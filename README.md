@@ -18,6 +18,7 @@ dependencies
  - libevent1, libevent-dev
 
 bundled: 
+
  - beanstalk-client
 
 run `rake deps` to set up bundled deps
@@ -27,10 +28,10 @@ running
 
 start up beanstalkd
 
-populator.rb => puts work items on the 'jobs' tube
-worker.rb => pops work items off the 'jobs' tube, puts results onto the 'results' tube
-results.rb => processes job results off 'results' tube'
-stats.rb => gets stats periodically from beanstalkd tubes
+populator.rb => puts work items on the 'jobs' tube  
+worker.rb => pops work items off the 'jobs' tube, puts results onto the 'results' tube  
+results.rb => processes job results off 'results' tube  
+stats.rb => gets stats periodically from beanstalkd tubes  
 
 tenets
 ======
@@ -43,7 +44,7 @@ tenets
 proposed architecture
 =====================
 
-(current implementation doesn't reflect this)
+(current implementation vaguely reflects this)
 
     -------------                  ------------
     | populator |---          -----| notifier |
@@ -60,7 +61,9 @@ proposed architecture
    	----------      ----------       ----------
 
 
-- populator determines checks that need to occur, and puts jobs onto beanstalk
-- workers pop jobs off the beanstalk, do job, put result onto beanstalk
-- notifier pops results, notifies
+- populator determines checks that need to occur, and puts jobs onto 'jobs' tube
+  - populator fetches jobs from a database
+- workers pop a job off the beanstalk, do job, put result onto 'results' tube, 
+  re-add job to 'jobs' tube with a delay. 
+- notifier pops off 'results' tube, notifies
 
