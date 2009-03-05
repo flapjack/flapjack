@@ -2,8 +2,6 @@
 
 require 'rubygems'
 require 'bin/common'
-Gem.clear_paths
-Gem.path.unshift(File.join(File.dirname(__FILE__), 'gems'))
 
 desc "freeze deps"
 task :deps do 
