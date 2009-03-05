@@ -24,9 +24,9 @@ proposed architecture
 
 (current implementation doesn't reflect this)
 
- -------------                  -----------
- | populator |---          -----| results |
- -------------  |          |    -----------
+ -------------                  ------------
+ | populator |---          -----| notifier |
+ -------------  |          |    ------------
                 |          |
                --------------
                | beanstalkd |
@@ -37,3 +37,9 @@ proposed architecture
   ----------      ----------       ----------
 	| worker |      | worker |       | worker |
 	----------      ----------       ----------
+
+
+- populator determines checks that need to occur, and puts jobs onto beanstalk
+- workers pop jobs off the beanstalk, do job, put result onto beanstalk
+- notifier pops results, notifies
+
