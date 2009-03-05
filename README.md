@@ -53,12 +53,12 @@ proposed architecture
                   --------------
                   | beanstalkd |
                   --------------
-   							        |
-        -----------------------------------
-   	   |                |                |
-     ----------      ----------       ----------
-   	| worker |      | worker |       | worker |
-   	----------      ----------       ----------
+                        |
+       -----------------------------------
+       |                |                |
+    ----------      ----------       ----------
+    | worker |      | worker |       | worker |
+    ----------      ----------       ----------
 
 
 - populator determines checks that need to occur, and puts jobs onto 'jobs' tube
