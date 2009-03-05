@@ -14,7 +14,6 @@ begin
     job = @jobs.reserve
     j = YAML::load(job.body)
     puts "processing #{j.inspect}"
-    job.delete
 
     result = `#{j[:command]}`
     retval = $?
@@ -23,6 +22,12 @@ begin
     @results.yput({:id => j[:id], 
                    :result => result, 
                    :retval => retval.to_i})
+   
+    # add job back onto stack
+    @jobs.yput(j, 65536, j[:frequency])
+      
+    # once we're done, clean up
+    job.delete
   end
 rescue Beanstalk::NotConnected
   puts "beanstalk isn't up!"
