@@ -1,0 +1,39 @@
+dependencies
+============
+
+ - beanstalkd
+ - libevent1, libevent-dev
+
+bundled: 
+ - beanstalk-client
+
+
+running 
+=======
+
+start up beanstalkd
+
+populator.rb => puts work items on the 'jobs' tube
+worker.rb => pops work items off the 'jobs' tube, puts results onto the 'results' tube
+results.rb => processes job results off 'results' tube'
+stats.rb => gets stats periodically from beanstalkd tubes
+
+
+proposed architecture
+=====================
+
+(current implementation doesn't reflect this)
+
+ -------------                  -----------
+ | populator |---          -----| results |
+ -------------  |          |    -----------
+                |          |
+               --------------
+               | beanstalkd |
+               --------------
+							        |
+     -----------------------------------
+	   |                |                |
+  ----------      ----------       ----------
+	| worker |      | worker |       | worker |
+	----------      ----------       ----------
