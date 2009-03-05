@@ -7,6 +7,7 @@ dependencies
 bundled: 
  - beanstalk-client
 
+run `rake deps` to set up bundled deps
 
 running 
 =======
