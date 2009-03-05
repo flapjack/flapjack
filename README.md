@@ -29,7 +29,7 @@ running
 start up beanstalkd
 
 populator.rb => puts work items on the 'jobs' tube  
-worker.rb => pops work items off the 'jobs' tube, puts results onto the 'results' tube  
+worker.rb => pops work items off the 'jobs' tube, executes job, puts results onto the 'results' tube  
 results.rb => processes job results off 'results' tube  
 stats.rb => gets stats periodically from beanstalkd tubes  
 
