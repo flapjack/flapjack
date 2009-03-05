@@ -5,7 +5,7 @@ require 'beanstalk-client'
 
 begin 
   @jobs = Beanstalk::Pool.new(['localhost:11300'], 'jobs')
-  loop do 
+  100.times do 
     @jobs.yput({:command => 'echo hello', :params => {}, :id => (1..100).to_a[rand(100)]})
   end
 rescue Beanstalk::NotConnected
