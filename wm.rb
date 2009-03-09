@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-unless ARGV.size == 2 || ARGV.grep(/[--help|-h]/).size > 0
+unless ARGV.size == 2 || ARGV.grep(/[\-\-help|\-h]/).size > 0
   puts "Usage: #{__FILE__} <number-of-workers> <host>"
   exit 1
 end

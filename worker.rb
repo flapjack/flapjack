@@ -3,7 +3,7 @@
 require 'bin/common'
 require 'beanstalk-client'
 
-unless ARGV[0] || ARGV.grep(/[--help|-h]/).size > 0
+unless ARGV[0] || ARGV.grep(/[\-\-help|\-h]/).size > 0
   puts "Usage: #{__FILE__} <hostname>"
   exit 1
 end
