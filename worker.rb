@@ -3,9 +3,16 @@
 require 'bin/common'
 require 'beanstalk-client'
 
+unless ARGV[0] || ARGV.grep(/[--help|-h]/).size > 0
+  puts "Usage: #{__FILE__} <hostname>"
+  exit 1
+end
+
+@host = ARGV[0]
+
 begin 
-  @jobs    = Beanstalk::Pool.new(['localhost:11300'], 'jobs')
-  @results = Beanstalk::Pool.new(['localhost:11300'], 'results')
+  @jobs    = Beanstalk::Pool.new(["#{@host}:11300"], 'jobs')
+  @results = Beanstalk::Pool.new(["#{@host}:11300"], 'results')
   loop do
     # get_job
     # perform_job
