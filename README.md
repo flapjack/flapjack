@@ -28,8 +28,8 @@ Start up beanstalkd
 `notifier.rb` => notifies peopled based on results of checks on the `results` tube  
 `stats.rb` => gets stats periodically from beanstalkd tubes (useful for benchmarks)
 
-Proposed Architecture
----------------------
+Architecture
+------------
 
     -------------                  ------------
     | populator |---          -----| notifier |
