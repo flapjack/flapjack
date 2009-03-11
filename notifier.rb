@@ -58,7 +58,14 @@ if __FILE__ == $0 then
   mailer = Mailer.new
   xmpp = Xmpp.new(:jid => "flapjack-test@jabber.org", :password => "test")
 
-  @notifier = Notifier.new(:logger => log, :notifiers => [mailer, xmpp])
+  yaml = YAML::load(File.read(File.join(File.dirname(__FILE__), "recipients.yaml")))
+  recipients = yaml.map do |r|
+    OpenStruct.new(r)
+  end
+
+  @notifier = Notifier.new(:logger => log, 
+                           :notifiers => [mailer, xmpp], 
+                           :recipients => recipients)
   @options = Options.parse(ARGV)
 
   begin 
