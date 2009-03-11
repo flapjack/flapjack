@@ -27,7 +27,7 @@ begin
 
     puts "sending results for #{j[:id]}"
     @results.yput({:id => j[:id], 
-                   :result => result, 
+                   :output => result, 
                    :retval => retval.to_i})
    
     # add job back onto stack
