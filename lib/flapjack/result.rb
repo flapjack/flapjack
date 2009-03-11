@@ -13,8 +13,7 @@ class Result < OpenStruct
   end
 
   def critical?
-    [true, false][rand(2)]
-    #self.retval == 2
+    self.retval == 2
   end
 
   def status
