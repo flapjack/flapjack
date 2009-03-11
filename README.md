@@ -28,7 +28,7 @@ Start up beanstalkd
 `notifier.rb` => notifies peopled based on results of checks on the `results` tube  
 `stats.rb` => gets stats periodically from beanstalkd tubes (useful for benchmarks)
 
-You'll want to set up a recipients.yaml file so notifications can be sent: 
+You'll want to set up a `recipients.yaml` file so notifications can be sent: 
 
     - :name: John Doe
       :email: "john@doe.com"
@@ -48,7 +48,6 @@ You can write your own notifiers and place them in `lib/flapjack/notifiers/`.
 Your notifier just needs to implement the `notify!` method, and take in a hash:
 
     class Sms
-
       def initialize(opts={})
         # you may want to set from address here
       end
