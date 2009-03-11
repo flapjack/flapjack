@@ -28,6 +28,39 @@ Start up beanstalkd
 `notifier.rb` => notifies peopled based on results of checks on the `results` tube  
 `stats.rb` => gets stats periodically from beanstalkd tubes (useful for benchmarks)
 
+You'll want to set up a recipients.yaml file so notifications can be sent: 
+
+    - :name: John Doe
+      :email: "john@doe.com"
+      :phone: "+61 444 333 222"
+      :pager: "61444333222"
+      :jid: "john@doe.com"
+    - :name: Jane Doe
+      :email: "jane@doe.com"
+      :phone: "+61 444 222 111"
+      :pager: "61444222111"
+      :jid: "jane@doe.com"
+
+Currently there are email and XMPP notifiers. 
+
+You can write your own notifiers and place them in `lib/flapjack/notifiers/`.
+
+Your notifier just needs to implement the `notify!` method, and take in a hash:
+
+    class Sms
+
+      def initialize(opts={})
+        # you may want to set from address here
+      end
+
+      def notify!(opts={})
+        who = opts[:who]
+        result = opts[:result]
+        # sms to your hearts content
+      end
+    end
+        
+
 Architecture
 ------------
 
