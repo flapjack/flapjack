@@ -3,9 +3,11 @@
 require 'bin/common'
 require 'beanstalk-client'
 
+number = ARGV[0] ? ARGV[0].to_i : 100
+
 begin 
   @jobs = Beanstalk::Pool.new(['localhost:11300'], 'jobs')
-  1000.times do 
+  number.times do 
     @jobs.yput({:command => "sleep #{(1..5).to_a[rand(5)]}; echo '#{Time.now}'", 
                 :params => {}, 
                 :id => (1..100).to_a[rand(100)],
