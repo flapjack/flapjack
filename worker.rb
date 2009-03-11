@@ -23,7 +23,7 @@ begin
     puts "processing #{j.inspect}"
 
     result = `#{j[:command]}`
-    retval = $?
+    retval = $?.exitstatus
 
     puts "sending results for #{j[:id]}"
     @results.yput({:id => j[:id], 
