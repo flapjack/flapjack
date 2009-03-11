@@ -1,11 +1,10 @@
-series-of-tubes
-===============
+Flapjack
+========
 
 (have to come up with a better name)
 
-series-of-tubes is highly scalable and distributed monitoring system, analogous
-to Nagios. It understands the Nagios plugin format, so you can use your existing 
-Nagios checks. It can easily be scaled from 1 server to 1000. 
+Flapjack is highly scalable and distributed monitoring system. It understands 
+the Nagios plugin format, and can easily be scaled from 1 server to 1000. 
 
 Currently the code is experimental and proof of concept. Ease-of-use or 
 feature completedness is not guaranteed, however it should be *very* performant.
