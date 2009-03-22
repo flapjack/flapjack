@@ -48,7 +48,8 @@ class NotifierOptions
 end
 
 class NotifierCLI
-  attr_accessor :log, :recipients
+  attr_accessor :log, :recipients, :notifier, :results_queue
+  attr_accessor :condition
 
   def initialize
     @log = Log4r::Logger.new("notifier")
@@ -73,6 +74,21 @@ class NotifierCLI
     end
   end
 
+  def process_loop
+    loop do
+      process_job
+    end
+  end
+
+  def process_result
+    result_job = @results_queue.reserve
+    result = Result.new(YAML::load(result_job.body))
+    if result.warning? || result.critical?
+      @notifier.notify!(result)
+    end
+    result.delete
+  end
+
 end
 
 
@@ -83,29 +99,21 @@ if __FILE__ == $0 then
   
   ncli = NotifierCLI.new
   ncli.setup_loggers
+  ncli.setup_recipients(:filename => File.join(File.dirname(__FILE__), "recipients.yaml"))
 
   mailer = Flapjack::Notifiers::Mailer.new
   xmpp = Flapjack::Notifiers::Xmpp.new(:jid => "flapjack-test@jabber.org", :password => "test")
-    
-  ncli.setup_recipients(:filename => File.join(File.dirname(__FILE__), "recipients.yaml"))
-
-  @notifier = Notifier.new(:logger => ncli.log, 
-                           :notifiers => [mailer, xmpp], 
-                           :recipients => ncli.recipients)
+  ncli.notifier = Notifier.new(:logger => ncli.log, 
+                               :notifiers => [mailer, xmpp], 
+                               :recipients => ncli.recipients)
 
   begin 
 
-    @results = Beanstalk::Pool.new(["#{@options.host}:11300"], 'results')
+    ncli.results_queue = Beanstalk::Pool.new(["#{@options.host}:11300"], 'results')
     ncli.log.info("established connection to beanstalkd on #{@options.host}...")
 
-    loop do
-      result = @results.reserve
-      r = Result.new(YAML::load(result.body))
-      if r.warning? || r.critical?
-        @notifier.notify!(r)
-      end
-      result.delete
-    end
+    # process results
+    ncli.process_loop
 
   rescue Beanstalk::NotConnected
     ncli.log.error("beanstalk isn't up!")
