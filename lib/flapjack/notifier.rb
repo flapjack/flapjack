@@ -6,8 +6,17 @@ class Notifier
   
   def initialize(opts={})
     @log = opts[:logger]
-    @notifiers = (opts[:notifiers] || [])
     @recipients = (opts[:recipients] || [])
+    
+    @notifiers = []
+    if opts[:notifiers]
+	    opts[:notifiers].each do |n|
+	      @notifiers << n
+	      @log.info("using the #{n.class.to_s.split("::").last} notifier")
+	    end
+    else
+      @log.warning("there are no notifiers")
+    end
   end
   
   def notify!(result)
