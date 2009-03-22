@@ -47,6 +47,39 @@ describe "running the notifier" do
     end
   end
 
+  it "should setup a notifier" do 
+    n = NotifierCLI.new
+    n.notifier = Notifier.new(:logger => n.log, 
+                              :recipients => n.recipients)
+    n.notifier.should_not be_nil
+  end
+  
+  it "should setup a results queue" do 
+    n = NotifierCLI.new
+    beanstalk = mock("Beanstalk::Pool")
+    beanstalk.stub!(:stats).and_return("blah")
+    n.results_queue = beanstalk
+    n.results_queue.should_not be_nil
+    n.results_queue.stats.class.should == String
+  end
+
+  it "should process results" do 
+    n = NotifierCLI.new
+    n.notifier = Notifier.new(:logger => n.log, 
+                              :recipients => n.recipients)
+    
+    beanstalk = mock("Beanstalk::Pool")
+    beanstalk.stub!(:reserve).and_return {
+      job = mock("Beanstalk::Job")
+      job.should_receive(:body).and_return("--- \n:output: \"\"\n:id: 9\n:retval: 2\n")
+      job
+    }
+    
+    n.results_queue = beanstalk
+    n.process_result
+
+  end
+
 end
 
 
