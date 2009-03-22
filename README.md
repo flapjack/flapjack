@@ -58,7 +58,17 @@ Your notifier just needs to implement the `notify!` method, and take in a hash:
         # sms to your hearts content
       end
     end
-        
+
+
+Testing
+-------
+
+Tests are in `spec/`.
+
+To run tests:
+
+    $ rake spec
+
 
 Architecture
 ------------
