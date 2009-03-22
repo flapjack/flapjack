@@ -2,6 +2,13 @@
 
 require 'rubygems'
 require 'bin/common'
+require 'spec/rake/spectask'
+
+
+Spec::Rake::SpecTask.new do |t|
+  t.spec_opts = ["--options", "spec/spec.opts"]
+end
+
 
 desc "freeze deps"
 task :deps do 
@@ -19,3 +26,5 @@ task :deps do
   end
 
 end
+
+
