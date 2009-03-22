@@ -13,7 +13,7 @@ require 'lib/flapjack/notifiers/xmpp'
 
 include Log4r
 
-class Options
+class NotifierOptions
   def self.parse(args)
     options = OpenStruct.new
     opts = OptionParser.new do |opts|
@@ -47,30 +47,56 @@ class Options
   end
 end
 
+class NotifierCLI
+  attr_accessor :log, :recipients
+
+  def initialize
+    @log = Log4r::Logger.new("notifier")
+  end
+
+  def setup_loggers
+    @log.add(Log4r::StdoutOutputter.new('notifier'))
+    @log.add(Log4r::SyslogOutputter.new('notifier'))
+  end
+
+  def setup_recipients(opts={})
+
+    if opts[:yaml]
+      yaml = opts[:yaml]
+    else
+      opts[:filename] ||= File.join(File.dirname(__FILE__), "recipients.yaml")
+      yaml = YAML::load(File.read(opts[:filename]))
+    end
+
+    @recipients = yaml.map do |r|
+      OpenStruct.new(r)
+    end
+  end
+
+end
+
 
 # if we're run as a script
 if __FILE__ == $0 then
+ 
+  @options = NotifierOptions.parse(ARGV)
   
-  log = Log4r::Logger.new("notifier")
-  log.add(Log4r::StdoutOutputter.new('notifier'))
-  log.add(Log4r::SyslogOutputter.new('notifier'))
-  
-  mailer = Mailer.new
-  xmpp = Xmpp.new(:jid => "flapjack-test@jabber.org", :password => "test")
+  ncli = NotifierCLI.new
+  ncli.setup_loggers
 
-  yaml = YAML::load(File.read(File.join(File.dirname(__FILE__), "recipients.yaml")))
-  recipients = yaml.map do |r|
-    OpenStruct.new(r)
-  end
+  mailer = Flapjack::Notifiers::Mailer.new
+  xmpp = Flapjack::Notifiers::Xmpp.new(:jid => "flapjack-test@jabber.org", :password => "test")
+    
+  ncli.setup_recipients(:filename => File.join(File.dirname(__FILE__), "recipients.yaml"))
 
-  @notifier = Notifier.new(:logger => log, 
+  @notifier = Notifier.new(:logger => ncli.log, 
                            :notifiers => [mailer, xmpp], 
-                           :recipients => recipients)
-  @options = Options.parse(ARGV)
+                           :recipients => ncli.recipients)
 
   begin 
+
     @results = Beanstalk::Pool.new(["#{@options.host}:11300"], 'results')
-    log.info("established connection to beanstalkd on #{@options.host}...")
+    ncli.log.info("established connection to beanstalkd on #{@options.host}...")
 
     loop do
       result = @results.reserve
@@ -80,8 +106,9 @@ if __FILE__ == $0 then
       end
       result.delete
     end
+
   rescue Beanstalk::NotConnected
-    log.error("beanstalk isn't up!")
+    ncli.log.error("beanstalk isn't up!")
     exit 2
   end
 
