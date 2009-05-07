@@ -40,6 +40,17 @@ describe "running the notifier" do
     n.notify!(Result.new(:id => 'mock result'))
   end
 
+  it "should log notification on each notifier" do 
+    mock_notifier = mock("MockNotifier")
+    mock_notifier.stub!(:notify)
+
+    n = Notifier.new(:logger => MockLogger.new, 
+                     :notifiers => [mock_notifier],
+                     :recipients => [OpenStruct.new({:name => "John Doe"})])
+    n.notify!(Result.new(:id => '12345'))
+    n.log.messages.last.should =~ /12345/
+    n.log.messages.last.should =~ /John Doe/
+  end
 end
 
 
