@@ -7,7 +7,7 @@ class MockLogger
     @messages = []
   end
 
-  %w(warning error).each do |type|
+  %w(warning error info).each do |type|
     class_eval <<-HERE
       def #{type}(message)
         @messages << message
