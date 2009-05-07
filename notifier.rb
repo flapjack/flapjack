@@ -21,6 +21,9 @@ class NotifierOptions
       opts.on('-b', '--beanstalk HOST', 'location of the beanstalkd') do |host|
         options.host = host
       end
+      opts.on('-r', '--recipients FILE', 'recipients file') do |recipients|
+        options.recipients = recipients
+      end
       opts.on_tail("-h", "--help", "Show this message") do
         puts opts
         exit
