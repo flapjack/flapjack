@@ -23,6 +23,23 @@ describe "running the notifier" do
     n.log.messages.last.should =~ /no notifiers/
   end
 
+  it "should log when adding a new notifier" do
+    mock_notifier = mock("MockNotifier")
+    n = Notifier.new(:logger => MockLogger.new, 
+                     :notifiers => [mock_notifier])
+    n.log.messages.last.should =~ /using the (.+) notifier/
+  end
+
+  it "should call notify on each notifier when notifying" do 
+    mock_notifier = mock("MockNotifier")
+    mock_notifier.should_receive(:notify)
+
+    n = Notifier.new(:logger => MockLogger.new, 
+                     :notifiers => [mock_notifier],
+                     :recipients => [OpenStruct.new({:name => "John Doe"})])
+    n.notify!(Result.new(:id => 'mock result'))
+  end
+
 end
 
 
