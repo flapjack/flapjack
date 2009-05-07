@@ -3,9 +3,12 @@
 require 'ostruct'
 
 class Notifier
-  
+ 
+  attr_reader :recipients, :log
+
   def initialize(opts={})
     @log = opts[:logger]
+    raise "you have to specify a logger" unless @log
     @recipients = (opts[:recipients] || [])
     
     @notifiers = []
