@@ -26,7 +26,7 @@ class Notifier
     @notifiers.each do |n|
       @recipients.each do |recipient|
         @log.info("Notifying #{recipient.name} via #{n.class} about check #{result.id}")
-        n.notify!(:result => result, :who => recipient)
+        n.notify(:result => result, :who => recipient)
       end
     end
   end
