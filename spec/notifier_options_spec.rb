@@ -7,13 +7,13 @@ describe NotifierOptions do
  
   # beanstalk
   it "should accept the location of a beanstalk queue in short form" do 
-    args = %w(-b localhost)
+    args = %w(-b localhost -r recipients.yaml)
     options = NotifierOptions.parse(args)
     options.host.should == "localhost"
   end
   
   it "should accept the location of a beanstalk queue in long form" do 
-    args = %w(--beanstalk localhost)
+    args = %w(--beanstalk localhost -r recipients.yaml)
     options = NotifierOptions.parse(args)
     options.host.should == "localhost"
   end
@@ -32,7 +32,7 @@ describe NotifierOptions do
   end
 
   it "should exit if the recipients file doesn't exist" do 
-    args = %w(-b localhost --recipient recipients.yaml)
+    args = %w(-b localhost -r spec/wangity.yaml)
     lambda { 
       NotifierOptions.parse(args) 
     }.should raise_error(SystemExit)
