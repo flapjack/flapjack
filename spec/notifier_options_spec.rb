@@ -7,28 +7,28 @@ describe NotifierOptions do
  
   # beanstalk
   it "should accept the location of a beanstalk queue in short form" do 
-    args = %w(-b localhost -r recipients.yaml)
+    args = %w(-b localhost -r spec/recipients.yaml)
     options = NotifierOptions.parse(args)
     options.host.should == "localhost"
   end
   
   it "should accept the location of a beanstalk queue in long form" do 
-    args = %w(--beanstalk localhost -r recipients.yaml)
+    args = %w(--beanstalk localhost -r spec/recipients.yaml)
     options = NotifierOptions.parse(args)
     options.host.should == "localhost"
   end
 
   # recipients
   it "should accept the location of a recipients file in short form" do 
-    args = %w(-b localhost -r recipients.yaml)
+    args = %w(-b localhost -r spec/recipients.yaml)
     options = NotifierOptions.parse(args)
-    options.recipients.should == "recipients.yaml"
+    options.recipients.should == "spec/recipients.yaml"
   end
   
   it "should accept the location of a recipients file in long form" do 
-    args = %w(-b localhost --recipient recipients.yaml)
+    args = %w(-b localhost --recipient spec/recipients.yaml)
     options = NotifierOptions.parse(args)
-    options.recipients.should == "recipients.yaml"
+    options.recipients.should == "spec/recipients.yaml"
   end
 
   it "should exit if the recipients file doesn't exist" do 
