@@ -38,6 +38,13 @@ describe NotifierOptions do
     }.should raise_error(SystemExit)
   end
 
+  it "should exit if the recipients file isn't specified" do 
+    args = %w(-b localhost)
+    lambda { 
+      NotifierOptions.parse(args) 
+    }.should raise_error(SystemExit)
+  end
+
   # general
   it "should exit on when asked for help in short form" do 
     args = %w(-h)
