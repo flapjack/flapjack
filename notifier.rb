@@ -22,7 +22,7 @@ class NotifierOptions
         options.host = host
       end
       opts.on('-r', '--recipients FILE', 'recipients file') do |recipients|
-        options.recipients = recipients
+        options.recipients = recipients.to_s
       end
       opts.on_tail("-h", "--help", "Show this message") do
         puts opts
@@ -42,12 +42,14 @@ class NotifierOptions
 
     # check that the host is specified
     unless options.host 
+      puts "You have to specify a beanstalk host!"
       puts opts
       exit 2
     end
 
     # check that recipients file exists
-    unless File.exists?(options.recipients)
+    unless File.exists?(options.recipients.to_s)
+      puts "You have to specify a recipients file!"
       puts opts
       exit 2
     end
