@@ -46,6 +46,7 @@ class NotifierOptions
       exit 2
     end
 
+    # check that recipients file exists
     unless File.exists?(options.recipients)
       puts opts
       exit 2
