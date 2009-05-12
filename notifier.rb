@@ -46,6 +46,11 @@ class NotifierOptions
       exit 2
     end
 
+    unless File.exists?(options.recipients)
+      puts opts
+      exit 2
+    end
+
     options
   end
 end
