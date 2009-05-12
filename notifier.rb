@@ -40,16 +40,23 @@ class NotifierOptions
       exit 1
     end
 
+    @errors = []
     # check that the host is specified
     unless options.host 
-      puts "You have to specify a beanstalk host!"
-      puts opts
-      exit 2
+      @errors << "You have to specify a beanstalk host!"
     end
 
     # check that recipients file exists
     unless File.exists?(options.recipients.to_s)
-      puts "You have to specify a recipients file!"
+      @errors << "You have to specify a recipients file!"
+    end
+
+    if @errors.size > 0
+      puts "Errors:"
+      @errors.each do |error|
+        puts "  - #{error}"
+      end
+      puts
       puts opts
       exit 2
     end
