@@ -27,4 +27,11 @@ task :deps do
 
 end
 
-
+if require 'yard'
+  
+  YARD::Rake::YardocTask.new do |t|
+    t.files   = ['lib/**/*.rb']
+    t.options = ['--output-dir=doc/', '--readme=README.md']
+  end
+  
+end
