@@ -22,7 +22,7 @@ begin
     j = YAML::load(job.body)
     puts "processing #{j.inspect}"
 
-    result = `#{j[:command]}`
+    result = `sh -c '#{j[:command]}'`
     retval = $?.exitstatus
 
     puts "sending results for #{j[:id]}"
