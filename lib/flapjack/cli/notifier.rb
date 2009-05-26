@@ -87,17 +87,24 @@ module Flapjack
     end
   
     def process_loop
+      @log.info("Processing results...")
       loop do
-        process_job
+        process_result
       end
     end
   
     def process_result
+      @log.debug("Waiting for new result...")
       result_job = @results_queue.reserve
       result = Result.new(YAML::load(result_job.body))
+      
+      @log.info("Processing result for check '#{result.id}'")
       if result.warning? || result.critical?
+        @log.info("Notifying on check '#{result.id}'")
         @notifier.notify!(result)
       end
+
+      @log.debug("Deleting result for check '#{result.id}' from queue")
       result.delete
     end
   
