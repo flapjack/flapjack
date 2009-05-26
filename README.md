@@ -1,8 +1,10 @@
 Flapjack
 ========
 
-Flapjack is highly scalable and distributed monitoring system. It understands 
-the Nagios plugin format, and can easily be scaled from 1 server to 1000. 
+Flapjack is highly scalable and distributed monitoring system. 
+
+It understands the Nagios plugin format, and can easily be scaled 
+from 1 server to 1000. 
 
 
 
