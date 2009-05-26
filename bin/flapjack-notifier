@@ -19,7 +19,7 @@ require 'lib/flapjack/cli/notifier'
 
 ncli = Flapjack::NotifierCLI.new
 ncli.setup_loggers
-ncli.setup_recipients(:filename => File.join(File.dirname(__FILE__), "recipients.yaml"))
+ncli.setup_recipients(:filename => @options.recipients)
 
 mailer = Flapjack::Notifiers::Mailer.new
 xmpp = Flapjack::Notifiers::Xmpp.new(:jid => "flapjack-test@jabber.org", :password => "test")
