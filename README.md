@@ -6,8 +6,8 @@ the Nagios plugin format, and can easily be scaled from 1 server to 1000.
 
 
 
-Setup (Ubuntu Hardy)
---------------------
+Setup dependencies (Ubuntu Hardy)
+---------------------------------
 
 Add the following line to `/etc/apt/sources.list`
 
@@ -24,13 +24,9 @@ Start beanstalkd:
     sudo /etc/init.d/beanstalkd start
 
 
-Install flapjack:
 
-    sudo gem install flapjack
-
-
-Setup (everyone else)
----------------------
+Setup dependencies (everyone else)
+----------------------------------
 
 Install the following software through your package manager or from source: 
 
@@ -41,16 +37,23 @@ Run `rake deps` to set up bundled dependencies.
 
 
 
+Installation
+------------
+
+Install flapjack:
+
+    sudo gem install flapjack
+
+
 
 Running 
 -------
 
-Start up beanstalkd
+Make sure beanstalkd is running.
 
-`populator.rb` => puts work items on the `jobs` tube  
-`worker.rb` => pops work items off the `jobs` tube, executes job, puts results onto the `results` tube  
-`notifier.rb` => notifies peopled based on results of checks on the `results` tube  
-`stats.rb` => gets stats periodically from beanstalkd tubes (useful for benchmarks)
+`flapjack-worker` => executes checks, reports results
+`flapjack-notifier` => gets results, notifies people if necessary
+`flapjack-stats` => gets stats from beanstalkd tubes (useful for benchmarks + performance analysis)
 
 You'll want to set up a `recipients.yaml` file so notifications can be sent: 
 
@@ -66,6 +69,10 @@ You'll want to set up a `recipients.yaml` file so notifications can be sent:
       :jid: "jane@doe.com"
 
 Currently there are email and XMPP notifiers. 
+
+
+Developing
+----------
 
 You can write your own notifiers and place them in `lib/flapjack/notifiers/`.
 
@@ -97,6 +104,13 @@ To run tests:
 Architecture
 ------------
 
+           -------------------
+           | web interface / |
+           | dsl / flat file |
+           -------------------
+          /
+          |
+          |
     -------------                  ------------
     | populator |---          -----| notifier |
     -------------  |          |    ------------
@@ -112,9 +126,11 @@ Architecture
     ----------      ----------       ----------
 
 
-- populator determines checks that need to occur, and puts jobs onto `jobs` tube
-  - populator fetches jobs from a database
-- workers pop a job off the beanstalk, do job, put result onto `results` tube, 
-  re-add job to `jobs` tube with a delay. 
-- notifier pops off `results` tube, notifies
+- populator determines checks that need to occur, and puts checks onto `jobs` tube
+  - populator fetches jobs from a database 
+  - populator can be swapped out to get checks from a dsl or flat files
+- workers pop a check off the beanstalk, perform check, put result onto `results` tube, 
+  re-add check to `jobs` tube with a delay. 
+- notifier pops results off `results` tube, notifies as necessary
+
 
