@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'bin/common'
+require 'rubygems'
 require 'net/smtp'
 require 'mailfactory'
 
