@@ -1,4 +1,5 @@
-require File.join(File.dirname(__FILE__), '..', 'notifier')
+require File.join(File.dirname(__FILE__), '..', 'lib', 'flapjack', 'notifier')
+require File.join(File.dirname(__FILE__), '..', 'lib', 'flapjack', 'result')
 require File.join(File.dirname(__FILE__), 'helpers')
 
 describe "running the notifier" do 
