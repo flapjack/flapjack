@@ -17,13 +17,13 @@ module Flapjack
     
       end
     
-      def notify!(opts={})
+      def notify(opts={})
     
         raise unless opts[:who] && opts[:result]
     
         message = <<-DESC
           Check #{opts[:result].id} returned the status "#{opts[:result].status}".
-            http://localhost:4000/issue/#{opts[:result].object_id * -1}
+            http://localhost:4000/checks/#{opts[:result].id}
         DESC
     
         @xmpp.deliver(opts[:who].jid, message)
