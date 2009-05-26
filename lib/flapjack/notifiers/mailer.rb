@@ -9,7 +9,7 @@ module Flapjack
 
     class Mailer
     
-      def notify!(opts={})
+      def notify(opts={})
         raise unless (opts[:who] && opts[:result])
     
         mail = MailFactory.new
