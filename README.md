@@ -35,8 +35,6 @@ Install the following software through your package manager or from source:
  - beanstalkd (from http://xph.us/software/beanstalkd/)
  - libevent (from http://monkey.org/~provos/libevent/)
 
-Run `rake deps` to set up bundled dependencies.
-
 
 
 Installation
