@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'flapjack'
-  s.version = '0.1.5'
+  s.version = '0.1.7'
   s.date = '2009-05-26'
   
   s.summary = "a scalable and distributed monitoring system"
@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
   s.add_dependency('mailfactory', '>= 1.4.0')
  
   s.bindir = "bin"
-  #s.executables = %w(cucumber-nagios-gen)
+  s.executables = `git ls-files`.split.grep(/^bin/).map {|f| f.gsub(/bin\//, '')}
   s.files = `git ls-files`.split.grep(/^[^\.gitignore|^spec\/]/)
 end
 
