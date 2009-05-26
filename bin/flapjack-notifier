@@ -10,8 +10,11 @@ require 'lib/flapjack/result'
 require 'lib/flapjack/notifier'
 require 'lib/flapjack/notifiers/mailer'
 require 'lib/flapjack/notifiers/xmpp'
+
+# command line options are in here
 require 'lib/flapjack/cli/notifier'
 
+# boot up the notifier
 @options = Flapjack::NotifierOptions.parse(ARGV)
 
 ncli = Flapjack::NotifierCLI.new
