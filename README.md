@@ -4,19 +4,43 @@ Flapjack
 Flapjack is highly scalable and distributed monitoring system. It understands 
 the Nagios plugin format, and can easily be scaled from 1 server to 1000. 
 
-Currently the code is experimental and proof of concept. Ease-of-use or 
-feature completedness is not guaranteed, however it should be *very* performant.
 
 
-Dependencies + Setup
+Setup (Ubuntu Hardy)
 --------------------
 
- - beanstalkd
- - libevent1, libevent-dev
+Add the following line to `/etc/apt/sources.list`
 
-You can get beanstalkd from: http://xph.us/software/beanstalkd/
+    deb http://ppa.launchpad.net/auxesis/ppa/ubuntu hardy main
+
+Install beanstalkd:
+
+    sudo apt-get install beanstalkd
+
+Set `ENABLED=1` in `/etc/default/beanstalkd`.
+
+Start beanstalkd: 
+
+    sudo /etc/init.d/beanstalkd start
+
+
+Install flapjack:
+
+    sudo gem install flapjack
+
+
+Setup (everyone else)
+---------------------
+
+Install the following software through your package manager or from source: 
+
+ - beanstalkd (from http://xph.us/software/beanstalkd/)
+ - libevent (from http://monkey.org/~provos/libevent/)
 
 Run `rake deps` to set up bundled dependencies.
+
+
+
 
 Running 
 -------
