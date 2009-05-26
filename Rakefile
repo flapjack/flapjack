@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby 
 
 require 'rubygems'
-require 'bin/common'
+require 'fileutils'
 require 'spec/rake/spectask'
 
 
@@ -26,6 +26,21 @@ task :deps do
   end
 
 end
+
+desc "build gem"
+task :build do 
+  system("gem build flapjack.gemspec")
+  
+  FileUtils.mkdir_p('pkg')
+  puts
+  puts "Flapjack gems:"
+  Dir.glob("flapjack-*.gem").each do |gem|
+    dest = File.join('pkg', gem)
+    FileUtils.mv gem, dest
+    puts "  " + dest
+  end
+end
+
 
 if require 'yard'
   
