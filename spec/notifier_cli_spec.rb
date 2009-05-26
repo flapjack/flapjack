@@ -1,4 +1,4 @@
-require File.join(File.dirname(__FILE__), '..', 'notifier')
+require File.join(File.dirname(__FILE__), '..', 'lib', 'flapjack', 'cli', 'notifier')
 
 describe "running the notifier" do 
  
@@ -6,37 +6,37 @@ describe "running the notifier" do
   end
  
   it "should set up a logger instance on init" do 
-    n = NotifierCLI.new
+    n = Flapjack::NotifierCLI.new
     n.log.should_not be_nil
   end
   
   it "should setup loggers" do 
-    n = NotifierCLI.new
+    n = Flapjack::NotifierCLI.new
     n.setup_loggers
     n.log.outputters.size.should > 0
   end
   
   it "should setup recipients with a default file" do 
-    n = NotifierCLI.new
+    n = Flapjack::NotifierCLI.new
     n.setup_recipients
     n.recipients.size.should > 0
   end
 
   it "should setup recipients with a specified file" do 
-    n = NotifierCLI.new
+    n = Flapjack::NotifierCLI.new
     n.setup_recipients(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml'))
     n.recipients.size.should > 0
   end
   
   it "should setup recipients with a passed in yaml fragment" do 
-    n = NotifierCLI.new
+    n = Flapjack::NotifierCLI.new
     yaml = File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml')
     n.setup_recipients(:yaml => yaml)
     n.recipients.size.should > 0
   end
   
   it "should create an accessor object for every recipient" do 
-    n = NotifierCLI.new
+    n = Flapjack::NotifierCLI.new
     n.setup_recipients
     n.recipients.each do |r|
       r.email.should =~ /@/
@@ -48,14 +48,14 @@ describe "running the notifier" do
   end
 
   it "should setup a notifier" do 
-    n = NotifierCLI.new
+    n = Flapjack::NotifierCLI.new
     n.notifier = Notifier.new(:logger => n.log, 
                               :recipients => n.recipients)
     n.notifier.should_not be_nil
   end
   
   it "should setup a results queue" do 
-    n = NotifierCLI.new
+    n = Flapjack::NotifierCLI.new
     beanstalk = mock("Beanstalk::Pool")
     beanstalk.stub!(:stats).and_return("blah")
     n.results_queue = beanstalk
@@ -64,7 +64,7 @@ describe "running the notifier" do
   end
 
   it "should process results" do 
-    n = NotifierCLI.new
+    n = Flapjack::NotifierCLI.new
     n.notifier = Notifier.new(:logger => n.log, 
                               :recipients => n.recipients)
     
@@ -72,6 +72,7 @@ describe "running the notifier" do
     beanstalk.stub!(:reserve).and_return {
       job = mock("Beanstalk::Job")
       job.should_receive(:body).and_return("--- \n:output: \"\"\n:id: 9\n:retval: 2\n")
+      job.should_receive(:delete)
       job
     }
     
