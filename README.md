@@ -55,7 +55,7 @@ Make sure beanstalkd is running.
 `flapjack-notifier` => gets results, notifies people if necessary  
 `flapjack-stats` => gets stats from beanstalkd tubes (useful for benchmarks + performance analysis)  
 
-You'll want to set up a `recipients.yaml` file so notifications can be sent: 
+You'll want to set up a `recipients.yaml` so notifications can be sent: 
 
     - :name: John Doe
       :email: "john@doe.com"
