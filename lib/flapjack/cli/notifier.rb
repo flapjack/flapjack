@@ -77,7 +77,7 @@ module Flapjack
       if opts[:yaml]
         yaml = opts[:yaml]
       else
-        opts[:filename] ||= File.join(File.dirname(__FILE__), "recipients.yaml")
+        opts[:filename] ||= File.join(Dir.pwd, "recipients.yaml")
         yaml = YAML::load(File.read(opts[:filename]))
       end
   
@@ -105,7 +105,7 @@ module Flapjack
       end
 
       @log.debug("Deleting result for check '#{result.id}' from queue")
-      result.delete
+      result_job.delete
     end
   
   end
