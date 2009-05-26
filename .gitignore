@@ -10,3 +10,4 @@ gems/bin/*
 recipients.yaml
 .yardoc
 doc/*
+pkg/*
