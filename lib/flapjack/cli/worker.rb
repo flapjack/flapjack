@@ -6,7 +6,7 @@ require 'ostruct'
 require 'optparse'
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
-require 'flapjack/cli/worker'
+require 'flapjack/result'
 
 module Flapjack
   class WorkerOptions
@@ -60,14 +60,21 @@ module Flapjack
     end
   end
  
-  class WorkerCLI
+  class Worker
+    
+    attr_accessor :jobs, :results, :log
+
     def initialize(opts={})
       @jobs    = Beanstalk::Pool.new(["#{opts[:host]}:#{opts[:port]}"], 'jobs')
       @results = Beanstalk::Pool.new(["#{opts[:host]}:#{opts[:port]}"], 'results')
 
-      @log = Log4r::Logger.new('worker')
-      @log.add(Log4r::StdoutOutputter.new('worker'))
-      @log.add(Log4r::SyslogOutputter.new('worker'))
+      if opts[:logger]
+        @log = opts[:logger]
+      else
+        @log = Log4r::Logger.new('worker')
+        @log.add(Log4r::StdoutOutputter.new('worker'))
+        @log.add(Log4r::SyslogOutputter.new('worker'))
+      end
     end
     
     def process_loop
@@ -78,33 +85,58 @@ module Flapjack
     end
 
     def process_check
-      # get_check
-      @log.debug("Waiting for check...")
-      job = @jobs.reserve
-      j = YAML::load(job.body)
-      @log.info("Processing check id #{j[:id]}")
+      # get next check off the beanstalk
+      job, check = get_check()
   
-      # perform_check
-      command = "sh -c '#{j[:command]}'"
+      # do the actual check
+      result, retval = perform_check(check.command)
+
+      # report the results of the check
+      report_check(:result => result, :retval => retval, :check => check)
+     
+      # create another job for the check, delete current job
+      cleanup_job(:job => job, :check => check)
+    end
+
+    def perform_check(cmd)
+      command = "sh -c '#{cmd}'"
       @log.debug("Executing check: \"#{command}\"")
       result = `#{command}`
       retval = $?.exitstatus
 
-      # report_check
-      @log.debug "Reporting results for check id #{j[:id]}."
-      @results.yput({:id => j[:id], 
-                     :output => result, 
-                     :retval => retval.to_i})
-     
-      # cleanup_check
+      return result, retval
+    end
+
+    def report_check(opts={})
+      raise ArgumentError unless (opts[:result] && opts[:retval] && opts[:check])
+
+      @log.debug "Reporting results for check id #{opts[:check].id}."
+      @results.yput({:id => opts[:check].id, 
+                     :output => opts[:result], 
+                     :retval => opts[:retval].to_i})
+    end
+
+    def cleanup_job(opts={})
+      raise ArgumentError unless (opts[:job] && opts[:check])
+
       # add job back onto stack
       @log.debug("Putting check back onto beanstalk.")
-      @jobs.yput(j, 65536, j[:frequency])
+      @jobs.yput(opts[:check], 65536, opts[:check].frequency)
         
       # once we're done, clean up
       @log.debug("Deleting job.")
-      job.delete
+      opts[:job].delete
     end
+
+    def get_check
+      @log.debug("Waiting for check...")
+      job = @jobs.reserve
+      check = Check.new(YAML::load(job.body))
+      @log.info("Got check with id #{check.id}")
+
+      return job, check
+    end
+
   end
 
 end
