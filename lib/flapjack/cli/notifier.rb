@@ -37,15 +37,11 @@ module Flapjack
         exit 1
       end
  
-      # default the port
+      # default the host + port
+      options.host ||= 'localhost'
       options.port ||= 11300
   
       @errors = []
-      # check that the host is specified
-      unless options.host 
-        @errors << "You have to specify a beanstalk host!"
-      end
-  
       # check that recipients file exists
       unless File.exists?(options.recipients.to_s)
         @errors << "You have to specify a recipients file!"
