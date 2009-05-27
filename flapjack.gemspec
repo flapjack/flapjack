@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'flapjack'
-  s.version = '0.2.1'
+  s.version = '0.3.0'
   s.date = '2009-05-26'
   
   s.summary = "a scalable and distributed monitoring system"
@@ -11,6 +11,7 @@ Gem::Specification.new do |s|
   s.homepage = 'http://flapjack-project.com'
   s.has_rdoc = false
 
+  s.add_dependency('daemons', '>= 1.0.10')
   s.add_dependency('beanstalk-client', '>= 1.0.2')
   s.add_dependency('log4r', '>= 1.0.5')
   s.add_dependency('xmpp4r-simple', '>= 0.8.8')
