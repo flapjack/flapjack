@@ -44,7 +44,7 @@ module Flapjack
       @errors = []
       # check that recipients file exists
       unless File.exists?(options.recipients.to_s)
-        @errors << "You have to specify a recipients file!"
+        @errors << "The specified recipients file doesn't exist!"
       end
  
       # if there are errors, print them out and exit
