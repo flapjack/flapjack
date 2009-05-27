@@ -11,13 +11,22 @@ from 1 server to 1000.
 Setup dependencies (Ubuntu Hardy)
 ---------------------------------
 
-Add the following line to `/etc/apt/sources.list`
+Add the following lines to `/etc/apt/sources.list`
 
+    deb http://ppa.launchpad.net/ubuntu-ruby-backports/ubuntu hardy main
     deb http://ppa.launchpad.net/auxesis/ppa/ubuntu hardy main
 
-Install beanstalkd:
+Add GPG keys for the repos: 
 
-    sudo apt-get install beanstalkd
+    sudo apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 288BA53BCB7DA731
+
+Update your package list:
+
+    sudo aptitude update 
+
+Install rubygems + beanstalkd:
+
+    sudo apt-get install rubygems beanstalkd
 
 Set `ENABLED=1` in `/etc/default/beanstalkd`.
 
