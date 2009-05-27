@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
   s.add_dependency('mailfactory', '>= 1.4.0')
  
   s.bindir = "bin"
-  s.executables = `git ls-files`.split.grep(/^bin/).map {|f| f.gsub(/bin\//, '')}
+  s.executables = `git ls-files bin/*`.split
   s.files = `git ls-files`.split.grep(/^[^\.gitignore|^spec\/]/)
 end
 
