@@ -6,6 +6,7 @@ require 'rubygems'
 require 'daemons'
 require 'fileutils'
 require 'flapjack/cli/worker_manager'
+require 'flapjack/patches' # for Daemons
 
 # reassign ARGV so we don't mess with it directly
 args = ARGV
