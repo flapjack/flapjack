@@ -35,7 +35,6 @@ Install the following software through your package manager or from source:
  - libevent (from http://monkey.org/~provos/libevent/)
 
 
-
 Installation
 ------------
 
@@ -43,27 +42,17 @@ Install flapjack:
 
     sudo gem install flapjack
 
+Then run the magic configuration script to set up init scripts: 
 
-Create a directory for PID files:
+    sudo install-flapjack-systemwide
 
-    sudo mkdir /var/run/flapjack 
-    sudo chmod a+rw /var/run/flapjack
-
-Copy init scripts and default config across: 
-
-    gem contents flapjack | grep etc
-    sudo cp -rf path/to/flapjack/etc/* /etc/
+The script will prompt you if it wants to do anything destructive. 
 
 
 Running 
 -------
 
 Make sure beanstalkd is running.
-
-  * `flapjack-worker` => executes checks, reports results  
-  * `flapjack-worker-manager` => starts/stops a cluster of `flapjack-worker`
-  * `flapjack-notifier` => gets results, notifies people if necessary  
-  * `flapjack-stats` => gets stats from beanstalkd tubes (useful for benchmarks + performance analysis)  
 
 You'll want to set up `/etc/flapjack/recipients.yaml` so notifications can be sent via 
 `flapjack-notifier`: 
@@ -93,6 +82,14 @@ Currently there are email and XMPP notifiers.
 
 You'll want to get a copy of (http://github.com/auxesis/flapjack-admin/)[flapjack-admin]
 to set up some checks, then run its' populator to get them into Flapjack. 
+
+What things do 
+--------------
+
+  * `flapjack-worker` => executes checks, reports results  
+  * `flapjack-worker-manager` => starts/stops a cluster of `flapjack-worker`
+  * `flapjack-notifier` => gets results, notifies people if necessary  
+  * `flapjack-stats` => gets stats from beanstalkd tubes (useful for benchmarks + performance analysis)  
 
 
 init scripts
