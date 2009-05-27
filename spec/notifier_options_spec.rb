@@ -18,6 +18,12 @@ describe Flapjack::NotifierOptions do
     options.host.should == "localhost"
   end
 
+  it "should set a default beanstalk host" do 
+    args = %w(-r spec/recipients.yaml)
+    options = Flapjack::NotifierOptions.parse(args)
+    options.host.should == 'localhost'
+  end
+
   # beanstalk port
   it "should accept a specified beanstalk port in short form" do 
     args = %w(-b localhost -p 11340 -r spec/recipients.yaml)

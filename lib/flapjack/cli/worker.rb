@@ -38,24 +38,8 @@ module Flapjack
       end
  
       # default the port
+      options.host ||= 'localhost'
       options.port ||= 11300
-  
-      @errors = []
-      # check that the host is specified
-      unless options.host 
-        @errors << "You have to specify a beanstalk host!"
-      end
-  
-      # if there are errors, print them out and exit
-      if @errors.size > 0
-        puts "Errors:"
-        @errors.each do |error|
-          puts "  - #{error}"
-        end
-        puts
-        puts opts
-        exit 2
-      end
   
       options
     end
