@@ -15,6 +15,9 @@ module Flapjack
         opts.on('-b', '--beanstalk HOST', 'location of the beanstalkd') do |host|
           options.host = host
         end
+        opts.on('-p', '--port PORT', 'beanstalkd port') do |port|
+          options.port = port.to_i
+        end
         opts.on('-r', '--recipients FILE', 'recipients file') do |recipients|
           options.recipients = recipients.to_s
         end
@@ -23,7 +26,7 @@ module Flapjack
           exit
         end
       end
-  
+
       # parse the options
       begin
         opts.parse!(args)
@@ -33,6 +36,9 @@ module Flapjack
         puts opts
         exit 1
       end
+ 
+      # default the port
+      options.port ||= 11300
   
       @errors = []
       # check that the host is specified
@@ -44,7 +50,8 @@ module Flapjack
       unless File.exists?(options.recipients.to_s)
         @errors << "You have to specify a recipients file!"
       end
-  
+ 
+      # if there are errors, print them out and exit
       if @errors.size > 0
         puts "Errors:"
         @errors.each do |error|
