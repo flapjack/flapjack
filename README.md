@@ -55,11 +55,13 @@ Running
 
 Make sure beanstalkd is running.
 
-`flapjack-worker` => executes checks, reports results  
-`flapjack-notifier` => gets results, notifies people if necessary  
-`flapjack-stats` => gets stats from beanstalkd tubes (useful for benchmarks + performance analysis)  
+  * `flapjack-worker` => executes checks, reports results  
+  * `flapjack-worker-manager` => starts/stops a cluster of `flapjack-worker`
+  * `flapjack-notifier` => gets results, notifies people if necessary  
+  * `flapjack-stats` => gets stats from beanstalkd tubes (useful for benchmarks + performance analysis)  
 
-You'll want to set up a `recipients.yaml` so notifications can be sent: 
+You'll want to set up a `recipients.yaml` so notifications can be sent via 
+`flapjack-notifier`: 
 
     - :name: John Doe
       :email: "john@doe.com"
@@ -72,8 +74,25 @@ You'll want to set up a `recipients.yaml` so notifications can be sent:
       :pager: "61444222111"
       :jid: "jane@doe.com"
 
+Start up a cluster of workers: 
+
+    flapjack-worker-manager start
+
+This will spin up 5 workers in the background. You can specify how many workers 
+to start: 
+
+    flapjack-worker-manager start --workers=10
+
+Each of the `flapjack-worker`s will output to syslog (check in /var/log/messages).
+
+Start up the notifier: 
+
+    flapjack-notifier --recipients path/to/recipients.yaml
+
 Currently there are email and XMPP notifiers. 
 
+You'll want to get a copy of (http://github.com/auxesis/flapjack-admin/)[flapjack-admin]
+to set up some checks, then run its' populator to get them into Flapjack. 
 
 Developing
 ----------
