@@ -87,7 +87,7 @@ module Flapjack
     def process_check
       # get next check off the beanstalk
       job, check = get_check()
-  
+
       # do the actual check
       result, retval = perform_check(check.command)
 
@@ -121,7 +121,7 @@ module Flapjack
 
       # add job back onto stack
       @log.debug("Putting check back onto beanstalk.")
-      @jobs.yput(opts[:check], 65536, opts[:check].frequency)
+      @jobs.yput(opts[:check].to_h, 65536, opts[:check].frequency)
         
       # once we're done, clean up
       @log.debug("Deleting job.")
