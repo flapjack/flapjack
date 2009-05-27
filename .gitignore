@@ -11,3 +11,4 @@ recipients.yaml
 .yardoc
 doc/*
 pkg/*
+!etc/flapjack/recipients.yaml
