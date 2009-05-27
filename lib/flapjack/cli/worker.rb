@@ -7,6 +7,7 @@ require 'optparse'
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
 require 'flapjack/result'
+require 'flapjack/patches'
 
 module Flapjack
   class WorkerOptions
