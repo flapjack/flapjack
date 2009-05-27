@@ -60,7 +60,7 @@ describe "running the worker" do
 
     # a new job should be created for the check
     beanstalk = mock("Beanstalk::Pool")
-    beanstalk.should_receive(:yput)
+    beanstalk.should_receive(:yput).with(an_instance_of(Hash), an_instance_of(Fixnum), 30)
     w.jobs = beanstalk
 
     # the job should be deleted
@@ -69,7 +69,8 @@ describe "running the worker" do
 
     # frequency determines when the check is next available to run
     check = mock("Check")
-    check.should_receive(:frequency)
+    check.should_receive(:frequency).and_return(30)
+    check.should_receive(:to_h).and_return({})
 
     # do the cleanup
     w.cleanup_job(:job => job, :check => check)
