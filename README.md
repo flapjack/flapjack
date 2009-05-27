@@ -26,7 +26,6 @@ Start beanstalkd:
     sudo /etc/init.d/beanstalkd start
 
 
-
 Setup dependencies (everyone else)
 ----------------------------------
 
@@ -44,6 +43,11 @@ Install flapjack:
 
     sudo gem install flapjack
 
+
+Create a directory for PID files:
+
+    sudo mkdir /var/run/flapjack 
+    sudo chmod a+rw /var/run/flapjack
 
 
 Running 
