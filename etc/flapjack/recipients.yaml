@@ -1,0 +1,10 @@
+- :name: Jane Doe
+  :email: "jane@doe.com"
+  :phone: "+1 444 333 888"
+  :pager: "1444333888"
+  :jid: "jane@doe.com"
+- :name: John Doe
+  :email: "john@doe.com"
+  :phone: "+1 483 401 501"
+  :pager: "1888777333"
+  :jid: "john@doe.com"

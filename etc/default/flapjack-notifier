@@ -1,0 +1,15 @@
+# Defaults for flapjack-notifier initscript
+# sourced by /etc/init.d/flapjack-notifier
+
+# set enabled to 1 if you want the init script to start flapjack-notifier
+ENABLED=1
+
+# recipients file
+RECIPIENTS=/etc/flapjack/recipients.yaml
+
+# address beanstalkd is bound to
+BEANSTALKD_ADDR=localhost
+
+# port beanstalk is listening on
+BEANSTALKD_PORT=11300
+
