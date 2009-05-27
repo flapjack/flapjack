@@ -17,7 +17,7 @@ trap("INT") do
 end
 
 @options = Flapjack::WorkerOptions.parse(ARGV)
-@worker = Flapjack::WorkerCLI.new(:host => @options.host, :port => @options.port)
+@worker = Flapjack::Worker.new(:host => @options.host, :port => @options.port)
 
 begin
   @worker.process_loop
