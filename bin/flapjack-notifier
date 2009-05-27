@@ -12,6 +12,8 @@ require 'flapjack/result'
 require 'flapjack/notifier'
 require 'flapjack/notifiers/mailer'
 require 'flapjack/notifiers/xmpp'
+require 'daemons'
+require 'flapjack/patches'
 
 # command line options are in here
 require 'flapjack/cli/notifier'
@@ -41,6 +43,12 @@ begin
   ncli.process_loop
 
 rescue Beanstalk::NotConnected
-  ncli.log.error("beanstalk isn't up!")
-  exit 2
+  ncli.log.error("Couldn't connect to the Beanstalk!")
+
+  timeout = 5 
+  ncli.log.error("Retrying in #{timeout} seconds.")
+  sleep timeout
+
+  ncli.log.error("Retrying...")
+  retry
 end
