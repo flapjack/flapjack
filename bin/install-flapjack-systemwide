@@ -1,0 +1,50 @@
+#!/bin/sh
+
+# 28 05 2009
+# Lindsay Holmwood <lindsay@holmwood.id.au>
+# 
+# Copies various scripts to appropriate places so Flapjack can be 
+# started as a daemon. 
+# 
+# I abhor these sort of scripts. It's only a stopgap until Flapjack
+# gets packaged properly.
+# 
+# If you would like to package, please let me know! Patches welcome.
+# 
+
+if [ "$(whoami)" != "root" ]; then
+	echo 'You need to be root to run this script'
+	exit 1
+fi
+
+# prompt/warn the user what is about to happen
+echo "This script sets up Flapjack to run as a daemon. Specifically it: "
+echo
+echo "  * installs init scripts and configs into /etc"
+echo "  * sets up /var/run/flapjack "
+echo "  * sets Flapjack to run on boot"
+echo 
+echo "It will prompt you if it wants to overwrite an existing file."
+echo 
+echo -n "Do you want to continue? [y/n] "
+read continue
+echo 
+
+if [ "$continue" != "y" ]; then
+	echo "Exiting."
+	exit 
+fi
+
+# setup
+mkdir -p /var/run/flapjack
+chmod a+rw /var/run/flapjack
+
+etc_path=$(gem contents flapjack |grep etc | ruby -e "puts STDIN.gets.gsub(/etc\/.+/, 'etc')")
+cp -aiv $etc_path/* /etc/
+
+echo 
+echo "Setup complete!"
+echo 
+echo "You may want to customise /etc/flapjack/recipients.yaml"
+
+
