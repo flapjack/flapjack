@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env ruby
 
 # 28 05 2009
 # Lindsay Holmwood <lindsay@holmwood.id.au>
@@ -12,44 +12,43 @@
 # If you would like to package, please let me know! Patches welcome.
 # 
 
-if [ "$(whoami)" != "root" ]; then
-	echo 'You need to be root to run this script'
+unless ENV["USERNAME"] == "root"
+	puts 'You need to be root to run this script'
 	exit 1
-fi
+end
 
 # prompt/warn the user what is about to happen
-echo "This script sets up Flapjack to run as a daemon. Specifically it: "
-echo
-echo "  * installs init scripts and configs into /etc"
-echo "  * sets up /var/run/flapjack "
-echo "  * sets Flapjack to run on boot"
-echo 
-echo "It will prompt you if it wants to overwrite an existing file."
-echo 
-echo -n "Do you want to continue? [y/n] "
-read continue
-echo 
+puts "This script sets up Flapjack to run as a daemon. Specifically it: "
+puts
+puts "  * installs init scripts and configs into /etc"
+puts "  * sets up /var/run/flapjack "
+puts "  * sets Flapjack to run on boot"
+puts 
+puts "It will prompt you if it wants to overwrite an existing file."
+puts 
+print "Do you want to continue? [y/n] "
+continue = gets.strip
+puts 
 
-if [ "$continue" != "y" ]; then
-	echo "Exiting."
-	exit 
-fi
+unless continue == "y"
+  puts "Exiting."
+  exit 
+end
 
 # setup
-mkdir -p /var/run/flapjack
-chmod a+rw /var/run/flapjack
+system("mkdir -p /var/run/flapjack")
+system("chmod a+rw /var/run/flapjack")
 
-# fuck i am lazy sometimes
-etc_path=$(gem contents flapjack |grep etc | ruby -e "puts STDIN.gets.gsub(/etc\/.+/, 'etc')")
-cp -aiv $etc_path/* /etc/
+etc_path=`gem contents flapjack |grep etc`.first.gsub(/etc\/.+/, 'etc').strip
+system("cp -aiv #{etc_path}/* /etc")
 
 # set sequence number to 50 so beanstalkd has a chance to boot
-update-rc.d flapjack-workers defaults 50
-update-rc.d flapjack-notifier defaults 50
+system("update-rc.d flapjack-workers defaults 50")
+system("update-rc.d flapjack-notifier defaults 50")
 
-echo 
-echo "Setup complete!"
-echo 
-echo "You may want to customise /etc/flapjack/recipients.yaml"
+puts 
+puts "Setup complete!"
+puts 
+puts "You may want to customise /etc/flapjack/recipients.yaml"
 
 
