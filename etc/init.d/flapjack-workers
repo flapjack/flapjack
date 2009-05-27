@@ -8,6 +8,10 @@
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin
 
+if [ -f /etc/default/flapjack-workers ]; then
+  . /etc/default/flapjack-workers
+fi
+
 # Default return value
 RETVAL=0
 
@@ -20,15 +24,15 @@ fi
 # Evaluate command
 case "$1" in
     start)
-      flapjack-worker-manager start
+      flapjack-worker-manager start --workers $WORKERS
       RETVAL=$?
   ;;
     stop)
-      flapjack-worker-manager stop
+      flapjack-worker-manager stop --workers $WORKERS
       RETVAL=$?
   ;;
     restart)
-      flapjack-worker-manager restart
+      flapjack-worker-manager restart --workers $WORKERS
       RETVAL=$?
   ;;
     *)

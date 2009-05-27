@@ -8,6 +8,10 @@
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin
 
+if [ -f /etc/default/flapjack-notifier ]; then
+	. /etc/default/flapjack-notifier
+fi
+
 # Default return value
 RETVAL=0
 
@@ -20,15 +24,18 @@ fi
 # Evaluate command
 case "$1" in
     start)
-      flapjack-notifier-manager start
+      flapjack-notifier-manager start --recipients $RECIPIENTS \
+          --port $BEANSTALKD_PORT --beanstalk $BEANSTALKD_ADDR
       RETVAL=$?
   ;;
     stop)
-      flapjack-notifier-manager stop
+      flapjack-notifier-manager stop --recipients $RECIPIENTS \
+         --port $BEANSTALKD_PORT --beanstalk $BEANSTALKD_ADDR
       RETVAL=$?
   ;;
     restart)
-      flapjack-notifier-manager restart
+      flapjack-notifier-manager restart --recipients $RECIPIENTS \
+            --port $BEANSTALKD_PORT --beanstalk $BEANSTALKD_ADDR
       RETVAL=$?
   ;;
     *)
