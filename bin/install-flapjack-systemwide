@@ -39,6 +39,7 @@ fi
 mkdir -p /var/run/flapjack
 chmod a+rw /var/run/flapjack
 
+# fuck i am lazy sometimes
 etc_path=$(gem contents flapjack |grep etc | ruby -e "puts STDIN.gets.gsub(/etc\/.+/, 'etc')")
 cp -aiv $etc_path/* /etc/
 
