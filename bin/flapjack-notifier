@@ -34,7 +34,7 @@ ncli.notifier = Notifier.new(:logger => ncli.log,
 
 begin 
 
-  ncli.results_queue = Beanstalk::Pool.new(["#{@options.host}:11300"], 'results')
+  ncli.results_queue = Beanstalk::Pool.new(["#{@options.host}:#{@options.port}"], 'results')
   ncli.log.info("established connection to beanstalkd on #{@options.host}...")
 
   # process results
