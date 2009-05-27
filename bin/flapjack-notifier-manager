@@ -1,0 +1,30 @@
+#!/usr/bin/env ruby
+
+$: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+
+require 'rubygems'
+require 'daemons'
+require 'fileutils'
+require 'flapjack/cli/notifier_manager'
+require 'flapjack/patches' # for Daemons
+
+# reassign ARGV so we don't mess with it directly
+args = ARGV
+args << '--help' if args.size == 0
+options = Flapjack::NotifierManagerOptions.parse(args)
+
+worker_path = File.join(File.dirname(__FILE__), 'flapjack-notifier')
+
+# set up pid dir
+pid_dir = "/var/run/flapjack"
+FileUtils.mkdir_p(pid_dir)
+
+daemon_args = (args + ['--', '--beanstalk', options.host, 
+                       '--port', options.port.to_s,
+                       '--recipients', options.recipients])
+
+Daemons.run(worker_path, :ARGV => daemon_args,
+                         :multiple => false, 
+                         :dir_mode => :normal,
+                         :dir => pid_dir)
+
