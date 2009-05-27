@@ -80,14 +80,14 @@ Developing
 
 You can write your own notifiers and place them in `lib/flapjack/notifiers/`.
 
-Your notifier just needs to implement the `notify!` method, and take in a hash:
+Your notifier just needs to implement the `notify` method, and take in a hash:
 
     class Sms
       def initialize(opts={})
         # you may want to set from address here
       end
 
-      def notify!(opts={})
+      def notify(opts={})
         who = opts[:who]
         result = opts[:result]
         # sms to your hearts content
