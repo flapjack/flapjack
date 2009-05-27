@@ -8,7 +8,7 @@ class WorkerManagerOptions
   def self.parse(args)
     options = OpenStruct.new
     opts = OptionParser.new do |opts|
-      opts.banner = "Usage: #{__FILE__} <command> [options]"
+      opts.banner = "Usage: flapjack-worker-manager <command> [options]"
       opts.separator " "
       opts.separator "  where <command> is one of:"
       opts.separator "     start            start a worker"
