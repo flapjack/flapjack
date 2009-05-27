@@ -1,18 +1,20 @@
 #!/usr/bin/env ruby
 
+$: << File.dirname(__FILE__) + '/../lib') unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+
 require 'rubygems'
 require 'beanstalk-client'
 require 'ostruct'
 require 'optparse'
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
-require 'lib/flapjack/result'
-require 'lib/flapjack/notifier'
-require 'lib/flapjack/notifiers/mailer'
-require 'lib/flapjack/notifiers/xmpp'
+require 'flapjack/result'
+require 'flapjack/notifier'
+require 'flapjack/notifiers/mailer'
+require 'flapjack/notifiers/xmpp'
 
 # command line options are in here
-require 'lib/flapjack/cli/notifier'
+require 'flapjack/cli/notifier'
 
 # boot up the notifier
 @options = Flapjack::NotifierOptions.parse(ARGV)
