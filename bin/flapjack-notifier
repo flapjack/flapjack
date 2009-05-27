@@ -23,10 +23,13 @@ ncli = Flapjack::NotifierCLI.new
 ncli.setup_loggers
 ncli.setup_recipients(:filename => @options.recipients)
 
+ncli.log.debug("Loading Mailer notifier")
 mailer = Flapjack::Notifiers::Mailer.new
+ncli.log.debug("Loading XMPP notifier")
 xmpp = Flapjack::Notifiers::Xmpp.new(:jid => "flapjack-test@jabber.org", :password => "test")
+ncli.log.debug("Bringing up notifier subsystem")
 ncli.notifier = Notifier.new(:logger => ncli.log, 
-                             :notifiers => [mailer, xmpp], 
+                             :notifiers => [mailer], #, xmpp], 
                              :recipients => ncli.recipients)
 
 begin 
