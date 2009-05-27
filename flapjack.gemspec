@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'flapjack'
-  s.version = '0.3.3'
+  s.version = '0.3.4'
   s.date = '2009-05-26'
   
   s.summary = "a scalable and distributed monitoring system"
@@ -18,8 +18,8 @@ Gem::Specification.new do |s|
   s.add_dependency('mailfactory', '>= 1.4.0')
  
   s.bindir = "bin"
-  s.executables = `git ls-files bin/*`.split
-  s.files = `git ls-files`.split.grep(/^[^\.gitignore|^spec\/]/)
+  s.executables = `git ls-files bin/*`.split.map {|bin| bin.gsub(/^bin\//, '')}
+  s.files = `git ls-files`.split.delete_if {|file| file =~ /^(spec\/|\.gitignore)/}
 end
 
 
