@@ -43,6 +43,10 @@ chmod a+rw /var/run/flapjack
 etc_path=$(gem contents flapjack |grep etc | ruby -e "puts STDIN.gets.gsub(/etc\/.+/, 'etc')")
 cp -aiv $etc_path/* /etc/
 
+# set sequence number to 50 so beanstalkd has a chance to boot
+update-rc.d flapjack-workers defaults 50
+update-rc.d flapjack-notifier defaults 50
+
 echo 
 echo "Setup complete!"
 echo 
