@@ -1,18 +1,32 @@
 #!/usr/bin/env ruby
 
-unless ARGV.size == 2 || ARGV.grep(/[\-\-help|\-h]/).size > 0
-  puts "Usage: #{__FILE__} <number-of-workers> <host>"
-  exit 1
+$: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+
+require 'rubygems'
+require 'daemons'
+require 'fileutils'
+require 'flapjack/cli/worker_manager'
+
+# reassign ARGV so we don't mess with it directly
+args = ARGV
+args << '--help' if args.size == 0
+options = WorkerManagerOptions.parse(args)
+
+worker_path = File.join(File.dirname(__FILE__), 'flapjack-worker')
+
+# set up pid dir
+pid_dir = "/var/run/flapjack"
+FileUtils.mkdir_p(pid_dir)
+
+# spin up a number of workers (5 is the default).
+options.workers.times do |n|
+  # we fork for each worker, as Daemons.run backgrounds this script.
+  fork do
+    Daemons.run(worker_path, 
+                :ARGV => (args + %w(-- -b localhost)), 
+                :multiple => true, 
+                :dir_mode => :normal,
+                :dir => pid_dir)
+  end
 end
 
-number = ARGV[0].to_i
-host = ARGV[1]
-
-puts "Spinning up #{number} workers..."
-
-number.times do
-  cmd = "ruby #{File.join(File.dirname(__FILE__), 'worker.rb')} #{host} 2>&1 >/dev/null &"
-  system(cmd)
-end
-
-system("disown -a")
