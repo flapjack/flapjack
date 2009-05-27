@@ -49,7 +49,7 @@ Installation
 
 Install flapjack:
 
-    sudo gem install flapjack
+    sudo gem install auxesis-flapjack
 
 Then run the magic configuration script to set up init scripts: 
 
