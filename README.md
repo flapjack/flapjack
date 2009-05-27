@@ -49,6 +49,11 @@ Create a directory for PID files:
     sudo mkdir /var/run/flapjack 
     sudo chmod a+rw /var/run/flapjack
 
+Copy init scripts and default config across: 
+
+    gem contents flapjack | grep etc
+    sudo cp -rf path/to/flapjack/etc/* /etc/
+
 
 Running 
 -------
@@ -60,14 +65,9 @@ Make sure beanstalkd is running.
   * `flapjack-notifier` => gets results, notifies people if necessary  
   * `flapjack-stats` => gets stats from beanstalkd tubes (useful for benchmarks + performance analysis)  
 
-You'll want to set up a `recipients.yaml` so notifications can be sent via 
+You'll want to set up `/etc/flapjack/recipients.yaml` so notifications can be sent via 
 `flapjack-notifier`: 
 
-    - :name: John Doe
-      :email: "john@doe.com"
-      :phone: "+61 444 333 222"
-      :pager: "61444333222"
-      :jid: "john@doe.com"
     - :name: Jane Doe
       :email: "jane@doe.com"
       :phone: "+61 444 222 111"
@@ -94,6 +94,23 @@ Currently there are email and XMPP notifiers.
 You'll want to get a copy of (http://github.com/auxesis/flapjack-admin/)[flapjack-admin]
 to set up some checks, then run its' populator to get them into Flapjack. 
 
+
+init scripts
+------------
+
+You can use the provided init scripts to start Flapjack on boot. 
+
+To start: 
+
+    /etc/init.d/flapjack-workers start
+    /etc/init.d/flapjack-notifier start
+
+To set Flapjack to start on boot (Ubuntu): 
+
+    sudo update-rc.d flapjack-workers defaults
+    sudo update-rc.d flapjack-notifier defaults
+
+Config for the init scripts can be found in `/etc/defaults`.
 
 
 
