@@ -94,6 +94,9 @@ Currently there are email and XMPP notifiers.
 You'll want to get a copy of (http://github.com/auxesis/flapjack-admin/)[flapjack-admin]
 to set up some checks, then run its' populator to get them into Flapjack. 
 
+
+
+
 Developing
 ----------
 
