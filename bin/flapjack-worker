@@ -1,44 +1,34 @@
 #!/usr/bin/env ruby
 
+$: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+
 require 'rubygems'
-require 'beanstalk-client'
+require 'log4r'
+require 'log4r/outputter/syslogoutputter'
+require 'flapjack/cli/worker'
 
-unless ARGV[0] || ARGV.grep(/[\-\-help|\-h]/).size > 0
-  puts "Usage: #{__FILE__} <hostname>"
-  exit 1
+at_exit do 
+  puts "Shutting down"
 end
 
-@host = ARGV[0]
+trap("INT") do 
+  puts "Caught shutdown signal, cleaning up."
+  exit
+end
 
-begin 
-  @jobs    = Beanstalk::Pool.new(["#{@host}:11300"], 'jobs')
-  @results = Beanstalk::Pool.new(["#{@host}:11300"], 'results')
-  loop do
-    # get_job
-    # perform_job
-    # report_job
-    puts 'waiting for jobs...'
-    job = @jobs.reserve
-    j = YAML::load(job.body)
-    puts "processing #{j.inspect}"
+@options = Flapjack::WorkerOptions.parse(ARGV)
+@worker = Flapjack::WorkerCLI.new(:host => @options.host, :port => @options.port)
 
-    result = `sh -c '#{j[:command]}'`
-    retval = $?.exitstatus
-
-    puts "sending results for #{j[:id]}"
-    @results.yput({:id => j[:id], 
-                   :output => result, 
-                   :retval => retval.to_i})
-   
-    # add job back onto stack
-    @jobs.yput(j, 65536, j[:frequency])
-      
-    # once we're done, clean up
-    job.delete
-  end
+begin
+  @worker.process_loop
 rescue Beanstalk::NotConnected
-  puts "beanstalk isn't up!"
-  exit 2
+  puts "Couldn't connect to the beanstalk!"
+ 
+  timeout = 5
+  puts "Retrying in #{timeout} seconds"
+  sleep timeout 
+
+  puts "Retrying..."
+  retry
 end
-  
 
