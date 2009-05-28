@@ -47,10 +47,13 @@ Install the following software through your package manager or from source:
 Installation
 ------------
 
-From the checked out code, build + install the gem: 
+Add GitHub's RubyGems server to your Gem sources: 
 
-    rake build
-    sudo gem install pkg/flapjack-<latest>.gem
+    sudo gem sources -a http://gems.github.com
+
+Install the Flapjack gem: 
+
+    sudo gem install auxesis-flapjack
 
 Then run the magic configuration script to set up init scripts: 
 
