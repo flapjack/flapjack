@@ -27,6 +27,19 @@ task :deps do
 
 end
 
+desc "generate list of files for gemspec"
+task "gengemfiles" do 
+  executables = `git ls-files bin/*`.split.map {|bin| bin.gsub(/^bin\//, '')}             
+  files = `git ls-files`.split.delete_if {|file| file =~ /^(spec\/|\.gitignore)/}
+  puts
+  puts "Copy and paste into flapjack.gemspec:"
+  puts
+  puts "    s.executables = #{executables.inspect}"
+  puts "    s.files = #{files.inspect}"
+  puts
+  puts
+end
+
 desc "build gem"
 task :build do 
   system("gem build flapjack.gemspec")
