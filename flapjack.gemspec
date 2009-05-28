@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'flapjack'
-  s.version = '0.3.7'
+  s.version = '0.3.8'
   s.date = '2009-05-26'
   
   s.summary = "a scalable and distributed monitoring system"
@@ -18,8 +18,8 @@ Gem::Specification.new do |s|
   s.add_dependency('mailfactory', '>= 1.4.0')
  
   s.bindir = "bin"
-  s.executables = `git ls-files bin/*`.split.map {|bin| bin.gsub(/^bin\//, '')}
-  s.files = `git ls-files`.split.delete_if {|file| file =~ /^(spec\/|\.gitignore)/}
+  s.executables = ["flapjack-notifier", "flapjack-notifier-manager", "flapjack-stats", "flapjack-worker", "flapjack-worker-manager", "install-flapjack-systemwide"]
+  s.files = ["README.md", "Rakefile", "TODO.md", "bin/flapjack-notifier", "bin/flapjack-notifier-manager", "bin/flapjack-stats", "bin/flapjack-worker", "bin/flapjack-worker-manager", "bin/install-flapjack-systemwide", "etc/default/flapjack-notifier", "etc/default/flapjack-workers", "etc/flapjack/recipients.yaml", "etc/init.d/flapjack-notifier", "etc/init.d/flapjack-workers", "flapjack.gemspec", "lib/flapjack/cli/notifier.rb", "lib/flapjack/cli/notifier_manager.rb", "lib/flapjack/cli/worker.rb", "lib/flapjack/cli/worker_manager.rb", "lib/flapjack/notifier.rb", "lib/flapjack/notifiers/mailer.rb", "lib/flapjack/notifiers/xmpp.rb", "lib/flapjack/patches.rb", "lib/flapjack/result.rb"]
 end
 
 
