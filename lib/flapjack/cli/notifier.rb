@@ -200,7 +200,15 @@ module Flapjack
         @log.error("Got result for check #{result.id}, but it doesn't exist!")
       end
     end
-  
+
+    def any_parents_warning_or_critical?(result)
+      if check = Check.get(result.id)
+        check.worst_parent_status > 0 ? true : false 
+      else
+        @log.error("Got result for check #{result.id}, but it doesn't exist!")
+      end
+    end
+
     def process_result
       @log.debug("Waiting for new result...")
       result_job = @results_queue.reserve # blocks until a job is reserved
@@ -208,8 +216,12 @@ module Flapjack
       
       @log.info("Processing result for check '#{result.id}'")
       if result.warning? || result.critical?
-        @log.info("Notifying on check '#{result.id}'")
-        @notifier.notify!(result)
+        if any_parents_warning_or_critical?(result)
+          @log.info("Not notifying on check '#{result.id}' as parent is failing.")
+        else
+          @log.info("Notifying on check '#{result.id}'")
+          @notifier.notify!(result)
+        end
       end
 
       @log.info("Storing status of check in database")
