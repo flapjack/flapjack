@@ -192,6 +192,7 @@ module Flapjack
       end
     end
 
+    # FIXME: we're doing a lookup twice - optimise out
     def save_result(result)
       if check = Check.get(result.id)
         check.status = result.retval
@@ -201,6 +202,7 @@ module Flapjack
       end
     end
 
+    # FIXME: we're doing a lookup twice - optimise out
     def any_parents_warning_or_critical?(result)
       if check = Check.get(result.id)
         check.worst_parent_status > 0 ? true : false 
