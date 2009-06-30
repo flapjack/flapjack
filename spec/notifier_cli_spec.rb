@@ -5,6 +5,7 @@ describe "running the notifier" do
   before(:each) do 
   end
  
+  # logging
   it "should set up a logger instance on init" do 
     n = Flapjack::NotifierCLI.new
     n.log.should_not be_nil
@@ -15,7 +16,8 @@ describe "running the notifier" do
     n.setup_loggers
     n.log.outputters.size.should > 0
   end
-  
+ 
+  # recipients
   it "should setup recipients with a default file" do 
     n = Flapjack::NotifierCLI.new
     n.setup_recipients
@@ -28,6 +30,37 @@ describe "running the notifier" do
     n.recipients.size.should > 0
   end
 
+  it "should create an accessor object for every recipient" do 
+    n = Flapjack::NotifierCLI.new
+    n.setup_recipients
+    n.recipients.each do |r|
+      r.email.should =~ /@/
+      r.name.should =~ /\w+/
+      r.phone.should =~ /\d+/
+      r.pager.should =~ /\d+/
+      r.jid.should =~ /@/
+    end
+  end
+
+  # notifier
+  it "should setup a notifier" do 
+    n = Flapjack::NotifierCLI.new
+    n.setup_config(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'flapjack-notifier.yaml'))
+    n.setup_notifier(:logger => n.log, :recipients => n.recipients)
+    n.notifier.should_not be_nil
+  end
+
+  it "should load up notifiers specified in a config file" do 
+    n = Flapjack::NotifierCLI.new
+    n.setup_config(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'flapjack-notifier.yaml'))
+    n.initialize_notifiers
+    n.notifiers.size.should > 0
+    n.notifiers.each do |nf|
+      nf.should respond_to(:notify)
+    end
+  end
+ 
+  # config
   it "should setup a config" do 
     n = Flapjack::NotifierCLI.new
     n.setup_config(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'flapjack-notifier.yaml'))
@@ -51,25 +84,7 @@ describe "running the notifier" do
     end
   end
   
-  it "should create an accessor object for every recipient" do 
-    n = Flapjack::NotifierCLI.new
-    n.setup_recipients
-    n.recipients.each do |r|
-      r.email.should =~ /@/
-      r.name.should =~ /\w+/
-      r.phone.should =~ /\d+/
-      r.pager.should =~ /\d+/
-      r.jid.should =~ /@/
-    end
-  end
-
-  it "should setup a notifier" do 
-    n = Flapjack::NotifierCLI.new
-    n.notifier = Notifier.new(:logger => n.log, 
-                              :recipients => n.recipients)
-    n.notifier.should_not be_nil
-  end
-  
+  # actual work
   it "should setup a results queue" do 
     n = Flapjack::NotifierCLI.new
     beanstalk = mock("Beanstalk::Pool")
