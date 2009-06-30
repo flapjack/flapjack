@@ -173,7 +173,7 @@ module Flapjack
   
     def process_result
       @log.debug("Waiting for new result...")
-      result_job = @results_queue.reserve
+      result_job = @results_queue.reserve # blocks until a job is reserved
       result = Result.new(YAML::load(result_job.body))
       
       @log.info("Processing result for check '#{result.id}'")
