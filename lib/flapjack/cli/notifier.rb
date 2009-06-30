@@ -22,7 +22,7 @@ module Flapjack
           options.recipients = recipients.to_s
         end
         opts.on('-c', '--config FILE', 'config file') do |config|
-          options.config_file = config.to_s
+          options.config_filename = config.to_s
         end
         opts.on_tail("-h", "--help", "Show this message") do
           puts opts
@@ -43,7 +43,7 @@ module Flapjack
       # default the host + port
       options.host ||= 'localhost'
       options.port ||= 11300
-      options.config_file ||= "/etc/flapjack/flapjack-notifier.yaml"
+      options.config_filename ||= "/etc/flapjack/flapjack-notifier.yaml"
   
       @errors = []
       # check that recipients file exists
@@ -52,7 +52,7 @@ module Flapjack
       end
  
       # check that config file exists
-      unless File.exists?(options.config_file.to_s)
+      unless File.exists?(options.config_filename.to_s)
         @errors << "The specified config file doesn't exist!"
       end
 
@@ -72,7 +72,7 @@ module Flapjack
   end
   
   class NotifierCLI
-    attr_accessor :log, :recipients, :notifier, :results_queue
+    attr_accessor :log, :recipients, :notifier, :results_queue, :config
     attr_accessor :condition
   
     def initialize
@@ -92,10 +92,23 @@ module Flapjack
         opts[:filename] ||= File.join(Dir.pwd, "recipients.yaml")
         yaml = YAML::load(File.read(opts[:filename]))
       end
-  
+ 
+      # FIXME: add error detection for passing in dumb things
+
       @recipients = yaml.map do |r|
         OpenStruct.new(r)
       end
+    end
+
+    def setup_config(opts={})
+      if opts[:yaml]
+        yaml = opts[:yaml]
+      else
+        opts[:filename] ||= File.join(Dir.pwd, "flapjack-notifier.yaml")
+        yaml = YAML::load(File.read(opts[:filename]))
+      end
+
+      @config = OpenStruct.new(yaml)
     end
   
     def process_loop
