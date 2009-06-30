@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'flapjack'
-  s.version = '0.3.8'
+  s.version = '0.4.0'
   s.date = '2009-05-26'
   
   s.summary = "a scalable and distributed monitoring system"
@@ -17,6 +17,11 @@ Gem::Specification.new do |s|
   s.add_dependency('xmpp4r-simple', '>= 0.8.8')
   s.add_dependency('mailfactory', '>= 1.4.0')
   s.add_dependency('dm-core', '>= 0.9.11')
+  s.add_dependency('dm-timestamps', '>= 0.9.11')
+  s.add_dependency('dm-types', '>= 0.9.11')
+  s.add_dependency('dm-validations', '>= 0.9.11')
+  s.add_dependency('data_objects', '>= 0.9.12')
+  s.add_dependency('do_sqlite3', '>= 0.9.12')
  
   s.bindir = "bin"
   s.executables = ["flapjack-notifier", "flapjack-notifier-manager", "flapjack-stats", "flapjack-worker", "flapjack-worker-manager", "install-flapjack-systemwide"]
