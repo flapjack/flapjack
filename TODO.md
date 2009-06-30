@@ -12,3 +12,7 @@
    * build packages for gem dependencies
  * provide common interface for loading checks into beanstalk
  * write check generator
+   * include a collection of common functions 
+     (logging to rrd, retreiving values, executing check)
+ * write zeroconf/avahi notifier
+ * write growl notifier
