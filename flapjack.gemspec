@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'flapjack'
-  s.version = '0.4.2'
+  s.version = '0.4.3'
   s.date = '2009-06-30'
   
   s.summary = "a scalable and distributed monitoring system"
@@ -25,7 +25,7 @@ Gem::Specification.new do |s|
  
   s.bindir = "bin"
   s.executables = ["flapjack-notifier", "flapjack-notifier-manager", "flapjack-stats", "flapjack-worker", "flapjack-worker-manager", "install-flapjack-systemwide"]
-  s.files = ["LICENCE", "README.md", "Rakefile", "TODO.md", "bin/flapjack-notifier", "bin/flapjack-notifier-manager", "bin/flapjack-stats", "bin/flapjack-worker", "bin/flapjack-worker-manager", "bin/install-flapjack-systemwide", "etc/default/flapjack-notifier", "etc/default/flapjack-workers", "etc/flapjack/recipients.yaml", "etc/init.d/flapjack-notifier", "etc/init.d/flapjack-workers", "flapjack.gemspec", "lib/flapjack/cli/notifier.rb", "lib/flapjack/cli/notifier_manager.rb", "lib/flapjack/cli/worker.rb", "lib/flapjack/cli/worker_manager.rb", "lib/flapjack/database.rb", "lib/flapjack/models/check.rb", "lib/flapjack/models/check_template.rb", "lib/flapjack/models/node.rb", "lib/flapjack/models/related_check.rb", "lib/flapjack/notifier.rb", "lib/flapjack/notifiers/mailer/init.rb", "lib/flapjack/notifiers/mailer/mailer.rb", "lib/flapjack/notifiers/xmpp/init.rb", "lib/flapjack/notifiers/xmpp/xmpp.rb", "lib/flapjack/patches.rb", "lib/flapjack/result.rb"]
+  s.files = ["LICENCE", "README.md", "Rakefile", "TODO.md", "bin/flapjack-notifier", "bin/flapjack-notifier-manager", "bin/flapjack-stats", "bin/flapjack-worker", "bin/flapjack-worker-manager", "bin/install-flapjack-systemwide", "etc/default/flapjack-notifier", "etc/default/flapjack-workers", "etc/flapjack/flapjack-notifier.yaml.example", "etc/flapjack/recipients.yaml", "etc/flapjack/recipients.yaml.example", "etc/init.d/flapjack-notifier", "etc/init.d/flapjack-workers", "flapjack.gemspec", "lib/flapjack/cli/notifier.rb", "lib/flapjack/cli/notifier_manager.rb", "lib/flapjack/cli/worker.rb", "lib/flapjack/cli/worker_manager.rb", "lib/flapjack/database.rb", "lib/flapjack/models/check.rb", "lib/flapjack/models/check_template.rb", "lib/flapjack/models/node.rb", "lib/flapjack/models/related_check.rb", "lib/flapjack/notifier.rb", "lib/flapjack/notifiers/mailer/init.rb", "lib/flapjack/notifiers/mailer/mailer.rb", "lib/flapjack/notifiers/xmpp/init.rb", "lib/flapjack/notifiers/xmpp/xmpp.rb", "lib/flapjack/patches.rb", "lib/flapjack/result.rb"]
 end
 
 
