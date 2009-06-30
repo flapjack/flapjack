@@ -21,6 +21,9 @@ module Flapjack
         opts.on('-p', '--port PORT', 'beanstalkd port') do |port|
           options.port = port.to_i
         end
+        opts.on('-c', '--checks-directory DIR', 'sandboxed check directory') do |dir|
+          options.checks_directory = dir.to_s
+        end
         opts.on_tail("-h", "--help", "Show this message") do
           puts opts
           exit
@@ -40,6 +43,7 @@ module Flapjack
       # default the port
       options.host ||= 'localhost'
       options.port ||= 11300
+      options.checks_directory ||= File.join(File.dirname(__FILE__), '..', 'checks')
   
       options
     end
