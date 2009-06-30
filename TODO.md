@@ -4,7 +4,7 @@
    * specify configuration for plugins (from address/xmmp login) - DONE
  * write init scripts for notifier/worker-manager - DONE
  * hook notifier into web interface
-   * update status of checks
+   * update status of checks - DONE
    * relationships + cascading notifications
    * simple graphs
  * package with pallet
