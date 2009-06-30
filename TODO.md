@@ -16,3 +16,5 @@
      (logging to rrd, retreiving values, executing check)
  * write zeroconf/avahi notifier
  * write growl notifier
+ * write way to customise notifier messages (email body, xmpp format)
+ * write sms notifier
