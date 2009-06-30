@@ -1,0 +1,8 @@
+--- 
+:notifiers: 
+  :mailer: 
+    :from_address: notifications@flapjack-project.com
+  :xmpp: 
+    :jid: flapjack-test@jabber.org
+    :password: test
+:database_uri: "sqlite3:///tmp/flapjack-test.db"
