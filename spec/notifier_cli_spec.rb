@@ -1,4 +1,5 @@
 require File.join(File.dirname(__FILE__), '..', 'lib', 'flapjack', 'cli', 'notifier')
+require File.join(File.dirname(__FILE__), 'helpers')
 
 describe "running the notifier" do 
  
@@ -58,6 +59,13 @@ describe "running the notifier" do
     n.notifiers.each do |nf|
       nf.should respond_to(:notify)
     end
+  end
+
+  it "should warn if a specified notifier doesn't exist" do 
+    n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
+    n.setup_config(:yaml => {:notifiers => {:nonexistant => {}}})
+    n.initialize_notifiers
+    n.log.messages.find {|message| message =~ /Flapjack::Notifiers::Nonexistant doesn't exist/}.should_not be_nil
   end
  
   # config
