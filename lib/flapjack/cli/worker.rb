@@ -116,7 +116,8 @@ module Flapjack
     def get_check
       @log.debug("Waiting for check...")
       job = @jobs.reserve
-      check = Check.new(YAML::load(job.body))
+      # FIXME: maybe wrap Result as Job now that Check is reserved?
+      check = Result.new(YAML::load(job.body))
       @log.info("Got check with id #{check.id}")
 
       return job, check
