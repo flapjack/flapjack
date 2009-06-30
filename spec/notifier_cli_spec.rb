@@ -116,7 +116,6 @@ describe "running the notifier" do
     n.setup_database(:database_uri => "sqlite3://#{File.expand_path(File.dirname(__FILE__))}/test.db")                           
     n.setup_notifier                                                                                                             
                                                                                                                                  
-    # create a dummy check                                                                                                       
     DataMapper.auto_migrate!
     
     beanstalk = mock("Beanstalk::Pool")
