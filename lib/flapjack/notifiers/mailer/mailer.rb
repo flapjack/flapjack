@@ -8,13 +8,17 @@ module Flapjack
   module Notifiers
 
     class Mailer
-    
+
+      def initialize(opts={})
+        @from_address = opts[:from_address]
+      end
+
       def notify(opts={})
         raise unless (opts[:who] && opts[:result])
     
         mail = MailFactory.new
         mail.to = opts[:who].email
-        mail.from = "notifications@flapjack-project.com"
+        mail.from = @from_address
         mail.subject = "Check: #{opts[:result].id}, Status: #{opts[:result].status}"
         mail.text = <<-DESC
           Check #{opts[:result].id} returned the status "#{opts[:result].status}".
