@@ -49,6 +49,10 @@ system("update-rc.d flapjack-notifier defaults 50")
 puts 
 puts "Setup complete!"
 puts 
-puts "You may want to customise /etc/flapjack/recipients.yaml"
+puts "You will want to customise:"
+puts "  * /etc/flapjack/recipients.yaml"
+puts "  * /etc/flapjack/flapjack-notifier.yaml"
+puts 
+puts ".examples of these files exist in /etc/flapjack/'
 
 
