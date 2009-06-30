@@ -12,3 +12,4 @@ recipients.yaml
 doc/*
 pkg/*
 !etc/flapjack/recipients.yaml
+spec/test.db
