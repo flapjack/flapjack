@@ -64,6 +64,14 @@ class Check
     RelatedCheck.all(:parent_id => self.id).map {|rc| rc.child_check}
   end
 
+  def worst_parent_status
+    if parent_checks.size > 0
+      self.parent_checks.map { |parent| parent.status }.sort.pop
+    else
+      0
+    end
+  end
+
 
   GOOD = 0
   BAD  = 1
