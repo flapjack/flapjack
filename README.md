@@ -105,7 +105,7 @@ Each of the `flapjack-worker`s will output to syslog (check in /var/log/messages
 
 Start up the notifier: 
 
-    flapjack-notifier --recipients /etc/flapjack/recipients.yaml
+    flapjack-notifier-manager start --recipients /etc/flapjack/recipients.yaml
 
 Currently there are email and XMPP notifiers. 
 
