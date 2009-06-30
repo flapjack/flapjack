@@ -111,8 +111,8 @@ describe "running the notifier" do
 
   it "should process results" do 
     n = Flapjack::NotifierCLI.new
-    n.notifier = Notifier.new(:logger => n.log, 
-                              :recipients => n.recipients)
+    n.notifier = Flapjack::Notifier.new(:logger => n.log, 
+                                        :recipients => n.recipients)
     
     beanstalk = mock("Beanstalk::Pool")
     beanstalk.stub!(:reserve).and_return {
