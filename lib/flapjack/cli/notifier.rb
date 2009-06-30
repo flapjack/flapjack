@@ -72,11 +72,13 @@ module Flapjack
   end
   
   class NotifierCLI
-    attr_accessor :log, :recipients, :notifier, :results_queue, :config
+    attr_accessor :log, :recipients, :results_queue, :config
+    attr_accessor :notifier, :notifiers
     attr_accessor :condition
   
-    def initialize
-      @log = Log4r::Logger.new("notifier")
+    def initialize(opts={})
+      @log = opts[:logger]
+      @log ||= Log4r::Logger.new("notifier")
     end
   
     def setup_loggers
@@ -109,6 +111,44 @@ module Flapjack
       end
 
       @config = OpenStruct.new(yaml)
+    end
+
+    def initialize_notifiers(opts={})
+      notifiers_directory = opts[:notifiers_directory] 
+      notifiers_directory ||= File.expand_path(File.join(File.dirname(__FILE__), '..', 'notifiers'))
+
+      raise ArgumentError, "notifiers directory doesn't exist!" unless File.exists?(notifiers_directory)
+      
+      @notifiers = []
+     
+      @config.notifiers.each_pair do |notifier, config|
+        filename = File.join(notifiers_directory, notifier.to_s, 'init')
+        if File.exists?(filename + '.rb')
+          require filename
+          @notifiers << Flapjack::Notifiers.const_get("#{notifier.to_s.capitalize}").new(config)
+        end
+          @log.warning("Flapjack::Notifiers::#{notifier.to_s.capitalize} doesn't exist!") 
+        end
+
+      @notifiers
+    end
+
+    # Sets up notifier to do the grunt work of notifying people when checks 
+    # return badly. 
+    #
+    # Accepts a list of recipients (:recipients) and a logger (:logger) as 
+    # arguments. If neither of these are specified, it will default to an 
+    # existing list of recipients and the current logger.
+    #
+    # Sets up and returns @notifier, an instance of Flapjack::Notifier
+    def setup_notifier(opts={})
+      recipients = (opts[:recipients] || @recipients)
+      log = (opts[:logger] || @log)
+      initialize_notifiers
+      notifiers = @notifiers # should we accept a list of notifiers?
+      @notifier = Notifier.new(:logger => log,
+                               :notifiers => notifiers,
+                               :recipients => recipients)
     end
   
     def process_loop
