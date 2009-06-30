@@ -6,6 +6,9 @@
  * hook notifier into web interface
    * update status of checks
    * relationships + cascading notifications
+   * simple graphs
  * package with pallet
  * generate .deb/.rpms
    * build packages for gem dependencies
+ * provide common interface for loading checks into beanstalk
+ * write check generator
