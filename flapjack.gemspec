@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'flapjack'
-  s.version = '0.4.3'
+  s.version = '0.4.4'
   s.date = '2009-06-30'
   
   s.summary = "a scalable and distributed monitoring system"
