@@ -43,5 +43,3 @@ class Result < OpenStruct
 
 end
 
-class Check < Result
-end
