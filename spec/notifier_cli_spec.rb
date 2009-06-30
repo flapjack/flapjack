@@ -65,7 +65,14 @@ describe "running the notifier" do
     n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
     n.setup_config(:yaml => {:notifiers => {:nonexistant => {}}})
     n.initialize_notifiers
-    n.log.messages.find {|message| message =~ /Flapjack::Notifiers::Nonexistant doesn't exist/}.should_not be_nil
+    n.log.messages.find {|msg| msg =~ /Flapjack::Notifiers::Nonexistant doesn't exist/}.should_not be_nil
+  end
+
+  it "should log when loading up a notifier" do 
+    n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
+    n.setup_config(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'flapjack-notifier.yaml'))
+    n.initialize_notifiers
+    n.log.messages.find_all {|msg| msg =~ /Loading .+ notifier/}.size.should > 0
   end
  
   # config
