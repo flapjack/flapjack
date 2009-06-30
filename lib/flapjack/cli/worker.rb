@@ -56,6 +56,7 @@ module Flapjack
     def initialize(opts={})
       @jobs    = Beanstalk::Pool.new(["#{opts[:host]}:#{opts[:port]}"], 'jobs')
       @results = Beanstalk::Pool.new(["#{opts[:host]}:#{opts[:port]}"], 'results')
+      @sandbox = (opts[:check_directory] || File.expand_path(File.join(File.dirname(__FILE__), '..', 'checks')))
 
       if opts[:logger]
         @log = opts[:logger]
@@ -88,7 +89,7 @@ module Flapjack
     end
 
     def perform_check(cmd)
-      command = "sh -c '#{cmd}'"
+      command = "sh -c '#{@sandbox}/#{cmd}'"
       @log.debug("Executing check: \"#{command}\"")
       result = `#{command}`
       retval = $?.exitstatus
