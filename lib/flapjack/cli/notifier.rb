@@ -180,6 +180,15 @@ module Flapjack
         process_result
       end
     end
+
+    def save_result(result)
+      if check = Check.get(result.id)
+        check.status = result.retval
+        check.save
+      else
+        @log.error("Got result for check #{result.id}, but it doesn't exist!")
+      end
+    end
   
     def process_result
       @log.debug("Waiting for new result...")
@@ -193,9 +202,7 @@ module Flapjack
       end
 
       @log.info("Storing status of check in database")
-      check = Check.get(result.id)
-      check.status = result.retval
-      check.save
+      save_result(result)
 
       @log.debug("Deleting result for check '#{result.id}' from queue")
       result_job.delete
