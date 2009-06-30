@@ -21,6 +21,9 @@ module Flapjack
         opts.on('-r', '--recipients FILE', 'recipients file') do |recipients|
           options.recipients = recipients.to_s
         end
+        opts.on('-c', '--config FILE', 'config file') do |config|
+          options.config_file = config.to_s
+        end
         opts.on_tail("-h", "--help", "Show this message") do
           puts opts
           exit
@@ -40,6 +43,7 @@ module Flapjack
       # default the host + port
       options.host ||= 'localhost'
       options.port ||= 11300
+      options.config_file ||= "/etc/flapjack/flapjack-notifier.yaml"
   
       @errors = []
       # check that recipients file exists
@@ -47,6 +51,11 @@ module Flapjack
         @errors << "The specified recipients file doesn't exist!"
       end
  
+      # check that config file exists
+      unless File.exists?(options.config_file.to_s)
+        @errors << "The specified config file doesn't exist!"
+      end
+
       # if there are errors, print them out and exit
       if @errors.size > 0
         puts "Errors:"
