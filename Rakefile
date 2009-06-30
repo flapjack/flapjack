@@ -63,3 +63,13 @@ if require 'yard'
   end
   
 end
+
+desc "display FIXMEs in the codebase"
+task :fixmes do 
+  output = `grep -nR FIXME lib/* spec/* bin/`
+  output.split("\n").each do |line|
+    parts = line.split(':')
+    puts "#{parts[0].strip} +#{parts[1].strip}"
+    puts "  - #{parts[3].strip}"
+  end
+end
