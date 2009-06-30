@@ -16,6 +16,7 @@ Gem::Specification.new do |s|
   s.add_dependency('log4r', '>= 1.0.5')
   s.add_dependency('xmpp4r-simple', '>= 0.8.8')
   s.add_dependency('mailfactory', '>= 1.4.0')
+  s.add_dependency('dm-core', '>= 0.9.11')
  
   s.bindir = "bin"
   s.executables = ["flapjack-notifier", "flapjack-notifier-manager", "flapjack-stats", "flapjack-worker", "flapjack-worker-manager", "install-flapjack-systemwide"]
