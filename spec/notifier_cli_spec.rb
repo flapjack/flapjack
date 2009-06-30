@@ -72,7 +72,7 @@ describe "running the notifier" do
     n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
     n.setup_config(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'flapjack-notifier.yaml'))
     n.initialize_notifiers
-    n.log.messages.find_all {|msg| msg =~ /Loading .+ notifier/}.size.should > 0
+    n.log.messages.find_all {|msg| msg =~ /Loading the .+ notifier/}.size.should > 0
   end
  
   # config
