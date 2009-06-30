@@ -27,12 +27,28 @@ describe "running the notifier" do
     n.setup_recipients(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml'))
     n.recipients.size.should > 0
   end
+
+  it "should setup a config" do 
+    n = Flapjack::NotifierCLI.new
+    n.setup_config(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'flapjack-notifier.yaml'))
+    n.config.should_not be_nil
+  end
+
+  it "should setup a config with a passed in yaml fragment" do 
+    n = Flapjack::NotifierCLI.new
+    yaml = YAML::load(File.read(File.join(File.dirname(__FILE__), 'fixtures', 'flapjack-notifier.yaml')))
+    n.setup_config(:yaml => yaml)
+    n.config.should_not be_nil
+  end
   
   it "should setup recipients with a passed in yaml fragment" do 
     n = Flapjack::NotifierCLI.new
-    yaml = File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml')
+    yaml = YAML::load(File.read(File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml')))
     n.setup_recipients(:yaml => yaml)
     n.recipients.size.should > 0
+    n.recipients.each do |r|
+      r.should respond_to(:name)
+    end
   end
   
   it "should create an accessor object for every recipient" do 
