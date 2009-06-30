@@ -43,17 +43,28 @@ module Flapjack
       # default the host + port
       options.host ||= 'localhost'
       options.port ||= 11300
-      options.config_filename ||= "/etc/flapjack/flapjack-notifier.yaml"
   
       @errors = []
       # check that recipients file exists
-      unless File.exists?(options.recipients.to_s)
-        @errors << "The specified recipients file doesn't exist!"
+      if options.recipients
+        unless File.exists?(options.recipients.to_s)
+          @errors << "The specified recipients file doesn't exist!"
+        end
+      else
+        @errors << "You need to specify a recipients file with [-r|--recipients]."
       end
- 
+
       # check that config file exists
-      unless File.exists?(options.config_filename.to_s)
-        @errors << "The specified config file doesn't exist!"
+      if options.config_filename 
+        unless File.exists?(options.config_filename.to_s)
+          @errors << "The specified config file doesn't exist!"
+        end
+      else
+        options.config_filename ||= "/etc/flapjack/flapjack-notifier.yaml"
+        unless File.exists?(options.config_filename.to_s)
+          @errors << "The default config file (#{options.config_filename}) doesn't exist!"
+          @errors << "Set one up, or specify one with [-c|--config]."
+        end
       end
 
       # if there are errors, print them out and exit
@@ -148,9 +159,9 @@ module Flapjack
       log = (opts[:logger] || @log)
       initialize_notifiers
       notifiers = @notifiers # should we accept a list of notifiers?
-      @notifier = Notifier.new(:logger => log,
-                               :notifiers => notifiers,
-                               :recipients => recipients)
+      @notifier = Flapjack::Notifier.new(:logger => log,
+                                         :notifiers => notifiers,
+                                         :recipients => recipients)
     end
   
     def process_loop
