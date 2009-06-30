@@ -25,6 +25,9 @@ module Flapjack
         opts.on('-c', '--config FILE', 'config file') do |config|
           options.config_filename = config.to_s
         end
+        opts.on('-d', '--database-uri URI', 'location of the checks database') do |db|
+          options.database_uri = db.to_s
+        end
         opts.on_tail("-h", "--help", "Show this message") do
           puts opts
           exit
