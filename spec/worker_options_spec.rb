@@ -45,6 +45,24 @@ describe Flapjack::WorkerOptions do
     options.port.should == 11300
   end
 
+  it "should accept a specified checks directory in short form" do 
+    args = %w(-c /tmp)
+    options = Flapjack::WorkerOptions.parse(args)
+    options.checks_directory.should == "/tmp"
+  end
+
+  it "should accept a specified checks directory in long form" do 
+    args = %w(--checks-directory /tmp)
+    options = Flapjack::WorkerOptions.parse(args)
+    options.checks_directory.should == "/tmp"
+  end
+
+  it "should set a default checks directory" do 
+    args = []
+    options = Flapjack::WorkerOptions.parse(args)
+    options.checks_directory.should_not be_nil
+  end
+
   # general
   it "should exit on when asked for help in short form" do 
     args = %w(-h)
