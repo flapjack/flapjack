@@ -74,19 +74,19 @@ describe Flapjack::NotifierOptions do
   it "should accept the location of a config file in short form" do 
     args = %w(-b localhost -r spec/recipients.yaml -c spec/flapjack-notifier.yaml)
     options = Flapjack::NotifierOptions.parse(args)
-    options.config_file.should == "spec/flapjack-notifier.yaml"
+    options.config_filename.should == "spec/flapjack-notifier.yaml"
   end
 
   it "should accept the location of a config file in long form" do 
     args = %w(-b localhost -r spec/recipients.yaml --config spec/flapjack-notifier.yaml)
     options = Flapjack::NotifierOptions.parse(args)
-    options.config_file.should == "spec/flapjack-notifier.yaml"
+    options.config_filename.should == "spec/flapjack-notifier.yaml"
   end
 
   it "should provide a default config file if not specified" do 
     args = %w(-b localhost -r spec/recipients.yaml -c spec/flapjack-notifier.yaml)
     options = Flapjack::NotifierOptions.parse(args)
-    options.config_file.should_not be_nil
+    options.config_filename.should_not be_nil
   end
 
   it "should exit if the config file doesn't exist" do 
