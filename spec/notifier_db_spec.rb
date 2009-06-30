@@ -3,6 +3,10 @@ require File.join(File.dirname(__FILE__), '..', 'lib', 'flapjack', 'notifier')
 require File.join(File.dirname(__FILE__), '..', 'lib', 'flapjack', 'result')
 require File.join(File.dirname(__FILE__), 'helpers')
 
+GOOD = 0
+BAD  = 1
+UGLY = 2
+
 describe "giving feedback to flapjack-admin" do 
 
   it "should setup a database connection as specified in the config file" do 
@@ -32,7 +36,7 @@ describe "giving feedback to flapjack-admin" do
     
     # create a dummy check
     DataMapper.auto_migrate!
-    check = Check.new(:id => 9, :status => 0, :command => 'foo', :name => 'foo')
+    check = Check.new(:id => 9, :status => GOOD, :command => 'foo', :name => 'foo')
     check.save.should be_true
 
     # mock out the beanstalk
@@ -49,7 +53,7 @@ describe "giving feedback to flapjack-admin" do
 
     # has the check been updated?
     check = Check.get(9)
-    check.status.should == 2
+    check.status.should == UGLY
   end
 
   it "should explode if no database uri is specified" do
@@ -91,6 +95,83 @@ describe "giving feedback to flapjack-admin" do
     n.setup_database(:database_uri => "sqlite3:///tmp/flapjack_unstructured.db")
 
     n.log.messages.find {|msg| msg =~ /doesn't .+ any structure/}.should_not be_nil
+  end
+
+  it "should notify on a check if parent is clear" do 
+    # setup the notifier
+    n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
+    n.setup_config(:yaml => {:notifiers => {}})
+    n.setup_recipients(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml'))
+    n.setup_database(:database_uri => "sqlite3://#{File.expand_path(File.dirname(__FILE__))}/test.db")
+    
+    # create a dummy check
+    DataMapper.auto_migrate!
+    child_check = Check.new(:id => 3, :status => GOOD, :command => 'foo', :name => 'foo')
+    child_check.save.should be_true
+
+    parent_check = Check.new(:id => 17, :status => GOOD, :command => 'bar', :name => 'bar')
+    parent_check.save.should be_true
+
+    relation = RelatedCheck.new(:parent_check => parent_check, :child_check => child_check)
+    relation.save.should be_true
+
+    # mock out notifier
+    mock_notifier = mock("Flapjack::Notifier")
+    mock_notifier.should_receive(:notify!)
+    n.notifier = mock_notifier
+
+    # mock out the beanstalk
+    beanstalk = mock("Beanstalk::Pool")
+    beanstalk.stub!(:reserve).and_return {
+      job = mock("Beanstalk::Job")
+      job.should_receive(:body).and_return("--- \n:output: \"\"\n:id: 3\n:retval: 2\n")
+      job.should_receive(:delete)
+      job
+    }
+    
+    n.results_queue = beanstalk
+    n.process_result
+
+    n.log.messages.find {|msg| msg =~ /not notifying.+6.+/i}.should be_nil
+  end
+
+  it "should not notify on a check if parent is failing" do 
+    # setup the notifier
+    n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
+    n.setup_config(:yaml => {:notifiers => {}})
+    n.setup_recipients(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml'))
+    n.setup_database(:database_uri => "sqlite3://#{File.expand_path(File.dirname(__FILE__))}/test.db")
+    #n.setup_notifier
+    
+    # create a dummy check
+    DataMapper.auto_migrate!
+    child_check = Check.new(:id => 6, :status => GOOD, :command => 'foo', :name => 'foo')
+    child_check.save.should be_true
+
+    parent_check = Check.new(:id => 22, :status => UGLY, :command => 'bar', :name => 'bar')
+    parent_check.save.should be_true
+
+    relation = RelatedCheck.new(:parent_check => parent_check, :child_check => child_check)
+    relation.save.should be_true
+
+    # mock out notifier
+    mock_notifier = mock("Flapjack::Notifier")
+    mock_notifier.should_not_receive(:notify!)
+    n.notifier = mock_notifier
+
+    # mock out the beanstalk
+    beanstalk = mock("Beanstalk::Pool")
+    beanstalk.stub!(:reserve).and_return {
+      job = mock("Beanstalk::Job")
+      job.should_receive(:body).and_return("--- \n:output: \"\"\n:id: 6\n:retval: 2\n")
+      job.should_receive(:delete)
+      job
+    }
+    
+    n.results_queue = beanstalk
+    n.process_result
+
+    n.log.messages.find {|msg| msg =~ /not notifying.+6.+/i}.should_not be_nil
   end
 
 end
