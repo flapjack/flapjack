@@ -54,10 +54,36 @@ describe "giving feedback to flapjack-admin" do
 
   it "should explode if no database uri is specified" do
     n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
-    n.setup_config(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'flapjack-notifier.yaml'))
+    n.setup_config(:yaml => {})
     lambda {
       n.setup_database
     }.should raise_error(ArgumentError)
+  end
+
+  it "should log an error if the check id for a check doesn't exist in the db" do 
+    # setup the notifier
+    n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
+    n.setup_config(:yaml => {:notifiers => {}})
+    n.setup_recipients(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml'))
+    n.setup_database(:database_uri => "sqlite3://#{File.expand_path(File.dirname(__FILE__))}/test.db")
+    n.setup_notifier
+    
+    # create a dummy check
+    DataMapper.auto_migrate!
+
+    # mock out the beanstalk
+    beanstalk = mock("Beanstalk::Pool")
+    beanstalk.stub!(:reserve).and_return {
+      job = mock("Beanstalk::Job")
+      job.should_receive(:body).and_return("--- \n:output: \"\"\n:id: 9\n:retval: 2\n")
+      job.should_receive(:delete)
+      job
+    }
+    
+    n.results_queue = beanstalk
+    n.process_result
+
+    n.log.messages.find {|msg| msg =~ /check 9 doesn't exist/i}
   end
 
 end
