@@ -5,6 +5,7 @@ require 'ostruct'
 require 'optparse'
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
+require File.join(File.dirname(__FILE__), '..', 'database')
 
 module Flapjack
   class NotifierOptions
@@ -124,6 +125,12 @@ module Flapjack
       @config = OpenStruct.new(yaml)
     end
 
+    def setup_database(opts={})
+      uri = (opts[:database_uri] || @config.database_uri)
+      raise ArgumentError, "database URI wasn't specified!" unless uri
+      DataMapper.setup(:default, uri)
+    end
+
     def initialize_notifiers(opts={})
       notifiers_directory = opts[:notifiers_directory] 
       notifiers_directory ||= File.expand_path(File.join(File.dirname(__FILE__), '..', 'notifiers'))
@@ -183,8 +190,8 @@ module Flapjack
       end
 
       @log.info("Storing status of check in database")
-      check = Check.get(result[:id])
-      check.status = result[:retval]
+      check = Check.get(result.id)
+      check.status = result.retval
       check.save
 
       @log.debug("Deleting result for check '#{result.id}' from queue")
