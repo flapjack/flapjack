@@ -110,9 +110,14 @@ describe "running the notifier" do
   end
 
   it "should process results" do 
-    n = Flapjack::NotifierCLI.new
-    n.notifier = Flapjack::Notifier.new(:logger => n.log, 
-                                        :recipients => n.recipients)
+    n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
+    n.setup_config(:yaml => {:notifiers => {}})                                                                                  
+    n.setup_recipients(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml'))                            
+    n.setup_database(:database_uri => "sqlite3://#{File.expand_path(File.dirname(__FILE__))}/test.db")                           
+    n.setup_notifier                                                                                                             
+                                                                                                                                 
+    # create a dummy check                                                                                                       
+    DataMapper.auto_migrate!
     
     beanstalk = mock("Beanstalk::Pool")
     beanstalk.stub!(:reserve).and_return {
