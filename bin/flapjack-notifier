@@ -24,6 +24,7 @@ ncli.setup_loggers
 ncli.setup_recipients(:filename => @options.recipients)
 ncli.setup_config(:filename => @options.config_filename)
 ncli.setup_notifier
+ncli.setup_database(:database_uri => @options.database_uri)
 
 begin 
 
