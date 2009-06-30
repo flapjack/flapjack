@@ -7,6 +7,9 @@
    * update status of checks - DONE
    * relationships + cascading notifications - DONE
    * simple graphs
+ * documentation!
+   * user
+   * developer
  * package with pallet
  * generate .deb/.rpms
    * build packages for gem dependencies
