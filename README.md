@@ -74,11 +74,23 @@ Make sure beanstalkd is running.
 You'll want to set up `/etc/flapjack/recipients.yaml` so notifications can be sent via 
 `flapjack-notifier`: 
 
+    ---
     - :name: Jane Doe
       :email: "jane@doe.com"
       :phone: "+61 444 222 111"
       :pager: "61444222111"
       :jid: "jane@doe.com"
+
+You also need to set up `/etc/flapjack/flapjack-notifier.yaml`: 
+
+    --- 
+    :notifiers: 
+      :mailer: 
+        :from_address: notifications@my-domain.com
+      :xmpp: 
+        :jid: notifications@my-domain.com
+        :password: foo
+    :database_uri: "sqlite3:///var/lib/flapjack/flapjack.db"
 
 Start up a cluster of workers: 
 
