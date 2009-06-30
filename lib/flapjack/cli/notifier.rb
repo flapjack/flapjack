@@ -132,6 +132,17 @@ module Flapjack
       uri = (opts[:database_uri] || @config.database_uri)
       raise ArgumentError, "database URI wasn't specified!" unless uri
       DataMapper.setup(:default, uri)
+      validate_database
+    end
+
+    def validate_database
+      begin
+        DataMapper.repository(:default).adapter.execute("SELECT 'id' FROM 'checks';")
+      rescue Sqlite3Error
+        @log.warning("The specified database doesn't appear to have any structure!")
+        @log.warning("You need to investigate this.")
+      end
+      # FIXME: add more rescues in here!
     end
 
     def initialize_notifiers(opts={})
