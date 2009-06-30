@@ -182,6 +182,11 @@ module Flapjack
         @notifier.notify!(result)
       end
 
+      @log.info("Storing status of check in database")
+      check = Check.get(result[:id])
+      check.status = result[:retval]
+      check.save
+
       @log.debug("Deleting result for check '#{result.id}' from queue")
       result_job.delete
     end
