@@ -5,7 +5,7 @@
  * write init scripts for notifier/worker-manager - DONE
  * hook notifier into web interface
    * update status of checks - DONE
-   * relationships + cascading notifications
+   * relationships + cascading notifications - DONE
    * simple graphs
  * package with pallet
  * generate .deb/.rpms
