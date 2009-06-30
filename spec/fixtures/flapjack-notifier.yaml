@@ -1,7 +1,7 @@
 --- 
 :notifiers: 
   :mailer: 
-    :from_address: foo@bar.com
+    :from_address: notifications@flapjack-project.com
   :xmpp: 
-    :jid: foo
-    :password: bar
+    :jid: flapjack-test@jabber.org
+    :password: test
