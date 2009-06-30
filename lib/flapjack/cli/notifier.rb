@@ -124,11 +124,13 @@ module Flapjack
       @config.notifiers.each_pair do |notifier, config|
         filename = File.join(notifiers_directory, notifier.to_s, 'init')
         if File.exists?(filename + '.rb')
+          @log.debug("Loading the #{notifier.to_s.capitalize} notifier")
           require filename
           @notifiers << Flapjack::Notifiers.const_get("#{notifier.to_s.capitalize}").new(config)
-        end
+        else
           @log.warning("Flapjack::Notifiers::#{notifier.to_s.capitalize} doesn't exist!") 
         end
+      end
 
       @notifiers
     end
