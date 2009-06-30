@@ -22,7 +22,11 @@ Add GPG keys for the repos:
 
 Update your package list:
 
-    sudo aptitude update 
+    sudo apt-get update 
+
+Install Ruby dependencies: 
+
+    sudo apt-get install build-essential libsqlite3-dev
 
 Install rubygems + beanstalkd:
 
