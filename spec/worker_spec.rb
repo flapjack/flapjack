@@ -19,10 +19,12 @@ describe "running the worker" do
   end
 
   it "should perform a check" do 
+    sandbox = File.expand_path(File.join(File.dirname(__FILE__), 'check_sandbox'))
     w = Flapjack::Worker.new(:host => 'localhost', 
                              :port => 11300, 
-                             :logger => MockLogger.new)
-    # if this fails your machine is truly fucked
+                             :logger => MockLogger.new,
+                             :check_directory => sandbox)
+    # calls check spec/check_sandbox/echo
     output, retval = w.perform_check('echo foo') 
     output.should =~ /foo/
     retval.should == 0
@@ -96,6 +98,18 @@ describe "running the worker" do
 
     # do the reporting
     w.report_check(:result => "foo", :retval => retval, :check => check)
+  end
+
+  it "should run a check in a sandbox" do 
+    sandbox = File.expand_path(File.join(File.dirname(__FILE__), 'check_sandbox'))
+    w = Flapjack::Worker.new(:host => 'localhost', 
+                             :port => 11300, 
+                             :logger => MockLogger.new,
+                             :check_directory => sandbox)
+    
+    output, retval = w.perform_check('sandboxed_check') 
+    output.should =~ /#{sandbox}/
+    retval.should == 0
   end
 
 end
