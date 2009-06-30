@@ -83,7 +83,14 @@ describe "giving feedback to flapjack-admin" do
     n.results_queue = beanstalk
     n.process_result
 
-    n.log.messages.find {|msg| msg =~ /check 9 doesn't exist/i}
+    n.log.messages.find {|msg| msg =~ /check 9.+doesn't exist/i}.should_not be_nil
+  end
+
+  it "should raise a warning if the specified database doesn't have structure" do
+    n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
+    n.setup_database(:database_uri => "sqlite3:///tmp/flapjack_unstructured.db")
+
+    n.log.messages.find {|msg| msg =~ /doesn't .+ any structure/}.should_not be_nil
   end
 
 end
