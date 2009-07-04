@@ -9,7 +9,7 @@ gems/gems/*
 gems/bin/*
 recipients.yaml
 .yardoc
-doc/*
+#doc/*
 pkg/*
 !etc/flapjack/recipients.yaml
 spec/test.db
