@@ -1,7 +1,12 @@
-require File.join(File.dirname(__FILE__), '..', 'lib', 'flapjack', 'cli', 'notifier')
-require File.join(File.dirname(__FILE__), '..', 'lib', 'flapjack', 'notifier')
-require File.join(File.dirname(__FILE__), '..', 'lib', 'flapjack', 'result')
-require File.join(File.dirname(__FILE__), 'helpers')
+#!/usr/bin/env ruby
+
+__DIR__ = File.dirname(__FILE__)
+basedir = File.join(__DIR__, '..')
+
+require File.join(basedir, 'lib', 'flapjack', 'cli', 'notifier')
+require File.join(basedir, 'lib', 'flapjack', 'notifier')
+require File.join(basedir, 'lib', 'flapjack', 'result')
+require File.join(__DIR__, 'helpers')
 
 GOOD = 0
 BAD  = 1
