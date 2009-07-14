@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.name = 'flapjack'
-  s.version = '0.4.5'
-  s.date = '2009-06-30'
+  s.version = '0.4.6'
+  s.date = '2009-07-14'
   
   s.summary = "a scalable and distributed monitoring system"
   s.description = "Flapjack is highly scalable and distributed monitoring system. It understands the Nagios plugin format, and can easily be scaled from 1 server to 1000."
