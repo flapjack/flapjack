@@ -11,6 +11,7 @@ module Flapjack
 
       def initialize(opts={})
         @from_address = opts[:from_address]
+        @website_uri  = opts[:website_uri].gsub(/\/$/, '')
         @log = opts[:logger]
         @log ||= Log4r::Logger.new("notifier")
       end
@@ -29,7 +30,7 @@ module Flapjack
             #{opts[:result].output}
     
           You can respond to this issue at:
-            http://localhost:4000/issue/#{opts[:result].object_id * -1}
+            #{@website_uri}/issue/#{opts[:result].id}
         DESC
 
         begin 
