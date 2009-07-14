@@ -6,6 +6,8 @@ require 'optparse'
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
 require File.join(File.dirname(__FILE__), '..', 'database')
+require File.join(File.dirname(__FILE__), '..', 'notifier')
+require File.join(File.dirname(__FILE__), '..', 'result')
 
 module Flapjack
   class NotifierOptions
@@ -152,7 +154,7 @@ module Flapjack
       raise ArgumentError, "notifiers directory doesn't exist!" unless File.exists?(notifiers_directory)
       
       @notifiers = []
-     
+    
       @config.notifiers.each_pair do |notifier, config|
         filename = File.join(notifiers_directory, notifier.to_s, 'init')
         if File.exists?(filename + '.rb')
@@ -215,7 +217,7 @@ module Flapjack
     def process_result
       @log.debug("Waiting for new result...")
       result_job = @results_queue.reserve # blocks until a job is reserved
-      result = Result.new(YAML::load(result_job.body))
+      result = Flapjack::Result.new(YAML::load(result_job.body))
       
       @log.info("Processing result for check '#{result.id}'")
       if result.warning? || result.critical?
