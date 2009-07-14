@@ -9,6 +9,7 @@
    * simple graphs
    * event/result history
  * build option to specify notifier(s) directory
+ * trigger populator from web interface
  * documentation!
    * user
    * developer
@@ -17,7 +18,7 @@
    * integrating with collectd guide
    * writing custom populators guide
  * write puppet manifests
- * write chef cookbooks
+ * write chef cookbooks - DONE
  * package with pallet
  * generate .deb/.rpms
    * build packages for gem dependencies
