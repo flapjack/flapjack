@@ -1,5 +1,5 @@
 Feature: flapjack-worker-manager
-  To process multiple checks efficiently 
+  To execute multiple checks efficiently 
   A user
   Must run a cluster of workers
 
