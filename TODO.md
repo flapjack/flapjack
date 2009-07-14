@@ -1,8 +1,3 @@
- * daemonise notifier - DONE
- * provide config file for notifier
-   * specify which notifier plugins to load - DONE
-   * specify configuration for plugins (from address/xmmp login) - DONE
- * write init scripts for notifier/worker-manager - DONE
  * hook notifier into web interface
    * update status of checks - DONE
    * relationships + cascading notifications - DONE
@@ -18,7 +13,6 @@
    * integrating with collectd guide
    * writing custom populators guide
  * write puppet manifests
- * write chef cookbooks - DONE
  * package with pallet
  * generate .deb/.rpms
    * build packages for gem dependencies
