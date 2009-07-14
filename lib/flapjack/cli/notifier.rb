@@ -158,7 +158,7 @@ module Flapjack
         if File.exists?(filename + '.rb')
           @log.debug("Loading the #{notifier.to_s.capitalize} notifier")
           require filename
-          config.merge!(:logger => @log)
+          config.merge!(:logger => @log, :website_uri => @config.website_uri)
           @notifiers << Flapjack::Notifiers.const_get("#{notifier.to_s.capitalize}").new(config)
         else
           @log.warning("Flapjack::Notifiers::#{notifier.to_s.capitalize} doesn't exist!") 
