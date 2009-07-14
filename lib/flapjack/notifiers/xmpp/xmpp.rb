@@ -10,10 +10,16 @@ module Flapjack
     
         @jid = opts[:jid]
         @password = opts[:password]
+        @log = opts[:logger]
         unless @jid && @password 
           raise ArgumentError, "You have to provide a username and password"
         end
-        @xmpp = Jabber::Simple.new(@jid, @password)
+
+        begin 
+          @xmpp = Jabber::Simple.new(@jid, @password)
+        rescue SocketError => e
+          @log.error("XMPP: #{e.message}")
+        end
     
       end
     
