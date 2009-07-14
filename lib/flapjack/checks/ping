@@ -1,0 +1,10 @@
+#!/bin/sh 
+
+ping -c 3 $1
+retval=$?
+
+if [ "$retval" != 0 ]; then 
+  exit 2
+else
+  exit 0
+fi
