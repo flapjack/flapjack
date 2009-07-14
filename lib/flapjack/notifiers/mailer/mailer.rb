@@ -11,6 +11,8 @@ module Flapjack
 
       def initialize(opts={})
         @from_address = opts[:from_address]
+        @log = opts[:logger]
+        @log ||= Log4r::Logger.new("notifier")
       end
 
       def notify(opts={})
@@ -29,9 +31,13 @@ module Flapjack
           You can respond to this issue at:
             http://localhost:4000/issue/#{opts[:result].object_id * -1}
         DESC
-    
-        Net::SMTP.start('localhost') do |smtp|
-          smtp.sendmail(mail.to_s, mail.from, mail.to)
+
+        begin 
+          Net::SMTP.start('localhost') do |smtp|
+            smtp.sendmail(mail.to_s, mail.from, mail.to)
+          end
+        rescue Errno::ECONNREFUSED
+          @log.error("Couldn't establish connection to mail server!")
         end
       end
     
