@@ -68,6 +68,16 @@ describe "running the notifier" do
     n.log.messages.find {|msg| msg =~ /Flapjack::Notifiers::Nonexistant doesn't exist/}.should_not be_nil
   end
 
+  it "should pass a logger and website uri to a notifier" do 
+    n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
+    n.setup_config(:yaml => {:notifiers => {:mock => {}}, :website_uri => "http://localhost/"})
+    notifiers_dir = File.expand_path(File.join(File.dirname(__FILE__), 'mock-notifiers'))
+    n.initialize_notifiers(:notifiers_directory => notifiers_dir)
+    n.notifiers.first.should respond_to(:log)
+    n.notifiers.first.should respond_to(:website_uri)
+    n.notifiers.first.website_uri.should == "http://localhost/"
+  end
+
   it "should log when loading up a notifier" do 
     n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
     n.setup_config(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'flapjack-notifier.yaml'))
