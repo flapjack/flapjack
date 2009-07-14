@@ -41,15 +41,17 @@ module Flapjack
       options.host ||= "localhost"
       options.port ||= 11300
 
-      unless options.recipients =~ /.+/
-        puts "You must specify a recipients file!\n\n"
-        puts opts
-        exit 2
-      end
-  
-      unless File.exists?(options.recipients)
-        puts "The specified recipients file doesn't exist!"
-        exit 2
+      unless ARGV[0] == "stop"
+        unless options.recipients =~ /.+/ 
+          puts "You must specify a recipients file!\n\n"
+          puts opts
+          exit 2
+        end
+    
+        unless File.exists?(options.recipients)
+          puts "The specified recipients file doesn't exist!"
+          exit 2
+        end
       end
   
       unless %w(start stop restart).include?(args[0])
