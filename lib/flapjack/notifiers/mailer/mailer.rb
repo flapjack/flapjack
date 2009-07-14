@@ -11,7 +11,7 @@ module Flapjack
 
       def initialize(opts={})
         @from_address = opts[:from_address]
-        @website_uri  = opts[:website_uri].gsub(/\/$/, '')
+        @website_uri  = opts[:website_uri] ? opts[:website_uri].gsub(/\/$/, '') : "http://#{`hostname`}"
         @log = opts[:logger]
         @log ||= Log4r::Logger.new("notifier")
       end
