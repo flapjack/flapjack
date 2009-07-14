@@ -16,8 +16,16 @@ options = Flapjack::NotifierManagerOptions.parse(args)
 worker_path = File.join(File.dirname(__FILE__), 'flapjack-notifier')
 
 # set up pid dir
-pid_dir = "/var/run/flapjack"
-FileUtils.mkdir_p(pid_dir)
+pid_dir = "/var/run/flapjack/"
+unless File.exists?(pid_dir)
+  puts "#{pid_dir} doesn't exist."
+  exit 2
+end
+
+unless File.writable?(pid_dir)
+  puts "Can't write to #{pid_dir} - check permissions?"
+  exit 2
+end
 
 daemon_args = (args + ['--', '--beanstalk', options.host, 
                        '--port', options.port.to_s,
