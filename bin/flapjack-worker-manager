@@ -29,5 +29,7 @@ options.workers.times do |n|
                 :dir_mode => :normal,
                 :dir => pid_dir)
   end
+  # so we don't try and stop the daemon multiple times
+  break if ARGV[0] == "stop"
 end
 
