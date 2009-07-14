@@ -27,6 +27,9 @@ module Flapjack
         opts.on('-r', '--recipients FILE', 'recipients file') do |recipients|
           options.recipients = File.expand_path(recipients.to_s)
         end
+        opts.on('-c', '--config FILE', 'config file') do |config|
+          options.config_filename = config.to_s
+        end
       end
   
       begin
@@ -41,17 +44,34 @@ module Flapjack
       options.host ||= "localhost"
       options.port ||= 11300
 
+      @errors = []
+
       unless ARGV[0] == "stop"
-        unless options.recipients =~ /.+/ 
-          puts "You must specify a recipients file!\n\n"
-          puts opts
-          exit 2
+        if options.recipients
+          unless File.exists?(options.recipients)
+            @errors << "The specified recipients file doesn't exist!"
+          end
+        else
+          @errors << "You must specify a recipients file!"
         end
-    
-        unless File.exists?(options.recipients)
-          puts "The specified recipients file doesn't exist!"
-          exit 2
+
+        if options.config_filename 
+          unless File.exists?(options.config_filename)
+            @errors << "The specified config file dosen't exist!"
+          end
+        else 
+          @errors << "You must specify a config file!"
         end
+      end
+
+      if @errors.size > 0
+        puts "Errors:" 
+        @errors.each do |error|
+          puts "  - #{error}"
+        end
+        puts
+        puts opts
+        exit 2
       end
   
       unless %w(start stop restart).include?(args[0])
