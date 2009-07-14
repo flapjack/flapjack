@@ -20,11 +20,14 @@ class WorkerManagerOptions
       opts.on('-w', '--workers N', 'number of workers to spin up') do |workers|
         options.workers = workers.to_i
       end
+      opts.on('-c', '--checks-directory DIR', 'sandboxed check directory') do |dir|
+        options.check_directory = dir
+      end
     end
 
     begin
       opts.parse!(args)
-    rescue
+    rescue => e
       puts e.message.capitalize + "\n\n"
       puts opts
       exit 1
