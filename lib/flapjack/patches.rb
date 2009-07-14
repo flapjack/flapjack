@@ -1,5 +1,6 @@
 require 'ostruct'
 require 'daemons'
+require 'log4r'
 
 class OpenStruct
   def to_h
@@ -16,8 +17,10 @@ module Daemons
   end
 end
 
-class Log4r::Logger
-  def error(args)
-    err(args)
+module Log4r
+  class Logger
+    def error(args)
+      err(args)
+    end
   end
 end
