@@ -15,3 +15,9 @@ module Daemons
     end
   end
 end
+
+class Log4r::Logger
+  def error(args)
+    err(args)
+  end
+end
