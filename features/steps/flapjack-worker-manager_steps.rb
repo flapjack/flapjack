@@ -11,6 +11,8 @@ When /^I run "([^\"]*)"$/ do |cmd|
 end
 
 Then /^(\d+) instances of "([^\"]*)" should be running$/ do |number, command|
+  sleep 0.5 # this truly is a dodgy hack. 
+            # sometimes the the worker manager can take a while to fork
   output = `ps -eo cmd |grep ^#{command}`
   output.split.size.should >= number.to_i
 end
@@ -18,4 +20,14 @@ end
 Given /^there are (\d+) instances of the flapjack\-worker running$/ do |number|
   command = "#{bin_path}/flapjack-worker-manager start --workers=5"
   silent_system(command).should be_true
+end
+
+Given /^there are no instances of flapjack\-worker running$/ do
+  command = "#{bin_path}/flapjack-worker-manager stop"
+  silent_system(command)
+
+  sleep 0.5 # again, waiting for the worker manager
+
+  output = `ps -eo cmd |grep ^flapjack-worker`
+  output.split.size.should == 0
 end
