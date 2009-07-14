@@ -4,6 +4,15 @@ require 'rubygems'
 require 'fileutils'
 require 'spec/rake/spectask'
 
+# integration tests for cli utils
+begin 
+  require 'cucumber/rake/task'
+
+  Cucumber::Rake::Task.new do |task|
+    task.cucumber_opts = "--require features/"
+  end
+rescue LoadError
+end
 
 Spec::Rake::SpecTask.new do |t|
   t.spec_opts = ["--options", "spec/spec.opts"]
