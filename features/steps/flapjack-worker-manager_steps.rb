@@ -2,7 +2,8 @@ __DIR__ = File.expand_path(File.join(File.dirname(__FILE__), '..', '..'))
 bin_path = File.join(__DIR__, 'bin')
 
 Given /^the (.+) is on my path$/ do |command|
-  silent_system("test -e #{bin_path}/#{command}").should be_true
+  # (and is executable)
+  silent_system("test -x #{bin_path}/#{command}").should be_true
 end
 
 When /^I run "([^\"]*)"$/ do |cmd|
@@ -13,7 +14,7 @@ end
 Then /^(\d+) instances of "([^\"]*)" should be running$/ do |number, command|
   sleep 0.5 # this truly is a dodgy hack. 
             # sometimes the the worker manager can take a while to fork
-  output = `ps -eo cmd |grep ^#{command}`
+  output = `ps -eo cmd |grep ^#{command} |grep -v grep`
   output.split.size.should >= number.to_i
 end
 
@@ -28,6 +29,11 @@ Given /^there are no instances of flapjack\-worker running$/ do
 
   sleep 0.5 # again, waiting for the worker manager
 
-  output = `ps -eo cmd |grep ^flapjack-worker`
-  output.split.size.should == 0
+  output = `ps -eo cmd |grep ^flapjack-worker |grep -v grep`
+  output.split("\n").size.should == 0
+end
+
+Given /^beanstalkd is running on localhost$/ do
+  output = `ps -eo cmd |grep beanstalkd |grep -v grep`
+  output.split("\n").size.should == 1
 end
