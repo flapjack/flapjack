@@ -1,10 +1,7 @@
  * hook notifier into web interface
-   * update status of checks - DONE
-   * relationships + cascading notifications - DONE
-   * simple graphs
-   * event/result history
- * build option to specify notifier(s) directory
+   * write events for failed checks
  * trigger populator from web interface
+ * build option to specify notifier(s) directory
  * documentation!
    * user
    * developer
