@@ -24,11 +24,11 @@ fi
 # Evaluate command
 case "$1" in
     start)
-      flapjack-worker-manager start --workers $WORKERS
+      flapjack-worker-manager start --workers $WORKERS --checks-directory $CHECKS_DIRECTORY
       RETVAL=$?
   ;;
     stop)
-      flapjack-worker-manager stop --workers $WORKERS
+      flapjack-worker-manager stop
       RETVAL=$?
   ;;
     restart)
