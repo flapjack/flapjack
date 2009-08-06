@@ -12,3 +12,6 @@ BEANSTALKD_PORT=11300
 
 # number of workers to spin up
 WORKERS=5
+
+# location of the checks
+CHECKS_DIRECTORY=/usr/lib/flapjack/checks
