@@ -9,6 +9,7 @@
    * scaling guide
    * integrating with collectd guide
    * writing custom populators guide
+ * build benchmarks for flapjack-{worker,notifier}
  * write puppet manifests
  * package with pallet
  * generate .deb/.rpms
@@ -23,3 +24,4 @@
  * write growl notifier
  * write way to customise notifier messages (email body, xmpp format)
  * write sms notifier
+ * patch beanstalk-client to recognise DRAINING status 
