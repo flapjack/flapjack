@@ -112,7 +112,9 @@ module Flapjack
       # add job back onto stack
       @log.debug("Putting check back onto beanstalk.")
       @jobs.yput(opts[:check].to_h, 65536, opts[:check].frequency)
-        
+       
+      # FIXME: what happens when power goes out here?
+       
       # once we're done, clean up
       @log.debug("Deleting job.")
       opts[:job].delete
