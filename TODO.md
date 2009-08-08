@@ -1,6 +1,4 @@
- * hook notifier into web interface
-   * write events for failed checks
- * trigger populator from web interface
+ * create events for failed checks
  * build option to specify notifier(s) directory
  * documentation!
    * user
@@ -16,7 +14,7 @@
    * build packages for gem dependencies
  * sandbox flapjack-worker
    * provide config option for specifying sandbox dir
- * provide common interface for loading checks into beanstalk
+ * provide common interface for loading checks into beanstalk (extract from populator)
  * write check generator
    * include a collection of common functions 
      (logging to rrd, retreiving values, executing check)
