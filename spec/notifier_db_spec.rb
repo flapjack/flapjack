@@ -179,6 +179,43 @@ describe "giving feedback to flapjack-admin" do
     n.log.messages.find {|msg| msg =~ /not notifying.+6.+/i}.should_not be_nil
   end
 
+  it "should create events for failing checks" do 
+    # setup the notifier
+    n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
+    n.setup_config(:yaml => {:notifiers => {}})
+    n.setup_recipients(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml'))
+    n.setup_database(:database_uri => "sqlite3://#{File.expand_path(File.dirname(__FILE__))}/test.db")
+    
+    # create a dummy check
+    DataMapper.auto_migrate!
+    check = Check.new(:id => 29, :status => GOOD, :command => 'foo', :name => 'foo')
+    check.save.should be_true
+
+    number_of_existing_events = check.events.size
+
+    # mock out notifier
+    mock_notifier = mock("Flapjack::Notifier")
+    mock_notifier.should_receive(:notify!)
+    n.notifier = mock_notifier
+
+    # mock out the beanstalk
+    beanstalk = mock("Beanstalk::Pool")
+    beanstalk.stub!(:reserve).and_return {
+      job = mock("Beanstalk::Job")
+      job.should_receive(:body).and_return("--- \n:output: \"\"\n:id: 29\n:retval: 2\n")
+      job.should_receive(:delete)
+      job
+    }
+    
+    n.results_queue = beanstalk
+    n.process_result
+
+    n.log.messages.find {|msg| msg =~ /creating event for .+29.+/i}.should_not be_nil
+
+    # there should be 1 new event
+    check.events.size.should == number_of_existing_events + 1
+  end
+
 end
 
 
