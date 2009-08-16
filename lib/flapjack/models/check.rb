@@ -4,6 +4,7 @@ class Check
   timestamps :at
 
   has n, :related_checks, :child_key => [:child_id, :parent_id]
+  has n, :events
 
   #has n, :parent_checks, :through => :related_checks, 
   #       :child_key => :child_id,  :class_name => "Check"
