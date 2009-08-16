@@ -210,11 +210,15 @@ describe "giving feedback to flapjack-admin" do
     n.results_queue = beanstalk
     n.process_result
 
+    # there should be a log message
     n.log.messages.find {|msg| msg =~ /creating event for .+29.+/i}.should_not be_nil
 
     # there should be 1 new event
+    check.reload
     check.events.size.should == number_of_existing_events + 1
   end
+
+  it "should make the event available to the notifier"
 
 end
 
