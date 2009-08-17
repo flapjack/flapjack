@@ -218,7 +218,49 @@ describe "giving feedback to flapjack-admin" do
     check.events.size.should == number_of_existing_events + 1
   end
 
-  it "should make the event available to the notifier"
+  it "should make the event available to the notifier" do
+
+    class MockEventNotifier
+      attr_accessor :log
+
+      def initialize(opts={})
+        @log = []
+      end
+
+      def notify(opts={})
+        @log << (opts[:event] ? "got event" : "didn't get event")
+      end
+    end
+
+    # setup the notifier
+    n = Flapjack::NotifierCLI.new(:logger => MockLogger.new)
+    n.setup_config(:yaml => {:notifiers => {}})
+    n.setup_recipients(:filename => File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml'))
+    n.setup_notifier(:logger => n.log, :recipients => n.recipients)
+    n.setup_database(:database_uri => "sqlite3://#{File.expand_path(File.dirname(__FILE__))}/test.db")
+    n.notifier.notifiers << MockEventNotifier.new
+    
+    # create a dummy check
+    DataMapper.auto_migrate!
+    check = Check.new(:id => 29, :status => GOOD, :command => 'foo', :name => 'foo')
+    check.save.should be_true
+
+    number_of_existing_events = check.events.size
+
+    # mock out the beanstalk
+    beanstalk = mock("Beanstalk::Pool")
+    beanstalk.stub!(:reserve).and_return {
+      job = mock("Beanstalk::Job")
+      job.should_receive(:body).and_return("--- \n:output: \"\"\n:id: 29\n:retval: 2\n")
+      job.should_receive(:delete)
+      job
+    }
+    
+    n.results_queue = beanstalk
+    n.process_result
+
+    n.notifier.notifiers.first.log.include?("got event").should be_true
+  end
 
 end
 
