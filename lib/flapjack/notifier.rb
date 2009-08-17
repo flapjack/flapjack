@@ -5,7 +5,7 @@ require 'ostruct'
 module Flapjack
   class Notifier
    
-    attr_reader :recipients, :log
+    attr_reader :recipients, :log, :notifiers
   
     def initialize(opts={})
       @log = opts[:logger]
