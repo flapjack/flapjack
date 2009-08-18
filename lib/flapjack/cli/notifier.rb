@@ -227,6 +227,10 @@ module Flapjack
           @log.info("Notifying on check '#{result.id}'")
           @notifier.notify!(result)
         end
+        
+        @log.info("Creating event for check '#{result.id}'")
+        event = Event.new(:check_id => result.id)
+        raise unless event.save
       end
 
       @log.info("Storing status of check in database")
