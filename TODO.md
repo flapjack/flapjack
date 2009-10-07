@@ -23,3 +23,4 @@
  * write way to customise notifier messages (email body, xmpp format)
  * write sms notifier
  * patch beanstalk-client to recognise DRAINING status 
+ * http://www.kitchensoap.com/2009/10/05/meanwhile-more-meta-metrics/
