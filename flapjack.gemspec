@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.name = 'flapjack'
-  s.version = '0.4.10'
-  s.date = '2009-07-16'
+  s.version = '0.4.11'
+  s.date = '2009-10-24'
   
   s.summary = "a scalable and distributed monitoring system"
   s.description = "Flapjack is highly scalable and distributed monitoring system. It understands the Nagios plugin format, and can easily be scaled from 1 server to 1000."
@@ -16,12 +16,12 @@ Gem::Specification.new do |s|
   s.add_dependency('log4r', '>= 1.0.5')
   s.add_dependency('xmpp4r-simple', '>= 0.8.8')
   s.add_dependency('mailfactory', '>= 1.4.0')
-  s.add_dependency('dm-core', '>= 0.9.11')
-  s.add_dependency('dm-timestamps', '>= 0.9.11')
-  s.add_dependency('dm-types', '>= 0.9.11')
-  s.add_dependency('dm-validations', '>= 0.9.11')
-  s.add_dependency('data_objects', '>= 0.9.12')
-  s.add_dependency('do_sqlite3', '>= 0.9.12')
+  s.add_dependency('dm-core', '= 0.9.11')
+  s.add_dependency('dm-timestamps', '= 0.9.11')
+  s.add_dependency('dm-types', '= 0.9.11')
+  s.add_dependency('dm-validations', '= 0.9.11')
+  s.add_dependency('data_objects', '= 0.9.12')
+  s.add_dependency('do_sqlite3', '= 0.9.12')
  
   s.bindir = "bin"
   s.executables = ["flapjack-notifier", "flapjack-notifier-manager", "flapjack-stats", "flapjack-worker", "flapjack-worker-manager", "install-flapjack-systemwide"]
