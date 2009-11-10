@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'xmpp4r-simple'
+require 'xmpp4r'
 
 module Flapjack
   module Notifiers
@@ -16,7 +16,9 @@ module Flapjack
         end
 
         begin 
-          @xmpp = Jabber::Simple.new(@jid, @password)
+          @xmpp = Jabber::Client.new(@jid)
+          @xmpp.connect
+          @xmpp.auth(@password)
         rescue SocketError => e
           @log.error("XMPP: #{e.message}")
         end
@@ -25,14 +27,16 @@ module Flapjack
     
       def notify(opts={})
     
-        raise unless opts[:who] && opts[:result]
+        raise ArgumentError, "a recipient was not specified" unless opts[:who] 
+        raise ArgumentError, "a result was not specified" unless opts[:result]
     
-        message = <<-DESC
+        text = <<-DESC
           Check #{opts[:result].id} returned the status "#{opts[:result].status}".
             http://localhost:4000/checks/#{opts[:result].id}
         DESC
-    
-        @xmpp.deliver(opts[:who].jid, message)
+   
+        message = Jabber::Message.new(opts[:who].jid, text)
+        @xmpp.send(message)
     
       end
     
