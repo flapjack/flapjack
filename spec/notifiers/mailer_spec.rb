@@ -33,6 +33,8 @@ describe "mailing notifier" do
                              :result => OpenStruct.new(:id => 11, :status => 2, :output => "foo"))
     response.status.should == '250'
   end
+
+  it "should have a configurable server to send through"
 end
 
 
