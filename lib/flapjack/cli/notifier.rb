@@ -229,7 +229,7 @@ module Flapjack
         end
         
         @log.info("Creating event for check '#{result.id}'")
-        event = Event.new(:check_id => result.id)
+        event = ::Event.new(:check_id => result.id)
         raise unless event.save
       end
 
