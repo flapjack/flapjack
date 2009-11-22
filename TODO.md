@@ -5,15 +5,13 @@
    follow Puppet's lead with Puppet::Application (NotifierCLI translates to Flapjack::Notifier::Application)
    implement simple interface application interface: Flapjack::Notifier::Application.run(options)
 
-
- * reduce notifier dependencies (e.g. xmpp4r over xmpp4r-simple)
  * make notification/escalation logic pluggable (to reduce packaging dependencies)
 
  * release Flapjack as a distribution-consumable tarball
  * automate building of release tarball that optionally pulls in dependencies
  * add lintian-like checks for verifying packagability (see http://pkg-ruby-extras.alioth.debian.org/upstream-devs.html)
  
- * build benchmarks for flapjack-{worker,notifier}
+ * build easily runnable benchmarks for flapjack-{worker,notifier}
 
  * setup wiki.flapjack-project.com
  * documentation!
