@@ -224,13 +224,14 @@ module Flapjack
         if any_parents_warning_or_critical?(result)
           @log.info("Not notifying on check '#{result.id}' as parent is failing.")
         else
-          @log.info("Notifying on check '#{result.id}'")
-          @notifier.notify!(result)
-        end
+          @log.info("Creating event for check '#{result.id}'")
+          # FIXME: this will be a performance hit
+          event = ::Event.new(:check_id => result.id)
+          raise unless event.save
         
-        @log.info("Creating event for check '#{result.id}'")
-        event = ::Event.new(:check_id => result.id)
-        raise unless event.save
+          @log.info("Notifying on check '#{result.id}'")
+          @notifier.notify!(result, event)
+        end
       end
 
       @log.info("Storing status of check in database")
