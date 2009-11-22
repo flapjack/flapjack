@@ -1,13 +1,15 @@
 __DIR__ = File.expand_path(File.join(File.dirname(__FILE__), '..', '..'))
-bin_path = File.join(__DIR__, 'bin')
 
 Given /^the (.+) is on my path$/ do |command|
+  @bin_path = File.join(__DIR__, 'bin')
   # (and is executable)
   silent_system("test -x #{bin_path}/#{command}").should be_true
 end
 
 When /^I run "([^\"]*)"$/ do |cmd|
-  command = "#{bin_path}/#{cmd}"
+  parts = [cmd]
+  parts.shift(@bin_path) if @bin_path
+  command = parts.join('/')
   silent_system(command).should be_true
 end
 
