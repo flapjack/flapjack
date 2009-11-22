@@ -24,7 +24,8 @@ module Flapjack
       def notify(opts={})
         raise ArgumentError, "a recipient was not specified" unless opts[:who]
         raise ArgumentError, "a result was not specified" unless opts[:result]
-    
+
+        # potential FIXME: refactor TMail out entirely?
         mail = TMail::Mail.new
         mail.to = opts[:who].email
         mail.from = @from_address
