@@ -38,7 +38,7 @@ describe "running the notifier" do
     n = Flapjack::Notifier.new(:logger => MockLogger.new, 
                      :notifiers => [mock_notifier],
                      :recipients => [OpenStruct.new({:name => "John Doe"})])
-    n.notify!(Flapjack::Result.new(:id => 'mock result'))
+    n.notify!(Flapjack::Result.new(:id => 'mock result'), nil)
   end
 
   it "should log notification on each notifier" do 
@@ -48,7 +48,7 @@ describe "running the notifier" do
     n = Flapjack::Notifier.new(:logger => MockLogger.new, 
                      :notifiers => [mock_notifier],
                      :recipients => [OpenStruct.new({:name => "John Doe"})])
-    n.notify!(Flapjack::Result.new(:id => '12345'))
+    n.notify!(Flapjack::Result.new(:id => '12345'), nil)
     n.log.messages.last.should =~ /12345/
     n.log.messages.last.should =~ /John Doe/
   end
