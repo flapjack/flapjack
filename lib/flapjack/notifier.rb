@@ -22,7 +22,8 @@ module Flapjack
         @log.warning("there are no notifiers")
       end
     end
-    
+   
+    # FIXME: use opts={} convention
     def notify!(result, event)
       @notifiers.each do |n|
         @recipients.each do |recipient|
