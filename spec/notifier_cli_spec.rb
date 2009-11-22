@@ -3,9 +3,6 @@ require File.join(File.dirname(__FILE__), 'helpers')
 
 describe "running the notifier" do 
  
-  before(:each) do 
-  end
- 
   # logging
   it "should set up a logger instance on init" do 
     n = Flapjack::NotifierCLI.new
