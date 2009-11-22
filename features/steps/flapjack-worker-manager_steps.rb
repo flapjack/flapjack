@@ -10,7 +10,8 @@ When /^I run "([^\"]*)"$/ do |cmd|
   parts = [cmd]
   parts.shift(@bin_path) if @bin_path
   command = parts.join('/')
-  silent_system(command).should be_true
+  # this might be dodgy
+  `#{command}`.size.should > 0
 end
 
 Then /^(\d+) instances of "([^\"]*)" should be running$/ do |number, command|
