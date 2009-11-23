@@ -58,8 +58,8 @@ module Flapjack
       @results = Beanstalk::Pool.new(["#{opts[:host]}:#{opts[:port]}"], 'results')
       @sandbox = (opts[:check_directory] || File.expand_path(File.join(File.dirname(__FILE__), '..', 'checks')))
 
-      if opts[:logger]
-        @log = opts[:logger]
+      if opts[:log]
+        @log = opts[:log]
       else
         @log = Log4r::Logger.new('worker')
         @log.add(Log4r::StdoutOutputter.new('worker'))
