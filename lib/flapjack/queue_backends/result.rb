@@ -8,9 +8,7 @@ module Flapjack
 
       def initialize(options={})
         @job = options[:job]
-        raw_job = YAML::load(@job.body)
-        raw_job[:check_id] ||= raw_job.delete(:id)
-        @result = OpenStruct.new(raw_job)
+        @result = OpenStruct.new(options[:result])
       end
   
       # Whether a check returns an ok status. 
