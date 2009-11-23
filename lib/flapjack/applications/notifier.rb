@@ -141,7 +141,7 @@ module Flapjack
         result.save
 
         @log.info("Deleting result for check #{result.id}.")
-        result.delete
+        @results_queue.delete(result)
       end
 
       def main_loop
