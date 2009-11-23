@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
 require 'ostruct'
 require 'optparse'
 require 'log4r'
