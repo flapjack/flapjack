@@ -68,9 +68,6 @@ module Flapjack
         @result.check_id
       end
 
-      def save 
-      end
-
     end
   end
 end
