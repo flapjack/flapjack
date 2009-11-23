@@ -26,7 +26,7 @@ describe "datamapper check backend" do
 
     # the bad check doesn't have failing parents
     raw_result = {:check_id => bad.id, :retval => 2}
-    result = Flapjack::QueueBackends::Result.new(:job => true, :result => raw_result)
+    result = Flapjack::QueueBackends::Result.new(:result => raw_result)
     backend.any_parents_failed?(result).should be_false
 
     bad.status = 2
