@@ -9,6 +9,7 @@ describe "notifier application" do
 
   it "should have a simple interface to start the notifier" do 
     options = { :notifiers => {},
+                :log => MockLogger.new,
                 :check_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
     app = Flapjack::Notifier::Application.run(options)
