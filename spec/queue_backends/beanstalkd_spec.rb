@@ -16,16 +16,23 @@ describe "notifier application" do
     }.should_not raise_error
   end
 
-  it "should load a good test result" do 
-    @beanstalk.yput({:output => "", :id => 9, :retval => 0})
+  it "should load good, bad, and ugly test result" do 
+    [ {:output => "", :id => 9, :retval => 0},
+      {:output => "", :id => 3, :retval => 1},
+      {:output => "", :id => 1, :retval => 2} ].each do |result|
+      @beanstalk.yput(result)
+    end
 
     options = { :notifiers => {},
                 :logger => MockLogger.new,
                 :queue_backend => {:type => :beanstalkd} }
     app = Flapjack::Notifier::Application.run(options)
-    lambda {
-      app.process_result
-    }.should_not raise_error
+
+    3.times do |n|
+      lambda {
+        app.process_result
+      }.should_not raise_error
+    end
   end
 
 end
