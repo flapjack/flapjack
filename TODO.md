@@ -1,11 +1,14 @@
- * create events for failed checks
-
  * rethink Notifier/NotifierCLI split
    Notifier + NotifierCLI are tightly coupled, which makes it difficult to refactor
    follow Puppet's lead with Puppet::Application (NotifierCLI translates to Flapjack::Notifier::Application)
    implement simple interface application interface: Flapjack::Notifier::Application.run(options)
 
+ * build interface for config storage backends (datamapper, couchdb)
  * make notification/escalation logic pluggable (to reduce packaging dependencies)
+
+ * add check/results backend for CouchDB
+
+ * create events for failed checks
 
  * release Flapjack as a distribution-consumable tarball
  * automate building of release tarball that optionally pulls in dependencies
