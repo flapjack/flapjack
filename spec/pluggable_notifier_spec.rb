@@ -85,11 +85,18 @@ describe "notifier application" do
 
     # processes a single result
     app.process_result
-    %w(next).each do |method|
-      app.log.messages.find {|msg| msg =~ /#{method.gsub(/\?/,'\?')} was called/i}.should_not be_nil
+
+    # check that allowed methods were called
+    allowed_methods = %w(next)
+    allowed_methods.each do |method|
+      app.log.messages.find {|msg| msg =~ /#{method.gsub(/\?/,'\?')} was called on Mockbackend/i}.should_not be_nil
     end
 
+    # check that no other methods were
+    called_methods = app.log.messages.find_all {|msg| msg =~ /^method .+ was called on Mockbackend$/i }.map {|msg| msg.split(' ')[1]}
+    (allowed_methods - called_methods).size.should == 0
   end
+
   it "should use a limited interface for dealing with results off the results queue" do
     options = { :notifiers => {:mailer => {}}, 
                 :logger => MockLogger.new,
@@ -100,9 +107,16 @@ describe "notifier application" do
 
     # processes a single result
     app.process_result
-    %w(warning? any_parents_failed? save delete).each do |method|
+
+    # check that allowed methods were called
+    allowed_methods = %w(warning? any_parents_failed? save delete)
+    allowed_methods.each do |method|
       app.log.messages.find {|msg| msg =~ /#{method.gsub(/\?/,'\?')} was called/i}.should_not be_nil
     end
+
+    # check that no other methods were
+    called_methods = app.log.messages.find_all {|msg| msg =~ /^method .+ was called on Result$/i }.map {|msg| msg.split(' ')[1]}
+    (allowed_methods - called_methods).size.should == 0
   end
 
 
