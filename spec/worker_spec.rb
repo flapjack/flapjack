@@ -10,7 +10,7 @@ describe "running the worker" do
   it "should be able to specify and host and port to connect to" do
     w = Flapjack::Worker.new(:host => 'localhost', 
                              :port => 13401, 
-                             :logger => MockLogger.new)
+                             :log => MockLogger.new)
     w.jobs.should_not be_nil
     w.results.should_not be_nil
     # FIXME: probably very brittle
@@ -22,7 +22,7 @@ describe "running the worker" do
     sandbox = File.expand_path(File.join(File.dirname(__FILE__), 'check_sandbox'))
     w = Flapjack::Worker.new(:host => 'localhost', 
                              :port => 11300, 
-                             :logger => MockLogger.new,
+                             :log => MockLogger.new,
                              :check_directory => sandbox)
     # calls check spec/check_sandbox/echo
     output, retval = w.perform_check('echo foo') 
@@ -34,7 +34,7 @@ describe "running the worker" do
 
     w = Flapjack::Worker.new(:host => 'localhost', 
                              :port => 11300, 
-                             :logger => MockLogger.new)
+                             :log => MockLogger.new)
    
     # the pool should be touched
     beanstalk = mock("Beanstalk::Pool")
@@ -58,7 +58,7 @@ describe "running the worker" do
   it "should clean up after itself" do 
     w = Flapjack::Worker.new(:host => 'localhost', 
                              :port => 11300, 
-                             :logger => MockLogger.new)
+                             :log => MockLogger.new)
 
     # a new job should be created for the check
     beanstalk = mock("Beanstalk::Pool")
@@ -81,7 +81,7 @@ describe "running the worker" do
   it "should report the results of the check" do 
     w = Flapjack::Worker.new(:host => 'localhost', 
                              :port => 11300, 
-                             :logger => MockLogger.new)
+                             :log => MockLogger.new)
 
     # we need to put the results on the results beanstalk
     beanstalk = mock("Beanstalk::Pool")
@@ -104,7 +104,7 @@ describe "running the worker" do
     sandbox = File.expand_path(File.join(File.dirname(__FILE__), 'check_sandbox'))
     w = Flapjack::Worker.new(:host => 'localhost', 
                              :port => 11300, 
-                             :logger => MockLogger.new,
+                             :log => MockLogger.new,
                              :check_directory => sandbox)
     
     output, retval = w.perform_check('sandboxed_check') 

@@ -9,7 +9,7 @@ module Flapjack
       attr_accessor :log, :website_uri
 
       def initialize(opts={})
-        @log = opts[:logger]
+        @log = opts[:log]
         @website_uri = opts[:website_uri]
       end
     

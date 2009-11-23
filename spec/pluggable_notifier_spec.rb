@@ -16,7 +16,7 @@ describe "notifier application" do
 
   it "should log when loading a notifier" do 
     options = { :notifiers => {:mailer => {}}, 
-                :logger => MockLogger.new,
+                :log => MockLogger.new,
                 :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
                 :check_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
@@ -26,7 +26,7 @@ describe "notifier application" do
 
   it "should warn if a specified notifier doesn't exist" do 
     options = { :notifiers => {:nonexistant => {}}, 
-                :logger => MockLogger.new,
+                :log => MockLogger.new,
                 :check_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
     app = Flapjack::Notifier::Application.run(options)
@@ -35,7 +35,7 @@ describe "notifier application" do
 
   it "should give precedence to notifiers in user-specified notifier directories" do 
     options = { :notifiers => {:mailer => {}}, 
-                :logger => MockLogger.new,
+                :log => MockLogger.new,
                 :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
                 :check_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
@@ -49,7 +49,7 @@ describe "notifier application" do
 
   it "should merge recipients from a file and a specified list of recipients" do
     options = { :notifiers => {},
-                :logger => MockLogger.new,
+                :log => MockLogger.new,
                 :recipients => {:filename => File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml'),
                                 :list => [{:name => "Spoons McDoom"}]},
                 :check_backend => {:type => :mockbackend, 
@@ -66,7 +66,7 @@ describe "notifier application" do
 
   it "should load a beanstalkd as the default queue backend" do 
     options = { :notifiers => {}, 
-                :logger => MockLogger.new,
+                :log => MockLogger.new,
                 :check_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
     app = Flapjack::Notifier::Application.run(options)
@@ -75,7 +75,7 @@ describe "notifier application" do
 
   it "should load a queue backend as specified in options" do 
     options = { :notifiers => {},
-                :logger => MockLogger.new,
+                :log => MockLogger.new,
                 :queue_backend => {:type => :beanstalkd},
                 :check_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
@@ -85,7 +85,7 @@ describe "notifier application" do
 
   it "should raise if the specified queue backend doesn't exist" do
     options = { :notifiers => {}, 
-                :logger => MockLogger.new,
+                :log => MockLogger.new,
                 :queue_backend => {:type => :nonexistant} }
     lambda {
       app = Flapjack::Notifier::Application.run(options)
@@ -101,7 +101,7 @@ describe "notifier application" do
     #
 
     options = { :notifiers => {}, 
-                :logger => MockLogger.new,
+                :log => MockLogger.new,
                 :queue_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'queue_backends')},
                 :check_backend => {:type => :mockbackend, 
@@ -130,7 +130,7 @@ describe "notifier application" do
     #
 
     options = { :notifiers => {}, 
-                :logger => MockLogger.new,
+                :log => MockLogger.new,
                 :queue_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'queue_backends')},
                 :check_backend => {:type => :mockbackend, 
@@ -159,7 +159,7 @@ describe "notifier application" do
     #
 
     options = { :notifiers => {}, 
-                :logger => MockLogger.new,
+                :log => MockLogger.new,
                 :queue_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'queue_backends')},
                 :check_backend => {:type => :mockbackend, 
@@ -189,7 +189,7 @@ describe "notifier application" do
 
   it "should load a check backend as specified in options" do 
     options = { :notifiers => {},
-                :logger => MockLogger.new,
+                :log => MockLogger.new,
                 :check_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
     app = Flapjack::Notifier::Application.run(options)
@@ -198,7 +198,7 @@ describe "notifier application" do
 
   it "should raise if the specified check backend doesn't exist" do
     options = { :notifiers => {}, 
-                :logger => MockLogger.new,
+                :log => MockLogger.new,
                 :check_backend => {:type => :nonexistant} }
     lambda {
       app = Flapjack::Notifier::Application.run(options)

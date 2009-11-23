@@ -14,19 +14,19 @@ describe "running the notifier" do
   end
   
   it "should have a blank recipients list if none specified" do 
-    n = Flapjack::NotifierEngine.new(:logger => MockLogger.new)
+    n = Flapjack::NotifierEngine.new(:log => MockLogger.new)
     n.recipients.should_not be_nil
     n.recipients.size.should == 0
   end
 
   it "should warn if no notifiers have been specified" do 
-    n = Flapjack::NotifierEngine.new(:logger => MockLogger.new)
+    n = Flapjack::NotifierEngine.new(:log => MockLogger.new)
     n.log.messages.last.should =~ /no notifiers/
   end
 
   it "should log when adding a new notifier" do
     mock_notifier = mock("MockFlapjack::NotifierEngine")
-    n = Flapjack::NotifierEngine.new(:logger => MockLogger.new, 
+    n = Flapjack::NotifierEngine.new(:log => MockLogger.new, 
                      :notifiers => [mock_notifier])
     n.log.messages.last.should =~ /using the (.+) notifier/
   end
@@ -37,7 +37,7 @@ describe "running the notifier" do
 
     result = Flapjack::QueueBackends::Result.new(:result => {:check_id => 12345})
 
-    n = Flapjack::NotifierEngine.new(:logger => MockLogger.new, 
+    n = Flapjack::NotifierEngine.new(:log => MockLogger.new, 
                      :notifiers => [mock_notifier],
                      :recipients => [OpenStruct.new({:name => "John Doe"})])
     n.notify!(:result => result, :event => true)
@@ -49,7 +49,7 @@ describe "running the notifier" do
 
     result = Flapjack::QueueBackends::Result.new(:result => {:check_id => 12345})
 
-    n = Flapjack::NotifierEngine.new(:logger => MockLogger.new, 
+    n = Flapjack::NotifierEngine.new(:log => MockLogger.new, 
                                      :notifiers => [mock_notifier],
                                      :recipients => [OpenStruct.new({:name => "John Doe"})])
     n.notify!(:result => result, :event => true)

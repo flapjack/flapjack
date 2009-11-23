@@ -24,7 +24,7 @@ describe "notifier application" do
     end
 
     options = { :notifiers => {},
-                :logger => MockLogger.new,
+                :log => MockLogger.new,
                 :queue_backend => {:type => :beanstalkd},
                 :check_backend => {:type => :mockbackend,                                                                    
                                    :basedir => File.join(File.dirname(__FILE__), '..', 'check_backends')}} 
