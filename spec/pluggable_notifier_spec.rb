@@ -47,6 +47,33 @@ describe "notifier application" do
     app.recipients.size.should > 1
   end
 
+  it "should load a beanstalkd as the default queue backend" do 
+    options = { :notifiers => {:mailer => {}}, 
+                :logger => MockLogger.new,
+                :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')]}
+    app = Flapjack::Notifier::Application.run(options)
+    app.log.messages.find {|msg| msg =~ /loading.+beanstalkd.+backend/i}.should_not be_nil
+  end
+
+  it "should load a queue backend as specified in options" do 
+    options = { :notifiers => {:mailer => {}}, 
+                :logger => MockLogger.new,
+                :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
+                :queue_backend => {:type => :beanstalkd} }
+    app = Flapjack::Notifier::Application.run(options)
+    app.log.messages.find {|msg| msg =~ /loading.+beanstalkd.+backend/i}.should_not be_nil
+  end
+
+  it "should raise if the specified queue backend doesn't exist" do
+    options = { :notifiers => {:mailer => {}}, 
+                :logger => MockLogger.new,
+                :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
+                :queue_backend => {:type => :nonexistant} }
+    lambda {
+      app = Flapjack::Notifier::Application.run(options)
+      #app.log.messages.find {|msg| msg =~ /attempted to load nonexistant/i}.should_not be_nil
+    }.should raise_error
+  end
 
 end
 
