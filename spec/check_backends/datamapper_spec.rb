@@ -25,16 +25,16 @@ describe "datamapper check backend" do
     relation.save.should be_true
 
     # the bad check doesn't have failing parents
-    result_job = OpenStruct.new(:body => {:id => bad.id, :retval => 2}.to_yaml)
-    result = Flapjack::QueueBackends::Result.new(:job => result_job)
+    raw_result = {:check_id => bad.id, :retval => 2}
+    result = Flapjack::QueueBackends::Result.new(:job => true, :result => raw_result)
     backend.any_parents_failed?(result).should be_false
 
     bad.status = 2
     bad.save
     
     # the good check has a failing parent (bad)
-    result_job = OpenStruct.new(:body => {:id => good.id}.to_yaml)
-    result = Flapjack::QueueBackends::Result.new(:job => result_job)
+    raw_result = {:check_id => good.id, :retval => 0}
+    result = Flapjack::QueueBackends::Result.new(:result => raw_result)
     backend.any_parents_failed?(result).should be_true
   end
 
@@ -48,8 +48,8 @@ describe "datamapper check backend" do
     check = Check.new(:command => "exit 0", :name => "good")
     check.save.should be_true
 
-    result_job = OpenStruct.new(:body => {:id => check.id, :retval => 2}.to_yaml)
-    result = Flapjack::QueueBackends::Result.new(:job => result_job)
+    raw_result = {:check_id => check.id, :retval => 2}
+    result = Flapjack::QueueBackends::Result.new(:result => raw_result)
 
     backend.save(result).should be_true
   end
@@ -64,8 +64,8 @@ describe "datamapper check backend" do
     check = Check.new(:command => "exit 0", :name => "good")
     check.save.should be_true
 
-    result_job = OpenStruct.new(:body => {:id => check.id, :retval => 2}.to_yaml)
-    result = Flapjack::QueueBackends::Result.new(:job => result_job)
+    raw_result = {:check_id => check.id, :retval => 2}
+    result = Flapjack::QueueBackends::Result.new(:result => raw_result)
 
     backend.create_event(result).should be_true
   end
