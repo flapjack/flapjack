@@ -82,7 +82,7 @@ describe "notifier application" do
     app.process_result
 
     # check that allowed methods were called
-    allowed_methods = %w(next)
+    allowed_methods = %w(next delete)
     allowed_methods.each do |method|
       app.log.messages.find {|msg| msg =~ /#{method.gsub(/\?/,'\?')} was called on Mockbackend/i}.should_not be_nil
     end
@@ -103,7 +103,7 @@ describe "notifier application" do
     app.process_result
 
     # check that allowed methods were called
-    allowed_methods = %w(warning? any_parents_failed? save delete)
+    allowed_methods = %w(warning? any_parents_failed? save)
     allowed_methods.each do |method|
       app.log.messages.find {|msg| msg =~ /#{method.gsub(/\?/,'\?')} was called/i}.should_not be_nil
     end
