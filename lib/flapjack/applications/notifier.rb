@@ -83,19 +83,26 @@ module Flapjack
         @recipients ||= []
        
         # load from a file
-        if @options[:recipients] && @options[:recipients][:filename]
-          @log.info("Loading recipients from #{@options[:recipients][:filename]}")
-          @recipients += YAML::load(File.read(@options[:recipients][:filename]))
+        if @config.recipients && @config.recipients[:filename]
+          @log.info("Loading recipients from #{@config.recipients[:filename]}")
+          @recipients += YAML::load(File.read(@config.recipients[:filename]))
         end
 
         # merge in user specified list
-        if @options[:recipients] && @options[:recipients][:list]
-          @recipients += @options[:recipients][:list]
+        if @config.recipients && @config.recipients[:list]
+          @recipients += @config.recipients[:list]
         end
 
         # so poking at a recipient within notifiers is easier
         @recipients.map! do |recipient|
           OpenStruct.new(recipient)
+        end
+      end
+
+      def main_loop
+        @log.info("Booting main loop.")
+        loop do 
+          process_result
         end
       end
 
