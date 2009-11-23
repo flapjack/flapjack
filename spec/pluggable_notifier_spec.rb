@@ -36,9 +36,8 @@ describe "notifier application" do
   it "should pass global notifier config options to each notifier"
 
   it "should merge recipients from a file and a specified list of recipients" do
-    options = { :notifiers => {:mailer => {}}, 
+    options = { :notifiers => {},
                 :logger => MockLogger.new,
-                :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
                 :recipients => {:filename => File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml'),
                                 :list => [{:name => "Spoons McDoom"}]}}
     app = Flapjack::Notifier::Application.run(options)
@@ -48,26 +47,23 @@ describe "notifier application" do
   end
 
   it "should load a beanstalkd as the default queue backend" do 
-    options = { :notifiers => {:mailer => {}}, 
-                :logger => MockLogger.new,
-                :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')]}
+    options = { :notifiers => {}, 
+                :logger => MockLogger.new }
     app = Flapjack::Notifier::Application.run(options)
     app.log.messages.find {|msg| msg =~ /loading.+beanstalkd.+backend/i}.should_not be_nil
   end
 
   it "should load a queue backend as specified in options" do 
-    options = { :notifiers => {:mailer => {}}, 
+    options = { :notifiers => {},
                 :logger => MockLogger.new,
-                :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
                 :queue_backend => {:type => :beanstalkd} }
     app = Flapjack::Notifier::Application.run(options)
     app.log.messages.find {|msg| msg =~ /loading.+beanstalkd.+backend/i}.should_not be_nil
   end
 
   it "should raise if the specified queue backend doesn't exist" do
-    options = { :notifiers => {:mailer => {}}, 
+    options = { :notifiers => {}, 
                 :logger => MockLogger.new,
-                :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
                 :queue_backend => {:type => :nonexistant} }
     lambda {
       app = Flapjack::Notifier::Application.run(options)
@@ -76,11 +72,10 @@ describe "notifier application" do
   end
 
   it "should use a limited interface for dealing with the results queue" do
-    options = { :notifiers => {:mailer => {}}, 
+    options = { :notifiers => {}, 
                 :logger => MockLogger.new,
-                :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
                 :queue_backend => {:type => :mockbackend, 
-                                   :basedir => File.join(File.dirname(__FILE__), 'backends')} }
+                                   :basedir => File.join(File.dirname(__FILE__), 'queue_backends')} }
     app = Flapjack::Notifier::Application.run(options)
 
     # processes a single result
@@ -98,11 +93,10 @@ describe "notifier application" do
   end
 
   it "should use a limited interface for dealing with results off the results queue" do
-    options = { :notifiers => {:mailer => {}}, 
+    options = { :notifiers => {}, 
                 :logger => MockLogger.new,
-                :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
                 :queue_backend => {:type => :mockbackend, 
-                                   :basedir => File.join(File.dirname(__FILE__), 'backends')} }
+                                   :basedir => File.join(File.dirname(__FILE__), 'queue_backends')} }
     app = Flapjack::Notifier::Application.run(options)
 
     # processes a single result
