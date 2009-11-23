@@ -31,8 +31,8 @@ module Flapjack
         raise ArgumentError, "a result was not specified" unless opts[:result]
     
         text = <<-DESC
-          Check #{opts[:result].id} returned the status "#{opts[:result].status}".
-            http://localhost:4000/checks/#{opts[:result].id}
+          Check #{opts[:result].check_id} returned the status "#{opts[:result].status}".
+            http://localhost:4000/checks/#{opts[:result].check_id}
         DESC
    
         message = Jabber::Message.new(opts[:who].jid, text)
