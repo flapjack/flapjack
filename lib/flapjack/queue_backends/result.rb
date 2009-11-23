@@ -36,7 +36,10 @@ module Flapjack
       end
     
       def id
-        # openstruct won't respond, so we have to manually define it
+        @result.check_id
+      end
+
+      def check_id
         @result.check_id
       end
 
