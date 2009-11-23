@@ -22,5 +22,9 @@ module Log4r
     def error(args)
       err(args)
     end
+
+    def warning(args)
+      warn(args)
+    end
   end
 end
