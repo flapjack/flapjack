@@ -15,6 +15,7 @@ module Flapjack
         app.setup_loggers
         app.setup_notifiers
         app.setup_recipients
+        app.setup_queues
 
         app
       end
@@ -96,6 +97,27 @@ module Flapjack
         # so poking at a recipient within notifiers is easier
         @recipients.map! do |recipient|
           OpenStruct.new(recipient)
+        end
+      end
+
+      def setup_queues
+        defaults = { :type => :beanstalkd, 
+                     :host => 'localhost', 
+                     :port => '11300',
+                     :queue_name => 'results'}
+        config = defaults.merge(@config.queue_backend || {})
+
+        @log.info("Loading the #{config[:type].to_s.capitalize} queue backend")
+        
+        filename = File.join(File.dirname(__FILE__), '..', 'queue_backends', "#{config[:type]}.rb")
+
+        begin 
+          require filename
+          @results_queue = Flapjack::QueueBackends.const_get("#{config[:type].to_s.capitalize}").new(config)
+        rescue LoadError => e
+          @log.warning("Attempted to load #{config[:type].to_s.capitalize} queue backend, but it doesn't exist!")
+          @log.warning("Exiting.")
+          raise # preserves original exception logging
         end
       end
 
