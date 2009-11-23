@@ -3,6 +3,10 @@ require File.join(File.dirname(__FILE__), 'helpers')
 
 describe "notifier application" do 
 
+  # 
+  # booting interface
+  #
+
   it "should have a simple interface to start the notifier" do 
     options = {:notifiers => {}}
     app = Flapjack::Notifier::Application.run(options)
@@ -46,6 +50,10 @@ describe "notifier application" do
     app.recipients.size.should > 1
   end
 
+  #
+  # queues
+  #
+
   it "should load a beanstalkd as the default queue backend" do 
     options = { :notifiers => {}, 
                 :logger => MockLogger.new }
@@ -72,10 +80,18 @@ describe "notifier application" do
   end
 
   it "should use a limited interface for dealing with the results queue" do
+    
+    # Interface for a Flapjack::QueueBackends::<backend> is as follows: 
+    # 
+    #  methods: next, delete
+    #
+
     options = { :notifiers => {}, 
                 :logger => MockLogger.new,
                 :queue_backend => {:type => :mockbackend, 
-                                   :basedir => File.join(File.dirname(__FILE__), 'queue_backends')} }
+                                   :basedir => File.join(File.dirname(__FILE__), 'queue_backends')},
+                :check_backend => {:type => :mockbackend, 
+                                   :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
     app = Flapjack::Notifier::Application.run(options)
 
     # processes a single result
@@ -93,26 +109,86 @@ describe "notifier application" do
   end
 
   it "should use a limited interface for dealing with results off the results queue" do
+
+    # Interface for a Flapjack::QueueBackends::Result is as follows: 
+    # 
+    #  methods: id, warning?, critical?
+    #
+
     options = { :notifiers => {}, 
                 :logger => MockLogger.new,
                 :queue_backend => {:type => :mockbackend, 
-                                   :basedir => File.join(File.dirname(__FILE__), 'queue_backends')} }
+                                   :basedir => File.join(File.dirname(__FILE__), 'queue_backends')},
+                :check_backend => {:type => :mockbackend, 
+                                   :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
     app = Flapjack::Notifier::Application.run(options)
 
     # processes a single result
     app.process_result
 
     # check that allowed methods were called
-    allowed_methods = %w(warning? any_parents_failed? save)
+    allowed_methods = %w(id warning?)
     allowed_methods.each do |method|
       app.log.messages.find {|msg| msg =~ /#{method.gsub(/\?/,'\?')} was called/i}.should_not be_nil
     end
 
-    # check that no other methods were
-    called_methods = app.log.messages.find_all {|msg| msg =~ /^method .+ was called on Result$/i }.map {|msg| msg.split(' ')[1]}
+    # check that no other methods were called
+    called_methods = app.log.messages.find_all {|msg| msg =~ /^method .+ was called on Result$/i }.map {|msg| msg.split(' ')[1]}.uniq
     (allowed_methods - called_methods).size.should == 0
   end
 
+  it "should use a limited interface for dealing with the check backend" do
+    
+    # Interface for a Flapjack::CheckBackends::<backend> is as follows: 
+    # 
+    #  methods: any_parents_failed?, save
+    #
+
+    options = { :notifiers => {}, 
+                :logger => MockLogger.new,
+                :queue_backend => {:type => :mockbackend, 
+                                   :basedir => File.join(File.dirname(__FILE__), 'queue_backends')},
+                :check_backend => {:type => :mockbackend, 
+                                   :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
+    app = Flapjack::Notifier::Application.run(options)
+
+    # processes a single result
+    app.process_result
+
+    # check that allowed methods were called
+    allowed_methods = %w(any_parents_failed? save)
+    allowed_methods.each do |method|
+      app.log.messages.find {|msg| msg =~ /#{method.gsub(/\?/,'\?')} was called/i}.should_not be_nil
+    end
+
+    # check that no other methods were called
+    called_methods = app.log.messages.find_all {|msg| msg =~ /^method .+ was called on CheckBackends::Mockbackend$/i }.map {|msg| msg.split(' ')[1]}
+    (allowed_methods - called_methods).size.should == 0
+  end
+
+
+  #
+  # check backends
+  #
+
+  it "should load couchdb as the default check backend"
+
+  it "should load a check backend as specified in options" do 
+    options = { :notifiers => {},
+                :logger => MockLogger.new,
+                :check_backend => {:type => :datamapper} }
+    app = Flapjack::Notifier::Application.run(options)
+    app.log.messages.find {|msg| msg =~ /loading.+datamapper.+backend/i}.should_not be_nil
+  end
+
+  it "should raise if the specified check backend doesn't exist" do
+    options = { :notifiers => {}, 
+                :logger => MockLogger.new,
+                :check_backend => {:type => :nonexistant} }
+    lambda {
+      app = Flapjack::Notifier::Application.run(options)
+    }.should raise_error(LoadError)
+  end
 
 end
 
