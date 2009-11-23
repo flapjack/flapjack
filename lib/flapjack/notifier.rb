@@ -19,7 +19,7 @@ module Flapjack
           @log.info("using the #{n.class.to_s.split("::").last} notifier")
         end
       else
-        @log.warning("there are no notifiers")
+        @log.warning("There are no notifiers! flapjack-notifier won't be useful.")
       end
     end
    
