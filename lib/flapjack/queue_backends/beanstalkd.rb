@@ -67,9 +67,6 @@ module Flapjack
       def save 
       end
 
-      def delete
-      end
-  
     end
   end
 end
