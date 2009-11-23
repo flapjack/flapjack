@@ -26,7 +26,7 @@ module Flapjack
       attr_accessor :log, :recipients
 
       def initialize(options={})
-        @log = options[:logger]
+        @log = options[:log]
         @notifier_directories = options[:notifier_directories]
         @options = options
       end
