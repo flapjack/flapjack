@@ -26,7 +26,6 @@
    * writing custom populators guide
  * write puppet manifests
  
- * build option to specify notifier(s) directory
  * sandbox flapjack-worker
    * provide config option for specifying sandbox dir
 
