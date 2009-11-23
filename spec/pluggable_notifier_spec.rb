@@ -75,6 +75,37 @@ describe "notifier application" do
     }.should raise_error
   end
 
+  it "should use a limited interface for dealing with the results queue" do
+    options = { :notifiers => {:mailer => {}}, 
+                :logger => MockLogger.new,
+                :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
+                :queue_backend => {:type => :mockbackend, 
+                                   :basedir => File.join(File.dirname(__FILE__), 'backends')} }
+    app = Flapjack::Notifier::Application.run(options)
+
+    # processes a single result
+    app.process_result
+    %w(next).each do |method|
+      app.log.messages.find {|msg| msg =~ /#{method.gsub(/\?/,'\?')} was called/i}.should_not be_nil
+    end
+
+  end
+  it "should use a limited interface for dealing with results off the results queue" do
+    options = { :notifiers => {:mailer => {}}, 
+                :logger => MockLogger.new,
+                :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
+                :queue_backend => {:type => :mockbackend, 
+                                   :basedir => File.join(File.dirname(__FILE__), 'backends')} }
+    app = Flapjack::Notifier::Application.run(options)
+
+    # processes a single result
+    app.process_result
+    %w(warning? any_parents_failed? save delete).each do |method|
+      app.log.messages.find {|msg| msg =~ /#{method.gsub(/\?/,'\?')} was called/i}.should_not be_nil
+    end
+  end
+
+
 end
 
 def puts(*args) ; end
