@@ -84,7 +84,7 @@ module Flapjack
       end
 
       def setup_notifier_engine
-        options = { :logger => @log, :notifiers => @notifiers }
+        options = { :log => @log, :notifiers => @notifiers }
         @notifier_engine = Flapjack::NotifierEngine.new(options)
       end
 
