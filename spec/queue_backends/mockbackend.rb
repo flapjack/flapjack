@@ -15,6 +15,9 @@ module Flapjack
         @log.info("method next was called on Mockbackend")
         Result.new(@options)
       end
+      def delete(arg)
+        @log.info("method delete was called on Mockbackend")
+      end
     end
   end
 end
@@ -29,7 +32,7 @@ module Flapjack
       end
 
       # log if the method is called (essentially, these are dodgy mocks)
-      %w(id warning? critical? any_parents_failed? save delete).each do |method|
+      %w(id warning? critical? any_parents_failed? save).each do |method|
         class_eval <<-HERE
           def #{method}(*args)
             @log.info("method #{method} was called on Result")
