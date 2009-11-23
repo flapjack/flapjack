@@ -15,6 +15,10 @@ module Flapjack
 
         @queue = Beanstalk::Pool.new(["#{@config.host}:#{@config.port}"], @config.queue_name)
       end
+
+      def next
+        job = @queue.reserve # blocks
+      end
     end
   end
 end
