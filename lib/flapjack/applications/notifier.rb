@@ -3,6 +3,7 @@
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
 require File.expand_path(File.join(File.dirname(__FILE__), '..', 'patches'))
+require File.expand_path(File.join(File.dirname(__FILE__), '..', 'notifier_engine'))
 
 module Flapjack
   module Notifier
@@ -14,6 +15,7 @@ module Flapjack
         app.setup_config
         app.setup_loggers
         app.setup_notifiers
+        app.setup_notifier_engine
         app.setup_recipients
         app.setup_check_backend
         app.setup_queues
@@ -79,6 +81,11 @@ module Flapjack
           end
         end
 
+      end
+
+      def setup_notifier_engine
+        options = { :logger => @log, :notifiers => @notifiers }
+        @notifier_engine = Flapjack::NotifierEngine.new(options)
       end
 
       def setup_recipients
@@ -160,7 +167,7 @@ module Flapjack
               @log.warning("Couldn't create an event for #{result.id}!")
             end
             @log.info("Notifying on check #{result.id}.")
-            @notifier_engine.notify!(result)
+            @notifier_engine.notify!(:result => result, :event => event)
           end
         end
 
