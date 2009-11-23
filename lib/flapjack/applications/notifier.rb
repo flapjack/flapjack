@@ -104,12 +104,14 @@ module Flapjack
         defaults = { :type => :beanstalkd, 
                      :host => 'localhost', 
                      :port => '11300',
-                     :queue_name => 'results'}
+                     :queue_name => 'results',
+                     :log => @log }
         config = defaults.merge(@config.queue_backend || {})
+        basedir = config.delete(:basedir) || File.join(File.dirname(__FILE__), '..', 'queue_backends')
 
         @log.info("Loading the #{config[:type].to_s.capitalize} queue backend")
         
-        filename = File.join(File.dirname(__FILE__), '..', 'queue_backends', "#{config[:type]}.rb")
+        filename = File.join(basedir, "#{config[:type]}.rb")
 
         begin 
           require filename
@@ -119,6 +121,27 @@ module Flapjack
           @log.warning("Exiting.")
           raise # preserves original exception logging
         end
+      end
+
+      def process_result
+        @log.debug("Waiting for new result...")
+        result = @results_queue.next # this blocks until a result is popped
+        
+        @log.info("Processing result for check #{result.id}.")
+        if result.warning? || result.critical?
+          if result.any_parents_failed?
+            @log.info("Not notifying on check '#{result.id}' as parent is failing.")
+          else
+            @log.info("Notifying on check '#{result.id}'")
+            @notifier_engine.notify!(result)
+          end
+        end
+
+        @log.info("Storing status of check.")
+        result.save
+
+        @log.info("Deleting result for check #{result.id}.")
+        result.delete
       end
 
       def main_loop
