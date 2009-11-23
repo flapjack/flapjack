@@ -17,9 +17,9 @@ describe "notifier application" do
   end
 
   it "should load good, bad, and ugly test result" do 
-    [ {:output => "", :id => 9, :retval => 0},
-      {:output => "", :id => 3, :retval => 1},
-      {:output => "", :id => 1, :retval => 2} ].each do |result|
+    [ {:output => "", :id => 1, :retval => 0},
+      {:output => "", :id => 2, :retval => 1},
+      {:output => "", :id => 3, :retval => 2} ].each do |result|
       @beanstalk.yput(result)
     end
 
