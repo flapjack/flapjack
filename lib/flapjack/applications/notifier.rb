@@ -15,6 +15,7 @@ module Flapjack
         app.setup_loggers
         app.setup_notifiers
         app.setup_recipients
+        app.setup_check_backend
         app.setup_queues
 
         app
@@ -100,6 +101,27 @@ module Flapjack
         end
       end
 
+      def setup_check_backend
+        defaults = { :type => :datamapper,
+                     :log => @log }
+        config = defaults.merge(@config.check_backend || {})
+        basedir = config.delete(:basedir) || File.join(File.dirname(__FILE__), '..', 'check_backends')
+        
+        @log.info("Loading the #{config[:type].to_s.capitalize} check backend")
+        
+        filename = File.join(basedir, "#{config[:type]}.rb")
+
+        begin 
+          require filename
+          @check_backend = Flapjack::CheckBackends.const_get("#{config[:type].to_s.capitalize}").new(config)
+        rescue LoadError => e
+          @log.warning("Attempted to load #{config[:type].to_s.capitalize} check backend, but it doesn't exist!")
+          @log.warning("Exiting.")
+          raise # preserves original exception
+        end
+
+      end
+
       def setup_queues
         defaults = { :type => :beanstalkd, 
                      :host => 'localhost', 
@@ -119,7 +141,7 @@ module Flapjack
         rescue LoadError => e
           @log.warning("Attempted to load #{config[:type].to_s.capitalize} queue backend, but it doesn't exist!")
           @log.warning("Exiting.")
-          raise # preserves original exception logging
+          raise # preserves original exception
         end
       end
 
@@ -129,16 +151,21 @@ module Flapjack
         
         @log.info("Processing result for check #{result.id}.")
         if result.warning? || result.critical?
-          if result.any_parents_failed?
+          if @check_backend.any_parents_failed?(result)
             @log.info("Not notifying on check '#{result.id}' as parent is failing.")
           else
-            @log.info("Notifying on check '#{result.id}'")
+            if event = @check_backend.create_event(result)
+              @log.info("Event with id #{event.id} created for #{result.id}")
+            else
+              @log.warning("Couldn't create an event for #{result.id}!")
+            end
+            @log.info("Notifying on check #{result.id}.")
             @notifier_engine.notify!(result)
           end
         end
 
         @log.info("Storing status of check.")
-        result.save
+        @check_backend.save(result)
 
         @log.info("Deleting result for check #{result.id}.")
         @results_queue.delete(result)
