@@ -61,7 +61,7 @@ module Flapjack
     
       def id
         # openstruct won't respond, so we have to manually define it
-        @job.id
+        @job.check_id
       end
 
       def save 
