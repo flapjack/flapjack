@@ -1,3 +1,6 @@
+ * rename CheckBackends to Persistance
+ * rename QueueBackends to Transports
+
  * rethink Notifier/NotifierCLI split
    Notifier + NotifierCLI are tightly coupled, which makes it difficult to refactor
    follow Puppet's lead with Puppet::Application (NotifierCLI translates to Flapjack::Notifier::Application)
