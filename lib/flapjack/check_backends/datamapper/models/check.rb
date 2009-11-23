@@ -74,17 +74,13 @@ class Check
   end
 
 
-  GOOD = 0
-  BAD  = 1
-  UGLY = 2
-  
   def pretty_print_status
     case self.status
-    when GOOD
+    when 0
       "good"
-    when BAD
+    when 1
       "bad"
-    when UGLY
+    when 2
       "ugly"
     end
   end
