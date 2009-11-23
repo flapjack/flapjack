@@ -8,7 +8,7 @@ module Flapjack
     attr_reader :recipients, :log, :notifiers
   
     def initialize(opts={})
-      @log = opts[:logger]
+      @log = opts[:log]
       raise "you have to specify a logger" unless @log
       @recipients = (opts[:recipients] || [])
       
