@@ -23,7 +23,7 @@ describe "notifier application" do
     app.log.messages.find {|msg| msg =~ /Flapjack::Notifiers::Nonexistant doesn't exist/}.should_not be_nil
   end
 
-  it "should give precedence to specified notifier directories" do 
+  it "should give precedence to notifiers in user-specified notifier directories" do 
     options = { :notifiers => {:mailer => {}}, 
                 :logger => MockLogger.new,
                 :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')]}
