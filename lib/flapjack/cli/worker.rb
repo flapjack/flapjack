@@ -6,7 +6,6 @@ require 'ostruct'
 require 'optparse'
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
-require 'flapjack/result'
 require 'flapjack/patches'
 
 module Flapjack
@@ -123,8 +122,7 @@ module Flapjack
     def get_check
       @log.debug("Waiting for check...")
       job = @jobs.reserve
-      # FIXME: maybe wrap Result as Job now that Check is reserved?
-      check = Result.new(YAML::load(job.body))
+      check = Flapjack::Transport::Result.new(:job => job, :result => YAML::load(job.body))
       @log.info("Got check with id #{check.id}")
 
       return job, check
