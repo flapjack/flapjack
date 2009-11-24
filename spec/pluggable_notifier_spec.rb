@@ -142,7 +142,7 @@ describe "notifier application" do
     app.process_result
 
     # check that allowed methods were called
-    allowed_methods = %w(id warning?)
+    allowed_methods = %w(check_id warning?)
     allowed_methods.each do |method|
       app.log.messages.find {|msg| msg =~ /#{method.gsub(/\?/,'\?')} was called/i}.should_not be_nil
     end
