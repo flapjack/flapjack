@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 module Flapjack
-  module QueueBackends
+  module Transport
     class Result
 
       attr_accessor :job, :result
