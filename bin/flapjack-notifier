@@ -9,10 +9,14 @@ require 'flapjack/patches'
 
 @options = Flapjack::NotifierOptions.parse(ARGV)
 
-p @options
+log = Log4r::Logger.new("notifier")
+log.add(Log4r::StdoutOutputter.new("notifier"))
+log.add(Log4r::SyslogOutputter.new("notifier"))
 
-exit
-
-app = Flapjack::Notifier::Application.new(@options)
+app = Flapjack::Notifier::Application.run(:log => log, 
+                                          :notifiers => {},
+                                          :queue_backend => {:type => :beanstalkd},
+                                          :persistence => {:type => :datamapper,
+                                                           :uri => "sqlite3:///tmp/flapjack.db"})
 app.main()
 

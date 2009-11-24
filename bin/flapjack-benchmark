@@ -1,0 +1,49 @@
+#!/usr/bin/env ruby
+
+$: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+
+require 'flapjack/cli/notifier'
+require 'flapjack/applications/notifier'
+require 'daemons'
+require 'flapjack/patches'
+
+# setup 
+@options = Flapjack::NotifierOptions.parse(ARGV)
+
+log = Log4r::Logger.new("notifier")
+log.add(Log4r::SyslogOutputter.new("notifier"))
+
+app = Flapjack::Notifier::Application.run(:log => log, 
+                                          :notifiers => {},
+                                          :queue_backend => {:type => :beanstalkd},
+                                          :persistence => {:type => :datamapper,
+                                                           :uri => "sqlite3:///tmp/flapjack.db"})
+
+mockapp = Flapjack::Notifier::Application.run(:log => log,
+                                              :notifiers => {},
+                                              :queue_backend => {:type => :mockbackend,
+                                                                 :basedir => File.join(File.dirname(__FILE__), '..', 'spec', 'transports')},
+                                              :persistence => {:type => :mockbackend,
+                                                               :basedir => File.join(File.dirname(__FILE__), '..', 'spec', 'persistence')})
+
+# populate 
+require 'beanstalk-client'
+beanstalk = Beanstalk::Pool.new(["localhost:11300"], 'results')
+
+puts "Writing 1000 passing checks onto work queue."
+2000.times do 
+  result = {:output => "some output", :check_id => 1, :retval => 0}
+  beanstalk.yput(result)
+end
+
+# benchmark
+require 'benchmark' 
+
+Benchmark.bm(30) do |b|
+  b.report("beanstalkd + datamapper:") do
+    1000.times {app.process_result}
+  end
+  b.report("mock + mock:") do
+    1000.times {mockapp.process_result}
+  end
+end
