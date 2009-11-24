@@ -21,13 +21,23 @@ module Flapjack
 
       def any_parents_failed?(result)
         check = Check.get(result.check_id)
-        check.worst_parent_status != 0
+        if check
+          check.worst_parent_status != 0
+        else
+          @log.warning("Check with id #{result.check_id} doesn't exist!")
+          false # this will notify
+        end
       end
 
       def save(result)
         check = Check.get(result.check_id)
-        check.status = result.status
-        check.save
+        if check
+          check.status = result.status
+          check.save
+        else
+          @log.warning("Check with id #{result.check_id} doesn't exist!")
+          true
+        end
       end
 
       def create_event(result)
