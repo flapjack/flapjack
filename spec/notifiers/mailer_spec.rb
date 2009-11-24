@@ -3,14 +3,10 @@ require File.join(File.dirname(__FILE__), '..', 'helpers')
 
 describe "mailing notifier" do 
 
-#  it "should set a from address" do 
-#    mailer = Flapjack::Notifiers::Mailer.new(:from_address => "test@example.org")
-#  end
-
   it "should error if no from address is provided" do 
     lambda {
-      mailer = Flapjack::Notifiers::Mailer.new
-    }.should raise_error(ArgumentError)
+      mailer = Flapjack::Notifiers::Mailer.new(:log => MockLogger.new)
+    }.should raise_error(ArgumentError, /from address/)
   end
 
   it "should error if no recipient is provided" do
