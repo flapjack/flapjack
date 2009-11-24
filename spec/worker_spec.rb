@@ -41,7 +41,7 @@ describe "running the worker" do
     beanstalk.stub!(:reserve).and_return {
       # and it should produce a job
       job = mock("Beanstalk::Job")
-      job.should_receive(:body).and_return("--- \n:command: \"collectd-nagios -s /var/run/collectd-unixsock -H theodor -n cpu-0/cpu-idle -w 30: -c 10:\"\n:frequency: 30\n:id: 4\n")
+      job.should_receive(:body).and_return("--- \n:command: \"collectd-nagios -s /var/run/collectd-unixsock -H theodor -n cpu-0/cpu-idle -w 30: -c 10:\"\n:frequency: 30\n:check_id: 4\n")
       job
     }
     w.jobs = beanstalk
@@ -51,7 +51,7 @@ describe "running the worker" do
 
     # verify helper methods
     check.command.should =~ /^collectd-nagios/
-    check.id.should == 4
+    check.check_id.should == 4
     check.frequency.should == 30
   end
 
