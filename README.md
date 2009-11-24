@@ -51,13 +51,14 @@ Install the following software through your package manager or from source:
 Installation
 ------------
 
-Add GitHub's RubyGems server to your Gem sources: 
 
-    sudo gem sources -a http://gems.github.com
+Add the Gemcutter RubyGems server to your Gem sources: 
+
+    sudo gem sources -a http://gemcutter.org
 
 Install the Flapjack gem: 
 
-    sudo gem install auxesis-flapjack
+    sudo gem install flapjack
 
 Then run the magic configuration script to set up init scripts: 
 
@@ -119,6 +120,7 @@ What things do
   * `flapjack-worker-manager` => starts/stops a cluster of `flapjack-worker`
   * `flapjack-notifier` => gets results, notifies people if necessary  
   * `flapjack-stats` => gets stats from beanstalkd tubes (useful for benchmarks + performance analysis)  
+  * `flapjack-benchmark` => benchmarks various persistance/transport backend combinations
 
 
 init scripts
@@ -173,13 +175,21 @@ To run tests:
 Architecture
 ------------
 
-           -------------------
-           | web interface / |
-           | dsl / flat file |
-           -------------------
-          /
-          |
-          |
+    -------------------        -------------------
+    | web interface / |        | visualisation / |
+    | dsl / flat file |        | reporting       |
+    -------------------        -------------------
+              |                   |
+               \                 /
+                \               /
+                 ---------------
+                 | persistance |
+                 ---------------
+                        |
+          -------------------------------
+          |                             |
+          |                             |
+          |                             |
     -------------                  ------------
     | populator |---          -----| notifier |
     -------------  |          |    ------------
