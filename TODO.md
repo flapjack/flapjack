@@ -1,7 +1,6 @@
 
- * make command line tools work
- * fix queue_backend/check_backend references
  * make flapjack-worker consistent in design with flapjack-notifier
+ * fix queue_backend/check_backend references
  * make persistence/transport const_get CamelCase aware
  * clean up tests directory structure
  
