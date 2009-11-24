@@ -29,15 +29,15 @@ module Flapjack
         mail = TMail::Mail.new
         mail.to = opts[:who].email
         mail.from = @from_address
-        mail.subject = "Check: #{opts[:result].id}, Status: #{opts[:result].status}"
+        mail.subject = "Check: #{opts[:result].check_id}, Status: #{opts[:result].status}"
         mail.body = <<-DESC
-          Check #{opts[:result].id} returned the status "#{opts[:result].status}".
+          Check #{opts[:result].check_id} returned the status "#{opts[:result].status}".
           
           Here was the output: 
             #{opts[:result].output}
     
           You can respond to this issue at:
-            #{@website_uri}/issue/#{opts[:result].id}
+            #{@website_uri}/issue/#{opts[:result].check_id}
         DESC
 
         begin 
