@@ -10,7 +10,7 @@ Dir.glob(File.join(File.dirname(__FILE__), 'models', '*.rb')).each do |model|
 end
 
 module Flapjack
-  module CheckBackends
+  module Persistence
     class Datamapper
       def initialize(options={})
         @options = options

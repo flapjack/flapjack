@@ -17,7 +17,7 @@ module Flapjack
         app.setup_notifiers
         app.setup_notifier_engine
         app.setup_recipients
-        app.setup_check_backend
+        app.setup_persistence
         app.setup_queues
 
         app
@@ -108,11 +108,11 @@ module Flapjack
         end
       end
 
-      def setup_check_backend
+      def setup_persistence
         defaults = { :type => :datamapper,
                      :log => @log }
-        config = defaults.merge(@config.check_backend || {})
-        basedir = config.delete(:basedir) || File.join(File.dirname(__FILE__), '..', 'check_backends')
+        config = defaults.merge(@config.persistence || {})
+        basedir = config.delete(:basedir) || File.join(File.dirname(__FILE__), '..', 'persistence')
         
         @log.info("Loading the #{config[:type].to_s.capitalize} check backend")
         
@@ -120,7 +120,7 @@ module Flapjack
 
         begin 
           require filename
-          @check_backend = Flapjack::CheckBackends.const_get("#{config[:type].to_s.capitalize}").new(config)
+          @persistence = Flapjack::Persistence.const_get("#{config[:type].to_s.capitalize}").new(config)
         rescue LoadError => e
           @log.warning("Attempted to load #{config[:type].to_s.capitalize} check backend, but it doesn't exist!")
           @log.warning("Exiting.")
@@ -158,10 +158,10 @@ module Flapjack
         
         @log.info("Processing result for check #{result.id}.")
         if result.warning? || result.critical?
-          if @check_backend.any_parents_failed?(result)
+          if @persistence.any_parents_failed?(result)
             @log.info("Not notifying on check '#{result.id}' as parent is failing.")
           else
-            if event = @check_backend.create_event(result)
+            if event = @persistence.create_event(result)
               @log.info("Event with id #{event.id} created for #{result.id}")
             else
               @log.warning("Couldn't create an event for #{result.id}!")
@@ -172,7 +172,7 @@ module Flapjack
         end
 
         @log.info("Storing status of check.")
-        @check_backend.save(result)
+        @persistence.save(result)
 
         @log.info("Deleting result for check #{result.id}.")
         @results_queue.delete(result)
