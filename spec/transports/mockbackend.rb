@@ -2,7 +2,7 @@
 
 
 module Flapjack
-  module QueueBackends
+  module Transport
     class Mockbackend
       def initialize(options={})
         @options = options
@@ -23,7 +23,7 @@ module Flapjack
 end
 
 module Flapjack
-  module QueueBackends
+  module Transport
     class MockResult
       def initialize(options={})
         @options = options

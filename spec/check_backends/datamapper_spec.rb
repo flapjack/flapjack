@@ -2,7 +2,7 @@
 
 require File.join(File.dirname(__FILE__), '..', '..', 'lib', 'flapjack', 'applications', 'notifier')
 require File.join(File.dirname(__FILE__), '..', '..', 'lib', 'flapjack', 'check_backends', 'datamapper')
-require File.join(File.dirname(__FILE__), '..', '..', 'lib', 'flapjack', 'queue_backends', 'result')
+require File.join(File.dirname(__FILE__), '..', '..', 'lib', 'flapjack', 'transports', 'result')
 require File.join(File.dirname(__FILE__), '..', 'helpers')
 require 'tmpdir'
 

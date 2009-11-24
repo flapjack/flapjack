@@ -104,7 +104,7 @@ describe "notifier application" do
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
                 :queue_backend => {:type => :mockbackend, 
-                                   :basedir => File.join(File.dirname(__FILE__), 'queue_backends')},
+                                   :basedir => File.join(File.dirname(__FILE__), 'transports')},
                 :check_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
     app = Flapjack::Notifier::Application.run(options)
@@ -133,7 +133,7 @@ describe "notifier application" do
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
                 :queue_backend => {:type => :mockbackend, 
-                                   :basedir => File.join(File.dirname(__FILE__), 'queue_backends')},
+                                   :basedir => File.join(File.dirname(__FILE__), 'transports')},
                 :check_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
     app = Flapjack::Notifier::Application.run(options)
@@ -162,7 +162,7 @@ describe "notifier application" do
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
                 :queue_backend => {:type => :mockbackend, 
-                                   :basedir => File.join(File.dirname(__FILE__), 'queue_backends')},
+                                   :basedir => File.join(File.dirname(__FILE__), 'transports')},
                 :check_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
     app = Flapjack::Notifier::Application.run(options)

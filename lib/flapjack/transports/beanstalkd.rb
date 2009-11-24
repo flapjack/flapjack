@@ -3,7 +3,7 @@
 require 'beanstalk-client'
 
 module Flapjack
-  module QueueBackends
+  module Transport
     class Beanstalkd
       def initialize(options={})
         @options = options
