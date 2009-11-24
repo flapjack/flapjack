@@ -2,45 +2,17 @@
 
 $: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE__) + '/../lib/')
 
-require 'rubygems'
-require 'beanstalk-client'
-require 'ostruct'
-require 'optparse'
-require 'log4r'
-require 'log4r/outputter/syslogoutputter'
-require 'flapjack/result'
-require 'flapjack/notifier'
+require 'flapjack/cli/notifier'
+require 'flapjack/applications/notifier'
 require 'daemons'
 require 'flapjack/patches'
 
-# command line options are in here
-require 'flapjack/cli/notifier'
-
-# boot up the notifier
 @options = Flapjack::NotifierOptions.parse(ARGV)
 
-ncli = Flapjack::NotifierCLI.new
-ncli.setup_loggers
-ncli.setup_recipients(:filename => @options.recipients)
-ncli.setup_config(:filename => @options.config_filename)
-ncli.setup_notifier
-ncli.setup_database(:database_uri => @options.database_uri)
+p @options
 
-begin 
+exit
 
-  ncli.results_queue = Beanstalk::Pool.new(["#{@options.host}:#{@options.port}"], 'results')
-  ncli.log.info("established connection to beanstalkd on #{@options.host}...")
+app = Flapjack::Notifier::Application.new(@options)
+app.main()
 
-  # process results
-  ncli.process_loop
-
-rescue Beanstalk::NotConnected
-  ncli.log.error("Couldn't connect to the Beanstalk!")
-
-  timeout = 5 
-  ncli.log.error("Retrying in #{timeout} seconds.")
-  sleep timeout
-
-  ncli.log.error("Retrying...")
-  retry
-end
