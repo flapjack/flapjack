@@ -16,13 +16,13 @@ describe "notifier application" do
   end
 
   it "should log when loading a notifier" do 
-    options = { :notifiers => {:mailer => {}}, 
+    options = { :notifiers => {:testmailer => {}}, 
                 :log => MockLogger.new,
                 :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
                 :check_backend => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'check_backends')} }
     app = Flapjack::Notifier::Application.run(options)
-    app.log.messages.find {|msg| msg =~ /loading the mailer notifier/i}.should_not be_nil
+    app.log.messages.find {|msg| msg =~ /loading the testmailer notifier/i}.should_not be_nil
   end
 
   it "should warn if a specified notifier doesn't exist" do 
@@ -35,7 +35,7 @@ describe "notifier application" do
   end
 
   it "should give precedence to notifiers in user-specified notifier directories" do 
-    options = { :notifiers => {:mailer => {}}, 
+    options = { :notifiers => {:testmailer => {}}, 
                 :log => MockLogger.new,
                 :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
                 :check_backend => {:type => :mockbackend, 
