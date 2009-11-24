@@ -90,7 +90,7 @@ describe "running the worker" do
 
     # we need to report the check id
     check = mock("Check")
-    check.should_receive(:id).at_least(:once)
+    check.should_receive(:check_id).at_least(:once)
 
     # we need to report the status
     retval = mock("Process::Status")
