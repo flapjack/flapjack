@@ -1,6 +1,8 @@
 
  * make command line tools work
+ * fix queue_backend/check_backend references
  * make flapjack-worker consistent in design with flapjack-notifier
+ * make persistence/transport const_get CamelCase aware
  
  * add persistence backend for CouchDB
 
