@@ -34,13 +34,23 @@ module Flapjack
         when 2 ; "critical"
         end
       end
-    
+   
+      # FIXME: there is a *lot* of duplication here - implement a proxy
+      # object pattern?
       def id
         @result.check_id
       end
 
       def check_id
         @result.check_id
+      end
+
+      def command
+        @result.command
+      end
+
+      def frequency
+        @result.frequency
       end
 
     end
