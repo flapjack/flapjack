@@ -2,7 +2,7 @@
 
 module Flapjack
   module Notifiers
-    class Mailer
+    class Testmailer
 
       def initialize(opts={})
       end
