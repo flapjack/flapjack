@@ -3,22 +3,20 @@
 require 'rubygems'
 require 'net/smtp'
 require 'tmail'
-require 'log4r'
 
 module Flapjack
   module Notifiers
 
     class Mailer
 
+      attr_accessor :log, :from_address
+
       def initialize(opts={})
-        if opts[:from_address]
-          @from_address = opts[:from_address]
-        else
-          raise ArgumentError, "from address must be provided"
-        end
-        @website_uri  = opts[:website_uri] ? opts[:website_uri].gsub(/\/$/, '') : "http://#{`hostname`}"
-        @log = opts[:logger]
-        @log ||= ::Log4r::Logger.new("notifier")
+        @log = opts[:log]
+        @from_address = opts[:from_address]
+        @website_uri = opts[:website_uri]
+        
+        raise ArgumentError, "from address must be provided" unless @from_address
       end
 
       def notify(opts={})
