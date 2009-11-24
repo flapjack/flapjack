@@ -1,6 +1,8 @@
 #!/usr/bin/env ruby
 
+$: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..'))
 require 'beanstalk-client'
+require 'flapjack/transports/result'
 
 module Flapjack
   module Transport
