@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby 
 
 
-module MockFlapjack
+module Flapjack
   module QueueBackends
     class Mockbackend
       def initialize(options={})
@@ -22,7 +22,7 @@ module MockFlapjack
   end
 end
 
-module MockFlapjack
+module Flapjack
   module QueueBackends
     class MockResult
       def initialize(options={})
