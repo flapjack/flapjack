@@ -1,6 +1,4 @@
  * rename CheckBackends to Persistance
- * rename QueueBackends to Transports
- * rename :logger => :log on NotifierEngine
 
  * rethink Notifier/NotifierCLI split
    Notifier + NotifierCLI are tightly coupled, which makes it difficult to refactor
