@@ -20,18 +20,18 @@ module Flapjack
       end
 
       def any_parents_failed?(result)
-        check = Check.get(result.id)
+        check = Check.get(result.check_id)
         check.worst_parent_status != 0
       end
 
       def save(result)
-        check = Check.get(result.id)
+        check = Check.get(result.check_id)
         check.status = result.status
         check.save
       end
 
       def create_event(result)
-        event = Event.new(:check_id => result.id)
+        event = Event.new(:check_id => result.check_id)
         event.save
       end
 
