@@ -19,7 +19,7 @@ module Flapjack
       def next
         job = @queue.reserve # blocks
         result = YAML::load(job.body)
-        Flapjack::QueueBackends::Result.new(:job => job, :result => result)
+        Flapjack::Transport::Result.new(:job => job, :result => result)
       end
 
       def delete(result)
