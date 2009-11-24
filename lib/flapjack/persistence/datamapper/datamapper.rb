@@ -39,10 +39,10 @@ module Flapjack
       def connect
         raise ArgumentError, "Database URI wasn't specified" unless @config.uri
         DataMapper.setup(:default, @config.uri)
-        validate
+        validate_structure
       end
 
-      def validate
+      def validate_structure
         begin
           DataMapper.repository(:default).adapter.execute("SELECT 'id' FROM 'checks';")
         rescue Sqlite3Error => e
