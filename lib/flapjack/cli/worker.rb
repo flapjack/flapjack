@@ -99,8 +99,8 @@ module Flapjack
     def report_check(opts={})
       raise ArgumentError unless (opts[:result] && opts[:retval] && opts[:check])
 
-      @log.debug "Reporting results for check id #{opts[:check].id}."
-      @results.yput({:id => opts[:check].id, 
+      @log.debug "Reporting results for check id #{opts[:check].check_id}."
+      @results.yput({:check_id => opts[:check].check_id, 
                      :output => opts[:result], 
                      :retval => opts[:retval].to_i})
     end
@@ -123,7 +123,7 @@ module Flapjack
       @log.debug("Waiting for check...")
       job = @jobs.reserve
       check = Flapjack::Transport::Result.new(:job => job, :result => YAML::load(job.body))
-      @log.info("Got check with id #{check.id}")
+      @log.info("Got check with id #{check.check_id}")
 
       return job, check
     end
