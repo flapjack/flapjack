@@ -13,8 +13,6 @@ describe "datamapper check backend" do
     DataMapper.setup(:default, backend_options[:uri])
     DataMapper.auto_migrate!
 
-    backend = Flapjack::CheckBackends::Datamapper.new(backend_options)
-
     bad = Check.new(:command => "exit 1", :name => "bad")
     bad.save.should be_true
 
@@ -26,7 +24,9 @@ describe "datamapper check backend" do
 
     # the bad check doesn't have failing parents
     raw_result = {:check_id => bad.id, :retval => 2}
-    result = Flapjack::QueueBackends::Result.new(:result => raw_result)
+    result = Flapjack::Transport::Result.new(:result => raw_result)
+
+    backend = Flapjack::CheckBackends::Datamapper.new(backend_options)
     backend.any_parents_failed?(result).should be_false
 
     bad.status = 2
@@ -34,7 +34,7 @@ describe "datamapper check backend" do
     
     # the good check has a failing parent (bad)
     raw_result = {:check_id => good.id, :retval => 0}
-    result = Flapjack::QueueBackends::Result.new(:result => raw_result)
+    result = Flapjack::Transport::Result.new(:result => raw_result)
     backend.any_parents_failed?(result).should be_true
   end
 
@@ -49,7 +49,7 @@ describe "datamapper check backend" do
     check.save.should be_true
 
     raw_result = {:check_id => check.id, :retval => 2}
-    result = Flapjack::QueueBackends::Result.new(:result => raw_result)
+    result = Flapjack::Transport::Result.new(:result => raw_result)
 
     backend.save(result).should be_true
   end
@@ -65,7 +65,7 @@ describe "datamapper check backend" do
     check.save.should be_true
 
     raw_result = {:check_id => check.id, :retval => 2}
-    result = Flapjack::QueueBackends::Result.new(:result => raw_result)
+    result = Flapjack::Transport::Result.new(:result => raw_result)
 
     backend.create_event(result).should be_true
   end

@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby 
 
 
-module Flapjack
+module MockFlapjack
   module QueueBackends
     class Mockbackend
       def initialize(options={})
@@ -13,7 +13,7 @@ module Flapjack
 
       def next
         @log.info("method next was called on Mockbackend")
-        Result.new(@options)
+        MockResult.new(@options)
       end
       def delete(arg)
         @log.info("method delete was called on Mockbackend")
@@ -22,9 +22,9 @@ module Flapjack
   end
 end
 
-module Flapjack
+module MockFlapjack
   module QueueBackends
-    class Result
+    class MockResult
       def initialize(options={})
         @options = options
         @config = OpenStruct.new(@options)

@@ -35,7 +35,7 @@ describe "running the notifier" do
     mock_notifier = mock("MockFlapjack::NotifierEngine")
     mock_notifier.should_receive(:notify)
 
-    result = Flapjack::QueueBackends::Result.new(:result => {:check_id => 12345})
+    result = Flapjack::Transport::Result.new(:result => {:check_id => 12345})
 
     n = Flapjack::NotifierEngine.new(:log => MockLogger.new, 
                      :notifiers => [mock_notifier],
@@ -47,7 +47,7 @@ describe "running the notifier" do
     mock_notifier = mock("MockFlapjack::NotifierEngine")
     mock_notifier.stub!(:notify)
 
-    result = Flapjack::QueueBackends::Result.new(:result => {:check_id => 12345})
+    result = Flapjack::Transport::Result.new(:result => {:check_id => 12345})
 
     n = Flapjack::NotifierEngine.new(:log => MockLogger.new, 
                                      :notifiers => [mock_notifier],

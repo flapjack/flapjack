@@ -96,7 +96,7 @@ describe "notifier application" do
 
   it "should use a limited interface for dealing with the results queue" do
     
-    # Interface for a Flapjack::QueueBackends::<backend> is as follows: 
+    # Interface for a Flapjack::Transport::<backend> is as follows: 
     # 
     #  methods: next, delete
     #
@@ -125,7 +125,7 @@ describe "notifier application" do
 
   it "should use a limited interface for dealing with results off the results queue" do
 
-    # Interface for a Flapjack::QueueBackends::Result is as follows: 
+    # Interface for a Flapjack::Transport::Result is as follows: 
     # 
     #  methods: id, warning?, critical?
     #
