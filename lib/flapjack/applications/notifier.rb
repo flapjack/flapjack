@@ -178,7 +178,7 @@ module Flapjack
         @results_queue.delete(result)
       end
 
-      def main_loop
+      def main
         @log.info("Booting main loop.")
         loop do 
           process_result
