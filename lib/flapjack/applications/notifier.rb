@@ -156,17 +156,17 @@ module Flapjack
         @log.debug("Waiting for new result...")
         result = @results_queue.next # this blocks until a result is popped
         
-        @log.info("Processing result for check #{result.id}.")
+        @log.info("Processing result for check #{result.check_id}.")
         if result.warning? || result.critical?
           if @persistence.any_parents_failed?(result)
-            @log.info("Not notifying on check '#{result.id}' as parent is failing.")
+            @log.info("Not notifying on check '#{result.check_id}' as parent is failing.")
           else
             if event = @persistence.create_event(result)
-              @log.info("Event with id #{event.id} created for #{result.id}")
+              @log.info("Event with id #{event.id} created for #{result.check_id}")
             else
-              @log.warning("Couldn't create an event for #{result.id}!")
+              @log.warning("Couldn't create an event for #{result.check_id}!")
             end
-            @log.info("Notifying on check #{result.id}.")
+            @log.info("Notifying on check #{result.check_id}.")
             @notifier_engine.notify!(:result => result, :event => event)
           end
         end
@@ -174,7 +174,7 @@ module Flapjack
         @log.info("Storing status of check.")
         @persistence.save(result)
 
-        @log.info("Deleting result for check #{result.id}.")
+        @log.info("Deleting result for check #{result.check_id}.")
         @results_queue.delete(result)
       end
 
