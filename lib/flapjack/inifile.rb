@@ -11,7 +11,7 @@ module Flapjack
       string.split("\n").each do |line|
         if line =~ /^\s*\[(.+)\]\s*(;.+)*$/
           @current_section = $1
-          @data[@current_section] = {}
+          @data[@current_section] ||= {}
         end
         if line =~ /^\s*(.+)\s*=\s*([^;]+)\s*(;.+)*$/ # after = captures up to ; then groups everything after ;
           key = $1.strip
