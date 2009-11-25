@@ -20,6 +20,8 @@ describe "worker application" do
     app = Flapjack::Worker::Application.run(options)
 
     app.log.messages.find_all {|msg| msg =~ /loading.+beanstalkd.+transport/i}.size.should == 2
+    app.log.messages.find {|msg| msg =~ /loading.+beanstalkd.+transport.+checks/i}.should be_true
+    app.log.messages.find {|msg| msg =~ /loading.+beanstalkd.+transport.+results/i}.should be_true
   end
 
   it "should load a transport as specified in options" do 
