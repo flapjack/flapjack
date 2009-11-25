@@ -3,7 +3,7 @@
 
 module Flapjack
   module Persistence
-    class Mockbackend
+    class MockPersistenceBackend
       def initialize(options={})
         @options = options
         @config = OpenStruct.new(@options)
@@ -15,7 +15,7 @@ module Flapjack
       %w(any_parents_failed? save).each do |method|
         class_eval <<-HERE
           def #{method}(*args)
-            @log.info("method #{method} was called on Persistence::Mockbackend")
+            @log.info("method #{method} was called on MockPersistenceBackend")
           end
         HERE
       end

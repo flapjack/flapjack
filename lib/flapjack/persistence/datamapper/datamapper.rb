@@ -11,7 +11,7 @@ end
 
 module Flapjack
   module Persistence
-    class Datamapper
+    class DataMapper
       def initialize(options={})
         @options = options
         @config = OpenStruct.new(options)

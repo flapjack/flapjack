@@ -114,15 +114,16 @@ module Flapjack
         config = defaults.merge(@config.persistence || {})
         basedir = config.delete(:basedir) || File.join(File.dirname(__FILE__), '..', 'persistence')
         
-        @log.info("Loading the #{config[:type].to_s.capitalize} persistence backend")
-        
         filename = File.join(basedir, "#{config[:type]}.rb")
+        class_name = config[:type].to_s.split('_').map {|e| e.capitalize}.join
 
+        @log.info("Loading the #{class_name} persistence backend")
+        
         begin 
           require filename
-          @persistence = Flapjack::Persistence.const_get("#{config[:type].to_s.capitalize}").new(config)
+          @persistence = Flapjack::Persistence.const_get(class_name).new(config)
         rescue LoadError => e
-          @log.warning("Attempted to load #{config[:type].to_s.capitalize} persistence backend, but it doesn't exist!")
+          @log.warning("Attempted to load #{class_name} persistence backend, but it doesn't exist!")
           @log.warning("Exiting.")
           raise # preserves original exception
         end
