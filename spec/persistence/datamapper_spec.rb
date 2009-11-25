@@ -26,7 +26,7 @@ describe "datamapper persistence backend" do
     raw_result = {:check_id => bad.id, :retval => 2}
     result = Flapjack::Transport::Result.new(:result => raw_result)
 
-    backend = Flapjack::Persistence::Datamapper.new(backend_options)
+    backend = Flapjack::Persistence::DataMapper.new(backend_options)
     backend.any_parents_failed?(result).should be_false
 
     bad.status = 2
@@ -43,7 +43,7 @@ describe "datamapper persistence backend" do
     DataMapper.setup(:default, backend_options[:uri])
     DataMapper.auto_migrate!
     
-    backend = Flapjack::Persistence::Datamapper.new(backend_options)
+    backend = Flapjack::Persistence::DataMapper.new(backend_options)
 
     check = Check.new(:command => "exit 0", :name => "good")
     check.save.should be_true
@@ -59,7 +59,7 @@ describe "datamapper persistence backend" do
     DataMapper.setup(:default, backend_options[:uri])
     DataMapper.auto_migrate!
     
-    backend = Flapjack::Persistence::Datamapper.new(backend_options)
+    backend = Flapjack::Persistence::DataMapper.new(backend_options)
 
     check = Check.new(:command => "exit 0", :name => "good")
     check.save.should be_true
