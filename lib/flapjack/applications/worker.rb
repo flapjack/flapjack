@@ -53,7 +53,7 @@ module Flapjack
           class_name = config[:type].to_s.camel_case
           filename = File.join(basedir, "#{config[:type]}.rb")
           
-          @log.info("Loading the #{class_name} transport")
+          @log.info("Loading the #{class_name} transport for queue: #{queue_name}.")
 
           begin 
             require filename
