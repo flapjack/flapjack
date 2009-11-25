@@ -48,13 +48,13 @@ module Flapjack
       private 
       def connect
         raise ArgumentError, "Database URI wasn't specified" unless @config.uri
-        DataMapper.setup(:default, @config.uri)
+        ::DataMapper.setup(:default, @config.uri)
         validate_structure
       end
 
       def validate_structure
         begin
-          DataMapper.repository(:default).adapter.execute("SELECT 'id' FROM 'checks';")
+          ::DataMapper.repository(:default).adapter.execute("SELECT 'id' FROM 'checks';")
         rescue Sqlite3Error => e
           @log.warning("The specified database doesn't appear to have any structure!")
           @log.warning("Exiting.")
