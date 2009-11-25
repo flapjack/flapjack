@@ -2,10 +2,8 @@
 
 $: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE__) + '/../lib/')
 
-require 'rubygems'
-require 'log4r'
-require 'log4r/outputter/syslogoutputter'
 require 'flapjack/cli/worker'
+require 'flapjack/applications/worker'
 
 at_exit do 
   puts "Shutting down"
@@ -17,20 +15,8 @@ trap("INT") do
 end
 
 @options = Flapjack::WorkerOptions.parse(ARGV)
-@worker = Flapjack::Worker.new(:host => @options.host, 
-                               :port => @options.port,
-                               :checks_directory => @options.check_directory)
-
-begin
-  @worker.process_loop
-rescue Beanstalk::NotConnected
-  puts "Couldn't connect to the beanstalk!"
- 
-  timeout = 5
-  puts "Retrying in #{timeout} seconds"
-  sleep timeout 
-
-  puts "Retrying..."
-  retry
-end
+app = Flapjack::Worker::Application.run(:host => @options.host,
+                                        :port => @options.port,
+                                        :check_directory => @options.check_directory)
+app.main
 
