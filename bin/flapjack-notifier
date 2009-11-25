@@ -7,7 +7,7 @@ require 'flapjack/applications/notifier'
 require 'daemons'
 require 'flapjack/patches'
 
-@options = Flapjack::NotifierOptions.parse(ARGV)
+@options = Flapjack::Notifier::Options.parse(ARGV)
 
 log = Log4r::Logger.new("notifier")
 log.add(Log4r::StdoutOutputter.new("notifier"))
