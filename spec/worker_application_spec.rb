@@ -40,7 +40,7 @@ describe "worker application" do
 
   it "should use a limited interface for dealing with transports" do 
     options = { :log => MockLogger.new, 
-                :transport => {:type => :mocktransport, 
+                :transport => {:type => :mock_transport, 
                                :basedir => File.join(File.dirname(__FILE__), 'transports')} }
     app = Flapjack::Worker::Application.run(options)
     app.process_check
@@ -52,7 +52,7 @@ describe "worker application" do
     end
 
     # check no other methods were called
-    called_methods = app.log.messages.find_all {|msg| msg =~ /^method .+ was called on Mocktransport$/i }.map {|msg| msg.split(' ')[1]}
+    called_methods = app.log.messages.find_all {|msg| msg =~ /^method .+ was called on MockTransport$/i }.map {|msg| msg.split(' ')[1]}
     (allowed_methods - called_methods).size.should == 0
   end
 
