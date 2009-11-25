@@ -11,15 +11,12 @@ module Flapjack
     class Options
       def self.parse(args)
         options = OpenStruct.new
-        options.transport   = OpenStruct.new
-        options.persistence = OpenStruct.new
-
         opts = OptionParser.new do |opts|
-          opts.on('-r', '--recipients FILE', 'recipients file') do |recipients|
-            options.recipients = recipients.to_s
+          opts.on('-r', '--recipients FILE', 'recipients file') do |filename|
+            options.recipients_filename = filename
           end
-          opts.on('-c', '--config FILE', 'config file') do |config|
-            options.config_filename = config.to_s
+          opts.on('-c', '--config FILE', 'config file') do |filename|
+            options.config_filename = filename
           end
           opts.on_tail("-h", "--help", "Show this message") do
             puts opts
@@ -39,8 +36,8 @@ module Flapjack
 
         @errors = []
         # check that recipients file exists
-        if options.recipients
-          unless File.exists?(options.recipients.to_s)
+        if options.recipients_filename
+          unless File.exists?(options.recipients_filename)
             @errors << "The specified recipients file doesn't exist!"
           end
         else
@@ -59,19 +56,22 @@ module Flapjack
             @errors << "Set one up, or specify one with [-c|--config]."
           end
         end
-        
+       
+        # holder for transport + persistence config
+        options.transport   = OpenStruct.new
+        options.persistence = OpenStruct.new
+
         config = Flapjack::Inifile.read(options.config_filename)
-        config["transport"].each_pair do |key, value|
-          unless options.transport.send(key)
-            options.transport.send("#{key}=", value)
+
+        %w(transport persistence).each do |backend|
+          config[backend].each_pair do |key, value|
+            unless options.send(backend).send(key)
+              options.send(backend).send("#{key}=", value)
+            end
           end
         end
 
-        config["persistence"].each_pair do |key, value|
-          unless options.persistence.send(key)
-            options.persistence.send("#{key}=", value)
-          end
-        end
+        p config.keys.grep(/.+\-notifier/)
 
         # if there are errors, print them out and exit
         if @errors.size > 0
