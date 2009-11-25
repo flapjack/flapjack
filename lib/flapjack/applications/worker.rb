@@ -57,7 +57,7 @@ module Flapjack
             queue = Flapjack::Transport.const_get("#{config[:type].to_s.capitalize}").new(queue_config)
             instance_variable_set("@#{queue_name}_queue", queue)
           rescue LoadError => e
-            @log.warning("Attempted to load #{config[:type].to_s.capitalize} queue backend, but it doesn't exist!")
+            @log.warning("Attempted to load #{config[:type].to_s.capitalize} transport, but it doesn't exist!")
             @log.warning("Exiting.")
             raise # preserves original exception
           end

@@ -62,32 +62,32 @@ describe "notifier application" do
   end
 
   #
-  # queues
+  # transports
   #
 
-  it "should load a beanstalkd as the default queue backend" do 
+  it "should use beanstalkd as the default transport" do 
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
                 :persistence => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
-    app.log.messages.find {|msg| msg =~ /loading.+beanstalkd.+backend/i}.should_not be_nil
+    app.log.messages.find {|msg| msg =~ /loading.+beanstalkd.+transport/i}.should_not be_nil
   end
 
-  it "should load a queue backend as specified in options" do 
+  it "should use a transport as specified in options" do 
     options = { :notifiers => {},
                 :log => MockLogger.new,
-                :queue_backend => {:type => :beanstalkd},
+                :transport => {:type => :beanstalkd},
                 :persistence => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
-    app.log.messages.find {|msg| msg =~ /loading.+beanstalkd.+backend/i}.should_not be_nil
+    app.log.messages.find {|msg| msg =~ /loading.+beanstalkd.+transport/i}.should_not be_nil
   end
 
-  it "should raise if the specified queue backend doesn't exist" do
+  it "should error if the specified transport doesn't exist" do
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
-                :queue_backend => {:type => :nonexistant} }
+                :transport => {:type => :nonexistant} }
     lambda {
       app = Flapjack::Notifier::Application.run(options)
       #app.log.messages.find {|msg| msg =~ /attempted to load nonexistant/i}.should_not be_nil
@@ -96,14 +96,14 @@ describe "notifier application" do
 
   it "should use a limited interface for dealing with the results queue" do
     
-    # Interface for a Flapjack::Transport::<backend> is as follows: 
+    # Interface for a Flapjack::Transport::<transport> is as follows: 
     # 
     #  methods: next, delete
     #
 
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
-                :queue_backend => {:type => :mocktransport, 
+                :transport => {:type => :mocktransport, 
                                    :basedir => File.join(File.dirname(__FILE__), 'transports')},
                 :persistence => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
@@ -123,7 +123,7 @@ describe "notifier application" do
     (allowed_methods - called_methods).size.should == 0
   end
 
-  it "should use a limited interface for dealing with results off the results queue" do
+  it "should use a limited interface for dealing with results" do
 
     # Interface for a Flapjack::Transport::Result is as follows: 
     # 
@@ -132,7 +132,7 @@ describe "notifier application" do
 
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
-                :queue_backend => {:type => :mocktransport, 
+                :transport => {:type => :mocktransport, 
                                    :basedir => File.join(File.dirname(__FILE__), 'transports')},
                 :persistence => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
@@ -161,7 +161,7 @@ describe "notifier application" do
 
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
-                :queue_backend => {:type => :mocktransport, 
+                :transport => {:type => :mocktransport, 
                                    :basedir => File.join(File.dirname(__FILE__), 'transports')},
                 :persistence => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }

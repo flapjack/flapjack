@@ -135,10 +135,10 @@ module Flapjack
                      :port => '11300',
                      :queue_name => 'results',
                      :log => @log }
-        config = defaults.merge(@config.queue_backend || {})
+        config = defaults.merge(@config.transport || {})
         basedir = config.delete(:basedir) || File.join(File.dirname(__FILE__), '..', 'transports')
 
-        @log.info("Loading the #{config[:type].to_s.capitalize} queue backend")
+        @log.info("Loading the #{config[:type].to_s.capitalize} transport")
         
         filename = File.join(basedir, "#{config[:type]}.rb")
 
@@ -146,7 +146,7 @@ module Flapjack
           require filename
           @results_queue = Flapjack::Transport.const_get("#{config[:type].to_s.capitalize}").new(config)
         rescue LoadError => e
-          @log.warning("Attempted to load #{config[:type].to_s.capitalize} queue backend, but it doesn't exist!")
+          @log.warning("Attempted to load #{config[:type].to_s.capitalize} transport, but it doesn't exist!")
           @log.warning("Exiting.")
           raise # preserves original exception
         end
