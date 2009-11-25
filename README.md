@@ -120,7 +120,7 @@ What things do
   * `flapjack-worker-manager` => starts/stops a cluster of `flapjack-worker`
   * `flapjack-notifier` => gets results, notifies people if necessary  
   * `flapjack-stats` => gets stats from beanstalkd tubes (useful for benchmarks + performance analysis)  
-  * `flapjack-benchmark` => benchmarks various persistance/transport backend combinations
+  * `flapjack-benchmark` => benchmarks various persistence/transport backend combinations
 
 
 init scripts
@@ -183,7 +183,7 @@ Architecture
                \                 /
                 \               /
                  ---------------
-                 | persistance |
+                 | persistence |
                  ---------------
                         |
           -------------------------------
