@@ -1,5 +1,4 @@
 
- * make flapjack-worker cli work
  * refactor config parsing in worker/notifier
  * clean up tests directory structure
  
