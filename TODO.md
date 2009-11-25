@@ -1,5 +1,4 @@
 
- * make persistence/transport const_get CamelCase aware
  * make flapjack-worker cli work
  * refactor config parsing in worker/notifier
  * clean up tests directory structure
