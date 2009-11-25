@@ -3,7 +3,7 @@
 
 module Flapjack
   module Transport
-    class Mocktransport
+    class MockTransport
       def initialize(options={})
         @options = options
         @config = OpenStruct.new(@options)
