@@ -49,4 +49,12 @@ describe "inifile reader" do
     ini['forks']['hello'].should == 'world'
   end
 
+  it "should append re-opened sections" do 
+    example = "[forks]\nhello = world\n[forks]\nfoo = bar\n\n[forks]\nbar = baz"
+    ini = Flapjack::Inifile.new(example)
+    ini.keys.include?("forks").should be_true
+    ini["forks"].keys.sort.should == %w(bar foo hello)
+  end
+
+
 end
