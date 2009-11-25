@@ -4,35 +4,29 @@ require 'ostruct'
 require 'optparse'
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
+require File.join(File.dirname(__FILE__), '..', 'inifile')
 
 module Flapjack
   module Notifier
     class Options
       def self.parse(args)
         options = OpenStruct.new
+        options.transport   = OpenStruct.new
+        options.persistence = OpenStruct.new
+
         opts = OptionParser.new do |opts|
-          # the available command line options
-          opts.on('-b', '--beanstalk HOST', 'location of the beanstalkd') do |host|
-            options.host = host
-          end
-          opts.on('-p', '--port PORT', 'beanstalkd port') do |port|
-            options.port = port.to_i
-          end
           opts.on('-r', '--recipients FILE', 'recipients file') do |recipients|
             options.recipients = recipients.to_s
           end
           opts.on('-c', '--config FILE', 'config file') do |config|
             options.config_filename = config.to_s
           end
-          opts.on('-d', '--database-uri URI', 'location of the checks database') do |db|
-            options.database_uri = db.to_s
-          end
           opts.on_tail("-h", "--help", "Show this message") do
             puts opts
             exit
           end
         end
-  
+
         # parse the options
         begin
           opts.parse!(args)
@@ -42,11 +36,7 @@ module Flapjack
           puts opts
           exit 1
         end
-   
-        # default the host + port
-        options.host ||= 'localhost'
-        options.port ||= 11300
-    
+
         @errors = []
         # check that recipients file exists
         if options.recipients
@@ -69,7 +59,20 @@ module Flapjack
             @errors << "Set one up, or specify one with [-c|--config]."
           end
         end
-  
+        
+        config = Flapjack::Inifile.read(options.config_filename)
+        config["transport"].each_pair do |key, value|
+          unless options.transport.send(key)
+            options.transport.send("#{key}=", value)
+          end
+        end
+
+        config["persistence"].each_pair do |key, value|
+          unless options.persistence.send(key)
+            options.persistence.send("#{key}=", value)
+          end
+        end
+
         # if there are errors, print them out and exit
         if @errors.size > 0
           puts "Errors:"
