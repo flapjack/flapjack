@@ -1,9 +1,10 @@
 #!/usr/bin/env ruby 
 
+$: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..'))
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
-require File.expand_path(File.join(File.dirname(__FILE__), '..', 'patches'))
-require File.expand_path(File.join(File.dirname(__FILE__), '..', 'notifier_engine'))
+require 'flapjack/patches'
+require 'flapjack/notifier_engine'
 
 module Flapjack
   module Notifier
@@ -115,7 +116,7 @@ module Flapjack
         basedir = config.delete(:basedir) || File.join(File.dirname(__FILE__), '..', 'persistence')
         
         filename = File.join(basedir, "#{config[:type]}.rb")
-        class_name = config[:type].to_s.split('_').map {|e| e.capitalize}.join
+        class_name = config[:type].to_s.camel_case
 
         @log.info("Loading the #{class_name} persistence backend")
         
