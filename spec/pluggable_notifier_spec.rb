@@ -103,7 +103,7 @@ describe "notifier application" do
 
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
-                :queue_backend => {:type => :mockbackend, 
+                :queue_backend => {:type => :mocktransport, 
                                    :basedir => File.join(File.dirname(__FILE__), 'transports')},
                 :persistence => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
@@ -115,11 +115,11 @@ describe "notifier application" do
     # check that allowed methods were called
     allowed_methods = %w(next delete)
     allowed_methods.each do |method|
-      app.log.messages.find {|msg| msg =~ /#{method.gsub(/\?/,'\?')} was called on Mockbackend/i}.should_not be_nil
+      app.log.messages.find {|msg| msg =~ /#{method.gsub(/\?/,'\?')} was called on Mocktransport/i}.should_not be_nil
     end
 
     # check that no other methods were
-    called_methods = app.log.messages.find_all {|msg| msg =~ /^method .+ was called on Mockbackend$/i }.map {|msg| msg.split(' ')[1]}
+    called_methods = app.log.messages.find_all {|msg| msg =~ /^method .+ was called on Mocktransport$/i }.map {|msg| msg.split(' ')[1]}
     (allowed_methods - called_methods).size.should == 0
   end
 
@@ -132,7 +132,7 @@ describe "notifier application" do
 
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
-                :queue_backend => {:type => :mockbackend, 
+                :queue_backend => {:type => :mocktransport, 
                                    :basedir => File.join(File.dirname(__FILE__), 'transports')},
                 :persistence => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
@@ -148,7 +148,7 @@ describe "notifier application" do
     end
 
     # check that no other methods were called
-    called_methods = app.log.messages.find_all {|msg| msg =~ /^method .+ was called on Result$/i }.map {|msg| msg.split(' ')[1]}.uniq
+    called_methods = app.log.messages.find_all {|msg| msg =~ /^method .+ was called on MockResult$/i }.map {|msg| msg.split(' ')[1]}.uniq
     (allowed_methods - called_methods).size.should == 0
   end
 
@@ -161,7 +161,7 @@ describe "notifier application" do
 
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
-                :queue_backend => {:type => :mockbackend, 
+                :queue_backend => {:type => :mocktransport, 
                                    :basedir => File.join(File.dirname(__FILE__), 'transports')},
                 :persistence => {:type => :mockbackend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
