@@ -140,15 +140,16 @@ module Flapjack
         config = defaults.merge(@config.transport || {})
         basedir = config.delete(:basedir) || File.join(File.dirname(__FILE__), '..', 'transports')
 
-        @log.info("Loading the #{config[:type].to_s.capitalize} transport")
-        
+        class_name = config[:type].to_s.camel_case
         filename = File.join(basedir, "#{config[:type]}.rb")
 
+        @log.info("Loading the #{class_name} transport")
+        
         begin 
           require filename
-          @results_queue = Flapjack::Transport.const_get("#{config[:type].to_s.capitalize}").new(config)
+          @results_queue = Flapjack::Transport.const_get(class_name).new(config)
         rescue LoadError => e
-          @log.warning("Attempted to load #{config[:type].to_s.capitalize} transport, but it doesn't exist!")
+          @log.warning("Attempted to load #{class_name} transport, but it doesn't exist!")
           @log.warning("Exiting.")
           raise # preserves original exception
         end
