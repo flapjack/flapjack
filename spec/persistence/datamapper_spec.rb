@@ -6,7 +6,7 @@ require File.join(File.dirname(__FILE__), '..', '..', 'lib', 'flapjack', 'transp
 require File.join(File.dirname(__FILE__), '..', 'helpers')
 require 'tmpdir'
 
-describe "datamapper check backend" do 
+describe "datamapper persistence backend" do 
 
   it "should query its parent's statuses" do
     backend_options = { :uri => "sqlite3://#{Dir.mktmpdir}/flapjack.db", :log => MockLogger.new }

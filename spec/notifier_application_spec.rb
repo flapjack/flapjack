@@ -152,7 +152,7 @@ describe "notifier application" do
     (allowed_methods - called_methods).size.should == 0
   end
 
-  it "should use a limited interface for dealing with the check backend" do
+  it "should use a limited interface for dealing with the persistence backend" do
     
     # Interface for a Flapjack::Persistence::<backend> is as follows: 
     # 
@@ -183,12 +183,12 @@ describe "notifier application" do
 
 
   #
-  # check backends
+  # persistence backend
   #
 
-  it "should load couchdb as the default check backend"
+  it "should load couchdb as the default persistence backend"
 
-  it "should load a check backend as specified in options" do 
+  it "should load a persistence backend as specified in options" do 
     options = { :notifiers => {},
                 :log => MockLogger.new,
                 :persistence => {:type => :mockbackend, 
@@ -197,7 +197,7 @@ describe "notifier application" do
     app.log.messages.find {|msg| msg =~ /loading.+mockbackend.+backend/i}.should_not be_nil
   end
 
-  it "should raise if the specified check backend doesn't exist" do
+  it "should raise if the specified persistence backend doesn't exist" do
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
                 :persistence => {:type => :nonexistant} }
