@@ -71,7 +71,15 @@ module Flapjack
           end
         end
 
-        p config.keys.grep(/.+\-notifier/)
+        config['notifier'].each_pair do |key, value|
+          normalised_key = key.gsub('-', '_')
+          values = value.split(/,*\s+/)
+          options.send("#{normalised_key}=", values)
+        end
+        
+        options.notifiers.map! do |notifier|
+          { notifier => config["#{notifier}-notifier"] }
+        end
 
         # if there are errors, print them out and exit
         if @errors.size > 0
