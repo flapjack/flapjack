@@ -34,6 +34,7 @@ module Flapjack
           exit 1
         end
 
+        # validation of command line arguments
         @errors = []
         # check that recipients file exists
         if options.recipients_filename
@@ -56,7 +57,9 @@ module Flapjack
             @errors << "Set one up, or specify one with [-c|--config]."
           end
         end
-       
+      
+        # config loader
+
         # holder for transport + persistence config
         options.transport   = OpenStruct.new
         options.persistence = OpenStruct.new
@@ -71,15 +74,22 @@ module Flapjack
           end
         end
 
+        # base config (config.blah)
         config['notifier'].each_pair do |key, value|
           normalised_key = key.gsub('-', '_')
           values = value.split(/,*\s+/)
           options.send("#{normalised_key}=", values)
         end
         
+        # list of notifiers to load
         options.notifiers.map! do |notifier|
           { notifier => config["#{notifier}-notifier"] }
         end
+
+        # holder for recipients list
+        recipients = Flapjack::Inifile.read(options.recipients_filename)
+        options.recipients = recipients.all
+
 
         # if there are errors, print them out and exit
         if @errors.size > 0
