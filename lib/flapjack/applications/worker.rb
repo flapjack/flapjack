@@ -39,7 +39,7 @@ module Flapjack
       end
 
       def setup_queues
-        defaults = { :type => :beanstalkd, 
+        defaults = { :backend => :beanstalkd, 
                      :host => 'localhost', 
                      :port => '11300',
                      :log => @log }
@@ -50,8 +50,8 @@ module Flapjack
           
           queue_config = config.merge(:queue_name => queue_name)
        
-          class_name = config[:type].to_s.camel_case
-          filename = File.join(basedir, "#{config[:type]}.rb")
+          class_name = config[:backend].to_s.camel_case
+          filename = File.join(basedir, "#{config[:backend]}.rb")
           
           @log.info("Loading the #{class_name} transport for queue: #{queue_name}.")
 

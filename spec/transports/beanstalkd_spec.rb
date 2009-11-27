@@ -25,8 +25,8 @@ describe "notifier application" do
 
     options = { :notifiers => {},
                 :log => MockLogger.new,
-                :transport => {:type => :beanstalkd},
-                :persistence => {:type => :mock_persistence_backend,                                                                    
+                :transport => {:backend => :beanstalkd},
+                :persistence => {:backend => :mock_persistence_backend,                                                                    
                                    :basedir => File.join(File.dirname(__FILE__), '..', 'persistence')}} 
     app = Flapjack::Notifier::Application.run(options)
 

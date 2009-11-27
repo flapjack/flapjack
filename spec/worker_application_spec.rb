@@ -25,14 +25,14 @@ describe "worker application" do
   end
 
   it "should load a transport as specified in options" do 
-    options = {:log => MockLogger.new, :transport => {:type => :beanstalkd}}
+    options = {:log => MockLogger.new, :transport => {:backend => :beanstalkd}}
     app = Flapjack::Worker::Application.run(options)
 
     app.log.messages.find {|msg| msg =~ /loading.+beanstalkd.+transport/i}.should_not be_nil
   end
 
   it "should error if the specified transport dosen't exist" do 
-    options = {:log => MockLogger.new, :transport => {:type => :nonexistant}}
+    options = {:log => MockLogger.new, :transport => {:backend => :nonexistant}}
     lambda {
       app = Flapjack::Worker::Application.run(options)
     }.should raise_error
@@ -42,7 +42,7 @@ describe "worker application" do
 
   it "should use a limited interface for dealing with transports" do 
     options = { :log => MockLogger.new, 
-                :transport => {:type => :mock_transport, 
+                :transport => {:backend => :mock_transport, 
                                :basedir => File.join(File.dirname(__FILE__), 'transports')} }
     app = Flapjack::Worker::Application.run(options)
     app.process_check

@@ -1,4 +1,6 @@
 require File.join(File.dirname(__FILE__), '..', 'lib', 'flapjack', 'cli', 'notifier')
+require File.join(File.dirname(__FILE__), '..', 'lib', 'flapjack', 'patches')
+
 
 describe "notifier options multiplexer" do 
 
@@ -12,8 +14,8 @@ describe "notifier options multiplexer" do
   it "should setup notifier options from specified config file" do 
     args = ["-c", @config_filename, "-r", @recipients_filename]
     config = Flapjack::Notifier::Options.parse(args)
-    config.notifiers.each do |notifier|
-      %w(mailer xmpp).include?(notifier.keys.first)
+    config.notifiers.each do |key, value|
+      %w(mailer xmpp).include?(key)
     end
 
     config.notifier_directories.each do |dir|
@@ -24,26 +26,26 @@ describe "notifier options multiplexer" do
   it "should setup beanstalkd transport options from specified config file" do 
     args = ["-c", @config_filename, "-r", @recipients_filename]
     config = Flapjack::Notifier::Options.parse(args)
-    config.transport.backend.should == "beanstalkd"
-    config.transport.host.should == "localhost"
-    config.transport.port.should == "11300"
+    config.transport[:backend].should == "beanstalkd"
+    config.transport[:host].should == "localhost"
+    config.transport[:port].should == "11300"
   end
 
   it "should setup datamapper persistence options from specified config file" do 
     args = ["-c", @config_filename, "-r", @recipients_filename]
     config = Flapjack::Notifier::Options.parse(args)
-    config.persistence.backend.should == "datamapper"
-    config.persistence.uri.should == "sqlite3:///tmp/flapjack.db"
+    config.persistence[:backend].should == "data_mapper"
+    config.persistence[:uri].should == "sqlite3:///tmp/flapjack.db"
   end
 
   it "should setup couchdb persistence backend from specified config file" do 
     args = [ "-c", @couchdb_config_filename, "-r", @recipients_filename ]
     config = Flapjack::Notifier::Options.parse(args)
-    config.persistence.backend.should == "couchdb"
-    config.persistence.host.should == "localhost"
-    config.persistence.port.should == "5984"
-    config.persistence.username.should == "spoons"
-    config.persistence.password.should == "doom"
+    config.persistence[:backend].should == "couchdb"
+    config.persistence[:host].should == "localhost"
+    config.persistence[:port].should == "5984"
+    config.persistence[:username].should == "spoons"
+    config.persistence[:password].should == "doom"
   end
 
   it "should setup individual notifiers from a specified config file" do 

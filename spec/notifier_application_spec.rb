@@ -10,7 +10,7 @@ describe "notifier application" do
   it "should have a simple interface to start the notifier" do 
     options = { :notifiers => {},
                 :log => MockLogger.new,
-                :persistence => {:type => :mock_persistence_backend, 
+                :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
   end
@@ -19,7 +19,7 @@ describe "notifier application" do
     options = { :notifiers => {:testmailer => {}}, 
                 :log => MockLogger.new,
                 :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
-                :persistence => {:type => :mock_persistence_backend, 
+                :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
     app.log.messages.find {|msg| msg =~ /loading the testmailer notifier/i}.should_not be_nil
@@ -28,7 +28,7 @@ describe "notifier application" do
   it "should warn if a specified notifier doesn't exist" do 
     options = { :notifiers => {:nonexistant => {}}, 
                 :log => MockLogger.new,
-                :persistence => {:type => :mock_persistence_backend, 
+                :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
     app.log.messages.find {|msg| msg =~ /Flapjack::Notifiers::Nonexistant doesn't exist/}.should_not be_nil
@@ -38,7 +38,7 @@ describe "notifier application" do
     options = { :notifiers => {:testmailer => {}}, 
                 :log => MockLogger.new,
                 :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
-                :persistence => {:type => :mock_persistence_backend, 
+                :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
     app.log.messages.find {|msg| msg =~ /spoons/i}.should_not be_nil
@@ -53,7 +53,7 @@ describe "notifier application" do
                 :log => MockLogger.new,
                 :recipients => {:filename => File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml'),
                                 :list => [{:name => "Spoons McDoom"}]},
-                :persistence => {:type => :mock_persistence_backend, 
+                :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
     app.log.messages.find {|msg| msg =~ /fixtures\/recipients\.yaml/i}.should_not be_nil
@@ -68,7 +68,7 @@ describe "notifier application" do
   it "should use beanstalkd as the default transport" do 
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
-                :persistence => {:type => :mock_persistence_backend, 
+                :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
     app.log.messages.find {|msg| msg =~ /loading.+beanstalkd.+transport/i}.should_not be_nil
@@ -77,8 +77,8 @@ describe "notifier application" do
   it "should use a transport as specified in options" do 
     options = { :notifiers => {},
                 :log => MockLogger.new,
-                :transport => {:type => :beanstalkd},
-                :persistence => {:type => :mock_persistence_backend, 
+                :transport => {:backend => :beanstalkd},
+                :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
     app.log.messages.find {|msg| msg =~ /loading.+beanstalkd.+transport/i}.should_not be_nil
@@ -87,7 +87,7 @@ describe "notifier application" do
   it "should error if the specified transport doesn't exist" do
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
-                :transport => {:type => :nonexistant} }
+                :transport => {:backend => :nonexistant} }
     lambda {
       app = Flapjack::Notifier::Application.run(options)
       #app.log.messages.find {|msg| msg =~ /attempted to load nonexistant/i}.should_not be_nil
@@ -103,9 +103,9 @@ describe "notifier application" do
 
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
-                :transport => {:type => :mock_transport, 
+                :transport => {:backend => :mock_transport, 
                                    :basedir => File.join(File.dirname(__FILE__), 'transports')},
-                :persistence => {:type => :mock_persistence_backend, 
+                :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
 
@@ -132,9 +132,9 @@ describe "notifier application" do
 
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
-                :transport => {:type => :mock_transport, 
+                :transport => {:backend => :mock_transport, 
                                    :basedir => File.join(File.dirname(__FILE__), 'transports')},
-                :persistence => {:type => :mock_persistence_backend, 
+                :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
 
@@ -161,9 +161,9 @@ describe "notifier application" do
 
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
-                :transport => {:type => :mock_transport, 
+                :transport => {:backend => :mock_transport, 
                                    :basedir => File.join(File.dirname(__FILE__), 'transports')},
-                :persistence => {:type => :mock_persistence_backend, 
+                :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
 
@@ -191,7 +191,7 @@ describe "notifier application" do
   it "should load a persistence backend as specified in options" do 
     options = { :notifiers => {},
                 :log => MockLogger.new,
-                :persistence => {:type => :mock_persistence_backend, 
+                :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
     app.log.messages.find {|msg| msg =~ /loading.+MockPersistenceBackend.+backend/i}.should_not be_nil
@@ -200,7 +200,7 @@ describe "notifier application" do
   it "should raise if the specified persistence backend doesn't exist" do
     options = { :notifiers => {}, 
                 :log => MockLogger.new,
-                :persistence => {:type => :nonexistant} }
+                :persistence => {:backend => :nonexistant} }
     lambda {
       app = Flapjack::Notifier::Application.run(options)
     }.should raise_error(LoadError)
