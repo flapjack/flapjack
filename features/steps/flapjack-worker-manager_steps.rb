@@ -6,13 +6,20 @@ Given /^the (.+) is on my path$/ do |command|
   silent_system("test -x #{@bin_path}/#{command}").should be_true
 end
 
+Given /^the "([^\"]*)" directory exists and is writable$/ do |directory|
+  File.exists?(directory).should be_true
+  File.writable?(directory).should be_true
+end
+
 When /^I run "([^\"]*)"$/ do |cmd|
   parts = [cmd]
-  parts.shift(@bin_path) if @bin_path
+  parts.unshift(@bin_path) if @bin_path
   command = parts.join('/')
   # this might be dodgy
   @output = `#{command}`
-  @output.size.should > 0
+  #@output.size.should > 0
+  #p command
+  #p @output
 end
 
 Then /^(\d+) instances of "([^\"]*)" should be running$/ do |number, command|

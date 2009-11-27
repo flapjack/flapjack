@@ -31,9 +31,7 @@ end
 daemon_args = args
 if args.first != "stop"
   # if we're not stopping the daemon, pass options to it
-  daemon_args += ['--', '--beanstalk', options.host, 
-                        '--port', options.port.to_s,
-                        '--recipients', options.recipients,
+  daemon_args += ['--', '--recipients', options.recipients,
                         '--config', File.expand_path(options.config_filename)]
 end
 
