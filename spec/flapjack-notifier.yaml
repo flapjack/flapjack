@@ -1,7 +1,0 @@
---- 
-:notifiers: 
-  :mailer: 
-    :from_address: foo@bar.com
-  :xmpp: 
-    :jid: foo
-    :password: bar
