@@ -3,7 +3,7 @@ __DIR__ = File.expand_path(File.join(File.dirname(__FILE__), '..', '..'))
 Given /^the (.+) is on my path$/ do |command|
   @bin_path = File.join(__DIR__, 'bin')
   # (and is executable)
-  silent_system("test -x #{bin_path}/#{command}").should be_true
+  silent_system("test -x #{@bin_path}/#{command}").should be_true
 end
 
 When /^I run "([^\"]*)"$/ do |cmd|
@@ -23,12 +23,12 @@ Then /^(\d+) instances of "([^\"]*)" should be running$/ do |number, command|
 end
 
 Given /^there are (\d+) instances of the flapjack\-worker running$/ do |number|
-  command = "#{bin_path}/flapjack-worker-manager start --workers=5"
+  command = "#{@bin_path}/flapjack-worker-manager start --workers=5"
   silent_system(command).should be_true
 end
 
 Given /^there are no instances of flapjack\-worker running$/ do
-  command = "#{bin_path}/flapjack-worker-manager stop"
+  command = "#{@bin_path}/flapjack-worker-manager stop"
   silent_system(command)
 
   sleep 0.5 # again, waiting for the worker manager
