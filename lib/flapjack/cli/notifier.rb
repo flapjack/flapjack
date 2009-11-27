@@ -42,7 +42,7 @@ module Flapjack
             @errors << "The specified recipients file doesn't exist!"
           end
         else
-          @errors << "You need to specify a recipients file with [-r|--recipients]."
+          @errors << "You need to specify a recipients file with --recipients."
         end
   
         # check that config file exists
@@ -51,45 +51,13 @@ module Flapjack
             @errors << "The specified config file doesn't exist!"
           end
         else
-          options.config_filename ||= "/etc/flapjack/flapjack-notifier.yaml"
-          unless File.exists?(options.config_filename.to_s)
-            @errors << "The default config file (#{options.config_filename}) doesn't exist!"
-            @errors << "Set one up, or specify one with [-c|--config]."
+          options.config_filename = "/etc/flapjack/flapjack-notifier.conf"
+          unless File.exists?(options.config_filename)
+            @errors << "The default config file (#{options.config_filename}) doesn't exist."
+            @errors << "Please set one up, or specify one with --config."
           end
         end
       
-        # config loader
-
-        # holder for transport + persistence config
-        options.transport   = OpenStruct.new
-        options.persistence = OpenStruct.new
-
-        config = Flapjack::Inifile.read(options.config_filename)
-
-        %w(transport persistence).each do |backend|
-          config[backend].each_pair do |key, value|
-            unless options.send(backend).send(key)
-              options.send(backend).send("#{key}=", value)
-            end
-          end
-        end
-
-        # base config (config.blah)
-        config['notifier'].each_pair do |key, value|
-          normalised_key = key.gsub('-', '_')
-          values = value.split(/,*\s+/)
-          options.send("#{normalised_key}=", values)
-        end
-        
-        # list of notifiers to load
-        options.notifiers.map! do |notifier|
-          { notifier => config["#{notifier}-notifier"] }
-        end
-
-        # holder for recipients list
-        recipients = Flapjack::Inifile.read(options.recipients_filename)
-        options.recipients = recipients.all
-
 
         # if there are errors, print them out and exit
         if @errors.size > 0
@@ -102,6 +70,36 @@ module Flapjack
           exit 2
         end
     
+        # config loader
+
+        # holder for transport + persistence config
+        options.transport   = OpenStruct.new
+        options.persistence = OpenStruct.new
+
+        config = Flapjack::Inifile.read(options.config_filename)
+
+        %w(transport persistence).each do |backend|
+          options.send("#{backend}=", config[backend].symbolize_keys)
+        end
+
+        # base config (config.blah)
+        config['notifier'].each_pair do |key, value|
+          normalised_key = key.gsub('-', '_')
+          values = value.split(/,*\s+/)
+          options.send("#{normalised_key}=", values)
+        end
+        
+        # list of notifiers to load + their config
+        notifiers_to_load = options.notifiers
+        options.notifiers = {}
+        notifiers_to_load.each do |notifier|
+          options.notifiers[notifier] = config["#{notifier}-notifier"].symbolize_keys
+        end
+
+        # holder for recipients list
+        recipients = Flapjack::Inifile.read(options.recipients_filename)
+        options.recipients = recipients.all
+
         options
       end
     end
