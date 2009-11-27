@@ -56,5 +56,11 @@ describe "inifile reader" do
     ini["forks"].keys.sort.should == %w(bar foo hello)
   end
 
+  it "should dump the raw config" do 
+    example = "[forks]\nhello = world\n[spoons]\nfoo = bar\n[splades]\nbar = baz"
+    ini = Flapjack::Inifile.new(example)
+    ini.all.size.should == 3
+  end
+
 
 end

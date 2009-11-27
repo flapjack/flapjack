@@ -34,6 +34,10 @@ module Flapjack
     def self.read(filename)
       self.new(File.read(filename))
     end
+
+    def all
+      @data
+    end
   
   end
 end
