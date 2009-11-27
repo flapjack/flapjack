@@ -110,13 +110,13 @@ module Flapjack
       end
 
       def setup_persistence
-        defaults = { :type => :datamapper,
+        defaults = { :backend => :data_mapper,
                      :log => @log }
         config = defaults.merge(@config.persistence || {})
         basedir = config.delete(:basedir) || File.join(File.dirname(__FILE__), '..', 'persistence')
-        
-        filename = File.join(basedir, "#{config[:type]}.rb")
-        class_name = config[:type].to_s.camel_case
+       
+        filename = File.join(basedir, "#{config[:backend]}.rb")
+        class_name = config[:backend].to_s.camel_case
 
         @log.info("Loading the #{class_name} persistence backend")
         
@@ -132,7 +132,7 @@ module Flapjack
       end
 
       def setup_queues
-        defaults = { :type => :beanstalkd, 
+        defaults = { :backend => :beanstalkd, 
                      :host => 'localhost', 
                      :port => '11300',
                      :queue_name => 'results',
@@ -140,11 +140,11 @@ module Flapjack
         config = defaults.merge(@config.transport || {})
         basedir = config.delete(:basedir) || File.join(File.dirname(__FILE__), '..', 'transports')
 
-        class_name = config[:type].to_s.camel_case
-        filename = File.join(basedir, "#{config[:type]}.rb")
+        class_name = config[:backend].to_s.camel_case
+        filename = File.join(basedir, "#{config[:backend]}.rb")
 
         @log.info("Loading the #{class_name} transport")
-        
+      
         begin 
           require filename
           @results_queue = Flapjack::Transport.const_get(class_name).new(config)
