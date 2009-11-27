@@ -1,5 +1,7 @@
 
- * refactor config parsing in worker/notifier
+ * make notifier work 
+ * refactor config parsing in worker
+ * build config file/cli options proxy
  * clean up tests directory structure
  
  * add persistence backend for CouchDB
