@@ -48,17 +48,15 @@ describe "notifier application" do
 
   it "should pass global notifier config options to each notifier"
 
-  it "should merge recipients from a file and a specified list of recipients" do
+  it "should setup recipients from a list" do
     options = { :notifiers => {},
                 :log => MockLogger.new,
-                :recipients => {:filename => File.join(File.dirname(__FILE__), 'fixtures', 'recipients.yaml'),
-                                :list => [{:name => "Spoons McDoom"}]},
+                :recipients => [{:name => "Spoons McDoom"}],
                 :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
     app = Flapjack::Notifier::Application.run(options)
-    app.log.messages.find {|msg| msg =~ /fixtures\/recipients\.yaml/i}.should_not be_nil
-    # should have one specified in options[:recipients][:list], and some from specified recipients.yaml
-    app.recipients.size.should > 1
+    # 1 passed recipient should be here
+    app.recipients.size.should == 1
   end
 
   #
