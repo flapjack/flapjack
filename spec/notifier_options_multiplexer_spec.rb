@@ -46,6 +46,24 @@ describe "notifier options multiplexer" do
     config.persistence.password.should == "doom"
   end
 
+  it "should setup individual notifiers from a specified config file" do 
+    args = [ "-c", @config_filename, "-r", @recipients_filename ]
+    config = Flapjack::Notifier::Options.parse(args)
+    config.notifiers.size.should > 0
+  end
+  
+  it "should setup notifier directories options from a specified config file" do 
+    args = [ "-c", @config_filename, "-r", @recipients_filename ]
+    config = Flapjack::Notifier::Options.parse(args)
+    config.notifier_directories.size.should > 0
+  end
+
+  it "should setup recipients from a specified config file" do 
+    args = [ "-c", @config_filename, "-r", @recipients_filename ]
+    config = Flapjack::Notifier::Options.parse(args)
+    config.recipients.size.should > 0
+  end
+
 end
 
 
