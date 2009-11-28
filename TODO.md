@@ -1,7 +1,4 @@
 
- * setup wiki.flapjack-project.com
- * document new config structure
-
  * release Flapjack as a distribution-consumable tarball
  * automate building of release tarball that optionally pulls in dependencies
  * add lintian-like checks for verifying packagability (see http://pkg-ruby-extras.alioth.debian.org/upstream-devs.html)
