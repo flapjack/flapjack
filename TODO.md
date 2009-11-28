@@ -1,36 +1,29 @@
 
- * clean up tests directory structure
- 
- * add persistence backend for CouchDB
-
- * build config file/cli options proxy
- * make notification/escalation logic pluggable
+ * setup wiki.flapjack-project.com
+ * document new config structure
 
  * release Flapjack as a distribution-consumable tarball
  * automate building of release tarball that optionally pulls in dependencies
  * add lintian-like checks for verifying packagability (see http://pkg-ruby-extras.alioth.debian.org/upstream-devs.html)
  
- * build easily runnable benchmarks for flapjack-{worker,notifier}
+ * write packaging guide
+ * write installation guide
 
- * setup wiki.flapjack-project.com
- * documentation!
-   * user
-   * developer
-   * step-by-step install guide
-   * scaling guide
-   * integrating with collectd guide
-   * writing custom populators guide
- * write puppet manifests
- 
+ * build config file/cli options proxy
  * sandbox flapjack-worker
-   * provide config option for specifying sandbox dir
+ * build easily runnable benchmarks for flapjack-{worker,notifier}
+ * refactor couchdb backend to be less bongtastic
 
+ * make notification/escalation logic pluggable
+
+ * write puppet manifests
  * provide common interface for loading checks into beanstalk (extract from populator)
+ * start side project to have admin interface back onto couchdb
  
  * write zeroconf/avahi notifier
  * write growl notifier
  * write sms notifier
- * write way to customise notifier messages (email body, xmpp format)
+ * allow customisation of notifier messages (body, header)
 
  * http://www.kitchensoap.com/2009/10/05/meanwhile-more-meta-metrics/
 
