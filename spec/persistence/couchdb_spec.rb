@@ -40,4 +40,46 @@ describe "couchdb persistence backend" do
     backend.any_parents_failed?(result).should be_true
   end
 
+  it "should persist a result" do 
+    backend_options = { :host => "localhost", 
+                        :port => "5984",
+                        :database => "flapjack_production",
+                        :log => MockLogger.new }
+
+    # setup adapter
+    backend = Flapjack::Persistence::Couch.new(backend_options)
+
+
+    # save check
+    check = Flapjack::Persistence::Couch::Document.new(:command => "exit 0", :name => "good")
+    check.save.should be_true
+
+    raw_result = {:check_id => check.id, :retval => 2}
+    result = Flapjack::Transport::Result.new(:result => raw_result)
+
+    backend.save(result).should be_true
+  end
+
+  it "should create an event" do 
+    backend_options = { :host => "localhost", 
+                        :port => "5984",
+                        :database => "flapjack_production",
+                        :log => MockLogger.new }
+
+    # setup adapter
+    backend = Flapjack::Persistence::Couch.new(backend_options)
+
+    check = Flapjack::Persistence::Couch::Document.new(:command => "exit 0", :name => "good")
+    check.save.should be_true
+
+    raw_result = {:check_id => check.id, :retval => 2}
+    result = Flapjack::Transport::Result.new(:result => raw_result)
+
+    backend.create_event(result).should be_true
+
+    check.reload
+    check['events'].size.should == 1
+  end
+
 end
+

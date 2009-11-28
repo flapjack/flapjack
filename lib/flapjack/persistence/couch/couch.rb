@@ -22,6 +22,24 @@ module Flapjack
         ids.find_all { |id| self.class.get(id)["status"] != "0" }.size > 0
       end
 
+      def save(result)
+        response = self.class.get(result.result.check_id)
+        check = Flapjack::Persistence::Couch::Document.new(response)
+        check.status = result.result.retval
+        check.save
+      end
+
+      def create_event(result)
+        event = result.result.to_h.reject {|key, value| key == :check_id}
+        event.merge!(:when => Time.now.strftime("%Y-%m-%d %H:%M:%S%z"))
+
+        check = Flapjack::Persistence::Couch::Document.get(result.result.check_id)
+        check['events'] ||= []
+        check['events'] << event
+
+        check.save
+      end
+
       class << self
         attr_accessor :host, :port
         def setup(options={})
@@ -49,7 +67,7 @@ module Flapjack
 
         def put(options={})
           document = options[:document]
-          uri = "/#{@database}/#{options[:document]["id"]}"
+          uri = "/#{@database}/#{(options[:document]["id"] || options[:document]["_id"])}"
 
           req = ::Net::HTTP::Put.new(uri)
           req["content-type"] = "application/json"

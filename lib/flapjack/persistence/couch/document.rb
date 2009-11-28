@@ -5,19 +5,24 @@ module Flapjack
     class Couch
       class Document
         def initialize(options={})
-          @options = options
-          @config = OpenStruct.new(options)
-          @log = @config.log
+          if options[:table] && options[:persisted]
+            @table = options[:table]
+            @persisted = options[:persisted]
+          else
+            @table = options.dup
+          end
+        end
 
-          @table = @options.dup
+        def self.get(id)
+          response = Flapjack::Persistence::Couch.get(id)
+          self.new(:table => response, :persisted => true)
         end
 
         def save
-          document = @table
           if @persisted
-            response = Flapjack::Persistence::Couch.put(:document => document)
+            response = Flapjack::Persistence::Couch.put(:document => @table)
           else
-            response = Flapjack::Persistence::Couch.post(:document => document)
+            response = Flapjack::Persistence::Couch.post(:document => @table)
           end
 
           @table["id"]  = response["id"]
@@ -34,6 +39,19 @@ module Flapjack
         def id
           @table["id"]
         end
+
+        def [](id)
+          @table[id]
+        end
+        
+        def []=(id, value)
+          @table[id] = value
+        end
+
+        def reload
+          @table = Flapjack::Persistence::Couch.get(id)
+        end
+
       end # class Document
     end # class Couch
   end # module Persistence
