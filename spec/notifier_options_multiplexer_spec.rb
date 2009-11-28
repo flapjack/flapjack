@@ -44,8 +44,8 @@ describe "notifier options multiplexer" do
     config.persistence[:backend].should == "couchdb"
     config.persistence[:host].should == "localhost"
     config.persistence[:port].should == "5984"
-    config.persistence[:username].should == "spoons"
-    config.persistence[:password].should == "doom"
+    config.persistence[:version].should == "0.8"
+    config.persistence[:database].should == "flapjack_production"
   end
 
   it "should setup individual notifiers from a specified config file" do 
