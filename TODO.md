@@ -1,8 +1,8 @@
- * update example config in etc/
+ * write pure-SQLite3 persistence backend
+ * write migration tool for sqlite3 => couchdb
 
- * automate building of release tarball that optionally pulls in dependencies
+
  * add lintian-like checks for verifying packagability (see http://pkg-ruby-extras.alioth.debian.org/upstream-devs.html)
- 
  * sandbox flapjack-worker
  * write beanstalkd.yreserve to simplify code
  * write beanstalkd.jput, beanstalkd.jreserve for native json api
