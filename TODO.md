@@ -1,4 +1,5 @@
  * add yajl dependency to flapjack gemspec + on wiki
+ * update example config in etc/
 
  * release Flapjack as a distribution-consumable tarball
  * automate building of release tarball that optionally pulls in dependencies
