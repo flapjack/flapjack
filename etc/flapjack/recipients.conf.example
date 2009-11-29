@@ -1,0 +1,14 @@
+# example recipients.conf
+
+[John Doe]
+  email = johndoe@example.org
+  jid = john@example.org
+  phone = +61 400 111 222
+  pager = 61400111222
+
+[Jane Doe]
+  email = janedoe@example.org
+  jid = jane@example.org
+  phone = +61 222 333 111
+  pager = 61222333111
+

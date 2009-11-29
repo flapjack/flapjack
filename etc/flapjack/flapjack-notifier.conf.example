@@ -1,0 +1,34 @@
+# top level
+[notifier]
+  notifier-directories = /usr/lib/flapjack/notifiers/ /path/to/my/notifiers
+  notifiers = mailer, xmpp
+
+# persistence layers
+[persistence]
+  backend = data_mapper
+  uri = sqlite3:///tmp/flapjack.db
+
+# couchdb backend
+#[persistence]
+#  backend = couchdb
+#  version = 0.8
+#  host = localhost
+#  port = 5984 
+#  database = flapjack_production
+  
+# message transports
+[transport]
+  backend = beanstalkd
+  host = localhost
+  port = 11300
+
+# notifiers
+[mailer-notifier]
+  from_address = foo@bar.com
+
+[xmpp-notifier]
+  jid = foo@bar.com
+  password = barfoo
+  
+
+

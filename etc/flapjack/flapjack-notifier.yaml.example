@@ -1,8 +1,0 @@
---- 
-:notifiers: 
-  :mailer: 
-    :from_address: notifications@my-domain.com
-  :xmpp: 
-    :jid: notifications@my-domain.com
-    :password: foo
-:database_uri: "sqlite3:///var/lib/flapjack/flapjack.db"
