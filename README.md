@@ -6,8 +6,6 @@ Flapjack is highly scalable and distributed monitoring system.
 It understands the Nagios plugin format, and can easily be scaled 
 from 1 server to 1000. 
 
-
-
 Setup dependencies (Ubuntu Hardy)
 ---------------------------------
 
@@ -212,4 +210,11 @@ Architecture
   re-add check to `jobs` tube with a delay. 
 - notifier pops results off `results` tube, notifies as necessary
 
+Releasing
+---------
 
+ 1. bump version number + release date in gemspec
+ 1. create a new tag with `git tag -a -m "releasing 0.9" 0.9`
+ 1. push to github with `git push --tags`
+ 1. create a new gem with `rake build`
+ 1. push gem to Gemcutter with `rake push`
