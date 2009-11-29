@@ -19,23 +19,6 @@ Spec::Rake::SpecTask.new do |t|
 end
 
 
-desc "freeze deps"
-task :deps do 
-
-  deps = {'beanstalk-client' => ">= 1.0.2",
-          'log4r' => ">= 1.0.5",
-          'xmpp4r-simple' => ">= 0.8.8",
-          'mailfactory' => ">= 1.4.0"}
-
-  puts "\ninstalling dependencies. this will take a few minutes."
-
-  deps.each_pair do |dep, version|
-    puts "\ninstalling #{dep} (#{version})"
-    system("gem install #{dep} --version '#{version}' -i gems --no-rdoc --no-ri")
-  end
-
-end
-
 desc "generate list of files for gemspec"
 task "gengemfiles" do 
   executables = `git ls-files bin/*`.split.map {|bin| bin.gsub(/^bin\//, '')}             
@@ -64,15 +47,6 @@ task :build do
 end
 
 
-if require 'yard'
-  
-  YARD::Rake::YardocTask.new do |t|
-    t.files   = ['lib/**/*.rb']
-    t.options = ['--output-dir=doc/', '--readme=README.md']
-  end
-  
-end
-
 desc "display FIXMEs in the codebase"
 task :fixmes do 
   output = `grep -nR FIXME lib/* spec/* bin/`
@@ -82,3 +56,4 @@ task :fixmes do
     puts "  - #{parts[3].strip}"
   end
 end
+
