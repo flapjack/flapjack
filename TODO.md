@@ -1,11 +1,7 @@
- * add yajl dependency to flapjack gemspec + on wiki
  * update example config in etc/
 
- * release Flapjack as a distribution-consumable tarball
  * automate building of release tarball that optionally pulls in dependencies
  * add lintian-like checks for verifying packagability (see http://pkg-ruby-extras.alioth.debian.org/upstream-devs.html)
- 
- * push tagged release to github
  
  * sandbox flapjack-worker
  * write beanstalkd.yreserve to simplify code
