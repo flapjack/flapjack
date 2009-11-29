@@ -16,6 +16,7 @@ Gem::Specification.new do |s|
   s.add_dependency('log4r', '= 1.0.5')
   s.add_dependency('xmpp4r', '= 0.5')
   s.add_dependency('tmail', '= 1.2.3.1')
+  s.add_dependency('yajl-ruby', '= 0.6.4')
   s.add_dependency('dm-core', '= 0.9.11')
   s.add_dependency('dm-timestamps', '= 0.9.11')
   s.add_dependency('dm-types', '= 0.9.11')
