@@ -1,6 +1,7 @@
  * write pure-SQLite3 persistence backend
  * write migration tool for sqlite3 => couchdb
 
+ * write persistence backend setup tool (create couchdb/sqlite3 database)
 
  * add lintian-like checks for verifying packagability (see http://pkg-ruby-extras.alioth.debian.org/upstream-devs.html)
  * sandbox flapjack-worker
