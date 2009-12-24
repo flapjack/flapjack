@@ -174,15 +174,14 @@ module Flapjack
         @config.filters.each do |filter|
           filenames = @filter_directories.map {|dir| File.join(dir, filter.to_s + '.rb')}
           filename = filenames.find {|filename| File.exists?(filename)}
-          const_name = filter.to_s.capitalize
 
           if filename 
-            @log.info("Loading the #{const_name} filter (from #{filename})")
+            @log.info("Loading the #{filter.camel_case} filter (from #{filename})")
             require filename
-            filter = Flapjack::Filters.const_get(const_name).new(:log => @log)
+            filter = Flapjack::Filters.const_get(filter.camel_case).new(:log => @log, :persistence => @persistence)
             @filters << filter
           else
-            @log.warning("Flapjack::Filters::#{const_name} doesn't exist!")
+            @log.warning("Flapjack::Filters::#{filter.camel_case} doesn't exist!")
           end
         end
         
