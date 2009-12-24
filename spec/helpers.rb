@@ -3,13 +3,10 @@
 
 class MockLogger
   attr_reader :messages
-  def initialize 
-    @messages = []
-  end
-
   %w(warning error info debug).each do |type|
     class_eval <<-HERE
       def #{type}(message)
+        @messages ||= []
         @messages << message
       end
     HERE
