@@ -10,7 +10,9 @@ describe "notifier application" do
         @beanstalk = Beanstalk::Connection.new('localhost:11300', 'results')
       rescue => e
         # give helpful error messages to people unfamiliar with the test suite
+        puts
         puts "You need to have an instance of beanstalkd running locally to run these tests!"
+        puts
         raise
       end
     }.should_not raise_error
@@ -24,6 +26,7 @@ describe "notifier application" do
     end
 
     options = { :notifiers => {},
+                :filters => [],
                 :log => MockLogger.new,
                 :transport => {:backend => :beanstalkd},
                 :persistence => {:backend => :mock_persistence_backend,                                                                    

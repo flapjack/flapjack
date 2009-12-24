@@ -9,6 +9,7 @@ describe "notifier application" do
 
   it "should have a simple interface to start the notifier" do 
     options = { :notifiers => {},
+                :filters => [],
                 :log => MockLogger.new,
                 :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
@@ -17,6 +18,7 @@ describe "notifier application" do
 
   it "should log when loading a notifier" do 
     options = { :notifiers => {:testmailer => {}}, 
+                :filters => [],
                 :log => MockLogger.new,
                 :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
                 :persistence => {:backend => :mock_persistence_backend, 
@@ -27,6 +29,7 @@ describe "notifier application" do
 
   it "should warn if a specified notifier doesn't exist" do 
     options = { :notifiers => {:nonexistant => {}}, 
+                :filters => [],
                 :log => MockLogger.new,
                 :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
@@ -36,6 +39,7 @@ describe "notifier application" do
 
   it "should give precedence to notifiers in user-specified notifier directories" do 
     options = { :notifiers => {:testmailer => {}}, 
+                :filters => [],
                 :log => MockLogger.new,
                 :notifier_directories => [File.join(File.dirname(__FILE__),'notifier-directories', 'spoons')],
                 :persistence => {:backend => :mock_persistence_backend, 
@@ -50,6 +54,7 @@ describe "notifier application" do
 
   it "should setup recipients from a list" do
     options = { :notifiers => {},
+                :filters => [],
                 :log => MockLogger.new,
                 :recipients => [{:name => "Spoons McDoom"}],
                 :persistence => {:backend => :mock_persistence_backend, 
@@ -65,6 +70,7 @@ describe "notifier application" do
 
   it "should use beanstalkd as the default transport" do 
     options = { :notifiers => {}, 
+                :filters => [],
                 :log => MockLogger.new,
                 :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
@@ -74,6 +80,7 @@ describe "notifier application" do
 
   it "should use a transport as specified in options" do 
     options = { :notifiers => {},
+                :filters => [],
                 :log => MockLogger.new,
                 :transport => {:backend => :beanstalkd},
                 :persistence => {:backend => :mock_persistence_backend, 
@@ -84,6 +91,7 @@ describe "notifier application" do
 
   it "should error if the specified transport doesn't exist" do
     options = { :notifiers => {}, 
+                :filters => [],
                 :log => MockLogger.new,
                 :transport => {:backend => :nonexistant} }
     lambda {
@@ -100,6 +108,7 @@ describe "notifier application" do
     #
 
     options = { :notifiers => {}, 
+                :filters => [],
                 :log => MockLogger.new,
                 :transport => {:backend => :mock_transport, 
                                    :basedir => File.join(File.dirname(__FILE__), 'transports')},
@@ -129,6 +138,7 @@ describe "notifier application" do
     #
 
     options = { :notifiers => {}, 
+                :filters => ['ok'],
                 :log => MockLogger.new,
                 :transport => {:backend => :mock_transport, 
                                    :basedir => File.join(File.dirname(__FILE__), 'transports')},
@@ -158,6 +168,7 @@ describe "notifier application" do
     #
 
     options = { :notifiers => {}, 
+                :filters => ['any_parents_failed'],
                 :log => MockLogger.new,
                 :transport => {:backend => :mock_transport, 
                                    :basedir => File.join(File.dirname(__FILE__), 'transports')},
@@ -188,6 +199,7 @@ describe "notifier application" do
 
   it "should load a persistence backend as specified in options" do 
     options = { :notifiers => {},
+                :filters => [],
                 :log => MockLogger.new,
                 :persistence => {:backend => :mock_persistence_backend, 
                                    :basedir => File.join(File.dirname(__FILE__), 'persistence')} }
@@ -197,6 +209,7 @@ describe "notifier application" do
 
   it "should raise if the specified persistence backend doesn't exist" do
     options = { :notifiers => {}, 
+                :filters => [],
                 :log => MockLogger.new,
                 :persistence => {:backend => :nonexistant} }
     lambda {
