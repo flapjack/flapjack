@@ -5,12 +5,11 @@ require 'ostruct'
 module Flapjack
   class NotifierEngine
    
-    attr_reader :recipients, :log, :notifiers
+    attr_reader :log, :notifiers
   
     def initialize(opts={})
       @log = opts[:log]
       raise "you have to specify a logger" unless @log
-      @recipients = (opts[:recipients] || [])
       
       @notifiers = []
       if opts[:notifiers]
@@ -24,14 +23,15 @@ module Flapjack
     end
    
     def notify!(options={})
-      result = options[:result]
-      event  = options[:event]
+      result     = options[:result]
+      event      = options[:event]
+      recipients = options[:recipients]
 
       raise ArgumentError, "A result + event were not passed!" unless result && event
 
       @notifiers.each do |n|
-        @recipients.each do |recipient|
-          @log.info("Notifying #{recipient.name} via #{n.class} about check #{result.id}")
+        recipients.each do |recipient|
+          @log.info("Notifying #{recipient.name} via #{n.class} about check #{result.check_id}")
           n.notify(:result => result, :who => recipient, :event => event)
         end
       end
