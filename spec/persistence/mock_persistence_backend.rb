@@ -12,7 +12,7 @@ module Flapjack
       end
 
       # log if the method is called (essentially, these are dodgy mocks)
-      %w(any_parents_failed? save).each do |method|
+      %w(any_parents_failed? save create_event).each do |method|
         class_eval <<-HERE
           def #{method}(*args)
             @log.info("method #{method} was called on MockPersistenceBackend")
