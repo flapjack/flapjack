@@ -20,6 +20,7 @@ module Flapjack
         app.setup_recipients
         app.setup_persistence
         app.setup_queues
+        app.setup_filters
 
         app
       end
@@ -29,6 +30,7 @@ module Flapjack
       def initialize(options={})
         @log = options[:log]
         @notifier_directories = options[:notifier_directories]
+        @filter_directories = options[:filter_directories]
         @options = options
       end
 
@@ -75,6 +77,7 @@ module Flapjack
           if filename
             @log.info("Loading the #{notifier.to_s.capitalize} notifier (from #{filename})")
             require filename
+            config.merge!(:log => @log)
             notifier = Flapjack::Notifiers.const_get("#{notifier.to_s.capitalize}").new(config)
             @notifiers << notifier
           else
@@ -145,23 +148,60 @@ module Flapjack
         end
       end
 
+      def setup_filters 
+        @filter_directories ||= []
+
+        default_directory = File.expand_path(File.join(File.dirname(__FILE__), '..', 'filters'))
+        # the default directory should be the last in the list
+        if @filter_directories.include?(default_directory)
+          @filter_directories << @filter_directories.delete(default_directory)
+        else
+          @filter_directories << default_directory
+        end
+     
+        # filter to the directories that actually exist
+        @filter_directories = @filter_directories.find_all do |dir|
+          if File.exists?(dir)
+            true
+          else
+            @log.warning("Filters directory #{dir} doesn't exist. Skipping.")
+            false
+          end
+        end
+
+        @filters = []
+
+        @config.filters.each do |filter|
+          filenames = @filter_directories.map {|dir| File.join(dir, filter.to_s + '.rb')}
+          filename = filenames.find {|filename| File.exists?(filename)}
+          const_name = filter.to_s.capitalize
+
+          if filename 
+            @log.info("Loading the #{const_name} filter (from #{filename})")
+            require filename
+            filter = Flapjack::Filters.const_get(const_name).new(:log => @log)
+            @filters << filter
+          else
+            @log.warning("Flapjack::Filters::#{const_name} doesn't exist!")
+          end
+        end
+        
+      end
+
       def process_result
         @log.debug("Waiting for new result...")
         result = @results_queue.next # this blocks until a result is popped
         
         @log.info("Processing result for check #{result.check_id}.")
-        if result.warning? || result.critical?
-          if @persistence.any_parents_failed?(result)
-            @log.info("Not notifying on check '#{result.check_id}' as parent is failing.")
-          else
-            if event = @persistence.create_event(result)
-              @log.info("Event with id #{event.id} created for #{result.check_id}")
-            else
-              @log.warning("Couldn't create an event for #{result.check_id}!")
-            end
-            @log.info("Notifying on check #{result.check_id}.")
-            @notifier_engine.notify!(:result => result, :event => event)
-          end
+        event = @persistence.create_event(result)
+       
+
+        block = @filters.find {|filter| filter.block?(result) }
+        unless block
+          # do munging
+          @notifier_engine.notify!(:result => result, 
+                                   :event => event, 
+                                   :recipients => recipients)
         end
 
         @log.info("Storing status of check.")
