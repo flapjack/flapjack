@@ -14,14 +14,14 @@ module Flapjack
       %w(delete put).each do |method|
         class_eval <<-HERE
           def #{method}(*args)
-            @log.info("method #{method} was called on Mocktransport")
+            @log.info("method #{method} was called on MockTransport")
           end
         HERE
       end
 
       # exactly the same as above, just returns a real object
       def next
-        @log.info("method next was called on Mocktransport")
+        @log.info("method next was called on MockTransport")
         MockResult.new(@options)
       end
 
