@@ -7,14 +7,21 @@ require File.join(File.dirname(__FILE__), '..', 'helpers')
 
 describe "couchdb persistence backend" do 
 
-  it "should query its parent's statuses" do
-    backend_options = { :host => "localhost", 
-                        :port => "5984",
-                        :database => "flapjack_production",
-                        :log => MockLogger.new }
+  before(:all) do
+    @backend_options = { :host => "localhost", 
+                         :port => "5984",
+                         :database => "flapjack_test",
+                         :log => MockLogger.new }
 
+    uri = "/#{@backend_options[:database]}/"
+    request  = ::Net::HTTP::Put.new(uri)
+    response = Net::HTTP.start(@backend_options[:host], @backend_options[:port]) {|http| http.request(request)}
+
+  end
+
+  it "should query its parent's statuses" do
     # setup adapter
-    backend = Flapjack::Persistence::Couch.new(backend_options)
+    backend = Flapjack::Persistence::Couch.new(@backend_options)
 
     # check is failing
     parent = Flapjack::Persistence::Couch::Document.new(:command => "exit 1", :name => "failing parent")
@@ -41,13 +48,8 @@ describe "couchdb persistence backend" do
   end
 
   it "should persist a result" do 
-    backend_options = { :host => "localhost", 
-                        :port => "5984",
-                        :database => "flapjack_production",
-                        :log => MockLogger.new }
-
     # setup adapter
-    backend = Flapjack::Persistence::Couch.new(backend_options)
+    backend = Flapjack::Persistence::Couch.new(@backend_options)
 
 
     # save check
@@ -61,13 +63,8 @@ describe "couchdb persistence backend" do
   end
 
   it "should create an event" do 
-    backend_options = { :host => "localhost", 
-                        :port => "5984",
-                        :database => "flapjack_production",
-                        :log => MockLogger.new }
-
     # setup adapter
-    backend = Flapjack::Persistence::Couch.new(backend_options)
+    backend = Flapjack::Persistence::Couch.new(@backend_options)
 
     check = Flapjack::Persistence::Couch::Document.new(:command => "exit 0", :name => "good")
     check.save.should be_true
