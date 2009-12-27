@@ -14,15 +14,18 @@ module Flapjack
         end
 
         def self.get(id)
-          response = Flapjack::Persistence::Couch.get(id)
-          self.new(:table => response, :persisted => true)
+          if response = Flapjack::Persistence::Couch::Connection.get(id)
+            self.new(:table => response, :persisted => true)
+          else
+            nil
+          end
         end
 
         def save
           if @persisted
-            response = Flapjack::Persistence::Couch.put(:document => @table)
+            response = Flapjack::Persistence::Couch::Connection.put(:document => @table)
           else
-            response = Flapjack::Persistence::Couch.post(:document => @table)
+            response = Flapjack::Persistence::Couch::Connection.post(:document => @table)
           end
 
           @table["id"]  = response["id"]
