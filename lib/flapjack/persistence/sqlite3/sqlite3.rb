@@ -27,6 +27,48 @@ module Flapjack
         true
       end
 
+      def save_check(result)
+        if check = get_check(result[:id])
+          result[:updated_at] = Time.now
+          updates = result.map { |key, value| "#{key} = '#{value}'" }.join(', ')
+          statement = %(UPDATE "checks" SET #{updates} WHERE "id" = #{result[:id]};)
+          @db.execute(statement)
+        else
+          result[:created_at] = Time.now
+          columns, values = columns_and_values_for(result)
+          @db.execute(%(INSERT INTO "checks" #{columns} VALUES #{values}))
+        end
+        result
+      end
+
+      def get_check(id)
+        result = @db.execute2(%(SELECT * FROM "checks" WHERE id = "#{id}"))
+        return nil unless result[1]
+        hash = {}
+        result[0].each_with_index do |key, index|
+          hash[key] = result[1][index]
+        end
+        hash
+      end
+
+      def delete_check(id)
+        result = @db.execute2(%(DELETE FROM "checks" WHERE id = "#{id}"))
+      end
+
+      def all_checks
+        results = @db.execute2(%(SELECT * FROM "checks";))
+        
+        records = results[1..-1].map do |values|
+          hash = {}
+          values.each_with_index do |value, index|
+            hash[results[0][index]] = value
+          end
+          hash
+        end
+        
+        records
+      end
+
       private
       def connect
         raise ArgumentError, "Database location wasn't specified" unless @config.database
@@ -59,6 +101,22 @@ module Flapjack
           @db.execute(statement)
         end
       end
+
+      def columns_and_values_for(result)
+        @keys = []
+        @values = []
+        
+        result.each_pair do |k,v|
+          @keys << k
+          @values << v
+        end
+
+        keys   = "(\"" + @keys.join(%(", ")) + "\")"
+        values = "(\"" + @values.join(%(", ")) + "\")"
+
+        return keys, values
+      end
+
     end
   end
 end
