@@ -1,5 +1,6 @@
- * write migration tool for sqlite3 => couchdb
+ * move persistence API tests to cucumber
  * extend persistence APIs to cover CRUD
+ * write migration tool for sqlite3 => couchdb
 
  * write persistence backend setup tool (create couchdb/sqlite3 database)
 
