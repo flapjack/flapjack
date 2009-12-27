@@ -59,11 +59,11 @@ Feature: SQLite3 persistence backend
       | id | parent_id | child_id |
       | 1  | 1         | 2        |
     Then the following result should not have a failing parent:
-      | check_id | retval |
-      | 1        | 2      |
+      | check_id | 
+      | 1        |
     Then the following result should have a failing parent:
-      | check_id | retval |
-      | 2        | 0      |
+      | check_id |
+      | 2        |
 
   Scenario: Persisting results
     Given I set up the Sqlite3 backend with the following options:
@@ -73,8 +73,8 @@ Feature: SQLite3 persistence backend
       | name           | id | command | status | enabled |
       | failing parent | 3  | exit 2  | 0      | true    |
     Then the following results should save:
-      | check_id | retval |
-      | 3        | 2      |
+      | id | status |
+      | 3  | 2      |
     And the check with id "3" on the Sqlite3 backend should have a status of "2" 
 
   Scenario: Persisting events
@@ -85,7 +85,7 @@ Feature: SQLite3 persistence backend
       | name           | id | command | status | enabled |
       | failing parent | 4  | exit 2  | 4      | true    |
     Then the following event should save:
-      | check_id | retval |
+      | check_id | status |
       | 4        | 2      |
     And the check with id "4" on the Sqlite3 backend should have an event created
 
