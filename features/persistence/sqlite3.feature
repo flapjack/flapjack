@@ -45,8 +45,21 @@ Feature: SQLite3 persistence backend
     When I get all checks
     Then I should have at least 3 checks
 
+  Scenario: List all check relationships
+    Given the following checks exist: 
+      | name     | id | command | status | enabled |
+      | passing  | 9  | exit 0  | 0      | true    |
+      | warning  | 10 | exit 1  | 1      | true    |
+      | critical | 11 | exit 2  | 2      | true    |
+    And the following related checks exist: 
+      | parent_id | child_id |
+      | 9         | 10       |
+      | 10        | 11       |
+      | 11        | 9        |
+    When I get all check relationships
+    Then I should have at least 3 check relationships
 
-
+      
   Scenario: Query for failing parents
     Given the following checks exist:
       | name           | id | command | status | enabled |
