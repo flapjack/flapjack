@@ -125,3 +125,12 @@ task :tarball do
 
   puts "Release tarball with deps at #{release_tarball}"
 end
+
+desc "dump out statements to create sqlite3 schema"
+task :dm_debug do 
+  require 'lib/flapjack/persistence/data_mapper'
+
+  DataMapper.logger.set_log(STDOUT, :debug)
+  DataMapper.setup(:default, "sqlite3:///tmp/sqlite3.db")
+  DataMapper.auto_migrate!
+end
