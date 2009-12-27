@@ -6,6 +6,12 @@ Flapjack is highly scalable and distributed monitoring system.
 It understands the Nagios plugin format, and can easily be scaled 
 from 1 server to 1000. 
 
+WARNING
+=======
+
+**These install instructions are probably wrong. Follow them best you can, and
+please report bugs as you find them!**
+
 Setup dependencies (Ubuntu Hardy)
 ---------------------------------
 
@@ -70,26 +76,51 @@ Running
 
 Make sure beanstalkd is running.
 
-You'll want to set up `/etc/flapjack/recipients.yaml` so notifications can be sent via 
+You'll want to set up `/etc/flapjack/recipients.conf` so notifications can be sent via 
 `flapjack-notifier`: 
 
-    ---
-    - :name: Jane Doe
-      :email: "jane@doe.com"
-      :phone: "+61 444 222 111"
-      :pager: "61444222111"
-      :jid: "jane@doe.com"
+    [John Doe]
+      email = johndoe@example.org
+      jid = john@example.org
+      phone = +61 400 111 222
+      pager = 61400111222
+    
+    [Jane Doe]
+      email = janedoe@example.org
+      jid = jane@example.org
+      phone = +61 222 333 111
+      pager = 61222333111
 
-You also need to set up `/etc/flapjack/flapjack-notifier.yaml`: 
+You also need to set up `/etc/flapjack/notifier.conf`: 
 
-    --- 
-    :notifiers: 
-      :mailer: 
-        :from_address: notifications@my-domain.com
-      :xmpp: 
-        :jid: notifications@my-domain.com
-        :password: foo
-    :database_uri: "sqlite3:///var/lib/flapjack/flapjack.db"
+    # top level
+    [notifier]
+      notifier-directories = /usr/lib/flapjack/notifiers/ /path/to/my/notifiers
+      notifiers = mailer, xmpp
+    
+    # persistence layers
+    [persistence]
+      backend = data_mapper
+      uri = sqlite3:///tmp/flapjack.db
+    
+    # message transports
+    [transport]
+      backend = beanstalkd
+      host = localhost
+      port = 11300
+    
+    # notifiers
+    [mailer-notifier]
+      from_address = foo@bar.com
+    
+    [xmpp-notifier]
+      jid = foo@bar.com
+      password = barfoo
+    
+    # filters
+    [filters]
+      chain = ok, downtime, any_parents_failed
+
 
 Start up a cluster of workers: 
 
@@ -104,12 +135,12 @@ Each of the `flapjack-worker`s will output to syslog (check in /var/log/messages
 
 Start up the notifier: 
 
-    flapjack-notifier-manager start --recipients /etc/flapjack/recipients.yaml
+    flapjack-notifier-manager start --recipients /etc/flapjack/recipients.conf
 
 Currently there are email and XMPP notifiers. 
 
 You'll want to get a copy of (http://github.com/auxesis/flapjack-admin/)[flapjack-admin]
-to set up some checks, then run its' populator to get them into Flapjack. 
+to set up some checks, then run its populator to get them into Flapjack. 
 
 What things do 
 --------------
@@ -140,34 +171,15 @@ Config for the init scripts can be found in `/etc/defaults`.
 
 
 
-Developing
-----------
-
-You can write your own notifiers and place them in `lib/flapjack/notifiers/`.
-
-Your notifier just needs to implement the `notify` method, and take in a hash:
-
-    class Sms
-      def initialize(opts={})
-        # you may want to set from address here
-      end
-
-      def notify(opts={})
-        who = opts[:who]
-        result = opts[:result]
-        # sms to your hearts content
-      end
-    end
-
-
 Testing
 -------
 
-Tests are in `spec/`.
+Tests are in `spec/` and `features/`.
 
 To run tests:
 
     $ rake spec
+    $ rake cucumber
 
 
 Architecture
