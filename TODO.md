@@ -1,5 +1,5 @@
- * write pure-SQLite3 persistence backend
  * write migration tool for sqlite3 => couchdb
+ * extend persistence APIs to cover CRUD
 
  * write persistence backend setup tool (create couchdb/sqlite3 database)
 
