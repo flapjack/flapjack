@@ -78,7 +78,7 @@ Then /^the following event should save:$/ do |table|
 end
 
 Then /^the check with id "([^\"]*)" on the Sqlite3 backend should have an event created$/ do |id|
-  @backend.all_events(id).size.should > 0
+  @backend.all_events_for(id).size.should > 0
 end
 
 
@@ -88,4 +88,19 @@ end
 
 Then /^I should have at least (\d+) check relationships$/ do |n|
   @relationships.size.should >= n.to_i
+end
+
+Given /^the following events exist:$/ do |table|
+  table.hashes.each do |attrs|
+    result = Flapjack::Transport::Result.new(:result => attrs.symbolize_keys)
+    @backend.create_event(result).should be_true
+  end
+end
+
+When /^I get all events$/ do
+  @events = @backend.all_events
+end
+
+Then /^I should have at least (\d+) events$/ do |n|
+  @events.size.should >= n.to_i
 end

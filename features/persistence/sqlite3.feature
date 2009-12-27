@@ -45,21 +45,6 @@ Feature: SQLite3 persistence backend
     When I get all checks
     Then I should have at least 3 checks
 
-  Scenario: List all check relationships
-    Given the following checks exist: 
-      | name     | id | command | status | enabled |
-      | passing  | 9  | exit 0  | 0      | true    |
-      | warning  | 10 | exit 1  | 1      | true    |
-      | critical | 11 | exit 2  | 2      | true    |
-    And the following related checks exist: 
-      | parent_id | child_id |
-      | 9         | 10       |
-      | 10        | 11       |
-      | 11        | 9        |
-    When I get all check relationships
-    Then I should have at least 3 check relationships
-
-      
   Scenario: Query for failing parents
     Given the following checks exist:
       | name           | id | command | status | enabled |
@@ -75,16 +60,7 @@ Feature: SQLite3 persistence backend
       | check_id |
       | 2        |
 
-  Scenario: Persisting results
-    Given the following checks exist:
-      | name           | id | command | status | enabled |
-      | failing parent | 3  | exit 2  | 0      | true    |
-    Then the following results should save:
-      | id | status |
-      | 3  | 2      |
-    And the check with id "3" on the Sqlite3 backend should have a status of "2" 
-
-  Scenario: Persisting events
+  Scenario: Saving events
     Given the following checks exist: 
       | name           | id | command | status | enabled |
       | failing parent | 4  | exit 2  | 4      | true    |
@@ -93,4 +69,25 @@ Feature: SQLite3 persistence backend
       | 4        | 2      |
     And the check with id "4" on the Sqlite3 backend should have an event created
 
+  Scenario: List all events
+    Given the following events exist: 
+      | check_id |
+      | 9        |
+      | 10       |
+      | 11       |
+    When I get all events
+    Then I should have at least 3 events
 
+  Scenario: List all check relationships
+    Given the following checks exist: 
+      | name     | id | command | status | enabled |
+      | passing  | 9  | exit 0  | 0      | true    |
+      | warning  | 10 | exit 1  | 1      | true    |
+      | critical | 11 | exit 2  | 2      | true    |
+    And the following related checks exist: 
+      | parent_id | child_id |
+      | 9         | 10       |
+      | 10        | 11       |
+      | 11        | 9        |
+    When I get all check relationships
+    Then I should have at least 3 check relationships
