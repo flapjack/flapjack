@@ -82,3 +82,10 @@ Then /^the check with id "([^\"]*)" on the Sqlite3 backend should have an event 
 end
 
 
+When /^I get all check relationships$/ do
+  @relationships = @backend.all_check_relationships
+end
+
+Then /^I should have at least (\d+) check relationships$/ do |n|
+  @relationships.size.should >= n.to_i
+end
