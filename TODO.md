@@ -1,4 +1,6 @@
  * refactor couchdb backend to be less bongtastic
+ * write "action" hooks API on notifications
+
  * write migration tool for sqlite3 => couchdb
 
  * write persistence backend setup tool (create couchdb/sqlite3 database)
