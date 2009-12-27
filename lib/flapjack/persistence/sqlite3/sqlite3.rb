@@ -12,19 +12,9 @@ module Flapjack
         connect
       end
 
-      def any_parents_failed?(result)
-        rows = @db.execute(%(SELECT count(*) FROM "checks" INNER JOIN "related_checks" ON "related_checks".parent_id = "checks".id AND "related_checks".child_id = #{result.result.check_id};))
+      def any_parents_failed?(check_id)
+        rows = @db.execute(%(SELECT count(*) FROM "checks" INNER JOIN "related_checks" ON "related_checks".parent_id = "checks".id AND "related_checks".child_id = #{check_id};))
         rows.flatten.first != "0"
-      end
-
-      def save(result)
-        @db.execute(%(UPDATE "checks" SET status = #{result.result.retval} WHERE "id" = #{result.result.check_id};))
-        true
-      end
-
-      def create_event(result)
-        @db.execute(%(INSERT INTO "events" ("check_id", "created_at") VALUES ("#{result.result.check_id}", "#{Time.now}")))
-        true
       end
 
       def save_check(result)
@@ -67,6 +57,31 @@ module Flapjack
         end
         
         records
+      end
+
+      def save_check_relationship(attrs)
+        columns, values = columns_and_values_for(attrs)
+        @db.execute(%(INSERT INTO "related_checks" #{columns} VALUES #{values}))
+      end
+
+      # events
+      def all_events(id)
+        results = @db.execute2(%(SELECT * FROM "events" WHERE check_id = #{id}))
+
+        records = results[1..-1].map do |values|
+          hash = {}
+          values.each_with_index do |value, index|
+            hash[results[0][index]] = value
+          end
+          hash
+        end
+
+        records
+      end
+
+      def create_event(result)
+        @db.execute(%(INSERT INTO "events" ("check_id", "created_at") VALUES ("#{result.result.check_id}", "#{Time.now}")))
+        true
       end
 
       private
