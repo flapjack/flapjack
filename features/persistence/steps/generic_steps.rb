@@ -48,10 +48,6 @@ Then /^the following results should save:$/ do |table|
   end
 end
 
-Then /^the check with id "([^\"]*)" on the Sqlite3 backend should have a status of "([^\"]*)"$/ do |id, status|
-  @backend.get_check(id)["status"].should == status
-end
-
 Given /^the following related checks exist:$/ do |table|
   table.hashes.each do |attrs|
     @backend.save_check_relationship(attrs).should be_true
@@ -75,10 +71,6 @@ Then /^the following event should save:$/ do |table|
     result = Flapjack::Transport::Result.new(:result => attrs.symbolize_keys)
     @backend.create_event(result).should be_true
   end
-end
-
-Then /^the check with id "([^\"]*)" on the Sqlite3 backend should have an event created$/ do |id|
-  @backend.all_events_for(id).size.should > 0
 end
 
 

@@ -23,7 +23,3 @@ Then /^the check with id "([^\"]*)" on the Couch backend should have a status of
   pending # express the regexp above with the code you wish you had
 end
 
-Then /^the check with id "([^\"]*)" on the Couch backend should have an event created$/ do |arg1|
-  pending # express the regexp above with the code you wish you had
-end
-
