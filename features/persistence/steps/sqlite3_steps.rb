@@ -4,77 +4,36 @@ Given /^I set up the Sqlite3 backend with the following options:$/ do |table|
 end
 
 Given /^the following checks exist:$/ do |table|
-  if @backend.class == Flapjack::Persistence::Couch
-
-    table.hashes.each do |attrs|
-      check = Flapjack::Persistence::Couch::Document.new(attrs.symbolize_keys)
-      check.save.should be_true
-    end
-
-  else
-
-    @db = SQLite3::Database.new(@backend_options[:database]) 
-    table.hashes.each do |attrs|
-      @keys = [] ; @values = []
-      attrs.each_pair do |k,v|
-        @keys << k
-        @values << v
-      end
-  
-      keys   = "(\"" + @keys.join(%(", ")) + "\")"
-      values = "(\"" + @values.join(%(", ")) + "\")"
-  
-      @db.execute(%(INSERT INTO "checks" #{keys} VALUES #{values}))
-    end
-
+  table.hashes.each do |attrs|
+    @backend.save_check(attrs.symbolize_keys)
   end
 end
 
 Then /^the following results should save:$/ do |table|
   table.hashes.each do |attrs|
-    result = Flapjack::Transport::Result.new(:result => attrs.symbolize_keys)
-    @backend.save(result).should be_true
+    @backend.save_check(attrs.symbolize_keys).should be_true
   end
 end
 
 Then /^the check with id "([^\"]*)" on the Sqlite3 backend should have a status of "([^\"]*)"$/ do |id, status|
-  @db.execute(%(SELECT status FROM "checks" WHERE id = '#{id}')).first.first.should == status
+  @backend.get_check(id)["status"].should == status
 end
 
 Given /^the following related checks exist:$/ do |table|
-  if @backend.class == Flapjack::Persistence::Couch
-
-    table.hashes.each do |attrs|
-
-    end
-
-  else
-    table.hashes.each do |attrs|
-      @keys = [] ; @values = []
-      attrs.each_pair do |k,v|
-        @keys << k
-        @values << v
-      end
-  
-      keys   = "(\"" + @keys.join(%(", ")) + "\")"
-      values = "(\"" + @values.join(%(", ")) + "\")"
-  
-      @db.execute(%(INSERT INTO "related_checks" #{keys} VALUES #{values}))
-    end
+  table.hashes.each do |attrs|
+    @backend.save_check_relationship(attrs).should be_true
   end
 end
 
 Then /^the following result should not have a failing parent:$/ do |table|
   table.hashes.each do |attrs|
-    result = Flapjack::Transport::Result.new(:result => attrs.symbolize_keys)
-    @backend.any_parents_failed?(result).should be_false
+    @backend.any_parents_failed?(attrs['check_id']).should be_false
   end
 end
 
 Then /^the following result should have a failing parent:$/ do |table|
   table.hashes.each do |attrs|
-    result = Flapjack::Transport::Result.new(:result => attrs.symbolize_keys)
-    @backend.any_parents_failed?(result).should be_true
+    @backend.any_parents_failed?(attrs['check_id']).should be_true
   end
 end
 
@@ -86,7 +45,6 @@ Then /^the following event should save:$/ do |table|
 end
 
 Then /^the check with id "([^\"]*)" on the Sqlite3 backend should have an event created$/ do |id|
-  # test event is actually created
-  @db.execute(%(SELECT count(*) FROM "events" WHERE check_id = #{id})).first.first.to_i.should == 1
+  @backend.all_events(id).size.should > 0
 end
 
