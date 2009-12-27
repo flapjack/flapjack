@@ -79,8 +79,22 @@ module Flapjack
       end
 
       # events
-      def all_events(id)
+      def all_events_for(id)
         results = @db.execute2(%(SELECT * FROM "events" WHERE check_id = #{id}))
+
+        records = results[1..-1].map do |values|
+          hash = {}
+          values.each_with_index do |value, index|
+            hash[results[0][index]] = value
+          end
+          hash
+        end
+
+        records
+      end
+
+      def all_events
+        results = @db.execute2(%(SELECT * FROM "events";))
 
         records = results[1..-1].map do |values|
           hash = {}
