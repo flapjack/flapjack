@@ -15,8 +15,9 @@ log.add(Log4r::SyslogOutputter.new("notifier"))
 
 app = Flapjack::Notifier::Application.run(:log => log, 
                                           :notifiers => {},
+                                          :filters => [],
                                           :queue_backend => {:type => :beanstalkd},
-                                          :persistence => {:type => :datamapper,
+                                          :persistence => {:type => :data_mapper,
                                                            :uri => "sqlite3:///tmp/flapjack.db"})
 
 mockapp = Flapjack::Notifier::Application.run(:log => log,
