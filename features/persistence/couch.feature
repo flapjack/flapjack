@@ -45,8 +45,6 @@ Feature: CouchDB persistence backend
     When I get all checks
     Then I should have at least 3 checks
 
-
-
   Scenario: Query for failing parents
     Given the following checks exist:
       | name           | id | command | status | enabled |
@@ -56,28 +54,52 @@ Feature: CouchDB persistence backend
       | id | parent_id | child_id |
       | 1  | 1         | 2        |
     Then the following result should not have a failing parent:
-      | check_id | retval |
-      | 1        | 2      |
+      | check_id | 
+      | 1        |
     Then the following result should have a failing parent:
-      | check_id | retval |
-      | 2        | 0      |
+      | check_id |
+      | 2        |
 
-  Scenario: Persisting results
-    Given the following checks exist:
-      | name           | id | command | status | enabled |
-      | failing parent | 3  | exit 2  | 0      | true    |
-    Then the following results should save:
-      | check_id | retval |
-      | 3        | 2      |
-    And the check with id "3" on the Couch backend should have a status of "2" 
-
-  Scenario: Persisting events
+  Scenario: Saving events
     Given the following checks exist: 
       | name           | id | command | status | enabled |
       | failing parent | 4  | exit 2  | 4      | true    |
     Then the following event should save:
-      | check_id | retval |
+      | check_id | status |
       | 4        | 2      |
-    And the check with id "4" on the Couch backend should have an event created
+    And the check with id "4" on the Sqlite3 backend should have an event created
 
+  Scenario: List events for a check
+    Given the following checks exist: 
+      | name           | id | command | status | enabled |
+      | passing child  | 12 | exit 2  | 3      | true    |
+    Given the following events exist: 
+      | check_id |
+      | 12       |
+      | 12       |
+      | 12       |
+    When I get all events for check "12"
+    Then I should have at least 3 events
 
+  Scenario: List all events
+    Given the following events exist: 
+      | check_id |
+      | 9        |
+      | 10       |
+      | 11       |
+    When I get all events
+    Then I should have at least 3 events
+
+  Scenario: List all check relationships
+    Given the following checks exist: 
+      | name     | id | command | status | enabled |
+      | passing  | 9  | exit 0  | 0      | true    |
+      | warning  | 10 | exit 1  | 1      | true    |
+      | critical | 11 | exit 2  | 2      | true    |
+    And the following related checks exist: 
+      | parent_id | child_id |
+      | 9         | 10       |
+      | 10        | 11       |
+      | 11        | 9        |
+    When I get all check relationships
+    Then I should have at least 3 check relationships
