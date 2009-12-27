@@ -104,3 +104,7 @@ end
 Then /^I should have at least (\d+) events$/ do |n|
   @events.size.should >= n.to_i
 end
+
+When /^I get all events for check "([^\"]*)"$/ do |id|
+  @events = @backend.all_events_for(id) 
+end
