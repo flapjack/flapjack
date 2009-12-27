@@ -5,8 +5,8 @@ Feature: SQLite3 persistence backend
 
   Background:
     Given I set up the Sqlite3 backend with the following options:
-      | database         | auto_migrate | 
-      | /tmp/flapjack.db | true         |
+      | database  | auto_migrate | 
+      | :memory:  | true         |
 
   Scenario: Create a check
     When I create the following checks:
@@ -68,6 +68,18 @@ Feature: SQLite3 persistence backend
       | check_id | status |
       | 4        | 2      |
     And the check with id "4" on the Sqlite3 backend should have an event created
+
+  Scenario: List events for a check
+    Given the following checks exist: 
+      | name           | id | command | status | enabled |
+      | passing child  | 12 | exit 2  | 3      | true    |
+    Given the following events exist: 
+      | check_id |
+      | 12       |
+      | 12       |
+      | 12       |
+    When I get all events for check "12"
+    Then I should have at least 3 events
 
   Scenario: List all events
     Given the following events exist: 
