@@ -48,10 +48,7 @@ Feature: SQLite3 persistence backend
 
 
   Scenario: Query for failing parents
-    Given I set up the Sqlite3 backend with the following options:
-      | database         | auto_migrate | 
-      | /tmp/flapjack.db | true         |
-    And the following checks exist:
+    Given the following checks exist:
       | name           | id | command | status | enabled |
       | failing parent | 1  | exit 2  | 2      | true    |
       | passing child  | 2  | exit 0  | 0      | true    |
@@ -66,10 +63,7 @@ Feature: SQLite3 persistence backend
       | 2        |
 
   Scenario: Persisting results
-    Given I set up the Sqlite3 backend with the following options:
-      | database         | auto_migrate | 
-      | /tmp/flapjack.db | true         |
-    And the following checks exist:
+    Given the following checks exist:
       | name           | id | command | status | enabled |
       | failing parent | 3  | exit 2  | 0      | true    |
     Then the following results should save:
@@ -78,10 +72,7 @@ Feature: SQLite3 persistence backend
     And the check with id "3" on the Sqlite3 backend should have a status of "2" 
 
   Scenario: Persisting events
-    Given I set up the Sqlite3 backend with the following options:
-      | database         | auto_migrate | 
-      | /tmp/flapjack.db | true         |
-    And the following checks exist: 
+    Given the following checks exist: 
       | name           | id | command | status | enabled |
       | failing parent | 4  | exit 2  | 4      | true    |
     Then the following event should save:
