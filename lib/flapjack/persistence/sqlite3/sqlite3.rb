@@ -64,6 +64,20 @@ module Flapjack
         @db.execute(%(INSERT INTO "related_checks" #{columns} VALUES #{values}))
       end
 
+      def all_check_relationships
+        results = @db.execute2(%(SELECT * FROM "related_checks";))
+        
+        records = results[1..-1].map do |values|
+          hash = {}
+          values.each_with_index do |value, index|
+            hash[results[0][index]] = value
+          end
+          hash
+        end
+
+        records
+      end
+
       # events
       def all_events(id)
         results = @db.execute2(%(SELECT * FROM "events" WHERE check_id = #{id}))
