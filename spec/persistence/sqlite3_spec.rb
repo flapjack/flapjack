@@ -1,27 +1,23 @@
 #!/usr/bin/env ruby 
 
-require File.join(File.dirname(__FILE__), '..', '..', 'lib', 'flapjack', 'persistence', 'couch')
+require File.join(File.dirname(__FILE__), '..', '..', 'lib', 'flapjack', 'persistence', 'sqlite3')
 require File.join(File.dirname(__FILE__), '..', '..', 'lib', 'flapjack', 'transports', 'result')
 require File.join(File.dirname(__FILE__), '..', 'helpers')
 
-describe "couchdb persistence backend" do 
+describe "sqlite3 persistence backend" do 
 
   it "should query its parent's statuses" do
-
-    backend_options = { :host => "localhost", 
-                        :port => "5984",
-                        :database => "flapjack_production",
+    backend_options = { :database => "/tmp/flapjack.db", 
+                        :auto_migrate => true,
                         :log => MockLogger.new }
 
     # setup adapter
-    backend = Flapjack::Persistence::Couch.new(backend_options)
+    backend = Flapjack::Persistence::Sqlite3.new(backend_options)
 
     # check is failing
-    #parent = Flapjack::Persistence::Couch::Document.new(:command => "exit 1", :name => "failing parent")
-    #parent.save.should be_true
-
-
+    db = SQLite3::Database.new(backend_options[:database]) 
     db.execute(%(INSERT INTO "checks" ("id", "command", "status", "enabled", "name") VALUES (1, 'exit 2', 2, 't', 'failing parent')))
+
     # create check that is passing, but has a failing parent
     db.execute(%(INSERT INTO "checks" ("id", "command", "status", "enabled", "name") VALUES (2, 'exit 0', 0, 't', 'passing child')))
     db.execute(%(INSERT INTO "related_checks" ("id", "parent_id", "child_id") VALUES (1, 1, 2)))
@@ -48,7 +44,7 @@ describe "couchdb persistence backend" do
 
     # save check
     db = SQLite3::Database.new(backend_options[:database]) 
-    db.execute(%(INSERT INTO "checks" ("id", "command", "status", "enabled", "name") VALUES (3, 'exit 2', 2, 't', 'failing parent')))
+    db.execute(%(INSERT INTO "checks" ("id", "command", "status", "enabled", "name") VALUES (3, 'exit 2', 0, 't', 'failing parent')))
     
     # test persistence
     raw_result = {:check_id => 3, :retval => 2}
