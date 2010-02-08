@@ -4,6 +4,7 @@ module Flapjack
       def initialize(opts={})
         @log = opts[:log]
       end
+
       def block?(result)
         !result.warning? || !result.critical?
       end
