@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.name = 'flapjack'
-  s.version = '0.5.0'
-  s.date = '2009-11-29'
+  s.version = '0.5.1'
+  s.date = '2010-02-28'
   
   s.summary = "a scalable and distributed monitoring system"
   s.description = "Flapjack is highly scalable and distributed monitoring system. It understands the Nagios plugin format, and can easily be scaled from 1 server to 1000."
@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
 
   s.add_dependency('daemons', '= 1.0.10')
   s.add_dependency('beanstalk-client', '= 1.0.2')
-  s.add_dependency('log4r', '= 1.0.5')
+  s.add_dependency('log4r', '= 1.1.5')
   s.add_dependency('xmpp4r', '= 0.5')
   s.add_dependency('tmail', '= 1.2.3.1')
   s.add_dependency('yajl-ruby', '= 0.6.4')
