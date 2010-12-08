@@ -12,18 +12,16 @@ Given /^the "([^\"]*)" directory exists and is writable$/ do |directory|
 end
 
 When /^I run "([^\"]*)"$/ do |cmd|
-  parts = [cmd]
-  parts.unshift(@bin_path) if @bin_path
-  command = parts.join('/')
-  # this might be dodgy
+  @root = Pathname.new(File.dirname(__FILE__)).parent.parent.expand_path
+  bin_path = @root.join('bin')
+  command = "#{bin_path}/#{cmd}"
+
   @output = `#{command}`
-  #@output.size.should > 0
-  #p command
-  #p @output
+  $?.exitstatus.should == 0
 end
 
 Then /^(\d+) instances of "([^\"]*)" should be running$/ do |number, command|
-  sleep 0.5 # this truly is a dodgy hack. 
+  sleep 0.5 # this truly is a dodgy hack.
             # sometimes the the worker manager can take a while to fork
   output = `ps -eo cmd |grep ^#{command} |grep -v grep`
   output.split.size.should >= number.to_i
