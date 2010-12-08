@@ -1,0 +1,230 @@
+#!/usr/bin/env ruby
+
+require 'pathname'
+require 'rubygems'
+require 'yajl/json_gem'
+
+module Netsaint
+  class ConfigFile
+    attr_accessor :filename, :config
+
+    def initialize(filename, opts={})
+      @filename = filename
+      @config = {}
+    end
+
+    def read
+      @raw_cfg = File.readlines(@filename).grep(/^[^#]/).map {|l| l.strip.empty? ? nil : l.strip }.compact
+    end
+
+    def extract(keyname, opts={}, &blk)
+      opts[:delete] ||= true
+      attrs         = @config.find_all {|k, v| k =~ /^#{keyname}\[/ }
+      extracted     = {}
+
+      attrs.each do |key, value|
+        @config.delete(key) if opts[:delete]
+        name = key[/#{keyname}\[(.+)\]/, 1]
+        extracted[name] ||= []
+        if value.class == Array
+          value.each { |v| extracted[name] << v }
+        else
+          extracted[name] << value
+        end
+      end
+
+
+      if block_given?
+        yielded = extracted.map do |key, value|
+          key, value = yield key, value
+          [ key, value ]
+        end
+        extracted = Hash[yielded]
+      end
+
+      extracted
+    end
+
+    def build_timeperiods
+      timeperiods = extract "timeperiod" do |key, value|
+        value.map! do |v|
+          parts = v.split(';')
+          { "timeperiod_alias" => parts[1], "sun_timeranges" => parts[2],
+            "mon_timeranges"   => parts[3], "tue_timeranges" => parts[4],
+            "wed_timeranges"   => parts[5], "thu_timeranges" => parts[6],
+            "fri_timeranges"   => parts[7], "sat_timeranges" => parts[8] }
+        end
+        [ key, value ]
+      end
+
+      @config["timeperiods"] = timeperiods
+    end
+
+    def build_services
+      services = extract "service" do |key, value|
+        value.map! do |v|
+          parts = v.split(';')
+          { "description"         => parts[0], "volatile"              => parts[1],
+            "check_period"        => parts[2], "max_attempts"          => parts[3],
+            "check_interval"      => parts[4], "retry_interval"        => parts[5],
+            "notification_group"  => parts[6], "notification_interval" => parts[7],
+            "notification_period" => parts[8], "notify_recovery"       => parts[9],
+            "notify_critical"     => parts[10], "notify_warning"       => parts[11],
+            "event_hander"        => parts[12], "check_command"        => parts[13] }
+        end
+        [ key, value ]
+      end
+
+      @config["services"] = services
+    end
+
+    def build_contactgroups
+      contactgroups = extract "contactgroup" do |key, value|
+        value.map! do |v|
+          parts = v.split(';')
+          { "group_alias" => parts[0], "contacts" => parts[1] }
+        end
+        [ key, value ]
+      end
+
+      @config["contactgroups"] = contactgroups
+    end
+
+    def build_contacts
+      contacts = extract "contact" do |key, value|
+        value.map! do |v|
+          parts = v.split(';')
+          { "contact_alias"            => parts[0],  "svc_notification_period" => parts[1],
+            "host_notification_period" => parts[2],  "notify_service_recovery" => parts[3],
+            "notify_service_critical"  => parts[4],  "notify_service_warning"  => parts[5],
+            "notify_host_recovery"     => parts[6],  "notify_host_down"        => parts[7],
+            "notify_host_unreachable"  => parts[8],  "service_notify_commands" => parts[9],
+            "host_notify_commands"     => parts[10], "email_address"           => parts[11],
+            "pager"                    => parts[12] }
+        end
+        [ key, value ]
+      end
+
+      @config["contacts"] = contacts
+    end
+
+    def build_hosts
+      hosts = extract "host" do |key, value|
+        value.map! do |v|
+          parts = v.split(';')
+          { "host_alias"          => parts[0], "address"               => parts[1],
+            "parent_hosts"        => parts[2], "host_check_command"    => parts[3],
+            "max_attempts"        => parts[4], "notification_interval" => parts[5],
+            "notification_period" => parts[6], "notify_recovery"       => parts[7],
+            "notify_down"         => parts[8], "notify_unreachable"    => parts[9],
+            "event_handler"       => parts[10] }
+        end
+        [ key, value]
+      end
+
+      @config["hosts"] = hosts
+    end
+
+
+    def to_hash
+      self.read unless @raw_cfg
+
+      @raw_cfg.each do |o|
+        parts = o.scan(/^([^=]+)=(.+)$/).flatten
+        key   = parts.first
+        value = parts.last
+        case
+        when @config[key] && @config[key].class == Array
+          @config[key] << value
+        when @config[key]
+          @config[key] = [ @config[key] ]
+        else
+          @config[key] = value
+        end
+      end
+
+      build_timeperiods
+      build_services
+      build_contactgroups
+      build_contacts
+      build_hosts
+
+      @config
+    end
+
+    def related_files
+      self.to_hash if @config.empty?
+      @config.fetch("cfg_file")
+    end
+  end
+
+  class Config
+    attr_accessor :root, :configs, :files
+
+    def initialize(opts={})
+      raise ArgumentError, "You must specify :root" unless opts[:root]
+      @root    = opts[:root]
+      @root    = Pathname.new(@root) unless @root.class == Pathname
+      @configs = []
+      @files   = []
+    end
+
+    def build
+      filename = @root.join('netsaint.cfg')
+      build_file(filename)
+    end
+
+    def build_file(filename)
+      file = ConfigFile.new(filename)
+      hash = file.to_hash
+      @files   << file
+      @configs << hash
+      if hash["cfg_file"]
+        hash["cfg_file"].each do |name|
+          path = relativise_path(name)
+          build_file(path)
+        end
+      end
+    end
+
+    def relativise_path(filename)
+      @match = nil
+      parent = @root.dirname.dirname
+      path   = parent + filename.to_s[1..-1]
+
+      path
+    end
+
+    %w(timeperiods services contactgroups contacts hosts).each do |method|
+      class_eval <<-METHOD
+        def #{method}
+          #{method} = {}
+          @configs.each do |c|
+            c["#{method}"].each do |key, value|
+              #{method}[key] ||= []
+              #{method}[key] << value
+              #{method}[key].flatten!
+            end
+          end
+
+          #{method}
+        end
+      METHOD
+    end
+  end
+end
+
+options = ARGV[2..-1]
+options = Hash[options.map {|o| o.scan(/--(.+)=(.+)/).flatten }]
+
+@netsaint_root = Pathname.new(options["source"]).expand_path
+@config = Netsaint::Config.new(:root => @netsaint_root)
+
+@config.build
+
+command = ARGV[0]
+type    = ARGV[1]
+
+json = { type => @config.method(type).call }.to_json
+puts json
+
