@@ -214,17 +214,25 @@ module Netsaint
   end
 end
 
-options = ARGV[2..-1]
-options = Hash[options.map {|o| o.scan(/--(.+)=(.+)/).flatten }]
-
-@netsaint_root = Pathname.new(options["source"]).expand_path
-@config = Netsaint::Config.new(:root => @netsaint_root)
-
-@config.build
-
 command = ARGV[0]
-type    = ARGV[1]
 
-json = { type => @config.method(type).call }.to_json
-puts json
+case command
+when "print"
+  options = ARGV[2..-1]
+  options = Hash[options.map {|o| o.scan(/--(.+)=(.+)/).flatten }]
 
+  @netsaint_root = Pathname.new(options["source"]).expand_path
+  @config = Netsaint::Config.new(:root => @netsaint_root)
+
+  @config.build
+
+  command = ARGV[0]
+  type    = ARGV[1]
+
+  json = { type => @config.method(type).call }.to_json
+  puts json
+
+when "import"
+  options = ARGV[1..-1]
+  puts options
+end
