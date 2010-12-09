@@ -85,11 +85,12 @@ Feature: Netsaint -> Flapjack configuration converter
   @import
   Scenario: Import Netsaint config
     Given NetSaint configuration is at "features/support/data/etc/netsaint"
-    And Flapjack is using the Sqlite3 persistence backend
     When I run "flapjack-config-importer" with the following arguments:
       | argument                                      |
       | import                                        |
       | --source=features/support/data/etc/netsaint   |
+      | --config=features/support/configs/sqlite3.ini |
+    Then I should see "created batch \d+" in the output
     When I run "flapjack-batches" with the following arguments:
       | argument                                      |
       | show                                          |

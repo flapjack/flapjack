@@ -1,15 +1,8 @@
-Given /^Flapjack is using the Sqlite3 persistence backend$/ do
-  @options ||= []
-  @options << "--config=features/support/configs/sqlite3.ini"
-end
-
 When /^I run "([^"]*)" with the following arguments:$/ do |script, table|
-  @arguments ||= []
+  @arguments = []
   table.hashes.each do |attrs|
     @arguments << attrs["argument"]
   end
-
-  @arguments += @options
 
   command = "bin/#{script} #{@arguments.join(' ')}"
 
@@ -57,4 +50,8 @@ end
 
 Then /^the latest batch of checks should be in the work queue$/ do
   pending # express the regexp above with the code you wish you had
+end
+
+Then /^I should see "([^"]*)" in the output$/ do |regex|
+  @output.should =~ /#{regex}/i
 end
