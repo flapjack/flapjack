@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+data = '{"batches":[{"id":1,"checks":[{"id":1,"parent_id":null,"child_id":null,"command":"exit 0"}]}]}'
+puts data
+
+exit 0
