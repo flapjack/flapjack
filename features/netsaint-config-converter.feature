@@ -84,13 +84,20 @@ Feature: Netsaint -> Flapjack configuration converter
 
   @import
   Scenario: Import Netsaint config
-    Given netsaint configuration is at "features/support/data/etc/netsaint"
-    And Flapjack is installed
+    Given NetSaint configuration is at "features/support/data/etc/netsaint"
     And Flapjack is using the Sqlite3 persistence backend
-    When I run "flapjack-config-importer import --source=features/support/data/etc/netsaint"
-    Then Flapjack should have a new batch of checks
-    And the Flapjack batch should have several checks
-    And the Flapjack checks should have relationships
+    When I run "flapjack-config-importer" with the following arguments:
+      | argument                                      |
+      | import                                        |
+      | --source=features/support/data/etc/netsaint   |
+    When I run "flapjack-batches" with the following arguments:
+      | argument                                      |
+      | show                                          |
+      | --config=features/support/configs/sqlite3.ini |
+      | --format=json                                 |
+    Then I should see a valid JSON output
+    Then I should see a batch of checks in the output
+    Then I should see a batch of checks with relationships in the output
 
   @import
   Scenario: Populate workers with Flapjack-ised Netsaint checks
