@@ -82,15 +82,17 @@ Feature: Netsaint -> Flapjack configuration converter
       | attribute                | nillable? |
       | event_handler            | true      |
 
+  @import
   Scenario: Import Netsaint config
     Given netsaint configuration is at "features/support/data/etc/netsaint"
     And Flapjack is installed
     And Flapjack is using the Sqlite3 persistence backend
-    When I run "flapjack-config-importer --source=features/support/data/etc/netsaint"
+    When I run "flapjack-config-importer import --source=features/support/data/etc/netsaint"
     Then Flapjack should have a new batch of checks
     And the Flapjack batch should have several checks
     And the Flapjack checks should have relationships
 
+  @import
   Scenario: Populate workers with Flapjack-ised Netsaint checks
     Given I run the importer
     And the necessary checks and relationships are created
