@@ -235,4 +235,5 @@ when "print"
 when "import"
   options = ARGV[1..-1]
   puts options
+  puts "Created batch 1"
 end
