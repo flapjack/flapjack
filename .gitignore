@@ -13,3 +13,4 @@ recipients.yaml
 pkg/*
 !etc/flapjack/recipients.yaml
 spec/test.db
+features/support/tmp/*
