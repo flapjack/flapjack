@@ -234,6 +234,19 @@ when "print"
 
 when "import"
   options = ARGV[1..-1]
-  puts options
+  options = Hash[options.map {|o| o.scan(/--(.+)=(.+)/).flatten }]
+
+  @netsaint_root = Pathname.new(options["source"]).expand_path
+  @config = Netsaint::Config.new(:root => @netsaint_root)
+
+  @config.build
+
+  @check_commands = []
+  @config.services.each do |hostname, services|
+    services.each {|service| @check_commands << service["check_command"] }
+  end
+
+  p @check_commands
+
   puts "Created batch 1"
 end
