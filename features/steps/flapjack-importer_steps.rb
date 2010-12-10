@@ -40,6 +40,18 @@ Then /^I should see a batch of checks with relationships in the output$/ do
   end
 end
 
+Given /^no file exists at "([^"]*)"$/ do |filename|
+  FileUtils.rm_f(filename).should be_true
+end
+
+Then /^I should see valid JSON in "([^"]*)"$/ do |filename|
+  lambda {
+    file = File.new(filename, 'r')
+    parser = Yajl::Parser.new
+    @data = parser.parse(file)
+  }.should_not raise_error
+end
+
 Given /^I run the importer$/ do
   pending # express the regexp above with the code you wish you had
 end
