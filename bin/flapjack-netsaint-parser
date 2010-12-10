@@ -230,9 +230,16 @@ when "print"
   type    = ARGV[1]
 
   json = { type => @config.method(type).call }.to_json
-  puts json
 
-when "import"
+  if filename = options["to"]
+    File.open(filename, 'w') do |f|
+      f << json
+    end
+  else
+    puts json
+  end
+
+when "dump"
   options = ARGV[1..-1]
   options = Hash[options.map {|o| o.scan(/--(.+)=(.+)/).flatten }]
 
@@ -246,7 +253,15 @@ when "import"
     services.each {|service| @check_commands << service["check_command"] }
   end
 
-  p @check_commands
+  json = { "batch" => {"id" => 1} }.to_json
 
-  puts "Created batch 1"
+  if filename = options["to"]
+    File.open(filename, 'w') do |f|
+      f << json
+    end
+    puts "Dumped config to #{filename}"
+  else
+    puts json
+  end
+
 end
