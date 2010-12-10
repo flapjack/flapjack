@@ -4,19 +4,25 @@ require 'rubygems'
 require 'yajl'
 require 'yajl/json_gem'
 
-data = { "batches" =>
-          [
-            { "id" => 1, "checks" =>
-              [
-              "id"        => 1,
-              "parent_id" => nil,
-              "child_id"  => nil,
-              "command"   => "exit 0"
-              ]
-            }
-          ]
-        }
+command = ARGV[0]
 
-puts data.to_json
+case command
+when "import"
+  puts "Created batch 1"
+when "list"
+  data = { "batches" =>
+            [
+              { "id" => 1, "checks" =>
+                [
+                "id"        => 1,
+                "parent_id" => nil,
+                "child_id"  => nil,
+                "command"   => "exit 0"
+                ]
+              }
+            ]
+          }
 
-exit 0
+  puts data.to_json
+end
+
