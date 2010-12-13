@@ -125,6 +125,17 @@ module Netsaint
       @config["hosts"] = hosts
     end
 
+    def build_commands
+      commands = extract "command" do |key, value|
+        value.map! do |v|
+          parts = v.split(';')
+          { "command_line" => parts[0] }
+        end
+        [ key, value]
+      end
+
+      @config["commands"] = commands
+    end
 
     def to_hash
       self.read unless @raw_cfg
@@ -148,17 +159,20 @@ module Netsaint
       build_contactgroups
       build_contacts
       build_hosts
+      build_commands
 
       @config
     end
 
     def related_files
       self.to_hash if @config.empty?
-      @config.fetch("cfg_file")
+      @config.fetch("cfg_file") + @config.fetch("resource_file")
     end
   end
 
   class Config
+    include Enumerable
+
     attr_accessor :root, :configs, :files
 
     def initialize(opts={})
@@ -179,10 +193,12 @@ module Netsaint
       hash = file.to_hash
       @files   << file
       @configs << hash
-      if hash["cfg_file"]
-        hash["cfg_file"].each do |name|
-          path = relativise_path(name)
-          build_file(path)
+      %w(cfg_file resource_file).each do |linked_file|
+        if hash[linked_file]
+          hash[linked_file].each do |name|
+            path = relativise_path(name)
+            build_file(path)
+          end
         end
       end
     end
@@ -195,7 +211,28 @@ module Netsaint
       path
     end
 
-    %w(timeperiods services contactgroups contacts hosts).each do |method|
+    # Makes Enumerable mixin work
+    def each
+      @configs.each {|i| yield i }
+    end
+
+    # Search across all configs for a particular key.
+    #
+    # Can be passed a string:
+    #
+    #   @config.fetch("command_check_interval") # => {"command_check_interval" => "1"}
+    #
+    # Or a regex:
+    #
+    #   @config.fetch(/^\$USER\d+\$$/) # => { "$USER2$"=>"/tmp", "$USER1$"=>"/boot" }
+    #
+    def fetch(key)
+      configs = self.find_all {|c| c.keys.find {|k| k[k]} }
+      results = configs.map {|c| Hash[c.find_all { |k,v| k[key] }] }
+      results.inject {|final, hash| final.merge(hash) }
+    end
+
+    %w(timeperiods services contactgroups contacts hosts commands).each do |method|
       class_eval <<-METHOD
         def #{method}
           #{method} = {}
@@ -245,13 +282,7 @@ when "dump"
 
   @netsaint_root = Pathname.new(options["source"]).expand_path
   @config = Netsaint::Config.new(:root => @netsaint_root)
-
   @config.build
-
-  @check_commands = []
-  @config.services.each do |hostname, services|
-    services.each {|service| @check_commands << service["check_command"] }
-  end
 
   json = { "batch" => {"id" => 1} }.to_json
 
