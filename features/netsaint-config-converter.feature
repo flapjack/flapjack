@@ -106,28 +106,21 @@ Feature: Netsaint -> Flapjack configuration converter
   Scenario: Import Netsaint config
     Given NetSaint configuration is at "features/support/data/etc/netsaint"
     And no file exists at "features/support/tmp/dump.json"
+    And beanstalkd is running
     When I run "flapjack-netsaint-parser" with the following arguments:
       | argument                                      |
       | dump                                          |
       | --source=features/support/data/etc/netsaint   |
       | --format=json                                 |
       | --to=features/support/tmp/dump.json           |
+    Then show me the output
     Then I should see "features/support/tmp/dump.json" in the output
     Then I should see valid JSON in "features/support/tmp/dump.json"
-    When I run "flapjack-batches" with the following arguments:
+    When I run "flapjack-populator" with the following arguments:
       | argument                                      |
-      | import                                        |
-      | --config=features/support/configs/sqlite3.ini |
+      | deploy                                        |
       | --from=features/support/tmp/dump.json         |
-    Then I should see "created batch \d+" in the output
-    When I run "flapjack-batches" with the following arguments:
-      | argument                                      |
-      | list                                          |
-      | --config=features/support/configs/sqlite3.ini |
-      | --format=json                                 |
-    Then I should see a valid JSON output
-    Then I should see a batch of checks in the output
-    Then I should see a batch of checks with relationships in the output
+    Then I should see "Populated batch \d+" in the output
 
   @import
   Scenario: Populate workers with Flapjack-ised Netsaint checks

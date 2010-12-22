@@ -67,3 +67,13 @@ end
 Then /^I should see "([^"]*)" in the output$/ do |regex|
   @output.should =~ /#{regex}/i
 end
+
+Given /^beanstalkd is running$/ do
+  system("which beanstalkd > /dev/null 2>&1").should be_true
+
+  @beanstalkd = IO.popen("beanstalkd")
+
+  at_exit do
+    Process.kill("KILL", @beanstalkd.pid)
+  end
+end
