@@ -5,6 +5,19 @@ require 'rubygems'
 require 'yajl/json_gem'
 
 module Netsaint
+  class Service
+    def self.all
+      @services = Netsaint::Config.services
+      @services.map do |service|
+        self.new(service)
+      end
+    end
+
+    def initialize(opts={})
+      @attributes = opts
+    end
+  end
+
   class ConfigFile
     attr_accessor :filename, :config
 
@@ -173,80 +186,83 @@ module Netsaint
   class Config
     include Enumerable
 
-    attr_accessor :root, :configs, :files
+    class << self
+      attr_accessor :root, :configs, :files
 
-    def initialize(opts={})
-      raise ArgumentError, "You must specify :root" unless opts[:root]
-      @root    = opts[:root]
-      @root    = Pathname.new(@root) unless @root.class == Pathname
-      @configs = []
-      @files   = []
-    end
+      @@configs = []
+      @@files   = []
 
-    def build
-      filename = @root.join('netsaint.cfg')
-      build_file(filename)
-    end
+      def root=(arg)
+        @@root = arg
+        @@root = Pathname.new(@@root) unless @@root.class == Pathname
+      end
 
-    def build_file(filename)
-      file = ConfigFile.new(filename)
-      hash = file.to_hash
-      @files   << file
-      @configs << hash
-      %w(cfg_file resource_file).each do |linked_file|
-        if hash[linked_file]
-          hash[linked_file].each do |name|
-            path = relativise_path(name)
-            build_file(path)
+      def build
+        filename = @@root.join('netsaint.cfg')
+        build_file(filename)
+      end
+
+      def build_file(filename)
+        file = ConfigFile.new(filename)
+        hash = file.to_hash
+        @@files   << file
+        @@configs << hash
+        %w(cfg_file resource_file).each do |linked_file|
+          if hash[linked_file]
+            hash[linked_file].each do |name|
+              path = relativise_path(name)
+              build_file(path)
+            end
           end
         end
       end
-    end
 
-    def relativise_path(filename)
-      @match = nil
-      parent = @root.dirname.dirname
-      path   = parent + filename.to_s[1..-1]
+      def relativise_path(filename)
+        @@match = nil
+        parent = @@root.dirname.dirname
+        path   = parent + filename.to_s[1..-1]
 
-      path
-    end
+        path
+      end
 
-    # Makes Enumerable mixin work
-    def each
-      @configs.each {|i| yield i }
-    end
+      # Makes Enumerable mixin work
+      def each
+        @@configs.each {|i| yield i }
+      end
 
-    # Search across all configs for a particular key.
-    #
-    # Can be passed a string:
-    #
-    #   @config.fetch("command_check_interval") # => {"command_check_interval" => "1"}
-    #
-    # Or a regex:
-    #
-    #   @config.fetch(/^\$USER\d+\$$/) # => { "$USER2$"=>"/tmp", "$USER1$"=>"/boot" }
-    #
-    def fetch(key)
-      configs = self.find_all {|c| c.keys.find {|k| k[k]} }
-      results = configs.map {|c| Hash[c.find_all { |k,v| k[key] }] }
-      results.inject {|final, hash| final.merge(hash) }
-    end
+      # Search across all configs for a particular key.
+      #
+      # Can be passed a string:
+      #
+      #   Netsaint::Config.fetch("command_check_interval") # => {"command_check_interval" => "1"}
+      #
+      # Or a regex:
+      #
+      #   Netsaint::Config.fetch(/^\$USER\d+\$$/) # => { "$USER2$"=>"/tmp", "$USER1$"=>"/boot" }
+      #
+      def fetch(key)
+        configs = find_all {|c| c.keys.find {|k| k[k]} }
+        results = configs.map {|c| Hash[c.find_all { |k,v| k[key] }] }
+        results.inject {|final, hash| final.merge(hash) }
+      end
 
-    %w(timeperiods services contactgroups contacts hosts commands).each do |method|
-      class_eval <<-METHOD
-        def #{method}
-          #{method} = {}
-          @configs.each do |c|
-            c["#{method}"].each do |key, value|
-              #{method}[key] ||= []
-              #{method}[key] << value
-              #{method}[key].flatten!
+      %w(timeperiods services contactgroups contacts hosts commands).each do |method|
+        class_eval <<-METHOD
+          def #{method}
+            #{method} = {}
+            @@configs.each do |c|
+              c["#{method}"].each do |key, value|
+                #{method}[key] ||= []
+                #{method}[key] << value
+                #{method}[key].flatten!
+              end
             end
-          end
 
-          #{method}
-        end
-      METHOD
+            #{method}
+          end
+        METHOD
+      end
+
     end
   end
 end
@@ -258,15 +274,14 @@ when "print"
   options = ARGV[2..-1]
   options = Hash[options.map {|o| o.scan(/--(.+)=(.+)/).flatten }]
 
-  @netsaint_root = Pathname.new(options["source"]).expand_path
-  @config = Netsaint::Config.new(:root => @netsaint_root)
-
-  @config.build
+  netsaint_root = Pathname.new(options["source"]).expand_path
+  Netsaint::Config.root = netsaint_root
+  Netsaint::Config.build
 
   command = ARGV[0]
   type    = ARGV[1]
 
-  json = { type => @config.method(type).call }.to_json
+  json = { type => Netsaint::Config.method(type).call }.to_json
 
   if filename = options["to"]
     File.open(filename, 'w') do |f|
@@ -280,9 +295,14 @@ when "dump"
   options = ARGV[1..-1]
   options = Hash[options.map {|o| o.scan(/--(.+)=(.+)/).flatten }]
 
-  @netsaint_root = Pathname.new(options["source"]).expand_path
-  @config = Netsaint::Config.new(:root => @netsaint_root)
-  @config.build
+  netsaint_root = Pathname.new(options["source"]).expand_path
+  Netsaint::Config.root = netsaint_root
+  Netsaint::Config.build
+
+  #@services = Netsaint::Service.all.map do |service|
+  #  services.to_flapjack
+  #end
+  #p @services.first
 
   json = { "batch" => {"id" => 1} }.to_json
 
