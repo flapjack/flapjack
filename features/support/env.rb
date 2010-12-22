@@ -3,6 +3,7 @@
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
 require 'yajl'
+require 'beanstalk-client'
 
 #require 'flapjack/inifile'
 #require 'flapjack/filters/ok'

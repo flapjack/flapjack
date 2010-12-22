@@ -71,9 +71,26 @@ end
 Given /^beanstalkd is running$/ do
   system("which beanstalkd > /dev/null 2>&1").should be_true
 
-  @beanstalkd = IO.popen("beanstalkd")
+  @pipe = IO.popen("beanstalkd")
+
+  # So beanstalkd has a moment to catch its breath.
+  sleep 0.5
 
   at_exit do
-    Process.kill("KILL", @beanstalkd.pid)
+    Process.kill("KILL", @pipe.pid)
   end
+end
+
+Given /^there are no jobs on the "([^"]*)" beanstalkd queue$/ do |queue_name|
+  @queue = Beanstalk::Connection.new('localhost:11300', queue_name)
+  100.times { @queue.put('foo') }
+  until @queue.stats["current-jobs-ready"] == 0
+    job = @queue.reserve
+    job.delete
+  end
+end
+
+Then /^there should be several jobs on the "([^"]*)" beanstalkd queue$/ do |queue_name|
+  @queue = Beanstalk::Connection.new('localhost:11300', queue_name)
+  @queue.stats["current-jobs-ready"].should > 0
 end

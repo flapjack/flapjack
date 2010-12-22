@@ -107,6 +107,7 @@ Feature: Netsaint -> Flapjack configuration converter
     Given NetSaint configuration is at "features/support/data/etc/netsaint"
     And no file exists at "features/support/tmp/dump.json"
     And beanstalkd is running
+    And there are no jobs on the "checks" beanstalkd queue
     When I run "flapjack-netsaint-parser" with the following arguments:
       | argument                                      |
       | dump                                          |
@@ -120,7 +121,8 @@ Feature: Netsaint -> Flapjack configuration converter
       | argument                                      |
       | deploy                                        |
       | --from=features/support/tmp/dump.json         |
-    Then I should see "Populated batch \d+" in the output
+    Then I should see "Deployed batch \d+" in the output
+    Then there should be several jobs on the "checks" beanstalkd queue
 
   @import
   Scenario: Populate workers with Flapjack-ised Netsaint checks
