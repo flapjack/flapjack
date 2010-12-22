@@ -16,6 +16,10 @@ module Netsaint
     def initialize(opts={})
       @attributes = opts
     end
+
+    def to_flapjack
+      {"id" => "1", "command" => "exit 0", "interval" => 30 }
+    end
   end
 
   class ConfigFile
@@ -299,12 +303,11 @@ when "dump"
   Netsaint::Config.root = netsaint_root
   Netsaint::Config.build
 
-  #@services = Netsaint::Service.all.map do |service|
-  #  services.to_flapjack
-  #end
-  #p @services.first
+  @checks = Netsaint::Service.all.map do |service|
+    service.to_flapjack
+  end
 
-  json = { "batch" => {"id" => 1} }.to_json
+  json = { "batch" => {"id" => 1, "created_at" => Time.now}, "checks" => @checks }.to_json
 
   if filename = options["to"]
     File.open(filename, 'w') do |f|
