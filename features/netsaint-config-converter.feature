@@ -124,9 +124,3 @@ Feature: Netsaint -> Flapjack configuration converter
     Then I should see "Deployed batch \d+" in the output
     Then there should be several jobs on the "checks" beanstalkd queue
 
-  @import
-  Scenario: Populate workers with Flapjack-ised Netsaint checks
-    Given I run the importer
-    And the necessary checks and relationships are created
-    When I run "flapjack-populator"
-    Then the latest batch of checks should be in the work queue
