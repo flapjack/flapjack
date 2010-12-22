@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'yajl'
+require 'yajl/json_gem'
+require 'beanstalk-client'
+
+command = ARGV[0]
+
+case command
+when "deploy"
+  @queue = Beanstalk::Connection.new('localhost:11300', 'checks')
+  100.times do |i|
+    check = { "command" => "exit 0", "id" => i, "interval" => 30 }
+    @queue.yput(check)
+  end
+
+  puts "Deployed batch 1"
+end
+
