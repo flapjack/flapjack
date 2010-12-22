@@ -114,13 +114,14 @@ Feature: Netsaint -> Flapjack configuration converter
       | --source=features/support/data/etc/netsaint   |
       | --format=json                                 |
       | --to=features/support/tmp/dump.json           |
-    Then show me the output
     Then I should see "features/support/tmp/dump.json" in the output
     Then I should see valid JSON in "features/support/tmp/dump.json"
+    Then I should see a valid JSON batch in "features/support/tmp/dump.json"
     When I run "flapjack-populator" with the following arguments:
       | argument                                      |
       | deploy                                        |
       | --from=features/support/tmp/dump.json         |
+    Then show me the output
     Then I should see "Deployed batch \d+" in the output
     Then there should be several jobs on the "checks" beanstalkd queue
 

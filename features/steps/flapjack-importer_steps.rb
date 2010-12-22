@@ -94,3 +94,19 @@ Then /^there should be several jobs on the "([^"]*)" beanstalkd queue$/ do |queu
   @queue = Beanstalk::Connection.new('localhost:11300', queue_name)
   @queue.stats["current-jobs-ready"].should > 0
 end
+
+
+Then /^I should see a valid JSON batch in "([^"]*)"$/ do |filename|
+  lambda {
+    file = File.new(filename, 'r')
+    parser = Yajl::Parser.new
+    @data = parser.parse(file)
+  }.should_not raise_error
+
+  @data["checks"].size.should > 0
+  @data["checks"].each do |check|
+    %w(id command interval).each do |attr|
+      check[attr].should_not be_nil
+    end
+  end
+end
