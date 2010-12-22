@@ -3,14 +3,19 @@
 require 'rubygems'
 require 'beanstalk-client'
 
-begin 
+begin
   beanstalk = Beanstalk::Pool.new(['localhost:11300'])
-  loop do 
+  loop do
     time = Time.now
     beanstalk.list_tubes['localhost:11300'].each do |tube_name|
       next if tube_name == 'default'
-      stats = beanstalk.stats_tube(tube_name)
-      puts "#{time.to_i} [#{tube_name}] total: #{stats['total-jobs']}, waiting: #{stats['current-waiting']}, ready: #{stats['current-jobs-ready']}"
+      stats   = beanstalk.stats_tube(tube_name)
+      message = []
+      message << "#{time} [#{tube_name}]"
+      message << "total: #{stats['total-jobs']}"
+      message << "waiting: #{stats['current-waiting']}"
+      message << "ready: #{stats['current-jobs-ready']}"
+      puts message.join(', ')
     end
     sleep 1
   end
@@ -18,5 +23,5 @@ rescue Beanstalk::NotConnected
   puts "beanstalk isn't up!"
   exit 2
 end
-  
+
 
