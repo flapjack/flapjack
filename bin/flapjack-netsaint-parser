@@ -7,18 +7,135 @@ require 'yajl/json_gem'
 module Netsaint
   class Service
     def self.all
-      @services = Netsaint::Config.services
-      @services.map do |service|
-        self.new(service)
+      @services = []
+
+      Netsaint::Config.services.each do |id, attributes|
+        attributes.each do |attrs|
+          @services << self.new(attrs.merge("id" => id))
+        end
       end
+
+      #@services[0..500]
+      @services
     end
 
     def initialize(opts={})
       @attributes = opts
+
+      @attributes.keys.each do |key|
+        if key == "id" || !self.respond_to?(key.to_sym)
+          instance_eval <<-METHOD
+            def #{key}
+              @attributes["#{key}"]
+            end
+          METHOD
+        end
+      end
+    end
+
+    def flapjack_id
+      "#{id}-#{description.downcase.gsub(' ', '_')}"
+    end
+
+    def check_command
+      parts      = @attributes["check_command"].split('!')
+      command_id = parts.first
+      arguments  = parts[1..-1]
+
+      attrs   = { "arguments" => arguments,
+                  "hostname" =>  self.id }
+      command = ::Netsaint::Command.get(command_id)
+      command.attributes = attrs
+      command.expand_command_line
     end
 
     def to_flapjack
-      {"id" => "1", "command" => "exit 0", "interval" => 30 }
+      {"id" => flapjack_id, "command" => check_command, "interval" => check_interval.to_i * 60 }
+    end
+  end
+
+  class Command
+    def self.all
+      @commands = []
+
+      Netsaint::Config.commands.each do |id, attributes|
+        attributes.each do |attrs|
+          @commands << self.new(attrs.merge("id" => id))
+        end
+      end
+
+      @commands
+    end
+
+    def self.get(id)
+      attrs   = Netsaint::Config.commands[id].first
+      command = attrs.merge({"id" => id})
+
+      self.new(command)
+    end
+
+    def initialize(opts={})
+      @attributes = opts
+
+      @attributes.keys.each do |key|
+        if key == "id" || !self.respond_to?(key.to_sym)
+          instance_eval <<-METHOD
+            def #{key}
+              @attributes["#{key}"]
+            end
+          METHOD
+        end
+      end
+    end
+
+    def attributes=(attrs)
+      @attributes.merge!(attrs)
+    end
+
+    def expand_command_line
+      @attributes["command_line"].gsub(/\$\w+\$/) do |string|
+        lookup_macro(string)
+      end
+    end
+
+    def lookup_macro(string)
+      case string
+      when /^\$USER\d+\$$/
+        ::Netsaint::Config.fetch(string)[string]
+      when /^\$ARG(\d+)\$$/
+        index = $1.to_i - 1
+        @attributes["arguments"][index]
+      when "$HOSTNAME$"
+        @attributes["hostname"]
+      when "$HOSTADDRESS$"
+        hostname = @attributes["hostname"]
+        ::Netsaint::Host.get(hostname).address
+      else
+        raise "Don't know how to handle the #{string} macro!"
+      end
+    end
+  end
+
+  class Host
+    def self.get(id)
+      attrs   = Netsaint::Config.hosts[id].first
+      host = attrs.merge({"id" => id})
+
+      self.new(host)
+    end
+
+    def initialize(opts={})
+      @attributes = opts
+
+      @attributes.keys.each do |key|
+        if key == "id" || !self.respond_to?(key.to_sym)
+          instance_eval <<-METHOD
+            def #{key}
+              @attributes["#{key}"]
+            end
+          METHOD
+        end
+      end
     end
   end
 
@@ -181,10 +298,6 @@ module Netsaint
       @config
     end
 
-    def related_files
-      self.to_hash if @config.empty?
-      @config.fetch("cfg_file") + @config.fetch("resource_file")
-    end
   end
 
   class Config
@@ -245,7 +358,7 @@ module Netsaint
       #   Netsaint::Config.fetch(/^\$USER\d+\$$/) # => { "$USER2$"=>"/tmp", "$USER1$"=>"/boot" }
       #
       def fetch(key)
-        configs = find_all {|c| c.keys.find {|k| k[k]} }
+        configs = @@configs.find_all {|c| c.keys.find {|k| k[k]} }
         results = configs.map {|c| Hash[c.find_all { |k,v| k[key] }] }
         results.inject {|final, hash| final.merge(hash) }
       end
@@ -303,9 +416,7 @@ when "dump"
   Netsaint::Config.root = netsaint_root
   Netsaint::Config.build
 
-  @checks = Netsaint::Service.all.map do |service|
-    service.to_flapjack
-  end
+  @checks = Netsaint::Service.all.map { |service| service.to_flapjack }
 
   json = { "batch" => {"id" => 1, "created_at" => Time.now}, "checks" => @checks }.to_json
 
