@@ -121,7 +121,6 @@ Feature: Netsaint -> Flapjack configuration converter
       | argument                                      |
       | deploy                                        |
       | --from=features/support/tmp/dump.json         |
-    Then show me the output
     Then I should see "Deployed batch \d+" in the output
     Then there should be several jobs on the "checks" beanstalkd queue
 
