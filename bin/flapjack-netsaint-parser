@@ -44,9 +44,10 @@ module Netsaint
 
       attrs   = { "arguments" => arguments,
                   "hostname" =>  self.id }
-      command = ::Netsaint::Command.get(command_id)
-      command.attributes = attrs
-      command.expand_command_line
+      #command = ::Netsaint::Command.get(command_id)
+      #command.attributes = attrs
+      #command.expand_command_line
+      "exit 0"
     end
 
     def to_flapjack
