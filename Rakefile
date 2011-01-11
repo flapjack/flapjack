@@ -15,7 +15,7 @@ begin
     gem.summary = %Q{a scalable and distributed monitoring system}
     gem.description = %Q{lapjack is highly scalable and distributed monitoring system. It understands the Nagios plugin format, and can easily be scaled from 1 server to 1000.}
     gem.email = "lindsay@holmwood.id.au"
-    gem.homepage = "flapjack-project.com"
+    gem.homepage = "http://flapjack-project.com/"
     gem.authors = ["Lindsay Holmwood"]
     gem.has_rdoc = false
 
