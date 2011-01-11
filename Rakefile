@@ -1,11 +1,61 @@
-#!/usr/bin/env ruby 
+#!/usr/bin/env ruby
 
 require 'rubygems'
 require 'fileutils'
 require 'spec/rake/spectask'
+require 'rake'
 
-# integration tests for cli utils
-begin 
+#
+# Release management
+#
+begin
+  require 'jeweler'
+  Jeweler::Tasks.new do |gem|
+    gem.name = "flapjack"
+    gem.summary = %Q{a scalable and distributed monitoring system}
+    gem.description = %Q{lapjack is highly scalable and distributed monitoring system. It understands the Nagios plugin format, and can easily be scaled from 1 server to 1000.}
+    gem.email = "lindsay@holmwood.id.au"
+    gem.homepage = "flapjack-project.com"
+    gem.authors = ["Lindsay Holmwood"]
+    gem.has_rdoc = false
+
+    gem.add_dependency('daemons', '= 1.0.10')
+    gem.add_dependency('beanstalk-client', '= 1.0.2')
+    gem.add_dependency('log4r', '= 1.1.5')
+    gem.add_dependency('xmpp4r', '= 0.5')
+    gem.add_dependency('tmail', '= 1.2.3.1')
+    gem.add_dependency('yajl-ruby', '= 0.6.4')
+    gem.add_dependency('sqlite3-ruby', '= 1.2.5')
+  end
+  Jeweler::GemcutterTasks.new
+rescue LoadError
+  puts "Jeweler (or a dependency) not available. Install it with: gem install jeweler"
+end
+
+#
+# Testing
+#
+require 'rake/testtask'
+Rake::TestTask.new(:test) do |test|
+  test.libs << 'lib' << 'test'
+  test.pattern = 'test/**/test_*.rb'
+  test.verbose = true
+end
+
+begin
+  require 'rcov/rcovtask'
+  Rcov::RcovTask.new do |test|
+    test.libs << 'test'
+    test.pattern = 'test/**/test_*.rb'
+    test.verbose = true
+  end
+rescue LoadError
+  task :rcov do
+    abort "RCov is not available. In order to run rcov, you must: sudo gem install spicycode-rcov"
+  end
+end
+
+begin
   require 'cucumber/rake/task'
 
   Cucumber::Rake::Task.new do |task|
@@ -17,38 +67,25 @@ end
 Spec::Rake::SpecTask.new do |t|
   t.spec_opts = ["--options", "spec/spec.opts"]
 end
+task :test => :check_dependencies
 
+task :default => :test
 
-desc "generate list of files for gemspec"
-task "gengemfiles" do 
-  executables = `git ls-files bin/*`.split.map {|bin| bin.gsub(/^bin\//, '')}             
-  files = `git ls-files`.split.delete_if {|file| file =~ /^(spec\/|\.gitignore)/}
-  puts
-  puts "Copy and paste into flapjack.gemspec:"
-  puts
-  puts "    s.executables = #{executables.inspect}"
-  puts "    s.files = #{files.inspect}"
-  puts
-  puts
+require 'rake/rdoctask'
+Rake::RDocTask.new do |rdoc|
+  version = File.exist?('VERSION') ? File.read('VERSION') : ""
+
+  rdoc.rdoc_dir = 'rdoc'
+  rdoc.title = "flapjack #{version}"
+  rdoc.rdoc_files.include('README*')
+  rdoc.rdoc_files.include('lib/**/*.rb')
 end
 
-desc "build gem"
-task :build do 
-  system("gem build flapjack.gemspec")
-  
-  FileUtils.mkdir_p('pkg')
-  puts
-  puts "Flapjack gems:"
-  Dir.glob("flapjack-*.gem").each do |gem|
-    dest = File.join('pkg', gem)
-    FileUtils.mv gem, dest
-    puts "  " + dest
-  end
-end
-
-
+#
+# misc
+#
 desc "display FIXMEs in the codebase"
-task :fixmes do 
+task :fixmes do
   output = `grep -nR FIXME lib/* spec/* bin/`
   output.split("\n").each do |line|
     parts = line.split(':')
@@ -58,7 +95,7 @@ task :fixmes do
 end
 
 desc "build a tarball suitable for building packages from"
-task :tarball do 
+task :tarball do
   require 'open-uri'
   require 'tmpdir'
   tmpdir = Dir.mktmpdir
@@ -109,7 +146,7 @@ task :tarball do
     # save file
     saved_file = "/tmp/#{details[:filename]}"
     File.open(saved_file, 'w') do |f|
-      f << open(details[:source]).read 
+      f << open(details[:source]).read
     end
 
     `tar zxf #{saved_file} -C #{tmpdir}`
@@ -127,7 +164,7 @@ task :tarball do
 end
 
 desc "dump out statements to create sqlite3 schema"
-task :dm_debug do 
+task :dm_debug do
   require 'lib/flapjack/persistence/data_mapper'
 
   DataMapper.logger.set_log(STDOUT, :debug)
