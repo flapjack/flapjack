@@ -26,6 +26,9 @@ begin
     gem.add_dependency('tmail', '= 1.2.3.1')
     gem.add_dependency('yajl-ruby', '= 0.6.4')
     gem.add_dependency('sqlite3-ruby', '= 1.2.5')
+
+    # Don't release unsanitised NetSaint config into gem.
+    gem.files.exclude('features/support/data/etc/netsaint')
   end
   Jeweler::GemcutterTasks.new
 rescue LoadError
