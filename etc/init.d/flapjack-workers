@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-# Copyright (c) 2009 Lindsay Holmwood <lindsay@holmwood.id.au>
+# Copyright (c) 2009-2011 Lindsay Holmwood <lindsay@holmwood.id.au>
 #
 # flapjack-workers
 # Boots flapjack-workers, check executors for Flapjack.
 #
 
-PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin
+PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin
 
 if [ -f /etc/default/flapjack-workers ]; then
   . /etc/default/flapjack-workers
@@ -37,7 +37,7 @@ case "$1" in
   ;;
     *)
       echo "Usage: flapjack-workers {start|stop|restart}"
-      exit 1
+      RETVAL=1
   ;;
 esac
 
