@@ -3,7 +3,7 @@
 # Copyright (c) 2009 Lindsay Holmwood <lindsay@holmwood.id.au>
 #
 # flapjack-workers
-# Boots flapjack-workers, check executors for Flapjack. 
+# Boots flapjack-workers, check executors for Flapjack.
 #
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin
@@ -16,9 +16,9 @@ fi
 RETVAL=0
 
 if [ ! $(which flapjack-worker-manager) ]; then
-	echo "flapjack-worker-manager isn't on your path."
-	echo "Refusing to start."
-	exit 1
+  echo "flapjack-worker-manager isn't on your path."
+  echo "Refusing to start."
+  exit 1
 fi
 
 # Evaluate command
