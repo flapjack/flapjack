@@ -6,7 +6,7 @@
 # Boots flapjack-workers, check executors for Flapjack.
 #
 
-PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin
+PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin
 
 if [ -f /etc/default/flapjack-workers ]; then
   . /etc/default/flapjack-workers
