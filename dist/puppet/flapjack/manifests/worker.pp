@@ -1,18 +1,13 @@
-#
-# Usage
-# -----
-#
-# include flapjack-worker
-#
 class flapjack::worker {
   include flapjack::common
 
   service { "flapjack-workers":
     enable => true,
     ensure => running,
-    require => [ Exec["populate-etc-flapjack"],
-                 Exec["populate-etc-defaults-flapjack"],
-                 Exec["populate-etc-init.d-flapjack"] ],
+    require => [ Package["flapjack"],
+                 Exec["populate-etc-flapjack"],
+                 File["/etc/default/flapjack-workers"],
+                 File["/etc/init.d/flapjack-workers"] ],
   }
 
 }
