@@ -1,24 +1,24 @@
 #!/bin/bash
 #
-# Copyright (c) 2009 Lindsay Holmwood <lindsay@holmwood.id.au>
+# Copyright (c) 2009-2011 Lindsay Holmwood <lindsay@holmwood.id.au>
 #
 # flapjack-notifier
-# Boots flapjack-notifier, check executors for Flapjack. 
+# Boots flapjack-notifier, notifier for Flapjack.
 #
 
-PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin
+PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin
 
 if [ -f /etc/default/flapjack-notifier ]; then
-	. /etc/default/flapjack-notifier
+  . /etc/default/flapjack-notifier
 fi
 
 # Default return value
 RETVAL=0
 
 if [ ! $(which flapjack-notifier-manager) ]; then
-	echo "Error: flapjack-notifier-manager isn't on your path."
-	echo "Refusing to start!"
-	exit 1
+  echo "Error: flapjack-notifier-manager isn't on your path."
+  echo "Refusing to start!"
+  exit 1
 fi
 
 # Evaluate command
@@ -40,7 +40,7 @@ case "$1" in
   ;;
     *)
       echo "Usage: flapjack-notifier {start|stop|restart}"
-      exit 1
+      RETVAL=1
   ;;
 esac
 
