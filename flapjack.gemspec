@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{flapjack}
-  s.version = "0.5.2"
+  s.version = "0.5.3"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Lindsay Holmwood"]
-  s.date = %q{2011-01-11}
+  s.date = %q{2011-01-14}
   s.description = %q{lapjack is highly scalable and distributed monitoring system. It understands the Nagios plugin format, and can easily be scaled from 1 server to 1000.}
   s.email = %q{lindsay@holmwood.id.au}
   s.executables = ["flapjack-benchmark", "flapjack-netsaint-parser", "flapjack-notifier", "flapjack-notifier-manager", "flapjack-populator", "flapjack-stats", "flapjack-worker", "flapjack-worker-manager", "install-flapjack-systemwide"]
@@ -32,16 +32,24 @@ Gem::Specification.new do |s|
      "bin/flapjack-worker",
      "bin/flapjack-worker-manager",
      "bin/install-flapjack-systemwide",
+     "dist/etc/default/flapjack-notifier",
+     "dist/etc/default/flapjack-workers",
+     "dist/etc/flapjack/flapjack-notifier.conf.example",
+     "dist/etc/flapjack/recipients.conf.example",
+     "dist/etc/init.d/flapjack-notifier",
+     "dist/etc/init.d/flapjack-workers",
+     "dist/puppet/flapjack/files/.stub",
+     "dist/puppet/flapjack/manifests/common.pp",
+     "dist/puppet/flapjack/manifests/notifier.pp",
+     "dist/puppet/flapjack/manifests/worker.pp",
+     "dist/puppet/flapjack/templates/.stub",
+     "dist/puppet/ruby/manifests/dev.pp",
+     "dist/puppet/ruby/manifests/rubygems.pp",
+     "dist/puppet/sqlite3/manifests/dev.pp",
      "doc/CONFIGURING.md",
      "doc/DEVELOPING.md",
      "doc/INSTALL.md",
      "doc/PACKAGING.md",
-     "etc/default/flapjack-notifier",
-     "etc/default/flapjack-workers",
-     "etc/flapjack/flapjack-notifier.conf.example",
-     "etc/flapjack/recipients.conf.example",
-     "etc/init.d/flapjack-notifier",
-     "etc/init.d/flapjack-workers",
      "features/flapjack-notifier-manager.feature",
      "features/flapjack-worker-manager.feature",
      "features/netsaint-config-converter.feature",
@@ -60,6 +68,7 @@ Gem::Specification.new do |s|
      "features/support/silent_system.rb",
      "features/support/tmp/.stub",
      "flapjack.gemspec",
+     "lib/flapjack.rb",
      "lib/flapjack/applications/notifier.rb",
      "lib/flapjack/applications/worker.rb",
      "lib/flapjack/checks/http_content",
