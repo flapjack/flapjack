@@ -7,15 +7,24 @@ require 'yajl'
 require 'beanstalk-client'
 
 class ProcessManagement
+  # Cleans up daemons that were started in a scenario.
+  # We kill these daemons so the test state is clean at the beginning of every
+  # scenario, and scenarios don't become coupled with one another.
   def kill_lingering_daemons
-    Process.kill("KILL", @beanstalk.pid) if @beanstalkd
+    # FIXME: iterate through a collection of daemons registered during the scenario
+    Process.kill("KILL", @beanstalk.pid) if @beanstalk
   end
 
+  # Testing daemons with Ruby backticks blocks indefinitely, because the
+  # backtick method waits for the program to exit. We use the select() system
+  # call to read from a pipe connected to a daemon, and return if no data is
+  # read within the specified timeout.
+  #
   # http://weblog.jamisbuck.org/assets/2006/9/25/gdb.rb
-  def read_until_done(pipe, verbose=false)
+  def read_until_timeout(pipe, verbose=false, timeout=1)
     output = []
     line    = ""
-    while data = IO.select([pipe], nil, nil, 1) do
+    while data = IO.select([pipe], nil, nil, timeout) do
       next if data.empty?
       char = pipe.read(1)
       break if char.nil?
