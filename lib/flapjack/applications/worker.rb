@@ -51,19 +51,32 @@ module Flapjack
           queue_config = config.merge(:queue_name => queue_name)
 
           class_name = config[:backend].to_s.camel_case
-          filename = File.join(basedir, "#{config[:backend]}.rb")
+          filename = File.expand_path(File.join(basedir, "#{config[:backend]}.rb"))
 
           @log.info("Loading the #{class_name} transport for queue: #{queue_name}.")
 
           begin
             require filename
-            queue = Flapjack::Transport.const_get("#{class_name}").new(queue_config)
+            transport = Flapjack::Transport.const_get("#{class_name}")
+            queue     = transport.new(queue_config)
             instance_variable_set("@#{queue_name}_queue", queue)
+          rescue Beanstalk::NotConnected => e
+            @log.error("Couldn't connect to Beanstalk. Sleeping 5, then retrying.")
+            sleep 5
+            retry
           rescue LoadError => e
             @log.warning("Attempted to load #{class_name} transport, but it doesn't exist!")
             @log.warning("Exiting.")
             raise # preserves original exception
           end
+        end
+      end
+
+      def log(level, opts={})
+        if opts[:data]
+          @log.method(level).call(pp opts[:data])
+        else
+          @log.method(level).call(opts[:message])
         end
       end
 
