@@ -15,6 +15,10 @@ module Flapjack
           raise ArgumentError, "You need to specify a beanstalkd host, port, and queue name to connect to."
         end
 
+        connect
+      end
+
+      def connect
         @queue = Beanstalk::Pool.new(["#{@config.host}:#{@config.port}"], @config.queue_name)
       end
 
