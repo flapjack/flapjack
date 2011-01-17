@@ -81,10 +81,6 @@ Given /^beanstalkd is running$/ do
   end
 end
 
-After do |scenario|
-  Process.kill("KILL", @beanstalk.pid)
-end
-
 Given /^there are no jobs on the "([^"]*)" beanstalkd queue$/ do |queue_name|
   @queue = Beanstalk::Connection.new('localhost:11300', queue_name)
   100.times { @queue.put('foo') }
