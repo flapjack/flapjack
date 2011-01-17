@@ -5,15 +5,6 @@ $: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE_
 require 'flapjack/cli/worker'
 require 'flapjack/applications/worker'
 
-at_exit do 
-  puts "Shutting down"
-end
-
-trap("INT") do 
-  puts "Caught shutdown signal, cleaning up."
-  exit
-end
-
 @options = Flapjack::WorkerOptions.parse(ARGV)
 app = Flapjack::Worker::Application.run(:host => @options.host,
                                         :port => @options.port,

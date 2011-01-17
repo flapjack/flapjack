@@ -8,7 +8,7 @@ module Flapjack
   module Worker
     class Application
 
-      # boots the notifier
+      # boots the worker
       def self.run(options={})
         app = self.new(options)
         app.setup_loggers
@@ -22,15 +22,28 @@ module Flapjack
 
       def initialize(options={})
         @log = options[:log]
-        @notifier_directories = options[:notifier_directories]
         @options = options
+
+        setup_event_handlers
+      end
+
+
+      def setup_event_handlers
+        at_exit do
+          @log.info("Shutting down")
+        end
+
+        trap("INT") do
+          puts "Caught shutdown signal, cleaning up."
+          exit
+        end
       end
 
       def setup_loggers
         unless @log
-          @log = Log4r::Logger.new("notifier")
-          @log.add(Log4r::StdoutOutputter.new("notifier"))
-          @log.add(Log4r::SyslogOutputter.new("notifier"))
+          @log = Log4r::Logger.new("worker")
+          @log.add(Log4r::StdoutOutputter.new("worker"))
+          @log.add(Log4r::SyslogOutputter.new("worker"))
         end
       end
 
