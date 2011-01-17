@@ -28,19 +28,7 @@ Then /^I should see "([^"]*)" in the "([^"]*)" output$/ do |string, command|
   pipe = instance_variable_get(instance_variable_name)
   pipe.should_not be_nil
 
-  @output = []
-  line    = ""
-  while data = IO.select([pipe], nil, nil, 1) do
-    next if data.empty?
-    char = pipe.read(1)
-    break if char.nil?
-
-    line << char
-    if line[-1] == ?\n
-      @output << line
-      line = ""
-    end
-  end
+  @output = read_until_done(pipe)
   @output.grep(/#{string}/).size.should > 0
 end
 
@@ -49,18 +37,6 @@ Then /^I should not see "([^"]*)" in the "([^"]*)" output$/ do |string, command|
   pipe = instance_variable_get(instance_variable_name)
   pipe.should_not be_nil
 
-  @output = []
-  line    = ""
-  while data = IO.select([pipe], nil, nil, 1) do
-    next if data.empty?
-    char = pipe.read(1)
-    break if char.nil?
-
-    line << char
-    if line[-1] == ?\n
-      @output << line
-      line = ""
-    end
-  end
+  @output = read_until_done(pipe)
   @output.grep(/#{string}/).size.should == 0
 end
