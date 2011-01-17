@@ -8,7 +8,7 @@ require 'beanstalk-client'
 
 class ProcessManagement
   def kill_lingering_daemons
-    Process.kill("KILL", @beanstalk.pid)
+    Process.kill("KILL", @beanstalk.pid) if @beanstalkd
   end
 
   # http://weblog.jamisbuck.org/assets/2006/9/25/gdb.rb
