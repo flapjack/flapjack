@@ -12,9 +12,9 @@ Then /^I should see "([^"]*)" running$/ do |command|
 end
 
 When /^I background run "flapjack-worker"$/ do
-  @root = Pathname.new(File.dirname(__FILE__)).parent.parent.expand_path
+  @root    = Pathname.new(File.dirname(__FILE__)).parent.parent.expand_path
   bin_path = @root.join('bin')
-  command = "#{bin_path}/flapjack-worker"
+  command  = "#{bin_path}/flapjack-worker 2>&1"
 
   @worker = IO.popen(command, 'r')
 
