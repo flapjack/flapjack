@@ -17,3 +17,10 @@ Feature: flapjack-worker
     When I background run "flapjack-worker"
     Then I should see "flapjack-worker" running
     Then I should not see "Shutting down" in the "flapjack-worker" output
+
+  Scenario: Beanstalk disappears while worker running
+    Given beanstalkd is running
+    When I background run "flapjack-worker"
+    And beanstalkd is killed
+    Then I should see "flapjack-worker" running
+    Then I should not see "Shutting down" in the "flapjack-worker" output
