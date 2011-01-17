@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby 
+#!/usr/bin/env ruby
 
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
@@ -7,7 +7,7 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', 'patches'))
 module Flapjack
   module Worker
     class Application
-     
+
       # boots the notifier
       def self.run(options={})
         app = self.new(options)
@@ -28,9 +28,9 @@ module Flapjack
 
       def setup_loggers
         unless @log
-	        @log = Log4r::Logger.new("notifier")
-	        @log.add(Log4r::StdoutOutputter.new("notifier"))
-	        @log.add(Log4r::SyslogOutputter.new("notifier"))
+          @log = Log4r::Logger.new("notifier")
+          @log.add(Log4r::StdoutOutputter.new("notifier"))
+          @log.add(Log4r::SyslogOutputter.new("notifier"))
         end
       end
 
@@ -39,23 +39,23 @@ module Flapjack
       end
 
       def setup_queues
-        defaults = { :backend => :beanstalkd, 
-                     :host => 'localhost', 
+        defaults = { :backend => :beanstalkd,
+                     :host => 'localhost',
                      :port => '11300',
                      :log => @log }
         config = defaults.merge(@config.transport || {})
         basedir = config.delete(:basedir) || File.join(File.dirname(__FILE__), '..', 'transports')
 
         %w(results checks).each do |queue_name|
-          
+
           queue_config = config.merge(:queue_name => queue_name)
-       
+
           class_name = config[:backend].to_s.camel_case
           filename = File.join(basedir, "#{config[:backend]}.rb")
-          
+
           @log.info("Loading the #{class_name} transport for queue: #{queue_name}.")
 
-          begin 
+          begin
             require filename
             queue = Flapjack::Transport.const_get("#{class_name}").new(queue_config)
             instance_variable_set("@#{queue_name}_queue", queue)
@@ -89,7 +89,7 @@ module Flapjack
 
       def main
         @log.info("Booting main loop.")
-        loop do 
+        loop do
           process_check
         end
       end
