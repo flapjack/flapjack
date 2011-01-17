@@ -13,7 +13,6 @@ Feature: flapjack-worker
     Then I should see "Waiting for check" in the "flapjack-worker" output
 
   Scenario: Start a worker without beanstalk running
-    Given beanstalkd is running
     Given beanstalkd is not running
     When I background run "flapjack-worker"
     Then I should see "flapjack-worker" running
