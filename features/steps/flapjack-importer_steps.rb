@@ -71,14 +71,18 @@ end
 Given /^beanstalkd is running$/ do
   system("which beanstalkd > /dev/null 2>&1").should be_true
 
-  @pipe = IO.popen("beanstalkd")
+  @beanstalk = IO.popen("beanstalkd")
 
   # So beanstalkd has a moment to catch its breath.
   sleep 0.5
 
   at_exit do
-    Process.kill("KILL", @pipe.pid)
+    Process.kill("KILL", @beanstalk.pid)
   end
+end
+
+After do |scenario|
+  Process.kill("KILL", @beanstalk.pid)
 end
 
 Given /^there are no jobs on the "([^"]*)" beanstalkd queue$/ do |queue_name|
