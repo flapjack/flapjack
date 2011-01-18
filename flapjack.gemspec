@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{flapjack}
-  s.version = "0.5.4"
+  s.version = "0.5.5"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Lindsay Holmwood"]
-  s.date = %q{2011-01-14}
+  s.date = %q{2011-01-18}
   s.description = %q{lapjack is highly scalable and distributed monitoring system. It understands the Nagios plugin format, and can easily be scaled from 1 server to 1000.}
   s.email = %q{lindsay@holmwood.id.au}
   s.executables = ["flapjack-benchmark", "flapjack-netsaint-parser", "flapjack-notifier", "flapjack-notifier-manager", "flapjack-populator", "flapjack-stats", "flapjack-worker", "flapjack-worker-manager", "install-flapjack-systemwide"]
@@ -52,6 +52,7 @@ Gem::Specification.new do |s|
      "doc/PACKAGING.md",
      "features/flapjack-notifier-manager.feature",
      "features/flapjack-worker-manager.feature",
+     "features/flapjack-worker.feature",
      "features/netsaint-config-converter.feature",
      "features/packaging-lintian.feature",
      "features/persistence/couch.feature",
@@ -63,6 +64,7 @@ Gem::Specification.new do |s|
      "features/steps/flapjack-netsaint-parser_steps.rb",
      "features/steps/flapjack-notifier-manager_steps.rb",
      "features/steps/flapjack-worker-manager_steps.rb",
+     "features/steps/flapjack-worker_steps.rb",
      "features/steps/packaging-lintian_steps.rb",
      "features/support/env.rb",
      "features/support/silent_system.rb",
