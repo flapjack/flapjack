@@ -2,10 +2,10 @@
 
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib'))
 
-require 'flapjack/cli/worker'
-require 'flapjack/applications/worker'
+require 'flapjack/worker/cli'
+require 'flapjack/worker/application'
 
-@options = Flapjack::WorkerOptions.parse(ARGV)
+@options = Flapjack::Worker::CLI.parse(ARGV)
 app = Flapjack::Worker::Application.run(:host => @options.host,
                                         :port => @options.port,
                                         :check_directory => @options.check_directory)

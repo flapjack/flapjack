@@ -9,7 +9,8 @@ require 'log4r/outputter/syslogoutputter'
 require 'flapjack/patches'
 
 module Flapjack
-  class WorkerOptions
+  module Worker
+  class CLI
     def self.parse(args)
       options = OpenStruct.new
       opts = OptionParser.new do |opts|
@@ -38,14 +39,15 @@ module Flapjack
         puts opts
         exit 1
       end
- 
+
       # default the port
       options.host ||= 'localhost'
       options.port ||= 11300
       options.checks_directory ||= File.join(File.dirname(__FILE__), '..', 'checks')
-  
+
       options
     end
   end
+  end
 end
- 
+
