@@ -10,6 +10,7 @@ module Flapjack
       def initialize(options={})
         @options = options
         @config = OpenStruct.new(options)
+        @log    = @config.log
 
         unless @config.host && @config.port && @config.queue_name
           raise ArgumentError, "You need to specify a beanstalkd host, port, and queue name to connect to."
@@ -23,9 +24,15 @@ module Flapjack
       end
 
       def next
-        job = @queue.reserve # blocks
-        result = YAML::load(job.body)
-        Flapjack::Transport::Result.new(:job => job, :result => result)
+        begin
+          job = @queue.reserve # blocks
+          result = YAML::load(job.body)
+          Flapjack::Transport::Result.new(:job => job, :result => result)
+        rescue Beanstalk::NotConnected
+          @log.error("The '#{@config.queue_name}' Beanstalk queue went away. Waiting 5 seconds, then retrying.")
+          sleep 5
+          retry
+        end
       end
 
       def delete(result)
