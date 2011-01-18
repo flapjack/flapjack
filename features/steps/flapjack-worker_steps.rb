@@ -18,6 +18,8 @@ When /^I background run "flapjack-worker"$/ do
 
   @worker = IO.popen(command, 'r')
 
+  sleep 1
+
   at_exit do
     Process.kill("KILL", @worker.pid)
   end
@@ -37,6 +39,24 @@ Then /^I should not see "([^"]*)" in the "([^"]*)" output$/ do |string, command|
   pipe = instance_variable_get(instance_variable_name)
   pipe.should_not be_nil
 
-  @output = read_until_timeout(pipe)
+  @output = read_until_timeout(pipe, false, 5)
+  p @output
   @output.grep(/#{string}/).size.should == 0
+end
+
+When /^beanstalkd is killed$/ do
+  Given "beanstalkd is not running"
+end
+
+Then /^show me the output from "([^"]*)"$/ do |command|
+  instance_variable_name = "@" + command.split("-")[1]
+  pipe = instance_variable_get(instance_variable_name)
+  pipe.should_not be_nil
+
+  @output = read_until_timeout(pipe, true, 10)
+  puts @output
+end
+
+When /^I sleep "(\d+)" seconds$/ do |time|
+  sleep(time.to_i)
 end
