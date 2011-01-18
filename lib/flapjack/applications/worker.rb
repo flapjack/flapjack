@@ -73,10 +73,6 @@ module Flapjack
             transport = Flapjack::Transport.const_get("#{class_name}")
             queue     = transport.new(queue_config)
             instance_variable_set("@#{queue_name}_queue", queue)
-          rescue Beanstalk::NotConnected => e
-            @log.error("Couldn't connect to the '#{queue_name}' Beanstalk queue. Waiting 5 seconds, then retrying.")
-            sleep 5
-            retry
           rescue LoadError => e
             @log.warning("Attempted to load #{class_name} transport, but it doesn't exist!")
             @log.warning("Exiting.")
