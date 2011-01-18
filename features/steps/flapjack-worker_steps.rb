@@ -19,10 +19,6 @@ When /^I background run "flapjack-worker"$/ do
   @worker = IO.popen(command, 'r')
 
   sleep 1
-
-  at_exit do
-    Process.kill("KILL", @worker.pid)
-  end
 end
 
 Then /^I should see "([^"]*)" in the "([^"]*)" output$/ do |string, command|

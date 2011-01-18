@@ -75,10 +75,6 @@ Given /^beanstalkd is running$/ do
 
   # So beanstalkd has a moment to catch its breath.
   sleep 0.5
-
-  at_exit do
-    Process.kill("KILL", @beanstalk.pid)
-  end
 end
 
 Given /^there are no jobs on the "([^"]*)" beanstalkd queue$/ do |queue_name|
