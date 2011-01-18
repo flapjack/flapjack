@@ -1,11 +1,7 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
-require 'beanstalk-client'
 require 'ostruct'
 require 'optparse'
-require 'log4r'
-require 'log4r/outputter/syslogoutputter'
 require 'flapjack/patches'
 
 module Flapjack
