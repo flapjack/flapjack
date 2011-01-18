@@ -23,7 +23,7 @@ module Flapjack
         begin
           @queue = Beanstalk::Pool.new(["#{@config.host}:#{@config.port}"], @config.queue_name)
         rescue Beanstalk::NotConnected => e
-          @log.error("Couldn't connect to the '#{@config.queue_name}' Beanstalk queue. Waiting 5 seconds, then retrying.")
+          @log.error("Couldn't connect to the '#{@config.queue_name}' Beanstalk queue. Retrying in 5 seconds.")
           sleep 5
           retry
         end
