@@ -9,33 +9,33 @@ class OpenStruct
 end
 
 module Daemons
-  class PidFile 
+  class PidFile
     # we override this method so creating pid files is fork-safe
-    def filename 
+    def filename
       File.join(@dir, "#{@progname}#{Process.pid}.pid")
     end
   end
 end
 
-module Log4r
-  class Logger
-    def error(args)
-      err(args)
-    end
+#module Log4r
+#  class Logger
+#    def error(args)
+#      err(args)
+#    end
+#
+#    def warning(args)
+#      warn(args)
+#    end
+#  end
+#end
 
-    def warning(args)
-      warn(args)
-    end
-  end
-end
-
-# extracted from Extlib. 
+# extracted from Extlib.
 # FIXME: what's the licensing here?
 class String
-  def camel_case                                                                                                                                    
-    return self if self !~ /_/ && self =~ /[A-Z]+.*/                                                                                                
-    split('_').map{|e| e.capitalize}.join                                                                                                           
-  end   
+  def camel_case
+    return self if self !~ /_/ && self =~ /[A-Z]+.*/
+    split('_').map{|e| e.capitalize}.join
+  end
 end
 
 # http://gist.github.com/151324
