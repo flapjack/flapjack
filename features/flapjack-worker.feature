@@ -24,3 +24,4 @@ Feature: flapjack-worker
     And beanstalkd is killed
     Then I should see "flapjack-worker" running
     Then I should not see "Shutting down" in the "flapjack-worker" output
+    Then I should see "went away" in the "flapjack-worker" output
