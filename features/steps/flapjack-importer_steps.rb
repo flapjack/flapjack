@@ -71,7 +71,8 @@ end
 Given /^beanstalkd is running$/ do
   system("which beanstalkd > /dev/null 2>&1").should be_true
 
-  @beanstalk = IO.popen("beanstalkd")
+  command = "beanstalkd"
+  @beanstalk = spawn_daemon(command)
 
   # So beanstalkd has a moment to catch its breath.
   sleep 0.5

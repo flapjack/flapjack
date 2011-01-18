@@ -16,7 +16,7 @@ When /^I background run "flapjack-worker"$/ do
   bin_path = @root.join('bin')
   command  = "ruby -rubygems #{bin_path}/flapjack-worker 2>&1"
 
-  @worker = IO.popen(command, 'r')
+  @worker = spawn_daemon(command)
 
   sleep 1
 end
