@@ -21,7 +21,7 @@ class ProcessManagement
   # read within the specified timeout.
   #
   # http://weblog.jamisbuck.org/assets/2006/9/25/gdb.rb
-  def read_until_timeout(pipe, verbose=false, timeout=1)
+  def read_until_timeout(pipe, timeout=1, verbose=false)
     output = []
     line    = ""
     while data = IO.select([pipe], nil, nil, timeout) do
