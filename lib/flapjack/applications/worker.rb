@@ -74,7 +74,7 @@ module Flapjack
             queue     = transport.new(queue_config)
             instance_variable_set("@#{queue_name}_queue", queue)
           rescue Beanstalk::NotConnected => e
-            @log.error("Couldn't connect to Beanstalk. Sleeping 5, then retrying.")
+            @log.error("Couldn't connect to Beanstalk for #{queue_name}. Waiting 5 seconds, then retrying.")
             sleep 5
             retry
           rescue LoadError => e
