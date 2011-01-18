@@ -39,8 +39,7 @@ Then /^I should not see "([^"]*)" in the "([^"]*)" output$/ do |string, command|
   pipe = instance_variable_get(instance_variable_name)
   pipe.should_not be_nil
 
-  @output = read_until_timeout(pipe, false, 5)
-  p @output
+  @output = read_until_timeout(pipe, 5)
   @output.grep(/#{string}/).size.should == 0
 end
 
@@ -53,7 +52,7 @@ Then /^show me the output from "([^"]*)"$/ do |command|
   pipe = instance_variable_get(instance_variable_name)
   pipe.should_not be_nil
 
-  @output = read_until_timeout(pipe, true, 10)
+  @output = read_until_timeout(pipe, 5)
   puts @output
 end
 
