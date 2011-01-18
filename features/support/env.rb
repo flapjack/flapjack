@@ -11,8 +11,9 @@ class ProcessManagement
   # We kill these daemons so the test state is clean at the beginning of every
   # scenario, and scenarios don't become coupled with one another.
   def kill_lingering_daemons
-    # FIXME: iterate through a collection of daemons registered during the scenario
-    Process.kill("KILL", @beanstalk.pid) if @beanstalk
+    @daemons.each do |pipe|
+      Process.kill("KILL", pipe.pid)
+    end
   end
 
   # Testing daemons with Ruby backticks blocks indefinitely, because the
@@ -38,6 +39,13 @@ class ProcessManagement
     end
 
     output
+  end
+
+  def spawn_daemon(command)
+    @daemons ||= []
+    daemon = IO.popen(command)
+    @daemons << daemon
+    daemon
   end
 
 end
