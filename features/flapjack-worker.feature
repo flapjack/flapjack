@@ -25,3 +25,14 @@ Feature: flapjack-worker
     Then I should see "flapjack-worker" running
     Then I should not see "Shutting down" in the "flapjack-worker" output
     Then I should see "went away" in the "flapjack-worker" output
+
+  Scenario: Sends results
+    Given beanstalkd is running
+    When I background run "flapjack-worker"
+    Then I should see "flapjack-worker" running
+    When I insert a check onto the beanstalk
+    Then I should see a job on the "checks" beanstalk queue
+    And I should see "Executing check" in the "flapjack-worker" output
+    And I should see a job on the "results" beanstalk queue
+
+
