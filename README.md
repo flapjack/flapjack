@@ -88,6 +88,22 @@ Start up the notifier:
 
 Currently there are email and XMPP notifiers.
 
+Developing
+----------
+
+Clone the repository:
+
+    git clone https://auxesis@github.com/auxesis/flapjack.git
+
+Install development dependencies:
+
+    gem install bundler
+    bundle install
+
+Run the tests:
+
+    cucumber features/
+
 
 What things do
 --------------
