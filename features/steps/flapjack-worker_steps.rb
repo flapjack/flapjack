@@ -55,3 +55,14 @@ end
 When /^I sleep "(\d+)" seconds$/ do |time|
   sleep(time.to_i)
 end
+
+When /^I insert a check onto the beanstalk$/ do
+  @queue = Beanstalk::Connection.new('localhost:11300', 'checks')
+
+
+  pending # express the regexp above with the code you wish you had
+end
+
+Then /^I should see a job on the "([^"]*)" beanstalk queue$/ do |arg1|
+  pending # express the regexp above with the code you wish you had
+end
