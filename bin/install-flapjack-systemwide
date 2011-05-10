@@ -53,6 +53,6 @@ puts "You will want to customise:"
 puts "  * /etc/flapjack/recipients.yaml"
 puts "  * /etc/flapjack/flapjack-notifier.yaml"
 puts 
-puts ".examples of these files exist in /etc/flapjack/'
+puts ".examples of these files exist in /etc/flapjack/"
 
 
