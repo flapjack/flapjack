@@ -1,9 +1,9 @@
 Flapjack
 ========
 
-**WARNING: Flapjack is no longer under active development. **
+**WARNING: Flapjack is no longer under active development.**
 
-**Feel free to fork it, but I don't have the bandwidth to work on this project any longer. **
+**Feel free to fork it, but I don't have the bandwidth to work on this project any longer.**
 
 Flapjack is highly scalable and distributed monitoring system.
 
