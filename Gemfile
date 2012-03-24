@@ -11,4 +11,5 @@ gem 'xmpp4r', '= 0.5'
 gem 'tmail', '= 1.2.3.1'
 gem 'yajl-ruby', '= 0.6.4'
 gem 'sqlite3-ruby', '= 1.2.5'
-
+gem 'polyglot'
+gem 'treetop'
