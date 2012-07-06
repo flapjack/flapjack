@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby 
+#!/usr/bin/env ruby
 
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..'))
 require 'log4r'
@@ -9,7 +9,7 @@ require 'flapjack/notifier_engine'
 module Flapjack
   module Notifier
     class Application
-     
+
       # boots the notifier
       def self.run(options={})
         app = self.new(options)
@@ -36,9 +36,9 @@ module Flapjack
 
       def setup_loggers
         unless @log
-	        @log = Log4r::Logger.new("notifier")
-	        @log.add(Log4r::StdoutOutputter.new("notifier"))
-	        @log.add(Log4r::SyslogOutputter.new("notifier"))
+          @log = Log4r::Logger.new("notifier")
+          @log.add(Log4r::StdoutOutputter.new("notifier"))
+          @log.add(Log4r::SyslogOutputter.new("notifier"))
         end
       end
 
@@ -56,7 +56,7 @@ module Flapjack
         else
           @notifier_directories << default_directory
         end
-     
+
         # filter to the directories that actually exist
         @notifier_directories = @notifier_directories.find_all do |dir|
           if File.exists?(dir)
@@ -68,7 +68,7 @@ module Flapjack
         end
 
         @notifiers = []
-      
+
         # load up the notifiers and pass a config
         @config.notifiers.each_pair do |notifier, config|
           filenames = @notifier_directories.map {|dir| File.join(dir, notifier.to_s, 'init' + '.rb')}
@@ -94,7 +94,7 @@ module Flapjack
 
       def setup_recipients
         @recipients ||= []
-     
+
         @recipients += (@config.recipients || [])
         # so poking at a recipient within notifiers is easier
         @recipients.map! do |recipient|
@@ -107,13 +107,13 @@ module Flapjack
                      :log => @log }
         config = defaults.merge(@config.persistence || {})
         basedir = config.delete(:basedir) || File.join(File.dirname(__FILE__), '..', 'persistence')
-       
+
         filename = File.join(basedir, "#{config[:backend]}.rb")
         class_name = config[:backend].to_s.camel_case
 
         @log.info("Loading the #{class_name} persistence backend")
-        
-        begin 
+
+        begin
           require filename
           @persistence = Flapjack::Persistence.const_get(class_name).new(config)
         rescue LoadError => e
@@ -125,8 +125,8 @@ module Flapjack
       end
 
       def setup_queues
-        defaults = { :backend => :beanstalkd, 
-                     :host => 'localhost', 
+        defaults = { :backend => :beanstalkd,
+                     :host => 'localhost',
                      :port => '11300',
                      :queue_name => 'results',
                      :log => @log }
@@ -137,8 +137,8 @@ module Flapjack
         filename = File.join(basedir, "#{config[:backend]}.rb")
 
         @log.info("Loading the #{class_name} transport")
-      
-        begin 
+
+        begin
           require filename
           @results_queue = Flapjack::Transport.const_get(class_name).new(config)
         rescue LoadError => e
@@ -148,7 +148,7 @@ module Flapjack
         end
       end
 
-      def setup_filters 
+      def setup_filters
         @filter_directories ||= []
 
         default_directory = File.expand_path(File.join(File.dirname(__FILE__), '..', 'filters'))
@@ -158,7 +158,7 @@ module Flapjack
         else
           @filter_directories << default_directory
         end
-     
+
         # filter to the directories that actually exist
         @filter_directories = @filter_directories.find_all do |dir|
           if File.exists?(dir)
@@ -175,7 +175,7 @@ module Flapjack
           filenames = @filter_directories.map {|dir| File.join(dir, filter.to_s + '.rb')}
           filename = filenames.find {|filename| File.exists?(filename)}
 
-          if filename 
+          if filename
             @log.info("Loading the #{filter.camel_case} filter (from #{filename})")
             require filename
             filter = Flapjack::Filters.const_get(filter.camel_case).new(:log => @log, :persistence => @persistence)
@@ -184,22 +184,22 @@ module Flapjack
             @log.warning("Flapjack::Filters::#{filter.camel_case} doesn't exist!")
           end
         end
-        
+
       end
 
       def process_result
         @log.debug("Waiting for new result...")
         result = @results_queue.next # this blocks until a result is popped
-        
+
         @log.info("Processing result for check #{result.check_id}.")
         event = @persistence.create_event(result)
-       
+
 
         block = @filters.find {|filter| filter.block?(result) }
         unless block
           # do munging
-          @notifier_engine.notify!(:result => result, 
-                                   :event => event, 
+          @notifier_engine.notify!(:result => result,
+                                   :event => event,
                                    :recipients => recipients)
         end
 
@@ -212,7 +212,7 @@ module Flapjack
 
       def main
         @log.info("Booting main loop.")
-        loop do 
+        loop do
           process_result
         end
       end
