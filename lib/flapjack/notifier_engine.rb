@@ -4,13 +4,13 @@ require 'ostruct'
 
 module Flapjack
   class NotifierEngine
-   
+
     attr_reader :log, :notifiers
-  
+
     def initialize(opts={})
       @log = opts[:log]
       raise "you have to specify a logger" unless @log
-      
+
       @notifiers = []
       if opts[:notifiers]
         opts[:notifiers].each do |n|
@@ -21,7 +21,7 @@ module Flapjack
         @log.warning("There are no notifiers! flapjack-notifier won't be useful.")
       end
     end
-   
+
     def notify!(options={})
       result     = options[:result]
       event      = options[:event]
