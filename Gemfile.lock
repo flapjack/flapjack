@@ -15,7 +15,7 @@ GEM
       json (>= 1.4.6)
     json (1.5.1)
     log4r (1.1.5)
-    polyglot (0.3.1)
+    redis (3.0.1)
     rspec (2.3.0)
       rspec-core (~> 2.3.0)
       rspec-expectations (~> 2.3.0)
@@ -24,26 +24,17 @@ GEM
     rspec-expectations (2.3.0)
       diff-lcs (~> 1.1.2)
     rspec-mocks (2.3.0)
-    sqlite3-ruby (1.2.5)
     term-ansicolor (1.0.5)
-    tmail (1.2.3.1)
-    treetop (1.4.9)
-      polyglot (>= 0.3.1)
-    xmpp4r (0.5)
     yajl-ruby (0.6.4)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
-  beanstalk-client (= 1.0.2)
-  cucumber (~> 0.10.0)
-  daemons (= 1.0.10)
-  log4r (= 1.1.5)
-  polyglot
-  rspec (~> 2.3.0)
-  sqlite3-ruby (= 1.2.5)
-  tmail (= 1.2.3.1)
-  treetop
-  xmpp4r (= 0.5)
-  yajl-ruby (= 0.6.4)
+  beanstalk-client
+  cucumber
+  daemons
+  log4r
+  redis
+  rspec
+  yajl-ruby
