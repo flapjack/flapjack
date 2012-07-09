@@ -5,6 +5,7 @@ require 'log4r/outputter/syslogoutputter'
 require 'redis'
 require 'flapjack/patches'
 require 'flapjack/filters/ok'
+require 'flapjack/filters/acknowledged'
 require 'json'
 
 module Flapjack
