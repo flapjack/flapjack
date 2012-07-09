@@ -1,12 +1,15 @@
+
+require 'flapjack/filters/base'
+
 module Flapjack
   module Filters
     class Ok
-      def initialize(opts={})
-        @log = opts[:log]
-      end
+      include Base
 
-      def block?(result)
-        !result.warning? || !result.critical?
+      def block?(event)
+        result = !event.warning? && !event.critical?
+        @log.debug("Filter: Ok: #{result ? "block" : "pass"}")
+        result
       end
     end
   end

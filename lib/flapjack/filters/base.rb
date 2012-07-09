@@ -1,13 +1,13 @@
 module Flapjack
   module Filters
-    class AnyParentsFailed
+    module Base
       def initialize(opts={})
-        @log = opts[:log]
+        @log         = opts[:log]
         @persistence = opts[:persistence]
       end
 
-      def block?(result)
-        @persistence.any_parents_failed?(result)
+      def name
+        self.class.to_s.split('::').last
       end
     end
   end
