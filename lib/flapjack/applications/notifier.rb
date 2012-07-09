@@ -2,56 +2,9 @@
 
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
-require 'redis'
 require 'flapjack/patches'
 require 'flapjack/filters/ok'
 require 'flapjack/filters/acknowledged'
-require 'json'
-
-module Flapjack
-  class Event
-    def initialize(attrs={})
-      @attrs = attrs
-    end
-
-    def warning?
-      @attrs['state'] == 'warning'
-    end
-
-    def critical?
-      @attrs['state'] == 'critical'
-    end
-
-    def host
-      @attrs['host']
-    end
-
-    def service
-      @attrs['service']
-    end
-
-    def id
-      host + ';' + service
-    end
-  end
-
-  class Events
-    def initialize
-      @redis = ::Redis.new
-      @key   = 'events'
-    end
-
-    def next
-      raw   = @redis.blpop(@key).last
-      event = ::JSON.parse(raw)
-      Flapjack::Event.new(event)
-    end
-
-    def size
-      @redis.llen(@key)
-    end
-  end
-end
 
 module Flapjack
   class Notifier
