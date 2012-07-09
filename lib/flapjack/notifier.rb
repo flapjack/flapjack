@@ -5,6 +5,9 @@ require 'log4r/outputter/syslogoutputter'
 require 'flapjack/patches'
 require 'flapjack/filters/ok'
 require 'flapjack/filters/acknowledged'
+require 'flapjack/event'
+require 'flapjack/events'
+require 'redis'
 
 module Flapjack
   class Notifier
