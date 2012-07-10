@@ -56,7 +56,8 @@ module Flapjack
         end
 
       when 'action'
-
+        # When an action event is processed, store the event.
+        @persistence.hset('action_for;#{event.id}', timestamp, event.state)
       end
 
     end
