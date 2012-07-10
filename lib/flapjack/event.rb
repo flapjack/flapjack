@@ -6,6 +6,10 @@ module Flapjack
       @attrs = attrs
     end
 
+    def state
+      @attrs['state']
+    end
+
     def warning?
       @attrs['state'] == 'warning'
     end
@@ -24,6 +28,10 @@ module Flapjack
 
     def id
       host + ';' + service
+    end
+
+    def type
+      @attrs['type']
     end
 
     def action?

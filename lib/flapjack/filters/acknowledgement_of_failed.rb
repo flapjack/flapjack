@@ -17,7 +17,7 @@ module Flapjack
           message = "no action taken"
         end
         result = false
-        @log.debug("Filter: AcknowledgementOfFailed: #{result ? "block" : "pass"} (#{message}"))
+        @log.debug("Filter: AcknowledgementOfFailed: #{result ? "block" : "pass"} (#{message})")
         result
       end
     end

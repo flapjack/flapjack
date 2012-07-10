@@ -36,6 +36,31 @@ module Flapjack
       @filters << Flapjack::Filters::Acknowledged.new(options)
     end
 
+    def update_keys(event)
+      timestamp = Time.now.to_i
+      case event.type
+      when 'service'
+        # When an service event is processed, we check to see if new state matches the old state.
+        # If the state is different, update the database with: the time, the new state
+        old_state = @persistence.hget(event.id, 'state')
+        if event.state != old_state
+          @persistence.hset(event.id, 'state', event.state)
+          @persistence.hset(event.id, 'last_change', timestamp)
+          case event.state
+          when 'warning', 'critical'
+            @persistence.zadd('failed_services', timestamp, event.id)
+          else
+            @persistence.zrem('failed_services', event.id)
+          end
+
+        end
+
+      when 'action'
+
+      end
+
+    end
+
     def process_result
       @log.info("Waiting for event...")
       event = @events.next
@@ -44,6 +69,8 @@ module Flapjack
 
       #@log.info("Storing event.")
       #@persistence.save(event)
+
+      update_keys(event)
 
       block = @filters.find {|filter| filter.block?(event) }
       if not block
