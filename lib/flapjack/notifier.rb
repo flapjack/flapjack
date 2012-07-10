@@ -3,6 +3,7 @@
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
 require 'flapjack/patches'
+require 'flapjack/filters/acknowledgement_of_failed'
 require 'flapjack/filters/ok'
 require 'flapjack/filters/acknowledged'
 require 'flapjack/event'
@@ -30,6 +31,7 @@ module Flapjack
 
       options = { :log => @log, :persistence => @persistence }
       @filters = []
+      @filters << Flapjack::Filters::AcknowledgementOfFailed.new(options)
       @filters << Flapjack::Filters::Ok.new(options)
       @filters << Flapjack::Filters::Acknowledged.new(options)
     end

@@ -25,6 +25,18 @@ module Flapjack
     def id
       host + ';' + service
     end
+
+    def action?
+      @attrs['type'] == 'action'
+    end
+
+    def service?
+      @attrs['type'] == 'service'
+    end
+
+    def acknowledgement?
+      self.action? and @attrs['state'] == 'acknowledgement'
+    end
   end
 end
 
