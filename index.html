@@ -1,0 +1,105 @@
+---
+title: Flapjack, a scalable and distributed monitoring system
+layout: default
+---
+
+<div id='logo'>
+  <img alt='http://www.flickr.com/photos/ewedistrict/23110406/' src='/images/flapjack.png' />
+</div>
+<div id='what'>
+  <p>
+    <em>Flapjack</em>
+    is a scalable and distributed monitoring system. It natively talks the
+    Nagios plugin format, and can easily be scaled from 1 server to 1000.
+  </p>
+  <p>
+    <em>Flapjack</em>
+    tries to adhere to the following tenets:
+  </p>
+  <ul>
+    <li>it should be simple to set up, configure, and maintain</li>
+    <li>it should easily scale from a single host to multiple</li>
+    <li>it should gracefully handle large volumes of notifications</li>
+  </ul>
+  <p class='notice'>
+    <img alt='important notice emblem' class='important' src='images/important.png' />
+    Flapjack is under heavy development. Please have a
+    play, but be aware the implementation is incomplete, and there will be
+    <a href='http://github.com/auxesis/flapjack/issues'>bugs</a>.
+  </p>
+  <p>
+    Slides from
+    <a href='http://devopsdays.org/'>Devopsdays 2009</a>
+    presentation introducing Flapjack:
+    <div id="slides" style='margin-top: 1em'>
+      <object height='355' width='425'>
+        <param name='movie' value='http://static.slidesharecdn.com/swf/ssplayer2.swf?doc=141-joined-091105162106-phpapp01&amp;stripped_title=flapjack-rethinking-monitoring-for-the-cloud' />
+        <param name='allowFullScreen' value='value' />
+        <param name='allowScriptAccess' value='always' />
+        <embed allowfullscreen='true' allowscriptaccess='always' height='355' src='http://static.slidesharecdn.com/swf/ssplayer2.swf?doc=141-joined-091105162106-phpapp01&amp;stripped_title=flapjack-rethinking-monitoring-for-the-cloud' type='application/x-shockwave-flash' width='425'></embed>
+      </object>
+    </div>
+  </p>
+</div>
+<div id='developing'>
+  <h2>Developing</h2>
+  <p>
+    Flapjack's code is lives on <a href='http://github.com/auxesis/flapjack'>GitHub</a>.
+  </p>
+</div>
+<div id='who'>
+  <h2>Who's reponsible?</h2>
+  <p>
+    <em>Flapjack</em>
+    is written by&nbsp;<a href='http://holmwood.id.au/~lindsay/'>Lindsay Holmwood</a>.
+  </p>
+  <p>
+    Logo derived from
+    <em>
+      <a href='http://www.flickr.com/photos/ewedistrict/23110406/'>Pancake</a>
+    </em>
+    by Brandon Martin-Anderson, and is
+    <a href='http://creativecommons.org/licenses/by-sa/2.0/deed.en'>CC Attribution-Share Alike 2.0 Generic</a>
+    licenced.
+  </p>
+</div>
+<div id='friends'>
+  <h2>Friends of Flapjack</h2>
+  <ul>
+    <li>
+      <a href='http://collectd.org/'>collectd</a>, the lightweight statistics collection daemon.
+    </li>
+    <li>
+      <a href='http://auxesis.github.com/cucumber-nagios/'>cucumber-nagios</a>, helps you
+      describe how a website should work in plain text, and outputs whether it does in
+      the Nagios plugin format.
+    </li>
+  </ul>
+</div>
+
+
+
+
+
+
+
+<div id="nav-below" class="navigation">
+  {% if paginator.next_page %}
+    <div class="nav-next">
+      <a href="{{ site.url }}/page{{ paginator.next_page }}#posts">
+        Older posts
+      </a>
+    </div>
+  {% endif %}
+  {% if paginator.previous_page %}
+    <div class="nav-previous">
+      {% if paginator.page == 2 %}
+        <a href="{{ site.url }}#posts">
+      {% else %}
+        <a href="{{ site.url }}/page{{ paginator.previous_page }}#posts">
+      {% endif %}
+        Newer posts
+      </a>
+    </div>
+  {% endif %}
+</div>

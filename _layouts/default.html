@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{ page.title }}</title>
+    {% include externals.html %}
+  </head>
+  <body>
+    <div id="wrapper">
+      {% include header.html %}
+
+      <div id="content">
+        {{ content }}
+      </div> <!-- content -->
+
+    </div> <!-- wrapper -->
+    {% include google-analytics.html %}
+  </body>
+</html>
+
