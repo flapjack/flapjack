@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 class Check
   include DataMapper::Resource
 
@@ -6,9 +8,9 @@ class Check
   has n, :related_checks, :child_key => [:child_id, :parent_id]
   has n, :events
 
-  #has n, :parent_checks, :through => :related_checks, 
+  #has n, :parent_checks, :through => :related_checks,
   #       :child_key => :child_id,  :class_name => "Check"
-  #has n, :child_checks,  :through => :related_checks, 
+  #has n, :child_checks,  :through => :related_checks,
   #       :child_key => :parent_id, :class_name => "Check"
 
   belongs_to :node
@@ -27,7 +29,7 @@ class Check
   property :deleted_at, ParanoidDateTime
 
   # copy command onto check
-  before :valid? do 
+  before :valid? do
     if self.check_template && self.command.blank?
       self.command = self.check_template.command
       self.name = self.check_template.name

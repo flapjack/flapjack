@@ -2,7 +2,6 @@
 
 $: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE__) + '/../lib/')
 
-require 'rubygems'
 require 'daemons'
 require 'fileutils'
 require 'flapjack/cli/worker_manager'
@@ -23,9 +22,9 @@ FileUtils.mkdir_p(pid_dir)
 options.workers.times do |n|
   # we fork for each worker, as Daemons.run backgrounds this script.
   fork do
-    Daemons.run(worker_path, 
-                :ARGV => (args + %w(-- -b localhost)), 
-                :multiple => true, 
+    Daemons.run(worker_path,
+                :ARGV => (args + %w(-- -b localhost)),
+                :multiple => true,
                 :dir_mode => :normal,
                 :dir => pid_dir)
   end

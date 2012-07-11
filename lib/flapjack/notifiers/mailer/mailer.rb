@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
 require 'net/smtp'
 require 'tmail'
 
@@ -15,7 +14,7 @@ module Flapjack
         @log = opts[:log]
         @from_address = opts[:from_address]
         @website_uri = opts[:website_uri]
-        
+
         raise ArgumentError, "from address must be provided" unless @from_address
       end
 
@@ -30,15 +29,15 @@ module Flapjack
         mail.subject = "Check: #{opts[:result].check_id}, Status: #{opts[:result].status}"
         mail.body = <<-DESC
           Check #{opts[:result].check_id} returned the status "#{opts[:result].status}".
-          
-          Here was the output: 
+
+          Here was the output:
             #{opts[:result].output}
-    
+
           You can respond to this issue at:
             #{@website_uri}/issue/#{opts[:result].check_id}
         DESC
 
-        begin 
+        begin
           Net::SMTP.start('localhost') do |smtp|
             return smtp.sendmail(mail.to_s, mail.from, mail.to)
           end
@@ -46,7 +45,7 @@ module Flapjack
           @log.error("Couldn't establish connection to mail server!")
         end
       end
-    
+
     end
   end
 end

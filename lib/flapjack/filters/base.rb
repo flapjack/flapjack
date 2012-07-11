@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 module Flapjack
   module Filters
     module Base

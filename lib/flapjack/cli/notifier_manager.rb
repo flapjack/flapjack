@@ -1,8 +1,7 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
 require 'ostruct'
-require 'optparse' 
+require 'optparse'
 
 module Flapjack
   class NotifierManagerOptions
@@ -17,7 +16,7 @@ module Flapjack
         opts.separator "     restart          restart workers"
         opts.separator " "
         opts.separator "  and [options] are:"
-  
+
         opts.on('-b', '--beanstalk HOST', 'location of the beanstalkd') do |host|
           options.host = host
         end
@@ -31,7 +30,7 @@ module Flapjack
           options.config_filename = config.to_s
         end
       end
-  
+
       begin
         opts.parse!(args)
       rescue => e
@@ -39,7 +38,7 @@ module Flapjack
         puts opts
         exit 1
       end
-  
+
       # defaults
       options.host ||= "localhost"
       options.port ||= 11300
@@ -55,17 +54,17 @@ module Flapjack
           @errors << "You must specify a recipients file!"
         end
 
-        if options.config_filename 
+        if options.config_filename
           unless File.exists?(options.config_filename)
             @errors << "The specified config file dosen't exist!"
           end
-        else 
+        else
           @errors << "You must specify a config file!"
         end
       end
 
       if @errors.size > 0
-        puts "Errors:" 
+        puts "Errors:"
         @errors.each do |error|
           puts "  - #{error}"
         end
@@ -73,12 +72,12 @@ module Flapjack
         puts opts
         exit 2
       end
-  
+
       unless %w(start stop restart).include?(args[0])
         puts opts
         exit 1
       end
-  
+
       options
     end
   end

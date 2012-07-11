@@ -2,7 +2,6 @@
 
 $: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE__) + '/../lib/')
 
-require 'rubygems'
 require 'daemons'
 require 'fileutils'
 require 'flapjack/cli/notifier_manager'
@@ -37,7 +36,7 @@ end
 
 # boot
 Daemons.run(worker_path, :ARGV => daemon_args,
-                         :multiple => false, 
+                         :multiple => false,
                          :dir_mode => :normal,
                          :dir => pid_dir)
 
