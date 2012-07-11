@@ -62,9 +62,18 @@ module Flapjack
 
     end
 
-    def process_result
-      @log.info("Waiting for event...")
-      event = @events.next
+    # process any events we have until there's none left
+    def process_events
+
+      loop do
+        event = @events.gimmie
+        break unless event
+        process_result(event)
+      end
+
+    end
+
+    def process_result(event)
 
       @log.debug("#{@events.size} events waiting on the queue")
 
@@ -84,7 +93,9 @@ module Flapjack
     def main
       @log.info("Booting main loop.")
       loop do
-        process_result
+        @log.info("Waiting for event...")
+        event = @events.next
+        process_result(event)
       end
     end
   end

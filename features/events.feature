@@ -1,7 +1,8 @@
-Feature: flapjack-notifier-event-processor
+Feature: events
   So people can be notified when things break and recover
   Flapjack-notifier must process events correctly
 
+  @events
   Scenario: Service ok to ok
     Given servce x is in an ok state
     When  an ok event is received for service x

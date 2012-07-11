@@ -10,6 +10,7 @@ When /^an ok event is received for service x$/ do
 end
 
 Then /^a notification should not be generated for service x$/ do
+  # read the rest of the scenario log file for "Not sending notifications for event xxx;xxx"
   pending # express the regexp above with the code you wish you had
 end
 
@@ -21,7 +22,7 @@ When /^a failure event is received for service x$/ do
   pending # express the regexp above with the code you wish you had
 end
 
-When /^(\d+) seconds passes$/ do |arg1|
+When /^(\d+) second.* passes$/ do |arg1|
   pending # express the regexp above with the code you wish you had
 end
 
@@ -30,6 +31,7 @@ When /^(\d+) minute.* passes$/ do |arg1|
 end
 
 Then /^a notification should be generated for service x$/ do
+  # read the rest of the scenario log file for "Sending notifications for event xxx;xxx"
   pending # express the regexp above with the code you wish you had
 end
 
