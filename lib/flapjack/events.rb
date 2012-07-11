@@ -19,12 +19,15 @@ module Flapjack
 
     # non blocking version of next
     def gimmie
-      lpops = @redis.lpop(@key)
-      pp lpops
-      raw   = lpops.last
-      pp raw
-      event = ::JSON.parse(raw)
-      Flapjack::Event.new(event)
+      raw = @redis.lpop(@key)
+      p raw
+      if raw
+        event = ::JSON.parse(raw)
+        result = Flapjack::Event.new(event)
+      else
+        result = nil
+      end
+      result
     end
 
     def size

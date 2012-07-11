@@ -12,7 +12,7 @@ require 'flapjack/patches'
 
 Before('@events') do
   app = Flapjack::Notifier.run
-  app.process_result
+  app.process_events
 end
 
 After('@events') do
