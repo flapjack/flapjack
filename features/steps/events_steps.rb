@@ -2,6 +2,7 @@
 
 
 Given /^servce x is in an ok state$/ do
+
   pending # express the regexp above with the code you wish you had
 end
 

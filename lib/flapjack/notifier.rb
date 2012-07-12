@@ -44,20 +44,31 @@ module Flapjack
         # If the state is different, update the database with: the time, the new state
         old_state = @persistence.hget(event.id, 'state')
         if event.state != old_state
-          @persistence.hset(event.id, 'state', event.state)
+
+          # current state only (for speedy lookup)
+          @persistence.hset(event.id, 'state',       event.state)
           @persistence.hset(event.id, 'last_change', timestamp)
+
+          # retention of all state changes
+          @persistence.rpush("#{event.id}:states", timestamp)
+          @persistence.set("#{event.id}:#{timestamp}:state",   event.state)
+          @persistence.set("#{event.id}:#{timestamp}:summary", event.summary)
+          @persistence.set("#{event.id}:#{timestamp}:latency", event.latency)
+
           case event.state
           when 'warning', 'critical'
             @persistence.zadd('failed_services', timestamp, event.id)
+            @persistence.zadd('failed_services:client:' + event.client, timestamp, event.id)
           else
             @persistence.zrem('failed_services', event.id)
+            @persistence.zrem('failed_services:client:' + event.client, event.id)
           end
 
         end
 
       when 'action'
         # When an action event is processed, store the event.
-        @persistence.hset('action_for;#{event.id}', timestamp, event.state)
+        @persistence.hset(event.id + ':actions', timestamp, event.state)
       end
 
     end

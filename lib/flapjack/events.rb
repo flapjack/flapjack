@@ -20,7 +20,6 @@ module Flapjack
     # non blocking version of next
     def gimmie
       raw = @redis.lpop(@key)
-      p raw
       if raw
         event = ::JSON.parse(raw)
         result = Flapjack::Event.new(event)

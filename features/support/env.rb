@@ -16,6 +16,6 @@ Before('@events') do
 end
 
 After('@events') do
-  app.destroy()
+
 end
 

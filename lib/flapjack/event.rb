@@ -30,6 +30,10 @@ module Flapjack
       host + ';' + service
     end
 
+    def client
+      host.match(/^\w+/)[0]
+    end
+
     def type
       @attrs['type']
     end
