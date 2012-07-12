@@ -38,6 +38,10 @@ module Flapjack
       @attrs['type']
     end
 
+    def summary
+      @attrs['summary']
+    end
+
     def action?
       @attrs['type'] == 'action'
     end
