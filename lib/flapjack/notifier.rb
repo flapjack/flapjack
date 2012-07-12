@@ -3,9 +3,11 @@
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
 require 'flapjack/patches'
-require 'flapjack/filters/acknowledgement_of_failed'
+require 'flapjack/filters/acknowledgement'
 require 'flapjack/filters/ok'
-require 'flapjack/filters/acknowledged'
+require 'flapjack/filters/scheduled_maintenance'
+require 'flapjack/filters/unscheduled_maintenance'
+require 'flapjack/filters/detect_mass_client_failures'
 require 'flapjack/event'
 require 'flapjack/events'
 require 'redis'
@@ -31,9 +33,11 @@ module Flapjack
 
       options = { :log => @log, :persistence => @persistence }
       @filters = []
-      @filters << Flapjack::Filters::AcknowledgementOfFailed.new(options)
       @filters << Flapjack::Filters::Ok.new(options)
-      @filters << Flapjack::Filters::Acknowledged.new(options)
+      @filters << Flapjack::Filters::ScheduledMaintenance.new(options)
+      @filters << Flapjack::Filters::UnscheduledMaintenance.new(options)
+      @filters << Flapjack::Filters::DetectMassClientFailures.new(options)
+      @filters << Flapjack::Filters::Acknowledgement.new(options)
     end
 
     def update_keys(event)
@@ -53,7 +57,6 @@ module Flapjack
           @persistence.rpush("#{event.id}:states", timestamp)
           @persistence.set("#{event.id}:#{timestamp}:state",   event.state)
           @persistence.set("#{event.id}:#{timestamp}:summary", event.summary)
-          @persistence.set("#{event.id}:#{timestamp}:latency", event.latency)
 
           case event.state
           when 'warning', 'critical'
@@ -87,17 +90,22 @@ module Flapjack
     def process_result(event)
 
       @log.debug("#{@events.size} events waiting on the queue")
+      @log.debug("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}")
 
       #@log.info("Storing event.")
       #@persistence.save(event)
 
       update_keys(event)
 
-      block = @filters.find {|filter| filter.block?(event) }
-      if not block
-        @log.info("Sending notifications for event #{event.host};#{event.service}")
+      # changing this to run all filters rather than stopping at the first failure
+      # i think we'll need to be more subtle here, provide a mechanism for a filter to say 'stop
+      # processing now' otherwise keep processing filters even after a block. ... maybe not.
+      blockers = @filters.find_all {|filter| filter.block?(event) }
+      if blockers.length == 0
+        @log.info("Sending notifications for event #{event.id}")
       else
-        @log.info("Not sending notifications for event #{event.host};#{event.service} because the #{block.name} filter blocked")
+        blocker_names = blockers.collect{|blocker| blocker.name }
+        @log.info("Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
       end
     end
 

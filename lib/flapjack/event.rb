@@ -10,6 +10,14 @@ module Flapjack
       @attrs['state']
     end
 
+    def ok?
+      @attrs['state'] == 'ok'
+    end
+
+    def unknown?
+      @attrs['state'] == 'unknown'
+    end
+
     def warning?
       @attrs['state'] == 'warning'
     end
@@ -27,7 +35,7 @@ module Flapjack
     end
 
     def id
-      host + ';' + service
+      host + ':' + service
     end
 
     def client
