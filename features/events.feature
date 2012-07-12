@@ -82,14 +82,26 @@ Feature: events
   Scenario: Service failed to ok when acknowledged
     Given service x is in a failure state
     When  an acknowledgement event is received for service x
-    And   1 minute passes
+    Then  a notification should be generated for service x
+    When  1 minute passes
     And   an ok event is received for service x
+    Then  a notification should be generated for service x
+
+  Scenario: Service failed to ok when acknowledged, and fails after 6 minutes
+    Given service x is in a failure state
+    When  an acknowledgement event is received for service x
+    Then  a notification should be generated for service x
+    When  1 minute passes
+    And   an ok event is received for service x
+    Then  a notification should be generated for service x
+    When  6 minutes passes
+    And   a failure event is received for service x
     Then  a notification should be generated for service x
 
   Scenario: Acknowledgement when ok
     Given service x is in an ok state
     When  an acknowledgement event is received for service x
-    Then  a notification should be generated for service x
+    Then  a notification should not be generated for service x
 
   Scenario: Acknowledgement when failed
     Given service x is in an ok state
