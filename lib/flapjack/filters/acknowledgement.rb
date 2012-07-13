@@ -32,6 +32,8 @@ module Flapjack
           else
             message = "no action taken"
             result  = true
+            @log.debug("Filter: Acknowledgement: blocking because event.acknowledgement? is false") unless event.acknowledgement?
+            @log.debug("Filter: Acknowledgement: blocking because zscore of failed_services for #{event.id} is false") unless @persistence.zscore("failed_services", event.id)
           end
         end
         @log.debug("Filter: Acknowledgement: #{result ? "block" : "pass"} (#{message})")

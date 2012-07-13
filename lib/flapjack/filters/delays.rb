@@ -39,7 +39,9 @@ module Flapjack
       end
 
       def time_since_last_problem_alert(event)
-        Time.now.to_i - @persistence.get("#{event.id}:last_problem_notification").to_i
+        result = Time.now.to_i - @persistence.get("#{event.id}:last_problem_notification").to_i
+        @log.debug("Filter: Delays: time_since_last_problem_alert is returning #{result}")
+        result
       end
 
       def time_since_last_alert_about_current_problem(event)
@@ -48,7 +50,9 @@ module Flapjack
           time_since_last_problem_alert = time_since_last_problem_alert(event)
           duration_of_current_failure   = duration_of_current_failure(event)
           if (time_since_last_problem_alert < duration_of_current_failure)
-            return time_since_last_problem_alert
+            result = time_since_last_problem_alert
+            @log.debug("Filter: Delays: time_since_last_alert_about_current_problem is returning #{result}")
+            return result
           end
         end
         duration
@@ -65,8 +69,12 @@ module Flapjack
           if service_failed?(event)
             if (duration_of_current_failure(event) < failure_delay)
               result = true
+              d = duration_of_current_failure(event)
+              @log.debug("Filter: Delays: blocking because duration of current failure (#{d}) is less than failure_delay (#{failure_delay})")
             elsif time_since_last_alert_about_current_problem(event) and (time_since_last_alert_about_current_problem(event) < resend_delay)
               result = true
+              t = time_since_last_alert_about_current_problem(event)
+              @log.debug("Filter: Delays: blocking because time since last alert for current problem (#{t}) is less than resend_delay (#{resend_delay})")
             end
           end
         end

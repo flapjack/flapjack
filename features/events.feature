@@ -99,6 +99,9 @@ Feature: events
     Then  a notification should be generated for service x
     When  6 minutes passes
     And   a failure event is received for service x
+    Then  a notification should not be generated for service x
+    When  6 minutes passes
+    And   a failure event is received for service x
     Then  a notification should be generated for service x
 
   Scenario: Acknowledgement when ok
@@ -107,8 +110,7 @@ Feature: events
     Then  a notification should not be generated for service x
 
   Scenario: Acknowledgement when failed
-    Given service x is in an ok state
+    Given service x is in a failure state
     When  an acknowledgement event is received for service x
     Then  a notification should be generated for service x
-
 
