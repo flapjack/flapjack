@@ -4,7 +4,7 @@ Feature: events
 
   @events
   Scenario: Service ok to ok
-    Given servce x is in an ok state
+    Given service x is in an ok state
     When  an ok event is received for service x
     Then  a notification should not be generated for service x
 
