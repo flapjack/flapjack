@@ -11,4 +11,5 @@ gem 'redis'
 group :development do
   gem 'rspec'
   gem 'cucumber'
+  gem 'delorean'
 end

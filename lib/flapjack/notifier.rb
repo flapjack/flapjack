@@ -102,10 +102,10 @@ module Flapjack
       # processing now' otherwise keep processing filters even after a block. ... maybe not.
       blockers = @filters.find_all {|filter| filter.block?(event) }
       if blockers.length == 0
-        @log.info("Sending notifications for event #{event.id}")
+        @log.info("#{Time.now}: Sending notifications for event #{event.id}")
       else
         blocker_names = blockers.collect{|blocker| blocker.name }
-        @log.info("Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
+        @log.info("#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
       end
     end
 

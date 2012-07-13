@@ -13,6 +13,7 @@ require 'flapjack/patches'
 Before('@events') do
   app = Flapjack::Notifier.run
   app.process_events
+  @redis = Redis.new
 end
 
 After('@events') do

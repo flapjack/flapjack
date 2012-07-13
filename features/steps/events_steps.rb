@@ -3,8 +3,17 @@ require 'redis'
 require 'json'
 
 def submit_event(event)
-  @redis = Redis.new
   @redis.rpush 'events', event.to_json
+end
+
+def remove_unscheduled_maintenance(host = 'clientx-dvmh-app-01', service = 'ping')
+  # end any unscheduled downtime
+  event_id = host + ":" + service
+  if (um_start = @redis.get("#{event_id}:unscheduled_maintenance"))
+    @redis.del("#{event_id}:unscheduled_maintenance")
+    duration = Time.now.to_i - um_start.to_i
+    @redis.zadd("#{event_id}:unscheduled_maintenances", duration, um_start)
+  end
 end
 
 def submit_ok(host = 'clientx-dvmh-app-01', service = 'ping')
@@ -40,44 +49,34 @@ def submit_acknowledgement(host = 'clientx-dvmh-app-01', service = 'ping')
   submit_event(event)
 end
 
-def remove_unscheduled_maintenance(host = 'clientx-dvmh-app-01', service = 'ping')
-
-end
 
 def process_events
-  @output = `tmp/process_events`
+  @output = `tmp/process_events.rb`
 end
 
 
 Given /^service x is in an ok state$/ do
   remove_unscheduled_maintenance
   submit_ok
+  process_events
 end
 
 When /^an ok event is received for service x$/ do
-  pending # express the regexp above with the code you wish you had
+  submit_ok
 end
 
 Then /^a notification should not be generated for service x$/ do
-  # read the rest of the scenario log file for "Not sending notifications for event xxx;xxx"
-  pending # express the regexp above with the code you wish you had
-end
-
-When /^a failure event is received for service x$/ do
-  pending # express the regexp above with the code you wish you had
-end
-
-When /^(\d+) second.* passes$/ do |arg1|
-  pending # express the regexp above with the code you wish you had
-end
-
-When /^(\d+) minute.* passes$/ do |arg1|
-  pending # express the regexp above with the code you wish you had
+  process_events
+  @output.should =~ /Not sending notifications for event/
 end
 
 Then /^a notification should be generated for service x$/ do
-  # read the rest of the scenario log file for "Sending notifications for event xxx;xxx"
-  pending # express the regexp above with the code you wish you had
+  process_events
+  @output.should =~ /Sending notifications for event/
+end
+
+When /^a failure event is received for service x$/ do
+  submit_critical
 end
 
 Given /^service x is in scheduled maintenance$/ do
@@ -85,18 +84,27 @@ Given /^service x is in scheduled maintenance$/ do
 end
 
 Given /^service x is in unscheduled maintenance$/ do
-  pending # express the regexp above with the code you wish you had
+  submit_ok
+  submit_critical
+  submit_acknowledgement
+  process_events
 end
 
 When /^an acknowledgement is received for service x$/ do
-  pending # express the regexp above with the code you wish you had
+  submit_acknowledgement
 end
 
 Given /^service x is in a failure state$/ do
-  pending # express the regexp above with the code you wish you had
+  clear_unscheduled_maintenance
+  submit_critical
+  process_events
 end
 
 When /^an acknowledgement event is received for service x$/ do
-  pending # express the regexp above with the code you wish you had
+  submit_acknowledgement
+end
+
+Then /^show me the fucking output$/ do
+  puts @output
 end
 
