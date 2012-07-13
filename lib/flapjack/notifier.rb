@@ -8,6 +8,7 @@ require 'flapjack/filters/ok'
 require 'flapjack/filters/scheduled_maintenance'
 require 'flapjack/filters/unscheduled_maintenance'
 require 'flapjack/filters/detect_mass_client_failures'
+require 'flapjack/filters/delays'
 require 'flapjack/event'
 require 'flapjack/events'
 require 'redis'
@@ -37,6 +38,7 @@ module Flapjack
       @filters << Flapjack::Filters::ScheduledMaintenance.new(options)
       @filters << Flapjack::Filters::UnscheduledMaintenance.new(options)
       @filters << Flapjack::Filters::DetectMassClientFailures.new(options)
+      @filters << Flapjack::Filters::Delays.new(options)
       @filters << Flapjack::Filters::Acknowledgement.new(options)
     end
 
@@ -102,10 +104,12 @@ module Flapjack
       # processing now' otherwise keep processing filters even after a block. ... maybe not.
       blockers = @filters.find_all {|filter| filter.block?(event) }
       if blockers.length == 0
-        @log.info("#{Time.now}: Sending notifications for event #{event.id}")
+        $notification = "#{Time.now}: Sending notifications for event #{event.id}"
+        @log.info($notification)
       else
         blocker_names = blockers.collect{|blocker| blocker.name }
-        @log.info("#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
+        $notification = "#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}"
+        @log.info($notification)
       end
     end
 

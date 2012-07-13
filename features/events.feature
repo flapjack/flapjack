@@ -1,21 +1,21 @@
+@events
 Feature: events
   So people can be notified when things break and recover
   Flapjack-notifier must process events correctly
 
-  @events
   Scenario: Service ok to ok
     Given service x is in an ok state
     When  an ok event is received for service x
     Then  a notification should not be generated for service x
     And   show me the output
 
-  @events @time
+  @time
   Scenario: Service ok to failed
     Given service x is in an ok state
     And   a failure event is received for service x
     Then  a notification should not be generated for service x
 
-  @events @time
+  @time
   Scenario: Service failed to failed after 10 seconds
     Given service x is in an ok state
     When  a failure event is received for service x

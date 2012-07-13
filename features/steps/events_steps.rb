@@ -49,11 +49,9 @@ def submit_acknowledgement(host = 'clientx-dvmh-app-01', service = 'ping')
   submit_event(event)
 end
 
-
 def process_events
-  @output = `tmp/process_events.rb`
+  @app.process_events
 end
-
 
 Given /^service x is in an ok state$/ do
   remove_unscheduled_maintenance
@@ -67,12 +65,12 @@ end
 
 Then /^a notification should not be generated for service x$/ do
   process_events
-  @output.should =~ /Not sending notifications for event/
+  $notification.should =~ /Not sending notifications for event/
 end
 
 Then /^a notification should be generated for service x$/ do
   process_events
-  @output.should =~ /Sending notifications for event/
+  $notification.should =~ /Sending notifications for event/
 end
 
 When /^a failure event is received for service x$/ do
@@ -95,7 +93,7 @@ When /^an acknowledgement is received for service x$/ do
 end
 
 Given /^service x is in a failure state$/ do
-  clear_unscheduled_maintenance
+  remove_unscheduled_maintenance
   submit_critical
   process_events
 end
@@ -104,7 +102,7 @@ When /^an acknowledgement event is received for service x$/ do
   submit_acknowledgement
 end
 
-Then /^show me the fucking output$/ do
-  puts @output
+Then /^show me the notification$/ do
+  puts $notification
 end
 
