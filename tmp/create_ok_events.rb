@@ -14,30 +14,9 @@ events << {
   'state' => 'ok',
 }.to_json
 
-events << {
-  'host' => "app-#{id}",
-  'service' => 'http',
-  'type' => 'service',
-  'state' => 'critical',
-}.to_json
-
-events << {
-  'host' => "app-#{id}",
-  'service' => 'http',
-  'type' => 'action',
-  'state' => 'acknowledgement',
-}.to_json
-
-#events << {
-#  'host' => "app-#{id}",
-#  'service' => 'http',
-#  'type' => 'service',
-#  'state' => 'ok',
-#}.to_json
-
 redis = Redis.new
 
-2000.times do
+4000.times do
   events.each {|event|
     redis.rpush 'events', event
   }

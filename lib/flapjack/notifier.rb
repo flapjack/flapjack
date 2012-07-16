@@ -124,21 +124,29 @@ module Flapjack
       #@persistence.save(event)
 
       skip_filters = update_keys(event)[:skip_filters]
-      blockers = []
+      #blockers = []
       unless skip_filters
         # changing this to run all filters rather than stopping at the first failure
         # i think we'll need to be more subtle here, provide a mechanism for a filter to say 'stop
         # processing now' otherwise keep processing filters even after a block. ... maybe not.
-        blockers = @filters.find_all {|filter| filter.block?(event) }
+        #blockers = @filters.find_all {|filter| filter.block?(event) }
+        # and trying reverting to how it was originally where first blocking filter stops filter
+        # processing
+        blocker = @filters.find {|filter| filter.block?(event) }
       end
-      if blockers.length == 0 and not skip_filters
+      #if blockers.length == 0 and not skip_filters
+      if not blocker and not skip_filters
         $notification = "#{Time.now}: Sending notifications for event #{event.id}"
         @log.info($notification)
         send_notification(event)
-      else
-        blocker_names = blockers.collect{|blocker| blocker.name }
+      elsif blocker
+        #blocker_names = blockers.collect{|blocker| blocker.name }
+        @log.debug("blocker: " + blocker.inspect)
+        blocker_names = [ blocker.name ]
         $notification = "#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}"
         @log.info($notification)
+      else
+        $notification = "#{Time.now}: Not sending notifications for event #{event.id} because state is ok with no change"
       end
     end
 
