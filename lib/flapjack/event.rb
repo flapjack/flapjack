@@ -7,31 +7,31 @@ module Flapjack
     end
 
     def state
-      @attrs['state']
+      @attrs['state'].downcase
     end
 
     def ok?
-      @attrs['state'] == 'ok'
+      @attrs['state'].downcase == 'ok'
     end
 
     def unknown?
-      @attrs['state'] == 'unknown'
+      @attrs['state'].downcase == 'unknown'
     end
 
     def warning?
-      @attrs['state'] == 'warning'
+      @attrs['state'].downcase == 'warning'
     end
 
     def critical?
-      @attrs['state'] == 'critical'
+      @attrs['state'].downcase == 'critical'
     end
 
     def host
-      @attrs['host']
+      @attrs['host'].downcase
     end
 
     def service
-      @attrs['service']
+      @attrs['service'].downcase
     end
 
     def id
@@ -43,7 +43,7 @@ module Flapjack
     end
 
     def type
-      @attrs['type']
+      @attrs['type'].downcase
     end
 
     def summary
@@ -51,15 +51,15 @@ module Flapjack
     end
 
     def action?
-      @attrs['type'] == 'action'
+      type == 'action'
     end
 
     def service?
-      @attrs['type'] == 'service'
+      type == 'service'
     end
 
     def acknowledgement?
-      self.action? and @attrs['state'] == 'acknowledgement'
+      action? and state == 'acknowledgement'
     end
   end
 end
