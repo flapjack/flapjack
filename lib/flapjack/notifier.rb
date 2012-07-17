@@ -141,7 +141,6 @@ module Flapjack
         send_notification(event)
       elsif blocker
         #blocker_names = blockers.collect{|blocker| blocker.name }
-        @log.debug("blocker: " + blocker.inspect)
         blocker_names = [ blocker.name ]
         $notification = "#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}"
         @log.info($notification)
