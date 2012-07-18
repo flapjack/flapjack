@@ -1,0 +1,59 @@
+!!! 5
+%html
+  %head
+    :css
+      * { margin: 0; padding: 0; }
+      html { font-size: 62.5%; }
+      body { font-size: 20px; }
+      div#wrapper {
+        margin: 24px auto;
+        width: 800px;
+      }
+      h1, h2, h3, h4, h5 {
+        font-family: Helvetica Neue, sans-serif;
+        margin-bottom: 12px;
+      }
+      table {
+        text-align: left;
+        width: 100%;
+      }
+      table th {
+        font-family: Helvetica Neue, sans-serif;
+        background-color: #eee;
+      }
+      table td, table th {
+        padding: 4px;
+      }
+      table td.critical {
+        background-color: #fb9a99;
+      }
+      table td.ok {
+        background-color: #B2DF8A;
+      }
+  %body
+    %div#wrapper
+      %h1 Flapjack Status
+      %h4
+        Events queued:
+        = @events_queued
+      %h4
+        Number of failing services:
+        = @count
+      %h3
+        All Services
+      %table
+        %tr
+          %th Host
+          %th Service
+          %th State
+          %th Last State Change
+        - @states.each do |host, service, status, changed|
+          %tr
+            %td= host
+            %td= service
+            %td{:class => status}= status
+            %td= relative_time_ago(Time.at(changed.to_i)) + ' ago'
+
+      -#%ul
+        -#- @keys.each do |key|
+          -#%li= key

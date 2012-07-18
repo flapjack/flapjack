@@ -1,6 +1,9 @@
 GEM
   remote: http://rubygems.org/
   specs:
+    activesupport (3.2.6)
+      i18n (~> 0.6)
+      multi_json (~> 1.0)
     beanstalk-client (1.0.2)
     builder (3.0.0)
     chronic (0.6.7)
@@ -14,10 +17,17 @@ GEM
     delorean (2.0.0)
       chronic
     diff-lcs (1.1.2)
+    eventmachine (0.12.10)
     gherkin (2.3.6)
       json (>= 1.4.6)
+    haml (3.1.6)
+    i18n (0.6.0)
     json (1.5.1)
     log4r (1.1.5)
+    multi_json (1.3.6)
+    rack (1.4.1)
+    rack-protection (1.2.0)
+      rack
     redis (3.0.1)
     rspec (2.3.0)
       rspec-core (~> 2.3.0)
@@ -27,7 +37,27 @@ GEM
     rspec-expectations (2.3.0)
       diff-lcs (~> 1.1.2)
     rspec-mocks (2.3.0)
+    shotgun (0.9)
+      rack (>= 1.0)
+    sinatra (1.3.2)
+      rack (~> 1.3, >= 1.3.6)
+      rack-protection (~> 1.2)
+      tilt (~> 1.3, >= 1.3.3)
+    sinatra_more (0.3.43)
+      activesupport
+      bundler (>= 0.9.2)
+      sinatra (>= 0.9.2)
+      thor (>= 0.11.8)
+      tilt (>= 0.2)
     term-ansicolor (1.0.5)
+    thin (1.3.1)
+      daemons (>= 1.0.9)
+      eventmachine (>= 0.12.6)
+      rack (>= 1.0.0)
+    thor (0.15.4)
+    tilt (1.3.3)
+    warden (1.1.1)
+      rack (>= 1.0)
     yajl-ruby (0.6.4)
 
 PLATFORMS
@@ -38,7 +68,14 @@ DEPENDENCIES
   cucumber
   daemons
   delorean
+  haml
   log4r
   redis
   rspec
+  shotgun
+  sinatra
+  sinatra_more
+  thin
+  tilt
+  warden
   yajl-ruby
