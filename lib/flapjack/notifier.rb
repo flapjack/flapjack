@@ -49,7 +49,7 @@ module Flapjack
       timestamp = Time.now.to_i
       case event.type
       when 'service'
-        # FIXME: this is added for development, perhaps it can be removed in production
+        # FIXME: this is added for development, perhaps it can be removed in production,
         # depends if we want to display 'last check time' or have logic depend on this
         @persistence.hset(event.id, 'last_update', timestamp)
 

@@ -26,7 +26,6 @@ module Flapjack
         data    = @persistence.hmget(key, 'state', 'last_change', 'last_update')
         parts  += data
       }.sort_by {|parts| parts }
-      p @states.inspect
       haml :index
     end
   end
