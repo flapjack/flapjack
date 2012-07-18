@@ -60,7 +60,7 @@
             %td= service
             %td{:class => status}= status
             %td= relative_time_ago(Time.at(changed.to_i)) + ' ago'
-            %td= relative_time_ago(Time.at(updated.to_i)) + ' ago'
+            %td= (Time.now.to_i - updated.to_i).to_s + ' seconds ago'
 
       -#%ul
         -#- @keys.each do |key|
