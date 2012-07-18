@@ -27,6 +27,12 @@
       table td.critical {
         background-color: #fb9a99;
       }
+      table td.down {
+        background-color: #fb9a99;
+      }
+      table td.warning {
+        background-color: #f9bb34;
+      }
       table td.ok {
         background-color: #B2DF8A;
       }
@@ -47,12 +53,14 @@
           %th Service
           %th State
           %th Last State Change
-        - @states.each do |host, service, status, changed|
+          %th Last Update
+        - @states.each do |host, service, status, changed, updated|
           %tr
             %td= host
             %td= service
             %td{:class => status}= status
             %td= relative_time_ago(Time.at(changed.to_i)) + ' ago'
+            %td= relative_time_ago(Time.at(updated.to_i)) + ' ago'
 
       -#%ul
         -#- @keys.each do |key|

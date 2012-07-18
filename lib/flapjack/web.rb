@@ -21,12 +21,12 @@ module Flapjack
       @count = @persistence.zcard 'failed_services'
       @events_queued = @persistence.llen('events')
       @states = @persistence.keys('*:*:states').map { |r|
-        parts  = r.split(':')[0..1]
-        key    = parts.join(':')
-        data   = @persistence.hmget(key, 'state', 'last_change')
-        parts += data
-      }.sort_by {|parts| parts.first }
-
+        parts   = r.split(':')[0..1]
+        key     = parts.join(':')
+        data    = @persistence.hmget(key, 'state', 'last_change', 'last_update')
+        parts  += data
+      }.sort_by {|parts| parts }
+      p @states.inspect
       haml :index
     end
   end

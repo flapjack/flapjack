@@ -49,6 +49,10 @@ module Flapjack
       timestamp = Time.now.to_i
       case event.type
       when 'service'
+        # FIXME: this is added for development, perhaps it can be removed in production
+        # depends if we want to display 'last check time' or have logic depend on this
+        @persistence.hset(event.id, 'last_update', timestamp)
+
         # When an service event is processed, we check to see if new state matches the old state.
         # If the state is different, update the database with: the time, the new state
         old_state = @persistence.hget(event.id, 'state')

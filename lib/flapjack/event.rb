@@ -35,7 +35,7 @@ module Flapjack
     end
 
     def service
-      @attrs['service'].downcase
+      @attrs['service']
     end
 
     def id
