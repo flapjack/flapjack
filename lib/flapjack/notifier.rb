@@ -31,6 +31,8 @@ module Flapjack
       @log.add(Log4r::StdoutOutputter.new("notifier"))
       @log.add(Log4r::SyslogOutputter.new("notifier"))
 
+      @notifylog = Log4r::Logger.new("notifier")
+      @notifylog.add(Log4r::FileOutputter.new("notiflog", {:filename => "log/notify.log"}))
 
       options = { :log => @log, :persistence => @persistence }
       @filters = []
@@ -113,6 +115,7 @@ module Flapjack
       @persistence.set("#{event.id}:last_#{notification_type}_notification", timestamp)
       @persistence.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
       @log.debug("Notification of type #{notification_type} has been sent for #{event.id}. (LIES)")
+      @notifylog.info("#{Time.now.to_s} - #{event.id} - #{notification_type}")
     end
 
     def process_result(event)

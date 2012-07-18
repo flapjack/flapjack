@@ -11,19 +11,23 @@ module Flapjack
     end
 
     def ok?
-      @attrs['state'].downcase == 'ok'
+      (state == 'ok') or (state == 'up')
     end
 
     def unknown?
-      @attrs['state'].downcase == 'unknown'
+      state == 'unknown'
+    end
+
+    def unreachable?
+      state == 'unreachable'
     end
 
     def warning?
-      @attrs['state'].downcase == 'warning'
+      state == 'warning'
     end
 
     def critical?
-      @attrs['state'].downcase == 'critical'
+      state == 'critical'
     end
 
     def host

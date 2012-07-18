@@ -1,0 +1,27 @@
+#!/usr/bin/env ruby
+
+require 'redis'
+require 'json'
+
+# nagios.cfg contains the following templates for host and service data (modified from the default
+# to include hoststate / servicestate, and a fake service 'HOST' for hostperfdata, so that the
+# fields match up
+# host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
+# service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
+
+heg = ["[HOSTPERFDATA]", "1342499885", "localhost", "HOST", "4.014", "0.207", "PING OK - Packet loss = 0%, RTA = 0.28 ms", "rta=0.284000ms;3000.000000;5000.000000;0.000000 pl=0%;80;100;0\n"]
+seg = ["[SERVICEPERFDATA]", "1342499885", "localhost", "PING", "4.031", "0.362", "PING OK - Packet loss = 0%, RTA = 0.27 ms", "rta=0.271000ms;100.000000;500.000000;0.000000 pl=0%;20;60;0\n"]
+
+redis = Redis.new
+while line = ARGF.readline.split("\t")
+  object_type, timestamp, host, service, state, check_time, check_latency, check_output, check_perfdata = line
+  puts "#{object_type}, #{timestamp}, #{host}, #{service}, #{state}, #{check_output}"
+  event = {
+    'host' => host,
+    'service' => service,
+    'type' => 'service',
+    'state' => state,
+  }.to_json
+  redis.rpush 'events', event
+end
+
