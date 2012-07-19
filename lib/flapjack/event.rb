@@ -30,6 +30,10 @@ module Flapjack
       state == 'critical'
     end
 
+    def failure?
+      warning? or critical?
+    end
+
     def host
       @attrs['host'].downcase
     end

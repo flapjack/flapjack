@@ -68,3 +68,8 @@
       -#%ul
         -#- @keys.each do |key|
           -#%li= key
+      %p Events processed: #{@event_counter_all} (ok: #{@event_counter_ok}, failure: #{@event_counter_failure}, action: #{@event_counter_action})
+      %p Average rate: #{@event_rate_all} events per second
+      %p Uptime: #{@uptime_string}
+      %p Boot time: #{@boot_time}
+      %p Current time: #{Time.now}
