@@ -6,12 +6,12 @@ require 'pathname'
 require 'yajl'
 require 'beanstalk-client'
 require 'daemons'
-require 'flapjack/notifier'
+require 'flapjack/executive'
 require 'flapjack/patches'
 
 
 Before('@events') do
-  @app = Flapjack::Notifier.run
+  @app = Flapjack::Executive.run
   @app.process_events
   @redis = Redis.new
 end

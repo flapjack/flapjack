@@ -14,8 +14,8 @@ require 'flapjack/events'
 require 'redis'
 
 module Flapjack
-  class Notifier
-    # Boots the notifier.
+  class Executive
+    # Boots flapjack executive
     def self.run(options={})
       self.new(options)
     end
@@ -27,12 +27,12 @@ module Flapjack
       @persistence = ::Redis.new
       @events      = Flapjack::Events.new
 
-      @log = Log4r::Logger.new("notifier")
-      @log.add(Log4r::StdoutOutputter.new("notifier"))
-      @log.add(Log4r::SyslogOutputter.new("notifier"))
+      @log = Log4r::Logger.new("executive")
+      @log.add(Log4r::StdoutOutputter.new("executive"))
+      @log.add(Log4r::SyslogOutputter.new("executive"))
 
-      @notifylog = Log4r::Logger.new("notifier")
-      @notifylog.add(Log4r::FileOutputter.new("notiflog", {:filename => "log/notify.log"}))
+      @notifylog = Log4r::Logger.new("executive")
+      @notifylog.add(Log4r::FileOutputter.new("notifylog", {:filename => "log/notify.log"}))
 
       options = { :log => @log, :persistence => @persistence }
       @filters = []

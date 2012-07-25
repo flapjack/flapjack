@@ -1,7 +1,7 @@
 @events
 Feature: events
   So people can be notified when things break and recover
-  Flapjack-notifier must process events correctly
+  flapjack-executive must process events correctly
 
   Scenario: Service ok to ok
     Given service x is in an ok state

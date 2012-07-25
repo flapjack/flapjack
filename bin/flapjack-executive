@@ -2,10 +2,10 @@
 
 $: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE__) + '/../lib/')
 
-require 'flapjack/notifier'
+require 'flapjack/executive'
 require 'daemons'
 require 'flapjack/patches'
 
-app = Flapjack::Notifier.run
+app = Flapjack::Executive.run
 app.main()
 

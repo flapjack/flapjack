@@ -2,26 +2,26 @@
 
 $: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE__) + '/../lib/')
 
-require 'flapjack/cli/notifier'
-require 'flapjack/applications/notifier'
+require 'flapjack/cli/executive'
+require 'flapjack/applications/executive'
 require 'daemons'
 require 'flapjack/patches'
 
 # setup 
-@options = Flapjack::Notifier::Options.parse(ARGV)
+@options = Flapjack::Executive::Options.parse(ARGV)
 
-log = Log4r::Logger.new("notifier")
-log.add(Log4r::SyslogOutputter.new("notifier"))
+log = Log4r::Logger.new("executive")
+log.add(Log4r::SyslogOutputter.new("executive"))
 
-app = Flapjack::Notifier::Application.run(:log => log, 
-                                          :notifiers => {},
+app = Flapjack::Executive::Application.run(:log => log, 
+                                          :executives => {},
                                           :filters => [],
                                           :queue_backend => {:type => :beanstalkd},
                                           :persistence => {:type => :data_mapper,
                                                            :uri => "sqlite3:///tmp/flapjack.db"})
 
-mockapp = Flapjack::Notifier::Application.run(:log => log,
-                                              :notifiers => {},
+mockapp = Flapjack::Executive::Application.run(:log => log,
+                                              :executives => {},
                                               :queue_backend => {:type => :mockbackend,
                                                                  :basedir => File.join(File.dirname(__FILE__), '..', 'spec', 'transports')},
                                               :persistence => {:type => :mockbackend,

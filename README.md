@@ -29,7 +29,7 @@ What things do
 
   * `flapjack-worker` => executes checks, reports results
   * `flapjack-worker-manager` => starts/stops a cluster of `flapjack-worker`
-  * `flapjack-notifier` => gets results, notifies people if necessary
+  * `flapjack-executive` => gets results, works out when and who to notify, sets downtime etc
   * `flapjack-stats` => gets stats from beanstalkd tubes (useful for benchmarks + performance analysis)
   * `flapjack-benchmark` => benchmarks various persistence/transport backend combinations
 
