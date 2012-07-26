@@ -111,7 +111,10 @@ module Flapjack
 
     end
 
-    def send_notification(event)
+    # takes an event for which a notification needs to be generated, works out the type of
+    # notification, updates the notification history in redis, calls other methods to work out who
+    # to notify, by what method, and finally to have the notifications sent
+    def generate_notification(event)
       timestamp = Time.now.to_i
       notification_type = 'unknown'
       case event.type
@@ -130,8 +133,40 @@ module Flapjack
       end
       @persistence.set("#{event.id}:last_#{notification_type}_notification", timestamp)
       @persistence.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
-      @log.debug("Notification of type #{notification_type} has been sent for #{event.id}. (LIES)")
-      @notifylog.info("#{Time.now.to_s} - #{event.id} - #{notification_type}")
+      @log.debug("Notification of type #{notification_type} is being generated for #{event.id}.")
+
+      send_notifications(event, notification_type, contacts_for_check(event.id))
+    end
+
+    # takes a check, looks up contacts that are interested in this check (or in the check's entity)
+    # and returns an array of contact ids
+    # eg
+    #   contacts_for_check("clientx:checky") -> [ '2', '534' ]
+    #
+    def contacts_for_check(check)
+      entity = check.split(':').first
+      return @persistence.sunion("contacts_for:#{entity}", "contacts_for:#{check}")
+    end
+
+    # takes a contact ID and returns a hash containing each of the media the contact wishes to be
+    # contacted by, and the associated address for each.
+    # eg:
+    #   media_for_contact('123') -> { :sms => "+61401234567", :email => "gno@free.dom" }
+    #
+    def media_for_contact(contact)
+      return @persistence.hgetall("contact_media:#{contact}")
+    end
+
+    # takes an event, a notification type, and an array of contacts and creates jobs in rescue
+    # (eventually) for each notification
+    #
+    def send_notifications(event, notification_type, contacts)
+      contacts.each {|contact|
+        media = media_for_contact(contact)
+        media.each_pair {|media, address|
+          @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact} | #{media} | #{address}")
+        }
+      }
     end
 
     def process_result(event)
@@ -157,7 +192,7 @@ module Flapjack
       if not blocker and not skip_filters
         $notification = "#{Time.now}: Sending notifications for event #{event.id}"
         @log.info($notification)
-        send_notification(event)
+        generate_notification(event)
       elsif blocker
         #blocker_names = blockers.collect{|blocker| blocker.name }
         blocker_names = [ blocker.name ]
