@@ -145,7 +145,18 @@ module Flapjack
     #
     def contacts_for_check(check)
       entity = check.split(':').first
-      return @persistence.sunion("contacts_for:#{entity}", "contacts_for:#{check}")
+      entity_id = @persistence.get("entity_id:#{entity}")
+      if entity_id
+        check = entity_id + ":" + check.split(':').last
+        @log.debug("contacts for #{entity_id} (#{entity}): " + @persistence.smembers("contacts_for:#{entity_id}").length.to_s)
+        @log.debug("contacts for #{check}: " + @persistence.smembers("contacts_for:#{check}").length.to_s)
+        union = @persistence.sunion("contacts_for:#{entity_id}", "contacts_for:#{check}")
+        @log.debug("contacts for union of #{entity_id} and #{check}: " + union.length.to_s)
+        return union
+      else
+        @log.debug("entity [#{entity}] has no contacts")
+        return []
+      end
     end
 
     # takes a contact ID and returns a hash containing each of the media the contact wishes to be

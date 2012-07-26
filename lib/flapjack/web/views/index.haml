@@ -65,7 +65,11 @@
             %td{:class => status}= status
             %td= relative_time_ago(Time.at(changed.to_i)) + ' ago'
             %td= (Time.now.to_i - updated.to_i).to_s + ' seconds ago'
-            %td= relative_time_ago(Time.at(Time.now.to_i - notified.to_i)) + ' (notified_kind)'
+            - if notified > 0
+              - last_notified = relative_time_ago(Time.at(notified.to_i)) + " ago, #{notified_kind}"
+            - else
+              - last_notified = 'never'
+            %td= last_notified
 
       -#%ul
         -#- @keys.each do |key|
