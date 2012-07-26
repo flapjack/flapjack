@@ -47,5 +47,26 @@ when "import-contacts"
     @persistence.exec
   }
 
+when "import-entities"
+  @persistence = Redis.new
+  entities = parser.parse(file)
+  entities.each {|entity|
+    if not entity['id']
+      puts "Entity not imported as it has no id: " + entity.inspect
+      next
+    end
+    @persistence.multi
+    existing_name = @persistence.hget("entity:#{entity['id']}", 'name')
+    @persistence.del("entity_id:#{existing_name}") unless existing_name == entity['name']
+    @persistence.set("entity_id:#{entity['name']}", entity['id'])
+    @persistence.hset("entity:#{entity['id']}", 'name', entity['name'])
+
+    @persistence.del("contacts_for:#{entity['id']}")
+    entity['contacts'].each {|contact|
+      @persistence.sadd("contacts_for:#{entity['id']}", contact)
+    }
+    @persistence.exec
+
+  }
 end
 
