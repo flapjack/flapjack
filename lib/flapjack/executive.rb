@@ -166,7 +166,13 @@ module Flapjack
         media.each_pair {|media, address|
           @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact} | #{media} | #{address}")
         }
+        if media.length == 0
+          @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact} | NO MEDIA FOR CONTACT")
+        end
       }
+      if contacts.length == 0
+        @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | NO CONTACTS")
+      end
     end
 
     def process_result(event)

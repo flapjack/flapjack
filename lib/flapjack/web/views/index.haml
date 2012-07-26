@@ -46,30 +46,27 @@
         Events queued:
         = @events_queued
       %h4
-        Number of failing services:
+        Number of failing checks:
         = @count
       %h3
-        All Services
+        All Checks
       %table
         %tr
-          %th Host
-          %th Service
+          %th Entity
+          %th Check
           %th State
           %th Last State Change
           %th Last Update
-        - @states.each do |host, service, status, changed, updated|
+          %th Last Notification
+        - @states.each do |entity, check, status, changed, updated, notified_kind, notified|
           %tr
-            %td= host
-            %td= service
+            %td= entity
+            %td= check
             %td{:class => status}= status
             %td= relative_time_ago(Time.at(changed.to_i)) + ' ago'
             %td= (Time.now.to_i - updated.to_i).to_s + ' seconds ago'
+            %td= relative_time_ago(Time.at(Time.now.to_i - notified.to_i)) + ' (notified_kind)'
 
       -#%ul
         -#- @keys.each do |key|
           -#%li= key
-      %p Events processed: #{@event_counter_all} (ok: #{@event_counter_ok}, failure: #{@event_counter_failure}, action: #{@event_counter_action})
-      %p Average rate: #{@event_rate_all} events per second
-      %p Uptime: #{@uptime_string}
-      %p Boot time: #{@boot_time}
-      %p Current time: #{Time.now}

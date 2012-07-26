@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 out = ""
-(1..100).to_a.each { |clientid|
+(1..1).to_a.each { |clientid|
   (1..10).to_a.each { |id|
     out += "define host {\n"
     out += "  use            linux-server\n"

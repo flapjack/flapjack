@@ -42,6 +42,19 @@ module Flapjack
       @events_queued = @persistence.llen('events')
     end
 
+    def last_notifications(event_id)
+      notifications = {}
+      notifications[:problem]         = @persistence.get("#{event_id}:last_problem_notification").to_i
+      notifications[:recovery]        = @persistence.get("#{event_id}:last_recovery_notification").to_i
+      notifications[:acknowledgement] = @persistence.get("#{event_id}:last_acknowledgement_notification").to_i
+      return notifications
+    end
+
+    def last_notification(event_id)
+      notifications = last_notifications(event_id)
+      return notifications.sort_by {|kind, timestamp| timestamp}.last
+    end
+
     before do
       @persistence = ::Redis.new
     end
@@ -53,6 +66,7 @@ module Flapjack
         key     = parts.join(':')
         data    = @persistence.hmget(key, 'state', 'last_change', 'last_update')
         parts  += data
+        parts  += last_notification(key)
       }.sort_by {|parts| parts }
      haml :index
     end
