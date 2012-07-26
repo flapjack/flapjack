@@ -80,11 +80,11 @@ module Flapjack
 
           case event.state
           when 'warning', 'critical'
-            @persistence.zadd('failed_services', timestamp, event.id)
-            @persistence.zadd('failed_services:client:' + event.client, timestamp, event.id)
+            @persistence.zadd('failed_checks', timestamp, event.id)
+            @persistence.zadd('failed_checks:client:' + event.client, timestamp, event.id)
           else
-            @persistence.zrem('failed_services', event.id)
-            @persistence.zrem('failed_services:client:' + event.client, event.id)
+            @persistence.zrem('failed_checks', event.id)
+            @persistence.zrem('failed_checks:client:' + event.client, event.id)
           end
         elsif event.ok?
           # no state change, and ok, so SKIP FILTERS

@@ -16,16 +16,16 @@ def process_input
   redis = Redis.new
   begin
     while line = ARGF.readline.split("\t")
-      object_type, timestamp, host, service, state, check_time, check_latency, check_output, check_perfdata = line
-      puts "#{object_type}, #{timestamp}, #{host}, #{service}, #{state}, #{check_output}"
+      object_type, timestamp, entity, check, state, check_time, check_latency, check_output, check_perfdata = line
+      puts "#{object_type}, #{timestamp}, #{entity}, #{check}, #{state}, #{check_output}"
       next unless line.length == 9
       next unless timestamp =~ /^\d+$/
       next unless (object_type == '[HOSTPERFDATA]') or (object_type == '[SERVICEPERFDATA]')
       event = {
-        'host' => host,
-        'service' => service,
-        'type' => 'service',
-        'state' => state,
+        'entity'  => entity,
+        'check'   => check,
+        'type'    => 'service',
+        'state'   => state,
         'summary' => check_output,
       }.to_json
       redis.rpush 'events', event

@@ -34,20 +34,21 @@ module Flapjack
       warning? or critical?
     end
 
-    def host
-      @attrs['host'].downcase
+    def entity
+      @attrs['entity'].downcase
     end
 
-    def service
-      @attrs['service']
+    def check
+      @attrs['check']
     end
 
     def id
-      host + ':' + service
+      entity + ':' + check
     end
 
+    # FIXME: site specific
     def client
-      host.match(/^\w+/)[0]
+      entity.match(/^\w+/)[0]
     end
 
     def type
