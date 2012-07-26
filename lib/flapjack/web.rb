@@ -24,20 +24,9 @@ module Flapjack
       period_string
     end
 
-    before do
-      @persistence = ::Redis.new
-    end
-
-    get '/' do
+    def self_stats
       @keys = @persistence.keys '*'
       @count = @persistence.zcard 'failed_services'
-      @events_queued = @persistence.llen('events')
-      @states = @persistence.keys('*:*:states').map { |r|
-        parts   = r.split(':')[0..1]
-        key     = parts.join(':')
-        data    = @persistence.hmget(key, 'state', 'last_change', 'last_update')
-        parts  += data
-      }.sort_by {|parts| parts }
       @event_counter_all     = @persistence.hget('event_counters', 'all')
       @event_counter_ok      = @persistence.hget('event_counters', 'ok')
       @event_counter_failure = @persistence.hget('event_counters', 'failure')
@@ -50,7 +39,28 @@ module Flapjack
       else
         @event_rate_all      = 0
       end
-      haml :index
+      @events_queued = @persistence.llen('events')
     end
+
+    before do
+      @persistence = ::Redis.new
+    end
+
+    get '/' do
+      self_stats
+      @states = @persistence.keys('*:*:states').map { |r|
+        parts   = r.split(':')[0..1]
+        key     = parts.join(':')
+        data    = @persistence.hmget(key, 'state', 'last_change', 'last_update')
+        parts  += data
+      }.sort_by {|parts| parts }
+     haml :index
+    end
+
+    get '/self_stats' do
+      self_stats
+      haml :self_stats
+    end
+
   end
 end

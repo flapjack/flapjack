@@ -2,19 +2,23 @@
 
 require 'yajl'
 require 'beanstalk-client'
+require 'redis'
 
 command = ARGV[0]
+options = ARGV[1..-1]
+options = Hash[options.map {|o| o.scan(/--(.+)=(.+)/).flatten }]
+
+raise ArgumentError, "required option 'from' not supplied" unless options["from"]
+
+filename = options["from"]
+file     = File.new(filename)
+parser   = Yajl::Parser.new
 
 case command
 when "deploy"
-  options = ARGV[1..-1]
-  options = Hash[options.map {|o| o.scan(/--(.+)=(.+)/).flatten }]
 
   @queue = Beanstalk::Connection.new('localhost:11300', 'checks')
 
-  filename = options["from"]
-  file     = File.new(filename)
-  parser   = Yajl::Parser.new
   batch    = parser.parse(file)
   batch_id = batch["batch"]["id"]
 
@@ -24,5 +28,24 @@ when "deploy"
   end
 
   puts "Deployed batch #{batch_id}"
+
+when "import-contacts"
+  @persistence = Redis.new
+  contacts = parser.parse(file)
+  contacts.each {|contact|
+    if not contact['id']
+      puts "Contact not imported as it has no id: " + contact.inspect
+      next
+    end
+    @persistence.multi
+    @persistence.hset("contact:#{contact['id']}", 'first_name', contact['first_name'])
+    @persistence.hset("contact:#{contact['id']}", 'last_name',  contact['last_name'])
+    @persistence.hset("contact:#{contact['id']}", 'email',      contact['email'])
+    contact['media'].each_pair {|medium, address|
+      @persistence.hset("contact_media:#{contact['id']}", medium, address)
+    }
+    @persistence.exec
+  }
+
 end
 
