@@ -7,6 +7,7 @@ gem 'beanstalk-client'
 gem 'log4r'
 gem 'yajl-ruby'
 gem 'redis'
+gem 'resque'
 
 group :web do
   gem 'sinatra'
@@ -17,6 +18,7 @@ group :web do
 end
 
 group :development do
+  gem 'jeweler'
   gem 'rspec'
   gem 'cucumber'
   gem 'delorean'

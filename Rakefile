@@ -2,8 +2,9 @@
 
 require 'rubygems'
 require 'fileutils'
-require 'spec/rake/spectask'
+#require 'spec/rake/spectask'
 require 'rake'
+require 'resque/tasks'
 
 #
 # Release management
@@ -67,14 +68,17 @@ begin
 rescue LoadError
 end
 
-Spec::Rake::SpecTask.new do |t|
-  t.spec_opts = ["--options", "spec/spec.opts"]
-end
+# FIXME: had to comment out "#require 'spec/rake/spectask'" at the top of Rakefile as this file is
+# missing, and the below depends on it. Fix or nix?
+#Spec::Rake::SpecTask.new do |t|
+#  t.spec_opts = ["--options", "spec/spec.opts"]
+#end
+
 task :test => :check_dependencies
 
 task :default => :test
 
-require 'rake/rdoctask'
+require 'rdoc/task'
 Rake::RDocTask.new do |rdoc|
   version = File.exist?('VERSION') ? File.read('VERSION') : ""
 
@@ -83,6 +87,7 @@ Rake::RDocTask.new do |rdoc|
   rdoc.rdoc_files.include('README*')
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
+
 
 #
 # misc
