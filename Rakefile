@@ -1,11 +1,13 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
+$: << File.dirname(__FILE__) + '/lib' unless $:.include?(File.dirname(__FILE__) + '/lib/')
+
+#require 'rubygems'
 require 'fileutils'
 #require 'spec/rake/spectask'
 require 'rake'
+require 'flapjack'
 require 'resque/tasks'
-
 #
 # Release management
 #

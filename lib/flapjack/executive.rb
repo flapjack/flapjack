@@ -172,10 +172,27 @@ module Flapjack
     # (eventually) for each notification
     #
     def send_notifications(event, notification_type, contacts)
-      contacts.each {|contact|
-        media = media_for_contact(contact)
+      contacts.each {|contact_id|
+        media = media_for_contact(contact_id)
         media.each_pair {|media, address|
-          @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact} | #{media} | #{address}")
+          @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact_id} | #{media} | #{address}")
+          # queue this notification
+          # FIXME: make a Contact class perhaps
+          notification = { :event_id           => event.id,
+                           :state              => event.state,
+                           :summary            => event.summary,
+                           :notification_type  => notification_type,
+                           :contact_id         => contact_id,
+                           :contact_first_name => @persistence.hget("contact:#{contact_id}", 'first_name'),
+                           :contact_last_name  => @persistence.hget("contact:#{contact_id}", 'last_name'),
+                           :media              => media,
+                           :address            => address }
+          case media
+          when "sms"
+            Resque.enqueue(Flapjack::Notification::Sms, notification)
+          when "email"
+            Resque.enqueue(Flapjack::Notification::Email, notification)
+          end
         }
         if media.length == 0
           @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact} | NO MEDIA FOR CONTACT")

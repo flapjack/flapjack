@@ -5,6 +5,7 @@ require 'bundler/setup'
 require 'sinatra/base'
 require 'sinatra_more/markup_plugin'
 require 'redis'
+require 'resque'
 
 module Flapjack
   class Web < Sinatra::Base
