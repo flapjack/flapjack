@@ -6,7 +6,7 @@ module Flapjack
 
     def self.perform(notification)
       puts "Woo, got a notification to send out: #{notification.inspect}"
-      send(notification)
+      sendit(notification)
          # notification = { :event_id           => event.id,
          #                  :state              => event.state,
          #                  :summary            => event.summary,

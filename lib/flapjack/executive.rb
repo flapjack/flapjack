@@ -9,9 +9,13 @@ require 'flapjack/filters/scheduled_maintenance'
 require 'flapjack/filters/unscheduled_maintenance'
 require 'flapjack/filters/detect_mass_client_failures'
 require 'flapjack/filters/delays'
+require 'flapjack/notification'
+require 'flapjack/notification/sms'
+require 'flapjack/notification/email'
 require 'flapjack/event'
 require 'flapjack/events'
 require 'redis'
+require 'resque'
 
 module Flapjack
   class Executive
@@ -189,9 +193,9 @@ module Flapjack
                            :address            => address }
           case media
           when "sms"
-            Resque.enqueue(Flapjack::Notification::Sms, notification)
+            Resque.enqueue(Notification::Sms, notification)
           when "email"
-            Resque.enqueue(Flapjack::Notification::Email, notification)
+            Resque.enqueue(Notification::Email, notification)
           end
         }
         if media.length == 0

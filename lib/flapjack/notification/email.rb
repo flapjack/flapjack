@@ -1,10 +1,10 @@
 #!/usr/bin/env ruby
 
 module Flapjack
-  class Notification::Email < Flapjack::Notification
+  class Notification::Email < Notification
     @queue = :email_notifications
 
-    def send(notification)
+    def self.sendit(notification)
       puts "Sending email notification now (not for realz)"
     end
 

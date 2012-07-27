@@ -7,6 +7,9 @@ require 'fileutils'
 #require 'spec/rake/spectask'
 require 'rake'
 require 'flapjack'
+require 'flapjack/notification'
+require 'flapjack/notification/email'
+require 'flapjack/notification/sms'
 require 'resque/tasks'
 #
 # Release management
