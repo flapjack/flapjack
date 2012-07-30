@@ -126,14 +126,17 @@ Create the named pipe if it doesn't already exist:
 
     mkfifo -m 0666 /usr/local/var/lib/nagios/perfdata_services.fifo
 
-flapjack-nagios-receiver
+
+flapjack Nagios Receiver
+------------------------
+
 This process needs to be started with the nagios perfdata named pipe attached to its STDIN like so:
 
     be bin/flapjack-nagios-receiver < /usr/local/var/lib/nagios/perfdata_services.fifo
 
 Now as nagios feeds check execution results into the perfdata named pipe, flapjack-nagios-receiver will convert them to JSON encoded ruby objects and insert them into the *events* list in redis.
 
-importing contacts and entities
+Importing contacts and entities
 -------------------------------
 
 The `flapjack-populator` script provides a mechanism for importing contacts and entities from custcare extract files in JSON format.
