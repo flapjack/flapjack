@@ -127,7 +127,7 @@ Create the named pipe if it doesn't already exist:
     mkfifo -m 0666 /usr/local/var/lib/nagios/perfdata_services.fifo
 
 
-flapjack Nagios Receiver
+flapjack-nagios-receiver
 ------------------------
 
 This process needs to be started with the nagios perfdata named pipe attached to its STDIN like so:
