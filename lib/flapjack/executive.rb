@@ -71,7 +71,7 @@ module Flapjack
         # When an service event is processed, we check to see if new state matches the old state.
         # If the state is different, update the database with: the time, the new state
         old_state = @persistence.hget(event.id, 'state')
-        if event.state != old_state
+        if event.state != old_state && event.entity
 
           # current state only (for speedy lookup)
           @persistence.hset(event.id, 'state',       event.state)
@@ -82,17 +82,20 @@ module Flapjack
           @persistence.set("#{event.id}:#{timestamp}:state",   event.state)
           @persistence.set("#{event.id}:#{timestamp}:summary", event.summary)
 
+          # If the service event's state is ok and there was no previous state, don't alert
+          result[:skip_filters] = true unless old_state
+
           case event.state
           when 'warning', 'critical'
             @persistence.zadd('failed_checks', timestamp, event.id)
-            @persistence.zadd('failed_checks:client:' + event.client, timestamp, event.id)
+            @persistence.zadd('failed_checks:client:' + event.client, timestamp, event.id) if event.client
           else
             @persistence.zrem('failed_checks', event.id)
-            @persistence.zrem('failed_checks:client:' + event.client, event.id)
+            @persistence.zrem('failed_checks:client:' + event.client, event.id) if event.client
           end
         elsif event.ok?
           # no state change, and ok, so SKIP FILTERS
-          result = { :skip_filters => true }
+          result[:skip_filters] = true
         end
 
       when 'action'
@@ -210,34 +213,24 @@ module Flapjack
     def process_result(event)
 
       @log.debug("#{@events.size} events waiting on the queue")
+      @log.debug("Raw event received: #{event.inspect}")
       @log.debug("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}")
 
-      #@log.info("Storing event.")
-      #@persistence.save(event)
-
       skip_filters = update_keys(event)[:skip_filters]
-      #blockers = []
-      unless skip_filters
-        # changing this to run all filters rather than stopping at the first failure
-        # i think we'll need to be more subtle here, provide a mechanism for a filter to say 'stop
-        # processing now' otherwise keep processing filters even after a block. ... maybe not.
-        #blockers = @filters.find_all {|filter| filter.block?(event) }
-        # and trying reverting to how it was originally where first blocking filter stops filter
-        # processing
-        blocker = @filters.find {|filter| filter.block?(event) }
-      end
-      #if blockers.length == 0 and not skip_filters
+
+      blocker = @filters.find {|filter| filter.block?(event) } unless skip_filters
+
       if not blocker and not skip_filters
         $notification = "#{Time.now}: Sending notifications for event #{event.id}"
         @log.info($notification)
         generate_notification(event)
       elsif blocker
-        #blocker_names = blockers.collect{|blocker| blocker.name }
+
         blocker_names = [ blocker.name ]
         $notification = "#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}"
         @log.info($notification)
       else
-        $notification = "#{Time.now}: Not sending notifications for event #{event.id} because state is ok with no change"
+        $notification = "#{Time.now}: Not sending notifications for event #{event.id} because state is ok with no change, or no prior state"
       end
     end
 

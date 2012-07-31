@@ -35,7 +35,7 @@ module Flapjack
     end
 
     def entity
-      @attrs['entity'].downcase
+      @attrs['entity'] ? e = @attrs['entity'].downcase : e = nil
     end
 
     def check
@@ -43,12 +43,14 @@ module Flapjack
     end
 
     def id
-      entity + ':' + check
+      entity ? e = entity : e = '-'
+      check  ? c = check  : c = '-'
+      e + ':' + c
     end
 
     # FIXME: site specific
     def client
-      entity.match(/^\w+/)[0]
+      entity ? c = entity.match(/^\w+/)[0] : c = nil
     end
 
     def type

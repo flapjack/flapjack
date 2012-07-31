@@ -60,7 +60,7 @@ module Flapjack
 
       def block?(event)
         failure_delay = 30
-        resend_delay  = 60 # FIXME: return to 300 after testing
+        resend_delay  = 300
 
         result = false
 

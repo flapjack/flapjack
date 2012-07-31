@@ -16,3 +16,5 @@ spec/test.db
 features/support/tmp/*
 features/support/etc/netsaint/*
 log/*
+vendor
+.bundle

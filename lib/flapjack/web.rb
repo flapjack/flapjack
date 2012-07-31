@@ -26,8 +26,10 @@ module Flapjack
     end
 
     def self_stats
-      @keys = @persistence.keys '*'
-      @count = @persistence.zcard 'failed_services'
+      @keys  = @persistence.keys '*'
+      @count_failing_checks  = @persistence.zcard 'failed_checks'
+      @count_all_checks      = 'heaps' # FIXME: rename ENTITY:CHECK to check:ENTITY:CHECK so we can glob them here, 
+                                       # or create a set to index all checks
       @event_counter_all     = @persistence.hget('event_counters', 'all')
       @event_counter_ok      = @persistence.hget('event_counters', 'ok')
       @event_counter_failure = @persistence.hget('event_counters', 'failure')
@@ -56,6 +58,11 @@ module Flapjack
       return notifications.sort_by {|kind, timestamp| timestamp}.last
     end
 
+    def check_summary(event_id)
+      timestamp = @persistence.lindex("#{event_id}:states", -1)
+      @persistence.get("#{event_id}:#{timestamp}:summary")
+    end
+
     before do
       @persistence = ::Redis.new
     end
@@ -69,7 +76,30 @@ module Flapjack
         parts  += data
         parts  += last_notification(key)
       }.sort_by {|parts| parts }
-     haml :index
+      haml :index
+    end
+
+    get '/failing' do
+      self_stats
+      @states = @persistence.zrange('failed_checks', 0, -1).map {|key|
+        parts   = key.split(':')
+        data    = @persistence.hmget(key, 'state', 'last_change', 'last_update')
+        parts  += data
+        parts  += last_notification(key)
+      }.sort_by {|parts| parts}
+      haml :index
+    end
+
+    get '/check' do
+      @entity = params[:entity]
+      @check  = params[:check]
+      key = @entity + ":" + @check
+      @check_state        = @persistence.hget(key, 'state')
+      @check_last_update  = @persistence.hget(key, 'last_update')
+      @check_last_change  = @persistence.hget(key, 'last_change')
+      @check_summary      = check_summary(key)
+      @last_notifications = last_notifications(key)
+      haml :check
     end
 
     get '/self_stats' do
