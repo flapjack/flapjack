@@ -112,8 +112,8 @@ nagios.cfg config file changes:
 ```
 # modified lines:
 enable_notifications=0
-host_perfdata_file=/usr/local/var/lib/nagios/perfdata_services.fifo
-service_perfdata_file=/usr/local/var/lib/nagios/perfdata_services.fifo
+host_perfdata_file=/var/cache/nagios3/event_stream.fifo
+service_perfdata_file=/var/cache/nagios3/event_stream.fifo
 host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
 service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
 host_perfdata_file_mode=p
@@ -124,7 +124,7 @@ All hosts and services (or templates that they use) will need to have process_pe
 
 Create the named pipe if it doesn't already exist:
 
-    mkfifo -m 0666 /usr/local/var/lib/nagios/perfdata_services.fifo
+    mkfifo -m 0666 /var/cache/nagios3/event_stream.fifo
 
 
 flapjack-nagios-receiver
@@ -132,7 +132,7 @@ flapjack-nagios-receiver
 
 This process needs to be started with the nagios perfdata named pipe attached to its STDIN like so:
 
-    be bin/flapjack-nagios-receiver < /usr/local/var/lib/nagios/perfdata_services.fifo
+    be bin/flapjack-nagios-receiver < /var/cache/nagios3/event_stream.fifo
 
 Now as nagios feeds check execution results into the perfdata named pipe, flapjack-nagios-receiver will convert them to JSON encoded ruby objects and insert them into the *events* list in redis.
 
