@@ -11,9 +11,10 @@ require 'flapjack/patches'
 
 
 Before('@events') do
-  @app = Flapjack::Executive.run
-  @app.process_events
-  @redis = Redis.new
+  # Use a separate database whilst testing
+  @app = Flapjack::Executive.new(:redis => { :db => 14 })
+  @app.drain_events
+  @redis = Flapjack.persistence
 end
 
 After('@events') do
