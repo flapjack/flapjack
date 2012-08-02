@@ -1,11 +1,11 @@
 #!/usr/bin/env ruby
 
-$: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+$: << File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib'))
 
 require 'flapjack/executive'
 require 'daemons'
 require 'flapjack/patches'
 
-app = Flapjack::Executive.run
+app = Flapjack::Executive.new
 app.main()
 
