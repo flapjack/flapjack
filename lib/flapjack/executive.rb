@@ -19,11 +19,6 @@ require 'resque'
 
 module Flapjack
   class Executive
-    # Boots flapjack executive
-    def self.run(options={})
-      self.new(options)
-    end
-
     attr_accessor :log
 
     def initialize(options={})
@@ -36,8 +31,9 @@ module Flapjack
       @log.add(Log4r::SyslogOutputter.new("executive"))
 
       @notifylog = Log4r::Logger.new("executive")
-      @notifylog.add(Log4r::FileOutputter.new("notifylog", {:filename => "log/notify.log"}))
+      @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => "log/notify.log"))
 
+      # FIXME: Put loading filters into separate method
       options = { :log => @log, :persistence => @persistence }
       @filters = []
       @filters << Flapjack::Filters::Ok.new(options)
@@ -48,7 +44,10 @@ module Flapjack
       @filters << Flapjack::Filters::Acknowledgement.new(options)
 
       @boot_time = Time.now
+      # FIXME: assumes there is only ever one executive running
       @persistence.set('boot_time', @boot_time.to_i)
+      # FIXME: resets counters on every bootup. probably not a good idea. probably.
+      # FIXME: add an administrative function to reset all event counters
       @persistence.hset('event_counters', 'all', 0)
       @persistence.hset('event_counters', 'ok', 0)
       @persistence.hset('event_counters', 'failure', 0)
@@ -56,48 +55,59 @@ module Flapjack
     end
 
     def update_keys(event)
-      result = { :skip_filters => false }
+      result    = { :skip_filters => false }
       timestamp = Time.now.to_i
       @persistence.hincrby('event_counters', 'all', 1)
+
       case event.type
+      # Service events represent changes in state on monitored systems
       when 'service'
-        # FIXME: this is added for development, perhaps it can be removed in production,
-        # depends if we want to display 'last check time' or have logic depend on this
+        # Track when we last saw an event for a particular entity:check pair
         @persistence.hset(event.id, 'last_update', timestamp)
 
         @persistence.hincrby('event_counters', 'ok', 1)      if (event.ok?)
         @persistence.hincrby('event_counters', 'failure', 1) if (event.failure?)
 
-        # When an service event is processed, we check to see if new state matches the old state.
-        # If the state is different, update the database with: the time, the new state
         old_state = @persistence.hget(event.id, 'state')
-        if event.state != old_state && event.entity
 
-          # current state only (for speedy lookup)
+        case
+        # If there is a state change, update record with: the time, the new state
+        when event.state != old_state
+          update_record(event)
+
+          # FIXME: validate that the event is sane before we ever get here
+          # FIXME: create an event if there is dodgy data
+
+          # Note the current state (for speedy lookups)
           @persistence.hset(event.id, 'state',       event.state)
+          # FIXME: rename to last_state_change?
           @persistence.hset(event.id, 'last_change', timestamp)
 
-          # retention of all state changes
+          # Retain all state changes for entity:check pair
           @persistence.rpush("#{event.id}:states", timestamp)
           @persistence.set("#{event.id}:#{timestamp}:state",   event.state)
           @persistence.set("#{event.id}:#{timestamp}:summary", event.summary)
 
-          # If the service event's state is ok and there was no previous state, don't alert
+          # If the service event's state is ok and there was no previous state, don't alert.
+          # This stops new checks from alerting as "recovery" after they have been added.
           result[:skip_filters] = true unless old_state
 
           case event.state
           when 'warning', 'critical'
             @persistence.zadd('failed_checks', timestamp, event.id)
+            # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
             @persistence.zadd('failed_checks:client:' + event.client, timestamp, event.id) if event.client
           else
             @persistence.zrem('failed_checks', event.id)
+            # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
             @persistence.zrem('failed_checks:client:' + event.client, event.id) if event.client
           end
-        elsif event.ok?
-          # no state change, and ok, so SKIP FILTERS
+        # No state change, and event is ok, so no need to run through filters
+        when event.ok?
           result[:skip_filters] = true
         end
 
+      # Action events represent human or automated interaction with Flapjack
       when 'action'
         # When an action event is processed, store the event.
         @persistence.hset(event.id + ':actions', timestamp, event.state)
@@ -107,15 +117,13 @@ module Flapjack
       return result
     end
 
-    # process any events we have until there's none left
+    # Process any events we have until there's none left
     def process_events
-
       loop do
-        event = @events.gimmie
+        event = @events.next(:block => false)
         break unless event
-        process_result(event)
+        process_event(event)
       end
-
     end
 
     # takes an event for which a notification needs to be generated, works out the type of
@@ -210,13 +218,13 @@ module Flapjack
       end
     end
 
-    def process_result(event)
-
+    def process_event(event)
       @log.debug("#{@events.size} events waiting on the queue")
       @log.debug("Raw event received: #{event.inspect}")
-      @log.debug("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}")
+      @log.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}")
 
-      skip_filters = update_keys(event)[:skip_filters]
+      result       = update_keys(event)
+      skip_filters = result[:skip_filters]
 
       blocker = @filters.find {|filter| filter.block?(event) } unless skip_filters
 
