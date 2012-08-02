@@ -120,12 +120,14 @@ When /^an ok event is received for check x$/ do
 end
 
 Then /^a notification should not be generated for check x$/ do
-  $notification.should =~ /Not sending notifications for event/
+  message = Flapjack.logger.messages.find {|m| m =~ /Not sending notifications for event/ }
+  message.should_not be_nil
 end
 
 Then /^a notification should be generated for check x$/ do
   drain_events
-  $notification.should =~ /Sending notifications for event/
+  message = Flapjack.logger.messages.find {|m| m =~ /Sending notifications for event/ }
+  message.should_not be_nil
 end
 
 When /^a failure event is received for check x$/ do
@@ -143,7 +145,7 @@ When /^an acknowledgement event is received for check x$/ do
   drain_events
 end
 
-Then /^show me the notification$/ do
-  puts $notification
+Then /^show me the notifications?$/ do
+  puts Flapjack.logger.messages.join("\n")
 end
 

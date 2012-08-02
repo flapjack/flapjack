@@ -28,10 +28,7 @@ module Flapjack
       Flapjack.bootstrap(@options)
 
       @persistence = Flapjack.persistence
-
-      @log = Log4r::Logger.new("executive")
-      @log.add(Log4r::StdoutOutputter.new("executive"))
-      @log.add(Log4r::SyslogOutputter.new("executive"))
+      @log = Flapjack.logger
 
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => "log/notify.log"))
@@ -230,16 +227,13 @@ module Flapjack
       blocker = @filters.find {|filter| filter.block?(event) } unless skip_filters
 
       if not blocker and not skip_filters
-        $notification = "#{Time.now}: Sending notifications for event #{event.id}"
-        @log.info($notification)
+        @log.info("#{Time.now}: Sending notifications for event #{event.id}")
         generate_notification(event)
       elsif blocker
         blocker_names = [ blocker.name ]
-        $notification = "#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}"
-        @log.info($notification)
+        @log.info("#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
       else
-        $notification = "#{Time.now}: Not sending notifications for event #{event.id} because state is ok with no change, or no prior state"
-        @log.info($notification)
+        @log.info("#{Time.now}: Not sending notifications for event #{event.id} because state is ok with no change, or no prior state")
       end
     end
 

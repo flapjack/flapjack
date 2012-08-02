@@ -8,9 +8,15 @@ module Flapjack
           :db => 0
         }
       }
-      @options     = defaults.merge(opts)
+      @options = defaults.merge(opts)
 
       @@persistence = ::Redis.new(@options[:redis])
+
+      if not @@logger = @options[:logger]
+        @@logger = Log4r::Logger.new("executive")
+        @@logger.add(Log4r::StdoutOutputter.new("executive"))
+        @@logger.add(Log4r::SyslogOutputter.new("executive"))
+      end
     end
 
     @bootstrapped = true
@@ -22,6 +28,10 @@ module Flapjack
 
   def self.persistence
     @@persistence
+  end
+
+  def self.logger
+    @@logger
   end
 end
 
