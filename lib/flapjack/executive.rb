@@ -25,7 +25,7 @@ module Flapjack
 
     def initialize(opts={})
       @options     = opts
-      Flapjack.bootstrap(opts)
+      Flapjack.bootstrap(@options)
 
       @persistence = Flapjack.persistence
 
@@ -248,7 +248,7 @@ module Flapjack
       loop do
         @log.info("Waiting for event...")
         event = Event.next
-        process_result(event)
+        process_event(event)
       end
     end
   end
