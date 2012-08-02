@@ -6,4 +6,4 @@ require 'flapjack/notifier'
 require 'flapjack/patches'
 
 app = Flapjack::Notifier.new
-app.process_events
+app.drain_events
