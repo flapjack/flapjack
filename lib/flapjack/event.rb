@@ -1,7 +1,52 @@
 #!/usr/bin/env ruby
 
+require 'redis'
+require 'json'
+
 module Flapjack
   class Event
+    @@redis = ::Redis.new
+    @@key   = 'events'
+
+    # Helper method for getting the next event.
+    #
+    # Has a blocking a non-blocking method signature.
+    #
+    # Calling next with :block => true, we wait indefinitely for events coming
+    # from other systems. This is the default behaviour.
+    #
+    # Calling next with :block => false, will return a nil if there are no
+    # events on the queue.
+    #
+    def self.next(opts={})
+      defaults = { :block => true }
+      options  = defaults.merge(opts)
+      block    = options[:block]
+
+      # In production, we wait indefinitely for events coming from other systems.
+      if block
+        raw   = @@redis.blpop(@@key).last
+        event = ::JSON.parse(raw)
+        self.new(event)
+      # In testing, we care if there are no events on the queue.
+      else
+        raw    = @@redis.lpop(@@key)
+        result = nil
+
+        if raw
+          event = ::JSON.parse(raw)
+          result = self.new(event)
+        end
+
+        return result
+      end
+    end
+
+    # Provide a count of the number of events on the queue to be processed.
+    def self.pending_count
+      @@redis.llen(@@key)
+    end
+
     def initialize(attrs={})
       @attrs = attrs
     end
@@ -50,7 +95,7 @@ module Flapjack
 
     # FIXME: site specific
     def client
-      entity ? c = entity.match(/^\w+/)[0] : c = nil
+      c = entity ? entity.split('-').first : nil
     end
 
     def type
