@@ -84,8 +84,8 @@ def submit_acknowledgement(entity = 'clientx-dvmh-app-01', check = 'ping')
   submit_event(event)
 end
 
-def process_events
-  @app.process_events
+def drain_events
+  @app.drain_events
 end
 
 Given /^check x is in an ok state$/ do
@@ -111,12 +111,12 @@ Given /^check x is in unscheduled maintenance$/ do
   remove_scheduled_maintenance
   set_failure_state
   submit_acknowledgement
-  process_events
+  drain_events
 end
 
 When /^an ok event is received for check x$/ do
   submit_ok
-  process_events
+  drain_events
 end
 
 Then /^a notification should not be generated for check x$/ do
@@ -124,23 +124,23 @@ Then /^a notification should not be generated for check x$/ do
 end
 
 Then /^a notification should be generated for check x$/ do
-  process_events
+  drain_events
   $notification.should =~ /Sending notifications for event/
 end
 
 When /^a failure event is received for check x$/ do
   submit_critical
-  process_events
+  drain_events
 end
 
 When /^an acknowledgement is received for check x$/ do
   submit_acknowledgement
-  process_events
+  drain_events
 end
 
 When /^an acknowledgement event is received for check x$/ do
   submit_acknowledgement
-  process_events
+  drain_events
 end
 
 Then /^show me the notification$/ do
