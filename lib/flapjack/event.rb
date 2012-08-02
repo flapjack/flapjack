@@ -5,9 +5,6 @@ require 'json'
 
 module Flapjack
   class Event
-    @@redis = ::Redis.new
-    @@key   = 'events'
-
     # Helper method for getting the next event.
     #
     # Has a blocking a non-blocking method signature.
@@ -25,12 +22,12 @@ module Flapjack
 
       # In production, we wait indefinitely for events coming from other systems.
       if block
-        raw   = @@redis.blpop(@@key).last
+        raw   = Flapjack.persistence.blpop('events').last
         event = ::JSON.parse(raw)
         self.new(event)
       # In testing, we care if there are no events on the queue.
       else
-        raw    = @@redis.lpop(@@key)
+        raw    = Flapjack.persistence.lpop('events')
         result = nil
 
         if raw
@@ -44,7 +41,7 @@ module Flapjack
 
     # Provide a count of the number of events on the queue to be processed.
     def self.pending_count
-      @@redis.llen(@@key)
+      Flapjack.persistence.llen('events')
     end
 
     def initialize(attrs={})

@@ -2,6 +2,7 @@
 
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
+require 'flapjack'
 require 'flapjack/patches'
 require 'flapjack/filters/acknowledgement'
 require 'flapjack/filters/ok'
@@ -13,17 +14,20 @@ require 'flapjack/notification'
 require 'flapjack/notification/sms'
 require 'flapjack/notification/email'
 require 'flapjack/event'
-require 'flapjack/events'
 require 'redis'
 require 'resque'
 
+
 module Flapjack
+
   class Executive
     attr_accessor :log
 
-    def initialize(options={})
-      @options     = options
-      @persistence = ::Redis.new
+    def initialize(opts={})
+      @options     = opts
+      Flapjack.bootstrap(opts)
+
+      @persistence = Flapjack.persistence
 
       @log = Log4r::Logger.new("executive")
       @log.add(Log4r::StdoutOutputter.new("executive"))
@@ -72,8 +76,6 @@ module Flapjack
         case
         # If there is a state change, update record with: the time, the new state
         when event.state != old_state
-          update_record(event)
-
           # FIXME: validate that the event is sane before we ever get here
           # FIXME: create an event if there is dodgy data
 
@@ -117,7 +119,7 @@ module Flapjack
     end
 
     # Process any events we have until there's none left
-    def process_events
+    def drain_events
       loop do
         event = Event.next(:block => false)
         break unless event
@@ -232,12 +234,12 @@ module Flapjack
         @log.info($notification)
         generate_notification(event)
       elsif blocker
-
         blocker_names = [ blocker.name ]
         $notification = "#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}"
         @log.info($notification)
       else
         $notification = "#{Time.now}: Not sending notifications for event #{event.id} because state is ok with no change, or no prior state"
+        @log.info($notification)
       end
     end
 
