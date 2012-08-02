@@ -24,7 +24,6 @@ module Flapjack
     def initialize(options={})
       @options     = options
       @persistence = ::Redis.new
-      @events      = Flapjack::Events.new
 
       @log = Log4r::Logger.new("executive")
       @log.add(Log4r::StdoutOutputter.new("executive"))
@@ -120,7 +119,7 @@ module Flapjack
     # Process any events we have until there's none left
     def process_events
       loop do
-        event = @events.next(:block => false)
+        event = Event.next(:block => false)
         break unless event
         process_event(event)
       end
@@ -219,7 +218,7 @@ module Flapjack
     end
 
     def process_event(event)
-      @log.debug("#{@events.size} events waiting on the queue")
+      @log.debug("#{Event.pending_count} events waiting on the queue")
       @log.debug("Raw event received: #{event.inspect}")
       @log.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}")
 
@@ -246,7 +245,7 @@ module Flapjack
       @log.info("Booting main loop.")
       loop do
         @log.info("Waiting for event...")
-        event = @events.next
+        event = Event.next
         process_result(event)
       end
     end
