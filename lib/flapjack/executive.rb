@@ -133,9 +133,9 @@ module Flapjack
       case event.type
       when 'service'
         case event.state
-        when 'ok', 'unknown'
+        when 'ok', 'up', 'unknown'
           notification_type = 'recovery'
-        when 'warning', 'critical'
+        when 'warning', 'critical', 'down'
           notification_type = 'problem'
         end
       when 'action'
@@ -194,13 +194,15 @@ module Flapjack
                        :id                 => fuid,
                        :state              => event.state,
                        :summary            => event.summary,
-                       :notification_type  => notification_type,
-                       :contact_id         => contact_id,
-                       :contact_first_name => @persistence.hget("contact:#{contact_id}", 'first_name'),
-                       :contact_last_name  => @persistence.hget("contact:#{contact_id}", 'last_name') }
+                       :notification_type  => notification_type }
 
       contacts.each {|contact_id|
         media = media_for_contact(contact_id)
+
+        notification.merge(:contact_id         => contact_id,
+                           :contact_first_name => @persistence.hget("contact:#{contact_id}", 'first_name'),
+                           :contact_last_name  => @persistence.hget("contact:#{contact_id}", 'last_name') )
+
         media.each_pair {|media, address|
 
           @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact_id} | #{media} | #{address}")

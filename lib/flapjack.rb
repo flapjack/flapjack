@@ -13,13 +13,13 @@ module Flapjack
       @@persistence = ::Redis.new(@options[:redis])
 
       if not @@logger = @options[:logger]
-        @@logger = Log4r::Logger.new("executive")
-        @@logger.add(Log4r::StdoutOutputter.new("executive"))
-        @@logger.add(Log4r::SyslogOutputter.new("executive"))
+        @@logger = Log4r::Logger.new("flapjack")
+        @@logger.add(Log4r::StdoutOutputter.new("flapjack"))
+        @@logger.add(Log4r::SyslogOutputter.new("flapjack"))
       end
 
       @@apphome = File.absolute_path(File.dirname(__FILE__) + '/../')
-      @@config  = YAML.load(@@apphome + '/etc/flapjack_config.yaml')
+      @@config  = YAML.load_file(@@apphome + '/etc/flapjack_config.yaml')
     end
 
     @bootstrapped = true
@@ -43,8 +43,11 @@ module Flapjack
     1
   end
 
-  def self.config(config_name)
-    @@config[config_name]
+  def self.config
+    #@@apphome ||= File.absolute_path(File.dirname(__FILE__) + '/../')
+    #@@config  ||= YAML.load(@@apphome + '/etc/flapjack_config.yaml')
+    @@logger.debug @@config.inspect
+    @@config
   end
 
 end
