@@ -1,0 +1,4 @@
+---
+sms_provider: messagenet
+sms_messagenet_username: "ermahgerd"
+sms_messagenet_password: "xxxx"

@@ -141,7 +141,7 @@ module Flapjack
       when 'action'
         case event.state
         when 'acknowledgement'
-          notification_type = 'problem'
+          notification_type = 'acknowledgement'
         end
       end
       @persistence.set("#{event.id}:last_#{notification_type}_notification", timestamp)
@@ -181,30 +181,40 @@ module Flapjack
       return @persistence.hgetall("contact_media:#{contact}")
     end
 
+    # generates a fairly unique identifier to use as a message id
+    def fuid
+      fuid = Flapjack.instance.to_i.to_s + '-' + Time.now.tv_usec.to_s
+    end
+
     # takes an event, a notification type, and an array of contacts and creates jobs in rescue
     # (eventually) for each notification
     #
     def send_notifications(event, notification_type, contacts)
+      notification = { :event_id           => event.id,
+                       :id                 => fuid,
+                       :state              => event.state,
+                       :summary            => event.summary,
+                       :notification_type  => notification_type,
+                       :contact_id         => contact_id,
+                       :contact_first_name => @persistence.hget("contact:#{contact_id}", 'first_name'),
+                       :contact_last_name  => @persistence.hget("contact:#{contact_id}", 'last_name') }
+
       contacts.each {|contact_id|
         media = media_for_contact(contact_id)
         media.each_pair {|media, address|
+
           @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact_id} | #{media} | #{address}")
           # queue this notification
           # FIXME: make a Contact class perhaps
-          notification = { :event_id           => event.id,
-                           :state              => event.state,
-                           :summary            => event.summary,
-                           :notification_type  => notification_type,
-                           :contact_id         => contact_id,
-                           :contact_first_name => @persistence.hget("contact:#{contact_id}", 'first_name'),
-                           :contact_last_name  => @persistence.hget("contact:#{contact_id}", 'last_name'),
-                           :media              => media,
-                           :address            => address }
+          notif = notification.dup
+          notif[:media]   = media
+          notif[:address] = address
+
           case media
           when "sms"
-            Resque.enqueue(Notification::Sms, notification)
+            Resque.enqueue(Notification::Sms, notif)
           when "email"
-            Resque.enqueue(Notification::Email, notification)
+            Resque.enqueue(Notification::Email, notif)
           end
         }
         if media.length == 0

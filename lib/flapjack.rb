@@ -17,6 +17,9 @@ module Flapjack
         @@logger.add(Log4r::StdoutOutputter.new("executive"))
         @@logger.add(Log4r::SyslogOutputter.new("executive"))
       end
+
+      @@apphome = File.absolute_path(File.dirname(__FILE__) + '/../')
+      @@config  = YAML.load(@@apphome + '/etc/flapjack_config.yaml')
     end
 
     @bootstrapped = true
@@ -33,5 +36,16 @@ module Flapjack
   def self.logger
     @@logger
   end
+
+  # FIXME: this should register the running flapjack as a unique instance in redis
+  # perhaps look at resque's code, how it does this
+  def self.instance
+    1
+  end
+
+  def self.config(config_name)
+    @@config[config_name]
+  end
+
 end
 
