@@ -103,6 +103,10 @@ module Flapjack
       @attrs['summary']
     end
 
+    def when
+      Time.at(@attrs['when'])
+    end
+
     def action?
       type == 'action'
     end

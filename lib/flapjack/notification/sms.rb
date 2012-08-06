@@ -15,18 +15,15 @@ module Flapjack
       entity, check      = notification['event_id'].split(':')
 
       puts "Sending sms notification now"
+      headline{'problem'         => 'PROBLEM: ',
+               'recovery'        => 'RECOVERY: ',
+               'acknowledgement' => 'ACK: ',
+               'unknown'         => '' }
+               ''                => '' }
 
-      case notification_type
-      when 'problem'
-        message = "PROBLEM: "
-      when 'recovery'
-        message = "RECOVERY: "
-      when 'acknowledgement'
-        message = "ACK: "
-      else
-        message = "UNKNOWN: "
-      end
-      message += "'#{check}' on #{entity} is #{state.upcase}, #{summary}"
+      notification_type
+
+      message += "#{headline[notification_type]}'#{check}' on #{entity} is #{state.upcase} at #{when.strftime('%H:%M %d %b')}, #{summary}"
       notification['message'] = message
       Flapjack::Notification::SmsMessagenet.sender(notification)
     end

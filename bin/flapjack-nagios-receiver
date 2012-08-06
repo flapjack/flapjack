@@ -22,11 +22,12 @@ def process_input
       next unless timestamp =~ /^\d+$/
       next unless (object_type == '[HOSTPERFDATA]') or (object_type == '[SERVICEPERFDATA]')
       event = {
-        'entity'  => entity,
-        'check'   => check,
-        'type'    => 'service',
-        'state'   => state,
-        'summary' => check_output,
+        'entity'    => entity,
+        'check'     => check,
+        'type'      => 'service',
+        'state'     => state,
+        'summary'   => check_output,
+        'timestamp' => timestamp,
       }.to_json
       redis.rpush 'events', event
     end

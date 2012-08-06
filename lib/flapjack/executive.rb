@@ -194,6 +194,7 @@ module Flapjack
                        :id                 => fuid,
                        :state              => event.state,
                        :summary            => event.summary,
+                       :when               => event.when,
                        :notification_type  => notification_type }
 
       contacts.each {|contact_id|
@@ -231,7 +232,7 @@ module Flapjack
     def process_event(event)
       @log.debug("#{Event.pending_count} events waiting on the queue")
       @log.debug("Raw event received: #{event.inspect}")
-      @log.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}")
+      @log.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}, #{event.when.to_s}")
 
       result       = update_keys(event)
       skip_filters = result[:skip_filters]
