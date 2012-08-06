@@ -12,18 +12,20 @@ module Flapjack
       contact_last_name  = notification['contact_last_name']
       state              = notification['state']
       summary            = notification['summary']
+      time               = notification['time']
       entity, check      = notification['event_id'].split(':')
 
       puts "Sending sms notification now"
-      headline{'problem'         => 'PROBLEM: ',
-               'recovery'        => 'RECOVERY: ',
-               'acknowledgement' => 'ACK: ',
-               'unknown'         => '' }
-               ''                => '' }
+      headline_map = {'problem'         => 'PROBLEM: ',
+                      'recovery'        => 'RECOVERY: ',
+                      'acknowledgement' => 'ACK: ',
+                      'unknown'         => '',
+                      ''                => '',
+                     }
 
-      notification_type
+      headline = headline_map[notification_type] || ''
 
-      message += "#{headline[notification_type]}'#{check}' on #{entity} is #{state.upcase} at #{when.strftime('%H:%M %d %b')}, #{summary}"
+      message = "#{headline}'#{check}' on #{entity} is #{state.upcase} at #{Time.at(time).strftime('%H:%M %-d %b')}, #{summary}"
       notification['message'] = message
       Flapjack::Notification::SmsMessagenet.sender(notification)
     end

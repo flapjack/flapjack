@@ -38,6 +38,8 @@ when "import-contacts"
       next
     end
     @persistence.multi
+    @persistence.del("contact:#{contact['id']}")
+    @persistence.del("contact_media:#{contact['id']}")
     @persistence.hset("contact:#{contact['id']}", 'first_name', contact['first_name'])
     @persistence.hset("contact:#{contact['id']}", 'last_name',  contact['last_name'])
     @persistence.hset("contact:#{contact['id']}", 'email',      contact['email'])

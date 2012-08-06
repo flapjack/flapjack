@@ -183,7 +183,7 @@ module Flapjack
 
     # generates a fairly unique identifier to use as a message id
     def fuid
-      fuid = Flapjack.instance.to_i.to_s + '-' + Time.now.tv_usec.to_s
+      fuid = Flapjack.instance.to_i.to_s + '-' + Time.now.to_i.to_s + '.' + Time.now.tv_usec.to_s
     end
 
     # takes an event, a notification type, and an array of contacts and creates jobs in rescue
@@ -191,10 +191,9 @@ module Flapjack
     #
     def send_notifications(event, notification_type, contacts)
       notification = { :event_id           => event.id,
-                       :id                 => fuid,
                        :state              => event.state,
                        :summary            => event.summary,
-                       :when               => event.when,
+                       :time               => event.time,
                        :notification_type  => notification_type }
 
       contacts.each {|contact_id|
@@ -212,6 +211,7 @@ module Flapjack
           notif = notification.dup
           notif[:media]   = media
           notif[:address] = address
+          notif[:id]      = fuid
 
           case media
           when "sms"
@@ -232,7 +232,7 @@ module Flapjack
     def process_event(event)
       @log.debug("#{Event.pending_count} events waiting on the queue")
       @log.debug("Raw event received: #{event.inspect}")
-      @log.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}, #{event.when.to_s}")
+      @log.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}, #{Time.at(event.time).to_s}")
 
       result       = update_keys(event)
       skip_filters = result[:skip_filters]

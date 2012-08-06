@@ -103,8 +103,8 @@ module Flapjack
       @attrs['summary']
     end
 
-    def when
-      Time.at(@attrs['when'])
+    def time
+      @attrs['time'] ? @attrs['time'].to_i : Time.now.to_i
     end
 
     def action?
