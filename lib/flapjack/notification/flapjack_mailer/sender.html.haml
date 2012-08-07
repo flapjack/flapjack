@@ -1,0 +1,16 @@
+%h2= "#{@check} on #{@entity} is #{@state}"
+
+%p= "Hi #{@contact_first_name},"
+
+%p Take heed:
+
+%p
+  = "entity: #{@entity}"
+  = "check: #{@check}"
+  = "state: #{@state}"
+  = "summary: #{@summary}"
+  = "time: #{Time.at(@time.to_i).to_s}"
+
+  Cheers
+  Flapjack
+

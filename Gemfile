@@ -8,6 +8,8 @@ gem 'log4r'
 gem 'yajl-ruby'
 gem 'redis'
 gem 'resque'
+gem 'mail'
+gem 'actionmailer'
 
 group :web do
   gem 'sinatra'

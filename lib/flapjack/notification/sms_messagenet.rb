@@ -9,7 +9,6 @@ module Flapjack
   class Notification::SmsMessagenet
 
     def self.sender(notification)
-
       Flapjack.bootstrap
       @log = Flapjack.logger
 
