@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
 require 'bundler/setup'
 require 'sinatra/base'
 require 'sinatra_more/markup_plugin'
@@ -28,7 +27,7 @@ module Flapjack
     def self_stats
       @keys  = @persistence.keys '*'
       @count_failing_checks  = @persistence.zcard 'failed_checks'
-      @count_all_checks      = 'heaps' # FIXME: rename ENTITY:CHECK to check:ENTITY:CHECK so we can glob them here, 
+      @count_all_checks      = 'heaps' # FIXME: rename ENTITY:CHECK to check:ENTITY:CHECK so we can glob them here,
                                        # or create a set to index all checks
       @event_counter_all     = @persistence.hget('event_counters', 'all')
       @event_counter_ok      = @persistence.hget('event_counters', 'ok')
