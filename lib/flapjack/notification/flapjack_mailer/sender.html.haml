@@ -1,16 +1,43 @@
-%h2= "#{@check} on #{@entity} is #{@state}"
+%style{:type => "text/css", :media => "screen"}
+  :plain
+    #container {
+      text-transform: uppercase;
+    }
+    table {
+      border-collapse: collapse;
+    }
+    table, th, td {
+      border: 1px solid #666;
+      padding: 4px;
+    }
 
 %p= "Hi #{@contact_first_name},"
 
-%p Take heed:
+%p Monitoring has detected the following:
 
-%p
-  = "entity: #{@entity}"
-  = "check: #{@check}"
-  = "state: #{@state}"
-  = "summary: #{@summary}"
-  = "time: #{Time.at(@time.to_i).to_s}"
+%table
+  %tbody
+    %tr
+      %td
+        %strong Entity
+      %td= @entity
+    %tr
+      %td
+        %strong Check
+      %td= @check
+    %tr
+      %td
+        %strong State
+      %td= @state.upcase
+    %tr
+      %td
+        %strong Summary
+      %td= @summary
+    %tr
+      %td
+        %strong Time
+      %td= Time.at(@time.to_i).to_s
 
-  Cheers
-  Flapjack
+%p Cheers,
+%p Flapjack
 

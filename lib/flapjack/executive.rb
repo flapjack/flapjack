@@ -190,18 +190,20 @@ module Flapjack
     # (eventually) for each notification
     #
     def send_notifications(event, notification_type, contacts)
-      notification = { :event_id           => event.id,
-                       :state              => event.state,
-                       :summary            => event.summary,
-                       :time               => event.time,
-                       :notification_type  => notification_type }
+      notification = { 'event_id'          => event.id,
+                       'state'             => event.state,
+                       'summary'           => event.summary,
+                       'time'              => event.time,
+                       'notification_type' => notification_type }
 
       contacts.each {|contact_id|
         media = media_for_contact(contact_id)
 
-        notification.merge(:contact_id         => contact_id,
-                           :contact_first_name => @persistence.hget("contact:#{contact_id}", 'first_name'),
-                           :contact_last_name  => @persistence.hget("contact:#{contact_id}", 'last_name') )
+        contact_deets = {'contact_id'         => contact_id,
+                         'contact_first_name' => @persistence.hget("contact:#{contact_id}", 'first_name'),
+                         'contact_last_name'  => @persistence.hget("contact:#{contact_id}", 'last_name'), }
+
+        notification = notification.merge(contact_deets)
 
         media.each_pair {|media, address|
 
@@ -209,9 +211,10 @@ module Flapjack
           # queue this notification
           # FIXME: make a Contact class perhaps
           notif = notification.dup
-          notif[:media]   = media
-          notif[:address] = address
-          notif[:id]      = fuid
+          notif['media']   = media
+          notif['address'] = address
+          notif['id']      = fuid
+          @log.debug("send_notifications: sending notification: #{notif.inspect}")
 
           case media
           when "sms"

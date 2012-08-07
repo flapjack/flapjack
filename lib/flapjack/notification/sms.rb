@@ -27,7 +27,7 @@ module Flapjack
 
       message = "#{headline}'#{check}' on #{entity} is #{state.upcase} at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
       notification['message'] = message
-      Flapjack::Notification::SmsMessagenet.sender(notification)
+      Flapjack::Notification::SmsMessagenet.sender(notification, @log)
     end
 
   end

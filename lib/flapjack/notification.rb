@@ -7,8 +7,8 @@ module Flapjack
     def self.perform(notification)
       #Flapjack.bootstrap(:logger => "notification")
       Flapjack.bootstrap
-      @@log = Flapjack.logger
-      @@log.debug "Woo, got a notification to send out: #{notification.inspect}"
+      @log = Flapjack.logger
+      @log.debug "Woo, got a notification to send out: #{notification.inspect}"
       sendit(notification)
     end
 
