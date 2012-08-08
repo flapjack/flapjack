@@ -3,33 +3,39 @@
 require 'flapjack/notification/sms_messagenet'
 
 module Flapjack
-  class Notification::Sms < Flapjack::Notification
-    @queue = :sms_notifications
+  module Notification
 
-    def self.sendit(notification)
-      notification_type  = notification['notification_type']
-      contact_first_name = notification['contact_first_name']
-      contact_last_name  = notification['contact_last_name']
-      state              = notification['state']
-      summary            = notification['summary']
-      time               = notification['time']
-      entity, check      = notification['event_id'].split(':')
+    class Sms
 
-      puts "Sending sms notification now"
-      headline_map = {'problem'         => 'PROBLEM: ',
-                      'recovery'        => 'RECOVERY: ',
-                      'acknowledgement' => 'ACK: ',
-                      'unknown'         => '',
-                      ''                => '',
-                     }
+      extend Flapjack::Notification::Common
 
-      headline = headline_map[notification_type] || ''
+      @queue = :sms_notifications
 
-      message = "#{headline}'#{check}' on #{entity} is #{state.upcase} at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
-      notification['message'] = message
-      Flapjack::Notification::SmsMessagenet.sender(notification, @log)
+      def self.dispatch(notification)
+        notification_type  = notification['notification_type']
+        contact_first_name = notification['contact_first_name']
+        contact_last_name  = notification['contact_last_name']
+        state              = notification['state']
+        summary            = notification['summary']
+        time               = notification['time']
+        entity, check      = notification['event_id'].split(':')
+
+        puts "Sending sms notification now"
+        headline_map = {'problem'         => 'PROBLEM: ',
+                        'recovery'        => 'RECOVERY: ',
+                        'acknowledgement' => 'ACK: ',
+                        'unknown'         => '',
+                        ''                => '',
+                       }
+
+        headline = headline_map[notification_type] || ''
+
+        message = "#{headline}'#{check}' on #{entity} is #{state.upcase} at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
+        notification['message'] = message
+        Flapjack::Notification::SmsMessagenet.sender(notification, @log)
+      end
+
     end
-
   end
 end
 
