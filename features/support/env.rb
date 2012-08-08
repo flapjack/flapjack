@@ -6,8 +6,11 @@ require 'pathname'
 require 'yajl'
 require 'beanstalk-client'
 require 'daemons'
+require 'webmock/cucumber'
 require 'flapjack/executive'
 require 'flapjack/patches'
+
+WebMock.disable_net_connect!
 
 class MockLogger
   attr_accessor :messages
