@@ -16,11 +16,13 @@ Scenario: Handle a failure to send an SMS notification
   When the SMS notification handler fails to send an SMS
   Then the user should not receive an SMS notification
 
+@email
 Scenario: Send an email notification
   Given a user email notification has been generated
   When the email notification handler runs successfully
   Then the user should receive an email notification
 
+@email
 Scenario: Handle a failure to send an email notification
   Given a user email notification has been generated
   When the email notification handler fails to send an email
