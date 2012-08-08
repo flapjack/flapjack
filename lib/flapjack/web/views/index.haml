@@ -48,8 +48,8 @@
         Events queued:
         = @events_queued
       %h4
-        All checks: 
-        %a(title='all checks' href='/') 
+        All checks:
+        %a(title='all checks' href='/')
           = @count_all_checks
       %h4
         Failing checks:
@@ -65,13 +65,16 @@
           %th Last State Change
           %th Last Update
           %th Last Notification
-        - @states.each do |entity, check, status, changed, updated, notified_kind, notified|
+        - @states.each do |entity, check, status, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified_kind, notified|
           %tr
             %td= entity
             %td
               - link = "/check?entity=" + entity + "&check=" + check
               %a(title='check detail' href=link) #{check}
-            %td{:class => status}= status
+            %td{:class => status}
+              = status.upcase
+              = " (Acknowledged)" if in_unscheduled_outage
+              = " (Scheduled Maintenance)" if in_scheduled_outage
             %td= relative_time_ago(Time.at(changed.to_i)) + ' ago'
             %td= (Time.now.to_i - updated.to_i).to_s + ' seconds ago'
             - if notified > 0

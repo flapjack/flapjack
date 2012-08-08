@@ -41,12 +41,18 @@
       }
   %body
     %div#wrapper
-      %h1 #{@entity}
-      %h1 #{@check}
-      %h2 State: #{@check_state}
+      %h1 #{@check} on #{@entity}
+      %h2
+        State: #{@check_state.upcase}
+        - if (['warning', 'critical', 'down'].include?(@check_state) and not (@in_unscheduled_maintenance or @in_scheduled_maintenance))
+          %a(href="/acknowledge?entity=#{@entity}&check=#{@check}") Acknowledge this
+        - if @in_unscheduled_maintenance
+          (Acknowledged)
+        - if @in_scheduled_maintenance
+          (Scheduled Maintenance)
       %h3 Output: #{@check_summary}
       %h4 Last state change: #{relative_time_ago(Time.at(@check_last_change.to_i))} ago (#{Time.at(@check_last_change.to_i)})
-      %h4 Last update: #{relative_time_ago(Time.at(@check_last_update.to_i))} ago (#{Time.at(@check_last_update.to_i)}) 
+      %h4 Last update: #{relative_time_ago(Time.at(@check_last_update.to_i))} ago (#{Time.at(@check_last_update.to_i)})
       - if @last_notifications[:problem] > 0
         - last_problem = relative_time_ago(Time.at(@last_notifications[:problem])) + " ago (" + Time.at(@last_notifications[:problem]).to_s + ")"
       - else

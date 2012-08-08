@@ -49,7 +49,7 @@ module Flapjack
     end
 
     def state
-      @attrs['state'].downcase
+      @attrs['state'] ? s = @attrs['state'].downcase : s = nil
     end
 
     def ok?

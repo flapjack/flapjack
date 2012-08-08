@@ -4,6 +4,7 @@ require 'action_mailer'
 require 'action_view'
 require 'haml'
 require 'haml/template/plugin'
+require 'flapjack/redis'
 
 # TODO define these somewhere more central
 ActionMailer::Base.raise_delivery_errors = true
@@ -19,6 +20,8 @@ module Flapjack
     class Email
       extend Flapjack::Notification::Common
 
+      extend Flapjack::Redis
+
       @queue = :email_notifications
 
       def self.dispatch(notification)
@@ -29,29 +32,40 @@ module Flapjack
         state              = notification['state']
         summary            = notification['summary']
         time               = notification['time']
+        event_id           = notification['event_id']
         entity, check      = notification['event_id'].split(':')
 
-        headline_map = {'problem'         => 'PROBLEM: ',
-                        'recovery'        => 'RECOVERY: ',
-                        'acknowledgement' => 'ACK: ',
+        headline_map = {'problem'         => 'Problem: ',
+                        'recovery'        => 'Recovery: ',
+                        'acknowledgement' => 'Acknowledgement: ',
                         'unknown'         => '',
                         ''                => '',
                        }
 
         headline = headline_map[notification_type] || ''
 
-        notification['subject']  = "#{headline}'#{check}' on #{entity} is #{state.upcase}"
+        subject = "#{headline}'#{check}' on #{entity}"
+        subject += " is #{state.upcase}" unless notification_type == 'acknowledgement'
+
+        notification['subject'] = subject
         @log.debug "Flapjack::Notification::Email#sendit is calling Flapjack::Notification::Mailer.sender, notification_id: #{notification['id']}"
-        Flapjack::Notification::Mailer.sender(notification, @log).deliver
+        sender_opts = { :log => @log,
+                        :in_scheduled_maintenance   => in_scheduled_maintenance?(event_id),
+                        :in_unscheduled_maintenance => in_unscheduled_maintenance?(event_id),
+        }
+        Flapjack::Notification::Mailer.sender(notification, sender_opts).deliver
       end
 
     end
 
     # FIXME: move this to a separate file
     class Mailer < ActionMailer::Base
+
       self.mailer_name = 'flapjack_mailer'
 
-      def sender(notification, log)
+      def sender(notification, opts)
+        log = opts[:log]
+
         # FIXME: use socket and gethostname instead of shelling out
         fqdn     = `/bin/hostname -f`.chomp
         from     = "flapjack@#{fqdn}"
@@ -70,6 +84,9 @@ module Flapjack
         @summary            = notification['summary']
         @time               = notification['time']
         @entity, @check     = notification['event_id'].split(':')
+        @in_unscheduled_maintenance = opts[:in_unscheduled_maintenance]
+        @in_scheduled_maintenance   = opts[:in_scheduled_maintenance]
+
 
         mail(:subject  => subject,
              :from     => from,
