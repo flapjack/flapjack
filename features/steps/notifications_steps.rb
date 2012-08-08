@@ -19,8 +19,6 @@ def send_email(notification)
   end
 end
 
-# summary            = notification['summary']
-# entity, check      = notification['event_id'].split(':')
 Given /^a user SMS notification has been generated$/ do
   @sms_notification = {'notification_type'  => 'problem',
                        'contact_first_name' => 'John',
@@ -65,7 +63,7 @@ end
 
 # This doesn't work as I have it here -- sends a mail with an empty To: header instead.
 # Might have to introduce Rspec's stubs here to fake bad mailer behaviour -- or if mail sending
-# won't fail, don't test for failure? 
+# won't ever fail, don't test for failure? 
 When /^the email notification handler fails to send an email$/ do
   pending
   @email_notification['address'] = nil  
