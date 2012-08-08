@@ -26,4 +26,5 @@ group :development do
   gem 'delorean'
   gem 'shotgun'
   gem 'thin'
+  gem 'webmock'
 end

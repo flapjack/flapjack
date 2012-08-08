@@ -1,64 +1,75 @@
-# TODO may want to refactor steps to different functional groups
+def send_sms(notification)
+  begin
+    Flapjack::Notification::Sms.perform(notification)
+    # puts "sms OK"
+    true
+  rescue Exception => e
+    # puts "sms failed"    # puts e.message    # puts e.backtrace.join("\n")
+    false
+  end
+end
 
-# NB: This is several steps away from Cucumber best practice, and won't work yet --
-# I'm just working out a rough flow.
-
+def send_email(notification)
+  begin
+    # Flapjack::Notification::Email.perform(notification)
+    true
+  rescue
+    false
+  end
+end
+# summary            = notification['summary']# entity, check      = notification['event_id'].split(':')
 Given /^a user SMS notification has been generated$/ do
-  pending
-  @sms_notification = {}
+  @sms_notification = {'notification_type'  => 'problem',
+                       'contact_first_name' => 'John',
+                       'contact_last_name'  => 'Smith',
+                       'state'              => 'CRITICAL',
+                       'summary'            => 'Socket timeout after 10 seconds',
+                       'time'               => Time.now.to_i,
+                       'event_id'           => 'b99999.darwin03-viprion-blade8',
+                       'address'            => '+61412345678',
+                       'id'                 => 1}
 end
 
 Given /^a user email notification has been generated$/ do
-  pending
   @email_notification = {}
 end
 
-# Could use https://github.com/bblimke/webmock if we want to get fancy -- but
-# this should do for now
+# TODO may need to get more complex, depending which SMS provider is used
 When /^the SMS notification handler runs successfully$/ do
-  pending
-  request = mock('http_request')
-  Net::HTTP::Get.should_receive(:new).and_return(request)
-  http = mock('http')
-  http.should_receive(:request).with(request).and_return(Net::HTTPSuccess.new)
-  Net::HTTP.should_receive(:start).and_yield(http)
+  # returns success by default - currently matches all addresses, maybe load from config?
+  stub_request(:get, /.*/)
 
-  Flapjack::Notification::SMS.perform(@sms_notification)
+  @sms_sent = send_sms(@sms_notification)
 end
 
 When /^the SMS notification handler fails to send an SMS$/ do
-  pending
-  request = mock('http_request')
-  Net::HTTP::Get.should_receive(:new).and_return(request)
-  http = mock('http')
-  http.should_receive(:request).with(request).and_return(Net::HTTPError.new)
-  Net::HTTP.should_receive(:start).and_yield(http)
+  stub_request(:any, /.*/).to_return(:status => [500, "Internal Server Error"])
 
-  Flapjack::Notification::SMS.perform(@sms_notification)
+  @sms_sent = send_sms(@sms_notification)
 end
 
 When /^the email notification handler runs successfully$/ do
   pending
-  # Flapjack::Notification::Email.perform(@email_notification)
+  @email_sent = send_email(@email_notification)
 end
 
 When /^the email notification handler fails to send an email$/ do
   pending
+  @email_sent = send_email(@email_notification)
 end
 
 Then /^the user should receive an SMS notification$/ do
-  pending
+  @sms_sent.should be_true
 end
 
 Then /^the user should receive an email notification$/ do
-  pending
+  @email_sent.should be_true
 end
 
 Then /^the user should not receive an SMS notification$/ do
-  pending
+  @sms_sent.should be_false
 end
 
 Then /^the user should not receive an email notification$/ do
-  pending # express the regexp above with the code you wish you had
+  @email_sent.should be_false
 end
-
