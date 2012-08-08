@@ -15,6 +15,8 @@ module Flapjack
     class Email
       extend Flapjack::Notification::Common
 
+      extend Flapjack::Redis
+
       @queue = :email_notifications
 
       def self.dispatch(notification)
@@ -25,6 +27,7 @@ module Flapjack
         state              = notification['state']
         summary            = notification['summary']
         time               = notification['time']
+        event_id           = notification['event_id']
         entity, check      = notification['event_id'].split(':')
 
         headline_map = {'problem'         => 'Problem: ',
@@ -41,7 +44,11 @@ module Flapjack
 
         notification['subject'] = subject
         @log.debug "Flapjack::Notification::Email#sendit is calling Flapjack::Notification::Mailer.sender, notification_id: #{notification['id']}"
-        Flapjack::Notification::Mailer.sender(notification, @log).deliver
+        sender_opts = { :log => @log,
+                        :in_scheduled_maintenance   => in_scheduled_maintenance?(event_id),
+                        :in_unscheduled_maintenance => in_unscheduled_maintenance?(event_id),
+        }
+        Flapjack::Notification::Mailer.sender(notification, sender_opts).deliver
       end
 
     end
@@ -50,11 +57,12 @@ module Flapjack
 
     # FIXME: move this to a separate file
     class Mailer < ActionMailer::Base
-      include Flapjack::Redis
 
       self.mailer_name = 'flapjack_mailer'
 
-      def sender(notification, log)
+      def sender(notification, opts)
+        log = opts[:log]
+
         # FIXME: use socket and gethostname instead of shelling out
         fqdn     = `/bin/hostname -f`.chomp
         from     = "flapjack@#{fqdn}"
@@ -73,9 +81,8 @@ module Flapjack
         @summary            = notification['summary']
         @time               = notification['time']
         @entity, @check     = notification['event_id'].split(':')
-        event_id            = notification['event_id']
-        @in_unscheduled_maintenance = in_unscheduled_maintenance?(event_id)
-        @in_scheduled_maintenance   = in_scheduled_maintenance?(event_id)
+        @in_unscheduled_maintenance = opts[:in_unscheduled_maintenance]
+        @in_scheduled_maintenance   = opts[:in_scheduled_maintenance]
 
 
         mail(:subject  => subject,

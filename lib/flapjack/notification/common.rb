@@ -9,6 +9,8 @@ module Flapjack
       def perform(notification)
         Flapjack.bootstrap
         @log = Flapjack.logger
+        @persistence = Flapjack.persistence
+
         @log.debug "Woo, got a notification to send out: #{notification.inspect}"
         dispatch(notification)
       end
