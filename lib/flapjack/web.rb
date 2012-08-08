@@ -5,10 +5,13 @@ require 'sinatra/base'
 require 'sinatra_more/markup_plugin'
 require 'redis'
 require 'resque'
+require 'flapjack/redis'
 
 module Flapjack
   class Web < Sinatra::Base
     register SinatraMore::MarkupPlugin
+
+    include Flapjack::Redis
 
     set :views, settings.root + '/web/views'
 
@@ -71,8 +74,9 @@ module Flapjack
       @states = @persistence.keys('*:*:states').map { |r|
         parts   = r.split(':')[0..1]
         key     = parts.join(':')
-        data    = @persistence.hmget(key, 'state', 'last_change', 'last_update')
-        parts  += data
+        parts  += @persistence.hmget(key, 'state', 'last_change', 'last_update')
+        parts  << in_unscheduled_maintenance?(key)
+        parts  << in_scheduled_maintenance?(key)
         parts  += last_notification(key)
       }.sort_by {|parts| parts }
       haml :index
@@ -82,8 +86,9 @@ module Flapjack
       self_stats
       @states = @persistence.zrange('failed_checks', 0, -1).map {|key|
         parts   = key.split(':')
-        data    = @persistence.hmget(key, 'state', 'last_change', 'last_update')
-        parts  += data
+        parts  += @persistence.hmget(key, 'state', 'last_change', 'last_update')
+        parts  << in_unscheduled_maintenance?(key)
+        parts  << in_scheduled_maintenance?(key)
         parts  += last_notification(key)
       }.sort_by {|parts| parts}
       haml :index
@@ -98,6 +103,8 @@ module Flapjack
       @check_last_change  = @persistence.hget(key, 'last_change')
       @check_summary      = check_summary(key)
       @last_notifications = last_notifications(key)
+      @in_unscheduled_maintenance = in_unscheduled_maintenance?(key)
+      @in_scheduled_maintenance   = in_scheduled_maintenance?(key)
       haml :check
     end
 
@@ -105,6 +112,20 @@ module Flapjack
       self_stats
       haml :self_stats
     end
+
+    get '/acknowledge' do
+      @entity = params[:entity]
+      @check  = params[:check]
+      key = @entity + ":" + @check
+      ack_opts = { 'summary' => "Ack from web at #{Time.now.to_s}" }
+      if create_acknowledgement(key, ack_opts)
+        @acknowledge_success = true
+      else
+        @acknowledge_success = false
+      end
+      haml :acknowledge
+    end
+
 
   end
 end

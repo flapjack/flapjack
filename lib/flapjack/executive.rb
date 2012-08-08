@@ -91,7 +91,7 @@ module Flapjack
           result[:skip_filters] = true unless old_state
 
           case event.state
-          when 'warning', 'critical'
+          when 'warning', 'critical', 'down'
             @persistence.zadd('failed_checks', timestamp, event.id)
             # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
             @persistence.zadd('failed_checks:client:' + event.client, timestamp, event.id) if event.client

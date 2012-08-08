@@ -4,6 +4,7 @@ require 'action_mailer'
 require 'action_view'
 require 'haml'
 require 'haml/template/plugin'
+require 'flapjack/redis'
 
 # Flapjack config for ActionMailer
 require File.dirname(__FILE__) + '/../../../config/email'
@@ -26,17 +27,19 @@ module Flapjack
         time               = notification['time']
         entity, check      = notification['event_id'].split(':')
 
-        puts "Sending sms notification now"
-        headline_map = {'problem'         => 'PROBLEM: ',
-                        'recovery'        => 'RECOVERY: ',
-                        'acknowledgement' => 'ACK: ',
+        headline_map = {'problem'         => 'Problem: ',
+                        'recovery'        => 'Recovery: ',
+                        'acknowledgement' => 'Acknowledgement: ',
                         'unknown'         => '',
                         ''                => '',
                        }
 
         headline = headline_map[notification_type] || ''
 
-        notification['subject']  = "#{headline}'#{check}' on #{entity} is #{state.upcase}"
+        subject = "#{headline}'#{check}' on #{entity}"
+        subject += " is #{state.upcase}" unless notification_type == 'acknowledgement'
+
+        notification['subject'] = subject
         @log.debug "Flapjack::Notification::Email#sendit is calling Flapjack::Notification::Mailer.sender, notification_id: #{notification['id']}"
         Flapjack::Notification::Mailer.sender(notification, @log).deliver
       end
@@ -47,6 +50,8 @@ module Flapjack
 
     # FIXME: move this to a separate file
     class Mailer < ActionMailer::Base
+      include Flapjack::Redis
+
       self.mailer_name = 'flapjack_mailer'
 
       def sender(notification, log)
@@ -68,6 +73,10 @@ module Flapjack
         @summary            = notification['summary']
         @time               = notification['time']
         @entity, @check     = notification['event_id'].split(':')
+        event_id            = notification['event_id']
+        @in_unscheduled_maintenance = in_unscheduled_maintenance(event_id)
+        @in_scheduled_maintenance   = in_scheduled_maintenance(event_id)
+
 
         mail(:subject  => subject,
              :from     => from,
