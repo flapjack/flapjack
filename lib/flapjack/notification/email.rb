@@ -74,8 +74,8 @@ module Flapjack
         @time               = notification['time']
         @entity, @check     = notification['event_id'].split(':')
         event_id            = notification['event_id']
-        @in_unscheduled_maintenance = in_unscheduled_maintenance(event_id)
-        @in_scheduled_maintenance   = in_scheduled_maintenance(event_id)
+        @in_unscheduled_maintenance = in_unscheduled_maintenance?(event_id)
+        @in_scheduled_maintenance   = in_scheduled_maintenance?(event_id)
 
 
         mail(:subject  => subject,
