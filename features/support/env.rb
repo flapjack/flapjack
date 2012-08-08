@@ -6,8 +6,11 @@ require 'pathname'
 require 'yajl'
 require 'beanstalk-client'
 require 'daemons'
+require 'webmock/cucumber'
 require 'flapjack/executive'
 require 'flapjack/patches'
+
+WebMock.disable_net_connect!
 
 class MockLogger
   attr_accessor :messages
@@ -38,3 +41,9 @@ After do
   Flapjack.logger.messages = []
 end
 
+Around('@email') do |scenario, block|
+  ActionMailer::Base.delivery_method = :test
+  ActionMailer::Base.perform_deliveries = true
+  ActionMailer::Base.deliveries.clear
+  block.call
+end

@@ -6,8 +6,13 @@ require 'haml'
 require 'haml/template/plugin'
 require 'flapjack/redis'
 
-# Flapjack config for ActionMailer
-require File.dirname(__FILE__) + '/../../../config/email'
+# TODO define these somewhere more central
+ActionMailer::Base.raise_delivery_errors = true
+ActionMailer::Base.view_paths = File.dirname(__FILE__)
+ActionMailer::Base.delivery_method = :smtp
+ActionMailer::Base.smtp_settings = { :address => "127.0.0.1",
+                                     :port => 25,
+                                     :enable_starttls_auto => false }
 
 module Flapjack
   module Notification
@@ -52,8 +57,6 @@ module Flapjack
       end
 
     end
-
-    ActionMailer::Base.view_paths = File.dirname(__FILE__)
 
     # FIXME: move this to a separate file
     class Mailer < ActionMailer::Base
