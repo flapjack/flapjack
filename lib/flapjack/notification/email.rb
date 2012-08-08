@@ -5,6 +5,9 @@ require 'action_view'
 require 'haml'
 require 'haml/template/plugin'
 
+# Flapjack config for ActionMailer
+require File.dirname(__FILE__) + '/../../../config/email'
+
 module Flapjack
   module Notification
 
@@ -40,15 +43,10 @@ module Flapjack
 
     end
 
-    ActionMailer::Base.raise_delivery_errors = true
     ActionMailer::Base.view_paths = File.dirname(__FILE__)
-    ActionMailer::Base.delivery_method = :smtp
-    ActionMailer::Base.smtp_settings = { :address => "127.0.0.1",
-                                         :port => 25,
-                                         :enable_starttls_auto => false }
 
     # FIXME: move this to a separate file
-    class Notification::Mailer < ActionMailer::Base
+    class Mailer < ActionMailer::Base
       self.mailer_name = 'flapjack_mailer'
 
       def sender(notification, log)
