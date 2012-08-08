@@ -27,4 +27,5 @@ group :development do
   gem 'shotgun'
   gem 'thin'
   gem 'webmock'
+  gem 'simplecov'
 end

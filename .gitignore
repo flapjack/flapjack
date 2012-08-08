@@ -19,3 +19,4 @@ log/*
 vendor
 .bundle
 etc/flapjack_config.yaml
+coverage

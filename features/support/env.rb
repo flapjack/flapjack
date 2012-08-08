@@ -1,5 +1,11 @@
 #!/usr/bin/env ruby
 
+require 'simplecov'
+SimpleCov.start do
+  add_filter '/features/'
+end
+SimpleCov.coverage_dir 'coverage/cucumber'
+
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
 require 'pathname'
