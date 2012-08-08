@@ -30,7 +30,10 @@ module Flapjack
 
         headline = headline_map[notification_type] || ''
 
-        message = "#{headline}'#{check}' on #{entity} is #{state.upcase} at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
+        message = "#{headline}'#{check}' on #{entity}"
+        message += " is #{state.upcase}" unless notification_type == 'acknowledgement'
+        message += " at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
+
         notification['message'] = message
         Flapjack::Notification::SmsMessagenet.sender(notification, @log)
       end
