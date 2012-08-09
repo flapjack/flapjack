@@ -1,13 +1,14 @@
 Hi <%= @contact_first_name %>,
 
-Take heed:
+Monitoring has detected the following:
 
-entity: <%= @entity %>
-check: <%= @check %>
-state: <%= @state %>
-summary: <%= @summary %>
-time: <%= Time.at(@time.to_i).to_s %>
+Entity: <%= @entity %>
+Check: <%= @check %>
+State: <%= @state %>
+Summary: <%= @summary %>
+Time: <%= Time.at(@time.to_i).to_s %>
+Flapjack: http://127.0.0.1:9292/check?entity=<%= @entity %>&check=<%= @check %>
 
-Cheers
+Cheers,
 Flapjack
 
