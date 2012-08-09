@@ -88,60 +88,60 @@ def drain_events
   @app.drain_events
 end
 
-Given /^check x is in an ok state$/ do
-  remove_unscheduled_maintenance
-  remove_scheduled_maintenance
-  remove_notifications
-  set_ok_state
+Given /^check ([\w\.\-]+) is in an ok state$/ do |entity|
+  remove_unscheduled_maintenance(entity)
+  remove_scheduled_maintenance(entity)
+  remove_notifications(entity)
+  set_ok_state(entity)
 end
 
-Given /^check x is in a failure state$/ do
-  remove_unscheduled_maintenance
-  remove_scheduled_maintenance
-  remove_notifications
-  set_failure_state
+Given /^check ([\w\.\-]+) is in a failure state$/ do |entity|
+  remove_unscheduled_maintenance(entity)
+  remove_scheduled_maintenance(entity)
+  remove_notifications(entity)
+  set_failure_state(entity)
 end
 
-Given /^check x is in scheduled maintenance$/ do
-  remove_unscheduled_maintenance
-  set_scheduled_maintenance
+Given /^check ([\w\.\-]+) is in scheduled maintenance$/ do |entity|
+  remove_unscheduled_maintenance(entity)
+  set_scheduled_maintenance(entity)
 end
 
-Given /^check x is in unscheduled maintenance$/ do
-  remove_scheduled_maintenance
-  set_failure_state
-  submit_acknowledgement
+Given /^check ([\w\.\-]+) is in unscheduled maintenance$/ do |entity|
+  remove_scheduled_maintenance(entity)
+  set_failure_state(entity)
+  submit_acknowledgement(entity)
   drain_events
 end
 
-When /^an ok event is received for check x$/ do
-  submit_ok
+When /^an ok event is received for check ([\w\.\-]+)$/ do |entity|
+  submit_ok(entity)
   drain_events
 end
 
-Then /^a notification should not be generated for check x$/ do
+Then /^a notification should not be generated for check ([\w\.\-]+)$/ do |entity|
   message = Flapjack.logger.messages.find {|m| m =~ /Not sending notifications for event/ }
   message.should_not be_nil
 end
 
-Then /^a notification should be generated for check x$/ do
+Then /^a notification should be generated for check ([\w\.\-]+)$/ do |entity|
   drain_events
   message = Flapjack.logger.messages.find {|m| m =~ /Sending notifications for event/ }
   message.should_not be_nil
 end
 
-When /^a failure event is received for check x$/ do
-  submit_critical
+When /^a failure event is received for check ([\w\.\-]+)$/ do |entity|
+  submit_critical(entity)
   drain_events
 end
 
-When /^an acknowledgement is received for check x$/ do
-  submit_acknowledgement
+When /^an acknowledgement is received for check ([\w\.\-]+)$/ do |entity|
+  submit_acknowledgement(entity)
   drain_events
 end
 
-When /^an acknowledgement event is received for check x$/ do
-  submit_acknowledgement
+When /^an acknowledgement event is received for check ([\w\.\-]+)$/ do |entity|
+  submit_acknowledgement(entity)
   drain_events
 end
 

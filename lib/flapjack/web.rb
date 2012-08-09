@@ -126,6 +126,5 @@ module Flapjack
       haml :acknowledge
     end
 
-
   end
 end

@@ -32,7 +32,7 @@ module Flapjack
           response = http.request request
           http_success = ( response.is_a?(Net::HTTPSuccess) == true )
           log.debug("Flapjack::Notification::SMSMessagenet: response from server: #{response.body}")
-          raise RuntimeError "Failed to send SMS via messagenet, http response is a #{response.class}, notification_id: #{notification_id}" unless http_success
+          raise RuntimeError.new "Failed to send SMS via messagenet, http response is a #{response.class}, notification_id: #{notification_id}" unless http_success
         end
 
       end
