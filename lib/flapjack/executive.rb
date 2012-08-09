@@ -2,6 +2,9 @@
 
 require 'log4r'
 require 'log4r/outputter/syslogoutputter'
+require 'redis'
+require 'resque'
+require 'yajl'
 require 'flapjack'
 require 'flapjack/patches'
 require 'flapjack/filters/acknowledgement'
@@ -14,8 +17,6 @@ require 'flapjack/notification/common'
 require 'flapjack/notification/sms'
 require 'flapjack/notification/email'
 require 'flapjack/event'
-require 'redis'
-require 'resque'
 
 
 module Flapjack
@@ -186,6 +187,11 @@ module Flapjack
       fuid = Flapjack.instance.to_i.to_s + '-' + Time.now.to_i.to_s + '.' + Time.now.tv_usec.to_s
     end
 
+    # puts a notification into the jabber queue (redis list)
+    def submit_jabber(notification)
+      @persistence.rpush('jabber_notifications', Yajl::Encoder.encode(notification))
+    end
+
     # takes an event, a notification type, and an array of contacts and creates jobs in rescue
     # (eventually) for each notification
     #
@@ -221,6 +227,8 @@ module Flapjack
             Resque.enqueue(Notification::Sms, notif)
           when "email"
             Resque.enqueue(Notification::Email, notif)
+          when "jabber"
+            submit_jabber(notif)
           end
         }
         if media.length == 0
