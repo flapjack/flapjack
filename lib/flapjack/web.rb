@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'bundler/setup'
 require 'sinatra/base'
 require 'sinatra_more/markup_plugin'
 require 'redis'
@@ -125,7 +124,6 @@ module Flapjack
       end
       haml :acknowledge
     end
-
 
   end
 end

@@ -205,18 +205,18 @@ module Flapjack
 
         notification = notification.merge(contact_deets)
 
-        media.each_pair {|media, address|
+        media.each_pair {|media_type, address|
 
           @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact_id} | #{media} | #{address}")
           # queue this notification
           # FIXME: make a Contact class perhaps
           notif = notification.dup
-          notif['media']   = media
+          notif['media']   = media_type
           notif['address'] = address
           notif['id']      = fuid
           @log.debug("send_notifications: sending notification: #{notif.inspect}")
 
-          case media
+          case media_type
           when "sms"
             Resque.enqueue(Notification::Sms, notif)
           when "email"

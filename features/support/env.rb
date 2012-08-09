@@ -1,16 +1,24 @@
 #!/usr/bin/env ruby
 
+require 'rubygems'
+require 'simplecov'
+SimpleCov.start do
+  add_filter '/features/'
+end
+SimpleCov.coverage_dir 'coverage/cucumber'
+
+require 'bundler'
+Bundler.setup(:default, :cucumber)
+
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
 require 'pathname'
-require 'yajl'
-require 'beanstalk-client'
-require 'daemons'
+
 require 'webmock/cucumber'
+WebMock.disable_net_connect!
+
 require 'flapjack/executive'
 require 'flapjack/patches'
-
-WebMock.disable_net_connect!
 
 class MockLogger
   attr_accessor :messages
@@ -46,4 +54,12 @@ Around('@email') do |scenario, block|
   ActionMailer::Base.perform_deliveries = true
   ActionMailer::Base.deliveries.clear
   block.call
+end
+
+# not sure why this has to be explicitly required -- Bundler should
+# be doing this
+require 'resque_spec'
+
+Before('@resque') do
+  ResqueSpec.reset!
 end

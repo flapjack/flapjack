@@ -1,7 +1,9 @@
 #!/usr/bin/env ruby
 
 require 'rubygems'
-require 'bundler/setup'
+require 'bundler'
+Bundler.setup(:default, :web)
+
 $: << File.expand_path(File.join(File.dirname(__FILE__), 'lib'))
 require 'flapjack/web'
 
