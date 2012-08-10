@@ -6,12 +6,10 @@ gem 'daemons'
 gem 'beanstalk-client'
 gem 'log4r'
 gem 'yajl-ruby', :require => 'yajl'
+
+gem 'em-synchrony'
 gem 'redis'
 gem 'resque'
-gem 'mail'
-gem 'haml' # moved from web as required in mailer as well
-gem 'actionmailer'
-gem 'thin'
 
 # TODO split out some of the above gems to separate groups (e.g. mail), only
 # require those groups in the parts that need them
@@ -26,6 +24,18 @@ group :web do
   gem 'tilt'
   gem 'warden'
   gem 'sinatra_more'
+  gem 'rack-fiber_pool'
+  gem 'haml'  
+  gem 'thin'
+  # pony is vendored into sinatra_more (?), and requires these
+  gem 'mail'
+  gem 'actionmailer', :require => 'action_mailer'
+end
+
+group :email do
+  gem 'haml'
+  gem 'mail'
+  gem 'actionmailer', :require => 'action_mailer'
 end
 
 group :rspec do

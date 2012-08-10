@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'yajl'
-
 # redis interaction functions for flapjack
 # assumes @persistence is already set up by Flapjack.bootstrap
 module Flapjack

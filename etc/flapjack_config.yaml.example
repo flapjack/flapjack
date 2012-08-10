@@ -1,4 +1,31 @@
 ---
-sms_provider: messagenet
-sms_messagenet_username: "ermahgerd"
-sms_messagenet_password: "xxxx"
+
+development:
+  email_notifier:
+    instances: 1
+  sms_notifier:
+    instances: 1
+    username: "ermahgerd"
+    password: "xxxx"
+  web:
+    instances: 1
+
+staging:
+  email_notifier:
+    instances: 1
+  sms_notifier:
+    instances: 1
+    username: "ermahgerd"
+    password: "xxxx"
+  web:
+    instances: 1
+    
+production:
+  email_notifier:
+    instances: 1
+  sms_notifier:
+    instances: 1
+    username: "ermahgerd"
+    password: "xxxx"
+  web:
+    instances: 1

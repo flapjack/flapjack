@@ -1,15 +1,14 @@
 #!/usr/bin/env ruby
 
-require 'sinatra/base'
-require 'sinatra_more/markup_plugin'
-require 'redis'
-require 'resque'
+Bundler.require(:web)
+
 require 'flapjack/redis'
 
 module Flapjack
   class Web < Sinatra::Base
     register SinatraMore::MarkupPlugin
 
+    include Flapjack::Pikelet
     include Flapjack::Redis
 
     set :views, settings.root + '/web/views'
@@ -64,9 +63,9 @@ module Flapjack
       @persistence.get("#{event_id}:#{timestamp}:summary")
     end
 
-    before do
-      @persistence = ::Redis.new
-    end
+#    before do
+#      @persistence = ::Redis.new
+#    end
 
     get '/' do
       self_stats

@@ -1,9 +1,10 @@
 #!/usr/bin/env ruby
 
-require 'action_mailer'
+Bundler.require(:email)
 require 'action_view'
-require 'haml'
-require 'haml/template/plugin'
+# require 'haml/template/plugin' # haml templates won't work without this
+
+require 'flapjack/notification/common'
 require 'flapjack/redis'
 
 # TODO define these somewhere more central

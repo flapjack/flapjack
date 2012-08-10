@@ -1,0 +1,98 @@
+#!/usr/bin/env ruby
+
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+
+require 'rubygems'
+require 'bundler'
+
+# subsidiary parts will require particular bundler groups as needed
+Bundler.require(:default, FLAPJACK_ENV.to_sym)
+
+# load the config hash for the current environment
+config_file = File.join('etc', 'flapjack_config.yaml')
+
+if File.file?(config_file)
+  config = YAML::load(File.open(config_file))
+else
+  puts "Could not find 'etc/flapjack_config.yaml'"
+  exit(false)
+end
+
+config_env = config[FLAPJACK_ENV]
+
+if config_env.nil? || config_env.empty?
+  puts "No config data for environment '#{FLAPJACK_ENV}'"
+  exit(false)  
+end
+
+# add lib to the default include path
+unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+  $: << File.dirname(__FILE__) + '/../lib'
+end
+
+
+# set up initial values for all configured components
+pikelets = {}
+
+config_env.keys.each do |pikelet_type|
+
+  # TODO, e.g.
+  # 'jabber_notifier' => Flapjack::Notification::Jabber,
+  # 'jabber_bot' => Flapjack::JabberBot, 
+ 
+  case pikelet_type
+  when 'executive'
+    require 'flapjack/executive'
+    pikelets[Flapjack::Executive] = {:config => config_env[pikelet_type]}
+  when 'web'
+    require 'flapjack/web'
+    pikelets[Flapjack::Web] = {:config => config_env[pikelet_type]}
+  when 'email_notifier'
+    require 'flapjack/notification/email'
+    pikelets[Flapjack::Notification::Email] = 
+      {:config => config_env['email_notifier'],
+       :redis_queue => 'email_notifier'}
+  when 'sms_notifier'
+    require 'flapjack/notification/sms'
+    pikelets[Flapjack::Notification::Sms] = 
+      {:config => config_env['sms_notifier'],
+       :redis_queue => 'sms_notifier'}
+  end 
+
+end
+
+EM.next_tick {
+
+  pikelets.select {|p| [Flapjack::Notification::Email, 
+                        Flapjack::Notification::Sms].include?(p) }.each do |pikelet| 
+   
+    pikelet_opts = pikelets[pikelet]
+   
+    p pikelet_opts
+   
+    # TODO create and bootstrap em-resque worker for pikelet
+    # will need to ensure queue segregation
+  
+    # TODO Flapjack falls over when Redis restarted ??
+  
+    # require 'em-resque/worker_machine'
+    # require 'em-resque/task_helper'
+    #  
+    # EM::Resque.redis = resque_config[FLAPJACK_ENV]
+    # opts = TaskHelper.parse_opts_from_env.merge(:redis => resque_config[FLAPJACK_ENV])
+    # EM::Resque::WorkerMachine.new(opts).start
+
+  end
+  
+}
+
+if pikelets.include?(Flapjack::Web)
+
+  #  # TODO incorporate thin config settings into flapjack config web part, above
+  #  ::Thin::Runner.new(["--config", "config/thin.yml", "--rackup", "config.ru",
+  #                      "start"]).run!
+
+end
+    
+# TODO daemonize using lib/flapjack/daemonizing.rb -- extracted from Thin
+

@@ -23,12 +23,11 @@ module Flapjack
   class Executive
     attr_accessor :log
 
+    include Flapjack::Pikelet
+
     def initialize(opts={})
       @options     = opts
-      Flapjack.bootstrap(@options)
-
-      @persistence = Flapjack.persistence
-      @log = Flapjack.logger
+      # Flapjack.bootstrap(@options)
 
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => "log/notify.log"))

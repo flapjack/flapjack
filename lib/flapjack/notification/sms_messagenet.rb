@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
-require 'log4r'
-require 'log4r/outputter/syslogoutputter'
+#require 'log4r'
+#require 'log4r/outputter/syslogoutputter'
 require 'net/http'
 require 'flapjack'
 
