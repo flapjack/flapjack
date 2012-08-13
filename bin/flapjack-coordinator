@@ -61,38 +61,41 @@ config_env.keys.each do |pikelet_type|
 
 end
 
-EM.next_tick {
+# TODO Flapjack falls over when Redis restarted -- trap errors and attempt reconnect
 
-  pikelets.select {|p| [Flapjack::Notification::Email, 
-                        Flapjack::Notification::Sms].include?(p) }.each do |pikelet| 
-   
-    pikelet_opts = pikelets[pikelet]
-   
-    p pikelet_opts
-   
-    # TODO create and bootstrap em-resque worker for pikelet
-    # will need to ensure queue segregation
-  
-    # TODO Flapjack falls over when Redis restarted ??
-  
-    # require 'em-resque/worker_machine'
-    # require 'em-resque/task_helper'
-    #  
-    # EM::Resque.redis = resque_config[FLAPJACK_ENV]
-    # opts = TaskHelper.parse_opts_from_env.merge(:redis => resque_config[FLAPJACK_ENV])
-    # EM::Resque::WorkerMachine.new(opts).start
+EM.synchrony do
 
+  if pikelets.include?(Flapjack::Executive)
+    # TODO handle multiple instances
+    Fiber.new {
+      flapjack_exec = Flapjack::Executive.new
+      flapjack_exec.main
+    }
   end
+
+  (pikelets.keys & [Flapjack::Notification::Email, Flapjack::Notification::Sms]).each do |pikelet| 
+    # TODO handle multiple instances
+    pikelet_opts = pikelets[pikelet]; p pikelet_opts
+    Fiber.new {
+      Flapjack::Resqueuer.new(pikelet_opts.merge(:type => pikelet))
+    }
+  end
+
+  if pikelets.include?(Flapjack::Web)
+    
+    #  # TODO incorporate thin config settings into flapjack config web part, above
   
-}
-
-if pikelets.include?(Flapjack::Web)
-
-  #  # TODO incorporate thin config settings into flapjack config web part, above
-  #  ::Thin::Runner.new(["--config", "config/thin.yml", "--rackup", "config.ru",
-  #                      "start"]).run!
+    # App.run! # thin app
+  
+    #  ::Thin::Runner.new(["--config", "config/thin.yml", "--rackup", "config.ru",
+    #                      "start"]).run!
+  
+    # TODO daemonize via Thin
+  
+  else
+    # TODO daemonize using lib/flapjack/daemonizing.rb -- extracted from Thin  
+  end
 
 end
-    
-# TODO daemonize using lib/flapjack/daemonizing.rb -- extracted from Thin
+
 
