@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-Bundler.require(:web)
-
 require 'flapjack/pikelet'
 require 'flapjack/redis'
 

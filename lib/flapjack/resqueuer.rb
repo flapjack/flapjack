@@ -12,11 +12,13 @@ module Flapjack
     # opts[:type] should be the notification class -- TODO clean this up,
     # it's all too hacky
     def initialize(opts = {})
-      worker = EM::Resque::Worker.new(opts[:type].queue)
-      
-      # TODO check that this will 'block' indefinitely
-      worker.work(0)
+      @worker = EM::Resque::Worker.new(opts[:type].instance_variable_get('@queue'))      
     end    
+    
+    def main
+      # TODO check that this will 'block' indefinitely
+      @worker.work(0)
+    end
     
   end
 

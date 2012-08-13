@@ -11,28 +11,20 @@ gem 'em-synchrony'
 gem 'redis'
 gem 'em-resque'
 
+gem 'sinatra'
+gem 'tilt'
+gem 'warden'
+gem 'sinatra_more'
+gem 'rack-fiber_pool' # TODO check
+gem 'haml'
+gem 'thin'
+
+gem 'mail'
+gem 'actionmailer', :require => 'action_mailer'
+
 group :development do
   gem 'jeweler'
   gem 'shotgun'
-end
-
-group :web do
-  gem 'sinatra'
-  gem 'tilt'
-  gem 'warden'
-  gem 'sinatra_more'
-  gem 'rack-fiber_pool'
-  gem 'haml'  
-  gem 'thin'
-  # pony is vendored into sinatra_more (?), and requires these
-  gem 'mail'
-  gem 'actionmailer', :require => 'action_mailer'
-end
-
-group :email do
-  gem 'haml'
-  gem 'mail'
-  gem 'actionmailer', :require => 'action_mailer'
 end
 
 group :rspec do

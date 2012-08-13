@@ -1,1 +1,1 @@
-Flapjack::Web.run!
+run Flapjack::Web

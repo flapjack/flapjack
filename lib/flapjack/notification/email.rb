@@ -1,8 +1,7 @@
 #!/usr/bin/env ruby
 
-Bundler.require(:email)
 require 'action_view'
-# require 'haml/template/plugin' # haml templates won't work without this
+require 'haml/template/plugin' # haml templates won't work without this
 
 require 'flapjack/notification/common'
 require 'flapjack/redis'

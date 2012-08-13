@@ -97,7 +97,7 @@ EM.synchrony do
     # TODO incorporate thin config settings into flapjack config (web part)
     # there's probably a more elegant way of calling this than using a one-line
     # rackup file, too  
-    ::Thin::Runner.new(["--config", "config/thin.yml", "--rackup", "coord_config.ru",
+    ::Thin::Runner.new(["--config", "etc/thin_config.yaml", "--rackup", "coord_config.ru",
                         "--daemonize", "start"]).run!
   
   else
