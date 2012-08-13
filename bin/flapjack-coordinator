@@ -2,7 +2,7 @@
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
-require 'rubygems'
+# require 'rubygem-s'
 require 'bundler'
 
 # subsidiary parts will require particular bundler groups as needed

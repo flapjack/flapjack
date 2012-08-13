@@ -7,11 +7,13 @@ module Flapjack
 
     class Sms
 
-      extend Flapjack::Notification::Common
+      include Flapjack::Notification::Common
 
       @queue = :sms_notifications
 
-      def self.dispatch(notification)
+      def dispatch(notification)
+        self.bootstrap
+        
         notification_type  = notification['notification_type']
         contact_first_name = notification['contact_first_name']
         contact_last_name  = notification['contact_last_name']
@@ -32,7 +34,7 @@ module Flapjack
 
         message = "#{headline}'#{check}' on #{entity} is #{state.upcase} at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
         notification['message'] = message
-        Flapjack::Notification::SmsMessagenet.sender(notification, @log)
+        Flapjack::Notification::SmsMessagenet.sender(notification, @logger)
       end
 
     end

@@ -8,7 +8,7 @@ end
 SimpleCov.coverage_dir 'coverage/cucumber'
 
 require 'bundler'
-Bundler.setup(:default, :cucumber)
+Bundler.require(:default, :cucumber)
 
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
@@ -41,12 +41,12 @@ Before do
   # Use a separate database whilst testing
   @app = Flapjack::Executive.new(:redis => { :db => 14 }, :logger => @logger)
   @app.drain_events
-  @redis = Flapjack.persistence
+  @redis = @app.persistence
 end
 
 After do
   # Reset the logged messages
-  Flapjack.logger.messages = []
+  @logger.messages = []
 end
 
 Around('@email') do |scenario, block|

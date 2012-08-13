@@ -2,15 +2,15 @@
 
 # Encapsulates the config loading and environment setup used
 # by the various Flapjack components
+
+require 'log4r/outputter/consoleoutputters'
+require 'log4r/outputter/syslogoutputter'
+
 module Flapjack
   module Pikelet
     
-    def included(mod)
-      class << mod
-        attr_accessor :bootstrapped, :persistence, :logger, :config
-      end
-    end
-    
+    attr_accessor :bootstrapped, :persistence, :logger, :config
+        
     # FIXME: this should register the running pikelet as a unique instance in redis
     # perhaps look at resque's code, how it does this
     def instance
@@ -21,7 +21,7 @@ module Flapjack
       !!@bootstrapped
     end
     
-    def bootstrap(options = {})
+    def bootstrap(opts = {})
       return if bootstrapped?
       
       defaults = {
@@ -33,10 +33,10 @@ module Flapjack
 
       @persistence = ::Redis.new(options[:redis])
 
-      unless @log = options[:logger]
-        @log = Log4r::Logger.new("flapjack")
-        @log.add(Log4r::StdoutOutputter.new("flapjack"))
-        @log.add(Log4r::SyslogOutputter.new("flapjack"))
+      unless @logger = options[:logger]
+        @logger = Log4r::Logger.new("flapjack")
+        @logger.add(Log4r::StdoutOutputter.new("flapjack"))
+        @logger.add(Log4r::SyslogOutputter.new("flapjack"))
       end
 
       @config  = options[:config] || {}

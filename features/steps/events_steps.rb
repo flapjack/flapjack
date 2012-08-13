@@ -120,13 +120,13 @@ When /^an ok event is received for check ([\w\.\-]+)$/ do |entity|
 end
 
 Then /^a notification should not be generated for check ([\w\.\-]+)$/ do |entity|
-  message = Flapjack.logger.messages.find {|m| m =~ /Not sending notifications for event/ }
+  message = @app.logger.messages.find {|m| m =~ /Not sending notifications for event/ }
   message.should_not be_nil
 end
 
 Then /^a notification should be generated for check ([\w\.\-]+)$/ do |entity|
   drain_events
-  message = Flapjack.logger.messages.find {|m| m =~ /Sending notifications for event/ }
+  message = @app.logger.messages.find {|m| m =~ /Sending notifications for event/ }
   message.should_not be_nil
 end
 
@@ -146,6 +146,6 @@ When /^an acknowledgement event is received for check ([\w\.\-]+)$/ do |entity|
 end
 
 Then /^show me the notifications?$/ do
-  puts Flapjack.logger.messages.join("\n")
+  puts @app.logger.messages.join("\n")
 end
 

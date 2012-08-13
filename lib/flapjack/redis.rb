@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 # redis interaction functions for flapjack
-# assumes @persistence is already set up by Flapjack.bootstrap
+# assumes @persistence is already set up by pikelet bootstrap
 module Flapjack
   module Redis
 

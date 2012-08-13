@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'action_view'
+require 'haml/util'
 require 'haml/template/plugin' # haml templates won't work without this
 
 require 'flapjack/notification/common'
@@ -18,13 +19,13 @@ module Flapjack
   module Notification
 
     class Email
-      extend Flapjack::Notification::Common
+      include Flapjack::Notification::Common
 
-      extend Flapjack::Redis
+      include Flapjack::Redis
 
       @queue = :email_notifications
 
-      def self.dispatch(notification)
+      def dispatch(notification)
 
         notification_type  = notification['notification_type']
         contact_first_name = notification['contact_first_name']
@@ -48,10 +49,10 @@ module Flapjack
         subject += " is #{state.upcase}" unless notification_type == 'acknowledgement'
 
         notification['subject'] = subject
-        @log.debug "Flapjack::Notification::Email#sendit is calling Flapjack::Notification::Mailer.sender, notification_id: #{notification['id']}"
-        sender_opts = { :log => @log,
+        @logger.debug "Flapjack::Notification::Email#sendit is calling Flapjack::Notification::Mailer.sender, notification_id: #{notification['id']}"
+        sender_opts = { :log => @logger,
                         :in_scheduled_maintenance   => in_scheduled_maintenance?(event_id),
-                        :in_unscheduled_maintenance => in_unscheduled_maintenance?(event_id),
+                        :in_unscheduled_maintenance => in_unscheduled_maintenance?(event_id)
         }
         Flapjack::Notification::Mailer.sender(notification, sender_opts).deliver
       end
