@@ -5,7 +5,6 @@ FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 # require 'rubygem-s'
 require 'bundler'
 
-# subsidiary parts will require particular bundler groups as needed
 Bundler.require(:default, FLAPJACK_ENV.to_sym)
 
 # load the config hash for the current environment
@@ -33,7 +32,6 @@ end
 require 'flapjack/notification/email'
 require 'flapjack/notification/sms'
 require 'flapjack/executive'
-require 'flapjack/resqueuer'
 require 'flapjack/web'
 
 # set up initial values for all configured components
