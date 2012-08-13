@@ -1,8 +1,8 @@
 #!/usr/bin/env ruby
 
 require 'ostruct'
-require 'daemons'
-require 'log4r'
+#require 'daemons'
+#require 'log4r'
 
 class OpenStruct
   def to_h

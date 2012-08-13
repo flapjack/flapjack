@@ -9,10 +9,7 @@ gem 'yajl-ruby', :require => 'yajl'
 
 gem 'em-synchrony'
 gem 'redis'
-gem 'resque'
-
-# TODO split out some of the above gems to separate groups (e.g. mail), only
-# require those groups in the parts that need them
+gem 'em-resque'
 
 group :development do
   gem 'jeweler'

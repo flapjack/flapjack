@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
-require 'log4r'
-require 'log4r/outputter/syslogoutputter'
+#require 'log4r'
+#require 'log4r/outputter/syslogoutputter'
 require 'flapjack'
 require 'flapjack/patches'
 require 'flapjack/filters/acknowledgement'
@@ -14,8 +14,9 @@ require 'flapjack/notification/common'
 require 'flapjack/notification/sms'
 require 'flapjack/notification/email'
 require 'flapjack/event'
-require 'redis'
-require 'resque'
+require 'flapjack/pikelet'
+#require 'redis'
+#require 'resque'
 
 
 module Flapjack

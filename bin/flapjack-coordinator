@@ -30,6 +30,11 @@ unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
 end
 
+require 'flapjack/notification/email'
+require 'flapjack/notification/sms'
+require 'flapjack/executive'
+require 'flapjack/resqueuer'
+require 'flapjack/web'
 
 # set up initial values for all configured components
 pikelets = {}
@@ -42,18 +47,14 @@ config_env.keys.each do |pikelet_type|
  
   case pikelet_type
   when 'executive'
-    require 'flapjack/executive'
     pikelets[Flapjack::Executive] = {:config => config_env[pikelet_type]}
   when 'web'
-    require 'flapjack/web'
     pikelets[Flapjack::Web] = {:config => config_env[pikelet_type]}
   when 'email_notifier'
-    require 'flapjack/notification/email'
     pikelets[Flapjack::Notification::Email] = 
       {:config => config_env['email_notifier'],
        :redis_queue => 'email_notifier'}
   when 'sms_notifier'
-    require 'flapjack/notification/sms'
     pikelets[Flapjack::Notification::Sms] = 
       {:config => config_env['sms_notifier'],
        :redis_queue => 'sms_notifier'}
@@ -65,37 +66,42 @@ end
 
 EM.synchrony do
 
+  def fiberise_instances(pikelet, instance_num, &block)
+    instances = [1, instance_num || 1].max    
+    (1..instances).each do |n|
+      Fiber.new {
+        block.yield
+      }.resume
+    end
+  end
+
   if pikelets.include?(Flapjack::Executive)
-    # TODO handle multiple instances
-    Fiber.new {
-      flapjack_exec = Flapjack::Executive.new
-      flapjack_exec.main
+    pikelet_opts = pikelets[Flapjack::Executive]; p pikelet_opts
+    fiberise_instances(Flapjack::Executive, pikelet_opts['instances'].to_i) {
+      flapjack_exec = Flapjack::Executive.new(pikelet_opts)
+      flapjack_exec.main     
     }
   end
 
-  (pikelets.keys & [Flapjack::Notification::Email, Flapjack::Notification::Sms]).each do |pikelet| 
-    # TODO handle multiple instances
+  (pikelets.keys & [Flapjack::Notification::Email, Flapjack::Notification::Sms]).each do |pikelet|
     pikelet_opts = pikelets[pikelet]; p pikelet_opts
-    Fiber.new {
-      Flapjack::Resqueuer.new(pikelet_opts.merge(:type => pikelet))
+    fiberise_instances(pikelet, pikelet_opts['instances']) {
+      flapjack_rsq = Flapjack::Resqueuer.new(pikelet_opts.merge(:type => pikelet))
+      flapjack_rsq.main
     }
   end
 
   if pikelets.include?(Flapjack::Web)
-    
-    #  # TODO incorporate thin config settings into flapjack config web part, above
+    # pikelet_opts = pikelets[Flapjack::Web]; p pikelet_opts
   
-    # App.run! # thin app
-  
-    #  ::Thin::Runner.new(["--config", "config/thin.yml", "--rackup", "config.ru",
-    #                      "start"]).run!
-  
-    # TODO daemonize via Thin
+    # TODO incorporate thin config settings into flapjack config (web part)
+    # there's probably a more elegant way of calling this than using a one-line
+    # rackup file, too  
+    ::Thin::Runner.new(["--config", "config/thin.yml", "--rackup", "coord_config.ru",
+                        "--daemonize", "start"]).run!
   
   else
     # TODO daemonize using lib/flapjack/daemonizing.rb -- extracted from Thin  
   end
 
 end
-
-

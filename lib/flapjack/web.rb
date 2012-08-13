@@ -2,6 +2,7 @@
 
 Bundler.require(:web)
 
+require 'flapjack/pikelet'
 require 'flapjack/redis'
 
 module Flapjack
@@ -63,9 +64,9 @@ module Flapjack
       @persistence.get("#{event_id}:#{timestamp}:summary")
     end
 
-#    before do
-#      @persistence = ::Redis.new
-#    end
+    before do
+      bootstrap
+    end
 
     get '/' do
       self_stats

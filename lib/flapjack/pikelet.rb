@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 # Encapsulates the config loading and environment setup used
 # by the various Flapjack components
 module Flapjack

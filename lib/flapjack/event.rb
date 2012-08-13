@@ -1,8 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'redis'
-require 'json'
-
 module Flapjack
   class Event
     # Helper method for getting the next event.
