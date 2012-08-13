@@ -10,12 +10,6 @@ module Flapjack
   module Pikelet
     
     attr_accessor :bootstrapped, :persistence, :logger, :config
-        
-    # FIXME: this should register the running pikelet as a unique instance in redis
-    # perhaps look at resque's code, how it does this
-    def instance
-      1
-    end
 
     def bootstrapped?
       !!@bootstrapped

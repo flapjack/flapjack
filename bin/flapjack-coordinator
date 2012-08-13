@@ -41,6 +41,10 @@ pikelets = {}
 
 config_env.keys.each do |pikelet_type|
 
+  # TODO if we want to run the same pikelet with different settings,
+  # we could require each setting to include a type, and treat the
+  # key as the name of the config -- for now, YAGNI.
+
   # TODO, e.g.
   # 'jabber_notifier' => Flapjack::Notification::Jabber,
   # 'jabber_bot' => Flapjack::JabberBot, 
@@ -75,7 +79,7 @@ EM.synchrony do
     end
   end
 
-  if pikelets.include?(Flapjack::Executive)
+  if pikelets.has_key?(Flapjack::Executive)
     pikelet_opts = pikelets[Flapjack::Executive]; p pikelet_opts
     fiberise_instances(Flapjack::Executive, pikelet_opts['instances'].to_i) {
       flapjack_exec = Flapjack::Executive.new(pikelet_opts)
@@ -85,13 +89,16 @@ EM.synchrony do
 
   (pikelets.keys & [Flapjack::Notification::Email, Flapjack::Notification::Sms]).each do |pikelet|
     pikelet_opts = pikelets[pikelet]; p pikelet_opts
+    # the following line would need to change if more than one config type for class
+    # (see the comment re config parsing, above)
+    pikelet::CONFIG = pikelet_opts['config']
     fiberise_instances(pikelet, pikelet_opts['instances']) {
-      flapjack_rsq = Flapjack::Resqueuer.new(pikelet_opts.merge(:type => pikelet))
-      flapjack_rsq.main
+      flapjack_rsq = EM::Resque::Worker.new(pikelet.instance_varaible_get('@queue'))
+      flapjack_rsq.work(0)       
     }
   end
 
-  if pikelets.include?(Flapjack::Web)
+  if pikelets.has_key?(Flapjack::Web)
     # pikelet_opts = pikelets[Flapjack::Web]; p pikelet_opts
   
     # TODO incorporate thin config settings into flapjack config (web part)

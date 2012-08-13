@@ -177,7 +177,7 @@ module Flapjack
 
     # generates a fairly unique identifier to use as a message id
     def fuid
-      fuid = self.instance.to_i.to_s + '-' + Time.now.to_i.to_s + '.' + Time.now.tv_usec.to_s
+      fuid = self.object_id.to_i.to_s + '-' + Time.now.to_i.to_s + '.' + Time.now.tv_usec.to_s
     end
 
     # takes an event, a notification type, and an array of contacts and creates jobs in rescue

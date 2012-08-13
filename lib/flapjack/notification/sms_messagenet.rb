@@ -7,9 +7,17 @@ module Flapjack
   module Notification
     class SmsMessagenet
 
-      def self.sender(notification, log)
-        raise RuntimeError.new('sms_messagenet: username is missing') unless username = @config["username"]
-        raise RuntimeError.new('sms_messagenet: password is missing') unless password = @config["password"]
+      def self.sender(notification, options = {})
+        
+        log = options[:logger]
+        config = options[:config]
+        
+        unless config && (username = config["username"])
+          raise RuntimeError.new('sms_messagenet: username is missing')
+        end
+        unless config && (password = config["password"])
+          raise RuntimeError.new('sms_messagenet: password is missing') 
+        end
 
         raise RuntimeError.new('address is missing') unless address         = notification['address']
         raise RuntimeError.new('message is missing') unless message         = notification['message']
