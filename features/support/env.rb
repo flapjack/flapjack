@@ -7,8 +7,9 @@ SimpleCov.start do
 end
 SimpleCov.coverage_dir 'coverage/cucumber'
 
+ENV["FLAPJACK_ENV"] = 'test'
 require 'bundler'
-Bundler.require(:default, :cucumber)
+Bundler.require(:default, :test)
 
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
@@ -39,7 +40,7 @@ end
 Before do
   @logger = MockLogger.new
   # Use a separate database whilst testing
-  @app = Flapjack::Executive.new(:redis => { :db => 14 }, :logger => @logger)
+  @app = Flapjack::Executive.new(:redis => { :db => 14 }, :logger => @logger, :evented => false)
   @app.drain_events
   @redis = @app.persistence
 end

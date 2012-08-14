@@ -22,7 +22,8 @@ module Flapjack
     include Flapjack::Pikelet
 
     def initialize(opts = {})
-      bootstrap(opts.merge(:evented => true))
+      opts[:evented] = true if opts[:evented].nil? 
+      bootstrap(opts)
 
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => "log/notify.log"))

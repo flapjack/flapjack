@@ -26,15 +26,16 @@ group :development do
   gem 'shotgun'
 end
 
-group :rspec do
-  gem 'rspec'
-end
-
-group :cucumber do
+group :test do
   gem 'rspec'
   gem 'cucumber'
   gem 'delorean'
   gem 'resque_spec'
   gem 'webmock'
+  gem 'guard'
+  gem 'guard-rspec'
+  gem 'guard-cucumber'
+  gem 'fuubar'
+  gem 'fuubar-cucumber'
   gem 'simplecov', :require => false
 end
