@@ -29,6 +29,8 @@ unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
 end
 
+require 'em-resque/worker'
+
 require 'flapjack/notification/email'
 require 'flapjack/notification/sms'
 require 'flapjack/executive'
@@ -91,19 +93,20 @@ EM.synchrony do
     # (see the comment re config parsing, above)
     pikelet::CONFIG = pikelet_opts['config']
     fiberise_instances(pikelet, pikelet_opts['instances']) {
-      flapjack_rsq = EM::Resque::Worker.new(pikelet.instance_varaible_get('@queue'))
+      flapjack_rsq = EM::Resque::Worker.new(pikelet.instance_variable_get('@queue'))
       flapjack_rsq.work(0)       
     }
   end
 
   if pikelets.has_key?(Flapjack::Web)
-    # pikelet_opts = pikelets[Flapjack::Web]; p pikelet_opts
+    puts "running web"
+    pikelet_opts = pikelets[Flapjack::Web]; p pikelet_opts
   
     # TODO incorporate thin config settings into flapjack config (web part)
-    # there's probably a more elegant way of calling this than using a one-line
-    # rackup file, too  
+    # NBL disable the --daemonize when debugging, otherwise it swallows errors
     ::Thin::Runner.new(["--config", "etc/thin_config.yaml", "--rackup", "coord_config.ru",
-                        "--daemonize", "start"]).run!
+                        # "--daemonize",
+                        "start"]).run!
   
   else
     # TODO daemonize using lib/flapjack/daemonizing.rb -- extracted from Thin  

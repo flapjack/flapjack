@@ -8,6 +8,7 @@ gem 'yajl-ruby', :require => 'yajl'
 gem 'em-synchrony'
 gem 'redis'
 gem 'em-resque'
+gem 'json'
 
 gem 'sinatra'
 gem 'tilt'

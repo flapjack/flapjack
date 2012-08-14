@@ -146,6 +146,7 @@ DEPENDENCIES
   em-synchrony
   haml
   jeweler
+  json
   log4r
   mail
   rack-fiber_pool
