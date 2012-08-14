@@ -1,6 +1,8 @@
 # duplicating some setup stuff to get thin starting properly
 
-FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+unless defined?(FLAPJACK_ENV)
+  FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+end
 
 require 'bundler'
 

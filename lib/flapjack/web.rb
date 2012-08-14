@@ -63,7 +63,7 @@ module Flapjack
     end
 
     before do
-      bootstrap
+      bootstrap(:evented => false)
     end
 
     get '/' do

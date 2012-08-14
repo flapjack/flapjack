@@ -2,7 +2,6 @@
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
-# require 'rubygem-s'
 require 'bundler'
 
 Bundler.require(:default, FLAPJACK_ENV.to_sym)
@@ -70,9 +69,8 @@ end
 
 EM.synchrony do
 
-  def fiberise_instances(pikelet, instance_num, &block)
-    instances = [1, instance_num || 1].max    
-    (1..instances).each do |n|
+  def fiberise_instances(instance_num, &block)
+    (1..[1, instance_num || 1].max).each do |n|
       Fiber.new {
         block.yield
       }.resume
@@ -80,19 +78,19 @@ EM.synchrony do
   end
 
   if pikelets.has_key?(Flapjack::Executive)
-    pikelet_opts = pikelets[Flapjack::Executive]; p pikelet_opts
-    fiberise_instances(Flapjack::Executive, pikelet_opts['instances'].to_i) {
+    pikelet_opts = pikelets[Flapjack::Executive]
+    fiberise_instances(pikelet_opts['instances'].to_i) {
       flapjack_exec = Flapjack::Executive.new(pikelet_opts)
       flapjack_exec.main     
     }
   end
 
   (pikelets.keys & [Flapjack::Notification::Email, Flapjack::Notification::Sms]).each do |pikelet|
-    pikelet_opts = pikelets[pikelet]; p pikelet_opts
+    pikelet_opts = pikelets[pikelet]
     # the following line would need to change if more than one config type for class
     # (see the comment re config parsing, above)
     pikelet::CONFIG = pikelet_opts['config']
-    fiberise_instances(pikelet, pikelet_opts['instances']) {
+    fiberise_instances(pikelet_opts['instances']) {
       flapjack_rsq = EM::Resque::Worker.new(pikelet.instance_variable_get('@queue'))
       flapjack_rsq.work(0)       
     }
@@ -100,10 +98,10 @@ EM.synchrony do
 
   if pikelets.has_key?(Flapjack::Web)
     puts "running web"
-    pikelet_opts = pikelets[Flapjack::Web]; p pikelet_opts
+    pikelet_opts = pikelets[Flapjack::Web]
   
     # TODO incorporate thin config settings into flapjack config (web part)
-    # NBL disable the --daemonize when debugging, otherwise it swallows errors
+    # NB: disable the --daemonize when debugging, otherwise it swallows errors
     ::Thin::Runner.new(["--config", "etc/thin_config.yaml", "--rackup", "coord_config.ru",
                         # "--daemonize",
                         "start"]).run!

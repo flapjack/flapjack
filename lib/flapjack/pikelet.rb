@@ -25,7 +25,11 @@ module Flapjack
       }
       options = defaults.merge(opts)
 
-      @persistence = EM::Protocols::Redis.connect(options[:redis])
+      if opts[:evented]
+        @persistence = EM::Protocols::Redis.connect(options[:redis])
+      else
+        @persistence = ::Redis.new(options[:redis])
+      end
 
       unless @logger = options[:logger]
         @logger = Log4r::Logger.new("flapjack")

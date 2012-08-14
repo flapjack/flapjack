@@ -22,7 +22,7 @@ module Flapjack
     include Flapjack::Pikelet
 
     def initialize(opts = {})
-      bootstrap(opts)
+      bootstrap(opts.merge(:evented => true))
 
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => "log/notify.log"))
@@ -180,7 +180,7 @@ module Flapjack
       fuid = self.object_id.to_i.to_s + '-' + Time.now.to_i.to_s + '.' + Time.now.tv_usec.to_s
     end
 
-    # takes an event, a notification type, and an array of contacts and creates jobs in rescue
+    # takes an event, a notification type, and an array of contacts and creates jobs in resque
     # (eventually) for each notification
     #
     def send_notifications(event, notification_type, contacts)
