@@ -1,12 +1,8 @@
 #!/usr/bin/env ruby
 
-require 'log4r'
-require 'log4r/outputter/syslogoutputter'
-require 'redis'
-require 'resque'
-require 'yajl'
+require 'log4r/outputter/fileoutputter'
+
 require 'flapjack'
-require 'flapjack/patches'
 require 'flapjack/filters/acknowledgement'
 require 'flapjack/filters/ok'
 require 'flapjack/filters/scheduled_maintenance'
@@ -17,25 +13,22 @@ require 'flapjack/notification/common'
 require 'flapjack/notification/sms'
 require 'flapjack/notification/email'
 require 'flapjack/event'
-
+require 'flapjack/pikelet'
 
 module Flapjack
 
   class Executive
-    attr_accessor :log
+    include Flapjack::Pikelet
 
-    def initialize(opts={})
-      @options     = opts
-      Flapjack.bootstrap(@options)
-
-      @persistence = Flapjack.persistence
-      @log = Flapjack.logger
+    def initialize(opts = {})
+      opts[:evented] = false if opts[:evented].nil?
+      self.bootstrap(opts)
 
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => "log/notify.log"))
 
       # FIXME: Put loading filters into separate method
-      options = { :log => @log, :persistence => @persistence }
+      options = { :log => @logger, :persistence => @persistence }
       @filters = []
       @filters << Flapjack::Filters::Ok.new(options)
       @filters << Flapjack::Filters::ScheduledMaintenance.new(options)
@@ -119,7 +112,7 @@ module Flapjack
     # Process any events we have until there's none left
     def drain_events
       loop do
-        event = Event.next(:block => false)
+        event = Event.next(:block => false, :persistence => @persistence)
         break unless event
         process_event(event)
       end
@@ -147,7 +140,7 @@ module Flapjack
       end
       @persistence.set("#{event.id}:last_#{notification_type}_notification", timestamp)
       @persistence.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
-      @log.debug("Notification of type #{notification_type} is being generated for #{event.id}.")
+      @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}.")
 
       send_notifications(event, notification_type, contacts_for_check(event.id))
     end
@@ -162,13 +155,13 @@ module Flapjack
       entity_id = @persistence.get("entity_id:#{entity}")
       if entity_id
         check = entity_id + ":" + check.split(':').last
-        @log.debug("contacts for #{entity_id} (#{entity}): " + @persistence.smembers("contacts_for:#{entity_id}").length.to_s)
-        @log.debug("contacts for #{check}: " + @persistence.smembers("contacts_for:#{check}").length.to_s)
+        @logger.debug("contacts for #{entity_id} (#{entity}): " + @persistence.smembers("contacts_for:#{entity_id}").length.to_s)
+        @logger.debug("contacts for #{check}: " + @persistence.smembers("contacts_for:#{check}").length.to_s)
         union = @persistence.sunion("contacts_for:#{entity_id}", "contacts_for:#{check}")
-        @log.debug("contacts for union of #{entity_id} and #{check}: " + union.length.to_s)
+        @logger.debug("contacts for union of #{entity_id} and #{check}: " + union.length.to_s)
         return union
       else
-        @log.debug("entity [#{entity}] has no contacts")
+        @logger.debug("entity [#{entity}] has no contacts")
         return []
       end
     end
@@ -184,7 +177,7 @@ module Flapjack
 
     # generates a fairly unique identifier to use as a message id
     def fuid
-      fuid = Flapjack.instance.to_i.to_s + '-' + Time.now.to_i.to_s + '.' + Time.now.tv_usec.to_s
+      fuid = self.object_id.to_i.to_s + '-' + Time.now.to_i.to_s + '.' + Time.now.tv_usec.to_s
     end
 
     # puts a notification into the jabber queue (redis list)
@@ -192,9 +185,8 @@ module Flapjack
       @persistence.rpush('jabber_notifications', Yajl::Encoder.encode(notification))
     end
 
-    # takes an event, a notification type, and an array of contacts and creates jobs in rescue
+    # takes an event, a notification type, and an array of contacts and creates jobs in resque
     # (eventually) for each notification
-    #
     def send_notifications(event, notification_type, contacts)
       notification = { 'event_id'          => event.id,
                        'state'             => event.state,
@@ -220,7 +212,7 @@ module Flapjack
           notif['media']   = media_type
           notif['address'] = address
           notif['id']      = fuid
-          @log.debug("send_notifications: sending notification: #{notif.inspect}")
+          @logger.debug("send_notifications: sending notification: #{notif.inspect}")
 
           case media_type
           when "sms"
@@ -241,9 +233,9 @@ module Flapjack
     end
 
     def process_event(event)
-      @log.debug("#{Event.pending_count} events waiting on the queue")
-      @log.debug("Raw event received: #{event.inspect}")
-      @log.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}, #{Time.at(event.time).to_s}")
+      @logger.debug("#{Event.pending_count(:persistence => @persistence)} events waiting on the queue")
+      @logger.debug("Raw event received: #{event.inspect}")
+      @logger.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}, #{Time.at(event.time).to_s}")
 
       result       = update_keys(event)
       skip_filters = result[:skip_filters]
@@ -251,21 +243,21 @@ module Flapjack
       blocker = @filters.find {|filter| filter.block?(event) } unless skip_filters
 
       if not blocker and not skip_filters
-        @log.info("#{Time.now}: Sending notifications for event #{event.id}")
+        @logger.info("#{Time.now}: Sending notifications for event #{event.id}")
         generate_notification(event)
       elsif blocker
         blocker_names = [ blocker.name ]
-        @log.info("#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
+        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
       else
-        @log.info("#{Time.now}: Not sending notifications for event #{event.id} because state is ok with no change, or no prior state")
+        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because state is ok with no change, or no prior state")
       end
     end
 
     def main
-      @log.info("Booting main loop.")
+      @logger.info("Booting main loop.")
       loop do
-        @log.info("Waiting for event...")
-        event = Event.next
+        @logger.info("Waiting for event...")
+        event = Event.next(:persistence => @persistence)
         process_event(event)
       end
     end

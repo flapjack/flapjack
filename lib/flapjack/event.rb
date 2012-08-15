@@ -1,8 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'redis'
-require 'json'
-
 module Flapjack
   class Event
     # Helper method for getting the next event.
@@ -22,12 +19,12 @@ module Flapjack
 
       # In production, we wait indefinitely for events coming from other systems.
       if block
-        raw   = Flapjack.persistence.blpop('events').last
+        raw   = opts[:persistence].blpop('events', 0).last
         event = ::JSON.parse(raw)
         self.new(event)
       # In testing, we care if there are no events on the queue.
       else
-        raw    = Flapjack.persistence.lpop('events')
+        raw    = opts[:persistence].lpop('events')
         result = nil
 
         if raw
@@ -40,8 +37,8 @@ module Flapjack
     end
 
     # Provide a count of the number of events on the queue to be processed.
-    def self.pending_count
-      Flapjack.persistence.llen('events')
+    def self.pending_count(opts = {})
+      opts[:persistence].llen('events')
     end
 
     def initialize(attrs={})

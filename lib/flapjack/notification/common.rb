@@ -1,17 +1,17 @@
 #!/usr/bin/env ruby
-#
+
+require 'flapjack/pikelet'
 
 module Flapjack
   module Notification
 
     module Common
 
-      def perform(notification)
-        Flapjack.bootstrap
-        @log = Flapjack.logger
-        @persistence = Flapjack.persistence
+      include Flapjack::Pikelet
 
-        @log.debug "Woo, got a notification to send out: #{notification.inspect}"
+      def perform(notification)
+        self.bootstrap
+        @logger.debug "Woo, got a notification to send out: #{notification.inspect}"
         dispatch(notification)
       end
 

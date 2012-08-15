@@ -1,15 +1,13 @@
 #!/usr/bin/env ruby
 
-require 'sinatra/base'
-require 'sinatra_more/markup_plugin'
-require 'redis'
-require 'resque'
+require 'flapjack/pikelet'
 require 'flapjack/redis'
 
 module Flapjack
   class Web < Sinatra::Base
     register SinatraMore::MarkupPlugin
 
+    include Flapjack::Pikelet
     include Flapjack::Redis
 
     set :views, settings.root + '/web/views'
@@ -65,7 +63,7 @@ module Flapjack
     end
 
     before do
-      @persistence = ::Redis.new
+      bootstrap(:evented => false)
     end
 
     get '/' do

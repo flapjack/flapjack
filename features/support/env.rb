@@ -1,14 +1,16 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
-require 'simplecov'
-SimpleCov.start do
-  add_filter '/features/'
+if ENV['COVERAGE']
+  require 'simplecov'
+  SimpleCov.start do
+    add_filter '/features/'
+  end
+  SimpleCov.coverage_dir 'coverage/cucumber'
 end
-SimpleCov.coverage_dir 'coverage/cucumber'
 
+ENV["FLAPJACK_ENV"] = 'test'
 require 'bundler'
-Bundler.setup(:default, :cucumber)
+Bundler.require(:default, :test)
 
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
@@ -39,14 +41,14 @@ end
 Before do
   @logger = MockLogger.new
   # Use a separate database whilst testing
-  @app = Flapjack::Executive.new(:redis => { :db => 14 }, :logger => @logger)
+  @app = Flapjack::Executive.new(:redis => { :db => 14 }, :logger => @logger, :evented => false)
   @app.drain_events
-  @redis = Flapjack.persistence
+  @redis = @app.persistence
 end
 
 After do
   # Reset the logged messages
-  Flapjack.logger.messages = []
+  @logger.messages = []
 end
 
 Around('@email') do |scenario, block|

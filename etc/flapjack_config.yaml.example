@@ -1,4 +1,42 @@
 ---
-sms_provider: messagenet
-sms_messagenet_username: "ermahgerd"
-sms_messagenet_password: "xxxx"
+
+development:
+  executive:
+    instances: 1
+  email_notifier:
+    instances: 1
+    settings:
+      raise_delivery_errors: true
+      delivery_method: 'smtp'
+      smtp_settings:
+        address: "127.0.0.1"
+        port: 2525
+        enable_starttls_auto: false
+  email_notifier:
+    instances: 1
+  sms_notifier:
+    instances: 1
+    username: "ermahgerd"
+    password: "xxxx"
+  web:
+    instances: 1
+
+staging:
+  email_notifier:
+    instances: 1
+  sms_notifier:
+    instances: 1
+    username: "ermahgerd"
+    password: "xxxx"
+  web:
+    instances: 1
+    
+production:
+  email_notifier:
+    instances: 1
+  sms_notifier:
+    instances: 1
+    username: "ermahgerd"
+    password: "xxxx"
+  web:
+    instances: 1

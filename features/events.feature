@@ -113,4 +113,3 @@ Feature: events
     Given check x is in a failure state
     When  an acknowledgement event is received for check x
     Then  a notification should be generated for check x
-

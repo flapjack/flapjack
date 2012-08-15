@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'log4r'
-require 'log4r/outputter/syslogoutputter'
 require 'net/http'
 require 'flapjack'
 
@@ -9,10 +7,17 @@ module Flapjack
   module Notification
     class SmsMessagenet
 
-      def self.sender(notification, log)
-
-        raise RuntimeError.new('sms_messagenet_username is missing') unless username = Flapjack.config["sms_messagenet_username"] #"config sms_messagenet_username is not defined"
-        raise RuntimeError.new('sms_messagenet_password is missing') unless password = Flapjack.config["sms_messagenet_password"] #"config sms_messagenet_password is not defined"
+      def self.sender(notification, options = {})
+        
+        log = options[:logger]
+        config = options[:config]
+        
+        unless config && (username = config["username"])
+          raise RuntimeError.new('sms_messagenet: username is missing')
+        end
+        unless config && (password = config["password"])
+          raise RuntimeError.new('sms_messagenet: password is missing') 
+        end
 
         raise RuntimeError.new('address is missing') unless address         = notification['address']
         raise RuntimeError.new('message is missing') unless message         = notification['message']
