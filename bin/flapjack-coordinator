@@ -80,7 +80,7 @@ EM.synchrony do
   if pikelets.has_key?(Flapjack::Executive)
     pikelet_opts = pikelets[Flapjack::Executive]
     fiberise_instances(pikelet_opts['instances'].to_i) {
-      flapjack_exec = Flapjack::Executive.new(pikelet_opts)
+      flapjack_exec = Flapjack::Executive.new(pikelet_opts.merge(:evented => true))
       flapjack_exec.main     
     }
   end

@@ -3,7 +3,6 @@
 require 'log4r/outputter/fileoutputter'
 
 require 'flapjack'
-require 'flapjack/patches'
 require 'flapjack/filters/acknowledgement'
 require 'flapjack/filters/ok'
 require 'flapjack/filters/scheduled_maintenance'
@@ -22,8 +21,8 @@ module Flapjack
     include Flapjack::Pikelet
 
     def initialize(opts = {})
-      opts[:evented] = true if opts[:evented].nil? 
-      bootstrap(opts)
+      opts[:evented] = false if opts[:evented].nil?
+      self.bootstrap(opts)
 
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => "log/notify.log"))

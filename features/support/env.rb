@@ -1,11 +1,12 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
-require 'simplecov'
-SimpleCov.start do
-  add_filter '/features/'
+if ENV['COVERAGE']
+  require 'simplecov'
+  SimpleCov.start do
+    add_filter '/features/'
+  end
+  SimpleCov.coverage_dir 'coverage/cucumber'
 end
-SimpleCov.coverage_dir 'coverage/cucumber'
 
 ENV["FLAPJACK_ENV"] = 'test'
 require 'bundler'

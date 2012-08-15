@@ -2,11 +2,9 @@ if ENV['COVERAGE']
   require 'simplecov'
 
   SimpleCov.start do
-    add_filter '/features/'
     add_filter '/spec/'
-
-    add_group 'Libraries', 'lib'
   end
+  SimpleCov.coverage_dir 'coverage/rspec'
 end
 
 ENV["FLAPJACK_ENV"] = 'test'
