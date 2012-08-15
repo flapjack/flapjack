@@ -41,6 +41,8 @@
       }
   %body
     %div#wrapper
+      %p
+        %a(title='Dashboard' href='/') Dashboard
       - if @acknowledge_success
         %h1
           %a(href="/check?entity=#{@entity}&check=#{@check}") #{@check} on #{@entity}
