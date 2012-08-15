@@ -1,9 +1,7 @@
 #!/usr/bin/env ruby
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
-
 require 'bundler'
-
 Bundler.require(:default, FLAPJACK_ENV.to_sym)
 
 # load the config hash for the current environment
