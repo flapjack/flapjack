@@ -1,9 +1,12 @@
 #!/usr/bin/env ruby
 
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+require 'bundler'
+Bundler.require(:default, FLAPJACK_ENV.to_sym)
+
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib'))
 
 require 'flapjack/executive'
-require 'daemons'
 require 'flapjack/patches'
 
 app = Flapjack::Executive.new
