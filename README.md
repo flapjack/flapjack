@@ -47,6 +47,9 @@ There's some rspec unit tests as well, run these like so:
 
     $ rspec spec
 
+NB, if the cucumber tests fail with a spurious lexing error on line 2 of events.feature, then try this:
+
+    $ cucumber -f fuubar features
 
 Architecture
 ------------
