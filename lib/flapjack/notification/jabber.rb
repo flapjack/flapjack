@@ -8,11 +8,12 @@ module Flapjack
       include Flapjack::Pikelet
 
       def initialize(opts)
+        # TODO: create a logger named jabber
         self.bootstrap
       end
 
       def main
-        puts "in main jabber"
+        @logger.debug("in main jabber")
       end
 
       def dispatch(notification)
