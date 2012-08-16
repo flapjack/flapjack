@@ -13,7 +13,7 @@ module Flapjack
 
       def dispatch(notification)
         self.bootstrap
-        
+
         notification_type  = notification['notification_type']
         contact_first_name = notification['contact_first_name']
         contact_last_name  = notification['contact_last_name']

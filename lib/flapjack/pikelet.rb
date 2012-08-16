@@ -8,16 +8,16 @@ require 'log4r/outputter/syslogoutputter'
 
 module Flapjack
   module Pikelet
-    
+
     attr_accessor :bootstrapped, :persistence, :logger, :config
 
     def bootstrapped?
       !!@bootstrapped
     end
-    
+
     def bootstrap(opts = {})
       return if bootstrapped?
-      
+
       defaults = {
         :redis => {
           :db => 0
@@ -41,6 +41,6 @@ module Flapjack
 
       @bootstrapped = true
     end
-      
+
   end
 end

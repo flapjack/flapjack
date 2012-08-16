@@ -1,6 +1,8 @@
 ---
 
 development:
+  redis:
+    database: 13
   executive:
     instances: 1
   email_notifier:
@@ -18,10 +20,14 @@ development:
     instances: 1
     username: "ermahgerd"
     password: "xxxx"
+  jabber_gateway:
+    instances: 1
   web:
     instances: 1
 
-staging:
+test:
+  redis:
+    database: 14
   email_notifier:
     instances: 1
   sms_notifier:
@@ -30,8 +36,23 @@ staging:
     password: "xxxx"
   web:
     instances: 1
-    
+
+
+staging:
+  redis:
+    database: 15
+  email_notifier:
+    instances: 1
+  sms_notifier:
+    instances: 1
+    username: "ermahgerd"
+    password: "xxxx"
+  web:
+    instances: 1
+
 production:
+  redis:
+    database: 12
   email_notifier:
     instances: 1
   sms_notifier:
