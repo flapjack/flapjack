@@ -5,8 +5,10 @@ gem 'beanstalk-client'
 gem 'log4r'
 gem 'yajl-ruby', :require => 'yajl'
 
-gem 'em-synchrony'
+gem 'eventmachine', '~> 1.0.0.rc.4'
+gem 'em-synchrony', '~> 1.0.2'
 gem 'redis'
+gem 'hiredis'
 gem 'em-resque'
 gem 'json'
 
@@ -20,6 +22,8 @@ gem 'thin'
 
 gem 'mail'
 gem 'actionmailer', :require => 'action_mailer'
+
+gem 'blather'
 
 group :development do
   gem 'jeweler'

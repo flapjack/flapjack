@@ -37,11 +37,15 @@ What things do
 Testing
 -------
 
-Tests live in `features/`.
+Feature tests live in `features/`.
 
-To run tests:
+To run feature tests:
 
     $ rake cucumber
+
+There's some rspec unit tests as well, run these like so:
+
+    $ rspec spec
 
 
 Architecture
