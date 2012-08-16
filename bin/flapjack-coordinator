@@ -26,87 +26,12 @@ unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
 end
 
-require 'em-resque/worker'
-
-require 'flapjack/notification/email'
-require 'flapjack/notification/sms'
-require 'flapjack/executive'
-require 'flapjack/web'
-
-# set up initial values for all configured components
-pikelets = {}
-
-config_env.keys.each do |pikelet_type|
-
-  # TODO if we want to run the same pikelet with different settings,
-  # we could require each setting to include a type, and treat the
-  # key as the name of the config -- for now, YAGNI.
-
-  # TODO, e.g.
-  # 'jabber_notifier' => Flapjack::Notification::Jabber,
-  # 'jabber_bot' => Flapjack::JabberBot, 
- 
-  case pikelet_type
-  when 'executive'
-    pikelets[Flapjack::Executive] = {:config => config_env[pikelet_type]}
-  when 'web'
-    pikelets[Flapjack::Web] = {:config => config_env[pikelet_type]}
-  when 'email_notifier'
-    pikelets[Flapjack::Notification::Email] = 
-      {:config => config_env['email_notifier']}
-  when 'sms_notifier'
-    pikelets[Flapjack::Notification::Sms] = 
-      {:config => config_env['sms_notifier']}
-  end 
-
-end
-
 # TODO Flapjack falls over when Redis restarted -- trap errors and attempt reconnect
 
-EM.synchrony do
+require 'flapjack/coordinator'
 
-  def fiberise_instances(instance_num, &block)
-    (1..[1, instance_num || 1].max).each do |n|
-      Fiber.new {
-        block.yield
-      }.resume
-    end
-  end
+coordinator = Flapjack::Coordinator.new(config_env)
+coordinator.log_file = 'log/flapjack.log'
+coordinator.pid_file = 'tmp/pids/flapjack.pid'
 
-  if pikelets.has_key?(Flapjack::Executive)
-    pikelet_opts = pikelets[Flapjack::Executive]
-    fiberise_instances(pikelet_opts['instances'].to_i) {
-      flapjack_exec = Flapjack::Executive.new(pikelet_opts.merge(:evented => true))
-      flapjack_exec.main     
-    }
-  end
-
-  (pikelets.keys & [Flapjack::Notification::Email, Flapjack::Notification::Sms]).each do |pikelet|
-    pikelet_opts = pikelets[pikelet]
-    # the following line would need to change if more than one config type for class
-    # (see the comment re config parsing, above)
-    pikelet::CONFIG = pikelet_opts['config']
-    EVENTED_RESQUE = true # workers need to know what type of Redis connection to make
-    fiberise_instances(pikelet_opts['instances']) {
-      flapjack_rsq = EM::Resque::Worker.new(pikelet.instance_variable_get('@queue'))
-      # # Use these to debug the resque workers
-      # flapjack_rsq.verbose = true
-      # flapjack_rsq.very_verbose = true
-      flapjack_rsq.work(0.1)
-    }
-  end
-
-  if pikelets.has_key?(Flapjack::Web)
-    pikelet_opts = pikelets[Flapjack::Web]
-  
-    # TODO incorporate thin config settings into flapjack config (web part)
-    # NB: disable the --daemonize when debugging, otherwise it swallows errors
-    ::Thin::Runner.new(["--config", "etc/thin_config.yaml", "--rackup", "coord_config.ru",
-                        # "--daemonize",
-                        "start"]).run!
-  
-  else
-    # TODO daemonize using lib/flapjack/daemonizing.rb -- extracted from Thin  
-  end
-
-end
+coordinator.start(:daemonize => true)
