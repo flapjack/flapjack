@@ -6,14 +6,11 @@ module Flapjack
   module Notification
 
     class Sms
-
-      include Flapjack::Notification::Common
-
+      extend Flapjack::Notification::Common
+      
       @queue = :sms_notifications
 
-      def dispatch(notification)
-        self.bootstrap
-        
+      def self.dispatch(notification, opts = {})
         notification_type  = notification['notification_type']
         contact_first_name = notification['contact_first_name']
         contact_last_name  = notification['contact_last_name']
@@ -37,7 +34,8 @@ module Flapjack
         message += " at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
 
         notification['message'] = message
-        Flapjack::Notification::SmsMessagenet.sender(notification, :logger => @logger,
+        Flapjack::Notification::SmsMessagenet.sender(notification,
+          :logger => opts[:logger],
           :config => Flapjack::Notification::Sms::CONFIG)
       end
 

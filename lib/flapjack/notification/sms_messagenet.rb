@@ -8,8 +8,7 @@ module Flapjack
     class SmsMessagenet
 
       def self.sender(notification, options = {})
-        
-        log = options[:logger]
+        logger = options[:logger]
         config = options[:config]
         
         unless config && (username = config["username"])
@@ -30,13 +29,13 @@ module Flapjack
 
         uri       = URI('https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage')
         uri.query = URI.encode_www_form(params)
-        log.debug("request_uri: #{uri.request_uri.inspect}")
+        logger.debug("request_uri: #{uri.request_uri.inspect}")
 
         Net::HTTP.start(uri.host, uri.port, :use_ssl => uri.scheme == 'https') do |http|
           request = Net::HTTP::Get.new uri.request_uri
           response = http.request request
           http_success = ( response.is_a?(Net::HTTPSuccess) == true )
-          log.debug("Flapjack::Notification::SMSMessagenet: response from server: #{response.body}")
+          logger.debug("Flapjack::Notification::SMSMessagenet: response from server: #{response.body}")
           raise RuntimeError.new "Failed to send SMS via messagenet, http response is a #{response.class}, notification_id: #{notification_id}" unless http_success
         end
 

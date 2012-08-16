@@ -53,12 +53,10 @@ config_env.keys.each do |pikelet_type|
     pikelets[Flapjack::Web] = {:config => config_env[pikelet_type]}
   when 'email_notifier'
     pikelets[Flapjack::Notification::Email] = 
-      {:config => config_env['email_notifier'],
-       :redis_queue => 'email_notifier'}
+      {:config => config_env['email_notifier']}
   when 'sms_notifier'
     pikelets[Flapjack::Notification::Sms] = 
-      {:config => config_env['sms_notifier'],
-       :redis_queue => 'sms_notifier'}
+      {:config => config_env['sms_notifier']}
   end 
 
 end
@@ -88,14 +86,17 @@ EM.synchrony do
     # the following line would need to change if more than one config type for class
     # (see the comment re config parsing, above)
     pikelet::CONFIG = pikelet_opts['config']
+    EVENTED_RESQUE = true # workers need to know what type of Redis connection to make
     fiberise_instances(pikelet_opts['instances']) {
       flapjack_rsq = EM::Resque::Worker.new(pikelet.instance_variable_get('@queue'))
-      flapjack_rsq.work(0)       
+      # # Use these to debug the resque workers
+      # flapjack_rsq.verbose = true
+      # flapjack_rsq.very_verbose = true
+      flapjack_rsq.work(0.1)
     }
   end
 
   if pikelets.has_key?(Flapjack::Web)
-    puts "running web"
     pikelet_opts = pikelets[Flapjack::Web]
   
     # TODO incorporate thin config settings into flapjack config (web part)
