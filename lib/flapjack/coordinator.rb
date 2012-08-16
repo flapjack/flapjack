@@ -100,10 +100,12 @@ module Flapjack
               flapjack_rsq.work(0.1)
             }
           when 'web'
-            # TODO incorporate thin config settings into flapjack config (web part)
-            # NB: disable the --daemonize when debugging, otherwise it swallows errors
-            ::Thin::Runner.new(["--config", "etc/thin_config.yaml", "--rackup", "coord_config.ru",
-                                "start"]).run!
+            # FIXME error if no thin config
+            thin_opts = pikelet_cfg['thin_config'].to_a.collect {|a|
+              ["--#{a[0]}", a[1].to_s]
+            }.flatten  << 'start'
+            p thin_opts
+            ::Thin::Runner.new(thin_opts).run!
           end
           
         end

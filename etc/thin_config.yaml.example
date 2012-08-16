@@ -1,7 +1,0 @@
-pid: tmp/pids/thin.pid
-log: log/thin.log
-timeout: 30
-max_conns: 1024
-port: 5080
-max_persistent_conns: 512
-environment: development

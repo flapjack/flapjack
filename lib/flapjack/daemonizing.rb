@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 
-# Copied from thin -- will be used when the current process isn't running the
-# web server. If it is, we'll depend on thin to daemonise things.
+# Copied from thin.
 
 require 'etc'
 require 'daemons' unless RUBY_PLATFORM =~ /mswin/

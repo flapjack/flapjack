@@ -5,21 +5,24 @@ development:
     instances: 1
   email_notifier:
     instances: 1
-    settings:
+    actionmailer_config:
       raise_delivery_errors: true
       delivery_method: 'smtp'
       smtp_settings:
         address: "127.0.0.1"
         port: 2525
         enable_starttls_auto: false
-  email_notifier:
-    instances: 1
-  sms_notifier:
-    instances: 1
-    username: "ermahgerd"
-    password: "xxxx"
+#  sms_notifier:
+#    instances: 1
+#    username: "ermahgerd"
+#    password: "xxxx"
   web:
     instances: 1
+    thin_config:
+      pid: tmp/pids/thin.pid
+      log: log/thin.log
+      timeout: 30
+      port: 5080
 
 staging:
   email_notifier:
