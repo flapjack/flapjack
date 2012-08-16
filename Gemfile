@@ -8,6 +8,7 @@ gem 'yajl-ruby', :require => 'yajl'
 gem 'eventmachine', '~> 1.0.0.rc.4'
 gem 'em-synchrony', '~> 1.0.2'
 gem 'redis'
+gem 'hiredis'
 gem 'em-resque'
 gem 'json'
 
