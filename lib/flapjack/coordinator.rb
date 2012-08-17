@@ -90,8 +90,13 @@ module Flapjack
             }
           when 'email_notifier', 'sms_notifier'
             pikelet = pikelet_types[pikelet_type]
-            pikelet.class_variable_set('@@config', pikelet_cfg)
-            
+
+            # # Deferring this pending discussion about execution model, Resque's not
+            # # playing well with evented code
+            # if 'email_notifier'.eql?(pikelet_type)
+            #   pikelet.class_variable_set('@@actionmailer_config', actionmailer_config)
+            # end
+
             fiberise_instances(pikelet_cfg['instances']) {
               flapjack_rsq = EM::Resque::Worker.new(pikelet.instance_variable_get('@queue'))
               # # Use these to debug the resque workers
@@ -104,7 +109,6 @@ module Flapjack
             thin_opts = pikelet_cfg['thin_config'].to_a.collect {|a|
               ["--#{a[0]}", a[1].to_s]
             }.flatten  << 'start'
-            p thin_opts
             ::Thin::Runner.new(thin_opts).run!
           end
           
