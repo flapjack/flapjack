@@ -22,6 +22,14 @@ development:
     password: "xxxx"
   jabber_gateway:
     instances: 1
+    server: "jabber.domain.tld"
+    port: 5222
+    jabberid: "flapjack@jabber.domain.tld"
+    password: "good-password"
+    alias: "flapjack"
+    rooms:
+      - "gimp@conference.jabber.domain.tld"
+      - "log@conference.jabber.domain.tld"
   web:
     instances: 1
 
