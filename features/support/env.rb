@@ -58,6 +58,10 @@ Around('@email') do |scenario, block|
   block.call
 end
 
+After('@time') do
+  Delorean.back_to_the_present
+end
+
 # not sure why this has to be explicitly required -- Bundler should
 # be doing this
 require 'resque_spec'
