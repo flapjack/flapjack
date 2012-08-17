@@ -120,7 +120,9 @@ module Flapjack
                 entity, check = event['event_id'].split(':')
                 state         = event['state']
                 summary       = event['summary']
-                @jabber_connection.say('log@conference.jabber.bulletproof.net', "#{type.upcase} ::: \"#{check}\" on #{entity} is #{state.upcase} ::: #{summary}", :groupchat)
+                @config['rooms'].each do |room|
+                  @jabber_connection.say(Blather::JID.new(room), "#{type.upcase} ::: \"#{check}\" on #{entity} is #{state.upcase} ::: #{summary}", :groupchat)
+                end
               else
                 @logger.debug("bugger, not connected, sleep 1 before retry")
                 EM::Synchrony.sleep(1)
@@ -129,18 +131,6 @@ module Flapjack
           end # FiberIterator do
 
         end
-      end
-
-      def dispatch(notification)
-
-        notification_type  = notification['notification_type']
-        contact_first_name = notification['contact_first_name']
-        contact_last_name  = notification['contact_last_name']
-        state              = notification['state']
-        summary            = notification['summary']
-        time               = notification['time']
-        entity, check      = notification['event_id'].split(':')
-
       end
 
     end
