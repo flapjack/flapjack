@@ -22,7 +22,7 @@ module Flapjack
 
     def initialize(opts = {})
       bootstrap(opts)
-      
+
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => "log/notify.log"))
 
@@ -261,14 +261,13 @@ module Flapjack
                'host'    => '',
                'service' => '',
                'state'   => ''}
-      @persistence.rpush('events', Yajl::Encoder.encode(event))      
+      @persistence.rpush('events', Yajl::Encoder.encode(event))
     end
 
     def main
       @logger.info("Booting main loop.")
       until @should_stop
         @logger.info("Waiting for event...")
-        @logger.info(@persistence.inspect)
         event = Event.next(:persistence => @persistence)
         process_event(event) unless event.nil?
       end

@@ -1,12 +1,7 @@
 #!/usr/bin/env ruby
 
-require 'eventmachine'
-require 'em-synchrony'
 require 'em-synchrony/fiber_iterator'
-require 'blather/client'
-require 'redis'
-require 'redis/connection/synchrony'
-require 'yajl'
+require 'blather/client/dsl'
 require 'socket'
 
 module Flapjack
