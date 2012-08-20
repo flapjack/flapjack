@@ -5,32 +5,34 @@ require 'em-resque/worker'
 require 'flapjack/daemonizing'
 require 'flapjack/notification/email'
 require 'flapjack/notification/sms'
+require 'flapjack/notification/jabber'
 require 'flapjack/executive'
 require 'flapjack/web'
 
 module Flapjack
-  
+
   class Coordinator
-    
-    EVENTED_RESQUE = true # workers need to know what type of Redis connection to make
-    
+
+    # disable Sinatra's at_exit handler (?)
+    Sinatra::Application.run = false
+
     include Flapjack::Daemonizable
-    
+
     def initialize(config = {})
       @config = config
       @pikelets = []
     end
-    
+
     def start(options = {})
       # FIXME raise error if config not set, or empty
-      
+
       if options[:daemonize]
         daemonize
         setup_signals
       else        
         setup_signals
         setup
-      end      
+      end
     end
 
     # clean shutdown
@@ -64,7 +66,7 @@ module Flapjack
     def after_daemonize
       setup
     end
-    
+
   private
 
     # FIXME handle these
@@ -79,7 +81,7 @@ module Flapjack
     end
 
     def setup
-  
+
       # TODO if we want to run the same pikelet with different settings,
       # we could require each setting to include a type, and treat the
       # key as the name of the config -- for now, YAGNI.
@@ -93,12 +95,11 @@ module Flapjack
       }
 
       EM.synchrony do
-      
         unless (['email_notifier', 'sms_notifier'] & @config.keys).empty?
           # make Resque a slightly nicer citizen
           require 'flapjack/resque_patches'
         end
-      
+
         def fiberise_instances(instance_num, &block)
           (1..[1, instance_num || 1].max).each do |n|
             Fiber.new {
@@ -109,12 +110,10 @@ module Flapjack
 
         @config.keys.each do |pikelet_type|
           next unless pikelet_types.has_key?(pikelet_type)
-          
           pikelet_cfg = @config[pikelet_type]
-          
+
           case pikelet_type
           when 'executive'
-            puts "init exec"
             fiberise_instances(pikelet_cfg['instances'].to_i) {
               flapjack_exec = Flapjack::Executive.new(pikelet_cfg)
               @pikelets << flapjack_exec
@@ -122,8 +121,7 @@ module Flapjack
             }
           when 'email_notifier', 'sms_notifier'
             pikelet = pikelet_types[pikelet_type]
-            puts "init #{pikelet.name}"
-
+            
             # TODO error if pikelet_cfg['queue'].nil?
 
             # # Deferring this: Resque's not playing well with evented code
@@ -134,13 +132,17 @@ module Flapjack
             fiberise_instances(pikelet_cfg['instances']) {
               flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
               # # Use these to debug the resque workers
-              flapjack_rsq.verbose = true
-              flapjack_rsq.very_verbose = true
+              # flapjack_rsq.verbose = true
+              # flapjack_rsq.very_verbose = true
               @pikelets << flapjack_rsq
               flapjack_rsq.work(0.1)
             }
+          when 'jabber_gateway'
+            fiberise_instances(pikelet_cfg['instances']) {
+              flapjack_jabbers = Flapjack::Notification::Jabber.new(pikelet_cfg)
+              flapjack_jabbers.main
+            }
           when 'web'
-            puts "init web"
             port = nil
             if pikelet_cfg['thin_config'] && pikelet_cfg['thin_config']['port']
               port = pikelet_cfg['thin_config']['port'].to_i
@@ -148,20 +150,17 @@ module Flapjack
 
             port = 3000 if port.nil? || port <= 0 || port > 65535
 
-            # disable Sinatra's at_exit handler (?)
-            Sinatra::Application.run = false
-
             thin = Thin::Server.new('0.0.0.0', port, Flapjack::Web, :signals => false)
             @pikelets << thin
             thin.start
           end
-          
+
         end
 
       end
-  
+
     end
 
   end
-  
+
 end

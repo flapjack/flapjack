@@ -1,6 +1,8 @@
 ---
 
 development:
+  redis:
+    database: 13
   executive:
     instances: 1
   email_notifier:
@@ -12,10 +14,20 @@ development:
         address: "127.0.0.1"
         port: 2525
         enable_starttls_auto: false
-#  sms_notifier:
-#    instances: 1
-#    username: "ermahgerd"
-#    password: "xxxx"
+  sms_notifier:
+    instances: 1
+    username: "ermahgerd"
+    password: "xxxx"
+  jabber_gateway:
+    instances: 1
+    server: "jabber.domain.tld"
+    port: 5222
+    jabberid: "flapjack@jabber.domain.tld"
+    password: "good-password"
+    alias: "flapjack"
+    rooms:
+      - "gimp@conference.jabber.domain.tld"
+      - "log@conference.jabber.domain.tld"
   web:
     instances: 1
     thin_config:
@@ -24,7 +36,9 @@ development:
       timeout: 30
       port: 5080
 
-staging:
+test:
+  redis:
+    database: 14
   email_notifier:
     instances: 1
   sms_notifier:
@@ -33,8 +47,23 @@ staging:
     password: "xxxx"
   web:
     instances: 1
-    
+
+
+staging:
+  redis:
+    database: 15
+  email_notifier:
+    instances: 1
+  sms_notifier:
+    instances: 1
+    username: "ermahgerd"
+    password: "xxxx"
+  web:
+    instances: 1
+
 production:
+  redis:
+    database: 12
   email_notifier:
     instances: 1
   sms_notifier:

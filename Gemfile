@@ -12,7 +12,7 @@ gem 'redis'
 gem 'em-resque'
 gem 'json'
 
-gem 'sinatra'
+gem 'sinatra', :require => 'sinatra/base'
 gem 'tilt'
 gem 'warden'
 gem 'sinatra_more'

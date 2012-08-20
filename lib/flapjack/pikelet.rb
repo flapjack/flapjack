@@ -8,7 +8,6 @@ require 'log4r/outputter/syslogoutputter'
 
 module Flapjack
   module Pikelet
-    
     attr_accessor :bootstrapped, :persistence, :logger, :config, :should_stop
 
     def bootstrapped?
@@ -21,7 +20,7 @@ module Flapjack
 
     def bootstrap(opts = {})
       return if bootstrapped?
-      
+
       defaults = {
         :redis => {
           :db => 0
@@ -29,7 +28,7 @@ module Flapjack
       }
       options = defaults.merge(opts)
       @persistence = ::Redis.new(options[:redis])
-      
+
       unless @logger = options[:logger]
         @logger = Log4r::Logger.new("flapjack")
         @logger.add(Log4r::StdoutOutputter.new("flapjack"))
@@ -42,6 +41,6 @@ module Flapjack
 
       @bootstrapped = true
     end
-      
+
   end
 end

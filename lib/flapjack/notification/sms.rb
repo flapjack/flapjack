@@ -7,7 +7,7 @@ module Flapjack
 
     class Sms
       extend Flapjack::Notification::Common
-      
+
       def self.dispatch(notification, opts = {})
         notification_type  = notification['notification_type']
         contact_first_name = notification['contact_first_name']
