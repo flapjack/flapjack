@@ -25,18 +25,19 @@ module Flapjack
       }
       options = defaults.merge(opts)
 
-      if options[:evented]
-        @persistence = EM::Protocols::Redis.connect(options[:redis])
-      else
-        @persistence = ::Redis.new(options[:redis])
-      end
-
       unless @logger = options[:logger]
         @logger = Log4r::Logger.new("flapjack")
         @logger.add(Log4r::StdoutOutputter.new("flapjack"))
         @logger.add(Log4r::SyslogOutputter.new("flapjack"))
       end
 
+      if options[:evented]
+        @logger.debug(self.class.name + ": evented!")
+        @persistence = EM::Protocols::Redis.connect(options[:redis])
+      else
+        @logger.debug(self.class.name + ": not evented!")
+        @persistence = ::Redis.new(options[:redis].merge(:driver => :ruby))
+      end
       @config = options[:config] || {}
 
       @bootstrapped = true

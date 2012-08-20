@@ -20,3 +20,4 @@ vendor
 .bundle
 etc/flapjack_config.yaml
 coverage
+tmp/pids/*
