@@ -21,7 +21,7 @@ module Flapjack
     include Flapjack::Pikelet
 
     def initialize(opts = {})
-      bootstrap(opts.merge(:redis => {:driver => 'synchrony'}))
+      bootstrap(opts)
       
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => "log/notify.log"))

@@ -115,7 +115,7 @@ module Flapjack
           case pikelet_type
           when 'executive'
             fiberise_instances(pikelet_cfg['instances'].to_i) {
-              flapjack_exec = Flapjack::Executive.new(pikelet_cfg)
+              flapjack_exec = Flapjack::Executive.new(pikelet_cfg.merge(:redis => {:driver => 'synchrony'}))
               @pikelets << flapjack_exec
               flapjack_exec.main     
             }
