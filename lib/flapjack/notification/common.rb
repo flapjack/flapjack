@@ -10,9 +10,9 @@ module Flapjack
       include Flapjack::Pikelet
 
       def perform(notification)
-        self.bootstrap
+        bootstrap(:evented => defined?(EVENTED_RESQUE)) # not ideal
         @logger.debug "Woo, got a notification to send out: #{notification.inspect}"
-        dispatch(notification)
+        dispatch(notification, :logger => @logger)
       end
 
     end

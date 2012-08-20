@@ -9,7 +9,6 @@ Feature: events
     Then  a notification should not be generated for check x
     And   show me the output
 
-  @time
   Scenario: Check ok to failed
     Given check x is in an ok state
     And   a failure event is received for check x
@@ -23,13 +22,15 @@ Feature: events
     And   a failure event is received for check x
     Then  a notification should not be generated for check x
 
+  @time
   Scenario: Check ok to failed for 1 minute
     Given check x is in an ok state
     When  a failure event is received for check x
     And   1 minute passes
     And   a failure event is received for check x
     Then  a notification should be generated for check x
-
+    
+  @time
   Scenario: Check failed and alerted to failed for 1 minute
     Given check x is in an ok state
     When  a failure event is received for check x
@@ -40,6 +41,7 @@ Feature: events
     And   a failure event is received for check x
     Then  a notification should not be generated for check x
 
+  @time
   Scenario: Check failed and alerted to failed for 6 minutes
     Given check x is in an ok state
     When  a failure event is received for check x
@@ -50,6 +52,7 @@ Feature: events
     And   a failure event is received for check x
     Then  a notification should be generated for check x
 
+  @time
   Scenario: Check ok to failed for 1 minute when in scheduled maintenance
     Given check x is in an ok state
     And   check x is in scheduled maintenance
@@ -58,6 +61,7 @@ Feature: events
     And   a failure event is received for check x
     Then  a notification should not be generated for check x
 
+  @time
   Scenario: Check ok to failed for 1 minute when in unscheduled maintenance
     Given check x is in an ok state
     And   check x is in unscheduled maintenance
@@ -66,6 +70,7 @@ Feature: events
     And   a failure event is received for check x
     Then  a notification should not be generated for check x
 
+  @time
   Scenario: Check ok to failed for 1 minute, acknowledged, and failed for 6 minutes
     Given check x is in an ok state
     When  a failure event is received for check x
@@ -76,12 +81,13 @@ Feature: events
     And   6 minute passes
     And   a failure event is received for check x
     Then  a notification should not be generated for check x
-
+  
   Scenario: Check failed to ok
     Given check x is in a failure state
     When  an ok event is received for check x
     Then  a notification should be generated for check x
 
+  @time
   Scenario: Check failed to ok when acknowledged
     Given check x is in a failure state
     When  an acknowledgement event is received for check x
@@ -90,6 +96,7 @@ Feature: events
     And   an ok event is received for check x
     Then  a notification should be generated for check x
 
+  @time
   Scenario: Check failed to ok when acknowledged, and fails after 6 minutes
     Given check x is in a failure state
     When  an acknowledgement event is received for check x
