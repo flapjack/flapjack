@@ -17,7 +17,7 @@ namespace :events do
     #   'summary'   => check_output,
     #   'time'      => timestamp,
     def create_event(event)
-      redis = ::Redis.new
+      redis = ::Redis.new(:driver => :ruby)
       evt = Yajl::Encoder.encode(event)
       puts "sending #{evt}"
       redis.rpush('events', evt)      

@@ -9,8 +9,9 @@ module Flapjack
 
       include Flapjack::Pikelet
 
+      # NB: these probably shouldn't initialise Redis
       def perform(notification)
-        bootstrap(:evented => defined?(EVENTED_RESQUE)) # not ideal
+        bootstrap(:redis => {:driver => :ruby})
         @logger.debug "Woo, got a notification to send out: #{notification.inspect}"
         dispatch(notification, :logger => @logger)
       end
