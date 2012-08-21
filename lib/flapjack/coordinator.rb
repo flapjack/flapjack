@@ -25,10 +25,9 @@ module Flapjack
 
       if options[:daemonize]
         daemonize
-        setup_signals
       else
-        setup_signals
         setup
+        setup_signals
       end
     end
 
@@ -59,12 +58,12 @@ module Flapjack
       # FIXME wrap the above in a timeout?
     end
 
-    # needs to be visible to Daemonizable -- maybe try protected?
     def after_daemonize
+      # FIXME ideally we'd setup_signals after setup, but something in web is blocking
+      # when we're running daemonized :/
+      setup_signals
       setup
     end
-
-  private
 
     def setup_signals
       trap('INT')  { stop! }
@@ -75,6 +74,8 @@ module Flapjack
         # trap('USR1') { reopen_log }
       end
     end
+
+  private
 
     def setup
 
@@ -94,6 +95,8 @@ module Flapjack
         unless (['email_notifier', 'sms_notifier'] & @config.keys).empty?
           # make Resque a slightly nicer citizen
           require 'flapjack/resque_patches'
+          # set up connection pooling, stop resque errors
+          EM::Resque.initialize_redis(::Redis.new(@config['redis']))
         end
 
         def fiberise_instances(instance_num, &block)

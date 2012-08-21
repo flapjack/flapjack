@@ -1,8 +1,8 @@
 ---
 
 development:
-  pid: tmp/pids/flapjack.pid
-  log: log/flapjack.log
+  pid_file: tmp/pids/flapjack.pid
+  log_file: log/flapjack.log
   redis:
     database: 13
   executive:
