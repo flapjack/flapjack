@@ -74,7 +74,8 @@ module Flapjack
         'executive'      => Flapjack::Executive,
         'web'            => Flapjack::Web,
         'email_notifier' => Flapjack::Notification::Email,
-        'sms_notifier'   => Flapjack::Notification::Sms
+        'sms_notifier'   => Flapjack::Notification::Sms,
+        'jabber_gateway' => Flapjack::Notification::Jabber
       }
 
       EM.synchrony do
