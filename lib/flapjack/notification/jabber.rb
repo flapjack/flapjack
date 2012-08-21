@@ -1,12 +1,7 @@
 #!/usr/bin/env ruby
 
-require 'eventmachine'
-require 'em-synchrony'
 require 'em-synchrony/fiber_iterator'
-require 'blather/client'
-require 'redis'
-require 'redis/connection/synchrony'
-require 'yajl'
+require 'blather/client/dsl'
 require 'socket'
 
 module Flapjack
@@ -104,7 +99,7 @@ module Flapjack
             @jabber_connection.keepalive if jabber_connected
           end
 
-          queues = ['jabber_notifications']
+          queues = [@config['queue']]
           events = {}
           EM::Synchrony::FiberIterator.new(queues, queues.length).each do |queue|
             redis = ::Redis.new(:driver => :synchrony)

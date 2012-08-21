@@ -13,12 +13,11 @@ module Flapjack
 
   class Coordinator
 
-    EVENTED_RESQUE = true # workers need to know what type of Redis connection to make
-
     include Flapjack::Daemonizable
 
     def initialize(config = {})
       @config = config
+      @pikelets = []
     end
 
     def start(options = {})
@@ -26,30 +25,43 @@ module Flapjack
 
       if options[:daemonize]
         daemonize
-        setup_signals
       else
         setup
-        setup_signals
       end
     end
 
-    # needs to be visible to Daemonizable -- maybe try protected?
+    # clean shutdown
+    def stop
+      @pikelets.each do |pik|
+        case pik
+        when Flapjack::Executive
+          pik.stop
+          Fiber.new {
+            pik.add_shutdown_event
+          }.resume
+        when EM::Resque::Worker
+          # resque is polling, so won't need a shutdown object
+          pik.shutdown
+        when Thin::Server
+          pik.stop
+        end
+      end
+      # # TODO call EM.stop after polling to check whether all of the
+      # # above have finished
+      # EM.stop
+    end
+
+    # not-so-clean shutdown
+    def stop!
+      stop
+      # FIXME wrap the above in a timeout?
+    end
+
     def after_daemonize
       setup
     end
 
   private
-
-    # FIXME handle these
-    def setup_signals
-      # trap('INT')  { stop! }
-      # trap('TERM') { stop }
-      unless RUBY_PLATFORM =~ /mswin/
-        # trap('QUIT') { stop }
-        # trap('HUP')  { restart }
-        # trap('USR1') { reopen_log }
-      end
-    end
 
     def setup
 
@@ -62,10 +74,17 @@ module Flapjack
         'executive'      => Flapjack::Executive,
         'web'            => Flapjack::Web,
         'email_notifier' => Flapjack::Notification::Email,
-        'sms_notifier'   => Flapjack::Notification::Sms
+        'sms_notifier'   => Flapjack::Notification::Sms,
+        'jabber_gateway' => Flapjack::Notification::Jabber
       }
 
       EM.synchrony do
+        unless (['email_notifier', 'sms_notifier'] & @config.keys).empty?
+          # make Resque a slightly nicer citizen
+          require 'flapjack/resque_patches'
+          # set up connection pooling, stop resque errors
+          EM::Resque.initialize_redis(::Redis.new(@config['redis']))
+        end
 
         def fiberise_instances(instance_num, &block)
           (1..[1, instance_num || 1].max).each do |n|
@@ -76,33 +95,32 @@ module Flapjack
         end
 
         @config.keys.each do |pikelet_type|
-          unless pikelet_types.has_key?(pikelet_type)
-            # FIXME warning
-            next
-          end
-
+          next unless pikelet_types.has_key?(pikelet_type)
           pikelet_cfg = @config[pikelet_type]
 
           case pikelet_type
           when 'executive'
             fiberise_instances(pikelet_cfg['instances'].to_i) {
-              flapjack_exec = Flapjack::Executive.new(pikelet_cfg.merge(:evented => true))
+              flapjack_exec = Flapjack::Executive.new(pikelet_cfg.merge(:redis => {:driver => 'synchrony'}))
+              @pikelets << flapjack_exec
               flapjack_exec.main
             }
           when 'email_notifier', 'sms_notifier'
             pikelet = pikelet_types[pikelet_type]
 
-            # # Deferring this pending discussion about execution model, Resque's not
-            # # playing well with evented code
+            # TODO error if pikelet_cfg['queue'].nil?
+
+            # # Deferring this: Resque's not playing well with evented code
             # if 'email_notifier'.eql?(pikelet_type)
             #   pikelet.class_variable_set('@@actionmailer_config', actionmailer_config)
             # end
 
             fiberise_instances(pikelet_cfg['instances']) {
-              flapjack_rsq = EM::Resque::Worker.new(pikelet.instance_variable_get('@queue'))
+              flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
               # # Use these to debug the resque workers
               # flapjack_rsq.verbose = true
               # flapjack_rsq.very_verbose = true
+              @pikelets << flapjack_rsq
               flapjack_rsq.work(0.1)
             }
           when 'jabber_gateway'
@@ -111,17 +129,33 @@ module Flapjack
               flapjack_jabbers.main
             }
           when 'web'
-            # FIXME error if no thin config
-            thin_opts = pikelet_cfg['thin_config'].to_a.collect {|a|
-              ["--#{a[0]}", a[1].to_s]
-            }.flatten  << 'start'
-            ::Thin::Runner.new(thin_opts).run!
+            port = nil
+            if pikelet_cfg['thin_config'] && pikelet_cfg['thin_config']['port']
+              port = pikelet_cfg['thin_config']['port'].to_i
+            end
+
+            port = 3000 if port.nil? || port <= 0 || port > 65535
+
+            thin = Thin::Server.new('0.0.0.0', port, Flapjack::Web, :signals => false)
+            @pikelets << thin
+            thin.start
           end
 
         end
 
+        setup_signals
       end
 
+    end
+
+    def setup_signals
+      trap('INT')  { stop! }
+      trap('TERM') { stop }
+      unless RUBY_PLATFORM =~ /mswin/
+        trap('QUIT') { stop }
+        # trap('HUP')  { restart }
+        # trap('USR1') { reopen_log }
+      end
     end
 
   end

@@ -21,8 +21,11 @@ module Flapjack
     include Flapjack::Pikelet
 
     def initialize(opts = {})
-      opts[:evented] = false if opts[:evented].nil?
-      self.bootstrap(opts)
+      bootstrap(opts)
+
+      @queues = {:email  => opts['email_queue'] || 'email_notifications',
+                 :sms    => opts['sms_queue'] || 'sms_notifications',
+                 :jabber => opts['jabber_queue'] || 'jabber_notifications'}
 
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => "log/notify.log"))
@@ -104,6 +107,9 @@ module Flapjack
         # When an action event is processed, store the event.
         @persistence.hset(event.id + ':actions', timestamp, event.state)
         @persistence.hincrby('event_counters', 'action', 1) if (event.ok?)
+      when 'shutdown'
+        # should this be logged as an action instead? being minimally invasive for now
+        result[:shutdown] = true
       end
 
       return result
@@ -154,7 +160,7 @@ module Flapjack
       entity = check.split(':').first
       entity_id = @persistence.get("entity_id:#{entity}")
       if entity_id
-        check = entity_id + ":" + check.split(':').last
+        check = entity_id.to_s + ":" + check.split(':').last
         @logger.debug("contacts for #{entity_id} (#{entity}): " + @persistence.smembers("contacts_for:#{entity_id}").length.to_s)
         @logger.debug("contacts for #{check}: " + @persistence.smembers("contacts_for:#{check}").length.to_s)
         union = @persistence.sunion("contacts_for:#{entity_id}", "contacts_for:#{check}")
@@ -182,7 +188,7 @@ module Flapjack
 
     # puts a notification into the jabber queue (redis list)
     def submit_jabber(notification)
-      @persistence.rpush('jabber_notifications', Yajl::Encoder.encode(notification))
+      @persistence.rpush(@queues[:jabber], Yajl::Encoder.encode(notification))
     end
 
     # takes an event, a notification type, and an array of contacts and creates jobs in resque
@@ -216,9 +222,9 @@ module Flapjack
 
           case media_type
           when "sms"
-            Resque.enqueue(Notification::Sms, notif)
+            Resque.enqueue_to(@queues[:sms], Notification::Sms, notif)
           when "email"
-            Resque.enqueue(Notification::Email, notif)
+            Resque.enqueue_to(@queues[:email], Notification::Email, notif)
           when "jabber"
             submit_jabber(notif)
           end
@@ -238,6 +244,7 @@ module Flapjack
       @logger.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}, #{Time.at(event.time).to_s}")
 
       result       = update_keys(event)
+      return if result[:shutdown]
       skip_filters = result[:skip_filters]
 
       blocker = @filters.find {|filter| filter.block?(event) } unless skip_filters
@@ -253,13 +260,23 @@ module Flapjack
       end
     end
 
+    def add_shutdown_event
+      event = {'type'    => 'shutdown',
+               'host'    => '',
+               'service' => '',
+               'state'   => ''}
+      @persistence.rpush('events', Yajl::Encoder.encode(event))
+    end
+
     def main
       @logger.info("Booting main loop.")
-      loop do
+      until @should_stop
         @logger.info("Waiting for event...")
         event = Event.next(:persistence => @persistence)
-        process_event(event)
+        process_event(event) unless event.nil?
       end
+      @persistence.disconnect
+      @logger.info("Exiting main loop.")
     end
   end
 end

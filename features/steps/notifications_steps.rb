@@ -79,22 +79,22 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity|
 end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
-  queue = ResqueSpec.peek(Flapjack::Notification::Sms.instance_variable_get('@queue'))
+  queue = ResqueSpec.peek('sms_notifications')
   queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }.should_not be_empty
 end
 
 Then /^an email notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
-  queue = ResqueSpec.peek(Flapjack::Notification::Email.instance_variable_get('@queue'))
+  queue = ResqueSpec.peek('email_notifications')
   queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }.should_not be_empty
 end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should not be queued for the user$/ do |entity|
-  queue = ResqueSpec.peek(Flapjack::Notification::Sms.instance_variable_get('@queue'))
+  queue = ResqueSpec.peek('sms_notifications')
   queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }.should be_empty
 end
 
 Then /^an email notification for entity '([\w\.\-]+)' should not be queued for the user$/ do |entity|
-  queue = ResqueSpec.peek(Flapjack::Notification::Email.instance_variable_get('@queue'))
+  queue = ResqueSpec.peek('email_notifications')
   queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }.should be_empty
 end
 

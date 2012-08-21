@@ -11,7 +11,7 @@ ActionMailer::Base.raise_delivery_errors = true
 ActionMailer::Base.view_paths = File.dirname(__FILE__)
 ActionMailer::Base.delivery_method = :smtp
 ActionMailer::Base.smtp_settings = { :address => "127.0.0.1",
-                                     :port => 25,
+                                     :port => 2525,
                                      :enable_starttls_auto => false }
 
 module Flapjack
@@ -20,8 +20,6 @@ module Flapjack
     class Email
       extend Flapjack::Notification::Common
       extend Flapjack::Redis
-
-      @queue = :email_notifications
 
       def self.dispatch(notification, opts = {})
         notification_type  = notification['notification_type']
@@ -47,8 +45,8 @@ module Flapjack
         notification['subject'] = subject
         opts[:logger].debug "Flapjack::Notification::Email#dispatch is calling Flapjack::Notification::Mailer.sender, notification_id: #{notification['id']}"
         sender_opts = {:logger => opts[:logger],
-                       :in_scheduled_maintenance   => in_scheduled_maintenance?(event_id),
-                       :in_unscheduled_maintenance => in_unscheduled_maintenance?(event_id)
+                       :in_scheduled_maintenance   => in_scheduled_maintenance?(@persistence, event_id),
+                       :in_unscheduled_maintenance => in_unscheduled_maintenance?(@persistence, event_id)
                       }
         Flapjack::Notification::Mailer.sender(notification, sender_opts).deliver
       end

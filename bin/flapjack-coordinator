@@ -31,7 +31,7 @@ end
 require 'flapjack/coordinator'
 
 coordinator = Flapjack::Coordinator.new(config_env)
-coordinator.log_file = 'log/flapjack.log'
-coordinator.pid_file = 'tmp/pids/flapjack.pid'
+coordinator.log_file = (config['log_file'] || 'log/flapjack.log')
+coordinator.pid_file = (config['pid_file'] || 'tmp/pids/flapjack.pid')
 
-coordinator.start(:daemonize => true)
+coordinator.start(:daemonize => false)
