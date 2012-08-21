@@ -11,7 +11,7 @@ ActionMailer::Base.raise_delivery_errors = true
 ActionMailer::Base.view_paths = File.dirname(__FILE__)
 ActionMailer::Base.delivery_method = :smtp
 ActionMailer::Base.smtp_settings = { :address => "127.0.0.1",
-                                     :port => 2525,
+                                     :port => 25,
                                      :enable_starttls_auto => false }
 
 module Flapjack
