@@ -41,7 +41,8 @@ end
 Before do
   @logger = MockLogger.new
   # Use a separate database whilst testing
-  @app = Flapjack::Executive.new(:redis => { :db => 14, :driver => :ruby }, :logger => @logger)
+  @app = Flapjack::Executive.new(:redis => { :db => 14, :driver => :ruby }, :logger => @logger,
+    'email_queue' => 'email_notifications', 'sms_queue' => 'sms_notifications')
   @app.drain_events
   @redis = @app.persistence
 end

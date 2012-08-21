@@ -23,6 +23,10 @@ module Flapjack
     def initialize(opts = {})
       bootstrap(opts)
 
+      @queues = {:email  => opts['email_queue'] || 'email_notifications',
+                 :sms    => opts['sms_queue'] || 'sms_notifications',
+                 :jabber => opts['jabber_queue'] || 'jabber_notifications'}
+
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => "log/notify.log"))
 
@@ -184,7 +188,7 @@ module Flapjack
 
     # puts a notification into the jabber queue (redis list)
     def submit_jabber(notification)
-      @persistence.rpush('jabber_notifications', Yajl::Encoder.encode(notification))
+      @persistence.rpush(@queues[:jabber], Yajl::Encoder.encode(notification))
     end
 
     # takes an event, a notification type, and an array of contacts and creates jobs in resque
@@ -218,9 +222,9 @@ module Flapjack
 
           case media_type
           when "sms"
-            Resque.enqueue_to('sms_notifications', Notification::Sms, notif)
+            Resque.enqueue_to(@queues[:sms], Notification::Sms, notif)
           when "email"
-            Resque.enqueue_to('email_notifications', Notification::Email, notif)
+            Resque.enqueue_to(@queues[:email], Notification::Email, notif)
           when "jabber"
             submit_jabber(notif)
           end

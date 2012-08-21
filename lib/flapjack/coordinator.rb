@@ -13,9 +13,6 @@ module Flapjack
 
   class Coordinator
 
-    # disable Sinatra's at_exit handler (?)
-    Sinatra::Application.run = false
-
     include Flapjack::Daemonizable
 
     def initialize(config = {})
@@ -29,7 +26,7 @@ module Flapjack
       if options[:daemonize]
         daemonize
         setup_signals
-      else        
+      else
         setup_signals
         setup
       end
@@ -37,7 +34,7 @@ module Flapjack
 
     # clean shutdown
     def stop
-      @pikelets.each do |pik| 
+      @pikelets.each do |pik|
         case pik
         when Flapjack::Executive
           pik.stop
@@ -69,7 +66,6 @@ module Flapjack
 
   private
 
-    # FIXME handle these
     def setup_signals
       trap('INT')  { stop! }
       trap('TERM') { stop }
@@ -117,11 +113,11 @@ module Flapjack
             fiberise_instances(pikelet_cfg['instances'].to_i) {
               flapjack_exec = Flapjack::Executive.new(pikelet_cfg.merge(:redis => {:driver => 'synchrony'}))
               @pikelets << flapjack_exec
-              flapjack_exec.main     
+              flapjack_exec.main
             }
           when 'email_notifier', 'sms_notifier'
             pikelet = pikelet_types[pikelet_type]
-            
+
             # TODO error if pikelet_cfg['queue'].nil?
 
             # # Deferring this: Resque's not playing well with evented code

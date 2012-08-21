@@ -99,7 +99,7 @@ module Flapjack
             @jabber_connection.keepalive if jabber_connected
           end
 
-          queues = ['jabber_notifications']
+          queues = [@config['queue']]
           events = {}
           EM::Synchrony::FiberIterator.new(queues, queues.length).each do |queue|
             redis = ::Redis.new(:driver => :synchrony)
