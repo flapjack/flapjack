@@ -27,7 +27,6 @@ module Flapjack
         daemonize
       else
         setup
-        setup_signals
       end
     end
 
@@ -59,20 +58,7 @@ module Flapjack
     end
 
     def after_daemonize
-      # FIXME ideally we'd setup_signals after setup, but something in web is blocking
-      # when we're running daemonized :/
-      setup_signals
       setup
-    end
-
-    def setup_signals
-      trap('INT')  { stop! }
-      trap('TERM') { stop }
-      unless RUBY_PLATFORM =~ /mswin/
-        trap('QUIT') { stop }
-        # trap('HUP')  { restart }
-        # trap('USR1') { reopen_log }
-      end
     end
 
   private
@@ -156,8 +142,19 @@ module Flapjack
 
         end
 
+        setup_signals
       end
 
+    end
+
+    def setup_signals
+      trap('INT')  { stop! }
+      trap('TERM') { stop }
+      unless RUBY_PLATFORM =~ /mswin/
+        trap('QUIT') { stop }
+        # trap('HUP')  { restart }
+        # trap('USR1') { reopen_log }
+      end
     end
 
   end
