@@ -23,8 +23,8 @@ module Flapjack
       def initialize(opts)
         # TODO: create a logger named jabber
         self.bootstrap
+        @config = opts.dup
         @logger.debug("New Jabber pikelet with the following options: #{opts.inspect}")
-        @config   = opts[:config]
         @hostname = Socket.gethostname
         @flapjack_jid = Blather::JID.new(@config['jabberid'] + '/' + @hostname)
       end
@@ -53,7 +53,8 @@ module Flapjack
 
           @jabber_connection = Flapjack::Notification::JabberConnection.new
           @logger.debug("Setting up jabber connection with jabberid: " + @flapjack_jid.to_s + ", port: " + @config['port'].to_s + ", server: " + @config['server'].to_s + ", password: " + @config['password'].to_s)
-          @jabber_connection.send(:client).setup @flapjack_jid, @config['password'], @config['server'], @config['port'].to_i
+          #@jabber_connection.send(:client).setup @flapjack_jid, @config['password'], @config['server'], @config['port'].to_i
+          @jabber_connection.client.setup @flapjack_jid, @config['password'], @config['server'], @config['port'].to_i
 
           @jabber_connection.disconnected do
             @logger.warn("jabbers disconnected! reconnecting in 1 second ...")
