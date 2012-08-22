@@ -16,7 +16,7 @@ module Flapjack
       redis.exists("#{key}:scheduled_maintenance")
     end
 
-    # returns a hash of all scheduled maintenances for a check
+    # returns an array of all scheduled maintenances for a check
     def scheduled_maintenances(redis, key)
       result = []
       if redis.exists("#{key}:scheduled_maintenances")
@@ -54,6 +54,38 @@ module Flapjack
       start_time = opts[:start_time]
       redis.del("#{key}:#{start_time}:scheduled_maintenance:summary")
       redis.zrem("#{key}:scheduled_maintenances", start_time)
+      redis.del("#{key}:scheduled_maintenance")
+      update_scheduled_maintenance(redis, key)
+    end
+
+    # if not in scheduled maintenance, looks in scheduled maintenance list for a check to see if
+    # current state should be set to scheduled maintenance, and sets it as appropriate
+    def update_scheduled_maintenance(redis, key)
+      return if in_scheduled_maintenance?(redis, key)
+
+      sched_ms = scheduled_maintenances(redis, key)
+      return unless sched_ms.length > 0
+
+      # any with an end_time in the future?
+      future_endings = sched_ms.find_all {|s|
+        s[:end_time] > Time.now.to_i
+      }
+      return unless future_endings.length > 0
+
+      # any of these with a start time in the past?
+      current_sched_ms = future_endings.find_all {|f|
+        f[:start_time] <= Time.now.to_i
+      }
+      return unless current_sched_ms.length > 0
+
+      # yes! so set current scheduled maintenance
+      # if multiple scheduled maintenances found, find the end_time furthest in the future
+      futurist = current_sched_ms.sort_by {|c|
+        c[:end_time]
+      }.last
+      start_time = futurist[:start_time]
+      duration   = futurist[:duration]
+      redis.setex("#{key}:scheduled_maintenance", duration, start_time)
     end
 
     # creates an event object and adds it to the events list in redis

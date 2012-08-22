@@ -14,11 +14,13 @@ require 'flapjack/notification/sms'
 require 'flapjack/notification/email'
 require 'flapjack/event'
 require 'flapjack/pikelet'
+require 'flapjack/redis'
 
 module Flapjack
 
   class Executive
     include Flapjack::Pikelet
+    include Flapjack::Redis
 
     def initialize(opts = {})
       bootstrap(opts)
@@ -101,6 +103,8 @@ module Flapjack
         when event.ok?
           result[:skip_filters] = true
         end
+
+        update_scheduled_maintenance(@persistence, event.id)
 
       # Action events represent human or automated interaction with Flapjack
       when 'action'
