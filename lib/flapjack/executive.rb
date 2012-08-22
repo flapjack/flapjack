@@ -280,7 +280,7 @@ module Flapjack
         event = Event.next(:persistence => @persistence)
         process_event(event) unless event.nil?
       end
-      @persistence.disconnect
+      @persistence.quit
       @logger.info("Exiting main loop.")
     end
   end

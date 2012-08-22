@@ -12,9 +12,9 @@ module Flapjack
         @logger = options[:logger]
       end
 
-      # FIXME This returns too much irrelevant data -- we'll refactor the data model instead
+      # FIXME http://redis.io/commands/keys suggests we should be using sets instead
       def check_list
-        @redis.keys("#{@entity}:*").sort
+        @redis.keys("check:#{@entity}:*").map {|k| k =~ /^check:#{@entity}:(.+)$/; $1}
       end
 
       def check_count

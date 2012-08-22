@@ -43,8 +43,8 @@ Before do
   # Use a separate database whilst testing
   @app = Flapjack::Executive.new(:redis => { :db => 14, :driver => :ruby }, :logger => @logger,
     'email_queue' => 'email_notifications', 'sms_queue' => 'sms_notifications')
-  @app.drain_events
   @redis = @app.persistence
+  @redis.flushdb
 end
 
 After do
