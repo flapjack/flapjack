@@ -38,10 +38,18 @@ module Flapjack
       entity.check_list
     end
 
-    get 'entities/:entity_name/checks/:check_name' do
+    get 'entity_checks/:entity_name\::check_name' do
       entity_check = Flapjack::Data::EntityCheck.new(:name => params[:entity_name],
         :check => params[:check_name], :redis => persistence)
       entity_check.status
+    end
+
+    put 'entity_checks/:entity_name\::check_name' do
+      entity_check = Flapjack::Data::EntityCheck.new(:name => params[:entity_name],
+        :check => params[:check_name], :redis => persistence)
+      if params[:acknowledge]
+
+      end
     end
 
   end

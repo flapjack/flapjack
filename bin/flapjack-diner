@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'httparty'
+require 'json'
 require 'pp'
 
 module Flapjack
@@ -12,12 +13,22 @@ module Flapjack
 
     class << self
 
+      # NB: clients will need to handle any exceptions caused by,
+      # e.g., network failures or non-parseable JSON data.
+
       def entity_checks(entity_name)
-        get("/entities/#{entity_name}/checks")
+        response = get("/entities/#{entity_name}/checks")
+        JSON.parse(response.body)
       end
 
       def entity_check_status(entity_name, check_name)
-        get("/entities/#{entity_name}/checks/#{check_name}")
+        response = get("/entity_checks/#{entity_name}:#{check_name}")
+        JSON.parse(response.body)
+      end
+
+      def entity_check_acknowledge!(entity_name, check_name)
+        response = put("/entity_checks/#{entity_name}:#{check_name}?acknowledge=1")
+        JSON.parse(response.body)
       end
 
     end
