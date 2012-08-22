@@ -12,9 +12,14 @@ module Flapjack
         @logger = options[:logger]
       end
 
+      # FIXME This returns too much irrelevant data -- we'll refactor the data model instead
       def check_list
-        # This returns too much irrelevant data -- we'll refactor the data model instead
         @redis.keys("#{@entity}:*").sort
+      end
+
+      def check_count
+        checks = check_list
+        checks.nil? ? nil : checks.length
       end
 
     end

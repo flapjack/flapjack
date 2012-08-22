@@ -27,7 +27,6 @@ module Flapjack
         state              = notification['state']
         summary            = notification['summary']
         time               = notification['time']
-        event_id           = notification['event_id']
         entity, check      = notification['event_id'].split(':')
         entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
           :check => check, :redis => @persistence)

@@ -14,8 +14,9 @@ module Flapjack
 
     set :views, settings.root + '/web/views'
 
+    # TODO move these to a time handling section of a utils lib
     def time_period_in_words(period)
-      period_mm, period_ss  = @uptime.divmod(60)
+      period_mm, period_ss  = period.divmod(60)
       period_hh, period_mm  = period_mm.divmod(60)
       period_dd, period_hh  = period_hh.divmod(24)
       period_string         = ""
@@ -24,6 +25,16 @@ module Flapjack
       period_string        += period_mm.to_s + " minutes, " if period_mm > 0
       period_string        += period_ss.to_s + " seconds" if period_ss > 0
       period_string
+    end
+
+    # returns a string showing the local timezone we're running in
+    # eg "CST (UTC+09:30)"
+    def local_timezone
+      tzname = Time.new.zone
+      q, r = Time.new.utc_offset.divmod(3600)
+      q < 0 ? sign = '-' : sign = '+'
+      tzoffset = sign + "%02d" % q.abs.to_s + ':' + r.to_f.div(60).to_s
+      "#{tzname} (UTC#{tzoffset})"
     end
 
     def self_stats
@@ -45,6 +56,10 @@ module Flapjack
 
     def redis
       Flapjack::Web.persistence
+    end
+
+     def logger
+      Flapjack::Web.logger
     end
 
     before do
@@ -113,17 +128,6 @@ module Flapjack
       ack = entity_check.create_acknowledgement(:summary => "Ack from web at #{Time.now.to_s}")
       @acknowledge_success = !!ack
       haml :acknowledge
-    end
-
-    # returns a string showing the local timezone we're running in
-    # eg "CST (UTC+09:30)"
-    # TODO: put this in a time handling section of a utils lib
-    def local_timezone
-      tzname = Time.new.zone
-      q, r = Time.new.utc_offset.divmod(3600)
-      q < 0 ? sign = '-' : sign = '+'
-      tzoffset = sign + "%02d" % q.abs.to_s + ':' + r.to_f.div(60).to_s
-      return "#{tzname} (UTC#{tzoffset})"
     end
 
     # create scheduled maintenance
