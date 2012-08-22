@@ -8,26 +8,25 @@ module Flapjack
   class Diner
 
     include HTTParty
+    format :json
 
-    attr_accessor :base_url
+    class << self
 
-    def initialize(options = {})
-      @base_url = (options[:base_url] || 'http://127.0.0.1:5081')
-    end
+      def entity_checks(entity_name)
+        get("/entities/#{entity_name}/checks")
+      end
 
-    def entity_checks(entity_name)
-      self.class.get("#{base_url}/entities/#{entity_name}/checks")
-    end
+      def entity_check_status(entity_name, check_name)
+        get("/entities/#{entity_name}/checks/#{check_name}")
+      end
 
-    def entity_check_status(entity_name, check_name)
-      self.class.get("#{base_url}/entities/#{entity_name}/checks/#{check_name}")
     end
 
   end
 
 end
 
-fd = Flapjack::Diner.new(:base_url => 'http://127.0.0.1:5081')
+Flapjack::Diner.base_uri('http://127.0.0.1:5081')
 
-pp fd.entity_checks('clientx-app-01')
-pp fd.entity_check_status('clientx-app-01', 'ping')
+pp Flapjack::Diner.entity_checks('clientx-app-01')
+pp Flapjack::Diner.entity_check_status('clientx-app-01', 'ping')
