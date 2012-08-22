@@ -8,7 +8,7 @@ module Flapjack
   module Notification
 
     class JabberConnection
-      extend Blather::DSL
+      include Blather::DSL
 
       def keepalive()
         client.write ' '
@@ -23,8 +23,8 @@ module Flapjack
       def initialize(opts)
         # TODO: create a logger named jabber
         self.bootstrap
+        @config = opts.dup
         @logger.debug("New Jabber pikelet with the following options: #{opts.inspect}")
-        @config   = opts[:config]
         @hostname = Socket.gethostname
         @flapjack_jid = Blather::JID.new(@config['jabberid'] + '/' + @hostname)
       end
@@ -53,7 +53,7 @@ module Flapjack
 
           @jabber_connection = Flapjack::Notification::JabberConnection.new
           @logger.debug("Setting up jabber connection with jabberid: " + @flapjack_jid.to_s + ", port: " + @config['port'].to_s + ", server: " + @config['server'].to_s + ", password: " + @config['password'].to_s)
-          @jabber_connection.send(:client).setup @flapjack_jid, @config['password'], @config['server'], @config['port'].to_i
+          @jabber_connection.setup @flapjack_jid, @config['password'], @config['server'], @config['port'].to_i
 
           @jabber_connection.disconnected do
             @logger.warn("jabbers disconnected! reconnecting in 1 second ...")
@@ -72,7 +72,7 @@ module Flapjack
               presence.from = @flapjack_jid
               presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
               presence << "<x xmlns='http://jabber.org/protocol/muc'/>"
-              @jabber_connection.send(:client).write presence
+              @jabber_connection.write_to_stream presence
               @jabber_connection.say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
             end
           end

@@ -8,8 +8,8 @@ id = "%.2d" % (1..10).to_a[rand(9)]
 events = []
 
 events << {
-  'host' => "app-#{id}",
-  'service' => 'http',
+  'entity' => "client1-test-app-#{id}",
+  'check' => 'http',
   'type' => 'service',
   'state' => 'ok',
 }.to_json

@@ -4,6 +4,8 @@ gem 'daemons'
 gem 'beanstalk-client'
 gem 'log4r'
 gem 'yajl-ruby', :require => 'yajl'
+gem 'chronic'
+gem 'chronic_duration'
 
 gem 'eventmachine', '~> 1.0.0.rc.4'
 gem 'hiredis'

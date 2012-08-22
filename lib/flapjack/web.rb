@@ -1,5 +1,8 @@
 #!/usr/bin/env ruby
 
+require 'chronic'
+require 'chronic_duration'
+
 require 'flapjack/pikelet'
 require 'flapjack/models/entity_check'
 
@@ -87,6 +90,7 @@ module Flapjack
     get '/check' do
       @entity = params[:entity]
       @check  = params[:check]
+
       entity_check = EntityCheck.new(:name => @entity, :check => @check, :redis => redis)
       @status = entity_check.status
 
@@ -97,6 +101,8 @@ module Flapjack
       @last_notifications         = @status[:last_notifications]
       @in_unscheduled_maintenance = @status[:in_scheduled_maintenance]
       @in_scheduled_maintenance   = @status[:in_unscheduled_maintenance]
+      @scheduled_maintenances     = @status[:scheduled_maintenances]
+
       haml :check
     end
 
@@ -104,11 +110,45 @@ module Flapjack
       @entity = params[:entity]
       @check  = params[:check]
       entity_check = EntityCheck.new(:name => @entity, :check => @check, :redis => redis)
-      ack_opts = { 'summary' => "Ack from web at #{Time.now.to_s}" }
-      ack = entity_check.create_acknowledgement(redis, key, ack_opts)
+      ack = entity_check.create_acknowledgement(:summary => "Ack from web at #{Time.now.to_s}")
       @acknowledge_success = !!ack
       haml :acknowledge
     end
 
+    # returns a string showing the local timezone we're running in
+    # eg "CST (UTC+09:30)"
+    # TODO: put this in a time handling section of a utils lib
+    def local_timezone
+      tzname = Time.new.zone
+      q, r = Time.new.utc_offset.divmod(3600)
+      q < 0 ? sign = '-' : sign = '+'
+      tzoffset = sign + "%02d" % q.abs.to_s + ':' + r.to_f.div(60).to_s
+      return "#{tzname} (UTC#{tzoffset})"
+    end
+
+    # create scheduled maintenance
+    post '/scheduled_maintenance/:entity/:check' do
+      start_time = Chronic.parse(params[:start_time]).to_i
+      raise ArgumentError, "start time parsed to zero" unless start_time > 0
+      duration   = ChronicDuration.parse(params[:duration])
+      summary    = params[:summary]
+      entity = params[:entity]
+      check  = params[:check]
+      entity_check = EntityCheck.new(:name => entity, :check => check, :redis => redis)
+      entity_check.create_scheduled_maintenance(:start_time => start_time,
+                                                :duration   => duration,
+                                                :summary    => summary)
+      redirect back
+    end
+
+    # delete a scheduled maintenance
+    post '/delete_scheduled_maintenance/:entity/:check' do
+      entity = params[:entity]
+      check  = params[:check]
+      entity_check = EntityCheck.new(:name => entity, :check => check, :redis => redis)
+      start_time = params[:start_time]
+      entity_check.delete_scheduled_maintenance(:start_time => start_time)
+      redirect back
+    end
   end
 end
