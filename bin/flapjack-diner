@@ -16,18 +16,27 @@ module Flapjack
       # NB: clients will need to handle any exceptions caused by,
       # e.g., network failures or non-parseable JSON data.
 
-      def entity_checks(entity_name)
-        response = get("/entities/#{entity_name}/checks")
+      def checks(entity)
+        response = get("/entities/#{entity}/checks")
         JSON.parse(response.body)
       end
 
-      def entity_check_status(entity_name, check_name)
-        response = get("/entity_checks/#{entity_name}:#{check_name}")
+      def check_status(entity, check)
+        response = get("/entity_checks/#{entity}:#{check}")
         JSON.parse(response.body)
       end
 
-      def entity_check_acknowledge!(entity_name, check_name)
-        response = put("/entity_checks/#{entity_name}:#{check_name}?acknowledge=1")
+      def acknowledge_check!(entity, check, options = {})
+        # TODO validate options
+        response = post("/acknowledgments/#{entity}:#{check}?summary=#{options[:summary]}")
+        JSON.parse(response.body)
+      end
+
+      # TODO check whether HTTParty escapes URL or whether this script should do it
+      def create_scheduled_maintenance!(entity, check, options = {})
+        # TODO validate options
+        response = post("/scheduled_maintenances/#{entity}:#{check}?" +
+          "start_time=#{options[:start_time]}&duration=#{options[:duration]}&summary=#{options[:summary]}")
         JSON.parse(response.body)
       end
 
@@ -39,5 +48,5 @@ end
 
 Flapjack::Diner.base_uri('http://127.0.0.1:5081')
 
-pp Flapjack::Diner.entity_checks('clientx-app-01')
-pp Flapjack::Diner.entity_check_status('clientx-app-01', 'ping')
+pp Flapjack::Diner.checks('clientx-app-01')
+pp Flapjack::Diner.status('clientx-app-01', 'ping')

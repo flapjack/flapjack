@@ -33,23 +33,27 @@ module Flapjack
       end
     end
 
-    get 'entities/:entity_name/checks' do
-      entity = Flapjack::Data::Entity.new(:name => params[:entity_name], :redis => persistence)
+    get 'entities/:entity/checks' do
+      entity = Flapjack::Data::Entity.new(:entity => params[:entity],
+        :redis => persistence)
       entity.check_list
     end
 
-    get 'entity_checks/:entity_name\::check_name' do
-      entity_check = Flapjack::Data::EntityCheck.new(:name => params[:entity_name],
-        :check => params[:check_name], :redis => persistence)
+    get 'entity_checks/:entity\::check' do
+      entity_check = Flapjack::Data::EntityCheck.new(:entity => params[:entity],
+        :check => params[:check], :redis => persistence)
       entity_check.status
     end
 
-    put 'entity_checks/:entity_name\::check_name' do
-      entity_check = Flapjack::Data::EntityCheck.new(:name => params[:entity_name],
-        :check => params[:check_name], :redis => persistence)
-      if params[:acknowledge]
+    post 'acknowledgements/:entity\::check' do
+      entity_check = Flapjack::Data::EntityCheck.new(:entity => params[:entity],
+        :check => params[:check], :redis => persistence)
+      entity_check.create_acknowledgement(params[:summary])
+    end
 
-      end
+    post 'scheduled_maintenances/:entity\::check' do
+      entity_check = Flapjack::Data::EntityCheck.new(:entity => params[:entity],
+        :check => params[:check], :redis => persistence)
     end
 
   end

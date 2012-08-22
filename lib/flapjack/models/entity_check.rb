@@ -10,13 +10,15 @@ module Flapjack
       STATE_WARNING         = 'warning'
       STATE_CRITICAL        = 'critical'
       STATE_ACKNOWLEDGEMENT = 'acknowledgement'
+      STATE_UP              = 'up'
+      STATE_DOWN            = 'down'
       STATE_UNKNOWN         = 'unknown'
 
       def initialize(options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
-        raise "Name not set" unless @name = options[:name]
+        raise "Entity not set" unless @entity = options[:entity]
         raise "Check not set" unless @check = options[:check]
-        @key = "#{@name}:#{@check}"
+        @key = "#{@entity}:#{@check}"
         @logger = options[:logger]
       end
 
@@ -39,7 +41,7 @@ module Flapjack
       #   'summary'   => check_output,
       #   'time'      => timestamp
       def create_event(event)
-        event.merge('entity' => @name, 'check' => @check)
+        event.merge('entity' => @entity, 'check' => @check)
         event.time = Time.now.to_i if event.time.nil?
         @redis.rpush('events', Yajl::Encoder.encode(event))
       end
@@ -50,7 +52,7 @@ module Flapjack
         }
         options = defaults.merge(opts)
 
-        event = { 'entity'  => @name,
+        event = { 'entity'  => @entity,
                   'check'   => @check,
                   'type'    => 'action',
                   'state'   => 'acknowledgement',
@@ -59,36 +61,25 @@ module Flapjack
         create_event(event)
       end
 
-    # returns a hash of all scheduled maintenances for a check
-    def scheduled_maintenances
-      result = []
-      if @redis.exists("#{@key}:scheduled_maintenances")
-        @redis.zrange("#{@key}:scheduled_maintenances", 0, -1, {:withscores => true}).each {|s|
-          puts s.inspect
-          start_time = s[0].to_i
-          duration   = s[1].to_i
-          summary    = @redis.get("#{@key}:#{start_time}:scheduled_maintenance:summary")
-          end_time   = start_time + duration
-          result << {:start_time => start_time,
-                     :end_time   => end_time,
-                     :duration   => duration,
-                     :summary    => summary,
-                    }
-        }
-        puts result.inspect
-      end
-      return result
-    end
-
-      def set_scheduled_maintenance(reason, duration = 60*60*2)
-        t = Time.now.to_i
-        @redis.setex("#{@key}:scheduled_maintenance", duration, t)
-        @redis.zadd("#{@key}:scheduled_maintenances", duration, t)
-        @redis.set("#{@key}:#{t}:scheduled_maintenance:summary", reason)
-      end
-
-      def remove_scheduled_maintenance
-        @redis.del("#{entity_check}:scheduled_maintenance")
+      # returns a hash of all scheduled maintenances for a check
+      def scheduled_maintenances
+        result = []
+        if @redis.exists("#{@key}:scheduled_maintenances")
+          @redis.zrange("#{@key}:scheduled_maintenances", 0, -1, {:withscores => true}).each {|s|
+            puts s.inspect
+            start_time = s[0].to_i
+            duration   = s[1].to_i
+            summary    = @redis.get("#{@key}:#{start_time}:scheduled_maintenance:summary")
+            end_time   = start_time + duration
+            result << {:start_time => start_time,
+                       :end_time   => end_time,
+                       :duration   => duration,
+                       :summary    => summary,
+                      }
+          }
+          puts result.inspect
+        end
+        return result
       end
 
       # end any unscheduled downtime
@@ -120,6 +111,7 @@ module Flapjack
       end
 
       # FIXME: clientx -- possibly an initialised @client value instead?
+      # FIXME: include STATE_UP & STATE_DOWN ??
       def state=(state = STATE_OK)
         return unless validate_state(state)
         t = Time.now.to_i - (60*60*24)
@@ -165,7 +157,8 @@ module Flapjack
 
       def validate_state(state)
         return if [STATE_OK, STATE_WARNING, STATE_CRITICAL,
-                   STATE_ACKNOWLEDGEMENT, STATE_UNKNOWN].include?(state)
+                   STATE_ACKNOWLEDGEMENT, STATE_UP, STATE_DOWN,
+                   STATE_UNKNOWN].include?(state)
         if @logger
           @logger.error "Invalidate state value #{state}"
         end

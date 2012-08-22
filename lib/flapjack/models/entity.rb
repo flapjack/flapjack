@@ -8,13 +8,13 @@ module Flapjack
 
       def initialize(options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
-        raise "Name not set" unless @name = options[:name]
+        raise "Entity not set" unless @entity = options[:entity]
         @logger = options[:logger]
       end
 
       def check_list
         # This returns too much irrelevant data -- we'll refactor the data model instead
-        @redis.keys("#{@name}:*").sort
+        @redis.keys("#{@entity}:*").sort
       end
 
     end

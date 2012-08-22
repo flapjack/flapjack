@@ -59,7 +59,7 @@ module Flapjack
       self_stats
       @states = redis.keys('*:*:states').map { |r|
         parts   = r.split(':')[0..1]
-        entity_check = EntityCheck.new(:name => parts[0], :check => parts[1], :redis => redis)
+        entity_check = EntityCheck.new(:entity => parts[0], :check => parts[1], :redis => redis)
         key     = parts.join(':')
         parts  += redis.hmget(key, 'state', 'last_change', 'last_update')
         parts  << entity_check.in_unscheduled_maintenance?
@@ -73,7 +73,7 @@ module Flapjack
       self_stats
       @states = redis.zrange('failed_checks', 0, -1).map {|key|
         parts   = key.split(':')
-        entity_check = EntityCheck.new(:name => parts[0], :check => parts[1], :redis => redis)
+        entity_check = EntityCheck.new(:entity => parts[0], :check => parts[1], :redis => redis)
         parts  += redis.hmget(key, 'state', 'last_change', 'last_update')
         parts  << entity_check.in_unscheduled_maintenance?
         parts  << entity_check.in_scheduled_maintenance?
@@ -91,7 +91,7 @@ module Flapjack
       @entity = params[:entity]
       @check  = params[:check]
 
-      entity_check = EntityCheck.new(:name => @entity, :check => @check, :redis => redis)
+      entity_check = EntityCheck.new(:entity => @entity, :check => @check, :redis => redis)
       @status = entity_check.status
 
       @check_state                = @status[:state]
@@ -109,7 +109,7 @@ module Flapjack
     get '/acknowledge' do
       @entity = params[:entity]
       @check  = params[:check]
-      entity_check = EntityCheck.new(:name => @entity, :check => @check, :redis => redis)
+      entity_check = EntityCheck.new(:entity => @entity, :check => @check, :redis => redis)
       ack = entity_check.create_acknowledgement(:summary => "Ack from web at #{Time.now.to_s}")
       @acknowledge_success = !!ack
       haml :acknowledge
@@ -134,7 +134,7 @@ module Flapjack
       summary    = params[:summary]
       entity = params[:entity]
       check  = params[:check]
-      entity_check = EntityCheck.new(:name => entity, :check => check, :redis => redis)
+      entity_check = EntityCheck.new(:entity => entity, :check => check, :redis => redis)
       entity_check.create_scheduled_maintenance(:start_time => start_time,
                                                 :duration   => duration,
                                                 :summary    => summary)
@@ -145,7 +145,7 @@ module Flapjack
     post '/delete_scheduled_maintenance/:entity/:check' do
       entity = params[:entity]
       check  = params[:check]
-      entity_check = EntityCheck.new(:name => entity, :check => check, :redis => redis)
+      entity_check = EntityCheck.new(:entity => entity, :check => check, :redis => redis)
       start_time = params[:start_time]
       entity_check.delete_scheduled_maintenance(:start_time => start_time)
       redirect back

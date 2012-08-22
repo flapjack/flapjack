@@ -28,8 +28,8 @@ module Flapjack
         summary            = notification['summary']
         time               = notification['time']
         event_id           = notification['event_id']
-        entity_name, check = notification['event_id'].split(':')
-        entity_check = Flapjack::Data::EntityCheck.new(:name => entity_name,
+        entity, check      = notification['event_id'].split(':')
+        entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
           :check => check, :redis => @persistence)
 
         headline_map = {'problem'         => 'Problem: ',
@@ -40,7 +40,7 @@ module Flapjack
 
         headline = headline_map[notification_type] || ''
 
-        subject = "#{headline}'#{check}' on #{entity_name}"
+        subject = "#{headline}'#{check}' on #{entity}"
         subject += " is #{state.upcase}" unless notification_type == 'acknowledgement'
 
         notification['subject'] = subject
