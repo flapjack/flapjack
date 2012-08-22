@@ -37,9 +37,9 @@ development:
       - "gimp@conference.jabber.domain.tld"
       - "log@conference.jabber.domain.tld"
   web:
-    instances: 1
-    thin_config:
-      port: 5080
+    port: 5080
+  api:
+    port: 5081
 
 test:
   redis:
