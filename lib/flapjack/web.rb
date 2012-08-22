@@ -2,6 +2,8 @@
 
 require 'flapjack/pikelet'
 require 'flapjack/redis'
+require 'chronic'
+require 'chronic_duration'
 
 module Flapjack
   class Web < Sinatra::Base
@@ -106,6 +108,7 @@ module Flapjack
       @last_notifications = last_notifications(key)
       @in_unscheduled_maintenance = in_unscheduled_maintenance?(Flapjack::Web.persistence, key)
       @in_scheduled_maintenance   = in_scheduled_maintenance?(Flapjack::Web.persistence, key)
+      @scheduled_maintenances     = scheduled_maintenances(Flapjack::Web.persistence, key)
       haml :check
     end
 
@@ -127,5 +130,43 @@ module Flapjack
       haml :acknowledge
     end
 
+    # returns a string showing the local timezone we're running in
+    # eg "CST (UTC+09:30)"
+    # TODO: put this in a time handling section of a utils lib
+    def local_timezone
+      tzname = Time.new.zone
+      q, r = Time.new.utc_offset.divmod(3600)
+      q < 0 ? sign = '-' : sign = '+'
+      tzoffset = sign + "%02d" % q.abs.to_s + ':' + r.to_f.div(60).to_s
+      return "#{tzname} (UTC#{tzoffset})"
+    end
+
+    # create scheduled maintenance
+    post '/scheduled_maintenance/:entity/:check' do
+      start_time = Chronic.parse(params[:start_time]).to_i
+      raise ArgumentError, "start time parsed to zero" unless start_time > 0
+      duration   = ChronicDuration.parse(params[:duration])
+      summary    = params[:summary]
+      entity     = params[:entity]
+      check      = params[:check]
+      key        = entity + ':' + check
+      options    = { :start_time => start_time,
+                     :duration   => duration,
+                     :summary    => summary,
+                   }
+      create_scheduled_maintenance(Flapjack::Web.persistence, key, options)
+      redirect back
+    end
+
+    # delete a scheduled maintenance
+    post '/delete_scheduled_maintenance/:entity/:check' do
+      entity     = params[:entity]
+      check      = params[:check]
+      start_time = params[:start_time]
+      key        = entity + ':' + check
+      options    = {:start_time => start_time}
+      delete_scheduled_maintenance(Flapjack::Web.persistence, key, options)
+      redirect back
+    end
   end
 end
