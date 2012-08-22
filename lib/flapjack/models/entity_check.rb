@@ -61,7 +61,7 @@ module Flapjack
         create_event(event)
       end
 
-      # returns a hash of all scheduled maintenances for a check
+      # returns an array of all scheduled maintenances for a check
       def scheduled_maintenances
         result = []
         if @redis.exists("#{@key}:scheduled_maintenances")
@@ -79,16 +79,7 @@ module Flapjack
           }
           puts result.inspect
         end
-        return result
-      end
-
-      # end any unscheduled downtime
-      def remove_unscheduled_maintenance
-        if (um_start = @redis.get("#{@key}:unscheduled_maintenance"))
-          @redis.del("#{@key}:unscheduled_maintenance")
-          duration = Time.now.to_i - um_start.to_i
-          @redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start)
-        end
+        result
       end
 
       # creates a scheduled maintenance period for a check
@@ -108,6 +99,28 @@ module Flapjack
         start_time = opts[:start_time]
         @redis.del("#{@key}:#{start_time}:scheduled_maintenance:summary")
         @redis.zrem("#{@key}:scheduled_maintenances", start_time)
+        @redis.del("#{@key}:scheduled_maintenance")
+        update_scheduled_maintenance
+      end
+
+      # if not in scheduled maintenance, looks in scheduled maintenance list for a check to see if
+      # current state should be set to scheduled maintenance, and sets it as appropriate
+      def update_scheduled_maintenance
+        return if in_scheduled_maintenance?
+
+        # are we within a scheduled maintenance period?
+        t = Time.now.to_i
+        current_sched_ms = scheduled_maintenances.select {|sm|
+          (sm[:start_time] <= t) && (t < sm[:end_time])
+        }
+        return if current_sched_ms.empty?
+
+        # yes! so set current scheduled maintenance
+        # if multiple scheduled maintenances found, find the end_time furthest in the future
+        futurist = current_sched_ms.max {|sm| sm[:start_time] }
+        start_time = futurist[:start_time]
+        duration   = futurist[:duration]
+        @redis.setex("#{@key}:scheduled_maintenance", duration, start_time)
       end
 
       # FIXME: clientx -- possibly an initialised @client value instead?

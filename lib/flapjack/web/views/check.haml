@@ -56,31 +56,42 @@
       %table
         %tr
           %td Last state change:
-          %td #{relative_time_ago(Time.at(@check_last_change.to_i))} ago (#{Time.at(@check_last_change.to_i)})
+          %td #{relative_time_ago(Time.at(@check_last_change.to_i))} ago
+          %td #{Time.at(@check_last_change.to_i)}
         %tr
           %td Last update:
-          %td #{relative_time_ago(Time.at(@check_last_update.to_i))} ago (#{Time.at(@check_last_update.to_i)})
+          %td #{relative_time_ago(Time.at(@check_last_update.to_i))} ago
+          %td #{Time.at(@check_last_update.to_i)}
         - if @last_notifications[:problem] > 0
-          - last_problem = relative_time_ago(Time.at(@last_notifications[:problem])) + " ago (" + Time.at(@last_notifications[:problem]).to_s + ")"
+          - last_problem_relative = relative_time_ago(Time.at(@last_notifications[:problem])) + " ago"
+          - last_problem          = Time.at(@last_notifications[:problem]).to_s
         - else
-          - last_problem = 'never'
+          - last_problem_relative = 'never'
+          - last_problem          = ''
         %tr
           %td Last problem notification:
+          %td= last_problem_relative
           %td= last_problem
         - if @last_notifications[:recovery] > 0
-          - last_recovery = relative_time_ago(Time.at(@last_notifications[:recovery])) + " ago (" + Time.at(@last_notifications[:recovery]).to_s + ")"
+          - last_recovery_relative = relative_time_ago(Time.at(@last_notifications[:recovery])) + " ago"
+          - last_recovery          = Time.at(@last_notifications[:recovery]).to_s
         - else
-          - last_recovery = 'never'
+          - last_recovery_relative = 'never'
+          - last_recovery          = ''
         %tr
           %td Last recovery notification:
+          %td= last_recovery_relative
           %td= last_recovery
         - if @last_notifications[:acknowledgement] > 0
-          - last_acknowledgement = relative_time_ago(Time.at(@last_notifications[:acknowledgement])) + " ago (" + Time.at(@last_notifications[:acknowledgement]).to_s + ")"
+          - last_ack_relative = relative_time_ago(Time.at(@last_notifications[:acknowledgement])) + " ago"
+          - last_ack          = Time.at(@last_notifications[:acknowledgement]).to_s
         - else
-          - last_acknowledgement = 'never'
+          - last_ack_relative = 'never'
+          - last_ack          = ''
         %tr
           %td Last acknowledgement notification:
-          %td= last_acknowledgement
+          %td= last_ack_relative
+          %td= last_ack
       %h3 Scheduled Maintenance Periods
       - if @scheduled_maintenances.length > 0
         %table
@@ -90,7 +101,7 @@
             %th Duration
             %th Summary
             %th Actions
-          - @scheduled_maintenances.each do |scheduled_maintenance|
+          - @scheduled_maintenances.sort_by {|s| s[:start_time]}.each do |scheduled_maintenance|
             - start_time = scheduled_maintenance[:start_time]
             - end_time   = scheduled_maintenance[:end_time]
             - duration   = scheduled_maintenance[:duration]
@@ -116,7 +127,7 @@
                 %label{:for => 'start_time'} Start time:
               %td
                 %input{:type => 'text', :name => 'start_time', :class => 'text', :size => '20', :maxlength => '80'}
-                  %p uses chronic, so eg "4pm today", "friday 2pm", "2012-01-28 13:00", etc. Times are taken to be in #{local_timezone}
+                  %p uses chronic, so eg "4pm today", "two hours hence", "friday 2pm", "2012-01-28 13:00", etc. Times are taken to be in #{local_timezone}
             %tr
               %td
                 %label{:for => 'duration'} Duration:

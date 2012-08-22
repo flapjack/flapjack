@@ -9,6 +9,7 @@ require 'flapjack/filters/scheduled_maintenance'
 require 'flapjack/filters/unscheduled_maintenance'
 require 'flapjack/filters/detect_mass_client_failures'
 require 'flapjack/filters/delays'
+require 'flapjack/models/entity_check'
 require 'flapjack/notification/common'
 require 'flapjack/notification/sms'
 require 'flapjack/notification/email'
@@ -101,6 +102,10 @@ module Flapjack
         when event.ok?
           result[:skip_filters] = true
         end
+
+        entity, check = event.id.split(':')
+        entity_check = Flapjack::Data::EntityCheck.new(:entity => entity, :check => check, :redis => @persistence)
+        entity_check.update_scheduled_maintenance
 
       # Action events represent human or automated interaction with Flapjack
       when 'action'

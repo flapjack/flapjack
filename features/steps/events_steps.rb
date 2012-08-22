@@ -1,21 +1,24 @@
 #!/usr/bin/env ruby
-require 'redis'
-require 'json'
+
+require 'flapjack/models/entity_check'
 
 def submit_event(event)
   @redis.rpush 'events', event.to_json
 end
 
 def set_scheduled_maintenance(entity = 'clientx-dvmh-app-01', check = 'ping', duration = 60*60*2)
-  event_id = entity + ":" + check
-  @redis.setex("#{event_id}:scheduled_maintenance", duration, Time.now.to_i)
-  @redis.zadd("#{event_id}:scheduled_maintenances", duration, Time.now.to_i)
-  @redis.set("#{event_id}:#{Time.now.to_i}:scheduled_maintenance:summary", "upgrading everything")
+  entity_check = Flapjack::Data::EntityCheck.new(:entity => entity, :check => 'ping', :redis => @redis)
+  t = Time.now.to_i
+  entity_check.create_scheduled_maintenance(:start_time => t, :duration => duration, :summary => "upgrading everything")
+  @redis.setex("#{entity}:#{check}:scheduled_maintenance", duration, t)
 end
 
 def remove_scheduled_maintenance(entity = 'clientx-dvmh-app-01', check = 'ping')
-  event_id = entity + ":" + check
-  @redis.del("#{event_id}:scheduled_maintenance")
+  entity_check = Flapjack::Data::EntityCheck.new(:entity => entity, :check => 'ping', :redis => @redis)
+  sm = entity_check.scheduled_maintenances
+  sm.each do |m|
+    entity_check.delete_scheduled_maintenance(:start_time => m[:start_time])
+  end
 end
 
 def remove_unscheduled_maintenance(entity = 'clientx-dvmh-app-01', check = 'ping')
