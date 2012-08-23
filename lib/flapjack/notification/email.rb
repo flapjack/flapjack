@@ -3,8 +3,8 @@
 require 'action_view'
 require 'haml/template/plugin' # haml templates won't work without this
 
+require 'flapjack/models/entity_check'
 require 'flapjack/notification/common'
-require 'flapjack/redis'
 
 # TODO define these somewhere more central
 ActionMailer::Base.raise_delivery_errors = true
@@ -19,7 +19,6 @@ module Flapjack
 
     class Email
       extend Flapjack::Notification::Common
-      extend Flapjack::Redis
 
       def self.dispatch(notification, opts = {})
         notification_type  = notification['notification_type']
@@ -28,8 +27,9 @@ module Flapjack
         state              = notification['state']
         summary            = notification['summary']
         time               = notification['time']
-        event_id           = notification['event_id']
         entity, check      = notification['event_id'].split(':')
+        entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
+          :check => check, :redis => @persistence)
 
         headline_map = {'problem'         => 'Problem: ',
                         'recovery'        => 'Recovery: ',
@@ -45,8 +45,8 @@ module Flapjack
         notification['subject'] = subject
         opts[:logger].debug "Flapjack::Notification::Email#dispatch is calling Flapjack::Notification::Mailer.sender, notification_id: #{notification['id']}"
         sender_opts = {:logger => opts[:logger],
-                       :in_scheduled_maintenance   => in_scheduled_maintenance?(@persistence, event_id),
-                       :in_unscheduled_maintenance => in_unscheduled_maintenance?(@persistence, event_id)
+                       :in_scheduled_maintenance   => entity_check.in_scheduled_maintenance?,
+                       :in_unscheduled_maintenance => entity_check.in_unscheduled_maintenance?
                       }
         Flapjack::Notification::Mailer.sender(notification, sender_opts).deliver
       end

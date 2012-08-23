@@ -8,6 +8,7 @@ require 'flapjack/notification/sms'
 require 'flapjack/notification/jabber'
 require 'flapjack/executive'
 require 'flapjack/web'
+require 'flapjack/api'
 
 module Flapjack
 
@@ -30,6 +31,10 @@ module Flapjack
       end
     end
 
+    def after_daemonize
+      setup
+    end
+
     # clean shutdown
     def stop
       @pikelets.each do |pik|
@@ -40,25 +45,21 @@ module Flapjack
             pik.add_shutdown_event
           }.resume
         when EM::Resque::Worker
-          # resque is polling, so won't need a shutdown object
+          # resque is polling, so we don't need a shutdown object
           pik.shutdown
-        when Thin::Server
+        when Thin::Server # web, api
           pik.stop
         end
       end
-      # # TODO call EM.stop after polling to check whether all of the
-      # # above have finished
-      # EM.stop
+      # FIXME only call EM.stop after polling to check whether all of the
+      # above have finished
+      EM.stop
     end
 
     # not-so-clean shutdown
     def stop!
       stop
       # FIXME wrap the above in a timeout?
-    end
-
-    def after_daemonize
-      setup
     end
 
   private
@@ -71,11 +72,12 @@ module Flapjack
 
       # TODO store these in the classes themselves, register pikelets here?
       pikelet_types = {
-        'executive'      => Flapjack::Executive,
-        'web'            => Flapjack::Web,
-        'email_notifier' => Flapjack::Notification::Email,
-        'sms_notifier'   => Flapjack::Notification::Sms,
-        'jabber_gateway' => Flapjack::Notification::Jabber
+        'executive'       => Flapjack::Executive,
+        'web'             => Flapjack::Web,
+        'api'             => Flapjack::API,
+        'email_notifier'  => Flapjack::Notification::Email,
+        'sms_notifier'    => Flapjack::Notification::Sms,
+        'jabber_notifier' => Flapjack::Notification::Jabber
       }
 
       EM.synchrony do
@@ -130,15 +132,26 @@ module Flapjack
             }
           when 'web'
             port = nil
-            if pikelet_cfg['thin_config'] && pikelet_cfg['thin_config']['port']
-              port = pikelet_cfg['thin_config']['port'].to_i
+            if pikelet_cfg['port']
+              port = pikelet_cfg['port'].to_i
             end
 
             port = 3000 if port.nil? || port <= 0 || port > 65535
 
-            thin = Thin::Server.new('0.0.0.0', port, Flapjack::Web, :signals => false)
-            @pikelets << thin
-            thin.start
+            web = Thin::Server.new('0.0.0.0', port, Flapjack::Web, :signals => false)
+            @pikelets << web
+            web.start
+          when 'api'
+            port = nil
+            if pikelet_cfg['port']
+              port = pikelet_cfg['port'].to_i
+            end
+
+            port = 3001 if port.nil? || port <= 0 || port > 65535
+
+            api = Thin::Server.new('0.0.0.0', port, Flapjack::API, :signals => false)
+            @pikelets << api
+            api.start
           end
 
         end

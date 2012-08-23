@@ -1,23 +1,24 @@
 #!/usr/bin/env ruby
 
-require 'flapjack/pikelet'
-require 'flapjack/redis'
 require 'chronic'
 require 'chronic_duration'
+
+require 'flapjack/pikelet'
+require 'flapjack/models/entity_check'
 
 module Flapjack
   class Web < Sinatra::Base
     register SinatraMore::MarkupPlugin
 
     extend Flapjack::Pikelet
-    include Flapjack::Redis
 
     set :views, settings.root + '/web/views'
 
+    # TODO move these to a time handling section of a utils lib
     def time_period_in_words(period)
-      period_mm, period_ss = @uptime.divmod(60)
-      period_hh, period_mm = period_mm.divmod(60)
-      period_dd, period_hh = period_hh.divmod(24)
+      period_mm, period_ss  = period.divmod(60)
+      period_hh, period_mm  = period_mm.divmod(60)
+      period_dd, period_hh  = period_hh.divmod(24)
       period_string         = ""
       period_string        += period_dd.to_s + " days, " if period_dd > 0
       period_string        += period_hh.to_s + " hours, " if period_hh > 0
@@ -26,42 +27,39 @@ module Flapjack
       period_string
     end
 
+    # returns a string showing the local timezone we're running in
+    # eg "CST (UTC+09:30)"
+    def local_timezone
+      tzname = Time.new.zone
+      q, r = Time.new.utc_offset.divmod(3600)
+      q < 0 ? sign = '-' : sign = '+'
+      tzoffset = sign + "%02d" % q.abs.to_s + ':' + r.to_f.div(60).to_s
+      "#{tzname} (UTC#{tzoffset})"
+    end
+
     def self_stats
-      @keys  = Flapjack::Web.persistence.keys '*'
-      @count_failing_checks  = Flapjack::Web.persistence.zcard 'failed_checks'
+      @keys = redis.keys '*'
+      @count_failing_checks  = redis.zcard 'failed_checks'
       @count_all_checks      = 'heaps' # FIXME: rename ENTITY:CHECK to check:ENTITY:CHECK so we can glob them here,
                                        # or create a set to index all checks
-      @event_counter_all     = Flapjack::Web.persistence.hget('event_counters', 'all')
-      @event_counter_ok      = Flapjack::Web.persistence.hget('event_counters', 'ok')
-      @event_counter_failure = Flapjack::Web.persistence.hget('event_counters', 'failure')
-      @event_counter_action  = Flapjack::Web.persistence.hget('event_counters', 'action')
-      @boot_time             = Time.at(Flapjack::Web.persistence.get('boot_time').to_i)
+      @event_counter_all     = redis.hget('event_counters', 'all')
+      @event_counter_ok      = redis.hget('event_counters', 'ok')
+      @event_counter_failure = redis.hget('event_counters', 'failure')
+      @event_counter_action  = redis.hget('event_counters', 'action')
+      @boot_time             = Time.at(redis.get('boot_time').to_i)
       @uptime                = Time.now.to_i - @boot_time.to_i
       @uptime_string         = time_period_in_words(@uptime)
-      if @uptime > 0
-        @event_rate_all      = @event_counter_all.to_f / @uptime
-      else
-        @event_rate_all      = 0
-      end
-      @events_queued = Flapjack::Web.persistence.llen('events')
+      @event_rate_all        = (@uptime > 0) ?
+                                 (@event_counter_all.to_f / @uptime) : 0
+      @events_queued = redis.llen('events')
     end
 
-    def last_notifications(event_id)
-      notifications = {}
-      notifications[:problem]         = Flapjack::Web.persistence.get("#{event_id}:last_problem_notification").to_i
-      notifications[:recovery]        = Flapjack::Web.persistence.get("#{event_id}:last_recovery_notification").to_i
-      notifications[:acknowledgement] = Flapjack::Web.persistence.get("#{event_id}:last_acknowledgement_notification").to_i
-      return notifications
+    def redis
+      Flapjack::Web.persistence
     end
 
-    def last_notification(event_id)
-      notifications = last_notifications(event_id)
-      return notifications.sort_by {|kind, timestamp| timestamp}.last
-    end
-
-    def check_summary(event_id)
-      timestamp = Flapjack::Web.persistence.lindex("#{event_id}:states", -1)
-      Flapjack::Web.persistence.get("#{event_id}:#{timestamp}:summary")
+     def logger
+      Flapjack::Web.logger
     end
 
     before do
@@ -74,42 +72,29 @@ module Flapjack
 
     get '/' do
       self_stats
-      @states = Flapjack::Web.persistence.keys('*:*:states').map { |r|
+      @states = redis.keys('*:*:states').map { |r|
         parts   = r.split(':')[0..1]
+        entity_check = EntityCheck.new(:entity => parts[0], :check => parts[1], :redis => redis)
         key     = parts.join(':')
-        parts  += Flapjack::Web.persistence.hmget(key, 'state', 'last_change', 'last_update')
-        parts  << in_unscheduled_maintenance?(Flapjack::Web.persistence, key)
-        parts  << in_scheduled_maintenance?(Flapjack::Web.persistence, key)
-        parts  += last_notification(key)
+        parts  += redis.hmget(key, 'state', 'last_change', 'last_update')
+        parts  << entity_check.in_unscheduled_maintenance?
+        parts  << entity_check.in_scheduled_maintenance?
+        parts  += entity_check.last_notification
       }.sort_by {|parts| parts }
       haml :index
     end
 
     get '/failing' do
       self_stats
-      @states = Flapjack::Web.persistence.zrange('failed_checks', 0, -1).map {|key|
+      @states = redis.zrange('failed_checks', 0, -1).map {|key|
         parts   = key.split(':')
-        parts  += Flapjack::Web.persistence.hmget(key, 'state', 'last_change', 'last_update')
-        parts  << in_unscheduled_maintenance?(Flapjack::Web.persistence, key)
-        parts  << in_scheduled_maintenance?(Flapjack::Web.persistence, key)
-        parts  += last_notification(key)
+        entity_check = EntityCheck.new(:entity => parts[0], :check => parts[1], :redis => redis)
+        parts  += redis.hmget(key, 'state', 'last_change', 'last_update')
+        parts  << entity_check.in_unscheduled_maintenance?
+        parts  << entity_check.in_scheduled_maintenance?
+        parts  += entity_check.last_notification
       }.sort_by {|parts| parts}
       haml :index
-    end
-
-    get '/check' do
-      @entity = params[:entity]
-      @check  = params[:check]
-      key = @entity + ":" + @check
-      @check_state        = Flapjack::Web.persistence.hget(key, 'state')
-      @check_last_update  = Flapjack::Web.persistence.hget(key, 'last_update')
-      @check_last_change  = Flapjack::Web.persistence.hget(key, 'last_change')
-      @check_summary      = check_summary(key)
-      @last_notifications = last_notifications(key)
-      @in_unscheduled_maintenance = in_unscheduled_maintenance?(Flapjack::Web.persistence, key)
-      @in_scheduled_maintenance   = in_scheduled_maintenance?(Flapjack::Web.persistence, key)
-      @scheduled_maintenances     = scheduled_maintenances(Flapjack::Web.persistence, key)
-      haml :check
     end
 
     get '/self_stats' do
@@ -117,28 +102,32 @@ module Flapjack
       haml :self_stats
     end
 
+    get '/check' do
+      @entity = params[:entity]
+      @check  = params[:check]
+
+      entity_check = EntityCheck.new(:entity => @entity, :check => @check, :redis => redis)
+      @status = entity_check.status
+
+      @check_state                = @status[:state]
+      @check_last_update          = @status[:last_update]
+      @check_last_change          = @status[:last_change]
+      @check_summary              = @status[:summary]
+      @last_notifications         = @status[:last_notifications]
+      @in_unscheduled_maintenance = @status[:in_scheduled_maintenance]
+      @in_scheduled_maintenance   = @status[:in_unscheduled_maintenance]
+      @scheduled_maintenances     = @status[:scheduled_maintenances]
+
+      haml :check
+    end
+
     get '/acknowledge' do
       @entity = params[:entity]
       @check  = params[:check]
-      key = @entity + ":" + @check
-      ack_opts = { 'summary' => "Ack from web at #{Time.now.to_s}" }
-      if create_acknowledgement(Flapjack::Web.persistence, key, ack_opts)
-        @acknowledge_success = true
-      else
-        @acknowledge_success = false
-      end
+      entity_check = EntityCheck.new(:entity => @entity, :check => @check, :redis => redis)
+      ack = entity_check.create_acknowledgement(:summary => "Ack from web at #{Time.now.to_s}")
+      @acknowledge_success = !!ack
       haml :acknowledge
-    end
-
-    # returns a string showing the local timezone we're running in
-    # eg "CST (UTC+09:30)"
-    # TODO: put this in a time handling section of a utils lib
-    def local_timezone
-      tzname = Time.new.zone
-      q, r = Time.new.utc_offset.divmod(3600)
-      q < 0 ? sign = '-' : sign = '+'
-      tzoffset = sign + "%02d" % q.abs.to_s + ':' + r.to_f.div(60).to_s
-      return "#{tzname} (UTC#{tzoffset})"
     end
 
     # create scheduled maintenance
@@ -147,25 +136,22 @@ module Flapjack
       raise ArgumentError, "start time parsed to zero" unless start_time > 0
       duration   = ChronicDuration.parse(params[:duration])
       summary    = params[:summary]
-      entity     = params[:entity]
-      check      = params[:check]
-      key        = entity + ':' + check
-      options    = { :start_time => start_time,
-                     :duration   => duration,
-                     :summary    => summary,
-                   }
-      create_scheduled_maintenance(Flapjack::Web.persistence, key, options)
+      entity = params[:entity]
+      check  = params[:check]
+      entity_check = EntityCheck.new(:entity => entity, :check => check, :redis => redis)
+      entity_check.create_scheduled_maintenance(:start_time => start_time,
+                                                :duration   => duration,
+                                                :summary    => summary)
       redirect back
     end
 
     # delete a scheduled maintenance
     post '/delete_scheduled_maintenance/:entity/:check' do
-      entity     = params[:entity]
-      check      = params[:check]
+      entity = params[:entity]
+      check  = params[:check]
+      entity_check = EntityCheck.new(:entity => entity, :check => check, :redis => redis)
       start_time = params[:start_time]
-      key        = entity + ':' + check
-      options    = {:start_time => start_time}
-      delete_scheduled_maintenance(Flapjack::Web.persistence, key, options)
+      entity_check.delete_scheduled_maintenance(:start_time => start_time)
       redirect back
     end
   end
