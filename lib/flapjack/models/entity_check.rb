@@ -139,9 +139,29 @@ module Flapjack
         end
       end
 
+      def state
+        @redis.hget(@key, 'state')
+      end
+
+      def last_update
+        @redis.hget(@key, 'last_update').to_i
+      end
+
+      def last_problem_notification
+        @redis.get("#{@key}:last_problem_notification").to_i
+      end
+
+      def last_recovery_notification
+        @redis.get("#{@key}:last_recovery_notification").to_i
+      end
+
+      def last_acknowledgement_notification
+        @redis.get("#{@key}:last_acknowledgment_notification").to_i
+      end
+
       def status
-        {:state                       => @redis.hget(@key, 'state'),
-         :last_update                 => @redis.hget(@key, 'last_update'),
+        {:state                       => state,
+         :last_update                 => last_update,
          :last_change                 => @redis.hget(@key, 'last_change'),
          :summary                     => summary,
          :last_notifications          => last_notifications,
@@ -158,10 +178,8 @@ module Flapjack
       end
 
       def summary
-        @redis.multi do
-          timestamp = @redis.lindex("#{@key}:states", -1)
-          @redis.get("#{@key}:#{timestamp}:summary")
-        end
+        timestamp = @redis.lindex("#{@key}:states", -1)
+        @redis.get("#{@key}:#{timestamp}:summary")
       end
 
     private

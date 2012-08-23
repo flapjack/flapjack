@@ -100,4 +100,5 @@ end
 Flapjack::Diner.base_uri('http://127.0.0.1:5081')
 
 pp Flapjack::Diner.checks('clientx-app-01')
-pp Flapjack::Diner.status('clientx-app-01', 'ping')
+pp Flapjack::Diner.check_status('clientx-app-01', 'ping')
+pp Flapjack::Diner.checks_and_statuses('clientx-app-01')

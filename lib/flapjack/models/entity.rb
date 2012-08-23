@@ -12,9 +12,9 @@ module Flapjack
         @logger = options[:logger]
       end
 
-      # FIXME http://redis.io/commands/keys suggests we should be using sets instead
+      # NB: this will change when the data model is changed to add check: before them
       def check_list
-        @redis.keys("check:#{@entity}:*").map {|k| k =~ /^check:#{@entity}:(.+)$/; $1}
+        @redis.keys("#{@entity}:*").map {|k| k =~ /^#{@entity}:(.+)$/; $1}.reject {|e| e =~ /:/ }
       end
 
       def check_count

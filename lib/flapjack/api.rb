@@ -33,10 +33,31 @@ module Flapjack
       end
     end
 
+    get 'entities' do
+      # entities = Flapjack::Data::Entity.all
+    end
+
     get 'entities/:entity/checks' do
       entity = Flapjack::Data::Entity.new(:entity => params[:entity],
         :redis => persistence)
       entity.check_list
+    end
+
+    get 'entities/:entity/statuses' do
+      entity = Flapjack::Data::Entity.new(:entity => params[:entity],
+        :redis => persistence)
+      entity.check_list.sort.collect do |c|
+        entity_check = Flapjack::Data::EntityCheck.new(:entity => params[:entity], :check => c,
+          :redis => persistence)
+        { 'name'                                => c,
+          'state'                               => entity_check.state,
+          'in_unscheduled_maintenance'          => entity_check.in_unscheduled_maintenance?,
+          'in_scheduled_maintenance'            => entity_check.in_scheduled_maintenance?,
+          'last_update'                         => entity_check.last_update,
+          'last_problem_notification'           => entity_check.last_problem_notification,
+          'last_recovery_notification'          => entity_check.last_recovery_notification,
+          'last_acknowledgement_notification'   => entity_check.last_acknowledgement_notification }
+      end
     end
 
     get 'entity_checks/:entity\::check' do
