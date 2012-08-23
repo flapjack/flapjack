@@ -48,25 +48,22 @@ Before do
 end
 
 After do
+  @redis.quit
   # Reset the logged messages
   @logger.messages = []
 end
 
-Around('@email') do |scenario, block|
+Before('@resque') do
+  ResqueSpec.reset!
+end
+
+Before('@email') do
   ActionMailer::Base.delivery_method = :test
   ActionMailer::Base.perform_deliveries = true
   ActionMailer::Base.deliveries.clear
-  block.call
 end
 
 After('@time') do
   Delorean.back_to_the_present
 end
 
-# not sure why this has to be explicitly required -- Bundler should
-# be doing this
-require 'resque_spec'
-
-Before('@resque') do
-  ResqueSpec.reset!
-end

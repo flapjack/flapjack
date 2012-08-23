@@ -1,15 +1,7 @@
 require 'spec_helper'
 require 'flapjack/models/entity'
 
-describe Flapjack::Data::Entity do
-
-  # this feels a bit clunky
-  around(:each) do |example|
-    @redis = ::Redis.new(:db => 14, :driver => :ruby)
-    @redis.flushdb
-    example.run
-    @redis.quit
-  end
+describe Flapjack::Data::Entity, :redis => true do
 
   let(:name)  { 'abc-123' }
   let(:check) { 'ping' }

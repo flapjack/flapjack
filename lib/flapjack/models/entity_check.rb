@@ -143,7 +143,7 @@ module Flapjack
         {:state                       => @redis.hget(@key, 'state'),
          :last_update                 => @redis.hget(@key, 'last_update'),
          :last_change                 => @redis.hget(@key, 'last_change'),
-         :summary                     => check_summary,
+         :summary                     => summary,
          :last_notifications          => last_notifications,
          :in_unscheduled_maintenance  => in_unscheduled_maintenance?,
          :in_scheduled_maintenance    => in_scheduled_maintenance?
@@ -157,13 +157,11 @@ module Flapjack
         }
       end
 
-      def last_notification
-        last_notifications.sort_by {|kind, timestamp| timestamp}.last
-      end
-
-      def check_summary
-        timestamp = @redis.lindex("#{@key}:states", -1)
-        @redis.get("#{@key}:#{timestamp}:summary")
+      def summary
+        @redis.multi do
+          timestamp = @redis.lindex("#{@key}:states", -1)
+          @redis.get("#{@key}:#{timestamp}:summary")
+        end
       end
 
     private

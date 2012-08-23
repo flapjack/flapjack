@@ -3,6 +3,7 @@
 require 'httparty'
 require 'json'
 require 'pp'
+require 'uri'
 
 module Flapjack
 
@@ -13,31 +14,81 @@ module Flapjack
 
     class << self
 
+      def logger=(l)
+        @logger = l
+      end
+
       # NB: clients will need to handle any exceptions caused by,
       # e.g., network failures or non-parseable JSON data.
 
       def checks(entity)
-        response = get("/entities/#{entity}/checks")
+        entity_esc = prepare(entity, :required => 'entity')
+        return if entity_esc.nil?
+
+        response = get("/entities/#{entity_esc}/checks")
         JSON.parse(response.body)
       end
 
+      def checks_and_statuses(entity)
+        entity_esc = prepare(entity, :required => 'entity')
+        return if entity_esc.nil?
+
+        JSON.parse(response.body)
+        response = get("/entities/#{entity_esc}/statuses")
+      end
+
       def check_status(entity, check)
+        entity_esc = prepare(entity, :required => 'entity')
+        check_esc = prepare(check, :required => 'check')
+        return if entity_esc.nil? || check_esc.nil?
+
         response = get("/entity_checks/#{entity}:#{check}")
         JSON.parse(response.body)
       end
 
       def acknowledge_check!(entity, check, options = {})
-        # TODO validate options
-        response = post("/acknowledgments/#{entity}:#{check}?summary=#{options[:summary]}")
+        entity_esc = prepare(entity, :required => 'entity')
+        check_esc = prepare(check, :required => 'check')
+        return if entity_esc.nil? || check_esc.nil?
+
+        acknowledge_check_url = "/acknowledgments/#{entity_esc}:#{check_esc}"
+
+        if options[:summary]
+          summary_esc = prepare(options[:summary])
+          acknowledge_check_url += "?summary=#{summary_esc}"
+        end
+
+        response = post(acknowledge_check_url)
         JSON.parse(response.body)
       end
 
-      # TODO check whether HTTParty escapes URL or whether this script should do it
       def create_scheduled_maintenance!(entity, check, options = {})
-        # TODO validate options
-        response = post("/scheduled_maintenances/#{entity}:#{check}?" +
-          "start_time=#{options[:start_time]}&duration=#{options[:duration]}&summary=#{options[:summary]}")
+        entity_esc = prepare(entity, :required => 'entity')
+        check_esc = prepare(check, :required => 'check')
+        start_time_esc = prepare(entity, :required => 'start time')
+        duration_esc = prepare(check, :required => 'duration')
+        return if entity_esc.nil? || check_esc.nil? || start_time_esc.nil? || duration_esc.nil?
+
+        create_sch_maint_url ="/scheduled_maintenances/#{entity_esc}:#{check_esc}?" +
+          "start_time=#{start_time}&duration=#{duration}"
+
+        if options[:summary]
+          summary_esc = prepare(options[:summary])
+          create_sch_maint_url += "&summary=#{summary_esc}"
+        end
+
+        response = post(create_sch_maint_url)
         JSON.parse(response.body)
+      end
+
+    private
+
+      def prepare(data, opts = [])
+        if opts[:required] && data.nil?
+          @logger.error "#{opts[:required].upcase} is required" if @logger
+          return
+        end
+        URI.escape(data)
       end
 
     end

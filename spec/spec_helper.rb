@@ -21,4 +21,12 @@ RSpec.configure do |config|
   # if tests are marked with :focus, run only those, otherwise run all
   config.filter_run :focus => true
   config.run_all_when_everything_filtered = true
+
+  config.around(:each, :redis => true) do |example|
+    @redis = ::Redis.new(:db => 14, :driver => :ruby)
+    @redis.flushdb
+    example.run
+    @redis.quit
+  end
+
 end

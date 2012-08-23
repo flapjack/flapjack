@@ -79,7 +79,7 @@ module Flapjack
         parts  += redis.hmget(key, 'state', 'last_change', 'last_update')
         parts  << entity_check.in_unscheduled_maintenance?
         parts  << entity_check.in_scheduled_maintenance?
-        parts  += entity_check.last_notification
+        parts  += entity_check.last_notifications.max_by {|n| n[1]}
       }.sort_by {|parts| parts }
       haml :index
     end
@@ -92,7 +92,7 @@ module Flapjack
         parts  += redis.hmget(key, 'state', 'last_change', 'last_update')
         parts  << entity_check.in_unscheduled_maintenance?
         parts  << entity_check.in_scheduled_maintenance?
-        parts  += entity_check.last_notification
+        parts  += entity_check.last_notifications.max_by {|n| n[1]}
       }.sort_by {|parts| parts}
       haml :index
     end
