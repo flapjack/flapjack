@@ -14,11 +14,20 @@ module Flapjack
       STATE_DOWN            = 'down'
       STATE_UNKNOWN         = 'unknown'
 
+      # TODO initialize entity by 'id' from stored data model
+
       def initialize(options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
-        raise "Entity not set" unless @entity = options[:entity]
-        raise "Check not set" unless @check = options[:check]
-        @key = "#{@entity}:#{@check}"
+        if options[:event_id]
+          @entity, @check = options[:event_id].split(':')
+          @key = options[:event_id]
+        else
+          @entity = options[:entity]
+          @check = options[:check]
+          @key = "#{@entity}:#{@check}" if @entity && @check
+        end
+        raise "Entity not set" unless @entity
+        raise "Check not set" unless @check
         @logger = options[:logger]
       end
 
@@ -42,7 +51,7 @@ module Flapjack
       #   'time'      => timestamp
       def create_event(event)
         event.merge('entity' => @entity, 'check' => @check)
-        event.time = Time.now.to_i if event.time.nil?
+        event['time'] = Time.now.to_i if event['time'].nil?
         @redis.rpush('events', Yajl::Encoder.encode(event))
       end
 
@@ -52,9 +61,7 @@ module Flapjack
         }
         options = defaults.merge(opts)
 
-        event = { 'entity'  => @entity,
-                  'check'   => @check,
-                  'type'    => 'action',
+        event = { 'type'    => 'action',
                   'state'   => 'acknowledgement',
                   'summary' => options['summary']
                 }
@@ -123,28 +130,32 @@ module Flapjack
         @redis.setex("#{@key}:scheduled_maintenance", duration, start_time)
       end
 
+      def state
+        @redis.hget("check:#{@key}", 'state')
+      end
+
       # FIXME: clientx -- possibly an initialised @client value instead?
       # FIXME: include STATE_UP & STATE_DOWN ??
       def state=(state = STATE_OK)
         return unless validate_state(state)
         t = Time.now.to_i - (60*60*24)
-        @redis.hset(@key, 'state', e_state)
-        @redis.hset(@key, 'last_change', t)
+        @redis.hset("check:#{@key}", 'state', e_state)
+        @redis.hset("check:#{@key}", 'last_change', t)
         if STATE_CRITICAL.eql?(state)
-          @redis.zadd('failed_checks', t, entity_check)
-          @redis.zadd('failed_checks:client:clientx', t, entity_check)
+          @redis.zadd('failed_checks', t, @key)
+          @redis.zadd('failed_checks:client:clientx', t, @key)
         elsif STATE_OK.eql?(state)
-          @redis.zrem('failed_checks', entity_check)
-          @redis.zrem('failed_checks:client:clientx', entity_check)
+          @redis.zrem('failed_checks', @key)
+          @redis.zrem('failed_checks:client:clientx', @key)
         end
       end
 
-      def state
-        @redis.hget(@key, 'state')
+      def last_update
+        @redis.hget("check:#{@key}", 'last_update').to_i
       end
 
-      def last_update
-        @redis.hget(@key, 'last_update').to_i
+      def last_change
+        @redis.hget("check:#{@key}", 'last_change').to_i
       end
 
       def last_problem_notification
@@ -159,15 +170,13 @@ module Flapjack
         @redis.get("#{@key}:last_acknowledgment_notification").to_i
       end
 
-      def status
-        {:state                       => state,
-         :last_update                 => last_update,
-         :last_change                 => @redis.hget(@key, 'last_change'),
-         :summary                     => summary,
-         :last_notifications          => last_notifications,
-         :in_unscheduled_maintenance  => in_unscheduled_maintenance?,
-         :in_scheduled_maintenance    => in_scheduled_maintenance?
-        }
+      def failed?
+        ['warning', 'critical'].include?( state )
+      end
+
+      def duration_of_current_failure
+        return unless failed?
+        Time.now.to_i - @redis.hget("check:#{@key}", 'last_change').to_i
       end
 
       def last_notifications
@@ -180,6 +189,22 @@ module Flapjack
       def summary
         timestamp = @redis.lindex("#{@key}:states", -1)
         @redis.get("#{@key}:#{timestamp}:summary")
+      end
+
+      def time_since_last_problem_alert
+        result = Time.now.to_i - @redis.get("#{@key}:last_problem_notification").to_i
+        # @log.debug("Filter: Delays: time_since_last_problem_alert is returning #{result}")
+        result
+      end
+
+      def time_since_last_alert_about_current_problem
+        return unless failed?
+        result = time_since_last_problem_alert
+        return unless (result < duration_of_current_failure)
+        # if @logger
+          # @logger.debug("Filter: Delays: time_since_last_alert_about_current_problem is returning #{result}")
+        # end
+        result
       end
 
     private

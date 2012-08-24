@@ -1,5 +1,5 @@
 require 'spec_helper'
-require 'flapjack/models/entity'
+require 'flapjack/data/entity'
 
 describe Flapjack::Data::Entity, :redis => true do
 

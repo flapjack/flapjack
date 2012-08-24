@@ -1,5 +1,5 @@
 require 'spec_helper'
-require 'flapjack/models/entity_check'
+require 'flapjack/data/entity_check'
 
 describe Flapjack::Data::EntityCheck, :redis => true do
 
@@ -30,12 +30,24 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
   it "creates an acknowledgement"
 
+  it "returns its state"
+
   it "updates state"
 
-  it "returns its status"
+  it "returns that it has failed"
+
+  it "returns that it has not failed"
+
+  it "returns a status hash"
 
   it "returns its last notifications"
 
   it "returns a status summary"
+
+  it "returns duration of current failure"
+
+  it "returns time since last problem alert"
+
+  it "returns time since last alert about current problem"
 
 end

@@ -38,16 +38,22 @@ class MockLogger
   end
 end
 
+redis_opts = { :db => 14, :driver => :ruby }
+
+redis = Redis.new(redis_opts)
+redis.flushdb
+redis.quit
+
 Before do
   @logger = MockLogger.new
   # Use a separate database whilst testing
-  @app = Flapjack::Executive.new(:redis => { :db => 14, :driver => :ruby }, :logger => @logger,
+  @app = Flapjack::Executive.new(:redis => redis_opts, :logger => @logger,
     'email_queue' => 'email_notifications', 'sms_queue' => 'sms_notifications')
   @redis = @app.persistence
-  @redis.flushdb
 end
 
 After do
+  @redis.flushdb
   @redis.quit
   # Reset the logged messages
   @logger.messages = []

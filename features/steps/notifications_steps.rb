@@ -9,13 +9,13 @@ def add_contact(contact = {})
   @redis.hset("contact:#{contact['id']}", 'email',      contact['email'])
   contact['media'].each_pair {|medium, address|
     @redis.hset("contact_media:#{contact['id']}", medium, address)
-  }    
+  }
   @redis.exec
 end
 
 # also copied from flapjack-populator
 def add_entity(entity = {})
-  @redis.multi 
+  @redis.multi
   existing_name = @redis.hget("entity:#{entity['id']}", 'name')
   @redis.del("entity_id:#{existing_name}") unless existing_name == entity['name']
   @redis.set("entity_id:#{entity['name']}", entity['id'])
@@ -66,15 +66,15 @@ Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)' and
               'contacts' => ["0998"])
   add_entity( 'id'       => '5001',
               'name'     => entity2,
-              'contacts' => ["0999"])              
+              'contacts' => ["0999"])
 end
 
 When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity|
-  event = Flapjack::Event.new('type'    => 'service',
-                              'state'   => 'critical',
-                              'summary' => '100% packet loss',
-                              'entity'  => entity,
-                              'check'   => 'ping')
+  event = Flapjack::Data::Event.new('type'    => 'service',
+                                    'state'   => 'critical',
+                                    'summary' => '100% packet loss',
+                                    'entity'  => entity,
+                                    'check'   => 'ping')
   @app.generate_notification(event)
 end
 
@@ -152,10 +152,10 @@ end
 
 # This doesn't work as I have it here -- sends a mail with an empty To: header instead.
 # Might have to introduce Rspec's stubs here to fake bad mailer behaviour -- or if mail sending
-# won't ever fail, don't test for failure? 
+# won't ever fail, don't test for failure?
 When /^the email notification handler fails to send an email$/ do
   pending
-  @email_notification['address'] = nil  
+  @email_notification['address'] = nil
   send_email(@email_notification)
 end
 

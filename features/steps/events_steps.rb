@@ -1,6 +1,15 @@
 #!/usr/bin/env ruby
 
-require 'flapjack/models/entity_check'
+require 'flapjack/data/entity_check'
+require 'flapjack/data/event'
+
+def drain_events
+  loop do
+    event = Flapjack::Data::Event.next(:block => false, :persistence => @redis)
+    break unless event
+    @app.process_event(event)
+  end
+end
 
 def submit_event(event)
   @redis.rpush 'events', event.to_json
@@ -40,16 +49,16 @@ end
 
 def set_ok_state(entity = 'clientx-dvmh-app-01', check = 'ping')
   event_id = entity + ":" + check
-  @redis.hset(event_id, 'state', 'ok')
-  @redis.hset(event_id, 'last_change', (Time.now.to_i - (60*60*24)))
+  @redis.hset("check:" + event_id, 'state', 'ok')
+  @redis.hset("check:" + event_id, 'last_change', (Time.now.to_i - (60*60*24)))
   @redis.zrem('failed_checks', event_id)
   @redis.zrem('failed_checks:client:clientx', event_id)
 end
 
 def set_failure_state(entity = 'clientx-dvmh-app-01', check = 'ping')
   event_id = entity + ":" + check
-  @redis.hset(event_id, 'state', 'critical')
-  @redis.hset(event_id, 'last_change', (Time.now.to_i - (60*60*24)))
+  @redis.hset("check:" + event_id, 'state', 'critical')
+  @redis.hset("check:" + event_id, 'last_change', (Time.now.to_i - (60*60*24)))
   @redis.zadd('failed_checks', (Time.now.to_i - (60*60*24)), event_id)
   @redis.zadd('failed_checks:client:clientx', (Time.now.to_i - (60*60*24)), event_id)
 end
@@ -61,6 +70,7 @@ def submit_ok(entity = 'clientx-dvmh-app-01', check = 'ping')
     'summary' => '0% packet loss',
     'entity'  => entity,
     'check'   => check,
+    'client'  => 'clientx'
   }
   submit_event(event)
 end
@@ -72,6 +82,7 @@ def submit_critical(entity = 'clientx-dvmh-app-01', check = 'ping')
     'summary' => '100% packet loss',
     'entity'  => entity,
     'check'   => check,
+    'client'  => 'clientx'
   }
   submit_event(event)
 end
@@ -83,12 +94,9 @@ def submit_acknowledgement(entity = 'clientx-dvmh-app-01', check = 'ping')
     'summary' => "I'll have this fixed in a jiffy, saw the same thing yesterday",
     'entity'  => entity,
     'check'   => check,
+    'client'  => 'clientx'
   }
   submit_event(event)
-end
-
-def drain_events
-  @app.drain_events
 end
 
 Given /^check ([\w\.\-]+) is in an ok state$/ do |entity|
@@ -110,11 +118,12 @@ Given /^check ([\w\.\-]+) is in scheduled maintenance$/ do |entity|
   set_scheduled_maintenance(entity)
 end
 
+# TODO set the state directly rather than run drain_events
 Given /^check ([\w\.\-]+) is in unscheduled maintenance$/ do |entity|
   remove_scheduled_maintenance(entity)
   set_failure_state(entity)
   submit_acknowledgement(entity)
-  drain_events
+  drain_events  # TODO these should only be in When clauses
 end
 
 When /^an ok event is received for check ([\w\.\-]+)$/ do |entity|
@@ -122,13 +131,15 @@ When /^an ok event is received for check ([\w\.\-]+)$/ do |entity|
   drain_events
 end
 
+# TODO logging is a side-effect, should test for notification generation itself
 Then /^a notification should not be generated for check ([\w\.\-]+)$/ do |entity|
   message = @app.logger.messages.find {|m| m =~ /Not sending notifications for event/ }
   message.should_not be_nil
 end
 
 Then /^a notification should be generated for check ([\w\.\-]+)$/ do |entity|
-  drain_events
+  drain_events # TODO these should only be in When clauses
+  p @app.logger.messages
   message = @app.logger.messages.find {|m| m =~ /Sending notifications for event/ }
   message.should_not be_nil
 end

@@ -6,15 +6,16 @@ module Flapjack
 
     class Entity
 
+      # TODO initialize entity by 'id' from stored data model
+
       def initialize(options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
         raise "Entity not set" unless @entity = options[:entity]
         @logger = options[:logger]
       end
 
-      # NB: this will change when the data model is changed to add check: before them
       def check_list
-        @redis.keys("#{@entity}:*").map {|k| k =~ /^#{@entity}:(.+)$/; $1}.reject {|e| e =~ /:/ }
+        @redis.keys("check:#{@entity}:*").map {|k| k =~ /^check:#{@entity}:(.+)$/; $1}
       end
 
       def check_count

@@ -2,8 +2,8 @@
 
 require 'flapjack/pikelet'
 
-require 'flapjack/models/entity'
-require 'flapjack/models/entity_check'
+require 'flapjack/data/entity'
+require 'flapjack/data/entity_check'
 
 # We can always move this to a Sinatra::Base subclass if the Grape
 # functionality isn't worth the extra gems needed
@@ -63,7 +63,14 @@ module Flapjack
     get 'entity_checks/:entity\::check' do
       entity_check = Flapjack::Data::EntityCheck.new(:entity => params[:entity],
         :check => params[:check], :redis => persistence)
-      entity_check.status
+      {:state                       => entity_check.state,
+       :last_update                 => entity_check.last_update,
+       :last_change                 => entity_check.last_change,
+       :summary                     => entity_check.summary,
+       :last_notifications          => entity_check.last_notifications,
+       :in_unscheduled_maintenance  => entity_check.in_unscheduled_maintenance?,
+       :in_scheduled_maintenance    => entity_check.in_scheduled_maintenance?
+      }
     end
 
     post 'acknowledgements/:entity\::check' do

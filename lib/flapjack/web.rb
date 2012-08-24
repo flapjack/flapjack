@@ -4,11 +4,10 @@ require 'chronic'
 require 'chronic_duration'
 
 require 'flapjack/pikelet'
-require 'flapjack/models/entity_check'
+require 'flapjack/data/entity_check'
 
 module Flapjack
   class Web < Sinatra::Base
-    register SinatraMore::MarkupPlugin
 
     extend Flapjack::Pikelet
 
@@ -107,16 +106,14 @@ module Flapjack
       @check  = params[:check]
 
       entity_check = EntityCheck.new(:entity => @entity, :check => @check, :redis => redis)
-      @status = entity_check.status
-
-      @check_state                = @status[:state]
-      @check_last_update          = @status[:last_update]
-      @check_last_change          = @status[:last_change]
-      @check_summary              = @status[:summary]
-      @last_notifications         = @status[:last_notifications]
-      @in_unscheduled_maintenance = @status[:in_scheduled_maintenance]
-      @in_scheduled_maintenance   = @status[:in_unscheduled_maintenance]
-      @scheduled_maintenances     = @status[:scheduled_maintenances]
+      @check_state                = entity_check.state
+      @check_last_update          = entity_check.last_update
+      @check_last_change          = entity_check.last_change
+      @check_summary              = entity_check.summary
+      @last_notifications         = entity_check.last_notifications
+      @in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
+      @in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
+      @scheduled_maintenances     = entity_check.scheduled_maintenances
 
       haml :check
     end

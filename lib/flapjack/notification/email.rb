@@ -1,9 +1,10 @@
 #!/usr/bin/env ruby
 
 require 'action_view'
+require 'haml/template'
 require 'haml/template/plugin' # haml templates won't work without this
 
-require 'flapjack/models/entity_check'
+require 'flapjack/data/entity_check'
 require 'flapjack/notification/common'
 
 # TODO define these somewhere more central

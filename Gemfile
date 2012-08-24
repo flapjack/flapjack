@@ -17,8 +17,6 @@ gem 'json'
 gem 'sinatra', :require => 'sinatra/base'
 gem 'tilt'
 gem 'warden'
-gem 'sinatra_more'
-gem 'rack-fiber_pool' # TODO check
 gem 'haml'
 gem 'thin'
 
