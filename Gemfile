@@ -25,8 +25,6 @@ gem 'actionmailer', :require => 'action_mailer'
 
 gem 'blather'
 
-gem 'grape'
-
 group :development do
   gem 'jeweler'
   gem 'shotgun'

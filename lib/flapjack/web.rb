@@ -37,24 +37,20 @@ module Flapjack
     end
 
     def self_stats
-      @keys = redis.keys '*'
-      @count_failing_checks  = redis.zcard 'failed_checks'
+      @keys = @@redis.keys '*'
+      @count_failing_checks  = @@redis.zcard 'failed_checks'
       @count_all_checks      = 'heaps' # FIXME: rename ENTITY:CHECK to check:ENTITY:CHECK so we can glob them here,
                                        # or create a set to index all checks
-      @event_counter_all     = redis.hget('event_counters', 'all')
-      @event_counter_ok      = redis.hget('event_counters', 'ok')
-      @event_counter_failure = redis.hget('event_counters', 'failure')
-      @event_counter_action  = redis.hget('event_counters', 'action')
-      @boot_time             = Time.at(redis.get('boot_time').to_i)
+      @event_counter_all     = @@redis.hget('event_counters', 'all')
+      @event_counter_ok      = @@redis.hget('event_counters', 'ok')
+      @event_counter_failure = @@redis.hget('event_counters', 'failure')
+      @event_counter_action  = @@redis.hget('event_counters', 'action')
+      @boot_time             = Time.at(@@redis.get('boot_time').to_i)
       @uptime                = Time.now.to_i - @boot_time.to_i
       @uptime_string         = time_period_in_words(@uptime)
       @event_rate_all        = (@uptime > 0) ?
                                  (@event_counter_all.to_f / @uptime) : 0
-      @events_queued = redis.llen('events')
-    end
-
-    def redis
-      Flapjack::Web.persistence
+      @events_queued = @@redis.llen('events')
     end
 
      def logger
@@ -63,7 +59,7 @@ module Flapjack
 
     before do
       # will only initialise the first time it's run
-      Flapjack::Web.bootstrap(:redis => {:driver => :ruby})
+      Flapjack::Web.bootstrap
     end
 
     after do
@@ -71,11 +67,11 @@ module Flapjack
 
     get '/' do
       self_stats
-      @states = redis.keys('*:*:states').map { |r|
+      @states = @@redis.keys('*:*:states').map { |r|
         parts   = r.split(':')[0..1]
-        entity_check = EntityCheck.new(:entity => parts[0], :check => parts[1], :redis => redis)
+        entity_check = EntityCheck.new(:entity_name => parts[0], :check => parts[1], :redis => @@redis)
         key     = parts.join(':')
-        parts  += redis.hmget(key, 'state', 'last_change', 'last_update')
+        parts  += @@redis.hmget(key, 'state', 'last_change', 'last_update')
         parts  << entity_check.in_unscheduled_maintenance?
         parts  << entity_check.in_scheduled_maintenance?
         parts  += entity_check.last_notifications.max_by {|n| n[1]}
@@ -85,10 +81,10 @@ module Flapjack
 
     get '/failing' do
       self_stats
-      @states = redis.zrange('failed_checks', 0, -1).map {|key|
+      @states = @@redis.zrange('failed_checks', 0, -1).map {|key|
         parts   = key.split(':')
-        entity_check = EntityCheck.new(:entity => parts[0], :check => parts[1], :redis => redis)
-        parts  += redis.hmget(key, 'state', 'last_change', 'last_update')
+        entity_check = EntityCheck.new(:entity_name => parts[0], :check => parts[1], :redis => @@redis)
+        parts  += @@redis.hmget(key, 'state', 'last_change', 'last_update')
         parts  << entity_check.in_unscheduled_maintenance?
         parts  << entity_check.in_scheduled_maintenance?
         parts  += entity_check.last_notifications.max_by {|n| n[1]}
@@ -102,10 +98,7 @@ module Flapjack
     end
 
     get '/check' do
-      @entity = params[:entity]
-      @check  = params[:check]
-
-      entity_check = EntityCheck.new(:entity => @entity, :check => @check, :redis => redis)
+      entity_check = EntityCheck.new(:entity_name => params[:entity], :check => params[:check], :redis => @@redis)
       @check_state                = entity_check.state
       @check_last_update          = entity_check.last_update
       @check_last_change          = entity_check.last_change
@@ -121,7 +114,7 @@ module Flapjack
     get '/acknowledge' do
       @entity = params[:entity]
       @check  = params[:check]
-      entity_check = EntityCheck.new(:entity => @entity, :check => @check, :redis => redis)
+      entity_check = EntityCheck.new(:entity_name => @entity, :check => @check, :redis => @@redis)
       ack = entity_check.create_acknowledgement(:summary => "Ack from web at #{Time.now.to_s}")
       @acknowledge_success = !!ack
       haml :acknowledge
@@ -133,9 +126,7 @@ module Flapjack
       raise ArgumentError, "start time parsed to zero" unless start_time > 0
       duration   = ChronicDuration.parse(params[:duration])
       summary    = params[:summary]
-      entity = params[:entity]
-      check  = params[:check]
-      entity_check = EntityCheck.new(:entity => entity, :check => check, :redis => redis)
+      entity_check = EntityCheck.new(:entity_name => params[:entity], :check => params[:check], :redis => @@redis)
       entity_check.create_scheduled_maintenance(:start_time => start_time,
                                                 :duration   => duration,
                                                 :summary    => summary)
@@ -144,9 +135,7 @@ module Flapjack
 
     # delete a scheduled maintenance
     post '/delete_scheduled_maintenance/:entity/:check' do
-      entity = params[:entity]
-      check  = params[:check]
-      entity_check = EntityCheck.new(:entity => entity, :check => check, :redis => redis)
+      entity_check = EntityCheck.new(:entity_name => params[:entity], :check => params[:check], :redis => @@redis)
       start_time = params[:start_time]
       entity_check.delete_scheduled_maintenance(:start_time => start_time)
       redirect back

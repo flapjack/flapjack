@@ -20,10 +20,10 @@ module Flapjack
 
       include Flapjack::Pikelet
 
-      def initialize(opts)
+      def initialize(opts = {})
         # TODO: create a logger named jabber
         self.bootstrap
-        @config = opts.dup
+        @config = opts[:config].dup
         @logger.debug("New Jabber pikelet with the following options: #{opts.inspect}")
         @hostname = Socket.gethostname
         @flapjack_jid = Blather::JID.new(@config['jabberid'] + '/' + @hostname)

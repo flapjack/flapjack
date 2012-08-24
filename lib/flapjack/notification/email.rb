@@ -12,7 +12,7 @@ ActionMailer::Base.raise_delivery_errors = true
 ActionMailer::Base.view_paths = File.dirname(__FILE__)
 ActionMailer::Base.delivery_method = :smtp
 ActionMailer::Base.smtp_settings = { :address => "127.0.0.1",
-                                     :port => 25,
+                                     :port => 2525,
                                      :enable_starttls_auto => false }
 
 module Flapjack
@@ -29,8 +29,9 @@ module Flapjack
         summary            = notification['summary']
         time               = notification['time']
         entity, check      = notification['event_id'].split(':')
-        entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
-          :check => check, :redis => @persistence)
+
+        entity_check = Flapjack::Data::EntityCheck.new(:event_id => notification['event_id'],
+          :redis => opts[:redis])
 
         headline_map = {'problem'         => 'Problem: ',
                         'recovery'        => 'Recovery: ',

@@ -29,11 +29,11 @@ module Flapjack
         JSON.parse(response.body)
       end
 
-      def checks_and_statuses(entity)
+      def status(entity)
         entity_esc = prepare(entity, :required => 'entity')
         return if entity_esc.nil?
 
-        response = get("/entities/#{entity_esc}/statuses")
+        response = get("/entities/#{entity_esc}/status")
         JSON.parse(response.body)
       end
 
@@ -79,6 +79,14 @@ module Flapjack
 
         response = post(create_sch_maint_url)
         JSON.parse(response.body)
+      end
+
+      def scheduled_maintenances(entity, check)
+
+      end
+
+      def unscheduled_maintenances(entity, check)
+
       end
 
     private

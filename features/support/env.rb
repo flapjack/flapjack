@@ -39,17 +39,16 @@ class MockLogger
 end
 
 redis_opts = { :db => 14, :driver => :ruby }
-
-redis = Redis.new(redis_opts)
+redis = ::Redis.new(redis_opts)
 redis.flushdb
 redis.quit
 
 Before do
   @logger = MockLogger.new
   # Use a separate database whilst testing
-  @app = Flapjack::Executive.new(:redis => redis_opts, :logger => @logger,
+  @redis = ::Redis.new(redis_opts)
+  @app = Flapjack::Executive.new(:redis => @redis, :logger => @logger,
     'email_queue' => 'email_notifications', 'sms_queue' => 'sms_notifications')
-  @redis = @app.persistence
 end
 
 After do

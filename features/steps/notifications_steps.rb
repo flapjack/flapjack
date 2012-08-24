@@ -13,21 +13,6 @@ def add_contact(contact = {})
   @redis.exec
 end
 
-# also copied from flapjack-populator
-def add_entity(entity = {})
-  @redis.multi
-  existing_name = @redis.hget("entity:#{entity['id']}", 'name')
-  @redis.del("entity_id:#{existing_name}") unless existing_name == entity['name']
-  @redis.set("entity_id:#{entity['name']}", entity['id'])
-  @redis.hset("entity:#{entity['id']}", 'name', entity['name'])
-
-  @redis.del("contacts_for:#{entity['id']}")
-  entity['contacts'].each {|contact|
-    @redis.sadd("contacts_for:#{entity['id']}", contact)
-  }
-  @redis.exec
-end
-
 Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ do |entity|
   add_contact( 'id'         => '0999',
                'first_name' => 'John',
@@ -36,7 +21,7 @@ Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ d
                'media'      => {'sms' => '+61888888888'} )
   add_entity( 'id'       => '5000',
               'name'     => entity,
-              'contacts' => ["0999"])
+              'contacts' => ["0999"] )
 end
 
 Given /^the user wants to receive email notifications for entity '([\w\.\-]+)'$/ do |entity|
@@ -98,29 +83,35 @@ Then /^an email notification for entity '([\w\.\-]+)' should not be queued for t
   queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }.should be_empty
 end
 
-Given /^a user SMS notification has been queued$/ do
+Given /^a user SMS notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
+  add_entity( 'id'       => '5000',
+              'name'     => entity )
   @sms_notification = {'notification_type'  => 'problem',
                        'contact_first_name' => 'John',
                        'contact_last_name'  => 'Smith',
                        'state'              => 'CRITICAL',
                        'summary'            => 'Socket timeout after 10 seconds',
                        'time'               => Time.now.to_i,
-                       'event_id'           => 'b99999.darwin03-viprion-blade8:CHECK',
+                       'event_id'           => "#{entity}:ping",
                        'address'            => '+61412345678',
                        'id'                 => 1}
 end
 
-Given /^a user email notification has been queued$/ do
-  @email_notification = {'notification_type' => 'problem',
-                        'contact_first_name' => 'John',
-                        'contact_last_name'  => 'Smith',
-                        'state'              => 'CRITICAL',
-                        'summary'            => 'Socket timeout after 10 seconds',
-                        'time'               => Time.now.to_i,
-                        'event_id'           => 'b99999.darwin03-viprion-blade8:CHECK',
-                        'address'            => 'johns@example.dom',
-                        'id'                 => 2}
+Given /^a user email notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
+  add_entity( 'id'       => '5001',
+              'name'     => entity )
+  @email_notification = {'notification_type'  => 'problem',
+                         'contact_first_name' => 'John',
+                         'contact_last_name'  => 'Smith',
+                         'state'              => 'CRITICAL',
+                         'summary'            => 'Socket timeout after 10 seconds',
+                         'time'               => Time.now.to_i,
+                         'event_id'           => "#{entity}:ping",
+                         'address'            => 'johns@example.dom',
+                         'id'                 => 2}
 end
+
+# NB using perform, the notifiers were accessing the wrong Redis DB number
 
 # TODO may need to get more complex, depending which SMS provider is used
 When /^the SMS notification handler runs successfully$/ do
@@ -130,7 +121,7 @@ When /^the SMS notification handler runs successfully$/ do
   Flapjack::Notification::Sms.class_variable_set('@@config', {'username' => 'abcd', 'password' => 'efgh'})
 
   lambda {
-    Flapjack::Notification::Sms.perform(@sms_notification)
+    Flapjack::Notification::Sms.dispatch(@sms_notification, :logger => @logger, :redis => @redis)
   }.should_not raise_error
   @sms_sent = true
 end
@@ -139,14 +130,14 @@ When /^the SMS notification handler fails to send an SMS$/ do
   stub_request(:any, /.*/).to_return(:status => [500, "Internal Server Error"])
 
   lambda {
-    Flapjack::Notification::Sms.perform(@sms_notification)
+    Flapjack::Notification::Sms.dispatch(@sms_notification, :logger => @logger, :redis => @redis)
   }.should raise_error
   @sms_sent = false
 end
 
 When /^the email notification handler runs successfully$/ do
   lambda {
-    Flapjack::Notification::Email.perform(@email_notification)
+    Flapjack::Notification::Email.dispatch(@email_notification, :logger => @logger, :redis => @redis)
   }.should_not raise_error
 end
 
@@ -155,8 +146,10 @@ end
 # won't ever fail, don't test for failure?
 When /^the email notification handler fails to send an email$/ do
   pending
-  @email_notification['address'] = nil
-  send_email(@email_notification)
+  lambda {
+    @email_notification['address'] = nil
+    Flapjack::Notification::Email.dispatch(@email_notification, :logger => @logger, :redis => @redis)
+  }.should_not raise_error
 end
 
 Then /^the user should receive an SMS notification$/ do

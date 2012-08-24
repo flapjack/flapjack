@@ -10,10 +10,10 @@ require 'flapjack/filters/unscheduled_maintenance'
 require 'flapjack/filters/detect_mass_client_failures'
 require 'flapjack/filters/delays'
 require 'flapjack/data/entity_check'
+require 'flapjack/data/event'
 require 'flapjack/notification/common'
 require 'flapjack/notification/sms'
 require 'flapjack/notification/email'
-require 'flapjack/data/event'
 require 'flapjack/pikelet'
 
 module Flapjack
@@ -24,15 +24,17 @@ module Flapjack
     def initialize(opts = {})
       bootstrap(opts)
 
-      @queues = {:email  => opts['email_queue'] || 'email_notifications',
-                 :sms    => opts['sms_queue'] || 'sms_notifications',
+      @redis = opts[:redis]
+
+      @queues = {:email  =>  opts['email_queue'] || 'email_notifications',
+                 :sms    =>    opts['sms_queue'] || 'sms_notifications',
                  :jabber => opts['jabber_queue'] || 'jabber_notifications'}
 
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => "log/notify.log"))
 
       # FIXME: Put loading filters into separate method
-      options = { :log => @logger, :persistence => @persistence }
+      options = { :log => @logger, :persistence => @redis }
       @filters = []
       @filters << Flapjack::Filters::Ok.new(options)
       @filters << Flapjack::Filters::ScheduledMaintenance.new(options)
@@ -43,30 +45,30 @@ module Flapjack
 
       @boot_time = Time.now
       # FIXME: assumes there is only ever one executive running
-      @persistence.set('boot_time', @boot_time.to_i)
+      @redis.set('boot_time', @boot_time.to_i)
       # FIXME: resets counters on every bootup. probably not a good idea. probably.
       # FIXME: add an administrative function to reset all event counters
-      @persistence.hset('event_counters', 'all', 0)
-      @persistence.hset('event_counters', 'ok', 0)
-      @persistence.hset('event_counters', 'failure', 0)
-      @persistence.hset('event_counters', 'action', 0)
+      @redis.hset('event_counters', 'all', 0)
+      @redis.hset('event_counters', 'ok', 0)
+      @redis.hset('event_counters', 'failure', 0)
+      @redis.hset('event_counters', 'action', 0)
     end
 
     def update_keys(event)
       result    = { :skip_filters => false }
       timestamp = Time.now.to_i
-      @persistence.hincrby('event_counters', 'all', 1)
+      @redis.hincrby('event_counters', 'all', 1)
 
       case event.type
       # Service events represent changes in state on monitored systems
       when 'service'
         # Track when we last saw an event for a particular entity:check pair
-        @persistence.hset("check:" + event.id, 'last_update', timestamp)
+        @redis.hset("check:" + event.id, 'last_update', timestamp)
 
-        @persistence.hincrby('event_counters', 'ok', 1)      if (event.ok?)
-        @persistence.hincrby('event_counters', 'failure', 1) if (event.failure?)
+        @redis.hincrby('event_counters', 'ok', 1)      if (event.ok?)
+        @redis.hincrby('event_counters', 'failure', 1) if (event.failure?)
 
-        old_state = @persistence.hget("check:" + event.id, 'state')
+        old_state = @redis.hget("check:" + event.id, 'state')
 
         case
         # If there is a state change, update record with: the time, the new state
@@ -75,14 +77,14 @@ module Flapjack
           # FIXME: create an event if there is dodgy data
 
           # Note the current state (for speedy lookups)
-          @persistence.hset("check:" + event.id, 'state',       event.state)
+          @redis.hset("check:" + event.id, 'state',       event.state)
           # FIXME: rename to last_state_change?
-          @persistence.hset("check:" + event.id, 'last_change', timestamp)
+          @redis.hset("check:" + event.id, 'last_change', timestamp)
 
           # Retain all state changes for entity:check pair
-          @persistence.rpush("#{event.id}:states", timestamp)
-          @persistence.set("#{event.id}:#{timestamp}:state",   event.state)
-          @persistence.set("#{event.id}:#{timestamp}:summary", event.summary)
+          @redis.rpush("#{event.id}:states", timestamp)
+          @redis.set("#{event.id}:#{timestamp}:state",   event.state)
+          @redis.set("#{event.id}:#{timestamp}:summary", event.summary)
 
           # If the service event's state is ok and there was no previous state, don't alert.
           # This stops new checks from alerting as "recovery" after they have been added.
@@ -90,34 +92,33 @@ module Flapjack
 
           case event.state
           when 'warning', 'critical', 'down'
-            @persistence.zadd('failed_checks', timestamp, event.id)
+            @redis.zadd('failed_checks', timestamp, event.id)
             # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-            @persistence.zadd('failed_checks:client:' + event.client, timestamp, event.id) if event.client
+            @redis.zadd('failed_checks:client:' + event.client, timestamp, event.id) if event.client
           else
-            @persistence.zrem('failed_checks', event.id)
+            @redis.zrem('failed_checks', event.id)
             # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-            @persistence.zrem('failed_checks:client:' + event.client, event.id) if event.client
+            @redis.zrem('failed_checks:client:' + event.client, event.id) if event.client
           end
         # No state change, and event is ok, so no need to run through filters
         when event.ok?
           result[:skip_filters] = true
         end
 
-        entity, check = event.id.split(':')
-        entity_check = Flapjack::Data::EntityCheck.new(:entity => entity, :check => check, :redis => @persistence)
+        entity_check = Flapjack::Data::EntityCheck.new(:event_id => event.id, :redis => @redis)
         entity_check.update_scheduled_maintenance
 
       # Action events represent human or automated interaction with Flapjack
       when 'action'
         # When an action event is processed, store the event.
-        @persistence.hset(event.id + ':actions', timestamp, event.state)
-        @persistence.hincrby('event_counters', 'action', 1) if (event.ok?)
+        @redis.hset(event.id + ':actions', timestamp, event.state)
+        @redis.hincrby('event_counters', 'action', 1) if (event.ok?)
       when 'shutdown'
         # should this be logged as an action instead? being minimally invasive for now
         result[:shutdown] = true
       end
 
-      return result
+      result
     end
 
     # takes an event for which a notification needs to be generated, works out the type of
@@ -140,8 +141,8 @@ module Flapjack
           notification_type = 'acknowledgement'
         end
       end
-      @persistence.set("#{event.id}:last_#{notification_type}_notification", timestamp)
-      @persistence.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
+      @redis.set("#{event.id}:last_#{notification_type}_notification", timestamp)
+      @redis.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
       @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}.")
 
       send_notifications(event, notification_type, contacts_for_check(event.id))
@@ -154,17 +155,17 @@ module Flapjack
     #
     def contacts_for_check(check)
       entity = check.split(':').first
-      entity_id = @persistence.get("entity_id:#{entity}")
+      entity_id = @redis.get("entity_id:#{entity}")
       if entity_id
         check = entity_id.to_s + ":" + check.split(':').last
-        @logger.debug("contacts for #{entity_id} (#{entity}): " + @persistence.smembers("contacts_for:#{entity_id}").length.to_s)
-        @logger.debug("contacts for #{check}: " + @persistence.smembers("contacts_for:#{check}").length.to_s)
-        union = @persistence.sunion("contacts_for:#{entity_id}", "contacts_for:#{check}")
+        @logger.debug("contacts for #{entity_id} (#{entity}): " + @redis.smembers("contacts_for:#{entity_id}").length.to_s)
+        @logger.debug("contacts for #{check}: " + @redis.smembers("contacts_for:#{check}").length.to_s)
+        union = @redis.sunion("contacts_for:#{entity_id}", "contacts_for:#{check}")
         @logger.debug("contacts for union of #{entity_id} and #{check}: " + union.length.to_s)
-        return union
+        union
       else
         @logger.debug("entity [#{entity}] has no contacts")
-        return []
+        []
       end
     end
 
@@ -174,7 +175,7 @@ module Flapjack
     #   media_for_contact('123') -> { :sms => "+61401234567", :email => "gno@free.dom" }
     #
     def media_for_contact(contact)
-      return @persistence.hgetall("contact_media:#{contact}")
+      @redis.hgetall("contact_media:#{contact}")
     end
 
     # generates a fairly unique identifier to use as a message id
@@ -184,7 +185,7 @@ module Flapjack
 
     # puts a notification into the jabber queue (redis list)
     def submit_jabber(notification)
-      @persistence.rpush(@queues[:jabber], Yajl::Encoder.encode(notification))
+      @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(notification))
     end
 
     # takes an event, a notification type, and an array of contacts and creates jobs in resque
@@ -200,8 +201,8 @@ module Flapjack
         media = media_for_contact(contact_id)
 
         contact_deets = {'contact_id'         => contact_id,
-                         'contact_first_name' => @persistence.hget("contact:#{contact_id}", 'first_name'),
-                         'contact_last_name'  => @persistence.hget("contact:#{contact_id}", 'last_name'), }
+                         'contact_first_name' => @redis.hget("contact:#{contact_id}", 'first_name'),
+                         'contact_last_name'  => @redis.hget("contact:#{contact_id}", 'last_name'), }
 
         notification = notification.merge(contact_deets)
 
@@ -235,7 +236,7 @@ module Flapjack
     end
 
     def process_event(event)
-      @logger.debug("#{Flapjack::Data::Event.pending_count(:persistence => @persistence)} events waiting on the queue")
+      @logger.debug("#{Flapjack::Data::Event.pending_count(:persistence => @redis)} events waiting on the queue")
       @logger.debug("Raw event received: #{event.inspect}")
       @logger.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}, #{Time.at(event.time).to_s}")
 
@@ -261,17 +262,17 @@ module Flapjack
                'host'    => '',
                'service' => '',
                'state'   => ''}
-      @persistence.rpush('events', Yajl::Encoder.encode(event))
+      @redis.rpush('events', Yajl::Encoder.encode(event))
     end
 
     def main
       @logger.info("Booting main loop.")
       until @should_stop
         @logger.info("Waiting for event...")
-        event = Flapjack::Data::Event.next(:persistence => @persistence)
+        event = Flapjack::Data::Event.next(:persistence => @redis)
         process_event(event) unless event.nil?
       end
-      @persistence.quit
+      @redis.quit
       @logger.info("Exiting main loop.")
     end
   end

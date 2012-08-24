@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'flapjack/data/entity'
+
 module Flapjack
 
   module Data
@@ -10,19 +12,29 @@ module Flapjack
       STATE_WARNING         = 'warning'
       STATE_CRITICAL        = 'critical'
       STATE_ACKNOWLEDGEMENT = 'acknowledgement'
-      STATE_UP              = 'up'
-      STATE_DOWN            = 'down'
+      # STATE_UP              = 'up'
+      # STATE_DOWN            = 'down'
       STATE_UNKNOWN         = 'unknown'
+
+      attr_accessor :entity, :check
 
       # TODO initialize entity by 'id' from stored data model
 
       def initialize(options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
         if options[:event_id]
-          @entity, @check = options[:event_id].split(':')
+          entity_name, @check = options[:event_id].split(':')
+          @entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis)
           @key = options[:event_id]
         else
-          @entity = options[:entity]
+          @entity = options[:entity] if options[:entity] && options[:entity].is_a?(Flapjack::Data::Entity)
+          if @entity.nil?
+            if options[:entity_id]
+              @entity = Flapjack::Data::Entity.find_by_id(options[:entity_id], :redis => @redis)
+            elsif options[:entity_name]
+              @entity = Flapjack::Data::Entity.find_by_name(options[:entity_name], :redis => @redis)
+            end
+          end
           @check = options[:check]
           @key = "#{@entity}:#{@check}" if @entity && @check
         end
@@ -50,7 +62,7 @@ module Flapjack
       #   'summary'   => check_output,
       #   'time'      => timestamp
       def create_event(event)
-        event.merge('entity' => @entity, 'check' => @check)
+        event.merge('entity' => @entity.name, 'check' => @check)
         event['time'] = Time.now.to_i if event['time'].nil?
         @redis.rpush('events', Yajl::Encoder.encode(event))
       end
