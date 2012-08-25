@@ -145,7 +145,7 @@ module Flapjack
 
             port = 3000 if port.nil? || port <= 0 || port > 65535
 
-            Flapjack::Web.class_variable_set('@@redis', redis)
+            Flapjack::Web.class_variable_set('@@redis', Redis.new(@config['redis'].merge(:driver => 'ruby')))
 
             web = Thin::Server.new('0.0.0.0', port, Flapjack::Web, :signals => false)
             @pikelets << web
@@ -158,7 +158,7 @@ module Flapjack
 
             port = 3001 if port.nil? || port <= 0 || port > 65535
 
-            Flapjack::API.class_variable_set('@@redis', redis)
+            Flapjack::API.class_variable_set('@@redis', Redis.new(@config['redis'].merge(:driver => 'ruby')))
 
             api = Thin::Server.new('0.0.0.0', port, Flapjack::API, :signals => false)
             @pikelets << api

@@ -26,6 +26,25 @@ module Flapjack
       period_string
     end
 
+    # Returns relative time in words referencing the given date
+    # relative_time_ago(Time.now) => 'about a minute ago'
+    def relative_time_ago(from_time)
+      distance_in_minutes = (((Time.now - from_time.to_time).abs)/60).round
+      case distance_in_minutes
+        when 0..1 then 'about a minute'
+        when 2..44 then "#{distance_in_minutes} minutes"
+        when 45..89 then 'about 1 hour'
+        when 90..1439 then "about #{(distance_in_minutes.to_f / 60.0).round} hours"
+        when 1440..2439 then '1 day'
+        when 2440..2879 then 'about 2 days'
+        when 2880..43199 then "#{(distance_in_minutes / 1440).round} days"
+        when 43200..86399 then 'about 1 month'
+        when 86400..525599 then "#{(distance_in_minutes / 43200).round} months"
+        when 525600..1051199 then 'about 1 year'
+        else "over #{(distance_in_minutes / 525600).round} years"
+      end
+    end
+
     # returns a string showing the local timezone we're running in
     # eg "CST (UTC+09:30)"
     def local_timezone
@@ -69,13 +88,21 @@ module Flapjack
       self_stats
       @states = @@redis.keys('*:*:states').map { |r|
         parts   = r.split(':')[0..1]
-        entity_check = EntityCheck.new(:entity_name => parts[0], :check => parts[1], :redis => @@redis)
-        key     = parts.join(':')
-        parts  += @@redis.hmget(key, 'state', 'last_change', 'last_update')
-        parts  << entity_check.in_unscheduled_maintenance?
-        parts  << entity_check.in_scheduled_maintenance?
-        parts  += entity_check.last_notifications.max_by {|n| n[1]}
-      }.sort_by {|parts| parts }
+        entity = Flapjack::Data::Entity.find_by_name(parts[0],
+          :redis => @@redis)
+        if entity.nil?
+          nil
+        else
+          entity_check = Flapjack::Data::EntityCheck.new(:entity => entity, 
+            :check => parts[1], :redis => @@redis)
+          parts << entity_check.state
+          parts << entity_check.last_change
+          parts << entity_check.last_update
+          parts << entity_check.in_unscheduled_maintenance?
+          parts << entity_check.in_scheduled_maintenance?
+          parts += entity_check.last_notifications.max_by {|n| n[1]}
+        end
+      }.compact.sort_by {|parts| parts }
       haml :index
     end
 
@@ -83,12 +110,21 @@ module Flapjack
       self_stats
       @states = @@redis.zrange('failed_checks', 0, -1).map {|key|
         parts   = key.split(':')
-        entity_check = EntityCheck.new(:entity_name => parts[0], :check => parts[1], :redis => @@redis)
-        parts  += @@redis.hmget(key, 'state', 'last_change', 'last_update')
-        parts  << entity_check.in_unscheduled_maintenance?
-        parts  << entity_check.in_scheduled_maintenance?
-        parts  += entity_check.last_notifications.max_by {|n| n[1]}
-      }.sort_by {|parts| parts}
+        entity = Flapjack::Data::Entity.find_by_name(parts[0],
+          :redis => @@redis)
+        if entity.nil?
+          nil
+        else
+          entity_check = Flapjack::Data::EntityCheck.new(:entity => entity, 
+            :check => parts[1], :redis => @@redis)
+          parts << entity_check.state
+          parts << entity_check.last_change
+          parts << entity_check.last_update
+          parts << entity_check.in_unscheduled_maintenance?
+          parts << entity_check.in_scheduled_maintenance?
+          parts += entity_check.last_notifications.max_by {|n| n[1]}
+        end
+      }.compact.sort_by {|parts| parts}
       haml :index
     end
 
@@ -98,7 +134,8 @@ module Flapjack
     end
 
     get '/check' do
-      entity_check = EntityCheck.new(:entity_name => params[:entity], :check => params[:check], :redis => @@redis)
+      entity_check = Flapjack::Data::EntityCheck.new(:entity_name => params[:entity],
+        :check => params[:check], :redis => @@redis)
       @check_state                = entity_check.state
       @check_last_update          = entity_check.last_update
       @check_last_change          = entity_check.last_change
@@ -114,7 +151,8 @@ module Flapjack
     get '/acknowledge' do
       @entity = params[:entity]
       @check  = params[:check]
-      entity_check = EntityCheck.new(:entity_name => @entity, :check => @check, :redis => @@redis)
+      entity_check = Flapjack::Data::EntityCheck.new(:entity_name => @entity,
+        :check => @check, :redis => @@redis)
       ack = entity_check.create_acknowledgement(:summary => "Ack from web at #{Time.now.to_s}")
       @acknowledge_success = !!ack
       haml :acknowledge
@@ -135,7 +173,8 @@ module Flapjack
 
     # delete a scheduled maintenance
     post '/delete_scheduled_maintenance/:entity/:check' do
-      entity_check = EntityCheck.new(:entity_name => params[:entity], :check => params[:check], :redis => @@redis)
+      entity_check = Flapjack::Data::EntityCheck.new(:entity_name => params[:entity],
+        :check => params[:check], :redis => @@redis)
       start_time = params[:start_time]
       entity_check.delete_scheduled_maintenance(:start_time => start_time)
       redirect back

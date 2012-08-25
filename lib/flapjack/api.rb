@@ -30,10 +30,9 @@ module Flapjack
       Flapjack::API.bootstrap
     end
 
-    # TODO Entity and EntityCheck should check for presence of Entity in Redis list
-
     def entity_status(entity_name)
       entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @@redis)
+      return if entity.nil?
       entity.check_list.sort.collect {|check|
         entity_check_status(entity, check)
       }
@@ -52,76 +51,110 @@ module Flapjack
         'last_recovery_notification'          => entity_check.last_recovery_notification,
         'last_acknowledgement_notification'   => entity_check.last_acknowledgement_notification
       }
-      # # possibly the below? need to discuss data spec
-      # {'state'                       => entity_check.state,
-      #  'last_update'                 => entity_check.last_update,
-      #  'last_change'                 => entity_check.last_change,
-      #  'summary'                     => entity_check.summary,
-      #  'last_notifications'          => entity_check.last_notifications,
-      #  'in_unscheduled_maintenance'  => entity_check.in_unscheduled_maintenance?,
-      #  'in_scheduled_maintenance'    => entity_check.in_scheduled_maintenance?
-      # }
     end
 
     get '/entities', :provides => :json do
-      Flapjack::Data::Entity.all.collect {|e|
+      Flapjack::Data::Entity.all.sort {|ent| ent.id }.collect {|e|
         entity_status(e)
       }
     end
 
-    get '/entities/:entity/checks', :provides => :json do
-      entity = Flapjack::Data::Entity.new(:entity => params[:entity],
+    get '/checks/:entity', :provides => :json do
+      entity = Flapjack::Data::Entity.find_by_name(params[:entity],
         :redis => @@redis)
+      if entity.nil?
+        status 404
+        return
+      end
       entity.check_list
     end
 
-    get '/entities/:entity/status', :provides => :json do
-      entity_status(params[:entity])
+    get '/status/:entity', :provides => :json do
+      sta = entity_status(params[:entity])
+      if sta.nil?
+        status 404
+        return
+      end
+      sta
     end
 
-    get '/entities/:entity\::check', :provides => :json do
-      entity_check_status(params[:entity], params[:check])
+    get '/status/:entity/:check', :provides => :json do
+      sta = entity_check_status(params[:entity], params[:check])
+      if sta.nil?
+        status 404
+        return
+      end
+      sta
     end
 
     # list scheduled maintenance periods for a service on an entity
-    get '/scheduled_maintenances/:entity\::check', :provides => :json do
-      # TODO
+    get '/scheduled_maintenances/:entity/:check', :provides => :json do
+      entity = Flapjack::Data::Entity.find_by_name(params[:entity],
+        :redis => @@redis)
+      if entity.nil?
+        status 404
+        return
+      end      
+      entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
+        :check => params[:check], :redis => @@redis)
+      entity_check.scheduled_maintenances
     end
 
     # list unscheduled maintenance periods for a service on an entity
-    get '/unscheduled_maintenances/:entity\::check', :provides => :json do
-      # TODO
+    get '/unscheduled_maintenances/:entity/:check', :provides => :json do
+      entity = Flapjack::Data::Entity.find_by_name(params[:entity],
+        :redis => @@redis)
+      if entity.nil?
+        status 404
+        return
+      end 
+      entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
+        :check => params[:check], :redis => @@redis)
+      entity_check.unscheduled_maintenances
     end
 
     # create a scheduled maintenance period for a service on an entity
-    post '/scheduled_maintenances/:entity\::check', :provides => :json do
-      entity_check = Flapjack::Data::EntityCheck.new(:entity_name => params[:entity],
+    post '/scheduled_maintenances/:entity/:check', :provides => :json do
+      entity = Flapjack::Data::Entity.find_by_name(params[:entity],
+        :redis => @@redis)
+      if entity.nil?
+        status 404
+        return
+      end       
+      entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
         :check => params[:check], :redis => @@redis)
-      # TODO
+      entity_check.create_scheduled_maintenance(:start_time => params[:start_time],
+        :duration => params[:duration], :summary => params[:summary])
     end
 
     # create an acknowledgement for a service on an entity
-    post '/acknowledgements/:entity\::check', :provides => :json do
-      entity_check = Flapjack::Data::EntityCheck.new(:entity_name => params[:entity],
+    post '/acknowledgements/:entity/:check', :provides => :json do
+      entity = Flapjack::Data::Entity.find_by_name(params[:entity], 
+        :redis => @@redis)
+      if entity.nil?
+        status 404
+        return
+      end       
+      entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
         :check => params[:check], :redis => @@redis)
       entity_check.create_acknowledgement(params[:summary])
     end
 
-    get "*" do
-      status 404
-    end
+    # get "*" do
+    #   status 404
+    # end
 
-    put "*" do
-      status 404
-    end
+    # put "*" do
+    #   status 404
+    # end
 
-    post "*" do
-      status 404
-    end
+    # post "*" do
+    #   status 404
+    # end
 
-    delete "*" do
-      status 404
-    end
+    # delete "*" do
+    #   status 404
+    # end
 
     not_found do
       json_status 404, "Not found"

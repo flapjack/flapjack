@@ -36,7 +36,7 @@ module Flapjack
             end
           end
           @check = options[:check]
-          @key = "#{@entity}:#{@check}" if @entity && @check
+          @key = "#{@entity.name}:#{@check}" if @entity && @check
         end
         raise "Entity not set" unless @entity
         raise "Check not set" unless @check

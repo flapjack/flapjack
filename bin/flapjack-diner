@@ -21,11 +21,16 @@ module Flapjack
       # NB: clients will need to handle any exceptions caused by,
       # e.g., network failures or non-parseable JSON data.
 
+      def entities
+        response = get("/entities")
+        JSON.parse(response.body)
+      end
+
       def checks(entity)
         entity_esc = prepare(entity, :required => 'entity')
         return if entity_esc.nil?
 
-        response = get("/entities/#{entity_esc}/checks")
+        response = get("/checks/#{entity_esc}")
         JSON.parse(response.body)
       end
 
@@ -33,7 +38,7 @@ module Flapjack
         entity_esc = prepare(entity, :required => 'entity')
         return if entity_esc.nil?
 
-        response = get("/entities/#{entity_esc}/status")
+        response = get("/status/#{entity_esc}")
         JSON.parse(response.body)
       end
 
@@ -42,7 +47,7 @@ module Flapjack
         check_esc = prepare(check, :required => 'check')
         return if entity_esc.nil? || check_esc.nil?
 
-        response = get("/entity_checks/#{entity}:#{check}")
+        response = get("/status/#{entity_esc}/#{check_esc}")
         JSON.parse(response.body)
       end
 
@@ -51,7 +56,7 @@ module Flapjack
         check_esc = prepare(check, :required => 'check')
         return if entity_esc.nil? || check_esc.nil?
 
-        acknowledge_check_url = "/acknowledgments/#{entity_esc}:#{check_esc}"
+        acknowledge_check_url = "/acknowledgments/#{entity_esc}/#{check_esc}"
 
         if options[:summary]
           summary_esc = prepare(options[:summary])
@@ -69,7 +74,7 @@ module Flapjack
         duration_esc = prepare(check, :required => 'duration')
         return if entity_esc.nil? || check_esc.nil? || start_time_esc.nil? || duration_esc.nil?
 
-        create_sch_maint_url ="/scheduled_maintenances/#{entity_esc}:#{check_esc}?" +
+        create_sch_maint_url ="/scheduled_maintenances/#{entity_esc}/#{check_esc}?" +
           "start_time=#{start_time}&duration=#{duration}"
 
         if options[:summary]
@@ -82,11 +87,21 @@ module Flapjack
       end
 
       def scheduled_maintenances(entity, check)
+        entity_esc = prepare(entity, :required => 'entity')
+        check_esc = prepare(check, :required => 'check')
+        return if entity_esc.nil? || check_esc.nil?
 
+        response = get("/scheduled_maintenances/#{entity_esc}/#{check_esc}")
+        JSON.parse(response.body)
       end
 
       def unscheduled_maintenances(entity, check)
+        entity_esc = prepare(entity, :required => 'entity')
+        check_esc = prepare(check, :required => 'check')
+        return if entity_esc.nil? || check_esc.nil?
 
+        response = get("/unscheduled_maintenances/#{entity_esc}/#{check_esc}")
+        JSON.parse(response.body)
       end
 
     private
@@ -107,6 +122,10 @@ end
 
 Flapjack::Diner.base_uri('http://127.0.0.1:5081')
 
-pp Flapjack::Diner.checks('clientx-app-01')
-pp Flapjack::Diner.check_status('clientx-app-01', 'ping')
-pp Flapjack::Diner.checks_and_statuses('clientx-app-01')
+pp Flapjack::Diner.entities
+
+# pp Flapjack::Diner.checks('clientx-app-01')
+# pp Flapjack::Diner.status('clientx-app-01')
+# pp Flapjack::Diner.check_status('clientx-app-01', 'ping')
+# pp Flapjack::Diner.unscheduled_maintenances('clientx-app-01', 'ping')
+# pp Flapjack::Diner.scheduled_maintenances('clientx-app-01', 'ping')
