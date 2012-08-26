@@ -38,6 +38,10 @@ class MockLogger
   end
 end
 
+Mail.defaults do
+  delivery_method :test # in practice you'd do this in spec_helper.rb
+end
+
 redis_opts = { :db => 14, :driver => :ruby }
 redis = ::Redis.new(redis_opts)
 redis.flushdb
@@ -63,9 +67,7 @@ Before('@resque') do
 end
 
 Before('@email') do
-  ActionMailer::Base.delivery_method = :test
-  ActionMailer::Base.perform_deliveries = true
-  ActionMailer::Base.deliveries.clear
+  Mail::TestMailer.deliveries.clear
 end
 
 After('@time') do

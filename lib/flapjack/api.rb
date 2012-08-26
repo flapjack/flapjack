@@ -67,7 +67,6 @@ module Flapjack
     get '/checks/:entity' do
       content_type :json
       entity = to_entity(params[:entity])
-      p entity
       if entity.nil?
         status 404
         return

@@ -82,9 +82,8 @@ module Flapjack
 
       EM.synchrony do
 
-        redis = EventMachine::Synchrony::ConnectionPool.new(:size => 10) do
-          ::Redis.new(@config['redis'].merge(:driver => 'synchrony'))
-        end
+        redis_sync = ::Redis.new(@config['redis'].merge(:driver => 'synchrony'))
+        redis_ruby = ::Redis.new(@config['redis'].merge(:driver => 'ruby'))
 
         unless (['email_notifier', 'sms_notifier'] & @config.keys).empty?
           # make Resque a slightly nicer citizen
@@ -108,12 +107,15 @@ module Flapjack
           case pikelet_type
           when 'executive'
             fiberise_instances(pikelet_cfg['instances'].to_i) {
-              flapjack_exec = Flapjack::Executive.new(pikelet_cfg.merge(:redis => redis))
+              flapjack_exec = Flapjack::Executive.new(pikelet_cfg.merge(:redis => redis_sync))
               @pikelets << flapjack_exec
               flapjack_exec.main
             }
           when 'email_notifier', 'sms_notifier'
-            puts "init #{pikelet_type}"
+            
+            # NB: see https://github.com/mikel/mail/blob/master/lib/mail/mail.rb#L53
+            # for details of configuring mail gem. defaults to SMTP, localhost, port 25
+            Mail.delivery_settings = {:enable_starttls_auto => false}
 
             # TODO error if pikelet_cfg['queue'].nil?
 
@@ -126,15 +128,15 @@ module Flapjack
             fiberise_instances(pikelet_cfg['instances']) {
               flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
               # # Use these to debug the resque workers
-              p flapjack_rsq
-              flapjack_rsq.verbose = true
-              flapjack_rsq.very_verbose = true
+              # flapjack_rsq.verbose = true
+              # flapjack_rsq.very_verbose = true
               @pikelets << flapjack_rsq
               flapjack_rsq.work(0.1)
             }
           when 'jabber_gateway'
             fiberise_instances(pikelet_cfg['instances']) {
-              flapjack_jabbers = Flapjack::Notification::Jabber.new(:redis => redis, :config => pikelet_cfg)
+              flapjack_jabbers = Flapjack::Notification::Jabber.new(:redis => redis_sync,
+                :config => pikelet_cfg)
               flapjack_jabbers.main
             }
           when 'web'
@@ -145,7 +147,9 @@ module Flapjack
 
             port = 3000 if port.nil? || port <= 0 || port > 65535
 
-            Flapjack::Web.class_variable_set('@@redis', Redis.new(@config['redis'].merge(:driver => 'ruby')))
+            Flapjack::Web.class_variable_set('@@redis', redis_ruby)
+
+            Thin::Logging.silent = true
 
             web = Thin::Server.new('0.0.0.0', port, Flapjack::Web, :signals => false)
             @pikelets << web
@@ -158,7 +162,9 @@ module Flapjack
 
             port = 3001 if port.nil? || port <= 0 || port > 65535
 
-            Flapjack::API.class_variable_set('@@redis', Redis.new(@config['redis'].merge(:driver => 'ruby')))
+            Flapjack::API.class_variable_set('@@redis', redis_ruby)              
+
+            Thin::Logging.silent = true
 
             api = Thin::Server.new('0.0.0.0', port, Flapjack::API, :signals => false)
             @pikelets << api

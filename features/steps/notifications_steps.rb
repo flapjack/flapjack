@@ -1,4 +1,6 @@
 
+include Mail::Matchers
+
 # copied from flapjack-populator
 def add_contact(contact = {})
   @redis.multi
@@ -157,8 +159,7 @@ Then /^the user should receive an SMS notification$/ do
 end
 
 Then /^the user should receive an email notification$/ do
-  ActionMailer::Base.deliveries.should_not be_empty
-  ActionMailer::Base.deliveries.should have(1).mail
+  have_sent_email.should be_true
 end
 
 Then /^the user should not receive an SMS notification$/ do
@@ -166,5 +167,5 @@ Then /^the user should not receive an SMS notification$/ do
 end
 
 Then /^the user should not receive an email notification$/ do
-  ActionMailer::Base.deliveries.should be_empty
+  have_sent_email.should be_false
 end

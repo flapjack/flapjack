@@ -15,13 +15,10 @@ gem 'em-resque'
 gem 'json'
 
 gem 'sinatra', :require => 'sinatra/base'
-gem 'tilt'
-gem 'warden'
 gem 'haml'
 gem 'thin'
 
 gem 'mail'
-gem 'actionmailer', :require => 'action_mailer'
 
 gem 'blather'
 
