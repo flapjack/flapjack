@@ -113,9 +113,10 @@ module Flapjack
             }
           when 'email_notifier', 'sms_notifier'
             
-            # NB: see https://github.com/mikel/mail/blob/master/lib/mail/mail.rb#L53
+            # See https://github.com/mikel/mail/blob/master/lib/mail/mail.rb#L53
+            # & https://github.com/mikel/mail/blob/master/spec/mail/configuration_spec.rb
             # for details of configuring mail gem. defaults to SMTP, localhost, port 25
-            Mail.delivery_settings = {:enable_starttls_auto => false}
+            Mail.defaults { delivery_method :smtp, {:enable_starttls_auto => false} }
 
             # TODO error if pikelet_cfg['queue'].nil?
 
