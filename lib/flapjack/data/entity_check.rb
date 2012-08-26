@@ -80,25 +80,13 @@ module Flapjack
         create_event(event)
       end
 
+      def unscheduled_maintenances
+        maintenances(:scheduled => false)
+      end
+
       # returns an array of all scheduled maintenances for a check
       def scheduled_maintenances
-        result = []
-        if @redis.exists("#{@key}:scheduled_maintenances")
-          @redis.zrange("#{@key}:scheduled_maintenances", 0, -1, {:withscores => true}).each {|s|
-            puts s.inspect
-            start_time = s[0].to_i
-            duration   = s[1].to_i
-            summary    = @redis.get("#{@key}:#{start_time}:scheduled_maintenance:summary")
-            end_time   = start_time + duration
-            result << {:start_time => start_time,
-                       :end_time   => end_time,
-                       :duration   => duration,
-                       :summary    => summary,
-                      }
-          }
-          puts result.inspect
-        end
-        result
+        maintenances(:scheduled => true)
       end
 
       # creates a scheduled maintenance period for a check
@@ -229,6 +217,22 @@ module Flapjack
           @logger.error "Invalidate state value #{state}"
         end
       end
+
+      def maintenances(opts = {})
+        sched = opts[:scheduled] ? 'scheduled' : 'unscheduled'
+        return [] unless @redis.exists("#{@key}:#{sched}_maintenances")
+        @redis.zrange("#{@key}:#{sched}_maintenances", 0, -1, {:withscores => true}).collect {|s|
+          start_time = s[0].to_i
+          duration   = s[1].to_i
+          summary    = @redis.get("#{@key}:#{start_time}:#{sched}_maintenance:summary")
+          end_time   = start_time + duration
+          {:start_time => start_time,
+           :end_time   => end_time,
+           :duration   => duration,
+           :summary    => summary
+          }
+        }
+      end      
 
     end
 

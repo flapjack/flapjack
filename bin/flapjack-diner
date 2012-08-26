@@ -120,12 +120,11 @@ module Flapjack
 
 end
 
-Flapjack::Diner.base_uri('http://127.0.0.1:5081')
+Flapjack::Diner.base_uri('localhost:5081')
 
 pp Flapjack::Diner.entities
-
-# pp Flapjack::Diner.checks('clientx-app-01')
-# pp Flapjack::Diner.status('clientx-app-01')
-# pp Flapjack::Diner.check_status('clientx-app-01', 'ping')
-# pp Flapjack::Diner.unscheduled_maintenances('clientx-app-01', 'ping')
-# pp Flapjack::Diner.scheduled_maintenances('clientx-app-01', 'ping')
+pp Flapjack::Diner.checks('clientx-app-01')
+pp Flapjack::Diner.status('clientx-app-01')
+pp Flapjack::Diner.check_status('clientx-app-01', 'ping')
+pp Flapjack::Diner.unscheduled_maintenances('clientx-app-01', 'ping')
+pp Flapjack::Diner.scheduled_maintenances('clientx-app-01', 'ping')
