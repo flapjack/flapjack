@@ -42,8 +42,8 @@ module Flapjack
     end
 
     def entity_check_status(ent, check)
-      entity_check = Flapjack::Data::EntityCheck.new(:entity => to_entity(ent),
-        :check => check, :redis => @@redis)
+      entity_check = Flapjack::Data::EntityCheck.for_entity(to_entity(ent),
+        check, :redis => @@redis)
       return if entity_check.nil?
       { 'name'                                => check,
         'state'                               => entity_check.state,
@@ -102,8 +102,8 @@ module Flapjack
         status 404
         return
       end
-      entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
-        :check => params[:check], :redis => @@redis)
+      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+        params[:check], :redis => @@redis)
       entity_check.scheduled_maintenances.to_json
     end
 
@@ -115,8 +115,8 @@ module Flapjack
         status 404
         return
       end
-      entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
-        :check => params[:check], :redis => @@redis)
+      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+        params[:check], :redis => @@redis)
       entity_check.unscheduled_maintenances.to_json
     end
 
@@ -128,8 +128,8 @@ module Flapjack
         status 404
         return
       end
-      entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
-        :check => params[:check], :redis => @@redis)
+      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+        params[:check], :redis => @@redis)
       entity_check.create_scheduled_maintenance(:start_time => params[:start_time],
         :duration => params[:duration], :summary => params[:summary])
       status 201
@@ -143,8 +143,8 @@ module Flapjack
         status 404
         return
       end
-      entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
-        :check => params[:check], :redis => @@redis)
+      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+        params[:check], :redis => @@redis)
       entity_check.create_acknowledgement(params[:summary])
       status 201
     end

@@ -22,7 +22,7 @@ module Flapjack
 
         if (event.type == 'service') and (event.critical? or event.warning?)
 
-          entity_check = Flapjack::Data::EntityCheck.new(:event_id => event.id, :redis => @persistence)
+          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @persistence)
 
           time_since_last_alert = -1
           if entity_check.failed?

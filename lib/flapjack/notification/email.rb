@@ -18,7 +18,7 @@ module Flapjack
         time               = notification['time']
         entity, check      = notification['event_id'].split(':')
 
-        entity_check = Flapjack::Data::EntityCheck.new(:event_id => notification['event_id'],
+        entity_check = Flapjack::Data::EntityCheck.for_event_id(notification['event_id'],
           :redis => opts[:redis])
 
         headline_map = {'problem'         => 'Problem: ',

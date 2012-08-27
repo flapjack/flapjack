@@ -93,8 +93,8 @@ module Flapjack
         if entity.nil?
           nil
         else
-          entity_check = Flapjack::Data::EntityCheck.new(:entity => entity, 
-            :check => parts[1], :redis => @@redis)
+          entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+            parts[1], :redis => @@redis)
           parts << entity_check.state
           parts << entity_check.last_change
           parts << entity_check.last_update
@@ -115,8 +115,8 @@ module Flapjack
         if entity.nil?
           nil
         else
-          entity_check = Flapjack::Data::EntityCheck.new(:entity => entity, 
-            :check => parts[1], :redis => @@redis)
+          entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+            parts[1], :redis => @@redis)
           parts << entity_check.state
           parts << entity_check.last_change
           parts << entity_check.last_update
@@ -134,8 +134,8 @@ module Flapjack
     end
 
     get '/check' do
-      entity_check = Flapjack::Data::EntityCheck.new(:entity_name => params[:entity],
-        :check => params[:check], :redis => @@redis)
+      entity_check = Flapjack::Data::EntityCheck.for_entity_name(params[:entity],
+        params[:check], :redis => @@redis)
       @check_state                = entity_check.state
       @check_last_update          = entity_check.last_update
       @check_last_change          = entity_check.last_change
@@ -149,10 +149,8 @@ module Flapjack
     end
 
     get '/acknowledge' do
-      @entity = params[:entity]
-      @check  = params[:check]
-      entity_check = Flapjack::Data::EntityCheck.new(:entity_name => @entity,
-        :check => @check, :redis => @@redis)
+      entity_check = Flapjack::Data::EntityCheck.for_entity_name(params[:entity],
+        params[:check], :redis => @@redis)
       ack = entity_check.create_acknowledgement(:summary => "Ack from web at #{Time.now.to_s}")
       @acknowledge_success = !!ack
       haml :acknowledge
@@ -164,7 +162,8 @@ module Flapjack
       raise ArgumentError, "start time parsed to zero" unless start_time > 0
       duration   = ChronicDuration.parse(params[:duration])
       summary    = params[:summary]
-      entity_check = EntityCheck.new(:entity_name => params[:entity], :check => params[:check], :redis => @@redis)
+      entity_check = Flapjack::Data::EntityCheck.for_entity_name(params[:entity],
+        params[:check], :redis => @@redis)
       entity_check.create_scheduled_maintenance(:start_time => start_time,
                                                 :duration   => duration,
                                                 :summary    => summary)
@@ -173,8 +172,8 @@ module Flapjack
 
     # delete a scheduled maintenance
     post '/delete_scheduled_maintenance/:entity/:check' do
-      entity_check = Flapjack::Data::EntityCheck.new(:entity_name => params[:entity],
-        :check => params[:check], :redis => @@redis)
+      entity_check = Flapjack::Data::EntityCheck.for_entity_name(params[:entity],
+        params[:check], :redis => @@redis)
       start_time = params[:start_time]
       entity_check.delete_scheduled_maintenance(:start_time => start_time)
       redirect back

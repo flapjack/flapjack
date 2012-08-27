@@ -16,14 +16,14 @@ def submit_event(event)
 end
 
 def set_scheduled_maintenance(entity, check, duration = 60*60*2)
-  entity_check = Flapjack::Data::EntityCheck.new(:entity_name => entity, :check => check, :redis => @redis)
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, => check, :redis => @redis)
   t = Time.now.to_i
   entity_check.create_scheduled_maintenance(:start_time => t, :duration => duration, :summary => "upgrading everything")
   @redis.setex("#{entity}:#{check}:scheduled_maintenance", duration, t)
 end
 
 def remove_scheduled_maintenance(entity, check)
-  entity_check = Flapjack::Data::EntityCheck.new(:entity_name => entity, :check => check, :redis => @redis)
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
   sm = entity_check.scheduled_maintenances
   sm.each do |m|
     entity_check.delete_scheduled_maintenance(:start_time => m[:start_time])

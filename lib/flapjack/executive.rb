@@ -105,7 +105,7 @@ module Flapjack
           result[:skip_filters] = true
         end
 
-        entity_check = Flapjack::Data::EntityCheck.new(:event_id => event.id, :redis => @redis)
+        entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
         entity_check.update_scheduled_maintenance
 
       # Action events represent human or automated interaction with Flapjack

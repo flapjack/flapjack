@@ -18,31 +18,32 @@ module Flapjack
 
       attr_accessor :entity, :check
 
-      # TODO initialize entity by 'id' from stored data model
-      # All of this initialization should be cleaned up, it's too verbose.
-      # Passing around the redis handle like this is a SMELL as well.
+      def self.for_event_id(event_id, options = {})
+        redis = options[:redis]
+        entity_name, check = event_id.split(':')
+        entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
+        return nil unless entity && entity.is_a?(Flapjack::Data::Entity)
+        self.new(entity, check, :redis => redis)
+      end
 
-      def initialize(options = {})
-        raise "Redis connection not set" unless @redis = options[:redis]
-        if options[:event_id]
-          entity_name, @check = options[:event_id].split(':')
-          @entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis)
-          @key = options[:event_id]
-        else
-          @entity = options[:entity] if options[:entity] && options[:entity].is_a?(Flapjack::Data::Entity)
-          if @entity.nil?
-            if options[:entity_id]
-              @entity = Flapjack::Data::Entity.find_by_id(options[:entity_id], :redis => @redis)
-            elsif options[:entity_name]
-              @entity = Flapjack::Data::Entity.find_by_name(options[:entity_name], :redis => @redis)
-            end
-          end
-          @check = options[:check]
-          @key = "#{@entity.name}:#{@check}" if @entity && @check
-        end
-        raise "Entity not set" unless @entity
-        raise "Check not set" unless @check
-        @logger = options[:logger]
+      def self.for_entity_name(entity_name, check, options = {})
+        redis = options[:redis]
+        entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
+        return nil unless entity && entity.is_a?(Flapjack::Data::Entity)
+        self.new(entity, check, :redis => redis)
+      end
+
+      def self.for_entity_id(entity_id, check, options = {})
+        redis = options[:redis]
+        entity = Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis)
+        return nil unless entity && entity.is_a?(Flapjack::Data::Entity)
+        self.new(entity, check, :redis => redis)
+      end
+
+      def self.for_entity(entity, check, options = {})
+        redis = options[:redis]
+        return nil unless entity && entity.is_a?(Flapjack::Data::Entity)
+        self.new(entity, check, :redis => redis)
       end
 
       # takes a key "entity:check", returns true if the check is in unscheduled
@@ -141,7 +142,7 @@ module Flapjack
       def state=(state = STATE_OK)
         return unless validate_state(state)
         t = Time.now.to_i - (60*60*24)
-        @redis.hset("check:#{@key}", 'state', e_state)
+        @redis.hset("check:#{@key}", 'state', state)
         @redis.hset("check:#{@key}", 'last_change', t)
         if STATE_CRITICAL.eql?(state)
           @redis.zadd('failed_checks', t, @key)
@@ -169,7 +170,7 @@ module Flapjack
       end
 
       def last_acknowledgement_notification
-        @redis.get("#{@key}:last_acknowledgment_notification").to_i
+        @redis.get("#{@key}:last_acknowledgement_notification").to_i
       end
 
       def failed?
@@ -211,13 +212,18 @@ module Flapjack
 
     private
 
+      # Passing around the redis handle like this is a SMELL.
+      def initialize(entity, check, options = {})
+        raise "Redis connection not set" unless @redis = options[:redis]
+        @entity = entity
+        @check = check
+        @key = "#{entity.name}:#{check}" if entity && check
+      end
+
       def validate_state(state)
-        return if [STATE_OK, STATE_WARNING, STATE_CRITICAL,
-                   STATE_ACKNOWLEDGEMENT, STATE_UP, STATE_DOWN,
-                   STATE_UNKNOWN].include?(state)
-        if @logger
-          @logger.error "Invalidate state value #{state}"
-        end
+        [STATE_OK, STATE_WARNING, STATE_CRITICAL,
+         STATE_ACKNOWLEDGEMENT, # STATE_UP, STATE_DOWN,
+         STATE_UNKNOWN].include?(state)
       end
 
       def maintenances(opts = {})
