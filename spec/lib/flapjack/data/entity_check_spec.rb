@@ -30,7 +30,11 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
   it "creates an acknowledgement"
 
-  it "returns its state"
+  it "returns its state" do
+    # ec = EntityCheck.new(:entity_name => , :check => 'ping')
+
+
+  end
 
   it "updates state"
 

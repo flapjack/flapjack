@@ -6,27 +6,11 @@ describe Flapjack::Data::Entity, :redis => true do
   let(:name)  { 'abc-123' }
   let(:check) { 'ping' }
 
-  # copied from flapjack-populator -- TODO move to entity model
-  def add_entity(entity = {})
-    @redis.multi
-    existing_name = @redis.hget("entity:#{entity['id']}", 'name')
-    @redis.del("entity_id:#{existing_name}") unless existing_name == entity['name']
-    @redis.set("entity_id:#{entity['name']}", entity['id'])
-    @redis.hset("entity:#{entity['id']}", 'name', entity['name'])
-
-    @redis.del("contacts_for:#{entity['id']}")
-    if entity['contacts'] && entity['contacts'].respond_to?(:each)
-      entity['contacts'].each {|contact|
-        @redis.sadd("contacts_for:#{entity['id']}", contact)
-      }
-    end
-    @redis.exec
-  end
-
   it "returns a list of checks for an entity" do
-    add_entity('id'       => '5000',
-               'name'     => name,
-               'contacts' => [])
+    Flapjack::Data::Entity.add({'id'       => '5000',
+                                'name'     => name,
+                                'contacts' => []},
+                                :redis => @redis)
 
     @redis.hset("check:#{name}:ping", 'state', 'OK')
     @redis.hset("check:#{name}:ssh",  'state', 'OK')
@@ -41,9 +25,10 @@ describe Flapjack::Data::Entity, :redis => true do
   end
 
   it "returns a count of checks for an entity" do
-    add_entity('id'       => '5000',
-               'name'     => name,
-               'contacts' => [])
+    Flapjack::Data::Entity.add({'id'       => '5000',
+                                'name'     => name,
+                                'contacts' => []},
+                               :redis => @redis)
 
     @redis.hset("check:#{name}:ping", 'state', 'OK')
     @redis.hset("check:#{name}:ssh",  'state', 'OK')

@@ -11,23 +11,6 @@ def drain_events
   end
 end
 
-# copied from flapjack-populator -- TODO move to entity model
-def add_entity(entity = {})
-  @redis.multi
-  existing_name = @redis.hget("entity:#{entity['id']}", 'name')
-  @redis.del("entity_id:#{existing_name}") unless existing_name == entity['name']
-  @redis.set("entity_id:#{entity['name']}", entity['id'])
-  @redis.hset("entity:#{entity['id']}", 'name', entity['name'])
-
-  @redis.del("contacts_for:#{entity['id']}")
-  if entity['contacts'] && entity['contacts'].respond_to?(:each)
-    entity['contacts'].each {|contact|
-      @redis.sadd("contacts_for:#{entity['id']}", contact)
-    }
-  end
-  @redis.exec
-end
-
 def submit_event(event)
   @redis.rpush 'events', event.to_json
 end
@@ -117,8 +100,9 @@ def submit_acknowledgement(entity, check)
 end
 
 Given /^an entity '([\w\.\-]+)' exists$/ do |entity|
-  add_entity('id'       => '5000',
-             'name'     => entity)
+  Flapjack::Data::Entity.add({'id'       => '5000',
+                              'name'     => entity},
+                             :redis => @redis )
 end
 
 Given /^^check '([\w\.\-]+)' for entity '([\w\.\-]+)' is in an ok state$/ do |check, entity|

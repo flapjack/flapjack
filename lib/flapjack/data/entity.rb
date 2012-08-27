@@ -8,16 +8,29 @@ module Flapjack
 
       attr_accessor :name, :id
 
-      # TODO use a global pointer to a synchrony-based connection pool
-      def self.initialize_redis
-      end
-
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.keys("entity_id:*").collect {|k|
           k =~ /^entity_id:(.+)$/; entity_name = $1
           self.new(:name => entity_name, :id => redis.get("entity_id:#{entity_name}"), :redis => redis)
         }
+      end
+
+      def self.add(entity, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.multi
+        existing_name = redis.hget("entity:#{entity['id']}", 'name')
+        redis.del("entity_id:#{existing_name}") unless existing_name == entity['name']
+        redis.set("entity_id:#{entity['name']}", entity['id'])
+        redis.hset("entity:#{entity['id']}", 'name', entity['name'])
+
+        redis.del("contacts_for:#{entity['id']}")
+        if entity['contacts'] && entity['contacts'].respond_to?(:each)
+          entity['contacts'].each {|contact|
+            redis.sadd("contacts_for:#{entity['id']}", contact)
+          }
+        end
+        redis.exec
       end
 
       def self.find_by_name(entity_name, options = {})

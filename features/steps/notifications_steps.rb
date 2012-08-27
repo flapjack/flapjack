@@ -21,9 +21,10 @@ Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ d
                'last_name'  => 'Smith',
                'email'      => 'johns@example.dom',
                'media'      => {'sms' => '+61888888888'} )
-  add_entity( 'id'       => '5000',
-              'name'     => entity,
-              'contacts' => ["0999"] )
+  Flapjack::Data::Entity.add({'id'       => '5000',
+                              'name'     => entity,
+                              'contacts' => ["0999"]},
+                             :redis => @redis )
 end
 
 Given /^the user wants to receive email notifications for entity '([\w\.\-]+)'$/ do |entity|
@@ -32,9 +33,10 @@ Given /^the user wants to receive email notifications for entity '([\w\.\-]+)'$/
                'last_name'  => 'Smith',
                'email'      => 'johns@example.dom',
                'media'      => {'email' => 'johns@example.dom'} )
-  add_entity( 'id'       => '5000',
-              'name'     => entity,
-              'contacts' => ["0999"] )
+  Flapjack::Data::Entity.add({'id'       => '5000',
+                              'name'     => entity,
+                              'contacts' => ["0999"]},
+                             :redis => @redis )
 end
 
 Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)' and email notifications for entity '([\w\.\-]+)'$/ do |entity1, entity2|
@@ -48,12 +50,14 @@ Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)' and
                'last_name'  => 'Smith',
                'email'      => 'johns@example.dom',
                'media'      => {'email'      => 'johns@example.dom'} )
-  add_entity( 'id'       => '5000',
-              'name'     => entity1,
-              'contacts' => ["0998"])
-  add_entity( 'id'       => '5001',
-              'name'     => entity2,
-              'contacts' => ["0999"])
+  Flapjack::Data::Entity.add({'id'       => '5000',
+                              'name'     => entity1,
+                              'contacts' => ["0998"]},
+                             :redis => @redis )
+  Flapjack::Data::Entity.add({'id'       => '5001',
+                              'name'     => entity2,
+                              'contacts' => ["0999"]},
+                             :redis => @redis )
 end
 
 When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity|
@@ -86,8 +90,9 @@ Then /^an email notification for entity '([\w\.\-]+)' should not be queued for t
 end
 
 Given /^a user SMS notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
-  add_entity( 'id'       => '5000',
-              'name'     => entity )
+  Flapjack::Data::Entity.add({'id'   => '5000',
+                              'name' => entity},
+                             :redis => @redis )
   @sms_notification = {'notification_type'  => 'problem',
                        'contact_first_name' => 'John',
                        'contact_last_name'  => 'Smith',
@@ -100,8 +105,9 @@ Given /^a user SMS notification has been queued for entity '([\w\.\-]+)'$/ do |e
 end
 
 Given /^a user email notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
-  add_entity( 'id'       => '5001',
-              'name'     => entity )
+  Flapjack::Data::Entity.add({'id'   => '5001',
+                              'name' => entity},
+                             :redis => @redis )
   @email_notification = {'notification_type'  => 'problem',
                          'contact_first_name' => 'John',
                          'contact_last_name'  => 'Smith',
