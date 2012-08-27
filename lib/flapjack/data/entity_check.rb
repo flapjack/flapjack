@@ -19,6 +19,8 @@ module Flapjack
       attr_accessor :entity, :check
 
       # TODO initialize entity by 'id' from stored data model
+      # All of this initialization should be cleaned up, it's too verbose.
+      # Passing around the redis handle like this is a SMELL as well.
 
       def initialize(options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
@@ -124,9 +126,9 @@ module Flapjack
 
         # yes! so set current scheduled maintenance
         # if multiple scheduled maintenances found, find the end_time furthest in the future
-        futurist = current_sched_ms.max {|sm| sm[:start_time] }
-        start_time = futurist[:start_time]
-        duration   = futurist[:duration]
+        most_futuristic = current_sched_ms.max {|sm| sm[:end_time] }
+        start_time = most_futuristic[:start_time]
+        duration   = most_futuristic[:duration]
         @redis.setex("#{@key}:scheduled_maintenance", duration, start_time)
       end
 
@@ -232,7 +234,7 @@ module Flapjack
            :summary    => summary
           }
         }
-      end      
+      end
 
     end
 

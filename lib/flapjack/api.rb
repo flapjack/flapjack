@@ -59,7 +59,7 @@ module Flapjack
     get '/entities' do
       content_type :json
       ret = Flapjack::Data::Entity.all(:redis => @@redis).sort_by(&:name).collect {|e|
-        entity_status(e)
+        {'id' => e.id, 'name' => e.name, 'checks' => entity_status(e)}
       }
       ret.to_json
     end
@@ -101,7 +101,7 @@ module Flapjack
       if entity.nil?
         status 404
         return
-      end      
+      end
       entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
         :check => params[:check], :redis => @@redis)
       entity_check.scheduled_maintenances.to_json
@@ -114,7 +114,7 @@ module Flapjack
       if entity.nil?
         status 404
         return
-      end 
+      end
       entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
         :check => params[:check], :redis => @@redis)
       entity_check.unscheduled_maintenances.to_json
@@ -127,7 +127,7 @@ module Flapjack
       if entity.nil?
         status 404
         return
-      end       
+      end
       entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
         :check => params[:check], :redis => @@redis)
       entity_check.create_scheduled_maintenance(:start_time => params[:start_time],
@@ -142,7 +142,7 @@ module Flapjack
       if entity.nil?
         status 404
         return
-      end       
+      end
       entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
         :check => params[:check], :redis => @@redis)
       entity_check.create_acknowledgement(params[:summary])
