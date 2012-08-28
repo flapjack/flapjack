@@ -60,14 +60,12 @@ module Flapjack
       end
 
       # creates an event object and adds it to the events list in redis
-      #   'entity'    => entity,
-      #   'check'     => check,
       #   'type'      => 'service',
       #   'state'     => state,
       #   'summary'   => check_output,
       #   'time'      => timestamp
       def create_event(event)
-        event.merge('entity' => @entity.name, 'check' => @check)
+        event.merge!('entity' => @entity.name, 'check' => @check)
         event['time'] = Time.now.to_i if event['time'].nil?
         @redis.rpush('events', Yajl::Encoder.encode(event))
       end
