@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'log4r'
 require 'log4r/outputter/fileoutputter'
 
 require 'flapjack'

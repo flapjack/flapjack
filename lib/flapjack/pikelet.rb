@@ -8,6 +8,7 @@
 # with butter, at afternoon tea, but can also be served at morning tea."
 #    from http://en.wikipedia.org/wiki/Pancake
 
+require 'log4r'
 require 'log4r/outputter/consoleoutputters'
 require 'log4r/outputter/syslogoutputter'
 

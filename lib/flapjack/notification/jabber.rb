@@ -1,8 +1,18 @@
 #!/usr/bin/env ruby
 
-require 'em-synchrony/fiber_iterator'
-require 'blather/client/dsl'
 require 'socket'
+
+require 'eventmachine'
+# the redis/synchrony gems need to be required in this particular order, see
+# the redis-rb README for details
+require 'hiredis'
+require 'em-synchrony'
+require 'redis/connection/synchrony'
+require 'redis'
+
+require 'blather/client/dsl'
+require 'em-synchrony/fiber_iterator'
+require 'yajl/json_gem'
 
 module Flapjack
   module Notification

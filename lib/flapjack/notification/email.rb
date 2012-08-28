@@ -1,5 +1,9 @@
 #!/usr/bin/env ruby
 
+require 'mail'
+require 'erb'
+require 'haml'
+
 require 'flapjack/data/entity_check'
 require 'flapjack/notification/common'
 

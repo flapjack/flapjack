@@ -2,7 +2,10 @@
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 require 'bundler'
-Bundler.require(:default, FLAPJACK_ENV.to_sym)
+Bundler.setup(:default, FLAPJACK_ENV.to_sym)
+
+require 'daemons'
+require 'log4r'
 
 $: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE__) + '/../lib/')
 
@@ -10,13 +13,13 @@ require 'flapjack/cli/executive'
 require 'flapjack/applications/executive'
 require 'flapjack/patches'
 
-# setup 
+# setup
 @options = Flapjack::Executive::Options.parse(ARGV)
 
 log = Log4r::Logger.new("executive")
 log.add(Log4r::SyslogOutputter.new("executive"))
 
-app = Flapjack::Executive::Application.run(:log => log, 
+app = Flapjack::Executive::Application.run(:log => log,
                                           :executives => {},
                                           :filters => [],
                                           :queue_backend => {:type => :beanstalkd},
@@ -30,18 +33,18 @@ mockapp = Flapjack::Executive::Application.run(:log => log,
                                               :persistence => {:type => :mockbackend,
                                                                :basedir => File.join(File.dirname(__FILE__), '..', 'spec', 'persistence')})
 
-# populate 
+# populate
 require 'beanstalk-client'
 beanstalk = Beanstalk::Pool.new(["localhost:11300"], 'results')
 
 puts "Writing 1000 passing checks onto work queue."
-2000.times do 
+2000.times do
   result = {:output => "some output", :check_id => 1, :retval => 0}
   beanstalk.yput(result)
 end
 
 # benchmark
-require 'benchmark' 
+require 'benchmark'
 
 Benchmark.bm(30) do |b|
   b.report("beanstalkd + datamapper:") do

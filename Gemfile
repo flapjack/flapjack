@@ -1,31 +1,6 @@
 source :rubygems
 
-gem 'daemons'
-gem 'beanstalk-client'
-gem 'log4r'
-gem 'yajl-ruby', :require => 'yajl'
-gem 'chronic'
-gem 'chronic_duration'
-
-gem 'eventmachine', '~> 1.0.0.rc.4'
-gem 'hiredis'
-gem 'em-synchrony', '~> 1.0.2'
-gem 'redis'
-gem 'em-resque'
-gem 'json'
-
-gem 'sinatra', :require => 'sinatra/base'
-gem 'haml'
-gem 'thin'
-
-gem 'mail'
-
-gem 'blather'
-
-group :development do
-  gem 'jeweler'
-  gem 'shotgun'
-end
+gemspec :name => 'flapjack'
 
 group :test do
   gem 'rspec'

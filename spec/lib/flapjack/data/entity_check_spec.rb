@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
 
 describe Flapjack::Data::EntityCheck, :redis => true do
@@ -12,13 +13,48 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                                :redis => @redis)
   end
 
-  it "is created for an event id"
+  it "is created for an event id" do
+    ec = Flapjack::Data::EntityCheck.for_event_id("#{name}:ping", :redis => @redis)
+    ec.should_not be_nil
+    ec.entity.should_not be_nil
+    ec.entity.name.should_not be_nil
+    ec.entity.name.should == name
+    ec.check.should_not be_nil
+    ec.check.should == 'ping'
+  end
 
-  it "is created for an entity name"
+  it "is created for an entity name" do
+    ec = Flapjack::Data::EntityCheck.for_entity_name(name, 'ping', :redis => @redis)
+    ec.should_not be_nil
+    ec.entity.should_not be_nil
+    ec.entity.name.should_not be_nil
+    ec.entity.name.should == name
+    ec.check.should_not be_nil
+    ec.check.should == 'ping'
+  end
 
-  it "is created for an entity id"
+  it "is created for an entity id" do
+    ec = Flapjack::Data::EntityCheck.for_entity_id(5000, 'ping', :redis => @redis)
+    ec.should_not be_nil
+    ec.entity.should_not be_nil
+    ec.entity.name.should_not be_nil
+    ec.entity.name.should == name
+    ec.check.should_not be_nil
+    ec.check.should == 'ping'
+  end
 
-  it "is created for an entity object"
+  it "is created for an entity object" do
+    e = Flapjack::Data::Entity.find_by_name(name, :redis => @redis)
+    ec = Flapjack::Data::EntityCheck.for_entity(e, 'ping', :redis => @redis)
+    ec.should_not be_nil
+    ec.entity.should_not be_nil
+    ec.entity.name.should_not be_nil
+    ec.entity.name.should == name
+    ec.check.should_not be_nil
+    ec.check.should == 'ping'
+  end
+
+  it "is not created for a missing entity"
 
   context "maintenance" do
 

@@ -2,6 +2,8 @@
 
 require 'chronic'
 require 'chronic_duration'
+require 'sinatra/base'
+require 'haml'
 
 require 'flapjack/pikelet'
 require 'flapjack/data/entity_check'
@@ -79,9 +81,6 @@ module Flapjack
     before do
       # will only initialise the first time it's run
       Flapjack::Web.bootstrap
-    end
-
-    after do
     end
 
     get '/' do

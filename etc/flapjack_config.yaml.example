@@ -6,20 +6,16 @@ development:
   redis:
     database: 13
   executive:
-    instances: 1
     email_queue: email_notifications
     sms_queue: sms_notifications
     jabber_queue: jabber_notifications
   email_notifier:
-    instances: 1
     queue: email_notifications
   sms_notifier:
-    instances: 1
     queue: sms_notifications
     username: "ermahgerd"
     password: "xxxx"
   jabber_gateway:
-    instances: 1
     queue: jabber_notifications
     server: "jabber.domain.tld"
     port: 5222

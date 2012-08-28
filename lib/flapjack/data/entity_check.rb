@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'yajl/json_gem'
+
 require 'flapjack/data/entity'
 
 module Flapjack

@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'sinatra/base'
+
 require 'flapjack/pikelet'
 
 require 'flapjack/data/entity'
