@@ -10,6 +10,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
   let(:name)  { 'abc-123' }
   let(:check) { 'ping' }
 
+  let(:half_an_hour) { 30 * 60 }
+
   before(:each) do
     Flapjack::Data::Entity.add({'id'   => '5000',
                                 'name' => name},
@@ -94,11 +96,41 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       ec.should_not be_in_scheduled_maintenance
     end
 
+    it "creates an unscheduled maintenance period" do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_unscheduled_maintenance(:start_time => t, :duration => half_an_hour, :summary => 'oops')
+
+      timestamp = @redis.get("#{name}:#{check}:unscheduled_maintenance")
+      timestamp.should_not be_nil
+      timestamp.should == t.to_s
+
+      umps = @redis.zrange("#{name}:#{check}:unscheduled_maintenances", 0, -1, :with_scores => true)
+      umps.should_not be_nil
+      umps.should be_an(Array)
+      umps.should have(1).unscheduled_maintenance_period
+      umps[0].should be_an(Array)
+
+      start_time = umps[0][0]
+      start_time.should_not be_nil
+      start_time.should be_a(String)
+      start_time.should == t.to_s
+
+      score = umps[0][1]
+      score.should_not be_nil
+      score.should be_a(Float)
+      score.should == half_an_hour
+
+      summary = @redis.get("#{name}:#{check}:#{t}:unscheduled_maintenance:summary")
+      summary.should_not be_nil
+      summary.should == 'oops'
+    end
+
     it "creates a scheduled maintenance period for a future time" do
       t = Time.now.to_i
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
       ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
-        :duration => 30 * 60, :summary => "30 minutes")
+        :duration => half_an_hour, :summary => "30 minutes")
 
       smps = @redis.zrange("#{name}:#{check}:scheduled_maintenances", 0, -1, :with_scores => true)
       smps.should_not be_nil
@@ -114,7 +146,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       score = smps[0][1]
       score.should_not be_nil
       score.should be_a(Float)
-      score.should == 30 * 60
+      score.should == half_an_hour
     end
 
     it "creates a scheduled maintenance period covering the current time"
@@ -127,7 +159,6 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       t = Time.now.to_i
       five_hours_ago = t - (60 * 60 * 5)
       three_hours_ago = t - (60 * 60 * 3)
-      half_an_hour = 60 * 30
 
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
       ec.create_scheduled_maintenance(:start_time => five_hours_ago,
@@ -150,9 +181,28 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     end
 
     it "returns a list of unscheduled maintenance periods" do
+      t = Time.now.to_i
+      five_hours_ago = t - (60 * 60 * 5)
+      three_hours_ago = t - (60 * 60 * 3)
+
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-      smp = ec.unscheduled_maintenances
-      pending # TODO
+      ec.create_unscheduled_maintenance(:start_time => five_hours_ago,
+        :duration => half_an_hour, :summary => "first")
+      ec.create_unscheduled_maintenance(:start_time => three_hours_ago,
+        :duration => half_an_hour, :summary => "second")
+
+      ump = ec.unscheduled_maintenances
+      ump.should_not be_nil
+      ump.should be_an(Array)
+      ump.should have(2).unscheduled_maintenance_periods
+      ump[0].should == {:start_time => five_hours_ago,
+                        :end_time   => five_hours_ago + half_an_hour,
+                        :duration   => half_an_hour,
+                        :summary    => "first"}
+      ump[1].should == {:start_time => three_hours_ago,
+                        :end_time   => three_hours_ago + half_an_hour,
+                        :duration   => half_an_hour,
+                        :summary    => "second"}
     end
 
     it "updates scheduled maintenance periods"

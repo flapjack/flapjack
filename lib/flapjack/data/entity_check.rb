@@ -91,14 +91,29 @@ module Flapjack
         maintenances(:scheduled => true)
       end
 
+      # FIXME: need to add summary to summary of existing unscheduled maintenance if there is
+      # one, and extend duration / expiry time, instead of creating a separate unscheduled
+      # outage as we are doing now...
+      def create_unscheduled_maintenance(opts = {})
+        start_time = opts[:start_time]  # unix timestamp
+        duration   = opts[:duration]    # seconds
+        summary    = opts[:summary]
+        time_remaining = (start_time + duration) - Time.now.to_i
+        if time_remaining > 0
+          @redis.setex("#{@key}:unscheduled_maintenance", time_remaining, start_time)
+        end
+        @redis.zadd("#{@key}:unscheduled_maintenances", duration, start_time)
+        @redis.set("#{@key}:#{start_time}:unscheduled_maintenance:summary", summary)
+      end
+
       # creates a scheduled maintenance period for a check
+      # TODO: consider adding some validation to the data we're adding in here
+      # eg start_time is a believable unix timestamp (not in the past and not too
+      # far in the future), duration is within some bounds...
       def create_scheduled_maintenance(opts = {})
         start_time = opts[:start_time]  # unix timestamp
         duration   = opts[:duration]    # seconds
         summary    = opts[:summary]
-        # TODO: consider adding some validation to the data we're adding in here
-        # eg start_time is a believable unix timestamp (not in the past and not too
-        # far in the future), duration is within some bounds...
         @redis.zadd("#{@key}:scheduled_maintenances", duration, start_time)
         @redis.set("#{@key}:#{start_time}:scheduled_maintenance:summary", summary)
 
