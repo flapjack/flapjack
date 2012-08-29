@@ -4,7 +4,6 @@ if ENV['COVERAGE']
   SimpleCov.start do
     add_filter '/spec/'
   end
-  SimpleCov.coverage_dir 'coverage/rspec'
 end
 
 ENV["FLAPJACK_ENV"] = 'test'

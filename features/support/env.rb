@@ -5,7 +5,6 @@ if ENV['COVERAGE']
   SimpleCov.start do
     add_filter '/features/'
   end
-  SimpleCov.coverage_dir 'coverage/cucumber'
 end
 
 ENV["FLAPJACK_ENV"] = 'test'
