@@ -8,7 +8,9 @@ Gem::Specification.new do |gem|
   gem.summary       = %q{a scalable and distributed monitoring system}
   gem.homepage      = %q{http://flapjack-project.com/}
 
-  gem.files         = `git ls-files`.split($\)
+  # see http://yehudakatz.com/2010/12/16/clarifying-the-roles-of-the-gemspec-and-gemfile/
+  # following a middle road here, not shipping it with the gem :)
+  gem.files         = `git ls-files`.split($\) - ['Gemfile.lock']
   gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.name          = "flapjack"
