@@ -21,3 +21,4 @@ vendor
 etc/flapjack_config.yaml
 coverage
 tmp/pids/*
+tmp/spec*
