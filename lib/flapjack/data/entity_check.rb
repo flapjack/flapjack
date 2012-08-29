@@ -199,30 +199,9 @@ module Flapjack
         ['warning', 'critical'].include?( state )
       end
 
-      def duration_of_current_failure
-        return unless failed?
-        Time.now.to_i - @redis.hget("check:#{@key}", 'last_change').to_i
-      end
-
       def summary
         timestamp = @redis.lindex("#{@key}:states", -1)
         @redis.get("#{@key}:#{timestamp}:summary")
-      end
-
-      def time_since_last_problem_alert
-        result = Time.now.to_i - @redis.get("#{@key}:last_problem_notification").to_i
-        # @log.debug("Filter: Delays: time_since_last_problem_alert is returning #{result}")
-        result
-      end
-
-      def time_since_last_alert_about_current_problem
-        return unless failed?
-        result = time_since_last_problem_alert
-        return unless (result < duration_of_current_failure)
-        # if @logger
-          # @logger.debug("Filter: Delays: time_since_last_alert_about_current_problem is returning #{result}")
-        # end
-        result
       end
 
     private

@@ -325,12 +325,4 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec.last_recovery_notification.should == t
   end
 
-  it "returns duration of current failure"
-
-  it "returns nil for duration of current failure if not failing"
-
-  it "returns time since last problem alert"
-
-  it "returns time since last alert about current problem"
-
 end
