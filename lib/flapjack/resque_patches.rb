@@ -1,7 +1,9 @@
 #!/usr/bin/env ruby
 
 # Resque is really designed around a multiprocess model, so we here we
-# stub some that behaviour away. 
+# stub some that behaviour away.
+
+require 'resque'
 
 module Resque
 

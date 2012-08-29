@@ -11,10 +11,7 @@ describe Flapjack::Pikelet do
     include Flapjack::Pikelet
   end
 
-  let(:redis) { mock('Redis') }
-
   it "should bootstrap an including class" do
-    ::Redis.should_receive(:new).and_return(redis)
     Log4r::StdoutOutputter.should_receive(:new).and_return(stdout)
     Log4r::SyslogOutputter.should_receive(:new).and_return(syslogout)
     logger.should_receive(:add).with(stdout)
@@ -25,10 +22,6 @@ describe Flapjack::Pikelet do
     b.bootstrap
 
     b.should be_bootstrapped
-
-    b.should respond_to(:persistence)
-    b.persistence.should equal(redis)
-
     b.should respond_to(:logger)
     b.logger.should equal(logger)
   end

@@ -16,19 +16,15 @@ module Flapjack
         result = false
         if event.type == 'action'
           if event.acknowledgement? and @persistence.zscore("failed_checks", event.id)
-            expiry = 4 * 60 * 60
-
-            # FIXME: need to add summary to summary of existing unscheduled maintenance if there is
-            # one, and extend duration / expiry time, instead of creating a separate unscheduled
-            # outage as we are doing now...
-            #
-            # FIXME: also, need to see if a TTL has been provided with the acknowledgement, and use
-            # that instead of the default of four hours
-            #
-            @persistence.setex("#{event.id}:unscheduled_maintenance", expiry, timestamp)
-            @persistence.zadd("#{event.id}:unscheduled_maintenances", expiry, timestamp)
-            @persistence.set("#{event.id}:#{timestamp}:unscheduled_maintenance:summary", event.summary)
-            message = "unscheduled maintenance created for #{event.id}"
+            ec = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @persistence)
+            if ec.nil?
+              @log.error "Filter: Acknowledgement: unknown entity for event '#{event.id}'"
+            else
+              # FIXME: need to see if a TTL has been provided with the acknowledgement, and use
+              # that instead of the default of four hours
+              ec.create_unscheduled_maintenance(:start_time => timestamp, :duration => 4 * 60 * 60)
+              message = "unscheduled maintenance created for #{event.id}"
+            end
           else
             message = "no action taken"
             result  = true

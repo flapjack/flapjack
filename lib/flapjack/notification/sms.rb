@@ -17,7 +17,6 @@ module Flapjack
         time               = notification['time']
         entity, check      = notification['event_id'].split(':')
 
-        puts "Sending sms notification now"
         headline_map = {'problem'         => 'PROBLEM: ',
                         'recovery'        => 'RECOVERY: ',
                         'acknowledgement' => 'ACK: ',

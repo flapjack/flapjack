@@ -1,18 +1,11 @@
 #!/usr/bin/env ruby
 
-require 'action_view'
-require 'haml/template/plugin' # haml templates won't work without this
+require 'mail'
+require 'erb'
+require 'haml'
 
-require 'flapjack/models/entity_check'
+require 'flapjack/data/entity_check'
 require 'flapjack/notification/common'
-
-# TODO define these somewhere more central
-ActionMailer::Base.raise_delivery_errors = true
-ActionMailer::Base.view_paths = File.dirname(__FILE__)
-ActionMailer::Base.delivery_method = :smtp
-ActionMailer::Base.smtp_settings = { :address => "127.0.0.1",
-                                     :port => 25,
-                                     :enable_starttls_auto => false }
 
 module Flapjack
   module Notification
@@ -28,8 +21,9 @@ module Flapjack
         summary            = notification['summary']
         time               = notification['time']
         entity, check      = notification['event_id'].split(':')
-        entity_check = Flapjack::Data::EntityCheck.new(:entity => entity,
-          :check => check, :redis => @persistence)
+
+        entity_check = Flapjack::Data::EntityCheck.for_event_id(notification['event_id'],
+          :redis => opts[:redis])
 
         headline_map = {'problem'         => 'Problem: ',
                         'recovery'        => 'Recovery: ',
@@ -48,29 +42,27 @@ module Flapjack
                        :in_scheduled_maintenance   => entity_check.in_scheduled_maintenance?,
                        :in_unscheduled_maintenance => entity_check.in_unscheduled_maintenance?
                       }
-        Flapjack::Notification::Mailer.sender(notification, sender_opts).deliver
+
+        mail = prepare_email(notification, sender_opts)
+        mail.deliver!
       end
 
-    end
+    private
 
-    # FIXME: move this to a separate file
-    class Mailer < ActionMailer::Base
+      def self.prepare_email(notification, opts)
 
-      self.mailer_name = 'flapjack_mailer'
-
-      def sender(notification, opts)
         logger = opts[:logger]
 
         # FIXME: use socket and gethostname instead of shelling out
         fqdn     = `/bin/hostname -f`.chomp
-        from     = "flapjack@#{fqdn}"
-        logger.debug("flapjack_mailer: set from to #{from}")
-        reply_to = from
+        m_from     = "flapjack@#{fqdn}"
+        logger.debug("flapjack_mailer: set from to #{m_from}")
+        m_reply_to = m_from
 
-        to                  = notification['address']
-        subject             = notification['subject']
+        m_to       = notification['address']
+        m_subject  = notification['subject']
 
-        logger.debug("Flapjack::Notification::Mailer #{notification['id']} to: #{to} subject: #{subject}")
+        logger.debug("Flapjack::Notification::Mailer #{notification['id']} to: #{m_to} subject: #{m_subject}")
 
         @notification_type  = notification['notification_type']
         @contact_first_name = notification['contact_first_name']
@@ -82,12 +74,25 @@ module Flapjack
         @in_unscheduled_maintenance = opts[:in_unscheduled_maintenance]
         @in_scheduled_maintenance   = opts[:in_scheduled_maintenance]
 
-        mail(:subject  => subject,
-             :from     => from,
-             :to       => to,
-             :reply_to => reply_to) do |format|
-          format.text
-          format.html
+        mail_scope = self
+
+        mail = Mail.new do
+          from     m_from
+          to       m_to
+          subject  m_subject
+          reply_to m_reply_to
+
+          text_part do
+            template = ERB.new(File.read(File.dirname(__FILE__) +
+              '/flapjack_mailer/sender.text.erb'))
+            template.result(binding)
+          end
+
+          html_part do
+            engine = Haml::Engine.new(File.read(File.dirname(__FILE__) +
+          '/flapjack_mailer/sender.html.haml'))
+            engine.render(mail_scope)
+          end
         end
       end
 

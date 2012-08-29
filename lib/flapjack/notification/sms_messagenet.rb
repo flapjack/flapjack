@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'net/http'
-require 'flapjack'
+require 'uri'
 
 module Flapjack
   module Notification
@@ -10,12 +10,12 @@ module Flapjack
       def self.sender(notification, options = {})
         logger = options[:logger]
         config = options[:config]
-        
+
         unless config && (username = config["username"])
           raise RuntimeError.new('sms_messagenet: username is missing')
         end
         unless config && (password = config["password"])
-          raise RuntimeError.new('sms_messagenet: password is missing') 
+          raise RuntimeError.new('sms_messagenet: password is missing')
         end
 
         raise RuntimeError.new('address is missing') unless address         = notification['address']

@@ -5,7 +5,6 @@ if ENV['COVERAGE']
   SimpleCov.start do
     add_filter '/features/'
   end
-  SimpleCov.coverage_dir 'coverage/cucumber'
 end
 
 ENV["FLAPJACK_ENV"] = 'test'
@@ -38,35 +37,39 @@ class MockLogger
   end
 end
 
+Mail.defaults do
+  delivery_method :test # in practice you'd do this in spec_helper.rb
+end
+
+redis_opts = { :db => 14, :driver => :ruby }
+redis = ::Redis.new(redis_opts)
+redis.flushdb
+redis.quit
+
 Before do
   @logger = MockLogger.new
   # Use a separate database whilst testing
-  @app = Flapjack::Executive.new(:redis => { :db => 14, :driver => :ruby }, :logger => @logger,
+  @redis = ::Redis.new(redis_opts)
+  @app = Flapjack::Executive.new(:redis => @redis, :logger => @logger,
     'email_queue' => 'email_notifications', 'sms_queue' => 'sms_notifications')
-  @app.drain_events
-  @redis = @app.persistence
 end
 
 After do
+  @redis.flushdb
+  @redis.quit
   # Reset the logged messages
   @logger.messages = []
 end
 
-Around('@email') do |scenario, block|
-  ActionMailer::Base.delivery_method = :test
-  ActionMailer::Base.perform_deliveries = true
-  ActionMailer::Base.deliveries.clear
-  block.call
+Before('@resque') do
+  ResqueSpec.reset!
+end
+
+Before('@email') do
+  Mail::TestMailer.deliveries.clear
 end
 
 After('@time') do
   Delorean.back_to_the_present
 end
 
-# not sure why this has to be explicitly required -- Bundler should
-# be doing this
-require 'resque_spec'
-
-Before('@resque') do
-  ResqueSpec.reset!
-end

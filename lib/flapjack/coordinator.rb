@@ -1,14 +1,23 @@
 #!/usr/bin/env ruby
 
+require 'eventmachine'
+# the redis/synchrony gems need to be required in this particular order, see
+# the redis-rb README for details
+require 'hiredis'
+require 'em-synchrony'
+require 'redis/connection/synchrony'
+require 'redis'
+require 'em-resque'
 require 'em-resque/worker'
+require 'thin'
 
+require 'flapjack/api'
 require 'flapjack/daemonizing'
 require 'flapjack/notification/email'
 require 'flapjack/notification/sms'
 require 'flapjack/notification/jabber'
 require 'flapjack/executive'
 require 'flapjack/web'
-require 'flapjack/api'
 
 module Flapjack
 
@@ -81,19 +90,15 @@ module Flapjack
       }
 
       EM.synchrony do
+
+        redis_sync = ::Redis.new(@config['redis'].merge(:driver => 'synchrony'))
+        redis_ruby = ::Redis.new(@config['redis'].merge(:driver => 'ruby'))
+
         unless (['email_notifier', 'sms_notifier'] & @config.keys).empty?
           # make Resque a slightly nicer citizen
           require 'flapjack/resque_patches'
           # set up connection pooling, stop resque errors
           EM::Resque.initialize_redis(::Redis.new(@config['redis']))
-        end
-
-        def fiberise_instances(instance_num, &block)
-          (1..[1, instance_num || 1].max).each do |n|
-            Fiber.new {
-              block.yield
-            }.resume
-          end
         end
 
         @config.keys.each do |pikelet_type|
@@ -102,34 +107,40 @@ module Flapjack
 
           case pikelet_type
           when 'executive'
-            fiberise_instances(pikelet_cfg['instances'].to_i) {
-              flapjack_exec = Flapjack::Executive.new(pikelet_cfg.merge(:redis => {:driver => 'synchrony'}))
+            Fiber.new {
+              flapjack_exec = Flapjack::Executive.new(pikelet_cfg.merge(:redis => redis_sync))
               @pikelets << flapjack_exec
               flapjack_exec.main
-            }
+            }.resume
           when 'email_notifier', 'sms_notifier'
-            pikelet = pikelet_types[pikelet_type]
+
+            # See https://github.com/mikel/mail/blob/master/lib/mail/mail.rb#L53
+            # & https://github.com/mikel/mail/blob/master/spec/mail/configuration_spec.rb
+            # for details of configuring mail gem. defaults to SMTP, localhost, port 25
+            Mail.defaults { delivery_method :smtp, {:enable_starttls_auto => false} }
 
             # TODO error if pikelet_cfg['queue'].nil?
 
             # # Deferring this: Resque's not playing well with evented code
             # if 'email_notifier'.eql?(pikelet_type)
+            #   pikelet = pikelet_types[pikelet_type]
             #   pikelet.class_variable_set('@@actionmailer_config', actionmailer_config)
             # end
 
-            fiberise_instances(pikelet_cfg['instances']) {
+            Fiber.new {
               flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
               # # Use these to debug the resque workers
               # flapjack_rsq.verbose = true
               # flapjack_rsq.very_verbose = true
               @pikelets << flapjack_rsq
               flapjack_rsq.work(0.1)
-            }
+            }.resume
           when 'jabber_gateway'
-            fiberise_instances(pikelet_cfg['instances']) {
-              flapjack_jabbers = Flapjack::Notification::Jabber.new(pikelet_cfg)
+            Fiber.new {
+              flapjack_jabbers = Flapjack::Notification::Jabber.new(:redis => redis_sync,
+                :config => pikelet_cfg)
               flapjack_jabbers.main
-            }
+            }.resume
           when 'web'
             port = nil
             if pikelet_cfg['port']
@@ -137,6 +148,10 @@ module Flapjack
             end
 
             port = 3000 if port.nil? || port <= 0 || port > 65535
+
+            Flapjack::Web.class_variable_set('@@redis', redis_ruby)
+
+            Thin::Logging.silent = true
 
             web = Thin::Server.new('0.0.0.0', port, Flapjack::Web, :signals => false)
             @pikelets << web
@@ -148,6 +163,10 @@ module Flapjack
             end
 
             port = 3001 if port.nil? || port <= 0 || port > 65535
+
+            Flapjack::API.class_variable_set('@@redis', redis_ruby)
+
+            Thin::Logging.silent = true
 
             api = Thin::Server.new('0.0.0.0', port, Flapjack::API, :signals => false)
             @pikelets << api
