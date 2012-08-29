@@ -99,7 +99,12 @@ module Flapjack
           parts << entity_check.last_update
           parts << entity_check.in_unscheduled_maintenance?
           parts << entity_check.in_scheduled_maintenance?
-          parts += entity_check.last_notifications.max_by {|n| n[1]}
+          last_notifications =
+            {:problem         => entity_check.last_problem_notification,
+             :recovery        => entity_check.last_recovery_notification,
+             :acknowledgement => entity_check.last_acknowledgement_notification
+            }
+          parts += last_notifications.max_by {|n| n[1]}
         end
       }.compact.sort_by {|parts| parts }
       haml :index
@@ -121,7 +126,12 @@ module Flapjack
           parts << entity_check.last_update
           parts << entity_check.in_unscheduled_maintenance?
           parts << entity_check.in_scheduled_maintenance?
-          parts += entity_check.last_notifications.max_by {|n| n[1]}
+          last_notifications =
+            {:problem         => entity_check.last_problem_notification,
+             :recovery        => entity_check.last_recovery_notification,
+             :acknowledgement => entity_check.last_acknowledgement_notification
+            }
+          parts += last_notifications.max_by {|n| n[1]}
         end
       }.compact.sort_by {|parts| parts}
       haml :index
@@ -139,7 +149,11 @@ module Flapjack
       @check_last_update          = entity_check.last_update
       @check_last_change          = entity_check.last_change
       @check_summary              = entity_check.summary
-      @last_notifications         = entity_check.last_notifications
+      @last_notifications         =
+        {:problem         => entity_check.last_problem_notification,
+         :recovery        => entity_check.last_recovery_notification,
+         :acknowledgement => entity_check.last_acknowledgement_notification
+        }
       @in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
       @in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
       @scheduled_maintenances     = entity_check.scheduled_maintenances

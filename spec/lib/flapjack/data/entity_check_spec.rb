@@ -94,9 +94,34 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       ec.should_not be_in_scheduled_maintenance
     end
 
-    it "creates a scheduled maintenance period"
+    it "creates a scheduled maintenance period for a future time" do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
+        :duration => 30 * 60, :summary => "30 minutes")
 
-    it "removes a scheduled maintenance period"
+      smps = @redis.zrange("#{name}:#{check}:scheduled_maintenances", 0, -1, :with_scores => true)
+      smps.should_not be_nil
+      smps.should be_an(Array)
+      smps.should have(1).scheduled_maintenance_period
+      smps[0].should be_an(Array)
+
+      start_time = smps[0][0]
+      start_time.should_not be_nil
+      start_time.should be_a(String)
+      start_time.should == (t + (60 * 60)).to_s
+
+      score = smps[0][1]
+      score.should_not be_nil
+      score.should be_a(Float)
+      score.should == 30 * 60
+    end
+
+    it "creates a scheduled maintenance period covering the current time"
+
+    it "removes an scheduled maintenance period for a future time"
+
+    it "removes an scheduled maintenance period covering a current time"
 
     it "returns a list of scheduled maintenance periods" do
       t = Time.now.to_i
@@ -236,15 +261,23 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec.should_not be_failed
   end
 
-  it "returns a status hash" do
-
-  end
-
-  it "returns its last notifications"
-
   it "returns a status summary"
 
+  it "returns timestamps for its last notifications" do
+    t = Time.now.to_i
+    @redis.set("#{name}:#{check}:last_problem_notification", t - 30)
+    @redis.set("#{name}:#{check}:last_acknowledgement_notification", t - 15)
+    @redis.set("#{name}:#{check}:last_recovery_notification", t)
+
+    ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+    ec.last_problem_notification.should == t - 30
+    ec.last_acknowledgement_notification.should == t - 15
+    ec.last_recovery_notification.should == t
+  end
+
   it "returns duration of current failure"
+
+  it "returns nil for duration of current failure if not failing"
 
   it "returns time since last problem alert"
 
