@@ -22,15 +22,14 @@ module Flapjack
         if (event.type == 'service') and (event.critical? or event.warning?)
 
           entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @persistence)
-          t = Time.now.to_i
+          current_time = Time.now.to_i
 
           if entity_check.failed?
-            # I think this encapsulates previous logic
-            last_problem = entity_check.last_problem_notification
-            last_change = entity_check.last_change
+            last_problem_alert = entity_check.last_problem_notification
+            last_change        = entity_check.last_change
 
-            current_failure_duration = t - last_change
-            time_since_last_alert = t - last_problem
+            current_failure_duration = current_time - last_change
+            time_since_last_alert    = current_time - last_problem_alert
 
             if (current_failure_duration < failure_delay)
               result = true
