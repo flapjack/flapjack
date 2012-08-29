@@ -10,9 +10,16 @@ module Flapjack
 
     class EntityCheck
 
+      # FIXME: do we add 'up' and 'down' as new constants? (nagios uses these states
+      # for host checks) ...
+      # probably want an array of 'ok' state strings ('ok', 'up') and an array of
+      # 'failure' state strings ('warning', 'critical', 'down')
+      # FIXME: 'acknowledgement' isn't a primary state of a check but rather meta-data
       STATE_OK              = 'ok'
+      STATE_UP              = 'up'
       STATE_WARNING         = 'warning'
       STATE_CRITICAL        = 'critical'
+      STATE_DOWN            = 'down'
       STATE_ACKNOWLEDGEMENT = 'acknowledgement'
       STATE_UNKNOWN         = 'unknown'
 
@@ -57,7 +64,7 @@ module Flapjack
         @redis.exists("#{@key}:scheduled_maintenance")
       end
 
-      # creates an event object and adds it to the events list in redis
+      # creates, or modifies, an event object and adds it to the events list in redis
       #   'type'      => 'service',
       #   'state'     => state,
       #   'summary'   => check_output,
@@ -104,6 +111,24 @@ module Flapjack
         end
         @redis.zadd("#{@key}:unscheduled_maintenances", duration, start_time)
         @redis.set("#{@key}:#{start_time}:unscheduled_maintenance:summary", summary)
+      end
+
+      # ends any unscheduled maintenance
+      def end_unscheduled_maintenance(opts = {})
+        defaults = {
+          :end_time => Time.now.to_i
+        }
+        options  = defaults.merge(opts)
+        end_time = options[:end_time]
+
+        if (um_start = @persistence.get("#{@key}:unscheduled_maintenance"))
+          duration = end_time - um_start.to_i
+          @log.debug("ending unscheduled downtime for #{@key} at #{Time.at(end_time).to_s}")
+          @redis.del("#{@key}:unscheduled_maintenance")
+          @redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start)
+        else
+          @log.debug("end_unscheduled_maintenance called for #{@key} but none found")
+        end
       end
 
       # creates a scheduled maintenance period for a check
@@ -156,10 +181,12 @@ module Flapjack
       end
 
       # should this return STATE_UNKNOWN if nil?
+      # JR: don't think so, we need to check if no previous state
       def state
         @redis.hget("check:#{@key}", 'state')
       end
 
+      # FIXME: is this actually used anywhere? don't think so...
       # FIXME: clientx -- possibly an initialised @client value instead?
       def state=(state = STATE_OK)
         return unless validate_state(state)
@@ -196,7 +223,11 @@ module Flapjack
       end
 
       def failed?
-        ['warning', 'critical'].include?( state )
+        [STATE_WARNING, STATE_CRITICAL, STATE_DOWN].include?( state )
+      end
+
+      def ok?
+        [STATE_OK, STATE_UP].include?( state )
       end
 
       def summary
@@ -212,10 +243,11 @@ module Flapjack
         @entity = entity
         @check = check
         @key = "#{entity.name}:#{check}" if entity && check
+        puts "this EntityCheck initalised to: #{self.inspect}"
       end
 
       def validate_state(state)
-        [STATE_OK, STATE_WARNING, STATE_CRITICAL,
+        [STATE_OK, STATE_UP, STATE_WARNING, STATE_CRITICAL, STATE_DOWN,
          STATE_ACKNOWLEDGEMENT, STATE_UNKNOWN].include?(state)
       end
 

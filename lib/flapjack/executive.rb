@@ -5,6 +5,7 @@ require 'log4r/outputter/fileoutputter'
 
 require 'flapjack'
 require 'flapjack/filters/acknowledgement'
+require 'flapjack/filters/no_previous_state'
 require 'flapjack/filters/ok'
 require 'flapjack/filters/scheduled_maintenance'
 require 'flapjack/filters/unscheduled_maintenance'
@@ -37,6 +38,7 @@ module Flapjack
       # FIXME: Put loading filters into separate method
       options = { :log => @logger, :persistence => @redis }
       @filters = []
+      @filters << Flapjack::Filters::NoPreviousState.new(options)
       @filters << Flapjack::Filters::Ok.new(options)
       @filters << Flapjack::Filters::ScheduledMaintenance.new(options)
       @filters << Flapjack::Filters::UnscheduledMaintenance.new(options)
@@ -107,7 +109,7 @@ module Flapjack
         end
 
         entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
-        entity_check.update_scheduled_maintenance
+        entity_check.update_scheduled_maintenance if entity_check
 
       # Action events represent human or automated interaction with Flapjack
       when 'action'
