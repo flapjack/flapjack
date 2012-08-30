@@ -86,13 +86,10 @@ module Flapjack
         'api'             => Flapjack::API,
         'email_notifier'  => Flapjack::Notification::Email,
         'sms_notifier'    => Flapjack::Notification::Sms,
-        'jabber_notifier' => Flapjack::Notification::Jabber
+        'jabber_gateway'  => Flapjack::Notification::Jabber
       }
 
       EM.synchrony do
-
-        redis_sync = ::Redis.new(@config['redis'].merge(:driver => 'synchrony'))
-        redis_ruby = ::Redis.new(@config['redis'].merge(:driver => 'ruby'))
 
         unless (['email_notifier', 'sms_notifier'] & @config.keys).empty?
           # make Resque a slightly nicer citizen
@@ -108,7 +105,8 @@ module Flapjack
           case pikelet_type
           when 'executive'
             Fiber.new {
-              flapjack_exec = Flapjack::Executive.new(pikelet_cfg.merge(:redis => redis_sync))
+              flapjack_exec = Flapjack::Executive.new(pikelet_cfg.merge(:redis =>
+                ::Redis.new(@config['redis'].merge(:driver => 'synchrony'))))
               @pikelets << flapjack_exec
               flapjack_exec.main
             }.resume
@@ -137,7 +135,8 @@ module Flapjack
             }.resume
           when 'jabber_gateway'
             Fiber.new {
-              flapjack_jabbers = Flapjack::Notification::Jabber.new(:redis => redis_sync,
+              flapjack_jabbers = Flapjack::Notification::Jabber.new(:redis =>
+                ::Redis.new(@config['redis'].merge(:driver => 'synchrony')),
                 :config => pikelet_cfg)
               flapjack_jabbers.main
             }.resume
@@ -149,7 +148,8 @@ module Flapjack
 
             port = 3000 if port.nil? || port <= 0 || port > 65535
 
-            Flapjack::Web.class_variable_set('@@redis', redis_ruby)
+            Flapjack::Web.class_variable_set('@@redis',
+              ::Redis.new(@config['redis'].merge(:driver => 'ruby')))
 
             Thin::Logging.silent = true
 
@@ -164,7 +164,8 @@ module Flapjack
 
             port = 3001 if port.nil? || port <= 0 || port > 65535
 
-            Flapjack::API.class_variable_set('@@redis', redis_ruby)
+            Flapjack::API.class_variable_set('@@redis',
+              ::Redis.new(@config['redis'].merge(:driver => 'ruby')))
 
             Thin::Logging.silent = true
 

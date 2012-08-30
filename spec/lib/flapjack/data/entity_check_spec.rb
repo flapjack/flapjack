@@ -270,18 +270,18 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     @redis.hset("check:#{name}:#{check}", 'state', 'ok')
 
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-    ec.state = 'critical'
+    ec.update_state('critical')
 
     state = @redis.hget("check:#{name}:#{check}", 'state')
     state.should_not be_nil
     state.should == 'critical'
   end
 
-  it "does not update state with invalid date" do
+  it "does not update state with invalid value" do
     @redis.hset("check:#{name}:#{check}", 'state', 'ok')
 
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-    ec.state = 'silly'
+    ec.update_state('silly')
 
     state = @redis.hget("check:#{name}:#{check}", 'state')
     state.should_not be_nil

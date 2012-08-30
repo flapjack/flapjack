@@ -180,25 +180,38 @@ module Flapjack
         @redis.setex("#{@key}:scheduled_maintenance", duration, start_time)
       end
 
-      # should this return STATE_UNKNOWN if nil?
-      # JR: don't think so, we need to check if no previous state
+      # returns nil if no previous state; this must be considered as a possible
+      # state by classes using this model
       def state
         @redis.hget("check:#{@key}", 'state')
       end
 
-      # FIXME: is this actually used anywhere? don't think so...
-      # FIXME: clientx -- possibly an initialised @client value instead?
-      def state=(state = STATE_OK)
+      def update_state(state, options = {})
         return unless validate_state(state)
-        t = Time.now.to_i - (60*60*24)
+        timestamp = options[:timestamp] || Time.now.to_i
+        client = options[:client]
+        summary = options[:summary]
+
+        # Note the current state (for speedy lookups)
         @redis.hset("check:#{@key}", 'state', state)
-        @redis.hset("check:#{@key}", 'last_change', t)
-        if STATE_CRITICAL.eql?(state)
-          @redis.zadd('failed_checks', t, @key)
-          @redis.zadd('failed_checks:client:clientx', t, @key)
-        elsif STATE_OK.eql?(state)
-          @redis.zrem('failed_checks', @key)
-          @redis.zrem('failed_checks:client:clientx', @key)
+
+        # FIXME: rename to last_state_change?
+        @redis.hset("check:#{@key}", 'last_change', timestamp)
+
+        # Retain all state changes for entity:check pair
+        @redis.rpush("#{@key}:states", timestamp)
+        @redis.set("#{@key}:#{timestamp}:state",   state)
+        @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
+
+        case state
+        when STATE_WARNING, STATE_CRITICAL, STATE_DOWN
+          @redis.zadd('failed_checks', timestamp, @key)
+          # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
+          @redis.zadd("failed_checks:client:#{client}", timestamp, @key) if client
+        else
+          @redis.zrem("failed_checks", @key)
+          # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
+          @redis.zrem("failed_checks:client:#{client}", @key) if client
         end
       end
 
@@ -243,7 +256,6 @@ module Flapjack
         @entity = entity
         @check = check
         @key = "#{entity.name}:#{check}" if entity && check
-        puts "this EntityCheck initalised to: #{self.inspect}"
       end
 
       def validate_state(state)

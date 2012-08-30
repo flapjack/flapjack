@@ -48,19 +48,15 @@ def remove_notifications(entity, check)
 end
 
 def set_ok_state(entity, check)
-  event_id = entity + ":" + check
-  @redis.hset("check:" + event_id, 'state', 'ok')
-  @redis.hset("check:" + event_id, 'last_change', (Time.now.to_i - (60*60*24)))
-  @redis.zrem('failed_checks', event_id)
-  @redis.zrem('failed_checks:client:clientx', event_id)
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+  entity_check.update_state(Flapjack::Data::EntityCheck::STATE_OK,
+    :timestamp => (Time.now.to_i - (60*60*24)))
 end
 
 def set_failure_state(entity, check)
-  event_id = entity + ":" + check
-  @redis.hset("check:" + event_id, 'state', 'critical')
-  @redis.hset("check:" + event_id, 'last_change', (Time.now.to_i - (60*60*24)))
-  @redis.zadd('failed_checks', (Time.now.to_i - (60*60*24)), event_id)
-  @redis.zadd('failed_checks:client:clientx', (Time.now.to_i - (60*60*24)), event_id)
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+  entity_check.update_state(Flapjack::Data::EntityCheck::STATE_CRITICAL,
+    :timestamp => (Time.now.to_i - (60*60*24)))
 end
 
 def submit_ok(entity, check)
@@ -160,7 +156,6 @@ Then /^a notification should not be generated for check '([\w\.\-]+)' on entity 
 end
 
 Then /^a notification should be generated for check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
-  drain_events # TODO these should only be in When clauses
   message = @app.logger.messages.find {|m| m =~ /Sending notifications for event/ }
   message.should_not be_nil
 end

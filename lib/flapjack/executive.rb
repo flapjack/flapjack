@@ -62,60 +62,47 @@ module Flapjack
       timestamp = Time.now.to_i
       @redis.hincrby('event_counters', 'all', 1)
 
+      entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
+
+      # FIXME skip if entity_check.nil?
+
+      # FIXME: validate that the event is sane before we ever get here
+      # FIXME: create an event if there is dodgy data
+
       case event.type
       # Service events represent changes in state on monitored systems
       when 'service'
         # Track when we last saw an event for a particular entity:check pair
         @redis.hset("check:" + event.id, 'last_update', timestamp)
+        # TODO entity_check.last_update = timestamp
 
-        @redis.hincrby('event_counters', 'ok', 1)      if (event.ok?)
-        @redis.hincrby('event_counters', 'failure', 1) if (event.failure?)
-
-        old_state = @redis.hget("check:" + event.id, 'state')
-
-        case
-        # If there is a state change, update record with: the time, the new state
-        when event.state != old_state
-          # FIXME: validate that the event is sane before we ever get here
-          # FIXME: create an event if there is dodgy data
-
-          # Note the current state (for speedy lookups)
-          @redis.hset("check:" + event.id, 'state',       event.state)
-          # FIXME: rename to last_state_change?
-          @redis.hset("check:" + event.id, 'last_change', timestamp)
-
-          # Retain all state changes for entity:check pair
-          @redis.rpush("#{event.id}:states", timestamp)
-          @redis.set("#{event.id}:#{timestamp}:state",   event.state)
-          @redis.set("#{event.id}:#{timestamp}:summary", event.summary)
-
-          # If the service event's state is ok and there was no previous state, don't alert.
-          # This stops new checks from alerting as "recovery" after they have been added.
-          result[:skip_filters] = true unless old_state
-
-          case event.state
-          when 'warning', 'critical', 'down'
-            @redis.zadd('failed_checks', timestamp, event.id)
-            # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-            @redis.zadd('failed_checks:client:' + event.client, timestamp, event.id) if event.client
-          else
-            @redis.zrem('failed_checks', event.id)
-            # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-            @redis.zrem('failed_checks:client:' + event.client, event.id) if event.client
-          end
-        # No state change, and event is ok, so no need to run through filters
-        when event.ok?
-          result[:skip_filters] = true
+        if event.ok?
+          @redis.hincrby('event_counters', 'ok', 1)
+        elsif event.failure?
+          @redis.hincrby('event_counters', 'failure', 1)
         end
 
-        entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
-        entity_check.update_scheduled_maintenance if entity_check
+        old_state = entity_check.state
+
+        # If there is a state change, update record with: the time, the new state
+        if event.state != old_state
+          entity_check.update_state(event.state, :timestamp => timestamp,
+            :summary => event.summary, :client => event.client)
+        end
+
+        # No state change, and event is ok, so no need to run through filters
+        # OR
+        # If the service event's state is ok and there was no previous state, don't alert.
+        # This stops new checks from alerting as "recovery" after they have been added.
+        result[:skip_filters] = event.ok? || (!old_state && event.state)
+
+        entity_check.update_scheduled_maintenance
 
       # Action events represent human or automated interaction with Flapjack
       when 'action'
         # When an action event is processed, store the event.
         @redis.hset(event.id + ':actions', timestamp, event.state)
-        @redis.hincrby('event_counters', 'action', 1) if (event.ok?)
+        @redis.hincrby('event_counters', 'action', 1) if event.ok?
       when 'shutdown'
         # should this be logged as an action instead? being minimally invasive for now
         result[:shutdown] = true
