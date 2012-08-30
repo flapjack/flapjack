@@ -121,10 +121,10 @@ module Flapjack
           @redis.hincrby('event_counters', 'failure', 1)
         end
 
-        old_state = entity_check.state
+        event.previous_state = entity_check.state
 
         # If there is a state change, update record with: the time, the new state
-        if event.state != old_state
+        if event.state != event.previous_state
           entity_check.update_state(event.state, :timestamp => timestamp,
             :summary => event.summary, :client => event.client)
         end
@@ -133,7 +133,7 @@ module Flapjack
         # OR
         # If the service event's state is ok and there was no previous state, don't alert.
         # This stops new checks from alerting as "recovery" after they have been added.
-        result[:skip_filters] = event.ok? || (!old_state && event.state)
+        result[:skip_filters] = event.ok? || (!event.previous_state && event.state)
 
         entity_check.update_scheduled_maintenance
 

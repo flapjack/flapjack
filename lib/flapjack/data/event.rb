@@ -57,6 +57,16 @@ module Flapjack
         @attrs['state'] ? s = @attrs['state'].downcase : s = nil
       end
 
+      # query the previous state
+      def previous_state
+        @attrs['previous_state'] ? p = @attrs['previous_state'].downcase : p = nil
+      end
+
+      # allow the event to hold the previous state for use by filters
+      def previous_state=(previous_state)
+        @attrs['previous_state'] = previous_state
+      end
+
       def ok?
         (state == 'ok') or (state == 'up')
       end
