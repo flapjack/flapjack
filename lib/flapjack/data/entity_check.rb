@@ -219,6 +219,10 @@ module Flapjack
         @redis.hget("check:#{@key}", 'last_update').to_i
       end
 
+      def last_update=(timestamp)
+        @redis.hset("check:#{@key}", 'last_update', timestamp)
+      end
+
       def last_change
         @redis.hget("check:#{@key}", 'last_change').to_i
       end

@@ -1,7 +1,8 @@
 #!/usr/bin/env ruby
 
 # This class encapsulates the config data and environmental setup used
-# by the various Flapjack components.
+# by the various Flapjack components. It might be easier to split this out
+# to those classes, as they tend to be doing different things anyway.
 #
 # "In Australia and New Zealand, small pancakes (about 75 mm in diameter) known as pikelets
 # are also eaten. They are traditionally served with jam and/or whipped cream, or solely
@@ -14,14 +15,18 @@ require 'log4r/outputter/syslogoutputter'
 
 module Flapjack
   module Pikelet
-    attr_accessor :bootstrapped, :logger, :config, :should_stop
+    attr_accessor :logger, :config
 
     def bootstrapped?
       !!@bootstrapped
     end
 
+    def should_quit?
+      @should_quit
+    end
+
     def stop
-      @should_stop = true
+      @should_quit = true
     end
 
     def bootstrap(opts = {})
@@ -35,7 +40,7 @@ module Flapjack
 
       @config = opts[:config] || {}
 
-      @should_stop = false
+      @should_quit = false
 
       @bootstrapped = true
     end

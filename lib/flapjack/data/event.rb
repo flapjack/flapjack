@@ -42,6 +42,13 @@ module Flapjack
         opts[:persistence].llen('events')
       end
 
+      def self.shutdown
+        {'type'    => 'shutdown',
+         'host'    => '',
+         'service' => '',
+         'state'   => ''}
+      end
+
       def initialize(attrs={})
         @attrs = attrs
       end

@@ -11,6 +11,7 @@ require 'flapjack/filters/scheduled_maintenance'
 require 'flapjack/filters/unscheduled_maintenance'
 require 'flapjack/filters/detect_mass_client_failures'
 require 'flapjack/filters/delays'
+require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/event'
 require 'flapjack/notification/common'
@@ -57,12 +58,51 @@ module Flapjack
       @redis.hset('event_counters', 'action', 0)
     end
 
-    def update_keys(event)
+    def main
+      @logger.info("Booting main loop.")
+      until should_quit?
+        @logger.info("Waiting for event...")
+        event = Flapjack::Data::Event.next(:persistence => @redis)
+        process_event(event) unless event.nil?
+      end
+      @redis.quit
+      @logger.info("Exiting main loop.")
+    end
+
+  private
+
+    def process_event(event)
+      @logger.debug("#{Flapjack::Data::Event.pending_count(:persistence => @redis)} events waiting on the queue")
+      @logger.debug("Raw event received: #{event.inspect}")
+      @logger.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}, #{Time.at(event.time).to_s}")
+
+      entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
+
+      result       = update_keys(event, entity_check)
+      return if result[:shutdown]
+      skip_filters = result[:skip_filters]
+
+      blocker = @filters.find {|filter| filter.block?(event) } unless skip_filters
+
+      if not blocker and not skip_filters
+        @logger.info("#{Time.now}: Sending notifications for event #{event.id}")
+        generate_notification(event, entity_check)
+      elsif blocker
+        blocker_names = [ blocker.name ]
+        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
+      else
+        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because state is ok with no change, or no prior state")
+      end
+    end
+
+    def add_shutdown_event
+      @redis.rpush('events', JSON.generate(Flapjack::Data::Event.shutdown))
+    end
+
+    def update_keys(event, entity_check)
       result    = { :skip_filters => false }
       timestamp = Time.now.to_i
       @redis.hincrby('event_counters', 'all', 1)
-
-      entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
 
       # FIXME skip if entity_check.nil?
 
@@ -73,8 +113,7 @@ module Flapjack
       # Service events represent changes in state on monitored systems
       when 'service'
         # Track when we last saw an event for a particular entity:check pair
-        @redis.hset("check:" + event.id, 'last_update', timestamp)
-        # TODO entity_check.last_update = timestamp
+        entity_check.last_update = timestamp
 
         if event.ok?
           @redis.hincrby('event_counters', 'ok', 1)
@@ -114,7 +153,7 @@ module Flapjack
     # takes an event for which a notification needs to be generated, works out the type of
     # notification, updates the notification history in redis, calls other methods to work out who
     # to notify, by what method, and finally to have the notifications sent
-    def generate_notification(event)
+    def generate_notification(event, entity_check)
       timestamp = Time.now.to_i
       notification_type = 'unknown'
       case event.type
@@ -135,47 +174,8 @@ module Flapjack
       @redis.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
       @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}.")
 
-      send_notifications(event, notification_type, contacts_for_check(event.id))
-    end
-
-    # takes a check, looks up contacts that are interested in this check (or in the check's entity)
-    # and returns an array of contact ids
-    # eg
-    #   contacts_for_check("clientx:checky") -> [ '2', '534' ]
-    #
-    def contacts_for_check(check)
-      entity = check.split(':').first
-      entity_id = @redis.get("entity_id:#{entity}")
-      if entity_id
-        check = entity_id.to_s + ":" + check.split(':').last
-        @logger.debug("contacts for #{entity_id} (#{entity}): " + @redis.smembers("contacts_for:#{entity_id}").length.to_s)
-        @logger.debug("contacts for #{check}: " + @redis.smembers("contacts_for:#{check}").length.to_s)
-        union = @redis.sunion("contacts_for:#{entity_id}", "contacts_for:#{check}")
-        @logger.debug("contacts for union of #{entity_id} and #{check}: " + union.length.to_s)
-        union
-      else
-        @logger.debug("entity [#{entity}] has no contacts")
-        []
-      end
-    end
-
-    # takes a contact ID and returns a hash containing each of the media the contact wishes to be
-    # contacted by, and the associated address for each.
-    # eg:
-    #   media_for_contact('123') -> { :sms => "+61401234567", :email => "gno@free.dom" }
-    #
-    def media_for_contact(contact)
-      @redis.hgetall("contact_media:#{contact}")
-    end
-
-    # generates a fairly unique identifier to use as a message id
-    def fuid
-      fuid = self.object_id.to_i.to_s + '-' + Time.now.to_i.to_s + '.' + Time.now.tv_usec.to_s
-    end
-
-    # puts a notification into the jabber queue (redis list)
-    def submit_jabber(notification)
-      @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(notification))
+      send_notifications(event, notification_type,
+                         Flapjack::Data::Contact.find_all_for_entity_check(entity_check, :redis => @redis))
     end
 
     # takes an event, a notification type, and an array of contacts and creates jobs in resque
@@ -213,7 +213,8 @@ module Flapjack
           when "email"
             Resque.enqueue_to(@queues[:email], Notification::Email, notif)
           when "jabber"
-            submit_jabber(notif)
+            # puts a notification into the jabber queue (redis list)
+            @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(notification))
           end
         }
         if media.length == 0
@@ -225,45 +226,19 @@ module Flapjack
       end
     end
 
-    def process_event(event)
-      @logger.debug("#{Flapjack::Data::Event.pending_count(:persistence => @redis)} events waiting on the queue")
-      @logger.debug("Raw event received: #{event.inspect}")
-      @logger.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}, #{Time.at(event.time).to_s}")
-
-      result       = update_keys(event)
-      return if result[:shutdown]
-      skip_filters = result[:skip_filters]
-
-      blocker = @filters.find {|filter| filter.block?(event) } unless skip_filters
-
-      if not blocker and not skip_filters
-        @logger.info("#{Time.now}: Sending notifications for event #{event.id}")
-        generate_notification(event)
-      elsif blocker
-        blocker_names = [ blocker.name ]
-        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
-      else
-        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because state is ok with no change, or no prior state")
-      end
+    # takes a contact ID and returns a hash containing each of the media the contact wishes to be
+    # contacted by, and the associated address for each.
+    # eg:
+    #   media_for_contact('123') -> { :sms => "+61401234567", :email => "gno@free.dom" }
+    #
+    def media_for_contact(contact)
+      @redis.hgetall("contact_media:#{contact}")
     end
 
-    def add_shutdown_event
-      event = {'type'    => 'shutdown',
-               'host'    => '',
-               'service' => '',
-               'state'   => ''}
-      @redis.rpush('events', Yajl::Encoder.encode(event))
+    # generates a fairly unique identifier to use as a message id
+    def fuid
+      fuid = self.object_id.to_i.to_s + '-' + Time.now.to_i.to_s + '.' + Time.now.tv_usec.to_s
     end
 
-    def main
-      @logger.info("Booting main loop.")
-      until @should_stop
-        @logger.info("Waiting for event...")
-        event = Flapjack::Data::Event.next(:persistence => @redis)
-        process_event(event) unless event.nil?
-      end
-      @redis.quit
-      @logger.info("Exiting main loop.")
-    end
   end
 end

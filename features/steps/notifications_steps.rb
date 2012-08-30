@@ -66,7 +66,8 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity|
                                     'summary' => '100% packet loss',
                                     'entity'  => entity,
                                     'check'   => 'ping')
-  @app.generate_notification(event)
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, 'ping', :redis => @redis)
+  @app.send(:generate_notification, event, entity_check)
 end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
