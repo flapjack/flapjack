@@ -88,7 +88,11 @@ Feature: events
 
   Scenario: Check failed to ok
     Given check 'abc' for entity 'def' is in a failure state
-    When  an ok event is received for check 'abc' on entity 'def'
+    And   5 minutes passes
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
+    When  5 minutes passes
+    And   an ok event is received for check 'abc' on entity 'def'
     Then  a notification should be generated for check 'abc' on entity 'def'
 
   @time

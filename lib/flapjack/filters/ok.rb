@@ -15,19 +15,13 @@ module Flapjack
         result = false
 
         if event.ok?
-          opts = { :redis => @persistence }
-          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, opts)
-
-          if entity_check
-            if entity_check.ok?
-              @log.debug("Filter: Ok: existing state was ok, and the previous state was ok, so blocking")
-              result = true
-            end
-
-            # end any unscheduled downtime
-            entity_check.end_unscheduled_maintenance
+          if event.previous_state == 'ok'
+          @log.debug("Filter: Ok: existing state was ok, and the previous state was ok, so blocking")
+          result = true
           end
 
+          # end any unscheduled downtime
+          entity_check.end_unscheduled_maintenance
         end
 
         @log.debug("Filter: Ok: #{result ? "block" : "pass"}")
