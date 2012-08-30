@@ -10,17 +10,10 @@ module Flapjack
 
     class EntityCheck
 
-      # FIXME: do we add 'up' and 'down' as new constants? (nagios uses these states
-      # for host checks) ...
-      # probably want an array of 'ok' state strings ('ok', 'up') and an array of
-      # 'failure' state strings ('warning', 'critical', 'down')
       # FIXME: 'acknowledgement' isn't a primary state of a check but rather meta-data
       STATE_OK              = 'ok'
-      STATE_UP              = 'up'
       STATE_WARNING         = 'warning'
       STATE_CRITICAL        = 'critical'
-      STATE_DOWN            = 'down'
-      STATE_ACKNOWLEDGEMENT = 'acknowledgement'
       STATE_UNKNOWN         = 'unknown'
 
       attr_accessor :entity, :check
@@ -236,11 +229,11 @@ module Flapjack
       end
 
       def failed?
-        [STATE_WARNING, STATE_CRITICAL, STATE_DOWN].include?( state )
+        [STATE_WARNING, STATE_CRITICAL].include?( state )
       end
 
       def ok?
-        [STATE_OK, STATE_UP].include?( state )
+        [STATE_OK].include?( state )
       end
 
       def summary
@@ -259,8 +252,7 @@ module Flapjack
       end
 
       def validate_state(state)
-        [STATE_OK, STATE_UP, STATE_WARNING, STATE_CRITICAL, STATE_DOWN,
-         STATE_ACKNOWLEDGEMENT, STATE_UNKNOWN].include?(state)
+        [STATE_OK, STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN].include?(state)
       end
 
       def maintenances(opts = {})

@@ -28,6 +28,10 @@ module Flapjack
     def initialize(config = {})
       @config = config
       @pikelets = []
+
+      @logger = Log4r::Logger.new("flapjack-coordinator")
+      @logger.add(Log4r::StdoutOutputter.new("flapjack-coordinator"))
+      @logger.add(Log4r::SyslogOutputter.new("flapjack-coordinator"))
     end
 
     def start(options = {})
@@ -91,6 +95,7 @@ module Flapjack
 
       EM.synchrony do
 
+        @logger.debug "config keys: #{@config.keys}"
         unless (['email_notifier', 'sms_notifier'] & @config.keys).empty?
           # make Resque a slightly nicer citizen
           require 'flapjack/resque_patches'
@@ -100,8 +105,8 @@ module Flapjack
 
         @config.keys.each do |pikelet_type|
           next unless pikelet_types.has_key?(pikelet_type)
+          @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet(s)"
           pikelet_cfg = @config[pikelet_type]
-
           case pikelet_type
           when 'executive'
             Fiber.new {
@@ -110,6 +115,7 @@ module Flapjack
               @pikelets << flapjack_exec
               flapjack_exec.main
             }.resume
+            @logger.debug "new fiber created for #{pikelet_type}"
           when 'email_notifier', 'sms_notifier'
 
             # See https://github.com/mikel/mail/blob/master/lib/mail/mail.rb#L53
@@ -133,6 +139,7 @@ module Flapjack
               @pikelets << flapjack_rsq
               flapjack_rsq.work(0.1)
             }.resume
+            @logger.debug "new fiber created for #{pikelet_type}"
           when 'jabber_gateway'
             Fiber.new {
               flapjack_jabbers = Flapjack::Notification::Jabber.new(:redis =>
@@ -140,6 +147,7 @@ module Flapjack
                 :config => pikelet_cfg)
               flapjack_jabbers.main
             }.resume
+            @logger.debug "new fiber created for #{pikelet_type}"
           when 'web'
             port = nil
             if pikelet_cfg['port']
@@ -156,6 +164,7 @@ module Flapjack
             web = Thin::Server.new('0.0.0.0', port, Flapjack::Web, :signals => false)
             @pikelets << web
             web.start
+            @logger.debug "new thin server instance started for #{pikelet_type}"
           when 'api'
             port = nil
             if pikelet_cfg['port']
@@ -172,6 +181,7 @@ module Flapjack
             api = Thin::Server.new('0.0.0.0', port, Flapjack::API, :signals => false)
             @pikelets << api
             api.start
+            @logger.debug "new thin server instance started for #{pikelet_type}"
           end
 
         end
