@@ -19,30 +19,26 @@ module Flapjack
       attr_accessor :entity, :check
 
       def self.for_event_id(event_id, options = {})
-        redis = options[:redis]
+        raise "Redis connection not set" unless redis = options[:redis]
         entity_name, check = event_id.split(':')
-        entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
-        return nil unless entity && entity.is_a?(Flapjack::Data::Entity)
-        self.new(entity, check, :redis => redis)
+        self.new(Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis, :create => true), check,
+          :redis => redis)
       end
 
       def self.for_entity_name(entity_name, check, options = {})
-        redis = options[:redis]
-        entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
-        return nil unless entity && entity.is_a?(Flapjack::Data::Entity)
-        self.new(entity, check, :redis => redis)
+        raise "Redis connection not set" unless redis = options[:redis]
+        self.new(Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis, :create => true), check,
+          :redis => redis)
       end
 
       def self.for_entity_id(entity_id, check, options = {})
-        redis = options[:redis]
-        entity = Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis)
-        return nil unless entity && entity.is_a?(Flapjack::Data::Entity)
-        self.new(entity, check, :redis => redis)
+        raise "Redis connection not set" unless redis = options[:redis]
+        self.new(Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis), check,
+          :redis => redis)
       end
 
       def self.for_entity(entity, check, options = {})
-        redis = options[:redis]
-        return nil unless entity && entity.is_a?(Flapjack::Data::Entity)
+        raise "Redis connection not set" unless redis = options[:redis]
         self.new(entity, check, :redis => redis)
       end
 
@@ -250,9 +246,9 @@ module Flapjack
       # Passing around the redis handle like this is a SMELL.
       def initialize(entity, check, options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
-        @entity = entity
-        @check = check
-        @key = "#{entity.name}:#{check}" if entity && check
+        raise "Invalid entity" unless @entity = entity
+        raise "Invalid check" unless @check = check
+        @key = "#{entity.name}:#{check}"
       end
 
       def validate_state(state)

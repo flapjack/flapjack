@@ -60,8 +60,9 @@ describe Flapjack::Data::EntityCheck, :redis => true do
   end
 
   it "is not created for a missing entity" do
-    ec = Flapjack::Data::EntityCheck.for_entity(nil, 'ping', :redis => @redis)
-    ec.should be_nil
+    expect {
+      Flapjack::Data::EntityCheck.for_entity(nil, 'ping', :redis => @redis)
+    }.to raise_error
   end
 
   it "raises an error if not created with a redis connection handle" do

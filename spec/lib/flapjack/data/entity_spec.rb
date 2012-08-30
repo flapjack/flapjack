@@ -10,6 +10,14 @@ describe Flapjack::Data::Entity, :redis => true do
 
   it "finds an entity by name"
 
+  it "creates an entity if allowed when it can't find it" do
+    entity = Flapjack::Data::Entity.find_by_name(name, :redis => @redis, :create => true)
+
+    entity.should_not be_nil
+    entity.name.should == name
+    @redis.get("entity_id:#{name}").should == ''
+  end
+
   it "finds an entity by id"
 
   it "returns a list of all entities" do

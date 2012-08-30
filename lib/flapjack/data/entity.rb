@@ -18,26 +18,41 @@ module Flapjack
 
       def self.add(entity, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
+        raise "Entity name not provided" unless entity['name'] && !entity['name'].empty?
         redis.multi
-        existing_name = redis.hget("entity:#{entity['id']}", 'name')
-        redis.del("entity_id:#{existing_name}") unless existing_name == entity['name']
-        redis.set("entity_id:#{entity['name']}", entity['id'])
-        redis.hset("entity:#{entity['id']}", 'name', entity['name'])
 
-        redis.del("contacts_for:#{entity['id']}")
-        if entity['contacts'] && entity['contacts'].respond_to?(:each)
-          entity['contacts'].each {|contact|
-            redis.sadd("contacts_for:#{entity['id']}", contact)
-          }
+        if entity['id']
+          existing_name = redis.hget("entity:#{entity['id']}", 'name')
+          redis.del("entity_id:#{existing_name}") unless existing_name == entity['name']
+          redis.set("entity_id:#{entity['name']}", entity['id'])
+          redis.hset("entity:#{entity['id']}", 'name', entity['name'])
+
+          redis.del("contacts_for:#{entity['id']}")
+          if entity['contacts'] && entity['contacts'].respond_to?(:each)
+            entity['contacts'].each {|contact|
+              redis.sadd("contacts_for:#{entity['id']}", contact)
+            }
+          end
+        else
+          # empty string is the redis equivalent of a Ruby nil, i.e. key with
+          # no value
+          redis.set("entity_id:#{entity['name']}", '')
         end
+
         redis.exec
       end
 
       def self.find_by_name(entity_name, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         entity_id = redis.get("entity_id:#{entity_name}")
-        return if entity_id.nil? || (entity_id.to_i == 0)
-        self.new(:name => entity_name, :id => entity_id.to_i, :redis => redis)
+        if entity_id.nil?
+          # key doesn't exist
+          return unless options[:create]
+          self.add({'name' => entity_name}, :redis => redis)
+        end
+        self.new(:name => entity_name,
+                 :id => (entity_id.nil? || entity_id.empty?) ? nil : entity_id.to_i,
+                 :redis => redis)
       end
 
       def self.find_by_id(entity_id, options = {})
@@ -64,7 +79,7 @@ module Flapjack
       def initialize(options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
         raise "Entity name not set" unless @name = options[:name]
-        raise "Entity id not set" unless @id = options[:id]
+        @id = options[:id]
         @logger = options[:logger]
       end
 

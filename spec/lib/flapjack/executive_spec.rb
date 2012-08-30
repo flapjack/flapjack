@@ -4,7 +4,7 @@ require 'flapjack/executive'
 describe Flapjack::Executive, :redis => true do
 
   # NB: this is only testing the public API of the Executive class, which is pretty limited.
-  # Most test coverage for this class comes from the cucumber features.
+  # (initialize, main, stop). Most test coverage for this class comes from the cucumber features.
 
   it "is initialised with default settings" do
     t = Time.now.to_i
@@ -33,8 +33,8 @@ describe Flapjack::Executive, :redis => true do
 
   it "shuts down when provided with a shutdown event" do
     shutdown_evt = mock(Flapjack::Data::Event)
-    shutdown_evt.should_receive(:id).twice.and_return('-:-')
-    shutdown_evt.should_receive(:type).twice.and_return('shutdown')
+    shutdown_evt.should_receive(:id).and_return('-:-')
+    shutdown_evt.should_receive(:type).exactly(3).times.and_return('shutdown')
     shutdown_evt.should_receive(:state).and_return(nil)
     shutdown_evt.should_receive(:summary).and_return(nil)
     shutdown_evt.should_receive(:time).and_return(Time.now)

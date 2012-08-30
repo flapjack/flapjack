@@ -76,7 +76,8 @@ module Flapjack
       @logger.debug("Raw event received: #{event.inspect}")
       @logger.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}, #{Time.at(event.time).to_s}")
 
-      entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
+      entity_check = (event.type == 'shutdown') ? nil :
+                       Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
 
       result       = update_keys(event, entity_check)
       return if result[:shutdown]
