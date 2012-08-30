@@ -197,7 +197,7 @@ module Flapjack
         @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
 
         case state
-        when STATE_WARNING, STATE_CRITICAL, STATE_DOWN
+        when STATE_WARNING, STATE_CRITICAL
           @redis.zadd('failed_checks', timestamp, @key)
           # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
           @redis.zadd("failed_checks:client:#{client}", timestamp, @key) if client
