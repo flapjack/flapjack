@@ -121,13 +121,13 @@ module Flapjack
         options  = defaults.merge(opts)
         end_time = options[:end_time]
 
-        if (um_start = @persistence.get("#{@key}:unscheduled_maintenance"))
+        if (um_start = @redis.get("#{@key}:unscheduled_maintenance"))
           duration = end_time - um_start.to_i
-          @log.debug("ending unscheduled downtime for #{@key} at #{Time.at(end_time).to_s}")
+          @logger.debug("ending unscheduled downtime for #{@key} at #{Time.at(end_time).to_s}") if @logger
           @redis.del("#{@key}:unscheduled_maintenance")
           @redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start)
         else
-          @log.debug("end_unscheduled_maintenance called for #{@key} but none found")
+          @logger.debug("end_unscheduled_maintenance called for #{@key} but none found") if @logger
         end
       end
 
