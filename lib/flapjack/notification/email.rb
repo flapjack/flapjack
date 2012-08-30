@@ -90,7 +90,7 @@ module Flapjack
 
           html_part do
             engine = Haml::Engine.new(File.read(File.dirname(__FILE__) +
-          '/flapjack_mailer/sender.html.haml'))
+              '/flapjack_mailer/sender.html.haml'))
             engine.render(mail_scope)
           end
         end

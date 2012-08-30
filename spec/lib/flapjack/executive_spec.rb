@@ -9,7 +9,6 @@ describe Flapjack::Executive, :redis => true do
   it "is initialised with default settings" do
     t = Time.now.to_i
 
-    Flapjack::Filters::NoPreviousState.should_receive(:new)
     Flapjack::Filters::Ok.should_receive(:new)
     Flapjack::Filters::ScheduledMaintenance.should_receive(:new)
     Flapjack::Filters::UnscheduledMaintenance.should_receive(:new)

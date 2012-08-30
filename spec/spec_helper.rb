@@ -40,4 +40,5 @@ RSpec.configure do |config|
     @redis.quit
   end
 
+  config.include Rack::Test::Methods, :sinatra => true
 end

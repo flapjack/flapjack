@@ -6,6 +6,7 @@ group :test do
   gem 'rspec'
   gem 'cucumber'
   gem 'delorean'
+  gem 'rack-test'
   gem 'resque_spec'
   gem 'webmock'
   gem 'guard'
