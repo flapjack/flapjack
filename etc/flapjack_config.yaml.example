@@ -29,6 +29,8 @@ development:
     port: 5080
   api:
     port: 5081
+  nagios_receiver:
+    redis_host: "redis.domain.tld"
 
 test:
   redis:
