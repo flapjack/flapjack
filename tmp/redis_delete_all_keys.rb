@@ -4,6 +4,6 @@ $: << File.dirname(__FILE__) + '/../lib' unless $:.include?(File.dirname(__FILE_
 
 require 'redis'
 
-@persistence = Redis.new
+@persistence = Redis.new(:db => 0)
 keys = @persistence.keys '*'
 @persistence.del(*keys)

@@ -33,6 +33,7 @@ module Flapjack
       def initialize(opts = {})
         # TODO: create a logger named jabber
         self.bootstrap
+        @redis  = opts[:redis]
         @config = opts[:config].dup
         @logger.debug("New Jabber pikelet with the following options: #{opts.inspect}")
         @hostname = Socket.gethostname
@@ -112,14 +113,13 @@ module Flapjack
           queues = [@config['queue']]
           events = {}
           EM::Synchrony::FiberIterator.new(queues, queues.length).each do |queue|
-            redis = ::Redis.new(:driver => :synchrony)
             @logger.debug("kicking off a fiber for #{queue}")
             EM::Synchrony.sleep(1)
             happy = true
             while happy
               if jabber_connected
                 @logger.debug("jabber is connected so commencing blpop on #{queue}")
-                events[queue] = redis.blpop(queue)
+                events[queue] = @redis.blpop(queue)
                 event         = Yajl::Parser.parse(events[queue][1])
                 type          = event['notification_type']
                 entity, check = event['event_id'].split(':')

@@ -21,9 +21,10 @@ else
 end
 config_env = config[FLAPJACK_ENV]
 puts config_env.inspect
-@redis_host = config_env['nagios_receiver']['redis_host'] || 'localhost'
-@redis_port = config_env['nagios_receiver']['redis_port'] || '6379'
-@redis_path = config_env['nagios_receiver']['redis_path'] || nil
+@redis_host     = config_env['nagios_receiver']['redis_host'] || 'localhost'
+@redis_port     = config_env['nagios_receiver']['redis_port'] || '6379'
+@redis_path     = config_env['nagios_receiver']['redis_path'] || nil
+@redis_db       = config_env['nagios_receiver']['redis_db']   || 0
 
 if config_env.nil? || config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}'"
@@ -38,9 +39,9 @@ end
 def process_input
 
   if @redis_path
-    redis = Redis.new(:path => @redis_path)
+    redis = Redis.new(:db => @redis_db, :path => @redis_path)
   else
-    redis = Redis.new(:host => @redis_host, :port => @redis_port)
+    redis = Redis.new(:db => @redis_db, :host => @redis_host, :port => @redis_port)
   end
 
   begin
