@@ -156,8 +156,8 @@ module Flapjack
          :recovery        => entity_check.last_recovery_notification,
          :acknowledgement => entity_check.last_acknowledgement_notification
         }
-      @in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
-      @in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
+      @in_scheduled_maintenance   = entity_check.in_scheduled_maintenance?
+      @in_unscheduled_maintenance = entity_check.in_unscheduled_maintenance?
       @scheduled_maintenances     = entity_check.scheduled_maintenances
 
       haml :check
