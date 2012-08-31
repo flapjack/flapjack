@@ -30,14 +30,18 @@ module Flapjack
 
             current_failure_duration = current_time - last_change
             time_since_last_alert    = current_time - last_problem_alert
-
+            @log.debug("Filter: Delays: last_problem_alert: #{last_problem_alert.to_s}, last_change: #{last_change.to_s}, current_failure_duration: #{current_failure_duration}, time_since_last_alert: #{time_since_last_alert.to_s}")
             if (current_failure_duration < failure_delay)
               result = true
               @log.debug("Filter: Delays: blocking because duration of current failure (#{current_failure_duration}) is less than failure_delay (#{failure_delay})")
-            elsif (time_since_last_alert > current_failure_duration) && (time_since_last_alert < resend_delay)
+            elsif time_since_last_alert < resend_delay
               result = true
               @log.debug("Filter: Delays: blocking because time since last alert for current problem (#{time_since_last_alert}) is less than resend_delay (#{resend_delay})")
+            else
+              @log.debug("Filter: Delays: not blocking because neither of the time comparison conditions were met")
             end
+          else
+            @log.debug("Filter: Delays: entity_check.failed? returned false ...")
           end
         end
 

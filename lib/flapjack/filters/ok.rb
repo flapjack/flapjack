@@ -21,6 +21,7 @@ module Flapjack
           end
 
           # end any unscheduled downtime
+          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, {:redis => @persistence})
           entity_check.end_unscheduled_maintenance
         end
 
