@@ -138,12 +138,7 @@ When /^a failure event is received for check '([\w\.\-]+)' on entity '([\w\.\-]+
   drain_events
 end
 
-When /^an acknowledgement is received for check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
-  submit_acknowledgement(entity, check)
-  drain_events
-end
-
-When /^an acknowledgement event is received for check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
+When /^an acknowledgement .*is received for check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
   submit_acknowledgement(entity, check)
   drain_events
 end
@@ -151,13 +146,15 @@ end
 
 # TODO logging is a side-effect, should test for notification generation itself
 Then /^a notification should not be generated for check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
-  message = @app.logger.messages.find {|m| m =~ /Not sending notifications for event/ }
-  message.should_not be_nil
+  message = @app.logger.messages.find_all {|m| m =~ /ending notifications for event #{entity}:#{check}/ }.last
+  message ? happy = message.match(/Not sending notifications/) : happy = false
+  happy.should be_true
 end
 
 Then /^a notification should be generated for check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
-  message = @app.logger.messages.find {|m| m =~ /Sending notifications for event/ }
-  message.should_not be_nil
+  message = @app.logger.messages.find_all {|m| m =~ /ending notifications for event #{entity}:#{check}/ }.last
+  message ? happy = message.match(/Sending notifications/) : happy = false
+  happy.should be_true
 end
 
 Then /^show me the notifications?$/ do
