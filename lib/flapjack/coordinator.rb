@@ -93,6 +93,8 @@ module Flapjack
         'jabber_gateway'  => Flapjack::Notification::Jabber
       }
 
+      # FIXME: the following is currently repeated in flapjack-populator and
+      # flapjack-nagios-receiver - move to a method in a module and include it
       redis_host = @config['redis']['host'] || '127.0.0.1'
       redis_port = @config['redis']['port'] || 6379
       redis_path = @config['redis']['path'] || nil

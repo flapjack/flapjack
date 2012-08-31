@@ -33,6 +33,8 @@ development:
     port: 5081
   nagios_receiver:
     redis_host: "redis.domain.tld"
+    redis_port: 6379
+    redis_db: 13
 
 test:
   redis:
