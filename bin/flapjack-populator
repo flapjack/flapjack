@@ -45,7 +45,6 @@ def get_redis_connection
   else
     redis = Redis.new(:db => @redis_db, :host => @redis_host, :port => @redis_port)
   end
-  redis.select(@redis_database)
   redis
 end
 
