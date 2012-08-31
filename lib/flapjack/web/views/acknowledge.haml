@@ -42,7 +42,9 @@
   %body
     %div#wrapper
       %p
-        %a(title='Dashboard' href='/') Dashboard
+        %a(title='Dashboard' href='/') All Checks
+        |
+        %a(title='Dashboard' href='/failing') Failing Checks
       - if @acknowledge_success
         %h1
           %a(href="/check?entity=#{@entity}&check=#{@check}") #{@check} on #{@entity}

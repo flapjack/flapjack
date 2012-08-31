@@ -60,8 +60,7 @@ module Flapjack
     def self_stats
       @keys = @@redis.keys '*'
       @count_failing_checks  = @@redis.zcard 'failed_checks'
-      @count_all_checks      = 'heaps' # FIXME: rename ENTITY:CHECK to check:ENTITY:CHECK so we can glob them here,
-                                       # or create a set to index all checks
+      @count_all_checks      = @@redis.keys('check:*:*').length
       @event_counter_all     = @@redis.hget('event_counters', 'all')
       @event_counter_ok      = @@redis.hget('event_counters', 'ok')
       @event_counter_failure = @@redis.hget('event_counters', 'failure')
