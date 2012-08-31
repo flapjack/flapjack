@@ -4,7 +4,9 @@ development:
   pid_file: tmp/pids/flapjack.pid
   log_file: log/flapjack.log
   redis:
-    database: 13
+    host: 127.0.0.1
+    port: 6379
+    db: 13
   executive:
     email_queue: email_notifications
     sms_queue: sms_notifications
