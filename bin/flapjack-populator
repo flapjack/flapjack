@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 
 require 'yajl'
-require 'beanstalk-client'
 require 'redis'
 
 command = ARGV[0]
@@ -13,6 +12,41 @@ raise ArgumentError, "required option 'from' not supplied" unless options["from"
 filename = options["from"]
 file     = File.new(filename)
 parser   = Yajl::Parser.new
+
+# config file reading stuff ...
+# FIXME: move this into somewhere reusable
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+config_file = File.join('etc', 'flapjack_config.yaml')
+if File.file?(config_file)
+  config = YAML::load(File.open(config_file))
+else
+  puts "Could not find 'etc/flapjack_config.yaml'"
+  exit(false)
+end
+config_env = config[FLAPJACK_ENV]
+@redis_host = config_env['redis']['host'] || 'localhost'
+@redis_port = config_env['redis']['port'] || '6379'
+@redis_path = config_env['redis']['path'] || nil
+@redis_db   = config_env['redis']['db']   || 0
+
+if config_env.nil? || config_env.empty?
+    puts "No config data for environment '#{FLAPJACK_ENV}'"
+      exit(false)
+end
+
+# add lib to the default include path
+unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+  $: << File.dirname(__FILE__) + '/../lib'
+end
+
+def get_redis_connection
+  if @redis_path
+    redis = Redis.new(:db => @redis_db, :path => @redis_path)
+  else
+    redis = Redis.new(:db => @redis_db, :host => @redis_host, :port => @redis_port)
+  end
+  redis
+end
 
 case command
 when "deploy"
@@ -30,7 +64,7 @@ when "deploy"
   puts "Deployed batch #{batch_id}"
 
 when "import-contacts"
-  @persistence = Redis.new
+  @persistence = get_redis_connection
   contacts = parser.parse(file)
   contacts.each {|contact|
     if not contact['id']
@@ -50,7 +84,7 @@ when "import-contacts"
   }
 
 when "import-entities"
-  @persistence = Redis.new
+  @persistence = get_redis_connection
   entities = parser.parse(file)
   entities.each {|entity|
     if not entity['id']

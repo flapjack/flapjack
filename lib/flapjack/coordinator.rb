@@ -93,6 +93,19 @@ module Flapjack
         'jabber_gateway'  => Flapjack::Notification::Jabber
       }
 
+      # FIXME: the following is currently repeated in flapjack-populator and
+      # flapjack-nagios-receiver - move to a method in a module and include it
+      redis_host = @config['redis']['host'] || '127.0.0.1'
+      redis_port = @config['redis']['port'] || 6379
+      redis_path = @config['redis']['path'] || nil
+      redis_db   = @config['redis']['db']   || 0
+
+      if redis_path
+        redis_options = { :db => redis_db, :path => redis_path }
+      else
+        redis_options = { :db => redis_db, :host => redis_host, :port => redis_port }
+      end
+
       EM.synchrony do
 
         @logger.debug "config keys: #{@config.keys}"
@@ -100,7 +113,7 @@ module Flapjack
           # make Resque a slightly nicer citizen
           require 'flapjack/resque_patches'
           # set up connection pooling, stop resque errors
-          EM::Resque.initialize_redis(::Redis.new(@config['redis']))
+          EM::Resque.initialize_redis(::Redis.new(redis_options))
         end
 
         @config.keys.each do |pikelet_type|
@@ -111,7 +124,7 @@ module Flapjack
           when 'executive'
             Fiber.new {
               flapjack_exec = Flapjack::Executive.new(pikelet_cfg.merge(:redis =>
-                ::Redis.new(@config['redis'].merge(:driver => 'synchrony'))))
+                ::Redis.new(redis_options.merge(:driver => 'synchrony'))))
               @pikelets << flapjack_exec
               flapjack_exec.main
             }.resume
@@ -143,7 +156,7 @@ module Flapjack
           when 'jabber_gateway'
             Fiber.new {
               flapjack_jabbers = Flapjack::Notification::Jabber.new(:redis =>
-                ::Redis.new(@config['redis'].merge(:driver => 'synchrony')),
+                ::Redis.new(redis_options.merge(:driver => 'synchrony')),
                 :config => pikelet_cfg)
               flapjack_jabbers.main
             }.resume
@@ -157,7 +170,7 @@ module Flapjack
             port = 3000 if port.nil? || port <= 0 || port > 65535
 
             Flapjack::Web.class_variable_set('@@redis',
-              ::Redis.new(@config['redis'].merge(:driver => 'ruby')))
+              ::Redis.new(redis_options.merge(:driver => 'ruby')))
 
             Thin::Logging.silent = true
 
@@ -174,7 +187,7 @@ module Flapjack
             port = 3001 if port.nil? || port <= 0 || port > 65535
 
             Flapjack::API.class_variable_set('@@redis',
-              ::Redis.new(@config['redis'].merge(:driver => 'ruby')))
+              ::Redis.new(redis_options.merge(:driver => 'ruby')))
 
             Thin::Logging.silent = true
 

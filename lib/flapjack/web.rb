@@ -94,9 +94,9 @@ module Flapjack
         else
           entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
             parts[1], :redis => @@redis)
-          parts << entity_check.state
-          parts << entity_check.last_change
-          parts << entity_check.last_update
+          parts << ( entity_check.state || '-' )
+          parts << ( entity_check.last_change || '-' )
+          parts << ( entity_check.last_update || '-' )
           parts << entity_check.in_unscheduled_maintenance?
           parts << entity_check.in_scheduled_maintenance?
           last_notifications =

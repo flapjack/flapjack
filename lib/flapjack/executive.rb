@@ -27,6 +27,8 @@ module Flapjack
       bootstrap(opts)
 
       @redis = opts[:redis]
+      redis_client_status = @redis.client
+      @logger.debug("Flapjack::Executive.initialize: @redis client status: " + redis_client_status.inspect)
 
       @queues = {:email  =>  opts['email_queue'] || 'email_notifications',
                  :sms    =>    opts['sms_queue'] || 'sms_notifications',
@@ -67,6 +69,10 @@ module Flapjack
       @logger.info("Exiting main loop.")
     end
 
+    def add_shutdown_event
+      @redis.rpush('events', JSON.generate(Flapjack::Data::Event.shutdown))
+    end
+
   private
 
     def process_event(event)
@@ -92,10 +98,6 @@ module Flapjack
       else
         @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because state is ok with no change, or no prior state")
       end
-    end
-
-    def add_shutdown_event
-      @redis.rpush('events', JSON.generate(Flapjack::Data::Event.shutdown))
     end
 
     def update_keys(event, entity_check)
@@ -217,7 +219,7 @@ module Flapjack
           end
         }
         if media.length == 0
-          @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact} | NO MEDIA FOR CONTACT")
+          @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact_id} | NO MEDIA FOR CONTACT")
         end
       }
       if contacts.length == 0
