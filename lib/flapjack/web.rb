@@ -143,8 +143,10 @@ module Flapjack
     end
 
     get '/check' do
-      entity_check = Flapjack::Data::EntityCheck.for_entity_name(params[:entity],
-        params[:check], :redis => @@redis)
+      @entity = params[:entity]
+      @check = params[:check]
+      entity_check = Flapjack::Data::EntityCheck.for_entity_name(@entity, @check,
+        :redis => @@redis)
       @check_state                = entity_check.state
       @check_last_update          = entity_check.last_update
       @check_last_change          = entity_check.last_change
@@ -162,8 +164,10 @@ module Flapjack
     end
 
     get '/acknowledge' do
-      entity_check = Flapjack::Data::EntityCheck.for_entity_name(params[:entity],
-        params[:check], :redis => @@redis)
+      @entity = params[:entity]
+      @check = params[:check]
+      entity_check = Flapjack::Data::EntityCheck.for_entity_name(@entity, @check,
+        :redis => @@redis)
       ack = entity_check.create_acknowledgement(:summary => "Ack from web at #{Time.now.to_s}")
       @acknowledge_success = !!ack
       haml :acknowledge
