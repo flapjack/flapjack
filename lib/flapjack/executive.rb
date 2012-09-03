@@ -46,7 +46,7 @@ module Flapjack
       @filters << Flapjack::Filters::ScheduledMaintenance.new(options)
       @filters << Flapjack::Filters::UnscheduledMaintenance.new(options)
       @filters << Flapjack::Filters::DetectMassClientFailures.new(options)
-      # @filters << Flapjack::Filters::Delays.new(options)
+      @filters << Flapjack::Filters::Delays.new(options)
       @filters << Flapjack::Filters::Acknowledgement.new(options)
 
       @boot_time = Time.now

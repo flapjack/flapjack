@@ -140,11 +140,12 @@ module Flapjack
 
         @logger.debug "config keys: #{@config.keys}"
         unless (['email_notifier', 'sms_notifier'] & @config.keys).empty?
-          # # NB: can override the default 'resque' namespace like this
           # set up connection pooling, stop resque errors
-          ::Resque.redis = EventMachine::Synchrony::ConnectionPool.new(:size => 1) do
+          ::EM::Resque.redis = EventMachine::Synchrony::ConnectionPool.new(:size => 1) do
             ::Redis.new(redis_options)
           end
+          # # NB: can override the default 'resque' namespace like this
+          # ::EM::Resque.redis.namespace = 'flapjack'
         end
 
         @config.keys.each do |pikelet_type|
