@@ -8,16 +8,20 @@ development:
     port: 6379
     db: 13
   executive:
+    enabled: yes
     email_queue: email_notifications
     sms_queue: sms_notifications
     jabber_queue: jabber_notifications
   email_notifier:
+    enabled: yes
     queue: email_notifications
   sms_notifier:
+    enabled: yes
     queue: sms_notifications
     username: "ermahgerd"
     password: "xxxx"
   jabber_gateway:
+    enabled: yes
     queue: jabber_notifications
     server: "jabber.domain.tld"
     port: 5222
@@ -28,13 +32,11 @@ development:
       - "gimp@conference.jabber.domain.tld"
       - "log@conference.jabber.domain.tld"
   web:
+    enabled: yes
     port: 5080
   api:
+    enabled: yes
     port: 5081
-  nagios_receiver:
-    redis_host: "redis.domain.tld"
-    redis_port: 6379
-    redis_db: 13
 
 test:
   redis:

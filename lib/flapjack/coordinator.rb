@@ -35,6 +35,7 @@ module Flapjack
       @logger = Log4r::Logger.new("flapjack-coordinator")
       @logger.add(Log4r::StdoutOutputter.new("flapjack-coordinator"))
       @logger.add(Log4r::SyslogOutputter.new("flapjack-coordinator"))
+
     end
 
     def start(options = {})
@@ -130,11 +131,13 @@ module Flapjack
           ::Resque.redis = EventMachine::Synchrony::ConnectionPool.new(:size => 1) do
             ::Redis.new(redis_options)
           end
-          # ::Resque.redis.namespace = "flapjack"
         end
 
         @config.keys.each do |pikelet_type|
           next unless pikelet_types.has_key?(pikelet_type)
+          if @config[pikelet_type]['enabled']
+            next unless @config[pikelet_type]['enabled'] == true
+          end
           @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet(s)"
           pikelet_cfg = @config[pikelet_type]
           case pikelet_type
