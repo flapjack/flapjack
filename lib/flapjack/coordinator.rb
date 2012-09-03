@@ -117,7 +117,9 @@ module Flapjack
           require 'flapjack/resque_patches'
 
           # set up connection pooling, stop resque errors
-          ::EM::Resque.initialize_redis(::Redis.new(redis_options))
+          ::Resque.redis = EventMachine::Synchrony::ConnectionPool.new(:size => 1) do
+            ::Redis.new(redis_options)
+          end
         end
 
         @config.keys.each do |pikelet_type|
