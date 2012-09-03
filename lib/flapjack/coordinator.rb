@@ -58,9 +58,7 @@ module Flapjack
         case pik
         when Flapjack::Executive
           pik.stop
-          Fiber.new {
-            pik.add_shutdown_event
-          }.resume
+          pik.add_shutdown_event
         when EM::Resque::Worker
           # resque is polling, so we don't need a shutdown object
           pik.shutdown
@@ -157,11 +155,10 @@ module Flapjack
           case pikelet_type
           when 'executive'
             f = Fiber.new {
-              redis_exec_opt = redis_options.merge(:driver => 'synchrony')
               flapjack_exec = Flapjack::Executive.new(
                 pikelet_cfg.merge(
-                  :redis => ::Redis.new(redis_exec_opt),
-                  :redis_config => redis_exec_opt
+                  :redis => ::Redis.new(redis_options.merge(:driver => 'synchrony')),
+                  :redis_config => redis_options
                 )
               )
               @pikelets << flapjack_exec
