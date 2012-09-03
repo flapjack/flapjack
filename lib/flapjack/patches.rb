@@ -51,3 +51,17 @@ class Hash
     end
   end
 end
+
+# As Redis::Future objects inherit from BasicObject, it's difficult to
+# distinguish between them and other objects in collected data from
+# pipelined queries.
+#
+# (One alternative would be to put other values in Futures ourselves, and
+#  evaluate everything...)
+class Redis
+  class Future
+    def class
+      ::Redis::Future
+    end
+  end
+end

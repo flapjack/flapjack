@@ -66,7 +66,7 @@ module Flapjack
       end
       # # FIXME only call EM.stop after polling to check whether all of the
       # # above have finished
-      # EM.stop
+      EM.stop
     end
 
     # not-so-clean shutdown
@@ -116,8 +116,9 @@ module Flapjack
           # make Resque a slightly nicer citizen
           require 'flapjack/resque_patches'
 
-          # set up connection pooling, stop resque errors
-          ::EM::Resque.initialize_redis(::Redis.new(redis_options))
+          ::Resque.redis = EventMachine::Synchrony::ConnectionPool.new(:size => 1) do
+            ::Redis.new(redis_options)
+          end
         end
 
         @config.keys.each do |pikelet_type|

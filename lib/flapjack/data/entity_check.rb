@@ -2,6 +2,8 @@
 
 require 'yajl/json_gem'
 
+require 'flapjack/patches'
+
 require 'flapjack/data/entity'
 
 module Flapjack
@@ -100,6 +102,8 @@ module Flapjack
         end
         @redis.zadd("#{@key}:unscheduled_maintenances", duration, start_time)
         @redis.set("#{@key}:#{start_time}:unscheduled_maintenance:summary", summary)
+
+        @redis.zadd("#{@key}:sorted_unscheduled_maintenance_timestamps", start_time, start_time)
       end
 
       # ends any unscheduled maintenance
@@ -115,6 +119,7 @@ module Flapjack
           @logger.debug("ending unscheduled downtime for #{@key} at #{Time.at(end_time).to_s}") if @logger
           @redis.del("#{@key}:unscheduled_maintenance")
           @redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start)
+          @redis.zadd("#{@key}:sorted_unscheduled_maintenance_timestamps", start_time, start_time)
         else
           @logger.debug("end_unscheduled_maintenance called for #{@key} but none found") if @logger
         end
@@ -131,6 +136,8 @@ module Flapjack
         @redis.zadd("#{@key}:scheduled_maintenances", duration, start_time)
         @redis.set("#{@key}:#{start_time}:scheduled_maintenance:summary", summary)
 
+        @redis.zadd("#{@key}:sorted_scheduled_maintenance_timestamps", start_time, start_time)
+
         # scheduled maintenance periods have changed, revalidate
         update_scheduled_maintenance(:revalidate => true)
       end
@@ -140,6 +147,8 @@ module Flapjack
         start_time = opts[:start_time]
         @redis.del("#{@key}:#{start_time}:scheduled_maintenance:summary")
         @redis.zrem("#{@key}:scheduled_maintenances", start_time)
+
+        @redis.zremrangebyscore("#{@key}:sorted_scheduled_maintenance_timestamps", start_time, start_time)
 
         # scheduled maintenance periods have changed, revalidate
         update_scheduled_maintenance(:revalidate => true)
@@ -192,6 +201,8 @@ module Flapjack
         @redis.set("#{@key}:#{timestamp}:state",   state)
         @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
 
+        @redis.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
+
         case state
         when STATE_WARNING, STATE_CRITICAL
           @redis.zadd('failed_checks', timestamp, @key)
@@ -239,6 +250,86 @@ module Flapjack
       def summary
         timestamp = @redis.lindex("#{@key}:states", -1)
         @redis.get("#{@key}:#{timestamp}:summary")
+      end
+
+      # Returns a list of states for this entity check, sorted by timestamp.
+      #
+      # start_time and end_time should be passed as integer timestamps; these timestamps
+      # will be considered inclusively, so, e.g. coverage for a day should go
+      # from midnight to 11:59:59 PM. Pass nil for either end to leave that
+      # side unbounded.
+      def historical_states(start_time, end_time, opts = {})
+        start_time ||= '-inf'
+        end_time ||= '+inf'
+        order = opts[:order]
+        query = (order && 'desc'.eql?(order.downcase)) ? :zrevrangebyscore : :zrangebyscore
+        state_ts = @redis.send(query, "#{@key}:sorted_state_timestamps", start_time, end_time)
+
+        state_data = nil
+
+        @redis.multi do
+          state_data = state_ts.collect {|ts|
+            {:timestamp => ts.to_i,
+             :state     => @redis.get("#{@key}:#{ts}:state"),
+             :summary   => @redis.get("#{@key}:#{ts}:summary")}
+          }
+        end
+
+        # The redis commands in a pipeline block return future objects, which
+        # must be evaluated. This relies on a patch in flapjack/patches.rb to
+        # make the Future objects report their class.
+        state_data.collect {|sd|
+          sd.update(sd) {|k,ov,nv|
+            (nv.class == Redis::Future) ? nv.value : nv
+          }
+        }
+      end
+
+      # requires a known state timestamp, i.e. probably one returned via
+      # historical_states. will find the one before that in the sorted set,
+      # if any.
+      def historical_state_before(timestamp)
+        pos = @redis.zrank("#{@key}:sorted_state_timestamps", timestamp)
+        return if pos < 1
+        ts = @redis.zrange("#{@key}:sorted_state_timestamps", pos - 1, pos)
+        {:timestamp => ts.to_i,
+         :state     => @redis.get("#{@key}:#{ts}:state"),
+         :summary   => @redis.get("#{@key}:#{ts}:summary")}
+      end
+
+      # Returns a list of maintenance periods (either unscheduled or scheduled) for this
+      # entity check, sorted by timestamp.
+      #
+      # start_time and end_time should be passed as integer timestamps; these timestamps
+      # will be considered inclusively, so, e.g. coverage for a day should go
+      # from midnight to 11:59:59 PM. Pass nil for either end to leave that
+      # side unbounded.
+      def historical_maintenances(start_time, end_time, opts = {})
+        sched = opts[:scheduled] ? 'scheduled' : 'unscheduled'
+
+        start_time ||= '-inf'
+        end_time ||= '+inf'
+        order = opts[:order]
+        query = (order && 'desc'.eql?(order.downcase)) ? :zrevrangebyscore : :zrangebyscore
+        maint_ts = @redis.send(query, "#{@key}:sorted_#{sched}_maintenance_timestamps", start_time, end_time)
+
+        maint_data = nil
+
+        @redis.multi do
+          maint_data = maint_ts.collect {|ts|
+            {:timestamp => ts,
+             :duration  => @redis.zscore("#{@key}:#{sched}_maintenances", ts),
+             :summary   => @redis.get("#{@key}:#{ts}:#{sched}_maintenance:summary")
+            }
+          }
+        end
+
+        # The redis commands in a pipeline block return future objects, which
+        # must be evaluated. This relies on a patch in flapjack/patches.rb to
+        # make the Future objects report their class.
+        maint_data.collect {|md|
+          md.update(md) {|k,ov,nv| (nv.class == Redis::Future) ? nv.value : nv }
+        }
       end
 
     private
