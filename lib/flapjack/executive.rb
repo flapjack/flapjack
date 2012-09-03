@@ -26,6 +26,8 @@ module Flapjack
     def initialize(opts = {})
       bootstrap(opts)
 
+      @redis_config = opts[:redis_config]
+
       @redis = opts[:redis]
       redis_client_status = @redis.client
       @logger.debug("Flapjack::Executive.initialize: @redis client status: " + redis_client_status.inspect)
@@ -69,8 +71,12 @@ module Flapjack
       @logger.info("Exiting main loop.")
     end
 
+    # this must use a separate connection to the main Executive one, as it's running
+    # from a different fiber while the main one is blocking.
     def add_shutdown_event
-      @redis.rpush('events', JSON.generate(Flapjack::Data::Event.shutdown))
+      r = ::Redis.new(@redis_config)
+      r.rpush('events', JSON.generate(Flapjack::Data::Event.shutdown))
+      r.quit
     end
 
   private

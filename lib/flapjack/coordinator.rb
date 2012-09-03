@@ -11,6 +11,8 @@ require 'em-resque'
 require 'em-resque/worker'
 require 'thin'
 
+require 'flapjack/patches'
+
 require 'flapjack/api'
 require 'flapjack/daemonizing'
 require 'flapjack/notification/email'
@@ -28,6 +30,7 @@ module Flapjack
     def initialize(config = {})
       @config = config
       @pikelets = []
+      @pikelet_fibers = {}
 
       @logger = Log4r::Logger.new("flapjack-coordinator")
       @logger.add(Log4r::StdoutOutputter.new("flapjack-coordinator"))
@@ -64,9 +67,21 @@ module Flapjack
           pik.stop
         end
       end
-      # # FIXME only call EM.stop after polling to check whether all of the
-      # # above have finished
-      # EM.stop
+
+      Fiber.new {
+        loop do
+          # @pikelet_fibers.each_pair do |n,f|
+          #   puts "#{n}: #{f.alive? ? 'alive' : 'dead'}"
+          # end
+
+          if @pikelet_fibers.values.any?(&:alive?)
+            EM::Synchrony.sleep 0.25
+          else
+            EM.stop
+            break
+          end
+        end
+      }.resume
     end
 
     # not-so-clean shutdown
@@ -111,15 +126,11 @@ module Flapjack
         @logger.debug "config keys: #{@config.keys}"
         unless (['email_notifier', 'sms_notifier'] & @config.keys).empty?
           # # NB: can override the default 'resque' namespace like this
-          # ::Resque.redis.namespace = "flapjack_resque"
-
-          # make Resque a slightly nicer citizen
-          require 'flapjack/resque_patches'
-
           # set up connection pooling, stop resque errors
           ::Resque.redis = EventMachine::Synchrony::ConnectionPool.new(:size => 1) do
             ::Redis.new(redis_options)
           end
+          # ::Resque.redis.namespace = "flapjack"
         end
 
         @config.keys.each do |pikelet_type|
@@ -128,12 +139,19 @@ module Flapjack
           pikelet_cfg = @config[pikelet_type]
           case pikelet_type
           when 'executive'
-            Fiber.new {
-              flapjack_exec = Flapjack::Executive.new(pikelet_cfg.merge(:redis =>
-                ::Redis.new(redis_options.merge(:driver => 'synchrony'))))
+            f = Fiber.new {
+              redis_exec_opt = redis_options.merge(:driver => 'synchrony')
+              flapjack_exec = Flapjack::Executive.new(
+                pikelet_cfg.merge(
+                  :redis => ::Redis.new(redis_exec_opt),
+                  :redis_config => redis_exec_opt
+                )
+              )
               @pikelets << flapjack_exec
               flapjack_exec.main
-            }.resume
+            }
+            @pikelet_fibers[pikelet_type] = f
+            f.resume
             @logger.debug "new fiber created for #{pikelet_type}"
           when 'email_notifier', 'sms_notifier'
 
@@ -150,22 +168,26 @@ module Flapjack
             #   pikelet.class_variable_set('@@actionmailer_config', actionmailer_config)
             # end
 
-            Fiber.new {
+            f = Fiber.new {
               flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
               # # Use these to debug the resque workers
               # flapjack_rsq.verbose = true
               # flapjack_rsq.very_verbose = true
               @pikelets << flapjack_rsq
               flapjack_rsq.work(0.1)
-            }.resume
+            }
+            @pikelet_fibers[pikelet_type] = f
+            f.resume
             @logger.debug "new fiber created for #{pikelet_type}"
           when 'jabber_gateway'
-            Fiber.new {
+            f = Fiber.new {
               flapjack_jabbers = Flapjack::Notification::Jabber.new(:redis =>
                 ::Redis.new(redis_options.merge(:driver => 'synchrony')),
                 :config => pikelet_cfg)
               flapjack_jabbers.main
-            }.resume
+            }
+            @pikelet_fibers[pikelet_type] = f
+            f.resume
             @logger.debug "new fiber created for #{pikelet_type}"
           when 'web'
             port = nil
