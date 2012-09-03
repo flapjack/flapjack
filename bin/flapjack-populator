@@ -2,6 +2,7 @@
 
 require 'yajl'
 require 'redis'
+require 'yaml'
 
 command = ARGV[0]
 options = ARGV[1..-1]

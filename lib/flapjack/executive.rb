@@ -26,6 +26,8 @@ module Flapjack
     def initialize(opts = {})
       bootstrap(opts)
 
+      @redis_config = opts[:redis_config]
+
       @redis = opts[:redis]
       redis_client_status = @redis.client
       @logger.debug("Flapjack::Executive.initialize: @redis client status: " + redis_client_status.inspect)
@@ -69,8 +71,12 @@ module Flapjack
       @logger.info("Exiting main loop.")
     end
 
+    # this must use a separate connection to the main Executive one, as it's running
+    # from a different fiber while the main one is blocking.
     def add_shutdown_event
-      @redis.rpush('events', JSON.generate(Flapjack::Data::Event.shutdown))
+      r = ::Redis.new(@redis_config)
+      r.rpush('events', JSON.generate(Flapjack::Data::Event.shutdown))
+      r.quit
     end
 
   private
@@ -89,14 +95,14 @@ module Flapjack
 
       blocker = @filters.find {|filter| filter.block?(event) } unless skip_filters
 
-      if not blocker and not skip_filters
+      if skip_filters
+        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because filtering was skipped")
+      elsif not blocker
         @logger.info("#{Time.now}: Sending notifications for event #{event.id}")
         generate_notification(event, entity_check)
       elsif blocker
         blocker_names = [ blocker.name ]
         @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
-      else
-        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because state is ok with no change, or no prior state")
       end
     end
 
@@ -123,6 +129,7 @@ module Flapjack
         end
 
         event.previous_state = entity_check.state
+        @logger.info("No previous state for event #{event.id}") unless not event.previous_state.nil?
 
         # If there is a state change, update record with: the time, the new state
         if event.state != event.previous_state
@@ -134,7 +141,10 @@ module Flapjack
         # OR
         # If the service event's state is ok and there was no previous state, don't alert.
         # This stops new checks from alerting as "recovery" after they have been added.
-        result[:skip_filters] = event.ok? || (!event.previous_state && event.state)
+        if !event.previous_state && event.ok?
+          @logger.debug("setting skip_filters to true because there was no previous state and event is ok")
+          result[:skip_filters] = true
+        end
 
         entity_check.update_scheduled_maintenance
 

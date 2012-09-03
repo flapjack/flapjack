@@ -40,9 +40,11 @@ Feature: events
     When  a failure event is received for check 'abc' on entity 'def'
     And   1 minute passes
     And   a failure event is received for check 'abc' on entity 'def'
+    And   show me the notifications
     Then  a notification should be generated for check 'abc' on entity 'def'
     When  1 minute passes
     And   a failure event is received for check 'abc' on entity 'def'
+    And   show me the notifications
     Then  a notification should not be generated for check 'abc' on entity 'def'
 
   @time

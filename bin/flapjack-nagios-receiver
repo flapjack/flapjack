@@ -21,10 +21,10 @@ else
 end
 config_env = config[FLAPJACK_ENV]
 puts config_env.inspect
-@redis_host     = config_env['nagios_receiver']['redis_host'] || 'localhost'
-@redis_port     = config_env['nagios_receiver']['redis_port'] || '6379'
-@redis_path     = config_env['nagios_receiver']['redis_path'] || nil
-@redis_db       = config_env['nagios_receiver']['redis_db']   || 0
+@redis_host     = config_env['redis']['host'] || 'localhost'
+@redis_port     = config_env['redis']['port'] || '6379'
+@redis_path     = config_env['redis']['path'] || nil
+@redis_db       = config_env['redis']['db']   || 0
 
 if config_env.nil? || config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}'"
@@ -51,6 +51,8 @@ def process_input
       next unless line.length == 9
       next unless timestamp =~ /^\d+$/
       next unless (object_type == '[HOSTPERFDATA]') or (object_type == '[SERVICEPERFDATA]')
+      state = 'ok'       if state.downcase == 'up'
+      state = 'critical' if state.downcase == 'down'
       event = {
         'entity'    => entity,
         'check'     => check,

@@ -119,7 +119,7 @@ module Flapjack
           @logger.debug("ending unscheduled downtime for #{@key} at #{Time.at(end_time).to_s}") if @logger
           @redis.del("#{@key}:unscheduled_maintenance")
           @redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start)
-          @redis.zadd("#{@key}:sorted_unscheduled_maintenance_timestamps", start_time, start_time)
+          @redis.zadd("#{@key}:sorted_unscheduled_maintenance_timestamps", um_start, um_start)
         else
           @logger.debug("end_unscheduled_maintenance called for #{@key} but none found") if @logger
         end

@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'flapjack/api'
 
-describe Flapjack::API, :sinatra => true do
+describe 'Flapjack::API', :sinatra => true do
 
   def app
     Flapjack::API

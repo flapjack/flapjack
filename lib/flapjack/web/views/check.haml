@@ -42,7 +42,9 @@
   %body
     %div#wrapper
       %p
-        %a(title='Dashboard' href='/') Dashboard
+        %a(title='Dashboard' href='/') All Checks
+        |
+        %a(title='Dashboard' href='/failing') Failing Checks
       %h1 #{@check} on #{@entity}
       %h2
         State: #{@check_state.upcase}
