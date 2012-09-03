@@ -51,8 +51,8 @@ def process_input
       next unless line.length == 9
       next unless timestamp =~ /^\d+$/
       next unless (object_type == '[HOSTPERFDATA]') or (object_type == '[SERVICEPERFDATA]')
-      check = 'ok'       if check.downcase == 'up'
-      check = 'critical' if check.downcase == 'down'
+      state = 'ok'       if state.downcase == 'up'
+      state = 'critical' if state.downcase == 'down'
       event = {
         'entity'    => entity,
         'check'     => check,
