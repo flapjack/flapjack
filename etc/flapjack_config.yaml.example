@@ -15,6 +15,15 @@ development:
   email_notifier:
     enabled: yes
     queue: email_notifications
+    smtp_config:
+      port: 2525
+      # address: "localhost"
+      # port: 25
+      # domain: 'localhost.localdomain'
+      # user_name: nil
+      # password: nil
+      # authentication: nil
+      # enable_starttls_auto: true
   sms_notifier:
     enabled: yes
     queue: sms_notifications

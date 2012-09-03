@@ -58,7 +58,9 @@ module Flapjack
         case pik
         when Flapjack::Executive
           pik.stop
-          pik.add_shutdown_event
+          Fiber.new {
+            pik.add_shutdown_event
+          }.resume
         when EM::Resque::Worker
           # resque is polling, so we don't need a shutdown object
           pik.shutdown
@@ -169,20 +171,31 @@ module Flapjack
             @logger.debug "new fiber created for #{pikelet_type}"
           when 'email_notifier', 'sms_notifier'
 
+            pikelet = pikelet_types[pikelet_type]
+
             # See https://github.com/mikel/mail/blob/master/lib/mail/mail.rb#L53
             # & https://github.com/mikel/mail/blob/master/spec/mail/configuration_spec.rb
             # for details of configuring mail gem. defaults to SMTP, localhost, port 25
-            Mail.defaults { delivery_method :smtp, {:enable_starttls_auto => false} }
 
-            # TODO error if pikelet_cfg['queue'].nil?
+            if pikelet_type.eql?('email_notifier')
+              smtp_config = {}
 
-            # # Deferring this: Resque's not playing well with evented code
-            # if 'email_notifier'.eql?(pikelet_type)
-            #   pikelet = pikelet_types[pikelet_type]
-            #   pikelet.class_variable_set('@@actionmailer_config', actionmailer_config)
-            # end
+              if pikelet_cfg['smtp_config']
+                smtp_config = pikelet_cfg['smtp_config'].keys.inject({}) do |ret,obj|
+                  ret[obj.to_sym] = pikelet_cfg['smtp_config'][obj]
+                  ret
+                end
+              end
 
+              Mail.defaults {
+                delivery_method :smtp, {:enable_starttls_auto => false}.merge(smtp_config)
+              }
+            end
+
+            pikelet.class_variable_set('@@config', pikelet_cfg)
+            
             f = Fiber.new {
+              # TODO error if pikelet_cfg['queue'].nil?
               flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
               # # Use these to debug the resque workers
               # flapjack_rsq.verbose = true
