@@ -82,16 +82,18 @@ module Flapjack
           subject  m_subject
           reply_to m_reply_to
 
+          text_template = ERB.new(File.read(File.dirname(__FILE__) +
+            '/flapjack_mailer/sender.text.erb'))
+
           text_part do
-            template = ERB.new(File.read(File.dirname(__FILE__) +
-              '/flapjack_mailer/sender.text.erb'))
-            template.result(binding)
+            body text_template.result(binding)
           end
 
+          haml_engine = Haml::Engine.new(File.read(File.dirname(__FILE__) +
+            '/flapjack_mailer/sender.html.haml'))
+
           html_part do
-            engine = Haml::Engine.new(File.read(File.dirname(__FILE__) +
-              '/flapjack_mailer/sender.html.haml'))
-            engine.render(mail_scope)
+            body haml_engine.render(mail_scope)
           end
         end
       end

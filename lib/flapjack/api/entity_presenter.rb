@@ -4,7 +4,7 @@
 
 module Flapjack
 
-  module API
+  class API
 
     class EntityPresenter
 

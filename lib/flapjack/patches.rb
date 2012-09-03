@@ -101,6 +101,7 @@ module Resque
             procline "Forked #{@child} at #{Time.now.to_i}"
             Process.wait(@child)
           else
+            unregister_signal_handlers if !@cant_fork && term_child
             procline "Processing #{job.queue} since #{Time.now.to_i}"
             redis.client.reconnect # Don't share connection with parent
             perform(job, &block)
