@@ -19,15 +19,18 @@ module Flapjack
         states = @entity_check.historical_states(start_time, end_time)
         return states if states.empty?
 
-        initial = @entity_check.historical_state_before(states[0][:timestamp])
-
         # if it started failed, prepend the earlier event
-        if initial
-          states.unshift(initial) if state_failed?(initial[:state])
-          last_state = initial[:state]
-        else
-          last_state = nil
+        initial = @entity_check.historical_state_before(states.first[:timestamp])
+        states.unshift(initial) if initial && state_failed?(initial[:state])
+
+        # if it ended failed, append the event when it recovered
+        if state_failed?(states.last[:state])
+          # TODO ensure this event is a recovery, find the first recovery after if not
+          last = @entity_check.historical_state_after(states.last)
+          states.push(last)
         end
+
+        last_state = nil
 
         paired_states = states.inject([]) do |ret, obj|
 
@@ -41,7 +44,6 @@ module Flapjack
 
           ret
         end
-
       end
 
       def unscheduled_outages(start_time, end_time)
@@ -53,11 +55,12 @@ module Flapjack
         # to see if we start in an unscheduled maintenance period, we must check all unscheduled
         # maintenances before the period and their durations
         start_in_unsched = @entity_check.historical_maintenances(nil, start_time,
-          :scheduled => false).detect {|pu|
+          :scheduled => false).select {|pu|
 
           (pu[:timestamp] + pu[:duration]) >= start_time
         }
 
+        start_in_unsched + unsched_outages
       end
 
       def scheduled_outages(start_time, end_time)
@@ -69,36 +72,21 @@ module Flapjack
         # to see if we start in a scheduled maintenance period, we must check all scheduled
         # maintenances before the period and their durations
         start_in_sched = @entity_check.historical_maintenances(nil, start_time,
-          :scheduled => true).detect {|ps|
+          :scheduled => true).select {|ps|
 
           (ps[:timestamp] + ps[:duration]) >= start_time
         }
 
+        start_in_sched + sched_outages
       end
 
       def unscheduled_downtime(start_time, end_time)
 
-        # # copied from methods above --
+        sched_outages = scheduled_outages
 
-        # states = @entity_check.historical_states(start_time, end_time)
+        down = downtimes
 
-        # unsched_outages = @entity_check.historical_maintenances(start_time, end_time,
-        #   :scheduled => false)
-
-        # start_in_unsched = @entity_check.historical_maintenances(nil, start_time,
-        #   :scheduled => false).detect {|pu|
-
-        #   (pu[:timestamp] + pu[:duration]) >= start_time
-        # }
-
-        # sched_outages = @entity_check.historical_maintenances(start_time, end_time,
-        #   :scheduled => true)
-
-        # start_in_sched = @entity_check.historical_maintenances(nil, start_time,
-        #   :scheduled => true).detect {|ps|
-
-        #   (ps[:timestamp] + ps[:duration]) >= start_time
-        # }
+        # TODO
 
       end
 

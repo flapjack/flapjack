@@ -1,10 +1,12 @@
 #!/usr/bin/env ruby
 
+require 'sinatra/base'
+
 # require 'flapjack/data/entity'
 
 module Flapjack
 
-  class API
+  class API < Sinatra::Base
 
     class EntityPresenter
 
