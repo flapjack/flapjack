@@ -65,19 +65,32 @@ module Flapjack
           # resque is polling, so we don't need a shutdown object
           pik.shutdown
         when Thin::Server # web, api
-          pik.stop
+          # drop from this side, as HTTP keepalive etc. means browsers
+          # keep connections alive for ages, and we'd be hanging around
+          # waiting for them to drop
+          pik.stop!
         end
       end
 
       Fiber.new {
+
+        thin_pikelets = @pikelets.select {|p| p.is_a?(Thin::Server) }
+
         loop do
           # @pikelet_fibers.each_pair do |n,f|
           #   puts "#{n}: #{f.alive? ? 'alive' : 'dead'}"
           # end
 
-          if @pikelet_fibers.values.any?(&:alive?)
-            puts '.'
+          # thin_pikelets.each do |tp|
+          #   s = tp.backend.size
+          #   puts "thin on port #{tp.port} - #{s} connections"
+          # end
+
+          if @pikelet_fibers.values.any?(&:alive?) ||
+            thin_pikelets.any?{|tp| !tp.backend.empty? }
+
             EM::Synchrony.sleep 0.25
+
           else
             EM.stop
             break
