@@ -33,7 +33,7 @@ module Flapjack
       return if bootstrapped?
 
       unless @logger = opts[:logger]
-        @logger = Log4r::Logger.new("flapjack")
+        @logger = Log4r::Logger.new("#{self.class.to_s.downcase.gsub('::', '-')}")
         @logger.add(Log4r::StdoutOutputter.new("flapjack"))
         @logger.add(Log4r::SyslogOutputter.new("flapjack"))
       end

@@ -76,6 +76,7 @@ module Flapjack
           # end
 
           if @pikelet_fibers.values.any?(&:alive?)
+            puts '.'
             EM::Synchrony.sleep 0.25
           else
             EM.stop
@@ -135,9 +136,9 @@ module Flapjack
 
         @config.keys.each do |pikelet_type|
           next unless pikelet_types.has_key?(pikelet_type)
-          if @config[pikelet_type]['enabled']
-            next unless @config[pikelet_type]['enabled'] == true
-          end
+          #if @config[pikelet_type]['enabled']
+            next unless @config[pikelet_type]['enabled'] #== true
+          #end
           @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet(s)"
           pikelet_cfg = @config[pikelet_type]
           case pikelet_type
