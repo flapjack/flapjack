@@ -64,9 +64,9 @@ module Flapjack
           pik.stop
         end
       end
-      # FIXME only call EM.stop after polling to check whether all of the
-      # above have finished
-      EM.stop
+      # # FIXME only call EM.stop after polling to check whether all of the
+      # # above have finished
+      # EM.stop
     end
 
     # not-so-clean shutdown
@@ -110,13 +110,14 @@ module Flapjack
 
         @logger.debug "config keys: #{@config.keys}"
         unless (['email_notifier', 'sms_notifier'] & @config.keys).empty?
+          # # NB: can override the default 'resque' namespace like this
+          # ::Resque.redis.namespace = "flapjack_resque"
+
           # make Resque a slightly nicer citizen
           require 'flapjack/resque_patches'
+
           # set up connection pooling, stop resque errors
-          ::EM::Resque.redis = ::EventMachine::Synchrony::ConnectionPool.new(:size => 1) do
-            ::Redis.new(redis_options)
-          end
-          ::Resque.redis = ::Redis::Namespace.new(:resque, :redis => ::EM::Resque.redis)
+          ::EM::Resque.initialize_redis(::Redis.new(redis_options))
         end
 
         @config.keys.each do |pikelet_type|
