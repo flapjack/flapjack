@@ -3,6 +3,7 @@
 development:
   pid_file: tmp/pids/flapjack.pid
   log_file: log/flapjack.log
+  daemonize: no
   redis:
     host: 127.0.0.1
     port: 6379

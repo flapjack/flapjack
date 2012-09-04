@@ -93,6 +93,7 @@ module Flapjack
             '/flapjack_mailer/sender.html.haml'))
 
           html_part do
+            content_type 'text/html; charset=UTF-8'
             body haml_engine.render(mail_scope)
           end
         end
