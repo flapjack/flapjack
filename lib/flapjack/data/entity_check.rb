@@ -317,11 +317,9 @@ module Flapjack
 
         @redis.multi do
           maint_data = maint_ts.collect {|ts|
-            duration = @redis.zscore("#{@key}:#{sched}_maintenances", ts)
             {:start_time => ts,
-             :duration   => duration,
+             :duration   => @redis.zscore("#{@key}:#{sched}_maintenances", ts),
              :summary    => @redis.get("#{@key}:#{ts}:#{sched}_maintenance:summary"),
-             :end_time   => ts + duration
             }
           }
         end
@@ -331,6 +329,8 @@ module Flapjack
         # make the Future objects report their class.
         maint_data.collect {|md|
           md.update(md) {|k,ov,nv| (nv.class == Redis::Future) ? nv.value : nv }
+          md[:end_time] = (md[:start_time].to_i + md[:duration]).floor
+          md
         }
       end
 

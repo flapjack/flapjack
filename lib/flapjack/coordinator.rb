@@ -35,7 +35,6 @@ module Flapjack
       @logger = Log4r::Logger.new("flapjack-coordinator")
       @logger.add(Log4r::StdoutOutputter.new("flapjack-coordinator"))
       @logger.add(Log4r::SyslogOutputter.new("flapjack-coordinator"))
-
     end
 
     def start(options = {})

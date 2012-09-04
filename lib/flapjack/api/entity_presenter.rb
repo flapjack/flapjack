@@ -14,6 +14,22 @@ module Flapjack
         @entity = entity
       end
 
+      def outages(start_time, end_time)
+
+      end
+
+      def unscheduled_maintenances(start_time, end_time)
+
+      end
+
+      def scheduled_maintenances(start_time, end_time)
+
+      end
+
+      def downtime(start_time, end_time)
+
+      end
+
     end
 
   end

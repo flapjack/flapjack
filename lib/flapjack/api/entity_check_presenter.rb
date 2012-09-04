@@ -89,11 +89,13 @@ module Flapjack
       # start one second after the maintenance period ends.
       #
       # NB: when summing across an entity we'd have to coalesce the results
-      # for different checks as well
+      # for different checks as well -- although we can probably do that by
+      # combining all of the states a la the outages() method and tracking
+      # the total down at any one time (if > 0, the entity is considered failing)
       def downtime(start_time, end_time)
-        sched_maintenances = scheduled_maintenance
+        sched_maintenances = scheduled_maintenance(start_time, end_time)
 
-        outs = outages
+        outs = outages(start_time, end_time)
 
         total_secs = 0
         percentage = 0
@@ -124,11 +126,12 @@ module Flapjack
 
           end
 
-          total_secs = outs.sum {|o|
-            o[:ignore] ? 0 : (o[:end_time] - o[:start_time])
+          # sum outage times, unless they are to be ignored
+          total_secs = outs.inject(0) {|sum, o|
+            sum += (o[:ignore] ? 0 : (o[:end_time] - o[:start_time]))
           }
 
-          percentage = 100 * total_secs) / (end_time - start_time)
+          percentage = (total_secs * 100) / (end_time - start_time)
 
         end
 
