@@ -51,7 +51,6 @@ module Flapjack
       end
 
       def unscheduled_maintenance(start_time, end_time)
-
         # unsched_maintenance is an array of hashes, with [duration, timestamp, summary] keys
         unsched_maintenance = @entity_check.historical_maintenances(start_time, end_time,
           :scheduled => false)
@@ -68,7 +67,6 @@ module Flapjack
       end
 
       def scheduled_maintenance(start_time, end_time)
-
         # sched_maintenance is an array of hashes, with [duration, timestamp, summary] keys
         sched_maintenance = @entity_check.historical_maintenances(start_time, end_time,
           :scheduled => true)
@@ -87,6 +85,8 @@ module Flapjack
       # TODO test whether the below overlapping logic is prone to off-by-one
       # errors; the numbers may line up more neatly if we consider outages to
       # start one second after the maintenance period ends.
+      #
+      # TODO test performance with larger data sets
       #
       # NB: when summing across an entity we'd have to coalesce the results
       # for different checks as well -- although we can probably do that by
@@ -132,10 +132,9 @@ module Flapjack
           }
 
           percentage = (total_secs * 100) / (end_time - start_time)
-
         end
 
-        {:total_seconds => total_secs, :percentage => percentage}
+        {:total_seconds => total_secs, :percentage => percentage, :downtime => outs}
       end
 
     end

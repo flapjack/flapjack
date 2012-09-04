@@ -75,6 +75,7 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
     downtimes = ecp.downtime(time - (12 * 60 * 60), time)
 
+    # 31 minutes, 3 + 8 + 20
     downtimes.should be_a(Hash)
     downtimes[:total_seconds].should == (31 * 60)
     downtimes[:percentage].should == (((31 * 60) * 100) / (12 * 60 * 60))
