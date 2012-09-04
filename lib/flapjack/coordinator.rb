@@ -140,11 +140,12 @@ module Flapjack
 
         @logger.debug "config keys: #{@config.keys}"
         unless (['email_notifier', 'sms_notifier'] & @config.keys).empty?
-          # # NB: can override the default 'resque' namespace like this
           # set up connection pooling, stop resque errors
-          ::Resque.redis = EventMachine::Synchrony::ConnectionPool.new(:size => 1) do
+          ::EM::Resque.redis = EventMachine::Synchrony::ConnectionPool.new(:size => 1) do
             ::Redis.new(redis_options)
           end
+          # # NB: can override the default 'resque' namespace like this
+          # ::EM::Resque.redis.namespace = 'flapjack'
         end
 
         @config.keys.each do |pikelet_type|
@@ -155,11 +156,10 @@ module Flapjack
           case pikelet_type
           when 'executive'
             f = Fiber.new {
-              redis_exec_opt = redis_options.merge(:driver => 'synchrony')
               flapjack_exec = Flapjack::Executive.new(
                 pikelet_cfg.merge(
-                  :redis => ::Redis.new(redis_exec_opt),
-                  :redis_config => redis_exec_opt
+                  :redis => ::Redis.new(redis_options.merge(:driver => 'synchrony')),
+                  :redis_config => redis_options
                 )
               )
               @pikelets << flapjack_exec
@@ -170,20 +170,31 @@ module Flapjack
             @logger.debug "new fiber created for #{pikelet_type}"
           when 'email_notifier', 'sms_notifier'
 
+            pikelet = pikelet_types[pikelet_type]
+
             # See https://github.com/mikel/mail/blob/master/lib/mail/mail.rb#L53
             # & https://github.com/mikel/mail/blob/master/spec/mail/configuration_spec.rb
             # for details of configuring mail gem. defaults to SMTP, localhost, port 25
-            Mail.defaults { delivery_method :smtp, {:enable_starttls_auto => false} }
 
-            # TODO error if pikelet_cfg['queue'].nil?
+            if pikelet_type.eql?('email_notifier')
+              smtp_config = {}
 
-            # # Deferring this: Resque's not playing well with evented code
-            # if 'email_notifier'.eql?(pikelet_type)
-            #   pikelet = pikelet_types[pikelet_type]
-            #   pikelet.class_variable_set('@@actionmailer_config', actionmailer_config)
-            # end
+              if pikelet_cfg['smtp_config']
+                smtp_config = pikelet_cfg['smtp_config'].keys.inject({}) do |ret,obj|
+                  ret[obj.to_sym] = pikelet_cfg['smtp_config'][obj]
+                  ret
+                end
+              end
 
+              Mail.defaults {
+                delivery_method :smtp, {:enable_starttls_auto => false}.merge(smtp_config)
+              }
+            end
+
+            pikelet.class_variable_set('@@config', pikelet_cfg)
+            
             f = Fiber.new {
+              # TODO error if pikelet_cfg['queue'].nil?
               flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
               # # Use these to debug the resque workers
               # flapjack_rsq.verbose = true

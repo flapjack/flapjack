@@ -69,7 +69,7 @@ namespace :events do
     create_event( 'entity'  => 'clientx-app-01',
                   'check'   => 'ping',
                   'type'    => 'service',
-                  'state'   => 'failed',
+                  'state'   => 'critical',
                   'summary' => 'testing' )
 
     sleep(8)
