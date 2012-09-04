@@ -3,7 +3,7 @@ Flapjack
 
 Flapjack is highly scalable and distributed monitoring notification system.
 
-Flapjack's provides a scalable method for dealing with events representing changes in system state (OK -> WARNING -> CRITICAL transitions) and alerting appropriate people as necessary.
+Flapjack provides a scalable method for dealing with events representing changes in system state (OK -> WARNING -> CRITICAL transitions) and alerting appropriate people as necessary.
 
 Developing
 ----------
@@ -28,23 +28,22 @@ What things do
 Executables:
 
   * `flapjack` => starts multiple components ('pikelets') within the one ruby process as specified in the configuration file.
-  * `flapjack-nagios-receiver` => reads nagios check output on standard input and places them on the events queue in redis as JSON blobs. Currently unable to be run under flapjack-coordinator
+  * `flapjack-nagios-receiver` => reads nagios check output on standard input and places them on the events queue in redis as JSON blobs. Currently unable to be run in-process with `flapjack`
 
 There are more fun executables in the bin directory.
 
 Pikelets:
 
   * `executive` => processes events off a queue (a redis list) and decides what actions to take (alert, record state changes, etc)
-  * `email_notifier` => generates email notifications
-  * `sms_notifier` => generates sms notifications (text messages to mobile phones)
-  * `jabber_gateway` => connects to an XMPP (jabber) server, sends notifications (to rooms and individuals), handles acknowledgements from jabber users and other commands
-  * `web` => web UI
-  * `api` => API server (http)
+  * `email_notifier` => generates email notifications (resque, mail)
+  * `sms_notifier` => generates sms notifications (resque)
+  * `jabber_gateway` => connects to an XMPP (jabber) server, sends notifications (to rooms and individuals), handles acknowledgements from jabber users and other commands (blather)
+  * `web` => web UI (sinatra, thin)
+  * `api` => HTTP API server (sinatra, thin)
 
 Pikelets are flapjack components which can be run within the same ruby process, or as separate processes.
 
-The simplest configuration will have one `flapjack-coordinator` started running executive and some notification gateways, and one `flapjack-nagios-receiver` receiving events from Nagios and placing them on the events queue for processing.
-
+The simplest configuration will have one `flapjack` process running executive, web, and some notification gateways, and one `flapjack-nagios-receiver` process receiving events from Nagios and placing them on the events queue for processing by executive.
 
 Testing
 -------
@@ -63,10 +62,6 @@ NB, if the cucumber tests fail with a spurious lexing error on line 2 of events.
 
     $ cucumber -f fuubar features
 
-Architecture
-------------
-
-TODO: insert architecture diagram and notes here
 
 
 Releasing
@@ -78,8 +73,13 @@ To build the gem, run:
 
     gem build flapjack.gemspec
 
+Architecture
+------------
+
+TODO: insert architecture diagram and notes here
+
 Event-Processing
-================
+----------------
 
 At its core, flapjack process events received from external check execution engines, such as Nagios. Nagios provides a 'perfdata' event output channel, which writes to a named pipe. `flapjack-nagios-receiver` then reads from this named pipe, converts them to JSON and adds them to the events queue. `executive` picks them up and processes them - deciding when and who to notifify about problems, recoveries, acknowledgements etc.
 
@@ -115,13 +115,28 @@ Create the named pipe if it doesn't already exist:
 
     mkfifo -m 0666 /var/cache/nagios3/event_stream.fifo
 
+Configuring
+===========
+
+```
+cp etc/flapjack-config.yaml.example etc/flapjack-config.yaml
+```
+
+Edit the configuration to suit (redis connection, smtp server, jabber server, sms gateway, etc)
+
+The default FLAPJACK_ENV is "development" if there is no environment variable set.
+
+Running
+=======
+
+    bin/flapjack
 
 flapjack-nagios-receiver
 ------------------------
 
 This process needs to be started with the nagios perfdata named pipe attached to its STDIN like so:
 
-    be bin/flapjack-nagios-receiver < /var/cache/nagios3/event_stream.fifo
+    bin/flapjack-nagios-receiver < /var/cache/nagios3/event_stream.fifo
 
 Now as nagios feeds check execution results into the perfdata named pipe, flapjack-nagios-receiver will convert them to JSON encoded ruby objects and insert them into the *events* queue.
 
@@ -130,8 +145,8 @@ Importing contacts and entities
 
 The `flapjack-populator` script provides a mechanism for importing contacts and entities from JSON formatted import files.
 
-    be bin/flapjack-populator import-contacts --from=tmp/dummy_contacts.json
-    be bin/flapjack-populator import-entities --from=tmp/dummy_entities.json
+    bin/flapjack-populator import-contacts --from=tmp/dummy_contacts.json
+    bin/flapjack-populator import-entities --from=tmp/dummy_entities.json
 
 TODO: convert the format documentation into markdown and include in the project
 
