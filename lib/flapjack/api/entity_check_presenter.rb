@@ -22,7 +22,7 @@ module Flapjack
         # if it started failed, prepend the earlier event
         initial = @entity_check.historical_state_before(states.first[:timestamp])
         states.unshift(initial) if (initial &&
-          initial[:state] == Flapjack::Data::EntityCheck::STATE_CRITICAL)
+          (initial[:state] == Flapjack::Data::EntityCheck::STATE_CRITICAL))
 
         # if it ended failed, append the event when it recovered
         if states.last[:state] == Flapjack::Data::EntityCheck::STATE_CRITICAL
@@ -102,14 +102,6 @@ module Flapjack
         end
 
         {:total_seconds => total_secs, :percentage => percentage}
-      end
-
-      private
-
-        # def overlaps?(t1_start, t1_end, t2_start, t2_end)
-        #   (t1_start - t2_end) * (t2_start - t1_end) >= 0
-        # end
-
       end
 
     end
