@@ -86,8 +86,9 @@ At its core, flapjack process events received from external check execution engi
 Dependencies
 ------------
 
-Apart from a bundle of gems:
-- Redis
+Apart from a bundle of gems (see Gemfile):
+- Ruby >= 1.9
+- Redis >= 2.4.15
 
 Nagios config
 -------------
