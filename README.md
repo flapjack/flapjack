@@ -5,22 +5,8 @@ Flapjack is highly scalable and distributed monitoring notification system.
 
 Flapjack provides a scalable method for dealing with events representing changes in system state (OK -> WARNING -> CRITICAL transitions) and alerting appropriate people as necessary.
 
-Developing
-----------
+At its core, flapjack process events received from external check execution engines, such as Nagios. Nagios provides a 'perfdata' event output channel, which writes to a named pipe. `flapjack-nagios-receiver` then reads from this named pipe, converts each line to JSON and adds them to the events queue. `executive` picks up the events and processes them - deciding when and who to notifify about problems, recoveries, acknowledgements etc.
 
-Clone the repository:
-
-    git clone https://auxesis@github.com/auxesis/flapjack.git
-
-Install development dependencies:
-
-    gem install bundler
-    bundle install
-
-Run the tests:
-
-    cucumber features/
-    rspec spec
 
 What things do
 --------------
@@ -44,6 +30,24 @@ Pikelets:
 Pikelets are flapjack components which can be run within the same ruby process, or as separate processes.
 
 The simplest configuration will have one `flapjack` process running executive, web, and some notification gateways, and one `flapjack-nagios-receiver` process receiving events from Nagios and placing them on the events queue for processing by executive.
+
+
+Developing
+----------
+
+Clone the repository:
+
+    git clone https://auxesis@github.com/auxesis/flapjack.git
+
+Install development dependencies:
+
+    gem install bundler
+    bundle install
+
+Run the tests:
+
+    cucumber features/
+    rspec spec
 
 Testing
 -------
@@ -73,22 +77,16 @@ To build the gem, run:
 
     gem build flapjack.gemspec
 
-Architecture
-------------
+Configuring
+===========
 
-TODO: insert architecture diagram and notes here
+```
+cp etc/flapjack-config.yaml.example etc/flapjack-config.yaml
+```
 
-Event-Processing
-----------------
+Edit the configuration to suit (redis connection, smtp server, jabber server, sms gateway, etc)
 
-At its core, flapjack process events received from external check execution engines, such as Nagios. Nagios provides a 'perfdata' event output channel, which writes to a named pipe. `flapjack-nagios-receiver` then reads from this named pipe, converts them to JSON and adds them to the events queue. `executive` picks them up and processes them - deciding when and who to notifify about problems, recoveries, acknowledgements etc.
-
-Dependencies
-------------
-
-Apart from a bundle of gems (see Gemfile):
-- Ruby >= 1.9
-- Redis >= 2.4.15
+The default FLAPJACK_ENV is "development" if there is no environment variable set.
 
 Nagios config
 -------------
@@ -116,16 +114,6 @@ Create the named pipe if it doesn't already exist:
 
     mkfifo -m 0666 /var/cache/nagios3/event_stream.fifo
 
-Configuring
-===========
-
-```
-cp etc/flapjack-config.yaml.example etc/flapjack-config.yaml
-```
-
-Edit the configuration to suit (redis connection, smtp server, jabber server, sms gateway, etc)
-
-The default FLAPJACK_ENV is "development" if there is no environment variable set.
 
 Running
 =======
@@ -187,4 +175,17 @@ We use the following redis database numbers by convention:
 * 0 => production
 * 13 => development
 * 14 => testing
+
+Architecture
+------------
+
+TODO: insert architecture diagram and notes here
+
+Dependencies
+------------
+
+Apart from a bundle of gems (see Gemfile):
+- Ruby >= 1.9
+- Redis >= 2.4.15
+
 
