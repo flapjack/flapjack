@@ -31,7 +31,8 @@ end
 require 'flapjack/coordinator'
 
 coordinator = Flapjack::Coordinator.new(config_env)
-coordinator.log_file = (config['log_file'] || 'log/flapjack.log')
-coordinator.pid_file = (config['pid_file'] || 'tmp/pids/flapjack.pid')
-
-coordinator.start(:daemonize => false)
+coordinator.log_file = (config_env['log_file'] || 'log/flapjack.log')
+coordinator.pid_file = (config_env['pid_file'] || 'tmp/pids/flapjack.pid')
+daemonize = !!config_env['daemonize']
+puts "Daemonising ... pid: " + Process.pid.to_s if daemonize
+coordinator.start(:daemonize => daemonize)

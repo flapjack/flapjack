@@ -105,5 +105,8 @@ when "import-entities"
     @persistence.exec
 
   }
+else
+  puts "you need to give me something to do, eg a command like 'import-entities' or 'import-clients' etc"
+  raise ArgumentError
 end
 

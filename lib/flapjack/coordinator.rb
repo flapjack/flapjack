@@ -141,8 +141,8 @@ module Flapjack
         @logger.debug "config keys: #{@config.keys}"
         unless (['email_notifier', 'sms_notifier'] & @config.keys).empty?
           # set up connection pooling, stop resque errors
-          ::EM::Resque.redis = EventMachine::Synchrony::ConnectionPool.new(:size => 1) do
-            ::Redis.new(redis_options)
+          ::Resque.redis = EventMachine::Synchrony::ConnectionPool.new(:size => 5) do
+            ::Redis.new(redis_options.merge(:driver => :synchrony))
           end
           # # NB: can override the default 'resque' namespace like this
           # ::EM::Resque.redis.namespace = 'flapjack'
@@ -150,9 +150,7 @@ module Flapjack
 
         @config.keys.each do |pikelet_type|
           next unless pikelet_types.has_key?(pikelet_type)
-          #if @config[pikelet_type]['enabled']
-            next unless @config[pikelet_type]['enabled'] #== true
-          #end
+          next unless @config[pikelet_type]['enabled']
           @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet(s)"
           pikelet_cfg = @config[pikelet_type]
           case pikelet_type
@@ -199,8 +197,8 @@ module Flapjack
               # TODO error if pikelet_cfg['queue'].nil?
               flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
               # # Use these to debug the resque workers
-              # flapjack_rsq.verbose = true
-              # flapjack_rsq.very_verbose = true
+              flapjack_rsq.verbose = true
+              #flapjack_rsq.very_verbose = true
               @pikelets << flapjack_rsq
               flapjack_rsq.work(0.1)
             }
