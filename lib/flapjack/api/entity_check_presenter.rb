@@ -84,20 +84,51 @@ module Flapjack
         start_in_sched + sched_maintenance
       end
 
+      # TODO test whether the below overlapping logic is prone to off-by-one
+      # errors; the numbers may line up more neatly if we consider outages to
+      # start one second after the maintenance period ends.
+      #
+      # NB: when summing across an entity we'd have to coalesce the results
+      # for different checks as well
       def downtime(start_time, end_time)
-        sched_maintenance = scheduled_maintenance
+        sched_maintenances = scheduled_maintenance
 
-        down = outages
+        outs = outages
 
         total_secs = 0
         percentage = 0
 
-        down.each do |d|
+        unless outs.empty?
 
-          start  = d[0]
-          finish = d[1]
+          sched_maintenances.each do |sm|
 
-          # TODO determine overlap against all sched_maintenance periods
+            outs.each do |o|
+              next if o[:ignore] # already flagged as fully overlapping
+              next unless (sm[:start_time] < o[:end_time]) &&
+                (sm[:end_time] > o[:start_time])
+
+              if sm[:start_time] <= o[:start_time] &&
+                sm[:end_time] >= o[:end_time]
+
+                # fully overlapping
+                o[:ignore] = true
+
+              elsif sm[:start_time] <= o[:start_time]
+                # partially overlapping on the earlier side
+                o[:start_time] = sm[:end_time]
+              elsif sm[:end_time] >= o[:end_time]
+                # partially overlapping on the later side
+                o[:end_time] = sm[:start_time]
+              end
+            end
+
+          end
+
+          total_secs = outs.sum {|o|
+            o[:ignore] ? 0 : (o[:end_time] - o[:start_time])
+          }
+
+          percentage = 100 * total_secs) / (end_time - start_time)
 
         end
 

@@ -317,9 +317,11 @@ module Flapjack
 
         @redis.multi do
           maint_data = maint_ts.collect {|ts|
-            {:timestamp => ts,
-             :duration  => @redis.zscore("#{@key}:#{sched}_maintenances", ts),
-             :summary   => @redis.get("#{@key}:#{ts}:#{sched}_maintenance:summary")
+            duration = @redis.zscore("#{@key}:#{sched}_maintenances", ts)
+            {:start_time => ts,
+             :duration   => duration,
+             :summary    => @redis.get("#{@key}:#{ts}:#{sched}_maintenance:summary"),
+             :end_time   => ts + duration
             }
           }
         end
