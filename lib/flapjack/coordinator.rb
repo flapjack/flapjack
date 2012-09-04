@@ -149,9 +149,7 @@ module Flapjack
 
         @config.keys.each do |pikelet_type|
           next unless pikelet_types.has_key?(pikelet_type)
-          #if @config[pikelet_type]['enabled']
-            next unless @config[pikelet_type]['enabled'] #== true
-          #end
+          next unless @config[pikelet_type]['enabled']
           @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet(s)"
           pikelet_cfg = @config[pikelet_type]
           case pikelet_type
