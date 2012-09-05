@@ -57,10 +57,10 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
   end
 
   it "a list of unscheduled maintenances for an entity check" do
-    entity_check.should_receive(:historical_maintenances).
+    entity_check.should_receive(:maintenances).
       with(time - (12 * 60 * 60), time, :scheduled => false).and_return(maintenances)
 
-    entity_check.should_receive(:historical_maintenances).
+    entity_check.should_receive(:maintenances).
       with(nil, time - (12 * 60 * 60), :scheduled => false).and_return([])
 
     ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
@@ -73,10 +73,10 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
   end
 
   it "a list of scheduled maintenances for an entity check" do
-    entity_check.should_receive(:historical_maintenances).
+    entity_check.should_receive(:maintenances).
       with(time - (12 * 60 * 60), time, :scheduled => true).and_return(maintenances)
 
-    entity_check.should_receive(:historical_maintenances).
+    entity_check.should_receive(:maintenances).
       with(nil, time - (12 * 60 * 60), :scheduled => true).and_return([])
 
     ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
@@ -95,10 +95,10 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     entity_check.should_receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
-    entity_check.should_receive(:historical_maintenances).
+    entity_check.should_receive(:maintenances).
       with(time - (12 * 60 * 60), time, :scheduled => true).and_return(maintenances)
 
-    entity_check.should_receive(:historical_maintenances).
+    entity_check.should_receive(:maintenances).
       with(nil, time - (12 * 60 * 60), :scheduled => true).and_return([])
 
     ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)

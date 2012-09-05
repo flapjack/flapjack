@@ -10,6 +10,8 @@ require 'sinatra/base'
 
 require 'flapjack/pikelet'
 
+require 'flapjack/api/entity_presenter'
+
 require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
 
@@ -101,8 +103,23 @@ module Flapjack
       sta.to_json
     end
 
-    # list scheduled maintenance periods for a service on an entity
-    get '/scheduled_maintenances/:entity/:check' do
+    get '/outages/:entity' do
+      content_type :json
+      entity = to_entity(params[:entity])
+      if entity.nil?
+        status 404
+        return
+      end
+
+      # TODO sensible to_i logic
+      start_time = params[:start_time] ? params[:start_time].to_i : nil
+      end_time = params[:end_time] ? params[:end_time].to_i : nil
+
+      presenter = Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+      presenter.outages(start_time, end_time).to_json
+    end
+
+    get '/outages/:entity/:check' do
       content_type :json
       entity = to_entity(params[:entity])
       if entity.nil?
@@ -111,10 +128,31 @@ module Flapjack
       end
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
         params[:check], :redis => @@redis)
-      entity_check.scheduled_maintenances.to_json
+
+      # TODO sensible to_i logic
+      start_time = params[:start_time] ? params[:start_time].to_i : nil
+      end_time = params[:end_time] ? params[:end_time].to_i : nil
+
+      presenter = Flapjack::API::EntityCheckPresenter.new(entity_check)
+      presenter.outages(start_time, end_time).to_json
     end
 
-    # list unscheduled maintenance periods for a service on an entity
+    get '/unscheduled_maintenances/:entity' do
+      content_type :json
+      entity = to_entity(params[:entity])
+      if entity.nil?
+        status 404
+        return
+      end
+
+      # TODO sensible to_i logic
+      start_time = params[:start_time] ? params[:start_time].to_i : nil
+      end_time = params[:end_time] ? params[:end_time].to_i : nil
+
+      presenter = Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+      presenter.unscheduled_maintenance(start_time, end_time).to_json
+    end
+
     get '/unscheduled_maintenances/:entity/:check' do
       content_type :json
       entity = to_entity(params[:entity])
@@ -124,11 +162,85 @@ module Flapjack
       end
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
         params[:check], :redis => @@redis)
-      entity_check.unscheduled_maintenances.to_json
+
+      # TODO sensible to_i logic
+      start_time = params[:start_time] ? params[:start_time].to_i : nil
+      end_time = params[:end_time] ? params[:end_time].to_i : nil
+
+      presenter = Flapjack::API::EntityCheckPresenter.new(entity_check)
+      presenter.unscheduled_maintenance(start_time, end_time).to_json
+    end
+
+    get '/scheduled_maintenances/:entity' do
+      content_type :json
+      entity = to_entity(params[:entity])
+      if entity.nil?
+        status 404
+        return
+      end
+
+      # TODO sensible to_i logic
+      start_time = params[:start_time] ? params[:start_time].to_i : nil
+      end_time = params[:end_time] ? params[:end_time].to_i : nil
+
+      presenter = Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+      presenter.scheduled_maintenance(start_time, end_time).to_json
+    end
+
+    get '/scheduled_maintenances/:entity/:check' do
+      content_type :json
+      entity = to_entity(params[:entity])
+      if entity.nil?
+        status 404
+        return
+      end
+      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+        params[:check], :redis => @@redis)
+
+      # TODO sensible to_i logic
+      start_time = params[:start_time] ? params[:start_time].to_i : nil
+      end_time = params[:end_time] ? params[:end_time].to_i : nil
+
+      presenter = Flapjack::API::EntityCheckPresenter.new(entity_check)
+      presenter.scheduled_maintenance(start_time, end_time).to_json
+    end
+
+    get '/downtime/:entity' do
+      content_type :json
+      entity = to_entity(params[:entity])
+      if entity.nil?
+        status 404
+        return
+      end
+
+      # TODO sensible to_i logic
+      start_time = params[:start_time] ? params[:start_time].to_i : nil
+      end_time = params[:end_time] ? params[:end_time].to_i : nil
+
+      presenter = Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+      presenter.downtime(start_time, end_time).to_json
+    end
+
+    get '/downtime/:entity/:check' do
+      content_type :json
+      entity = to_entity(params[:entity])
+      if entity.nil?
+        status 404
+        return
+      end
+      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+        params[:check], :redis => @@redis)
+
+      # TODO sensible to_i logic
+      start_time = params[:start_time] ? params[:start_time].to_i : nil
+      end_time = params[:end_time] ? params[:end_time].to_i : nil
+
+      presenter = Flapjack::API::EntityCheckPresenter.new(entity_check)
+      presenter.downtime(start_time, end_time).to_json
     end
 
     # create a scheduled maintenance period for a service on an entity
-    post '/scheduled_maintenances/:entity/:check' do
+    post '/scheduled_maintenance/:entity/:check' do
       content_type :json
       entity = to_entity(params[:entity])
       if entity.nil?
@@ -154,142 +266,6 @@ module Flapjack
         params[:check], :redis => @@redis)
       entity_check.create_acknowledgement(params[:summary])
       status 201
-    end
-
-    get '/outage_reports/:entity' do
-      content_type :json
-      entity = to_entity(params[:entity])
-      if entity.nil?
-        status 404
-        return
-      end
-
-      # TODO sensible to_i logic
-      start_time = params[:start_time]
-      end_time = params[:end_time]
-
-      presenter = Flapjack::API::EntityPresenter(entity)
-      presenter.outages(start_time, end_time)
-    end
-
-    get '/outage_reports/:entity/:check' do
-      content_type :json
-      entity = to_entity(params[:entity])
-      if entity.nil?
-        status 404
-        return
-      end
-      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => @@redis)
-
-      # TODO sensible to_i logic
-      start_time = params[:start_time]
-      end_time = params[:end_time]
-
-      presenter = Flapjack::API::EntityCheckPresenter(entity_check)
-      presenter.outages(start_time, end_time)
-    end
-
-    get '/unscheduled_maintenance_reports/:entity' do
-      content_type :json
-      entity = to_entity(params[:entity])
-      if entity.nil?
-        status 404
-        return
-      end
-
-      # TODO sensible to_i logic
-      start_time = params[:start_time]
-      end_time = params[:end_time]
-
-      presenter = Flapjack::API::EntityPresenter(entity)
-      presenter.unscheduled_maintenances(start_time, end_time)
-    end
-
-    get '/unscheduled_maintenance_reports/:entity/:check' do
-      content_type :json
-      entity = to_entity(params[:entity])
-      if entity.nil?
-        status 404
-        return
-      end
-      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => @@redis)
-
-      # TODO sensible to_i logic
-      start_time = params[:start_time]
-      end_time = params[:end_time]
-
-      presenter = Flapjack::API::EntityCheckPresenter(entity_check)
-      presenter.unscheduled_maintenances(start_time, end_time)
-    end
-
-    get '/scheduled_maintenance_reports/:entity' do
-      content_type :json
-      entity = to_entity(params[:entity])
-      if entity.nil?
-        status 404
-        return
-      end
-
-      # TODO sensible to_i logic
-      start_time = params[:start_time]
-      end_time = params[:end_time]
-
-      presenter = Flapjack::API::EntityPresenter(entity)
-      presenter.scheduled_maintenances(start_time, end_time)
-    end
-
-    get '/scheduled_maintenance_reports/:entity/:check' do
-      content_type :json
-      entity = to_entity(params[:entity])
-      if entity.nil?
-        status 404
-        return
-      end
-      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => @@redis)
-
-      # TODO sensible to_i logic
-      start_time = params[:start_time]
-      end_time = params[:end_time]
-
-      presenter = Flapjack::API::EntityCheckPresenter(entity_check)
-      presenter.scheduled_maintenances(start_time, end_time)
-    end
-
-    get '/downtime_reports/:entity' do
-      content_type :json
-      entity = to_entity(params[:entity])
-      if entity.nil?
-        status 404
-        return
-      end
-
-      # TODO sensible to_i logic
-      start_time = params[:start_time]
-      end_time = params[:end_time]
-
-      presenter = Flapjack::API::EntityPresenter(entity)
-      presenter.downtime(start_time, end_time)
-    end
-
-    get '/downtime_reports/:entity/:check' do
-      content_type :json
-      entity = to_entity(params[:entity])
-      if entity.nil?
-        status 404
-        return
-      end
-      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => @@redis)
-
-      # TODO sensible to_i logic
-      start_time = params[:start_time]
-      end_time = params[:end_time]
-
-      presenter = Flapjack::API::EntityCheckPresenter(entity_check)
-      presenter.downtime(start_time, end_time)
     end
 
     not_found do

@@ -56,12 +56,12 @@ module Flapjack
 
       def unscheduled_maintenance(start_time, end_time)
         # unsched_maintenance is an array of hashes, with [duration, timestamp, summary] keys
-        unsched_maintenance = @entity_check.historical_maintenances(start_time, end_time,
+        unsched_maintenance = @entity_check.maintenances(start_time, end_time,
           :scheduled => false)
 
         # to see if we start in an unscheduled maintenance period, we must check all unscheduled
         # maintenances before the period and their durations
-        start_in_unsched = @entity_check.historical_maintenances(nil, start_time,
+        start_in_unsched = @entity_check.maintenances(nil, start_time,
           :scheduled => false).select {|pu|
 
           (pu[:timestamp] + pu[:duration]) >= start_time
@@ -72,12 +72,12 @@ module Flapjack
 
       def scheduled_maintenance(start_time, end_time)
         # sched_maintenance is an array of hashes, with [duration, timestamp, summary] keys
-        sched_maintenance = @entity_check.historical_maintenances(start_time, end_time,
+        sched_maintenance = @entity_check.maintenances(start_time, end_time,
           :scheduled => true)
 
         # to see if we start in a scheduled maintenance period, we must check all scheduled
         # maintenances before the period and their durations
-        start_in_sched = @entity_check.historical_maintenances(nil, start_time,
+        start_in_sched = @entity_check.maintenances(nil, start_time,
           :scheduled => true).select {|ps|
 
           (ps[:timestamp] + ps[:duration]) >= start_time

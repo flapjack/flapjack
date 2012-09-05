@@ -24,7 +24,7 @@ end
 
 def remove_scheduled_maintenance(entity, check)
   entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
-  sm = entity_check.scheduled_maintenances
+  sm = entity_check.maintenances(nil, nil, :scheduled => true)
   sm.each do |m|
     entity_check.delete_scheduled_maintenance(:start_time => m[:start_time])
   end

@@ -12,7 +12,6 @@ module Flapjack
 
     class EntityCheck
 
-      # FIXME: 'acknowledgement' isn't a primary state of a check but rather meta-data
       STATE_OK              = 'ok'
       STATE_WARNING         = 'warning'
       STATE_CRITICAL        = 'critical'
@@ -77,16 +76,6 @@ module Flapjack
                   'summary' => options['summary']
                 }
         create_event(event)
-      end
-
-      # returns an array of all unscheduled maintenances for a check
-      def unscheduled_maintenances
-        maintenances(:scheduled => false)
-      end
-
-      # returns an array of all scheduled maintenances for a check
-      def scheduled_maintenances
-        maintenances(:scheduled => true)
       end
 
       # FIXME: need to add summary to summary of existing unscheduled maintenance if there is
@@ -165,7 +154,7 @@ module Flapjack
 
         # are we within a scheduled maintenance period?
         t = Time.now.to_i
-        current_sched_ms = scheduled_maintenances.select {|sm|
+        current_sched_ms = maintenances(nil, nil, :scheduled => true).select {|sm|
           (sm[:start_time] <= t) && (t < sm[:end_time])
         }
         return if current_sched_ms.empty?
@@ -175,7 +164,7 @@ module Flapjack
         most_futuristic = current_sched_ms.max {|sm| sm[:end_time] }
         start_time = most_futuristic[:start_time]
         duration   = most_futuristic[:duration]
-        @redis.setex("#{@key}:scheduled_maintenance", duration, start_time)
+        @redis.setex("#{@key}:scheduled_maintenance", duration.to_i, start_time)
       end
 
       # returns nil if no previous state; this must be considered as a possible
@@ -304,7 +293,7 @@ module Flapjack
       # will be considered inclusively, so, e.g. coverage for a day should go
       # from midnight to 11:59:59 PM. Pass nil for either end to leave that
       # side unbounded.
-      def historical_maintenances(start_time, end_time, opts = {})
+      def maintenances(start_time, end_time, opts = {})
         sched = opts[:scheduled] ? 'scheduled' : 'unscheduled'
 
         start_time ||= '-inf'
@@ -317,7 +306,7 @@ module Flapjack
 
         @redis.multi do
           maint_data = maint_ts.collect {|ts|
-            {:start_time => ts,
+            {:start_time => ts.to_i,
              :duration   => @redis.zscore("#{@key}:#{sched}_maintenances", ts),
              :summary    => @redis.get("#{@key}:#{ts}:#{sched}_maintenance:summary"),
             }
@@ -329,7 +318,7 @@ module Flapjack
         # make the Future objects report their class.
         maint_data.collect {|md|
           md.update(md) {|k,ov,nv| (nv.class == Redis::Future) ? nv.value : nv }
-          md[:end_time] = (md[:start_time].to_i + md[:duration]).floor
+          md[:end_time] = (md[:start_time] + md[:duration]).floor
           md
         }
       end
@@ -346,22 +335,6 @@ module Flapjack
 
       def validate_state(state)
         [STATE_OK, STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN].include?(state)
-      end
-
-      def maintenances(opts = {})
-        sched = opts[:scheduled] ? 'scheduled' : 'unscheduled'
-        return [] unless @redis.exists("#{@key}:#{sched}_maintenances")
-        @redis.zrange("#{@key}:#{sched}_maintenances", 0, -1, :withscores => true).collect {|s|
-          start_time = s[0].to_i
-          duration   = s[1].to_i
-          summary    = @redis.get("#{@key}:#{start_time}:#{sched}_maintenance:summary")
-          end_time   = start_time + duration
-          {:start_time => start_time,
-           :end_time   => end_time,
-           :duration   => duration,
-           :summary    => summary
-          }
-        }
       end
 
     end

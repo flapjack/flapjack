@@ -167,7 +167,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       ec.create_scheduled_maintenance(:start_time => three_hours_ago,
         :duration => half_an_hour, :summary => "second")
 
-      smp = ec.scheduled_maintenances
+      smp = ec.maintenances(nil, nil, :scheduled => true)
       smp.should_not be_nil
       smp.should be_an(Array)
       smp.should have(2).scheduled_maintenance_periods
@@ -192,7 +192,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       ec.create_unscheduled_maintenance(:start_time => three_hours_ago,
         :duration => half_an_hour, :summary => "second")
 
-      ump = ec.unscheduled_maintenances
+      ump =  ec.maintenances(nil, nil, :scheduled => false)
       ump.should_not be_nil
       ump.should be_an(Array)
       ump.should have(2).unscheduled_maintenance_periods
@@ -345,7 +345,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec.create_scheduled_maintenance(:start_time => time_before(t, 60),
       :duration => half_an_hour, :summary => "c")
 
-    sched_maint_periods = ec.historical_maintenances(time_before(t, 150), t,
+    sched_maint_periods = ec.maintenances(time_before(t, 150), t,
       :scheduled => true)
     sched_maint_periods.should_not be_nil
     sched_maint_periods.should be_an(Array)
