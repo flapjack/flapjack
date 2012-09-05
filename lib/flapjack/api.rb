@@ -240,7 +240,7 @@ module Flapjack
     end
 
     # create a scheduled maintenance period for a service on an entity
-    post '/scheduled_maintenance/:entity/:check' do
+    post '/scheduled_maintenances/:entity/:check' do
       content_type :json
       entity = to_entity(params[:entity])
       if entity.nil?
