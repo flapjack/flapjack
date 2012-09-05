@@ -118,7 +118,14 @@ Create the named pipe if it doesn't already exist:
 Running
 =======
 
-    bin/flapjack
+    bin/flapjack [options]
+
+    $ flapjack --help
+    Usage: flapjack [options]
+        -c, --config [PATH]              PATH to the config file to use
+        -d, --[no-]daemonize             Daemonize?
+
+The command line option for daemonize overrides whatever is set in the config file.
 
 flapjack-nagios-receiver
 ------------------------
