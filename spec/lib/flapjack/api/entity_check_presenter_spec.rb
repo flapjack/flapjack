@@ -23,17 +23,20 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
   }
 
   # one overlap at start, one overlap at end, one wholly overlapping,
-  # and one left un-overlapped
-  let(:scheduled_maintenances) {
+  # one wholly contained
+  let(:maintenances) {
     [{:start_time => time - ((4 * 60 * 60) + (1 * 60)), # 1 minute before outage starts
       :end_time   => time - (4 * 60 * 60) + (2 * 60),   # 2 minutes after outage starts
       :duration => (3 * 60)},
      {:start_time => time - (3 * 60 * 60) + (8 * 60),   # 2 minutes before outage ends
       :end_time   => time - (3 * 60 * 60) + (11 * 60),  # 1 minute after outage ends
       :duration => (3 * 60)},
-     {:start_time => time - ((2 * 60 * 60) + (1 * 60)), # i minute before outage starts
+     {:start_time => time - ((2 * 60 * 60) + (1 * 60)), # 1 minute before outage starts
       :end_time   => time - (2 * 60 * 60) + (17 * 60),  # 2 minutes after outage ends
-      :duration => (3 * 60)}
+      :duration => (3 * 60)},
+     {:start_time => time - (1 * 60 * 60) + (1 * 60),   # 1 minute after outage starts
+      :end_time   => time - (1 * 60 * 60) + (10 * 60),  # 10 minutes before outage ends
+      :duration => (9 * 60)}
     ]
   }
 
@@ -53,12 +56,38 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     # TODO check the data in those hashes
   end
 
-  it "a list of unscheduled maintenances for an entity check"
+  it "a list of unscheduled maintenances for an entity check" do
+    entity_check.should_receive(:historical_maintenances).
+      with(time - (12 * 60 * 60), time, :scheduled => false).and_return(maintenances)
 
-  it "a list of scheduled maintenances for an entity check"
+    entity_check.should_receive(:historical_maintenances).
+      with(nil, time - (12 * 60 * 60), :scheduled => false).and_return([])
 
-  # TODO test with overhanging maintenance period (i.e. starts before start
-  # time of check)
+    ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
+    unsched_maint = ecp.unscheduled_maintenance(time - (12 * 60 * 60), time)
+
+    unsched_maint.should be_an(Array)
+    unsched_maint.should have(4).time_ranges
+
+    # TODO check the data in those hashes
+  end
+
+  it "a list of scheduled maintenances for an entity check" do
+    entity_check.should_receive(:historical_maintenances).
+      with(time - (12 * 60 * 60), time, :scheduled => true).and_return(maintenances)
+
+    entity_check.should_receive(:historical_maintenances).
+      with(nil, time - (12 * 60 * 60), :scheduled => true).and_return([])
+
+    ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
+    sched_maint = ecp.scheduled_maintenance(time - (12 * 60 * 60), time)
+
+    sched_maint.should be_an(Array)
+    sched_maint.should have(4).time_ranges
+
+    # TODO check the data in those hashes
+  end
+
   it "returns downtime and percentage for an entity check" do
     entity_check.should_receive(:historical_states).
       with(time - (12 * 60 * 60), time).and_return(states)
@@ -67,7 +96,7 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
       with(time - (4 * 60 * 60)).and_return(nil)
 
     entity_check.should_receive(:historical_maintenances).
-      with(time - (12 * 60 * 60), time, :scheduled => true).and_return(scheduled_maintenances)
+      with(time - (12 * 60 * 60), time, :scheduled => true).and_return(maintenances)
 
     entity_check.should_receive(:historical_maintenances).
       with(nil, time - (12 * 60 * 60), :scheduled => true).and_return([])
@@ -75,10 +104,13 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
     downtimes = ecp.downtime(time - (12 * 60 * 60), time)
 
-    # 31 minutes, 3 + 8 + 20
+    # 22 minutes, 3 + 8 + 11
     downtimes.should be_a(Hash)
-    downtimes[:total_seconds].should == (31 * 60)
-    downtimes[:percentage].should == (((31 * 60) * 100) / (12 * 60 * 60))
+    downtimes[:total_seconds].should == (22 * 60)
+    downtimes[:percentage].should == (((22 * 60) * 100) / (12 * 60 * 60))
+    downtimes[:downtime].should be_an(Array)
+    # the last outage gets split by the intervening maintenance period
+    downtimes[:downtime].should have(5).time_ranges
   end
 
 end
