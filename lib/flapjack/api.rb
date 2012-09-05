@@ -111,9 +111,8 @@ module Flapjack
         return
       end
 
-      # TODO sensible to_i logic
-      start_time = params[:start_time] ? params[:start_time].to_i : nil
-      end_time = params[:end_time] ? params[:end_time].to_i : nil
+      start_time = validate_and_parseint(params[:start_time])
+      end_time   = validate_and_parseint(params[:end_time])
 
       presenter = Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
       presenter.outages(start_time, end_time).to_json
@@ -129,9 +128,8 @@ module Flapjack
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
         params[:check], :redis => @@redis)
 
-      # TODO sensible to_i logic
-      start_time = params[:start_time] ? params[:start_time].to_i : nil
-      end_time = params[:end_time] ? params[:end_time].to_i : nil
+      start_time = validate_and_parseint(params[:start_time])
+      end_time   = validate_and_parseint(params[:end_time])
 
       presenter = Flapjack::API::EntityCheckPresenter.new(entity_check)
       presenter.outages(start_time, end_time).to_json
@@ -145,9 +143,8 @@ module Flapjack
         return
       end
 
-      # TODO sensible to_i logic
-      start_time = params[:start_time] ? params[:start_time].to_i : nil
-      end_time = params[:end_time] ? params[:end_time].to_i : nil
+      start_time = validate_and_parseint(params[:start_time])
+      end_time   = validate_and_parseint(params[:end_time])
 
       presenter = Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
       presenter.unscheduled_maintenance(start_time, end_time).to_json
@@ -163,9 +160,8 @@ module Flapjack
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
         params[:check], :redis => @@redis)
 
-      # TODO sensible to_i logic
-      start_time = params[:start_time] ? params[:start_time].to_i : nil
-      end_time = params[:end_time] ? params[:end_time].to_i : nil
+      start_time = validate_and_parseint(params[:start_time])
+      end_time   = validate_and_parseint(params[:end_time])
 
       presenter = Flapjack::API::EntityCheckPresenter.new(entity_check)
       presenter.unscheduled_maintenance(start_time, end_time).to_json
@@ -179,9 +175,8 @@ module Flapjack
         return
       end
 
-      # TODO sensible to_i logic
-      start_time = params[:start_time] ? params[:start_time].to_i : nil
-      end_time = params[:end_time] ? params[:end_time].to_i : nil
+      start_time = validate_and_parseint(params[:start_time])
+      end_time   = validate_and_parseint(params[:end_time])
 
       presenter = Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
       presenter.scheduled_maintenance(start_time, end_time).to_json
@@ -197,9 +192,8 @@ module Flapjack
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
         params[:check], :redis => @@redis)
 
-      # TODO sensible to_i logic
-      start_time = params[:start_time] ? params[:start_time].to_i : nil
-      end_time = params[:end_time] ? params[:end_time].to_i : nil
+      start_time = validate_and_parseint(params[:start_time])
+      end_time   = validate_and_parseint(params[:end_time])
 
       presenter = Flapjack::API::EntityCheckPresenter.new(entity_check)
       presenter.scheduled_maintenance(start_time, end_time).to_json
@@ -213,9 +207,8 @@ module Flapjack
         return
       end
 
-      # TODO sensible to_i logic
-      start_time = params[:start_time] ? params[:start_time].to_i : nil
-      end_time = params[:end_time] ? params[:end_time].to_i : nil
+      start_time = validate_and_parseint(params[:start_time])
+      end_time   = validate_and_parseint(params[:end_time])
 
       presenter = Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
       presenter.downtime(start_time, end_time).to_json
@@ -231,9 +224,8 @@ module Flapjack
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
         params[:check], :redis => @@redis)
 
-      # TODO sensible to_i logic
-      start_time = params[:start_time] ? params[:start_time].to_i : nil
-      end_time = params[:end_time] ? params[:end_time].to_i : nil
+      start_time = validate_and_parseint(params[:start_time])
+      end_time   = validate_and_parseint(params[:end_time])
 
       presenter = Flapjack::API::EntityCheckPresenter.new(entity_check)
       presenter.downtime(start_time, end_time).to_json
@@ -275,6 +267,13 @@ module Flapjack
     error do
       json_status 500, env['sinatra.error'].message
     end
+
+    private
+
+      def validate_and_parseint(value)
+        return unless value && (value =~ /^\d+$/)
+        value.to_i
+      end
 
   end
 
