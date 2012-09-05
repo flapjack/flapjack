@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+# Formats entity/check data for presentation by the API methods in Flapjack::API.
+
 require 'sinatra/base'
 
 require 'flapjack/data/entity_check'
@@ -38,11 +40,13 @@ module Flapjack
           if (obj[:state] == Flapjack::Data::EntityCheck::STATE_CRITICAL) &&
             (last_state.nil? || (last_state != Flapjack::Data::EntityCheck::STATE_CRITICAL))
 
+            # flipped to failed, mark next outage
             last_state = obj[:state]
             ret << {:start_time => obj[:timestamp], :end_time => nil, :summary => obj[:summary]}
           elsif (obj[:state] != Flapjack::Data::EntityCheck::STATE_CRITICAL) &&
             (last_state == Flapjack::Data::EntityCheck::STATE_CRITICAL)
 
+            # flipped to not failed, mark end time for the current outage
             last_state = obj[:state]
             ret.last[:end_time] = obj[:timestamp]
           end
@@ -87,11 +91,6 @@ module Flapjack
       # start one second after the maintenance period ends.
       #
       # TODO test performance with larger data sets
-      #
-      # NB: when summing across an entity we'd have to coalesce the results
-      # for different checks as well -- although we can probably do that by
-      # combining all of the states a la the outages() method and tracking
-      # the total down at any one time (if > 0, the entity is considered failing)
       def downtime(start_time, end_time)
         sched_maintenances = scheduled_maintenance(start_time, end_time)
 
@@ -102,17 +101,47 @@ module Flapjack
 
         unless outs.empty?
 
+          # Initially we need to check for cases where a scheduled
+          # maintenance period is fully covered by an outage period.
+          # We then create two new outage peiods to cover the time around
+          # the scheduled maintenance period, and remove the original.
+
+          sched_maintenances.each do |sm|
+
+            split_outs = []
+
+            outs.each { |o|
+              next unless o[:start_time] < sm[:start_time] &&
+                o[:end_time] > sm[:end_time]
+              o[:delete] = true
+              split_outs += [{:start_time => o[:start_time],
+                              :end_time => sm[:start_time],
+                              :summary => "#{o[:summary]} [split start]"},
+                             {:start_time => sm[:end_time],
+                              :end_time => o[:end_time],
+                              :summary => "#{o[:summary]} [split finish]"}]
+            }
+
+            outs.reject! {|o| o[:delete]}
+            outs += split_outs
+            # not strictly necessary to keep the data sorted, but
+            # will make more sense while debgging
+            outs.sort! {|a,b| a[:start_time] <=> b[:start_time]}
+          end
+
           sched_maintenances.each do |sm|
 
             outs.each do |o|
-              next if o[:ignore] # already flagged as fully overlapping
+              # skip if already flagged as fully overlapped when
+              # comparing to an earlier scheduled maintenance
+              next if o[:ignore]
               next unless (sm[:start_time] < o[:end_time]) &&
                 (sm[:end_time] > o[:start_time])
 
               if sm[:start_time] <= o[:start_time] &&
                 sm[:end_time] >= o[:end_time]
 
-                # fully overlapping
+                # outage is fully overlapped by the scheduled maintenanc
                 o[:ignore] = true
 
               elsif sm[:start_time] <= o[:start_time]
