@@ -15,7 +15,7 @@ module Flapjack
 
     class EntityPresenter
 
-      def initialise(entity, options = {})
+      def initialize(entity, options = {})
         @entity = entity
         @redis = options[:redis]
       end
@@ -26,23 +26,23 @@ module Flapjack
         }
       end
 
-      def unscheduled_maintenances(start_time, end_time)
+      def unscheduled_maintenance(start_time, end_time)
         checks.collect {|c|
-          {:check => c, :unscheduled_maintenances =>
-            check_presenter(c).unscheduled_maintenances(start_time, end_time)}
+          {:check => c, :unscheduled_maintenance =>
+            check_presenter(c).unscheduled_maintenance(start_time, end_time)}
         }
       end
 
-      def scheduled_maintenances(start_time, end_time)
+      def scheduled_maintenance(start_time, end_time)
         checks.collect {|c|
-          {:check => c, :scheduled_maintenances =>
-            check_presenter(c).scheduled_maintenances(start_time, end_time)}
+          {:check => c, :scheduled_maintenance =>
+            check_presenter(c).scheduled_maintenance(start_time, end_time)}
         }
       end
 
       def downtime(start_time, end_time)
         checks.collect {|c|
-          {:check => c, :scheduled_maintenances =>
+          {:check => c, :downtime =>
             check_presenter(c).downtime(start_time, end_time)}
         }
       end
@@ -50,11 +50,11 @@ module Flapjack
     private
 
       def checks
-        @check_list ||= entity.check_list
+        @check_list ||= @entity.check_list
       end
 
       def check_presenter(check)
-        entity_check = Flapjack::Data::EntityCheck.for_entity(@entity, c,
+        entity_check = Flapjack::Data::EntityCheck.for_entity(@entity, check,
           :redis => @redis)
         presenter = Flapjack::API::EntityCheckPresenter.new(entity_check)
       end
