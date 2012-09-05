@@ -1,11 +1,11 @@
 Flapjack
 ========
 
-Flapjack is highly scalable and distributed monitoring notification system.
+Flapjack is a highly scalable and distributed monitoring notification system.
 
 Flapjack provides a scalable method for dealing with events representing changes in system state (OK -> WARNING -> CRITICAL transitions) and alerting appropriate people as necessary.
 
-At its core, flapjack process events received from external check execution engines, such as Nagios. Nagios provides a 'perfdata' event output channel, which writes to a named pipe. `flapjack-nagios-receiver` then reads from this named pipe, converts each line to JSON and adds them to the events queue. `executive` picks up the events and processes them - deciding when and who to notifify about problems, recoveries, acknowledgements etc.
+At its core, flapjack process events received from external check execution engines, such as Nagios. Nagios provides a 'perfdata' event output channel, which writes to a named pipe. `flapjack-nagios-receiver` then reads from this named pipe, converts each line to JSON and adds them to the events queue. `executive` picks up the events and processes them - deciding when and who to notifify about problems, recoveries, acknowledgements etc. Additional check engines can be supported by adding additional receiver processes similar to the nagios receiver.
 
 
 What things do
@@ -184,7 +184,7 @@ TODO: insert architecture diagram and notes here
 Dependencies
 ------------
 
-Apart from a bundle of gems (see Gemfile):
+Apart from a bundle of gems (see flapjack.gemspec for runtime gems, and Gemfile for additional gems required for testing):
 - Ruby >= 1.9
 - Redis >= 2.4.15
 
