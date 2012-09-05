@@ -1,8 +1,8 @@
 #!/usr/bin/env ruby
 
+require 'yaml'
+
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
-require 'bundler'
-Bundler.setup(:default, FLAPJACK_ENV.to_sym)
 
 # load the config hash for the current environment
 config_file = File.join('etc', 'flapjack_config.yaml')
