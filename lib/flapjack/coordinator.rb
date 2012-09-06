@@ -15,10 +15,10 @@ require 'flapjack/patches'
 
 require 'flapjack/api'
 require 'flapjack/daemonizing'
+require 'flapjack/executive'
+require 'flapjack/jabber'
 require 'flapjack/notification/email'
 require 'flapjack/notification/sms'
-require 'flapjack/notification/jabber'
-require 'flapjack/executive'
 require 'flapjack/web'
 
 module Flapjack
@@ -116,11 +116,11 @@ module Flapjack
       # TODO store these in the classes themselves, register pikelets here?
       pikelet_types = {
         'executive'       => Flapjack::Executive,
-        'web'             => Flapjack::Web,
         'api'             => Flapjack::API,
+        'jabber_gateway'  => Flapjack::Jabber,
+        'web'             => Flapjack::Web,
         'email_notifier'  => Flapjack::Notification::Email,
-        'sms_notifier'    => Flapjack::Notification::Sms,
-        'jabber_gateway'  => Flapjack::Notification::Jabber
+        'sms_notifier'    => Flapjack::Notification::Sms
       }
 
       # FIXME: the following is currently repeated in flapjack-populator and
@@ -145,7 +145,7 @@ module Flapjack
             ::Redis.new(redis_options.merge(:driver => :synchrony))
           end
           # # NB: can override the default 'resque' namespace like this
-          # ::EM::Resque.redis.namespace = 'flapjack'
+          # ::Resque.redis.namespace = 'flapjack'
         end
 
         @config.keys.each do |pikelet_type|
@@ -197,7 +197,7 @@ module Flapjack
               # TODO error if pikelet_cfg['queue'].nil?
               flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
               # # Use these to debug the resque workers
-              flapjack_rsq.verbose = true
+              # flapjack_rsq.verbose = true
               #flapjack_rsq.very_verbose = true
               @pikelets << flapjack_rsq
               flapjack_rsq.work(0.1)
@@ -207,7 +207,7 @@ module Flapjack
             @logger.debug "new fiber created for #{pikelet_type}"
           when 'jabber_gateway'
             f = Fiber.new {
-              flapjack_jabbers = Flapjack::Notification::Jabber.new(:redis =>
+              flapjack_jabbers = Flapjack::Jabber.new(:redis =>
                 ::Redis.new(redis_options.merge(:driver => 'synchrony')),
                 :config => pikelet_cfg)
               flapjack_jabbers.main

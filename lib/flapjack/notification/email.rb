@@ -74,6 +74,12 @@ module Flapjack
         @in_unscheduled_maintenance = opts[:in_unscheduled_maintenance]
         @in_scheduled_maintenance   = opts[:in_scheduled_maintenance]
 
+        text_template = ERB.new(File.read(File.dirname(__FILE__) +
+          '/email/alert.text.erb'))
+
+        haml_engine = Haml::Engine.new(File.read(File.dirname(__FILE__) +
+          '/email/alert.html.haml'))
+
         mail_scope = self
 
         mail = Mail.new do
@@ -82,15 +88,9 @@ module Flapjack
           subject  m_subject
           reply_to m_reply_to
 
-          text_template = ERB.new(File.read(File.dirname(__FILE__) +
-            '/flapjack_mailer/sender.text.erb'))
-
           text_part do
             body text_template.result(binding)
           end
-
-          haml_engine = Haml::Engine.new(File.read(File.dirname(__FILE__) +
-            '/flapjack_mailer/sender.html.haml'))
 
           html_part do
             content_type 'text/html; charset=UTF-8'
