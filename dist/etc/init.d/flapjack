@@ -11,6 +11,8 @@ PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/b
 # Default return value
 RETVAL=0
 
+export FLAPJACK_ENV="production"
+
 if [ ! $(which flapjack) ]; then
   echo "Error: flapjack isn't in PATH."
   echo "Refusing to do anything!"
@@ -20,7 +22,7 @@ fi
 # Evaluate command
 case "$1" in
     start)
-      flapjack --config /etc/flapjack/flapjack-config.yaml --daemonize
+      rbenv-exec flapjack --config /etc/flapjack/flapjack-config.yaml --daemonize
       RETVAL=$?
     ;;
     stop)
