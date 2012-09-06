@@ -47,8 +47,8 @@
         %a(title='Dashboard' href='/failing') Failing Checks
       %h1 #{@check} on #{@entity}
       %h2
-        State: #{@check_state.upcase}
-        - if (['warning', 'critical', 'down'].include?(@check_state) and not (@in_unscheduled_maintenance or @in_scheduled_maintenance))
+        State: #{@check_state ? @check_state.upcase : ''}
+        - if (['warning', 'critical'].include?(@check_state) and !(@in_unscheduled_maintenance || @in_scheduled_maintenance))
           %a(href="/acknowledge?entity=#{@entity}&check=#{@check}") Acknowledge this
         - if @in_unscheduled_maintenance
           (Acknowledged)
@@ -64,7 +64,7 @@
           %td Last update:
           %td #{relative_time_ago(Time.at(@check_last_update.to_i))} ago
           %td #{Time.at(@check_last_update.to_i)}
-        - if @last_notifications[:problem] > 0
+        - if @last_notifications[:problem]
           - last_problem_relative = relative_time_ago(Time.at(@last_notifications[:problem])) + " ago"
           - last_problem          = Time.at(@last_notifications[:problem]).to_s
         - else
@@ -74,7 +74,7 @@
           %td Last problem notification:
           %td= last_problem_relative
           %td= last_problem
-        - if @last_notifications[:recovery] > 0
+        - if @last_notifications[:recovery]
           - last_recovery_relative = relative_time_ago(Time.at(@last_notifications[:recovery])) + " ago"
           - last_recovery          = Time.at(@last_notifications[:recovery]).to_s
         - else
@@ -84,7 +84,7 @@
           %td Last recovery notification:
           %td= last_recovery_relative
           %td= last_recovery
-        - if @last_notifications[:acknowledgement] > 0
+        - if @last_notifications[:acknowledgement]
           - last_ack_relative = relative_time_ago(Time.at(@last_notifications[:acknowledgement])) + " ago"
           - last_ack          = Time.at(@last_notifications[:acknowledgement]).to_s
         - else
@@ -95,7 +95,7 @@
           %td= last_ack_relative
           %td= last_ack
       %h3 Scheduled Maintenance Periods
-      - if @scheduled_maintenances.length > 0
+      - if @scheduled_maintenances && (@scheduled_maintenances.length > 0)
         %table
           %tr
             %th Start

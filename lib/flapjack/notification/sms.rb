@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'flapjack/notification/sms_messagenet'
+require 'flapjack/notification/sms/messagenet'
 
 module Flapjack
   module Notification
@@ -31,7 +31,7 @@ module Flapjack
         message += " at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
 
         notification['message'] = message
-        Flapjack::Notification::SmsMessagenet.sender(notification,
+        Flapjack::Notification::Sms::Messagenet.sender(notification,
           :logger => opts[:logger],
           :config => Flapjack::Notification::Sms.class_variable_get('@@config'))
       end

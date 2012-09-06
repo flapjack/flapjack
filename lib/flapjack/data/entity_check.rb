@@ -19,6 +19,7 @@ module Flapjack
 
       attr_accessor :entity, :check
 
+      # TODO probably shouldn't always be creating on query -- work out when this should be happening
       def self.for_event_id(event_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         entity_name, check = event_id.split(':')
@@ -26,6 +27,7 @@ module Flapjack
           :redis => redis)
       end
 
+      # TODO probably shouldn't always be creating on query -- work out when this should be happening
       def self.for_entity_name(entity_name, check, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         self.new(Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis, :create => true), check,
@@ -205,7 +207,9 @@ module Flapjack
       end
 
       def last_update
-        @redis.hget("check:#{@key}", 'last_update').to_i
+        lu = @redis.hget("check:#{@key}", 'last_update')
+        return unless (lu && lu =~ /^\d+$/)
+        lu.to_i
       end
 
       def last_update=(timestamp)
@@ -213,19 +217,27 @@ module Flapjack
       end
 
       def last_change
-        @redis.hget("check:#{@key}", 'last_change').to_i
+        lc = @redis.hget("check:#{@key}", 'last_change')
+        return unless (lc && lc =~ /^\d+$/)
+        lc.to_i
       end
 
       def last_problem_notification
-        @redis.get("#{@key}:last_problem_notification").to_i
+        lpn = @redis.get("#{@key}:last_problem_notification")
+        return unless (lpn && lpn =~ /^\d+$/)
+        lpn.to_i
       end
 
       def last_recovery_notification
-        @redis.get("#{@key}:last_recovery_notification").to_i
+        lrn = @redis.get("#{@key}:last_recovery_notification")
+        return unless (lrn && lrn =~ /^\d+$/)
+        lrn.to_i
       end
 
       def last_acknowledgement_notification
-        @redis.get("#{@key}:last_acknowledgement_notification").to_i
+        lan = @redis.get("#{@key}:last_acknowledgement_notification")
+        return unless (lan && lan =~ /^\d+$/)
+        lan.to_i
       end
 
       def failed?
