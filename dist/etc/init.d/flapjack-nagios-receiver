@@ -1,0 +1,40 @@
+#!/bin/bash
+#
+# Copyright (c) 2009-2012 Lindsay Holmwood <lindsay@holmwood.id.au>
+#
+# flapjack-nagios-receiver
+# reads from a nagios perfdata named-pipe and submits each event to the events queue in redis
+#
+
+PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin
+
+# Default return value
+RETVAL=0
+
+export FLAPJACK_ENV="production"
+
+if [ ! $(which flapjack-nagios-receiver) ]; then
+  echo "Error: flapjack-nagios-receiver isn't in PATH."
+  echo "Refusing to do anything!"
+  exit 1
+fi
+
+# Evaluate command
+case "$1" in
+    start)
+      rbenv-exec flapjack-nagios-receiver --config /etc/flapjack/flapjack-config.yaml >> /var/log/flapjack-nagios-receiver.log 2>&1
+      RETVAL=$?
+    ;;
+    stop)
+      #FIXME: implement this with daemons, or start it via coordinator
+      echo "Unimplemented (for now). Try doing a 'ps aux | grep flapjack-nagios-receiver', yes this is lame please kick up a stink"
+      RETVAL=$?
+    ;;
+    *)
+      echo "Usage: flapjack {start}"
+      RETVAL=1
+    ;;
+esac
+
+exit $RETVAL
+
