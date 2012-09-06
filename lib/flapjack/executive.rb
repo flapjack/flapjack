@@ -36,8 +36,9 @@ module Flapjack
                  :sms    =>    opts['sms_queue'] || 'sms_notifications',
                  :jabber => opts['jabber_queue'] || 'jabber_notifications'}
 
+      notifylog  = opts['notification_log_file'] || 'log/notify.log'
       @notifylog = Log4r::Logger.new("executive")
-      @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => "log/notify.log"))
+      @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => notifylog))
 
       # FIXME: Put loading filters into separate method
       options = { :log => @logger, :persistence => @redis }
