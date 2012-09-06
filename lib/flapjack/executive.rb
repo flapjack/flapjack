@@ -97,13 +97,17 @@ module Flapjack
 
       if skip_filters
         @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because filtering was skipped")
-      elsif not blocker
-        @logger.info("#{Time.now}: Sending notifications for event #{event.id}")
-        generate_notification(event, entity_check)
-      elsif blocker
+        return
+      end
+
+      if blocker
         blocker_names = [ blocker.name ]
         @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
+        return
       end
+
+      @logger.info("#{Time.now}: Sending notifications for event #{event.id}")
+      generate_notification(event, entity_check)
     end
 
     def update_keys(event, entity_check)
@@ -122,10 +126,12 @@ module Flapjack
         # Track when we last saw an event for a particular entity:check pair
         entity_check.last_update = timestamp
 
+        @failure_count = nil
+
         if event.ok?
           @redis.hincrby('event_counters', 'ok', 1)
         elsif event.failure?
-          @redis.hincrby('event_counters', 'failure', 1)
+          @failure_count = @redis.hincrby('event_counters', 'failure', 1)
         end
 
         event.previous_state = entity_check.state
@@ -224,6 +230,7 @@ module Flapjack
           when "email"
             Resque.enqueue_to(@queues[:email], Notification::Email, notif)
           when "jabber"
+            notification[:failure_count] = @failure_count if @failure_count
             # puts a notification into the jabber queue (redis list)
             @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(notification))
           end
