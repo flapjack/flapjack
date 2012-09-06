@@ -8,6 +8,11 @@
 
 PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin
 
+# load global rbenv environment if present
+if [ -x /etc/profile.d/rbenv.sh ] ; then
+  source /etc/profile.d/rbenv.sh
+fi
+
 # Default return value
 RETVAL=0
 
@@ -21,19 +26,19 @@ fi
 
 # Evaluate command
 case "$1" in
-    start)
-      rbenv-exec flapjack-nagios-receiver --config /etc/flapjack/flapjack-config.yaml >> /var/log/flapjack-nagios-receiver.log 2>&1
-      RETVAL=$?
-    ;;
-    stop)
-      #FIXME: implement this with daemons, or start it via coordinator
-      echo "Unimplemented (for now). Try doing a 'ps aux | grep flapjack-nagios-receiver', yes this is lame please kick up a stink"
-      RETVAL=$?
-    ;;
-    *)
-      echo "Usage: flapjack {start}"
-      RETVAL=1
-    ;;
+  start)
+    nohup rbenv-exec flapjack-nagios-receiver --config /etc/flapjack/flapjack-config.yaml >> /var/log/flapjack-nagios-receiver.log 2>&1 &
+    RETVAL=$?
+  ;;
+  stop)
+    #FIXME: implement this with daemons, or start it via coordinator
+    echo "Unimplemented (for now). Try doing a 'ps aux | grep flapjack-nagios-receiver', yes this is lame please kick up a stink"
+    RETVAL=1
+  ;;
+  *)
+    echo "Usage: flapjack {start}"
+    RETVAL=1
+  ;;
 esac
 
 exit $RETVAL
