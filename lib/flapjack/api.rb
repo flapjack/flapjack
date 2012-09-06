@@ -37,34 +37,6 @@ module Flapjack
       end
     end
 
-    def to_entity(name_or_entity)
-      return name_or_entity if name_or_entity.is_a?(Flapjack::Data::Entity)
-      Flapjack::Data::Entity.find_by_name(name_or_entity, :redis => @@redis)
-    end
-
-    def entity_status(ent)
-      entity = to_entity(ent)
-      return if entity.nil?
-      entity.check_list.sort.collect {|check|
-        entity_check_status(entity, check)
-      }
-    end
-
-    def entity_check_status(ent, check)
-      entity_check = Flapjack::Data::EntityCheck.for_entity(to_entity(ent),
-        check, :redis => @@redis)
-      return if entity_check.nil?
-      { 'name'                                => check,
-        'state'                               => entity_check.state,
-        'in_unscheduled_maintenance'          => entity_check.in_unscheduled_maintenance?,
-        'in_scheduled_maintenance'            => entity_check.in_scheduled_maintenance?,
-        'last_update'                         => entity_check.last_update,
-        'last_problem_notification'           => entity_check.last_problem_notification,
-        'last_recovery_notification'          => entity_check.last_recovery_notification,
-        'last_acknowledgement_notification'   => entity_check.last_acknowledgement_notification
-      }
-    end
-
     get '/entities' do
       content_type :json
       ret = Flapjack::Data::Entity.all(:redis => @@redis).sort_by(&:name).collect {|e|
@@ -269,6 +241,35 @@ module Flapjack
     end
 
     private
+
+      def to_entity(name_or_entity)
+        return name_or_entity if name_or_entity.is_a?(Flapjack::Data::Entity)
+        Flapjack::Data::Entity.find_by_name(name_or_entity, :redis => @@redis)
+      end
+
+      # TODO move the status methods down to the presenters?
+      def entity_status(ent)
+        entity = to_entity(ent)
+        return if entity.nil?
+        entity.check_list.sort.collect {|check|
+          entity_check_status(entity, check)
+        }
+      end
+
+      def entity_check_status(ent, check)
+        entity_check = Flapjack::Data::EntityCheck.for_entity(to_entity(ent),
+          check, :redis => @@redis)
+        return if entity_check.nil?
+        { 'name'                                => check,
+          'state'                               => entity_check.state,
+          'in_unscheduled_maintenance'          => entity_check.in_unscheduled_maintenance?,
+          'in_scheduled_maintenance'            => entity_check.in_scheduled_maintenance?,
+          'last_update'                         => entity_check.last_update,
+          'last_problem_notification'           => entity_check.last_problem_notification,
+          'last_recovery_notification'          => entity_check.last_recovery_notification,
+          'last_acknowledgement_notification'   => entity_check.last_acknowledgement_notification
+        }
+      end
 
       def validate_and_parseint(value)
         return unless value && (value =~ /^\d+$/)
