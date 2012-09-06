@@ -160,7 +160,8 @@ module Flapjack
             sum += (o[:ignore] ? 0 : (o[:end_time] - o[:start_time]))
           }
 
-          percentage = (total_secs * 100) / (end_time - start_time)
+          percentage = (start_time.nil? || end_time.nil?) ? nil :
+                         (total_secs * 100) / (end_time - start_time)
         end
 
         {:total_seconds => total_secs, :percentage => percentage, :downtime => outs}
