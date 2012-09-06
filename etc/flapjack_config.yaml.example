@@ -13,6 +13,7 @@ development:
     email_queue: email_notifications
     sms_queue: sms_notifications
     jabber_queue: jabber_notifications
+    notification_log_file: log/flapjack-notification.log
   email_notifier:
     enabled: yes
     queue: email_notifications
