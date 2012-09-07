@@ -85,12 +85,13 @@ end
 
 def submit_acknowledgement(entity, check)
   event = {
-    'type'    => 'action',
-    'state'   => 'acknowledgement',
-    'summary' => "I'll have this fixed in a jiffy, saw the same thing yesterday",
-    'entity'  => entity,
-    'check'   => check,
-    'client'  => 'clientx'
+    'type'               => 'action',
+    'state'              => 'acknowledgement',
+    'summary'            => "I'll have this fixed in a jiffy, saw the same thing yesterday",
+    'entity'             => entity,
+    'check'              => check,
+    'client'             => 'clientx',
+    # 'acknowledgement_id' =>
   }
   submit_event(event)
 end

@@ -44,6 +44,10 @@ module Flapjack
         self.new(entity, check, :redis => redis)
       end
 
+      def entity_name
+        @entity.name
+      end
+
       # takes a key "entity:check", returns true if the check is in unscheduled
       # maintenance
       def in_unscheduled_maintenance?
@@ -72,9 +76,10 @@ module Flapjack
         }
         options = defaults.merge(opts)
 
-        event = { 'type'    => 'action',
-                  'state'   => 'acknowledgement',
-                  'summary' => options['summary']
+        event = { 'type'               => 'action',
+                  'state'              => 'acknowledgement',
+                  'summary'            => options['summary'],
+                  'acknowledgement_id' => options['acknowledgement_id']
                 }
         create_event(event)
       end

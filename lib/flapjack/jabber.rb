@@ -33,6 +33,8 @@ module Flapjack
       # TODO: create a logger named jabber
       self.bootstrap
       @redis  = opts[:redis]
+      @redis_config = opts[:redis_config]
+
       @config = opts[:config].dup
       @logger.debug("New Jabber pikelet with the following options: #{opts.inspect}")
       @hostname = Socket.gethostname
@@ -51,6 +53,12 @@ module Flapjack
       @jabber_connection.send(:client).connected?
     end
 
+    def add_shutdown_event
+      r = ::Redis.new(@redis_config)
+      r.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
+      r.quit
+    end
+
     def main
 
       @logger.debug("in main jabber")
@@ -66,11 +74,12 @@ module Flapjack
         @jabber_connection.setup @flapjack_jid, @config['password'], @config['server'], @config['port'].to_i
 
         @jabber_connection.disconnected do
-          @logger.warn("jabbers disconnected! reconnecting in 1 second ...")
-          #EM::Synchrony.sleep(5)
-          #EM.sleep(5)
-          sleep 1
-          @jabber_connection.send(:client).connect
+          unless should_quit?
+            @logger.warn("jabbers disconnected! reconnecting in 1 second ...")
+            # EM::Synchrony.sleep(1)
+            sleep 1
+            @jabber_connection.send(:client).connect
+          end
         end
 
         # Join the MUC Chat room after connecting.
@@ -87,15 +96,54 @@ module Flapjack
           end
         end
 
-        @jabber_connection.message :groupchat?, :body => /^flapjack: / do |m|
+        @jabber_connection.message :groupchat?, :body => /^flapjack:\s+/ do |m|
           @logger.debug("groupchat message received: #{m.inspect}")
-          rxp = Regexp.new('flapjack: (.*)', 'i').match(m.body)
-          skip unless rxp.length > 1
-          words = rxp[1]
-          msg = "what do you mean, '#{words}'?"
-          #from_room, from_alias = Regexp.new('(.*)/(.*)', 'i').match(m.from)
-          @jabber_connection.say(m.from.stripped, msg, :groupchat)
-          @logger.debug("Sent to group chat: #{msg}")
+
+          msg = nil
+          action = nil
+          redis = nil
+          entity_check = nil
+          if m.body =~ /^flapjack:\s+ACKID\s+(\d+)\s*$/i
+            ackid = $1
+
+            @logger.debug("matched ackid #{ackid}")
+
+            redis = ::Redis.new(@redis_config)
+            event_id = redis.hget('unacknowledged_failures', ackid)
+
+            error = nil
+            if event_id.nil?
+              error = "not found"
+            else
+              entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => redis)
+              error = "unknown entity" if entity_check.nil?
+            end
+
+            if error
+              msg = "couldn't ACK #{ackid} - #{error}"
+            else
+              msg = "ACKing #{entity_check.check} on entity #{entity_check.entity_name}(#{ackid})"
+              action = Proc.new {
+                entity_check.create_acknowledgement('summary' => "by #{m.from}", 'acknowledgement_id' => ackid)
+              }
+            end
+
+            @logger.debug("about to send msg #{msg}")
+
+          elsif m.body =~ /^flapjack: (.*)/i
+            words = $1
+            msg = "what do you mean, '#{words}'?"
+          end
+
+          if msg
+            #from_room, from_alias = Regexp.new('(.*)/(.*)', 'i').match(m.from)
+            @jabber_connection.say(m.from.stripped, msg, :groupchat)
+            @logger.debug("Sent to group chat: #{msg}")
+          end
+
+          action.call if action
+          redis.quit if redis
+
         end
 
         run
@@ -114,21 +162,24 @@ module Flapjack
         EM::Synchrony::FiberIterator.new(queues, queues.length).each do |queue|
           @logger.debug("kicking off a fiber for #{queue}")
           EM::Synchrony.sleep(1)
-          happy = true
-          while happy
+          until should_quit?
             if jabber_connected
               @logger.debug("jabber is connected so commencing blpop on #{queue}")
               events[queue] = @redis.blpop(queue)
               event         = Yajl::Parser.parse(events[queue][1])
               type          = event['notification_type']
-              entity, check = event['event_id'].split(':')
-              state         = event['state']
-              summary       = event['summary']
-              @config['rooms'].each do |room|
-                @jabber_connection.say(Blather::JID.new(room), "#{type.upcase} ::: \"#{check}\" on #{entity} is #{state.upcase} ::: #{summary}", :groupchat)
+              @logger.debug(event.inspect)
+              unless 'shutdown'.eql?(type)
+                entity, check = event['event_id'].split(':')
+                state         = event['state']
+                summary       = event['summary']
+                ack_str       = event['failure_count'] ? "::: flapjack: ACKID #{event['failure_count']} " : ''
+                @config['rooms'].each do |room|
+                  @jabber_connection.say(Blather::JID.new(room), "#{type.upcase} #{ack_str}:::\"#{check}\" on #{entity} is #{state.upcase} ::: #{summary}", :groupchat)
+                end
               end
             else
-              @logger.debug("bugger, not connected, sleep 1 before retry")
+              @logger.debug("not connected, sleep 1 before retry")
               EM::Synchrony.sleep(1)
             end
           end

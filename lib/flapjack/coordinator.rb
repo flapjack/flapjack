@@ -56,7 +56,7 @@ module Flapjack
     def stop
       @pikelets.each do |pik|
         case pik
-        when Flapjack::Executive
+        when Flapjack::Executive, Flapjack::Jabber
           pik.stop
           Fiber.new {
             pik.add_shutdown_event
@@ -209,7 +209,9 @@ module Flapjack
             f = Fiber.new {
               flapjack_jabbers = Flapjack::Jabber.new(:redis =>
                 ::Redis.new(redis_options.merge(:driver => 'synchrony')),
+                :redis_config => redis_options,
                 :config => pikelet_cfg)
+              @pikelets << flapjack_jabbers
               flapjack_jabbers.main
             }
             @pikelet_fibers[pikelet_type] = f
