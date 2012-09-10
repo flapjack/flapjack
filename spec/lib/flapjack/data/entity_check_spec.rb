@@ -238,8 +238,9 @@ describe Flapjack::Data::EntityCheck, :redis => true do
   it "creates an acknowledgement" do
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
     t = Time.now.to_i
-    ec.create_acknowledgement('summary' => 'looking now',
-                              'time'    => t)
+    ec.create_acknowledgement('summary'            => 'looking now',
+                              'time'               => t,
+                              'acknowledgement_id' => '75')
     event_json = @redis.rpop('events')
     event_json.should_not be_nil
     event = nil
@@ -249,12 +250,13 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     event.should_not be_nil
     event.should be_a(Hash)
     event.should == {
-      'entity'  => name,
-      'check'   => check,
-      'type'    => 'action',
-      'state'   => 'acknowledgement',
-      'summary' => 'looking now',
-      'time'    => t
+      'entity'             => name,
+      'check'              => check,
+      'type'               => 'action',
+      'state'              => 'acknowledgement',
+      'summary'            => 'looking now',
+      'time'               => t,
+      'acknowledgement_id' => '75',
     }
   end
 
