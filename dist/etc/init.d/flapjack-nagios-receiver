@@ -20,28 +20,17 @@ export FLAPJACK_ENV="production"
 
 NAGIOS_PERFDATA_FIFO="/var/cache/nagios3/event_stream.fifo"
 
-if [ ! $(which flapjack-nagios-receiver) ]; then
-  echo "Error: flapjack-nagios-receiver isn't in PATH."
+if [ ! $(which flapjack-nagios-receiver-control) ]; then
+  echo "Error: flapjack-nagios-receiver-control isn't in PATH."
   echo "Refusing to do anything!"
   exit 1
 fi
 
 # Evaluate command
-case "$1" in
-  start)
-    nohup /bin/bash -c "source /etc/profile.d/rbenv.sh && rbenv shell 1.9.3-p125 && flapjack-nagios-receiver --config /etc/flapjack/flapjack-config.yaml >> /var/log/flapjack-nagios-receiver.log 2>&1 < ${NAGIOS_PERFDATA_FIFO} &"
-    RETVAL=$?
-  ;;
-  stop)
-    #FIXME: implement this with daemons, or start it via coordinator
-    echo "Unimplemented (for now). Try doing a 'ps aux | grep flapjack-nagios-receiver', yes this is lame please kick up a stink"
-    RETVAL=1
-  ;;
-  *)
-    echo "Usage: flapjack {start}"
-    RETVAL=1
-  ;;
-esac
+
+#/bin/bash -c "source /etc/profile.d/rbenv.sh && rbenv shell 1.9.3-p125 && flapjack-nagios-receiver-control $1 -- --config /etc/flapjack/flapjack-config.yaml ${NAGIOS_PERFDATA_FIFO}"
+rbenv shell 1.9.3-p125 && flapjack-nagios-receiver-control $1 -- --config /etc/flapjack/flapjack-config.yaml ${NAGIOS_PERFDATA_FIFO}
+RETVAL=$?
 
 exit $RETVAL
 
