@@ -20,7 +20,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'daemons'
   gem.add_dependency 'log4r'
   gem.add_dependency 'yajl-ruby'
-  gem.add_dependency 'eventmachine', '~> 1.0.0.rc.4'
+  gem.add_dependency 'eventmachine', '~> 1.0.0'
   gem.add_dependency 'hiredis'
   gem.add_dependency 'em-synchrony', '~> 1.0.2'
   gem.add_dependency 'redis'
