@@ -35,7 +35,6 @@ module Flapjack
       @logger = Log4r::Logger.new("flapjack-coordinator")
       @logger.add(Log4r::StdoutOutputter.new("flapjack-coordinator"))
       @logger.add(Log4r::SyslogOutputter.new("flapjack-coordinator"))
-
     end
 
     def start(options = {})
@@ -52,57 +51,8 @@ module Flapjack
       setup
     end
 
-    # clean shutdown
     def stop
-      @pikelets.each do |pik|
-        case pik
-        when Flapjack::Executive, Flapjack::Jabber
-          pik.stop
-          Fiber.new {
-            pik.add_shutdown_event
-          }.resume
-        when EM::Resque::Worker
-          # resque is polling, so we don't need a shutdown object
-          pik.shutdown
-        when Thin::Server # web, api
-          # drop from this side, as HTTP keepalive etc. means browsers
-          # keep connections alive for ages, and we'd be hanging around
-          # waiting for them to drop
-          pik.stop!
-        end
-      end
-
-      Fiber.new {
-
-        thin_pikelets = @pikelets.select {|p| p.is_a?(Thin::Server) }
-
-        loop do
-          # @pikelet_fibers.each_pair do |n,f|
-          #   puts "#{n}: #{f.alive? ? 'alive' : 'dead'}"
-          # end
-
-          # thin_pikelets.each do |tp|
-          #   s = tp.backend.size
-          #   puts "thin on port #{tp.port} - #{s} connections"
-          # end
-
-          if @pikelet_fibers.values.any?(&:alive?) ||
-            thin_pikelets.any?{|tp| !tp.backend.empty? }
-
-            EM::Synchrony.sleep 0.25
-
-          else
-            EM.stop
-            break
-          end
-        end
-      }.resume
-    end
-
-    # not-so-clean shutdown
-    def stop!
-      stop
-      # FIXME wrap the above in a timeout?
+      shutdown
     end
 
   private
@@ -146,6 +96,10 @@ module Flapjack
           end
           # # NB: can override the default 'resque' namespace like this
           # ::Resque.redis.namespace = 'flapjack'
+        end
+
+        unless (['web', 'api'] & @config.keys).empty?
+          Thin::Logging.silent = true
         end
 
         @config.keys.each do |pikelet_type|
@@ -223,12 +177,10 @@ module Flapjack
               port = pikelet_cfg['port'].to_i
             end
 
-            port = 3000 if port.nil? || port <= 0 || port > 65535
+            port = 3000 if (port.nil? || port <= 0 || port > 65535)
 
             Flapjack::Web.class_variable_set('@@redis',
               ::Redis.new(redis_options.merge(:driver => 'ruby')))
-
-            Thin::Logging.silent = true
 
             web = Thin::Server.new('0.0.0.0', port, Flapjack::Web, :signals => false)
             @pikelets << web
@@ -240,12 +192,10 @@ module Flapjack
               port = pikelet_cfg['port'].to_i
             end
 
-            port = 3001 if port.nil? || port <= 0 || port > 65535
+            port = 3001 if (port.nil? || port <= 0 || port > 65535)
 
             Flapjack::API.class_variable_set('@@redis',
               ::Redis.new(redis_options.merge(:driver => 'ruby')))
-
-            Thin::Logging.silent = true
 
             api = Thin::Server.new('0.0.0.0', port, Flapjack::API, :signals => false)
             @pikelets << api
@@ -261,13 +211,59 @@ module Flapjack
     end
 
     def setup_signals
-      trap('INT')  { stop! }
+      trap('INT')  { stop }
       trap('TERM') { stop }
       unless RUBY_PLATFORM =~ /mswin/
         trap('QUIT') { stop }
-        # trap('HUP')  { restart }
-        # trap('USR1') { reopen_log }
+        # trap('HUP')  { }
       end
+    end
+
+    # def health_check(thin_pikelets)
+    #   @pikelet_fibers.each_pair do |n,f|
+    #     @logger.debug "#{n}: #{f.alive? ? 'alive' : 'dead'}"
+    #   end
+    #
+    #   thin_pikelets.each do |tp|
+    #     s = tp.backend.size
+    #     @logger.debug "thin on port #{tp.port} - #{s} connections"
+    #   end
+    # end
+
+    def shutdown
+      @pikelets.each do |pik|
+        case pik
+        when Flapjack::Executive, Flapjack::Jabber
+          pik.stop
+          Fiber.new {
+            pik.add_shutdown_event
+          }.resume
+        when EM::Resque::Worker
+          # resque is polling, so we don't need a shutdown object
+          pik.shutdown
+        when Thin::Server # web, api
+          # drop from this side, as HTTP keepalive etc. means browsers
+          # keep connections alive for ages, and we'd be hanging around
+          # waiting for them to drop
+          pik.stop!
+        end
+      end
+
+      Fiber.new {
+        thin_pikelets = @pikelets.select {|p| p.is_a?(Thin::Server) }
+
+        loop do
+          # health_check(thin_pikelets)
+
+          if @pikelet_fibers.values.any?(&:alive?) ||
+            thin_pikelets.any?{|tp| !tp.backend.empty? }
+            EM::Synchrony.sleep 0.25
+          else
+            EM.stop
+            break
+          end
+        end
+      }.resume
     end
 
   end
