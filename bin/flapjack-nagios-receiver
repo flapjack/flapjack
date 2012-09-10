@@ -2,6 +2,7 @@
 
 require 'redis'
 require 'json'
+require 'yaml'
 require 'optparse'
 require 'ostruct'
 require 'flapjack/data/entity_check'
