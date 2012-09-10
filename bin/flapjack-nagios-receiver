@@ -65,6 +65,9 @@ def process_input
     end
   rescue Redis::CannotConnectError
     puts "Error, unable to to connect to the redis server (#{$!})"
+  resque EOFError
+    puts "Error - end of file reached when reading from the named pipe. Nagios down?"
+    sleep 10
   end
 end
 
