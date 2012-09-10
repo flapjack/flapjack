@@ -2,8 +2,46 @@
 
 require 'redis'
 require 'json'
-$: << File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib'))
+require 'yaml'
+require 'optparse'
+require 'ostruct'
 require 'flapjack/data/entity_check'
+
+options = OpenStruct.new
+options.config    = File.join('etc', 'flapjack_config.yaml')
+options.daemonize = nil
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: flapjack-nagios-receiver [options]"
+
+  opts.on("-c", "--config [PATH]", String, "PATH to the config file to use") do |c|
+    options.config = c
+  end
+
+end.parse!(ARGV)
+
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+
+# load the config hash for the current environment
+
+if File.file?(options.config)
+  config = YAML::load(File.open(options.config))
+else
+  puts "Could not find config file at '#{options.config}', you may want to specify one with the --config option"
+  exit(false)
+end
+
+config_env = config[FLAPJACK_ENV]
+
+if config_env.nil? || config_env.empty?
+  puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
+  exit(false)
+end
+
+# add lib to the default include path
+#unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+#  $: << File.dirname(__FILE__) + '/../lib'
+#end
 
 # nagios.cfg contains the following templates for host and service data (modified from the default
 # to include hoststate / servicestate, and a fake service 'HOST' for hostperfdata, so that the
@@ -11,16 +49,6 @@ require 'flapjack/data/entity_check'
 # host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
 # service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
 
-FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
-config_file = File.join('etc', 'flapjack_config.yaml')
-if File.file?(config_file)
-  config = YAML::load(File.open(config_file))
-else
-  puts "Could not find 'etc/flapjack_config.yaml'"
-  exit(false)
-end
-config_env = config[FLAPJACK_ENV]
-puts config_env.inspect
 @redis_host     = config_env['redis']['host'] || 'localhost'
 @redis_port     = config_env['redis']['port'] || '6379'
 @redis_path     = config_env['redis']['path'] || nil
@@ -29,11 +57,6 @@ puts config_env.inspect
 if config_env.nil? || config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}'"
   exit(false)
-end
-
-# add lib to the default include path
-unless $:.include?(File.dirname(__FILE__) + '/../lib/')
-  $: << File.dirname(__FILE__) + '/../lib'
 end
 
 def process_input
@@ -65,6 +88,9 @@ def process_input
     end
   rescue Redis::CannotConnectError
     puts "Error, unable to to connect to the redis server (#{$!})"
+  rescue EOFError
+    puts "Error - end of file reached when reading from the named pipe. Nagios down?"
+    sleep 10
   end
 end
 

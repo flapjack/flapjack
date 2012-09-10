@@ -27,7 +27,7 @@ fi
 # Evaluate command
 case "$1" in
   start)
-    nohup rbenv-exec flapjack-nagios-receiver --config /etc/flapjack/flapjack-config.yaml >> /var/log/flapjack-nagios-receiver.log 2>&1 &
+    nohup /bin/bash -c 'source /etc/profile.d/rbenv.sh && rbenv shell 1.9.3-p125 && flapjack-nagios-receiver --config /etc/flapjack/flapjack-config.yaml >> /var/log/flapjack-nagios-receiver.log 2>&1 &'
     RETVAL=$?
   ;;
   stop)
