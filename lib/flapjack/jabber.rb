@@ -10,50 +10,136 @@ require 'em-synchrony'
 require 'redis/connection/synchrony'
 require 'redis'
 
-require 'blather/client/dsl'
+require 'blather/client/client'
 require 'em-synchrony/fiber_iterator'
 require 'yajl/json_gem'
 
+require 'flapjack/pikelet'
+
 module Flapjack
 
-  class JabberConnection
-    include Blather::DSL
-
-    def keepalive
-      client.write ' '
-    end
-
-    def close
-      client.close
-    end
-
-  end
-
-  class Jabber
+  class Jabber < Blather::Client
 
     include Flapjack::Pikelet
 
+    log = Logger.new(STDOUT)
+    # log.level = Logger::DEBUG
+    log.level = Logger::INFO
+    Blather.logger = log
+
     def initialize(opts = {})
+      super()
       self.bootstrap
+
+      @config = opts[:config] ? opts[:config].dup : {}
+      logger.debug("New Jabber pikelet with the following options: #{opts.inspect}")
+
       @redis  = opts[:redis]
       @redis_config = opts[:redis_config]
 
-      @config = opts[:config].dup
-      logger.debug("New Jabber pikelet with the following options: #{opts.inspect}")
-      @hostname = Socket.gethostname
-      @flapjack_jid = Blather::JID.new(@config['jabberid'] + '/' + @hostname)
+      hostname = Socket.gethostname
+      flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + hostname)
+
+      setup(flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
+
+      logger.debug("Building jabber connection with jabberid: " +
+        flapjack_jid.to_s + ", port: " + @config['port'].to_s +
+        ", server: " + @config['server'].to_s + ", password: " +
+        @config['password'].to_s)
+
+      register_handler :ready do |stanza|
+        on_ready(stanza)
+      end
+
+      register_handler :message, :groupchat?, :body => /^flapjack:\s+/ do |stanza|
+        on_groupchat(stanza)
+      end
+
+      register_handler :disconnected do |stanza|
+        on_disconnect(stanza)
+      end
     end
 
-    def run
-      @jabber_connection.send(:client).run
-      log = Logger.new(STDOUT)
-      #log.level = Logger::DEBUG
-      log.level = Logger::INFO
-      Blather.logger = log
+    # Join the MUC Chat room after connecting.
+    def on_ready(stanza)
+      logger.info("Jabber Connected")
+      @config['rooms'].each do |room|
+        logger.info("Joining room #{room}")
+        presence = Blather::Stanza::Presence.new
+        presence.from = @flapjack_jid
+        presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
+        presence << "<x xmlns='http://jabber.org/protocol/muc'/>"
+        write presence
+        say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
+      end
     end
 
-    def jabber_connected
-      @jabber_connection.send(:client).connected?
+    def on_groupchat(stanza)
+      logger.debug("groupchat message received: #{stanza.inspect}")
+
+      msg = nil
+      action = nil
+      redis = nil
+      entity_check = nil
+      if stanza.body =~ /^flapjack:\s+ACKID\s+(\d+)\s*$/i
+        ackid = $1
+
+        logger.debug("matched ackid #{ackid}")
+
+        @redis_chat ||= ::Redis.new(@redis_config)
+        event_id = @redis_chat.hget('unacknowledged_failures', ackid)
+
+        error = nil
+        if event_id.nil?
+          error = "not found"
+        else
+          entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis_chat)
+          error = "unknown entity" if entity_check.nil?
+        end
+
+        if error
+          msg = "couldn't ACK #{ackid} - #{error}"
+        else
+          msg = "ACKing #{entity_check.check} on entity #{entity_check.entity_name}(#{ackid})"
+          action = Proc.new {
+            entity_check.create_acknowledgement('summary' => "by #{m.from}", 'acknowledgement_id' => ackid)
+          }
+        end
+
+        logger.debug("about to send msg #{msg}")
+
+      elsif stanza.body =~ /^flapjack: (.*)/i
+        words = $1
+        msg = "what do you mean, '#{words}'?"
+      end
+
+      if msg
+        #from_room, from_alias = Regexp.new('(.*)/(.*)', 'i').match(m.from)
+        EM.next_tick do
+          # without the next_tick block, this doesn't actually seem to be emitted
+          # until EM next does something else in this fiber. the code executes
+          # straight away, but the data is buffered somehow.
+          say(stanza.from.stripped, msg, :groupchat)
+          logger.debug("Sent to group chat: #{msg}")
+        end
+      end
+
+      # this may need to be in EM.next_tick block too?
+      action.call if action
+    end
+
+    # returning true to prevent the reactor loop from stopping
+    def on_disconnect(stanza)
+      return true unless should_quit?
+      logger.warn("jabbers disconnected! reconnecting in 1 second ...")
+      EventMachine::Timer.new(1) do
+        client.connect
+      end
+      true
+    end
+
+    def say(to, msg, using = :chat)
+      write Blather::Stanza::Message.new(to, msg, using)
     end
 
     def add_shutdown_event
@@ -63,120 +149,41 @@ module Flapjack
     end
 
     def main
-
-      logger.debug("in main jabber")
-
-      @jabber_connection = Flapjack::JabberConnection.new
-      logger.debug("Setting up jabber connection with jabberid: " + @flapjack_jid.to_s + ", port: " + @config['port'].to_s + ", server: " + @config['server'].to_s + ", password: " + @config['password'].to_s)
-      @jabber_connection.setup @flapjack_jid, @config['password'], @config['server'], @config['port'].to_i
-
-      @jabber_connection.disconnected do
-        unless should_quit?
-          logger.warn("jabbers disconnected! reconnecting in 1 second ...")
-          EM::Synchrony.sleep(1)
-          # sleep 1
-          @jabber_connection.send(:client).connect
-        end
-        true # prevent reactor loop from stopping
-      end
-
-      # Join the MUC Chat room after connecting.
-      @jabber_connection.when_ready do
-        logger.info("Jabber Connected")
-        @config['rooms'].each do |room|
-          logger.info("Joining room #{room}")
-          presence = Blather::Stanza::Presence.new
-          presence.from = @flapjack_jid
-          presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
-          presence << "<x xmlns='http://jabber.org/protocol/muc'/>"
-          @jabber_connection.write_to_stream presence
-          @jabber_connection.say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
-        end
-      end
-
-      @jabber_connection.message :groupchat?, :body => /^flapjack:\s+/ do |m|
-        logger.debug("groupchat message received: #{m.inspect}")
-
-        msg = nil
-        action = nil
-        redis = nil
-        entity_check = nil
-        if m.body =~ /^flapjack:\s+ACKID\s+(\d+)\s*$/i
-          ackid = $1
-
-          logger.debug("matched ackid #{ackid}")
-
-          @redis_chat ||= ::Redis.new(@redis_config)
-          event_id = @redis_chat.hget('unacknowledged_failures', ackid)
-
-          error = nil
-          if event_id.nil?
-            error = "not found"
-          else
-            entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis_chat)
-            error = "unknown entity" if entity_check.nil?
-          end
-
-          if error
-            msg = "couldn't ACK #{ackid} - #{error}"
-          else
-            msg = "ACKing #{entity_check.check} on entity #{entity_check.entity_name}(#{ackid})"
-            action = Proc.new {
-              entity_check.create_acknowledgement('summary' => "by #{m.from}", 'acknowledgement_id' => ackid)
-            }
-          end
-
-          logger.debug("about to send msg #{msg}")
-
-        elsif m.body =~ /^flapjack: (.*)/i
-          words = $1
-          msg = "what do you mean, '#{words}'?"
-        end
-
-        if msg
-          #from_room, from_alias = Regexp.new('(.*)/(.*)', 'i').match(m.from)
-          EM.next_tick do
-            # without the next_tick block, this doesn't actually seem to be emitted
-            # until EM next does something else in this fiber. the code executes
-            # straight away, but the data is buffered somehow.
-            @jabber_connection.say(m.from.stripped, msg, :groupchat)
-            logger.debug("Sent to group chat: #{msg}")
-          end
-        end
-
-        # this may need to be in EM.next_tick block too?
-        action.call if action
-      end
-
-      run
-
       EM::Synchrony.add_periodic_timer(30) do
         logger.debug("connection count: #{EM.connection_count} #{Time.now.to_s}.#{Time.now.usec.to_s}")
       end
 
       EM::Synchrony.add_periodic_timer(60) do
         logger.debug("calling keepalive on the jabber connection")
-        @jabber_connection.keepalive if jabber_connected
+        write('') if connected?
       end
+
+      run
 
       # simplified to use a single queue only as it makes the shutdown logic easier
       queue = @config['queue']
       events = {}
 
       until should_quit?
-        if jabber_connected
+        if connected?
           logger.debug("jabber is connected so commencing blpop on #{queue}")
           events[queue] = @redis.blpop(queue)
           event         = Yajl::Parser.parse(events[queue][1])
           type          = event['notification_type']
           logger.debug(event.inspect)
-          unless 'shutdown'.eql?(type)
+          if 'shutdown'.eql?(type)
+            EM.next_tick {
+              # get delays without the next_tick
+              close
+              @redis_chat.quit if @redis_chat
+            }
+          else
             entity, check = event['event_id'].split(':')
             state         = event['state']
             summary       = event['summary']
             ack_str       = event['failure_count'] ? "::: flapjack: ACKID #{event['failure_count']} " : ''
             @config['rooms'].each do |room|
-              @jabber_connection.say(Blather::JID.new(room), "#{type.upcase} #{ack_str}:::\"#{check}\" on #{entity} is #{state.upcase} ::: #{summary}", :groupchat)
+              say(Blather::JID.new(room), "#{type.upcase} #{ack_str}:::\"#{check}\" on #{entity} is #{state.upcase} ::: #{summary}", :groupchat)
             end
           end
         else
@@ -184,12 +191,6 @@ module Flapjack
           EM::Synchrony.sleep(1)
         end
       end
-
-      EM.next_tick {
-        # get delays without the next_tick
-        @jabber_connection.close
-        @redis_chat.quit if @redis_chat
-      }
     end
 
   end

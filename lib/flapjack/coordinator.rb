@@ -161,12 +161,12 @@ module Flapjack
             @logger.debug "new fiber created for #{pikelet_type}"
           when 'jabber_gateway'
             f = Fiber.new {
-              flapjack_jabbers = Flapjack::Jabber.new(:redis =>
+              flapjack_jabber = Flapjack::Jabber.new(:redis =>
                 ::Redis.new(redis_options.merge(:driver => 'synchrony')),
                 :redis_config => redis_options,
                 :config => pikelet_cfg)
-              @pikelets << flapjack_jabbers
-              flapjack_jabbers.main
+              @pikelets << flapjack_jabber
+              flapjack_jabber.main
             }
             @pikelet_fibers[pikelet_type] = f
             f.resume
