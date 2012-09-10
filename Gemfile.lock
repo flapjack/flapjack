@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    flapjack (0.6.7)
+    flapjack (0.6.8)
       blather
       chronic
       chronic_duration
