@@ -84,8 +84,6 @@ module Flapjack
       if stanza.body =~ /^flapjack:\s+ACKID\s+(\d+)\s*$/i
         ackid = $1
 
-        logger.debug("matched ackid #{ackid}")
-
         @redis_chat ||= ::Redis.new(@redis_config)
         event_id = @redis_chat.hget('unacknowledged_failures', ackid)
 
@@ -105,8 +103,6 @@ module Flapjack
             entity_check.create_acknowledgement('summary' => "by #{m.from}", 'acknowledgement_id' => ackid)
           }
         end
-
-        logger.debug("about to send msg #{msg}")
 
       elsif stanza.body =~ /^flapjack: (.*)/i
         words = $1
