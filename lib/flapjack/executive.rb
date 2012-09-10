@@ -32,9 +32,9 @@ module Flapjack
       redis_client_status = @redis.client
       @logger.debug("Flapjack::Executive.initialize: @redis client status: " + redis_client_status.inspect)
 
-      @queues = {:email  =>  opts['email_queue'] || 'email_notifications',
-                 :sms    =>    opts['sms_queue'] || 'sms_notifications',
-                 :jabber => opts['jabber_queue'] || 'jabber_notifications'}
+      @queues = {:email  =>  opts['email_queue'],
+                 :sms    =>    opts['sms_queue'],
+                 :jabber => opts['jabber_queue']}
 
       notifylog  = opts['notification_log_file'] || 'log/notify.log'
       @notifylog = Log4r::Logger.new("executive")
@@ -76,7 +76,10 @@ module Flapjack
     # from a different fiber while the main one is blocking.
     def add_shutdown_event
       r = ::Redis.new(@redis_config)
-      r.rpush('events', JSON.generate(Flapjack::Data::Event.shutdown))
+      r.rpush('events', JSON.generate('type'    => 'shutdown',
+                                      'host'    => '',
+                                      'service' => '',
+                                      'state'   => ''))
       r.quit
     end
 
@@ -85,7 +88,9 @@ module Flapjack
     def process_event(event)
       @logger.debug("#{Flapjack::Data::Event.pending_count(:persistence => @redis)} events waiting on the queue")
       @logger.debug("Raw event received: #{event.inspect}")
-      @logger.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}, #{Time.at(event.time).to_s}")
+      time_at = event.time
+      time_at_str = time_at ? ", #{Time.at(time_at).to_s}" : ''
+      @logger.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
 
       entity_check = (event.type == 'shutdown') ? nil :
                        Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
@@ -98,13 +103,17 @@ module Flapjack
 
       if skip_filters
         @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because filtering was skipped")
-      elsif not blocker
-        @logger.info("#{Time.now}: Sending notifications for event #{event.id}")
-        generate_notification(event, entity_check)
-      elsif blocker
+        return
+      end
+
+      if blocker
         blocker_names = [ blocker.name ]
         @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
+        return
       end
+
+      @logger.info("#{Time.now}: Sending notifications for event #{event.id}")
+      generate_notification(event, entity_check)
     end
 
     def update_keys(event, entity_check)
@@ -123,10 +132,13 @@ module Flapjack
         # Track when we last saw an event for a particular entity:check pair
         entity_check.last_update = timestamp
 
+        @failure_count = nil
+
         if event.ok?
           @redis.hincrby('event_counters', 'ok', 1)
         elsif event.failure?
-          @redis.hincrby('event_counters', 'failure', 1)
+          @failure_count = @redis.hincrby('event_counters', 'failure', 1)
+          @redis.hset('unacknowledged_failures', @failure_count, event.id)
         end
 
         event.previous_state = entity_check.state
@@ -154,6 +166,10 @@ module Flapjack
         # When an action event is processed, store the event.
         @redis.hset(event.id + ':actions', timestamp, event.state)
         @redis.hincrby('event_counters', 'action', 1) if event.ok?
+
+        if event.acknowledgement? && event.acknowledgement_id
+          @redis.hdel('unacknowledged_failures', event.acknowledgement_id)
+        end
       when 'shutdown'
         # should this be logged as an action instead? being minimally invasive for now
         result[:shutdown] = true
@@ -221,12 +237,19 @@ module Flapjack
 
           case media_type
           when "sms"
-            Resque.enqueue_to(@queues[:sms], Notification::Sms, notif)
+            if @queues[:sms]
+              Resque.enqueue_to(@queues[:sms], Notification::Sms, notif)
+            end
           when "email"
-            Resque.enqueue_to(@queues[:email], Notification::Email, notif)
+            if @queues[:email]
+              Resque.enqueue_to(@queues[:email], Notification::Email, notif)
+            end
           when "jabber"
-            # puts a notification into the jabber queue (redis list)
-            @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(notification))
+            if @queues[:jabber]
+              notification['failure_count'] = @failure_count if @failure_count
+              # puts a notification into the jabber queue (redis list)
+              @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(notification))
+            end
           end
         }
         if media.length == 0

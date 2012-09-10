@@ -11,9 +11,130 @@ require 'flapjack/data/entity_check'
 module Flapjack
   class Web < Sinatra::Base
 
+    use Rack::MethodOverride
+
     extend Flapjack::Pikelet
 
     set :views, settings.root + '/web/views'
+
+    before do
+      # will only initialise the first time it's run
+      Flapjack::Web.bootstrap
+    end
+
+    get '/' do
+      self_stats
+
+      # TODO (?) recast as Entity.all do |e|; e.checks.do |ec|; ...
+      @states = @@redis.keys('*:*:states').map { |r|
+        parts  = r.split(':')[0..1]
+        parts += entity_check_state(parts[0], parts[1])
+      }.compact.sort_by {|parts| parts }
+      haml :index
+    end
+
+    get '/failing' do
+      self_stats
+      @states = @@redis.zrange('failed_checks', 0, -1).map {|key|
+        parts  = key.split(':')
+        parts += entity_check_state(parts[0], parts[1])
+      }.compact.sort_by {|parts| parts}
+      haml :index
+    end
+
+    get '/self_stats' do
+      self_stats
+      haml :self_stats
+    end
+
+    get '/check' do
+      @entity = params[:entity]
+      @check = params[:check]
+
+      entity_check = get_entity_check(@entity, @check)
+      return 404 if entity_check.nil?
+
+      @check_state                = entity_check.state
+      @check_last_update          = entity_check.last_update
+      @check_last_change          = entity_check.last_change
+      @check_summary              = entity_check.summary
+      @last_notifications         =
+        {:problem         => entity_check.last_problem_notification,
+         :recovery        => entity_check.last_recovery_notification,
+         :acknowledgement => entity_check.last_acknowledgement_notification
+        }
+      @in_scheduled_maintenance   = entity_check.in_scheduled_maintenance?
+      @in_unscheduled_maintenance = entity_check.in_unscheduled_maintenance?
+      @scheduled_maintenances     = entity_check.scheduled_maintenances
+
+      haml :check
+    end
+
+    post '/acknowledgements/:entity/:check' do
+      @entity = params[:entity]
+      @check = params[:check]
+
+      entity_check = get_entity_check(@entity, @check)
+      return 404 if entity_check.nil?
+
+      ack = entity_check.create_acknowledgement(:summary => "Ack from web at #{Time.now.to_s}")
+      @acknowledge_success = !!ack
+      [201, haml(:acknowledge)]
+    end
+
+    # create scheduled maintenance
+    post '/scheduled_maintenances/:entity/:check' do
+      start_time = Chronic.parse(params[:start_time]).to_i
+      raise ArgumentError, "start time parsed to zero" unless start_time > 0
+      duration   = ChronicDuration.parse(params[:duration])
+      summary    = params[:summary]
+
+      entity_check = get_entity_check(params[:entity],  params[:check])
+      return 404 if entity_check.nil?
+
+      entity_check.create_scheduled_maintenance(:start_time => start_time,
+                                                :duration   => duration,
+                                                :summary    => summary)
+      redirect back
+    end
+
+    # delete a scheduled maintenance
+    delete '/scheduled_maintenances/:entity/:check' do
+      entity_check = get_entity_check(params[:entity], params[:check])
+      return 404 if entity_check.nil?
+
+      entity_check.delete_scheduled_maintenance(:start_time => params[:start_time].to_i)
+      redirect back
+    end
+
+  private
+
+    def get_entity_check(entity, check)
+      entity_obj = (entity && entity.length > 0) ?
+        Flapjack::Data::Entity.find_by_name(entity, :redis => @@redis) : nil
+      return if entity_obj.nil? || (check.nil? || check.length == 0)
+      Flapjack::Data::EntityCheck.for_entity(entity_obj, check, :redis => @@redis)
+    end
+
+    def entity_check_state(entity_name, check)
+      entity = Flapjack::Data::Entity.find_by_name(entity_name,
+        :redis => @@redis)
+      return if entity.nil?
+      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+        check, :redis => @@redis)
+      last_notifications =
+        {:problem         => entity_check.last_problem_notification,
+         :recovery        => entity_check.last_recovery_notification,
+         :acknowledgement => entity_check.last_acknowledgement_notification
+        }
+      [(entity_check.state       || '-'),
+       (entity_check.last_change || '-'),
+       (entity_check.last_update || '-'),
+       entity_check.in_unscheduled_maintenance?,
+       entity_check.in_scheduled_maintenance?,
+       last_notifications.max_by {|n| n[1] || 0}[1]
+      ]
+    end
 
     # TODO move these to a time handling section of a utils lib
     def time_period_in_words(period)
@@ -73,126 +194,9 @@ module Flapjack
       @events_queued = @@redis.llen('events')
     end
 
-     def logger
+    def logger
       Flapjack::Web.logger
     end
 
-    before do
-      # will only initialise the first time it's run
-      Flapjack::Web.bootstrap
-    end
-
-    get '/' do
-      self_stats
-      @states = @@redis.keys('*:*:states').map { |r|
-        parts   = r.split(':')[0..1]
-        entity = Flapjack::Data::Entity.find_by_name(parts[0],
-          :redis => @@redis)
-        if entity.nil?
-          nil
-        else
-          entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-            parts[1], :redis => @@redis)
-          parts << ( entity_check.state || '-' )
-          parts << ( entity_check.last_change || '-' )
-          parts << ( entity_check.last_update || '-' )
-          parts << entity_check.in_unscheduled_maintenance?
-          parts << entity_check.in_scheduled_maintenance?
-          last_notifications =
-            {:problem         => entity_check.last_problem_notification,
-             :recovery        => entity_check.last_recovery_notification,
-             :acknowledgement => entity_check.last_acknowledgement_notification
-            }
-          parts += last_notifications.max_by {|n| n[1]}
-        end
-      }.compact.sort_by {|parts| parts }
-      haml :index
-    end
-
-    get '/failing' do
-      self_stats
-      @states = @@redis.zrange('failed_checks', 0, -1).map {|key|
-        parts   = key.split(':')
-        entity = Flapjack::Data::Entity.find_by_name(parts[0],
-          :redis => @@redis)
-        if entity.nil?
-          nil
-        else
-          entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-            parts[1], :redis => @@redis)
-          parts << entity_check.state
-          parts << entity_check.last_change
-          parts << entity_check.last_update
-          parts << entity_check.in_unscheduled_maintenance?
-          parts << entity_check.in_scheduled_maintenance?
-          last_notifications =
-            {:problem         => entity_check.last_problem_notification,
-             :recovery        => entity_check.last_recovery_notification,
-             :acknowledgement => entity_check.last_acknowledgement_notification
-            }
-          parts += last_notifications.max_by {|n| n[1]}
-        end
-      }.compact.sort_by {|parts| parts}
-      haml :index
-    end
-
-    get '/self_stats' do
-      self_stats
-      haml :self_stats
-    end
-
-    get '/check' do
-      @entity = params[:entity]
-      @check = params[:check]
-      entity_check = Flapjack::Data::EntityCheck.for_entity_name(@entity, @check,
-        :redis => @@redis)
-      @check_state                = entity_check.state
-      @check_last_update          = entity_check.last_update
-      @check_last_change          = entity_check.last_change
-      @check_summary              = entity_check.summary
-      @last_notifications         =
-        {:problem         => entity_check.last_problem_notification,
-         :recovery        => entity_check.last_recovery_notification,
-         :acknowledgement => entity_check.last_acknowledgement_notification
-        }
-      @in_scheduled_maintenance   = entity_check.in_scheduled_maintenance?
-      @in_unscheduled_maintenance = entity_check.in_unscheduled_maintenance?
-      @scheduled_maintenances     = entity_check.scheduled_maintenances
-
-      haml :check
-    end
-
-    get '/acknowledge' do
-      @entity = params[:entity]
-      @check = params[:check]
-      entity_check = Flapjack::Data::EntityCheck.for_entity_name(@entity, @check,
-        :redis => @@redis)
-      ack = entity_check.create_acknowledgement(:summary => "Ack from web at #{Time.now.to_s}")
-      @acknowledge_success = !!ack
-      haml :acknowledge
-    end
-
-    # create scheduled maintenance
-    post '/scheduled_maintenance/:entity/:check' do
-      start_time = Chronic.parse(params[:start_time]).to_i
-      raise ArgumentError, "start time parsed to zero" unless start_time > 0
-      duration   = ChronicDuration.parse(params[:duration])
-      summary    = params[:summary]
-      entity_check = Flapjack::Data::EntityCheck.for_entity_name(params[:entity],
-        params[:check], :redis => @@redis)
-      entity_check.create_scheduled_maintenance(:start_time => start_time,
-                                                :duration   => duration,
-                                                :summary    => summary)
-      redirect back
-    end
-
-    # delete a scheduled maintenance
-    post '/delete_scheduled_maintenance/:entity/:check' do
-      entity_check = Flapjack::Data::EntityCheck.for_entity_name(params[:entity],
-        params[:check], :redis => @@redis)
-      start_time = params[:start_time]
-      entity_check.delete_scheduled_maintenance(:start_time => start_time)
-      redirect back
-    end
   end
 end

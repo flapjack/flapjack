@@ -5,7 +5,7 @@ module Flapjack
     class Event
       # Helper method for getting the next event.
       #
-      # Has a blocking a non-blocking method signature.
+      # Has a blocking and non-blocking method signature.
       #
       # Calling next with :block => true, we wait indefinitely for events coming
       # from other systems. This is the default behaviour.
@@ -23,13 +23,13 @@ module Flapjack
           raw   = opts[:persistence].blpop('events').last
           event = ::JSON.parse(raw)
           self.new(event)
-          # In testing, we care if there are no events on the queue.
         else
+          # In testing, we take care that there are no events on the queue.
           raw    = opts[:persistence].lpop('events')
           result = nil
 
           if raw
-            event = ::JSON.parse(raw)
+            event  = ::JSON.parse(raw)
             result = self.new(event)
           end
 
@@ -42,29 +42,73 @@ module Flapjack
         opts[:persistence].llen('events')
       end
 
-      def self.shutdown
-        {'type'    => 'shutdown',
-         'host'    => '',
-         'service' => '',
-         'state'   => ''}
-      end
-
       def initialize(attrs={})
         @attrs = attrs
       end
 
       def state
-        @attrs['state'] ? s = @attrs['state'].downcase : s = nil
+        return unless @attrs['state']
+        @attrs['state'].downcase
       end
 
       # query the previous state
       def previous_state
-        @attrs['previous_state'] ? p = @attrs['previous_state'].downcase : p = nil
+        return unless @previous_state
+        @previous_state
       end
 
       # allow the event to hold the previous state for use by filters
       def previous_state=(previous_state)
-        @attrs['previous_state'] = previous_state
+        @previous_state = previous_state
+      end
+
+      def entity
+        return unless @attrs['entity']
+        @attrs['entity'].downcase
+      end
+
+      def check
+        @attrs['check']
+      end
+
+      def acknowledgement_id
+        @attrs['acknowledgement_id']
+      end
+
+      def id
+        (entity || '-') + ':' + (check || '-')
+      end
+
+      # FIXME: site specific
+      def client
+        return unless entity
+        entity.split('-').first
+      end
+
+      def type
+        return unless @attrs['type']
+        @attrs['type'].downcase
+      end
+
+      def summary
+        @attrs['summary']
+      end
+
+      def time
+        return unless @attrs['time']
+        @attrs['time'].to_i
+      end
+
+      def action?
+        type == 'action'
+      end
+
+      def service?
+        type == 'service'
+      end
+
+      def acknowledgement?
+        action? and state == 'acknowledgement'
       end
 
       def ok?
@@ -91,48 +135,6 @@ module Flapjack
         warning? or critical?
       end
 
-      def entity
-        @attrs['entity'] ? e = @attrs['entity'].downcase : e = nil
-      end
-
-      def check
-        @attrs['check']
-      end
-
-      def id
-        entity ? e = entity : e = '-'
-        check  ? c = check  : c = '-'
-        e + ':' + c
-      end
-
-      # FIXME: site specific
-      def client
-        c = entity ? entity.split('-').first : nil
-      end
-
-      def type
-        @attrs['type'].downcase
-      end
-
-      def summary
-        @attrs['summary']
-      end
-
-      def time
-        @attrs['time'] ? @attrs['time'].to_i : Time.now.to_i
-      end
-
-      def action?
-        type == 'action'
-      end
-
-      def service?
-        type == 'service'
-      end
-
-      def acknowledgement?
-        action? and state == 'acknowledgement'
-      end
     end
   end
 end
