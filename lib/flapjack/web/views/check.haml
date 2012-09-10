@@ -46,14 +46,15 @@
         |
         %a(title='Dashboard' href='/failing') Failing Checks
       %h1 #{@check} on #{@entity}
-      %h2
-        State: #{@check_state ? @check_state.upcase : ''}
-        - if (['warning', 'critical'].include?(@check_state) and !(@in_unscheduled_maintenance || @in_scheduled_maintenance))
-          %a(href="/acknowledge?entity=#{@entity}&check=#{@check}") Acknowledge this
-        - if @in_unscheduled_maintenance
-          (Acknowledged)
-        - if @in_scheduled_maintenance
-          (Scheduled Maintenance)
+      %form{:action => "/acknowledgements/#{@entity}/#{@check}", :method => "post"}
+        %h2
+          State: #{@check_state ? @check_state.upcase : ''}
+          - if (['warning', 'critical'].include?(@check_state) and !(@in_unscheduled_maintenance || @in_scheduled_maintenance))
+            %input{:type => 'submit', :value => 'Acknowledge', :class => 'button'}
+          - if @in_unscheduled_maintenance
+            (Acknowledged)
+          - if @in_scheduled_maintenance
+            (Scheduled Maintenance)
       %h3 Output: #{@check_summary}
       %table
         %tr
@@ -122,7 +123,7 @@
       - else
         %p No scheduled maintenance
       %h4 Add Scheduled Maintenace
-      %form{ :action => "/scheduled_maintenances/#{@entity}/#{@check}", :method => "post"}
+      %form{:action => "/scheduled_maintenances/#{@entity}/#{@check}", :method => "post"}
         %fieldset
           %table
             %tr
