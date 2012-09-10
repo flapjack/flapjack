@@ -115,13 +115,14 @@
               %td= summary
               %td
                 - if end_time > Time.now.to_i
-                  %form{ :action => "/delete_scheduled_maintenance/#{@entity}/#{@check}", :method => "post"}
+                  %form{ :action => "/scheduled_maintenances/#{@entity}/#{@check}", :method => "post"}
+                    %input{:type => 'hidden', :name => '_method', :value => 'delete'}
                     %input{:type => 'hidden', :name => 'start_time', :value => start_time}
-                    %input{:type => 'submit', :name => 'delete', :value => 'Delete', :class => 'button'}
+                    %input{:type => 'submit', :value => 'Delete', :class => 'button'}
       - else
         %p No scheduled maintenance
       %h4 Add Scheduled Maintenace
-      %form{ :action => "/scheduled_maintenance/#{@entity}/#{@check}", :method => "post"}
+      %form{ :action => "/scheduled_maintenances/#{@entity}/#{@check}", :method => "post"}
         %fieldset
           %table
             %tr

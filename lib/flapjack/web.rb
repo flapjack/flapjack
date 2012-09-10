@@ -11,6 +11,8 @@ require 'flapjack/data/entity_check'
 module Flapjack
   class Web < Sinatra::Base
 
+    use Rack::MethodOverride
+
     extend Flapjack::Pikelet
 
     set :views, settings.root + '/web/views'
@@ -189,7 +191,7 @@ module Flapjack
     end
 
     # create scheduled maintenance
-    post '/scheduled_maintenance/:entity/:check' do
+    post '/scheduled_maintenances/:entity/:check' do
       start_time = Chronic.parse(params[:start_time]).to_i
       raise ArgumentError, "start time parsed to zero" unless start_time > 0
       duration   = ChronicDuration.parse(params[:duration])
@@ -208,15 +210,14 @@ module Flapjack
     end
 
     # delete a scheduled maintenance
-    post '/delete_scheduled_maintenance/:entity/:check' do
+    delete '/scheduled_maintenances/:entity/:check' do
       entity_check = get_entity_check(params[:entity], params[:check])
       if entity_check.nil?
         status 404
         return
       end
 
-      start_time = params[:start_time]
-      entity_check.delete_scheduled_maintenance(:start_time => start_time)
+      entity_check.delete_scheduled_maintenance(:start_time => params[:start_time].to_i)
       redirect back
     end
 

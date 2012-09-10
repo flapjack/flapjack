@@ -67,6 +67,7 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
     last_response.should be_not_found
   end
 
+  # TODO shouldn't create actual entity record
   it "returns 404 if no entity check is passed" do
     Flapjack::Data::Entity.add({'id'   => '5000',
                                 'name' => entity_name},
@@ -76,14 +77,48 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
   end
 
   # TODO this should not be a GET
-  it "creates an acknowledgement for an entity check" do
-
-  end
+  it "creates an acknowledgement for an entity check"
 
   it "creates a scheduled maintenance period for an entity check" do
+    t = Time.now.to_i
 
+    start_time = Time.at(t - (24 * 60 * 60))
+    duration = 30 * 60
+    summary = 'wow'
+
+    Chronic.should_receive(:parse).with('1 day ago').and_return(start_time)
+    ChronicDuration.should_receive(:parse).with('30 minutes').and_return(duration)
+
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => @redis).and_return(entity)
+
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, 'ping', :redis => @redis).and_return(entity_check)
+
+    entity_check.should_receive(:create_scheduled_maintenance).
+      with(:start_time => start_time.to_i, :duration => duration, :summary => summary)
+
+    post "/scheduled_maintenances/#{entity_name_esc}/ping?"+
+      "start_time=1+day+ago&duration=30+minutes&summary=wow"
+    last_response.status.should == 302
   end
 
-  it "deletes a scheduled maintenance period for an entity check"
+  it "deletes a scheduled maintenance period for an entity check" do
+    t = Time.now.to_i
+
+    start_time = t - (24 * 60 * 60)
+
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => @redis).and_return(entity)
+
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, 'ping', :redis => @redis).and_return(entity_check)
+
+    entity_check.should_receive(:delete_scheduled_maintenance).
+      with(:start_time => start_time)
+
+    delete "/scheduled_maintenances/#{entity_name_esc}/ping?start_time=#{start_time}"
+    last_response.status.should == 302
+  end
 
 end
