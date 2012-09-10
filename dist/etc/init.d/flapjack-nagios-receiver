@@ -18,6 +18,8 @@ RETVAL=0
 
 export FLAPJACK_ENV="production"
 
+NAGIOS_PERFDATA_FIFO="/var/cache/nagios3/event_stream.fifo"
+
 if [ ! $(which flapjack-nagios-receiver) ]; then
   echo "Error: flapjack-nagios-receiver isn't in PATH."
   echo "Refusing to do anything!"
@@ -27,7 +29,7 @@ fi
 # Evaluate command
 case "$1" in
   start)
-    nohup /bin/bash -c 'source /etc/profile.d/rbenv.sh && rbenv shell 1.9.3-p125 && flapjack-nagios-receiver --config /etc/flapjack/flapjack-config.yaml >> /var/log/flapjack-nagios-receiver.log 2>&1 &'
+    nohup /bin/bash -c "source /etc/profile.d/rbenv.sh && rbenv shell 1.9.3-p125 && flapjack-nagios-receiver --config /etc/flapjack/flapjack-config.yaml >> /var/log/flapjack-nagios-receiver.log 2>&1 < ${NAGIOS_PERFDATA_FIFO} &"
     RETVAL=$?
   ;;
   stop)
