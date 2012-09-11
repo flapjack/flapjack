@@ -30,6 +30,16 @@ describe Flapjack::Executive, :redis => true do
     @redis.hget('event_counters', 'action').should == 0.to_s
   end
 
+  it "prompts the blocking redis connection to quit" do
+    redis = mock('redis')
+    ::Redis.should_receive(:new).and_return(redis)
+    redis.should_receive(:rpush).with('events', %q{{"type":"shutdown","host":"","service":"","state":""}})
+    redis.should_receive(:quit)
+
+    executive = Flapjack::Executive.new(:redis => @redis)
+    executive.add_shutdown_event
+  end
+
   it "shuts down when provided with a shutdown event" do
     shutdown_evt = mock(Flapjack::Data::Event)
     shutdown_evt.should_receive(:id).and_return('-:-')

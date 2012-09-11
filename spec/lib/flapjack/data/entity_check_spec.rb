@@ -152,9 +152,9 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
     it "creates a scheduled maintenance period covering the current time"
 
-    it "removes an scheduled maintenance period for a future time"
+    it "removes a scheduled maintenance period for a future time"
 
-    it "removes an scheduled maintenance period covering a current time"
+    it "removes a scheduled maintenance period covering a current time"
 
     it "returns a list of scheduled maintenance periods" do
       t = Time.now.to_i

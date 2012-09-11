@@ -14,6 +14,7 @@ require 'blather/client/client'
 require 'em-synchrony/fiber_iterator'
 require 'yajl/json_gem'
 
+require 'flapjack/data/entity_check'
 require 'flapjack/pikelet'
 
 module Flapjack
@@ -36,11 +37,13 @@ module Flapjack
 
       @redis  = opts[:redis]
       @redis_config = opts[:redis_config]
+    end
 
+    def setup
       hostname = Socket.gethostname
       @flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + hostname)
 
-      setup(@flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
+      super(@flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
 
       logger.debug("Building jabber connection with jabberid: " +
         @flapjack_jid.to_s + ", port: " + @config['port'].to_s +
@@ -166,11 +169,11 @@ module Flapjack
           type          = event['notification_type']
           logger.debug(event.inspect)
           if 'shutdown'.eql?(type)
-            EM.next_tick {
+            EM.next_tick do
               # get delays without the next_tick
               close
               @redis_chat.quit if @redis_chat
-            }
+            end
           else
             entity, check = event['event_id'].split(':')
             state         = event['state']
@@ -183,8 +186,10 @@ module Flapjack
 
             msg = "#{type.upcase} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
 
-            @config['rooms'].each do |room|
-              say(Blather::JID.new(room), msg, :groupchat)
+            EM.next_tick do
+              @config['rooms'].each do |room|
+                say(Blather::JID.new(room), msg, :groupchat)
+              end
             end
           end
         else

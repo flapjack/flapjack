@@ -166,6 +166,7 @@ module Flapjack
                 :redis_config => redis_options,
                 :config => pikelet_cfg)
               @pikelets << flapjack_jabber
+              flapjack_jabber.setup
               flapjack_jabber.main
             }
             @pikelet_fibers[pikelet_type] = f
