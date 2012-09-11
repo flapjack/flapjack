@@ -18,6 +18,11 @@ OptionParser.new do |opts|
   opts.on("-d", "--[no-]daemonize", "Daemonize?") do |d|
     options.daemonize = d
   end
+
+  opts.on("-p", "--pidfile [PATH]", String, "PATH to the pidfile to write to") do |p|
+    options.pidfile = p
+  end
+
 end.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
@@ -38,6 +43,12 @@ if config_env.nil? || config_env.empty?
   exit(false)
 end
 
+if options.pidfile.nil?
+  pid_file = (config_env['pid_file'] || 'tmp/pids/flapjack.pid')
+else
+  pid_file = options.pidfile
+end
+
 # add lib to the default include path
 unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
@@ -49,7 +60,7 @@ require 'flapjack/coordinator'
 
 coordinator = Flapjack::Coordinator.new(config_env)
 coordinator.log_file = (config_env['log_file'] || 'log/flapjack.log')
-coordinator.pid_file = (config_env['pid_file'] || 'tmp/pids/flapjack.pid')
+coordinator.pid_file = pid_file
 
 if options.daemonize.nil?
   daemonize = !!config_env['daemonize']

@@ -14,6 +14,7 @@ require 'blather/client/client'
 require 'em-synchrony/fiber_iterator'
 require 'yajl/json_gem'
 
+require 'flapjack/data/entity_check'
 require 'flapjack/pikelet'
 
 module Flapjack
@@ -36,14 +37,16 @@ module Flapjack
 
       @redis  = opts[:redis]
       @redis_config = opts[:redis_config]
+    end
 
+    def setup
       hostname = Socket.gethostname
-      flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + hostname)
+      @flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + hostname)
 
-      setup(flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
+      super(@flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
 
       logger.debug("Building jabber connection with jabberid: " +
-        flapjack_jid.to_s + ", port: " + @config['port'].to_s +
+        @flapjack_jid.to_s + ", port: " + @config['port'].to_s +
         ", server: " + @config['server'].to_s + ", password: " +
         @config['password'].to_s)
 
@@ -98,9 +101,9 @@ module Flapjack
         if error
           msg = "couldn't ACK #{ackid} - #{error}"
         else
-          msg = "ACKing #{entity_check.check} on entity #{entity_check.entity_name}(#{ackid})"
+          msg = "ACKing #{entity_check.check} on entity #{entity_check.entity_name} (#{ackid})"
           action = Proc.new {
-            entity_check.create_acknowledgement('summary' => "by #{m.from}", 'acknowledgement_id' => ackid)
+            entity_check.create_acknowledgement('summary' => "by #{stanza.from.stripped}", 'acknowledgement_id' => ackid)
           }
         end
 
@@ -109,7 +112,7 @@ module Flapjack
         msg = "what do you mean, '#{words}'?"
       end
 
-      if msg
+      if msg || action
         #from_room, from_alias = Regexp.new('(.*)/(.*)', 'i').match(m.from)
         EM.next_tick do
           # without the next_tick block, this doesn't actually seem to be emitted
@@ -117,19 +120,17 @@ module Flapjack
           # straight away, but the data is buffered somehow.
           say(stanza.from.stripped, msg, :groupchat)
           logger.debug("Sent to group chat: #{msg}")
+          action.call if action
         end
       end
-
-      # this may need to be in EM.next_tick block too?
-      action.call if action
     end
 
     # returning true to prevent the reactor loop from stopping
     def on_disconnect(stanza)
-      return true unless should_quit?
+      return true if should_quit?
       logger.warn("jabbers disconnected! reconnecting in 1 second ...")
       EventMachine::Timer.new(1) do
-        client.connect
+        connect
       end
       true
     end
@@ -154,7 +155,7 @@ module Flapjack
         write('') if connected?
       end
 
-      run
+      connect
 
       # simplified to use a single queue only as it makes the shutdown logic easier
       queue = @config['queue']
@@ -168,18 +169,27 @@ module Flapjack
           type          = event['notification_type']
           logger.debug(event.inspect)
           if 'shutdown'.eql?(type)
-            EM.next_tick {
+            EM.next_tick do
               # get delays without the next_tick
               close
               @redis_chat.quit if @redis_chat
-            }
+            end
           else
             entity, check = event['event_id'].split(':')
             state         = event['state']
             summary       = event['summary']
-            ack_str       = event['failure_count'] ? "::: flapjack: ACKID #{event['failure_count']} " : ''
-            @config['rooms'].each do |room|
-              say(Blather::JID.new(room), "#{type.upcase} #{ack_str}:::\"#{check}\" on #{entity} is #{state.upcase} ::: #{summary}", :groupchat)
+
+            ack_str = event['failure_count'] ? "::: flapjack: ACKID #{event['failure_count']} " : ''
+            maint_str = (type && 'acknowledgement'.eql?(type.downcase)) ?
+              "has been acknowledged, unscheduled maintenance created for 4 hours" :
+              "is #{state.upcase}"
+
+            msg = "#{type.upcase} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
+
+            EM.next_tick do
+              @config['rooms'].each do |room|
+                say(Blather::JID.new(room), msg, :groupchat)
+              end
             end
           end
         else

@@ -18,6 +18,10 @@ OptionParser.new do |opts|
     options.config = c
   end
 
+  opts.on("-f", "--fifo [PATH]", String, "PATH to the nagios perfdata named pipe") do |f|
+    options.fifo_path = f
+  end
+
 end.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
@@ -66,6 +70,8 @@ def process_input
   else
     redis = Redis.new(:db => @redis_db, :host => @redis_host, :port => @redis_port)
   end
+
+  puts "ARGV after option processing looks like this: [#{ARGV.inspect}]"
 
   begin
     while line = ARGF.readline.split("\t")

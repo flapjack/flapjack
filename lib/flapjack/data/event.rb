@@ -3,6 +3,9 @@
 module Flapjack
   module Data
     class Event
+
+      attr_accessor :previous_state
+
       # Helper method for getting the next event.
       #
       # Has a blocking and non-blocking method signature.
@@ -44,22 +47,12 @@ module Flapjack
 
       def initialize(attrs={})
         @attrs = attrs
+        @attrs['time'] = Time.now.to_i unless @attrs.has_key?('time')
       end
 
       def state
         return unless @attrs['state']
         @attrs['state'].downcase
-      end
-
-      # query the previous state
-      def previous_state
-        return unless @previous_state
-        @previous_state
-      end
-
-      # allow the event to hold the previous state for use by filters
-      def previous_state=(previous_state)
-        @previous_state = previous_state
       end
 
       def entity
