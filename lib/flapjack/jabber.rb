@@ -38,12 +38,12 @@ module Flapjack
       @redis_config = opts[:redis_config]
 
       hostname = Socket.gethostname
-      flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + hostname)
+      @flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + hostname)
 
-      setup(flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
+      setup(@flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
 
       logger.debug("Building jabber connection with jabberid: " +
-        flapjack_jid.to_s + ", port: " + @config['port'].to_s +
+        @flapjack_jid.to_s + ", port: " + @config['port'].to_s +
         ", server: " + @config['server'].to_s + ", password: " +
         @config['password'].to_s)
 
@@ -100,7 +100,7 @@ module Flapjack
         else
           msg = "ACKing #{entity_check.check} on entity #{entity_check.entity_name} (#{ackid})"
           action = Proc.new {
-            entity_check.create_acknowledgement('summary' => "by #{stanza.from}", 'acknowledgement_id' => ackid)
+            entity_check.create_acknowledgement('summary' => "by #{stanza.from.stripped}", 'acknowledgement_id' => ackid)
           }
         end
 
@@ -124,10 +124,10 @@ module Flapjack
 
     # returning true to prevent the reactor loop from stopping
     def on_disconnect(stanza)
-      return true unless should_quit?
+      return true if should_quit?
       logger.warn("jabbers disconnected! reconnecting in 1 second ...")
       EventMachine::Timer.new(1) do
-        client.connect
+        connect
       end
       true
     end
@@ -152,7 +152,7 @@ module Flapjack
         write('') if connected?
       end
 
-      run
+      connect
 
       # simplified to use a single queue only as it makes the shutdown logic easier
       queue = @config['queue']

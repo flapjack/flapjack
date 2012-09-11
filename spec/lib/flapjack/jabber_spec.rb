@@ -3,11 +3,34 @@ require 'flapjack/jabber'
 
 describe Flapjack::Jabber do
 
+  let(:config) { {'server'   => 'example.com',
+                  'port'     => '5222',
+                  'jabberid' => 'flapjack@example.com',
+                  'password' => 'password',
+                  'alias'    => 'flapjack',
+                  'rooms'    => ['flapjacktest@conference.example.com']
+                 }
+  }
+
   let(:stanza) { mock('stanza') }
 
-  it "is initialized"
+  it "is initialized" do
+    Socket.should_receive(:gethostname).and_return('thismachine')
 
-  it "joins a chat room after connecting"
+    fj = Flapjack::Jabber.new(:config => config)
+    fj.should_not be_nil
+  end
+
+  it "joins a chat room after connecting" do
+    Socket.should_receive(:gethostname).and_return('thismachine')
+
+    fj = Flapjack::Jabber.new(:config => config)
+
+    fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Presence))
+    fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
+
+    fj.on_ready(stanza)
+  end
 
   it "receives an acknowledgement message"
 
@@ -17,7 +40,7 @@ describe Flapjack::Jabber do
 
   it "writes a message to the jabber connection"
 
-  it "prmopts the blocking redis connection to quit"
+  it "prompts the blocking redis connection to quit"
 
   it "runs a blocking loop listening for notifications"
 
