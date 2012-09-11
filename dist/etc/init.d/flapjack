@@ -32,7 +32,8 @@ case "$1" in
   ;;
   stop)
     kill `cat /var/run/flapjack/flapjack.pid`
-    #FIXME: make this more robust, preferably use daemons foo
+    # FIXME: make this more robust, preferably use daemons foo
+    # or at least wait until the flapjack process has exited before exiting
     RETVAL=$?
   ;;
   *)
