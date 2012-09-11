@@ -35,7 +35,7 @@ module Flapjack
       @config = opts[:config] ? opts[:config].dup : {}
       logger.debug("New Jabber pikelet with the following options: #{opts.inspect}")
 
-      @redis  = opts[:redis]
+      @redis = opts[:redis]
       @redis_config = opts[:redis_config]
     end
 
@@ -131,7 +131,7 @@ module Flapjack
       return true if should_quit?
       logger.warn("jabbers disconnected! reconnecting in 1 second ...")
       EventMachine::Timer.new(1) do
-        connect
+        connect # Blather::Client.connect
       end
       true
     end
@@ -156,7 +156,7 @@ module Flapjack
         write('') if connected?
       end
 
-      connect
+      connect # Blather::Client.connect
 
       # simplified to use a single queue only as it makes the shutdown logic easier
       queue = @config['queue']
@@ -172,7 +172,7 @@ module Flapjack
           if 'shutdown'.eql?(type)
             EM.next_tick do
               # get delays without the next_tick
-              close
+              close # Blather::Client.close
               @redis_chat.quit if @redis_chat
             end
           else

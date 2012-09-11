@@ -16,20 +16,26 @@ module Flapjack
         @entity_check = entity_check
       end
 
-      def outages(start_time, end_time)
+      # if options[:chop] is true, overlapping outages at start and end
+      # times will be sliced to fit.
+      def outages(start_time, end_time, options = {})
         # states is an array of hashes, with [state, timestamp, summary] keys
         states = @entity_check.historical_states(start_time, end_time)
         return states if states.empty?
 
         # if it started failed, prepend the earlier event
         initial = @entity_check.historical_state_before(states.first[:timestamp])
-        states.unshift(initial) if (initial &&
+        if (initial &&
           (initial[:state] == Flapjack::Data::EntityCheck::STATE_CRITICAL))
+          initial[:start_time] = start_time if options[:chop]
+          states.unshift(initial)
+        end
 
         # if it ended failed, append the event when it recovered
         if states.last[:state] == Flapjack::Data::EntityCheck::STATE_CRITICAL
           # TODO ensure this event is not CRITICAL, get first non-CRITICAL if so
           last = @entity_check.historical_state_after(states.last)
+          last[:end_time] = end_time if options[:chop]
           states.push(last)
         end
 
@@ -94,7 +100,7 @@ module Flapjack
       def downtime(start_time, end_time)
         sched_maintenances = scheduled_maintenance(start_time, end_time)
 
-        outs = outages(start_time, end_time)
+        outs = outages(start_time, end_time, :chop => true)
 
         total_secs = 0
         percentage = 0
@@ -103,7 +109,7 @@ module Flapjack
 
           # Initially we need to check for cases where a scheduled
           # maintenance period is fully covered by an outage period.
-          # We then create two new outage peiods to cover the time around
+          # We then create two new outage periods to cover the time around
           # the scheduled maintenance period, and remove the original.
 
           sched_maintenances.each do |sm|
@@ -132,17 +138,14 @@ module Flapjack
           sched_maintenances.each do |sm|
 
             outs.each do |o|
-              # skip if already flagged as fully overlapped when
-              # comparing to an earlier scheduled maintenance
-              next if o[:ignore]
               next unless (sm[:start_time] < o[:end_time]) &&
                 (sm[:end_time] > o[:start_time])
 
               if sm[:start_time] <= o[:start_time] &&
                 sm[:end_time] >= o[:end_time]
 
-                # outage is fully overlapped by the scheduled maintenanc
-                o[:ignore] = true
+                # outage is fully overlapped by the scheduled maintenance
+                o[:delete] = true
 
               elsif sm[:start_time] <= o[:start_time]
                 # partially overlapping on the earlier side
@@ -153,11 +156,12 @@ module Flapjack
               end
             end
 
+            outs.reject! {|o| o[:delete]}
           end
 
           # sum outage times, unless they are to be ignored
           total_secs = outs.inject(0) {|sum, o|
-            sum += (o[:ignore] ? 0 : (o[:end_time] - o[:start_time]))
+            sum += (o[:end_time] - o[:start_time])
           }
 
           percentage = (start_time.nil? || end_time.nil?) ? nil :

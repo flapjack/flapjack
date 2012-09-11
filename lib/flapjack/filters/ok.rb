@@ -16,12 +16,12 @@ module Flapjack
 
         if event.ok?
           if event.previous_state == 'ok'
-          @log.debug("Filter: Ok: existing state was ok, and the previous state was ok, so blocking")
-          result = true
+            @log.debug("Filter: Ok: existing state was ok, and the previous state was ok, so blocking")
+            result = true
           end
 
           # end any unscheduled downtime
-          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, {:redis => @persistence})
+          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @persistence)
           entity_check.end_unscheduled_maintenance
         end
 

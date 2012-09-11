@@ -109,8 +109,10 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     downtimes[:total_seconds].should == (22 * 60)
     downtimes[:percentage].should == (((22 * 60) * 100) / (12 * 60 * 60))
     downtimes[:downtime].should be_an(Array)
-    # the last outage gets split by the intervening maintenance period
-    downtimes[:downtime].should have(5).time_ranges
+    # the last outage gets split by the intervening maintenance period,
+    # but the fully covered one gets removed.
+    p downtimes[:downtime]
+    downtimes[:downtime].should have(4).time_ranges
   end
 
 end

@@ -237,6 +237,8 @@ module Flapjack
         when Flapjack::Executive, Flapjack::Jabber
           pik.stop
           Fiber.new {
+            # this needs to use a separate Redis connection from the pikelet's
+            # one, as that's in the middle of its blpop
             pik.add_shutdown_event
           }.resume
         when EM::Resque::Worker
