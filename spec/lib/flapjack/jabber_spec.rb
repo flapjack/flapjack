@@ -47,10 +47,10 @@ describe Flapjack::Jabber do
   end
 
   it "receives an acknowledgement message" do
-    stanza.should_receive(:body).and_return('flapjack: ACKID 876')
+    stanza.should_receive(:body).and_return('flapjack: ACKID 876 fixing now')
     from = mock('from')
-    from.should_receive(:stripped).twice.and_return('sender')
-    stanza.should_receive(:from).twice.and_return(from)
+    from.should_receive(:stripped).and_return('sender')
+    stanza.should_receive(:from).and_return(from)
 
     redis = mock('redis')
     redis.should_receive(:hget).with('unacknowledged_failures', '876').
@@ -59,7 +59,7 @@ describe Flapjack::Jabber do
 
     entity_check = mock(Flapjack::Data::EntityCheck)
     entity_check.should_receive(:create_acknowledgement).
-      with('summary' => 'by sender', 'acknowledgement_id' => '876')
+      with('summary' => 'fixing now', 'acknowledgement_id' => '876')
     entity_check.should_receive(:entity_name).and_return('main-example.com')
     entity_check.should_receive(:check).and_return('ping')
 
@@ -110,7 +110,6 @@ describe Flapjack::Jabber do
     fj.add_shutdown_event
   end
 
-  # TODO change to get one notification
   it "runs a blocking loop listening for notifications" do
     EM::Synchrony.should_receive(:add_periodic_timer).with(30)
     EM::Synchrony.should_receive(:add_periodic_timer).with(60)
@@ -120,7 +119,7 @@ describe Flapjack::Jabber do
 
     fj.should_receive(:connect)
     fj.should_receive(:connected?).twice.and_return(true)
-    fj.should_receive(:should_quit?).exactly(3).times.and_return(false, false, true) # run the blpop twice
+    fj.should_receive(:should_quit?).exactly(3).times.and_return(false, false, true)
     redis.should_receive(:blpop).twice.and_return(
       ["jabber_notifications", %q{{"notification_type":"problem","event_id":"main-example.com:ping","state":"critical","summary":"!!!"}}],
       ["jabber_notifications", %q{{"notification_type":"shutdown"}}]
