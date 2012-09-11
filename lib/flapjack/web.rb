@@ -28,7 +28,7 @@ module Flapjack
       # TODO (?) recast as Entity.all do |e|; e.checks.do |ec|; ...
       @states = @@redis.keys('*:*:states').map { |r|
         parts  = r.split(':')[0..1]
-        parts += entity_check_state(parts[0], parts[1])
+        [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
       }.compact.sort_by {|parts| parts }
       haml :index
     end
@@ -37,7 +37,7 @@ module Flapjack
       self_stats
       @states = @@redis.zrange('failed_checks', 0, -1).map {|key|
         parts  = key.split(':')
-        parts += entity_check_state(parts[0], parts[1])
+        [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
       }.compact.sort_by {|parts| parts}
       haml :index
     end
@@ -122,17 +122,18 @@ module Flapjack
       return if entity.nil?
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
         check, :redis => @@redis)
-      last_notifications =
+      latest_notif =
         {:problem         => entity_check.last_problem_notification,
          :recovery        => entity_check.last_recovery_notification,
          :acknowledgement => entity_check.last_acknowledgement_notification
-        }
+        }.max_by {|n| n[1] || 0}
       [(entity_check.state       || '-'),
        (entity_check.last_change || '-'),
        (entity_check.last_update || '-'),
        entity_check.in_unscheduled_maintenance?,
        entity_check.in_scheduled_maintenance?,
-       last_notifications.max_by {|n| n[1] || 0}[1]
+       latest_notif[0],
+       latest_notif[1]
       ]
     end
 
