@@ -98,9 +98,9 @@ module Flapjack
         if error
           msg = "couldn't ACK #{ackid} - #{error}"
         else
-          msg = "ACKing #{entity_check.check} on entity #{entity_check.entity_name}(#{ackid})"
+          msg = "ACKing #{entity_check.check} on entity #{entity_check.entity_name} (#{ackid})"
           action = Proc.new {
-            entity_check.create_acknowledgement('summary' => "by #{m.from}", 'acknowledgement_id' => ackid)
+            entity_check.create_acknowledgement('summary' => "by #{stanza.from}", 'acknowledgement_id' => ackid)
           }
         end
 
@@ -109,7 +109,7 @@ module Flapjack
         msg = "what do you mean, '#{words}'?"
       end
 
-      if msg
+      if msg || action
         #from_room, from_alias = Regexp.new('(.*)/(.*)', 'i').match(m.from)
         EM.next_tick do
           # without the next_tick block, this doesn't actually seem to be emitted
@@ -117,11 +117,9 @@ module Flapjack
           # straight away, but the data is buffered somehow.
           say(stanza.from.stripped, msg, :groupchat)
           logger.debug("Sent to group chat: #{msg}")
+          action.call if action
         end
       end
-
-      # this may need to be in EM.next_tick block too?
-      action.call if action
     end
 
     # returning true to prevent the reactor loop from stopping
@@ -177,9 +175,16 @@ module Flapjack
             entity, check = event['event_id'].split(':')
             state         = event['state']
             summary       = event['summary']
-            ack_str       = event['failure_count'] ? "::: flapjack: ACKID #{event['failure_count']} " : ''
+
+            ack_str = event['failure_count'] ? "::: flapjack: ACKID #{event['failure_count']} " : ''
+            maint_str = (type && 'acknowledgement'.eql?(type.downcase)) ?
+              "has been acknowledged, unscheduled maintenance created for 4 hours" :
+              "is #{state.upcase}"
+
+            msg = "#{type.upcase} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
+
             @config['rooms'].each do |room|
-              say(Blather::JID.new(room), "#{type.upcase} #{ack_str}:::\"#{check}\" on #{entity} is #{state.upcase} ::: #{summary}", :groupchat)
+              say(Blather::JID.new(room), msg, :groupchat)
             end
           end
         else
