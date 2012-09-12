@@ -65,6 +65,7 @@ module Flapjack
 
     # Join the MUC Chat room after connecting.
     def on_ready(stanza)
+      @connected_at = Time.now.to_i
       logger.info("Jabber Connected")
       @config['rooms'].each do |room|
         logger.info("Joining room #{room}")

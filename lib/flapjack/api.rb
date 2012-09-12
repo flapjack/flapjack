@@ -6,6 +6,8 @@
 # There's a matching flapjack-diner gem which consumes data from this API
 # (currently at https://github.com/ali-graham/flapjack-diner -- this will change.)
 
+require 'time'
+
 require 'sinatra/base'
 
 require 'flapjack/pikelet'
@@ -40,14 +42,18 @@ module Flapjack
     get '/entities' do
       content_type :json
       ret = Flapjack::Data::Entity.all(:redis => @@redis).sort_by(&:name).collect {|e|
-        {'id' => e.id, 'name' => e.name, 'checks' => entity_status(e)}
+        {'id' => e.id, 'name' => e.name,
+         'checks' => e.check_list.sort.collect {|c|
+                       entity_check_status(e, c)
+                     }
+        }
       }
       ret.to_json
     end
 
     get '/checks/:entity' do
       content_type :json
-      entity = to_entity(params[:entity])
+      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => @@redis)
       if entity.nil?
         status 404
         return
@@ -55,158 +61,138 @@ module Flapjack
       entity.check_list.to_json
     end
 
-    get '/status/:entity' do
+    get %r{/status/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
       content_type :json
-      sta = entity_status(params[:entity])
-      if sta.nil?
-        status 404
-        return
-      end
-      sta.to_json
-    end
 
-    get '/status/:entity/:check' do
-      content_type :json
-      sta = entity_check_status(params[:entity], params[:check])
-      if sta.nil?
-        status 404
-        return
-      end
-      sta.to_json
-    end
+      entity_name = params[:captures][0]
+      check = params[:captures][1]
 
-    get '/outages/:entity' do
-      content_type :json
-      entity = to_entity(params[:entity])
+      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @@redis)
       if entity.nil?
         status 404
         return
       end
 
-      start_time = validate_and_parseint(params[:start_time])
-      end_time   = validate_and_parseint(params[:end_time])
+      ret = if check
+        entity_check_status(entity, check)
+      else
+        entity.check_list.sort.collect {|c|
+          entity_check_status(entity, c)
+        }
+      end
+      ret.to_json
+    end
 
-      presenter = Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+    # the first capture group in the regex checks for acceptable
+    # characters in a domain name -- this will also match strings
+    # that aren't acceptable domain names as well, of course.
+    get %r{/outages/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
+      content_type :json
+
+      entity_name = params[:captures][0]
+      check = params[:captures][1]
+
+      entity = entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @@redis)
+      if entity.nil?
+        status 404
+        return
+      end
+
+      start_time = validate_and_parsetime(params[:start_time])
+      end_time   = validate_and_parsetime(params[:end_time])
+
+      presenter = if check
+        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+          check, :redis => @@redis)
+        Flapjack::API::EntityCheckPresenter.new(entity_check)
+      else
+        Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+      end
+
       presenter.outages(start_time, end_time).to_json
     end
 
-    get '/outages/:entity/:check' do
+    get %r{/unscheduled_maintenances/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
       content_type :json
-      entity = to_entity(params[:entity])
-      if entity.nil?
-        status 404
-        return
-      end
-      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => @@redis)
 
-      start_time = validate_and_parseint(params[:start_time])
-      end_time   = validate_and_parseint(params[:end_time])
+      entity_name = params[:captures][0]
+      check = params[:captures][1]
 
-      presenter = Flapjack::API::EntityCheckPresenter.new(entity_check)
-      presenter.outages(start_time, end_time).to_json
-    end
-
-    get '/unscheduled_maintenances/:entity' do
-      content_type :json
-      entity = to_entity(params[:entity])
+      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @@redis)
       if entity.nil?
         status 404
         return
       end
 
-      start_time = validate_and_parseint(params[:start_time])
-      end_time   = validate_and_parseint(params[:end_time])
+      start_time = validate_and_parsetime(params[:start_time])
+      end_time   = validate_and_parsetime(params[:end_time])
 
-      presenter = Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+      presenter = if check
+        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+          check, :redis => @@redis)
+        Flapjack::API::EntityCheckPresenter.new(entity_check)
+      else
+        Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+      end
+
       presenter.unscheduled_maintenance(start_time, end_time).to_json
     end
 
-    get '/unscheduled_maintenances/:entity/:check' do
+    get %r{/scheduled_maintenances/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
       content_type :json
-      entity = to_entity(params[:entity])
-      if entity.nil?
-        status 404
-        return
-      end
-      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => @@redis)
 
-      start_time = validate_and_parseint(params[:start_time])
-      end_time   = validate_and_parseint(params[:end_time])
+      entity_name = params[:captures][0]
+      check = params[:captures][1]
 
-      presenter = Flapjack::API::EntityCheckPresenter.new(entity_check)
-      presenter.unscheduled_maintenance(start_time, end_time).to_json
-    end
-
-    get '/scheduled_maintenances/:entity' do
-      content_type :json
-      entity = to_entity(params[:entity])
+      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @@redis)
       if entity.nil?
         status 404
         return
       end
 
-      start_time = validate_and_parseint(params[:start_time])
-      end_time   = validate_and_parseint(params[:end_time])
+      start_time = validate_and_parsetime(params[:start_time])
+      end_time   = validate_and_parsetime(params[:end_time])
 
-      presenter = Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+      presenter = if check
+        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+          check, :redis => @@redis)
+        Flapjack::API::EntityCheckPresenter.new(entity_check)
+      else
+        Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+      end
       presenter.scheduled_maintenance(start_time, end_time).to_json
     end
 
-    get '/scheduled_maintenances/:entity/:check' do
+    get %r{/downtime/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
       content_type :json
-      entity = to_entity(params[:entity])
-      if entity.nil?
-        status 404
-        return
-      end
-      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => @@redis)
 
-      start_time = validate_and_parseint(params[:start_time])
-      end_time   = validate_and_parseint(params[:end_time])
+      entity_name = params[:captures][0]
+      check = params[:captures][1]
 
-      presenter = Flapjack::API::EntityCheckPresenter.new(entity_check)
-      presenter.scheduled_maintenance(start_time, end_time).to_json
-    end
-
-    get '/downtime/:entity' do
-      content_type :json
-      entity = to_entity(params[:entity])
+      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @@redis)
       if entity.nil?
         status 404
         return
       end
 
-      start_time = validate_and_parseint(params[:start_time])
-      end_time   = validate_and_parseint(params[:end_time])
+      start_time = validate_and_parsetime(params[:start_time])
+      end_time   = validate_and_parsetime(params[:end_time])
 
-      presenter = Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
-      presenter.downtime(start_time, end_time).to_json
-    end
-
-    get '/downtime/:entity/:check' do
-      content_type :json
-      entity = to_entity(params[:entity])
-      if entity.nil?
-        status 404
-        return
+      presenter = if check
+        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+          check, :redis => @@redis)
+        Flapjack::API::EntityCheckPresenter.new(entity_check)
+      else
+        Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
       end
-      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => @@redis)
 
-      start_time = validate_and_parseint(params[:start_time])
-      end_time   = validate_and_parseint(params[:end_time])
-
-      presenter = Flapjack::API::EntityCheckPresenter.new(entity_check)
       presenter.downtime(start_time, end_time).to_json
     end
 
     # create a scheduled maintenance period for a service on an entity
     post '/scheduled_maintenances/:entity/:check' do
       content_type :json
-      entity = to_entity(params[:entity])
+      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => @@redis)
       if entity.nil?
         status 404
         return
@@ -221,7 +207,7 @@ module Flapjack
     # create an acknowledgement for a service on an entity
     post '/acknowledgements/:entity/:check' do
       content_type :json
-      entity = to_entity(params[:entity])
+      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => @@redis)
       if entity.nil?
         status 404
         return
@@ -242,22 +228,8 @@ module Flapjack
 
     private
 
-      def to_entity(name_or_entity)
-        return name_or_entity if name_or_entity.is_a?(Flapjack::Data::Entity)
-        Flapjack::Data::Entity.find_by_name(name_or_entity, :redis => @@redis)
-      end
-
-      # TODO move the status methods down to the presenters?
-      def entity_status(ent)
-        entity = to_entity(ent)
-        return if entity.nil?
-        entity.check_list.sort.collect {|check|
-          entity_check_status(entity, check)
-        }
-      end
-
-      def entity_check_status(ent, check)
-        entity_check = Flapjack::Data::EntityCheck.for_entity(to_entity(ent),
+      def entity_check_status(entity, check)
+        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
           check, :redis => @@redis)
         return if entity_check.nil?
         { 'name'                                => check,
@@ -271,9 +243,13 @@ module Flapjack
         }
       end
 
-      def validate_and_parseint(value)
-        return unless value && (value =~ /^\d+$/)
-        value.to_i
+      # NB: casts to UTC before converting to a timestamp
+      def validate_and_parsetime(value)
+        return unless value
+        Time.iso8601(value).getutc.to_i
+      rescue ArgumentError => e
+        # FIXME log error
+        nil
       end
 
   end

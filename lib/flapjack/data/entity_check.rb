@@ -285,7 +285,7 @@ module Flapjack
         # must be evaluated. This relies on a patch in flapjack/patches.rb to
         # make the Future objects report their class.
         state_data.collect {|sd|
-          sd.update(sd) {|k,ov,nv|
+          sd.merge!(sd) {|k,ov,nv|
             (nv.class == Redis::Future) ? nv.value : nv
           }
         }
@@ -334,7 +334,7 @@ module Flapjack
         # must be evaluated. This relies on a patch in flapjack/patches.rb to
         # make the Future objects report their class.
         maint_data.collect {|md|
-          md.update(md) {|k,ov,nv| (nv.class == Redis::Future) ? nv.value : nv }
+          md.merge!(md) {|k,ov,nv| (nv.class == Redis::Future) ? nv.value : nv }
           md[:end_time] = (md[:start_time] + md[:duration]).floor
           md
         }

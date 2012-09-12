@@ -111,7 +111,6 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     downtimes[:downtime].should be_an(Array)
     # the last outage gets split by the intervening maintenance period,
     # but the fully covered one gets removed.
-    p downtimes[:downtime]
     downtimes[:downtime].should have(4).time_ranges
   end
 
