@@ -17,6 +17,7 @@ require 'flapjack/api'
 require 'flapjack/daemonizing'
 require 'flapjack/executive'
 require 'flapjack/jabber'
+require 'flapjack/pagerduty'
 require 'flapjack/notification/email'
 require 'flapjack/notification/sms'
 require 'flapjack/web'
@@ -65,12 +66,13 @@ module Flapjack
 
       # TODO store these in the classes themselves, register pikelets here?
       pikelet_types = {
-        'executive'       => Flapjack::Executive,
-        'api'             => Flapjack::API,
-        'jabber_gateway'  => Flapjack::Jabber,
-        'web'             => Flapjack::Web,
-        'email_notifier'  => Flapjack::Notification::Email,
-        'sms_notifier'    => Flapjack::Notification::Sms
+        'executive'         => Flapjack::Executive,
+        'api'               => Flapjack::API,
+        'jabber_gateway'    => Flapjack::Jabber,
+        'pagerduty_gateway' => Flapjack::Pagerduty,
+        'web'               => Flapjack::Web,
+        'email_notifier'    => Flapjack::Notification::Email,
+        'sms_notifier'      => Flapjack::Notification::Sms
       }
 
       # FIXME: the following is currently repeated in flapjack-populator and
@@ -172,6 +174,18 @@ module Flapjack
             @pikelet_fibers[pikelet_type] = f
             f.resume
             @logger.debug "new fiber created for #{pikelet_type}"
+          when 'pagerduty_gateway'
+            f = Fiber.new {
+              flapjack_pagerduty = Flapjack::Pagerduty.new(:redis =>
+                ::Redis.new(redis_options.merge(:driver => 'synchrony')),
+                :redis_config => redis_options,
+                :config => pikelet_cfg)
+              @pikelets << flapjack_pagerduty
+              flapjack_pagerduty.main
+            }
+            @pikelet_fibers[pikelet_type] = f
+            f.resume
+            @logger.debug "new fiber created for #{pikelet_type}"
           when 'web'
             port = nil
             if pikelet_cfg['port']
@@ -234,7 +248,7 @@ module Flapjack
     def shutdown
       @pikelets.each do |pik|
         case pik
-        when Flapjack::Executive, Flapjack::Jabber
+        when Flapjack::Executive, Flapjack::Jabber, Flapjack::Pagerduty
           pik.stop
           Fiber.new {
             # this needs to use a separate Redis connection from the pikelet's

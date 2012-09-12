@@ -42,6 +42,9 @@ development:
     rooms:
       - "gimp@conference.jabber.domain.tld"
       - "log@conference.jabber.domain.tld"
+  pagerduty_gateway:
+    enabled: yes
+    queue: pagerduty_notifications
   web:
     enabled: yes
     port: 5080

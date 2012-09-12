@@ -3,6 +3,7 @@
 require 'mail'
 require 'erb'
 require 'haml'
+require 'socket'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/notification/common'
@@ -53,8 +54,9 @@ module Flapjack
 
         logger = opts[:logger]
 
-        # FIXME: use socket and gethostname instead of shelling out
-        fqdn     = `/bin/hostname -f`.chomp
+        # not useing socket and gethostname as that doesn't give you a fqdn.
+        # see the facter issue: https://projects.puppetlabs.com/issues/3898
+        fqdn       = `/bin/hostname -f`.chomp
         m_from     = "flapjack@#{fqdn}"
         logger.debug("flapjack_mailer: set from to #{m_from}")
         m_reply_to = m_from
