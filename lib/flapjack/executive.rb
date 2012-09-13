@@ -32,9 +32,10 @@ module Flapjack
       redis_client_status = @redis.client
       @logger.debug("Flapjack::Executive.initialize: @redis client status: " + redis_client_status.inspect)
 
-      @queues = {:email  =>  opts['email_queue'],
-                 :sms    =>    opts['sms_queue'],
-                 :jabber => opts['jabber_queue']}
+      @queues = {:email     => opts['email_queue'],
+                 :sms       => opts['sms_queue'],
+                 :jabber    => opts['jabber_queue'],
+                 :pagerduty => opts['pagerduty_queue']}
 
       notifylog  = opts['notification_log_file'] || 'log/notify.log'
       @notifylog = Log4r::Logger.new("executive")
@@ -248,7 +249,11 @@ module Flapjack
             if @queues[:jabber]
               notification['failure_count'] = @failure_count if @failure_count
               # puts a notification into the jabber queue (redis list)
-              @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(notification))
+              @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(notif))
+            end
+          when "pagerduty"
+            if @queues[:pagerduty]
+              @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(notif))
             end
           end
         }

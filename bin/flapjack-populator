@@ -90,11 +90,20 @@ when "import-contacts"
     @persistence.multi
     @persistence.del("contact:#{contact['id']}")
     @persistence.del("contact_media:#{contact['id']}")
+    @persistence.del("contact_pagerduty:#{contact['id']}")
     @persistence.hset("contact:#{contact['id']}", 'first_name', contact['first_name'])
     @persistence.hset("contact:#{contact['id']}", 'last_name',  contact['last_name'])
     @persistence.hset("contact:#{contact['id']}", 'email',      contact['email'])
     contact['media'].each_pair {|medium, address|
-      @persistence.hset("contact_media:#{contact['id']}", medium, address)
+      case medium
+      when 'pagerduty'
+        @persistence.hset("contact_media:#{contact['id']}", medium, address['service_key'])
+        @persistence.hset("contact_pagerduty:#{contact['id']}", 'subdomain', address['subdomain'])
+        @persistence.hset("contact_pagerduty:#{contact['id']}", 'username',  address['username'])
+        @persistence.hset("contact_pagerduty:#{contact['id']}", 'password',  address['password'])
+      else
+        @persistence.hset("contact_media:#{contact['id']}", medium, address)
+      end
     }
     @persistence.exec
   }

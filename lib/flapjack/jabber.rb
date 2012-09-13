@@ -87,14 +87,19 @@ module Flapjack
       action = nil
       redis = nil
       entity_check = nil
-      if stanza.body =~ /^flapjack:\s+ACKID\s+(\d+)\s+(.*)$/i
-        ackid = $1
+      if stanza.body =~ /^flapjack:\s+ACKID\s+(\d+)(?:\s*(.*))$/i
+        ackid   = $1
         comment = $2
+
+        error = nil
+
+        if comment.nil? or comment == ""
+          error = "please provide a comment, eg \"flapjack: ACKID #{$1} AL looking\""
+        end
 
         @redis_chat ||= ::Redis.new(@redis_config)
         event_id = @redis_chat.hget('unacknowledged_failures', ackid)
 
-        error = nil
         if event_id.nil?
           error = "not found"
         else
@@ -103,9 +108,9 @@ module Flapjack
         end
 
         if error
-          msg = "couldn't ACK #{ackid} - #{error}"
+          msg = "ERROR - couldn't ACK #{ackid} - #{error}"
         else
-          msg = "ACKing #{entity_check.check} on entity #{entity_check.entity_name} (#{ackid})"
+          msg = "ACKing #{entity_check.check} on #{entity_check.entity_name} (#{ackid})"
           action = Proc.new {
             entity_check.create_acknowledgement('summary' => (comment || ''), 'acknowledgement_id' => ackid)
           }
@@ -113,7 +118,7 @@ module Flapjack
 
       elsif stanza.body =~ /^flapjack: (.*)/i
         words = $1
-        msg = "what do you mean, '#{words}'?"
+        msg   = "what do you mean, '#{words}'?"
       end
 
       if msg || action
@@ -156,7 +161,7 @@ module Flapjack
 
       EM::Synchrony.add_periodic_timer(60) do
         logger.debug("calling keepalive on the jabber connection")
-        write('') if connected?
+        write(' ') if connected?
       end
 
       connect # Blather::Client.connect

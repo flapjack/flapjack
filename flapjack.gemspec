@@ -23,6 +23,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'eventmachine', '~> 1.0.0'
   gem.add_dependency 'hiredis'
   gem.add_dependency 'em-synchrony', '~> 1.0.2'
+  gem.add_dependency 'em-http-request'
   gem.add_dependency 'redis'
   gem.add_dependency 'em-resque'
   gem.add_dependency 'sinatra'
@@ -32,6 +33,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'blather'
   gem.add_dependency 'chronic'
   gem.add_dependency 'chronic_duration'
+  gem.add_dependency 'httparty'
 
   gem.add_development_dependency 'rake'
 end
