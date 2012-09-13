@@ -65,6 +65,7 @@ module Flapjack
 
     # Join the MUC Chat room after connecting.
     def on_ready(stanza)
+      return if should_quit?
       @connected_at = Time.now.to_i
       logger.info("Jabber Connected")
       @config['rooms'].each do |room|
@@ -79,6 +80,7 @@ module Flapjack
     end
 
     def on_groupchat(stanza)
+      return if should_quit?
       logger.debug("groupchat message received: #{stanza.inspect}")
 
       msg = nil

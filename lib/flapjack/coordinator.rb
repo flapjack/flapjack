@@ -110,14 +110,23 @@ module Flapjack
           case pikelet_type
           when 'executive'
             f = Fiber.new {
-              flapjack_exec = Flapjack::Executive.new(
-                pikelet_cfg.merge(
-                  :redis => ::Redis.new(redis_options.merge(:driver => 'synchrony')),
-                  :redis_config => redis_options
+              flapjack_exec = nil
+              begin
+                flapjack_exec = Flapjack::Executive.new(
+                  pikelet_cfg.merge(
+                    :redis => ::Redis.new(redis_options.merge(:driver => 'synchrony')),
+                    :redis_config => redis_options
+                  )
                 )
-              )
-              @pikelets << flapjack_exec
-              flapjack_exec.main
+                @pikelets << flapjack_exec
+                flapjack_exec.main
+              rescue Exception => e
+                trace = e.backtrace.join("\n")
+                @logger.fatal "#{e.message}\n#{trace}"
+                @pikelets.delete_if {|p| p == flapjack_exec } if flapjack_exec
+                @pikelet_fibers.delete(pikelet_type)
+                stop
+              end
             }
             @pikelet_fibers[pikelet_type] = f
             f.resume
@@ -148,26 +157,43 @@ module Flapjack
             pikelet.class_variable_set('@@config', pikelet_cfg)
 
             f = Fiber.new {
-              # TODO error if pikelet_cfg['queue'].nil?
-              flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
-              # # Use these to debug the resque workers
-              # flapjack_rsq.verbose = true
-              #flapjack_rsq.very_verbose = true
-              @pikelets << flapjack_rsq
-              flapjack_rsq.work(0.1)
+              flapjack_rsq = nil
+              begin
+                # TODO error if pikelet_cfg['queue'].nil?
+                flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
+                # # Use these to debug the resque workers
+                # flapjack_rsq.verbose = true
+                #flapjack_rsq.very_verbose = true
+                @pikelets << flapjack_rsq
+                flapjack_rsq.work(0.1)
+              rescue Exception => e
+                trace = e.backtrace.join("\n")
+                @pikelets.delete_if {|p| p == flapjack_rsq } if flapjack_rsq
+                @logger.fatal "#{e.message}\n#{trace}"
+                stop
+              end
             }
             @pikelet_fibers[pikelet_type] = f
             f.resume
             @logger.debug "new fiber created for #{pikelet_type}"
           when 'jabber_gateway'
+            flapjack_jabber = nil
             f = Fiber.new {
-              flapjack_jabber = Flapjack::Jabber.new(:redis =>
-                ::Redis.new(redis_options.merge(:driver => 'synchrony')),
-                :redis_config => redis_options,
-                :config => pikelet_cfg)
-              @pikelets << flapjack_jabber
-              flapjack_jabber.setup
-              flapjack_jabber.main
+              begin
+                flapjack_jabber = Flapjack::Jabber.new(:redis =>
+                  ::Redis.new(redis_options.merge(:driver => 'synchrony')),
+                  :redis_config => redis_options,
+                  :config => pikelet_cfg)
+                @pikelets << flapjack_jabber
+                flapjack_jabber.setup
+                flapjack_jabber.main
+              rescue Exception => e
+                trace = e.backtrace.join("\n")
+                @logger.fatal "#{e.message}\n#{trace}"
+                @pikelets.delete_if {|p| p == flapjack_jabber } if flapjack_jabber
+                @pikelet_fibers.delete(pikelet_type)
+                stop
+              end
             }
             @pikelet_fibers[pikelet_type] = f
             f.resume
@@ -220,16 +246,16 @@ module Flapjack
       end
     end
 
-    # def health_check(thin_pikelets)
-    #   @pikelet_fibers.each_pair do |n,f|
-    #     @logger.debug "#{n}: #{f.alive? ? 'alive' : 'dead'}"
-    #   end
-    #
-    #   thin_pikelets.each do |tp|
-    #     s = tp.backend.size
-    #     @logger.debug "thin on port #{tp.port} - #{s} connections"
-    #   end
-    # end
+    def health_check(thin_pikelets)
+      @pikelet_fibers.each_pair do |n,f|
+        @logger.debug "#{n}: #{f.alive? ? 'alive' : 'dead'}"
+      end
+
+      thin_pikelets.each do |tp|
+        s = tp.backend.size
+        @logger.debug "thin on port #{tp.port} - #{s} connections"
+      end
+    end
 
     def shutdown
       @pikelets.each do |pik|
@@ -256,7 +282,7 @@ module Flapjack
         thin_pikelets = @pikelets.select {|p| p.is_a?(Thin::Server) }
 
         loop do
-          # health_check(thin_pikelets)
+          health_check(thin_pikelets)
 
           if @pikelet_fibers.values.any?(&:alive?) ||
             thin_pikelets.any?{|tp| !tp.backend.empty? }
