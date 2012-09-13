@@ -201,13 +201,22 @@ module Flapjack
             f.resume
             @logger.debug "new fiber created for #{pikelet_type}"
           when 'pagerduty_gateway'
+            flapjack_pagerduty = nil
             f = Fiber.new {
-              flapjack_pagerduty = Flapjack::Pagerduty.new(:redis =>
-                ::Redis.new(redis_options.merge(:driver => 'synchrony')),
-                :redis_config => redis_options,
-                :config => pikelet_cfg)
-              @pikelets << flapjack_pagerduty
-              flapjack_pagerduty.main
+              begin
+                flapjack_pagerduty = Flapjack::Pagerduty.new(:redis =>
+                  ::Redis.new(redis_options.merge(:driver => 'synchrony')),
+                  :redis_config => redis_options,
+                  :config => pikelet_cfg)
+                @pikelets << flapjack_pagerduty
+                flapjack_pagerduty.main
+              rescue Exception => e
+                trace = e.backtrace.join("\n")
+                @logger.fatal "#{e.message}\n#{trace}"
+                @pikelets.delete_if {|p| p == flapjack_pagerduty } if flapjack_pagerduty
+                @pikelet_fibers.delete(pikelet_type)
+                stop
+              end
             }
             @pikelet_fibers[pikelet_type] = f
             f.resume
