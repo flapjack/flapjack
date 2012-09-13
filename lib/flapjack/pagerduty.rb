@@ -5,11 +5,10 @@ require 'eventmachine'
 # the redis-rb README for details
 require 'hiredis'
 require 'em-synchrony'
+require 'em-synchrony/em-http'
 require 'redis/connection/synchrony'
 require 'redis'
 
-require 'httparty'
-#require 'em-synchrony/fiber_iterator'
 require 'yajl/json_gem'
 
 require 'flapjack/data/entity_check'
@@ -20,10 +19,6 @@ module Flapjack
   class Pagerduty
 
     include Flapjack::Pikelet
-    include HTTParty
-
-    # in case of emergency pull handle
-    #debug_output
 
     def initialize(opts = {})
       super()
@@ -40,9 +35,11 @@ module Flapjack
 
     def send_pagerduty_event(event)
       options  = { :body => Yajl::Encoder.encode(event) }
-      response = self.class.post(@pagerduty_events_api_url, options)
-      logger.debug "send_pagerduty_event got a return code of #{response.code.to_s} - #{response.to_s}"
-      return response.code, response.to_hash
+      http = EM::HttpRequest.new(@pagerduty_events_api_url).post(options)
+      response = Yajl::Parser.parse(http.response)
+      status   = http.response_header.status
+      logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
+      return status, response
     end
 
     def test_pagerduty_connection
@@ -51,8 +48,9 @@ module Flapjack
                "event_type"   => "nop",
                "description"  => "I love APIs with noops." }
       code, results = send_pagerduty_event(noop)
-      return true if code == 200
-      logger.error "Error: test_pagerduty_connection: API returned #{code.to_s} #{resuls.inspect}"
+      puts results.inspect
+      return true if code == 200 && results['status'] =~ /success/i
+      logger.error "Error: test_pagerduty_connection: API returned #{code.to_s} #{results.inspect}"
       return false
     end
 
