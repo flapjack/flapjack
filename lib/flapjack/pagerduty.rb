@@ -93,8 +93,18 @@ module Flapjack
         @logger.error("failed to parse json from a post to #{url} ... response headers and body follows...")
         @logger.error(http.response_header.inspect)
         @logger.error(http.response)
+        return nil
       end
       status   = http.response_header.status
+
+      @logger.debug("pagerduty_acknowledged?: decoded response as: #{response.inspect}")
+      if not response
+        @logger.error('no valid response received from pagerduty!')
+        return nil
+      elsif not response['incidents']
+        @logger.error('no incidents found in response')
+        return nil
+      end
 
       if response['incidents'].length > 0
         return true
@@ -105,21 +115,25 @@ module Flapjack
 
     def catch_pagerduty_acks
 
-      if @redis_adhoc.get(@sem_pagerduty_acks_running) == 'true'
+      @redis_pda ||= Redis.new(@redis_config.merge(:driver => 'synchrony'))
+
+      if @redis_pda.get(@sem_pagerduty_acks_running) == 'true'
         logger.debug("skipping looking for acks in pagerduty as this is already happening")
         return
       end
 
-      @redis_adhoc.set(@sem_pagerduty_acks_running, 'true')
-      @redis_adhoc.expire(@sem_pagerduty_acks_running, 300)
+      @redis_pda.set(@sem_pagerduty_acks_running, 'true')
+      @redis_pda.expire(@sem_pagerduty_acks_running, 300)
 
       logger.debug("looking for acks in pagerduty for unack'd problems")
 
       unacknowledged_failing_checks.each {|check|
-        entity_check = Flapjack::Data::EntityCheck.for_event_id(check, { :redis => @redis_adhoc } )
-        pagerduty_credentials = entity_check.pagerduty_credentials
+        entity_check = Flapjack::Data::EntityCheck.for_event_id(check, { :redis => @redis_pda } )
+        pagerduty_credentials = entity_check.pagerduty_credentials( { :redis => @redis_pla } )
+        puts "have looked up pagerduty credentials"
 
-        options = pagerduty_credentials.merge(:check => check)
+        # FIXME: try each set of credentials until one works (may have stale contacts turning up)
+        options = pagerduty_credentials.first.merge(:check => check)
 
         if pagerduty_acknowledged?(options)
           @logger.debug "#{check} is acknowledged in pagerduty, creating flapjack acknowledgement"
@@ -130,7 +144,7 @@ module Flapjack
       }
       # TODO: use a redis key for this with an expiry
       @catch_pagerduty_acks_running = false
-      @redis_adhoc.del(@sem_pagerduty_acks_running)
+      @redis_pda.del(@sem_pagerduty_acks_running)
     end
 
     def add_shutdown_event
