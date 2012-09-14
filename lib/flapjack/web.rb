@@ -77,7 +77,7 @@ module Flapjack
       entity_check = get_entity_check(@entity, @check)
       return 404 if entity_check.nil?
 
-      ack = entity_check.create_acknowledgement(:summary => "Ack from web at #{Time.now.to_s}")
+      ack = entity_check.create_acknowledgement('summary' => "Ack from web at #{Time.now.to_s}")
       @acknowledge_success = !!ack
       [201, haml(:acknowledge)]
     end
