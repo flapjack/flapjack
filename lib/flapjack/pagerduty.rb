@@ -29,8 +29,10 @@ module Flapjack
 
       @redis = opts[:redis]
       @redis_config = opts[:redis_config]
+      @redis_adhoc = Redis.new(@redis_config.merge(:driver => 'synchrony'))
 
       @pagerduty_events_api_url = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
+      @sem_pagerduty_acks_running = 'sem_pagerduty_acks_running'
     end
 
     def send_pagerduty_event(event)
@@ -54,10 +56,95 @@ module Flapjack
       return false
     end
 
-    def list_pagerduty_incidents(opts)
+    # this should be moved to a checks data model perhaps
+    def unacknowledged_failing_checks
+      failing_checks = @redis_adhoc.zrange('failed_checks', '0', '-1')
+      if not failing_checks.class == Array
+        @logger.error("redis.zrange returned something other than an array! Here it is: " + failing_checks.inspect)
+      end
+      ufc = failing_checks.find_all {|check|
+        not @redis_adhoc.exists(check + ':unscheduled_maintenance')
+      }
+      @logger.debug "found unacknowledged failing checks as follows: " + ufc.join(', ')
+      return ufc
+    end
+
+    def pagerduty_acknowledged?(opts)
       subdomain   = opts[:subdomain]
       username    = opts[:username]
       password    = opts[:password]
+      check       = opts[:check]
+
+      url = 'https://' + subdomain + '.pagerduty.com/api/v1/incidents'
+      query = { 'fields'       => 'incident_number,status',
+                'since'        => (Time.new.utc - (60*60*24*7)).iso8601,
+                'until'        => (Time.new.utc + (60*60*24)).iso8601,
+                'incident_key' => check,
+                'status'       => 'acknowledged' }
+
+      options = { :head  => { 'authorization' => [username, password] },
+                  :query => query }
+
+      http = EM::HttpRequest.new(url).get(options)
+
+      begin
+        response = Yajl::Parser.parse(http.response)
+      rescue Yajl::ParseError
+        @logger.error("failed to parse json from a post to #{url} ... response headers and body follows...")
+        @logger.error(http.response_header.inspect)
+        @logger.error(http.response)
+        return nil
+      end
+      status   = http.response_header.status
+
+      @logger.debug("pagerduty_acknowledged?: decoded response as: #{response.inspect}")
+      if not response
+        @logger.error('no valid response received from pagerduty!')
+        return nil
+      elsif not response['incidents']
+        @logger.error('no incidents found in response')
+        return nil
+      end
+
+      if response['incidents'].length > 0
+        return true
+      else
+        return false
+      end
+    end
+
+    def catch_pagerduty_acks
+
+      @redis_pda ||= Redis.new(@redis_config.merge(:driver => 'synchrony'))
+
+      if @redis_pda.get(@sem_pagerduty_acks_running) == 'true'
+        logger.debug("skipping looking for acks in pagerduty as this is already happening")
+        return
+      end
+
+      @redis_pda.set(@sem_pagerduty_acks_running, 'true')
+      @redis_pda.expire(@sem_pagerduty_acks_running, 300)
+
+      logger.debug("looking for acks in pagerduty for unack'd problems")
+
+      unacknowledged_failing_checks.each {|check|
+        entity_check = Flapjack::Data::EntityCheck.for_event_id(check, { :redis => @redis_pda } )
+        pagerduty_credentials = entity_check.pagerduty_credentials( { :redis => @redis_pla } )
+        puts "have looked up pagerduty credentials"
+
+        # FIXME: try each set of credentials until one works (may have stale contacts turning up)
+        options = pagerduty_credentials.first.merge(:check => check)
+
+        if pagerduty_acknowledged?(options)
+          @logger.debug "#{check} is acknowledged in pagerduty, creating flapjack acknowledgement"
+          entity_check.create_acknowledgement(:summary => "Acknowledged on PagerDuty")
+        else
+          @logger.debug "#{check} is not acknowledged in pagerduty"
+        end
+      }
+      # TODO: use a redis key for this with an expiry
+      @catch_pagerduty_acks_running = false
+      @redis_pda.del(@sem_pagerduty_acks_running)
     end
 
     def add_shutdown_event
@@ -69,8 +156,18 @@ module Flapjack
     def main
       logger.debug("pagerduty gateway - commencing main method")
       raise "Can't connect to the pagerduty API" unless test_pagerduty_connection
+
+      # TODO: only clear this if there isn't another pagerduty gateway instance running
+      # or better, include on instance ID in the semaphore key name
+      @redis_adhoc.del(@sem_pagerduty_acks_running)
+
+      EM::Synchrony.add_periodic_timer(10) do
+        catch_pagerduty_acks
+      end
+
       queue = @config['queue']
       events = {}
+
       until should_quit?
           logger.debug("pagerduty gateway is going into blpop mode on #{queue}")
           events[queue] = @redis.blpop(queue)

@@ -73,7 +73,7 @@ module Flapjack
 
       def create_acknowledgement(opts = {})
         defaults = {
-          :summary => '...'
+          'summary' => '...'
         }
         options = defaults.merge(opts)
 
@@ -338,6 +338,20 @@ module Flapjack
           md[:end_time] = (md[:start_time] + md[:duration]).floor
           md
         }
+      end
+
+      # returns an array of pagerduty credentials. If more than one contact for this entity_check
+      # has pagerduty credentials then there'll be one hash in the array for each set of
+      # credentials.
+      def pagerduty_credentials(options)
+        creds = []
+        raise "Redis connection not set" unless @redis = options[:redis]
+        contacts = Flapjack::Data::Contact.find_all_for_entity_check(self, { :redis => redis })
+        contacts.each {|contact|
+          cred = Flapjack::Data::Contact.pagerduty_credentials_for_contact(contact, { :redis => redis })
+          creds << cred if cred
+        }
+        creds
       end
 
     private
