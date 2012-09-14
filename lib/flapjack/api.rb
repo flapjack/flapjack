@@ -214,7 +214,7 @@ module Flapjack
       end
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
         params[:check], :redis => @@redis)
-      entity_check.create_acknowledgement(params[:summary])
+      entity_check.create_acknowledgement('summary' => params[:summary])
       status 201
     end
 

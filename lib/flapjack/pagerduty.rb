@@ -50,7 +50,6 @@ module Flapjack
                "event_type"   => "nop",
                "description"  => "I love APIs with noops." }
       code, results = send_pagerduty_event(noop)
-      puts results.inspect
       return true if code == 200 && results['status'] =~ /success/i
       logger.error "Error: test_pagerduty_connection: API returned #{code.to_s} #{results.inspect}"
       return false
@@ -70,10 +69,10 @@ module Flapjack
     end
 
     def pagerduty_acknowledged?(opts)
-      subdomain   = opts[:subdomain]
-      username    = opts[:username]
-      password    = opts[:password]
-      check       = opts[:check]
+      subdomain   = opts['subdomain']
+      username    = opts['username']
+      password    = opts['password']
+      check       = opts['check']
 
       url = 'https://' + subdomain + '.pagerduty.com/api/v1/incidents'
       query = { 'fields'       => 'incident_number,status',
@@ -115,36 +114,39 @@ module Flapjack
 
     def catch_pagerduty_acks
 
-      @redis_pda ||= Redis.new(@redis_config.merge(:driver => 'synchrony'))
+      @redis_pd ||= Redis.new(@redis_config.merge(:driver => 'synchrony'))
 
-      if @redis_pda.get(@sem_pagerduty_acks_running) == 'true'
+      if @redis_pd.get(@sem_pagerduty_acks_running) == 'true'
         logger.debug("skipping looking for acks in pagerduty as this is already happening")
         return
       end
 
-      @redis_pda.set(@sem_pagerduty_acks_running, 'true')
-      @redis_pda.expire(@sem_pagerduty_acks_running, 300)
+      @redis_pd.set(@sem_pagerduty_acks_running, 'true')
+      @redis_pd.expire(@sem_pagerduty_acks_running, 300)
 
       logger.debug("looking for acks in pagerduty for unack'd problems")
 
       unacknowledged_failing_checks.each {|check|
-        entity_check = Flapjack::Data::EntityCheck.for_event_id(check, { :redis => @redis_pda } )
-        pagerduty_credentials = entity_check.pagerduty_credentials( { :redis => @redis_pla } )
-        puts "have looked up pagerduty credentials"
+        entity_check = Flapjack::Data::EntityCheck.for_event_id(check, { :redis => @redis_pd, :logger => @logger } )
+        pagerduty_credentials = entity_check.pagerduty_credentials( { :redis => @redis_pd, :logger => @logger } )
+
+        if pagerduty_credentials.length == 0
+          @logger.debug("Found no pagerduty creditials for #{entity_check.entity_name}:#{entity_check.check}")
+          next
+        end
 
         # FIXME: try each set of credentials until one works (may have stale contacts turning up)
-        options = pagerduty_credentials.first.merge(:check => check)
+        options = pagerduty_credentials.first.merge('check' => check)
 
         if pagerduty_acknowledged?(options)
           @logger.debug "#{check} is acknowledged in pagerduty, creating flapjack acknowledgement"
-          entity_check.create_acknowledgement(:summary => "Acknowledged on PagerDuty")
+          entity_check.create_acknowledgement('summary' => "Acknowledged on PagerDuty")
         else
           @logger.debug "#{check} is not acknowledged in pagerduty"
         end
       }
-      # TODO: use a redis key for this with an expiry
       @catch_pagerduty_acks_running = false
-      @redis_pda.del(@sem_pagerduty_acks_running)
+      @redis_pd.del(@sem_pagerduty_acks_running)
     end
 
     def add_shutdown_event

@@ -345,10 +345,12 @@ module Flapjack
       # credentials.
       def pagerduty_credentials(options)
         creds = []
-        raise "Redis connection not set" unless @redis = options[:redis]
-        contacts = Flapjack::Data::Contact.find_all_for_entity_check(self, { :redis => redis })
+        raise "Redis connection not set" unless redis = options[:redis]
+        logger = options[:logger]
+
+        contacts = Flapjack::Data::Contact.find_all_for_entity_check(self, { :redis => redis, :logger => logger })
         contacts.each {|contact|
-          cred = Flapjack::Data::Contact.pagerduty_credentials_for_contact(contact, { :redis => redis })
+          cred = Flapjack::Data::Contact.pagerduty_credentials_for_contact(contact, { :redis => redis, :logger => logger })
           creds << cred if cred
         }
         creds
