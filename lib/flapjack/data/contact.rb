@@ -9,7 +9,7 @@ module Flapjack
       # takes a check, looks up contacts that are interested in this check (or in the check's entity)
       # and returns an array of contact ids
       def self.find_all_for_entity_check(entity_check, options = {})
-        #logger = options[:logger]
+        logger = options[:logger]
         logger = nil
         raise "Redis connection not set" unless redis = options[:redis]
 

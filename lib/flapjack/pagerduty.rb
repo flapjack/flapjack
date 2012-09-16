@@ -32,6 +32,7 @@ module Flapjack
       @redis_adhoc = Redis.new(@redis_config.merge(:driver => 'synchrony'))
 
       @pagerduty_events_api_url = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
+      @pagerduty_acks_started = nil
       @sem_pagerduty_acks_running = 'sem_pagerduty_acks_running'
     end
 
@@ -56,13 +57,14 @@ module Flapjack
     end
 
     # this should be moved to a checks data model perhaps
-    def unacknowledged_failing_checks
-      failing_checks = @redis_adhoc.zrange('failed_checks', '0', '-1')
+    def unacknowledged_failing_checks(options)
+      raise "Redis connection not set" unless redis = options[:redis]
+      failing_checks = redis.zrange('failed_checks', '0', '-1')
       if not failing_checks.class == Array
         @logger.error("redis.zrange returned something other than an array! Here it is: " + failing_checks.inspect)
       end
       ufc = failing_checks.find_all {|check|
-        not @redis_adhoc.exists(check + ':unscheduled_maintenance')
+        not redis.exists(check + ':unscheduled_maintenance')
       }
       @logger.debug "found unacknowledged failing checks as follows: " + ufc.join(', ')
       return ufc
@@ -114,24 +116,31 @@ module Flapjack
 
     def catch_pagerduty_acks
 
-      @redis_pd ||= Redis.new(@redis_config.merge(:driver => 'synchrony'))
+      # create a new redis connection each iteration of the timer
+      redis = Redis.new(@redis_config.merge(:driver => 'synchrony'))
 
-      if @redis_pd.get(@sem_pagerduty_acks_running) == 'true'
+      # ensure we're the only instance of the pagerduty acknowledgement check running (with a naive
+      # timeout of five minutes to guard against stale locks caused by crashing code) either in this
+      # process or in other processes
+      if (@pagerduty_acks_started and @pagerduty_acks_started > (Time.now.to_i - 300)) or
+          redis.get(@sem_pagerduty_acks_running) == 'true'
         logger.debug("skipping looking for acks in pagerduty as this is already happening")
         return
       end
 
-      @redis_pd.set(@sem_pagerduty_acks_running, 'true')
-      @redis_pd.expire(@sem_pagerduty_acks_running, 300)
+      @pagerduty_acks_started = Time.now.to_i
+      redis.set(@sem_pagerduty_acks_running, 'true')
+      redis.expire(@sem_pagerduty_acks_running, 300)
 
       logger.debug("looking for acks in pagerduty for unack'd problems")
 
-      unacknowledged_failing_checks.each {|check|
-        entity_check = Flapjack::Data::EntityCheck.for_event_id(check, { :redis => @redis_pd, :logger => @logger } )
-        pagerduty_credentials = entity_check.pagerduty_credentials( { :redis => @redis_pd, :logger => @logger } )
+      # ok lets do it
+      unacknowledged_failing_checks(:redis => redis).each {|check|
+        entity_check = Flapjack::Data::EntityCheck.for_event_id(check, { :redis => redis, :logger => @logger } )
+        pagerduty_credentials = entity_check.pagerduty_credentials( { :redis => redis, :logger => @logger } )
 
         if pagerduty_credentials.length == 0
-          @logger.debug("Found no pagerduty creditials for #{entity_check.entity_name}:#{entity_check.check}")
+          @logger.debug("Found no pagerduty creditials for #{entity_check.entity_name}:#{entity_check.check}, moving on")
           next
         end
 
@@ -142,11 +151,11 @@ module Flapjack
           @logger.debug "#{check} is acknowledged in pagerduty, creating flapjack acknowledgement"
           entity_check.create_acknowledgement('summary' => "Acknowledged on PagerDuty")
         else
-          @logger.debug "#{check} is not acknowledged in pagerduty"
+          @logger.debug "#{check} is not acknowledged in pagerduty, moving on"
         end
       }
-      @catch_pagerduty_acks_running = false
-      @redis_pd.del(@sem_pagerduty_acks_running)
+      @pagerduty_acks_started = nil
+      redis.del(@sem_pagerduty_acks_running)
     end
 
     def add_shutdown_event
