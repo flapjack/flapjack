@@ -77,7 +77,7 @@ module Flapjack
       check       = opts['check']
 
       url = 'https://' + subdomain + '.pagerduty.com/api/v1/incidents'
-      query = { 'fields'       => 'incident_number,status',
+      query = { 'fields'       => 'incident_number,status,last_status_change_by',
                 'since'        => (Time.new.utc - (60*60*24*7)).iso8601,
                 'until'        => (Time.new.utc + (60*60*24)).iso8601,
                 'incident_key' => check,
@@ -87,30 +87,36 @@ module Flapjack
                   :query => query }
 
       http = EM::HttpRequest.new(url).get(options)
-
+      # DEBUG flapjack-pagerduty: pagerduty_acknowledged?: decoded response as:
+      # {"incidents"=>[{"incident_number"=>40, "status"=>"acknowledged",
+      # "last_status_change_by"=>{"id"=>"PO1NWPS", "name"=>"Jesse Reynolds",
+      # "email"=>"jesse@bulletproof.net",
+      # "html_url"=>"http://bltprf.pagerduty.com/users/PO1NWPS"}}], "limit"=>100, "offset"=>0,
+      # "total"=>1}
       begin
         response = Yajl::Parser.parse(http.response)
       rescue Yajl::ParseError
         @logger.error("failed to parse json from a post to #{url} ... response headers and body follows...")
         @logger.error(http.response_header.inspect)
         @logger.error(http.response)
-        return nil
+        return nil, nil
       end
       status   = http.response_header.status
 
       @logger.debug("pagerduty_acknowledged?: decoded response as: #{response.inspect}")
       if not response
         @logger.error('no valid response received from pagerduty!')
-        return nil
+        return nil, nil
       elsif not response['incidents']
         @logger.error('no incidents found in response')
-        return nil
+        return nil, nil
       end
 
       if response['incidents'].length > 0
-        return true
+        pg_acknowledged_by = response['incidents'].first['last_status_change_by']
+        return true, :pg_acknowledged_by => pg_acknowledged_by
       else
-        return false
+        return false, nil
       end
     end
 
@@ -147,9 +153,15 @@ module Flapjack
         # FIXME: try each set of credentials until one works (may have stale contacts turning up)
         options = pagerduty_credentials.first.merge('check' => check)
 
-        if pagerduty_acknowledged?(options)
-          @logger.debug "#{check} is acknowledged in pagerduty, creating flapjack acknowledgement"
-          entity_check.create_acknowledgement('summary' => "Acknowledged on PagerDuty")
+        pagerduty_acknowledged, result_hash = pagerduty_acknowledged?(options)
+        pg_acknowledged_by = result_hash[:pg_acknowledged_by]
+        if pagerduty_acknowledged
+          @logger.debug "#{check} is acknowledged in pagerduty, creating flapjack acknowledgement ... pg_acknowledged_by: #{pg_acknowledged_by.inspect}"
+          who_text = ""
+          if pg_acknowledged_by['name']
+            who_text = " by #{pg_acknowledged_by['name']}"
+          end
+          entity_check.create_acknowledgement('summary' => "Acknowledged on PagerDuty" + who_text)
         else
           @logger.debug "#{check} is not acknowledged in pagerduty, moving on"
         end
