@@ -55,6 +55,10 @@
             (Acknowledged)
           - if @in_scheduled_maintenance
             (Scheduled Maintenance)
+      - if @in_unscheduled_maintenance
+        %form{:action => "/end_unscheduled_maintenance/#{@entity}/#{@check}", :method => "post"}
+          %p
+            %input{:type => 'submit', :value => 'End Unscheduled Maintenance (Unacknowledge)', :class => 'button'}
       %h3 Output: #{@check_summary}
       %table
         %tr

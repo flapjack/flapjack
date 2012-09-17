@@ -82,6 +82,19 @@ module Flapjack
       [201, haml(:acknowledge)]
     end
 
+    # FIXME: there is bound to be a more idiomatic / restful way of doing this
+    post '/end_unscheduled_maintenance/:entity/:check' do
+      @entity = params[:entity]
+      @check = params[:check]
+
+      entity_check = get_entity_check(@entity, @check)
+      return 404 if entity_check.nil?
+
+      entity_check.end_unscheduled_maintenance
+
+      redirect back
+    end
+
     # create scheduled maintenance
     post '/scheduled_maintenances/:entity/:check' do
       start_time = Chronic.parse(params[:start_time]).to_i
