@@ -247,7 +247,7 @@ module Flapjack
             end
           when "jabber"
             if @queues[:jabber]
-              notification['failure_count'] = @failure_count if @failure_count
+              notif['failure_count'] = @failure_count if @failure_count
               # puts a notification into the jabber queue (redis list)
               @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(notif))
             end

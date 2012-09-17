@@ -18,6 +18,7 @@ banner += "\n"
 banner += "  commands:\n"
 banner += "    - import-entities\n"
 banner += "    - import-contacts\n"
+banner += "    - purge-events (purge queued monitoring events)\n"
 
 OptionParser.new do |opts|
   opts.banner = "Usage: flapjack-populator command [options]"
@@ -26,7 +27,7 @@ OptionParser.new do |opts|
     options.config = c
   end
 
-  opts.on("-f", "--from FILE", String, "path to the FILE to import") do |f|
+  opts.on("-f", "--from [FILE]", String, "path to the FILE to import") do |f|
     options.from = f
   end
 
@@ -50,8 +51,11 @@ if config_env.nil? || config_env.empty?
   exit(false)
 end
 
-filename = options.from
-file     = File.new(filename)
+if options.from
+  filename = options.from
+  file     = File.new(filename)
+end
+
 parser   = Yajl::Parser.new
 
 @redis_host = config_env['redis']['host'] || 'localhost'
@@ -129,6 +133,17 @@ when "import-entities"
     @persistence.exec
 
   }
+
+when "purge-events"
+  @persistence = get_redis_connection
+  events_size = @persistence.llen('events')
+  puts "purging #{events_size} events..."
+  timestamp = Time.now.to_i
+  puts "renaming events to events.#{timestamp}"
+  @persistence.rename('events', "events.#{timestamp}")
+  puts "setting expiry of events.#{timestamp} to 8 hours"
+  @persistence.expire("events.#{timestamp}", (60 * 60 * 8))
+
 else
   puts "you need to give me something to do, eg a command like 'import-entities' or 'import-clients' etc"
   raise ArgumentError

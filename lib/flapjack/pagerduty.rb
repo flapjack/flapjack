@@ -154,8 +154,9 @@ module Flapjack
           @logger.debug "#{check} is not acknowledged in pagerduty, moving on"
         end
       }
-      @pagerduty_acks_started = nil
       redis.del(@sem_pagerduty_acks_running)
+      redis.quit
+      @pagerduty_acks_started = nil
     end
 
     def add_shutdown_event

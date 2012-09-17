@@ -145,6 +145,7 @@ module Flapjack
     end
 
     def say(to, msg, using = :chat)
+      @logger.debug("Sending a jabber message to: #{to.to_s}, using: #{using.to_s}, message: #{msg}")
       write Blather::Stanza::Message.new(to, msg, using)
     end
 
@@ -171,11 +172,16 @@ module Flapjack
       events = {}
 
       until should_quit?
+
+        # FIXME: should also check if presence has been established in any group chat rooms that are
+        # configured before starting to process events, otherwise the first few may get lost (send
+        # before joining the group chat rooms)
         if connected?
           logger.debug("jabber is connected so commencing blpop on #{queue}")
           events[queue] = @redis.blpop(queue)
           event         = Yajl::Parser.parse(events[queue][1])
           type          = event['notification_type']
+          logger.debug('jabber notification event received')
           logger.debug(event.inspect)
           if 'shutdown'.eql?(type)
             EM.next_tick do
@@ -187,7 +193,11 @@ module Flapjack
             entity, check = event['event_id'].split(':')
             state         = event['state']
             summary       = event['summary']
+            logger.debug("processing jabber notification event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
 
+            # FIXME: change the 'for 4 hours' so it looks up the length of unscheduled maintance
+            # that has been created, or takes this value from the event. This is so we can handle
+            # varying lenghts of acknowledgement-created-unscheduled-maintenace.
             ack_str = event['failure_count'] ? "::: flapjack: ACKID #{event['failure_count']} " : ''
             maint_str = (type && 'acknowledgement'.eql?(type.downcase)) ?
               "has been acknowledged, unscheduled maintenance created for 4 hours" :
