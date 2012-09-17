@@ -64,9 +64,19 @@ module Flapjack
         @attrs['check']
       end
 
+
+      # FIXME some values are only set for certain event types --
+      # this may not be the best way to do this
       def acknowledgement_id
         @attrs['acknowledgement_id']
       end
+
+      def duration
+        return unless @attrs['duration']
+        @attrs['duration'].to_i
+      end
+      # end FIXME
+
 
       def id
         (entity || '-') + ':' + (check || '-')

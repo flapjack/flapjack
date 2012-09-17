@@ -15,11 +15,7 @@ require 'log4r/outputter/syslogoutputter'
 
 module Flapjack
   module Pikelet
-    attr_accessor :logger, :config
-
-    def bootstrapped?
-      !!@bootstrapped
-    end
+    attr_accessor :logger, :redis, :config
 
     def should_quit?
       @should_quit
@@ -30,7 +26,7 @@ module Flapjack
     end
 
     def bootstrap(opts = {})
-      return if bootstrapped?
+      return if !!@bootstrapped
 
       unless @logger = opts[:logger]
         @logger = Log4r::Logger.new("#{self.class.to_s.downcase.gsub('::', '-')}")
@@ -38,7 +34,8 @@ module Flapjack
         @logger.add(Log4r::SyslogOutputter.new("flapjack"))
       end
 
-      @config = opts[:config] || {}
+      @redis = opts[:redis]
+      @config = opts[:config]
 
       @should_quit = false
 

@@ -1,19 +1,33 @@
 #!/usr/bin/env ruby
 
+require 'fiber'
+
 require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
 require 'haml'
+require 'rack/fiber_pool'
 
 require 'flapjack/pikelet'
 require 'flapjack/data/entity_check'
+require 'flapjack/utility'
 
 module Flapjack
   class Web < Sinatra::Base
 
-    use Rack::MethodOverride
+    # doesn't work with Rack::Test for some reason
+    unless 'test'.eql?(FLAPJACK_ENV)
+      rescue_exception = Proc.new { |env, exception|
+        p exception.message
+        puts exception.backtrace.join("\n")
+        [503, {}, exception.message]
+      }
 
+      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+    end
+    use Rack::MethodOverride
     extend Flapjack::Pikelet
+    include Flapjack::Utility
 
     set :views, settings.root + '/web/views'
 
@@ -54,9 +68,11 @@ module Flapjack
       entity_check = get_entity_check(@entity, @check)
       return 404 if entity_check.nil?
 
+      last_change = entity_check.last_change
+
       @check_state                = entity_check.state
       @check_last_update          = entity_check.last_update
-      @check_last_change          = entity_check.last_change
+      @check_last_change          = last_change
       @check_summary              = entity_check.summary
       @last_notifications         =
         {:problem         => entity_check.last_problem_notification,
@@ -66,6 +82,8 @@ module Flapjack
       @in_scheduled_maintenance   = entity_check.in_scheduled_maintenance?
       @in_unscheduled_maintenance = entity_check.in_unscheduled_maintenance?
       @scheduled_maintenances     = entity_check.maintenances(nil, nil, :scheduled => true)
+      @acknowledgement_id         = entity_check.failed? ?
+        entity_check.event_count_at(entity_check.last_change) : nil
 
       haml :check
     end
@@ -73,11 +91,17 @@ module Flapjack
     post '/acknowledgements/:entity/:check' do
       @entity = params[:entity]
       @check = params[:check]
+      @summary = params[:summary]
+      @acknowledgement_id = params[:acknowledgement_id]
+
+      dur   = ChronicDuration.parse(params[:duration] || '')
+      @duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
       entity_check = get_entity_check(@entity, @check)
       return 404 if entity_check.nil?
 
-      ack = entity_check.create_acknowledgement('summary' => "Ack from web at #{Time.now.to_s}")
+      ack = entity_check.create_acknowledgement('summary' => (@summary || ''),
+        'acknowledgement_id' => @acknowledgement_id, 'duration' => @duration)
       @acknowledge_success = !!ack
       [201, haml(:acknowledge)]
     end
@@ -135,48 +159,6 @@ module Flapjack
        latest_notif[0],
        latest_notif[1]
       ]
-    end
-
-    # TODO move these to a time handling section of a utils lib
-    def time_period_in_words(period)
-      period_mm, period_ss  = period.divmod(60)
-      period_hh, period_mm  = period_mm.divmod(60)
-      period_dd, period_hh  = period_hh.divmod(24)
-      period_string         = ""
-      period_string        += period_dd.to_s + " days, " if period_dd > 0
-      period_string        += period_hh.to_s + " hours, " if period_hh > 0
-      period_string        += period_mm.to_s + " minutes, " if period_mm > 0
-      period_string        += period_ss.to_s + " seconds" if period_ss > 0
-      period_string
-    end
-
-    # Returns relative time in words referencing the given date
-    # relative_time_ago(Time.now) => 'about a minute ago'
-    def relative_time_ago(from_time)
-      distance_in_minutes = (((Time.now - from_time.to_time).abs)/60).round
-      case distance_in_minutes
-        when 0..1 then 'about a minute'
-        when 2..44 then "#{distance_in_minutes} minutes"
-        when 45..89 then 'about 1 hour'
-        when 90..1439 then "about #{(distance_in_minutes.to_f / 60.0).round} hours"
-        when 1440..2439 then '1 day'
-        when 2440..2879 then 'about 2 days'
-        when 2880..43199 then "#{(distance_in_minutes / 1440).round} days"
-        when 43200..86399 then 'about 1 month'
-        when 86400..525599 then "#{(distance_in_minutes / 43200).round} months"
-        when 525600..1051199 then 'about 1 year'
-        else "over #{(distance_in_minutes / 525600).round} years"
-      end
-    end
-
-    # returns a string showing the local timezone we're running in
-    # eg "CST (UTC+09:30)"
-    def local_timezone
-      tzname = Time.new.zone
-      q, r = Time.new.utc_offset.divmod(3600)
-      q < 0 ? sign = '-' : sign = '+'
-      tzoffset = sign + "%02d" % q.abs.to_s + ':' + r.to_f.div(60).to_s
-      "#{tzname} (UTC#{tzoffset})"
     end
 
     def self_stats

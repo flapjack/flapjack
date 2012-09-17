@@ -10,6 +10,8 @@ require 'em-synchrony'
 require 'redis/connection/synchrony'
 require 'redis'
 
+require 'chronic_duration'
+
 require 'blather/client/client'
 require 'em-synchrony/fiber_iterator'
 require 'yajl/json_gem'
@@ -27,17 +29,6 @@ module Flapjack
     # log.level = Logger::DEBUG
     log.level = Logger::INFO
     Blather.logger = log
-
-    def initialize(opts = {})
-      super()
-      self.bootstrap
-
-      @config = opts[:config] ? opts[:config].dup : {}
-      logger.debug("New Jabber pikelet with the following options: #{opts.inspect}")
-
-      @redis = opts[:redis]
-      @redis_config = opts[:redis_config]
-    end
 
     def setup
       hostname = Socket.gethostname
@@ -92,18 +83,24 @@ module Flapjack
         comment = $2
 
         error = nil
+        dur = nil
 
-        if comment.nil? or comment == ""
+        if comment.nil? || (comment.length == 0)
           error = "please provide a comment, eg \"flapjack: ACKID #{$1} AL looking\""
+        elsif comment =~ /duration.*?(\d+.*\w+.*)$/
+          # a fairly liberal match above, we'll let chronic_duration do the heavy lifting
+          dur = ChronicDuration.parse($1)
         end
 
-        @redis_chat ||= ::Redis.new(@redis_config)
-        event_id = @redis_chat.hget('unacknowledged_failures', ackid)
+        four_hours = 4 * 60 * 60
+        duration = (dur.nil? || (dur <= 0) || (dur > four_hours)) ? four_hours : dur
+
+        event_id = @redis.hget('unacknowledged_failures', ackid)
 
         if event_id.nil?
           error = "not found"
         else
-          entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis_chat)
+          entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
           error = "unknown entity" if entity_check.nil?
         end
 
@@ -112,7 +109,8 @@ module Flapjack
         else
           msg = "ACKing #{entity_check.check} on #{entity_check.entity_name} (#{ackid})"
           action = Proc.new {
-            entity_check.create_acknowledgement('summary' => (comment || ''), 'acknowledgement_id' => ackid)
+            entity_check.create_acknowledgement('summary' => (comment || ''),
+              'acknowledgement_id' => ackid, 'duration' => duration)
           }
         end
 
@@ -149,13 +147,14 @@ module Flapjack
       write Blather::Stanza::Message.new(to, msg, using)
     end
 
-    def add_shutdown_event
-      r = ::Redis.new(@redis_config)
-      r.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
-      r.quit
+    def add_shutdown_event(opts = {})
+      return unless redis = opts[:redis]
+      redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
     end
 
     def main
+      logger.debug("New Jabber pikelet with the following options: #{@config.inspect}")
+
       EM::Synchrony.add_periodic_timer(30) do
         logger.debug("connection count: #{EM.connection_count} #{Time.now.to_s}.#{Time.now.usec.to_s}")
       end
@@ -165,6 +164,7 @@ module Flapjack
         write(' ') if connected?
       end
 
+      setup
       connect # Blather::Client.connect
 
       # simplified to use a single queue only as it makes the shutdown logic easier
@@ -187,7 +187,6 @@ module Flapjack
             EM.next_tick do
               # get delays without the next_tick
               close # Blather::Client.close
-              @redis_chat.quit if @redis_chat
             end
           else
             entity, check = event['event_id'].split(':')
@@ -198,7 +197,7 @@ module Flapjack
             # FIXME: change the 'for 4 hours' so it looks up the length of unscheduled maintance
             # that has been created, or takes this value from the event. This is so we can handle
             # varying lenghts of acknowledgement-created-unscheduled-maintenace.
-            ack_str = event['failure_count'] ? "::: flapjack: ACKID #{event['failure_count']} " : ''
+            ack_str = event['event_count'] ? "::: flapjack: ACKID #{event['event_count']} " : ''
             maint_str = (type && 'acknowledgement'.eql?(type.downcase)) ?
               "has been acknowledged, unscheduled maintenance created for 4 hours" :
               "is #{state.upcase}"

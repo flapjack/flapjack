@@ -102,6 +102,7 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
     entity_check.should_receive(:maintenances).with(nil, nil, :scheduled => true).and_return([])
+    entity_check.should_receive(:failed?).and_return(false)
 
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => @redis).and_return(entity)

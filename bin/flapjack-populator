@@ -63,11 +63,6 @@ parser   = Yajl::Parser.new
 @redis_path = config_env['redis']['path'] || nil
 @redis_db   = config_env['redis']['db']   || 0
 
-if config_env.nil? || config_env.empty?
-  puts "No config data for environment '#{FLAPJACK_ENV}'"
-  exit(false)
-end
-
 # add lib to the default include path
 unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'

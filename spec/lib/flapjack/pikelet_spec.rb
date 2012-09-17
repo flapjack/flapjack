@@ -21,14 +21,8 @@ describe Flapjack::Pikelet do
     b = Breakfast.new
     b.bootstrap
 
-    b.should be_bootstrapped
     b.should respond_to(:logger)
     b.logger.should equal(logger)
-  end
-
-  it "should show when it has not been bootstrapped" do
-    b = Breakfast.new
-    b.should_not be_bootstrapped
   end
 
 end
