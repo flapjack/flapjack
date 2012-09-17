@@ -50,9 +50,10 @@ Before do
   @logger = MockLogger.new
   # Use a separate database whilst testing
   @redis = ::Redis.new(redis_opts)
-  @app = Flapjack::Executive.new(
-    'email_queue' => 'email_notifications', 'sms_queue' => 'sms_notifications')
-  @app.bootstrap(:redis => @redis, :logger => @logger)
+  @app = Flapjack::Executive.new
+  @app.bootstrap(:redis => @redis, :logger => @logger,
+    :config => {'email_queue' => 'email_notifications',
+                'sms_queue' => 'sms_notifications'})
   @app.setup
 end
 

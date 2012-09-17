@@ -23,20 +23,18 @@ module Flapjack
   class Executive
     include Flapjack::Pikelet
 
-    def initialize(opts = {})
-      @queues = {:email     => opts['email_queue'],
-                 :sms       => opts['sms_queue'],
-                 :jabber    => opts['jabber_queue'],
-                 :pagerduty => opts['pagerduty_queue']}
-
-      notifylog  = opts['notification_log_file'] || 'log/notify.log'
-      @notifylog = Log4r::Logger.new("executive")
-      @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => notifylog))
-    end
-
     def setup
       redis_client_status = @redis.client
       @logger.debug("Flapjack::Executive.initialize: @redis client status: " + redis_client_status.inspect)
+
+      @queues = {:email     => @config['email_queue'],
+                 :sms       => @config['sms_queue'],
+                 :jabber    => @config['jabber_queue'],
+                 :pagerduty => @config['pagerduty_queue']}
+
+      notifylog  = @config['notification_log_file'] || 'log/notify.log'
+      @notifylog = Log4r::Logger.new("executive")
+      @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => notifylog))
 
       # FIXME: Put loading filters into separate method
       options = { :log => @logger, :persistence => @redis }
