@@ -60,21 +60,6 @@ module Flapjack
 
     def setup
 
-      # TODO if we want to run the same pikelet with different settings,
-      # we could require each setting to include a type, and treat the
-      # key as the name of the config -- for now, YAGNI.
-
-      # TODO store these in the classes themselves, register pikelets here?
-      pikelet_types = {
-        'executive'         => Flapjack::Executive,
-        'api'               => Flapjack::API,
-        'jabber_gateway'    => Flapjack::Jabber,
-        'pagerduty_gateway' => Flapjack::Pagerduty,
-        'web'               => Flapjack::Web,
-        'email_notifier'    => Flapjack::Notification::Email,
-        'sms_notifier'      => Flapjack::Notification::Sms
-      }
-
       # FIXME: the following is currently repeated in flapjack-populator and
       # flapjack-nagios-receiver - move to a method in a module and include it
       redis_host = @config['redis']['host'] || '127.0.0.1'
@@ -83,176 +68,28 @@ module Flapjack
       redis_db   = @config['redis']['db']   || 0
 
       if redis_path
-        redis_options = { :db => redis_db, :path => redis_path }
+        @redis_options = { :db => redis_db, :path => redis_path }
       else
-        redis_options = { :db => redis_db, :host => redis_host, :port => redis_port }
+        @redis_options = { :db => redis_db, :host => redis_host, :port => redis_port }
       end
 
       EM.synchrony do
 
         @logger.debug "config keys: #{@config.keys}"
-        unless (['email_notifier', 'sms_notifier'] & @config.keys).empty?
-          # set up connection pooling, stop resque errors
-          ::Resque.redis = EventMachine::Synchrony::ConnectionPool.new(:size => 5) do
-            ::Redis.new(redis_options.merge(:driver => :synchrony))
-          end
-          # # NB: can override the default 'resque' namespace like this
-          # ::Resque.redis.namespace = 'flapjack'
-        end
-
-        unless (['web', 'api'] & @config.keys).empty?
-          Thin::Logging.silent = true
-        end
 
         @config.keys.each do |pikelet_type|
-          next unless pikelet_types.has_key?(pikelet_type)
           next unless @config[pikelet_type]['enabled']
-          @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet(s)"
+          @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet"
           pikelet_cfg = @config[pikelet_type]
+
           case pikelet_type
-          when 'executive'
-            f = Fiber.new {
-              flapjack_exec = nil
-              begin
-                flapjack_exec = Flapjack::Executive.new(
-                  pikelet_cfg.merge(
-                    :redis => ::Redis.new(redis_options.merge(:driver => 'synchrony')),
-                    :redis_config => redis_options
-                  )
-                )
-                @pikelets << flapjack_exec
-                flapjack_exec.main
-              rescue Exception => e
-                trace = e.backtrace.join("\n")
-                @logger.fatal "#{e.message}\n#{trace}"
-                @pikelets.delete_if {|p| p == flapjack_exec } if flapjack_exec
-                @pikelet_fibers.delete(pikelet_type)
-                stop
-              end
-            }
-            @pikelet_fibers[pikelet_type] = f
-            f.resume
-            @logger.debug "new fiber created for #{pikelet_type}"
+          when 'executive', 'jabber_gateway', 'pagerduty_gateway'
+            build_pikelet(pikelet_type, pikelet_cfg)
+          when 'web', 'api'
+            build_thin_pikelet(pikelet_type, pikelet_cfg)
           when 'email_notifier', 'sms_notifier'
-
-            pikelet = pikelet_types[pikelet_type]
-
-            # See https://github.com/mikel/mail/blob/master/lib/mail/mail.rb#L53
-            # & https://github.com/mikel/mail/blob/master/spec/mail/configuration_spec.rb
-            # for details of configuring mail gem. defaults to SMTP, localhost, port 25
-
-            if pikelet_type.eql?('email_notifier')
-              smtp_config = {}
-
-              if pikelet_cfg['smtp_config']
-                smtp_config = pikelet_cfg['smtp_config'].keys.inject({}) do |ret,obj|
-                  ret[obj.to_sym] = pikelet_cfg['smtp_config'][obj]
-                  ret
-                end
-              end
-
-              Mail.defaults {
-                delivery_method :smtp, {:enable_starttls_auto => false}.merge(smtp_config)
-              }
-            end
-
-            pikelet.class_variable_set('@@config', pikelet_cfg)
-
-            f = Fiber.new {
-              flapjack_rsq = nil
-              begin
-                # TODO error if pikelet_cfg['queue'].nil?
-                flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
-                # # Use these to debug the resque workers
-                # flapjack_rsq.verbose = true
-                #flapjack_rsq.very_verbose = true
-                @pikelets << flapjack_rsq
-                flapjack_rsq.work(0.1)
-              rescue Exception => e
-                trace = e.backtrace.join("\n")
-                @pikelets.delete_if {|p| p == flapjack_rsq } if flapjack_rsq
-                @logger.fatal "#{e.message}\n#{trace}"
-                stop
-              end
-            }
-            @pikelet_fibers[pikelet_type] = f
-            f.resume
-            @logger.debug "new fiber created for #{pikelet_type}"
-          when 'jabber_gateway'
-            flapjack_jabber = nil
-            f = Fiber.new {
-              begin
-                flapjack_jabber = Flapjack::Jabber.new(:redis =>
-                  ::Redis.new(redis_options.merge(:driver => 'synchrony')),
-                  :redis_config => redis_options,
-                  :config => pikelet_cfg)
-                @pikelets << flapjack_jabber
-                flapjack_jabber.setup
-                flapjack_jabber.main
-              rescue Exception => e
-                trace = e.backtrace.join("\n")
-                @logger.fatal "#{e.message}\n#{trace}"
-                @pikelets.delete_if {|p| p == flapjack_jabber } if flapjack_jabber
-                @pikelet_fibers.delete(pikelet_type)
-                stop
-              end
-            }
-            @pikelet_fibers[pikelet_type] = f
-            f.resume
-            @logger.debug "new fiber created for #{pikelet_type}"
-          when 'pagerduty_gateway'
-            flapjack_pagerduty = nil
-            f = Fiber.new {
-              begin
-                flapjack_pagerduty = Flapjack::Pagerduty.new(:redis =>
-                  ::Redis.new(redis_options.merge(:driver => 'synchrony')),
-                  :redis_config => redis_options,
-                  :config => pikelet_cfg)
-                @pikelets << flapjack_pagerduty
-                flapjack_pagerduty.main
-              rescue Exception => e
-                trace = e.backtrace.join("\n")
-                @logger.fatal "#{e.message}\n#{trace}"
-                @pikelets.delete_if {|p| p == flapjack_pagerduty } if flapjack_pagerduty
-                @pikelet_fibers.delete(pikelet_type)
-                stop
-              end
-            }
-            @pikelet_fibers[pikelet_type] = f
-            f.resume
-            @logger.debug "new fiber created for #{pikelet_type}"
-          when 'web'
-            port = nil
-            if pikelet_cfg['port']
-              port = pikelet_cfg['port'].to_i
-            end
-
-            port = 3000 if (port.nil? || port <= 0 || port > 65535)
-
-            Flapjack::Web.class_variable_set('@@redis',
-              ::Redis.new(redis_options.merge(:driver => 'ruby')))
-
-            web = Thin::Server.new('0.0.0.0', port, Flapjack::Web, :signals => false)
-            @pikelets << web
-            web.start
-            @logger.debug "new thin server instance started for #{pikelet_type}"
-          when 'api'
-            port = nil
-            if pikelet_cfg['port']
-              port = pikelet_cfg['port'].to_i
-            end
-
-            port = 3001 if (port.nil? || port <= 0 || port > 65535)
-
-            Flapjack::API.class_variable_set('@@redis',
-              ::Redis.new(redis_options.merge(:driver => 'ruby')))
-
-            api = Thin::Server.new('0.0.0.0', port, Flapjack::API, :signals => false)
-            @pikelets << api
-            api.start
-            @logger.debug "new thin server instance started for #{pikelet_type}"
+            build_resque_pikelet(pikelet_type, pikelet_cfg)
           end
-
         end
 
         setup_signals
@@ -267,6 +104,128 @@ module Flapjack
         trap('QUIT') { stop }
         # trap('HUP')  { }
       end
+    end
+
+    def build_redis_connection_pool(options = {})
+      EventMachine::Synchrony::ConnectionPool.new(:size => options[:size] || 5) do
+        ::Redis.new(@redis_options.merge(:driver => 'synchrony'))
+      end
+    end
+
+    def build_pikelet(pikelet_type, pikelet_cfg)
+      pikelet_class = case pikelet_type
+      when 'executive'
+        Flapjack::Executive
+      when 'jabber_gateway'
+        Flapjack::Jabber
+      when 'pagerduty_gateway'
+        Flapjack::Pagerduty
+      end
+      return unless pikelet_class
+
+      pikelet = nil
+      f = Fiber.new {
+        begin
+          pikelet = pikelet_class.new
+          @pikelets << pikelet
+          pikelet.bootstrap(:redis => build_redis_connection_pool, :config => pikelet_cfg)
+          pikelet.main
+        rescue Exception => e
+          trace = e.backtrace.join("\n")
+          @logger.fatal "#{e.message}\n#{trace}"
+          @pikelets.delete_if {|p| p == pikelet } if pikelet
+          @pikelet_fibers.delete(pikelet_type)
+          stop
+        end
+      }
+      @pikelet_fibers[pikelet_type] = f
+      f.resume
+      @logger.debug "new fiber created for #{pikelet_type}"
+    end
+
+    def build_thin_pikelet(pikelet_type, pikelet_cfg)
+      pikelet_class = case pikelet_type
+      when 'web'
+        Flapjack::Web
+      when 'api'
+        Flapjack::API
+      end
+      return unless pikelet_class
+
+      port = nil
+      if pikelet_cfg['port']
+        port = pikelet_cfg['port'].to_i
+      end
+
+      port = 3001 if (port.nil? || port <= 0 || port > 65535)
+
+      pikelet_class.class_variable_set('@@redis', build_redis_connection_pool)
+
+      Thin::Logging.silent = true
+
+      pikelet = Thin::Server.new('0.0.0.0', port, pikelet_class, :signals => false)
+      @pikelets << pikelet
+      pikelet.start
+      @logger.debug "new thin server instance started for #{pikelet_type}"
+    end
+
+    def build_resque_pikelet(pikelet_type, pikelet_cfg)
+      pikelet_class = case pikelet_type
+      when 'email_notifier'
+        Flapjack::Notification::Email
+      when 'sms_notifier'
+        Flapjack::Notification::Sms
+      end
+      return unless pikelet_class
+
+      if ::Resque.redis.nil?
+        # set up connection pooling, stop resque errors
+        ::Resque.redis = build_redis_connection_pool
+        ## NB: can override the default 'resque' namespace like this
+        #::Resque.redis.namespace = 'flapjack'
+      end
+
+      # See https://github.com/mikel/mail/blob/master/lib/mail/mail.rb#L53
+      # & https://github.com/mikel/mail/blob/master/spec/mail/configuration_spec.rb
+      # for details of configuring mail gem. defaults to SMTP, localhost, port 25
+
+      if pikelet_type.eql?('email_notifier')
+        smtp_config = {}
+
+        if pikelet_cfg['smtp_config']
+          smtp_config = pikelet_cfg['smtp_config'].keys.inject({}) do |ret,obj|
+            ret[obj.to_sym] = pikelet_cfg['smtp_config'][obj]
+            ret
+          end
+        end
+
+        Mail.defaults {
+          delivery_method :smtp, {:enable_starttls_auto => false}.merge(smtp_config)
+        }
+      end
+
+      pikelet_class.class_variable_set('@@config', pikelet_cfg)
+
+      f = Fiber.new {
+        flapjack_rsq = nil
+        begin
+          # TODO error if pikelet_cfg['queue'].nil?
+          flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
+          # # Use these to debug the resque workers
+          # flapjack_rsq.verbose = true
+          #flapjack_rsq.very_verbose = true
+          @pikelets << flapjack_rsq
+          flapjack_rsq.work(0.1)
+        rescue Exception => e
+          trace = e.backtrace.join("\n")
+          @pikelets.delete_if {|p| p == flapjack_rsq } if flapjack_rsq
+          @logger.fatal "#{e.message}\n#{trace}"
+          stop
+        end
+      }
+      @pikelet_fibers[pikelet_type] = f
+      f.resume
+      @logger.debug "new fiber created for #{pikelet_type}"
     end
 
     def health_check(thin_pikelets)
@@ -288,7 +247,9 @@ module Flapjack
           Fiber.new {
             # this needs to use a separate Redis connection from the pikelet's
             # one, as that's in the middle of its blpop
-            pik.add_shutdown_event
+            r = Redis.new(@redis_options.merge(:driver => 'synchrony'))
+            pik.add_shutdown_event(:redis => r)
+            r.quit
           }.resume
         when EM::Resque::Worker
           # resque is polling, so we don't need a shutdown object

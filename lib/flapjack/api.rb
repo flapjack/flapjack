@@ -8,6 +8,7 @@
 
 require 'time'
 
+require 'rack/fiber_pool'
 require 'sinatra/base'
 
 require 'flapjack/pikelet'
@@ -21,6 +22,15 @@ module Flapjack
 
   class API < Sinatra::Base
 
+    # doesn't work with Rack::Test for some reason
+    unless 'test'.eql?(FLAPJACK_ENV)
+      rescue_exception = Proc.new { |env, exception|
+        [503, {}, exception.message]
+      }
+
+      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+    end
+    use Rack::MethodOverride
     extend Flapjack::Pikelet
 
     before do
@@ -205,6 +215,8 @@ module Flapjack
     end
 
     # create an acknowledgement for a service on an entity
+    # NB currently, this does not acknowledge a specific failure event, just
+    # the entity-check as a whole
     post '/acknowledgements/:entity/:check' do
       content_type :json
       entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => @@redis)
@@ -212,9 +224,14 @@ module Flapjack
         status 404
         return
       end
+
+      dur = params[:duration] ? params[:duration].to_i : nil
+      duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
+
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
         params[:check], :redis => @@redis)
-      entity_check.create_acknowledgement('summary' => params[:summary])
+      entity_check.create_acknowledgement('summary' => params[:summary],
+        'duration' => duration)
       status 201
     end
 

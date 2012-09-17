@@ -30,7 +30,7 @@ FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 # load the config hash for the current environment
 
 if File.file?(options.config)
-  config = YAML::load(File.open(options.config))
+  config = YAML::load_file(options.config)
 else
   puts "Could not find config file at '#{options.config}', you may want to specify one with the --config option"
   exit(false)
