@@ -1,116 +1,132 @@
 @events
 Feature: events
   So people can be notified when things break and recover
-  Flapjack-notifier must process events correctly
+  flapjack-executive must process events correctly
 
-  Scenario: Service ok to ok
-    Given service x is in an ok state
-    When  an ok event is received for service x
-    Then  a notification should not be generated for service x
-    And   show me the output
+  # TODO make entity and check implicit, so the test reads more cleanly
+  Background:
+    Given an entity 'def' exists
+
+  Scenario: Check ok to ok
+    Given check 'abc' for entity 'def' is in an ok state
+    When  an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    # And   show me the output
+
+  Scenario: Check ok to failed
+    Given check 'abc' for entity 'def' is in an ok state
+    When  a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
 
   @time
-  Scenario: Service ok to failed
-    Given service x is in an ok state
-    And   a failure event is received for service x
-    Then  a notification should not be generated for service x
-
-  @time
-  Scenario: Service failed to failed after 10 seconds
-    Given service x is in an ok state
-    When  a failure event is received for service x
+  Scenario: Check failed to failed after 10 seconds
+    Given check 'abc' for entity 'def' is in an ok state
+    When  a failure event is received for check 'abc' on entity 'def'
     And   10 seconds passes
-    And   a failure event is received for service x
-    Then  a notification should not be generated for service x
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
 
-  Scenario: Service ok to failed for 1 minute
-    Given service x is in an ok state
-    When  a failure event is received for service x
+  @time
+  Scenario: Check ok to failed for 1 minute
+    Given check 'abc' for entity 'def' is in an ok state
+    When  a failure event is received for check 'abc' on entity 'def'
     And   1 minute passes
-    And   a failure event is received for service x
-    Then  a notification should be generated for service x
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
 
-  Scenario: Service failed and alerted to failed for 1 minute
-    Given service x is in an ok state
-    When  a failure event is received for service x
+  @time
+  Scenario: Check failed and alerted to failed for 1 minute
+    Given check 'abc' for entity 'def' is in an ok state
+    When  a failure event is received for check 'abc' on entity 'def'
     And   1 minute passes
-    And   a failure event is received for service x
-    Then  a notification should be generated for service x
+    And   a failure event is received for check 'abc' on entity 'def'
+    And   show me the notifications
+    Then  a notification should be generated for check 'abc' on entity 'def'
     When  1 minute passes
-    And   a failure event is received for service x
-    Then  a notification should not be generated for service x
+    And   a failure event is received for check 'abc' on entity 'def'
+    And   show me the notifications
+    Then  a notification should not be generated for check 'abc' on entity 'def'
 
-  Scenario: Service failed and alerted to failed for 6 minutes
-    Given service x is in an ok state
-    When  a failure event is received for service x
+  @time
+  Scenario: Check failed and alerted to failed for 6 minutes
+    Given check 'abc' for entity 'def' is in an ok state
+    When  a failure event is received for check 'abc' on entity 'def'
     And   1 minute passes
-    And   a failure event is received for service x
-    Then  a notification should be generated for service x
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
     When  6 minutes passes
-    And   a failure event is received for service x
-    Then  a notification should be generated for service x
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
 
-  Scenario: Service ok to failed for 1 minute when in scheduled maintenance
-    Given service x is in an ok state
-    And   service x is in scheduled maintenance
-    When  a failure event is received for service x
+  @time
+  Scenario: Check ok to failed for 1 minute when in scheduled maintenance
+    Given check 'abc' for entity 'def' is in an ok state
+    And   check 'abc' for entity 'def' is in scheduled maintenance
+    When  a failure event is received for check 'abc' on entity 'def'
     And   1 minute passes
-    And   a failure event is received for service x
-    Then  a notification should not be generated for service x
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
 
-  Scenario: Service ok to failed for 1 minute when in unscheduled maintenance
-    Given service x is in an ok state
-    And   service x is in unscheduled maintenance
-    When  a failure event is received for service x
+  @time
+  Scenario: Check ok to failed for 1 minute when in unscheduled maintenance
+    Given check 'abc' for entity 'def' is in an ok state
+    And   check 'abc' for entity 'def' is in unscheduled maintenance
+    When  a failure event is received for check 'abc' on entity 'def'
     And   1 minute passes
-    And   a failure event is received for service x
-    Then  a notification should not be generated for service x
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
 
-  Scenario: Service ok to failed for 1 minute, acknowledged, and failed for 6 minutes
-    Given service x is in an ok state
-    When  a failure event is received for service x
+  @time
+  Scenario: Check ok to failed for 1 minute, acknowledged, and failed for 6 minutes
+    Given check 'abc' for entity 'def' is in an ok state
+    When  a failure event is received for check 'abc' on entity 'def'
     And   1 minute passes
-    And   a failure event is received for service x
-    Then  a notification should be generated for service x
-    When  an acknowledgement is received for service x
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
+    When  an acknowledgement is received for check 'abc' on entity 'def'
     And   6 minute passes
-    And   a failure event is received for service x
-    Then  a notification should not be generated for service x
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
 
-  Scenario: Service failed to ok
-    Given service x is in a failure state
-    When  an ok event is received for service x
-    Then  a notification should be generated for service x
+  Scenario: Check failed to ok
+    Given check 'abc' for entity 'def' is in a failure state
+    And   5 minutes passes
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
+    When  5 minutes passes
+    And   an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
 
-  Scenario: Service failed to ok when acknowledged
-    Given service x is in a failure state
-    When  an acknowledgement event is received for service x
-    Then  a notification should be generated for service x
+  @time
+  Scenario: Check failed to ok when acknowledged
+    Given check 'abc' for entity 'def' is in a failure state
+    When  an acknowledgement event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
     When  1 minute passes
-    And   an ok event is received for service x
-    Then  a notification should be generated for service x
+    And   an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
 
-  Scenario: Service failed to ok when acknowledged, and fails after 6 minutes
-    Given service x is in a failure state
-    When  an acknowledgement event is received for service x
-    Then  a notification should be generated for service x
+  @time
+  Scenario: Check failed to ok when acknowledged, and fails after 6 minutes
+    Given check 'abc' for entity 'def' is in a failure state
+    When  an acknowledgement event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
     When  1 minute passes
-    And   an ok event is received for service x
-    Then  a notification should be generated for service x
+    And   an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
     When  6 minutes passes
-    And   a failure event is received for service x
-    Then  a notification should not be generated for service x
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
     When  6 minutes passes
-    And   a failure event is received for service x
-    Then  a notification should be generated for service x
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
 
   Scenario: Acknowledgement when ok
-    Given service x is in an ok state
-    When  an acknowledgement event is received for service x
-    Then  a notification should not be generated for service x
+    Given check 'abc' for entity 'def' is in an ok state
+    When  an acknowledgement event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
 
   Scenario: Acknowledgement when failed
-    Given service x is in a failure state
-    When  an acknowledgement event is received for service x
-    Then  a notification should be generated for service x
-
+    Given check 'abc' for entity 'def' is in a failure state
+    When  an acknowledgement event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
