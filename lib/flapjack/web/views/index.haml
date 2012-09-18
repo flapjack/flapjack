@@ -1,0 +1,92 @@
+!!! 5
+%html
+  %head
+    :css
+      * { margin: 0; padding: 0; }
+      html { font-size: 62.5%; }
+      body { font-size: 16px; }
+      div#wrapper {
+        margin: 24px auto;
+        width: 1000px;
+      }
+      h1, h2, h3, h4, h5 {
+        font-family: Helvetica Neue, sans-serif;
+        margin-bottom: 12px;
+      }
+      table {
+        text-align: left;
+        width: 100%;
+      }
+      table th {
+        font-family: Helvetica Neue, sans-serif;
+        background-color: #eee;
+      }
+      table td, table th {
+        padding: 4px;
+      }
+      table td.critical {
+        background-color: #fb9a99;
+      }
+      table td.down {
+        background-color: #fb9a99;
+      }
+      table td.warning {
+        background-color: #f9bb34;
+      }
+      table td.ok {
+        background-color: #B2DF8A;
+      }
+      table td.up {
+        background-color: #B2DF8A;
+      }
+  %body
+    %div#wrapper
+      %p
+        %a(title='internal stats' href='/') All Checks
+        |
+        %a(title='internal stats' href='/failing') Failing Checks
+        |
+        %a(title='internal stats' href='/self_stats') Internal Statistics
+      %h1 Flapjack Status
+      %h4
+        Events queued:
+        = @events_queued
+      %h4
+        All checks:
+        %a(title='all checks' href='/')
+          = @count_all_checks
+      %h4
+        Failing checks:
+        %a(title='failing checks' href='/failing')
+          = @count_failing_checks
+      %h3
+        All Checks
+      %table
+        %tr
+          %th Entity
+          %th Check
+          %th State
+          %th Last State Change
+          %th Last Update
+          %th Last Notification
+        - @states.each do |entity, check, status, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified_kind, notified|
+          %tr
+            %td= entity
+            %td
+              - link = "/check?entity=" + entity + "&check=" + check
+              %a(title='check detail' href=link) #{check}
+            %td{:class => status}
+              = status.upcase
+              = " (Acknowledged)" if in_unscheduled_outage
+              = " (Scheduled Maintenance)" if in_scheduled_outage
+            %td= relative_time_ago(Time.at(changed.to_i)) + ' ago'
+            %td= (Time.now.to_i - updated.to_i).to_s + ' seconds ago'
+            - if notified && (notified > 0)
+              - last_notified = relative_time_ago(Time.at(notified.to_i)) + " ago, #{notified_kind}"
+            - else
+              - last_notified = 'never'
+            %td= last_notified
+
+      -#%ul
+        -#- @keys.each do |key|
+          -#%li= key

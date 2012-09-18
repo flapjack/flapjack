@@ -1,0 +1,36 @@
+#!/bin/bash
+#
+# Copyright (c) 2009-2012 Lindsay Holmwood <lindsay@holmwood.id.au>
+#
+# flapjack-nagios-receiver
+# reads from a nagios perfdata named-pipe and submits each event to the events queue in redis
+#
+
+PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin
+
+# load global rbenv environment if present
+if [ -x /etc/profile.d/rbenv.sh ] ; then
+  source /etc/profile.d/rbenv.sh
+fi
+
+# Default return value
+RETVAL=0
+
+export FLAPJACK_ENV="production"
+
+NAGIOS_PERFDATA_FIFO="/var/cache/nagios3/event_stream.fifo"
+
+if [ ! $(which flapjack-nagios-receiver-control) ]; then
+  echo "Error: flapjack-nagios-receiver-control isn't in PATH."
+  echo "Refusing to do anything!"
+  exit 1
+fi
+
+# Evaluate command
+
+#/bin/bash -c "source /etc/profile.d/rbenv.sh && rbenv shell 1.9.3-p125 && flapjack-nagios-receiver-control $1 -- --config /etc/flapjack/flapjack-config.yaml ${NAGIOS_PERFDATA_FIFO}"
+rbenv shell 1.9.3-p125 && flapjack-nagios-receiver-control $1 -- --config /etc/flapjack/flapjack-config.yaml ${NAGIOS_PERFDATA_FIFO}
+RETVAL=$?
+
+exit $RETVAL
+

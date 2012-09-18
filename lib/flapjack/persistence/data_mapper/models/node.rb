@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 class Node
   include DataMapper::Resource
 
@@ -6,7 +8,7 @@ class Node
   property :fqdn, String, :key => true
 
   validates_is_unique :fqdn
-  validates_format :fqdn, :with => /^[0-9|a-z|A-Z|\-|\.]*$/, 
+  validates_format :fqdn, :with => /^[0-9|a-z|A-Z|\-|\.]*$/,
                           :message => "not a RFC1035-formatted FQDN (see section 2.3.1)"
 
   def hostname

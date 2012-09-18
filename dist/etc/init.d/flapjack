@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+# Copyright (c) 2009-2012 Lindsay Holmwood <lindsay@holmwood.id.au>
+#
+# flapjack
+# Boots flapjack (coordinator, flapjack-executive, notification workers, ...)
+#
+
+PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin
+
+# load global rbenv environment if present
+if [ -x /etc/profile.d/rbenv.sh ] ; then
+  source /etc/profile.d/rbenv.sh
+fi
+
+# Default return value
+RETVAL=0
+
+export FLAPJACK_ENV="production"
+
+if [ ! $(which flapjack) ]; then
+  echo "Error: flapjack isn't in PATH."
+  echo "Refusing to do anything!"
+  exit 1
+fi
+
+# Evaluate command
+case "$1" in
+  start)
+    flapjack --config /etc/flapjack/flapjack-config.yaml --daemonize
+    RETVAL=$?
+  ;;
+  stop)
+    kill `cat /var/run/flapjack/flapjack.pid`
+    # FIXME: make this more robust, preferably use daemons foo
+    # or at least wait until the flapjack process has exited before exiting
+    RETVAL=$?
+  ;;
+  *)
+    echo "Usage: flapjack {start|stop}"
+    RETVAL=1
+  ;;
+esac
+
+exit $RETVAL
+

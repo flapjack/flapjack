@@ -1,0 +1,72 @@
+#!/usr/bin/env ruby
+
+require 'yaml'
+require 'optparse'
+require 'ostruct'
+
+options = OpenStruct.new
+options.config    = File.join('etc', 'flapjack_config.yaml')
+options.daemonize = nil
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: flapjack [options]"
+
+  opts.on("-c", "--config [PATH]", String, "PATH to the config file to use") do |c|
+    options.config = c
+  end
+
+  opts.on("-d", "--[no-]daemonize", "Daemonize?") do |d|
+    options.daemonize = d
+  end
+
+  opts.on("-p", "--pidfile [PATH]", String, "PATH to the pidfile to write to") do |p|
+    options.pidfile = p
+  end
+
+end.parse!(ARGV)
+
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+
+# load the config hash for the current environment
+
+if File.file?(options.config)
+  config = YAML::load(File.open(options.config))
+else
+  puts "Could not find config file at '#{options.config}', you may want to specify one with the --config option"
+  exit(false)
+end
+
+config_env = config[FLAPJACK_ENV]
+
+if config_env.nil? || config_env.empty?
+  puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
+  exit(false)
+end
+
+if options.pidfile.nil?
+  pid_file = (config_env['pid_file'] || 'tmp/pids/flapjack.pid')
+else
+  pid_file = options.pidfile
+end
+
+# add lib to the default include path
+unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+  $: << File.dirname(__FILE__) + '/../lib'
+end
+
+# TODO Flapjack falls over when Redis restarted -- trap errors and attempt reconnect
+
+require 'flapjack/coordinator'
+
+coordinator = Flapjack::Coordinator.new(config_env)
+coordinator.log_file = (config_env['log_file'] || 'log/flapjack.log')
+coordinator.pid_file = pid_file
+
+if options.daemonize.nil?
+  daemonize = !!config_env['daemonize']
+else
+  daemonize = options.daemonize
+end
+
+puts "Daemonising ... " if daemonize
+coordinator.start(:daemonize => daemonize)

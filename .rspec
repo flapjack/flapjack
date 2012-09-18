@@ -1,0 +1,10 @@
+--color
+--format Fuubar
+--format html
+--out tmp/spec.html
+--require ./spec/support/uncolored_doc_formatter.rb
+--format UncoloredDocFormatter
+--out tmp/spec_doc.txt
+--require ./spec/support/profile_all_formatter.rb
+--format ProfileAllFormatter
+--out tmp/spec_profile.txt

@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'pathname'
-require 'rubygems'
 require 'yajl/json_gem'
 
 module Netsaint
