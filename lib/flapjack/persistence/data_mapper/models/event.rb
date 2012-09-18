@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 class Event
   include DataMapper::Resource
 

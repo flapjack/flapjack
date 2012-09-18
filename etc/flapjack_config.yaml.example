@@ -1,0 +1,90 @@
+---
+
+development:
+  pid_file: tmp/pids/flapjack.pid
+  log_file: log/flapjack.log
+  daemonize: no
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    db: 13
+  executive:
+    enabled: yes
+    email_queue: email_notifications
+    sms_queue: sms_notifications
+    jabber_queue: jabber_notifications
+    notification_log_file: log/flapjack-notification.log
+  email_notifier:
+    enabled: yes
+    queue: email_notifications
+    smtp_config:
+      port: 2525
+      # address: "localhost"
+      # port: 25
+      # domain: 'localhost.localdomain'
+      # user_name: nil
+      # password: nil
+      # authentication: nil
+      # enable_starttls_auto: true
+  sms_notifier:
+    enabled: yes
+    queue: sms_notifications
+    username: "ermahgerd"
+    password: "xxxx"
+  jabber_gateway:
+    enabled: yes
+    queue: jabber_notifications
+    server: "jabber.domain.tld"
+    port: 5222
+    jabberid: "flapjack@jabber.domain.tld"
+    password: "good-password"
+    alias: "flapjack"
+    rooms:
+      - "gimp@conference.jabber.domain.tld"
+      - "log@conference.jabber.domain.tld"
+  pagerduty_gateway:
+    enabled: yes
+    queue: pagerduty_notifications
+  web:
+    enabled: yes
+    port: 5080
+  api:
+    enabled: yes
+    port: 5081
+
+test:
+  redis:
+    database: 14
+  email_notifier:
+    instances: 1
+  sms_notifier:
+    instances: 1
+    username: "ermahgerd"
+    password: "xxxx"
+  web:
+    instances: 1
+
+
+staging:
+  redis:
+    database: 15
+  email_notifier:
+    instances: 1
+  sms_notifier:
+    instances: 1
+    username: "ermahgerd"
+    password: "xxxx"
+  web:
+    instances: 1
+
+production:
+  redis:
+    database: 12
+  email_notifier:
+    instances: 1
+  sms_notifier:
+    instances: 1
+    username: "ermahgerd"
+    password: "xxxx"
+  web:
+    instances: 1

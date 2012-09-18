@@ -1,29 +1,151 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
 require 'yajl'
-require 'beanstalk-client'
+require 'redis'
+require 'yaml'
+require 'optparse'
+require 'ostruct'
+require 'flapjack/data/entity_check'
 
-command = ARGV[0]
+options = OpenStruct.new
+options.config    = File.join('etc', 'flapjack_config.yaml')
+options.daemonize = nil
 
-case command
-when "deploy"
-  options = ARGV[1..-1]
-  options = Hash[options.map {|o| o.scan(/--(.+)=(.+)/).flatten }]
+command = ARGV.shift
 
-  @queue = Beanstalk::Connection.new('localhost:11300', 'checks')
+banner  = "Usage: flapjack-populator command [options]\n"
+banner += "\n"
+banner += "  commands:\n"
+banner += "    - import-entities\n"
+banner += "    - import-contacts\n"
+banner += "    - purge-events (purge queued monitoring events)\n"
 
-  filename = options["from"]
-  file     = File.new(filename)
-  parser   = Yajl::Parser.new
-  batch    = parser.parse(file)
-  batch_id = batch["batch"]["id"]
+OptionParser.new do |opts|
+  opts.banner = "Usage: flapjack-populator command [options]"
 
-  batch["checks"].each do |check|
-    job = check.merge({"batch_id" => batch_id})
-    @queue.yput(job)
+  opts.on("-c", "--config [PATH]", String, "PATH to the config file to use") do |c|
+    options.config = c
   end
 
-  puts "Deployed batch #{batch_id}"
+  opts.on("-f", "--from [FILE]", String, "path to the FILE to import") do |f|
+    options.from = f
+  end
+
+end.parse!(ARGV)
+
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+
+# load the config hash for the current environment
+
+if File.file?(options.config)
+  config = YAML::load(File.open(options.config))
+else
+  puts "Could not find config file at '#{options.config}', you may want to specify one with the --config option"
+  exit(false)
+end
+
+config_env = config[FLAPJACK_ENV]
+
+if config_env.nil? || config_env.empty?
+  puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
+  exit(false)
+end
+
+if options.from
+  filename = options.from
+  file     = File.new(filename)
+end
+
+parser   = Yajl::Parser.new
+
+@redis_host = config_env['redis']['host'] || 'localhost'
+@redis_port = config_env['redis']['port'] || '6379'
+@redis_path = config_env['redis']['path'] || nil
+@redis_db   = config_env['redis']['db']   || 0
+
+if config_env.nil? || config_env.empty?
+  puts "No config data for environment '#{FLAPJACK_ENV}'"
+  exit(false)
+end
+
+# add lib to the default include path
+unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+  $: << File.dirname(__FILE__) + '/../lib'
+end
+
+def get_redis_connection
+  if @redis_path
+    redis = Redis.new(:db => @redis_db, :path => @redis_path)
+  else
+    redis = Redis.new(:db => @redis_db, :host => @redis_host, :port => @redis_port)
+  end
+  redis
+end
+
+case command
+when "import-contacts"
+  @persistence = get_redis_connection
+  contacts = parser.parse(file)
+  contacts.each {|contact|
+    if not contact['id']
+      puts "Contact not imported as it has no id: " + contact.inspect
+      next
+    end
+    @persistence.multi
+    @persistence.del("contact:#{contact['id']}")
+    @persistence.del("contact_media:#{contact['id']}")
+    @persistence.del("contact_pagerduty:#{contact['id']}")
+    @persistence.hset("contact:#{contact['id']}", 'first_name', contact['first_name'])
+    @persistence.hset("contact:#{contact['id']}", 'last_name',  contact['last_name'])
+    @persistence.hset("contact:#{contact['id']}", 'email',      contact['email'])
+    contact['media'].each_pair {|medium, address|
+      case medium
+      when 'pagerduty'
+        @persistence.hset("contact_media:#{contact['id']}", medium, address['service_key'])
+        @persistence.hset("contact_pagerduty:#{contact['id']}", 'subdomain', address['subdomain'])
+        @persistence.hset("contact_pagerduty:#{contact['id']}", 'username',  address['username'])
+        @persistence.hset("contact_pagerduty:#{contact['id']}", 'password',  address['password'])
+      else
+        @persistence.hset("contact_media:#{contact['id']}", medium, address)
+      end
+    }
+    @persistence.exec
+  }
+
+when "import-entities"
+  @persistence = get_redis_connection
+  entities = parser.parse(file)
+  entities.each {|entity|
+    if not entity['id']
+      puts "Entity not imported as it has no id: " + entity.inspect
+      next
+    end
+    @persistence.multi
+    existing_name = @persistence.hget("entity:#{entity['id']}", 'name')
+    @persistence.del("entity_id:#{existing_name}") unless existing_name == entity['name']
+    @persistence.set("entity_id:#{entity['name']}", entity['id'])
+    @persistence.hset("entity:#{entity['id']}", 'name', entity['name'])
+
+    @persistence.del("contacts_for:#{entity['id']}")
+    entity['contacts'].each {|contact|
+      @persistence.sadd("contacts_for:#{entity['id']}", contact)
+    }
+    @persistence.exec
+
+  }
+
+when "purge-events"
+  @persistence = get_redis_connection
+  events_size = @persistence.llen('events')
+  puts "purging #{events_size} events..."
+  timestamp = Time.now.to_i
+  puts "renaming events to events.#{timestamp}"
+  @persistence.rename('events', "events.#{timestamp}")
+  puts "setting expiry of events.#{timestamp} to 8 hours"
+  @persistence.expire("events.#{timestamp}", (60 * 60 * 8))
+
+else
+  puts "you need to give me something to do, eg a command like 'import-entities' or 'import-clients' etc"
+  raise ArgumentError
 end
 

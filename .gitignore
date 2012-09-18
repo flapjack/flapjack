@@ -15,3 +15,10 @@ pkg/*
 spec/test.db
 features/support/tmp/*
 features/support/etc/netsaint/*
+log/*
+vendor
+.bundle
+etc/flapjack_config.yaml
+coverage
+tmp/pids/*
+tmp/spec*

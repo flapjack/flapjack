@@ -1,59 +1,75 @@
 #!/usr/bin/env ruby
 
+if ENV['COVERAGE']
+  require 'simplecov'
+  SimpleCov.start do
+    add_filter '/features/'
+  end
+end
+
+ENV["FLAPJACK_ENV"] = 'test'
+require 'bundler'
+Bundler.require(:default, :test)
+
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
 require 'pathname'
-require 'yajl'
-require 'beanstalk-client'
 
-class ProcessManagement
-  # Cleans up daemons that were started in a scenario.
-  # We kill these daemons so the test state is clean at the beginning of every
-  # scenario, and scenarios don't become coupled with one another.
-  def kill_lingering_daemons
-    @daemons.each do |pipe|
-      Process.kill("KILL", pipe.pid)
-    end
+require 'webmock/cucumber'
+WebMock.disable_net_connect!
+
+require 'flapjack/executive'
+require 'flapjack/patches'
+
+class MockLogger
+  attr_accessor :messages
+
+  def initialize
+    @messages = []
   end
 
-  # Testing daemons with Ruby backticks blocks indefinitely, because the
-  # backtick method waits for the program to exit. We use the select() system
-  # call to read from a pipe connected to a daemon, and return if no data is
-  # read within the specified timeout.
-  #
-  # http://weblog.jamisbuck.org/assets/2006/9/25/gdb.rb
-  def read_until_timeout(pipe, timeout=1, verbose=false)
-    output = []
-    line    = ""
-    while data = IO.select([pipe], nil, nil, timeout) do
-      next if data.empty?
-      char = pipe.read(1)
-      break if char.nil?
-
-      line << char
-      if line[-1] == ?\n
-        puts line if verbose
-        output << line
-        line = ""
+  %w(debug info warn error fatal).each do |level|
+    class_eval <<-RUBY
+      def #{level}(msg)
+        @messages << msg
       end
-    end
-
-    output
+    RUBY
   end
-
-  def spawn_daemon(command)
-    @daemons ||= []
-    daemon = IO.popen(command)
-    @daemons << daemon
-    daemon
-  end
-
 end
 
-After do |scenario|
-  kill_lingering_daemons
+Mail.defaults do
+  delivery_method :test # in practice you'd do this in spec_helper.rb
 end
 
-World do
-  ProcessManagement.new
+redis_opts = { :db => 14, :driver => :ruby }
+redis = ::Redis.new(redis_opts)
+redis.flushdb
+redis.quit
+
+Before do
+  @logger = MockLogger.new
+  # Use a separate database whilst testing
+  @redis = ::Redis.new(redis_opts)
+  @app = Flapjack::Executive.new(:redis => @redis, :logger => @logger,
+    'email_queue' => 'email_notifications', 'sms_queue' => 'sms_notifications')
 end
+
+After do
+  @redis.flushdb
+  @redis.quit
+  # Reset the logged messages
+  @logger.messages = []
+end
+
+Before('@resque') do
+  ResqueSpec.reset!
+end
+
+Before('@email') do
+  Mail::TestMailer.deliveries.clear
+end
+
+After('@time') do
+  Delorean.back_to_the_present
+end
+

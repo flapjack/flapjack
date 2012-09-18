@@ -1,8 +1,7 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
 require 'ostruct'
-require 'optparse' 
+require 'optparse'
 
 class WorkerManagerOptions
   def self.parse(args)

@@ -1,96 +1,36 @@
 Flapjack
 ========
 
-**WARNING: Flapjack is no longer under active development.**
+Flapjack is a highly scalable and distributed monitoring notification system.
 
-**Feel free to fork it, but I don't have the bandwidth to work on this project any longer.**
+Flapjack provides a scalable method for dealing with events representing changes in system state (OK -> WARNING -> CRITICAL transitions) and alerting appropriate people as necessary.
 
-Flapjack is highly scalable and distributed monitoring system.
-
-It understands the Nagios plugin format, and can easily be scaled
-from 1 server to 1000.
+At its core, flapjack process events received from external check execution engines, such as Nagios. Nagios provides a 'perfdata' event output channel, which writes to a named pipe. `flapjack-nagios-receiver` then reads from this named pipe, converts each line to JSON and adds them to the events queue. `executive` picks up the events and processes them - deciding when and who to notifify about problems, recoveries, acknowledgements etc. Additional check engines can be supported by adding additional receiver processes similar to the nagios receiver.
 
 
-Installation
-------------
+What things do
+--------------
 
-Installation is currently driven by Puppet. The required Puppet modules to install Flapjack are in `dist/puppet/`.
+Executables:
 
-**WARNING** the Puppet modules are currently Ubuntu specific. If you want to install Flapjack on another platform, you'll have to refactor them. Patches welcome!
+  * `flapjack` => starts multiple components ('pikelets') within the one ruby process as specified in the configuration file.
+  * `flapjack-nagios-receiver` => reads nagios check output on standard input and places them on the events queue in redis as JSON blobs. Currently unable to be run in-process with `flapjack`
 
-To install, copy these modules into your Puppet repository, and apply the `flapjack::worker` + `flapjack::notifier` classes to the machines you wish to run the workers and notifier on respectively.
+There are more fun executables in the bin directory.
 
-Once the modules are in place and applied to nodes, do a normal Puppet run.
+Pikelets:
 
-Most of what's documented below is automated by Puppet, and can be considered a usage guide.
+  * `executive` => processes events off a queue (a redis list) and decides what actions to take (alert, record state changes, etc)
+  * `email_notifier` => generates email notifications (resque, mail)
+  * `sms_notifier` => generates sms notifications (resque)
+  * `jabber_gateway` => connects to an XMPP (jabber) server, sends notifications (to rooms and individuals), handles acknowledgements from jabber users and other commands (blather)
+  * `web` => web UI (sinatra, thin)
+  * `api` => HTTP API server (sinatra, thin)
 
-Running
--------
+Pikelets are flapjack components which can be run within the same ruby process, or as separate processes.
 
-Make sure beanstalkd is running.
+The simplest configuration will have one `flapjack` process running executive, web, and some notification gateways, and one `flapjack-nagios-receiver` process receiving events from Nagios and placing them on the events queue for processing by executive.
 
-You'll want to set up `/etc/flapjack/recipients.conf` so notifications can be sent via
-`flapjack-notifier`:
-
-    [John Doe]
-      email = johndoe@example.org
-      jid = john@example.org
-      phone = +61 400 111 222
-      pager = 61400111222
-
-    [Jane Doe]
-      email = janedoe@example.org
-      jid = jane@example.org
-      phone = +61 222 333 111
-      pager = 61222333111
-
-You also need to set up `/etc/flapjack/notifier.conf`:
-
-    # top level
-    [notifier]
-      notifier-directories = /usr/lib/flapjack/notifiers/ /path/to/my/notifiers
-      notifiers = mailer, xmpp
-
-    # persistence layers
-    [persistence]
-      backend = data_mapper
-      uri = sqlite3:///tmp/flapjack.db
-
-    # message transports
-    [transport]
-      backend = beanstalkd
-      host = localhost
-      port = 11300
-
-    # notifiers
-    [mailer-notifier]
-      from_address = foo@bar.com
-
-    [xmpp-notifier]
-      jid = foo@bar.com
-      password = barfoo
-
-    # filters
-    [filters]
-      chain = ok, downtime, any_parents_failed
-
-
-Start up a cluster of workers:
-
-    flapjack-worker-manager start
-
-This will spin up 5 workers in the background. You can specify how many workers
-to start:
-
-    flapjack-worker-manager start --workers=10
-
-Each of the `flapjack-worker`s will output to syslog (check in /var/log/messages).
-
-Start up the notifier:
-
-    flapjack-notifier-manager start --recipients /etc/flapjack/recipients.conf
-
-Currently there are email and XMPP notifiers.
 
 Developing
 ----------
@@ -107,69 +47,165 @@ Install development dependencies:
 Run the tests:
 
     cucumber features/
-
-
-What things do
---------------
-
-  * `flapjack-worker` => executes checks, reports results
-  * `flapjack-worker-manager` => starts/stops a cluster of `flapjack-worker`
-  * `flapjack-notifier` => gets results, notifies people if necessary
-  * `flapjack-stats` => gets stats from beanstalkd tubes (useful for benchmarks + performance analysis)
-  * `flapjack-benchmark` => benchmarks various persistence/transport backend combinations
-
+    rspec spec
 
 Testing
 -------
 
-Tests live in `features/`.
+Feature tests live in `features/`.
 
-To run tests:
+To run feature tests:
 
-    $ rake cucumber
+    $ cucumber features
 
+There's some rspec unit tests as well, run these like so:
 
-Architecture
-------------
+    $ rspec spec
 
-    -------------------        -------------------
-    | web interface / |        | visualisation / |
-    | dsl / flat file |        | reporting       |
-    -------------------        -------------------
-              |                   |
-               \                 /
-                \               /
-                 ---------------
-                 | persistence |
-                 ---------------
-                        |
-          -------------------------------
-          |                             |
-          |                             |
-          |                             |
-    -------------                  ------------
-    | populator |---          -----| notifier |
-    -------------  |          |    ------------
-                   |          |
-                  --------------
-                  | beanstalkd |
-                  --------------
-                        |
-       -----------------------------------
-       |                |                |
-    ----------      ----------       ----------
-    | worker |      | worker |       | worker |
-    ----------      ----------       ----------
+NB, if the cucumber tests fail with a spurious lexing error on line 2 of events.feature, then try this:
+
+    $ cucumber -f fuubar features
 
 
-- populator determines checks that need to occur, and puts checks onto `jobs` tube
-  - populator fetches jobs from a database
-  - populator can be swapped out to get checks from a dsl or flat files
-- workers pop a check off the beanstalk, perform check, put result onto `results` tube,
-  re-add check to `jobs` tube with a delay.
-- notifier pops results off `results` tube, notifies as necessary
 
 Releasing
 ---------
 
-Gem releases are handled with [Jeweler](https://github.com/technicalpickles/jeweler).
+Gem releases are handled with [Bundler](http://gembundler.com/rubygems.html).
+
+To build the gem, run:
+
+    gem build flapjack.gemspec
+
+Configuring
+===========
+
+```
+cp etc/flapjack-config.yaml.example etc/flapjack-config.yaml
+```
+
+Edit the configuration to suit (redis connection, smtp server, jabber server, sms gateway, etc)
+
+The default FLAPJACK_ENV is "development" if there is no environment variable set.
+
+Nagios config
+-------------
+
+You need a Nagios prior to version 3.3 as this breaks perfdata output for checks which don't generate performance data (stuff after a | in the check output). We are developing and running against Nagios version 3.2.3 with success.
+
+nagios.cfg config file changes:
+
+```
+# modified lines:
+enable_notifications=0
+host_perfdata_file=/var/cache/nagios3/event_stream.fifo
+service_perfdata_file=/var/cache/nagios3/event_stream.fifo
+host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
+service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
+host_perfdata_file_mode=p
+service_perfdata_file_mode=p
+```
+
+What we're doing here is telling Nagios to generate a line of output for every host and service check into a named pipe. The template lines must be as above so that `flapjack-nagios-receiver` knows what to expect.
+
+All hosts and services (or templates that they use) will need to have process_perf_data enabled on them. (This is a real misnomer, it doesn't mean the performance data will be processed, just that it will be fed to the perfdata output channel, a named pipe in our case.)
+
+Create the named pipe if it doesn't already exist:
+
+    mkfifo -m 0666 /var/cache/nagios3/event_stream.fifo
+
+
+Running
+=======
+
+    bin/flapjack [options]
+
+    $ flapjack --help
+    Usage: flapjack [options]
+        -c, --config [PATH]              PATH to the config file to use
+        -d, --[no-]daemonize             Daemonize?
+
+The command line option for daemonize overrides whatever is set in the config file.
+
+flapjack-nagios-receiver
+------------------------
+
+There is a control script that uses [Daemons](http://daemons.rubyforge.org/) to start, stop, restart, show status etc of the flapjack-nagios-receiver process. Options after -- are passed through to flapjack-nagios-receiver. Run it like so:
+
+    flapjack-nagios-receiver-control start -- --config /etc/flapjack/flapjack-config.yaml /path/to/nagios/perfdata.fifo
+    flapjack-nagios-receiver-control status
+    flapjack-nagios-receiver-control restart -- --config /etc/flapjack/flapjack-config.yaml /path/to/nagios/perfdata.fifo
+    flapjack-nagios-receiver-control stop
+
+* Bypassing daemons control script: *
+
+This process needs to be started with the nagios perfdata named pipe attached to its STDIN like so:
+
+    flapjack-nagios-receiver < /var/cache/nagios3/event_stream.fifo
+
+Or the path to the fifo can just be given as an argument, thanks to the magical powers of ARGV:
+
+    flapjack-nagios-receiver /var/cache/nagios3/event_stream.fifo
+
+Now as nagios feeds check execution results into the perfdata named pipe, flapjack-nagios-receiver will convert them to JSON encoded ruby objects and insert them into the *events* queue.
+
+Importing contacts and entities
+-------------------------------
+
+The `flapjack-populator` script provides a mechanism for importing contacts and entities from JSON formatted import files.
+
+    bin/flapjack-populator import-contacts --from tmp/dummy_contacts.json --config /etc/flapjack/flapjack-config.yml
+    bin/flapjack-populator import-entities --from tmp/dummy_entities.json --config /etc/flapjack/flapjack-config.yml
+
+TODO: convert the format documentation into markdown and include in the project
+
+In lieu of actual documentation of the formats there are example files, and example ruby code which generated them, in the tmp directory.
+
+executive
+---------
+
+Flapjack executive processes events from the 'events' list in redis. It does a blocking read on redis so new events are picked off the events list and processed as soon as they created.
+
+When executive decides somebody ought to be notified (for a problem, recovery, or acknowledgement or what-have-you) it looks up contact information and then creates a notification job on one of the notification queues (eg sms_notifications) in rescue, or via the jabber_notifications redis list which is processed by the jabber_gateway.
+
+Resque Workers
+--------------
+
+We're using [Resque](https://github.com/defunkt/resque) to queue email and sms notifications generated by flapjack-executive. The queues are named as follows:
+- email_notifications
+- sms_notifications
+
+There'll be more of these as we add more notification mediums.
+
+Note that using the flapjack-config.yaml file you can have flapjack start the resque workers in-process. Or you can run them standalone with the `rake resque:work` command as follows.
+
+One resque worker that processes both queues (but prioritises SMS above email) can be started as follows:
+
+    QUEUE=sms_notifications,email_notifications VERBOSE=1 be rake resque:work
+
+resque sets the command name so grep'ing ps output for `rake` or `ruby` will NOT find resque processes. Search instead for `resque`. (and remember the 'q').
+
+To background it you can add `BACKGROUND=yes`. Excellent documentation is available in [Resque's README](https://github.com/defunkt/resque/blob/master/README.markdown)
+
+Redis Database Instances
+------------------------
+
+We use the following redis database numbers by convention:
+
+* 0 => production
+* 13 => development
+* 14 => testing
+
+Architecture
+------------
+
+TODO: insert architecture diagram and notes here
+
+Dependencies
+------------
+
+Apart from a bundle of gems (see flapjack.gemspec for runtime gems, and Gemfile for additional gems required for testing):
+- Ruby >= 1.9
+- Redis >= 2.4.15
+
+

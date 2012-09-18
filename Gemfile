@@ -1,15 +1,18 @@
-#!/usr/bin/env ruby
-
 source :rubygems
 
-gem "rspec", "~> 2.3.0"
-gem "cucumber", "~> 0.10.0"
-gem 'daemons', '= 1.0.10'
-gem 'beanstalk-client', '= 1.0.2'
-gem 'log4r', '= 1.1.5'
-gem 'xmpp4r', '= 0.5'
-gem 'tmail', '= 1.2.3.1'
-gem 'yajl-ruby', '= 0.6.4'
-gem 'sqlite3-ruby', '= 1.2.5'
-gem 'polyglot'
-gem 'treetop'
+gemspec :name => 'flapjack'
+
+group :test do
+  gem 'rspec'
+  gem 'cucumber'
+  gem 'delorean'
+  gem 'rack-test'
+  gem 'resque_spec'
+  gem 'webmock'
+  gem 'guard'
+  gem 'guard-rspec'
+  gem 'guard-cucumber'
+  gem 'fuubar'
+  gem 'fuubar-cucumber'
+  gem 'simplecov', :require => false
+end
