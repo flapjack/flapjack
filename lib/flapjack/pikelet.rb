@@ -34,7 +34,7 @@ module Flapjack
         @logger.add(Log4r::SyslogOutputter.new("flapjack"))
       end
 
-      @redis = opts[:redis]
+      @redis  = opts[:redis]
       @config = opts[:config]
 
       @should_quit = false

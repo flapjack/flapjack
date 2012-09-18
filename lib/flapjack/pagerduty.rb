@@ -22,7 +22,7 @@ module Flapjack
 
     def setup
 
-      logger.debug("New Pagerduty pikelet with the following options: #{opts.inspect}")
+      logger.debug("New Pagerduty pikelet with the following config: #{@config.inspect}")
 
       @pagerduty_events_api_url = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
       @pagerduty_acks_started = nil
@@ -132,7 +132,7 @@ module Flapjack
       logger.debug("looking for acks in pagerduty for unack'd problems")
 
       # ok lets do it
-      unacknowledged_failing_checks(:redis => @redis).each {|check|
+      unacknowledged_failing_checks.each {|check|
         entity_check = Flapjack::Data::EntityCheck.for_event_id(check, { :redis => @redis, :logger => @logger } )
         pagerduty_credentials = entity_check.pagerduty_credentials( { :redis => @redis, :logger => @logger } )
 
