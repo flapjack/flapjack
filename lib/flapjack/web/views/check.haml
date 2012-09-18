@@ -49,12 +49,20 @@
       %form{:action => "/acknowledgements/#{@entity}/#{@check}", :method => "post"}
         %h2
           State: #{@check_state ? @check_state.upcase : ''}
-          - if (['warning', 'critical'].include?(@check_state) and !(@in_unscheduled_maintenance || @in_scheduled_maintenance))
-            %input{:type => 'submit', :value => 'Acknowledge', :class => 'button'}
-          - if @in_unscheduled_maintenance
-            (Acknowledged)
-          - if @in_scheduled_maintenance
-            (Scheduled Maintenance)
+        - if (['warning', 'critical'].include?(@check_state) and !(@in_unscheduled_maintenance || @in_scheduled_maintenance))
+          %input{:type => 'hidden', :name => 'acknowledgement_id', :value => "#{@acknowledgement_id}"}
+          %input{:type => 'submit', :value => 'Acknowledge', :class => 'button'}
+          with
+          %label{:for => 'summary'}
+            summary:
+          %input{:type => 'text', :name => 'summary', :value => ''}
+          %label{:for => 'duration'}
+            duration:
+          %input{:type => 'text', :name => 'duration', :value => ''}
+        - if @in_unscheduled_maintenance
+          %h3 (Acknowledged)
+        - if @in_scheduled_maintenance
+          %h3 (Scheduled Maintenance)
       - if @in_unscheduled_maintenance
         %form{:action => "/end_unscheduled_maintenance/#{@entity}/#{@check}", :method => "post"}
           %p

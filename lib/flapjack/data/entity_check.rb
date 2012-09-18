@@ -80,6 +80,7 @@ module Flapjack
         event = { 'type'               => 'action',
                   'state'              => 'acknowledgement',
                   'summary'            => options['summary'],
+                  'duration'           => options['duration'],
                   'acknowledgement_id' => options['acknowledgement_id']
                 }
         create_event(event)
@@ -185,6 +186,7 @@ module Flapjack
         timestamp = options[:timestamp] || Time.now.to_i
         client = options[:client]
         summary = options[:summary]
+        count = options[:count]
 
         # Note the current state (for speedy lookups)
         @redis.hset("check:#{@key}", 'state', state)
@@ -196,6 +198,7 @@ module Flapjack
         @redis.rpush("#{@key}:states", timestamp)
         @redis.set("#{@key}:#{timestamp}:state",   state)
         @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
+        @redis.set("#{@key}:#{timestamp}:count", count) if count
 
         @redis.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
 
@@ -245,6 +248,12 @@ module Flapjack
         lan.to_i
       end
 
+      def event_count_at(timestamp)
+        eca = @redis.get("#{@key}:#{timestamp}:count")
+        return unless (eca && eca =~ /^\d+$/)
+        eca.to_i
+      end
+
       def failed?
         [STATE_WARNING, STATE_CRITICAL].include?( state )
       end
@@ -273,11 +282,11 @@ module Flapjack
 
         state_data = nil
 
-        @redis.multi do
+        @redis.multi do |r|
           state_data = state_ts.collect {|ts|
             {:timestamp => ts.to_i,
-             :state     => @redis.get("#{@key}:#{ts}:state"),
-             :summary   => @redis.get("#{@key}:#{ts}:summary")}
+             :state     => r.get("#{@key}:#{ts}:state"),
+             :summary   => r.get("#{@key}:#{ts}:summary")}
           }
         end
 
@@ -321,11 +330,11 @@ module Flapjack
 
         maint_data = nil
 
-        @redis.multi do
+        @redis.multi do |r|
           maint_data = maint_ts.collect {|ts|
             {:start_time => ts.to_i,
-             :duration   => @redis.zscore("#{@key}:#{sched}_maintenances", ts),
-             :summary    => @redis.get("#{@key}:#{ts}:#{sched}_maintenance:summary"),
+             :duration   => r.zscore("#{@key}:#{sched}_maintenances", ts),
+             :summary    => r.get("#{@key}:#{ts}:#{sched}_maintenance:summary"),
             }
           }
         end

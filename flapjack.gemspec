@@ -10,7 +10,7 @@ Gem::Specification.new do |gem|
 
   # see http://yehudakatz.com/2010/12/16/clarifying-the-roles-of-the-gemspec-and-gemfile/
   # following a middle road here, not shipping it with the gem :)
-  gem.files         = `git ls-files`.split($\) - ['Gemfile.lock']
+  gem.files         = `git ls-files`.split($\) - ['Gemfile.lock', 'bin/flapjack-bpimport']
   gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.name          = "flapjack"
@@ -27,6 +27,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'redis'
   gem.add_dependency 'em-resque'
   gem.add_dependency 'sinatra'
+  gem.add_dependency 'rack-fiber_pool'
   gem.add_dependency 'haml'
   gem.add_dependency 'thin'
   gem.add_dependency 'mail'

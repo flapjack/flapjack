@@ -38,7 +38,7 @@ class MockLogger
 end
 
 Mail.defaults do
-  delivery_method :test # in practice you'd do this in spec_helper.rb
+  delivery_method :test
 end
 
 redis_opts = { :db => 14, :driver => :ruby }
@@ -49,9 +49,12 @@ redis.quit
 Before do
   @logger = MockLogger.new
   # Use a separate database whilst testing
-  @redis = ::Redis.new(redis_opts)
-  @app = Flapjack::Executive.new(:redis => @redis, :logger => @logger,
-    'email_queue' => 'email_notifications', 'sms_queue' => 'sms_notifications')
+  @app = Flapjack::Executive.new
+  @app.bootstrap(:logger => @logger, :redis => redis_opts,
+    :config => {'email_queue' => 'email_notifications',
+                'sms_queue' => 'sms_notifications'})
+  @app.setup
+  @redis = @app.redis
 end
 
 After do

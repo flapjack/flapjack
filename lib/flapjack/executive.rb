@@ -23,21 +23,17 @@ module Flapjack
   class Executive
     include Flapjack::Pikelet
 
-    def initialize(opts = {})
-      bootstrap(opts)
-
-      @redis_config = opts[:redis_config]
-
-      @redis = opts[:redis]
+    def setup
+      @redis = build_redis_connection_pool
       redis_client_status = @redis.client
       @logger.debug("Flapjack::Executive.initialize: @redis client status: " + redis_client_status.inspect)
 
-      @queues = {:email     => opts['email_queue'],
-                 :sms       => opts['sms_queue'],
-                 :jabber    => opts['jabber_queue'],
-                 :pagerduty => opts['pagerduty_queue']}
+      @queues = {:email     => @config['email_queue'],
+                 :sms       => @config['sms_queue'],
+                 :jabber    => @config['jabber_queue'],
+                 :pagerduty => @config['pagerduty_queue']}
 
-      notifylog  = opts['notification_log_file'] || 'log/notify.log'
+      notifylog  = @config['notification_log_file'] || 'log/notify.log'
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => notifylog))
 
@@ -52,36 +48,44 @@ module Flapjack
       @filters << Flapjack::Filters::Acknowledgement.new(options)
 
       @boot_time = Time.now
-      # FIXME: assumes there is only ever one executive running
+
+      # FIXME: all of the below keys assume there is only ever one executive running;
+      # we could generate a fuid and save it to disk, and prepend it from that
+      # point on...
+
+      # TODO unset on exit?
       @redis.set('boot_time', @boot_time.to_i)
-      # FIXME: resets counters on every bootup. probably not a good idea. probably.
+
       # FIXME: add an administrative function to reset all event counters
-      @redis.hset('event_counters', 'all', 0)
-      @redis.hset('event_counters', 'ok', 0)
-      @redis.hset('event_counters', 'failure', 0)
-      @redis.hset('event_counters', 'action', 0)
+      if @redis.hget('event_counters', 'all').nil?
+        @redis.hset('event_counters', 'all', 0)
+        @redis.hset('event_counters', 'ok', 0)
+        @redis.hset('event_counters', 'failure', 0)
+        @redis.hset('event_counters', 'action', 0)
+      end
     end
 
     def main
+      setup
+
       @logger.info("Booting main loop.")
+
       until should_quit?
         @logger.info("Waiting for event...")
         event = Flapjack::Data::Event.next(:persistence => @redis)
         process_event(event) unless event.nil?
       end
-      @redis.quit
       @logger.info("Exiting main loop.")
     end
 
     # this must use a separate connection to the main Executive one, as it's running
     # from a different fiber while the main one is blocking.
-    def add_shutdown_event
-      r = ::Redis.new(@redis_config)
-      r.rpush('events', JSON.generate('type'    => 'shutdown',
-                                      'host'    => '',
-                                      'service' => '',
-                                      'state'   => ''))
-      r.quit
+    def add_shutdown_event(opts = {})
+      return unless redis = opts[:redis]
+      redis.rpush('events', JSON.generate('type'    => 'shutdown',
+                                          'host'    => '',
+                                          'service' => '',
+                                          'state'   => ''))
     end
 
   private
@@ -120,7 +124,7 @@ module Flapjack
     def update_keys(event, entity_check)
       result    = { :skip_filters => false }
       timestamp = Time.now.to_i
-      @redis.hincrby('event_counters', 'all', 1)
+      @event_count = @redis.hincrby('event_counters', 'all', 1)
 
       # FIXME skip if entity_check.nil?
 
@@ -133,22 +137,21 @@ module Flapjack
         # Track when we last saw an event for a particular entity:check pair
         entity_check.last_update = timestamp
 
-        @failure_count = nil
-
         if event.ok?
           @redis.hincrby('event_counters', 'ok', 1)
         elsif event.failure?
-          @failure_count = @redis.hincrby('event_counters', 'failure', 1)
-          @redis.hset('unacknowledged_failures', @failure_count, event.id)
+          @redis.hincrby('event_counters', 'failure', 1)
+          @redis.hset('unacknowledged_failures', @event_count, event.id)
         end
 
         event.previous_state = entity_check.state
-        @logger.info("No previous state for event #{event.id}") unless not event.previous_state.nil?
+        @logger.info("No previous state for event #{event.id}") if event.previous_state.nil?
 
         # If there is a state change, update record with: the time, the new state
         if event.state != event.previous_state
           entity_check.update_state(event.state, :timestamp => timestamp,
-            :summary => event.summary, :client => event.client)
+            :summary => event.summary, :client => event.client,
+            :count => @event_count)
         end
 
         # No state change, and event is ok, so no need to run through filters
@@ -234,6 +237,8 @@ module Flapjack
           notif['media']   = media_type
           notif['address'] = address
           notif['id']      = fuid
+          dur = event.duration
+          notif['duration'] = dur if dur
           @logger.debug("send_notifications: sending notification: #{notif.inspect}")
 
           case media_type
@@ -247,7 +252,7 @@ module Flapjack
             end
           when "jabber"
             if @queues[:jabber]
-              notif['failure_count'] = @failure_count if @failure_count
+              notif['event_count'] = @event_count if @event_count
               # puts a notification into the jabber queue (redis list)
               @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(notif))
             end

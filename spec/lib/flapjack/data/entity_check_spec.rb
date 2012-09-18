@@ -240,7 +240,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     t = Time.now.to_i
     ec.create_acknowledgement('summary'            => 'looking now',
                               'time'               => t,
-                              'acknowledgement_id' => '75')
+                              'acknowledgement_id' => '75',
+                              'duration'           => 40 * 60)
     event_json = @redis.rpop('events')
     event_json.should_not be_nil
     event = nil
@@ -257,6 +258,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       'summary'            => 'looking now',
       'time'               => t,
       'acknowledgement_id' => '75',
+      'duration'           => 2400
     }
   end
 

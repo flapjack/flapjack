@@ -20,9 +20,8 @@ module Flapjack
             if ec.nil?
               @log.error "Filter: Acknowledgement: unknown entity for event '#{event.id}'"
             else
-              # FIXME: need to see if a TTL has been provided with the acknowledgement, and use
-              # that instead of the default of four hours
-              ec.create_unscheduled_maintenance(:start_time => timestamp, :duration => 4 * 60 * 60)
+              ec.create_unscheduled_maintenance(:start_time => timestamp,
+                :duration => (event.duration || (4 * 60 * 60)))
               message = "unscheduled maintenance created for #{event.id}"
             end
           else
