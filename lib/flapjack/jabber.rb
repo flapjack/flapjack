@@ -212,10 +212,10 @@ module Flapjack
             # FIXME: change the 'for 4 hours' so it looks up the length of unscheduled maintance
             # that has been created, or takes this value from the event. This is so we can handle
             # varying lengths of acknowledgement-created-unscheduled-maintenace.
-            ack_str = event['event_count'] && !state.eql?('ok') ?
+            ack_str = event['event_count'] && !state.eql?('ok') && !'acknowledgement'.eql?(type)?
               "::: flapjack: ACKID #{event['event_count']} " : ''
 
-            maint_str = (type && 'acknowledgement'.eql?(type.downcase)) ?
+            maint_str = (type && 'acknowledgement'.eql?(type)) ?
               "has been acknowledged, unscheduled maintenance created for #{duration}" :
               "is #{state.upcase}"
 
