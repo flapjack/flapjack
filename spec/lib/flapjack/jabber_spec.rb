@@ -52,7 +52,7 @@ describe Flapjack::Jabber do
   end
 
   it "receives an acknowledgement message" do
-    stanza.should_receive(:body).and_return('flapjack: ACKID 876 fixing now, duration 90m')
+    stanza.should_receive(:body).and_return('flapjack: ACKID 876 fixing now duration: 90m')
     from = mock('from')
     from.should_receive(:stripped).and_return('sender')
     stanza.should_receive(:from).and_return(from)
@@ -63,7 +63,7 @@ describe Flapjack::Jabber do
 
     entity_check = mock(Flapjack::Data::EntityCheck)
     entity_check.should_receive(:create_acknowledgement).
-      with('summary' => 'fixing now, duration 90m', 'acknowledgement_id' => '876', 'duration' => (90 * 60))
+      with('summary' => 'fixing now', 'acknowledgement_id' => '876', 'duration' => (90 * 60))
     entity_check.should_receive(:entity_name).and_return('main-example.com')
     entity_check.should_receive(:check).and_return('ping')
 
