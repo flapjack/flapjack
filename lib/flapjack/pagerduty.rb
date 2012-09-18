@@ -145,7 +145,7 @@ module Flapjack
         options = pagerduty_credentials.first.merge('check' => check)
 
         pagerduty_acknowledged, result_hash = pagerduty_acknowledged?(options)
-        pg_acknowledged_by = result_hash[:pg_acknowledged_by]
+        pg_acknowledged_by = result_hash[:pg_acknowledged_by] || nil
         if pagerduty_acknowledged
           @logger.debug "#{check} is acknowledged in pagerduty, creating flapjack acknowledgement ... pg_acknowledged_by: #{pg_acknowledged_by.inspect}"
           who_text = ""
