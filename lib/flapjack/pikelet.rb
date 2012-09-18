@@ -1,8 +1,7 @@
 #!/usr/bin/env ruby
 
 # This class encapsulates the config data and environmental setup used
-# by the various Flapjack components. It might be easier to split this out
-# to those classes, as they tend to be doing different things anyway.
+# by the various Flapjack components.
 #
 # "In Australia and New Zealand, small pancakes (about 75 mm in diameter) known as pikelets
 # are also eaten. They are traditionally served with jam and/or whipped cream, or solely
@@ -25,6 +24,17 @@ module Flapjack
       @should_quit = true
     end
 
+    def build_redis_connection_pool(options = {})
+      return unless @bootstrapped
+      if defined?(EventMachine::Synchrony::ConnectionPool)
+        EventMachine::Synchrony::ConnectionPool.new(:size => options[:size] || 5) do
+          ::Redis.new(@redis_config.merge(:driver => 'synchrony'))
+        end
+      else
+        ::Redis.new(@redis_config)
+      end
+    end
+
     def bootstrap(opts = {})
       return if @bootstrapped
 
@@ -34,8 +44,8 @@ module Flapjack
         @logger.add(Log4r::SyslogOutputter.new("flapjack"))
       end
 
-      @redis  = opts[:redis]
-      @config = opts[:config]
+      @redis_config = opts[:redis] || {}
+      @config = opts[:config] || {}
 
       @should_quit = false
 

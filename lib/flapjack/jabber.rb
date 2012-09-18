@@ -31,6 +31,7 @@ module Flapjack
     Blather.logger = log
 
     def setup
+      @redis = build_redis_connection_pool
       hostname = Socket.gethostname
       @flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + hostname)
 
@@ -42,11 +43,19 @@ module Flapjack
         @config['password'].to_s)
 
       register_handler :ready do |stanza|
-        on_ready(stanza)
+        EM.next_tick do
+          EM.synchrony do
+            on_ready(stanza)
+          end
+        end
       end
 
       register_handler :message, :groupchat?, :body => /^flapjack:\s+/ do |stanza|
-        on_groupchat(stanza)
+        EM.next_tick do
+          EM.synchrony do
+            on_groupchat(stanza)
+          end
+        end
       end
 
       register_handler :disconnected do |stanza|
@@ -57,6 +66,7 @@ module Flapjack
     # Join the MUC Chat room after connecting.
     def on_ready(stanza)
       return if should_quit?
+      @redis_handler ||= build_redis_connection_pool
       @connected_at = Time.now.to_i
       logger.info("Jabber Connected")
       @config['rooms'].each do |room|
@@ -95,12 +105,12 @@ module Flapjack
         four_hours = 4 * 60 * 60
         duration = (dur.nil? || (dur <= 0) || (dur > four_hours)) ? four_hours : dur
 
-        event_id = @redis.hget('unacknowledged_failures', ackid)
+        event_id = @redis_handler.hget('unacknowledged_failures', ackid)
 
         if event_id.nil?
           error = "not found"
         else
-          entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
+          entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis_handler)
           error = "unknown entity" if entity_check.nil?
         end
 
@@ -121,14 +131,9 @@ module Flapjack
 
       if msg || action
         #from_room, from_alias = Regexp.new('(.*)/(.*)', 'i').match(m.from)
-        EM.next_tick do
-          # without the next_tick block, this doesn't actually seem to be emitted
-          # until EM next does something else in this fiber. the code executes
-          # straight away, but the data is buffered somehow.
-          say(stanza.from.stripped, msg, :groupchat)
-          logger.debug("Sent to group chat: #{msg}")
-          action.call if action
-        end
+        say(stanza.from.stripped, msg, :groupchat)
+        logger.debug("Sent to group chat: #{msg}")
+        action.call if action
       end
     end
 

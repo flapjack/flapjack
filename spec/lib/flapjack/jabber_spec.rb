@@ -26,6 +26,9 @@ describe Flapjack::Jabber do
     fj = Flapjack::Jabber.new
     fj.bootstrap(:config => config)
 
+    EM.should_receive(:next_tick).twice.and_yield
+    EM.should_receive(:synchrony).twice.and_yield
+
     fj.should_receive(:register_handler).with(:ready).and_yield(stanza)
     fj.should_receive(:on_ready).with(stanza)
 
@@ -69,9 +72,9 @@ describe Flapjack::Jabber do
       and_return(entity_check)
 
     fj = Flapjack::Jabber.new
-    fj.bootstrap(:config => config, :redis => redis)
+    fj.bootstrap(:config => config)
+    fj.instance_variable_set('@redis_handler', redis)
 
-    EM.should_receive(:next_tick).and_yield
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
 
     fj.on_groupchat(stanza)
@@ -86,7 +89,6 @@ describe Flapjack::Jabber do
     fj = Flapjack::Jabber.new
     fj.bootstrap(:config => config)
 
-    EM.should_receive(:next_tick).and_yield
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
 
     fj.on_groupchat(stanza)
@@ -118,8 +120,10 @@ describe Flapjack::Jabber do
     EM::Synchrony.should_receive(:add_periodic_timer).with(60)
 
     redis = mock('redis')
+    EventMachine::Synchrony::ConnectionPool.should_receive(:new).and_return(redis)
+
     fj = Flapjack::Jabber.new
-    fj.bootstrap(:config => config, :redis => redis)
+    fj.bootstrap(:config => config)
 
     fj.should_receive(:connect)
     fj.should_receive(:connected?).twice.and_return(true)

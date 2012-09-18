@@ -24,6 +24,7 @@ module Flapjack
     include Flapjack::Pikelet
 
     def setup
+      @redis = build_redis_connection_pool
       redis_client_status = @redis.client
       @logger.debug("Flapjack::Executive.initialize: @redis client status: " + redis_client_status.inspect)
 

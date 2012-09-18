@@ -21,8 +21,8 @@ module Flapjack
     include Flapjack::Pikelet
 
     def setup
-
-      logger.debug("New Pagerduty pikelet with the following config: #{@config.inspect}")
+      @redis = build_redis_connection_pool
+      logger.debug("New Pagerduty pikelet with the following options: #{@config.inspect}")
 
       @pagerduty_events_api_url = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
       @pagerduty_acks_started = nil
@@ -51,12 +51,12 @@ module Flapjack
 
     # this should be moved to a checks data model perhaps
     def unacknowledged_failing_checks
-      failing_checks = @redis.zrange('failed_checks', '0', '-1')
+      failing_checks = @redis_timer.zrange('failed_checks', '0', '-1')
       unless failing_checks.is_a?(Array)
         @logger.error("redis.zrange returned something other than an array! Here it is: " + failing_checks.inspect)
       end
       ufc = failing_checks.reject {|check|
-        @redis.exists(check + ':unscheduled_maintenance')
+        @redis_timer.exists(check + ':unscheduled_maintenance')
       }
       @logger.debug "found unacknowledged failing checks as follows: " + ufc.join(', ')
       ufc
@@ -120,21 +120,21 @@ module Flapjack
       # timeout of five minutes to guard against stale locks caused by crashing code) either in this
       # process or in other processes
       if (@pagerduty_acks_started and @pagerduty_acks_started > (Time.now.to_i - 300)) or
-          @redis.get(@sem_pagerduty_acks_running) == 'true'
+          @redis_timer.get(@sem_pagerduty_acks_running) == 'true'
         logger.debug("skipping looking for acks in pagerduty as this is already happening")
         return
       end
 
       @pagerduty_acks_started = Time.now.to_i
-      @redis.set(@sem_pagerduty_acks_running, 'true')
-      @redis.expire(@sem_pagerduty_acks_running, 300)
+      @redis_timer.set(@sem_pagerduty_acks_running, 'true')
+      @redis_timer.expire(@sem_pagerduty_acks_running, 300)
 
       logger.debug("looking for acks in pagerduty for unack'd problems")
 
       # ok lets do it
       unacknowledged_failing_checks.each {|check|
-        entity_check = Flapjack::Data::EntityCheck.for_event_id(check, { :redis => @redis, :logger => @logger } )
-        pagerduty_credentials = entity_check.pagerduty_credentials( { :redis => @redis, :logger => @logger } )
+        entity_check = Flapjack::Data::EntityCheck.for_event_id(check, { :redis => @redis_timer, :logger => @logger } )
+        pagerduty_credentials = entity_check.pagerduty_credentials( { :redis => @redis_timer, :logger => @logger } )
 
         if pagerduty_credentials.length == 0
           @logger.debug("Found no pagerduty creditials for #{entity_check.entity_name}:#{entity_check.check}, moving on")
@@ -157,7 +157,7 @@ module Flapjack
           @logger.debug "#{check} is not acknowledged in pagerduty, moving on"
         end
       }
-      @redis.del(@sem_pagerduty_acks_running)
+      @redis_timer.del(@sem_pagerduty_acks_running)
       @pagerduty_acks_started = nil
     end
 
@@ -177,6 +177,7 @@ module Flapjack
       @redis.del(@sem_pagerduty_acks_running)
 
       EM::Synchrony.add_periodic_timer(10) do
+        @redis_timer ||= build_redis_connection_pool
         catch_pagerduty_acks
       end
 
@@ -218,7 +219,6 @@ module Flapjack
                               :description  => message }
 
           send_pagerduty_event(pagerduty_event)
-
         end
       end
     end

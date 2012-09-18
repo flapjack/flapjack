@@ -106,12 +106,6 @@ module Flapjack
       end
     end
 
-    def build_redis_connection_pool(options = {})
-      EventMachine::Synchrony::ConnectionPool.new(:size => options[:size] || 5) do
-        ::Redis.new(@redis_options.merge(:driver => 'synchrony'))
-      end
-    end
-
     def build_pikelet(pikelet_type, pikelet_cfg)
       pikelet_class = case pikelet_type
       when 'executive'
@@ -128,7 +122,7 @@ module Flapjack
         begin
           pikelet = pikelet_class.new
           @pikelets << pikelet
-          pikelet.bootstrap(:redis => build_redis_connection_pool, :config => pikelet_cfg)
+          pikelet.bootstrap(:redis => @redis_options, :config => pikelet_cfg)
           pikelet.main
         rescue Exception => e
           trace = e.backtrace.join("\n")
@@ -226,6 +220,12 @@ module Flapjack
       @pikelet_fibers[pikelet_type] = f
       f.resume
       @logger.debug "new fiber created for #{pikelet_type}"
+    end
+
+    def build_redis_connection_pool(options = {})
+      EventMachine::Synchrony::ConnectionPool.new(:size => options[:size] || 5) do
+        ::Redis.new(@redis_config.merge(:driver => (options[:driver] || 'synchrony')))
+      end
     end
 
     def health_check(thin_pikelets)
