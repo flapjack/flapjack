@@ -139,7 +139,7 @@ module Flapjack
       end
 
       if msg || action
-        #from_room, from_alias = Regexp.new('(.*)/(.*)', 'i').match(m.from)
+        # from_room, from_alias = Regexp.new('(.*)/(.*)', 'i').match(m.from)
         say(stanza.from.stripped, msg, :groupchat)
         logger.debug("Sent to group chat: #{msg}")
         action.call if action
@@ -209,9 +209,6 @@ module Flapjack
             duration      = event['duration'] ? time_period_in_words(event['duration']) : '4 hours'
             logger.debug("processing jabber notification event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
 
-            # FIXME: change the 'for 4 hours' so it looks up the length of unscheduled maintance
-            # that has been created, or takes this value from the event. This is so we can handle
-            # varying lengths of acknowledgement-created-unscheduled-maintenace.
             ack_str = event['event_count'] && !state.eql?('ok') ?
               "::: flapjack: ACKID #{event['event_count']} " : ''
 

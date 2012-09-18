@@ -58,7 +58,7 @@
           %input{:type => 'text', :name => 'summary', :value => ''}
           %label{:for => 'duration'}
             duration:
-          %input{:type => 'number', :name => 'duration', :value => '', :min => '1', :max => (4 * 60 * 60).to_s}
+          %input{:type => 'text', :name => 'duration', :value => ''}
         - if @in_unscheduled_maintenance
           %h3 (Acknowledged)
         - if @in_scheduled_maintenance
