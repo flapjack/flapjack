@@ -18,12 +18,14 @@ require 'yajl/json_gem'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/pikelet'
+require 'flapjack/utility'
 
 module Flapjack
 
   class Jabber < Blather::Client
 
     include Flapjack::Pikelet
+    include Flapjack::Utility
 
     log = Logger.new(STDOUT)
     # log.level = Logger::DEBUG
@@ -94,18 +96,19 @@ module Flapjack
       action = nil
       redis = nil
       entity_check = nil
-      if stanza.body =~ /^flapjack:\s+ACKID\s+(\d+)(?:\s*(.*))$/i
+      if stanza.body =~ /^flapjack:\s+ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration.*?(\d+.*\w+.*))?)$/i;
         ackid   = $1
         comment = $2
+        duration_str = $3
 
         error = nil
         dur = nil
 
         if comment.nil? || (comment.length == 0)
           error = "please provide a comment, eg \"flapjack: ACKID #{$1} AL looking\""
-        elsif comment =~ /duration.*?(\d+.*\w+.*)$/
+        elsif duration_str
           # a fairly liberal match above, we'll let chronic_duration do the heavy lifting
-          dur = ChronicDuration.parse($1)
+          dur = ChronicDuration.parse(duration_str)
         end
 
         four_hours = 4 * 60 * 60
@@ -207,10 +210,12 @@ module Flapjack
 
             # FIXME: change the 'for 4 hours' so it looks up the length of unscheduled maintance
             # that has been created, or takes this value from the event. This is so we can handle
-            # varying lenghts of acknowledgement-created-unscheduled-maintenace.
-            ack_str = event['event_count'] ? "::: flapjack: ACKID #{event['event_count']} " : ''
+            # varying lengths of acknowledgement-created-unscheduled-maintenace.
+            ack_str = event['event_count'] && !state.eql?('ok') ?
+              "::: flapjack: ACKID #{event['event_count']} " : ''
+
             maint_str = (type && 'acknowledgement'.eql?(type.downcase)) ?
-              "has been acknowledged, unscheduled maintenance created for 4 hours" :
+              "has been acknowledged, unscheduled maintenance created for #{time_period_in_words(event['duration'])}" :
               "is #{state.upcase}"
 
             msg = "#{type.upcase} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"

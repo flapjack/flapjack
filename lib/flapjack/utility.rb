@@ -7,12 +7,10 @@ module Flapjack
       period_mm, period_ss  = period.divmod(60)
       period_hh, period_mm  = period_mm.divmod(60)
       period_dd, period_hh  = period_hh.divmod(24)
-      period_string         = ''
-      period_string        += period_dd.to_s + ' days, ' if period_dd > 0
-      period_string        += period_hh.to_s + ' hours, ' if period_hh > 0
-      period_string        += period_mm.to_s + ' minutes, ' if period_mm > 0
-      period_string        += period_ss.to_s + ' seconds' if period_ss > 0
-      period_string
+      ["#{period_dd} days",
+       "#{period_hh} hours",
+       "#{period_mm} minutes",
+       "#{period_ss} seconds"].reject {|s| s =~ /^0 /}.join(', ')
     end
 
     # Returns relative time in words referencing the given date

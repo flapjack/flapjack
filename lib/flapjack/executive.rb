@@ -237,6 +237,8 @@ module Flapjack
           notif['media']   = media_type
           notif['address'] = address
           notif['id']      = fuid
+          dur = event.duration
+          notif['duration'] = dur if dur
           @logger.debug("send_notifications: sending notification: #{notif.inspect}")
 
           case media_type
