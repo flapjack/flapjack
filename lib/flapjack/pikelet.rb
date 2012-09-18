@@ -26,7 +26,7 @@ module Flapjack
     end
 
     def bootstrap(opts = {})
-      return if !!@bootstrapped
+      return if @bootstrapped
 
       unless @logger = opts[:logger]
         @logger = Log4r::Logger.new("#{self.class.to_s.downcase.gsub('::', '-')}")

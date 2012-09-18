@@ -49,8 +49,7 @@
       %form{:action => "/acknowledgements/#{@entity}/#{@check}", :method => "post"}
         %h2
           State: #{@check_state ? @check_state.upcase : ''}
-        - if (['warning', 'critical'].include?(@check_state)   )
-          / # and !(@in_unscheduled_maintenance || @in_scheduled_maintenance))
+        - if (['warning', 'critical'].include?(@check_state) and !(@in_unscheduled_maintenance || @in_scheduled_maintenance))
           %input{:type => 'hidden', :name => 'acknowledgement_id', :value => "#{@acknowledgement_id}"}
           %input{:type => 'submit', :value => 'Acknowledge', :class => 'button'}
           with

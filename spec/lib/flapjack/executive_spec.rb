@@ -6,11 +6,6 @@ describe Flapjack::Executive, :redis => true do
   # NB: this is only testing the public API of the Executive class, which is pretty limited.
   # (initialize, main, stop). Most test coverage for this class comes from the cucumber features.
 
-  it "is initialised with default settings" do
-    executive = Flapjack::Executive.new
-    executive.bootstrap(:redis => @redis)
-  end
-
   it "prompts the blocking redis connection to quit" do
     redis = mock('redis')
     redis.should_receive(:rpush).with('events', %q{{"type":"shutdown","host":"","service":"","state":""}})
@@ -40,7 +35,7 @@ describe Flapjack::Executive, :redis => true do
     Flapjack::Data::Event.should_receive(:next).and_return(shutdown_evt)
 
     executive = Flapjack::Executive.new
-    executive.bootstrap(:redis => @redis)
+    executive.bootstrap(:config => {}, :redis => @redis)
     # hacky, but the behaviour it's mimicking (shutdown from another thread) isn't
     # conducive to nice tests
     executive.stub(:should_quit?).and_return(false, true)

@@ -20,14 +20,9 @@ module Flapjack
 
     include Flapjack::Pikelet
 
-    def initialize(opts = {})
-      super()
-      self.bootstrap
+    def setup
 
-      @config = opts[:config] ? opts[:config].dup : {}
       logger.debug("New Pagerduty pikelet with the following options: #{opts.inspect}")
-
-      @redis = opts[:redis]
 
       @pagerduty_events_api_url = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
       @pagerduty_acks_started = nil
@@ -172,6 +167,8 @@ module Flapjack
     end
 
     def main
+      setup
+
       logger.debug("pagerduty gateway - commencing main method")
       raise "Can't connect to the pagerduty API" unless test_pagerduty_connection
 
