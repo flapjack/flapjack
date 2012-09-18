@@ -44,14 +44,14 @@ system("cp -aiv #{etc_path}/* /etc")
 
 # set sequence number to 50 so beanstalkd has a chance to boot
 system("update-rc.d flapjack-workers defaults 50")
-system("update-rc.d flapjack-notifier defaults 50")
+system("update-rc.d flapjack-executive defaults 50")
 
 puts 
 puts "Setup complete!"
 puts 
 puts "You will want to customise:"
 puts "  * /etc/flapjack/recipients.yaml"
-puts "  * /etc/flapjack/flapjack-notifier.yaml"
+puts "  * /etc/flapjack/flapjack-executive.yaml"
 puts 
 puts ".examples of these files exist in /etc/flapjack/'
 
