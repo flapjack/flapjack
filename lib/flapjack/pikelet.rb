@@ -26,7 +26,7 @@ module Flapjack
 
     def build_redis_connection_pool(options = {})
       return unless @bootstrapped
-      if defined?(EventMachine::Synchrony::ConnectionPool)
+      if defined?(EventMachine) && defined?(EventMachine::Synchrony)
         EventMachine::Synchrony::ConnectionPool.new(:size => options[:size] || 5) do
           ::Redis.new(@redis_config.merge(:driver => 'synchrony'))
         end

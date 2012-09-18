@@ -59,7 +59,13 @@ module Flapjack
       end
 
       register_handler :disconnected do |stanza|
-        on_disconnect(stanza)
+        ret = true
+        EM.next_tick do
+          EM.synchrony do
+            ret = on_disconnect(stanza)
+          end
+        end
+        ret
       end
     end
 

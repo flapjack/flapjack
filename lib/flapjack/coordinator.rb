@@ -224,7 +224,7 @@ module Flapjack
 
     def build_redis_connection_pool(options = {})
       EventMachine::Synchrony::ConnectionPool.new(:size => options[:size] || 5) do
-        ::Redis.new(@redis_config.merge(:driver => (options[:driver] || 'synchrony')))
+        ::Redis.new(@redis_options.merge(:driver => (options[:driver] || 'synchrony')))
       end
     end
 

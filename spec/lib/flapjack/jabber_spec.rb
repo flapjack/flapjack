@@ -26,8 +26,8 @@ describe Flapjack::Jabber do
     fj = Flapjack::Jabber.new
     fj.bootstrap(:config => config)
 
-    EM.should_receive(:next_tick).twice.and_yield
-    EM.should_receive(:synchrony).twice.and_yield
+    EM.should_receive(:next_tick).exactly(3).times.and_yield
+    EM.should_receive(:synchrony).exactly(3).times.and_yield
 
     fj.should_receive(:register_handler).with(:ready).and_yield(stanza)
     fj.should_receive(:on_ready).with(stanza)
