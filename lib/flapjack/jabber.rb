@@ -206,6 +206,7 @@ module Flapjack
             entity, check = event['event_id'].split(':')
             state         = event['state']
             summary       = event['summary']
+            duration      = event['duration'] ? time_period_in_words(event['duration']) : '4 hours'
             logger.debug("processing jabber notification event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
 
             # FIXME: change the 'for 4 hours' so it looks up the length of unscheduled maintance
@@ -215,7 +216,7 @@ module Flapjack
               "::: flapjack: ACKID #{event['event_count']} " : ''
 
             maint_str = (type && 'acknowledgement'.eql?(type.downcase)) ?
-              "has been acknowledged, unscheduled maintenance created for #{time_period_in_words(event['duration'])}" :
+              "has been acknowledged, unscheduled maintenance created for #{duration}" :
               "is #{state.upcase}"
 
             msg = "#{type.upcase} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
