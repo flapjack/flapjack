@@ -149,7 +149,7 @@ module Flapjack
           pg_acknowledged_by = result_hash[:pg_acknowledged_by] unless result_hash.nil?
           @logger.debug "#{check} is acknowledged in pagerduty, creating flapjack acknowledgement ... "
           who_text = ""
-          if pg_acknowledged_by['name']
+          if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
             who_text = " by #{pg_acknowledged_by['name']}"
           end
           entity_check.create_acknowledgement('summary' => "Acknowledged on PagerDuty" + who_text)
