@@ -76,8 +76,13 @@ module Flapjack
 
         @logger.debug "config keys: #{@config.keys}"
 
+        pikelet_keys = ['executive', 'jabber_gateway', 'pagerduty_gateway',
+                        'email_notifier', 'sms_notifier', 'web', 'api']
+
         @config.keys.each do |pikelet_type|
-          next unless @config[pikelet_type]['enabled']
+          next unless pikelet_keys.include?(pikelet_type) && 
+            @config[pikelet_type].is_a?(Hash) &&
+            @config[pikelet_type]['enabled']
           @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet"
           pikelet_cfg = @config[pikelet_type]
 
