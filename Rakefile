@@ -15,6 +15,13 @@ require 'cucumber'
 require 'cucumber/rake/task'
 require 'colorize'
 
+#require 'bundler/gem_tasks'
+require 'rspec/core/rake_task'
+
+RSpec::Core::RakeTask.new(:spec)
+
+task :default => :spec
+
 Cucumber::Rake::Task.new(:features) do |t|
   t.cucumber_opts = "features --format pretty"
 end
@@ -69,4 +76,4 @@ namespace :verify do
   task :all => [ :uncommitted ]
 end
 
-task :verify => 'verify:all'
+task :verify => [ 'verify:all', :spec ]
