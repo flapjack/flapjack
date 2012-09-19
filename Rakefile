@@ -53,7 +53,7 @@ end
 
 desc "clean up various generated files"
 task :clean do
-  [ "log/*", "pkg/"].each do |filename|
+  [ "pkg/"].each do |filename|
     puts "Removing #{filename}"
     FileUtils.rm_rf(filename)
   end
