@@ -169,11 +169,11 @@ module Flapjack
     def main
       logger.debug("New Jabber pikelet with the following options: #{@config.inspect}")
 
-      EM::Synchrony.add_periodic_timer(30) do
+      count_timer = EM::Synchrony.add_periodic_timer(30) do
         logger.debug("connection count: #{EM.connection_count} #{Time.now.to_s}.#{Time.now.usec.to_s}")
       end
 
-      EM::Synchrony.add_periodic_timer(60) do
+      keepalive_timer = EM::Synchrony.add_periodic_timer(60) do
         logger.debug("calling keepalive on the jabber connection")
         write(' ') if connected?
       end
@@ -229,6 +229,9 @@ module Flapjack
           EM::Synchrony.sleep(1)
         end
       end
+
+      count_timer.cancel
+      keepalive_timer.cancel
     end
 
   end

@@ -31,7 +31,6 @@ module Flapjack
     def initialize(config = {})
       @config = config
       @pikelets = []
-      @pikelet_fibers = {}
 
       @logger = Log4r::Logger.new("flapjack-coordinator")
       @logger.add(Log4r::StdoutOutputter.new("flapjack-coordinator"))
@@ -117,22 +116,19 @@ module Flapjack
       end
       return unless pikelet_class
 
-      pikelet = nil
       f = Fiber.new {
         begin
           pikelet = pikelet_class.new
-          @pikelets << pikelet
+          @pikelets.detect {|p| p[:type] == pikelet_type}[:instance] = pikelet
           pikelet.bootstrap(:redis => @redis_options, :config => pikelet_cfg)
           pikelet.main
         rescue Exception => e
           trace = e.backtrace.join("\n")
           @logger.fatal "#{e.message}\n#{trace}"
-          @pikelets.delete_if {|p| p == pikelet } if pikelet
-          @pikelet_fibers.delete(pikelet_type)
           stop
         end
       }
-      @pikelet_fibers[pikelet_type] = f
+      @pikelets << {:fiber => f, :type => pikelet_type}
       f.resume
       @logger.debug "new fiber created for #{pikelet_type}"
     end
@@ -158,7 +154,7 @@ module Flapjack
       Thin::Logging.silent = true
 
       pikelet = Thin::Server.new('0.0.0.0', port, pikelet_class, :signals => false)
-      @pikelets << pikelet
+      @pikelets << {:instance => pikelet, :type => pikelet_type}
       pikelet.start
       @logger.debug "new thin server instance started for #{pikelet_type}"
     end
@@ -172,8 +168,9 @@ module Flapjack
       end
       return unless pikelet_class
 
-      if ::Resque.redis.nil?
-        # set up connection pooling, stop resque errors
+      # set up connection pooling, stop resque errors (ensure that it's only
+      # done once)
+      if (['email_notifier', 'sms_notifier'] & @pikelets.collect {|p| p[:type]}).empty?
         ::Resque.redis = build_redis_connection_pool
         ## NB: can override the default 'resque' namespace like this
         #::Resque.redis.namespace = 'flapjack'
@@ -201,23 +198,21 @@ module Flapjack
       pikelet_class.class_variable_set('@@config', pikelet_cfg)
 
       f = Fiber.new {
-        flapjack_rsq = nil
         begin
           # TODO error if pikelet_cfg['queue'].nil?
-          flapjack_rsq = EM::Resque::Worker.new(pikelet_cfg['queue'])
+          pikelet = EM::Resque::Worker.new(pikelet_cfg['queue'])
+          @pikelets.detect {|p| p[:type] == pikelet_type}[:instance] = pikelet
           # # Use these to debug the resque workers
           # flapjack_rsq.verbose = true
           #flapjack_rsq.very_verbose = true
-          @pikelets << flapjack_rsq
-          flapjack_rsq.work(0.1)
+          pikelet.work(0.1)
         rescue Exception => e
           trace = e.backtrace.join("\n")
-          @pikelets.delete_if {|p| p == flapjack_rsq } if flapjack_rsq
           @logger.fatal "#{e.message}\n#{trace}"
           stop
         end
       }
-      @pikelet_fibers[pikelet_type] = f
+      @pikelets << {:fiber => f, :type => pikelet_type}
       f.resume
       @logger.debug "new fiber created for #{pikelet_type}"
     end
@@ -228,48 +223,52 @@ module Flapjack
       end
     end
 
-    def health_check(thin_pikelets)
-      @pikelet_fibers.each_pair do |n,f|
-        @logger.debug "#{n}: #{f.alive? ? 'alive' : 'dead'}"
-      end
-
-      thin_pikelets.each do |tp|
-        s = tp.backend.size
-        @logger.debug "thin on port #{tp.port} - #{s} connections"
-      end
-    end
+    # # TODO rewrite to be less spammy -- print only initial state and changes
+    # def health_check
+    #   @pikelets.each do |pik|
+    #     if pik[:instance].is_a?(Thin::Server)
+    #       s = pik[:instance].backend.size
+    #       @logger.debug "thin on port #{pik[:instance].port} - #{s} connections"
+    #     elsif pik[:fiber]
+    #       @logger.debug "#{pik[:type]}: #{pik[:fiber].alive? ? 'alive' : 'dead'}"
+    #     end
+    #   end
+    # end
 
     def shutdown
       @pikelets.each do |pik|
-        case pik
+        case pik[:instance]
         when Flapjack::Executive, Flapjack::Jabber, Flapjack::Pagerduty
-          pik.stop
-          Fiber.new {
-            # this needs to use a separate Redis connection from the pikelet's
-            # one, as that's in the middle of its blpop
-            r = Redis.new(@redis_options.merge(:driver => 'synchrony'))
-            pik.add_shutdown_event(:redis => r)
-            r.quit
-          }.resume
+          if pik[:fiber] && pik[:fiber].alive?
+            pik[:instance].stop
+            Fiber.new {
+              # this needs to use a separate Redis connection from the pikelet's
+              # one, as that's in the middle of its blpop
+              r = Redis.new(@redis_options.merge(:driver => 'synchrony'))
+              pik[:instance].add_shutdown_event(:redis => r)
+              r.quit
+            }.resume
+          end
         when EM::Resque::Worker
-          # resque is polling, so we don't need a shutdown object
-          pik.shutdown
+          if pik[:fiber] && pik[:fiber].alive?
+            # resque is polling, so we don't need a shutdown object
+            pik[:instance].shutdown
+          end
         when Thin::Server # web, api
           # drop from this side, as HTTP keepalive etc. means browsers
           # keep connections alive for ages, and we'd be hanging around
           # waiting for them to drop
-          pik.stop!
+          pik[:instance].stop!
         end
       end
 
+      fibers = @pikelets.collect {|p| p[:fiber] }.compact
+      thin_pikelets = @pikelets.collect {|p| p[:instance]}.select {|i| i.is_a?(Thin::Server) }
+
       Fiber.new {
-        thin_pikelets = @pikelets.select {|p| p.is_a?(Thin::Server) }
-
         loop do
-          health_check(thin_pikelets)
-
-          if @pikelet_fibers.values.any?(&:alive?) ||
-            thin_pikelets.any?{|tp| !tp.backend.empty? }
+          # health_check
+          if fibers.any?(&:alive?) || thin_pikelets.any?{|tp| !tp.backend.empty? }
             EM::Synchrony.sleep 0.25
           else
             EM.stop

@@ -176,7 +176,7 @@ module Flapjack
       # or better, include on instance ID in the semaphore key name
       @redis.del(@sem_pagerduty_acks_running)
 
-      EM::Synchrony.add_periodic_timer(10) do
+      acknowledgement_timer = EM::Synchrony.add_periodic_timer(10) do
         @redis_timer ||= build_redis_connection_pool
         catch_pagerduty_acks
       end
@@ -221,6 +221,8 @@ module Flapjack
           send_pagerduty_event(pagerduty_event)
         end
       end
+
+      acknowledgement_timer.cancel
     end
 
   end

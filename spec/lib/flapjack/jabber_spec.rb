@@ -116,8 +116,12 @@ describe Flapjack::Jabber do
   end
 
   it "runs a blocking loop listening for notifications" do
-    EM::Synchrony.should_receive(:add_periodic_timer).with(30)
-    EM::Synchrony.should_receive(:add_periodic_timer).with(60)
+    timer_1 = mock('timer_1')
+    timer_2 = mock('timer_2')
+    timer_1.should_receive(:cancel)
+    timer_2.should_receive(:cancel)
+    EM::Synchrony.should_receive(:add_periodic_timer).with(30).and_return(timer_1)
+    EM::Synchrony.should_receive(:add_periodic_timer).with(60).and_return(timer_2)
 
     redis = mock('redis')
     EventMachine::Synchrony::ConnectionPool.should_receive(:new).and_return(redis)
