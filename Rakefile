@@ -11,14 +11,9 @@ require 'resque/tasks'
 
 Dir['tasks/**/*.rake'].each { |t| load t }
 
-#require 'rubygems'
-#require 'bundler/setup'
 require 'cucumber'
 require 'cucumber/rake/task'
 require 'colorize'
-#require 'pathname'
-#$: << Pathname.new(__FILE__).join('lib').expand_path.to_s
-#require 'flapjack/version'
 
 Cucumber::Rake::Task.new(:features) do |t|
   t.cucumber_opts = "features --format pretty"
