@@ -60,6 +60,14 @@ module Flapjack
         end
       end
 
+      register_handler :message, :chat?, :body => /^flapjack:\s+/ do |stanza|
+        EM.next_tick do
+          EM.synchrony do
+            on_chat(stanza)
+          end
+        end
+      end
+
       register_handler :disconnected do |stanza|
         ret = true
         EM.next_tick do
@@ -146,6 +154,12 @@ module Flapjack
       end
     end
 
+    def on_chat(stanza)
+      return if should_quit?
+      logger.debug("chat message received: #{stanza.inspect}")
+      say(stanza.from.stripped, 'hello there', :chat)
+    end
+
     # returning true to prevent the reactor loop from stopping
     def on_disconnect(stanza)
       return true if should_quit?
@@ -202,12 +216,17 @@ module Flapjack
               # get delays without the next_tick
               close # Blather::Client.close
             end
+            # FIXME: should we also set something so should_quit? returns true
+            # to prevent retrieving more notifications from the queue while closing?
+            # or does close only return once the connection is really and truely closed?
           else
             entity, check = event['event_id'].split(':')
             state         = event['state']
             summary       = event['summary']
             duration      = event['duration'] ? time_period_in_words(event['duration']) : '4 hours'
-            logger.debug("processing jabber notification event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
+            address       = event['address']
+
+            logger.debug("processing jabber notification address: #{address}, event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
 
             ack_str = event['event_count'] && !state.eql?('ok') && !'acknowledgement'.eql?(type) ?
               "::: flapjack: ACKID #{event['event_count']} " : ''
@@ -218,10 +237,10 @@ module Flapjack
 
             msg = "#{type.upcase} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
 
+            chat_type = :chat
+            chat_type = :groupchat if @config['rooms'].include?(address)
             EM.next_tick do
-              @config['rooms'].each do |room|
-                say(Blather::JID.new(room), msg, :groupchat)
-              end
+              say(Blather::JID.new(address), msg, chat_type)
             end
           end
         else
