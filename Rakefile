@@ -76,4 +76,4 @@ namespace :verify do
   task :all => [ :uncommitted ]
 end
 
-task :verify => [ 'verify:all', :spec ]
+task :verify => [ 'verify:all', :spec, :features]
