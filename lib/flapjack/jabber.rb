@@ -34,8 +34,8 @@ module Flapjack
 
     def setup
       @redis = build_redis_connection_pool
-      hostname = Socket.gethostname
-      @flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + hostname)
+      @hostname = Socket.gethostname
+      @flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + @hostname)
 
       super(@flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
 
@@ -56,6 +56,14 @@ module Flapjack
         EM.next_tick do
           EM.synchrony do
             on_groupchat(stanza)
+          end
+        end
+      end
+
+      register_handler :message, :chat? do |stanza|
+        EM.next_tick do
+          EM.synchrony do
+            on_chat(stanza)
           end
         end
       end
@@ -88,21 +96,19 @@ module Flapjack
       end
     end
 
-    def on_groupchat(stanza)
-      return if should_quit?
-      logger.debug("groupchat message received: #{stanza.inspect}")
+    def interpreter(command)
 
-      msg = nil
-      action = nil
-      redis = nil
+      msg          = nil
+      action       = nil
       entity_check = nil
-      if stanza.body =~ /^flapjack:\s+ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration.*?(\d+.*\w+.*))?)$/i;
-        ackid   = $1
-        comment = $2
+      case
+      when command =~ /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration.*?(\d+.*\w+.*))?)$/i;
+        ackid        = $1
+        comment      = $2
         duration_str = $3
 
         error = nil
-        dur = nil
+        dur   = nil
 
         if comment.nil? || (comment.length == 0)
           error = "please provide a comment, eg \"flapjack: ACKID #{$1} AL looking\""
@@ -133,15 +139,59 @@ module Flapjack
           }
         end
 
-      elsif stanza.body =~ /^flapjack: (.*)/i
+      when command =~ /^help$/
+        msg  = "commands: \n"
+        msg += "  ACKID <id> <comment> [duration: <time spec>] \n"
+        msg += "  identify \n"
+        msg += "  help \n"
+
+      when command =~ /^identify$/
+        t = Process.times
+
+        msg  = "Flapjack process #{Process.pid} on #{`hostname -f`.chomp} \n"
+        msg += "User CPU Time: #{t.utime}\n"
+        msg += "System CPU Time: #{t.stime}\n"
+        msg += `uname -a`.chomp + "\n"
+
+      when command =~ /^(.*)/
         words = $1
-        msg   = "what do you mean, '#{words}'?"
+        msg   = "what do you mean, '#{words}'? Type 'help' for a list of acceptable commands."
+
       end
 
+      {:msg => msg, :action => action}
+    end
+
+    def on_groupchat(stanza)
+      return if should_quit?
+      logger.debug("groupchat message received: #{stanza.inspect}")
+
+      if stanza.body =~ /^flapjack:\s+(.*)/
+        command = $1
+      end
+
+      results = interpreter(command)
+      msg     = results[:msg]
+      action  = results[:action]
+
       if msg || action
-        # from_room, from_alias = Regexp.new('(.*)/(.*)', 'i').match(m.from)
         say(stanza.from.stripped, msg, :groupchat)
         logger.debug("Sent to group chat: #{msg}")
+        action.call if action
+      end
+    end
+
+    def on_chat(stanza)
+      return if should_quit?
+      logger.debug("chat message received: #{stanza.inspect}")
+
+      results = interpreter(stanza.body)
+      msg     = results[:msg]
+      action  = results[:action]
+
+      if msg || action
+        say(stanza.from.stripped, msg, :chat)
+        logger.debug("Sent to #{stanza.from.stripped}: #{msg}")
         action.call if action
       end
     end
@@ -202,12 +252,17 @@ module Flapjack
               # get delays without the next_tick
               close # Blather::Client.close
             end
+            # FIXME: should we also set something so should_quit? returns true
+            # to prevent retrieving more notifications from the queue while closing?
+            # or does close only return once the connection is really and truely closed?
           else
             entity, check = event['event_id'].split(':')
             state         = event['state']
             summary       = event['summary']
             duration      = event['duration'] ? time_period_in_words(event['duration']) : '4 hours'
-            logger.debug("processing jabber notification event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
+            address       = event['address']
+
+            logger.debug("processing jabber notification address: #{address}, event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
 
             ack_str = event['event_count'] && !state.eql?('ok') && !'acknowledgement'.eql?(type) ?
               "::: flapjack: ACKID #{event['event_count']} " : ''
@@ -218,10 +273,10 @@ module Flapjack
 
             msg = "#{type.upcase} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
 
+            chat_type = :chat
+            chat_type = :groupchat if @config['rooms'].include?(address)
             EM.next_tick do
-              @config['rooms'].each do |room|
-                say(Blather::JID.new(room), msg, :groupchat)
-              end
+              say(Blather::JID.new(address), msg, chat_type)
             end
           end
         else
