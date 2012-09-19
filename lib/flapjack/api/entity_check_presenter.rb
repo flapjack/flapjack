@@ -25,24 +25,21 @@ module Flapjack
 
         # if it started failed, prepend the earlier event
         initial = @entity_check.historical_state_before(states.first[:timestamp])
-        if (initial &&
-          (initial[:state] == Flapjack::Data::EntityCheck::STATE_CRITICAL))
-          initial[:start_time] = start_time if options[:chop]
+        if (initial && (initial[:state] == Flapjack::Data::EntityCheck::STATE_CRITICAL))
           states.unshift(initial)
         end
 
         # if it ended failed, append the event when it recovered
         if states.last[:state] == Flapjack::Data::EntityCheck::STATE_CRITICAL
           # TODO ensure this event is not CRITICAL, get first non-CRITICAL if so
-          last = @entity_check.historical_state_after(states.last)
-          last[:end_time] = end_time if options[:chop]
-          states.push(last)
+          last = @entity_check.historical_state_after(states.last[:timestamp])
+          states.push(last) if last
         end
 
         last_state = nil
 
         # returns an array of hashes, with [:start_time, :end_time, :summary]
-        states.inject([]) do |ret, obj|
+        time_periods = states.inject([]) do |ret, obj|
           if (obj[:state] == Flapjack::Data::EntityCheck::STATE_CRITICAL) &&
             (last_state.nil? || (last_state != Flapjack::Data::EntityCheck::STATE_CRITICAL))
 
@@ -58,6 +55,17 @@ module Flapjack
           end
           ret
         end
+
+        if options[:chop]
+          if start_time && (time_periods.first[:start_time] < start_time)
+            time_periods.first[:start_time] = start_time
+          end
+          if time_periods.last[:end_time].nil? || (end_time && (time_periods.last[:end_time] > end_time))
+            time_periods.last[:end_time] = (end_time || Time.now.to_i)
+          end
+        end
+
+        time_periods
       end
 
       def unscheduled_maintenance(start_time, end_time)
@@ -67,11 +75,10 @@ module Flapjack
 
         # to see if we start in an unscheduled maintenance period, we must check all unscheduled
         # maintenances before the period and their durations
-        start_in_unsched = @entity_check.maintenances(nil, start_time,
-          :scheduled => false).select {|pu|
-
-          (pu[:timestamp] + pu[:duration]) >= start_time
-        }
+        start_in_unsched = start_time.nil? ? [] :
+          @entity_check.maintenances(nil, start_time, :scheduled => false).select {|pu|
+            pu[:end_time] >= start_time
+          }
 
         start_in_unsched + unsched_maintenance
       end
@@ -83,11 +90,10 @@ module Flapjack
 
         # to see if we start in a scheduled maintenance period, we must check all scheduled
         # maintenances before the period and their durations
-        start_in_sched = @entity_check.maintenances(nil, start_time,
-          :scheduled => true).select {|ps|
-
-          (ps[:timestamp] + ps[:duration]) >= start_time
-        }
+        start_in_sched = start_time.nil? ? [] :
+          @entity_check.maintenances(nil, start_time, :scheduled => true).select {|ps|
+            ps[:end_time] >= start_time
+          }
 
         start_in_sched + sched_maintenance
       end
@@ -159,7 +165,7 @@ module Flapjack
             outs.reject! {|o| o[:delete]}
           end
 
-          # sum outage times, unless they are to be ignored
+          # sum outage times
           total_secs = outs.inject(0) {|sum, o|
             sum += (o[:end_time] - o[:start_time])
           }

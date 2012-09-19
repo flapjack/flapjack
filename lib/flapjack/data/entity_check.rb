@@ -307,9 +307,19 @@ module Flapjack
         pos = @redis.zrank("#{@key}:sorted_state_timestamps", timestamp)
         return if pos < 1
         ts = @redis.zrange("#{@key}:sorted_state_timestamps", pos - 1, pos)
-        {:timestamp => ts.to_i,
-         :state     => @redis.get("#{@key}:#{ts}:state"),
-         :summary   => @redis.get("#{@key}:#{ts}:summary")}
+        return if ts.nil? || ts.empty?
+        {:timestamp => ts.first.to_i,
+         :state     => @redis.get("#{@key}:#{ts.first}:state"),
+         :summary   => @redis.get("#{@key}:#{ts.first}:summary")}
+      end
+
+      def historical_state_after(timestamp)
+        pos = @redis.zrank("#{@key}:sorted_state_timestamps", timestamp)
+        ts = @redis.zrange("#{@key}:sorted_state_timestamps", pos + 1, pos + 2)
+        return if ts.nil? || ts.empty?
+        {:timestamp => ts.first.to_i,
+         :state     => @redis.get("#{@key}:#{ts.first}:state"),
+         :summary   => @redis.get("#{@key}:#{ts.first}:summary")}
       end
 
       # Returns a list of maintenance periods (either unscheduled or scheduled) for this
