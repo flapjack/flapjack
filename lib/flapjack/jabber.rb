@@ -34,8 +34,8 @@ module Flapjack
 
     def setup
       @redis = build_redis_connection_pool
-      hostname = Socket.gethostname
-      @flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + hostname)
+      @hostname = Socket.gethostname
+      @flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + @hostname)
 
       super(@flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
 
@@ -60,7 +60,7 @@ module Flapjack
         end
       end
 
-      register_handler :message, :chat?, :body => /^flapjack:\s+/ do |stanza|
+      register_handler :message, :chat? do |stanza|
         EM.next_tick do
           EM.synchrony do
             on_chat(stanza)
@@ -96,21 +96,19 @@ module Flapjack
       end
     end
 
-    def on_groupchat(stanza)
-      return if should_quit?
-      logger.debug("groupchat message received: #{stanza.inspect}")
+    def interpreter(command)
 
-      msg = nil
-      action = nil
-      redis = nil
+      msg          = nil
+      action       = nil
       entity_check = nil
-      if stanza.body =~ /^flapjack:\s+ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration.*?(\d+.*\w+.*))?)$/i;
-        ackid   = $1
-        comment = $2
+      case
+      when command =~ /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration.*?(\d+.*\w+.*))?)$/i;
+        ackid        = $1
+        comment      = $2
         duration_str = $3
 
         error = nil
-        dur = nil
+        dur   = nil
 
         if comment.nil? || (comment.length == 0)
           error = "please provide a comment, eg \"flapjack: ACKID #{$1} AL looking\""
@@ -141,13 +139,42 @@ module Flapjack
           }
         end
 
-      elsif stanza.body =~ /^flapjack: (.*)/i
+      when command =~ /^help$/
+        msg  = "commands: \n"
+        msg += "  ACKID <id> <comment> [duration: <time spec>] \n"
+        msg += "  identify \n"
+        msg += "  help \n"
+
+      when command =~ /^identify$/
+        t = Process.times
+
+        msg  = "Flapjack process #{Process.pid} on #{`hostname -f`.chomp} \n"
+        msg += "User CPU Time: #{t.utime}\n"
+        msg += "System CPU Time: #{t.stime}\n"
+        msg += `uname -a`.chomp + "\n"
+
+      when command =~ /^(.*)/
         words = $1
-        msg   = "what do you mean, '#{words}'?"
+        msg   = "what do you mean, '#{words}'? Type 'help' for a list of acceptable commands."
+
       end
 
+      {:msg => msg, :action => action}
+    end
+
+    def on_groupchat(stanza)
+      return if should_quit?
+      logger.debug("groupchat message received: #{stanza.inspect}")
+
+      if stanza.body =~ /^flapjack:\s+(.*)/
+        command = $1
+      end
+
+      results = interpreter(command)
+      msg     = results[:msg]
+      action  = results[:action]
+
       if msg || action
-        # from_room, from_alias = Regexp.new('(.*)/(.*)', 'i').match(m.from)
         say(stanza.from.stripped, msg, :groupchat)
         logger.debug("Sent to group chat: #{msg}")
         action.call if action
@@ -157,7 +184,16 @@ module Flapjack
     def on_chat(stanza)
       return if should_quit?
       logger.debug("chat message received: #{stanza.inspect}")
-      say(stanza.from.stripped, 'hello there', :chat)
+
+      results = interpreter(stanza.body)
+      msg     = results[:msg]
+      action  = results[:action]
+
+      if msg || action
+        say(stanza.from.stripped, msg, :chat)
+        logger.debug("Sent to #{stanza.from.stripped}: #{msg}")
+        action.call if action
+      end
     end
 
     # returning true to prevent the reactor loop from stopping
