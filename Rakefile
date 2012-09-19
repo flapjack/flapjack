@@ -14,17 +14,15 @@ Dir['tasks/**/*.rake'].each { |t| load t }
 require 'cucumber'
 require 'cucumber/rake/task'
 require 'colorize'
+Cucumber::Rake::Task.new(:features) do |t|
+  t.cucumber_opts = "features --format pretty"
+end
 
-#require 'bundler/gem_tasks'
 require 'rspec/core/rake_task'
-
 RSpec::Core::RakeTask.new(:spec)
 
 task :default => :spec
 
-Cucumber::Rake::Task.new(:features) do |t|
-  t.cucumber_opts = "features --format pretty"
-end
 
 desc "build gem"
 task :build => :verify do
