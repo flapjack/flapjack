@@ -85,14 +85,16 @@ module Flapjack
       @redis_handler ||= build_redis_connection_pool
       @connected_at = Time.now.to_i
       logger.info("Jabber Connected")
-      @config['rooms'].each do |room|
-        logger.info("Joining room #{room}")
-        presence = Blather::Stanza::Presence.new
-        presence.from = @flapjack_jid
-        presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
-        presence << "<x xmlns='http://jabber.org/protocol/muc'/>"
-        write presence
-        say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
+      if @config['rooms'] && @config['rooms'].length > 0
+        @config['rooms'].each do |room|
+          logger.info("Joining room #{room}")
+          presence = Blather::Stanza::Presence.new
+          presence.from = @flapjack_jid
+          presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
+          presence << "<x xmlns='http://jabber.org/protocol/muc'/>"
+          write presence
+          say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
+        end
       end
     end
 
@@ -274,7 +276,7 @@ module Flapjack
             msg = "#{type.upcase} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
 
             chat_type = :chat
-            chat_type = :groupchat if @config['rooms'].include?(address)
+            chat_type = :groupchat if @config['rooms'] && @config['rooms'].include?(address)
             EM.next_tick do
               say(Blather::JID.new(address), msg, chat_type)
             end
