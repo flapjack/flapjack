@@ -211,7 +211,7 @@ module Flapjack
         params[:check], :redis => @@redis)
       entity_check.create_scheduled_maintenance(:start_time => params[:start_time],
         :duration => params[:duration], :summary => params[:summary])
-      status 201
+      status 204
     end
 
     # create an acknowledgement for a service on an entity
@@ -232,7 +232,7 @@ module Flapjack
         params[:check], :redis => @@redis)
       entity_check.create_acknowledgement('summary' => params[:summary],
         'duration' => duration)
-      status 201
+      status 204
     end
 
     not_found do
