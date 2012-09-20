@@ -2,10 +2,16 @@
 
 require 'yajl'
 require 'redis'
-require 'yaml'
 require 'optparse'
 require 'ostruct'
-require 'flapjack/data/entity_check'
+
+# add lib to the default include path
+unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+  $: << File.dirname(__FILE__) + '/../lib'
+end
+
+require 'flapjack/data/contact'
+require 'flapjack/data/entity'
 
 options = OpenStruct.new
 options.config    = File.join('etc', 'flapjack_config.yaml')
@@ -35,21 +41,7 @@ end.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
-# load the config hash for the current environment
-
-if File.file?(options.config)
-  config = YAML::load(File.open(options.config))
-else
-  puts "Could not find config file at '#{options.config}', you may want to specify one with the --config option"
-  exit(false)
-end
-
-config_env = config[FLAPJACK_ENV]
-
-if config_env.nil? || config_env.empty?
-  puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
-  exit(false)
-end
+config_env = Flapjack::Configuration.new.load(options.config)
 
 if options.from
   filename = options.from
@@ -58,15 +50,10 @@ end
 
 parser   = Yajl::Parser.new
 
-@redis_host = config_env['redis']['host'] || 'localhost'
-@redis_port = config_env['redis']['port'] || '6379'
-@redis_path = config_env['redis']['path'] || nil
-@redis_db   = config_env['redis']['db']   || 0
-
-# add lib to the default include path
-unless $:.include?(File.dirname(__FILE__) + '/../lib/')
-  $: << File.dirname(__FILE__) + '/../lib'
-end
+@redis_host = config_env['redis']['host']
+@redis_port = config_env['redis']['port']
+@redis_path = config_env['redis']['path']
+@redis_db   = config_env['redis']['db']
 
 def get_redis_connection
   if @redis_path
@@ -79,65 +66,36 @@ end
 
 case command
 when "import-contacts"
-  @persistence = get_redis_connection
   contacts = parser.parse(file)
-  contacts.each {|contact|
-    if not contact['id']
-      puts "Contact not imported as it has no id: " + contact.inspect
-      next
-    end
-    @persistence.multi
-    @persistence.del("contact:#{contact['id']}")
-    @persistence.del("contact_media:#{contact['id']}")
-    @persistence.del("contact_pagerduty:#{contact['id']}")
-    @persistence.hset("contact:#{contact['id']}", 'first_name', contact['first_name'])
-    @persistence.hset("contact:#{contact['id']}", 'last_name',  contact['last_name'])
-    @persistence.hset("contact:#{contact['id']}", 'email',      contact['email'])
-    contact['media'].each_pair {|medium, address|
-      case medium
-      when 'pagerduty'
-        @persistence.hset("contact_media:#{contact['id']}", medium, address['service_key'])
-        @persistence.hset("contact_pagerduty:#{contact['id']}", 'subdomain', address['subdomain'])
-        @persistence.hset("contact_pagerduty:#{contact['id']}", 'username',  address['username'])
-        @persistence.hset("contact_pagerduty:#{contact['id']}", 'password',  address['password'])
-      else
-        @persistence.hset("contact_media:#{contact['id']}", medium, address)
+
+  @persistence = get_redis_connection
+  @persistence.multi do |r|
+    contacts.each do |contact|
+      unless contact['id']
+        puts "Contact not imported as it has no id: " + contact.inspect
+        next
       end
-    }
-    @persistence.exec
-  }
+      Flapjack::Data::Contact.add(contact, :redis => r)
+    end
+  end
 
 when "import-entities"
-  @persistence = get_redis_connection
   entities = parser.parse(file)
-  entities.each {|entity|
-    if not entity['id']
-      puts "Entity not imported as it has no id: " + entity.inspect
-      next
+
+  @persistence = get_redis_connection
+  @persistence.multi do |r|
+    entities.each do |entity|
+      unless entity['id']
+        puts "Entity not imported as it has no id: " + entity.inspect
+        next
+      end
+      Flapjack::Data::Entity.add(entity, :redis => r)
     end
-    @persistence.multi
-    existing_name = @persistence.hget("entity:#{entity['id']}", 'name')
-    @persistence.del("entity_id:#{existing_name}") unless existing_name == entity['name']
-    @persistence.set("entity_id:#{entity['name']}", entity['id'])
-    @persistence.hset("entity:#{entity['id']}", 'name', entity['name'])
-
-    @persistence.del("contacts_for:#{entity['id']}")
-    entity['contacts'].each {|contact|
-      @persistence.sadd("contacts_for:#{entity['id']}", contact)
-    }
-    @persistence.exec
-
-  }
+  end
 
 when "purge-events"
   @persistence = get_redis_connection
-  events_size = @persistence.llen('events')
-  puts "purging #{events_size} events..."
-  timestamp = Time.now.to_i
-  puts "renaming events to events.#{timestamp}"
-  @persistence.rename('events', "events.#{timestamp}")
-  puts "setting expiry of events.#{timestamp} to 8 hours"
-  @persistence.expire("events.#{timestamp}", (60 * 60 * 8))
+  Flapjack::Data.Event.purge_all(:redis => @persistence)
 
 else
   puts "you need to give me something to do, eg a command like 'import-entities' or 'import-clients' etc"

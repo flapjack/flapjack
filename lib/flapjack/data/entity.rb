@@ -16,12 +16,14 @@ module Flapjack
         }
       end
 
+      # NB: should probably be called in the context of a Redis multi block; not doing so
+      # here as calling classes may well be adding/updating multiple records in the one
+      # operation
       def self.add(entity, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         raise "Entity name not provided" unless entity['name'] && !entity['name'].empty?
 
         if entity['id']
-          redis.multi
           existing_name = redis.hget("entity:#{entity['id']}", 'name')
           redis.del("entity_id:#{existing_name}") unless existing_name == entity['name']
           redis.set("entity_id:#{entity['name']}", entity['id'])
@@ -33,7 +35,6 @@ module Flapjack
               redis.sadd("contacts_for:#{entity['id']}", contact)
             }
           end
-          redis.exec
         else
           # empty string is the redis equivalent of a Ruby nil, i.e. key with
           # no value
