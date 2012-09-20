@@ -37,17 +37,18 @@ module Flapjack
       end
 
       redis_defaults = {'host' => 'localhost',
-                        'port' => '6379',
+                        'port' => 6379,
                         'path' => nil,
                         'db'   => 0}
 
       config_env['redis'] = {} unless config_env.has_key?('redis')
       redis_defaults.each_pair do |k,v|
-        next if config_env['redis'].has_key?(k) && config_env['redis'][k] &&
-          (config_env['redis'][k].length > 0)
+        next if config_env['redis'].has_key?(k) && (config_env['redis'][k] &&
+          !(config_env['redis'][k].is_a?(String) && config_env['redis'][k].empty?))
         config_env['redis'][k] = v
       end
 
+      config_env
     end
 
   end

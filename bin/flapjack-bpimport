@@ -2,6 +2,7 @@
 
 require 'optparse'
 require 'ostruct'
+require 'httparty'
 require 'yajl/json_gem'
 require 'redis'
 
@@ -10,6 +11,7 @@ unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
 end
 
+require 'flapjack/configuration'
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
 
@@ -50,19 +52,20 @@ module Flapjack
 
     class << self
 
+      # TODO indicate JSON by sending content type
       def entities
-        from_json( get("/entities") )
+        parsed( get("/services.json") )
       end
 
       def contacts
-        from_json( get("/contacts") )
+        parsed( get("/contacts.json") )
       end
 
     private
 
-      def from_json(response)
-        return unless response && response.body
-        JSON.parse(response.body)
+      def parsed(response)
+        return unless response && response.respond_to?(:parsed_response)
+        response.parsed_response
       end
 
     end
@@ -70,22 +73,15 @@ module Flapjack
 
 end
 
-
-@redis_host = config_env['redis']['host']
-@redis_port = config_env['redis']['port']
-@redis_path = config_env['redis']['path']
-@redis_db   = config_env['redis']['db']
-
-def get_redis_connection
-  if @redis_path
-    redis = Redis.new(:db => @redis_db, :path => @redis_path)
-  else
-    redis = Redis.new(:db => @redis_db, :host => @redis_host, :port => @redis_port)
-  end
-  redis
+def get_redis_connection(cfg)
+  opts = cfg['path'] ? {:path => cfg['path']} :
+                       {:host => cfg['host'], :port => cfg['port']}
+  Redis.new(opts.merge(:db => cfg['db']))
 end
 
 begin
+  p kevlar_url
+  p options
   Flapjack::KevlarClient.base_uri(kevlar_url)
   if options.username && (options.username.length > 0) &&
      options.password && (options.password.length > 0)
@@ -93,12 +89,17 @@ begin
   end
   entities = Flapjack::KevlarClient.entities
   contacts = Flapjack::KevlarClient.contacts
+
+  p entities
+  p contacts
+
 rescue Exception => e
-  # TODO error and exit
+  puts e.message
+  puts e.backtrace.join("\n")
+  exit(false)
 end
 
-
-redis = get_redis_connection
+redis = get_redis_connection(config_env['redis'])
 
 redis.multi do |r|
   entities.each do |entity|

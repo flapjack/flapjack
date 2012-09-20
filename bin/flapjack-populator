@@ -10,6 +10,7 @@ unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
 end
 
+require 'flapjack/configuration'
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
 
@@ -50,52 +51,51 @@ end
 
 parser   = Yajl::Parser.new
 
-@redis_host = config_env['redis']['host']
-@redis_port = config_env['redis']['port']
-@redis_path = config_env['redis']['path']
-@redis_db   = config_env['redis']['db']
-
-def get_redis_connection
-  if @redis_path
-    redis = Redis.new(:db => @redis_db, :path => @redis_path)
-  else
-    redis = Redis.new(:db => @redis_db, :host => @redis_host, :port => @redis_port)
-  end
-  redis
+def get_redis_connection(cfg)
+  opts = cfg['path'] ? {:path => cfg['path'])} :
+                       {:host => cfg['host'], :port => cfg['port']}
+  Redis.new(opts.merge(:db => cfg['db']))
 end
 
 case command
 when "import-contacts"
   contacts = parser.parse(file)
 
-  @persistence = get_redis_connection
-  @persistence.multi do |r|
-    contacts.each do |contact|
-      unless contact['id']
-        puts "Contact not imported as it has no id: " + contact.inspect
-        next
+  if contacts && contacts.is_a?(Enumerable) && contacts.any? {|e| !e['id'].nil?}
+    @persistence = get_redis_connection(config_env['redis'])
+    @persistence.multi do |r|
+      contacts.each do |contact|
+        unless contact['id']
+          puts "Contact not imported as it has no id: " + contact.inspect
+          next
+        end
+        Flapjack::Data::Contact.add(contact, :redis => r)
       end
-      Flapjack::Data::Contact.add(contact, :redis => r)
     end
+    @persistence.quit
   end
 
 when "import-entities"
   entities = parser.parse(file)
 
-  @persistence = get_redis_connection
-  @persistence.multi do |r|
-    entities.each do |entity|
-      unless entity['id']
-        puts "Entity not imported as it has no id: " + entity.inspect
-        next
+  if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
+    @persistence = get_redis_connection(config_env['redis'])
+    @persistence.multi do |r|
+      entities.each do |entity|
+        unless entity['id']
+          puts "Entity not imported as it has no id: " + entity.inspect
+          next
+        end
+        Flapjack::Data::Entity.add(entity, :redis => r)
       end
-      Flapjack::Data::Entity.add(entity, :redis => r)
     end
+    @persistence.quit
   end
 
 when "purge-events"
-  @persistence = get_redis_connection
+  @persistence = get_redis_connection(config_env['redis'])
   Flapjack::Data.Event.purge_all(:redis => @persistence)
+  @persistence.quit
 
 else
   puts "you need to give me something to do, eg a command like 'import-entities' or 'import-clients' etc"
