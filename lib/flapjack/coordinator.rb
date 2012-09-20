@@ -17,6 +17,7 @@ require 'flapjack/api'
 require 'flapjack/daemonizing'
 require 'flapjack/executive'
 require 'flapjack/jabber'
+require 'flapjack/oobetet'
 require 'flapjack/pagerduty'
 require 'flapjack/notification/email'
 require 'flapjack/notification/sms'
@@ -77,17 +78,18 @@ module Flapjack
         @logger.debug "config keys: #{@config.keys}"
 
         pikelet_keys = ['executive', 'jabber_gateway', 'pagerduty_gateway',
-                        'email_notifier', 'sms_notifier', 'web', 'api']
+                        'email_notifier', 'sms_notifier', 'web', 'api',
+                        'oobetet']
 
         @config.keys.each do |pikelet_type|
-          next unless pikelet_keys.include?(pikelet_type) && 
+          next unless pikelet_keys.include?(pikelet_type) &&
             @config[pikelet_type].is_a?(Hash) &&
             @config[pikelet_type]['enabled']
           @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet"
           pikelet_cfg = @config[pikelet_type]
 
           case pikelet_type
-          when 'executive', 'jabber_gateway', 'pagerduty_gateway'
+          when 'executive', 'jabber_gateway', 'pagerduty_gateway', 'oobetet'
             build_pikelet(pikelet_type, pikelet_cfg)
           when 'web', 'api'
             build_thin_pikelet(pikelet_type, pikelet_cfg)
@@ -118,6 +120,8 @@ module Flapjack
         Flapjack::Jabber
       when 'pagerduty_gateway'
         Flapjack::Pagerduty
+      when 'oobetet'
+        Flapjack::Oobetet
       end
       return unless pikelet_class
 

@@ -15,7 +15,9 @@ require 'cucumber'
 require 'cucumber/rake/task'
 require 'colorize'
 Cucumber::Rake::Task.new(:features) do |t|
-  t.cucumber_opts = "features --format pretty"
+  #t.cucumber_opts = "features --format pretty"
+  #t.cucumber_opts = "--format progress"
+  t.cucumber_opts = "--format fuubar"
 end
 
 require 'rspec/core/rake_task'
@@ -75,5 +77,4 @@ namespace :verify do
 end
 
 # FIXME: getting that intermittent gherken lexing error so removing :features from verify list
-#task :verify => [ 'verify:all', :spec, :features]
-task :verify => [ 'verify:all', :spec]
+task :verify => [ 'verify:all', :spec, :features]

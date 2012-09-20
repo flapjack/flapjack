@@ -4,8 +4,8 @@ require File.expand_path('../lib/flapjack/version', __FILE__)
 Gem::Specification.new do |gem|
   gem.authors       = ["Lindsay Holmwood"]
   gem.email         = %q{lindsay@holmwood.id.au}
-  gem.description   = %q{Flapjack is highly scalable and distributed monitoring system. It understands the Nagios plugin format, and can easily be scaled from 1 server to 1000.}
-  gem.summary       = %q{a scalable and distributed monitoring system}
+  gem.description   = %q{Flapjack is a highly scalable and distributed monitoring notification system.}
+  gem.summary       = %q{a scalable and distributed monitoring notification system}
   gem.homepage      = %q{http://flapjack-project.com/}
 
   # see http://yehudakatz.com/2010/12/16/clarifying-the-roles-of-the-gemspec-and-gemfile/
