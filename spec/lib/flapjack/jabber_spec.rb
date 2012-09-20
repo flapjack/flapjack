@@ -26,14 +26,17 @@ describe Flapjack::Jabber do
     fj = Flapjack::Jabber.new
     fj.bootstrap(:config => config)
 
-    EM.should_receive(:next_tick).exactly(3).times.and_yield
-    EM.should_receive(:synchrony).exactly(3).times.and_yield
+    EM.should_receive(:next_tick).exactly(4).times.and_yield
+    EM.should_receive(:synchrony).exactly(4).times.and_yield
 
     fj.should_receive(:register_handler).with(:ready).and_yield(stanza)
     fj.should_receive(:on_ready).with(stanza)
 
     fj.should_receive(:register_handler).with(:message, :groupchat?, :body => /^flapjack:\s+/).and_yield(stanza)
     fj.should_receive(:on_groupchat).with(stanza)
+
+    fj.should_receive(:register_handler).with(:message, :chat?).and_yield(stanza)
+    fj.should_receive(:on_chat).with(stanza)
 
     fj.should_receive(:register_handler).with(:disconnected).and_yield(stanza)
     fj.should_receive(:on_disconnect).with(stanza).and_return(true)
@@ -81,7 +84,7 @@ describe Flapjack::Jabber do
   end
 
   it "receives a message it doesn't understand" do
-    stanza.should_receive(:body).twice.and_return('flapjack: hello!')
+    stanza.should_receive(:body).once.and_return('flapjack: hello!')
     from = mock('from')
     from.should_receive(:stripped).and_return('sender')
     stanza.should_receive(:from).and_return(from)
