@@ -248,6 +248,27 @@ module Flapjack
         lan.to_i
       end
 
+      def last_notifications_of_each_type
+        ln = {:problem         => last_problem_notification,
+              :recovery        => last_recovery_notification,
+              :acknowledgement => last_acknowledgement_notification }
+        puts "***** last_notifications_of_each_type for #{@key.inspect}: #{ln.inspect}"
+        ln
+      end
+
+      # unpredictable results if there are multiple notifications of different
+      # types sent at the same time
+      def last_notification
+        nils = { :type => nil, :timestamp => nil }
+        lne = last_notifications_of_each_type
+        ln = lne.delete_if {|type, timestamp|
+          timestamp.nil? || timestamp.to_i == 0
+        }
+        return nils unless ln.length > 0
+        lns = ln.sort_by { |type, timestamp| timestamp }.last
+        { :type => lns[0], :timestamp => lns[1] }
+      end
+
       def event_count_at(timestamp)
         eca = @redis.get("#{@key}:#{timestamp}:count")
         return unless (eca && eca =~ /^\d+$/)

@@ -92,13 +92,15 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
   it "shows the state of a check for an entity" do
     time = Time.now.to_i
 
+    last_notifications = {:problem         => time - ((3 * 60 * 60) + (5 * 60)),
+                          :recovery        => time - (3 * 60 * 60),
+                          :acknowledgement => nil }
+
     entity_check.should_receive(:state).and_return('ok')
     entity_check.should_receive(:last_update).and_return(time - (3 * 60 * 60))
     entity_check.should_receive(:last_change).and_return(time - (3 * 60 * 60))
     entity_check.should_receive(:summary).and_return('all good')
-    entity_check.should_receive(:last_problem_notification).and_return(time - ((3 * 60 * 60) + (5 * 60)))
-    entity_check.should_receive(:last_recovery_notification).and_return(time - (3 * 60 * 60))
-    entity_check.should_receive(:last_acknowledgement_notification).and_return(nil)
+    entity_check.should_receive(:last_notifications_of_each_type).and_return(last_notifications)
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
     entity_check.should_receive(:maintenances).with(nil, nil, :scheduled => true).and_return([])
