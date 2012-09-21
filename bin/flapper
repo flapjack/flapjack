@@ -1,0 +1,48 @@
+#!/usr/bin/env ruby
+
+require 'eventmachine'
+require 'socket'
+
+module Flapper
+
+  def receive_data data
+    send_data ">>>you sent: #{data}"
+    close_connection if data =~ /quit/i
+  end
+
+end
+
+def local_ip
+  # turn off reverse DNS resolution temporarily
+  orig, Socket.do_not_reverse_lookup = Socket.do_not_reverse_lookup, true
+
+  UDPSocket.open do |s|
+    s.connect '64.233.187.99', 1
+    s.addr.last
+  end
+ensure
+  Socket.do_not_reverse_lookup = orig
+end
+
+start_every = 120
+stop_after  = 60
+bind_ip     = local_ip
+bind_port   = 12345
+EM.run {
+
+  puts "#{Time.now}: starting server"
+  server_init = EM.start_server bind_ip, bind_port, Flapper
+  EM.add_timer(stop_after) do
+    puts "#{Time.now}: stopping server"
+    EM.stop_server(server_init)
+  end
+
+  EM.add_periodic_timer(start_every) do
+    puts "#{Time.now}: starting server"
+    server = EM.start_server bind_ip, bind_port, Flapper
+    EM.add_timer(stop_after) do
+      puts "#{Time.now}: stopping server"
+      EM.stop_server(server)
+    end
+  end
+}
