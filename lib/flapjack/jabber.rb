@@ -33,6 +33,7 @@ module Flapjack
     Blather.logger = log
 
     def initialize
+      super
       @buffer = []
       @hostname = Socket.gethostname
     end
