@@ -275,9 +275,11 @@ module Flapjack
           logger.debug('jabber notification event received')
           logger.debug(event.inspect)
           if 'shutdown'.eql?(type)
-            EM.next_tick do
-              # get delays without the next_tick
-              close # Blather::Client.close
+            if should_quit?
+              EM.next_tick do
+                # get delays without the next_tick
+                close # Blather::Client.close
+              end
             end
             # FIXME: should we also set something so should_quit? returns true
             # to prevent retrieving more notifications from the queue while closing?
