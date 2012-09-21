@@ -40,7 +40,7 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     ]
   }
 
-  it "returns a list of outage hashes for an entity check" do
+  it "returns a list of state hashes for an entity check" do
     entity_check.should_receive(:historical_states).
       with(time - (5 * 60 * 60), time - (2 * 60 * 60)).and_return(states)
 

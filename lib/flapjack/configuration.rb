@@ -1,14 +1,21 @@
 #!/usr/bin/env ruby
 
-
 require 'yaml'
 
 module Flapjack
 
   class Configuration
 
+    def initialize(opts = {})
+      @logger = opts[:logger]
+      unless @logger
+        @logger       = Logger.new(STDOUT)
+        @logger.level = Logger::ERROR
+      end
+    end
+
     def logger
-      # @logger ||= TODO
+      @logger
     end
 
     def load(filename)
