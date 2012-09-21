@@ -48,6 +48,7 @@ describe Flapjack::Jabber do
     fj = Flapjack::Jabber.new
     fj.bootstrap(:config => config)
 
+    fj.should_receive(:connected?).and_return(true)
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Presence))
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
 
@@ -79,6 +80,7 @@ describe Flapjack::Jabber do
     fj.bootstrap(:config => config)
     fj.instance_variable_set('@redis_handler', redis)
 
+    fj.should_receive(:connected?).and_return(true)
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
 
     fj.on_groupchat(stanza)
@@ -93,6 +95,7 @@ describe Flapjack::Jabber do
     fj = Flapjack::Jabber.new
     fj.bootstrap(:config => config)
 
+    fj.should_receive(:connected?).and_return(true)
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
 
     fj.on_groupchat(stanza)
@@ -132,9 +135,10 @@ describe Flapjack::Jabber do
 
     fj = Flapjack::Jabber.new
     fj.bootstrap(:config => config)
+    fj.should_receive(:register_handler).exactly(4).times
 
     fj.should_receive(:connect)
-    fj.should_receive(:connected?).twice.and_return(true)
+    fj.should_receive(:connected?).exactly(3).times.and_return(true)
     fj.should_receive(:should_quit?).exactly(3).times.and_return(false, false, true)
     redis.should_receive(:blpop).twice.and_return(
       ["jabber_notifications", %q{{"notification_type":"problem","event_id":"main-example.com:ping","state":"critical","summary":"!!!"}}],

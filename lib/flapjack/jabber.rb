@@ -32,9 +32,13 @@ module Flapjack
     log.level = Logger::INFO
     Blather.logger = log
 
+    def initialize
+      @buffer = []
+      @hostname = Socket.gethostname
+    end
+
     def setup
       @redis = build_redis_connection_pool
-      @hostname = Socket.gethostname
       @flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + @hostname)
 
       super(@flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
@@ -96,10 +100,13 @@ module Flapjack
           say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
         end
       end
+      return if @buffer.empty?
+      while stanza = @buffer.shift
+        @logger.debug("Sending a buffered jabber message to: #{stanza.to}, using: #{stanza.type}, message: #{stanza.body}")
+      end
     end
 
     def interpreter(command)
-
       msg          = nil
       action       = nil
       entity_check = nil
@@ -219,8 +226,14 @@ module Flapjack
     end
 
     def say(to, msg, using = :chat)
-      @logger.debug("Sending a jabber message to: #{to.to_s}, using: #{using.to_s}, message: #{msg}")
-      write Blather::Stanza::Message.new(to, msg, using)
+      stanza = Blather::Stanza::Message.new(to, msg, using)
+      if connected?
+        @logger.debug("Sending a jabber message to: #{to.to_s}, using: #{using.to_s}, message: #{msg}")
+        write(stanza)
+      else
+        @logger.debug("Buffering a jabber message to: #{to.to_s}, using: #{using.to_s}, message: #{msg}")
+        @buffer << stanza
+      end
     end
 
     def add_shutdown_event(opts = {})
