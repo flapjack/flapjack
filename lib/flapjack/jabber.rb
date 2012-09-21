@@ -131,6 +131,10 @@ module Flapjack
           error = "unknown entity" if entity_check.nil?
         end
 
+        if entity_check && entity_check.in_unscheduled_maintenance?
+          error = "#{event_id} is already acknowledged"
+        end
+
         if error
           msg = "ERROR - couldn't ACK #{ackid} - #{error}"
         else
@@ -187,7 +191,13 @@ module Flapjack
       return if should_quit?
       logger.debug("chat message received: #{stanza.inspect}")
 
-      results = interpreter(stanza.body)
+      if stanza.body =~ /^flapjack:\s+(.*)/
+        command = $1
+      else
+        command = stanza.body
+      end
+
+      results = interpreter(command)
       msg     = results[:msg]
       action  = results[:action]
 

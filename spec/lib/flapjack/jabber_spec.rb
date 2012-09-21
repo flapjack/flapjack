@@ -65,6 +65,7 @@ describe Flapjack::Jabber do
       and_return('main-example.com:ping')
 
     entity_check = mock(Flapjack::Data::EntityCheck)
+    entity_check.should_receive(:in_unscheduled_maintenance?)
     entity_check.should_receive(:create_acknowledgement).
       with('summary' => 'fixing now', 'acknowledgement_id' => '876', 'duration' => (90 * 60))
     entity_check.should_receive(:entity_name).and_return('main-example.com')
