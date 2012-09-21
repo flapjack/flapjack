@@ -121,6 +121,27 @@ Feature: events
     And   a failure event is received for check 'abc' on entity 'def'
     Then  a notification should be generated for check 'abc' on entity 'def'
 
+  @time
+  Scenario: Osciliating state, period of two minutes
+    Given check 'abc' for entity 'def' is in an ok state
+    When  a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  1 minute passes
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
+    When  an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
+    When  1 minute passes
+    And   an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  1 minute passes
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
+    When  an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
+
   Scenario: Acknowledgement when ok
     Given check 'abc' for entity 'def' is in an ok state
     When  an acknowledgement event is received for check 'abc' on entity 'def'
