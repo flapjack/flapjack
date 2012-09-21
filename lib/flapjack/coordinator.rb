@@ -80,7 +80,7 @@ module Flapjack
                         'email_notifier', 'sms_notifier', 'web', 'api']
 
         @config.keys.each do |pikelet_type|
-          next unless pikelet_keys.include?(pikelet_type) && 
+          next unless pikelet_keys.include?(pikelet_type) &&
             @config[pikelet_type].is_a?(Hash) &&
             @config[pikelet_type]['enabled']
           @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet"
