@@ -104,6 +104,7 @@ module Flapjack
       return if @buffer.empty?
       while stanza = @buffer.shift
         @logger.debug("Sending a buffered jabber message to: #{stanza.to}, using: #{stanza.type}, message: #{stanza.body}")
+        write(stanza)
       end
     end
 
