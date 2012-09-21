@@ -19,6 +19,7 @@ require 'yajl/json_gem'
 require 'flapjack/data/entity_check'
 require 'flapjack/pikelet'
 require 'flapjack/utility'
+require 'flapjack/version'
 
 module Flapjack
 
@@ -162,8 +163,9 @@ module Flapjack
 
       when command =~ /^identify$/
         t = Process.times
-
-        msg  = "Flapjack process #{Process.pid} on #{`hostname -f`.chomp} \n"
+        boot_time = Time.at(@redis_handler.get('boot_time').to_i)
+        msg  = "Flapjack #{Flapjack::VERSION} process #{Process.pid} on #{`hostname -f`.chomp} \n"
+        msg += "Boot time: #{boot_time}\n"
         msg += "User CPU Time: #{t.utime}\n"
         msg += "System CPU Time: #{t.stime}\n"
         msg += `uname -a`.chomp + "\n"
