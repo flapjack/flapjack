@@ -20,22 +20,22 @@ options.config = File.join('etc', 'flapjack_config.yaml')
 
 kevlar_url = ARGV.shift
 
-banner  = "Usage: flapjack-bpimport KEVLAR [options]\n"
+banner  = "Usage: flapjack-bpimport KEVLAR_URL [options]\n"
 banner += "\n"
-banner += "  KEVLAR: root URL of a kevlar server\n"
+banner += "  KEVLAR_URL: root URL of a kevlar server\n"
 
 OptionParser.new {|opts|
-  opts.banner = "Usage: flapjack-bpimport URL [options]"
+  opts.banner = "Usage: flapjack-bpimport KEVLAR_URL [options]"
 
   opts.on("-c", "--config [PATH]", String, "PATH to the config file to use") do |c|
     options.config = c
   end
 
-  opts.on("-u", "--username [USERNAME]", String, "USERNAME to send ") do |u|
+  opts.on("-u", "--username [USERNAME]", String, "USERNAME of a kevlar user with an admin role") do |u|
     options.username = u
   end
 
-  opts.on("-c", "--password [PASSWORD]", String, "PATH to the config file to use") do |p|
+  opts.on("-c", "--password [PASSWORD]", String, "PASSWORD for the kevlar user provided for USERNAME") do |p|
     options.password = p
   end
 
@@ -48,17 +48,17 @@ config_env = Flapjack::Configuration.new.load(options.config)
 module Flapjack
   module KevlarClient
     include HTTParty
+    headers 'Accept' => 'application/json'
     format :json
 
     class << self
 
-      # TODO indicate JSON by sending content type
       def entities
-        parsed( get("/services.json") )
+        parsed( get("/services") )
       end
 
       def contacts
-        parsed( get("/contacts.json") )
+        parsed( get("/contacts") )
       end
 
     private
@@ -80,8 +80,6 @@ def get_redis_connection(cfg)
 end
 
 begin
-  p kevlar_url
-  p options
   Flapjack::KevlarClient.base_uri(kevlar_url)
   if options.username && (options.username.length > 0) &&
      options.password && (options.password.length > 0)
@@ -89,10 +87,6 @@ begin
   end
   entities = Flapjack::KevlarClient.entities
   contacts = Flapjack::KevlarClient.contacts
-
-  p entities
-  p contacts
-
 rescue Exception => e
   puts e.message
   puts e.backtrace.join("\n")
@@ -101,22 +95,28 @@ end
 
 redis = get_redis_connection(config_env['redis'])
 
-redis.multi do |r|
-  entities.each do |entity|
-    unless entity['id']
-      puts "Entity not imported as it has no id: " + entity.inspect
-      next
+redis.multi do
+
+  if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
+    entities.each do |entity|
+      unless entity['id']
+        puts "Entity not imported as it has no id: " + entity.inspect
+        next
+      end
+      Flapjack::Data::Entity.add(entity, :redis => redis)
     end
-    Flapjack::Data::Entity.add(entity, :redis => r)
   end
 
-  contacts.each do |contact|
-    unless contact['id']
-      puts "Contact not imported as it has no id: " + contact.inspect
-      next
+  if contacts && contacts.is_a?(Enumerable) && contacts.any? {|e| e['id']}
+    contacts.each do |contact|
+      unless contact['id']
+        puts "Contact not imported as it has no id: " + contact.inspect
+        next
+      end
+      Flapjack::Data::Contact.add(contact, :redis => redis)
     end
-    Flapjack::Data::Contact.add(contact, :redis => r)
   end
+
 end
 
 redis.quit

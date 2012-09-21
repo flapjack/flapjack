@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'yajl'
+require 'yajl/json_gem'
 require 'redis'
 require 'optparse'
 require 'ostruct'
@@ -49,46 +49,44 @@ if options.from
   file     = File.new(filename)
 end
 
-parser   = Yajl::Parser.new
-
 def get_redis_connection(cfg)
-  opts = cfg['path'] ? {:path => cfg['path'])} :
+  opts = cfg['path'] ? {:path => cfg['path']} :
                        {:host => cfg['host'], :port => cfg['port']}
   Redis.new(opts.merge(:db => cfg['db']))
 end
 
 case command
 when "import-contacts"
-  contacts = parser.parse(file)
+  contacts = JSON.parse(file)
 
   if contacts && contacts.is_a?(Enumerable) && contacts.any? {|e| !e['id'].nil?}
     @persistence = get_redis_connection(config_env['redis'])
-    @persistence.multi do |r|
+    @persistence.multi do
       contacts.each do |contact|
         unless contact['id']
           puts "Contact not imported as it has no id: " + contact.inspect
           next
         end
-        Flapjack::Data::Contact.add(contact, :redis => r)
+        Flapjack::Data::Contact.add(contact, :redis => @persistence)
       end
     end
     @persistence.quit
   end
 
 when "import-entities"
-  entities = parser.parse(file)
+  entities = JSON.parse(file)
 
   if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
     @persistence = get_redis_connection(config_env['redis'])
-    @persistence.multi do |r|
-      entities.each do |entity|
-        unless entity['id']
-          puts "Entity not imported as it has no id: " + entity.inspect
-          next
-        end
-        Flapjack::Data::Entity.add(entity, :redis => r)
+    @persistence.multi
+    entities.each do |entity|
+      unless entity['id']
+        puts "Entity not imported as it has no id: " + entity.inspect
+        next
       end
+      Flapjack::Data::Entity.add(entity, :redis => @persistence)
     end
+    @persistence.exec
     @persistence.quit
   end
 
