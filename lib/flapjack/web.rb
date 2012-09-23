@@ -62,6 +62,7 @@ module Flapjack
     end
 
     get '/check' do
+      begin
       @entity = params[:entity]
       @check = params[:check]
 
@@ -74,11 +75,7 @@ module Flapjack
       @check_last_update          = entity_check.last_update
       @check_last_change          = last_change
       @check_summary              = entity_check.summary
-      @last_notifications         =
-        {:problem         => entity_check.last_problem_notification,
-         :recovery        => entity_check.last_recovery_notification,
-         :acknowledgement => entity_check.last_acknowledgement_notification
-        }
+      @last_notifications         = entity_check.last_notifications_of_each_type
       @in_scheduled_maintenance   = entity_check.in_scheduled_maintenance?
       @in_unscheduled_maintenance = entity_check.in_unscheduled_maintenance?
       @scheduled_maintenances     = entity_check.maintenances(nil, nil, :scheduled => true)
@@ -86,15 +83,20 @@ module Flapjack
         entity_check.event_count_at(entity_check.last_change) : nil
 
       haml :check
+      rescue Exception => e
+        puts e.message
+        puts e.backtrace.join("\n")
+      end
+
     end
 
     post '/acknowledgements/:entity/:check' do
-      @entity = params[:entity]
-      @check = params[:check]
-      @summary = params[:summary]
+      @entity             = params[:entity]
+      @check              = params[:check]
+      @summary            = params[:summary]
       @acknowledgement_id = params[:acknowledgement_id]
 
-      dur   = ChronicDuration.parse(params[:duration] || '')
+      dur = ChronicDuration.parse(params[:duration] || '')
       @duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
       entity_check = get_entity_check(@entity, @check)
@@ -102,6 +104,8 @@ module Flapjack
 
       ack = entity_check.create_acknowledgement('summary' => (@summary || ''),
         'acknowledgement_id' => @acknowledgement_id, 'duration' => @duration)
+
+      # FIXME: make this a flash message on the check page and delete the acknowledge page
       @acknowledge_success = !!ack
       [201, haml(:acknowledge)]
     end
