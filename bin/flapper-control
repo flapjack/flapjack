@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+
+require 'daemons'
+opts = {
+  :app_name   => 'flapper',
+  :dir_mode   => :normal,
+  :dir        => '/var/run/flapjack',
+  :multiple   => false,
+  :backtrace  => true,
+  :monitor    => false,
+  :log_dir    => '/var/log/flapjack',
+  :log_output => true,
+}
+Daemons.run(File.join(File.dirname(__FILE__) ,'flapper'), opts)
+
