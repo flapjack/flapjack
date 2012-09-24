@@ -29,8 +29,7 @@ module Flapjack
         hist_states.each_with_index do |obj, index|
           if (index == 0)
             # initial
-            obj.delete(:timestamp)
-            obj[:start_time] = start_time
+            obj[:start_time] = [obj.delete(:timestamp), start_time].max
             obj[:end_time]   = hist_states[index + 1][:timestamp]
           elsif index == (num_states - 1)
             # last
@@ -156,15 +155,14 @@ module Flapjack
             ret
           }
 
-          p total_secs
-
           unless (start_time.nil? || end_time.nil?)
             total_secs.each_pair do |st, ts|
-              percentages[st] = (total_secs[st] * 100) / (end_time - start_time)
+              percentages[st] = (total_secs[st] * 100.0) / (end_time.to_f - start_time.to_f)
             end
           end
         end
 
+        total_secs['ok'] = (end_time - start_time) - total_secs.values.reduce(:+)
         percentages['ok'] = 100 - percentages.values.reduce(:+)
         {:total_seconds => total_secs, :percentages => percentages, :downtime => outs}
       end

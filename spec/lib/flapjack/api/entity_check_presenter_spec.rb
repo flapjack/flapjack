@@ -104,10 +104,13 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
     downtimes = ecp.downtime(time - (12 * 60 * 60), time)
 
+
     # 22 minutes, 3 + 8 + 11
     downtimes.should be_a(Hash)
-    downtimes[:total_seconds].should == (22 * 60)
-    downtimes[:percentage].should == (((22 * 60) * 100) / (12 * 60 * 60))
+    downtimes[:total_seconds].should == {'critical' => (22 * 60),
+      'ok' => ((12 * 60 * 60) - (22 * 60))}
+    downtimes[:percentages].should == {'critical' => (((22 * 60) * 100.0) / (12 * 60 * 60)),
+      'ok' => ((((12 * 60 * 60) - (22 * 60)) * 100.0) / (12 * 60 *60))}
     downtimes[:downtime].should be_an(Array)
     # the last outage gets split by the intervening maintenance period,
     # but the fully covered one gets removed.
