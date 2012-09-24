@@ -27,6 +27,7 @@ fi
 # Evaluate command
 case "$1" in
   start)
+    rbenv shell 1.9.3-p125
     flapjack --config /etc/flapjack/flapjack-config.yaml --daemonize
     RETVAL=$?
   ;;
