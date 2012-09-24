@@ -32,7 +32,7 @@ module Flapjack
       config = YAML::load_file(filename)
 
       if config.nil?
-        logger.error "TODO"
+        logger.error "Could not load config file '#{filename}'"
         return
       end
 
