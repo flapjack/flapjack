@@ -227,8 +227,12 @@ module Flapjack
     end
 
     def build_redis_connection_pool(options = {})
+      redis_em_options = @redis_options.dup
+      redis_db = redis_em_options.delete(:db)
       EventMachine::Synchrony::ConnectionPool.new(:size => options[:size] || 5) do
-        ::Redis.new(@redis_options.merge(:driver => (options[:driver] || 'synchrony')))
+        redis = EM::Protocols::Redis.connect(redis_em_options)
+        redis.select(redis_db)
+        redis
       end
     end
 

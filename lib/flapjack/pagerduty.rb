@@ -186,7 +186,7 @@ module Flapjack
 
       until should_quit?
         logger.debug("pagerduty gateway is going into blpop mode on #{queue}")
-        events[queue] = @redis.blpop(queue)
+        events[queue] = @redis.blpop(queue, 0)
         event         = Yajl::Parser.parse(events[queue][1])
         type          = event['notification_type']
         logger.debug("pagerduty notification event popped off the queue: " + event.inspect)

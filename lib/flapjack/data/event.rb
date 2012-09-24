@@ -23,7 +23,7 @@ module Flapjack
 
         # In production, we wait indefinitely for events coming from other systems.
         if block
-          raw   = opts[:persistence].blpop('events').last
+          raw   = opts[:persistence].blpop('events', 0).last
           event = ::JSON.parse(raw)
           self.new(event)
         else
