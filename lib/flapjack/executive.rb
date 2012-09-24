@@ -25,8 +25,6 @@ module Flapjack
 
     def setup
       @redis = build_redis_connection_pool
-      redis_client_status = @redis.client
-      @logger.debug("Flapjack::Executive.initialize: @redis client status: " + redis_client_status.inspect)
 
       @queues = {:email     => @config['email_queue'],
                  :sms       => @config['sms_queue'],

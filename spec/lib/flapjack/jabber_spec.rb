@@ -25,6 +25,7 @@ describe Flapjack::Jabber do
 
     fj = Flapjack::Jabber.new
     fj.bootstrap(:config => config)
+    fj.should_receive(:build_redis_connection_pool)
 
     EM.should_receive(:next_tick).exactly(4).times.and_yield
     EM.should_receive(:synchrony).exactly(4).times.and_yield
@@ -47,6 +48,8 @@ describe Flapjack::Jabber do
   it "joins a chat room after connecting" do
     fj = Flapjack::Jabber.new
     fj.bootstrap(:config => config)
+
+    fj.should_receive(:build_redis_connection_pool)
 
     fj.should_receive(:connected?).and_return(true)
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Presence))
@@ -131,10 +134,10 @@ describe Flapjack::Jabber do
     EM::Synchrony.should_receive(:add_periodic_timer).with(60).and_return(timer_2)
 
     redis = mock('redis')
-    EventMachine::Synchrony::ConnectionPool.should_receive(:new).and_return(redis)
 
     fj = Flapjack::Jabber.new
     fj.bootstrap(:config => config)
+    fj.should_receive(:build_redis_connection_pool).and_return(redis)
     fj.should_receive(:register_handler).exactly(4).times
 
     fj.should_receive(:connect)

@@ -271,7 +271,7 @@ module Flapjack
         # before joining the group chat rooms)
         if connected?
           logger.debug("jabber is connected so commencing blpop on #{queue}")
-          events[queue] = @redis.blpop(queue)
+          events[queue] = @redis.blpop(queue, 0)
           event         = Yajl::Parser.parse(events[queue][1])
           type          = event['notification_type']
           logger.debug('jabber notification event received')
