@@ -13,6 +13,7 @@ end
 require 'flapjack/configuration'
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
+require 'flapjack/data/event'
 
 options = OpenStruct.new
 options.config    = File.join('etc', 'flapjack_config.yaml')
@@ -92,7 +93,7 @@ when "import-entities"
 
 when "purge-events"
   @persistence = get_redis_connection(config_env['redis'])
-  Flapjack::Data.Event.purge_all(:redis => @persistence)
+  Flapjack::Data::Event.purge_all(:redis => @persistence)
   @persistence.quit
 
 else
