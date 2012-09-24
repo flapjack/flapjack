@@ -25,7 +25,9 @@ module Flapjack
     # doesn't work with Rack::Test for some reason
     unless 'test'.eql?(FLAPJACK_ENV)
       rescue_exception = Proc.new { |env, exception|
-        [503, {}, exception.message]
+        logger.error exception.message
+        logger.error exception.backtrace.join("\n")
+        [503, {}, {:status => 503, :reason => exception.message}.to_json]
       }
 
       use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
@@ -36,17 +38,6 @@ module Flapjack
     before do
       # will only initialise the first time it's run
       Flapjack::API.bootstrap
-    end
-
-    helpers do
-      def json_status(code, reason)
-        status code
-        {:status => code, :reason => reason}.to_json
-      end
-
-      def logger
-        Flapjack::API.logger
-      end
     end
 
     get '/entities' do
@@ -211,7 +202,7 @@ module Flapjack
         params[:check], :redis => @@redis)
       entity_check.create_scheduled_maintenance(:start_time => params[:start_time],
         :duration => params[:duration], :summary => params[:summary])
-      status 201
+      status 204
     end
 
     # create an acknowledgement for a service on an entity
@@ -232,15 +223,11 @@ module Flapjack
         params[:check], :redis => @@redis)
       entity_check.create_acknowledgement('summary' => params[:summary],
         'duration' => duration)
-      status 201
+      status 204
     end
 
     not_found do
-      json_status 404, "Not found"
-    end
-
-    error do
-      json_status 500, env['sinatra.error'].message
+      [404, {}, {:status => 404, :reason => "Not found"}.to_json]
     end
 
     private
@@ -265,7 +252,7 @@ module Flapjack
         return unless value
         Time.iso8601(value).getutc.to_i
       rescue ArgumentError => e
-        # FIXME log error
+        logger.error "Couldn't parse time from '#{value}'"
         nil
       end
 

@@ -18,8 +18,8 @@ module Flapjack
     # doesn't work with Rack::Test for some reason
     unless 'test'.eql?(FLAPJACK_ENV)
       rescue_exception = Proc.new { |env, exception|
-        p exception.message
-        puts exception.backtrace.join("\n")
+        logger.error exception.message
+        logger.error exception.backtrace.join("\n")
         [503, {}, exception.message]
       }
 

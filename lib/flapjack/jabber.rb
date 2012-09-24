@@ -283,9 +283,6 @@ module Flapjack
                 close # Blather::Client.close
               end
             end
-            # FIXME: should we also set something so should_quit? returns true
-            # to prevent retrieving more notifications from the queue while closing?
-            # or does close only return once the connection is really and truely closed?
           else
             entity, check = event['event_id'].split(':')
             state         = event['state']
