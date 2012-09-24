@@ -45,6 +45,17 @@ module Flapjack
         opts[:persistence].llen('events')
       end
 
+      # FIXME make this use a logger taken from the opts
+      def self.purge_all(opts = {})
+        events_size = opts[:redis].llen('events')
+        puts "purging #{events_size} events..."
+        timestamp = Time.now.to_i
+        puts "renaming events to events.#{timestamp}"
+        opts[:redis].rename('events', "events.#{timestamp}")
+        puts "setting expiry of events.#{timestamp} to 8 hours"
+        opts[:redis].expire("events.#{timestamp}", (60 * 60 * 8))
+      end
+
       def initialize(attrs={})
         @attrs = attrs
         @attrs['time'] = Time.now.to_i unless @attrs.has_key?('time')

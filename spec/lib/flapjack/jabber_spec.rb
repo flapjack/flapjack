@@ -139,7 +139,7 @@ describe Flapjack::Jabber do
 
     fj.should_receive(:connect)
     fj.should_receive(:connected?).exactly(3).times.and_return(true)
-    fj.should_receive(:should_quit?).exactly(3).times.and_return(false, false, true)
+    fj.should_receive(:should_quit?).exactly(4).times.and_return(false, false, true)
     redis.should_receive(:blpop).twice.and_return(
       ["jabber_notifications", %q{{"notification_type":"problem","event_id":"main-example.com:ping","state":"critical","summary":"!!!"}}],
       ["jabber_notifications", %q{{"notification_type":"shutdown"}}]

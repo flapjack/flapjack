@@ -16,56 +16,35 @@ module Flapjack
         @entity_check = entity_check
       end
 
-      # if options[:chop] is true, overlapping outages at start and end
-      # times will be sliced to fit.
       def outages(start_time, end_time, options = {})
-        # states is an array of hashes, with [state, timestamp, summary] keys
-        states = @entity_check.historical_states(start_time, end_time)
-        return states if states.empty?
+        # hist_states is an array of hashes, with [state, timestamp, summary] keys
+        hist_states = @entity_check.historical_states(start_time, end_time)
+        return hist_states if hist_states.empty?
 
-        # if it started failed, prepend the earlier event
-        initial = @entity_check.historical_state_before(states.first[:timestamp])
-        if (initial && (initial[:state] == Flapjack::Data::EntityCheck::STATE_CRITICAL))
-          states.unshift(initial)
-        end
+        initial = @entity_check.historical_state_before(hist_states.first[:timestamp])
+        hist_states.unshift(initial) if initial
 
-        # if it ended failed, append the event when it recovered
-        if states.last[:state] == Flapjack::Data::EntityCheck::STATE_CRITICAL
-          # TODO ensure this event is not CRITICAL, get first non-CRITICAL if so
-          last = @entity_check.historical_state_after(states.last[:timestamp])
-          states.push(last) if last
-        end
+        num_states = hist_states.size
 
-        last_state = nil
-
-        # returns an array of hashes, with [:start_time, :end_time, :summary]
-        time_periods = states.inject([]) do |ret, obj|
-          if (obj[:state] == Flapjack::Data::EntityCheck::STATE_CRITICAL) &&
-            (last_state.nil? || (last_state != Flapjack::Data::EntityCheck::STATE_CRITICAL))
-
-            # flipped to failed, mark next outage
-            last_state = obj[:state]
-            ret << {:start_time => obj[:timestamp], :end_time => nil, :summary => obj[:summary]}
-          elsif (obj[:state] != Flapjack::Data::EntityCheck::STATE_CRITICAL) &&
-            (last_state == Flapjack::Data::EntityCheck::STATE_CRITICAL)
-
-            # flipped to not failed, mark end time for the current outage
-            last_state = obj[:state]
-            ret.last[:end_time] = obj[:timestamp]
+        hist_states.each_with_index do |obj, index|
+          if (index == 0)
+            # initial
+            ts = obj.delete(:timestamp)
+            obj[:start_time] = start_time ? [ts, start_time].max : ts
+            obj[:end_time]   = hist_states[index + 1][:timestamp]
+          elsif index == (num_states - 1)
+            # last
+            obj[:start_time] = obj.delete(:timestamp)
+            obj[:end_time]   = end_time
+          else
+            # except for first and last
+            obj[:start_time] = obj.delete(:timestamp)
+            obj[:end_time]   = hist_states[index + 1][:timestamp]
           end
-          ret
+          obj[:duration] = obj[:end_time] ? (obj[:end_time] - obj[:start_time]) : nil
         end
 
-        if options[:chop]
-          if start_time && (time_periods.first[:start_time] < start_time)
-            time_periods.first[:start_time] = start_time
-          end
-          if time_periods.last[:end_time].nil? || (end_time && (time_periods.last[:end_time] > end_time))
-            time_periods.last[:end_time] = (end_time || Time.now.to_i)
-          end
-        end
-
-        time_periods
+        hist_states.reject {|obj| obj[:state] == 'ok'}
       end
 
       def unscheduled_maintenance(start_time, end_time)
@@ -106,10 +85,15 @@ module Flapjack
       def downtime(start_time, end_time)
         sched_maintenances = scheduled_maintenance(start_time, end_time)
 
-        outs = outages(start_time, end_time, :chop => true)
+        outs = outages(start_time, end_time)
 
-        total_secs = 0
-        percentage = 0
+        total_secs  = {}
+        percentages = {}
+
+        outs.collect {|obj| obj[:state]}.uniq.each do |st|
+          total_secs[st]  = 0
+          percentages[st] = (start_time.nil? || end_time.nil?) ? nil : 0
+        end
 
         unless outs.empty?
 
@@ -126,10 +110,12 @@ module Flapjack
               next unless o[:start_time] < sm[:start_time] &&
                 o[:end_time] > sm[:end_time]
               o[:delete] = true
-              split_outs += [{:start_time => o[:start_time],
+              split_outs += [{:state => o[:state],
+                              :start_time => o[:start_time],
                               :end_time => sm[:start_time],
                               :summary => "#{o[:summary]} [split start]"},
-                             {:start_time => sm[:end_time],
+                             {:state => o[:state],
+                              :start_time => sm[:end_time],
                               :end_time => o[:end_time],
                               :summary => "#{o[:summary]} [split finish]"}]
             }
@@ -165,16 +151,21 @@ module Flapjack
             outs.reject! {|o| o[:delete]}
           end
 
-          # sum outage times
-          total_secs = outs.inject(0) {|sum, o|
-            sum += (o[:end_time] - o[:start_time])
+          total_secs = outs.inject(total_secs) {|ret, o|
+            ret[o[:state]] += (o[:end_time] - o[:start_time])
+            ret
           }
 
-          percentage = (start_time.nil? || end_time.nil?) ? nil :
-                         (total_secs * 100) / (end_time - start_time)
+          unless (start_time.nil? || end_time.nil?)
+            total_secs.each_pair do |st, ts|
+              percentages[st] = (total_secs[st] * 100.0) / (end_time.to_f - start_time.to_f)
+            end
+            total_secs['ok'] = (end_time - start_time) - total_secs.values.reduce(:+)
+            percentages['ok'] = 100 - percentages.values.reduce(:+)
+          end
         end
 
-        {:total_seconds => total_secs, :percentage => percentage, :downtime => outs}
+        {:total_seconds => total_secs, :percentages => percentages, :downtime => outs}
       end
 
     end
