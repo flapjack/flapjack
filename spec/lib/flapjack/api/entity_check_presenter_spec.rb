@@ -56,6 +56,22 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     # TODO check the data in those hashes
   end
 
+  it "returns the same list of outage hashes with no start and end time set" do
+    entity_check.should_receive(:historical_states).
+      with(nil, nil).and_return(states)
+
+    entity_check.should_receive(:historical_state_before).
+      with(time - (4 * 60 * 60)).and_return(nil)
+
+    ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
+    outages = ecp.outages(nil, nil)
+    outages.should_not be_nil
+    outages.should be_an(Array)
+    outages.should have(4).time_ranges
+
+    # TODO check the data in those hashes
+  end
+
   it "a list of unscheduled maintenances for an entity check" do
     entity_check.should_receive(:maintenances).
       with(time - (12 * 60 * 60), time, :scheduled => false).and_return(maintenances)
@@ -88,7 +104,7 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     # TODO check the data in those hashes
   end
 
-  it "returns downtime and percentage for an entity check" do
+  it "returns downtime and percentage for a downtime check" do
     entity_check.should_receive(:historical_states).
       with(time - (12 * 60 * 60), time).and_return(states)
 
@@ -111,6 +127,29 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
       'ok' => ((12 * 60 * 60) - (22 * 60))}
     downtimes[:percentages].should == {'critical' => (((22 * 60) * 100.0) / (12 * 60 * 60)),
       'ok' => ((((12 * 60 * 60) - (22 * 60)) * 100.0) / (12 * 60 *60))}
+    downtimes[:downtime].should be_an(Array)
+    # the last outage gets split by the intervening maintenance period,
+    # but the fully covered one gets removed.
+    downtimes[:downtime].should have(4).time_ranges
+  end
+
+  it "returns downtime (but no percentage) for an unbounded downtime check" do
+    entity_check.should_receive(:historical_states).
+      with(nil, nil).and_return(states)
+
+    entity_check.should_receive(:historical_state_before).
+      with(time - (4 * 60 * 60)).and_return(nil)
+
+    entity_check.should_receive(:maintenances).
+      with(nil, nil, :scheduled => true).and_return(maintenances)
+
+    ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
+    downtimes = ecp.downtime(nil, nil)
+
+    # 22 minutes, 3 + 8 + 11
+    downtimes.should be_a(Hash)
+    downtimes[:total_seconds].should == {'critical' => (22 * 60)}
+    downtimes[:percentages].should == {'critical' => nil}
     downtimes[:downtime].should be_an(Array)
     # the last outage gets split by the intervening maintenance period,
     # but the fully covered one gets removed.
