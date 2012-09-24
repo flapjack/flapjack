@@ -34,10 +34,9 @@ describe Flapjack::Executive, :redis => true do
     shutdown_evt.should_receive(:time).and_return(Time.now)
     Flapjack::Data::Event.should_receive(:next).and_return(shutdown_evt)
 
-    EventMachine::Synchrony::ConnectionPool.should_receive(:new).and_return(@redis)
-
     executive = Flapjack::Executive.new
     executive.bootstrap(:config => {})
+    executive.should_receive(:build_redis_connection_pool).and_return(@redis)
 
     # hacky, but the behaviour it's mimicking (shutdown from another thread) isn't
     # conducive to nice tests
