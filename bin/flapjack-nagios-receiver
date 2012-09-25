@@ -76,11 +76,24 @@ def process_input
   begin
     while line = @fifo.gets
       skip unless line
-      object_type, timestamp, entity, check, state, check_time, check_latency, check_output, check_perfdata = line.split("\t")
+      split_line = line.split("\t")
+
+      object_type, timestamp, entity, check, state, check_time, check_latency, check_output, check_perfdata = split_line
+
+      case
+      when split_line.length != 9
+        puts "ERROR - rejecting this line as it doesn't split into 9 tab separated strings: [#{line}]"
+        next
+      when (timestamp !~ /^\d+$/)
+        puts "ERROR - rejecting this line as second string doesn't look like a timestamp: [#{line}]"
+        next
+      when (not ((object_type == '[HOSTPERFDATA]') or (object_type == '[SERVICEPERFDATA]')))
+        puts "ERROR - rejecting this line as first string is neither '[HOSTPERFDATA]' nor '[SERVICEPERFDATA]': [#{line}]"
+        next
+      end
+
       puts "#{object_type}, #{timestamp}, #{entity}, #{check}, #{state}, #{check_output}"
-      next unless line.length == 9
-      next unless timestamp =~ /^\d+$/
-      next unless (object_type == '[HOSTPERFDATA]') or (object_type == '[SERVICEPERFDATA]')
+
       state = 'ok'       if state.downcase == 'up'
       state = 'critical' if state.downcase == 'down'
       event = {
@@ -95,15 +108,13 @@ def process_input
     end
   rescue Redis::CannotConnectError
     puts "Error, unable to to connect to the redis server (#{$!})"
-  rescue EOFError
-    puts "Error - end of file reached when reading from the named pipe. Nagios down?"
-    sleep 10
   end
 end
 
 def main
   while true
     process_input
+    puts "Whoops, restarting main loop in 10 seconds"
     sleep 10
   end
 end
