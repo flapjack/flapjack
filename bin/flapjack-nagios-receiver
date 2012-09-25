@@ -18,8 +18,8 @@ OptionParser.new do |opts|
     options.config = c
   end
 
-  opts.on("-f", "--fifo [PATH]", String, "PATH to the nagios perfdata named pipe") do |f|
-    options.fifo_path = f
+  opts.on("-f", "--fifo FIFO", String, "Path to the nagios perfdata named pipe") do |f|
+    options.fifo = f
   end
 
 end.parse!(ARGV)
@@ -42,10 +42,12 @@ if config_env.nil? || config_env.empty?
   exit(false)
 end
 
-# add lib to the default include path
-#unless $:.include?(File.dirname(__FILE__) + '/../lib/')
-#  $: << File.dirname(__FILE__) + '/../lib'
-#end
+if !options.fifo
+  puts "You must specify a path to the nagios perfdata named pipe using the --fifo option"
+  exit(false)
+end
+
+@fifo = File.new(options.fifo)
 
 # nagios.cfg contains the following templates for host and service data (modified from the default
 # to include hoststate / servicestate, and a fake service 'HOST' for hostperfdata, so that the
@@ -71,11 +73,10 @@ def process_input
     redis = Redis.new(:db => @redis_db, :host => @redis_host, :port => @redis_port)
   end
 
-  puts "ARGV after option processing looks like this: [#{ARGV.inspect}]"
-
   begin
-    while line = ARGF.readline.split("\t")
-      object_type, timestamp, entity, check, state, check_time, check_latency, check_output, check_perfdata = line
+    while line = @fifo.gets
+      skip unless line
+      object_type, timestamp, entity, check, state, check_time, check_latency, check_output, check_perfdata = line.split("\t")
       puts "#{object_type}, #{timestamp}, #{entity}, #{check}, #{state}, #{check_output}"
       next unless line.length == 9
       next unless timestamp =~ /^\d+$/
