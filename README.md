@@ -132,20 +132,16 @@ flapjack-nagios-receiver
 
 There is a control script that uses [Daemons](http://daemons.rubyforge.org/) to start, stop, restart, show status etc of the flapjack-nagios-receiver process. Options after -- are passed through to flapjack-nagios-receiver. Run it like so:
 
-    flapjack-nagios-receiver-control start -- --config /etc/flapjack/flapjack-config.yaml /path/to/nagios/perfdata.fifo
+    flapjack-nagios-receiver-control start -- --config /etc/flapjack/flapjack-config.yaml --fifo /path/to/nagios/perfdata.fifo
     flapjack-nagios-receiver-control status
-    flapjack-nagios-receiver-control restart -- --config /etc/flapjack/flapjack-config.yaml /path/to/nagios/perfdata.fifo
+    flapjack-nagios-receiver-control restart -- --config /etc/flapjack/flapjack-config.yaml --fifo /path/to/nagios/perfdata.fifo
     flapjack-nagios-receiver-control stop
 
 * Bypassing daemons control script: *
 
-This process needs to be started with the nagios perfdata named pipe attached to its STDIN like so:
+Specify the path to the nagios named pipe (fifo):
 
-    flapjack-nagios-receiver < /var/cache/nagios3/event_stream.fifo
-
-Or the path to the fifo can just be given as an argument, thanks to the magical powers of ARGV:
-
-    flapjack-nagios-receiver /var/cache/nagios3/event_stream.fifo
+    flapjack-nagios-receiver --fifo /var/cache/nagios3/event_stream.fifo
 
 Now as nagios feeds check execution results into the perfdata named pipe, flapjack-nagios-receiver will convert them to JSON encoded ruby objects and insert them into the *events* queue.
 
