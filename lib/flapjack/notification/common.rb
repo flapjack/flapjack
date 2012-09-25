@@ -14,7 +14,7 @@ module Flapjack
       def perform(notification)
         bootstrap
         @logger.debug "Woo, got a notification to send out: #{notification.inspect}"
-        dispatch(notification, :logger => @logger, :redis => ::Redis.new)
+        dispatch(notification, :logger => @logger, :redis => ::Resque.redis)
       end
 
     end
