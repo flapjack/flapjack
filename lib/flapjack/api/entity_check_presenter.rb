@@ -27,22 +27,24 @@ module Flapjack
         num_states = hist_states.size
 
         hist_states.each_with_index do |obj, index|
-          if (index == 0)
+          ts = obj.delete(:timestamp)
+          if index == (num_states - 1)
+            # last (even if the only one)
+            obj[:start_time] = start_time ? [ts, start_time].max : ts
+            obj[:end_time]   = end_time
+          elsif (index == 0)
             # initial
-            ts = obj.delete(:timestamp)
             obj[:start_time] = start_time ? [ts, start_time].max : ts
             obj[:end_time]   = hist_states[index + 1][:timestamp]
-          elsif index == (num_states - 1)
-            # last
-            obj[:start_time] = obj.delete(:timestamp)
-            obj[:end_time]   = end_time
           else
             # except for first and last
-            obj[:start_time] = obj.delete(:timestamp)
+            obj[:start_time] = ts
             obj[:end_time]   = hist_states[index + 1][:timestamp]
           end
           obj[:duration] = obj[:end_time] ? (obj[:end_time] - obj[:start_time]) : nil
         end
+
+        # p hist_states
 
         hist_states.reject {|obj| obj[:state] == 'ok'}
       end
@@ -107,16 +109,18 @@ module Flapjack
             split_outs = []
 
             outs.each { |o|
-              next unless o[:start_time] < sm[:start_time] &&
-                o[:end_time] > sm[:end_time]
+              next unless o[:end_time] && (o[:start_time] < sm[:start_time]) &&
+                (o[:end_time] > sm[:end_time])
               o[:delete] = true
               split_outs += [{:state => o[:state],
                               :start_time => o[:start_time],
                               :end_time => sm[:start_time],
+                              :duration => sm[:start_time] - o[:start_time],
                               :summary => "#{o[:summary]} [split start]"},
                              {:state => o[:state],
                               :start_time => sm[:end_time],
                               :end_time => o[:end_time],
+                              :duration => o[:end_time] - sm[:end_time],
                               :summary => "#{o[:summary]} [split finish]"}]
             }
 
@@ -130,7 +134,7 @@ module Flapjack
           sched_maintenances.each do |sm|
 
             outs.each do |o|
-              next unless (sm[:start_time] < o[:end_time]) &&
+              next unless o[:end_time] && (sm[:start_time] < o[:end_time]) &&
                 (sm[:end_time] > o[:start_time])
 
               if sm[:start_time] <= o[:start_time] &&
@@ -142,9 +146,11 @@ module Flapjack
               elsif sm[:start_time] <= o[:start_time]
                 # partially overlapping on the earlier side
                 o[:start_time] = sm[:end_time]
+                o[:duration] = o[:end_time] - o[:start_time]
               elsif sm[:end_time] >= o[:end_time]
                 # partially overlapping on the later side
                 o[:end_time] = sm[:start_time]
+                o[:duration] = o[:end_time] - o[:start_time]
               end
             end
 
@@ -152,7 +158,7 @@ module Flapjack
           end
 
           total_secs = outs.inject(total_secs) {|ret, o|
-            ret[o[:state]] += (o[:end_time] - o[:start_time])
+            ret[o[:state]] += o[:duration] if o[:duration]
             ret
           }
 
