@@ -62,7 +62,7 @@ module Flapjack
     end
 
     get '/check' do
-      begin
+      #begin
       @entity = params[:entity]
       @check  = params[:check]
 
@@ -86,10 +86,10 @@ module Flapjack
       @current_unscheduled_maintenance = entity_check.current_maintenance(:scheduled => false)
 
       haml :check
-      rescue Exception => e
-        puts e.message
-        puts e.backtrace.join("\n")
-      end
+      #rescue Exception => e
+      #  puts e.message
+      #  puts e.backtrace.join("\n")
+      #end
 
     end
 
@@ -108,9 +108,7 @@ module Flapjack
       ack = entity_check.create_acknowledgement('summary' => (@summary || ''),
         'acknowledgement_id' => @acknowledgement_id, 'duration' => @duration)
 
-      # FIXME: make this a flash message on the check page and delete the acknowledge page
-      @acknowledge_success = !!ack
-      [201, haml(:acknowledge)]
+      redirect back
     end
 
     # FIXME: there is bound to be a more idiomatic / restful way of doing this
@@ -152,17 +150,8 @@ module Flapjack
       raise ArgumentError, "start time parsed to zero" unless start_time > 0
 
       patches = {}
-      patches[:end_time => end_time] if end_time && (end_time > start_time)
+      patches[:end_time] = end_time if end_time && (end_time > start_time)
 
-      puts "params: #{params.inspect}"
-      puts "start_time: #{start_time.inspect}"
-      puts "end_time: #{end_time.inspect}"
-      puts "patches: #{patches.inspect}"
-      if end_time && (end_time > start_time)
-        puts "end_time && end_time > start_time"
-      else
-        puts "not end_time && end_time > start_time"
-      end
       raise ArgumentError.new("no valid data received to patch with") if patches.empty?
 
       entity_check.update_scheduled_maintenance(start_time, patches)
