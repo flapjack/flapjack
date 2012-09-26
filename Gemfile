@@ -10,6 +10,7 @@ group :test do
   gem 'resque_spec'
   gem 'webmock'
   gem 'guard'
+  gem 'rb-fsevent', '~> 0.9.1'
   gem 'guard-rspec'
   gem 'guard-cucumber'
   gem 'fuubar'
