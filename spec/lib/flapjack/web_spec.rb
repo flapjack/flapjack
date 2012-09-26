@@ -101,8 +101,6 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
     entity_check.should_receive(:last_change).and_return(time - (3 * 60 * 60))
     entity_check.should_receive(:summary).and_return('all good')
     entity_check.should_receive(:last_notifications_of_each_type).and_return(last_notifications)
-    entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
-    entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
     entity_check.should_receive(:maintenances).with(nil, nil, :scheduled => true).and_return([])
     entity_check.should_receive(:failed?).and_return(false)
     entity_check.should_receive(:current_maintenance).with(:scheduled => true).and_return(false)
