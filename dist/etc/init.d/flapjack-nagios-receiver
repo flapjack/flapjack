@@ -28,9 +28,8 @@ fi
 
 # Evaluate command
 
-#/bin/bash -c "source /etc/profile.d/rbenv.sh && rbenv shell 1.9.3-p125 && flapjack-nagios-receiver-control $1 -- --config /etc/flapjack/flapjack-config.yaml ${NAGIOS_PERFDATA_FIFO}"
-rbenv shell 1.9.3-p125 && flapjack-nagios-receiver-control $1 -- --config /etc/flapjack/flapjack-config.yaml ${NAGIOS_PERFDATA_FIFO}
-RETVAL=$?
+rbenv shell 1.9.3-p125 && flapjack-nagios-receiver-control $1 -- --config /etc/flapjack/flapjack-config.yaml --fifo ${NAGIOS_PERFDATA_FIFO}
 
+RETVAL=$?
 exit $RETVAL
 
