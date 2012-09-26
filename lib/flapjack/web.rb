@@ -64,7 +64,7 @@ module Flapjack
     get '/check' do
       begin
       @entity = params[:entity]
-      @check = params[:check]
+      @check  = params[:check]
 
       entity_check = get_entity_check(@entity, @check)
       return 404 if entity_check.nil?
@@ -81,6 +81,9 @@ module Flapjack
       @scheduled_maintenances     = entity_check.maintenances(nil, nil, :scheduled => true)
       @acknowledgement_id         = entity_check.failed? ?
         entity_check.event_count_at(entity_check.last_change) : nil
+
+      @current_scheduled_maintenance   = entity_check.current_maintenance(:scheduled => true)
+      @current_unscheduled_maintenance = entity_check.current_maintenance(:scheduled => false)
 
       haml :check
       rescue Exception => e
@@ -113,7 +116,7 @@ module Flapjack
     # FIXME: there is bound to be a more idiomatic / restful way of doing this
     post '/end_unscheduled_maintenance/:entity/:check' do
       @entity = params[:entity]
-      @check = params[:check]
+      @check  = params[:check]
 
       entity_check = get_entity_check(@entity, @check)
       return 404 if entity_check.nil?
@@ -130,12 +133,39 @@ module Flapjack
       duration   = ChronicDuration.parse(params[:duration])
       summary    = params[:summary]
 
-      entity_check = get_entity_check(params[:entity],  params[:check])
+      entity_check = get_entity_check(params[:entity], params[:check])
       return 404 if entity_check.nil?
 
       entity_check.create_scheduled_maintenance(:start_time => start_time,
                                                 :duration   => duration,
                                                 :summary    => summary)
+      redirect back
+    end
+
+    # modify scheduled maintenance
+    patch '/scheduled_maintenances/:entity/:check' do
+      entity_check = get_entity_check(params[:entity], params[:check])
+      return 404 if entity_check.nil?
+
+      end_time   = Chronic.parse(params[:end_time]).to_i
+      start_time = params[:start_time].to_i
+      raise ArgumentError, "start time parsed to zero" unless start_time > 0
+
+      patches = {}
+      patches[:end_time => end_time] if end_time && (end_time > start_time)
+
+      puts "params: #{params.inspect}"
+      puts "start_time: #{start_time.inspect}"
+      puts "end_time: #{end_time.inspect}"
+      puts "patches: #{patches.inspect}"
+      if end_time && (end_time > start_time)
+        puts "end_time && end_time > start_time"
+      else
+        puts "not end_time && end_time > start_time"
+      end
+      raise ArgumentError.new("no valid data received to patch with") if patches.empty?
+
+      entity_check.update_scheduled_maintenance(start_time, patches)
       redirect back
     end
 
