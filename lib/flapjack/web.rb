@@ -62,9 +62,9 @@ module Flapjack
     end
 
     get '/check' do
-      begin
+      #begin
       @entity = params[:entity]
-      @check = params[:check]
+      @check  = params[:check]
 
       entity_check = get_entity_check(@entity, @check)
       return 404 if entity_check.nil?
@@ -76,17 +76,18 @@ module Flapjack
       @check_last_change          = last_change
       @check_summary              = entity_check.summary
       @last_notifications         = entity_check.last_notifications_of_each_type
-      @in_scheduled_maintenance   = entity_check.in_scheduled_maintenance?
-      @in_unscheduled_maintenance = entity_check.in_unscheduled_maintenance?
       @scheduled_maintenances     = entity_check.maintenances(nil, nil, :scheduled => true)
       @acknowledgement_id         = entity_check.failed? ?
         entity_check.event_count_at(entity_check.last_change) : nil
 
+      @current_scheduled_maintenance   = entity_check.current_maintenance(:scheduled => true)
+      @current_unscheduled_maintenance = entity_check.current_maintenance(:scheduled => false)
+
       haml :check
-      rescue Exception => e
-        puts e.message
-        puts e.backtrace.join("\n")
-      end
+      #rescue Exception => e
+      #  puts e.message
+      #  puts e.backtrace.join("\n")
+      #end
 
     end
 
@@ -105,15 +106,13 @@ module Flapjack
       ack = entity_check.create_acknowledgement('summary' => (@summary || ''),
         'acknowledgement_id' => @acknowledgement_id, 'duration' => @duration)
 
-      # FIXME: make this a flash message on the check page and delete the acknowledge page
-      @acknowledge_success = !!ack
-      [201, haml(:acknowledge)]
+      redirect back
     end
 
     # FIXME: there is bound to be a more idiomatic / restful way of doing this
     post '/end_unscheduled_maintenance/:entity/:check' do
       @entity = params[:entity]
-      @check = params[:check]
+      @check  = params[:check]
 
       entity_check = get_entity_check(@entity, @check)
       return 404 if entity_check.nil?
@@ -130,12 +129,30 @@ module Flapjack
       duration   = ChronicDuration.parse(params[:duration])
       summary    = params[:summary]
 
-      entity_check = get_entity_check(params[:entity],  params[:check])
+      entity_check = get_entity_check(params[:entity], params[:check])
       return 404 if entity_check.nil?
 
       entity_check.create_scheduled_maintenance(:start_time => start_time,
                                                 :duration   => duration,
                                                 :summary    => summary)
+      redirect back
+    end
+
+    # modify scheduled maintenance
+    patch '/scheduled_maintenances/:entity/:check' do
+      entity_check = get_entity_check(params[:entity], params[:check])
+      return 404 if entity_check.nil?
+
+      end_time   = Chronic.parse(params[:end_time]).to_i
+      start_time = params[:start_time].to_i
+      raise ArgumentError, "start time parsed to zero" unless start_time > 0
+
+      patches = {}
+      patches[:end_time] = end_time if end_time && (end_time > start_time)
+
+      raise ArgumentError.new("no valid data received to patch with") if patches.empty?
+
+      entity_check.update_scheduled_maintenance(start_time, patches)
       redirect back
     end
 

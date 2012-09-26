@@ -161,7 +161,7 @@ module Flapjack
           result[:skip_filters] = true
         end
 
-        entity_check.update_scheduled_maintenance
+        entity_check.update_current_scheduled_maintenance
 
       # Action events represent human or automated interaction with Flapjack
       when 'action'
