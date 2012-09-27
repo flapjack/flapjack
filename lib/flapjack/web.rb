@@ -176,19 +176,18 @@ module Flapjack
     end
 
     get '/contacts' do
-      @contacts = Flapjack::Data::Contact.all
+      @contacts = Flapjack::Data::Contact.all(:redis => @@redis)
       haml :contacts
     end
 
-    get %r{/contacts/(?:(\d+)|(\w+@\w+))} do
-      id = params[:captures][0]
-      email = params[:captures][1]
+    get "/contacts/:contact" do
+      contact_id = params[:contact]
 
-      if id
-        @contact = Flapjack::Data::Contact.find_by_id(id)
-      elsif email
-        @contact = Flapjack::Data::Contact.find_by_email(email)
-      else
+      if contact_id
+        @contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @@redis)
+      end
+
+      unless @contact
         status 404
         return
       end
