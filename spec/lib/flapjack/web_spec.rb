@@ -187,4 +187,15 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
     last_response.status.should == 302
   end
 
+  it "shows a list of all known contacts" do
+    Flapjack::Data::Contact.should_receive(:all)
+
+    get "/contacts"
+    last_response.should be_ok
+  end
+
+  it "shows details of an individual contact found by email"
+
+  it "shows details of an individual contact found by id"
+
 end

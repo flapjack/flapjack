@@ -6,6 +6,56 @@ module Flapjack
 
     class Contact
 
+      attr_accessor :first_name, :last_name, :email, :media
+
+      def self.all(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        logger = options[:logger]
+
+        contact_keys = redis.keys('contact:*')
+
+        contact_keys.inject([]) {|ret, k|
+          k =~ /^contact:(\d+)$/
+          id = $1
+          contact = self.find_by_id(id.to_i, :redis => redis)
+          ret << contact if contact
+          ret
+        }
+      end
+
+      # TODO maybe store a reverse mapping of contacts by email address
+      # (would make this query quicker)
+      def self.find_by_email(email, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        raise "No email value passed" unless id
+        logger = options[:logger]
+
+        contact_keys = redis.keys('contact:*')
+
+        return unless email_key = contact_keys.detect {|k|
+          ck_email = redis.hget(k, 'email')
+          email == ck_email
+        }
+
+        email_key =~ /^contact:(\d+)$/
+        id = $1
+
+        self.find_by_id(id.to_i, :redis => redis)
+      end
+
+      def self.find_by_id(id, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        raise "No id value passed" unless id
+        logger = options[:logger]
+
+        first_name = redis.hget("contact:#{id}", 'first_name')
+        last_name  = redis.hget("contact:#{id}", 'last_name')
+        email      = redis.hget("contact:#{id}", 'email')
+
+        Contact.new(:first_name => first_name,
+          :last_name => last_name, :email => email, :id => id.to_i)
+      end
+
       # takes a check, looks up contacts that are interested in this check (or in the check's entity)
       # and returns an array of contact ids
       def self.find_all_for_entity_check(entity_check, options = {})

@@ -6,6 +6,9 @@ require 'flapjack/patches'
 
 require 'flapjack/data/entity'
 
+# TODO might want to split the class methods out to a separate class, DAO pattern
+# ( http://en.wikipedia.org/wiki/Data_access_object ).
+
 module Flapjack
 
   module Data
