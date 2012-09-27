@@ -9,6 +9,7 @@ require 'haml'
 require 'rack/fiber_pool'
 
 require 'flapjack/pikelet'
+require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/utility'
 
@@ -172,6 +173,27 @@ module Flapjack
 
       entity_check.delete_scheduled_maintenance(:start_time => params[:start_time].to_i)
       redirect back
+    end
+
+    get '/contacts' do
+      @contacts = Flapjack::Data::Contact.all
+      haml :contacts
+    end
+
+    get %r{/contacts/(?:(\d+)|(\w+@\w+))} do
+      id = params[:captures][0]
+      email = params[:captures][1]
+
+      if id
+        @contact = Flapjack::Data::Contact.find_by_id(id)
+      elsif email
+        @contact = Flapjack::Data::Contact.find_by_email(email)
+      else
+        status 404
+        return
+      end
+
+      haml :contact
     end
 
   private
