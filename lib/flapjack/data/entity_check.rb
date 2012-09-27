@@ -64,12 +64,11 @@ module Flapjack
       def current_maintenance(opts)
         sched = opts[:scheduled] ? 'scheduled' : 'unscheduled'
         ts = @redis.get("#{@key}:#{sched}_maintenance")
-        return nil unless ts
-        maint_data = {:start_time => ts.to_i,
-                      :duration   => @redis.zscore("#{@key}:#{sched}_maintenances", ts),
-                      :summary    => @redis.get("#{@key}:#{ts}:#{sched}_maintenance:summary"),
-                     }
-        maint_data
+        return unless ts
+        {:start_time => ts.to_i,
+         :duration   => @redis.zscore("#{@key}:#{sched}_maintenances", ts),
+         :summary    => @redis.get("#{@key}:#{ts}:#{sched}_maintenance:summary"),
+        }
       end
 
       # creates, or modifies, an event object and adds it to the events list in redis
@@ -410,12 +409,6 @@ module Flapjack
           md[:end_time] = (md[:start_time] + md[:duration]).floor
           md
         }
-      end
-
-      def maintenance_summary(opts)
-        sched = opts[:scheduled] ? 'scheduled' : 'unscheduled'
-        ts    = opts[:ts] ? opts[:ts] : current_maintenance_start_time(:sched => sched)
-        @redis.get("#{@key}:#{ts}:#{sched}_maintenance:summary")
       end
 
       # returns an array of pagerduty credentials. If more than one contact for this entity_check

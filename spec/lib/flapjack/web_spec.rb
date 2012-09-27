@@ -169,26 +169,25 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
     last_response.status.should == 302
   end
 
-# FIXME: how to support the patch http method? ... also, is putting the post data into the url the
-# way to go here?
-#  it "updates a scheduled maintenance period for an entity check" do
-#    t = Time.now.to_i
-#
-#    start_time = t - (24 * 60 * 60)
-#    end_time   = t
-#
-#    Flapjack::Data::Entity.should_receive(:find_by_name).
-#      with(entity_name, :redis => @redis).and_return(entity)
-#
-#    Flapjack::Data::EntityCheck.should_receive(:for_entity).
-#      with(entity, 'ping', :redis => @redis).and_return(entity_check)
-#
-#    entity_check.should_receive(:update_scheduled_maintenance).
-#      with(:start_time => start_time, :end_time => end_time)
-#
-#    patch "/scheduled_maintenances/#{entity_name_esc}/ping?start_time=#{start_time}&end_time=#{end_time}"
-#    last_response.status.should == 302
-#  end
+  # FIXME: how to support the patch http method? ... also, is putting the post data into the url the
+  # way to go here?
+  it "updates a scheduled maintenance period for an entity check" do
+    t = Time.now.to_i
+
+    start_time = t - (24 * 60 * 60)
+
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => @redis).and_return(entity)
+
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, 'ping', :redis => @redis).and_return(entity_check)
+
+    entity_check.should_receive(:update_scheduled_maintenance).
+      with(start_time, {:end_time => t})
+
+    patch "/scheduled_maintenances/#{entity_name_esc}/ping", {"start_time" => start_time, "end_time" => 'now'}
+    last_response.status.should == 302
+  end
 
   it "deletes a scheduled maintenance period for an entity check" do
     t = Time.now.to_i

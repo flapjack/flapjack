@@ -126,17 +126,18 @@
               %td= ChronicDuration.output(duration)
               %td= summary
               %td
-                - if end_time > Time.now.to_i && start_time > Time.now.to_i
-                  %form{ :action => "/scheduled_maintenances/#{@entity}/#{@check}", :method => "post"}
-                    %input{:type => 'hidden', :name => '_method', :value => 'delete'}
-                    %input{:type => 'hidden', :name => 'start_time', :value => start_time}
-                    %input{:type => 'submit', :value => 'Delete', :class => 'button'}
-                - elsif end_time > Time.now.to_i && start_time < Time.now.to_i
-                  %form{ :action => "/scheduled_maintenances/#{@entity}/#{@check}", :method => "post"}
-                    %input{:type => 'hidden', :name => '_method',    :value => 'patch'}
-                    %input{:type => 'hidden', :name => 'start_time', :value => start_time}
-                    %input{:type => 'hidden', :name => 'end_time',   :value => 'now'}
-                    %input{:type => 'submit', :value => 'End Now', :class => 'button'}
+                - if end_time > Time.now.to_i
+                  - if start_time > Time.now.to_i
+                    %form{ :action => "/scheduled_maintenances/#{@entity}/#{@check}", :method => "post"}
+                      %input{:type => 'hidden', :name => '_method', :value => 'delete'}
+                      %input{:type => 'hidden', :name => 'start_time', :value => start_time}
+                      %input{:type => 'submit', :value => 'Delete', :class => 'button'}
+                  - else
+                    %form{ :action => "/scheduled_maintenances/#{@entity}/#{@check}", :method => "post"}
+                      %input{:type => 'hidden', :name => '_method',    :value => 'patch'}
+                      %input{:type => 'hidden', :name => 'start_time', :value => start_time}
+                      %input{:type => 'hidden', :name => 'end_time',   :value => 'now'}
+                      %input{:type => 'submit', :value => 'End Now', :class => 'button'}
       - else
         %p No maintenance is scheduled
       %h4 Add Scheduled Maintenace

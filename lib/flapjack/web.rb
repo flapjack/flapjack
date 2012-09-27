@@ -140,20 +140,29 @@ module Flapjack
 
     # modify scheduled maintenance
     patch '/scheduled_maintenances/:entity/:check' do
-      entity_check = get_entity_check(params[:entity], params[:check])
-      return 404 if entity_check.nil?
 
-      end_time   = Chronic.parse(params[:end_time]).to_i
-      start_time = params[:start_time].to_i
-      raise ArgumentError, "start time parsed to zero" unless start_time > 0
+      begin
+        puts "params: #{params.inspect}"
 
-      patches = {}
-      patches[:end_time] = end_time if end_time && (end_time > start_time)
+        entity_check = get_entity_check(params[:entity], params[:check])
+        return 404 if entity_check.nil?
 
-      raise ArgumentError.new("no valid data received to patch with") if patches.empty?
+        end_time   = Chronic.parse(params[:end_time]).to_i
+        start_time = params[:start_time].to_i
+        raise ArgumentError, "start time parsed to zero" unless start_time > 0
 
-      entity_check.update_scheduled_maintenance(start_time, patches)
-      redirect back
+        patches = {}
+        patches[:end_time] = end_time if end_time && (end_time > start_time)
+
+        raise ArgumentError.new("no valid data received to patch with") if patches.empty?
+
+        entity_check.update_scheduled_maintenance(start_time, patches)
+        redirect back
+
+      rescue Exception => e
+        puts e.message
+        puts e.backtrace.join("\n")
+      end
     end
 
     # delete a scheduled maintenance
