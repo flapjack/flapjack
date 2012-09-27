@@ -28,16 +28,10 @@ module Flapjack
       def self.delete_all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        contacts = redis.keys('contact:*')
-
-        contacts.each do |c|
-          c =~ /^contact:(\d+)$/
-          id = $1
-
-          redis.del("contact:#{id}")
-          redis.del("contact_media:#{id}")
-          redis.del("contact_pagerduty:#{id}")
-        end
+        redis.del( redis.keys("contact:*") +
+                   redis.keys("contact_media:*") +
+                   redis.keys("contact_pagerduty:*") +
+                   redis.keys('contacts_for:*') )
       end
 
       # NB: should probably be called in the context of a Redis multi block; not doing so
