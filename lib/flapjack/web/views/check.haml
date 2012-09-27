@@ -108,7 +108,7 @@
           %td= last_ack_relative
           %td= last_ack
       %h3 Scheduled Maintenance Periods
-      - if @scheduled_maintenances && (@scheduled_maintenances.length > 0)
+      - if @scheduled_maintenances && !@scheduled_maintenances.empty?
         %table
           %tr
             %th Start

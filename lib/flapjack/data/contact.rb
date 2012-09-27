@@ -6,7 +6,7 @@ module Flapjack
 
     class Contact
 
-      attr_accessor :first_name, :last_name, :email, :media
+      attr_accessor :first_name, :last_name, :email, :media, :id
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
@@ -17,30 +17,10 @@ module Flapjack
         contact_keys.inject([]) {|ret, k|
           k =~ /^contact:(\d+)$/
           id = $1
-          contact = self.find_by_id(id.to_i, :redis => redis)
+          contact = self.find_by_id(id, :redis => redis)
           ret << contact if contact
           ret
         }
-      end
-
-      # TODO maybe store a reverse mapping of contacts by email address
-      # (would make this query quicker)
-      def self.find_by_email(email, options = {})
-        raise "Redis connection not set" unless redis = options[:redis]
-        raise "No email value passed" unless id
-        logger = options[:logger]
-
-        contact_keys = redis.keys('contact:*')
-
-        return unless email_key = contact_keys.detect {|k|
-          ck_email = redis.hget(k, 'email')
-          email == ck_email
-        }
-
-        email_key =~ /^contact:(\d+)$/
-        id = $1
-
-        self.find_by_id(id.to_i, :redis => redis)
       end
 
       def self.find_by_id(id, options = {})
@@ -62,8 +42,8 @@ module Flapjack
           media_hash[:pagerduty] = Hash[ pagerduty_keys.zip(pagerduty_vals) ]
         end
 
-        Contact.new(:first_name => fn, :last_name => ln,
-          :email => em, :id => id.to_i, :media => me )
+        self.new(:first_name => fn, :last_name => ln,
+          :email => em, :id => id.to_i, :media => me, :redis => redis )
       end
 
       # takes a check, looks up contacts that are interested in this check (or in the check's entity)
@@ -117,6 +97,21 @@ module Flapjack
 
         redis.hgetall("contact_pagerduty:#{contact}").
           merge('service_key' => service_key)
+      end
+
+      def name
+        [(self.first_name || ''), (self.last_name || '')].join(" ").strip
+      end
+
+    private
+
+      def initialize(options = {})
+        raise "Redis connection not set" unless @redis = options[:redis]
+        @first_name = options[:first_name]
+        @last_name  = options[:last_name]
+        @email      = options[:email]
+        @media      = options[:media]
+        @id         = options[:id]
       end
 
     end
