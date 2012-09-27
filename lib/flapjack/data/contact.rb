@@ -25,6 +25,21 @@ module Flapjack
         union
       end
 
+      def self.delete_all(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        contacts = redis.keys('contact:*')
+
+        contacts.each do |c|
+          c =~ /^contact:(\d+)$/
+          id = $1
+
+          redis.del("contact:#{id}")
+          redis.del("contact_media:#{id}")
+          redis.del("contact_pagerduty:#{id}")
+        end
+      end
+
       # NB: should probably be called in the context of a Redis multi block; not doing so
       # here as calling classes may well be adding/updating multiple records in the one
       # operation
@@ -34,9 +49,9 @@ module Flapjack
         redis.del("contact:#{contact['id']}")
         redis.del("contact_media:#{contact['id']}")
         redis.del("contact_pagerduty:#{contact['id']}")
-        redis.hset("contact:#{contact['id']}", 'first_name', contact['first_name'])
-        redis.hset("contact:#{contact['id']}", 'last_name',  contact['last_name'])
-        redis.hset("contact:#{contact['id']}", 'email',      contact['email'])
+        ['first_name', 'last_name', 'email'].each do |field|
+          redis.hset("contact:#{contact['id']}", field, contact[field])
+        end
         contact['media'].each_pair {|medium, address|
           case medium
           when 'pagerduty'
