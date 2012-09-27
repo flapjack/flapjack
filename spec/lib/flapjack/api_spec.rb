@@ -228,6 +228,7 @@ describe 'Flapjack::API', :sinatra => true do
       ]
     }
 
+    Flapjack::Data::Contact.should_receive(:delete_all)
     Flapjack::Data::Contact.should_receive(:add).twice
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
@@ -235,6 +236,7 @@ describe 'Flapjack::API', :sinatra => true do
   end
 
   it "does not create contacts if the data is improperly formatted" do
+    Flapjack::Data::Contact.should_not_receive(:delete_all)
     Flapjack::Data::Contact.should_not_receive(:add)
 
     post "/contacts", {'contacts' => ["Hello", "again"]}.to_json,
@@ -257,6 +259,7 @@ describe 'Flapjack::API', :sinatra => true do
       ]
     }
 
+    Flapjack::Data::Contact.should_receive(:delete_all)
     Flapjack::Data::Contact.should_receive(:add)
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
