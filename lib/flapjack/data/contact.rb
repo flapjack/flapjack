@@ -48,12 +48,22 @@ module Flapjack
         raise "No id value passed" unless id
         logger = options[:logger]
 
-        first_name = redis.hget("contact:#{id}", 'first_name')
-        last_name  = redis.hget("contact:#{id}", 'last_name')
-        email      = redis.hget("contact:#{id}", 'email')
+        fn = redis.hget("contact:#{id}", 'first_name')
+        ln = redis.hget("contact:#{id}", 'last_name')
+        em = redis.hget("contact:#{id}", 'email')
 
-        Contact.new(:first_name => first_name,
-          :last_name => last_name, :email => email, :id => id.to_i)
+        media_keys = redis.hkeys("contact_media:#{id}")
+        media_vals = redis.hmget("contact_media:#{id}", media_keys)
+        me = Hash[ media_keys.zip(media_vals) ]
+
+        pagerduty_keys = redis.hkeys("contact_pagerduty:#{id}")
+        unless pagerduty_keys.empty?
+          pagerduty_vals = redis.hmget("contact_pagerduty:#{id}", pagerduty_keys)
+          media_hash[:pagerduty] = Hash[ pagerduty_keys.zip(pagerduty_vals) ]
+        end
+
+        Contact.new(:first_name => fn, :last_name => ln,
+          :email => em, :id => id.to_i, :media => me )
       end
 
       # takes a check, looks up contacts that are interested in this check (or in the check's entity)
