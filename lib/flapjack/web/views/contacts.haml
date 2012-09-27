@@ -25,6 +25,11 @@
         padding: 4px;
       }
   %body
+    %p
+      %a(title='' href='/') All Checks
+      |
+      %a(title='' href='/self_stats') Internal Statistics
+    %h1 Contacts
     %div#wrapper
       - if @contacts && !@contacts.empty?
         %table

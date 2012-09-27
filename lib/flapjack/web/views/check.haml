@@ -42,9 +42,9 @@
   %body
     %div#wrapper
       %p
-        %a(title='Dashboard' href='/') All Checks
+        %a(title='' href='/') All Checks
         |
-        %a(title='Dashboard' href='/failing') Failing Checks
+        %a(title='' href='/failing') Failing Checks
       %h1 #{@check} on #{@entity}
       %form{:action => "/acknowledgements/#{@entity}/#{@check}", :method => "post"}
         %h2

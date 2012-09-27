@@ -33,8 +33,12 @@ module Flapjack
         em = redis.hget("contact:#{id}", 'email')
 
         media_keys = redis.hkeys("contact_media:#{id}")
-        media_vals = redis.hmget("contact_media:#{id}", media_keys)
-        me = Hash[ media_keys.zip(media_vals) ]
+        me = if media_keys.empty?
+          {}
+        else
+          media_vals = redis.hmget("contact_media:#{id}", media_keys)
+          Hash[ media_keys.zip(media_vals) ]
+        end
 
         pagerduty_keys = redis.hkeys("contact_pagerduty:#{id}")
         unless pagerduty_keys.empty?
@@ -43,7 +47,7 @@ module Flapjack
         end
 
         self.new(:first_name => fn, :last_name => ln,
-          :email => em, :id => id.to_i, :media => me, :redis => redis )
+          :email => em, :id => id, :media => me, :redis => redis )
       end
 
       # takes a check, looks up contacts that are interested in this check (or in the check's entity)
