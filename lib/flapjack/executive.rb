@@ -204,8 +204,7 @@ module Flapjack
       @redis.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
       @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}.")
 
-      send_notifications(event, notification_type,
-                         Flapjack::Data::Contact.find_all_for_entity_check(entity_check, :redis => @redis))
+      send_notifications(event, notification_type, entity_check.contacts)
     end
 
     # takes an event, a notification type, and an array of contacts and creates jobs in resque
@@ -217,20 +216,28 @@ module Flapjack
                        'time'              => event.time,
                        'notification_type' => notification_type }
 
-      contacts.each {|contact_id|
-        media = media_for_contact(contact_id)
+      if contacts.empty?
+        @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | NO CONTACTS")
+        return
+      end
 
-        contact_deets = {'contact_id'         => contact_id,
-                         'contact_first_name' => @redis.hget("contact:#{contact_id}", 'first_name'),
-                         'contact_last_name'  => @redis.hget("contact:#{contact_id}", 'last_name'), }
+      contacts.each {|contact|
 
-        notification = notification.merge(contact_deets)
+        if contact.media.empty?
+          @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact.id} | NO MEDIA FOR CONTACT")
+          next
+        end
 
-        media.each_pair {|media_type, address|
+        notification.merge!({'contact_id'         => contact.id,
+                             'contact_first_name' => contact.first_name,
+                             'contact_last_name'  => contact.last_name, })
 
-          @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact_id} | #{media} | #{address}")
+        contact.media.each_pair {|media_type, address|
+
+          @notifylog.info("#{Time.now.to_s} | #{event.id} | " +
+            "#{notification_type} | #{contact.id} | #{media_type} | #{address}")
+
           # queue this notification
-          # FIXME: make a Contact class perhaps
           notif = notification.dup
           notif['media']   = media_type
           notif['address'] = address
@@ -239,43 +246,26 @@ module Flapjack
           notif['duration'] = dur if dur
           @logger.debug("send_notifications: sending notification: #{notif.inspect}")
 
+          unless @queues[media_type.to_sym]
+            # TODO log error
+            next
+          end
+
+          # TODO consider changing Resque jobs to use raw blpop like the others
           case media_type
           when "sms"
-            if @queues[:sms]
-              Resque.enqueue_to(@queues[:sms], Notification::Sms, notif)
-            end
+            Resque.enqueue_to(@queues[:sms], Notification::Sms, notif)
           when "email"
-            if @queues[:email]
-              Resque.enqueue_to(@queues[:email], Notification::Email, notif)
-            end
+            Resque.enqueue_to(@queues[:email], Notification::Email, notif)
           when "jabber"
-            if @queues[:jabber]
-              notif['event_count'] = @event_count if @event_count
-              # puts a notification into the jabber queue (redis list)
-              @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(notif))
-            end
+            # TODO move next line up into other notif value setting above?
+            notif['event_count'] = @event_count if @event_count
+            @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(notif))
           when "pagerduty"
-            if @queues[:pagerduty]
-              @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(notif))
-            end
+            @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(notif))
           end
         }
-        if media.length == 0
-          @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact_id} | NO MEDIA FOR CONTACT")
-        end
       }
-      if contacts.length == 0
-        @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | NO CONTACTS")
-      end
-    end
-
-    # takes a contact ID and returns a hash containing each of the media the contact wishes to be
-    # contacted by, and the associated address for each.
-    # eg:
-    #   media_for_contact('123') -> { :sms => "+61401234567", :email => "gno@free.dom" }
-    #
-    def media_for_contact(contact)
-      @redis.hgetall("contact_media:#{contact}")
     end
 
     # generates a fairly unique identifier to use as a message id

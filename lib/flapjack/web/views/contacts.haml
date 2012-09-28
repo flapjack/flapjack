@@ -1,0 +1,46 @@
+!!! 5
+%html
+  %head
+    :css
+      * { margin: 0; padding: 0; }
+      html { font-size: 62.5%; }
+      body { font-size: 16px; }
+      div#wrapper {
+        margin: 24px auto;
+        width: 1000px;
+      }
+      h1, h2, h3, h4, h5 {
+        font-family: Helvetica Neue, sans-serif;
+        margin-bottom: 12px;
+      }
+      table {
+        text-align: left;
+        width: 100%;
+      }
+      table th {
+        font-family: Helvetica Neue, sans-serif;
+        background-color: #eee;
+      }
+      table td, table th {
+        padding: 4px;
+      }
+  %body
+    %div#wrapper
+      %p
+        %a(title='' href='/') All Checks
+        |
+        %a(title='' href='/self_stats') Internal Statistics
+      %h1 Contacts
+      - if @contacts && !@contacts.empty?
+        %table
+          %tr
+            %th Name
+            %th Email
+          - @contacts.sort_by {|c| [c.last_name, c.first_name] }.each do |contact|
+            %tr
+              %td
+                - link = "/contacts/#{contact.id}"
+                %a(title='contact details' href=link) #{contact.name}
+              %td= contact.email
+      - else
+        %p No contacts

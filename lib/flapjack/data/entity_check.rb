@@ -6,6 +6,9 @@ require 'flapjack/patches'
 
 require 'flapjack/data/entity'
 
+# TODO might want to split the class methods out to a separate class, DAO pattern
+# ( http://en.wikipedia.org/wiki/Data_access_object ).
+
 module Flapjack
 
   module Data
@@ -415,21 +418,33 @@ module Flapjack
       # has pagerduty credentials then there'll be one hash in the array for each set of
       # credentials.
       def pagerduty_credentials(options)
-        creds = []
-        raise "Redis connection not set" unless redis = options[:redis]
-        logger = options[:logger]
+        # raise "Redis connection not set" unless redis = options[:redis]
 
-        contacts = Flapjack::Data::Contact.find_all_for_entity_check(self, { :redis => redis, :logger => logger })
-        contacts.each {|contact|
-          cred = Flapjack::Data::Contact.pagerduty_credentials_for_contact(contact, { :redis => redis, :logger => logger })
-          creds << cred if cred
+        self.contacts.inject([]) {|ret, contact|
+          cred = contact.pagerduty_credentials
+          ret << cred if cred
+          ret
         }
-        creds
+      end
+
+      # takes a check, looks up contacts that are interested in this check (or in the check's entity)
+      # and returns an array of contact records
+      def contacts
+        entity = @entity
+        check  = @check
+
+        if @logger
+          @logger.debug("contacts for #{@entity.id} (#{@entity.name}): " + @redis.smembers("contacts_for:#{@entity.id}").length.to_s)
+          @logger.debug("contacts for #{check}: " + @redis.smembers("contacts_for:#{check}").length.to_s)
+        end
+
+        union = @redis.sunion("contacts_for:#{@entity.id}", "contacts_for:#{check}")
+        @logger.debug("contacts for union of #{@entity.id} and #{check}: " + union.length.to_s) if @logger
+        union.collect {|c_id| Flapjack::Data::Contact.find_by_id(c_id, :redis => @redis) }
       end
 
     private
 
-      # Passing around the redis handle like this is a SMELL.
       def initialize(entity, check, options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
         raise "Invalid entity" unless @entity = entity

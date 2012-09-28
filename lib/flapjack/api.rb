@@ -47,8 +47,13 @@ module Flapjack
 
   class API < Sinatra::Base
 
-    # doesn't work with Rack::Test for some reason
-    unless 'test'.eql?(FLAPJACK_ENV)
+    set :show_exceptions, false
+
+    if 'test'.eql?(FLAPJACK_ENV)
+      # expose test errors properly
+      set :raise_errors, true
+    else
+      # doesn't work with Rack::Test unless we wrap tests in EM.synchrony blocks
       rescue_exception = Proc.new { |env, exception|
         logger.error exception.message
         logger.error exception.backtrace.join("\n")
@@ -61,8 +66,6 @@ module Flapjack
     use Rack::JsonParamsParser
 
     extend Flapjack::Pikelet
-
-    set :show_exceptions, 'development'.eql?(FLAPJACK_ENV)
 
     before do
       # will only initialise the first time it's run

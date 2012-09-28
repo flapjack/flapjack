@@ -1,0 +1,59 @@
+!!! 5
+%html
+  %head
+    :css
+      * { margin: 0; padding: 0; }
+      html { font-size: 62.5%; }
+      body { font-size: 16px; }
+      div#wrapper {
+        margin: 24px auto;
+        width: 1000px;
+      }
+      h1, h2, h3, h4, h5 {
+        font-family: Helvetica Neue, sans-serif;
+        margin-bottom: 12px;
+      }
+      table {
+        text-align: left;
+        width: 100%;
+      }
+      table th {
+        font-family: Helvetica Neue, sans-serif;
+        background-color: #eee;
+      }
+      table td, table th {
+        padding: 4px;
+      }
+  %body
+    %div#wrapper
+      %h1= @contact.name
+      - if @entities && !@entities.empty?
+        %table
+          %tr
+            %th Entity name
+            %th Checks
+            %th Media
+          - @entities.sort_by(&:name).each do |entity|
+            %tr
+              %td
+                %p= entity.name
+              %td
+                - checks = entity.check_list
+                - if !checks.empty?
+                  - checks.each do |check|
+                    - link = "/check?entity=#{entity.name}&check=#{check}"
+                    %p
+                      %a(title='check status' href=link) #{check}
+                - else
+                  %p No checks
+              %td
+                - if @contact.media && !@contact.media.empty?
+                  - @contact.media.each_pair do |mk, mv|
+                    - if 'pagerduty'.eql?(mk)
+                      %p= "PagerDuty: #{mv['username']}@#{mv['subdomain']}"
+                    - else
+                      %p= "#{mk.capitalize}: #{mv}"
+                - else
+                  %p No media
+      - else
+        %p No entities
