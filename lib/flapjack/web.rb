@@ -16,14 +16,17 @@ require 'flapjack/utility'
 module Flapjack
   class Web < Sinatra::Base
 
-    # doesn't work with Rack::Test for some reason
-    unless 'test'.eql?(FLAPJACK_ENV)
+    if 'test'.eql?(FLAPJACK_ENV)
+      # expose test errors properly
+      set :raise_errors, true
+      set :show_exceptions, false
+    else
+      # doesn't work with Rack::Test unless we wrap tests in EM.synchrony blocks
       rescue_exception = Proc.new { |env, exception|
         logger.error exception.message
         logger.error exception.backtrace.join("\n")
         [503, {}, exception.message]
       }
-
       use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
     end
     use Rack::MethodOverride
@@ -143,29 +146,20 @@ module Flapjack
 
     # modify scheduled maintenance
     patch '/scheduled_maintenances/:entity/:check' do
+      entity_check = get_entity_check(params[:entity], params[:check])
+      return 404 if entity_check.nil?
 
-      begin
-        puts "params: #{params.inspect}"
+      end_time   = Chronic.parse(params[:end_time]).to_i
+      start_time = params[:start_time].to_i
+      raise ArgumentError, "start time parsed to zero" unless start_time > 0
 
-        entity_check = get_entity_check(params[:entity], params[:check])
-        return 404 if entity_check.nil?
+      patches = {}
+      patches[:end_time] = end_time if end_time && (end_time > start_time)
 
-        end_time   = Chronic.parse(params[:end_time]).to_i
-        start_time = params[:start_time].to_i
-        raise ArgumentError, "start time parsed to zero" unless start_time > 0
+      raise ArgumentError.new("no valid data received to patch with") if patches.empty?
 
-        patches = {}
-        patches[:end_time] = end_time if end_time && (end_time > start_time)
-
-        raise ArgumentError.new("no valid data received to patch with") if patches.empty?
-
-        entity_check.update_scheduled_maintenance(start_time, patches)
-        redirect back
-
-      rescue Exception => e
-        puts e.message
-        puts e.backtrace.join("\n")
-      end
+      entity_check.update_scheduled_maintenance(start_time, patches)
+      redirect back
     end
 
     # delete a scheduled maintenance

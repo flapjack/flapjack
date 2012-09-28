@@ -176,7 +176,11 @@
               %td
                 - link = "/contacts/#{contact.id}"
                 %a(title='contact details' href=link) #{contact.name}
-              %td TODO
+              %td
+                - if contact.media && !contact.media.empty?
+                  %p= contact.media.keys.collect(&:capitalize).join(", ")
+                - else
+                  %p No media
 
       - else
         %p No contacts

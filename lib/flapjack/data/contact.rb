@@ -44,6 +44,7 @@ module Flapjack
       # NB: should probably be called in the context of a Redis multi block; not doing so
       # here as calling classes may well be adding/updating multiple records in the one
       # operation
+      # TODO maybe return the instantiated Contact record?
       def self.add(contact, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
@@ -68,7 +69,6 @@ module Flapjack
 
       def pagerduty_credentials
         return unless service_key = @redis.hget("contact_media:#{self.id}", 'pagerduty')
-
         @redis.hgetall("contact_pagerduty:#{self.id}").
           merge('service_key' => service_key)
       end
@@ -81,11 +81,9 @@ module Flapjack
 
       def initialize(options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
-        @first_name = options[:first_name]
-        @last_name  = options[:last_name]
-        @email      = options[:email]
-        @media      = options[:media]
-        @id         = options[:id]
+        [:first_name, :last_name, :email, :media, :id].each do |field|
+          instance_variable_set(:"@#{field.to_s}", options[field])
+        end
       end
 
     end

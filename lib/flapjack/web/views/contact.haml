@@ -32,6 +32,7 @@
           %tr
             %th Entity name
             %th Checks
+            %th Media
           - @entities.sort_by(&:name).each do |entity|
             %tr
               %td
@@ -45,5 +46,14 @@
                       %a(title='check status' href=link) #{check}
                 - else
                   %p No checks
+              %td
+                - if @contact.media && !@contact.media.empty?
+                  - @contact.media.each_pair do |mk, mv|
+                    - if 'pagerduty'.eql?(mk)
+                      %p= "PagerDuty: #{mv['username']}@#{mv['subdomain']}"
+                    - else
+                      %p= "#{mk.capitalize}: #{mv}"
+                - else
+                  %p No media
       - else
         %p No entities
