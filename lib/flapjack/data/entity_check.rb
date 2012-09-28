@@ -63,6 +63,17 @@ module Flapjack
         @redis.exists("#{@key}:scheduled_maintenance")
       end
 
+      # return data about current maintenance (scheduled or unscheduled, as specified)
+      def current_maintenance(opts)
+        sched = opts[:scheduled] ? 'scheduled' : 'unscheduled'
+        ts = @redis.get("#{@key}:#{sched}_maintenance")
+        return unless ts
+        {:start_time => ts.to_i,
+         :duration   => @redis.zscore("#{@key}:#{sched}_maintenances", ts),
+         :summary    => @redis.get("#{@key}:#{ts}:#{sched}_maintenance:summary"),
+        }
+      end
+
       # creates, or modifies, an event object and adds it to the events list in redis
       #   'type'      => 'service',
       #   'state'     => state,
@@ -139,7 +150,28 @@ module Flapjack
         @redis.zadd("#{@key}:sorted_scheduled_maintenance_timestamps", start_time, start_time)
 
         # scheduled maintenance periods have changed, revalidate
-        update_scheduled_maintenance(:revalidate => true)
+        update_current_scheduled_maintenance(:revalidate => true)
+      end
+
+      # change the end time of a scheduled maintenance (including when one is current)
+      def update_scheduled_maintenance(start_time, patches = {})
+
+        # check if there is such a scheduled maintenance period
+        old_duration = @redis.zscore("#{@key}:scheduled_maintenances", start_time)
+        raise ArgumentError, 'no such scheduled maintenance period can be found' unless old_duration
+        raise ArgumentError, 'no handled patches have been supplied' unless patches[:end_time]
+
+        if patches[:end_time]
+          end_time = patches[:end_time]
+          raise ArgumentError unless end_time > start_time
+          old_end_time = start_time + old_duration
+          duration = end_time - start_time
+          @redis.zadd("#{@key}:scheduled_maintenances", duration, start_time)
+        end
+
+        # scheduled maintenance periods have changed, revalidate
+        update_current_scheduled_maintenance(:revalidate => true)
+
       end
 
       # delete a scheduled maintenance
@@ -151,12 +183,12 @@ module Flapjack
         @redis.zremrangebyscore("#{@key}:sorted_scheduled_maintenance_timestamps", start_time, start_time)
 
         # scheduled maintenance periods have changed, revalidate
-        update_scheduled_maintenance(:revalidate => true)
+        update_current_scheduled_maintenance(:revalidate => true)
       end
 
       # if not in scheduled maintenance, looks in scheduled maintenance list for a check to see if
       # current state should be set to scheduled maintenance, and sets it as appropriate
-      def update_scheduled_maintenance(opts = {})
+      def update_current_scheduled_maintenance(opts = {})
         if opts[:revalidate]
           @redis.del("#{@key}:scheduled_maintenance")
         else
@@ -255,7 +287,6 @@ module Flapjack
         ln = {:problem         => last_problem_notification,
               :recovery        => last_recovery_notification,
               :acknowledgement => last_acknowledgement_notification }
-        puts "***** last_notifications_of_each_type for #{@key.inspect}: #{ln.inspect}"
         ln
       end
 

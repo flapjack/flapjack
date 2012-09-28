@@ -3,8 +3,8 @@
 # A HTTP-based API server, which provides queries to determine the status of
 # entities and the checks that are reported against them.
 #
-# There's a matching flapjack-diner gem which consumes data from this API
-# (currently at https://github.com/ali-graham/flapjack-diner -- this will change.)
+# There's a matching flapjack-diner gem at https://github.com/flpjck/flapjack-diner
+# which consumes data from this API.
 
 require 'time'
 
@@ -15,8 +15,33 @@ require 'flapjack/pikelet'
 
 require 'flapjack/api/entity_presenter'
 
+require 'flapjack/data/contact'
 require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
+
+# from https://github.com/sinatra/sinatra/issues/501
+# TODO move to its own file
+module Rack
+  class JsonParamsParser < Struct.new(:app)
+    def call(env)
+      if env['rack.input'] and not input_parsed?(env) and type_match?(env)
+        env['rack.request.form_input'] = env['rack.input']
+        data = env['rack.input'].read
+        env['rack.request.form_hash'] = data.empty?? {} : JSON.parse(data)
+      end
+      app.call(env)
+    end
+
+    def input_parsed? env
+      env['rack.request.form_input'].eql? env['rack.input']
+    end
+
+    def type_match? env
+      type = env['CONTENT_TYPE'] and
+        type.split(/\s*[;,]\s*/, 2).first.downcase == 'application/json'
+    end
+  end
+end
 
 module Flapjack
 
@@ -27,13 +52,17 @@ module Flapjack
       rescue_exception = Proc.new { |env, exception|
         logger.error exception.message
         logger.error exception.backtrace.join("\n")
-        [503, {}, {:status => 503, :reason => exception.message}.to_json]
+        [503, {}, {:errors => [exception.message]}.to_json]
       }
 
       use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
     end
     use Rack::MethodOverride
+    use Rack::JsonParamsParser
+
     extend Flapjack::Pikelet
+
+    set :show_exceptions, 'development'.eql?(FLAPJACK_ENV)
 
     before do
       # will only initialise the first time it's run
@@ -226,8 +255,61 @@ module Flapjack
       status 204
     end
 
+    post '/entities' do
+      pass unless 'application/json'.eql?(request.content_type)
+      content_type :json
+
+      errors = []
+      ret = nil
+
+      entities = params[:entities]
+      if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
+        entities.each do |entity|
+          unless entity['id']
+            errors << "Entity not imported as it has no id: #{entity.inspect}"
+            next
+          end
+          Flapjack::Data::Entity.add(entity, :redis => @@redis)
+        end
+        ret = 200
+      else
+        ret = 403
+        errors << "No valid entities were submitted"
+      end
+      errors.empty? ? ret : [ret, {}, {:errors => [errors]}.to_json]
+    end
+
+    post '/contacts' do
+      begin
+      pass unless 'application/json'.eql?(request.content_type)
+      content_type :json
+
+      errors = []
+      ret = nil
+
+      contacts = params[:contacts]
+      if contacts && contacts.is_a?(Enumerable) && contacts.any? {|c| !c['id'].nil?}
+        Flapjack::Data::Contact.delete_all
+        contacts.each do |contact|
+          unless contact['id']
+            logger.warn "Contact not imported as it has no id: #{contact.inspect}"
+            next
+          end
+          Flapjack::Data::Contact.add(contact, :redis => @@redis)
+        end
+        ret = 200
+      else
+        ret = 403
+        errors << "No valid contacts were submitted"
+      end
+      errors.empty? ? ret : [ret, {}, {:errors => [errors]}.to_json]
+    rescue Exception => e
+      puts e.message
+    end
+    end
+
     not_found do
-      [404, {}, {:status => 404, :reason => "Not found"}.to_json]
+      [404, {}, {:errors => ["Not found"]}.to_json]
     end
 
     private

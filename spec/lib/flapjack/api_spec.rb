@@ -167,4 +167,103 @@ describe 'Flapjack::API', :sinatra => true do
     last_response.body.should == result_json
   end
 
+  it "creates entities from a submitted list" do
+    entities = {'entities' =>
+      [
+       {"id" => "10001",
+        "name" => "clientx-app-01",
+        "contacts" => ["0362","0363","0364"]
+       },
+       {"id" => "10002",
+        "name" => "clientx-app-02",
+        "contacts" => ["0362"]
+       }
+      ]
+    }
+    Flapjack::Data::Entity.should_receive(:add).twice
+
+    post "/entities", entities.to_json, {'CONTENT_TYPE' => 'application/json'}
+    last_response.status.should == 200
+  end
+
+  it "does not create entities if the data is improperly formatted" do
+    Flapjack::Data::Entity.should_not_receive(:add)
+
+    post "/entities", {'entities' => ["Hello", "there"]}.to_json,
+      {'CONTENT_TYPE' => 'application/json'}
+    last_response.status.should == 403
+  end
+
+  it "does not create entities if they don't contain an id" do
+    entities = {'entities' =>
+      [
+       {"id" => "10001",
+        "name" => "clientx-app-01",
+        "contacts" => ["0362","0363","0364"]
+       },
+       {"name" => "clientx-app-02",
+        "contacts" => ["0362"]
+       }
+      ]
+    }
+    Flapjack::Data::Entity.should_receive(:add)
+
+    post "/entities", entities.to_json, {'CONTENT_TYPE' => 'application/json'}
+    last_response.status.should == 200
+  end
+
+  it "creates contacts from a submitted list" do
+    contacts = {'contacts' =>
+      [{"id" => "0362",
+        "first_name" => "John",
+        "last_name" => "Smith",
+        "email" => "johns@example.dom",
+        "media" => {"email"  => "johns@example.dom",
+                    "jabber" => "johns@conference.localhost"}},
+       {"id" => "0363",
+        "first_name" => "Jane",
+        "last_name" => "Jones",
+        "email" => "jane@example.dom",
+        "media" => {"email" => "jane@example.dom"}}
+      ]
+    }
+
+    Flapjack::Data::Contact.should_receive(:delete_all)
+    Flapjack::Data::Contact.should_receive(:add).twice
+
+    post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    last_response.status.should == 200
+  end
+
+  it "does not create contacts if the data is improperly formatted" do
+    Flapjack::Data::Contact.should_not_receive(:delete_all)
+    Flapjack::Data::Contact.should_not_receive(:add)
+
+    post "/contacts", {'contacts' => ["Hello", "again"]}.to_json,
+      {'CONTENT_TYPE' => 'application/json'}
+    last_response.status.should == 403
+  end
+
+  it "does not create contacts if they don't contain an id" do
+    contacts = {'contacts' =>
+      [{"id" => "0362",
+        "first_name" => "John",
+        "last_name" => "Smith",
+        "email" => "johns@example.dom",
+        "media" => {"email"  => "johns@example.dom",
+                    "jabber" => "johns@conference.localhost"}},
+       {"first_name" => "Jane",
+        "last_name" => "Jones",
+        "email" => "jane@example.dom",
+        "media" => {"email" => "jane@example.dom"}}
+      ]
+    }
+
+    Flapjack::Data::Contact.should_receive(:delete_all)
+    Flapjack::Data::Contact.should_receive(:add)
+
+    post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    last_response.status.should == 200
+  end
+
 end

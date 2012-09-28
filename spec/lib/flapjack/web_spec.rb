@@ -101,10 +101,11 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
     entity_check.should_receive(:last_change).and_return(time - (3 * 60 * 60))
     entity_check.should_receive(:summary).and_return('all good')
     entity_check.should_receive(:last_notifications_of_each_type).and_return(last_notifications)
-    entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
-    entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
     entity_check.should_receive(:maintenances).with(nil, nil, :scheduled => true).and_return([])
     entity_check.should_receive(:failed?).and_return(false)
+    entity_check.should_receive(:current_maintenance).with(:scheduled => true).and_return(false)
+    entity_check.should_receive(:current_maintenance).with(:scheduled => false).and_return(false)
+    entity_check.should_receive(:contacts).and_return([])
 
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => @redis).and_return(entity)
@@ -142,7 +143,7 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
       with(an_instance_of(Hash))
 
     post "/acknowledgements/#{entity_name_esc}/ping"
-    last_response.status.should == 201
+    last_response.status.should == 302
   end
 
   it "creates a scheduled maintenance period for an entity check" do
@@ -166,6 +167,26 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
 
     post "/scheduled_maintenances/#{entity_name_esc}/ping?"+
       "start_time=1+day+ago&duration=30+minutes&summary=wow"
+    last_response.status.should == 302
+  end
+
+  # FIXME: how to support the patch http method? ... also, is putting the post data into the url the
+  # way to go here?
+  it "updates a scheduled maintenance period for an entity check" do
+    t = Time.now.to_i
+
+    start_time = t - (24 * 60 * 60)
+
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => @redis).and_return(entity)
+
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, 'ping', :redis => @redis).and_return(entity_check)
+
+    entity_check.should_receive(:update_scheduled_maintenance).
+      with(start_time, {:end_time => t})
+
+    patch "/scheduled_maintenances/#{entity_name_esc}/ping", {"start_time" => start_time, "end_time" => 'now'}
     last_response.status.should == 302
   end
 
