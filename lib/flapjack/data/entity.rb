@@ -16,22 +16,6 @@ module Flapjack
         }
       end
 
-      def self.find_all_for_contact(contact, options = {})
-        raise "Redis connection not set" unless redis = options[:redis]
-
-        redis.keys('contacts_for:*').inject([]) {|ret, k|
-          if redis.sismember(k, contact.id)
-            k =~ /^contacts_for:(.+)$/
-            entity_id = $1
-            entity_name = redis.hget("entity:#{entity_id}", 'name')
-            if entity_name
-              ret << self.new(:name => entity_name, :id => entity_id, :redis => redis)
-            end
-          end
-          ret
-        }
-      end
-
       # NB: should probably be called in the context of a Redis multi block; not doing so
       # here as calling classes may well be adding/updating multiple records in the one
       # operation

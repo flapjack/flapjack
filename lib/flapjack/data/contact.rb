@@ -25,6 +25,15 @@ module Flapjack
         }
       end
 
+      def self.delete_all(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        redis.del( redis.keys("contact:*") +
+                   redis.keys("contact_media:*") +
+                   redis.keys("contact_pagerduty:*") +
+                   redis.keys('contacts_for:*') )
+      end
+
       def self.find_by_id(id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         raise "No id value passed" unless id
@@ -74,6 +83,20 @@ module Flapjack
         return unless service_key = @redis.hget("contact_media:#{self.id}", 'pagerduty')
         @redis.hgetall("contact_pagerduty:#{self.id}").
           merge('service_key' => service_key)
+      end
+
+      def entities
+        @redis.keys('contacts_for:*').inject([]) {|ret, k|
+          if @redis.sismember(k, self.id)
+            k =~ /^contacts_for:(.+)$/
+            entity_id = $1
+            if entity_name = @redis.hget("entity:#{entity_id}", 'name')
+              ret << Flapjack::Data::Entity.new(:name => entity_name,
+                      :id => entity_id, :redis => @redis)
+            end
+          end
+          ret
+        }
       end
 
       def name
