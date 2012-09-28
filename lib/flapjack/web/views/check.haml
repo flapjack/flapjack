@@ -159,4 +159,18 @@
               %td
               %td
                 %input{:type => 'submit', :value => 'Save', :class => 'button'}
+      %h3 Contacts
+      - if @contacts && !@contacts.empty?
+        %table
+          %tr
+            %th Name
+            %th Media
+          - @contacts.sort_by {|c| [c.last_name, c.first_name] }.each do |contact|
+            %tr
+              %td
+                - link = "/contacts/#{contact.id}"
+                %a(title='contact details' href=link) #{contact.name}
+              %td TODO
 
+      - else
+        %p No contacts

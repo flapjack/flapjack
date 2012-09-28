@@ -83,6 +83,8 @@ module Flapjack
       @acknowledgement_id         = entity_check.failed? ?
         entity_check.event_count_at(entity_check.last_change) : nil
 
+      @contacts                   = entity_check.contacts
+
       haml :check
       rescue Exception => e
         puts e.message

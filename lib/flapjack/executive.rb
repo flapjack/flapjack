@@ -204,8 +204,7 @@ module Flapjack
       @redis.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
       @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}.")
 
-      send_notifications(event, notification_type,
-                         Flapjack::Data::Contact.find_all_for_entity_check(entity_check, :redis => @redis))
+      send_notifications(event, notification_type, entity_check.contacts)
     end
 
     # takes an event, a notification type, and an array of contacts and creates jobs in resque
