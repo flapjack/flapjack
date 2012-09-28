@@ -13,7 +13,6 @@ module Flapjack
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        logger = options[:logger]
 
         contact_keys = redis.keys('contact:*')
 
@@ -31,55 +30,16 @@ module Flapjack
         raise "No id value passed" unless id
         logger = options[:logger]
 
-        fn = redis.hget("contact:#{id}", 'first_name')
-        ln = redis.hget("contact:#{id}", 'last_name')
-        em = redis.hget("contact:#{id}", 'email')
+        fn, ln, em = redis.hmget("contact:#{id}", 'first_name', 'last_name', 'email')
+        me = redis.hgetall("contact_media:#{id}")
 
-        media_keys = redis.hkeys("contact_media:#{id}")
-        me = if media_keys.empty?
-          {}
-        else
-          media_vals = redis.hmget("contact_media:#{id}", media_keys)
-          Hash[ media_keys.zip(media_vals) ]
-        end
-
-        pagerduty_keys = redis.hkeys("contact_pagerduty:#{id}")
-        unless pagerduty_keys.empty?
-          pagerduty_vals = redis.hmget("contact_pagerduty:#{id}", pagerduty_keys)
-          media_hash[:pagerduty] = Hash[ pagerduty_keys.zip(pagerduty_vals) ]
-        end
+        pd_cred = self.pagerduty_credentials
+        me[:pagerduty] = pd_cred unless pd_cred.nil?
 
         self.new(:first_name => fn, :last_name => ln,
           :email => em, :id => id, :media => me, :redis => redis )
       end
 
-      # takes a check, looks up contacts that are interested in this check (or in the check's entity)
-      # and returns an array of contact ids
-      def self.find_all_for_entity_check(entity_check, options = {})
-        raise "Redis connection not set" unless redis = options[:redis]
-        logger = options[:logger]
-
-        entity = entity_check.entity
-        check  = entity_check.check
-
-        if logger
-          logger.debug("contacts for #{entity.id} (#{entity.name}): " + redis.smembers("contacts_for:#{entity.id}").length.to_s)
-          logger.debug("contacts for #{check}: " + redis.smembers("contacts_for:#{check}").length.to_s)
-        end
-
-        union = redis.sunion("contacts_for:#{entity.id}", "contacts_for:#{check}")
-        logger.debug("contacts for union of #{entity.id} and #{check}: " + union.length.to_s) if logger
-        union
-      end
-
-      def self.delete_all(options = {})
-        raise "Redis connection not set" unless redis = options[:redis]
-
-        redis.del( redis.keys("contact:*") +
-                   redis.keys("contact_media:*") +
-                   redis.keys("contact_pagerduty:*") +
-                   redis.keys('contacts_for:*') )
-      end
 
       # NB: should probably be called in the context of a Redis multi block; not doing so
       # here as calling classes may well be adding/updating multiple records in the one
@@ -87,31 +47,29 @@ module Flapjack
       def self.add(contact, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        redis.del("contact:#{contact['id']}")
-        redis.del("contact_media:#{contact['id']}")
-        redis.del("contact_pagerduty:#{contact['id']}")
-        ['first_name', 'last_name', 'email'].each do |field|
-          redis.hset("contact:#{contact['id']}", field, contact[field])
-        end
+        redis.del("contact:#{contact['id']}",
+                  "contact_media:#{contact['id']}",
+                  "contact_pagerduty:#{contact['id']}")
+
+        redis.hmset("contact:#{contact['id']}",
+                    *['first_name', 'last_name', 'email'].collect {|f| [f, contact[f]]})
+
         contact['media'].each_pair {|medium, address|
           case medium
           when 'pagerduty'
             redis.hset("contact_media:#{contact['id']}", medium, address['service_key'])
-            redis.hset("contact_pagerduty:#{contact['id']}", 'subdomain', address['subdomain'])
-            redis.hset("contact_pagerduty:#{contact['id']}", 'username',  address['username'])
-            redis.hset("contact_pagerduty:#{contact['id']}", 'password',  address['password'])
+            redis.hmset("contact_pagerduty:#{contact['id']}",
+                        *['subdomain', 'username', 'password'].collect {|f| [f, address[f]]})
           else
             redis.hset("contact_media:#{contact['id']}", medium, address)
           end
         }
       end
 
-      def self.pagerduty_credentials_for_contact(contact, options = {})
-        raise "Redis connection not set" unless redis = options[:redis]
+      def pagerduty_credentials
+        return unless service_key = @redis.hget("contact_media:#{self.id}", 'pagerduty')
 
-        return unless service_key = redis.hget("contact_media:#{contact}", 'pagerduty')
-
-        redis.hgetall("contact_pagerduty:#{contact}").
+        @redis.hgetall("contact_pagerduty:#{self.id}").
           merge('service_key' => service_key)
       end
 
