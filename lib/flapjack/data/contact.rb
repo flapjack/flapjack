@@ -33,8 +33,11 @@ module Flapjack
         fn, ln, em = redis.hmget("contact:#{id}", 'first_name', 'last_name', 'email')
         me = redis.hgetall("contact_media:#{id}")
 
-        pd_cred = self.pagerduty_credentials
-        me[:pagerduty] = pd_cred unless pd_cred.nil?
+        # similar to code in instance method pagerduty_credentials
+        if service_key = redis.hget("contact_media:#{id}", 'pagerduty')
+          me[:pagerduty] = @redis.hgetall("contact_pagerduty:#{id}").
+                             merge('service_key' => service_key)
+        end
 
         self.new(:first_name => fn, :last_name => ln,
           :email => em, :id => id, :media => me, :redis => redis )

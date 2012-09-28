@@ -428,7 +428,7 @@ module Flapjack
       end
 
       # takes a check, looks up contacts that are interested in this check (or in the check's entity)
-      # and returns an array of contact ids
+      # and returns an array of contact records
       def contacts
         entity = @entity
         check  = @check
@@ -440,12 +440,11 @@ module Flapjack
 
         union = @redis.sunion("contacts_for:#{@entity.id}", "contacts_for:#{check}")
         @logger.debug("contacts for union of #{@entity.id} and #{check}: " + union.length.to_s) if @logger
-        union
+        union.collect {|c_id| Flapjack::Data::Contact.find_by_id(c_id, :redis => @redis) }
       end
 
     private
 
-      # Passing around the redis handle like this is a SMELL.
       def initialize(entity, check, options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
         raise "Invalid entity" unless @entity = entity

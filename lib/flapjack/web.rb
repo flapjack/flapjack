@@ -21,12 +21,21 @@ module Flapjack
       set :raise_errors, true
       set :show_exceptions, false
     else
+      rescue_exception = Proc.new do |env, e|
+        if settings.show_exceptions?
+          # ensure the sinatra error page shows properly
+          request = Sinatra::Request.new(env)
+          printer = Sinatra::ShowExceptions.new(proc{ raise e })
+          s, h, b = printer.call(env)
+          [s, h, b]
+        else
+          logger.error e.message
+          logger.error e.backtrace.join("\n")
+          [503, {}, ""]
+        end
+      end
+
       # doesn't work with Rack::Test unless we wrap tests in EM.synchrony blocks
-      rescue_exception = Proc.new { |env, exception|
-        logger.error exception.message
-        logger.error exception.backtrace.join("\n")
-        [503, {}, exception.message]
-      }
       use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
     end
     use Rack::MethodOverride
@@ -116,6 +125,7 @@ module Flapjack
     end
 
     # FIXME: there is bound to be a more idiomatic / restful way of doing this
+    # (probably using 'delete' or 'patch')
     post '/end_unscheduled_maintenance/:entity/:check' do
       @entity = params[:entity]
       @check  = params[:check]

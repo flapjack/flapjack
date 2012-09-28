@@ -47,10 +47,11 @@ module Flapjack
 
   class API < Sinatra::Base
 
+    set :show_exceptions, false
+
     if 'test'.eql?(FLAPJACK_ENV)
       # expose test errors properly
       set :raise_errors, true
-      set :show_exceptions, false
     else
       # doesn't work with Rack::Test unless we wrap tests in EM.synchrony blocks
       rescue_exception = Proc.new { |env, exception|
