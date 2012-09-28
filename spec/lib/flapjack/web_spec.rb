@@ -105,6 +105,7 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
     entity_check.should_receive(:failed?).and_return(false)
     entity_check.should_receive(:current_maintenance).with(:scheduled => true).and_return(false)
     entity_check.should_receive(:current_maintenance).with(:scheduled => false).and_return(false)
+    entity_check.should_receive(:contacts).and_return([])
 
     entity_check.should_receive(:contacts).and_return([])
 

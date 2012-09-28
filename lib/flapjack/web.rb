@@ -75,7 +75,6 @@ module Flapjack
     end
 
     get '/check' do
-      #begin
       @entity = params[:entity]
       @check  = params[:check]
 
@@ -97,13 +96,7 @@ module Flapjack
       @current_unscheduled_maintenance = entity_check.current_maintenance(:scheduled => false)
 
       @contacts                   = entity_check.contacts
-
       haml :check
-      #rescue Exception => e
-      #  puts e.message
-      #  puts e.backtrace.join("\n")
-      #end
-
     end
 
     post '/acknowledgements/:entity/:check' do
