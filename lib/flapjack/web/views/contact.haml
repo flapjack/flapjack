@@ -27,3 +27,23 @@
   %body
     %div#wrapper
       %h1= @contact.name
+      - if @entities && !@entities.empty?
+        %table
+          %tr
+            %th Entity name
+            %th Checks
+          - @entities.sort_by(&:name).each do |entity|
+            %tr
+              %td
+                %p= entity.name
+              %td
+                - checks = entity.check_list
+                - if !checks.empty?
+                  - checks.each do |check|
+                    - link = "/check?entity=#{entity.name}&check=#{check}"
+                    %p
+                      %a(title='check status' href=link) #{check}
+                - else
+                  %p No checks
+      - else
+        %p No entities
