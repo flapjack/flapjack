@@ -192,6 +192,8 @@ module Flapjack
         return
       end
 
+      @entities = Flapjack::Data::Entity.find_all_for_contact(@contact, :redis => @@redis)
+
       haml :contact
     end
 
