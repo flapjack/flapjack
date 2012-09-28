@@ -96,6 +96,7 @@ module Flapjack
       @current_unscheduled_maintenance = entity_check.current_maintenance(:scheduled => false)
 
       @contacts                   = entity_check.contacts
+
       haml :check
     end
 
