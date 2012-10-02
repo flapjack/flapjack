@@ -42,9 +42,9 @@
   %body
     %div#wrapper
       %p
-        %a(title='Dashboard' href='/') All Checks
+        %a(title='' href='/') All Checks
         |
-        %a(title='Dashboard' href='/failing') Failing Checks
+        %a(title='' href='/failing') Failing Checks
       %h1 #{@check} on #{@entity}
       %form{:action => "/acknowledgements/#{@entity}/#{@check}", :method => "post"}
         %h2
@@ -107,7 +107,7 @@
           %td= last_ack_relative
           %td= last_ack
       %h3 Scheduled Maintenance Periods
-      - if @scheduled_maintenances && (@scheduled_maintenances.length > 0)
+      - if @scheduled_maintenances && !@scheduled_maintenances.empty?
         %table
           %tr
             %th Start
@@ -165,4 +165,21 @@
               %td
               %td
                 %input{:type => 'submit', :value => 'Save', :class => 'button'}
-
+      %h3 Contacts
+      - if @contacts && !@contacts.empty?
+        %table
+          %tr
+            %th Name
+            %th Media
+          - @contacts.sort_by {|c| [c.last_name, c.first_name] }.each do |contact|
+            %tr
+              %td
+                - link = "/contacts/#{contact.id}"
+                %a(title='contact details' href=link) #{contact.name}
+              %td
+                - if contact.media && !contact.media.empty?
+                  %p= contact.media.keys.collect(&:capitalize).join(", ")
+                - else
+                  %p No media
+      - else
+        %p No contacts

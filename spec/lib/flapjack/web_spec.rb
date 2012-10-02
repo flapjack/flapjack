@@ -105,6 +105,7 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
     entity_check.should_receive(:failed?).and_return(false)
     entity_check.should_receive(:current_maintenance).with(:scheduled => true).and_return(false)
     entity_check.should_receive(:current_maintenance).with(:scheduled => false).and_return(false)
+    entity_check.should_receive(:contacts).and_return([])
 
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => @redis).and_return(entity)
@@ -206,5 +207,16 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
     delete "/scheduled_maintenances/#{entity_name_esc}/ping?start_time=#{start_time}"
     last_response.status.should == 302
   end
+
+  it "shows a list of all known contacts" do
+    Flapjack::Data::Contact.should_receive(:all)
+
+    get "/contacts"
+    last_response.should be_ok
+  end
+
+  it "shows details of an individual contact found by email"
+
+  it "shows details of an individual contact found by id"
 
 end

@@ -9,20 +9,33 @@ require 'haml'
 require 'rack/fiber_pool'
 
 require 'flapjack/pikelet'
+require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/utility'
 
 module Flapjack
   class Web < Sinatra::Base
 
-    # doesn't work with Rack::Test for some reason
-    unless 'test'.eql?(FLAPJACK_ENV)
-      rescue_exception = Proc.new { |env, exception|
-        logger.error exception.message
-        logger.error exception.backtrace.join("\n")
-        [503, {}, exception.message]
-      }
+    if 'test'.eql?(FLAPJACK_ENV)
+      # expose test errors properly
+      set :raise_errors, true
+      set :show_exceptions, false
+    else
+      rescue_exception = Proc.new do |env, e|
+        if settings.show_exceptions?
+          # ensure the sinatra error page shows properly
+          request = Sinatra::Request.new(env)
+          printer = Sinatra::ShowExceptions.new(proc{ raise e })
+          s, h, b = printer.call(env)
+          [s, h, b]
+        else
+          logger.error e.message
+          logger.error e.backtrace.join("\n")
+          [503, {}, ""]
+        end
+      end
 
+      # doesn't work with Rack::Test unless we wrap tests in EM.synchrony blocks
       use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
     end
     use Rack::MethodOverride
@@ -62,7 +75,6 @@ module Flapjack
     end
 
     get '/check' do
-      #begin
       @entity = params[:entity]
       @check  = params[:check]
 
@@ -83,12 +95,9 @@ module Flapjack
       @current_scheduled_maintenance   = entity_check.current_maintenance(:scheduled => true)
       @current_unscheduled_maintenance = entity_check.current_maintenance(:scheduled => false)
 
-      haml :check
-      #rescue Exception => e
-      #  puts e.message
-      #  puts e.backtrace.join("\n")
-      #end
+      @contacts                   = entity_check.contacts
 
+      haml :check
     end
 
     post '/acknowledgements/:entity/:check' do
@@ -110,6 +119,7 @@ module Flapjack
     end
 
     # FIXME: there is bound to be a more idiomatic / restful way of doing this
+    # (probably using 'delete' or 'patch')
     post '/end_unscheduled_maintenance/:entity/:check' do
       @entity = params[:entity]
       @check  = params[:check]
@@ -140,29 +150,20 @@ module Flapjack
 
     # modify scheduled maintenance
     patch '/scheduled_maintenances/:entity/:check' do
+      entity_check = get_entity_check(params[:entity], params[:check])
+      return 404 if entity_check.nil?
 
-      begin
-        puts "params: #{params.inspect}"
+      end_time   = Chronic.parse(params[:end_time]).to_i
+      start_time = params[:start_time].to_i
+      raise ArgumentError, "start time parsed to zero" unless start_time > 0
 
-        entity_check = get_entity_check(params[:entity], params[:check])
-        return 404 if entity_check.nil?
+      patches = {}
+      patches[:end_time] = end_time if end_time && (end_time > start_time)
 
-        end_time   = Chronic.parse(params[:end_time]).to_i
-        start_time = params[:start_time].to_i
-        raise ArgumentError, "start time parsed to zero" unless start_time > 0
+      raise ArgumentError.new("no valid data received to patch with") if patches.empty?
 
-        patches = {}
-        patches[:end_time] = end_time if end_time && (end_time > start_time)
-
-        raise ArgumentError.new("no valid data received to patch with") if patches.empty?
-
-        entity_check.update_scheduled_maintenance(start_time, patches)
-        redirect back
-
-      rescue Exception => e
-        puts e.message
-        puts e.backtrace.join("\n")
-      end
+      entity_check.update_scheduled_maintenance(start_time, patches)
+      redirect back
     end
 
     # delete a scheduled maintenance
@@ -172,6 +173,28 @@ module Flapjack
 
       entity_check.delete_scheduled_maintenance(:start_time => params[:start_time].to_i)
       redirect back
+    end
+
+    get '/contacts' do
+      @contacts = Flapjack::Data::Contact.all(:redis => @@redis)
+      haml :contacts
+    end
+
+    get "/contacts/:contact" do
+      contact_id = params[:contact]
+
+      if contact_id
+        @contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @@redis)
+      end
+
+      unless @contact
+        status 404
+        return
+      end
+
+      @entities = @contact.entities
+
+      haml :contact
     end
 
   private
