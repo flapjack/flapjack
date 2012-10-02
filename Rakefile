@@ -27,7 +27,7 @@ end
 require 'rspec/core/rake_task'
 RSpec::Core::RakeTask.new(:spec)
 
-task :default => :verify
+task :default => :tests
 
 namespace :verify do
   task :uncommitted do
@@ -46,3 +46,4 @@ end
 
 # FIXME: getting that intermittent gherken lexing error so removing :features from verify list
 task :verify => [ 'verify:all', :spec, :features]
+task :tests  => [ :spec, :features]
