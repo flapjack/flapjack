@@ -44,7 +44,7 @@ module Flapjack
 
         # similar to code in instance method pagerduty_credentials
         if service_key = redis.hget("contact_media:#{id}", 'pagerduty')
-          me[:pagerduty] = @redis.hgetall("contact_pagerduty:#{id}").
+          me[:pagerduty] = redis.hgetall("contact_pagerduty:#{id}").
                              merge('service_key' => service_key)
         end
 
