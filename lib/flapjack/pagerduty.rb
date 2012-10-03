@@ -223,6 +223,9 @@ module Flapjack
       end
 
       acknowledgement_timer.cancel
+
+      @redis.empty! if @redis
+      @redis_timer.empty! if @redis_timer
     end
 
   end

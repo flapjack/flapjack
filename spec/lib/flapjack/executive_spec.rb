@@ -36,6 +36,7 @@ describe Flapjack::Executive, :redis => true do
 
     executive = Flapjack::Executive.new
     executive.bootstrap(:config => {})
+    @redis.should_receive(:empty!)
     executive.should_receive(:build_redis_connection_pool).and_return(@redis)
 
     # hacky, but the behaviour it's mimicking (shutdown from another thread) isn't

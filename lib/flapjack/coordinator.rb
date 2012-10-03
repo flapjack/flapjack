@@ -21,6 +21,7 @@ require 'flapjack/oobetet'
 require 'flapjack/pagerduty'
 require 'flapjack/notification/email'
 require 'flapjack/notification/sms'
+require 'flapjack/redis_pool'
 require 'flapjack/web'
 
 module Flapjack
@@ -158,12 +159,13 @@ module Flapjack
 
       port = 3001 if (port.nil? || port <= 0 || port > 65535)
 
-      pikelet_class.class_variable_set('@@redis', build_redis_connection_pool)
+      pool = Flapjack::RedisPool.new(:config => @redis_options)
+      pikelet_class.class_variable_set('@@redis', pool)
 
       Thin::Logging.silent = true
 
       pikelet = Thin::Server.new('0.0.0.0', port, pikelet_class, :signals => false)
-      @pikelets << {:instance => pikelet, :type => pikelet_type}
+      @pikelets << {:instance => pikelet, :type => pikelet_type, :pool => pool}
       pikelet.start
       @logger.debug "new thin server instance started for #{pikelet_type}"
     end
@@ -179,8 +181,10 @@ module Flapjack
 
       # set up connection pooling, stop resque errors (ensure that it's only
       # done once)
+      pool = nil
       if (['email_notifier', 'sms_notifier'] & @pikelets.collect {|p| p[:type]}).empty?
-        ::Resque.redis = build_redis_connection_pool
+        pool = Flapjack::RedisPool.new(:config => @redis_options)
+        ::Resque.redis = pool
         ## NB: can override the default 'resque' namespace like this
         #::Resque.redis.namespace = 'flapjack'
       end
@@ -221,15 +225,11 @@ module Flapjack
           stop
         end
       }
-      @pikelets << {:fiber => f, :type => pikelet_type}
+      pikelet_values = {:fiber => f, :type => pikelet_type}
+      pikelet_values[:pool] = pool if pool
+      @pikelets << pikelet_values
       f.resume
       @logger.debug "new fiber created for #{pikelet_type}"
-    end
-
-    def build_redis_connection_pool(options = {})
-      EventMachine::Synchrony::ConnectionPool.new(:size => options[:size] || 5) do
-        ::Redis.new(@redis_options)
-      end
     end
 
     # # TODO rewrite to be less spammy -- print only initial state and changes
@@ -259,10 +259,8 @@ module Flapjack
             }.resume
           end
         when EM::Resque::Worker
-          if pik[:fiber] && pik[:fiber].alive?
-            # resque is polling, so we don't need a shutdown object
-            pik[:instance].shutdown
-          end
+          # resque is polling, so we don't need a shutdown object
+          pik[:instance].shutdown if pik[:fiber] && pik[:fiber].alive?
         when Thin::Server # web, api
           # drop from this side, as HTTP keepalive etc. means browsers
           # keep connections alive for ages, and we'd be hanging around
@@ -280,6 +278,16 @@ module Flapjack
           if fibers.any?(&:alive?) || thin_pikelets.any?{|tp| !tp.backend.empty? }
             EM::Synchrony.sleep 0.25
           else
+            @pikelets.select {|p| thin_pikelets.include?(p) }.each do |tp|
+              tp[:pool].empty!
+            end
+
+            rsq_p = @pikelets.detect {|p|
+              ['email_notifier', 'sms_notifier'].include?(p[:type]) && !p[:pool].nil?
+            }
+
+            rsq_p[:pool].empty! if rsq_p
+
             EM.stop
             break
           end

@@ -134,6 +134,7 @@ describe Flapjack::Jabber do
     EM::Synchrony.should_receive(:add_periodic_timer).with(60).and_return(timer_2)
 
     redis = mock('redis')
+    redis.should_receive(:empty!)
 
     fj = Flapjack::Jabber.new
     fj.bootstrap(:config => config)

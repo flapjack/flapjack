@@ -73,6 +73,9 @@ module Flapjack
         event = Flapjack::Data::Event.next(:persistence => @redis)
         process_event(event) unless event.nil?
       end
+
+      @redis.empty! if @redis
+
       @logger.info("Exiting main loop.")
     end
 
