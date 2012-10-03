@@ -9,7 +9,7 @@ module Flapjack
 
     class Contact
 
-      attr_accessor :first_name, :last_name, :email, :media, :id
+      attr_accessor :first_name, :last_name, :email, :media, :pagerduty_credentials, :id
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
@@ -43,13 +43,13 @@ module Flapjack
         me = redis.hgetall("contact_media:#{id}")
 
         # similar to code in instance method pagerduty_credentials
+        pc = nil
         if service_key = redis.hget("contact_media:#{id}", 'pagerduty')
-          me[:pagerduty] = redis.hgetall("contact_pagerduty:#{id}").
-                             merge('service_key' => service_key)
+          pc = redis.hgetall("contact_pagerduty:#{id}").merge('service_key' => service_key)
         end
 
         self.new(:first_name => fn, :last_name => ln,
-          :email => em, :id => id, :media => me, :redis => redis )
+          :email => em, :id => id, :media => me, :pagerduty_credentials => pc, :redis => redis )
       end
 
 

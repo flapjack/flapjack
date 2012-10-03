@@ -192,6 +192,10 @@ module Flapjack
         return
       end
 
+      if @contact.media.has_key?('pagerduty')
+        @pagerduty_credentials = @contact.pagerduty_credentials
+      end
+
       @entities = @contact.entities
 
       haml :contact
