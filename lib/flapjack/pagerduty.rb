@@ -134,7 +134,7 @@ module Flapjack
       # ok lets do it
       unacknowledged_failing_checks.each {|check|
         entity_check = Flapjack::Data::EntityCheck.for_event_id(check, { :redis => @redis_timer, :logger => @logger } )
-        pagerduty_credentials = entity_check.pagerduty_credentials
+        pagerduty_credentials = entity_check.pagerduty_credentials(:redis => @redis_timer)
 
         if pagerduty_credentials.length == 0
           @logger.debug("Found no pagerduty creditials for #{entity_check.entity_name}:#{entity_check.check}, moving on")
