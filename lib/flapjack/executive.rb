@@ -45,7 +45,10 @@ module Flapjack
       @filters << Flapjack::Filters::Delays.new(options)
       @filters << Flapjack::Filters::Acknowledgement.new(options)
 
-      @boot_time = Time.now
+      @boot_time    = Time.now
+      @fqdn         = `/bin/hostname -f`.chomp
+      @pid          = Process.pid
+      @executive_id = @fqdn + ':' + $pid
 
       # FIXME: all of the below keys assume there is only ever one executive running;
       # we could generate a fuid and save it to disk, and prepend it from that
@@ -61,6 +64,7 @@ module Flapjack
         @redis.hset('event_counters', 'failure', 0)
         @redis.hset('event_counters', 'action', 0)
       end
+
     end
 
     def main
