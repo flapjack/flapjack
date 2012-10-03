@@ -9,7 +9,7 @@ GIT
 PATH
   remote: .
   specs:
-    flapjack (0.6.36)
+    flapjack (0.6.37)
       blather
       chronic
       chronic_duration
