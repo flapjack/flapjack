@@ -6,6 +6,8 @@ if ENV['COVERAGE']
   end
 end
 
+$testing = true
+
 FLAPJACK_ENV = ENV["FLAPJACK_ENV"] || 'test'
 require 'bundler'
 Bundler.require(:default, :test)
