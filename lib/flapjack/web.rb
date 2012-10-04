@@ -239,7 +239,7 @@ module Flapjack
       @keys = @@redis.keys '*'
       @count_failing_checks    = @@redis.zcard 'failed_checks'
       @count_all_checks        = @@redis.keys('check:*:*').length
-      @executive_instances     = @@redis.zrange('executive_instances', '0', '-1', {:withscores => true} )
+      @executive_instances     = @@redis.zrange('executive_instances', '0', '-1', :withscores => true)
       @event_counters          = @@redis.hgetall('event_counters')
       @event_counters_instance = @@redis.hgetall("event_counters:#{@instance_id}")
       @boot_time               = Time.at(@@redis.zscore('executive_instances', @instance_id).to_i)

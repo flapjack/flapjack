@@ -5,6 +5,7 @@ gemfile:
   - Gemfile
 services:
   - redis-server
-# uncomment this line if your project needs to run something other than `rake`:
-# script: bundle exec rspec spec
+before_script:
+  - mkdir -p ./log
+
 

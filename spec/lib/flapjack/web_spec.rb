@@ -25,11 +25,9 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
     @redis.should_receive(:keys).with('*').and_return([])
     @redis.should_receive(:zcard).with('failed_checks')
     @redis.should_receive(:keys).with('check:*:*').and_return([])
-    @redis.should_receive(:hget).with('event_counters', 'all')
-    @redis.should_receive(:hget).with('event_counters', 'ok')
-    @redis.should_receive(:hget).with('event_counters', 'failure')
-    @redis.should_receive(:hget).with('event_counters', 'action')
-    @redis.should_receive(:get).with('boot_time').and_return(0)
+    @redis.should_receive(:zscore).with('executive_instances', anything).and_return(Time.now.to_i)
+    @redis.should_receive(:hgetall).twice.and_return({'all' => '8001', 'ok' => '8002'},
+      {'all' => '9001', 'ok' => '9002'}) #
     @redis.should_receive(:llen).with('events')
   end
 
@@ -67,6 +65,7 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
   end
 
   it "shows a page listing failing checks" do
+    @redis.should_receive(:zrange).with("executive_instances", "0", "-1", :withscores => true)
     @redis.should_receive(:zrange).with('failed_checks', 0, -1).and_return(["#{entity_name}:#{check}:states"])
 
     expect_stats
