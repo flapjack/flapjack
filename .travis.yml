@@ -7,5 +7,4 @@ services:
   - redis-server
 before_script:
   - mkdir -p ./log
-
-
+script: bundle exec rspec spec && bundle exec cucumber features

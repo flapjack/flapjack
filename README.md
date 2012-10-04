@@ -1,6 +1,11 @@
 Flapjack
 ========
 
+[![Travis CI Status][id_travis_img]][id_travis_link]
+
+[id_travis_link]: https://secure.travis-ci.org/#!/flpjck/flapjack
+[id_travis_img]: https://secure.travis-ci.org/flpjck/flapjack.png
+
 Flapjack is a highly scalable and distributed monitoring notification system.
 
 Flapjack provides a scalable method for dealing with events representing changes in system state (OK -> WARNING -> CRITICAL transitions) and alerting appropriate people as necessary.
