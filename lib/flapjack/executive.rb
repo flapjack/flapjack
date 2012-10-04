@@ -48,7 +48,7 @@ module Flapjack
       @boot_time    = Time.now
       @fqdn         = `/bin/hostname -f`.chomp
       @pid          = Process.pid
-      @executive_id = @fqdn + ':' + $pid
+      @instance_id  = "#{@fqdn}:#{@pid}"
 
       # FIXME: all of the below keys assume there is only ever one executive running;
       # we could generate a fuid and save it to disk, and prepend it from that
@@ -65,6 +65,11 @@ module Flapjack
         @redis.hset('event_counters', 'action', 0)
       end
 
+      @redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
+      @redis.hset("event_counters:#{@instance_id}", 'all', 0)
+      @redis.hset("event_counters:#{@instance_id}", 'ok', 0)
+      @redis.hset("event_counters:#{@instance_id}", 'failure', 0)
+      @redis.hset("event_counters:#{@instance_id}", 'action', 0)
     end
 
     def main
@@ -127,6 +132,7 @@ module Flapjack
       result    = { :skip_filters => false }
       timestamp = Time.now.to_i
       @event_count = @redis.hincrby('event_counters', 'all', 1)
+      @event_count = @redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
 
       # FIXME skip if entity_check.nil?
 
@@ -141,8 +147,10 @@ module Flapjack
 
         if event.ok?
           @redis.hincrby('event_counters', 'ok', 1)
+          @redis.hincrby("event_counters:#{@instance_id}", 'ok', 1)
         elsif event.failure?
           @redis.hincrby('event_counters', 'failure', 1)
+          @redis.hincrby("event_counters:#{@instance_id}", 'failure', 1)
           @redis.hset('unacknowledged_failures', @event_count, event.id)
         end
 
@@ -171,7 +179,8 @@ module Flapjack
       when 'action'
         # When an action event is processed, store the event.
         @redis.hset(event.id + ':actions', timestamp, event.state)
-        @redis.hincrby('event_counters', 'action', 1) if event.ok?
+        @redis.hincrby('event_counters', 'action', 1)
+        @redis.hincrby("event_counters:#{@instance_id}", 'action', 1)
 
         if event.acknowledgement? && event.acknowledgement_id
           @redis.hdel('unacknowledged_failures', event.acknowledgement_id)

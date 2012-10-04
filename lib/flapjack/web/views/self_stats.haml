@@ -17,9 +17,11 @@
       %h4
         Number of failing services:
         = @count
-      %p Events processed: #{@event_counter_all} (ok: #{@event_counter_ok}, failure: #{@event_counter_failure}, action: #{@event_counter_action})
-      %p Average rate: #{@event_rate_all} events per second
+      %p Events processed (all time): #{@event_counters['all']} (ok: #{@event_counters['ok']}, failure: #{@event_counters['failure']}, action: #{@event_counters['action']})
+      %p Events processed (this instance): #{@event_counters_instance['all']} (ok: #{@event_counters_instance['ok']}, failure: #{@event_counters_instance['failure']}, action: #{@event_counters_instance['action']})
+      %p Average rate (this instance): #{@event_rate_all} events per second
       %p Total keys in redis: #{@keys.length}
       %p Uptime: #{@uptime_string}
       %p Boot time: #{@boot_time}
       %p Current time: #{Time.now}
+      %p Executive Instances: #{@executive_instances.inspect}
