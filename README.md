@@ -14,9 +14,12 @@ At its core, flapjack process events received from external check execution engi
 
 # Using Flapjack
 
-TODO (link to doc/USING.md)
+## Quickstart
 
+TODO numbered list for simplest possible Flapjack run
+
+For more information, including full specification of the configuration file and the data import formats, please refer to the [Flapjack Wiki](wiki/USING).
 
 # Developing Flapjack
 
-TODO (link to doc/DEVELOPING.md)
+Information on developing more Flapjack components or contributing to core Flapjack development can be found in the [Flapjack Wiki](wiki/DEVELOPING).
