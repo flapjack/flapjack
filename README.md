@@ -18,8 +18,8 @@ At its core, flapjack process events received from external check execution engi
 
 TODO numbered list for simplest possible Flapjack run
 
-For more information, including full specification of the configuration file and the data import formats, please refer to the [Flapjack Wiki](wiki/USING).
+For more information, including full specification of the configuration file and the data import formats, please refer to the [Flapjack Wiki](https://github.com/ali-graham/flapjack/wiki/USING).
 
 # Developing Flapjack
 
-Information on developing more Flapjack components or contributing to core Flapjack development can be found in the [Flapjack Wiki](wiki/DEVELOPING).
+Information on developing more Flapjack components or contributing to core Flapjack development can be found in the [Flapjack Wiki](https://github.com/ali-graham/flapjack/wiki/DEVELOPING).
