@@ -27,16 +27,14 @@ end.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
-# load the config hash for the current environment
-
-if File.file?(options.config)
-  config = YAML::load_file(options.config)
-else
-  puts "Could not find config file at '#{options.config}', you may want to specify one with the --config option"
-  exit(false)
+# add lib to the default include path
+unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+  $: << File.dirname(__FILE__) + '/../lib'
 end
 
-config_env = config[FLAPJACK_ENV]
+require 'flapjack/configuration'
+
+config_env = Flapjack::Configuration.new.load(options.config)
 
 if config_env.nil? || config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
@@ -47,11 +45,6 @@ if options.pidfile.nil?
   pid_file = (config_env['pid_file'] || 'tmp/pids/flapjack.pid')
 else
   pid_file = options.pidfile
-end
-
-# add lib to the default include path
-unless $:.include?(File.dirname(__FILE__) + '/../lib/')
-  $: << File.dirname(__FILE__) + '/../lib'
 end
 
 # TODO Flapjack falls over when Redis restarted -- trap errors and attempt reconnect
