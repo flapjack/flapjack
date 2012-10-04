@@ -232,18 +232,21 @@ module Flapjack
     end
 
     def self_stats
+      @fqdn         = `/bin/hostname -f`.chomp
+      @pid          = Process.pid
+      @instance_id  = "#{@fqdn}:#{@pid}"
+
       @keys = @@redis.keys '*'
-      @count_failing_checks  = @@redis.zcard 'failed_checks'
-      @count_all_checks      = @@redis.keys('check:*:*').length
-      @event_counter_all     = @@redis.hget('event_counters', 'all')
-      @event_counter_ok      = @@redis.hget('event_counters', 'ok')
-      @event_counter_failure = @@redis.hget('event_counters', 'failure')
-      @event_counter_action  = @@redis.hget('event_counters', 'action')
-      @boot_time             = Time.at(@@redis.get('boot_time').to_i)
-      @uptime                = Time.now.to_i - @boot_time.to_i
-      @uptime_string         = time_period_in_words(@uptime)
-      @event_rate_all        = (@uptime > 0) ?
-                                 (@event_counter_all.to_f / @uptime) : 0
+      @count_failing_checks    = @@redis.zcard 'failed_checks'
+      @count_all_checks        = @@redis.keys('check:*:*').length
+      @executive_instances     = @@redis.zrange('executive_instances', '0', '-1', {:withscores => true} )
+      @event_counters          = @@redis.hgetall('event_counters')
+      @event_counters_instance = @@redis.hgetall("event_counters:#{@instance_id}")
+      @boot_time               = Time.at(@@redis.zscore('executive_instances', @instance_id).to_i)
+      @uptime                  = Time.now.to_i - @boot_time.to_i
+      @uptime_string           = time_period_in_words(@uptime)
+      @event_rate_all          = (@uptime > 0) ?
+                                 (@event_counters_instance['all'].to_f / @uptime) : 0
       @events_queued = @@redis.llen('events')
     end
 
