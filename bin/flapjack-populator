@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 
-require 'yajl/json_gem'
-require 'redis'
 require 'optparse'
 require 'ostruct'
+require 'yajl/json_gem'
+require 'redis'
 
 # add lib to the default include path
 unless $:.include?(File.dirname(__FILE__) + '/../lib/')
@@ -44,6 +44,11 @@ end.parse!(ARGV)
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
 config_env = Flapjack::Configuration.new.load(options.config)
+
+if config_env.nil? || config_env.empty?
+  puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
+  exit(false)
+end
 
 if options.from
   filename = options.from
