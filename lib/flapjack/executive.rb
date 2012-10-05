@@ -36,6 +36,7 @@ module Flapjack
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => notifylog))
 
       # FIXME: Put loading filters into separate method
+      # FIXME: should we make the filters more configurable by the end user?
       options = { :log => @logger, :persistence => @redis }
       @filters = []
       @filters << Flapjack::Filters::Ok.new(options)
