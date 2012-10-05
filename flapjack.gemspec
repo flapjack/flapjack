@@ -36,5 +36,4 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'chronic_duration'
 
   gem.add_development_dependency 'rake'
-  gem.add_development_dependency 'colorize'
 end
