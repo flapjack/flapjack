@@ -315,6 +315,9 @@ module Flapjack
 
       count_timer.cancel
       keepalive_timer.cancel
+
+      @redis.empty! if @redis
+      @redis_handler.empty! if @redis_handler
     end
 
   end

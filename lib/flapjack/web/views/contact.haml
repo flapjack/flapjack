@@ -11,40 +11,36 @@
     %div#wrapper
       = nav
       %h1= @contact.name
-      - if @entities && !@entities.empty?
+      - if @contact.media && !@contact.media.empty?
+        %ul
+          - @contact.media.each_pair do |mk, mv|
+            - if 'pagerduty'.eql?(mk)
+              %li= "PagerDuty: "
+              %ul
+                - @pagerduty_credentials.each_pair do |pk, pv|
+                  - if 'password'.eql?(pk)
+                    %li= "#{pk}: ..."
+                  - else
+                    %li= "#{pk}: #{pv}"
+            - else
+              %li= "#{mk.capitalize}: #{mv}"
+      - else
+        %p No media
+      - if @entities_and_checks && !@entities_and_checks.empty?
         %table
           %tr
             %th Entity name
             %th Checks
-            %th Media
-          - @entities.sort_by(&:name).each do |entity|
+          - @entities_and_checks.each do |ec|
+            - entity = ec[:entity]
+            - checks = ec[:checks]
             %tr
               %td
                 %p= entity.name
               %td
-                - checks = entity.check_list
-                - if !checks.empty?
-                  - checks.each do |check|
-                    - link = "/check?entity=#{entity.name}&check=#{check}"
-                    %p
-                      %a(title='check status' href=link) #{check}
-                - else
-                  %p No checks
-              %td
-                - if @contact.media && !@contact.media.empty?
-                  %ul
-                    - @contact.media.each_pair do |mk, mv|
-                      - if 'pagerduty'.eql?(mk)
-                        %li= "PagerDuty: "
-                        %ul
-                          - @pagerduty_credentials.each_pair do |pk, pv|
-                            - if 'password'.eql?(pk)
-                              %li= "#{pk}: ..."
-                            - else
-                              %li= "#{pk}: #{pv}"
-                      - else
-                        %li= "#{mk.capitalize}: #{mv}"
-                - else
-                  %p No media
+                - checks.each do |check|
+                  - link = "/check?entity=#{entity.name}&check=#{check}"
+                  %p
+                    %a(title='check status' href=link) #{check}
       - else
         %p No entities

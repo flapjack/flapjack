@@ -196,7 +196,9 @@ module Flapjack
         @pagerduty_credentials = @contact.pagerduty_credentials
       end
 
-      @entities = @contact.entities
+      @entities_and_checks = @contact.entities_and_checks.sort_by {|ec|
+        ec[:entity].name
+      }
 
       haml :contact
     end
