@@ -145,7 +145,7 @@ module Flapjack
         breach = "haven't seen a test recovery notification in the last #{@max_latency} seconds"
       end
 
-      if !@flapjack_ok and !breach
+      unless @flapjack_ok || breach
         emit_jabber("Flapjack Self Monitoring is OK")
         emit_pagerduty("Flapjack Self Monitoring is OK", 'resolve')
       end
@@ -218,17 +218,15 @@ module Flapjack
         write(' ') if connected?
       end
 
-      check_timers_timer = EM::Synchrony.add_periodic_timer(10) do
-        check_timers
-      end
-
       setup
       connect # Blather::Client.connect
 
-      if should_quit?
-        keepalive_timer.cancel
-        check_timers_timer.cancel
+      until should_quit?
+        EM::Synchrony.sleep(10)
+        check_timers
       end
+
+      keepalive_timer.cancel
     end
 
   end

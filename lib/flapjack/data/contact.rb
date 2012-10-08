@@ -69,16 +69,18 @@ module Flapjack
         redis.hmset("contact:#{contact['id']}",
                     *['first_name', 'last_name', 'email'].collect {|f| [f, contact[f]]})
 
-        contact['media'].each_pair {|medium, address|
-          case medium
-          when 'pagerduty'
-            redis.hset("contact_media:#{contact['id']}", medium, address['service_key'])
-            redis.hmset("contact_pagerduty:#{contact['id']}",
-                        *['subdomain', 'username', 'password'].collect {|f| [f, address[f]]})
-          else
-            redis.hset("contact_media:#{contact['id']}", medium, address)
-          end
-        }
+        unless contact['media'].nil?
+          contact['media'].each_pair {|medium, address|
+            case medium
+            when 'pagerduty'
+              redis.hset("contact_media:#{contact['id']}", medium, address['service_key'])
+              redis.hmset("contact_pagerduty:#{contact['id']}",
+                          *['subdomain', 'username', 'password'].collect {|f| [f, address[f]]})
+            else
+              redis.hset("contact_media:#{contact['id']}", medium, address)
+            end
+          }
+        end
       end
 
       def pagerduty_credentials
