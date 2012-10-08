@@ -3,6 +3,8 @@
 # NB: use of redis.keys probably indicates we should maintain a data
 # structure to avoid the need for this type of query
 
+require 'set'
+
 module Flapjack
 
   module Data
@@ -85,18 +87,35 @@ module Flapjack
           merge('service_key' => service_key)
       end
 
-      def entities
-        @redis.keys('contacts_for:*').inject([]) {|ret, k|
+      def entities_and_checks
+        @redis.keys('contacts_for:*').inject({}) {|ret, k|
           if @redis.sismember(k, self.id)
-            k =~ /^contacts_for:(.+)$/
-            entity_id = $1
-            if entity_name = @redis.hget("entity:#{entity_id}", 'name')
-              ret << Flapjack::Data::Entity.new(:name => entity_name,
-                      :id => entity_id, :redis => @redis)
+            if k =~ /^contacts_for:([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?::(\w+))?$/
+              entity_id = $1
+              check = $2
+
+              unless ret.has_key?(entity_id)
+                ret[entity_id] = {}
+                if entity_name = @redis.hget("entity:#{entity_id}", 'name')
+                  entity = Flapjack::Data::Entity.new(:name => entity_name,
+                             :id => entity_id, :redis => @redis)
+                  ret[entity_id][:entity] = entity
+                end
+                # using a set to ensure unique check values
+                ret[entity_id][:checks] = Set.new
+              end
+
+              if check
+                # just add this check for the entity
+                ret[entity_id][:checks] |= check
+              else
+                # registered for the entity so add all checks
+                ret[entity_id][:checks] |= entity.check_list
+              end
             end
           end
           ret
-        }
+        }.values
       end
 
       def name
