@@ -190,9 +190,7 @@ module Flapjack
         event         = Yajl::Parser.parse(events[queue][1])
         type          = event['notification_type']
         logger.debug("pagerduty notification event popped off the queue: " + event.inspect)
-        if 'shutdown'.eql?(type)
-          # do anything in particular?
-        else
+        unless 'shutdown'.eql?(type)
           event_id      = event['event_id']
           entity, check = event_id.split(':')
           state         = event['state']
