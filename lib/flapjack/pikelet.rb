@@ -12,6 +12,8 @@ require 'log4r'
 require 'log4r/outputter/consoleoutputters'
 require 'log4r/outputter/syslogoutputter'
 
+require 'flapjack/redis_pool'
+
 module Flapjack
   module Pikelet
     attr_accessor :logger, :redis, :config
@@ -27,9 +29,7 @@ module Flapjack
     def build_redis_connection_pool(options = {})
       return unless @bootstrapped
       if defined?(EventMachine) && defined?(EventMachine::Synchrony)
-        EventMachine::Synchrony::ConnectionPool.new(:size => options[:size] || 5) do
-          ::Redis.new(@redis_config)
-        end
+        Flapjack::RedisPool.new(:config => @redis_config, :size => options[:size])
       else
         ::Redis.new(@redis_config)
       end

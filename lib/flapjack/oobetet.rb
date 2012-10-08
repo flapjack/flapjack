@@ -3,19 +3,12 @@
 #require 'socket'
 
 require 'eventmachine'
-# the redis/synchrony gems need to be required in this particular order, see                                                # the redis-rb README for details
-#require 'hiredis'
 require 'em-synchrony'
-#require 'redis/connection/synchrony'
-#require 'redis'
-
-#require 'chronic_duration'
 
 require 'blather/client/client'
 require 'em-synchrony/fiber_iterator'
 require 'yajl/json_gem'
 
-#require 'flapjack/data/entity_check'
 require 'flapjack/pikelet'
 require 'flapjack/utility'
 
