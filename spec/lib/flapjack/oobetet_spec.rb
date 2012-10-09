@@ -28,8 +28,6 @@ describe Flapjack::Oobetet do
   end
 
   it "hooks up event handlers to the appropriate methods" do
-    Socket.should_receive(:gethostname).and_return('thismachine')
-
     fo = Flapjack::Oobetet.new
     fo.bootstrap(:config => config)
 
@@ -45,7 +43,7 @@ describe Flapjack::Oobetet do
     fo.should_receive(:register_handler).with(:disconnected).and_yield(stanza)
     fo.should_receive(:on_disconnect).with(stanza).and_return(true)
 
-    fo.setup
+    fo.register_handlers
   end
 
   it "joins a chat room after connecting" do
@@ -67,6 +65,62 @@ describe Flapjack::Oobetet do
 
     ret = fo.on_disconnect(stanza)
     ret.should be_true
+  end
+
+  it "records times of a problem status messages" do
+    fo = Flapjack::Oobetet.new
+    fo.bootstrap(:config => config)
+
+    fo.setup
+
+    t = Time.now
+
+    stanza.should_receive(:body).and_return( %q{PROBLEM: "PING" on foo.bar.net} )
+    Time.should_receive(:now).and_return(t)
+
+    fo.on_groupchat(stanza)
+    fo_times = fo.instance_variable_get('@times')
+    fo_times.should_not be_nil
+    fo_times.should have_key(:last_problem)
+    fo_times[:last_problem].should == t.to_i
+  end
+
+  it "records times of a recovery status messages" do
+    fo = Flapjack::Oobetet.new
+    fo.bootstrap(:config => config)
+
+    fo.setup
+
+    t = Time.now
+
+    stanza = mock('gc_stanza')
+    stanza.should_receive(:body).and_return( %q{RECOVERY: "PING" on foo.bar.net} )
+    Time.should_receive(:now).and_return(t)
+
+    fo.on_groupchat(stanza)
+    fo_times = fo.instance_variable_get('@times')
+    fo_times.should_not be_nil
+    fo_times.should have_key(:last_recovery)
+    fo_times[:last_recovery].should == t.to_i
+  end
+
+  it "records times of an acknowledgement status messages" do
+    fo = Flapjack::Oobetet.new
+    fo.bootstrap(:config => config)
+
+    fo.setup
+
+    t = Time.now
+
+    stanza = mock('gc_stanza')
+    stanza.should_receive(:body).and_return( %q{ACKNOWLEDGEMENT: "PING" on foo.bar.net} )
+    Time.should_receive(:now).and_return(t)
+
+    fo.on_groupchat(stanza)
+    fo_times = fo.instance_variable_get('@times')
+    fo_times.should_not be_nil
+    fo_times.should have_key(:last_ack)
+    fo_times[:last_ack].should == t.to_i
   end
 
   it "runs a loop checking for recorded problems" do

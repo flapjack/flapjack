@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-#require 'socket'
+require 'socket'
 
 require 'eventmachine'
 require 'em-synchrony'
@@ -52,7 +52,10 @@ module Flapjack
                  :last_ack_sent => t }
 
       @last_alert = nil
+    end
 
+    # split out to ease testing
+    def register_handlers
       register_handler :ready do |stanza|
         EM.next_tick do
           EM.synchrony do
@@ -78,8 +81,8 @@ module Flapjack
         end
         ret
       end
-
     end
+
 
     # Join the MUC Chat room after connecting.
     def on_ready(stanza)
@@ -111,31 +114,37 @@ module Flapjack
 
     def on_groupchat(stanza)
       return if should_quit?
-      logger.debug("groupchat stanza body: " + stanza.body)
+
+      stanza_body = stanza.body
+
+      logger.debug("groupchat stanza body: " + stanza_body)
       logger.debug("groupchat message received: #{stanza.inspect}")
 
-      if stanza.body =~ /^(\w+).*#{Regexp.escape(@check_matcher)}/
+      if (stanza_body =~ /^(?:problem|recovery|acknowledgement)/i) &&
+         (stanza_body =~ /^(\w+).*#{Regexp.escape(@check_matcher)}/)
+
         # got something interesting
-        logger.debug("groupchat found the following state for #{@check_matcher}: #{$1.downcase}")
-        case $1.downcase
+        status = $1.downcase
+        t = Time.now.to_i
+        logger.debug("groupchat found the following state for #{@check_matcher}: #{status}")
+
+        case status
         when 'problem'
           logger.debug("updating @times last_problem")
-          @times[:last_problem] = Time.new.to_i
+          @times[:last_problem] = t
         when 'recovery'
           logger.debug("updating @times last_recovery")
-          @times[:last_recovery] = Time.new.to_i
+          @times[:last_recovery] = t
         when 'acknowledgement'
           logger.debug("updating @times last_ack")
-          @times[:last_ack] = Time.new.to_i
+          @times[:last_ack] = t
         end
-
       end
       logger.debug("@times: #{@times.inspect}")
-
     end
 
     def check_timers
-      t = Time.new.to_i
+      t = Time.now.to_i
       breach = nil
       @logger.debug("check_timers: inspecting @times #{@times.inspect}")
       case
@@ -219,6 +228,7 @@ module Flapjack
       end
 
       setup
+      register_handlers
       connect # Blather::Client.connect
 
       until should_quit?
