@@ -31,8 +31,7 @@ describe Flapjack::Oobetet do
     fo = Flapjack::Oobetet.new
     fo.bootstrap(:config => config)
 
-    EM.should_receive(:next_tick).exactly(3).times.and_yield
-    EM.should_receive(:synchrony).exactly(3).times.and_yield
+    EventMachine::Synchrony.should_receive(:next_tick).exactly(3).times.and_yield
 
     fo.should_receive(:register_handler).with(:ready).and_yield(stanza)
     fo.should_receive(:on_ready).with(stanza)

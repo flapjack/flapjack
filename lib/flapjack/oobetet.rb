@@ -57,27 +57,21 @@ module Flapjack
     # split out to ease testing
     def register_handlers
       register_handler :ready do |stanza|
-        EM.next_tick do
-          EM.synchrony do
-            on_ready(stanza)
-          end
+        EventMachine::Synchrony.next_tick do
+          on_ready(stanza)
         end
       end
 
       register_handler :message, :groupchat? do |stanza|
-        EM.next_tick do
-          EM.synchrony do
-            on_groupchat(stanza)
-          end
+        EventMachine::Synchrony.next_tick do
+          on_groupchat(stanza)
         end
       end
 
       register_handler :disconnected do |stanza|
         ret = true
-        EM.next_tick do
-          EM.synchrony do
-            ret = on_disconnect(stanza)
-          end
+        EventMachine::Synchrony.next_tick do
+          ret = on_disconnect(stanza)
         end
         ret
       end

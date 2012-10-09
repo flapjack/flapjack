@@ -27,8 +27,7 @@ describe Flapjack::Jabber do
     fj.bootstrap(:config => config)
     fj.should_receive(:build_redis_connection_pool)
 
-    EM.should_receive(:next_tick).exactly(4).times.and_yield
-    EM.should_receive(:synchrony).exactly(4).times.and_yield
+    EventMachine::Synchrony.should_receive(:next_tick).exactly(4).times.and_yield
 
     fj.should_receive(:register_handler).with(:ready).and_yield(stanza)
     fj.should_receive(:on_ready).with(stanza)
@@ -149,7 +148,7 @@ describe Flapjack::Jabber do
       ["jabber_notifications", %q{{"notification_type":"shutdown"}}]
     )
 
-    EM.should_receive(:next_tick).twice.and_yield
+    EventMachine::Synchrony.should_receive(:next_tick).twice.and_yield
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
     fj.should_receive(:close)
 

@@ -173,7 +173,7 @@ module Flapjack
       raise "Can't connect to the pagerduty API" unless test_pagerduty_connection
 
       # TODO: only clear this if there isn't another pagerduty gateway instance running
-      # or better, include on instance ID in the semaphore key name
+      # or better, include an instance ID in the semaphore key name
       @redis.del(@sem_pagerduty_acks_running)
 
       acknowledgement_timer = EM::Synchrony.add_periodic_timer(10) do
