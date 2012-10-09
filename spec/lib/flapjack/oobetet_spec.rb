@@ -93,7 +93,6 @@ describe Flapjack::Oobetet do
 
     t = Time.now
 
-    stanza = mock('gc_stanza')
     stanza.should_receive(:body).and_return( %q{RECOVERY: "PING" on foo.bar.net} )
     Time.should_receive(:now).and_return(t)
 
@@ -112,7 +111,6 @@ describe Flapjack::Oobetet do
 
     t = Time.now
 
-    stanza = mock('gc_stanza')
     stanza.should_receive(:body).and_return( %q{ACKNOWLEDGEMENT: "PING" on foo.bar.net} )
     Time.should_receive(:now).and_return(t)
 
