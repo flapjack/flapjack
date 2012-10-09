@@ -130,7 +130,7 @@ module Flapjack
         end
 
         four_hours = 4 * 60 * 60
-        duration = (dur.nil? || (dur <= 0) || (dur > four_hours)) ? four_hours : dur
+        duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
 
         event_id = @redis_handler.hget('unacknowledged_failures', ackid)
 
