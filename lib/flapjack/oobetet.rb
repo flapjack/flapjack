@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-#require 'socket'
+require 'socket'
 
 require 'eventmachine'
 require 'em-synchrony'
@@ -52,34 +52,31 @@ module Flapjack
                  :last_ack_sent => t }
 
       @last_alert = nil
+    end
 
+    # split out to ease testing
+    def register_handlers
       register_handler :ready do |stanza|
-        EM.next_tick do
-          EM.synchrony do
-            on_ready(stanza)
-          end
+        EventMachine::Synchrony.next_tick do
+          on_ready(stanza)
         end
       end
 
       register_handler :message, :groupchat? do |stanza|
-        EM.next_tick do
-          EM.synchrony do
-            on_groupchat(stanza)
-          end
+        EventMachine::Synchrony.next_tick do
+          on_groupchat(stanza)
         end
       end
 
       register_handler :disconnected do |stanza|
         ret = true
-        EM.next_tick do
-          EM.synchrony do
-            ret = on_disconnect(stanza)
-          end
+        EventMachine::Synchrony.next_tick do
+          ret = on_disconnect(stanza)
         end
         ret
       end
-
     end
+
 
     # Join the MUC Chat room after connecting.
     def on_ready(stanza)
@@ -111,31 +108,37 @@ module Flapjack
 
     def on_groupchat(stanza)
       return if should_quit?
-      logger.debug("groupchat stanza body: " + stanza.body)
+
+      stanza_body = stanza.body
+
+      logger.debug("groupchat stanza body: " + stanza_body)
       logger.debug("groupchat message received: #{stanza.inspect}")
 
-      if stanza.body =~ /^(\w+).*#{Regexp.escape(@check_matcher)}/
+      if (stanza_body =~ /^(?:problem|recovery|acknowledgement)/i) &&
+         (stanza_body =~ /^(\w+).*#{Regexp.escape(@check_matcher)}/)
+
         # got something interesting
-        logger.debug("groupchat found the following state for #{@check_matcher}: #{$1.downcase}")
-        case $1.downcase
+        status = $1.downcase
+        t = Time.now.to_i
+        logger.debug("groupchat found the following state for #{@check_matcher}: #{status}")
+
+        case status
         when 'problem'
           logger.debug("updating @times last_problem")
-          @times[:last_problem] = Time.new.to_i
+          @times[:last_problem] = t
         when 'recovery'
           logger.debug("updating @times last_recovery")
-          @times[:last_recovery] = Time.new.to_i
+          @times[:last_recovery] = t
         when 'acknowledgement'
           logger.debug("updating @times last_ack")
-          @times[:last_ack] = Time.new.to_i
+          @times[:last_ack] = t
         end
-
       end
       logger.debug("@times: #{@times.inspect}")
-
     end
 
     def check_timers
-      t = Time.new.to_i
+      t = Time.now.to_i
       breach = nil
       @logger.debug("check_timers: inspecting @times #{@times.inspect}")
       case
@@ -145,7 +148,7 @@ module Flapjack
         breach = "haven't seen a test recovery notification in the last #{@max_latency} seconds"
       end
 
-      if !@flapjack_ok and !breach
+      unless @flapjack_ok || breach
         emit_jabber("Flapjack Self Monitoring is OK")
         emit_pagerduty("Flapjack Self Monitoring is OK", 'resolve')
       end
@@ -218,17 +221,16 @@ module Flapjack
         write(' ') if connected?
       end
 
-      check_timers_timer = EM::Synchrony.add_periodic_timer(10) do
+      setup
+      register_handlers
+      connect # Blather::Client.connect
+
+      until should_quit?
+        EM::Synchrony.sleep(10)
         check_timers
       end
 
-      setup
-      connect # Blather::Client.connect
-
-      if should_quit?
-        keepalive_timer.cancel
-        check_timers_timer.cancel
-      end
+      keepalive_timer.cancel
     end
 
   end

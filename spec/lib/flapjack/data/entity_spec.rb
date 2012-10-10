@@ -6,10 +6,6 @@ describe Flapjack::Data::Entity, :redis => true do
   let(:name)  { 'abc-123' }
   let(:check) { 'ping' }
 
-  it "adds an entity, including contacts"
-
-  it "finds an entity by name"
-
   it "creates an entity if allowed when it can't find it" do
     entity = Flapjack::Data::Entity.find_by_name(name, :redis => @redis, :create => true)
 
@@ -18,22 +14,40 @@ describe Flapjack::Data::Entity, :redis => true do
     @redis.get("entity_id:#{name}").should == ''
   end
 
-  it "finds an entity by id"
+  it "finds an entity by id" do
+    Flapjack::Data::Entity.add({'id'   => '5000',
+                                'name' => name},
+                                :redis => @redis)
+
+    entity = Flapjack::Data::Entity.find_by_id('5000', :redis => @redis)
+    entity.should_not be_nil
+    entity.name.should == name
+  end
+
+  it "finds an entity by name" do
+    Flapjack::Data::Entity.add({'id'   => '5000',
+                                'name' => name},
+                                :redis => @redis)
+
+    entity = Flapjack::Data::Entity.find_by_name(name, :redis => @redis)
+    entity.should_not be_nil
+    entity.id.should == '5000'
+  end
 
   it "returns a list of all entities" do
-    Flapjack::Data::Entity.add({'id'       => '5000',
-                                'name'     => name},
+    Flapjack::Data::Entity.add({'id'   => '5000',
+                                'name' => name},
                                 :redis => @redis)
-    Flapjack::Data::Entity.add({'id'       => '5001',
-                                'name'     => "z_" + name},
+    Flapjack::Data::Entity.add({'id'   => '5001',
+                                'name' => "z_" + name},
                                 :redis => @redis)
 
     entities = Flapjack::Data::Entity.all(:redis => @redis)
     entities.should_not be_nil
     entities.should be_an(Array)
     entities.should have(2).entities
-    entities[0].id.should == 5000
-    entities[1].id.should == 5001
+    entities[0].id.should == '5000'
+    entities[1].id.should == '5001'
   end
 
   it "returns a list of checks for an entity" do
