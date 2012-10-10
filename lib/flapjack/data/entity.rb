@@ -12,7 +12,7 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
         redis.keys("entity_id:*").collect {|k|
           k =~ /^entity_id:(.+)$/; entity_name = $1
-          self.new(:name => entity_name, :id => redis.get("entity_id:#{entity_name}").to_i, :redis => redis)
+          self.new(:name => entity_name, :id => redis.get("entity_id:#{entity_name}"), :redis => redis)
         }
       end
 
@@ -51,7 +51,7 @@ module Flapjack
           self.add({'name' => entity_name}, :redis => redis)
         end
         self.new(:name => entity_name,
-                 :id => (entity_id.nil? || entity_id.empty?) ? nil : entity_id.to_i,
+                 :id => (entity_id.nil? || entity_id.empty?) ? nil : entity_id,
                  :redis => redis)
       end
 
