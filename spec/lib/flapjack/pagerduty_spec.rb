@@ -10,8 +10,35 @@ describe Flapjack::Pagerduty, :redis => true do
     redis.should_receive(:rpush).with(nil, %q{{"notification_type":"shutdown"}})
 
     pagerduty = Flapjack::Pagerduty.new
-    pagerduty.bootstrap(:redis => @redis)
+    pagerduty.bootstrap
     pagerduty.add_shutdown_event(:redis => redis)
+  end
+
+  it "doesn't look for acknowledgements if this search is already running" do
+    @redis.set(Flapjack::Pagerduty::SEM_PAGERDUTY_ACKS_RUNNING, 'true')
+
+    fp = Flapjack::Pagerduty.new
+    fp.bootstrap(:config => config)
+    fp.instance_variable_set("@redis_timer", @redis)
+
+    fp.should_not_receive(:find_pagerduty_acknowledgements)
+    fp.find_pagerduty_acknowledgements_if_safe
+  end
+
+  it "looks for acknowledgements if the search is not already running" do
+    fp = Flapjack::Pagerduty.new
+    fp.bootstrap(:config => config)
+    fp.instance_variable_set("@redis_timer", @redis)
+
+    fp.should_receive(:find_pagerduty_acknowledgements)
+    fp.find_pagerduty_acknowledgements_if_safe
+  end
+
+  # NB: will need to run in EM block to catch the evented HTTP requests
+  it "looks for acknowledgements via the PagerDuty API" do
+    pending
+    EM.run_block {
+    }
   end
 
   it "runs a blocking loop listening for notifications" do

@@ -56,6 +56,8 @@ module Flapjack
         config_env['redis'][k] = v
       end
 
+      Flapjack::MATCH_ENTITY_PQDN = !!config_env['match_entity_pqdn']
+
       config_env
     end
 

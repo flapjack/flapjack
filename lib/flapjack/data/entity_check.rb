@@ -22,25 +22,24 @@ module Flapjack
 
       attr_accessor :entity, :check
 
-      # TODO probably shouldn't always be creating on query -- work out when this should be happening
       def self.for_event_id(event_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        entity_name, check = event_id.split(':')
-        self.new(Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis, :create => true), check,
-          :redis => redis)
+        ent_name, check = event_id.split(':')
+        self.for_entity_name(ent_name, check, options)
       end
 
       # TODO probably shouldn't always be creating on query -- work out when this should be happening
-      def self.for_entity_name(entity_name, check, options = {})
+      def self.for_entity_name(ent_name, check, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        self.new(Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis, :create => true), check,
-          :redis => redis)
+        create = options.has_key?(:create) ? options[:create] : true
+        ent = Flapjack::Data::Entity.find_by_name(ent_name, :create => create, :redis => redis)
+        self.new(ent, check, :redis => redis)
       end
 
       def self.for_entity_id(entity_id, check, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        self.new(Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis), check,
-          :redis => redis)
+        ent = Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis)
+        self.new(ent, check, :redis => redis)
       end
 
       def self.for_entity(entity, check, options = {})

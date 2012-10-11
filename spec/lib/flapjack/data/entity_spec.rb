@@ -34,6 +34,18 @@ describe Flapjack::Data::Entity, :redis => true do
     entity.id.should == '5000'
   end
 
+  it "finds an entity with a local name" do
+    stub_const("Flapjack::MATCH_ENTITY_PQDN", true)
+
+    Flapjack::Data::Entity.add({'id'   => '5000',
+                                'name' => 'abc123'},
+                                :redis => @redis)
+
+    entity = Flapjack::Data::Entity.find_by_name('abc123.example.net', :redis => @redis)
+    entity.should_not be_nil
+    entity.id.should == '5000'
+  end
+
   it "returns a list of all entities" do
     Flapjack::Data::Entity.add({'id'   => '5000',
                                 'name' => name},
