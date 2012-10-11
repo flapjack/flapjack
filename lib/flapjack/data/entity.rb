@@ -42,17 +42,22 @@ module Flapjack
         end
       end
 
-      def self.find_by_name(entity_name, options = {})
+      def self.find_by_name(ent_name, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        entity_id = redis.get("entity_id:#{entity_name}")
-        if entity_id.nil?
-          # key doesn't exist
-          return unless options[:create]
-          self.add({'name' => entity_name}, :redis => redis)
+
+        ret = nil
+        if defined?(Flapjack::MATCH_ENTITY_PQDN) && Flapjack::MATCH_ENTITY_PQDN
+          # will definitely not create if not found
+          ret = self.find_or_maybe_create_by_name(ent_name.gsub(/^([^\.]+)\..+$/, '\1'),
+                  options.merge(:create => false))
         end
-        self.new(:name => entity_name,
-                 :id => (entity_id.nil? || entity_id.empty?) ? nil : entity_id,
-                 :redis => redis)
+
+        if ret.nil?
+          # will create if not found, if the passed options indicate so
+          ret = self.find_or_maybe_create_by_name(ent_name, options)
+        end
+
+        ret
       end
 
       def self.find_by_id(entity_id, options = {})
@@ -81,6 +86,19 @@ module Flapjack
         raise "Entity name not set" unless @name = options[:name]
         @id = options[:id]
         @logger = options[:logger]
+      end
+
+      def self.find_or_maybe_create_by_name(ent_name, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        entity_id = redis.get("entity_id:#{ent_name}")
+        if entity_id.nil?
+          # key doesn't exist
+          return unless options[:create]
+          self.add({'name' => ent_name}, :redis => redis)
+        end
+        self.new(:name => ent_name,
+                 :id => (entity_id.nil? || entity_id.empty?) ? nil : entity_id,
+                 :redis => redis)
       end
 
     end
