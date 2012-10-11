@@ -8,5 +8,5 @@ services:
 before_script:
   - mkdir -p ./log
 before_install:
-  - git submodule sync -- doc && git submodule update --init --recursive
+  - git submodule update --init --recursive
 script: bundle exec rspec spec && bundle exec cucumber features
