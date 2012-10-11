@@ -1,5 +1,5 @@
 require 'spec_helper'
-require 'flapjack/executive'
+require 'flapjack/pagerduty'
 
 describe Flapjack::Pagerduty, :redis => true do
 
