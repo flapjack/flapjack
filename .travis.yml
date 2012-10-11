@@ -7,5 +7,6 @@ services:
   - redis-server
 before_script:
   - mkdir -p ./log
-  - git submodule --quiet update --init
+before_install:
+  - git submodule update --init --recursive
 script: bundle exec rspec spec && bundle exec cucumber features
