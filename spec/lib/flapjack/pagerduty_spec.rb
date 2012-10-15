@@ -84,6 +84,27 @@ describe Flapjack::Pagerduty, :redis => true do
     end
   end
 
+  it "creates acknowledgements when pagerduty acknowledgements are found" do
+    fp = Flapjack::Pagerduty.new
+    fp.bootstrap(:config => config)
+
+    entity_check = mock('entity_check')
+    entity_check.should_receive(:check).and_return('PING')
+    entity_check.should_receive(:pagerduty_credentials).and_return([{
+      'service_key' => '12345678',
+      'subdomain"'  => 'flpjck',
+      'username'    => 'flapjack',
+      'password'    => 'password123'
+    }])
+    entity_check.should_receive(:create_acknowledgement).with('summary' => 'Acknowledged on PagerDuty')
+
+    Flapjack::Data::Global.should_receive(:unacknowledged_failing_checks).and_return([entity_check])
+
+    fp.should_receive(:pagerduty_acknowledged?).and_return({})
+
+    fp.send(:find_pagerduty_acknowledgements)
+  end
+
   it "runs a blocking loop listening for notifications" do
     timer = mock('timer')
     timer.should_receive(:cancel)
