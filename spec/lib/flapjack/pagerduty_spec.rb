@@ -1,9 +1,14 @@
 require 'spec_helper'
+
+require 'yajl/json_gem'
+
 require 'flapjack/pagerduty'
 
 describe Flapjack::Pagerduty, :redis => true do
 
   let(:config) { {'queue'    => 'pagerduty_notifications'} }
+
+  let(:time)   { Time.new }
 
   it "prompts the blocking redis connection to quit" do
     redis = mock('redis')
@@ -34,11 +39,49 @@ describe Flapjack::Pagerduty, :redis => true do
     fp.find_pagerduty_acknowledgements_if_safe
   end
 
-  # NB: will need to run in EM block to catch the evented HTTP requests
+  # Testing the private PagerDuty methods separately, it's simpler. May be
+  # an argument for splitting some of them to another module, accessed by this
+  # class, in which case it makes more sense for the methods to be public.
+
+  # NB: needs to run in synchrony block to catch the evented HTTP requests
   it "looks for acknowledgements via the PagerDuty API" do
-    pending
-    EM.run_block {
-    }
+    EM.synchrony do
+      fp = Flapjack::Pagerduty.new
+      fp.bootstrap(:config => config)
+
+      check = 'PING'
+      Time.should_receive(:now).and_return(time)
+      since = (time.utc - (60*60*24*7)).iso8601 # the last week
+      unt   = (time.utc + (60*60*24)).iso8601   # 1 day in the future
+
+      response = {"incidents" =>
+        [{"incident_number" => 12,
+          "status" => "acknowledged",
+          "last_status_change_by" => {"id"=>"ABCDEFG", "name"=>"John Smith",
+                                      "email"=>"johns@example.com",
+                                      "html_url"=>"http://flpjck.pagerduty.com/users/ABCDEFG"}
+         }
+        ],
+        "limit"=>100,
+        "offset"=>0,
+        "total"=>1}
+
+      stub_request(:get, "https://flpjck.pagerduty.com/api/v1/incidents?" +
+        "fields=incident_number,status,last_status_change_by&incident_key=#{check}&" +
+        "since=#{since}&status=acknowledged&until=#{unt}").
+         with(:headers => {'Authorization'=>['flapjack', 'password123']}).
+         to_return(:status => 200, :body => response.to_json, :headers => {})
+
+      result = fp.send(:pagerduty_acknowledged?, 'subdomain' => 'flpjck', 'username' => 'flapjack',
+        'password' => 'password123', 'check' => check)
+
+      result.should be_a(Hash)
+      result.should have_key(:pg_acknowledged_by)
+      result[:pg_acknowledged_by].should be_a(Hash)
+      result[:pg_acknowledged_by].should have_key('id')
+      result[:pg_acknowledged_by]['id'].should == 'ABCDEFG'
+      EM.stop
+    end
   end
 
   it "runs a blocking loop listening for notifications" do

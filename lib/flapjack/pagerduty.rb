@@ -12,6 +12,7 @@ require 'redis'
 require 'yajl/json_gem'
 
 require 'flapjack/data/entity_check'
+require 'flapjack/data/global'
 require 'flapjack/pikelet'
 
 module Flapjack
@@ -20,13 +21,13 @@ module Flapjack
 
     include Flapjack::Pikelet
 
+    PAGERDUTY_EVENTS_API_URL   = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
     SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'
 
     def setup
       @redis = build_redis_connection_pool
       logger.debug("New Pagerduty pikelet with the following options: #{@config.inspect}")
 
-      @pagerduty_events_api_url = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
       @pagerduty_acks_started = nil
     end
 
@@ -119,52 +120,6 @@ module Flapjack
 
   private
 
-    def find_pagerduty_acknowledgements
-
-      logger.debug("looking for acks in pagerduty for unack'd problems")
-
-      unacknowledged_failing_checks = @redis_timer.zrange('failed_checks', '0', '-1').reject {|check|
-        @redis_timer.exists(check + ':unscheduled_maintenance')
-      }
-      @logger.debug "found unacknowledged failing checks as follows: " + unacknowledged_failing_checks.join(', ')
-
-      unacknowledged_failing_checks.each {|check|
-        entity_check = Flapjack::Data::EntityCheck.for_event_id(check, { :redis => @redis_timer, :logger => @logger } )
-        pagerduty_credentials = entity_check.pagerduty_credentials(:redis => @redis_timer)
-
-        if pagerduty_credentials.length == 0
-          @logger.debug("Found no pagerduty creditials for #{entity_check.entity_name}:#{entity_check.check}, moving on")
-          next
-        end
-
-        # FIXME: try each set of credentials until one works (may have stale contacts turning up)
-        options = pagerduty_credentials.first.merge('check' => check)
-
-        pagerduty_acknowledged, result_hash = pagerduty_acknowledged?(options)
-        if pagerduty_acknowledged
-          pg_acknowledged_by = result_hash[:pg_acknowledged_by] unless result_hash.nil?
-          @logger.debug "#{check} is acknowledged in pagerduty, creating flapjack acknowledgement ... "
-          who_text = ""
-          if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
-            who_text = " by #{pg_acknowledged_by['name']}"
-          end
-          entity_check.create_acknowledgement('summary' => "Acknowledged on PagerDuty" + who_text)
-        else
-          @logger.debug "#{check} is not acknowledged in pagerduty, moving on"
-        end
-      }
-
-    end
-
-    def send_pagerduty_event(event)
-      options  = { :body => Yajl::Encoder.encode(event) }
-      http = EM::HttpRequest.new(@pagerduty_events_api_url).post(options)
-      response = Yajl::Parser.parse(http.response)
-      status   = http.response_header.status
-      logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
-      [status, response]
-    end
-
     def test_pagerduty_connection
       noop = { "service_key"  => "11111111111111111111111111111111",
                "incident_key" => "Flapjack is running a NOOP",
@@ -176,16 +131,63 @@ module Flapjack
       false
     end
 
+    def send_pagerduty_event(event)
+      options  = { :body => Yajl::Encoder.encode(event) }
+      http = EM::HttpRequest.new(PAGERDUTY_EVENTS_API_URL).post(options)
+      response = Yajl::Parser.parse(http.response)
+      status   = http.response_header.status
+      logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
+      [status, response]
+    end
+
+    def find_pagerduty_acknowledgements
+
+      logger.debug("looking for acks in pagerduty for unack'd problems")
+
+      unacknowledged_failing_checks = Flapjack::Data::Global.unacknowledged_failing_checks(:redis => @redis_timer)
+
+      @logger.debug "found unacknowledged failing checks as follows: " + unacknowledged_failing_checks.join(', ')
+
+      unacknowledged_failing_checks.each do |entity_check|
+        pagerduty_credentials = entity_check.pagerduty_credentials(:redis => @redis_timer)
+
+        if pagerduty_credentials.empty?
+          @logger.debug("No pagerduty credentials found for #{entity_check.entity_name}:#{entity_check.check}, skipping")
+          next
+        end
+
+        # FIXME: try each set of credentials until one works (may have stale contacts turning up)
+        options = pagerduty_credentials.first.merge('check' => entity_check.check)
+
+        acknowledged = pagerduty_acknowledged?(options)
+        if acknowledged.nil?
+          @logger.debug "#{entity_check.check} is not acknowledged in pagerduty, skipping"
+          next
+        end
+
+        pg_acknowledged_by = acknowledged[:pg_acknowledged_by]
+        @logger.debug "#{entity_check.check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
+        who_text = ""
+        if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
+          who_text = " by #{pg_acknowledged_by['name']}"
+        end
+        entity_check.create_acknowledgement('summary' => "Acknowledged on PagerDuty" + who_text)
+      end
+
+    end
+
     def pagerduty_acknowledged?(opts)
       subdomain   = opts['subdomain']
       username    = opts['username']
       password    = opts['password']
       check       = opts['check']
 
+      t = Time.now.utc
+
       url = 'https://' + subdomain + '.pagerduty.com/api/v1/incidents'
       query = { 'fields'       => 'incident_number,status,last_status_change_by',
-                'since'        => (Time.new.utc - (60*60*24*7)).iso8601,
-                'until'        => (Time.new.utc + (60*60*24)).iso8601,
+                'since'        => (t - (60*60*24*7)).iso8601, # the last week
+                'until'        => (t + (60*60*24)).iso8601,   # 1 day in the future
                 'incident_key' => check,
                 'status'       => 'acknowledged' }
 
@@ -205,27 +207,24 @@ module Flapjack
         @logger.error("failed to parse json from a post to #{url} ... response headers and body follows...")
         @logger.error(http.response_header.inspect)
         @logger.error(http.response)
-        return nil, nil
+        return nil
       end
       status   = http.response_header.status
 
       @logger.debug("pagerduty_acknowledged?: decoded response as: #{response.inspect}")
       if response.nil?
         @logger.error('no valid response received from pagerduty!')
-        return nil, nil
+        return nil
       end
 
       if response['incidents'].nil?
         @logger.error('no incidents found in response')
-        return nil, nil
+        return nil
       end
 
-      if response['incidents'].length > 0
-        pg_acknowledged_by = response['incidents'].first['last_status_change_by']
-        return true, :pg_acknowledged_by => pg_acknowledged_by
-      else
-        return false, nil
-      end
+      return nil if response['incidents'].empty?
+
+      {:pg_acknowledged_by => response['incidents'].first['last_status_change_by']}
     end
 
   end
