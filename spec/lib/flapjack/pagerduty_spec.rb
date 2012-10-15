@@ -124,11 +124,54 @@ describe Flapjack::Pagerduty, :redis => true do
       ["pagerduty_notifications", %q{{"notification_type":"shutdown"}}]
     )
 
-    # FIXME test these methods as well
     fp.should_receive(:test_pagerduty_connection).and_return(true)
     fp.should_receive(:send_pagerduty_event)
 
     fp.main
+  end
+
+  it "tests the pagerduty connection" do
+    EM.synchrony do
+
+      evt = { "service_key"  => "11111111111111111111111111111111",
+              "incident_key" => "Flapjack is running a NOOP",
+              "event_type"   => "nop",
+              "description"  => "I love APIs with noops." }
+
+      body = evt.to_json
+      stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
+        with(:body => body).to_return(:status => 200, :body => '{"status":"success"}', :headers => {})
+
+      fp = Flapjack::Pagerduty.new
+      fp.bootstrap(:config => config)
+
+      ret = fp.send(:test_pagerduty_connection)
+      ret.should be_true
+
+      EM.stop
+    end
+  end
+
+  it "sends an event to pagerduty" do
+    EM.synchrony do
+
+      evt = {"service_key"  => "abcdefg",
+             "incident_key" => "Flapjack test",
+             "event_type"   => "nop",
+             "description"  => "Not really sent anyway"}
+      body = evt.to_json
+      stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
+        with(:body => body).to_return(:status => 200, :body => "", :headers => {})
+
+      fp = Flapjack::Pagerduty.new
+      fp.bootstrap(:config => config)
+
+      ret = fp.send(:send_pagerduty_event, evt)
+      ret.should_not be_nil
+      ret.should == [200, nil]
+
+      EM.stop
+    end
   end
 
 end
