@@ -129,8 +129,8 @@ module Flapjack
       f = Fiber.new {
         begin
           pikelet = pikelet_class.new
-          @pikelets.detect {|p| p[:type] == pikelet_type}[:instance] = pikelet
-          pikelet.bootstrap(:redis => @redis_options, :config => pikelet_cfg)
+          @pikelets.detect {|p| p[:class] == pikelet_class}[:instance] = pikelet
+          pikelet.bootstrap(:redis_config => @redis_options, :config => pikelet_cfg)
           pikelet.main
         rescue Exception => e
           trace = e.backtrace.join("\n")
@@ -138,7 +138,7 @@ module Flapjack
           stop
         end
       }
-      @pikelets << {:fiber => f, :type => pikelet_type}
+      @pikelets << {:fiber => f, :class => pikelet_class}
       f.resume
       @logger.debug "new fiber created for #{pikelet_type}"
     end
@@ -152,20 +152,16 @@ module Flapjack
       end
       return unless pikelet_class
 
-      port = nil
-      if pikelet_cfg['port']
-        port = pikelet_cfg['port'].to_i
+      pikelet_class.bootstrap(:config => pikelet_cfg, :redis_config => @redis_options)
+
+      # only run once
+      if ([Flapjack::Web, Flapjack::API] & @pikelets.collect {|p| p[:class]}).empty?
+        Thin::Logging.silent = true
       end
 
-      port = 3001 if (port.nil? || port <= 0 || port > 65535)
-
-      pool = Flapjack::RedisPool.new(:config => @redis_options)
-      pikelet_class.class_variable_set('@@redis', pool)
-
-      Thin::Logging.silent = true
-
-      pikelet = Thin::Server.new('0.0.0.0', port, pikelet_class, :signals => false)
-      @pikelets << {:instance => pikelet, :type => pikelet_type, :pool => pool}
+      pikelet = Thin::Server.new('0.0.0.0', pikelet_class.instance_variable_get('@port'),
+        pikelet_class, :signals => false)
+      @pikelets << {:instance => pikelet, :class => pikelet_class}
       pikelet.start
       @logger.debug "new thin server instance started for #{pikelet_type}"
     end
@@ -179,42 +175,27 @@ module Flapjack
       end
       return unless pikelet_class
 
+      pikelet_class.bootstrap(:config => pikelet_cfg)
+
       # set up connection pooling, stop resque errors (ensure that it's only
       # done once)
-      pool = nil
-      if (['email_notifier', 'sms_notifier'] & @pikelets.collect {|p| p[:type]}).empty?
+      if ([Flapjack::Notification::Email, Flapjack::Notification::Sms] &
+        @pikelets.collect {|p| p[:class]}).empty?
+
         pool = Flapjack::RedisPool.new(:config => @redis_options)
         ::Resque.redis = pool
+        pikelet_class.redis = pool
         ## NB: can override the default 'resque' namespace like this
         #::Resque.redis.namespace = 'flapjack'
       end
 
-      # See https://github.com/mikel/mail/blob/master/lib/mail/mail.rb#L53
-      # & https://github.com/mikel/mail/blob/master/spec/mail/configuration_spec.rb
-      # for details of configuring mail gem. defaults to SMTP, localhost, port 25
-
-      if pikelet_type.eql?('email_notifier')
-        smtp_config = {}
-
-        if pikelet_cfg['smtp_config']
-          smtp_config = pikelet_cfg['smtp_config'].keys.inject({}) do |ret,obj|
-            ret[obj.to_sym] = pikelet_cfg['smtp_config'][obj]
-            ret
-          end
-        end
-
-        Mail.defaults {
-          delivery_method :smtp, {:enable_starttls_auto => false}.merge(smtp_config)
-        }
-      end
-
-      pikelet_class.class_variable_set('@@config', pikelet_cfg)
+      pikelet_class.bootstrap(:config => pikelet_cfg)
 
       f = Fiber.new {
         begin
           # TODO error if pikelet_cfg['queue'].nil?
           pikelet = EM::Resque::Worker.new(pikelet_cfg['queue'])
-          @pikelets.detect {|p| p[:type] == pikelet_type}[:instance] = pikelet
+          @pikelets.detect {|p| p[:class] == pikelet_class}[:instance] = pikelet
           # # Use these to debug the resque workers
           # flapjack_rsq.verbose = true
           #flapjack_rsq.very_verbose = true
@@ -225,8 +206,7 @@ module Flapjack
           stop
         end
       }
-      pikelet_values = {:fiber => f, :type => pikelet_type}
-      pikelet_values[:pool] = pool if pool
+      pikelet_values = {:fiber => f, :class => pikelet_class}
       @pikelets << pikelet_values
       f.resume
       @logger.debug "new fiber created for #{pikelet_type}"
@@ -269,24 +249,25 @@ module Flapjack
         end
       end
 
-      fibers = @pikelets.collect {|p| p[:fiber] }.compact
-      thin_pikelets = @pikelets.collect {|p| p[:instance]}.select {|i| i.is_a?(Thin::Server) }
-
       Fiber.new {
+
+        fibers = @pikelets.collect {|p| p[:fiber] }.compact
+        thin_pikelets = @pikelets.collect {|p| p[:instance]}.select {|i| i.is_a?(Thin::Server) }
+
         loop do
           # health_check
           if fibers.any?(&:alive?) || thin_pikelets.any?{|tp| !tp.backend.empty? }
             EM::Synchrony.sleep 0.25
           else
-            @pikelets.select {|p| thin_pikelets.include?(p) }.each do |tp|
-              tp[:pool].empty!
+
+            @pikelets.each do |pik|
+              case pik[:instance]
+              when Flapjack::Executive, Flapjack::Jabber, Flapjack::Pagerduty
+                pik[:instance].cleanup
+              when EM::Resque::Worker, Thin::Server
+                pik[:class].cleanup
+              end
             end
-
-            rsq_p = @pikelets.detect {|p|
-              ['email_notifier', 'sms_notifier'].include?(p[:type]) && !p[:pool].nil?
-            }
-
-            rsq_p[:pool].empty! if rsq_p
 
             EM.stop
             break

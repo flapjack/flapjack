@@ -2,6 +2,7 @@
 include Mail::Matchers
 
 # copied from flapjack-populator
+# TODO use Flapjack::Data::Contact.add
 def add_contact(contact = {})
   @redis.multi
   @redis.del("contact:#{contact['id']}")

@@ -16,24 +16,7 @@ require 'flapjack/redis_pool'
 
 module Flapjack
   module Pikelet
-    attr_accessor :logger, :redis, :config
-
-    def should_quit?
-      @should_quit
-    end
-
-    def stop
-      @should_quit = true
-    end
-
-    def build_redis_connection_pool(options = {})
-      return unless @bootstrapped
-      if defined?(EventMachine) && defined?(EventMachine::Synchrony)
-        Flapjack::RedisPool.new(:config => @redis_config, :size => options[:size])
-      else
-        ::Redis.new(@redis_config)
-      end
-    end
+    attr_accessor :logger, :config, :redis
 
     def bootstrap(opts = {})
       return if @bootstrapped
@@ -44,13 +27,81 @@ module Flapjack
         @logger.add(Log4r::SyslogOutputter.new("flapjack"))
       end
 
-      @redis_config = opts[:redis] || {}
       @config = opts[:config] || {}
-
-      @should_quit = false
 
       @bootstrapped = true
     end
 
+  end
+
+  module GenericPikelet
+    include Flapjack::Pikelet
+
+    def should_quit?
+      @should_quit
+    end
+
+    def stop
+      @should_quit = true
+    end
+
+    alias_method :orig_bootstrap, :bootstrap
+
+    def bootstrap(opts = {})
+      @redis_config =  opts.delete(:redis_config) || {}
+      @should_quit = false
+
+      orig_bootstrap(opts)
+    end
+
+    def build_redis_connection_pool(options = {})
+      return unless @bootstrapped
+      if defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
+        ::Redis.new(@redis_config.merge(:driver => 'ruby'))
+      else
+        Flapjack::RedisPool.new(:config => @redis_config, :size => options[:size])
+      end
+    end
+
+  end
+
+  module ResquePikelet
+    include Flapjack::Pikelet
+
+    def cleanup
+      @redis.empty!
+    end
+  end
+
+  module ThinPikelet
+    include Flapjack::Pikelet
+
+    attr_accessor :port
+
+    alias_method :orig_bootstrap, :bootstrap
+
+    def bootstrap(opts = {})
+      return if @bootstrapped
+
+      config = opts[:config]
+      redis_config = opts.delete(:redis_config) || {}
+
+      @port = config['port'] ? config['port'].to_i : nil
+      @port = 3001 if (@port.nil? || @port <= 0 || @port > 65535)
+
+      redis_size = opts.delete(:redis_size)
+
+      @redis = if defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
+        ::Redis.new(redis_config.merge(:driver => 'ruby'))
+      else
+        Flapjack::RedisPool.new(:config => redis_config, :size => redis_size)
+      end
+
+      orig_bootstrap(opts)
+    end
+
+    def cleanup
+      @redis.empty! if @redis
+    end
   end
 end

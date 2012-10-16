@@ -65,16 +65,19 @@ module Flapjack
     use Rack::MethodOverride
     use Rack::JsonParamsParser
 
-    extend Flapjack::Pikelet
+    extend Flapjack::ThinPikelet
 
-    before do
-      # will only initialise the first time it's run
-      Flapjack::API.bootstrap
+    def redis
+      Flapjack::API.instance_variable_get('@redis')
+    end
+
+    def logger
+      Flapjack::API.instance_variable_get('@logger')
     end
 
     get '/entities' do
       content_type :json
-      ret = Flapjack::Data::Entity.all(:redis => @@redis).sort_by(&:name).collect {|e|
+      ret = Flapjack::Data::Entity.all(:redis => redis).sort_by(&:name).collect {|e|
         {'id' => e.id, 'name' => e.name,
          'checks' => e.check_list.sort.collect {|c|
                        entity_check_status(e, c)
@@ -86,7 +89,7 @@ module Flapjack
 
     get '/checks/:entity' do
       content_type :json
-      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => @@redis)
+      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
       if entity.nil?
         status 404
         return
@@ -100,7 +103,7 @@ module Flapjack
       entity_name = params[:captures][0]
       check = params[:captures][1]
 
-      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @@redis)
+      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
       if entity.nil?
         status 404
         return
@@ -125,7 +128,7 @@ module Flapjack
       entity_name = params[:captures][0]
       check = params[:captures][1]
 
-      entity = entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @@redis)
+      entity = entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
       if entity.nil?
         status 404
         return
@@ -136,10 +139,10 @@ module Flapjack
 
       presenter = if check
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-          check, :redis => @@redis)
+          check, :redis => redis)
         Flapjack::API::EntityCheckPresenter.new(entity_check)
       else
-        Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+        Flapjack::API::EntityPresenter.new(entity, :redis => redis)
       end
 
       presenter.outages(start_time, end_time).to_json
@@ -151,7 +154,7 @@ module Flapjack
       entity_name = params[:captures][0]
       check = params[:captures][1]
 
-      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @@redis)
+      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
       if entity.nil?
         status 404
         return
@@ -162,10 +165,10 @@ module Flapjack
 
       presenter = if check
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-          check, :redis => @@redis)
+          check, :redis => redis)
         Flapjack::API::EntityCheckPresenter.new(entity_check)
       else
-        Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+        Flapjack::API::EntityPresenter.new(entity, :redis => redis)
       end
 
       presenter.unscheduled_maintenance(start_time, end_time).to_json
@@ -177,7 +180,7 @@ module Flapjack
       entity_name = params[:captures][0]
       check = params[:captures][1]
 
-      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @@redis)
+      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
       if entity.nil?
         status 404
         return
@@ -188,10 +191,10 @@ module Flapjack
 
       presenter = if check
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-          check, :redis => @@redis)
+          check, :redis => redis)
         Flapjack::API::EntityCheckPresenter.new(entity_check)
       else
-        Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+        Flapjack::API::EntityPresenter.new(entity, :redis => redis)
       end
       presenter.scheduled_maintenance(start_time, end_time).to_json
     end
@@ -202,7 +205,7 @@ module Flapjack
       entity_name = params[:captures][0]
       check = params[:captures][1]
 
-      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @@redis)
+      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
       if entity.nil?
         status 404
         return
@@ -213,10 +216,10 @@ module Flapjack
 
       presenter = if check
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-          check, :redis => @@redis)
+          check, :redis => redis)
         Flapjack::API::EntityCheckPresenter.new(entity_check)
       else
-        Flapjack::API::EntityPresenter.new(entity, :redis => @@redis)
+        Flapjack::API::EntityPresenter.new(entity, :redis => redis)
       end
 
       presenter.downtime(start_time, end_time).to_json
@@ -225,13 +228,13 @@ module Flapjack
     # create a scheduled maintenance period for a service on an entity
     post '/scheduled_maintenances/:entity/:check' do
       content_type :json
-      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => @@redis)
+      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
       if entity.nil?
         status 404
         return
       end
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => @@redis)
+        params[:check], :redis => redis)
       entity_check.create_scheduled_maintenance(:start_time => params[:start_time],
         :duration => params[:duration], :summary => params[:summary])
       status 204
@@ -242,7 +245,7 @@ module Flapjack
     # the entity-check as a whole
     post '/acknowledgements/:entity/:check' do
       content_type :json
-      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => @@redis)
+      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
       if entity.nil?
         status 404
         return
@@ -252,7 +255,7 @@ module Flapjack
       duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => @@redis)
+        params[:check], :redis => redis)
       entity_check.create_acknowledgement('summary' => params[:summary],
         'duration' => duration)
       status 204
@@ -272,7 +275,7 @@ module Flapjack
             errors << "Entity not imported as it has no id: #{entity.inspect}"
             next
           end
-          Flapjack::Data::Entity.add(entity, :redis => @@redis)
+          Flapjack::Data::Entity.add(entity, :redis => redis)
         end
         ret = 200
       else
@@ -291,13 +294,13 @@ module Flapjack
 
       contacts = params[:contacts]
       if contacts && contacts.is_a?(Enumerable) && contacts.any? {|c| !c['id'].nil?}
-        Flapjack::Data::Contact.delete_all(:redis => @@redis)
+        Flapjack::Data::Contact.delete_all(:redis => redis)
         contacts.each do |contact|
           unless contact['id']
             logger.warn "Contact not imported as it has no id: #{contact.inspect}"
             next
           end
-          Flapjack::Data::Contact.add(contact, :redis => @@redis)
+          Flapjack::Data::Contact.add(contact, :redis => redis)
         end
         ret = 200
       else
@@ -315,7 +318,7 @@ module Flapjack
 
       def entity_check_status(entity, check)
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-          check, :redis => @@redis)
+          check, :redis => redis)
         return if entity_check.nil?
         { 'name'                                => check,
           'state'                               => entity_check.state,

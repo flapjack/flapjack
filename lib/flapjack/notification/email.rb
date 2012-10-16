@@ -5,47 +5,80 @@ require 'erb'
 require 'haml'
 require 'socket'
 
+require 'flapjack/pikelet'
 require 'flapjack/data/entity_check'
-require 'flapjack/notification/common'
 
 module Flapjack
   module Notification
 
     class Email
-      extend Flapjack::Notification::Common
 
-      def self.dispatch(notification, opts = {})
-        notification_type  = notification['notification_type']
-        contact_first_name = notification['contact_first_name']
-        contact_last_name  = notification['contact_last_name']
-        state              = notification['state']
-        summary            = notification['summary']
-        time               = notification['time']
-        entity, check      = notification['event_id'].split(':')
+      extend Flapjack::ResquePikelet
 
-        entity_check = Flapjack::Data::EntityCheck.for_event_id(notification['event_id'],
-          :redis => opts[:redis])
+      class << self
 
-        headline_map = {'problem'         => 'Problem: ',
-                        'recovery'        => 'Recovery: ',
-                        'acknowledgement' => 'Acknowledgement: ',
-                        'unknown'         => ''
-                       }
+        alias_method :orig_bootstrap, :bootstrap
 
-        headline = headline_map[notification_type] || ''
+        # See https://github.com/mikel/mail/blob/master/lib/mail/mail.rb#L53
+        # & https://github.com/mikel/mail/blob/master/spec/mail/configuration_spec.rb
+        # for details of configuring mail gem. defaults to SMTP, localhost, port 25
+        def bootstrap(opts = {})
+          return if @bootstrapped
 
-        subject = "#{headline}'#{check}' on #{entity}"
-        subject += " is #{state.upcase}" unless notification_type == 'acknowledgement'
+          sc = opts[:config].delete('smtp_config')
 
-        notification['subject'] = subject
-        opts[:logger].debug "Flapjack::Notification::Email#dispatch is calling Flapjack::Notification::Mailer.sender, notification_id: #{notification['id']}"
-        sender_opts = {:logger => opts[:logger],
-                       :in_scheduled_maintenance   => entity_check.in_scheduled_maintenance?,
-                       :in_unscheduled_maintenance => entity_check.in_unscheduled_maintenance?
-                      }
+          if sc
+            smtp_config = sc.keys.inject({}) do |ret,obj|
+                ret[obj.to_sym] = sc[obj]
+                ret
+            end
 
-        mail = prepare_email(notification, sender_opts)
-        mail.deliver!
+            Mail.defaults {
+              delivery_method :smtp, {:enable_starttls_auto => false}.merge(smtp_config)
+            }
+          end
+          orig_bootstrap(opts)
+        end
+
+        def perform(notification)
+          @logger.debug "Woo, got a notification to send out: #{notification.inspect}"
+          self.dispatch(notification, :logger => @logger, :redis => ::Resque.redis)
+        end
+
+        def dispatch(notification, opts = {})
+          notification_type  = notification['notification_type']
+          contact_first_name = notification['contact_first_name']
+          contact_last_name  = notification['contact_last_name']
+          state              = notification['state']
+          summary            = notification['summary']
+          time               = notification['time']
+          entity, check      = notification['event_id'].split(':')
+
+          entity_check = Flapjack::Data::EntityCheck.for_event_id(notification['event_id'],
+            :redis => opts[:redis])
+
+          headline_map = {'problem'         => 'Problem: ',
+                          'recovery'        => 'Recovery: ',
+                          'acknowledgement' => 'Acknowledgement: ',
+                          'unknown'         => ''
+                         }
+
+          headline = headline_map[notification_type] || ''
+
+          subject = "#{headline}'#{check}' on #{entity}"
+          subject += " is #{state.upcase}" unless notification_type == 'acknowledgement'
+
+          notification['subject'] = subject
+          opts[:logger].debug "Flapjack::Notification::Email#dispatch is calling Flapjack::Notification::Mailer.sender, notification_id: #{notification['id']}"
+          sender_opts = {:logger => opts[:logger],
+                         :in_scheduled_maintenance   => entity_check.in_scheduled_maintenance?,
+                         :in_unscheduled_maintenance => entity_check.in_unscheduled_maintenance?
+                        }
+
+          mail = prepare_email(notification, sender_opts)
+          mail.deliver!
+        end
+
       end
 
     private

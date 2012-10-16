@@ -4,7 +4,6 @@ namespace :profile do
   require 'flapjack/configuration'
   require 'flapjack/executive'
 
-  FLAPJACK_ENV    = 'profile'
   FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..')
   FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_profile.yaml')
 
@@ -48,26 +47,77 @@ namespace :profile do
       }
     end
 
-    desc "profile executive with rubyprof"
-    task :executive do
+    def profile_pikelet(klass, config_key)
       config, redis_opts = load_config
-      exec = Flapjack::Executive.new
-      exec.bootstrap(:redis => redis_opts, :config => config_env['executive'])
-      t = rubyprof_profile('executive_profile.txt') { exec.main }
+      pikelet = klass.new
+      pikelet.bootstrap(:redis => redis_opts, :config => config_env[config_key])
+      t = rubyprof_profile("#{config_key}_profile.txt") { pikelet.main }
 
-      # TODO add some events
+      yield
 
-      exec.stop
-      exec.add_shutdown_event(:redis => Redis.new(redis_options.merge(:driver => 'ruby')))
+      pikelet.stop
+      pikelet.add_shutdown_event(:redis => Redis.new(redis_options.merge(:driver => 'ruby')))
       t.join
     end
 
+    def profile_resque(klass, config_key)
+      config, redis_opts = load_config
+      worker = EM::Resque::Worker.new(config_env[config_key]['queue'])
+      t = rubyprof_profile("#{config_key}_profile.txt") { worker.work }
+
+      yield
+
+      worker.shutdown
+      t.join
+    end
+
+    def profile_thin(klass, config_key)
+      config, redis_opts = load_config
+
+
+      t = rubyprof_profile("#{config_key}_profile.txt") { }
+
+      yield
+
+      pikelet.stop
+      t.join
+    end
+
+    desc "profile executive with rubyprof"
+    task :executive do
+      FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
+      profile_pikelet(Flapjack::Executive, 'executive') {
+        # TODO add some events
+      }
+    end
+
+    # NB: you'll need to access a real jabber server for this; if external events come in
+    # from that then runs will not necessarily be comparable
+    desc :jabber do
+      FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
+      profile_pikelet(Flapjack::Jabber, 'jabber_gateway') {
+        # TODO add some notifications
+      }
+    end
+
+    # NB: you'll need an external email server set up for this (whether it's mailtrap
+    # or a real server)
+    desc "profile email notifier with rubyprof"
+    task :email do
+      FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
+      profile_resque(Flapjack::Notification::Email, 'email_notifier') {
+        # TODO add some notifications
+      }
+    end
+
+    desc "profile web server with rubyprof"
+    task :web do
+      FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
+      profile_thin(Flapjack::Web, 'web') {
+        # TODO add some web requests
+      }
+    end
+
   end
-
-  # namespace :perftools do
-  #   task :executive do
-
-  #   end
-  # end
 
 end

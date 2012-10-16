@@ -8,8 +8,7 @@ if ENV['COVERAGE']
 end
 
 ENV["FLAPJACK_ENV"] = 'test'
-require 'bundler'
-Bundler.require(:default, :test)
+FLAPJACK_ENV = 'test'
 
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
@@ -20,6 +19,8 @@ WebMock.disable_net_connect!
 
 require 'flapjack/executive'
 require 'flapjack/patches'
+
+require 'resque_spec'
 
 class MockLogger
   attr_accessor :messages

@@ -35,12 +35,12 @@ namespace :events do
     end
 
     def get_redis_connection
+      base_opts = {:db => @redis_db, :driver => 'ruby'}
       if @redis_path
-        redis = Redis.new(:db => @redis_db, :path => @redis_path)
+        Redis.new( base_opts.merge(:path => @redis_path) )
       else
-        redis = Redis.new(:db => @redis_db, :host => @redis_host, :port => @redis_port)
+        Redis.new( base_opts.merge(:host => @redis_host, :port => @redis_port) )
       end
-      redis
     end
 
     # creates an event object and adds it to the events list in redis

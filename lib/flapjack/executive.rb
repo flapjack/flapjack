@@ -13,7 +13,6 @@ require 'flapjack/filters/delays'
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/event'
-require 'flapjack/notification/common'
 require 'flapjack/notification/sms'
 require 'flapjack/notification/email'
 require 'flapjack/pikelet'
@@ -21,7 +20,7 @@ require 'flapjack/pikelet'
 module Flapjack
 
   class Executive
-    include Flapjack::Pikelet
+    include Flapjack::GenericPikelet
 
     def setup
       @redis = build_redis_connection_pool

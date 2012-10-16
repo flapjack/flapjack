@@ -25,7 +25,7 @@ module Flapjack
 
   class Jabber < Blather::Client
 
-    include Flapjack::Pikelet
+    include Flapjack::GenericPikelet
     include Flapjack::Utility
 
     log = Logger.new(STDOUT)
