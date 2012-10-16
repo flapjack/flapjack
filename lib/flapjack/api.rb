@@ -49,7 +49,7 @@ module Flapjack
 
     set :show_exceptions, false
 
-    if 'test'.eql?(FLAPJACK_ENV)
+    if defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
       # expose test errors properly
       set :raise_errors, true
     else

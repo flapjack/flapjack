@@ -43,14 +43,15 @@ module Flapjack
       # FIXME raise error if config not set, or empty
 
       if options[:daemonize]
+        @signals = options[:signals]
         daemonize
       else
-        setup
+        setup(:signals => options[:signals])
       end
     end
 
     def after_daemonize
-      setup
+      setup(:signals => @signals)
     end
 
     def stop
@@ -59,7 +60,7 @@ module Flapjack
 
   private
 
-    def setup
+    def setup(options = {})
 
       # FIXME: the following is currently repeated in flapjack-populator and
       # flapjack-nagios-receiver - move to a method in a module and include it
@@ -68,14 +69,13 @@ module Flapjack
       redis_path = @config['redis']['path'] || nil
       redis_db   = @config['redis']['db']   || 0
 
-      if redis_path
-        @redis_options = { :db => redis_db, :path => redis_path }
+      @redis_options = if redis_path
+         { :db => redis_db, :path => redis_path }
       else
-        @redis_options = { :db => redis_db, :host => redis_host, :port => redis_port }
+         { :db => redis_db, :host => redis_host, :port => redis_port }
       end
 
       EM.synchrony do
-
         @logger.debug "config keys: #{@config.keys}"
 
         pikelet_keys = ['executive', 'jabber_gateway', 'pagerduty_gateway',
@@ -99,7 +99,7 @@ module Flapjack
           end
         end
 
-        setup_signals
+        setup_signals if options[:signals]
       end
 
     end

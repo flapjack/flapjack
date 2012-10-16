@@ -1,4 +1,3 @@
-
 require 'redis'
 require 'yaml'
 require 'yajl'
@@ -26,8 +25,8 @@ namespace :events do
     @redis_db   = config_env['redis']['db']   || 0
 
     if config_env.nil? || config_env.empty?
-        puts "No config data for environment '#{FLAPJACK_ENV}'"
-          exit(false)
+      puts "No config data for environment '#{FLAPJACK_ENV}'"
+      exit(false)
     end
 
     # add lib to the default include path

@@ -16,7 +16,7 @@ require 'flapjack/utility'
 module Flapjack
   class Web < Sinatra::Base
 
-    if 'test'.eql?(FLAPJACK_ENV)
+    if defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
       # expose test errors properly
       set :raise_errors, true
       set :show_exceptions, false
