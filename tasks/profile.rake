@@ -47,10 +47,24 @@ namespace :profile do
       }
     end
 
+    def profile_coordinator
+      config, redis_opts = load_config
+      coordinator = Flapjack::Coordinator.new(config)
+
+      t = rubyprof_profile("coordinator_profile.txt") {
+        coordinator.start(:daemonize => false, :signals => false)
+      }
+
+      yield
+
+      coordinator.stop
+      t.join
+    end
+
     def profile_pikelet(klass, config_key)
       config, redis_opts = load_config
       pikelet = klass.new
-      pikelet.bootstrap(:redis => redis_opts, :config => config_env[config_key])
+      pikelet.bootstrap(:config => config_env[config_key], :redis_config => redis_opts)
       t = rubyprof_profile("#{config_key}_profile.txt") { pikelet.main }
 
       yield
@@ -62,6 +76,7 @@ namespace :profile do
 
     def profile_resque(klass, config_key)
       config, redis_opts = load_config
+      # TODO redis setup for resque
       worker = EM::Resque::Worker.new(config_env[config_key]['queue'])
       t = rubyprof_profile("#{config_key}_profile.txt") { worker.work }
 
@@ -73,14 +88,26 @@ namespace :profile do
 
     def profile_thin(klass, config_key)
       config, redis_opts = load_config
+      klass.bootstrap(:config => config, :redis_config => redis_opts)
 
+      # TODO init server
 
-      t = rubyprof_profile("#{config_key}_profile.txt") { }
+      t = rubyprof_profile("#{config_key}_profile.txt") {
+
+      }
 
       yield
 
-      pikelet.stop
+      # pikelet.stop
       t.join
+    end
+
+    desc "profile multiple components running through coordinator with rubyprof"
+    task :coordinator do
+      FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
+      profile_coordinator {
+        # TODO make things happen
+      }
     end
 
     desc "profile executive with rubyprof"
