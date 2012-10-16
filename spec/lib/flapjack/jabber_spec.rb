@@ -15,17 +15,12 @@ describe Flapjack::Jabber do
 
   let(:stanza) { mock('stanza') }
 
-  it "is initialized" do
-    fj = Flapjack::Jabber.new
-    fj.should_not be_nil
-  end
-
   it "hooks up event handlers to the appropriate methods" do
     Socket.should_receive(:gethostname).and_return('thismachine')
 
     fj = Flapjack::Jabber.new
-    fj.bootstrap(:config => config)
     fj.should_receive(:build_redis_connection_pool)
+    fj.bootstrap(:config => config)
 
     EventMachine::Synchrony.should_receive(:next_tick).exactly(4).times.and_yield
 
@@ -136,8 +131,8 @@ describe Flapjack::Jabber do
     redis.should_receive(:empty!)
 
     fj = Flapjack::Jabber.new
-    fj.bootstrap(:config => config)
     fj.should_receive(:build_redis_connection_pool).and_return(redis)
+    fj.bootstrap(:config => config)
     fj.should_receive(:register_handler).exactly(4).times
 
     fj.should_receive(:connect)

@@ -33,10 +33,10 @@ module Flapjack
     log.level = Logger::INFO
     Blather.logger = log
 
-    alias_method :orig_bootstrap, :bootstrap
+    alias_method :generic_bootstrap, :bootstrap
 
     def bootstrap(opts = {})
-      orig_bootstrap(opts)
+      generic_bootstrap(opts)
 
       @redis = build_redis_connection_pool
 
@@ -95,7 +95,7 @@ module Flapjack
           presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
           presence << "<x xmlns='http://jabber.org/protocol/muc'/>"
           write presence
-          say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
+          say(room, "flapja ck jabber gateway started at #{Time.now}, hello!", :groupchat)
         end
       end
       return if @buffer.empty?

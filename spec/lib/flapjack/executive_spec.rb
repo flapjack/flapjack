@@ -35,14 +35,15 @@ describe Flapjack::Executive, :redis => true do
     Flapjack::Data::Event.should_receive(:next).and_return(shutdown_evt)
 
     executive = Flapjack::Executive.new
+    executive.should_receive(:build_redis_connection_pool).and_return(@redis)
     executive.bootstrap(:config => {})
     @redis.should_receive(:empty!)
-    executive.should_receive(:build_redis_connection_pool).and_return(@redis)
 
     # hacky, but the behaviour it's mimicking (shutdown from another thread) isn't
     # conducive to nice tests
     executive.stub(:should_quit?).and_return(false, true)
     executive.main
+    executive.cleanup
 
     # TODO these will need to be made relative to the running instance,
     # and a list of the running instances maintained somewhere

@@ -18,7 +18,8 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
   let(:entity_check)    { mock(Flapjack::Data::EntityCheck) }
 
   before(:each) do
-    Flapjack::Web.class_variable_set('@@redis', @redis)
+    Flapjack::Web.bootstrap(:config => {})
+    Flapjack::Web.instance_variable_set('@redis', @redis)
   end
 
   def expect_stats

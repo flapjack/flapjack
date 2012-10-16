@@ -65,7 +65,9 @@ module Flapjack
     use Rack::MethodOverride
     use Rack::JsonParamsParser
 
-    extend Flapjack::ThinPikelet
+    class << self
+      include Flapjack::ThinPikelet
+    end
 
     def redis
       Flapjack::API.instance_variable_get('@redis')

@@ -39,7 +39,10 @@ module Flapjack
       use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
     end
     use Rack::MethodOverride
-    extend Flapjack::ThinPikelet
+
+    class << self
+      include Flapjack::ThinPikelet
+    end
     include Flapjack::Utility
 
     set :views, settings.root + '/web/views'
