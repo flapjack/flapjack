@@ -63,6 +63,9 @@ module Flapjack
       end
     end
 
+    def cleanup
+    end
+
   end
 
   module ResquePikelet

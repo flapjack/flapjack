@@ -61,4 +61,4 @@ else
 end
 
 puts "Daemonising ... " if daemonize
-coordinator.start(:daemonize => daemonize)
+coordinator.start(:daemonize => daemonize, :signals => true)

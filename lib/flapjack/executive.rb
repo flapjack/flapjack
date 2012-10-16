@@ -22,7 +22,11 @@ module Flapjack
   class Executive
     include Flapjack::GenericPikelet
 
-    def setup
+    alias_method :generic_bootstrap, :bootstrap
+
+    def bootstrap(opts = {})
+      generic_bootstrap(opts)
+
       @redis = build_redis_connection_pool
 
       @queues = {:email     => @config['email_queue'],
@@ -73,8 +77,6 @@ module Flapjack
     end
 
     def main
-      setup
-
       @logger.info("Booting main loop.")
 
       until should_quit?
@@ -83,9 +85,11 @@ module Flapjack
         process_event(event) unless event.nil?
       end
 
-      @redis.empty! if @redis
-
       @logger.info("Exiting main loop.")
+    end
+
+    def cleanup
+      @redis.empty! if @redis
     end
 
     # this must use a separate connection to the main Executive one, as it's running

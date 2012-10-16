@@ -33,14 +33,18 @@ module Flapjack
     log.level = Logger::INFO
     Blather.logger = log
 
-    def initialize
-      super
+    alias_method :orig_bootstrap, :bootstrap
+
+    def bootstrap(opts = {})
+      orig_bootstrap(opts)
+
+      @redis = build_redis_connection_pool
+
       @buffer = []
       @hostname = Socket.gethostname
     end
 
     def setup
-      @redis = build_redis_connection_pool
       @flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + @hostname)
 
       super(@flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
