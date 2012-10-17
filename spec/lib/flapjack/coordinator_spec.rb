@@ -5,17 +5,84 @@ describe Flapjack::Coordinator do
 
   let(:fiber) { mock('Fiber') }
 
-  it "is initialized"
+  let(:config) {
+    {'redis'          => {},
+     'executive'      => {'enabled' => 'yes'},
+     'email_notifier' => {'enabled' => 'yes'},
+     'web'            => {'enabled' => 'yes'}
+    }
+  }
 
-  it "starts a suite of services based on config settings"
+  # leaving actual testing of daemonisation to that class's tests
+  it "daemonizes properly" do
+    fc = Flapjack::Coordinator.new(config)
+    fc.should_receive(:daemonize)
+    fc.should_not_receive(:build_pikelet)
+    fc.should_not_receive(:build_resque_pikelet)
+    fc.should_not_receive(:build_thin_pikelet)
+    fc.start(:daemonize => true, :signals => false)
+  end
 
-  it "runs daemonized"
+  it "runs undaemonized" do
+    EM.should_receive(:synchrony).and_yield
 
-  it "runs undaemonized"
+    fc = Flapjack::Coordinator.new(config)
+    fc.should_receive(:build_pikelet)
+    fc.should_receive(:build_resque_pikelet)
+    fc.should_receive(:build_thin_pikelet)
+    fc.start(:daemonize => false, :signals => false)
+  end
+
+  it "starts after daemonizing" do
+    EM.should_receive(:synchrony).and_yield
+
+    fc = Flapjack::Coordinator.new(config)
+    fc.should_receive(:build_pikelet)
+    fc.should_receive(:build_resque_pikelet)
+    fc.should_receive(:build_thin_pikelet)
+    fc.after_daemonize
+  end
 
   it "traps system signals and shuts down"
 
-  it "stops its services when closing"
+  # TODO whem merged with other changes, this will check pik[:class] instead,
+  # having to create instances of the pikelet classes is messy
+  it "stops its services when closing" do
+    fiber_exec = mock('fiber_exec')
+    fiber_rsq  = mock('fiber_rsq')
+
+    exec  = Flapjack::Executive.new
+    exec.should_receive(:add_shutdown_event)
+    email = EM::Resque::Worker.new('example')
+    email.should_receive(:shutdown)
+
+    web   = Thin::Server.new('0.0.0.0', 3000, Flapjack::Web, :signals => false)
+    web.should_receive(:stop!)
+
+    redis = mock('redis')
+    redis.should_receive(:quit)
+    Redis.should_receive(:new).and_return(redis)
+
+    fiber.should_receive(:resume)
+    fiber_stop = mock('fiber_stop')
+    fiber_stop.should_receive(:resume)
+    Fiber.should_receive(:new).twice.and_yield.and_return(fiber, fiber_stop)
+
+    fiber_exec.should_receive(:alive?).and_return(true, false)
+    fiber_rsq.should_receive(:alive?).and_return(true, false)
+
+    # EM::Synchrony.should_receive(:sleep)
+    EM.should_receive(:stop)
+
+    pikelets = [{:fiber => fiber_exec, :instance => exec},
+                {:fiber => fiber_rsq,  :instance => email},
+                {:instance => web}]
+
+    fc = Flapjack::Coordinator.new
+    fc.instance_variable_set('@redis_options', {})
+    fc.instance_variable_set('@pikelets', pikelets)
+    fc.stop
+  end
 
   it "creates an executive pikelet" do
     exec = mock('executive')

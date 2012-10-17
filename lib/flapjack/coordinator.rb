@@ -40,8 +40,7 @@ module Flapjack
     end
 
     def start(options = {})
-      # FIXME raise error if config not set, or empty
-
+      @signals = options[:signals]
       if options[:daemonize]
         daemonize
       else
@@ -98,7 +97,7 @@ module Flapjack
           end
         end
 
-        setup_signals
+        setup_signals if @signals
       end
 
     end
@@ -242,6 +241,8 @@ module Flapjack
     #   end
     # end
 
+    # TODO whem merged with other changes, have this check pik[:class] instead,
+    # makes tests neater
     def shutdown
       @pikelets.each do |pik|
         case pik[:instance]
