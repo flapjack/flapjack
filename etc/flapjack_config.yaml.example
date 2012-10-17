@@ -1,5 +1,25 @@
 ---
 
+quickstart:
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    db: 6
+  executive:
+    enabled: yes
+    email_queue: email_notifications
+    notification_log_file: log/flapjack-notification.log
+  email_notifier:
+    enabled: yes
+    queue: email_notifications
+    smtp_config:
+      address: "localhost"
+      domain: 'localhost.localdomain'
+      port: 25
+  web:
+    enabled: yes
+    port: 5080
+
 development:
   pid_file: tmp/pids/flapjack.pid
   log_file: log/flapjack.log

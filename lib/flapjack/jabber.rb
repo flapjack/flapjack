@@ -51,35 +51,27 @@ module Flapjack
         @config['password'].to_s)
 
       register_handler :ready do |stanza|
-        EM.next_tick do
-          EM.synchrony do
-            on_ready(stanza)
-          end
+        EventMachine::Synchrony.next_tick do
+          on_ready(stanza)
         end
       end
 
       register_handler :message, :groupchat?, :body => /^flapjack:\s+/ do |stanza|
-        EM.next_tick do
-          EM.synchrony do
-            on_groupchat(stanza)
-          end
+        EventMachine::Synchrony.next_tick do
+          on_groupchat(stanza)
         end
       end
 
       register_handler :message, :chat? do |stanza|
-        EM.next_tick do
-          EM.synchrony do
-            on_chat(stanza)
-          end
+        EventMachine::Synchrony.next_tick do
+          on_chat(stanza)
         end
       end
 
       register_handler :disconnected do |stanza|
         ret = true
-        EM.next_tick do
-          EM.synchrony do
-            ret = on_disconnect(stanza)
-          end
+        EventMachine::Synchrony.next_tick do
+          ret = on_disconnect(stanza)
         end
         ret
       end
@@ -130,7 +122,7 @@ module Flapjack
         end
 
         four_hours = 4 * 60 * 60
-        duration = (dur.nil? || (dur <= 0) || (dur > four_hours)) ? four_hours : dur
+        duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
 
         event_id = @redis_handler.hget('unacknowledged_failures', ackid)
 
@@ -278,7 +270,7 @@ module Flapjack
           logger.debug(event.inspect)
           if 'shutdown'.eql?(type)
             if should_quit?
-              EM.next_tick do
+              EventMachine::Synchrony.next_tick do
                 # get delays without the next_tick
                 close # Blather::Client.close
               end
@@ -303,7 +295,7 @@ module Flapjack
 
             chat_type = :chat
             chat_type = :groupchat if @config['rooms'] && @config['rooms'].include?(address)
-            EM.next_tick do
+            EventMachine::Synchrony.next_tick do
               say(Blather::JID.new(address), msg, chat_type)
             end
           end

@@ -8,7 +8,7 @@ require 'em-synchrony'
 require 'redis/connection/synchrony'
 require 'redis'
 
-# require 'eventmachine/synchrony/connection_pool'
+require 'em-synchrony/connection_pool'
 
 module Flapjack
   class RedisPool < EventMachine::Synchrony::ConnectionPool

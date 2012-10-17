@@ -283,7 +283,6 @@ module Flapjack
     end
 
     post '/contacts' do
-      begin
       pass unless 'application/json'.eql?(request.content_type)
       content_type :json
 
@@ -292,7 +291,7 @@ module Flapjack
 
       contacts = params[:contacts]
       if contacts && contacts.is_a?(Enumerable) && contacts.any? {|c| !c['id'].nil?}
-        Flapjack::Data::Contact.delete_all
+        Flapjack::Data::Contact.delete_all(:redis => @@redis)
         contacts.each do |contact|
           unless contact['id']
             logger.warn "Contact not imported as it has no id: #{contact.inspect}"
@@ -306,9 +305,6 @@ module Flapjack
         errors << "No valid contacts were submitted"
       end
       errors.empty? ? ret : [ret, {}, {:errors => [errors]}.to_json]
-    rescue Exception => e
-      puts e.message
-    end
     end
 
     not_found do

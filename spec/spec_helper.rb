@@ -12,6 +12,9 @@ FLAPJACK_ENV = ENV["FLAPJACK_ENV"] || 'test'
 require 'bundler'
 Bundler.require(:default, :test)
 
+require 'webmock/rspec'
+WebMock.disable_net_connect!
+
 $:.unshift(File.dirname(__FILE__) + '/../lib')
 
 # Requires supporting files with custom matchers and macros, etc,

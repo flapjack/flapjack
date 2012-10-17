@@ -1,11 +1,16 @@
 #!/usr/bin/env ruby
 
-require 'redis'
-require 'json'
-require 'yaml'
 require 'optparse'
 require 'ostruct'
-require 'flapjack/data/entity_check'
+require 'redis'
+require 'yajl/json_gem'
+
+# add lib to the default include path
+unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+  $: << File.dirname(__FILE__) + '/../lib'
+end
+
+require 'flapjack/configuration'
 
 options = OpenStruct.new
 options.config    = File.join('etc', 'flapjack_config.yaml')
@@ -26,16 +31,7 @@ end.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
-# load the config hash for the current environment
-
-if File.file?(options.config)
-  config = YAML::load(File.open(options.config))
-else
-  puts "Could not find config file at '#{options.config}', you may want to specify one with the --config option"
-  exit(false)
-end
-
-config_env = config[FLAPJACK_ENV]
+config_env = Flapjack::Configuration.new.load(options.config)
 
 if config_env.nil? || config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
@@ -55,24 +51,13 @@ end
 # host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
 # service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
 
-@redis_host     = config_env['redis']['host'] || 'localhost'
-@redis_port     = config_env['redis']['port'] || '6379'
-@redis_path     = config_env['redis']['path'] || nil
-@redis_db       = config_env['redis']['db']   || 0
-
-if config_env.nil? || config_env.empty?
-  puts "No config data for environment '#{FLAPJACK_ENV}'"
-  exit(false)
+def get_redis_connection(cfg)
+  opts = cfg['path'] ? {:path => cfg['path']} :
+                       {:host => cfg['host'], :port => cfg['port']}
+  Redis.new(opts.merge(:db => cfg['db']))
 end
 
-def process_input
-
-  if @redis_path
-    redis = Redis.new(:db => @redis_db, :path => @redis_path)
-  else
-    redis = Redis.new(:db => @redis_db, :host => @redis_host, :port => @redis_port)
-  end
-
+def process_input(redis)
   begin
     while line = @fifo.gets
       skip unless line
@@ -112,8 +97,10 @@ def process_input
 end
 
 def main
+  redis = get_redis_connection(config_env['redis'])
+
   while true
-    process_input
+    process_input(redis)
     puts "Whoops, restarting main loop in 10 seconds"
     sleep 10
   end
