@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-# Used for data that is 'global' to an instance of Flapjack's Executive component
-
 require 'flapjack/data/entity_check'
 
 module Flapjack
