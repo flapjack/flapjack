@@ -254,13 +254,13 @@ module Flapjack
       Fiber.new {
 
         fibers = @pikelets.collect {|p| p[:fiber] }.compact
-        thin_pikelets = @pikelets.collect {|p| p[:class]}.select {|i|
-          i.included_modules.include?(Flapjack::ThinPikelet)
+        thin_pikelets = @pikelets.select {|p|
+          [Flapjack::Web, Flapjack::API].include?(p[:class])
         }
 
         loop do
           # health_check
-          if fibers.any?(&:alive?) || thin_pikelets.any?{|tp| !tp.backend.empty? }
+          if fibers.any?(&:alive?) || thin_pikelets.any?{|tp| !tp[:instance].backend.empty? }
             EM::Synchrony.sleep 0.25
           else
 

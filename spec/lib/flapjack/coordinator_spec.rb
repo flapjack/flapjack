@@ -58,7 +58,10 @@ describe Flapjack::Coordinator do
     email.should_receive(:shutdown)
     Flapjack::Notification::Email.should_receive(:cleanup)
 
-    web   = mock('web')
+    backend = mock('backend')
+    backend.should_receive(:empty?).and_return(true)
+    web = mock('web')
+    web.should_receive(:backend).and_return(backend)
     web.should_receive(:stop!)
     Flapjack::Web.should_receive(:cleanup)
 
@@ -71,9 +74,10 @@ describe Flapjack::Coordinator do
     fiber_stop.should_receive(:resume)
     Fiber.should_receive(:new).twice.and_yield.and_return(fiber, fiber_stop)
 
-    fiber_exec.should_receive(:alive?).and_return(true, false)
-    fiber_rsq.should_receive(:alive?).and_return(true, false)
+    fiber_exec.should_receive(:alive?).exactly(3).times.and_return(true, true, false)
+    fiber_rsq.should_receive(:alive?).twice.and_return(true, false)
 
+    EM::Synchrony.should_receive(:sleep)
     EM.should_receive(:stop)
 
     pikelets = [{:fiber => fiber_exec, :instance => exec, :class => Flapjack::Executive},
