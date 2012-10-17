@@ -40,8 +40,7 @@ module Flapjack
     end
 
     def start(options = {})
-      # FIXME raise error if config not set, or empty
-
+      @signals = options[:signals]
       if options[:daemonize]
         daemonize
       else
@@ -75,7 +74,6 @@ module Flapjack
       end
 
       EM.synchrony do
-
         @logger.debug "config keys: #{@config.keys}"
 
         pikelet_keys = ['executive', 'jabber_gateway', 'pagerduty_gateway',
@@ -99,7 +97,7 @@ module Flapjack
           end
         end
 
-        setup_signals
+        setup_signals if @signals
       end
 
     end
@@ -126,10 +124,9 @@ module Flapjack
       end
       return unless pikelet_class
 
+      pikelet = pikelet_class.new
       f = Fiber.new {
         begin
-          pikelet = pikelet_class.new
-          @pikelets.detect {|p| p[:type] == pikelet_type}[:instance] = pikelet
           pikelet.bootstrap(:redis => @redis_options, :config => pikelet_cfg)
           pikelet.main
         rescue Exception => e
@@ -138,7 +135,7 @@ module Flapjack
           stop
         end
       }
-      @pikelets << {:fiber => f, :type => pikelet_type}
+      @pikelets << {:fiber => f, :type => pikelet_type, :instance => pikelet}
       f.resume
       @logger.debug "new fiber created for #{pikelet_type}"
     end
@@ -210,14 +207,14 @@ module Flapjack
 
       pikelet_class.class_variable_set('@@config', pikelet_cfg)
 
+      # TODO error if pikelet_cfg['queue'].nil?
+      pikelet = EM::Resque::Worker.new(pikelet_cfg['queue'])
+      # # Use these to debug the resque workers
+      # pikelet.verbose = true
+      # pikelet.very_verbose = true
+
       f = Fiber.new {
         begin
-          # TODO error if pikelet_cfg['queue'].nil?
-          pikelet = EM::Resque::Worker.new(pikelet_cfg['queue'])
-          @pikelets.detect {|p| p[:type] == pikelet_type}[:instance] = pikelet
-          # # Use these to debug the resque workers
-          # flapjack_rsq.verbose = true
-          #flapjack_rsq.very_verbose = true
           pikelet.work(0.1)
         rescue Exception => e
           trace = e.backtrace.join("\n")
@@ -225,7 +222,7 @@ module Flapjack
           stop
         end
       }
-      pikelet_values = {:fiber => f, :type => pikelet_type}
+      pikelet_values = {:fiber => f, :type => pikelet_type, :instance => pikelet}
       pikelet_values[:pool] = pool if pool
       @pikelets << pikelet_values
       f.resume
@@ -244,6 +241,8 @@ module Flapjack
     #   end
     # end
 
+    # TODO whem merged with other changes, have this check pik[:class] instead,
+    # makes tests neater
     def shutdown
       @pikelets.each do |pik|
         case pik[:instance]
