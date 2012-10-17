@@ -40,8 +40,7 @@ module Flapjack
     end
 
     def start(options = {})
-      # FIXME raise error if config not set, or empty
-
+      @signals = options[:signals]
       if options[:daemonize]
         @signals = options[:signals]
         daemonize
@@ -99,7 +98,7 @@ module Flapjack
           end
         end
 
-        setup_signals if options[:signals]
+        setup_signals if @signals
       end
 
     end
@@ -126,11 +125,10 @@ module Flapjack
       end
       return unless pikelet_class
 
+      pikelet = pikelet_class.new
       f = Fiber.new {
         begin
-          pikelet = pikelet_class.new
-          @pikelets.detect {|p| p[:class] == pikelet_class}[:instance] = pikelet
-          pikelet.bootstrap(:redis_config => @redis_options, :config => pikelet_cfg)
+          pikelet.bootstrap(:redis => @redis_options, :config => pikelet_cfg)
           pikelet.main
         rescue Exception => e
           trace = e.backtrace.join("\n")
@@ -138,7 +136,7 @@ module Flapjack
           stop
         end
       }
-      @pikelets << {:fiber => f, :class => pikelet_class}
+      @pikelets << {:fiber => f, :class => pikelet_class, :instance => pikelet}
       f.resume
       @logger.debug "new fiber created for #{pikelet_type}"
     end
@@ -191,14 +189,14 @@ module Flapjack
 
       pikelet_class.bootstrap(:config => pikelet_cfg)
 
+      # TODO error if pikelet_cfg['queue'].nil?
+      pikelet = EM::Resque::Worker.new(pikelet_cfg['queue'])
+      # # Use these to debug the resque workers
+      # pikelet.verbose = true
+      # pikelet.very_verbose = true
+
       f = Fiber.new {
         begin
-          # TODO error if pikelet_cfg['queue'].nil?
-          pikelet = EM::Resque::Worker.new(pikelet_cfg['queue'])
-          @pikelets.detect {|p| p[:class] == pikelet_class}[:instance] = pikelet
-          # # Use these to debug the resque workers
-          # flapjack_rsq.verbose = true
-          #flapjack_rsq.very_verbose = true
           pikelet.work(0.1)
         rescue Exception => e
           trace = e.backtrace.join("\n")
@@ -206,7 +204,8 @@ module Flapjack
           stop
         end
       }
-      pikelet_values = {:fiber => f, :class => pikelet_class}
+      pikelet_values = {:fiber => f, :class => pikelet_class, :instance => pikelet}
+      pikelet_values[:pool] = pool if pool
       @pikelets << pikelet_values
       f.resume
       @logger.debug "new fiber created for #{pikelet_type}"
@@ -226,8 +225,10 @@ module Flapjack
 
     def shutdown
       @pikelets.each do |pik|
-        case pik[:instance]
-        when Flapjack::Executive, Flapjack::Jabber, Flapjack::Pagerduty
+
+        # would be neater if we could use something similar for the class << self
+        # included pikelets as well
+        if pik[:class].included_modules.include?(Flapjack::GenericPikelet)
           if pik[:fiber] && pik[:fiber].alive?
             pik[:instance].stop
             Fiber.new {
@@ -238,10 +239,11 @@ module Flapjack
               r.quit
             }.resume
           end
-        when EM::Resque::Worker
+        elsif [Flapjack::Notification::Email,
+          Flapjack::Notification::Sms].include?(pik[:class])
           # resque is polling, so we don't need a shutdown object
           pik[:instance].shutdown if pik[:fiber] && pik[:fiber].alive?
-        when Thin::Server # web, api
+        elsif [Flapjack::Web, Flapjack::API].include?(pik[:class])
           # drop from this side, as HTTP keepalive etc. means browsers
           # keep connections alive for ages, and we'd be hanging around
           # waiting for them to drop
@@ -252,7 +254,9 @@ module Flapjack
       Fiber.new {
 
         fibers = @pikelets.collect {|p| p[:fiber] }.compact
-        thin_pikelets = @pikelets.collect {|p| p[:instance]}.select {|i| i.is_a?(Thin::Server) }
+        thin_pikelets = @pikelets.collect {|p| p[:class]}.select {|i|
+          i.included_modules.include?(Flapjack::ThinPikelet)
+        }
 
         loop do
           # health_check
@@ -261,10 +265,11 @@ module Flapjack
           else
 
             @pikelets.each do |pik|
-              case pik[:instance]
-              when Flapjack::Executive, Flapjack::Jabber, Flapjack::Pagerduty
+              if pik[:class].included_modules.include?(Flapjack::GenericPikelet)
                 pik[:instance].cleanup
-              when EM::Resque::Worker, Thin::Server
+              elsif [Flapjack::Notification::Email,
+                Flapjack::Notification::Sms,
+                Flapjack::Web, Flapjack::API].include?(pik[:class])
                 pik[:class].cleanup
               end
             end
