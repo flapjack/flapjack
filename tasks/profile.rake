@@ -92,6 +92,69 @@ namespace :profile do
     t.join
   end
 
+  namespace :perftools do
+
+    require 'perftools'
+
+    class PerftoolsProfiler
+
+      def self.profile(output_filename)
+        PerfTools::CpuProfiler.start(output_filename) do
+          EM.synchrony do
+            yield
+            EM.stop
+          end
+        end
+      end
+
+    end
+
+    desc "profile multiple components running through coordinator with perftools"
+    task :coordinator do
+      FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
+      profile_coordinator(PerftoolsProfiler) {
+        # TODO make things happen
+      }
+    end
+
+    desc "profile executive with perftools"
+    task :executive do
+      FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
+      profile_pikelet(PerftoolsProfiler, Flapjack::Executive, 'executive') {
+        # TODO add some events
+      }
+    end
+
+    # NB: you'll need to access a real jabber server for this; if external events come in
+    # from that then runs will not necessarily be comparable
+    desc "profile jabber gateway with perftools"
+    task :jabber do
+      FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
+      profile_pikelet(PerftoolsProfiler, Flapjack::Jabber, 'jabber_gateway') {
+        # TODO add some notifications
+      }
+    end
+
+    # NB: you'll need an external email server set up for this (whether it's mailtrap
+    # or a real server)
+    desc "profile email notifier with perftools"
+    task :email do
+      FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
+      profile_resque(PerftoolsProfiler, Flapjack::Notification::Email, 'email_notifier') {
+        # TODO add some notifications
+      }
+    end
+
+    desc "profile web server with perftools"
+    task :web do
+      FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
+      profile_thin(PerftoolsProfiler, Flapjack::Web, 'web') {
+        # TODO add some web requests
+      }
+    end
+
+  end
+
   namespace :rubyprof do
 
     require 'ruby-prof'
@@ -133,7 +196,8 @@ namespace :profile do
 
     # NB: you'll need to access a real jabber server for this; if external events come in
     # from that then runs will not necessarily be comparable
-    desc :jabber do
+    desc "profile jabber gateway with rubyprof"
+    task :jabber do
       FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
       profile_pikelet(RubyprofProfiler, Flapjack::Jabber, 'jabber_gateway') {
         # TODO add some notifications
