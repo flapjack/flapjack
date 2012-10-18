@@ -27,7 +27,7 @@ module Flapjack
     def bootstrap(opts = {})
       generic_bootstrap(opts)
 
-      @redis = build_redis_connection_pool
+      @redis = build_redis_connection_pool(opts[:redis_config])
 
       @queues = {:email     => @config['email_queue'],
                  :sms       => @config['sms_queue'],

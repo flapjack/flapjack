@@ -54,12 +54,13 @@ module Flapjack
       orig_bootstrap(opts)
     end
 
-    def build_redis_connection_pool(options = {})
+    def build_redis_connection_pool(options)
+      options ||= {}
       return unless @bootstrapped
       if defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
         ::Redis.new(@redis_config.merge(:driver => 'ruby'))
       else
-        Flapjack::RedisPool.new(:config => @redis_config, :size => options[:size])
+        Flapjack::RedisPool.new(:config => @redis_config, :size => (options[:size] || 5))
       end
     end
 

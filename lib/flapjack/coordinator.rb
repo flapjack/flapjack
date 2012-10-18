@@ -54,6 +54,8 @@ module Flapjack
     end
 
     def stop
+      return if @stopping
+      @stopping = true
       shutdown
     end
 
@@ -128,7 +130,7 @@ module Flapjack
       pikelet = pikelet_class.new
       f = Fiber.new {
         begin
-          pikelet.bootstrap(:redis => @redis_options, :config => pikelet_cfg)
+          pikelet.bootstrap(:redis_config => @redis_options, :config => pikelet_cfg)
           pikelet.main
         rescue Exception => e
           trace = e.backtrace.join("\n")
@@ -211,17 +213,20 @@ module Flapjack
       @logger.debug "new fiber created for #{pikelet_type}"
     end
 
-    # # TODO rewrite to be less spammy -- print only initial state and changes
-    # def health_check
-    #   @pikelets.each do |pik|
-    #     if pik[:instance].is_a?(Thin::Server)
-    #       s = pik[:instance].backend.size
-    #       @logger.debug "thin on port #{pik[:instance].port} - #{s} connections"
-    #     elsif pik[:fiber]
-    #       @logger.debug "#{pik[:type]}: #{pik[:fiber].alive? ? 'alive' : 'dead'}"
-    #     end
-    #   end
-    # end
+    # only prints state changes, otherwise pikelets not closing promptly can
+    # cause everything else to be spammy
+    def health_check
+      @pikelets.each do |pik|
+        status = if pik[:instance].is_a?(Thin::Server)
+          pik[:instance].backend.size > 0 ? 'running' : 'stopped'
+        elsif pik[:fiber]
+          pik[:fiber].alive? ? 'running' : 'stopped'
+        end
+        next if pik.has_key?(:status) && pik[:status].eql?(status)
+        @logger.info "#{pik[:class].name}: #{status}"
+        pik[:status] = status
+      end
+    end
 
     def shutdown
       @pikelets.each do |pik|
@@ -259,7 +264,8 @@ module Flapjack
         }
 
         loop do
-          # health_check
+          health_check
+
           if fibers.any?(&:alive?) || thin_pikelets.any?{|tp| !tp[:instance].backend.empty? }
             EM::Synchrony.sleep 0.25
           else

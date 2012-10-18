@@ -38,7 +38,8 @@ module Flapjack
     def bootstrap(opts = {})
       generic_bootstrap(opts)
 
-      @redis = build_redis_connection_pool
+      @redis_config = opts[:redis_config]
+      @redis = build_redis_connection_pool(@redis_config)
 
       @buffer = []
       @hostname = Socket.gethostname
@@ -84,7 +85,7 @@ module Flapjack
     # Join the MUC Chat room after connecting.
     def on_ready(stanza)
       return if should_quit?
-      @redis_handler ||= build_redis_connection_pool
+      @redis_handler ||= build_redis_connection_pool(@redis_config)
       @connected_at = Time.now.to_i
       logger.info("Jabber Connected")
       if @config['rooms'] && @config['rooms'].length > 0

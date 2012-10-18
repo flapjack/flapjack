@@ -24,8 +24,14 @@ module Flapjack
     PAGERDUTY_EVENTS_API_URL   = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
     SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'
 
-    def setup
-      @redis = build_redis_connection_pool
+    alias_method :generic_bootstrap, :bootstrap
+
+    def bootstrap(opts = {})
+      generic_bootstrap(opts)
+
+      @redis_config = opts[:redis_config]
+      @redis = build_redis_connection_pool(@redis_config)
+
       logger.debug("New Pagerduty pikelet with the following options: #{@config.inspect}")
 
       @pagerduty_acks_started = nil
@@ -37,8 +43,6 @@ module Flapjack
     end
 
     def main
-      setup
-
       logger.debug("pagerduty gateway - commencing main method")
       raise "Can't connect to the pagerduty API" unless test_pagerduty_connection
 
@@ -47,7 +51,7 @@ module Flapjack
       @redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
 
       acknowledgement_timer = EM::Synchrony.add_periodic_timer(10) do
-        @redis_timer ||= build_redis_connection_pool
+        @redis_timer ||= build_redis_connection_pool(@redis_config)
         find_pagerduty_acknowledgements_if_safe
       end
 
