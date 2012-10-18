@@ -270,6 +270,9 @@ module Flapjack
               elsif [Flapjack::Notification::Email,
                 Flapjack::Notification::Sms,
                 Flapjack::Web, Flapjack::API].include?(pik[:class])
+
+                # TODO resque pool cleanup
+
                 pik[:class].cleanup
               end
             end
