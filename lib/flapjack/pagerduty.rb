@@ -1,5 +1,8 @@
 #!/usr/bin/env ruby
 
+require 'em-synchrony'
+require 'em-synchrony/em-http'
+
 require 'yajl/json_gem'
 
 require 'flapjack/data/entity_check'
