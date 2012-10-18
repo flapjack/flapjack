@@ -1,40 +1,39 @@
 #!/usr/bin/env ruby
 
-require 'eventmachine'
-# the redis/synchrony gems need to be required in this particular order, see
-# the redis-rb README for details
-require 'hiredis'
-require 'em-synchrony'
-require 'em-synchrony/em-http'
-require 'redis/connection/synchrony'
-require 'redis'
-
 require 'yajl/json_gem'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/data/global'
 require 'flapjack/pikelet'
+require 'flapjack/redis_pool'
 
 module Flapjack
 
   class Pagerduty
 
-    include Flapjack::Pikelet
+    include Flapjack::GenericPikelet
 
     PAGERDUTY_EVENTS_API_URL   = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
     SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'
 
     alias_method :generic_bootstrap, :bootstrap
+    alias_method :generic_cleanup,   :cleanup
 
     def bootstrap(opts = {})
       generic_bootstrap(opts)
 
       @redis_config = opts[:redis_config]
-      @redis = build_redis_connection_pool(@redis_config)
+      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
 
       logger.debug("New Pagerduty pikelet with the following options: #{@config.inspect}")
 
       @pagerduty_acks_started = nil
+    end
+
+    def cleanup
+      @redis.empty! if @redis
+      @redis_timer.empty! if @redis_timer
+      generic_cleanup
     end
 
     def add_shutdown_event(opts = {})
@@ -51,7 +50,7 @@ module Flapjack
       @redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
 
       acknowledgement_timer = EM::Synchrony.add_periodic_timer(10) do
-        @redis_timer ||= build_redis_connection_pool(@redis_config)
+        @redis_timer ||= Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
         find_pagerduty_acknowledgements_if_safe
       end
 
@@ -95,9 +94,6 @@ module Flapjack
       end
 
       acknowledgement_timer.cancel
-
-      @redis.empty! if @redis
-      @redis_timer.empty! if @redis_timer
     end
 
     # considering this as part of the public API -- exposes it for testing.

@@ -11,7 +11,6 @@ describe Flapjack::Executive, :redis => true do
     redis.should_receive(:rpush).with('events', %q{{"type":"shutdown","host":"","service":"","state":""}})
 
     executive = Flapjack::Executive.new
-    executive.bootstrap(:redis => @redis)
     executive.add_shutdown_event(:redis => redis)
   end
 
@@ -35,7 +34,7 @@ describe Flapjack::Executive, :redis => true do
     Flapjack::Data::Event.should_receive(:next).and_return(shutdown_evt)
 
     executive = Flapjack::Executive.new
-    executive.should_receive(:build_redis_connection_pool).and_return(@redis)
+    Flapjack::RedisPool.should_receive(:new).and_return(@redis)
     executive.bootstrap(:config => {})
     @redis.should_receive(:empty!)
 

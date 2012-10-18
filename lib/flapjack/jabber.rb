@@ -18,6 +18,7 @@ require 'yajl/json_gem'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/pikelet'
+require 'flapjack/redis_pool'
 require 'flapjack/utility'
 require 'flapjack/version'
 
@@ -34,15 +35,22 @@ module Flapjack
     Blather.logger = log
 
     alias_method :generic_bootstrap, :bootstrap
+    alias_method :generic_cleanup,   :cleanup
 
     def bootstrap(opts = {})
       generic_bootstrap(opts)
 
       @redis_config = opts[:redis_config]
-      @redis = build_redis_connection_pool(@redis_config)
+      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
 
       @buffer = []
       @hostname = Socket.gethostname
+    end
+
+    def cleanup
+      @redis.empty! if @redis
+      @redis_handler.empty! if @redis_handler
+      generic_cleanup
     end
 
     def setup
@@ -85,7 +93,7 @@ module Flapjack
     # Join the MUC Chat room after connecting.
     def on_ready(stanza)
       return if should_quit?
-      @redis_handler ||= build_redis_connection_pool(@redis_config)
+      @redis_handler ||= Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
       @connected_at = Time.now.to_i
       logger.info("Jabber Connected")
       if @config['rooms'] && @config['rooms'].length > 0
@@ -312,9 +320,6 @@ module Flapjack
 
       count_timer.cancel
       keepalive_timer.cancel
-
-      @redis.empty! if @redis
-      @redis_handler.empty! if @redis_handler
     end
 
   end

@@ -50,11 +50,13 @@ redis.quit
 Before do
   @logger = MockLogger.new
   # Use a separate database whilst testing
+  Flapjack::RedisPool.should_receive(:new).and_return( ::Redis.new(redis_opts) )
   @app = Flapjack::Executive.new
-  @app.bootstrap(:logger => @logger, :redis => redis_opts,
+  @app.bootstrap(:logger => @logger,
     :config => {'email_queue' => 'email_notifications',
-                'sms_queue' => 'sms_notifications'})
-  @redis = @app.redis
+                'sms_queue' => 'sms_notifications'},
+    :redis_config => redis_opts)
+  @redis = @app.instance_variable_get('@redis')
 end
 
 After do

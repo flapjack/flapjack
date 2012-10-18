@@ -12,17 +12,19 @@ describe Flapjack::Pagerduty, :redis => true do
 
   it "prompts the blocking redis connection to quit" do
     redis = mock('redis')
-    redis.should_receive(:rpush).with(nil, %q{{"notification_type":"shutdown"}})
+    redis.should_receive(:rpush).with(config['queue'], %q{{"notification_type":"shutdown"}})
 
-    pagerduty = Flapjack::Pagerduty.new
-    pagerduty.bootstrap
-    pagerduty.add_shutdown_event(:redis => redis)
+    fp = Flapjack::Pagerduty.new
+    Flapjack::RedisPool.should_receive(:new)
+    fp.bootstrap(:config => config)
+    fp.add_shutdown_event(:redis => redis)
   end
 
   it "doesn't look for acknowledgements if this search is already running" do
     @redis.set(Flapjack::Pagerduty::SEM_PAGERDUTY_ACKS_RUNNING, 'true')
 
     fp = Flapjack::Pagerduty.new
+    Flapjack::RedisPool.should_receive(:new)
     fp.bootstrap(:config => config)
     fp.instance_variable_set("@redis_timer", @redis)
 
@@ -32,6 +34,7 @@ describe Flapjack::Pagerduty, :redis => true do
 
   it "looks for acknowledgements if the search is not already running" do
     fp = Flapjack::Pagerduty.new
+    Flapjack::RedisPool.should_receive(:new)
     fp.bootstrap(:config => config)
     fp.instance_variable_set("@redis_timer", @redis)
 
@@ -47,6 +50,7 @@ describe Flapjack::Pagerduty, :redis => true do
   it "looks for acknowledgements via the PagerDuty API" do
     EM.synchrony do
       fp = Flapjack::Pagerduty.new
+      Flapjack::RedisPool.should_receive(:new)
       fp.bootstrap(:config => config)
 
       check = 'PING'
@@ -86,6 +90,7 @@ describe Flapjack::Pagerduty, :redis => true do
 
   it "creates acknowledgements when pagerduty acknowledgements are found" do
     fp = Flapjack::Pagerduty.new
+    Flapjack::RedisPool.should_receive(:new)
     fp.bootstrap(:config => config)
 
     entity_check = mock('entity_check')
@@ -115,8 +120,8 @@ describe Flapjack::Pagerduty, :redis => true do
     redis.should_receive(:empty!)
 
     fp = Flapjack::Pagerduty.new
+    Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fp.bootstrap(:config => config)
-    fp.should_receive(:build_redis_connection_pool).and_return(redis)
 
     fp.should_receive(:should_quit?).exactly(3).times.and_return(false, false, true)
     redis.should_receive(:blpop).twice.and_return(
@@ -128,6 +133,7 @@ describe Flapjack::Pagerduty, :redis => true do
     fp.should_receive(:send_pagerduty_event)
 
     fp.main
+    fp.cleanup
   end
 
   it "tests the pagerduty connection" do
@@ -143,6 +149,7 @@ describe Flapjack::Pagerduty, :redis => true do
         with(:body => body).to_return(:status => 200, :body => '{"status":"success"}', :headers => {})
 
       fp = Flapjack::Pagerduty.new
+      Flapjack::RedisPool.should_receive(:new)
       fp.bootstrap(:config => config)
 
       ret = fp.send(:test_pagerduty_connection)
@@ -164,6 +171,7 @@ describe Flapjack::Pagerduty, :redis => true do
         with(:body => body).to_return(:status => 200, :body => "", :headers => {})
 
       fp = Flapjack::Pagerduty.new
+      Flapjack::RedisPool.should_receive(:new)
       fp.bootstrap(:config => config)
 
       ret = fp.send(:send_pagerduty_event, evt)

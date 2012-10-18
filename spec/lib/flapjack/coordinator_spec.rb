@@ -59,9 +59,9 @@ describe Flapjack::Coordinator do
     Flapjack::Notification::Email.should_receive(:cleanup)
 
     backend = mock('backend')
-    backend.should_receive(:empty?).and_return(true)
+    backend.should_receive(:size).twice.and_return(1, 0)
     web = mock('web')
-    web.should_receive(:backend).and_return(backend)
+    web.should_receive(:backend).twice.and_return(backend)
     web.should_receive(:stop!)
     Flapjack::Web.should_receive(:cleanup)
 
@@ -75,7 +75,7 @@ describe Flapjack::Coordinator do
     Fiber.should_receive(:new).twice.and_yield.and_return(fiber, fiber_stop)
 
     fiber_exec.should_receive(:alive?).exactly(3).times.and_return(true, true, false)
-    fiber_rsq.should_receive(:alive?).twice.and_return(true, false)
+    fiber_rsq.should_receive(:alive?).exactly(3).and_return(true, false, false)
 
     EM::Synchrony.should_receive(:sleep)
     EM.should_receive(:stop)
@@ -146,7 +146,7 @@ describe Flapjack::Coordinator do
     pikelets.should be_an(Array)
     pikelets.should have(1).pikelet
     pikelets.first.should == {:fiber => fiber, :class => Flapjack::Notification::Email,
-                              :instance => worker, :pool => redis}
+                              :instance => worker}
   end
 
   it "handles an exception raised by a resque worker pikelet"
@@ -159,6 +159,8 @@ describe Flapjack::Coordinator do
     Thin::Server.should_receive(:new).
       with(/^(?:\d{1,3}\.){3}\d{1,3}$/, an_instance_of(Fixnum), Flapjack::Web, :signals => false).
       and_return(server)
+
+    Flapjack::RedisPool.should_receive(:new)
 
     fc = Flapjack::Coordinator.new
     fc.send(:build_thin_pikelet, 'web', {})

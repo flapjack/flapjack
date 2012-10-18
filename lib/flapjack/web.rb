@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'fiber'
-
 require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
@@ -11,6 +9,7 @@ require 'rack/fiber_pool'
 require 'flapjack/pikelet'
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
+require 'flapjack/redis_pool'
 require 'flapjack/utility'
 
 module Flapjack
@@ -42,7 +41,24 @@ module Flapjack
 
     class << self
       include Flapjack::ThinPikelet
+
+      attr_accessor :redis
+
+      alias_method :thin_bootstrap, :bootstrap
+      alias_method :thin_cleanup,   :cleanup
+
+      def bootstrap(opts = {})
+        thin_bootstrap(opts)
+        @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
+      end
+
+      def cleanup
+        @redis.empty! if @redis
+        thin_cleanup
+      end
+
     end
+
     include Flapjack::Utility
 
     set :views, settings.root + '/web/views'

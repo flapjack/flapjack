@@ -16,6 +16,7 @@ require 'flapjack/data/event'
 require 'flapjack/notification/sms'
 require 'flapjack/notification/email'
 require 'flapjack/pikelet'
+require 'flapjack/redis_pool'
 
 module Flapjack
 
@@ -23,11 +24,12 @@ module Flapjack
     include Flapjack::GenericPikelet
 
     alias_method :generic_bootstrap, :bootstrap
+    alias_method :generic_cleanup,   :cleanup
 
     def bootstrap(opts = {})
       generic_bootstrap(opts)
 
-      @redis = build_redis_connection_pool(opts[:redis_config])
+      @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
 
       @queues = {:email     => @config['email_queue'],
                  :sms       => @config['sms_queue'],
@@ -76,6 +78,11 @@ module Flapjack
       @redis.hset("event_counters:#{@instance_id}", 'action', 0)
     end
 
+    def cleanup
+      @redis.empty! if @redis
+      generic_cleanup
+    end
+
     def main
       @logger.info("Booting main loop.")
 
@@ -86,10 +93,6 @@ module Flapjack
       end
 
       @logger.info("Exiting main loop.")
-    end
-
-    def cleanup
-      @redis.empty! if @redis
     end
 
     # this must use a separate connection to the main Executive one, as it's running

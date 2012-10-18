@@ -114,6 +114,8 @@ module Flapjack
       end
     end
 
+    # TODO consolidate the three build_* methods, they're mostly similar now
+
     def build_pikelet(pikelet_type, pikelet_cfg)
       pikelet_class = case pikelet_type
       when 'executive'
@@ -130,7 +132,7 @@ module Flapjack
       pikelet = pikelet_class.new
       f = Fiber.new {
         begin
-          pikelet.bootstrap(:redis_config => @redis_options, :config => pikelet_cfg)
+          pikelet.bootstrap(:config => pikelet_cfg, :redis_config => @redis_options)
           pikelet.main
         rescue Exception => e
           trace = e.backtrace.join("\n")
@@ -177,14 +179,10 @@ module Flapjack
 
       pikelet_class.bootstrap(:config => pikelet_cfg)
 
-      # set up connection pooling, stop resque errors (ensure that it's only
-      # done once)
-      if ([Flapjack::Notification::Email, Flapjack::Notification::Sms] &
-        @pikelets.collect {|p| p[:class]}).empty?
-
-        pool = Flapjack::RedisPool.new(:config => @redis_options)
-        ::Resque.redis = pool
-        pikelet_class.redis = pool
+      # set up connection pooling, stop resque errors
+      unless @resque_pool
+        @resque_pool = Flapjack::RedisPool.new(:config => @redis_options)
+        ::Resque.redis = @resque_pool
         ## NB: can override the default 'resque' namespace like this
         #::Resque.redis.namespace = 'flapjack'
       end
@@ -206,9 +204,7 @@ module Flapjack
           stop
         end
       }
-      pikelet_values = {:fiber => f, :class => pikelet_class, :instance => pikelet}
-      pikelet_values[:pool] = pool if pool
-      @pikelets << pikelet_values
+      @pikelets << {:fiber => f, :class => pikelet_class, :instance => pikelet}
       f.resume
       @logger.debug "new fiber created for #{pikelet_type}"
     end
@@ -217,7 +213,7 @@ module Flapjack
     # cause everything else to be spammy
     def health_check
       @pikelets.each do |pik|
-        status = if pik[:instance].is_a?(Thin::Server)
+        status = if [Flapjack::Web, Flapjack::API].include?(pik[:class])
           pik[:instance].backend.size > 0 ? 'running' : 'stopped'
         elsif pik[:fiber]
           pik[:fiber].alive? ? 'running' : 'stopped'
@@ -258,28 +254,27 @@ module Flapjack
 
       Fiber.new {
 
-        fibers = @pikelets.collect {|p| p[:fiber] }.compact
-        thin_pikelets = @pikelets.select {|p|
-          [Flapjack::Web, Flapjack::API].include?(p[:class])
-        }
-
         loop do
           health_check
 
-          if fibers.any?(&:alive?) || thin_pikelets.any?{|tp| !tp[:instance].backend.empty? }
+          if @pikelets.any? {|p| p[:status] == 'running'}
             EM::Synchrony.sleep 0.25
           else
 
+            @resque_pool.empty! if @resque_pool
+
             @pikelets.each do |pik|
+
               if pik[:class].included_modules.include?(Flapjack::GenericPikelet)
+
                 pik[:instance].cleanup
+
               elsif [Flapjack::Notification::Email,
                 Flapjack::Notification::Sms,
                 Flapjack::Web, Flapjack::API].include?(pik[:class])
 
-                # TODO resque pool cleanup
-
                 pik[:class].cleanup
+
               end
             end
 

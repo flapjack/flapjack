@@ -12,6 +12,7 @@ require 'rack/fiber_pool'
 require 'sinatra/base'
 
 require 'flapjack/pikelet'
+require 'flapjack/redis_pool'
 
 require 'flapjack/api/entity_presenter'
 
@@ -67,6 +68,22 @@ module Flapjack
 
     class << self
       include Flapjack::ThinPikelet
+
+      attr_accessor :redis
+
+      alias_method :thin_bootstrap, :bootstrap
+      alias_method :thin_cleanup,   :cleanup
+
+      def bootstrap(opts = {})
+        thin_bootstrap(opts)
+        @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
+      end
+
+      def cleanup
+        @redis.empty! if @redis
+        thin_cleanup
+      end
+
     end
 
     def redis

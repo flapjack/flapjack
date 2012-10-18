@@ -20,8 +20,8 @@ describe 'Flapjack::API', :sinatra => true do
   let(:redis)           { mock(::Redis) }
 
   before(:each) do
+    Flapjack::RedisPool.should_receive(:new).and_return(redis)
     Flapjack::API.bootstrap(:config => {})
-    Flapjack::API.instance_variable_set('@redis', redis)
   end
 
   it "returns a list of checks for an entity" do
