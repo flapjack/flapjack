@@ -23,3 +23,19 @@ For more information, including full specification of the configuration file and
 ## Developing Flapjack
 
 Information on developing more Flapjack components or contributing to core Flapjack development can be found in the [Flapjack Wiki](https://github.com/ali-graham/flapjack/wiki/DEVELOPING).
+
+## Documentation Submodule
+
+We have the documentation for this project on a github wiki and also referenced as a submodule at /doc in this project. Run the following commands to populate the local doc/ directory:
+
+```
+git submodule init
+git submodule update
+```
+
+If you make changes to the documentation locally, here's how to publish them:
+
+* git add, commit and push from inside the doc subdir
+* add, commit and push the doc dir from the root (this updates the pointer in the main git repo to the correct ref in the doc repo, we think...)
+
+
