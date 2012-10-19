@@ -47,6 +47,16 @@ redis = ::Redis.new(redis_opts)
 redis.flushdb
 redis.quit
 
+# NB: this seems to execute outside the Before/After hooks
+# regardless of placement -- this is what we want, as the
+# @redis driver should be initialised in the sync block.
+Around do |scenario, blk|
+  EM.synchrony do
+    blk.call
+    EM.stop
+  end
+end
+
 Before do
   @logger = MockLogger.new
   # Use a separate database whilst testing
