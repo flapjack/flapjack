@@ -3,8 +3,13 @@ namespace :profile do
   require 'flapjack/configuration'
   require 'flapjack/executive'
 
+  require 'flapjack/data/event'
+  require 'flapjack/data/message'
+
   FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..')
   FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_profile.yaml')
+
+  REPETITIONS     = 100
 
   def load_config
     config_env = Flapjack::Configuration.new.load(FLAPJACK_CONFIG)
@@ -20,13 +25,17 @@ namespace :profile do
     redis_host = config['redis']['host'] || '127.0.0.1'
     redis_port = config['redis']['port'] || 6379
     redis_path = config['redis']['path'] || nil
-    redis_db   = config['redis']['db']   || 0
+    redis_db   = config['redis']['db']   || 9
 
     if redis_path
       { :db => redis_db, :path => redis_path }
     else
       { :db => redis_db, :host => redis_host, :port => redis_port }
     end
+  end
+
+  def setup_baseline_data
+
   end
 
   def profile_coordinator(profiler_klass)
@@ -113,7 +122,10 @@ namespace :profile do
     task :coordinator do
       FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
       profile_coordinator(PerftoolsProfiler) {
-        # TODO make things happen
+        (1..REPETITIONS).times do
+          # TODO add some events
+          # Flapjack::Data::Event.create( )
+        end
       }
     end
 
@@ -121,7 +133,10 @@ namespace :profile do
     task :executive do
       FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
       profile_pikelet(PerftoolsProfiler, Flapjack::Executive, 'executive') {
-        # TODO add some events
+        (1..REPETITIONS).times do
+          # TODO add some events
+          # Flapjack::Data::Event.create( )
+        end
       }
     end
 
@@ -131,7 +146,10 @@ namespace :profile do
     task :jabber do
       FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
       profile_pikelet(PerftoolsProfiler, Flapjack::Jabber, 'jabber_gateway') {
-        # TODO add some notifications
+        (1..REPETITIONS).times do
+          # TODO add some notifications
+          # Flapjack::Data::Notification.create( )
+        end
       }
     end
 
@@ -141,7 +159,10 @@ namespace :profile do
     task :email do
       FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
       profile_resque(PerftoolsProfiler, Flapjack::Notification::Email, 'email_notifier') {
-        # TODO add some notifications
+        (1..REPETITIONS).times do
+          # TODO add some notifications
+          # Flapjack::Data::Notification.create( )
+        end
       }
     end
 
@@ -182,7 +203,10 @@ namespace :profile do
     task :coordinator do
       FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
       profile_coordinator(RubyprofProfiler) {
-        # TODO make things happen
+        (1..REPETITIONS).times do
+          # TODO add some events
+          # Flapjack::Data::Event.create( )
+        end
       }
     end
 
@@ -190,7 +214,10 @@ namespace :profile do
     task :executive do
       FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
       profile_pikelet(RubyprofProfiler, Flapjack::Executive, 'executive') {
-        # TODO add some events
+        (1..REPETITIONS).times do
+          # TODO add some events
+          # Flapjack::Data::Event.create( )
+        end
       }
     end
 
@@ -200,7 +227,10 @@ namespace :profile do
     task :jabber do
       FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
       profile_pikelet(RubyprofProfiler, Flapjack::Jabber, 'jabber_gateway') {
-        # TODO add some notifications
+        (1..REPETITIONS).times do
+          # TODO add some notifications
+          # Flapjack::Data::Notification.create( )
+        end
       }
     end
 
@@ -210,7 +240,10 @@ namespace :profile do
     task :email do
       FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
       profile_resque(RubyprofProfiler, Flapjack::Notification::Email, 'email_notifier') {
-        # TODO add some notifications
+        (1..REPETITIONS).times do
+          # TODO add some notifications
+          # Flapjack::Data::Notification.create( )
+        end
       }
     end
 

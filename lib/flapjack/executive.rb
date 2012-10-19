@@ -12,6 +12,7 @@ require 'flapjack/filters/detect_mass_client_failures'
 require 'flapjack/filters/delays'
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
+require 'flapjack/data/notification'
 require 'flapjack/data/event'
 require 'flapjack/notification/sms'
 require 'flapjack/notification/email'
@@ -135,7 +136,7 @@ module Flapjack
       end
 
       @logger.info("#{Time.now}: Sending notifications for event #{event.id}")
-      generate_notification(event, entity_check)
+      send_notification_messages(event, entity_check)
     end
 
     def update_keys(event, entity_check)
@@ -204,9 +205,8 @@ module Flapjack
     end
 
     # takes an event for which a notification needs to be generated, works out the type of
-    # notification, updates the notification history in redis, calls other methods to work out who
-    # to notify, by what method, and finally to have the notifications sent
-    def generate_notification(event, entity_check)
+    # notification, updates the notification history in redis,sends the notifications
+    def send_notification_messages(event, entity_check)
       timestamp = Time.now.to_i
       notification_type = 'unknown'
       case event.type
@@ -227,73 +227,43 @@ module Flapjack
       @redis.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
       @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}.")
 
-      send_notifications(event, notification_type, entity_check.contacts)
-    end
-
-    # takes an event, a notification type, and an array of contacts and creates jobs in resque
-    # (eventually) for each notification
-    def send_notifications(event, notification_type, contacts)
-      notification = { 'event_id'          => event.id,
-                       'state'             => event.state,
-                       'summary'           => event.summary,
-                       'time'              => event.time,
-                       'notification_type' => notification_type }
+      contacts = entity_check.contacts
 
       if contacts.empty?
         @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | NO CONTACTS")
         return
-      end
+       end
 
-      contacts.each {|contact|
+      notification = Flapjack::Data::Notification.for_event(event, :type => notification_type)
 
-        if contact.media.empty?
-          @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | #{contact.id} | NO MEDIA FOR CONTACT")
+      notification.messages(:contacts => contacts).each do |msg|
+        media_type = msg.medium.to_sym
+
+        @notifylog.info("#{Time.now.to_s} | #{event.id} | " +
+          "#{notification_type} | #{msg.contact.id} | #{media_type.to_s} | #{msg.address}")
+
+        unless @queues[media_type]
+          # TODO log error
           next
         end
 
-        notification.merge!({'contact_id'         => contact.id,
-                             'contact_first_name' => contact.first_name,
-                             'contact_last_name'  => contact.last_name, })
+        contents = msg.contents
 
-        contact.media.each_pair {|media_type, address|
+        # TODO consider changing Resque jobs to use raw blpop like the others
+        case media_type
+        when :sms
+          Resque.enqueue_to(@queues[:sms], Notification::Sms, contents)
+        when :email
+          Resque.enqueue_to(@queues[:email], Notification::Email, contents)
+        when :jabber
+          # TODO move next line up into other notif value setting above?
+          contents['event_count'] = @event_count if @event_count
+          @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(contents))
+        when :pagerduty
+          @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(contents))
+        end
 
-          @notifylog.info("#{Time.now.to_s} | #{event.id} | " +
-            "#{notification_type} | #{contact.id} | #{media_type} | #{address}")
-
-          # queue this notification
-          notif = notification.dup
-          notif['media']   = media_type
-          notif['address'] = address
-          notif['id']      = fuid
-          dur = event.duration
-          notif['duration'] = dur if dur
-          @logger.debug("send_notifications: sending notification: #{notif.inspect}")
-
-          unless @queues[media_type.to_sym]
-            # TODO log error
-            next
-          end
-
-          # TODO consider changing Resque jobs to use raw blpop like the others
-          case media_type
-          when "sms"
-            Resque.enqueue_to(@queues[:sms], Notification::Sms, notif)
-          when "email"
-            Resque.enqueue_to(@queues[:email], Notification::Email, notif)
-          when "jabber"
-            # TODO move next line up into other notif value setting above?
-            notif['event_count'] = @event_count if @event_count
-            @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(notif))
-          when "pagerduty"
-            @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(notif))
-          end
-        }
-      }
-    end
-
-    # generates a fairly unique identifier to use as a message id
-    def fuid
-      fuid = self.object_id.to_i.to_s + '-' + Time.now.to_i.to_s + '.' + Time.now.tv_usec.to_s
+      end
     end
 
   end

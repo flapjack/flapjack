@@ -74,30 +74,16 @@ module Flapjack
         }
       end
 
-      # creates, or modifies, an event object and adds it to the events list in redis
-      #   'type'      => 'service',
-      #   'state'     => state,
-      #   'summary'   => check_output,
-      #   'time'      => timestamp
-      def create_event(event)
-        event.merge!('entity' => @entity.name, 'check' => @check)
-        event['time'] = Time.now.to_i if event['time'].nil?
-        @redis.rpush('events', Yajl::Encoder.encode(event))
-      end
-
-      def create_acknowledgement(opts = {})
-        defaults = {
-          'summary' => '...'
-        }
-        options = defaults.merge(opts)
-
+      def create_acknowledgement(options = {})
         event = { 'type'               => 'action',
                   'state'              => 'acknowledgement',
                   'summary'            => options['summary'],
                   'duration'           => options['duration'],
-                  'acknowledgement_id' => options['acknowledgement_id']
+                  'acknowledgement_id' => options['acknowledgement_id'],
+                  'entity'             => @entity.name,
+                  'check'              => @check
                 }
-        create_event(event)
+        Flapjack::Data::Event.create(event, :redis => @redis)
       end
 
       # FIXME: need to add summary to summary of existing unscheduled maintenance if there is
@@ -425,8 +411,10 @@ module Flapjack
         check  = @check
 
         if @logger
-          @logger.debug("contacts for #{@entity.id} (#{@entity.name}): " + @redis.smembers("contacts_for:#{@entity.id}").length.to_s)
-          @logger.debug("contacts for #{check}: " + @redis.smembers("contacts_for:#{check}").length.to_s)
+          @logger.debug("contacts for #{@entity.id} (#{@entity.name}): " +
+            @redis.smembers("contacts_for:#{@entity.id}").length.to_s)
+          @logger.debug("contacts for #{check}: " +
+            @redis.smembers("contacts_for:#{check}").length.to_s)
         end
 
         union = @redis.sunion("contacts_for:#{@entity.id}", "contacts_for:#{check}")

@@ -40,6 +40,17 @@ module Flapjack
         end
       end
 
+      # creates, or modifies, an event object and adds it to the events list in redis
+      #   'type'      => 'service',
+      #   'state'     => state,
+      #   'summary'   => check_output,
+      #   'time'      => timestamp
+      def self.create(evt, opts = {})
+        raise "Redis connection not set" unless redis = opts[:redis]
+        evt['time'] = Time.now.to_i if evt['time'].nil?
+        redis.rpush('events', Yajl::Encoder.encode(evt))
+      end
+
       # Provide a count of the number of events on the queue to be processed.
       def self.pending_count(opts = {})
         opts[:persistence].llen('events')
