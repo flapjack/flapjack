@@ -76,7 +76,6 @@ module Flapjack
       return if @bootstrapped
 
       config = opts[:config]
-      redis_config = opts.delete(:redis_config) || {}
 
       @port = config['port'] ? config['port'].to_i : nil
       @port = 3001 if (@port.nil? || @port <= 0 || @port > 65535)
