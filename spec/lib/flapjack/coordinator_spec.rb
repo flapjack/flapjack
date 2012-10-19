@@ -13,6 +13,13 @@ describe Flapjack::Coordinator do
     }
   }
 
+  before(:each) {
+    # temporary workaround for failing test due to preserved state;
+    # won't be needed soon as this code has been fixed in a branch
+    Flapjack::API.class_variable_set('@@redis', nil)
+    Flapjack::Web.class_variable_set('@@redis', nil)
+  }
+
   # leaving actual testing of daemonisation to that class's tests
   it "daemonizes properly" do
     fc = Flapjack::Coordinator.new(config)
@@ -55,7 +62,6 @@ describe Flapjack::Coordinator do
     exec.should_receive(:add_shutdown_event)
     email = EM::Resque::Worker.new('example')
     email.should_receive(:shutdown)
-
     web   = Thin::Server.new('0.0.0.0', 3000, Flapjack::Web, :signals => false)
     web.should_receive(:stop!)
 
@@ -71,7 +77,6 @@ describe Flapjack::Coordinator do
     fiber_exec.should_receive(:alive?).and_return(true, false)
     fiber_rsq.should_receive(:alive?).and_return(true, false)
 
-    # EM::Synchrony.should_receive(:sleep)
     EM.should_receive(:stop)
 
     pikelets = [{:fiber => fiber_exec, :instance => exec},
@@ -139,7 +144,7 @@ describe Flapjack::Coordinator do
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
     pikelets.should have(1).pikelet
-    pikelets.first.should == {:fiber => fiber, :type => 'email_notifier', :instance => worker, :pool => redis}
+    pikelets.first.should == {:fiber => fiber, :type => 'email_notifier', :instance => worker}
   end
 
   it "handles an exception raised by a resque worker pikelet"
@@ -160,7 +165,7 @@ describe Flapjack::Coordinator do
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
     pikelets.should have(1).pikelet
-    pikelets.first.should == {:type => 'web', :instance => server, :pool => redis}
+    pikelets.first.should == {:type => 'web', :instance => server}
   end
 
   # NB: exceptions are handled directly by the Thin pikelets

@@ -156,13 +156,13 @@ module Flapjack
 
       port = 3001 if (port.nil? || port <= 0 || port > 65535)
 
-      pool = Flapjack::RedisPool.new(:config => @redis_options)
-      pikelet_class.class_variable_set('@@redis', pool)
+      pikelet_class.class_variable_set('@@redis',
+        Flapjack::RedisPool.new(:config => @redis_options))
 
       Thin::Logging.silent = true
 
       pikelet = Thin::Server.new('0.0.0.0', port, pikelet_class, :signals => false)
-      @pikelets << {:instance => pikelet, :type => pikelet_type, :pool => pool}
+      @pikelets << {:instance => pikelet, :type => pikelet_type}
       pikelet.start
       @logger.debug "new thin server instance started for #{pikelet_type}"
     end
@@ -178,10 +178,11 @@ module Flapjack
 
       # set up connection pooling, stop resque errors (ensure that it's only
       # done once)
-      pool = nil
+      @resque_pool = nil
       if (['email_notifier', 'sms_notifier'] & @pikelets.collect {|p| p[:type]}).empty?
         pool = Flapjack::RedisPool.new(:config => @redis_options)
         ::Resque.redis = pool
+        @resque_pool = pool
         ## NB: can override the default 'resque' namespace like this
         #::Resque.redis.namespace = 'flapjack'
       end
@@ -222,9 +223,7 @@ module Flapjack
           stop
         end
       }
-      pikelet_values = {:fiber => f, :type => pikelet_type, :instance => pikelet}
-      pikelet_values[:pool] = pool if pool
-      @pikelets << pikelet_values
+      @pikelets << {:fiber => f, :type => pikelet_type, :instance => pikelet}
       f.resume
       @logger.debug "new fiber created for #{pikelet_type}"
     end
@@ -277,15 +276,13 @@ module Flapjack
           if fibers.any?(&:alive?) || thin_pikelets.any?{|tp| !tp.backend.empty? }
             EM::Synchrony.sleep 0.25
           else
-            @pikelets.select {|p| thin_pikelets.include?(p) }.each do |tp|
-              tp[:pool].empty!
+            @resque_pool.empty! if @resque_pool
+
+            [Flapjack::Web, Flapjack::API].each do |klass|
+              next unless klass.class_variable_defined?('@@redis') &&
+                redis = klass.class_variable_get('@@redis')
+              redis.empty!
             end
-
-            rsq_p = @pikelets.detect {|p|
-              ['email_notifier', 'sms_notifier'].include?(p[:type]) && !p[:pool].nil?
-            }
-
-            rsq_p[:pool].empty! if rsq_p
 
             EM.stop
             break
