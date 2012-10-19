@@ -1,8 +1,8 @@
 #!/usr/bin/env ruby
 
-# # 'Notification' refers to the template object created when an event occurs,
-# # from which individual 'Message' objects are created, one for each
-# # contact+media recipient.
+# 'Notification' refers to the template object created when an event occurs,
+# from which individual 'Message' objects are created, one for each
+# contact+media recipient.
 
 module Flapjack
   module Data

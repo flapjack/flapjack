@@ -57,7 +57,7 @@ namespace :profile do
     redis_opts = redis_options(config_env)
     pikelet = klass.new
     pikelet.bootstrap(:config => config_env[config_key],
-      :redis_config => redis_opts))
+      :redis_config => redis_opts)
     t = profiler_klass.profile("#{config_key}_profile.txt") { pikelet.main }
 
     yield

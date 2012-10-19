@@ -205,7 +205,7 @@ module Flapjack
     end
 
     # takes an event for which a notification needs to be generated, works out the type of
-    # notification, updates the notification history in redis,sends the notifications
+    # notification, updates the notification history in redis, sends the notifications
     def send_notification_messages(event, entity_check)
       timestamp = Time.now.to_i
       notification_type = 'unknown'
