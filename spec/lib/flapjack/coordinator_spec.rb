@@ -13,6 +13,13 @@ describe Flapjack::Coordinator do
     }
   }
 
+  before(:each) {
+    # temporary workaround for failing test due to preserved state;
+    # won't be needed soon as this code has been fixed in a branch
+    Flapjack::API.class_variable_set('@@redis', nil)
+    Flapjack::Web.class_variable_set('@@redis', nil)
+  }
+
   # leaving actual testing of daemonisation to that class's tests
   it "daemonizes properly" do
     fc = Flapjack::Coordinator.new(config)

@@ -260,7 +260,6 @@ module Flapjack
           if @pikelets.any? {|p| p[:status] == 'running'}
             EM::Synchrony.sleep 0.25
           else
-
             @resque_pool.empty! if @resque_pool
 
             @pikelets.each do |pik|

@@ -31,9 +31,9 @@ end.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
-config_env = Flapjack::Configuration.new.load(options.config)
+@config_env = Flapjack::Configuration.new.load(options.config)
 
-if config_env.nil? || config_env.empty?
+if @config_env.nil? || @config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
   exit(false)
 end
@@ -97,7 +97,7 @@ def process_input(redis)
 end
 
 def main
-  redis = get_redis_connection(config_env['redis'])
+  redis = get_redis_connection(@config_env['redis'])
 
   while true
     process_input(redis)
