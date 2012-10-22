@@ -45,7 +45,7 @@ module Flapjack
       #   'state'     => state,
       #   'summary'   => check_output,
       #   'time'      => timestamp
-      def self.create(evt, opts = {})
+      def self.add(evt, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
         evt['time'] = Time.now.to_i if evt['time'].nil?
         redis.rpush('events', Yajl::Encoder.encode(evt))

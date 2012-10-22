@@ -25,27 +25,27 @@ namespace :events do
 
     redis = Redis.new(@redis_config)
 
-    Flapjack::Data::Event.create({'entity'  => 'clientx-app-01',
-                                  'check'   => 'ping',
-                                  'type'    => 'service',
-                                  'state'   => 'ok',
-                                  'summary' => 'testing'}, :redis => redis)
+    Flapjack::Data::Event.add({'entity'  => 'clientx-app-01',
+                               'check'   => 'ping',
+                               'type'    => 'service',
+                               'state'   => 'ok',
+                               'summary' => 'testing'}, :redis => redis)
 
     sleep(8)
 
-    Flapjack::Data::Event.create({'entity'  => 'clientx-app-01',
-                                  'check'   => 'ping',
-                                  'type'    => 'service',
-                                  'state'   => 'critical',
-                                  'summary' => 'testing'}, :redis => redis)
+    Flapjack::Data::Event.add({'entity'  => 'clientx-app-01',
+                               'check'   => 'ping',
+                               'type'    => 'service',
+                               'state'   => 'critical',
+                               'summary' => 'testing'}, :redis => redis)
 
     sleep(8)
 
-    Flapjack::Data::Event.create({'entity'  => 'clientx-app-01',
-                                  'check'   => 'ping',
-                                  'type'    => 'service',
-                                  'state'   => 'ok',
-                                  'summary' => 'testing'}, :redis => redis)
+    Flapjack::Data::Event.add({'entity'  => 'clientx-app-01',
+                               'check'   => 'ping',
+                               'type'    => 'service',
+                               'state'   => 'ok',
+                               'summary' => 'testing'}, :redis => redis)
 
   end
 

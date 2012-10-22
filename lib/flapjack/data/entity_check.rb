@@ -83,7 +83,7 @@ module Flapjack
                   'entity'             => @entity.name,
                   'check'              => @check
                 }
-        Flapjack::Data::Event.create(event, :redis => @redis)
+        Flapjack::Data::Event.add(event, :redis => @redis)
       end
 
       # FIXME: need to add summary to summary of existing unscheduled maintenance if there is

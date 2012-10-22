@@ -21,15 +21,16 @@ module Flapjack
       end
 
       def contents
-        c = {'contact_id'         => contact.id,
-             'contact_first_name' => contact.first_name,
-             'contact_last_name'  => contact.last_name,
-             'media'              => medium,
+        c = {'media'              => medium,
              'address'            => address,
-             'id'                 => id
-            }
+             'id'                 => id}
+        if contact
+          c.merge('contact_id'         => contact.id,
+                  'contact_first_name' => contact.first_name,
+                  'contact_last_name'  => contact.last_name)
+        end
         c['duration'] = duration if duration
-        c.merge(notification.contents)
+        c.merge(notification.contents) if notification
       end
 
     private

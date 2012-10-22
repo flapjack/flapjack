@@ -252,9 +252,9 @@ module Flapjack
         # TODO consider changing Resque jobs to use raw blpop like the others
         case media_type
         when :sms
-          Resque.enqueue_to(@queues[:sms], Notification::Sms, contents)
+          Resque.enqueue_to(@queues[:sms], Flapjack::Notification::Sms, contents)
         when :email
-          Resque.enqueue_to(@queues[:email], Notification::Email, contents)
+          Resque.enqueue_to(@queues[:email], Flapjack::Notification::Email, contents)
         when :jabber
           # TODO move next line up into other notif value setting above?
           contents['event_count'] = @event_count if @event_count
