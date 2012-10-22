@@ -43,7 +43,7 @@ end.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
-config_env = Flapjack::Configuration.new.load(options.config)
+config_env, redis_options = Flapjack::Configuration.new.load(options.config)
 
 if config_env.nil? || config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
@@ -55,18 +55,12 @@ if options.from
   file     = File.new(filename)
 end
 
-def get_redis_connection(cfg)
-  opts = cfg['path'] ? {:path => cfg['path']} :
-                       {:host => cfg['host'], :port => cfg['port']}
-  Redis.new(opts.merge(:db => cfg['db']))
-end
-
 case command
 when "import-contacts"
   contacts = JSON.parse(file)
 
   if contacts && contacts.is_a?(Enumerable) && contacts.any? {|e| !e['id'].nil?}
-    @persistence = get_redis_connection(config_env['redis'])
+    @persistence = Redis.new(redis_options)
     @persistence.multi do
       contacts.each do |contact|
         unless contact['id']
@@ -83,7 +77,7 @@ when "import-entities"
   entities = JSON.parse(file)
 
   if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
-    @persistence = get_redis_connection(config_env['redis'])
+    @persistence = Redis.new(redis_options)
     @persistence.multi
     entities.each do |entity|
       unless entity['id']
@@ -97,7 +91,7 @@ when "import-entities"
   end
 
 when "purge-events"
-  @persistence = get_redis_connection(config_env['redis'])
+  @persistence = Redis.new(redis_options)
   Flapjack::Data::Event.purge_all(:redis => @persistence)
   @persistence.quit
 

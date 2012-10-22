@@ -13,6 +13,8 @@ describe Flapjack::Coordinator do
     }
   }
 
+  let(:redis_config) { {} }
+
   before(:each) {
     # temporary workaround for failing test due to preserved state;
     # won't be needed soon as this code has been fixed in a branch
@@ -22,7 +24,7 @@ describe Flapjack::Coordinator do
 
   # leaving actual testing of daemonisation to that class's tests
   it "daemonizes properly" do
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, redis_config)
     fc.should_receive(:daemonize)
     fc.should_not_receive(:build_pikelet)
     fc.should_not_receive(:build_resque_pikelet)
@@ -33,7 +35,7 @@ describe Flapjack::Coordinator do
   it "runs undaemonized" do
     EM.should_receive(:synchrony).and_yield
 
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, redis_config)
     fc.should_receive(:build_pikelet)
     fc.should_receive(:build_resque_pikelet)
     fc.should_receive(:build_thin_pikelet)
@@ -43,7 +45,7 @@ describe Flapjack::Coordinator do
   it "starts after daemonizing" do
     EM.should_receive(:synchrony).and_yield
 
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, redis_config)
     fc.should_receive(:build_pikelet)
     fc.should_receive(:build_resque_pikelet)
     fc.should_receive(:build_thin_pikelet)
@@ -91,7 +93,7 @@ describe Flapjack::Coordinator do
                 {:fiber => fiber_rsq,  :instance => email, :class => Flapjack::Notification::Email},
                 {:instance => web, :class => Flapjack::Web}]
 
-    fc = Flapjack::Coordinator.new
+    fc = Flapjack::Coordinator.new(config, redis_config)
     fc.instance_variable_set('@redis_options', {})
     fc.instance_variable_set('@pikelets', pikelets)
     fc.stop
@@ -106,7 +108,7 @@ describe Flapjack::Coordinator do
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    fc = Flapjack::Coordinator.new
+    fc = Flapjack::Coordinator.new(config, redis_config)
     fc.send(:build_pikelet, 'executive', {})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
@@ -124,7 +126,7 @@ describe Flapjack::Coordinator do
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    fc = Flapjack::Coordinator.new
+    fc = Flapjack::Coordinator.new(config, redis_config)
     fc.should_receive(:stop)
     fc.send(:build_pikelet, 'jabber_gateway', {})
     pikelets = fc.instance_variable_get('@pikelets')
@@ -146,7 +148,7 @@ describe Flapjack::Coordinator do
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    fc = Flapjack::Coordinator.new
+    fc = Flapjack::Coordinator.new(config, redis_config)
     fc.send(:build_resque_pikelet, 'email_notifier', {})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
@@ -169,7 +171,7 @@ describe Flapjack::Coordinator do
 
     Flapjack::RedisPool.should_receive(:new)
 
-    fc = Flapjack::Coordinator.new
+    fc = Flapjack::Coordinator.new(config, redis_config)
     fc.send(:build_thin_pikelet, 'web', {})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil

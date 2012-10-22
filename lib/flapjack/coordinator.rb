@@ -30,8 +30,9 @@ module Flapjack
 
     include Flapjack::Daemonizable
 
-    def initialize(config = {})
+    def initialize(config, redis_options)
       @config = config
+      @redis_options = redis_options
       @pikelets = []
 
       @logger = Log4r::Logger.new("flapjack-coordinator")
@@ -45,12 +46,12 @@ module Flapjack
         @signals = options[:signals]
         daemonize
       else
-        setup(:signals => options[:signals])
+        run(:signals => options[:signals])
       end
     end
 
     def after_daemonize
-      setup(:signals => @signals)
+      run(:signals => @signals)
     end
 
     def stop
@@ -61,20 +62,7 @@ module Flapjack
 
   private
 
-    def setup(options = {})
-
-      # FIXME: the following is currently repeated in flapjack-populator and
-      # flapjack-nagios-receiver - move to a method in a module and include it
-      redis_host = @config['redis']['host'] || '127.0.0.1'
-      redis_port = @config['redis']['port'] || 6379
-      redis_path = @config['redis']['path'] || nil
-      redis_db   = @config['redis']['db']   || 0
-
-      @redis_options = if redis_path
-         { :db => redis_db, :path => redis_path }
-      else
-         { :db => redis_db, :host => redis_host, :port => redis_port }
-      end
+    def run(options = {})
 
       EM.synchrony do
         @logger.debug "config keys: #{@config.keys}"

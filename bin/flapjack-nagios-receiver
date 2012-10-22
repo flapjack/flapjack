@@ -31,7 +31,7 @@ end.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
-@config_env = Flapjack::Configuration.new.load(options.config)
+@config_env, @redis_options = Flapjack::Configuration.new.load(options.config)
 
 if @config_env.nil? || @config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
@@ -50,12 +50,6 @@ end
 # fields match up
 # host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
 # service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
-
-def get_redis_connection(cfg)
-  opts = cfg['path'] ? {:path => cfg['path']} :
-                       {:host => cfg['host'], :port => cfg['port']}
-  Redis.new(opts.merge(:db => cfg['db']))
-end
 
 def process_input(redis)
   begin
@@ -97,7 +91,7 @@ def process_input(redis)
 end
 
 def main
-  redis = get_redis_connection(@config_env['redis'])
+  redis = Redis.new(@redis_options)
 
   while true
     process_input(redis)

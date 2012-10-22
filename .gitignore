@@ -21,5 +21,6 @@ etc/*.yaml
 coverage
 tmp/pids/*
 tmp/spec*
+tmp/profile_*.txt
 flapjack-*.gem
 
