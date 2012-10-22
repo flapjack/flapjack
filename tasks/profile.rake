@@ -51,14 +51,42 @@ namespace :profile do
     return config_env, redis_options
   end
 
+  def check_db_empty(redis_options)
+    redis = Redis.new(redis_options)
+
+    # DBSIZE can return > 0 with expired keys -- but that's fine, we only
+    # want to run against an explicitly empty DB. If this fails against the
+    # intended Redis DB, they can FLUSHDB it manually
+    db_size = redis.dbsize.to_i
+    if db_size > 0
+      db = redis_options['db']
+      puts "Redis database has a non-zero DBSIZE (#{db_size}); profiling will destroy data."
+      puts "Use 'SELECT #{db}; FLUSHDB' in redis-cli if you really want to use this database."
+      puts "[redis options] #{options[:redis].inspect}"
+      puts "Exiting..."
+      exit(false)
+    end
+  end
+
+  def empty_db(redis_options)
+    redis = Redis.new(redis_options)
+    redis.flushdb
+  end
+
   # this adds a default entity and contact, so that the profiling methods
   # will actually trigger enough code to be useful
-  def setup_baseline_data
+  def setup_baseline_data(options = {})
+
     # FIXME
+
   end
 
   def profile_coordinator
     config_env, redis_options = load_config
+    check_db_empty(redis_options)
+
+    # TODO set up entity, contact
+
     coordinator = Flapjack::Coordinator.new(config, redis_options)
 
     t = profile("tmp/profile_coordinator.txt") {
@@ -69,13 +97,19 @@ namespace :profile do
 
     coordinator.stop
     t.join
+    empty_db(redis_options)
   end
 
   def profile_pikelet(klass, config_key)
     config_env, redis_options = load_config
+    check_db_empty(redis_options)
+
+    # TODO set up entity, contact
+
     pikelet = klass.new
     pikelet.bootstrap(:config => config_env[config_key],
       :redis_config => redis_options)
+
     t = profile("tmp/profile_#{config_key}.txt") { pikelet.main }
 
     yield
@@ -85,13 +119,19 @@ namespace :profile do
     pikelet.add_shutdown_event(:redis => redis)
     redis.quit
     t.join
+    empty_db(redis_options)
   end
 
   def profile_resque(klass, config_key)
     config_env, redis_options = load_config
+    check_db_empty(redis_options)
+
+    # TODO set up entity, contact
+
     pool = Flapjack::RedisPool.new(:config => redis_options)
     ::Resque.redis = pool
     worker = EM::Resque::Worker.new(config_env[config_key]['queue'])
+
     t = profile("tmp/profile_#{config_key}.txt") { worker.work }
 
     yield
@@ -99,10 +139,15 @@ namespace :profile do
     worker.shutdown
     t.join
     pool.empty!
+    empty_db(redis_options)
   end
 
   def profile_thin(klass, config_key)
     config_env, redis_options = load_config
+    check_db_empty(redis_options)
+
+    # TODO set up entity, contact
+
     klass.bootstrap(:config => config, :redis_config => redis_options)
 
     Thin::Logging.silent = true
@@ -116,15 +161,19 @@ namespace :profile do
 
     server.stop!
     t.join
+    empty_db(redis_options)
   end
 
   desc "profile multiple components running through coordinator with rubyprof"
   task :coordinator do
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
-    profile_coordinator(RubyprofProfiler) {
-      (1..REPETITIONS).times do
-        # TODO add some events
-        # Flapjack::Data::Event.create( )
+    profile_coordinator {
+      (1..REPETITIONS).times do |n|
+        Flapjack::Data::Event.create({'entity'  => 'clientx-app-01',
+                                      'check'   => 'ping',
+                                      'type'    => 'service',
+                                      'state'   => n ? 'ok' : 'critical',
+                                      'summary' => 'testing'}, :redis => redis)
       end
     }
   end
@@ -133,9 +182,12 @@ namespace :profile do
   task :executive do
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
     profile_pikelet(Flapjack::Executive, 'executive') {
-      (1..REPETITIONS).times do
-        # TODO add some events
-        # Flapjack::Data::Event.create( )
+      (1..REPETITIONS).times do |n|
+        Flapjack::Data::Event.create({'entity'  => 'clientx-app-01',
+                                      'check'   => 'ping',
+                                      'type'    => 'service',
+                                      'state'   => n ? 'ok' : 'critical',
+                                      'summary' => 'testing'}, :redis => redis)
       end
     }
   end
@@ -147,8 +199,8 @@ namespace :profile do
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
     profile_pikelet(Flapjack::Jabber, 'jabber_gateway') {
       (1..REPETITIONS).times do
-        # TODO add some notifications
-        # Flapjack::Data::Notification.create( )
+        # TODO add some messages
+        # Flapjack::Data::Message.create( )
       end
     }
   end
@@ -160,8 +212,8 @@ namespace :profile do
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
     profile_resque(Flapjack::Notification::Email, 'email_notifier') {
       (1..REPETITIONS).times do
-        # TODO add some notifications
-        # Flapjack::Data::Notification.create( )
+        # TODO add some messages
+        # Flapjack::Data::Message.create( )
       end
     }
   end
