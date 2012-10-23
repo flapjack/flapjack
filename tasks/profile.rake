@@ -1,5 +1,6 @@
 namespace :profile do
 
+  require 'fileutils'
   require 'flapjack/configuration'
 
   FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..')
@@ -187,7 +188,8 @@ namespace :profile do
   end
 
   def profile_fiber(name, thread)
-    output_filename = File.join('tmp', "profile_#{name}.txt")
+    output_dir = File.join('tmp', "profiles")
+    FileUtils.mkdir_p(output_dir)
     Fiber.new {
       if FLAPJACK_PROFILER =~ /^perftools$/i
         PerfTools::CpuProfiler.start(output_filename) do
@@ -199,10 +201,8 @@ namespace :profile do
         yield
         result = RubyProf.stop
         result.eliminate_methods!([/Thread#join/])
-        printer = RubyProf::FlatPrinter.new(result)
-        File.open(output_filename, 'w') {|f|
-          printer.print(f)
-        }
+        printer = RubyProf::MultiPrinter.new(result)
+        printer.print(:path => output_dir, :profile => name)
       end
     }
   end
