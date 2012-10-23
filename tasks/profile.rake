@@ -1,10 +1,6 @@
 namespace :profile do
 
   require 'flapjack/configuration'
-  require 'flapjack/executive'
-
-  require 'flapjack/data/event'
-  require 'flapjack/data/message'
 
   FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..')
   FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.yaml')
@@ -235,6 +231,10 @@ namespace :profile do
 
   desc "profile executive with rubyprof"
   task :executive do
+
+    require 'flapjack/executive'
+    require 'flapjack/data/event'
+
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
     config_env, redis_options = load_config
     profile_pikelet(Flapjack::Executive, 'executive', config_env['executive'],
@@ -259,6 +259,12 @@ namespace :profile do
   # come in from that then runs will not be comparable
   desc "profile jabber gateway with rubyprof"
   task :jabber do
+
+    require 'flapjack/jabber'
+    require 'flapjack/data/contact'
+    require 'flapjack/data/event'
+    require 'flapjack/data/notification'
+
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
     config_env, redis_options = load_config
     profile_pikelet(Flapjack::Jabber, 'jabber', config_env['jabber_gateway'],
@@ -274,7 +280,7 @@ namespace :profile do
                                           'check'   => 'ping')
         notification = Flapjack::Data::Notification.for_event(event)
 
-        contact = Flapjack::Data::Contact.for_id('1000')
+        contact = Flapjack::Data::Contact.find_by_id('1000', :redis => redis)
 
         REPETITIONS.times do |n|
           notification.messages(:contacts => [contact]).each do |msg|
@@ -284,7 +290,8 @@ namespace :profile do
               Yajl::Encoder.encode(contents))
           end
         end
-        redis.empty!
+
+        redis.quit
     }
   end
 
@@ -292,10 +299,21 @@ namespace :profile do
   # mailtrap or a real server)
   desc "profile email notifier with rubyprof"
   task :email do
+
+    require 'resque'
+    require 'flapjack/notification/email'
+
+    require 'flapjack/data/contact'
+    require 'flapjack/data/event'
+    require 'flapjack/data/notification'
+
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
     config_env, redis_options = load_config
     profile_resque(Flapjack::Notification::Email, 'email',
       config_env['email_notifier'], redis_options) {
+
+      # this executes in a separate thread, so no Fibery stuff is allowed
+      redis = Redis.new(redis_options.merge(:driver => 'ruby'))
 
       event = Flapjack::Data::Event.new('type'    => 'service',
                                         'state'   => 'critical',
@@ -304,7 +322,7 @@ namespace :profile do
                                         'check'   => 'ping')
       notification = Flapjack::Data::Notification.for_event(event)
 
-      contact = Flapjack::Data::Contact.for_id('1000')
+      contact = Flapjack::Data::Contact.find_by_id('1000', :redis => redis)
 
       REPETITIONS.times do
         notification.messages(:contacts => [contact]).each do |msg|
@@ -312,6 +330,8 @@ namespace :profile do
             Flapjack::Notification::Email, msg.contents)
         end
       end
+
+      redis.quit
     }
   end
 

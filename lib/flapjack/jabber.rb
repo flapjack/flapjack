@@ -92,7 +92,7 @@ module Flapjack
 
     # Join the MUC Chat room after connecting.
     def on_ready(stanza)
-      return if should_quit?
+      return if should_quit? && @shutting_down
       @redis_handler ||= Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
       @connected_at = Time.now.to_i
       logger.info("Jabber Connected")
@@ -185,7 +185,7 @@ module Flapjack
     end
 
     def on_groupchat(stanza)
-      return if should_quit?
+      return if should_quit? && @shutting_down
       logger.debug("groupchat message received: #{stanza.inspect}")
 
       if stanza.body =~ /^flapjack:\s+(.*)/
@@ -204,7 +204,7 @@ module Flapjack
     end
 
     def on_chat(stanza)
-      return if should_quit?
+      return if should_quit? && @shutting_down
       logger.debug("chat message received: #{stanza.inspect}")
 
       if stanza.body =~ /^flapjack:\s+(.*)/
@@ -226,7 +226,7 @@ module Flapjack
 
     # returning true to prevent the reactor loop from stopping
     def on_disconnect(stanza)
-      return true if should_quit?
+      return true if should_quit? && @shutting_down
       logger.warn("jabbers disconnected! reconnecting in 1 second ...")
       EventMachine::Timer.new(1) do
         connect # Blather::Client.connect
@@ -269,7 +269,7 @@ module Flapjack
       queue = @config['queue']
       events = {}
 
-      until should_quit?
+      until should_quit? && @shutting_down
 
         # FIXME: should also check if presence has been established in any group chat rooms that are
         # configured before starting to process events, otherwise the first few may get lost (send
@@ -278,11 +278,12 @@ module Flapjack
           logger.debug("jabber is connected so commencing blpop on #{queue}")
           events[queue] = @redis.blpop(queue, 0)
           event         = Yajl::Parser.parse(events[queue][1])
-          type          = event['notification_type']
+          type          = event['notification_type'] || 'unknown'
           logger.debug('jabber notification event received')
           logger.debug(event.inspect)
           if 'shutdown'.eql?(type)
             if should_quit?
+              @shutting_down = true
               EventMachine::Synchrony.next_tick do
                 # get delays without the next_tick
                 close # Blather::Client.close
