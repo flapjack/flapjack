@@ -45,19 +45,23 @@ namespace :profile do
       pikelet.bootstrap(:config => config,
         :redis_config => redis_options)
 
-      profile_fib = profile_fiber(name) {
-        pikelet.main
-      }
-      profile_fib.resume
-
       extern_thr = Thread.new {
+        Thread.stop
         yield if block_given?
         pikelet.stop
         pikelet.add_shutdown_event(:redis => redis)
       }
+
+      profile_fib = profile_fiber(name, extern_thr) {
+        pikelet.main
+      }
+      profile_fib.resume
+      extern_thr.run
       extern_thr.join
 
-      are_we_there_yet?(profile_fib)
+      are_we_there_yet?(profile_fib) {
+        pikelet.cleanup
+      }
     end
 
     empty_db(:redis => redis)
@@ -74,15 +78,16 @@ namespace :profile do
       ::Resque.redis = pool
       worker = EM::Resque::Worker.new(config_env[config_key]['queue'])
 
-      profile_fib = profile_fiber(name) {
-       worker.work
-      }
-      profile_fib.resume
-
       extern_thr = Thread.new {
+        Thread.stop
         yield if block_given?
         worker.shutdown
       }
+
+      profile_fib = profile_fiber(name, extern_thr) {
+       worker.work
+      }
+      profile_fib.resume
       extern_thr.join
 
       are_we_there_yet?(profile_fib) {
@@ -107,15 +112,16 @@ namespace :profile do
       server = Thin::Server.new('0.0.0.0', FLAPJACK_PORT,
         klass, :signals => false)
 
-      profile_fib = profile(name) {
-        server.start
-      }
-      profile_fib.resume
-
       extern_thr = Thread.new {
+        Thread.stop
         yield if block_given?
         server.stop!
       }
+
+      profile_fib = profile(name, extern_thr) {
+        server.start
+      }
+      profile_fib.resume
       extern_thr.join
 
       are_we_there_yet?(profile_fib) {
@@ -184,7 +190,7 @@ namespace :profile do
     redis.flushdb
   end
 
-  def profile_fiber(name)
+  def profile_fiber(name, thread)
     output_filename = File.join('tmp', "profile_#{name}.txt")
     Fiber.new {
       if FLAPJACK_PROFILER =~ /^perftools$/i
@@ -192,9 +198,11 @@ namespace :profile do
           yield
         end
       else
+        RubyProf::exclude_threads = [thread]
         RubyProf.start
         yield
         result = RubyProf.stop
+        result.eliminate_methods!([/Thread#join/])
         printer = RubyProf::FlatPrinter.new(result)
         File.open(output_filename, 'w') {|f|
           printer.print(f)

@@ -87,7 +87,7 @@ module Flapjack
     def main
       @logger.info("Booting main loop.")
 
-      until should_quit?
+      until should_quit? && @received_shutdown
         @logger.info("Waiting for event...")
         event = Flapjack::Data::Event.next(:persistence => @redis)
         process_event(event) unless event.nil?
@@ -198,7 +198,7 @@ module Flapjack
         end
       when 'shutdown'
         # should this be logged as an action instead? being minimally invasive for now
-        result[:shutdown] = true
+        result[:shutdown] = @received_shutdown = true
       end
 
       result
