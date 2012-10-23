@@ -53,6 +53,7 @@ namespace :profile do
         pikelet.main
       }
       profile_fib.resume
+
       extern_thr.run
       extern_thr.join
 
@@ -66,68 +67,75 @@ namespace :profile do
   end
 
   def profile_resque(klass, name, config, redis_options)
-    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
-    check_db_empty(:redis => redis, :redis_options => redis_options)
-    setup_baseline_data(:redis => redis)
+    # redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    # check_db_empty(:redis => redis, :redis_options => redis_options)
+    # setup_baseline_data(:redis => redis)
 
-    EM.synchrony do
-      pool = Flapjack::RedisPool.new(:config => redis_options)
-      ::Resque.redis = pool
-      worker = EM::Resque::Worker.new(config_env[config_key]['queue'])
+    # ::Resque.redis = redis
 
-      extern_thr = Thread.new {
-        Thread.stop
-        yield if block_given?
-        worker.shutdown
-      }
+    # EM.synchrony do
+    #   worker = EM::Resque::Worker.new(config['queue'])
 
-      profile_fib = profile_fiber(name, extern_thr) {
-       worker.work
-      }
-      profile_fib.resume
-      extern_thr.join
+    #   extern_thr = Thread.new {
+    #     yield if block_given?
+    #     Thread.stop
+    #     while Resque.info[:processed] < 100
+    #       Thread.stop
+    #     end
+    #     worker.shutdown
+    #   }
 
-      are_we_there_yet?(profile_fib) {
-        pool.empty!
-      }
-    end
+    #   profile_fib = profile_fiber(name, extern_thr) {
+    #     worker.work(0.1)
+    #   }
+    #   profile_fib.resume
 
-    empty_db(:redis => redis)
-    redis.quit
+    #   while Resque.info[:processed] < 100
+    #     extern_thr.run
+    #   end
+    #   extern_thr.join
+
+    #   are_we_there_yet?(profile_fib)
+    # end
+
+    # empty_db(:redis => redis)
+    # redis.quit
   end
 
   def profile_thin(klass, name, config, redis_options)
-    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
-    check_db_empty(:redis => redis, :redis_options => redis_options)
-    setup_baseline_data(:redis => redis)
+    # redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    # check_db_empty(:redis => redis, :redis_options => redis_options)
+    # setup_baseline_data(:redis => redis)
 
-    Thin::Logging.silent = true
+    # Thin::Logging.silent = true
 
-    EM.synchrony do
+    # EM.synchrony do
 
-      klass.bootstrap(:config => config, :redis_config => redis_options)
-      server = Thin::Server.new('0.0.0.0', FLAPJACK_PORT,
-        klass, :signals => false)
+    #   klass.bootstrap(:config => config, :redis_config => redis_options)
+    #   server = Thin::Server.new('0.0.0.0', FLAPJACK_PORT,
+    #     klass, :signals => false)
 
-      extern_thr = Thread.new {
-        Thread.stop
-        yield if block_given?
-        server.stop!
-      }
+    #   extern_thr = Thread.new {
+    #     Thread.stop
+    #     yield if block_given?
+    #     server.stop!
+    #   }
 
-      profile_fib = profile(name, extern_thr) {
-        server.start
-      }
-      profile_fib.resume
-      extern_thr.join
+    #   profile_fib = profile(name, extern_thr) {
+    #     server.start
+    #   }
+    #   profile_fib.resume
 
-      are_we_there_yet?(profile_fib) {
-        klass.cleanup
-      }
-    end
+    #   extern_thr.run
+    #   extern_thr.join
 
-    empty_db(:redis => redis)
-    redis.quit
+    #   are_we_there_yet?(profile_fib) {
+    #     klass.cleanup
+    #   }
+    # end
+
+    # empty_db(:redis => redis)
+    # redis.quit
   end
 
   ### utility methods
@@ -300,7 +308,18 @@ namespace :profile do
   desc "profile email notifier with rubyprof"
   task :email do
 
-    require 'resque'
+    require 'eventmachine'
+    # the redis/synchrony gems need to be required in this particular order, see
+    # the redis-rb README for details
+    require 'hiredis'
+    require 'em-synchrony'
+    require 'redis/connection/synchrony'
+    require 'redis'
+    require 'em-resque'
+    require 'em-resque/worker'
+
+    require 'flapjack/patches'
+    require 'flapjack/redis_pool'
     require 'flapjack/notification/email'
 
     require 'flapjack/data/contact'

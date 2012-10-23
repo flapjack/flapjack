@@ -143,7 +143,7 @@ module Flapjack
       result    = { :skip_filters => false }
       timestamp = Time.now.to_i
       @event_count = @redis.hincrby('event_counters', 'all', 1)
-      @event_count = @redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
+      @redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
 
       # FIXME skip if entity_check.nil?
 
