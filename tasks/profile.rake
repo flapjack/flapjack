@@ -121,10 +121,12 @@ namespace :profile do
     setup_baseline_data(:redis => redis)
 
     pikelet = klass.new
-    pikelet.bootstrap(:config => config[config_key],
-      :redis_config => redis_options)
 
-    profile(name) { pikelet.main }
+    profile(name) {
+      pikelet.bootstrap(:config => config,
+        :redis_config => redis_options)
+      pikelet.main
+    }
 
     yield if block_given?
 
@@ -139,11 +141,12 @@ namespace :profile do
     check_db_empty(:redis => redis, :redis_options => redis_options)
     setup_baseline_data(:redis => redis)
 
-    pool = Flapjack::RedisPool.new(:config => redis_options)
-    ::Resque.redis = pool
-    worker = EM::Resque::Worker.new(config_env[config_key]['queue'])
-
-    profile(name) { worker.work }
+    profile(name) {
+      pool = Flapjack::RedisPool.new(:config => redis_options)
+      ::Resque.redis = pool
+      worker = EM::Resque::Worker.new(config_env[config_key]['queue'])
+      worker.work
+    }
 
     yield if block_given?
 
@@ -158,19 +161,21 @@ namespace :profile do
     check_db_empty(:redis => redis, :redis_options => redis_options)
     setup_baseline_data(:redis => redis)
 
-    klass.bootstrap(:config => config, :redis_config => redis_options)
-
     Thin::Logging.silent = true
-    server = Thin::Server.new('0.0.0.0', FLAPJACK_PORT,
-      klass, :signals => false)
 
     profile(name) {
+      klass.bootstrap(:config => config, :redis_config => redis_options)
+
+      server = Thin::Server.new('0.0.0.0', FLAPJACK_PORT,
+        klass, :signals => false)
+
       server.start
     }
 
     yield if block_given?
 
     server.stop!
+    klass.cleanup
     empty_db(:redis => redis)
     redis.quit
   end
