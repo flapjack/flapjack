@@ -57,11 +57,11 @@ module Flapjack
       end
 
       redis_path = (config_env['redis']['path'] || nil)
-      base_opts = {:db => (config_env['redis']['db'] || 0)
+      base_opts = {:db => (config_env['redis']['db'] || 0)}
       redis_config = base_opts.merge(
-        redis_path ? { :path => redis_path } :
-                     { :host => (config_env['redis']['host'] || '127.0.0.1'),
-                       :port => (@config_env['redis']['port'] || 6379)}
+        (redis_path ? { :path => redis_path } :
+                      { :host => (config_env['redis']['host'] || '127.0.0.1'),
+                        :port => (config_env['redis']['port'] || 6379)})
       )
 
       return config_env, redis_config

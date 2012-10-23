@@ -7,7 +7,7 @@ namespace :profile do
   require 'flapjack/data/message'
 
   FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..')
-  FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_profile.yaml')
+  FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.yaml')
 
   FLAPJACK_PROFILER = ENV['FLAPJACK_PROFILER'] || 'rubyprof'
   port = ENV['FLAPJACK_PROFILER'].to_i
@@ -15,11 +15,11 @@ namespace :profile do
 
   REPETITIONS     = 100
 
-  require (FLAPJACK_PROFILER =~ /^perftools$/i) ? 'perftools' : 'rubyprof'
+  require (FLAPJACK_PROFILER =~ /^perftools$/i) ? 'perftools' : 'ruby-prof'
 
   def profile(name)
     output_filename = File.join('tmp', "profile_#{name}.txt")
-    Thread.new {
+    Fiber.new {
       if FLAPJACK_PROFILER =~ /^perftools$/i
         PerfTools::CpuProfiler.start(output_filename) do
           EM.synchrony do
@@ -39,7 +39,7 @@ namespace :profile do
           printer.print(f)
         }
       end
-    }
+    }.resume
   end
 
   def load_config
@@ -54,8 +54,9 @@ namespace :profile do
     return config_env, redis_options
   end
 
-  def check_db_empty(redis_options)
-    redis = Redis.new(redis_options)
+  def check_db_empty(options = {})
+    redis = options[:redis]
+    redis_options = options[:redis_options]
 
     # DBSIZE can return > 0 with expired keys -- but that's fine, we only
     # want to run against an explicitly empty DB. If this fails against the
@@ -63,27 +64,27 @@ namespace :profile do
     db_size = redis.dbsize.to_i
     if db_size > 0
       db = redis_options['db']
-      puts "Redis database has a non-zero DBSIZE (#{db_size}); profiling\n" +
-           "will destroy data. Use 'SELECT #{db}; FLUSHDB' in redis-cli if\n" +
-           'you really want to use this database.'
+      puts "The Redis database has a non-zero DBSIZE (#{db_size}) -- "
+           "profiling will destroy data. Use 'SELECT #{db}; FLUSHDB' in " +
+           'redis-cli if you want to profile using this database.'
       puts "[redis options] #{options[:redis].inspect}\nExiting..."
       exit(false)
     end
   end
 
-  def empty_db(redis_options)
-    redis = Redis.new(redis_options)
+  def empty_db(options = {})
+    redis = options[:redis]
     redis.flushdb
   end
 
   # this adds a default entity and contact, so that the profiling methods
   # will actually trigger enough code to be useful
-  def setup_baseline_data
+  def setup_baseline_data(options = {})
     entity = {"id"        => "2000",
               "name"      => "clientx-app-01",
-              "contacts"  => ["1000"]},
+              "contacts"  => ["1000"]}
 
-    Flapjack::Data::Entity.add(entity)
+    Flapjack::Data::Entity.add(entity, :redis => options[:redis])
 
     contact = {'id'         => '1000',
                'first_name' => 'John',
@@ -93,72 +94,69 @@ namespace :profile do
                  'email' => 'jsmith@example.com'
                }}
 
-    Flapjack::Data::Contact.add(contact)
+    Flapjack::Data::Contact.add(contact, :redis => options[:redis])
   end
 
-  def profile_coordinator
-    config_env, redis_options = load_config
-    check_db_empty(redis_options)
-
-    setup_baseline_data
+  def profile_coordinator(config, redis_options)
+    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    check_db_empty(:redis => redis, :redis_options => redis_options)
+    setup_baseline_data(:redis => redis)
 
     coordinator = Flapjack::Coordinator.new(config, redis_options)
 
-    t = profile('coordinator') {
+    profile('coordinator') {
       coordinator.start(:daemonize => false, :signals => false)
     }
 
     yield if block_given?
 
     coordinator.stop
-    t.join
-    empty_db(redis_options)
+    empty_db(:redis => redis)
+    redis.quit
   end
 
   def profile_pikelet(klass, name, config, redis_options)
-    check_db_empty(redis_options)
-
-    setup_baseline_data
+    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    check_db_empty(:redis => redis, :redis_options => redis_options)
+    setup_baseline_data(:redis => redis)
 
     pikelet = klass.new
-    pikelet.bootstrap(:config => config_env[config_key],
+    pikelet.bootstrap(:config => config[config_key],
       :redis_config => redis_options)
 
-    t = profile(name) { pikelet.main }
+    profile(name) { pikelet.main }
 
     yield if block_given?
 
     pikelet.stop
-    redis = Redis.new(redis_opts.merge(:driver => 'ruby'))
     pikelet.add_shutdown_event(:redis => redis)
+    empty_db(:redis => redis)
     redis.quit
-    t.join
-    empty_db(redis_options)
   end
 
   def profile_resque(klass, name, config, redis_options)
-    check_db_empty(redis_options)
-
-    setup_baseline_data
+    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    check_db_empty(:redis => redis, :redis_options => redis_options)
+    setup_baseline_data(:redis => redis)
 
     pool = Flapjack::RedisPool.new(:config => redis_options)
     ::Resque.redis = pool
     worker = EM::Resque::Worker.new(config_env[config_key]['queue'])
 
-    t = profile(name) { worker.work }
+    profile(name) { worker.work }
 
     yield if block_given?
 
     worker.shutdown
-    t.join
     pool.empty!
-    empty_db(redis_options)
+    empty_db(:redis => redis)
+    redis.quit
   end
 
   def profile_thin(klass, name, config, redis_options)
-    check_db_empty(redis_options)
-
-    setup_baseline_data
+    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    check_db_empty(:redis => redis, :redis_options => redis_options)
+    setup_baseline_data(:redis => redis)
 
     klass.bootstrap(:config => config, :redis_config => redis_options)
 
@@ -166,15 +164,15 @@ namespace :profile do
     server = Thin::Server.new('0.0.0.0', FLAPJACK_PORT,
       klass, :signals => false)
 
-    t = profile(name) {
+    profile(name) {
       server.start
     }
 
     yield if block_given?
 
     server.stop!
-    t.join
-    empty_db(redis_options)
+    empty_db(:redis => redis)
+    redis.quit
   end
 
   desc "profile startup of running through coordinator with rubyprof"
@@ -190,7 +188,7 @@ namespace :profile do
     config_env, redis_options = load_config
     profile_pikelet(Flapjack::Executive, 'executive', config_env['executive'],
       redis_options) {
-      (1..REPETITIONS).times do |n|
+      REPETITIONS.times do |n|
         Flapjack::Data::Event.add({'entity'  => 'clientx-app-01',
                                    'check'   => 'ping',
                                    'type'    => 'service',
@@ -223,7 +221,7 @@ namespace :profile do
 
         contact = Flapjack::Data::Contact.for_id('1000')
 
-        (1..REPETITIONS).times do |n|
+        REPETITIONS.times do |n|
           notification.messages(:contacts => [contact]).each do |msg|
             contents = msg.contents
             contents['event_count'] = n
@@ -239,7 +237,7 @@ namespace :profile do
   end
 
   # NB: you'll need an external email server set up for this (whether it's
-  # mailtrap # or a real server)
+  # mailtrap or a real server)
   desc "profile email notifier with rubyprof"
   task :email do
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
@@ -256,7 +254,7 @@ namespace :profile do
 
       contact = Flapjack::Data::Contact.for_id('1000')
 
-      (1..REPETITIONS).times do
+      REPETITIONS.times do
         notification.messages(:contacts => [contact]).each do |msg|
           Resque.enqueue_to(config_env['email_notifier']['queue'],
             Flapjack::Notification::Email, msg.contents)
@@ -269,10 +267,24 @@ namespace :profile do
   # not be comparable
   desc "profile web server with rubyprof"
   task :web do
+
+    require 'em-synchrony/em-http'
+    require 'flapjack/web'
+
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
     config_env, redis_options = load_config
     profile_thin(Flapjack::Web, 'web', config_env['web'], redis_options) {
-      # TODO add some web requests
+
+      EM.synchrony do
+        multi = EventMachine::Synchrony::Multi.new
+        REPETITIONS.times do |n|
+          req = EventMachine::HttpRequest.
+            new("http://127.0.0.1:#{FLAPJACK_PORT}/")
+          multi.add :"flapjack_#{n}", req.aget
+        end
+        res = multi.perform
+      end
+
     }
   end
 

@@ -75,10 +75,10 @@ module Flapjack
     def bootstrap(opts = {})
       return if @bootstrapped
 
-      config = opts[:config]
-
-      @port = config['port'] ? config['port'].to_i : nil
-      @port = 3001 if (@port.nil? || @port <= 0 || @port > 65535)
+      if config = opts[:config]
+        @port = config['port'] ? config['port'].to_i : nil
+        @port = 3001 if (@port.nil? || @port <= 0 || @port > 65535)
+      end
 
       orig_bootstrap(opts)
     end
