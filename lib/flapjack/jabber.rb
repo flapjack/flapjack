@@ -104,7 +104,7 @@ module Flapjack
           presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
           presence << "<x xmlns='http://jabber.org/protocol/muc'/>"
           write presence
-          say(room, "flapja ck jabber gateway started at #{Time.now}, hello!", :groupchat)
+          say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
         end
       end
       return if @buffer.empty?
