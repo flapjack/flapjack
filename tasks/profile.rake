@@ -17,30 +17,117 @@ namespace :profile do
 
   require (FLAPJACK_PROFILER =~ /^perftools$/i) ? 'perftools' : 'ruby-prof'
 
-  def profile(name)
-    output_filename = File.join('tmp', "profile_#{name}.txt")
-    Fiber.new {
-      if FLAPJACK_PROFILER =~ /^perftools$/i
-        PerfTools::CpuProfiler.start(output_filename) do
-          EM.synchrony do
-            yield
-            EM.stop
-          end
-        end
-      else
-        RubyProf.start
-        EM.synchrony do
-          yield
-          EM.stop
-        end
-        result = RubyProf.stop
-        printer = RubyProf::FlatPrinter.new(result)
-        File.open(output_filename, 'w') {|f|
-          printer.print(f)
-        }
-      end
-    }.resume
+  def profile_coordinator(config, redis_options)
+    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    check_db_empty(:redis => redis, :redis_options => redis_options)
+    setup_baseline_data(:redis => redis)
+
+    coordinator = Flapjack::Coordinator.new(config, redis_options)
+
+    profile('coordinator') {
+      coordinator.start(:daemonize => false, :signals => false)
+    }
+
+    yield if block_given?
+
+    coordinator.stop
+    empty_db(:redis => redis)
+    redis.quit
   end
+
+  def profile_pikelet(klass, name, config, redis_options)
+    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    check_db_empty(:redis => redis, :redis_options => redis_options)
+    setup_baseline_data(:redis => redis)
+
+    EM.synchrony do
+      pikelet = klass.new
+      pikelet.bootstrap(:config => config,
+        :redis_config => redis_options)
+
+      profile_fib = profile_fiber(name) {
+        pikelet.main
+      }
+      profile_fib.resume
+
+      extern_thr = Thread.new {
+        yield if block_given?
+        pikelet.stop
+        pikelet.add_shutdown_event(:redis => redis)
+      }
+      extern_thr.join
+
+      are_we_there_yet?(profile_fib)
+    end
+
+    empty_db(:redis => redis)
+    redis.quit
+  end
+
+  def profile_resque(klass, name, config, redis_options)
+    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    check_db_empty(:redis => redis, :redis_options => redis_options)
+    setup_baseline_data(:redis => redis)
+
+    EM.synchrony do
+      pool = Flapjack::RedisPool.new(:config => redis_options)
+      ::Resque.redis = pool
+      worker = EM::Resque::Worker.new(config_env[config_key]['queue'])
+
+      profile_fib = profile_fiber(name) {
+       worker.work
+      }
+      profile_fib.resume
+
+      extern_thr = Thread.new {
+        yield if block_given?
+        worker.shutdown
+      }
+      extern_thr.join
+
+      are_we_there_yet?(profile_fib) {
+        pool.empty!
+      }
+    end
+
+    empty_db(:redis => redis)
+    redis.quit
+  end
+
+  def profile_thin(klass, name, config, redis_options)
+    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    check_db_empty(:redis => redis, :redis_options => redis_options)
+    setup_baseline_data(:redis => redis)
+
+    Thin::Logging.silent = true
+
+    EM.synchrony do
+
+      klass.bootstrap(:config => config, :redis_config => redis_options)
+      server = Thin::Server.new('0.0.0.0', FLAPJACK_PORT,
+        klass, :signals => false)
+
+      profile_fib = profile(name) {
+        server.start
+      }
+      profile_fib.resume
+
+      extern_thr = Thread.new {
+        yield if block_given?
+        server.stop!
+      }
+      extern_thr.join
+
+      are_we_there_yet?(profile_fib) {
+        klass.cleanup
+      }
+    end
+
+    empty_db(:redis => redis)
+    redis.quit
+  end
+
+  ### utility methods
 
   def load_config
     config_env, redis_options = Flapjack::Configuration.new.
@@ -72,11 +159,6 @@ namespace :profile do
     end
   end
 
-  def empty_db(options = {})
-    redis = options[:redis]
-    redis.flushdb
-  end
-
   # this adds a default entity and contact, so that the profiling methods
   # will actually trigger enough code to be useful
   def setup_baseline_data(options = {})
@@ -97,88 +179,44 @@ namespace :profile do
     Flapjack::Data::Contact.add(contact, :redis => options[:redis])
   end
 
-  def profile_coordinator(config, redis_options)
-    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
-    check_db_empty(:redis => redis, :redis_options => redis_options)
-    setup_baseline_data(:redis => redis)
-
-    coordinator = Flapjack::Coordinator.new(config, redis_options)
-
-    profile('coordinator') {
-      coordinator.start(:daemonize => false, :signals => false)
-    }
-
-    yield if block_given?
-
-    coordinator.stop
-    empty_db(:redis => redis)
-    redis.quit
+  def empty_db(options = {})
+    redis = options[:redis]
+    redis.flushdb
   end
 
-  def profile_pikelet(klass, name, config, redis_options)
-    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
-    check_db_empty(:redis => redis, :redis_options => redis_options)
-    setup_baseline_data(:redis => redis)
-
-    pikelet = klass.new
-
-    profile(name) {
-      pikelet.bootstrap(:config => config,
-        :redis_config => redis_options)
-      pikelet.main
+  def profile_fiber(name)
+    output_filename = File.join('tmp', "profile_#{name}.txt")
+    Fiber.new {
+      if FLAPJACK_PROFILER =~ /^perftools$/i
+        PerfTools::CpuProfiler.start(output_filename) do
+          yield
+        end
+      else
+        RubyProf.start
+        yield
+        result = RubyProf.stop
+        printer = RubyProf::FlatPrinter.new(result)
+        File.open(output_filename, 'w') {|f|
+          printer.print(f)
+        }
+      end
     }
-
-    yield if block_given?
-
-    pikelet.stop
-    pikelet.add_shutdown_event(:redis => redis)
-    empty_db(:redis => redis)
-    redis.quit
   end
 
-  def profile_resque(klass, name, config, redis_options)
-    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
-    check_db_empty(:redis => redis, :redis_options => redis_options)
-    setup_baseline_data(:redis => redis)
-
-    profile(name) {
-      pool = Flapjack::RedisPool.new(:config => redis_options)
-      ::Resque.redis = pool
-      worker = EM::Resque::Worker.new(config_env[config_key]['queue'])
-      worker.work
-    }
-
-    yield if block_given?
-
-    worker.shutdown
-    pool.empty!
-    empty_db(:redis => redis)
-    redis.quit
+  # if you ask often enough, eventually you'll get the reply you want
+  def are_we_there_yet?(fiber)
+    loop do
+      if fiber.alive?
+        EM::Synchrony.sleep 0.25
+      else
+        yield if block_given?
+        EM.stop
+        break
+      end
+    end
   end
 
-  def profile_thin(klass, name, config, redis_options)
-    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
-    check_db_empty(:redis => redis, :redis_options => redis_options)
-    setup_baseline_data(:redis => redis)
-
-    Thin::Logging.silent = true
-
-    profile(name) {
-      klass.bootstrap(:config => config, :redis_config => redis_options)
-
-      server = Thin::Server.new('0.0.0.0', FLAPJACK_PORT,
-        klass, :signals => false)
-
-      server.start
-    }
-
-    yield if block_given?
-
-    server.stop!
-    klass.cleanup
-    empty_db(:redis => redis)
-    redis.quit
-  end
+  ## end utility methods
 
   desc "profile startup of running through coordinator with rubyprof"
   task :coordinator do
@@ -193,6 +231,10 @@ namespace :profile do
     config_env, redis_options = load_config
     profile_pikelet(Flapjack::Executive, 'executive', config_env['executive'],
       redis_options) {
+
+      # this executes in a separate thread, so no Fibery stuff is allowed
+      redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+
       REPETITIONS.times do |n|
         Flapjack::Data::Event.add({'entity'  => 'clientx-app-01',
                                    'check'   => 'ping',
@@ -201,6 +243,7 @@ namespace :profile do
                                    'summary' => 'testing'},
                                   :redis => redis)
       end
+      redis.quit
     }
   end
 
@@ -213,9 +256,8 @@ namespace :profile do
     profile_pikelet(Flapjack::Jabber, 'jabber', config_env['jabber_gateway'],
       redis_options) {
 
-      EM.synchrony do
-
-        redis = Flapjack::RedisPool.new(:config => redis_options)
+        # this executes in a separate thread, so no Fibery stuff is allowed
+        redis = Redis.new(redis_options.merge(:driver => 'ruby'))
 
         event = Flapjack::Data::Event.new('type'    => 'service',
                                           'state'   => 'critical',
@@ -234,10 +276,7 @@ namespace :profile do
               Yajl::Encoder.encode(contents))
           end
         end
-
         redis.empty!
-    end
-
     }
   end
 
