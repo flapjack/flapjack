@@ -105,40 +105,35 @@ namespace :profile do
     redis.quit
   end
 
-  def profile_thin(klass, name, config, redis_options)
-    # redis = Redis.new(redis_options.merge(:driver => 'ruby'))
-    # check_db_empty(:redis => redis, :redis_options => redis_options)
-    # setup_baseline_data(:redis => redis)
+  def profile_thin(klass, name, config, redis_options, &block)
+    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    check_db_empty(:redis => redis, :redis_options => redis_options)
+    setup_baseline_data(:redis => redis)
 
-    # Thin::Logging.silent = true
+    Thin::Logging.silent = true
 
-    # EM.synchrony do
+    EM.synchrony do
 
-    #   klass.bootstrap(:config => config, :redis_config => redis_options)
-    #   server = Thin::Server.new('0.0.0.0', FLAPJACK_PORT,
-    #     klass, :signals => false)
+      klass.bootstrap(:config => config, :redis_config => redis_options)
 
-    #   extern_thr = Thread.new {
-    #     Thread.stop
-    #     yield if block_given?
-    #     server.stop!
-    #   }
+      profile(name) {
+        server = Thin::Server.new('0.0.0.0', FLAPJACK_PORT,
+          klass, :signals => false)
 
-    #   profile_fib = profile(name, extern_thr) {
-    #     server.start
-    #   }
-    #   profile_fib.resume
+        server.start
 
-    #   extern_thr.run
-    #   extern_thr.join
+        EM.defer(block, proc {
+          server.stop!
+          Fiber.new {
+            klass.cleanup
+          }
+          EM.stop
+        })
+      }
+    end
 
-    #   are_we_there_yet?(profile_fib) {
-    #     klass.cleanup
-    #   }
-    # end
-
-    # empty_db(:redis => redis)
-    # redis.quit
+    empty_db(:redis => redis)
+    redis.quit
   end
 
   ### utility methods
@@ -204,7 +199,7 @@ namespace :profile do
     Fiber.new {
       if FLAPJACK_PROFILER =~ /^perftools$/i
         PerfTools::CpuProfiler.start(output_filename) do
-          yield
+          block.call if block
         end
       else
         RubyProf::exclude_threads = [thread] if thread
@@ -216,6 +211,22 @@ namespace :profile do
         printer.print(:path => output_dir, :profile => name)
       end
     }
+  end
+
+  def profile(name, &block)
+    output_dir = File.join('tmp', "profiles")
+    FileUtils.mkdir_p(output_dir)
+    if FLAPJACK_PROFILER =~ /^perftools$/i
+      PerfTools::CpuProfiler.start(output_filename) do
+        block.call if block
+      end
+    else
+      result = RubyProf.profile do
+        block.call if block
+      end
+      printer = RubyProf::MultiPrinter.new(result)
+      printer.print(:path => output_dir, :profile => name)
+    end
   end
 
   # if you ask often enough, eventually you'll get the reply you want
@@ -362,23 +373,24 @@ namespace :profile do
   desc "profile web server with rubyprof"
   task :web do
 
-    require 'em-synchrony/em-http'
+    require "net/http"
+    require "uri"
+
     require 'flapjack/web'
 
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
     config_env, redis_options = load_config
     profile_thin(Flapjack::Web, 'web', config_env['web'], redis_options) {
+      uri = URI.parse("http://127.0.0.1:#{FLAPJACK_PORT}/")
 
-      EM.synchrony do
-        multi = EventMachine::Synchrony::Multi.new
-        REPETITIONS.times do |n|
-          req = EventMachine::HttpRequest.
-            new("http://127.0.0.1:#{FLAPJACK_PORT}/")
-          multi.add :"flapjack_#{n}", req.aget
-        end
-        res = multi.perform
+      http = Net::HTTP.new(uri.host, uri.port)
+
+      REPETITIONS.times do |n|
+        request = Net::HTTP::Get.new(uri.request_uri)
+
+        response = http.request(request)
+        # puts "#{n} #{response.body}"
       end
-
     }
   end
 
