@@ -18,21 +18,21 @@ namespace :profile do
   require (FLAPJACK_PROFILER =~ /^perftools$/i) ? 'perftools' : 'ruby-prof'
 
   def profile_coordinator(config, redis_options)
-    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
-    check_db_empty(:redis => redis, :redis_options => redis_options)
-    setup_baseline_data(:redis => redis)
+    # redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    # check_db_empty(:redis => redis, :redis_options => redis_options)
+    # setup_baseline_data(:redis => redis)
 
-    coordinator = Flapjack::Coordinator.new(config, redis_options)
+    # coordinator = Flapjack::Coordinator.new(config, redis_options)
 
-    profile('coordinator') {
-      coordinator.start(:daemonize => false, :signals => false)
-    }
+    # profile('coordinator') {
+    #   coordinator.start(:daemonize => false, :signals => false)
+    # }
 
-    yield if block_given?
+    # yield if block_given?
 
-    coordinator.stop
-    empty_db(:redis => redis)
-    redis.quit
+    # coordinator.stop
+    # empty_db(:redis => redis)
+    # redis.quit
   end
 
   def profile_pikelet(klass, name, config, redis_options)
@@ -246,9 +246,15 @@ namespace :profile do
 
   desc "profile startup of running through coordinator with rubyprof"
   task :coordinator do
+
+    require 'flapjack/coordinator'
+
+    require 'flapjack/data/entity'
+    require 'flapjack/data/contact'
+
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
     config_env, redis_options = load_config
-    profile_coordinator(config_env, redis)
+    profile_coordinator(config_env, redis_options)
   end
 
   desc "profile executive with rubyprof"
