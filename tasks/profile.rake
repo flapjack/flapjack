@@ -12,6 +12,9 @@ namespace :profile do
 
   REPETITIONS     = 100
 
+  # If this is higher than 30 I'm getting "stack level too deep" errors for that part
+  RESQUE_REPETITIONS = 30
+
   require (FLAPJACK_PROFILER =~ /^perftools$/i) ? 'perftools' : 'ruby-prof'
 
   def profile_coordinator(config, redis_options)
@@ -67,39 +70,39 @@ namespace :profile do
   end
 
   def profile_resque(klass, name, config, redis_options)
-    # redis = Redis.new(redis_options.merge(:driver => 'ruby'))
-    # check_db_empty(:redis => redis, :redis_options => redis_options)
-    # setup_baseline_data(:redis => redis)
+    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    check_db_empty(:redis => redis, :redis_options => redis_options)
+    setup_baseline_data(:redis => redis)
 
-    # ::Resque.redis = redis
+    ::Resque.redis = redis
 
-    # EM.synchrony do
-    #   worker = EM::Resque::Worker.new(config['queue'])
+    EM.synchrony do
 
-    #   extern_thr = Thread.new {
-    #     yield if block_given?
-    #     Thread.stop
-    #     while Resque.info[:processed] < 100
-    #       Thread.stop
-    #     end
-    #     worker.shutdown
-    #   }
+      worker = EM::Resque::Worker.new(config['queue'])
 
-    #   profile_fib = profile_fiber(name, extern_thr) {
-    #     worker.work(0.1)
-    #   }
-    #   profile_fib.resume
+      extern_thr = Thread.new {
+        yield if block_given?
+      }
 
-    #   while Resque.info[:processed] < 100
-    #     extern_thr.run
-    #   end
-    #   extern_thr.join
+      profile_fib = profile_fiber(name, extern_thr) {
+        worker.work(0.1) {|job|
+          @profiler_count ||= 0
+          @profiler_count += 1
+          if @profiler_count >= RESQUE_REPETITIONS
+            job.worker.shutdown
+          end
+        }
+      }
 
-    #   are_we_there_yet?(profile_fib)
-    # end
+      extern_thr.join
 
-    # empty_db(:redis => redis)
-    # redis.quit
+      profile_fib.resume
+
+      are_we_there_yet?(profile_fib) {}
+    end
+
+    empty_db(:redis => redis)
+    redis.quit
   end
 
   def profile_thin(klass, name, config, redis_options)
@@ -195,7 +198,7 @@ namespace :profile do
     redis.flushdb
   end
 
-  def profile_fiber(name, thread)
+  def profile_fiber(name, thread = nil, &block)
     output_dir = File.join('tmp', "profiles")
     FileUtils.mkdir_p(output_dir)
     Fiber.new {
@@ -204,10 +207,10 @@ namespace :profile do
           yield
         end
       else
-        RubyProf::exclude_threads = [thread]
-        RubyProf.start
-        yield
-        result = RubyProf.stop
+        RubyProf::exclude_threads = [thread] if thread
+        result = RubyProf.profile do
+          block.call if block
+        end
         result.eliminate_methods!([/Thread#join/])
         printer = RubyProf::MultiPrinter.new(result)
         printer.print(:path => output_dir, :profile => name)
@@ -216,9 +219,9 @@ namespace :profile do
   end
 
   # if you ask often enough, eventually you'll get the reply you want
-  def are_we_there_yet?(fiber)
+  def are_we_there_yet?(fib)
     loop do
-      if fiber.alive?
+      if fib.alive?
         EM::Synchrony.sleep 0.25
       else
         yield if block_given?
