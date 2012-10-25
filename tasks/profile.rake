@@ -11,8 +11,6 @@ namespace :profile do
   FLAPJACK_PORT = ((port > 1024) && (port <= 65535)) ? port : 8075
 
   REPETITIONS     = 10
-
-  # If this is higher than 30 I'm getting "stack level too deep" errors for that part
   RESQUE_REPETITIONS = 10
 
   require (FLAPJACK_PROFILER =~ /^perftools$/i) ? 'perftools' : 'ruby-prof'
@@ -69,7 +67,7 @@ namespace :profile do
     redis.quit
   end
 
-  def profile_resque(klass, name, config, redis_options)
+  def profile_resque(cfg_name, config, redis_options, &block)
     redis = Redis.new(redis_options.merge(:driver => 'ruby'))
     check_db_empty(:redis => redis, :redis_options => redis_options)
     setup_baseline_data(:redis => redis)
@@ -77,28 +75,65 @@ namespace :profile do
     ::Resque.redis = redis
 
     EM.synchrony do
+      FlapjackProfileResque.instance_eval {
 
-      worker = EM::Resque::Worker.new(config['queue'])
+        class << self
 
-      extern_thr = Thread.new {
-        yield if block_given?
+          alias_method :orig_perform, :perform
+
+          # NB: this is very brittle in the case of exceptions; Resque swallows them,
+          # so you'll need to turn on the worker's verbose switches below to see what's
+          # really going on
+          def perform(notification)
+            count = if FlapjackProfileResque.class_variable_defined?('@@profile_count')
+              FlapjackProfileResque.class_variable_get('@@profile_count')
+            else
+              FlapjackProfileResque.class_variable_set('@@profile_count', 0)
+            end
+
+            RubyProf.send( (count.zero? ? :start : :resume) )
+            r = orig_perform(notification)
+            RubyProf.pause
+
+            count += 1
+            FlapjackProfileResque.class_variable_set('@@profile_count', count)
+
+            if count >= RESQUE_REPETITIONS
+              result = RubyProf.stop
+              printer = RubyProf::MultiPrinter.new(result)
+              output_dir = File.join('tmp', 'profiles')
+              FileUtils.mkdir_p(output_dir)
+              printer.print(:path => output_dir, :profile => cfg_name)
+            end
+            r
+          end
+        end
+
       }
 
-      profile_fib = profile_fiber(name, extern_thr) {
+      FlapjackProfileResque.bootstrap(:config => config)
+
+      worker = EM::Resque::Worker.new(config['queue'])
+      # worker.verbose = true
+      # worker.very_verbose = true
+
+      extern_thr = Thread.new {
+        block.call if block
+      }
+
+      profile_fib = Fiber.new {
         worker.work(0.1) {|job|
-          @profiler_count ||= 0
-          @profiler_count += 1
-          if @profiler_count >= RESQUE_REPETITIONS
+          if FlapjackProfileResque.class_variable_defined?('@@profile_count') &&
+            (FlapjackProfileResque.class_variable_get('@@profile_count') >= RESQUE_REPETITIONS)
             job.worker.shutdown
           end
         }
       }
 
       extern_thr.join
-
       profile_fib.resume
 
-      are_we_there_yet?(profile_fib) {}
+      are_we_there_yet?(profile_fib)
     end
 
     empty_db(:redis => redis)
@@ -345,8 +380,10 @@ namespace :profile do
 
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
     config_env, redis_options = load_config
-    profile_resque(Flapjack::Notification::Email, 'email',
-      config_env['email_notifier'], redis_options) {
+
+    FlapjackProfileResque = Class.new(Flapjack::Notification::Email)
+
+    profile_resque('email', config_env['email_notifier'], redis_options) {
 
       # this executes in a separate thread, so no Fibery stuff is allowed
       redis = Redis.new(redis_options.merge(:driver => 'ruby'))
@@ -360,10 +397,10 @@ namespace :profile do
 
       contact = Flapjack::Data::Contact.find_by_id('1000', :redis => redis)
 
-      REPETITIONS.times do
+      RESQUE_REPETITIONS.times do
         notification.messages(:contacts => [contact]).each do |msg|
           Resque.enqueue_to(config_env['email_notifier']['queue'],
-            Flapjack::Notification::Email, msg.contents)
+            FlapjackProfileResque, msg.contents)
         end
       end
 
@@ -376,8 +413,8 @@ namespace :profile do
   desc "profile web server with rubyprof"
   task :web do
 
-    require "net/http"
-    require "uri"
+    require 'net/http'
+    require 'uri'
 
     require 'flapjack/web'
 

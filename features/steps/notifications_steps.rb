@@ -146,8 +146,10 @@ When /^the SMS notification handler fails to send an SMS$/ do
 end
 
 When /^the email notification handler runs successfully$/ do
+  Resque.redis = @redis
+  Flapjack::Notification::Email.bootstrap(:config => {})
   lambda {
-    Flapjack::Notification::Email.dispatch(@email_notification, :logger => @logger, :redis => @redis)
+    Flapjack::Notification::Email.perform(@email_notification)
   }.should_not raise_error
 end
 
@@ -158,7 +160,7 @@ When /^the email notification handler fails to send an email$/ do
   pending
   lambda {
     @email_notification['address'] = nil
-    Flapjack::Notification::Email.dispatch(@email_notification, :logger => @logger, :redis => @redis)
+    Flapjack::Notification::Email.perform(@email_notification)
   }.should_not raise_error
 end
 
