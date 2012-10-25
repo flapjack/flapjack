@@ -87,11 +87,11 @@ module Flapjack
     end
 
     def redis
-      Flapjack::API.instance_variable_get('@redis')
+      self.class.instance_variable_get('@redis')
     end
 
     def logger
-      Flapjack::API.instance_variable_get('@logger')
+      self.class.instance_variable_get('@logger')
     end
 
     get '/entities' do

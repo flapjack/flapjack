@@ -10,10 +10,10 @@ namespace :profile do
   port = ENV['FLAPJACK_PROFILER'].to_i
   FLAPJACK_PORT = ((port > 1024) && (port <= 65535)) ? port : 8075
 
-  REPETITIONS     = 100
+  REPETITIONS     = 10
 
   # If this is higher than 30 I'm getting "stack level too deep" errors for that part
-  RESQUE_REPETITIONS = 30
+  RESQUE_REPETITIONS = 10
 
   require (FLAPJACK_PROFILER =~ /^perftools$/i) ? 'perftools' : 'ruby-prof'
 
@@ -105,6 +105,7 @@ namespace :profile do
     redis.quit
   end
 
+  # TODO perftools as well?
   def profile_thin(klass, name, config, redis_options, &block)
     redis = Redis.new(redis_options.merge(:driver => 'ruby'))
     check_db_empty(:redis => redis, :redis_options => redis_options)
@@ -113,23 +114,35 @@ namespace :profile do
     Thin::Logging.silent = true
 
     EM.synchrony do
+      output_dir = File.join('tmp', 'profiles')
+      FileUtils.mkdir_p(output_dir)
 
-      klass.bootstrap(:config => config, :redis_config => redis_options)
-
-      profile(name) {
-        server = Thin::Server.new('0.0.0.0', FLAPJACK_PORT,
-          klass, :signals => false)
-
-        server.start
-
-        EM.defer(block, proc {
-          server.stop!
-          Fiber.new {
-            klass.cleanup
-          }
-          EM.stop
-        })
+      profile_klass = Class.new(klass)
+      profile_klass.instance_eval {
+        before do
+          RubyProf.send( (profile_klass.class_variable_defined?('@@profiling') ? :resume : :start) )
+          profile_klass.class_variable_set('@@profiling', true)
+        end
+        after  { RubyProf.pause  }
       }
+
+      profile_klass.bootstrap(:config => config, :redis_config => redis_options)
+
+      server = Thin::Server.new('0.0.0.0', FLAPJACK_PORT,
+        profile_klass, :signals => false)
+
+      server.start
+
+      EM.defer(block, proc {
+        result = RubyProf.stop
+        server.stop!
+        Fiber.new {
+          profile_klass.cleanup
+        }
+        printer = RubyProf::MultiPrinter.new(result)
+        printer.print(:path => output_dir, :profile => name)
+        EM.stop
+      })
     end
 
     empty_db(:redis => redis)
@@ -194,7 +207,7 @@ namespace :profile do
   end
 
   def profile_fiber(name, thread = nil, &block)
-    output_dir = File.join('tmp', "profiles")
+    output_dir = File.join('tmp', 'profiles')
     FileUtils.mkdir_p(output_dir)
     Fiber.new {
       if FLAPJACK_PROFILER =~ /^perftools$/i
@@ -211,22 +224,6 @@ namespace :profile do
         printer.print(:path => output_dir, :profile => name)
       end
     }
-  end
-
-  def profile(name, &block)
-    output_dir = File.join('tmp', "profiles")
-    FileUtils.mkdir_p(output_dir)
-    if FLAPJACK_PROFILER =~ /^perftools$/i
-      PerfTools::CpuProfiler.start(output_filename) do
-        block.call if block
-      end
-    else
-      result = RubyProf.profile do
-        block.call if block
-      end
-      printer = RubyProf::MultiPrinter.new(result)
-      printer.print(:path => output_dir, :profile => name)
-    end
   end
 
   # if you ask often enough, eventually you'll get the reply you want
@@ -395,7 +392,6 @@ namespace :profile do
         request = Net::HTTP::Get.new(uri.request_uri)
 
         response = http.request(request)
-        # puts "#{n} #{response.body}"
       end
     }
   end

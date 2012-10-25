@@ -64,11 +64,11 @@ module Flapjack
     set :views, settings.root + '/web/views'
 
     def redis
-      Flapjack::Web.instance_variable_get('@redis')
+      self.class.instance_variable_get('@redis')
     end
 
     def logger
-      Flapjack::Web.instance_variable_get('@logger')
+      self.class.instance_variable_get('@logger')
     end
 
     get '/' do
