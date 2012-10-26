@@ -15,34 +15,31 @@ namespace :profile do
 
   require 'ruby-prof'
 
-  def profile_pikelet(klass, name, config, redis_options)
+  def profile_pikelet(klass, name, config, redis_options, &block)
     redis = Redis.new(redis_options.merge(:driver => 'ruby'))
     check_db_empty(:redis => redis, :redis_options => redis_options)
     setup_baseline_data(:redis => redis)
 
     EM.synchrony do
+      RubyProf.start
       pikelet = klass.new
       pikelet.bootstrap(:config => config,
         :redis_config => redis_options)
 
-      extern_thr = Thread.new {
-        Thread.stop
-        yield if block_given?
+      EM.defer(block, proc {
         pikelet.stop
         pikelet.add_shutdown_event(:redis => redis)
-      }
+      })
 
-      profile_fib = profile_fiber(name, extern_thr) {
-        pikelet.main
-      }
-      profile_fib.resume
-
-      extern_thr.run
-      extern_thr.join
-
-      are_we_there_yet?(profile_fib) {
-        pikelet.cleanup
-      }
+      pikelet.main
+      pikelet.cleanup
+      result = RubyProf.stop
+      result.eliminate_methods!([/Class::Thread/, /Deferrable/])
+      printer = RubyProf::MultiPrinter.new(result)
+      output_dir = File.join('tmp', 'profiles')
+      FileUtils.mkdir_p(output_dir)
+      printer.print(:path => output_dir, :profile => name)
+      EM.stop
     end
 
     empty_db(:redis => redis)
@@ -219,33 +216,6 @@ namespace :profile do
   def empty_db(options = {})
     redis = options[:redis]
     redis.flushdb
-  end
-
-  def profile_fiber(name, thread = nil, &block)
-    output_dir = File.join('tmp', 'profiles')
-    FileUtils.mkdir_p(output_dir)
-    Fiber.new {
-      RubyProf::exclude_threads = [thread] if thread
-      result = RubyProf.profile do
-        block.call if block
-      end
-      result.eliminate_methods!([/Thread#join/])
-      printer = RubyProf::MultiPrinter.new(result)
-      printer.print(:path => output_dir, :profile => name)
-    }
-  end
-
-  # if you ask often enough, eventually you'll get the reply you want
-  def are_we_there_yet?(fib)
-    loop do
-      if fib.alive?
-        EM::Synchrony.sleep 0.25
-      else
-        yield if block_given?
-        EM.stop
-        break
-      end
-    end
   end
 
   ## end utility methods
