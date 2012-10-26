@@ -13,24 +13,24 @@ namespace :profile do
   REPETITIONS     = 10
   RESQUE_REPETITIONS = 10
 
-  require (FLAPJACK_PROFILER =~ /^perftools$/i) ? 'perftools' : 'ruby-prof'
+  require 'ruby-prof'
 
-  def profile_coordinator(config, redis_options)
-    # redis = Redis.new(redis_options.merge(:driver => 'ruby'))
-    # check_db_empty(:redis => redis, :redis_options => redis_options)
-    # setup_baseline_data(:redis => redis)
+  def profile_coordinator(config, redis_options, &block)
+    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+    check_db_empty(:redis => redis, :redis_options => redis_options)
+    setup_baseline_data(:redis => redis)
 
-    # coordinator = Flapjack::Coordinator.new(config, redis_options)
+    coordinator = Flapjack::Coordinator.new(config, redis_options)
 
-    # profile('coordinator') {
-    #   coordinator.start(:daemonize => false, :signals => false)
-    # }
+    profile('coordinator') {
+      coordinator.start(:daemonize => false, :signals => false)
+    }
 
-    # yield if block_given?
+    block.call if block
 
-    # coordinator.stop
-    # empty_db(:redis => redis)
-    # redis.quit
+    coordinator.stop
+    empty_db(:redis => redis)
+    redis.quit
   end
 
   def profile_pikelet(klass, name, config, redis_options)
@@ -67,6 +67,10 @@ namespace :profile do
     redis.quit
   end
 
+  # I did write a less contrived version of this, but that seems prone
+  # to triggering 'stack level too deep' errors when profiling the email
+  # generation (possibly due to the treetop gem, not sure). Leaving
+  # as is for now.
   def profile_resque(cfg_name, config, redis_options, &block)
     redis = Redis.new(redis_options.merge(:driver => 'ruby'))
     check_db_empty(:redis => redis, :redis_options => redis_options)
@@ -140,7 +144,6 @@ namespace :profile do
     redis.quit
   end
 
-  # TODO perftools as well?
   def profile_thin(klass, name, config, redis_options, &block)
     redis = Redis.new(redis_options.merge(:driver => 'ruby'))
     check_db_empty(:redis => redis, :redis_options => redis_options)
@@ -245,19 +248,13 @@ namespace :profile do
     output_dir = File.join('tmp', 'profiles')
     FileUtils.mkdir_p(output_dir)
     Fiber.new {
-      if FLAPJACK_PROFILER =~ /^perftools$/i
-        PerfTools::CpuProfiler.start(output_filename) do
-          block.call if block
-        end
-      else
-        RubyProf::exclude_threads = [thread] if thread
-        result = RubyProf.profile do
-          block.call if block
-        end
-        result.eliminate_methods!([/Thread#join/])
-        printer = RubyProf::MultiPrinter.new(result)
-        printer.print(:path => output_dir, :profile => name)
+      RubyProf::exclude_threads = [thread] if thread
+      result = RubyProf.profile do
+        block.call if block
       end
+      result.eliminate_methods!([/Thread#join/])
+      printer = RubyProf::MultiPrinter.new(result)
+      printer.print(:path => output_dir, :profile => name)
     }
   end
 
@@ -427,7 +424,6 @@ namespace :profile do
 
       REPETITIONS.times do |n|
         request = Net::HTTP::Get.new(uri.request_uri)
-
         response = http.request(request)
       end
     }
