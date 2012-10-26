@@ -11,27 +11,9 @@ namespace :profile do
   FLAPJACK_PORT = ((port > 1024) && (port <= 65535)) ? port : 8075
 
   REPETITIONS     = 10
-  RESQUE_REPETITIONS = 10
+  RESQUE_REPETITIONS = 2
 
   require 'ruby-prof'
-
-  def profile_coordinator(config, redis_options, &block)
-    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
-    check_db_empty(:redis => redis, :redis_options => redis_options)
-    setup_baseline_data(:redis => redis)
-
-    coordinator = Flapjack::Coordinator.new(config, redis_options)
-
-    profile('coordinator') {
-      coordinator.start(:daemonize => false, :signals => false)
-    }
-
-    block.call if block
-
-    coordinator.stop
-    empty_db(:redis => redis)
-    redis.quit
-  end
 
   def profile_pikelet(klass, name, config, redis_options)
     redis = Redis.new(redis_options.merge(:driver => 'ruby'))
@@ -67,10 +49,9 @@ namespace :profile do
     redis.quit
   end
 
-  # I did write a less contrived version of this, but that seems prone
-  # to triggering 'stack level too deep' errors when profiling the email
-  # generation (possibly due to the treetop gem, not sure). Leaving
-  # as is for now.
+  # rubyprof doesn't like the mail gem, possibly due to treetop -- crashes
+  # with "stack level too deep" errors when generating if the profiling
+  # runs over 3 or more mails.
   def profile_resque(cfg_name, config, redis_options, &block)
     redis = Redis.new(redis_options.merge(:driver => 'ruby'))
     check_db_empty(:redis => redis, :redis_options => redis_options)
@@ -89,25 +70,22 @@ namespace :profile do
           # so you'll need to turn on the worker's verbose switches below to see what's
           # really going on
           def perform(notification)
-            count = if FlapjackProfileResque.class_variable_defined?('@@profile_count')
-              FlapjackProfileResque.class_variable_get('@@profile_count')
-            else
-              FlapjackProfileResque.class_variable_set('@@profile_count', 0)
-            end
+            r = nil
+            begin
+              count = if FlapjackProfileResque.class_variable_defined?('@@profile_count')
+                FlapjackProfileResque.class_variable_get('@@profile_count')
+              else
+                FlapjackProfileResque.class_variable_set('@@profile_count', 0)
+              end
 
-            RubyProf.send( (count.zero? ? :start : :resume) )
-            r = orig_perform(notification)
-            RubyProf.pause
+              RubyProf.send( (count.zero? ? :start : :resume) )
+              r = orig_perform(notification)
+              RubyProf.pause
 
-            count += 1
-            FlapjackProfileResque.class_variable_set('@@profile_count', count)
-
-            if count >= RESQUE_REPETITIONS
-              result = RubyProf.stop
-              printer = RubyProf::MultiPrinter.new(result)
-              output_dir = File.join('tmp', 'profiles')
-              FileUtils.mkdir_p(output_dir)
-              printer.print(:path => output_dir, :profile => cfg_name)
+              count += 1
+              FlapjackProfileResque.class_variable_set('@@profile_count', count)
+            rescue Exception => e
+              puts e.message
             end
             r
           end
@@ -118,26 +96,25 @@ namespace :profile do
       FlapjackProfileResque.bootstrap(:config => config)
 
       worker = EM::Resque::Worker.new(config['queue'])
-      # worker.verbose = true
-      # worker.very_verbose = true
+      worker.verbose = true
+      worker.very_verbose = true
 
-      extern_thr = Thread.new {
-        block.call if block
+      EM.defer(block)
+
+      worker.work(0.1) {|job|
+        if FlapjackProfileResque.class_variable_defined?('@@profile_count') &&
+          (FlapjackProfileResque.class_variable_get('@@profile_count') >= RESQUE_REPETITIONS)
+          job.worker.shutdown
+        end
       }
 
-      profile_fib = Fiber.new {
-        worker.work(0.1) {|job|
-          if FlapjackProfileResque.class_variable_defined?('@@profile_count') &&
-            (FlapjackProfileResque.class_variable_get('@@profile_count') >= RESQUE_REPETITIONS)
-            job.worker.shutdown
-          end
-        }
-      }
+      result = RubyProf.stop
+      printer = RubyProf::MultiPrinter.new(result)
+      output_dir = File.join('tmp', 'profiles')
+      FileUtils.mkdir_p(output_dir)
+      printer.print(:path => output_dir, :profile => cfg_name)
 
-      extern_thr.join
-      profile_fib.resume
-
-      are_we_there_yet?(profile_fib)
+      EM.stop
     end
 
     empty_db(:redis => redis)
@@ -272,19 +249,6 @@ namespace :profile do
   end
 
   ## end utility methods
-
-  desc "profile startup of running through coordinator with rubyprof"
-  task :coordinator do
-
-    require 'flapjack/coordinator'
-
-    require 'flapjack/data/entity'
-    require 'flapjack/data/contact'
-
-    FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
-    config_env, redis_options = load_config
-    profile_coordinator(config_env, redis_options)
-  end
 
   desc "profile executive with rubyprof"
   task :executive do
