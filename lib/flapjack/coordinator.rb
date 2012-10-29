@@ -62,30 +62,31 @@ module Flapjack
 
   private
 
+    # map from config key to pikelet class
+    PIKELET_TYPES = {'executive'          => Flapjack::Executive,
+                     'jabber_gateway'     => Flapjack::Jabber,
+                     'pagerduty_gateway'  => Flapjack::Pagerduty,
+                     'oobetet'            => Flapjack::Oobetet,
+
+                     'web'                => Flapjack::Web,
+                     'api'                => Flapjack::API,
+
+                     'email_notifier'     => Flapjack::Notification::Email,
+                     'sms_notifier'       => Flapjack::Notification::Sms}
+
     def run(options = {})
 
       EM.synchrony do
         @logger.debug "config keys: #{@config.keys}"
 
-        pikelet_keys = ['executive', 'jabber_gateway', 'pagerduty_gateway',
-                        'email_notifier', 'sms_notifier', 'web', 'api',
-                        'oobetet']
-
         @config.keys.each do |pikelet_type|
-          next unless pikelet_keys.include?(pikelet_type) &&
+          next unless PIKELET_TYPES.keys.include?(pikelet_type) &&
             @config[pikelet_type].is_a?(Hash) &&
             @config[pikelet_type]['enabled']
           @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet"
           pikelet_cfg = @config[pikelet_type]
 
-          case pikelet_type
-          when 'executive', 'jabber_gateway', 'pagerduty_gateway', 'oobetet'
-            build_pikelet(pikelet_type, pikelet_cfg)
-          when 'web', 'api'
-            build_thin_pikelet(pikelet_type, pikelet_cfg)
-          when 'email_notifier', 'sms_notifier'
-            build_resque_pikelet(pikelet_type, pikelet_cfg)
-          end
+          build_pikelet(pikelet_type, pikelet_cfg)
         end
 
         setup_signals if @signals
@@ -102,106 +103,88 @@ module Flapjack
       end
     end
 
-    # TODO consolidate the three build_* methods, they're mostly similar now
-
     def build_pikelet(pikelet_type, pikelet_cfg)
-      pikelet_class = case pikelet_type
-      when 'executive'
-        Flapjack::Executive
-      when 'jabber_gateway'
-        Flapjack::Jabber
-      when 'pagerduty_gateway'
-        Flapjack::Pagerduty
-      when 'oobetet'
-        Flapjack::Oobetet
-      end
-      return unless pikelet_class
+      return unless pikelet_class = PIKELET_TYPES[pikelet_type]
 
-      pikelet = pikelet_class.new
-      f = Fiber.new {
-        begin
-          pikelet.bootstrap(:config => pikelet_cfg, :redis_config => @redis_options)
-          pikelet.main
-        rescue Exception => e
-          trace = e.backtrace.join("\n")
-          @logger.fatal "#{e.message}\n#{trace}"
-          stop
+      inc_mod = pikelet_class.included_modules
+      ext_mod = extended_modules(pikelet_class)
+
+      pikelet = nil
+      fiber = nil
+
+      if inc_mod.include?(Flapjack::GenericPikelet)
+        pikelet = pikelet_class.new
+        pikelet.bootstrap(:config => pikelet_cfg, :redis_config => @redis_options)
+
+      else
+        pikelet_class.bootstrap(:config => pikelet_cfg, :redis_config => @redis_options)
+
+        if ext_mod.include?(Flapjack::ThinPikelet)
+
+          unless @thin_silenced
+            Thin::Logging.silent = true
+            @thin_silenced = true
+          end
+
+          pikelet = Thin::Server.new('0.0.0.0',
+                      pikelet_class.instance_variable_get('@port'),
+                      pikelet_class, :signals => false)
+
+        elsif ext_mod.include?(Flapjack::ResquePikelet)
+
+          # set up connection pooling, stop resque errors
+          unless @resque_pool
+            @resque_pool = Flapjack::RedisPool.new(:config => @redis_options)
+            ::Resque.redis = @resque_pool
+            ## NB: can override the default 'resque' namespace like this
+            #::Resque.redis.namespace = 'flapjack'
+          end
+
+          # TODO error if pikelet_cfg['queue'].nil?
+          pikelet = EM::Resque::Worker.new(pikelet_cfg['queue'])
+          # # Use these to debug the resque workers
+          # pikelet.verbose = true
+          # pikelet.very_verbose = true
         end
-      }
-      @pikelets << {:fiber => f, :class => pikelet_class, :instance => pikelet}
-      f.resume
-      @logger.debug "new fiber created for #{pikelet_type}"
-    end
 
-    def build_thin_pikelet(pikelet_type, pikelet_cfg)
-      pikelet_class = case pikelet_type
-      when 'web'
-        Flapjack::Web
-      when 'api'
-        Flapjack::API
-      end
-      return unless pikelet_class
-
-      pikelet_class.bootstrap(:config => pikelet_cfg, :redis_config => @redis_options)
-
-      # only run once
-      if ([Flapjack::Web, Flapjack::API] & @pikelets.collect {|p| p[:class]}).empty?
-        Thin::Logging.silent = true
       end
 
-      pikelet = Thin::Server.new('0.0.0.0', pikelet_class.instance_variable_get('@port'),
-        pikelet_class, :signals => false)
-      @pikelets << {:instance => pikelet, :class => pikelet_class}
-      pikelet.start
-      @logger.debug "new thin server instance started for #{pikelet_type}"
-    end
+      pikelet_info = {:class => pikelet_class, :instance => pikelet}
 
-    def build_resque_pikelet(pikelet_type, pikelet_cfg)
-      pikelet_class = case pikelet_type
-      when 'email_notifier'
-        Flapjack::Notification::Email
-      when 'sms_notifier'
-        Flapjack::Notification::Sms
+      if inc_mod.include?(Flapjack::GenericPikelet) ||
+        ext_mod.include?(Flapjack::ResquePikelet)
+
+        fiber = Fiber.new {
+          begin
+            # Can't use local inc_mod/ext_mod variables in the new fiber
+            if pikelet_class.included_modules.include?(Flapjack::GenericPikelet)
+              pikelet.main
+            elsif extended_modules(pikelet_class).include?(Flapjack::ResquePikelet)
+              pikelet.work(0.1)
+            end
+          rescue Exception => e
+            trace = e.backtrace.join("\n")
+            @logger.fatal "#{e.message}\n#{trace}"
+            stop
+          end
+        }
+
+        pikelet_info[:fiber] = fiber
+        fiber.resume
+        @logger.debug "new fiber created for #{pikelet_type}"
+      elsif ext_mod.include?(Flapjack::ThinPikelet)
+        pikelet.start
+        @logger.debug "new thin server instance started for #{pikelet_type}"
       end
-      return unless pikelet_class
 
-      pikelet_class.bootstrap(:config => pikelet_cfg)
-
-      # set up connection pooling, stop resque errors
-      unless @resque_pool
-        @resque_pool = Flapjack::RedisPool.new(:config => @redis_options)
-        ::Resque.redis = @resque_pool
-        ## NB: can override the default 'resque' namespace like this
-        #::Resque.redis.namespace = 'flapjack'
-      end
-
-      pikelet_class.bootstrap(:config => pikelet_cfg)
-
-      # TODO error if pikelet_cfg['queue'].nil?
-      pikelet = EM::Resque::Worker.new(pikelet_cfg['queue'])
-      # # Use these to debug the resque workers
-      # pikelet.verbose = true
-      # pikelet.very_verbose = true
-
-      f = Fiber.new {
-        begin
-          pikelet.work(0.1)
-        rescue Exception => e
-          trace = e.backtrace.join("\n")
-          @logger.fatal "#{e.message}\n#{trace}"
-          stop
-        end
-      }
-      @pikelets << {:fiber => f, :class => pikelet_class, :instance => pikelet}
-      f.resume
-      @logger.debug "new fiber created for #{pikelet_type}"
+      @pikelets << pikelet_info
     end
 
     # only prints state changes, otherwise pikelets not closing promptly can
     # cause everything else to be spammy
     def health_check
       @pikelets.each do |pik|
-        status = if [Flapjack::Web, Flapjack::API].include?(pik[:class])
+        status = if extended_modules(pik[:class]).include?(Flapjack::ThinPikelet)
           pik[:instance].backend.size > 0 ? 'running' : 'stopped'
         elsif pik[:fiber]
           pik[:fiber].alive? ? 'running' : 'stopped'
@@ -215,9 +198,12 @@ module Flapjack
     def shutdown
       @pikelets.each do |pik|
 
+        inc_mod = pik[:class].included_modules
+        ext_mod = extended_modules(pik[:class])
+
         # would be neater if we could use something similar for the class << self
         # included pikelets as well
-        if pik[:class].included_modules.include?(Flapjack::GenericPikelet)
+        if inc_mod.include?(Flapjack::GenericPikelet)
           if pik[:fiber] && pik[:fiber].alive?
             pik[:instance].stop
             Fiber.new {
@@ -228,11 +214,10 @@ module Flapjack
               r.quit
             }.resume
           end
-        elsif [Flapjack::Notification::Email,
-          Flapjack::Notification::Sms].include?(pik[:class])
+        elsif ext_mod.include?(Flapjack::ResquePikelet)
           # resque is polling, so we don't need a shutdown object
           pik[:instance].shutdown if pik[:fiber] && pik[:fiber].alive?
-        elsif [Flapjack::Web, Flapjack::API].include?(pik[:class])
+        elsif ext_mod.include?(Flapjack::ThinPikelet)
           # drop from this side, as HTTP keepalive etc. means browsers
           # keep connections alive for ages, and we'd be hanging around
           # waiting for them to drop
@@ -252,13 +237,16 @@ module Flapjack
 
             @pikelets.each do |pik|
 
-              if pik[:class].included_modules.include?(Flapjack::GenericPikelet)
+              inc_mod = pik[:class].included_modules
+              ext_mod = extended_modules(pik[:class])
+
+              if inc_mod.include?(Flapjack::GenericPikelet)
 
                 pik[:instance].cleanup
 
-              elsif [Flapjack::Notification::Email,
-                Flapjack::Notification::Sms,
-                Flapjack::Web, Flapjack::API].include?(pik[:class])
+              elsif [Flapjack::ResquePikelet, Flapjack::ThinPikelet].any?{|fp|
+                ext_mod.include?(fp)
+              }
 
                 pik[:class].cleanup
 
@@ -270,6 +258,10 @@ module Flapjack
           end
         end
       }.resume
+    end
+
+    def extended_modules(klass)
+      (class << klass; self; end).included_modules
     end
 
   end

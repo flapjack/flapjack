@@ -27,8 +27,6 @@ describe Flapjack::Coordinator do
     fc = Flapjack::Coordinator.new(config, redis_config)
     fc.should_receive(:daemonize)
     fc.should_not_receive(:build_pikelet)
-    fc.should_not_receive(:build_resque_pikelet)
-    fc.should_not_receive(:build_thin_pikelet)
     fc.start(:daemonize => true, :signals => false)
   end
 
@@ -36,9 +34,7 @@ describe Flapjack::Coordinator do
     EM.should_receive(:synchrony).and_yield
 
     fc = Flapjack::Coordinator.new(config, redis_config)
-    fc.should_receive(:build_pikelet)
-    fc.should_receive(:build_resque_pikelet)
-    fc.should_receive(:build_thin_pikelet)
+    fc.should_receive(:build_pikelet).exactly(3).times
     fc.start(:daemonize => false, :signals => false)
   end
 
@@ -46,9 +42,7 @@ describe Flapjack::Coordinator do
     EM.should_receive(:synchrony).and_yield
 
     fc = Flapjack::Coordinator.new(config, redis_config)
-    fc.should_receive(:build_pikelet)
-    fc.should_receive(:build_resque_pikelet)
-    fc.should_receive(:build_thin_pikelet)
+    fc.should_receive(:build_pikelet).exactly(3).times
     fc.after_daemonize
   end
 
@@ -88,6 +82,8 @@ describe Flapjack::Coordinator do
 
     EM::Synchrony.should_receive(:sleep)
     EM.should_receive(:stop)
+
+    p Flapjack::Executive.included_modules
 
     pikelets = [{:fiber => fiber_exec, :instance => exec, :class => Flapjack::Executive},
                 {:fiber => fiber_rsq,  :instance => email, :class => Flapjack::Notification::Email},
@@ -149,7 +145,7 @@ describe Flapjack::Coordinator do
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
     fc = Flapjack::Coordinator.new(config, redis_config)
-    fc.send(:build_resque_pikelet, 'email_notifier', {})
+    fc.send(:build_pikelet, 'email_notifier', {})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
@@ -172,7 +168,7 @@ describe Flapjack::Coordinator do
     Flapjack::RedisPool.should_receive(:new)
 
     fc = Flapjack::Coordinator.new(config, redis_config)
-    fc.send(:build_thin_pikelet, 'web', {})
+    fc.send(:build_pikelet, 'web', {})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
     pikelets.should be_an(Array)

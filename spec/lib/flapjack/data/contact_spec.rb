@@ -20,8 +20,8 @@ describe Flapjack::Data::Contact, :redis => true do
     contacts.should_not be_nil
     contacts.should be_an(Array)
     contacts.should have(2).contacts
-    contacts[0].id.should == '362'
-    contacts[1].id.should == '363'
+    contacts[0].name.should == 'Jane Janeley'
+    contacts[1].name.should == 'John Johnson'
   end
 
   it "finds a contact by id" do

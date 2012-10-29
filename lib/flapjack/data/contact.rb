@@ -24,7 +24,7 @@ module Flapjack
           contact = self.find_by_id(id, :redis => redis)
           ret << contact if contact
           ret
-        }
+        }.sort_by {|c| [c.last_name, c.first_name]}
       end
 
       def self.delete_all(options = {})
