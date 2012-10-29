@@ -41,6 +41,8 @@ module Flapjack
         raise "No id value passed" unless id
         logger = options[:logger]
 
+        return unless redis.hexists("contact:#{id}", 'first_name')
+
         fn, ln, em = redis.hmget("contact:#{id}", 'first_name', 'last_name', 'email')
         me = redis.hgetall("contact_media:#{id}")
 

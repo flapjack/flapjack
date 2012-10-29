@@ -4,7 +4,7 @@ require 'flapjack/data/contact'
 
 describe Flapjack::Data::Contact, :redis => true do
 
-  it "returns a list of all contacts" do
+  def add_contacts
     Flapjack::Data::Contact.add({'id'         => '362',
                                  'first_name' => 'John',
                                  'last_name'  => 'Johnson',
@@ -15,6 +15,10 @@ describe Flapjack::Data::Contact, :redis => true do
                                  'last_name'  => 'Janeley',
                                  'email'      => 'janej@example.com'},
                                  :redis       => @redis)
+  end
+
+  it "returns a list of all contacts" do
+    add_contacts
 
     contacts = Flapjack::Data::Contact.all(:redis => @redis)
     contacts.should_not be_nil
@@ -25,11 +29,7 @@ describe Flapjack::Data::Contact, :redis => true do
   end
 
   it "finds a contact by id" do
-    Flapjack::Data::Contact.add({'id'         => '362',
-                                 'first_name' => 'John',
-                                 'last_name'  => 'Johnson',
-                                 'email'      => 'johnj@example.com' },
-                                 :redis       => @redis)
+    add_contacts
 
     contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
     contact.should_not be_nil
@@ -38,7 +38,15 @@ describe Flapjack::Data::Contact, :redis => true do
 
   it "finds all contacts for a check on an entity"
 
-  it "deletes all contacts"
+  it "deletes all contacts" do
+    add_contacts
+
+    Flapjack::Data::Contact.delete_all(:redis => @redis)
+    contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
+    contact.should be_nil
+    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
+    contact.should be_nil
+  end
 
   it "returns pagerduty credentials for a contact"
 
