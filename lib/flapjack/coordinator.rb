@@ -157,7 +157,7 @@ module Flapjack
         fiber = Fiber.new {
           begin
             # Can't use local inc_mod/ext_mod variables in the new fiber
-            if pikelet_class.included_modules.include?(Flapjack::GenericPikelet)
+            if pikelet.is_a?(Flapjack::GenericPikelet)
               pikelet.main
             elsif extended_modules(pikelet_class).include?(Flapjack::ResquePikelet)
               pikelet.work(0.1)
@@ -198,30 +198,30 @@ module Flapjack
     def shutdown
       @pikelets.each do |pik|
 
-        inc_mod = pik[:class].included_modules
-        ext_mod = extended_modules(pik[:class])
+        pik_inst = pik[:instance]
+        ext_mod  = extended_modules(pik[:class])
 
         # would be neater if we could use something similar for the class << self
         # included pikelets as well
-        if inc_mod.include?(Flapjack::GenericPikelet)
+        if pik_inst.is_a?(Flapjack::GenericPikelet)
           if pik[:fiber] && pik[:fiber].alive?
-            pik[:instance].stop
+            pik_inst.stop
             Fiber.new {
               # this needs to use a separate Redis connection from the pikelet's
               # one, as that's in the middle of its blpop
               r = Redis.new(@redis_options.merge(:driver => 'synchrony'))
-              pik[:instance].add_shutdown_event(:redis => r)
+              pik_inst.add_shutdown_event(:redis => r)
               r.quit
             }.resume
           end
         elsif ext_mod.include?(Flapjack::ResquePikelet)
           # resque is polling, so we don't need a shutdown object
-          pik[:instance].shutdown if pik[:fiber] && pik[:fiber].alive?
+          pik_inst.shutdown if pik[:fiber] && pik[:fiber].alive?
         elsif ext_mod.include?(Flapjack::ThinPikelet)
           # drop from this side, as HTTP keepalive etc. means browsers
           # keep connections alive for ages, and we'd be hanging around
           # waiting for them to drop
-          pik[:instance].stop!
+          pik_inst.stop!
         end
       end
 
@@ -237,12 +237,12 @@ module Flapjack
 
             @pikelets.each do |pik|
 
-              inc_mod = pik[:class].included_modules
+              pik_inst = pik[:instance]
               ext_mod = extended_modules(pik[:class])
 
-              if inc_mod.include?(Flapjack::GenericPikelet)
+              if pik_inst.is_a?(Flapjack::GenericPikelet)
 
-                pik[:instance].cleanup
+                pik_inst.cleanup
 
               elsif [Flapjack::ResquePikelet, Flapjack::ThinPikelet].any?{|fp|
                 ext_mod.include?(fp)

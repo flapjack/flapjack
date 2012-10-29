@@ -53,17 +53,20 @@ describe Flapjack::Coordinator do
     fiber_rsq  = mock('fiber_rsq')
 
     exec  = mock('executive')
+    exec.should_receive(:is_a?).with(Flapjack::GenericPikelet).twice.and_return(true)
     exec.should_receive(:stop)
     exec.should_receive(:add_shutdown_event)
     exec.should_receive(:cleanup)
 
     email = mock('worker')
+    email.should_receive(:is_a?).with(Flapjack::GenericPikelet).twice.and_return(false)
     email.should_receive(:shutdown)
     Flapjack::Notification::Email.should_receive(:cleanup)
 
     backend = mock('backend')
     backend.should_receive(:size).twice.and_return(1, 0)
     web = mock('web')
+    web.should_receive(:is_a?).with(Flapjack::GenericPikelet).twice.and_return(false)
     web.should_receive(:backend).twice.and_return(backend)
     web.should_receive(:stop!)
     Flapjack::Web.should_receive(:cleanup)
@@ -83,8 +86,6 @@ describe Flapjack::Coordinator do
     EM::Synchrony.should_receive(:sleep)
     EM.should_receive(:stop)
 
-    p Flapjack::Executive.included_modules
-
     pikelets = [{:fiber => fiber_exec, :instance => exec, :class => Flapjack::Executive},
                 {:fiber => fiber_rsq,  :instance => email, :class => Flapjack::Notification::Email},
                 {:instance => web, :class => Flapjack::Web}]
@@ -99,6 +100,7 @@ describe Flapjack::Coordinator do
     exec = mock('executive')
     exec.should_receive(:bootstrap)
     Flapjack::Executive.should_receive(:new).and_return(exec)
+    exec.should_receive(:is_a?).with(Flapjack::GenericPikelet).and_return(true)
     exec.should_receive(:main)
 
     fiber.should_receive(:resume)
@@ -117,6 +119,7 @@ describe Flapjack::Coordinator do
     jabber = mock('jabber')
     jabber.should_receive(:bootstrap)
     Flapjack::Jabber.should_receive(:new).and_return(jabber)
+    jabber.should_receive(:is_a?).with(Flapjack::GenericPikelet).and_return(true)
     jabber.should_receive(:main).and_raise(RuntimeError)
 
     fiber.should_receive(:resume)
