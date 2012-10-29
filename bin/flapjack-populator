@@ -92,7 +92,13 @@ when "import-entities"
 
 when "purge-events"
   @persistence = Redis.new(redis_options)
-  Flapjack::Data::Event.purge_all(:redis => @persistence)
+  events_size = @persistence.llen('events')
+  puts "purging #{events_size} events..."
+  etq = "events.#{Time.now.to_i}"
+  puts "renaming 'events' to '#{etq}'"
+  @persistence.rename('events', etq)
+  puts "setting expiry of '#{etq}' to 8 hours"
+  @persistence.expire(etq, (60 * 60 * 8))
   @persistence.quit
 
 else

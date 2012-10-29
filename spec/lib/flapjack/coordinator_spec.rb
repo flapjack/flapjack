@@ -39,7 +39,31 @@ describe Flapjack::Coordinator do
     fc.after_daemonize
   end
 
-  it "traps system signals and shuts down"
+  it "traps system signals and shuts down" do
+    RbConfig::CONFIG.should_receive(:[]).with('host_os').and_return('darwin12.0.0')
+
+    Kernel.should_receive(:trap).with('INT').and_yield
+    Kernel.should_receive(:trap).with('TERM').and_yield
+    Kernel.should_receive(:trap).with('QUIT').and_yield
+
+    fc = Flapjack::Coordinator.new(config, redis_config)
+    fc.should_receive(:stop).exactly(3).times
+
+    fc.send(:setup_signals)
+  end
+
+  it "only traps two system signals on Windows" do
+    RbConfig::CONFIG.should_receive(:[]).with('host_os').and_return('mswin')
+
+    Kernel.should_receive(:trap).with('INT').and_yield
+    Kernel.should_receive(:trap).with('TERM').and_yield
+    Kernel.should_not_receive(:trap).with('QUIT')
+
+    fc = Flapjack::Coordinator.new(config, redis_config)
+    fc.should_receive(:stop).twice
+
+    fc.send(:setup_signals)
+  end
 
   it "stops its services when closing" do
     fiber_exec = mock('fiber_exec')
@@ -108,7 +132,7 @@ describe Flapjack::Coordinator do
     pikelets.first.should == {:fiber => fiber, :class => Flapjack::Executive, :instance => exec}
   end
 
-  it "handles an exception raised by a jabber pikelet" do
+  it "handles an exception raised by a fiber pikelet" do
     jabber = mock('jabber')
     jabber.should_receive(:bootstrap)
     Flapjack::Jabber.should_receive(:new).and_return(jabber)
@@ -149,8 +173,6 @@ describe Flapjack::Coordinator do
     pikelets.first.should == {:fiber => fiber, :class => Flapjack::Notification::Email,
                               :instance => worker}
   end
-
-  it "handles an exception raised by a resque worker pikelet"
 
   it "creates a thin server pikelet" do
     redis = mock('redis')

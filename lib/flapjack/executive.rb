@@ -89,7 +89,7 @@ module Flapjack
 
       until should_quit? && @received_shutdown
         @logger.info("Waiting for event...")
-        event = Flapjack::Data::Event.next(:persistence => @redis)
+        event = Flapjack::Data::Event.next(:redis => @redis)
         process_event(event) unless event.nil?
       end
 
@@ -109,7 +109,8 @@ module Flapjack
   private
 
     def process_event(event)
-      @logger.debug("#{Flapjack::Data::Event.pending_count(:persistence => @redis)} events waiting on the queue")
+      pending = Flapjack::Data::Event.pending_count(:redis => @redis)
+      @logger.debug("#{pending} events waiting on the queue")
       @logger.debug("Raw event received: #{event.inspect}")
       time_at = event.time
       time_at_str = time_at ? ", #{Time.at(time_at).to_s}" : ''

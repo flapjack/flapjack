@@ -94,12 +94,15 @@ module Flapjack
 
     end
 
+    # the global nature of this seems at odds with it calling stop
+    # within a single coordinator instance. Coordinator is essentially
+    # a singleton anyway...
     def setup_signals
-      trap('INT')  { stop }
-      trap('TERM') { stop }
-      unless RUBY_PLATFORM =~ /mswin/
-        trap('QUIT') { stop }
-        # trap('HUP')  { }
+      Kernel.trap('INT')  { stop }
+      Kernel.trap('TERM') { stop }
+      unless RbConfig::CONFIG['host_os'] =~ /mswin|windows|cygwin/i
+        Kernel.trap('QUIT') { stop }
+        # Kernel.trap('HUP')  { }
       end
     end
 
