@@ -38,7 +38,12 @@ module Flapjack
       # doesn't work with Rack::Test unless we wrap tests in EM.synchrony blocks
       use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
     end
+
+    web_logger = Logger.new('log/web_access.log')
+    use Rack::CommonLogger, web_logger
+
     use Rack::MethodOverride
+
     extend Flapjack::Pikelet
     include Flapjack::Utility
 

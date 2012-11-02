@@ -62,6 +62,10 @@ module Flapjack
 
       use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
     end
+
+    api_logger = Logger.new('log/api_access.log')
+    use Rack::CommonLogger, api_logger
+
     use Rack::MethodOverride
     use Rack::JsonParamsParser
 
