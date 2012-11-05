@@ -21,6 +21,7 @@ module Flapjack
                         'recovery'        => 'RECOVERY: ',
                         'acknowledgement' => 'ACK: ',
                         'unknown'         => '',
+                        'test'            => 'TEST NOTIFICATION: ',
                         ''                => '',
                        }
 

@@ -29,7 +29,8 @@ module Flapjack
         headline_map = {'problem'         => 'Problem: ',
                         'recovery'        => 'Recovery: ',
                         'acknowledgement' => 'Acknowledgement: ',
-                        'unknown'         => ''
+                        'test'            => 'Test Notification: ',
+                        'unknown'         => '',
                        }
 
         headline = headline_map[notification_type] || ''
