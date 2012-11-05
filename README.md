@@ -35,6 +35,7 @@ git submodule update
 
 If you make changes to the documentation locally, here's how to publish them:
 
+* first up, checkout master within the doc subdir, otherwise you'll be commiting to no branch, aka no man's land
 * git add, commit and push from inside the doc subdir
 * add, commit and push the doc dir from the root (this updates the pointer in the main git repo to the correct ref in the doc repo, we think...)
 
