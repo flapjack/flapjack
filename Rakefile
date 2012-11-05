@@ -7,7 +7,6 @@ end
 
 desc "build site"
 task :build do
-  FileUtils.rm_rf("#{File.join(File.dirname(__FILE__), '_site')}")
   system('jekyll')
 end
 
