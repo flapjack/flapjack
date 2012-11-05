@@ -1,3 +1,4 @@
+task :default => :build
 
 desc "take site live"
 task :deploy do
