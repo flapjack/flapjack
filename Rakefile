@@ -1,3 +1,4 @@
+task :default => :build
 
 desc "take site live"
 task :deploy do
@@ -6,7 +7,6 @@ end
 
 desc "build site"
 task :build do
-  FileUtils.rm_rf("#{File.join(File.dirname(__FILE__), '_site')}")
   system('jekyll')
 end
 
