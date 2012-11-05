@@ -27,6 +27,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'redis'
   gem.add_dependency 'em-resque'
   gem.add_dependency 'sinatra'
+  gem.add_dependency 'async-rack'
   gem.add_dependency 'rack-fiber_pool'
   gem.add_dependency 'haml'
   gem.add_dependency 'thin'
