@@ -9,49 +9,34 @@ layout: default
 <div id='what'>
   <p>
     <em>Flapjack</em>
-    is a scalable and distributed monitoring system. It natively talks the
-    Nagios plugin format, and can easily be scaled from 1 server to 1000.
+    is a highly scalable and distributed monitoring notification system. It sits on top of existing
+    monitoring engines like Nagios and Sensu, and does event processing &amp; notifications.
   </p>
   <p>
-    <em>Flapjack</em>
-    tries to adhere to the following tenets:
-  </p>
-  <ul>
-    <li>it should be simple to set up, configure, and maintain</li>
-    <li>it should easily scale from a single host to multiple</li>
-    <li>it should gracefully handle large volumes of notifications</li>
-  </ul>
-  <p class='notice'>
-    <img alt='important notice emblem' class='important' src='images/important.png' />
-    Flapjack is under heavy development. Please have a
-    play, but be aware the implementation is incomplete, and there will be
-    <a href='http://github.com/auxesis/flapjack/issues'>bugs</a>.
+  Flapjack provides an API for configuration, <a
+    href='https://github.com/flpjck/flapjack/wiki/GLOSSARY'>scheduling maintenance</a>,
+  acknowledging failures, and querying entity history (conveniently wrapped in a <a
+    href='https://github.com/flpjck/flapjack-diner'>client library</a>).
   </p>
   <p>
-    Slides from
-    <a href='http://devopsdays.org/'>Devopsdays 2009</a>
-    presentation introducing Flapjack:
-    <div id="slides" style='margin-top: 1em'>
-      <object height='355' width='425'>
-        <param name='movie' value='http://static.slidesharecdn.com/swf/ssplayer2.swf?doc=141-joined-091105162106-phpapp01&amp;stripped_title=flapjack-rethinking-monitoring-for-the-cloud' />
-        <param name='allowFullScreen' value='value' />
-        <param name='allowScriptAccess' value='always' />
-        <embed allowfullscreen='true' allowscriptaccess='always' height='355' src='http://static.slidesharecdn.com/swf/ssplayer2.swf?doc=141-joined-091105162106-phpapp01&amp;stripped_title=flapjack-rethinking-monitoring-for-the-cloud' type='application/x-shockwave-flash' width='425'></embed>
-      </object>
-    </div>
+    Flapjack can notify via PagerDuty, XMPP, and email, and also supports receiving acknowledgements
+    from PagerDuty + XMPP. Reference implementations for messaging via SMS gateways are also provided.
   </p>
 </div>
 <div id='developing'>
   <h2>Developing</h2>
   <p>
-    Flapjack's code is lives on <a href='http://github.com/auxesis/flapjack'>GitHub</a>.
+    Flapjack lives on <a href='http://github.com/flpjck/flapjack'>GitHub</a>. There is <a
+      href="https://github.com/flpjck/flapjack/wiki/DEVELOPING">a guide</a> to get you hacking.
   </p>
 </div>
 <div id='who'>
   <h2>Who's reponsible?</h2>
   <p>
-    <em>Flapjack</em>
-    is written by&nbsp;<a href='http://holmwood.id.au/~lindsay/'>Lindsay Holmwood</a>.
+    <em>Flapjack</em> was conceptualised by&nbsp;<a href='http://holmwood.id.au/~lindsay/'>Lindsay
+      Holmwood</a>. <a href='https://github.com/jessereynolds'>Jesse Reyolds</a> &amp; <a
+      href='https://github.com/ali-graham'>Ali Graham</a> are the primary developers. Development
+    is sponsored by <a href='http://bulletproof.net/'>Bulletproof Networks</a>.
   </p>
   <p>
     Logo derived from
@@ -70,7 +55,7 @@ layout: default
       <a href='http://collectd.org/'>collectd</a>, the lightweight statistics collection daemon.
     </li>
     <li>
-      <a href='http://auxesis.github.com/cucumber-nagios/'>cucumber-nagios</a>, helps you
+      <a href='http://cucumber-nagios.org/'>cucumber-nagios</a>, helps you
       describe how a website should work in plain text, and outputs whether it does in
       the Nagios plugin format.
     </li>
