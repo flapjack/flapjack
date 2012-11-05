@@ -34,10 +34,11 @@ describe Flapjack::Data::Entity, :redis => true do
     entity.id.should == '5000'
   end
 
-  # NB: broken with redis 2.6, which changes the default ordering.
-  # i have a fix for this in another branch, will handle on merge.
   it "returns a list of all entities" do
-    pending
+
+    pending "Broken with redis 2.6, which changes the default ordering. " +
+    "I have a fix for this in another branch, will handle on merge."
+
     Flapjack::Data::Entity.add({'id'   => '5000',
                                 'name' => name},
                                 :redis => @redis)
