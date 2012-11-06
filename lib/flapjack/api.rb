@@ -277,8 +277,8 @@ module Flapjack
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
         params[:check], :redis => @@redis)
       entity_check.create_event('summary' => summary,
-                                'type'    => 'test',
-                                'state'   => 'critical')
+                                'type'    => 'action',
+                                'state'   => 'test_notifications')
       status 204
     end
 

@@ -125,6 +125,10 @@ module Flapjack
         action? and state == 'acknowledgement'
       end
 
+      def test_notifications?
+        action? and state == 'test_notifications'
+      end
+
       def ok?
         (state == 'ok') or (state == 'up')
       end

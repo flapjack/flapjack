@@ -284,14 +284,27 @@ module Flapjack
 
             logger.debug("processing jabber notification address: #{address}, event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
 
-            ack_str = event['event_count'] && !state.eql?('ok') && !'acknowledgement'.eql?(type) ?
+            ack_str =
+              event['event_count'] &&
+              !state.eql?('ok') &&
+              !'acknowledgement'.eql?(type) &&
+              !'test'.eql?(type) ?
               "::: flapjack: ACKID #{event['event_count']} " : ''
 
-            maint_str = (type && 'acknowledgement'.eql?(type)) ?
-              "has been acknowledged, unscheduled maintenance created for #{duration}" :
-              "is #{state.upcase}"
+            case
+            when (type && type == 'acknowledgement')
+              maint_str = "has been acknowledged, unscheduled maintenance created for #{duration}"
+            when (type && type == 'test')
+              maint_str = ''
+              ack_str   = ''
+            else
+              maint_str = "is #{state.upcase}"
+            end
 
-            msg = "#{type.upcase} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
+            headline = type.upcase
+            headline = "TEST NOTIFICATION" if type.downcase == "test"
+
+            msg = "#{headline} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
 
             chat_type = :chat
             chat_type = :groupchat if @config['rooms'] && @config['rooms'].include?(address)
