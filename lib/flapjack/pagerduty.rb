@@ -81,6 +81,7 @@ module Flapjack
             pagerduty_type = "resolve"
           when 'test'
             maint_str      = ""
+            pagerduty_type = "trigger"
             headline       = "TEST NOTIFICATION"
           end
 
