@@ -16,6 +16,9 @@ require 'flapjack/redis_pool'
 
 require 'flapjack/api/entity_presenter'
 
+require 'async-rack'
+require 'flapjack/rack_logger'
+
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
@@ -65,6 +68,9 @@ module Flapjack
     end
     use Rack::MethodOverride
     use Rack::JsonParamsParser
+
+    api_logger = Flapjack::RackLogger.new('log/api_access.log')
+    use Rack::CommonLogger, api_logger
 
     class << self
       include Flapjack::ThinPikelet

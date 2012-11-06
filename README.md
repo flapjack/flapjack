@@ -18,11 +18,11 @@ At its core, flapjack process events received from external check execution engi
 
 TODO numbered list for simplest possible Flapjack run
 
-For more information, including full specification of the configuration file and the data import formats, please refer to the [Flapjack Wiki](https://github.com/ali-graham/flapjack/wiki/USING).
+For more information, including full specification of the configuration file and the data import formats, please refer to the [Flapjack Wiki](https://github.com/flpjck/flapjack/wiki/USING).
 
 ## Developing Flapjack
 
-Information on developing more Flapjack components or contributing to core Flapjack development can be found in the [Flapjack Wiki](https://github.com/ali-graham/flapjack/wiki/DEVELOPING).
+Information on developing more Flapjack components or contributing to core Flapjack development can be found in the [Flapjack Wiki](https://github.com/flpjck/flapjack/wiki/DEVELOPING).
 
 ## Documentation Submodule
 
@@ -35,6 +35,7 @@ git submodule update
 
 If you make changes to the documentation locally, here's how to publish them:
 
+* first up, checkout master within the doc subdir, otherwise you'll be commiting to no branch, aka no man's land
 * git add, commit and push from inside the doc subdir
 * add, commit and push the doc dir from the root (this updates the pointer in the main git repo to the correct ref in the doc repo, we think...)
 

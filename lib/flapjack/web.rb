@@ -6,6 +6,9 @@ require 'sinatra/base'
 require 'haml'
 require 'rack/fiber_pool'
 
+require 'async-rack'
+require 'flapjack/rack_logger'
+
 require 'flapjack/pikelet'
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
@@ -38,6 +41,9 @@ module Flapjack
       use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
     end
     use Rack::MethodOverride
+
+    web_logger = Flapjack::RackLogger.new('log/web_access.log')
+    use Rack::CommonLogger, web_logger
 
     class << self
       include Flapjack::ThinPikelet
