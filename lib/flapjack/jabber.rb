@@ -301,6 +301,9 @@ module Flapjack
               maint_str = "is #{state.upcase}"
             end
 
+            # FIXME - should probably put all the message composition stuff in one place so
+            # the logic isn't duplicated in each notification channel.
+            # TODO - templatise the messages so they can be customised without changing core code
             headline = type.upcase
             headline = "TEST NOTIFICATION" if type.downcase == "test"
 

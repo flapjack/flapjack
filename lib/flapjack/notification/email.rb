@@ -36,7 +36,7 @@ module Flapjack
         headline = headline_map[notification_type] || ''
 
         subject = "#{headline}'#{check}' on #{entity}"
-        subject += " is #{state.upcase}" unless notification_type == 'acknowledgement'
+        subject += " is #{state.upcase}" unless (notification_type == 'acknowledgement' or notification_type == 'test')
 
         notification['subject'] = subject
         opts[:logger].debug "Flapjack::Notification::Email#dispatch is calling Flapjack::Notification::Mailer.sender, notification_id: #{notification['id']}"
