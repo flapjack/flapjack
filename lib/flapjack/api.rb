@@ -258,6 +258,24 @@ module Flapjack
       status 204
     end
 
+    post '/test_notifications/:entity/:check' do
+      content_type :json
+      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => @@redis)
+      if entity.nil?
+        status 404
+        return
+      end
+
+      summary = params[:summary] || "Testing notifications to all contacts interested in entity #{entity.name}"
+
+      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+        params[:check], :redis => @@redis)
+      entity_check.create_event('summary' => summary,
+                                'type'    => 'test',
+                                'state'   => 'critical')
+      status 204
+    end
+
     post '/entities' do
       pass unless 'application/json'.eql?(request.content_type)
       content_type :json
