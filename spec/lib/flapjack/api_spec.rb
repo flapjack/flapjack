@@ -176,12 +176,12 @@ describe 'Flapjack::API', :sinatra => true do
     entity.should_receive(:name).and_return(entity_name)
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, 'foo', :redis => redis).and_return(entity_check)
-    Flapjack::Data::EntityCheck.should_receive(:create_event).
-      with({'summary' => "Testing notifications to all contacts interested in entity example.com", 'type' => "test", 'state' => "critical"})
+    entity_check.should_receive(:create_event).
+      with(hash_including('type' => "test", 'state' => "critical"))
 
 
     post "/test_notifications/#{entity_name_esc}/foo"
-    last_response.should be_ok
+    last_response.status.should == 204
   end
 
   it "creates entities from a submitted list" do
