@@ -288,7 +288,7 @@ module Flapjack
 
     post '/test_notifications/:entity/:check' do
       content_type :json
-      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => @@redis)
+      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
       if entity.nil?
         status 404
         return
@@ -297,7 +297,7 @@ module Flapjack
       summary = params[:summary] || "Testing notifications to all contacts interested in entity #{entity.name}"
 
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => @@redis)
+        params[:check], :redis => redis)
       entity_check.create_event('summary' => summary,
                                 'type'    => 'action',
                                 'state'   => 'test_notifications')
