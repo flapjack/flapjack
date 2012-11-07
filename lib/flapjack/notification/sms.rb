@@ -41,7 +41,7 @@ module Flapjack
           notification['message'] = message
           Flapjack::Notification::Sms::Messagenet.sender(notification,
             :logger => opts[:logger],
-            :config => Flapjack::Notification::Sms.class_variable_get('@@config'))
+            :config => Flapjack::Notification::Sms.instance_variable_get('@config'))
         end
 
       end
