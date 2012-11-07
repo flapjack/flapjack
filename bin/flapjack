@@ -33,7 +33,7 @@ end.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
-config_env = Flapjack::Configuration.new.load(options.config)
+config_env, redis_options = Flapjack::Configuration.new.load(options.config)
 
 if config_env.nil? || config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
@@ -50,7 +50,7 @@ end
 
 require 'flapjack/coordinator'
 
-coordinator = Flapjack::Coordinator.new(config_env)
+coordinator = Flapjack::Coordinator.new(config_env, redis_options)
 coordinator.log_file = (config_env['log_file'] || 'log/flapjack.log')
 coordinator.pid_file = pid_file
 

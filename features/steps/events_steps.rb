@@ -5,7 +5,7 @@ require 'flapjack/data/event'
 
 def drain_events
   loop do
-    event = Flapjack::Data::Event.next(:block => false, :persistence => @redis)
+    event = Flapjack::Data::Event.next(:block => false, :redis => @redis)
     break unless event
     @app.send(:process_event, event)
   end

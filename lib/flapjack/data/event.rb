@@ -17,43 +17,38 @@ module Flapjack
       # events on the queue.
       #
       def self.next(opts={})
+        raise "Redis connection not set" unless redis = opts[:redis]
+
         defaults = { :block => true }
         options  = defaults.merge(opts)
-        block    = options[:block]
 
         # In production, we wait indefinitely for events coming from other systems.
-        if block
-          raw   = opts[:persistence].blpop('events', 0).last
-          event = ::JSON.parse(raw)
-          self.new(event)
-        else
-          # In testing, we take care that there are no events on the queue.
-          raw    = opts[:persistence].lpop('events')
-          result = nil
-
-          if raw
-            event  = ::JSON.parse(raw)
-            result = self.new(event)
-          end
-
-          result
+        if options[:block]
+          return self.new( ::JSON.parse( redis.blpop('events', 0).last ) )
         end
+
+        # In testing, we take care that there are no events on the queue.
+        return unless raw = redis.lpop('events')
+        self.new( ::JSON.parse(raw) )
+      end
+
+      # creates, or modifies, an event object and adds it to the events list in redis
+      #   'type'      => 'service',
+      #   'state'     => state,
+      #   'summary'   => check_output,
+      #   'time'      => timestamp
+      def self.add(evt, opts = {})
+        raise "Redis connection not set" unless redis = opts[:redis]
+
+        evt['time'] = Time.now.to_i if evt['time'].nil?
+        redis.rpush('events', Yajl::Encoder.encode(evt))
       end
 
       # Provide a count of the number of events on the queue to be processed.
       def self.pending_count(opts = {})
-        opts[:persistence].llen('events')
-      end
+        raise "Redis connection not set" unless redis = opts[:redis]
 
-      # FIXME make this use a logger taken from the opts
-      def self.purge_all(opts = {})
-        events_size = opts[:redis].llen('events')
-        puts "purging #{events_size} events..."
-        timestamp = Time.now.to_i
-        puts "renaming events to events.#{timestamp}"
-        opts[:redis].rename('events', "events.#{timestamp}")
-        puts "setting expiry of events.#{timestamp} to 8 hours"
-        opts[:redis].expire("events.#{timestamp}", (60 * 60 * 8))
+        redis.llen('events')
       end
 
       def initialize(attrs={})

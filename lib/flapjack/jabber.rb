@@ -18,6 +18,7 @@ require 'yajl/json_gem'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/pikelet'
+require 'flapjack/redis_pool'
 require 'flapjack/utility'
 require 'flapjack/version'
 
@@ -25,7 +26,7 @@ module Flapjack
 
   class Jabber < Blather::Client
 
-    include Flapjack::Pikelet
+    include Flapjack::GenericPikelet
     include Flapjack::Utility
 
     log = Logger.new(STDOUT)
@@ -33,14 +34,26 @@ module Flapjack
     log.level = Logger::INFO
     Blather.logger = log
 
-    def initialize
-      super
+    alias_method :generic_bootstrap, :bootstrap
+    alias_method :generic_cleanup,   :cleanup
+
+    def bootstrap(opts = {})
+      generic_bootstrap(opts)
+
+      @redis_config = opts[:redis_config]
+      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+
       @buffer = []
       @hostname = Socket.gethostname
     end
 
+    def cleanup
+      @redis.empty! if @redis
+      @redis_handler.empty! if @redis_handler
+      generic_cleanup
+    end
+
     def setup
-      @redis = build_redis_connection_pool
       @flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + @hostname)
 
       super(@flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
@@ -79,8 +92,8 @@ module Flapjack
 
     # Join the MUC Chat room after connecting.
     def on_ready(stanza)
-      return if should_quit?
-      @redis_handler ||= build_redis_connection_pool
+      return if should_quit? && @shutting_down
+      @redis_handler ||= Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
       @connected_at = Time.now.to_i
       logger.info("Jabber Connected")
       if @config['rooms'] && @config['rooms'].length > 0
@@ -172,7 +185,7 @@ module Flapjack
     end
 
     def on_groupchat(stanza)
-      return if should_quit?
+      return if should_quit? && @shutting_down
       logger.debug("groupchat message received: #{stanza.inspect}")
 
       if stanza.body =~ /^flapjack:\s+(.*)/
@@ -191,7 +204,7 @@ module Flapjack
     end
 
     def on_chat(stanza)
-      return if should_quit?
+      return if should_quit? && @shutting_down
       logger.debug("chat message received: #{stanza.inspect}")
 
       if stanza.body =~ /^flapjack:\s+(.*)/
@@ -213,7 +226,7 @@ module Flapjack
 
     # returning true to prevent the reactor loop from stopping
     def on_disconnect(stanza)
-      return true if should_quit?
+      return true if should_quit? && @shutting_down
       logger.warn("jabbers disconnected! reconnecting in 1 second ...")
       EventMachine::Timer.new(1) do
         connect # Blather::Client.connect
@@ -256,7 +269,7 @@ module Flapjack
       queue = @config['queue']
       events = {}
 
-      until should_quit?
+      until should_quit? && @shutting_down
 
         # FIXME: should also check if presence has been established in any group chat rooms that are
         # configured before starting to process events, otherwise the first few may get lost (send
@@ -265,11 +278,12 @@ module Flapjack
           logger.debug("jabber is connected so commencing blpop on #{queue}")
           events[queue] = @redis.blpop(queue, 0)
           event         = Yajl::Parser.parse(events[queue][1])
-          type          = event['notification_type']
+          type          = event['notification_type'] || 'unknown'
           logger.debug('jabber notification event received')
           logger.debug(event.inspect)
           if 'shutdown'.eql?(type)
             if should_quit?
+              @shutting_down = true
               EventMachine::Synchrony.next_tick do
                 # get delays without the next_tick
                 close # Blather::Client.close
@@ -323,9 +337,6 @@ module Flapjack
 
       count_timer.cancel
       keepalive_timer.cancel
-
-      @redis.empty! if @redis
-      @redis_handler.empty! if @redis_handler
     end
 
   end

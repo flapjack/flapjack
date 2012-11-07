@@ -6,7 +6,7 @@ group :test do
   gem 'rspec'
   gem 'cucumber'
   gem 'delorean'
-  gem 'rack-test', :git => "git://github.com/brynary/rack-test.git", :ref => "8153c07"
+  gem 'rack-test'
   gem 'resque_spec'
   gem 'webmock'
   gem 'guard'

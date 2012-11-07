@@ -12,29 +12,13 @@ require 'log4r'
 require 'log4r/outputter/consoleoutputters'
 require 'log4r/outputter/syslogoutputter'
 
-require 'flapjack/redis_pool'
-
 module Flapjack
   module Pikelet
-    attr_accessor :logger, :redis, :config
+    attr_accessor :logger, :config
 
-    def should_quit?
-      @should_quit
-    end
-
-    def stop
-      @should_quit = true
-    end
-
-    def build_redis_connection_pool(options = {})
-      return unless @bootstrapped
-      if defined?(EventMachine) && defined?(EventMachine::Synchrony)
-        Flapjack::RedisPool.new(:config => @redis_config, :size => options[:size])
-      else
-        ::Redis.new(@redis_config)
-      end
-    end
-
+    # Classes including a pikelet subclass and wanting to extend #bootstrap
+    # should alias the original method and make sure to call them
+    # as part of their interstitial method.
     def bootstrap(opts = {})
       return if @bootstrapped
 
@@ -44,12 +28,59 @@ module Flapjack
         @logger.add(Log4r::SyslogOutputter.new("flapjack"))
       end
 
-      @redis_config = opts[:redis] || {}
       @config = opts[:config] || {}
 
+      @bootstrapped = true
+    end
+
+    # Aliasing isn't currently necessary for #cleanup, as it's empty anyway.
+    # It's probably best practice to do so, in case that changes.
+    def cleanup
+    end
+
+  end
+
+  module GenericPikelet
+    include Flapjack::Pikelet
+
+    def should_quit?
+      @should_quit
+    end
+
+    def stop
+      @should_quit = true
+    end
+
+    alias_method :orig_bootstrap, :bootstrap
+
+    def bootstrap(opts = {})
       @should_quit = false
 
-      @bootstrapped = true
+      orig_bootstrap(opts)
+    end
+
+  end
+
+  module ResquePikelet
+    include Flapjack::Pikelet
+  end
+
+  module ThinPikelet
+    include Flapjack::Pikelet
+
+    attr_accessor :port
+
+    alias_method :orig_bootstrap, :bootstrap
+
+    def bootstrap(opts = {})
+      return if @bootstrapped
+
+      if config = opts[:config]
+        @port = config['port'] ? config['port'].to_i : nil
+        @port = 3001 if (@port.nil? || @port <= 0 || @port > 65535)
+      end
+
+      orig_bootstrap(opts)
     end
 
   end

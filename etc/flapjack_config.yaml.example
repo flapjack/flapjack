@@ -125,3 +125,29 @@ production:
     password: "xxxx"
   web:
     instances: 1
+
+profile:
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    db: 14
+  executive:
+    enabled: yes
+    notification_log_file: log/flapjack-notification.log
+  email_notifier:
+    enabled: no
+    queue: email_notifications
+  jabber_gateway:
+    enabled: yes
+    queue: jabber_notifications
+    server: "jabber.domain.tld"
+    port: 5222
+    jabberid: "flapjack@jabber.domain.tld"
+    password: "good-password"
+    alias: "flapjack"
+    rooms:
+      - "gimp@conference.jabber.domain.tld"
+      - "log@conference.jabber.domain.tld"
+  web:
+    enabled: no
+    port: 5080
