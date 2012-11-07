@@ -222,6 +222,8 @@ module Flapjack
         case event.state
         when 'acknowledgement'
           notification_type = 'acknowledgement'
+        when 'test_notifications'
+          notification_type = 'test'
         end
       end
       @redis.set("#{event.id}:last_#{notification_type}_notification", timestamp)
