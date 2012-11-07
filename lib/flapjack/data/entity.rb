@@ -62,6 +62,15 @@ module Flapjack
         self.new(:name => entity_name, :id => entity_id, :redis => redis)
       end
 
+      def self.find_all_name_matching(pattern, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        matched_entities = redis.keys('check:*').collect {|check|
+          a, entity, c = check.split(':')
+          match = (entity =~ /#{pattern}/) ? entity : nil
+        }
+        matched_entities.compact.sort.uniq
+      end
+
       def check_list
         @redis.keys("check:#{@name}:*").map {|k| k =~ /^check:#{@name}:(.+)$/; $1}
       end

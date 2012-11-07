@@ -163,6 +163,7 @@ module Flapjack
       when command =~ /^help$/
         msg  = "commands: \n"
         msg += "  ACKID <id> <comment> [duration: <time spec>] \n"
+        msg += "  find entities matching /pattern/ \n"
         msg += "  test notifications for <entity>[:<check>] \n"
         msg += "  identify \n"
         msg += "  help \n"
@@ -194,6 +195,11 @@ module Flapjack
           msg = "yeah, no i can't see #{entity_name} in my systems"
         end
 
+      when command =~ /^(find )?entities matching\s+\/(.*)\/.*$/i
+        pattern = $2.chomp.strip
+        msg = "entities matching /#{pattern}/ ... \n"
+        entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern, :redis => @redis_handler)
+        msg += entity_list.empty? ? "No matching entities found for /#{pattern}/" : entity_list.join(', ')
 
       when command =~ /^(.*)/
         words = $1
