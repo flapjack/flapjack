@@ -2,6 +2,10 @@ source :rubygems
 
 gemspec :name => 'flapjack'
 
+group :development do
+  gem 'ruby-prof'
+end
+
 group :test do
   gem 'rspec'
   gem 'cucumber'
