@@ -8,8 +8,8 @@ describe Flapjack::Coordinator do
   let(:config) {
     {'redis'          => {},
      'executive'      => {'enabled' => 'yes'},
-     'email_notifier' => {'enabled' => 'yes'},
-     'web'            => {'enabled' => 'yes'}
+     'email_gateway'  => {'enabled' => 'yes'},
+     'web_gateway'    => {'enabled' => 'yes'}
     }
   }
 
@@ -78,7 +78,7 @@ describe Flapjack::Coordinator do
     email = mock('worker')
     email.should_receive(:is_a?).with(Flapjack::GenericPikelet).twice.and_return(false)
     email.should_receive(:shutdown)
-    Flapjack::Notification::Email.should_receive(:cleanup)
+    Flapjack::Gateways::Email.should_receive(:cleanup)
 
     backend = mock('backend')
     backend.should_receive(:size).twice.and_return(1, 0)
@@ -86,7 +86,7 @@ describe Flapjack::Coordinator do
     web.should_receive(:is_a?).with(Flapjack::GenericPikelet).twice.and_return(false)
     web.should_receive(:backend).twice.and_return(backend)
     web.should_receive(:stop!)
-    Flapjack::Web.should_receive(:cleanup)
+    Flapjack::Gateways::Web.should_receive(:cleanup)
 
     redis = mock('redis')
     redis.should_receive(:quit)
@@ -104,8 +104,8 @@ describe Flapjack::Coordinator do
     EM.should_receive(:stop)
 
     pikelets = [{:fiber => fiber_exec, :instance => exec, :class => Flapjack::Executive},
-                {:fiber => fiber_rsq,  :instance => email, :class => Flapjack::Notification::Email},
-                {:instance => web, :class => Flapjack::Web}]
+                {:fiber => fiber_rsq,  :instance => email, :class => Flapjack::Gateways::Email},
+                {:instance => web, :class => Flapjack::Gateways::Web}]
 
     fc = Flapjack::Coordinator.new(config, redis_config)
     fc.instance_variable_set('@redis_options', {})
@@ -135,7 +135,7 @@ describe Flapjack::Coordinator do
   it "handles an exception raised by a fiber pikelet" do
     jabber = mock('jabber')
     jabber.should_receive(:bootstrap)
-    Flapjack::Jabber.should_receive(:new).and_return(jabber)
+    Flapjack::Gateways::Jabber.should_receive(:new).and_return(jabber)
     jabber.should_receive(:is_a?).with(Flapjack::GenericPikelet).and_return(true)
     jabber.should_receive(:main).and_raise(RuntimeError)
 
@@ -149,7 +149,7 @@ describe Flapjack::Coordinator do
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
     pikelets.should have(1).pikelet
-    pikelets.first.should == {:fiber => fiber, :class => Flapjack::Jabber, :instance => jabber}
+    pikelets.first.should == {:fiber => fiber, :class => Flapjack::Gateways::Jabber, :instance => jabber}
   end
 
   it "creates a resque worker pikelet" do
@@ -165,12 +165,12 @@ describe Flapjack::Coordinator do
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
     fc = Flapjack::Coordinator.new(config, redis_config)
-    fc.send(:build_pikelet, 'email_notifier', {})
+    fc.send(:build_pikelet, 'email_gateway', {})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
     pikelets.should have(1).pikelet
-    pikelets.first.should == {:fiber => fiber, :class => Flapjack::Notification::Email,
+    pikelets.first.should == {:fiber => fiber, :class => Flapjack::Gateways::Email,
                               :instance => worker}
   end
 
@@ -180,18 +180,18 @@ describe Flapjack::Coordinator do
     server = mock('server')
     server.should_receive(:start)
     Thin::Server.should_receive(:new).
-      with(/^(?:\d{1,3}\.){3}\d{1,3}$/, an_instance_of(Fixnum), Flapjack::Web, :signals => false).
+      with(/^(?:\d{1,3}\.){3}\d{1,3}$/, an_instance_of(Fixnum), Flapjack::Gateways::Web, :signals => false).
       and_return(server)
 
     Flapjack::RedisPool.should_receive(:new)
 
     fc = Flapjack::Coordinator.new(config, redis_config)
-    fc.send(:build_pikelet, 'web', {})
+    fc.send(:build_pikelet, 'web_gateway', {})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
     pikelets.should have(1).pikelet
-    pikelets.first.should == {:class => Flapjack::Web, :instance => server}
+    pikelets.first.should == {:class => Flapjack::Gateways::Web, :instance => server}
   end
 
   # NB: exceptions are handled directly by the Thin pikelets

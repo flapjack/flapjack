@@ -12,17 +12,17 @@ require 'em-resque/worker'
 require 'thin'
 
 require 'flapjack/patches'
-
-require 'flapjack/api'
 require 'flapjack/daemonizing'
 require 'flapjack/executive'
-require 'flapjack/jabber'
-require 'flapjack/oobetet'
-require 'flapjack/pagerduty'
-require 'flapjack/notification/email'
-require 'flapjack/notification/sms'
 require 'flapjack/redis_pool'
-require 'flapjack/web'
+
+require 'flapjack/gateways/api'
+require 'flapjack/gateways/jabber'
+require 'flapjack/gateways/oobetet'
+require 'flapjack/gateways/pagerduty'
+require 'flapjack/gateways/email'
+require 'flapjack/gateways/sms_messagenet'
+require 'flapjack/gateways/web'
 
 module Flapjack
 
@@ -63,16 +63,16 @@ module Flapjack
   private
 
     # map from config key to pikelet class
-    PIKELET_TYPES = {'executive'          => Flapjack::Executive,
-                     'jabber_gateway'     => Flapjack::Jabber,
-                     'pagerduty_gateway'  => Flapjack::Pagerduty,
-                     'oobetet'            => Flapjack::Oobetet,
+    PIKELET_TYPES = {'executive'              => Flapjack::Executive,
+                     'jabber_gateway'         => Flapjack::Gateways::Jabber,
+                     'pagerduty_gateway'      => Flapjack::Gateways::Pagerduty,
+                     'oobetet_gateway'        => Flapjack::Gateways::Oobetet,
 
-                     'web'                => Flapjack::Web,
-                     'api'                => Flapjack::API,
+                     'web_gateway'            => Flapjack::Gateways::Web,
+                     'api_gateway'            => Flapjack::Gateways::API,
 
-                     'email_notifier'     => Flapjack::Notification::Email,
-                     'sms_notifier'       => Flapjack::Notification::Sms}
+                     'email_gateway'          => Flapjack::Gateways::Email,
+                     'sms_messagenet_gateway' => Flapjack::Gateways::SmsMessagenet}
 
     def run(options = {})
 
