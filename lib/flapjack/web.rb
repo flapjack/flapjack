@@ -42,9 +42,6 @@ module Flapjack
     end
     use Rack::MethodOverride
 
-    web_logger = Flapjack::RackLogger.new('log/web_access.log')
-    use Rack::CommonLogger, web_logger
-
     class << self
       include Flapjack::ThinPikelet
 
@@ -56,6 +53,11 @@ module Flapjack
       def bootstrap(opts = {})
         thin_bootstrap(opts)
         @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
+
+        if config && config['access_log']
+          access_logger = Flapjack::RackLogger.new(config['access_log'])
+          use Rack::CommonLogger, access_logger
+        end
       end
 
       def cleanup

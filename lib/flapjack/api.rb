@@ -83,6 +83,12 @@ module Flapjack
       def bootstrap(opts = {})
         thin_bootstrap(opts)
         @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
+
+        if config && config['access_log']
+          access_logger = Flapjack::RackLogger.new(config['access_log'])
+          use Rack::CommonLogger, access_logger
+        end
+
       end
 
       def cleanup
