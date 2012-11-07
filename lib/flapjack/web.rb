@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'fiber'
-
 require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
@@ -14,12 +12,13 @@ require 'flapjack/rack_logger'
 require 'flapjack/pikelet'
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
+require 'flapjack/redis_pool'
 require 'flapjack/utility'
 
 module Flapjack
   class Web < Sinatra::Base
 
-    if 'test'.eql?(FLAPJACK_ENV)
+    if defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
       # expose test errors properly
       set :raise_errors, true
       set :show_exceptions, false
@@ -46,21 +45,43 @@ module Flapjack
     web_logger = Flapjack::RackLogger.new('log/web_access.log')
     use Rack::CommonLogger, web_logger
 
-    extend Flapjack::Pikelet
+    class << self
+      include Flapjack::ThinPikelet
+
+      attr_accessor :redis
+
+      alias_method :thin_bootstrap, :bootstrap
+      alias_method :thin_cleanup,   :cleanup
+
+      def bootstrap(opts = {})
+        thin_bootstrap(opts)
+        @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
+      end
+
+      def cleanup
+        @redis.empty! if @redis
+        thin_cleanup
+      end
+
+    end
+
     include Flapjack::Utility
 
     set :views, settings.root + '/web/views'
 
-    before do
-      # will only initialise the first time it's run
-      Flapjack::Web.bootstrap
+    def redis
+      self.class.instance_variable_get('@redis')
+    end
+
+    def logger
+      self.class.instance_variable_get('@logger')
     end
 
     get '/' do
       self_stats
 
       # TODO (?) recast as Entity.all do |e|; e.checks.do |ec|; ...
-      @states = @@redis.keys('*:*:states').map { |r|
+      @states = redis.keys('*:*:states').map { |r|
         parts  = r.split(':')[0..1]
         [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
       }.compact.sort_by {|parts| parts }
@@ -69,7 +90,7 @@ module Flapjack
 
     get '/failing' do
       self_stats
-      @states = @@redis.zrange('failed_checks', 0, -1).map {|key|
+      @states = redis.zrange('failed_checks', 0, -1).map {|key|
         parts  = key.split(':')
         [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
       }.compact.sort_by {|parts| parts}
@@ -183,7 +204,7 @@ module Flapjack
     end
 
     get '/contacts' do
-      @contacts = Flapjack::Data::Contact.all(:redis => @@redis)
+      @contacts = Flapjack::Data::Contact.all(:redis => redis)
       haml :contacts
     end
 
@@ -191,7 +212,7 @@ module Flapjack
       contact_id = params[:contact]
 
       if contact_id
-        @contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @@redis)
+        @contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => redis)
       end
 
       unless @contact
@@ -214,17 +235,17 @@ module Flapjack
 
     def get_entity_check(entity, check)
       entity_obj = (entity && entity.length > 0) ?
-        Flapjack::Data::Entity.find_by_name(entity, :redis => @@redis) : nil
+        Flapjack::Data::Entity.find_by_name(entity, :redis => redis) : nil
       return if entity_obj.nil? || (check.nil? || check.length == 0)
-      Flapjack::Data::EntityCheck.for_entity(entity_obj, check, :redis => @@redis)
+      Flapjack::Data::EntityCheck.for_entity(entity_obj, check, :redis => redis)
     end
 
     def entity_check_state(entity_name, check)
       entity = Flapjack::Data::Entity.find_by_name(entity_name,
-        :redis => @@redis)
+        :redis => redis)
       return if entity.nil?
       entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        check, :redis => @@redis)
+        check, :redis => redis)
       latest_notif =
         {:problem         => entity_check.last_problem_notification,
          :recovery        => entity_check.last_recovery_notification,
@@ -245,22 +266,18 @@ module Flapjack
       @pid          = Process.pid
       @instance_id  = "#{@fqdn}:#{@pid}"
 
-      @keys = @@redis.keys '*'
-      @count_failing_checks    = @@redis.zcard 'failed_checks'
-      @count_all_checks        = @@redis.keys('check:*:*').length
-      @executive_instances     = @@redis.zrange('executive_instances', '0', '-1', :withscores => true)
-      @event_counters          = @@redis.hgetall('event_counters')
-      @event_counters_instance = @@redis.hgetall("event_counters:#{@instance_id}")
-      @boot_time               = Time.at(@@redis.zscore('executive_instances', @instance_id).to_i)
+      @keys = redis.keys '*'
+      @count_failing_checks    = redis.zcard 'failed_checks'
+      @count_all_checks        = redis.keys('check:*:*').length
+      @executive_instances     = redis.zrange('executive_instances', '0', '-1', :withscores => true)
+      @event_counters          = redis.hgetall('event_counters')
+      @event_counters_instance = redis.hgetall("event_counters:#{@instance_id}")
+      @boot_time               = Time.at(redis.zscore('executive_instances', @instance_id).to_i)
       @uptime                  = Time.now.to_i - @boot_time.to_i
       @uptime_string           = time_period_in_words(@uptime)
       @event_rate_all          = (@uptime > 0) ?
                                  (@event_counters_instance['all'].to_f / @uptime) : 0
-      @events_queued = @@redis.llen('events')
-    end
-
-    def logger
-      Flapjack::Web.logger
+      @events_queued = redis.llen('events')
     end
 
   end

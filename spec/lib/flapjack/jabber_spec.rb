@@ -15,17 +15,12 @@ describe Flapjack::Jabber do
 
   let(:stanza) { mock('stanza') }
 
-  it "is initialized" do
-    fj = Flapjack::Jabber.new
-    fj.should_not be_nil
-  end
-
   it "hooks up event handlers to the appropriate methods" do
     Socket.should_receive(:gethostname).and_return('thismachine')
 
     fj = Flapjack::Jabber.new
+    Flapjack::RedisPool.should_receive(:new)
     fj.bootstrap(:config => config)
-    fj.should_receive(:build_redis_connection_pool)
 
     EventMachine::Synchrony.should_receive(:next_tick).exactly(4).times.and_yield
 
@@ -46,9 +41,8 @@ describe Flapjack::Jabber do
 
   it "joins a chat room after connecting" do
     fj = Flapjack::Jabber.new
+    Flapjack::RedisPool.should_receive(:new).twice
     fj.bootstrap(:config => config)
-
-    fj.should_receive(:build_redis_connection_pool)
 
     fj.should_receive(:connected?).and_return(true)
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Presence))
@@ -79,6 +73,7 @@ describe Flapjack::Jabber do
       and_return(entity_check)
 
     fj = Flapjack::Jabber.new
+    Flapjack::RedisPool.should_receive(:new)
     fj.bootstrap(:config => config)
     fj.instance_variable_set('@redis_handler', redis)
 
@@ -95,6 +90,7 @@ describe Flapjack::Jabber do
     stanza.should_receive(:from).and_return(from)
 
     fj = Flapjack::Jabber.new
+    Flapjack::RedisPool.should_receive(:new)
     fj.bootstrap(:config => config)
 
     fj.should_receive(:connected?).and_return(true)
@@ -105,6 +101,7 @@ describe Flapjack::Jabber do
 
   it "reconnects when disconnected (if not quitting)" do
     fj = Flapjack::Jabber.new
+    Flapjack::RedisPool.should_receive(:new)
     fj.bootstrap(:config => config)
 
     EventMachine::Timer.should_receive(:new).with(1).and_yield
@@ -119,6 +116,7 @@ describe Flapjack::Jabber do
     redis.should_receive(:rpush).with('jabber_notifications', %q{{"notification_type":"shutdown"}})
 
     fj = Flapjack::Jabber.new
+    Flapjack::RedisPool.should_receive(:new)
     fj.bootstrap(:config => config)
 
     fj.add_shutdown_event(:redis => redis)
@@ -136,8 +134,8 @@ describe Flapjack::Jabber do
     redis.should_receive(:empty!)
 
     fj = Flapjack::Jabber.new
+    Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fj.bootstrap(:config => config)
-    fj.should_receive(:build_redis_connection_pool).and_return(redis)
     fj.should_receive(:register_handler).exactly(4).times
 
     fj.should_receive(:connect)
@@ -153,6 +151,7 @@ describe Flapjack::Jabber do
     fj.should_receive(:close)
 
     fj.main
+    fj.cleanup
   end
 
 end

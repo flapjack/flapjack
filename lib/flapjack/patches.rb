@@ -88,6 +88,7 @@ module Resque
       startup
 
       loop do
+
         break if shutdown?
 
         if not paused? and job = reserve
@@ -118,8 +119,9 @@ module Resque
         end
       end
 
-    ensure
       unregister_worker
+    rescue Exception => exception
+      unregister_worker(exception)
     end
 
   end

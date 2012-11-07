@@ -8,8 +8,7 @@ if ENV['COVERAGE']
 end
 
 ENV["FLAPJACK_ENV"] = 'test'
-require 'bundler'
-Bundler.require(:default, :test)
+FLAPJACK_ENV = 'test'
 
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
@@ -20,6 +19,8 @@ WebMock.disable_net_connect!
 
 require 'flapjack/executive'
 require 'flapjack/patches'
+
+require 'resque_spec'
 
 class MockLogger
   attr_accessor :messages
@@ -46,15 +47,25 @@ redis = ::Redis.new(redis_opts)
 redis.flushdb
 redis.quit
 
+# NB: this seems to execute outside the Before/After hooks
+# regardless of placement -- this is what we want, as the
+# @redis driver should be initialised in the sync block.
+Around do |scenario, blk|
+  EM.synchrony do
+    blk.call
+    EM.stop
+  end
+end
+
 Before do
   @logger = MockLogger.new
   # Use a separate database whilst testing
   @app = Flapjack::Executive.new
-  @app.bootstrap(:logger => @logger, :redis => redis_opts,
+  @app.bootstrap(:logger => @logger,
     :config => {'email_queue' => 'email_notifications',
-                'sms_queue' => 'sms_notifications'})
-  @app.setup
-  @redis = @app.redis
+                'sms_queue' => 'sms_notifications'},
+    :redis_config => redis_opts)
+  @redis = @app.instance_variable_get('@redis')
 end
 
 After do
