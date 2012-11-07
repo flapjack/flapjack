@@ -319,7 +319,7 @@ module Flapjack
             # FIXME - should probably put all the message composition stuff in one place so
             # the logic isn't duplicated in each notification channel.
             # TODO - templatise the messages so they can be customised without changing core code
-            headline = test.eql?(type.downcase) ? "TEST NOTIFICATION" : type.upcase
+            headline = "test".eql?(type.downcase) ? "TEST NOTIFICATION" : type.upcase
 
             msg = "#{headline} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
 
