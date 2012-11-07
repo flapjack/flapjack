@@ -197,9 +197,22 @@ module Flapjack
 
       when command =~ /^(find )?entities matching\s+\/(.*)\/.*$/i
         pattern = $2.chomp.strip
-        msg = "entities matching /#{pattern}/ ... \n"
         entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern, :redis => @redis_handler)
-        msg += entity_list.empty? ? "No matching entities found for /#{pattern}/" : entity_list.join(', ')
+        max_showable = 30
+        number_found = entity_list.length
+        entity_list = entity_list[0..(max_showable - 1)] if number_found > max_showable
+
+        case
+        when number_found == 0
+          msg = "found no entities matching /#{pattern}/"
+        when number_found == 1
+          msg = "found #{number_found} entity matching /#{pattern}/ ... \n"
+        when number_found > max_showable
+          msg = "showing first #{max_showable} of #{number_found} entities found matching /#{pattern}/\n"
+        else
+          msg = "found #{number_found} entities matching /#{pattern}/ ... \n"
+        end
+        msg += entity_list.join(', ') unless entity_list.empty?
 
       when command =~ /^(.*)/
         words = $1
