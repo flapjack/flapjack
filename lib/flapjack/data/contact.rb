@@ -24,7 +24,7 @@ module Flapjack
           contact = self.find_by_id(id, :redis => redis)
           ret << contact if contact
           ret
-        }
+        }.sort_by {|c| [c.last_name, c.first_name]}
       end
 
       def self.delete_all(options = {})
@@ -40,6 +40,8 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
         raise "No id value passed" unless id
         logger = options[:logger]
+
+        return unless redis.hexists("contact:#{id}", 'first_name')
 
         fn, ln, em = redis.hmget("contact:#{id}", 'first_name', 'last_name', 'email')
         me = redis.hgetall("contact_media:#{id}")

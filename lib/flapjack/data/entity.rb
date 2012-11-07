@@ -13,7 +13,7 @@ module Flapjack
         redis.keys("entity_id:*").collect {|k|
           k =~ /^entity_id:(.+)$/; entity_name = $1
           self.new(:name => entity_name, :id => redis.get("entity_id:#{entity_name}"), :redis => redis)
-        }
+        }.sort_by(&:name)
       end
 
       # NB: should probably be called in the context of a Redis multi block; not doing so

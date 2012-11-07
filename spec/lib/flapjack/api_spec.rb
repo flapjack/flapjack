@@ -10,7 +10,7 @@ describe 'Flapjack::API', :sinatra => true do
   let(:entity)          { mock(Flapjack::Data::Entity) }
   let(:entity_check)    { mock(Flapjack::Data::EntityCheck) }
 
-  let(:entity_name)     { 'example.com'}
+  let(:entity_name)     { 'www.example.net'}
   let(:entity_name_esc) { URI.escape(entity_name) }
   let(:check)           { 'ping' }
 
@@ -20,7 +20,8 @@ describe 'Flapjack::API', :sinatra => true do
   let(:redis)           { mock(::Redis) }
 
   before(:each) do
-    Flapjack::API.class_variable_set('@@redis', redis)
+    Flapjack::RedisPool.should_receive(:new).and_return(redis)
+    Flapjack::API.bootstrap(:config => {})
   end
 
   it "returns a list of checks for an entity" do
@@ -47,6 +48,17 @@ describe 'Flapjack::API', :sinatra => true do
     get "/scheduled_maintenances/#{entity_name_esc}"
     last_response.should be_ok
     last_response.body.should == result_json
+  end
+
+  it "creates an acknowledgement for an entity check" do
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+    entity_check.should_receive(:create_acknowledgement).with('summary' => nil, 'duration' => (4 * 60 * 60))
+
+    post "/acknowledgements/#{entity_name_esc}/#{check}"
+    last_response.status.should == 204
   end
 
   it "returns a list of scheduled maintenance periods within a time window for an entity"

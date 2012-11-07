@@ -2,6 +2,7 @@
 include Mail::Matchers
 
 # copied from flapjack-populator
+# TODO use Flapjack::Data::Contact.add
 def add_contact(contact = {})
   @redis.multi
   @redis.del("contact:#{contact['id']}")
@@ -67,7 +68,7 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity|
                                     'entity'  => entity,
                                     'check'   => 'ping')
   entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, 'ping', :redis => @redis)
-  @app.send(:generate_notification, event, entity_check)
+  @app.send(:send_notification_messages, event, entity_check)
 end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
@@ -127,7 +128,7 @@ When /^the SMS notification handler runs successfully$/ do
   # returns success by default - currently matches all addresses, maybe load from config?
   stub_request(:get, /.*/)
   # TODO load config from cfg file instead?
-  Flapjack::Notification::Sms.class_variable_set('@@config', {'username' => 'abcd', 'password' => 'efgh'})
+  Flapjack::Notification::Sms.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
 
   lambda {
     Flapjack::Notification::Sms.dispatch(@sms_notification, :logger => @logger, :redis => @redis)
@@ -145,8 +146,10 @@ When /^the SMS notification handler fails to send an SMS$/ do
 end
 
 When /^the email notification handler runs successfully$/ do
+  Resque.redis = @redis
+  Flapjack::Notification::Email.bootstrap(:config => {})
   lambda {
-    Flapjack::Notification::Email.dispatch(@email_notification, :logger => @logger, :redis => @redis)
+    Flapjack::Notification::Email.perform(@email_notification)
   }.should_not raise_error
 end
 
@@ -157,7 +160,7 @@ When /^the email notification handler fails to send an email$/ do
   pending
   lambda {
     @email_notification['address'] = nil
-    Flapjack::Notification::Email.dispatch(@email_notification, :logger => @logger, :redis => @redis)
+    Flapjack::Notification::Email.perform(@email_notification)
   }.should_not raise_error
 end
 

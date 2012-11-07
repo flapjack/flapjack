@@ -12,17 +12,19 @@ describe Flapjack::Pagerduty, :redis => true do
 
   it "prompts the blocking redis connection to quit" do
     redis = mock('redis')
-    redis.should_receive(:rpush).with(nil, %q{{"notification_type":"shutdown"}})
+    redis.should_receive(:rpush).with(config['queue'], %q{{"notification_type":"shutdown"}})
 
-    pagerduty = Flapjack::Pagerduty.new
-    pagerduty.bootstrap
-    pagerduty.add_shutdown_event(:redis => redis)
+    fp = Flapjack::Pagerduty.new
+    Flapjack::RedisPool.should_receive(:new)
+    fp.bootstrap(:config => config)
+    fp.add_shutdown_event(:redis => redis)
   end
 
   it "doesn't look for acknowledgements if this search is already running" do
     @redis.set(Flapjack::Pagerduty::SEM_PAGERDUTY_ACKS_RUNNING, 'true')
 
     fp = Flapjack::Pagerduty.new
+    Flapjack::RedisPool.should_receive(:new)
     fp.bootstrap(:config => config)
     fp.instance_variable_set("@redis_timer", @redis)
 
@@ -32,6 +34,7 @@ describe Flapjack::Pagerduty, :redis => true do
 
   it "looks for acknowledgements if the search is not already running" do
     fp = Flapjack::Pagerduty.new
+    Flapjack::RedisPool.should_receive(:new)
     fp.bootstrap(:config => config)
     fp.instance_variable_set("@redis_timer", @redis)
 
@@ -45,32 +48,33 @@ describe Flapjack::Pagerduty, :redis => true do
 
   # NB: needs to run in synchrony block to catch the evented HTTP requests
   it "looks for acknowledgements via the PagerDuty API" do
+    check = 'PING'
+    Time.should_receive(:now).and_return(time)
+    since = (time.utc - (60*60*24*7)).iso8601 # the last week
+    unt   = (time.utc + (60*60*24)).iso8601   # 1 day in the future
+
+    response = {"incidents" =>
+      [{"incident_number" => 12,
+        "status" => "acknowledged",
+        "last_status_change_by" => {"id"=>"ABCDEFG", "name"=>"John Smith",
+                                    "email"=>"johns@example.com",
+                                    "html_url"=>"http://flpjck.pagerduty.com/users/ABCDEFG"}
+       }
+      ],
+      "limit"=>100,
+      "offset"=>0,
+      "total"=>1}
+
+    stub_request(:get, "https://flpjck.pagerduty.com/api/v1/incidents?" +
+      "fields=incident_number,status,last_status_change_by&incident_key=#{check}&" +
+      "since=#{since}&status=acknowledged&until=#{unt}").
+       with(:headers => {'Authorization'=>['flapjack', 'password123']}).
+       to_return(:status => 200, :body => response.to_json, :headers => {})
+
     EM.synchrony do
       fp = Flapjack::Pagerduty.new
+      Flapjack::RedisPool.should_receive(:new)
       fp.bootstrap(:config => config)
-
-      check = 'PING'
-      Time.should_receive(:now).and_return(time)
-      since = (time.utc - (60*60*24*7)).iso8601 # the last week
-      unt   = (time.utc + (60*60*24)).iso8601   # 1 day in the future
-
-      response = {"incidents" =>
-        [{"incident_number" => 12,
-          "status" => "acknowledged",
-          "last_status_change_by" => {"id"=>"ABCDEFG", "name"=>"John Smith",
-                                      "email"=>"johns@example.com",
-                                      "html_url"=>"http://flpjck.pagerduty.com/users/ABCDEFG"}
-         }
-        ],
-        "limit"=>100,
-        "offset"=>0,
-        "total"=>1}
-
-      stub_request(:get, "https://flpjck.pagerduty.com/api/v1/incidents?" +
-        "fields=incident_number,status,last_status_change_by&incident_key=#{check}&" +
-        "since=#{since}&status=acknowledged&until=#{unt}").
-         with(:headers => {'Authorization'=>['flapjack', 'password123']}).
-         to_return(:status => 200, :body => response.to_json, :headers => {})
 
       result = fp.send(:pagerduty_acknowledged?, 'subdomain' => 'flpjck', 'username' => 'flapjack',
         'password' => 'password123', 'check' => check)
@@ -86,6 +90,7 @@ describe Flapjack::Pagerduty, :redis => true do
 
   it "creates acknowledgements when pagerduty acknowledgements are found" do
     fp = Flapjack::Pagerduty.new
+    Flapjack::RedisPool.should_receive(:new)
     fp.bootstrap(:config => config)
 
     entity_check = mock('entity_check')
@@ -115,8 +120,8 @@ describe Flapjack::Pagerduty, :redis => true do
     redis.should_receive(:empty!)
 
     fp = Flapjack::Pagerduty.new
+    Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fp.bootstrap(:config => config)
-    fp.should_receive(:build_redis_connection_pool).and_return(redis)
 
     fp.should_receive(:should_quit?).exactly(3).times.and_return(false, false, true)
     redis.should_receive(:blpop).twice.and_return(
@@ -128,21 +133,22 @@ describe Flapjack::Pagerduty, :redis => true do
     fp.should_receive(:send_pagerduty_event)
 
     fp.main
+    fp.cleanup
   end
 
   it "tests the pagerduty connection" do
+    evt = { "service_key"  => "11111111111111111111111111111111",
+            "incident_key" => "Flapjack is running a NOOP",
+            "event_type"   => "nop",
+            "description"  => "I love APIs with noops." }
+    body = evt.to_json
+
+    stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
+      with(:body => body).to_return(:status => 200, :body => '{"status":"success"}', :headers => {})
+
     EM.synchrony do
-
-      evt = { "service_key"  => "11111111111111111111111111111111",
-              "incident_key" => "Flapjack is running a NOOP",
-              "event_type"   => "nop",
-              "description"  => "I love APIs with noops." }
-
-      body = evt.to_json
-      stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
-        with(:body => body).to_return(:status => 200, :body => '{"status":"success"}', :headers => {})
-
       fp = Flapjack::Pagerduty.new
+      Flapjack::RedisPool.should_receive(:new)
       fp.bootstrap(:config => config)
 
       ret = fp.send(:test_pagerduty_connection)
@@ -153,17 +159,19 @@ describe Flapjack::Pagerduty, :redis => true do
   end
 
   it "sends an event to pagerduty" do
+    evt = {"service_key"  => "abcdefg",
+           "incident_key" => "Flapjack test",
+           "event_type"   => "nop",
+           "description"  => "Not really sent anyway"}
+    body = evt.to_json
+
+    stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
+      with(:body => body).to_return(:status => 200, :body => "", :headers => {})
+
     EM.synchrony do
 
-      evt = {"service_key"  => "abcdefg",
-             "incident_key" => "Flapjack test",
-             "event_type"   => "nop",
-             "description"  => "Not really sent anyway"}
-      body = evt.to_json
-      stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
-        with(:body => body).to_return(:status => 200, :body => "", :headers => {})
-
       fp = Flapjack::Pagerduty.new
+      Flapjack::RedisPool.should_receive(:new)
       fp.bootstrap(:config => config)
 
       ret = fp.send(:send_pagerduty_event, evt)

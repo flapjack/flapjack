@@ -214,31 +214,6 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
   end
 
-  it "creates an event" do
-    ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-    t = Time.now.to_i
-    ec.create_event('type'    => 'service',
-                    'state'   => 'ok',
-                    'summary' => 'everything checked out',
-                    'time'    => t)
-    event_json = @redis.rpop('events')
-    event_json.should_not be_nil
-    event = nil
-    expect {
-      event = JSON.parse(event_json)
-    }.not_to raise_error
-    event.should_not be_nil
-    event.should be_a(Hash)
-    event.should == {
-      'entity'  => name,
-      'check'   => check,
-      'type'    => 'service',
-      'state'   => 'ok',
-      'summary' => 'everything checked out',
-      'time'    => t
-    }
-  end
-
   it "creates an acknowledgement" do
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
     t = Time.now.to_i

@@ -13,57 +13,80 @@ describe Flapjack::Coordinator do
     }
   }
 
-  before(:each) {
-    # temporary workaround for failing test due to preserved state;
-    # won't be needed soon as this code has been fixed in a branch
-    Flapjack::API.class_variable_set('@@redis', nil)
-    Flapjack::Web.class_variable_set('@@redis', nil)
-  }
+  let(:redis_config) { {} }
 
   # leaving actual testing of daemonisation to that class's tests
   it "daemonizes properly" do
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, redis_config)
     fc.should_receive(:daemonize)
     fc.should_not_receive(:build_pikelet)
-    fc.should_not_receive(:build_resque_pikelet)
-    fc.should_not_receive(:build_thin_pikelet)
     fc.start(:daemonize => true, :signals => false)
   end
 
   it "runs undaemonized" do
     EM.should_receive(:synchrony).and_yield
 
-    fc = Flapjack::Coordinator.new(config)
-    fc.should_receive(:build_pikelet)
-    fc.should_receive(:build_resque_pikelet)
-    fc.should_receive(:build_thin_pikelet)
+    fc = Flapjack::Coordinator.new(config, redis_config)
+    fc.should_receive(:build_pikelet).exactly(3).times
     fc.start(:daemonize => false, :signals => false)
   end
 
   it "starts after daemonizing" do
     EM.should_receive(:synchrony).and_yield
 
-    fc = Flapjack::Coordinator.new(config)
-    fc.should_receive(:build_pikelet)
-    fc.should_receive(:build_resque_pikelet)
-    fc.should_receive(:build_thin_pikelet)
+    fc = Flapjack::Coordinator.new(config, redis_config)
+    fc.should_receive(:build_pikelet).exactly(3).times
     fc.after_daemonize
   end
 
-  it "traps system signals and shuts down"
+  it "traps system signals and shuts down" do
+    RbConfig::CONFIG.should_receive(:[]).with('host_os').and_return('darwin12.0.0')
 
-  # TODO whem merged with other changes, this will check pik[:class] instead,
-  # having to create instances of the pikelet classes is messy
+    Kernel.should_receive(:trap).with('INT').and_yield
+    Kernel.should_receive(:trap).with('TERM').and_yield
+    Kernel.should_receive(:trap).with('QUIT').and_yield
+
+    fc = Flapjack::Coordinator.new(config, redis_config)
+    fc.should_receive(:stop).exactly(3).times
+
+    fc.send(:setup_signals)
+  end
+
+  it "only traps two system signals on Windows" do
+    RbConfig::CONFIG.should_receive(:[]).with('host_os').and_return('mswin')
+
+    Kernel.should_receive(:trap).with('INT').and_yield
+    Kernel.should_receive(:trap).with('TERM').and_yield
+    Kernel.should_not_receive(:trap).with('QUIT')
+
+    fc = Flapjack::Coordinator.new(config, redis_config)
+    fc.should_receive(:stop).twice
+
+    fc.send(:setup_signals)
+  end
+
   it "stops its services when closing" do
     fiber_exec = mock('fiber_exec')
     fiber_rsq  = mock('fiber_rsq')
 
-    exec  = Flapjack::Executive.new
+    exec  = mock('executive')
+    exec.should_receive(:is_a?).with(Flapjack::GenericPikelet).twice.and_return(true)
+    exec.should_receive(:stop)
     exec.should_receive(:add_shutdown_event)
-    email = EM::Resque::Worker.new('example')
+    exec.should_receive(:cleanup)
+
+    email = mock('worker')
+    email.should_receive(:is_a?).with(Flapjack::GenericPikelet).twice.and_return(false)
     email.should_receive(:shutdown)
-    web   = Thin::Server.new('0.0.0.0', 3000, Flapjack::Web, :signals => false)
+    Flapjack::Notification::Email.should_receive(:cleanup)
+
+    backend = mock('backend')
+    backend.should_receive(:size).twice.and_return(1, 0)
+    web = mock('web')
+    web.should_receive(:is_a?).with(Flapjack::GenericPikelet).twice.and_return(false)
+    web.should_receive(:backend).twice.and_return(backend)
     web.should_receive(:stop!)
+    Flapjack::Web.should_receive(:cleanup)
 
     redis = mock('redis')
     redis.should_receive(:quit)
@@ -74,16 +97,17 @@ describe Flapjack::Coordinator do
     fiber_stop.should_receive(:resume)
     Fiber.should_receive(:new).twice.and_yield.and_return(fiber, fiber_stop)
 
-    fiber_exec.should_receive(:alive?).and_return(true, false)
-    fiber_rsq.should_receive(:alive?).and_return(true, false)
+    fiber_exec.should_receive(:alive?).exactly(3).times.and_return(true, true, false)
+    fiber_rsq.should_receive(:alive?).exactly(3).and_return(true, false, false)
 
+    EM::Synchrony.should_receive(:sleep)
     EM.should_receive(:stop)
 
-    pikelets = [{:fiber => fiber_exec, :instance => exec},
-                {:fiber => fiber_rsq,  :instance => email},
-                {:instance => web}]
+    pikelets = [{:fiber => fiber_exec, :instance => exec, :class => Flapjack::Executive},
+                {:fiber => fiber_rsq,  :instance => email, :class => Flapjack::Notification::Email},
+                {:instance => web, :class => Flapjack::Web}]
 
-    fc = Flapjack::Coordinator.new
+    fc = Flapjack::Coordinator.new(config, redis_config)
     fc.instance_variable_set('@redis_options', {})
     fc.instance_variable_set('@pikelets', pikelets)
     fc.stop
@@ -93,37 +117,39 @@ describe Flapjack::Coordinator do
     exec = mock('executive')
     exec.should_receive(:bootstrap)
     Flapjack::Executive.should_receive(:new).and_return(exec)
+    exec.should_receive(:is_a?).with(Flapjack::GenericPikelet).and_return(true)
     exec.should_receive(:main)
 
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    fc = Flapjack::Coordinator.new
+    fc = Flapjack::Coordinator.new(config, redis_config)
     fc.send(:build_pikelet, 'executive', {})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
     pikelets.should have(1).pikelet
-    pikelets.first.should == {:fiber => fiber, :type => 'executive', :instance => exec}
+    pikelets.first.should == {:fiber => fiber, :class => Flapjack::Executive, :instance => exec}
   end
 
-  it "handles an exception raised by a jabber pikelet" do
+  it "handles an exception raised by a fiber pikelet" do
     jabber = mock('jabber')
     jabber.should_receive(:bootstrap)
     Flapjack::Jabber.should_receive(:new).and_return(jabber)
+    jabber.should_receive(:is_a?).with(Flapjack::GenericPikelet).and_return(true)
     jabber.should_receive(:main).and_raise(RuntimeError)
 
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    fc = Flapjack::Coordinator.new
+    fc = Flapjack::Coordinator.new(config, redis_config)
     fc.should_receive(:stop)
     fc.send(:build_pikelet, 'jabber_gateway', {})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
     pikelets.should have(1).pikelet
-    pikelets.first.should == {:fiber => fiber, :type => 'jabber_gateway', :instance => jabber}
+    pikelets.first.should == {:fiber => fiber, :class => Flapjack::Jabber, :instance => jabber}
   end
 
   it "creates a resque worker pikelet" do
@@ -138,20 +164,18 @@ describe Flapjack::Coordinator do
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    fc = Flapjack::Coordinator.new
-    fc.send(:build_resque_pikelet, 'email_notifier', {})
+    fc = Flapjack::Coordinator.new(config, redis_config)
+    fc.send(:build_pikelet, 'email_notifier', {})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
     pikelets.should have(1).pikelet
-    pikelets.first.should == {:fiber => fiber, :type => 'email_notifier', :instance => worker}
+    pikelets.first.should == {:fiber => fiber, :class => Flapjack::Notification::Email,
+                              :instance => worker}
   end
-
-  it "handles an exception raised by a resque worker pikelet"
 
   it "creates a thin server pikelet" do
     redis = mock('redis')
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
 
     server = mock('server')
     server.should_receive(:start)
@@ -159,13 +183,15 @@ describe Flapjack::Coordinator do
       with(/^(?:\d{1,3}\.){3}\d{1,3}$/, an_instance_of(Fixnum), Flapjack::Web, :signals => false).
       and_return(server)
 
-    fc = Flapjack::Coordinator.new
-    fc.send(:build_thin_pikelet, 'web', {})
+    Flapjack::RedisPool.should_receive(:new)
+
+    fc = Flapjack::Coordinator.new(config, redis_config)
+    fc.send(:build_pikelet, 'web', {})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
     pikelets.should have(1).pikelet
-    pikelets.first.should == {:type => 'web', :instance => server}
+    pikelets.first.should == {:class => Flapjack::Web, :instance => server}
   end
 
   # NB: exceptions are handled directly by the Thin pikelets
