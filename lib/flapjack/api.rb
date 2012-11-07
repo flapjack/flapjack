@@ -69,9 +69,6 @@ module Flapjack
     use Rack::MethodOverride
     use Rack::JsonParamsParser
 
-    api_logger = Flapjack::RackLogger.new('log/api_access.log')
-    use Rack::CommonLogger, api_logger
-
     class << self
       include Flapjack::ThinPikelet
 
@@ -88,7 +85,6 @@ module Flapjack
           access_logger = Flapjack::RackLogger.new(config['access_log'])
           use Rack::CommonLogger, access_logger
         end
-
       end
 
       def cleanup
