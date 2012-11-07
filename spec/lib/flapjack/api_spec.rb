@@ -179,8 +179,6 @@ describe 'Flapjack::API', :sinatra => true do
     last_response.body.should == result_json
   end
 
-  it "creates an acknowledgement for a check on an entity"
-
   it "creates a test notification event for check on an entity" do
 
     Flapjack::Data::Entity.should_receive(:find_by_name).

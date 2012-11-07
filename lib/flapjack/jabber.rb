@@ -305,21 +305,21 @@ module Flapjack
               !'test'.eql?(type) ?
               "::: flapjack: ACKID #{event['event_count']} " : ''
 
-            case
-            when (type && type == 'acknowledgement')
-              maint_str = "has been acknowledged, unscheduled maintenance created for #{duration}"
-            when (type && type == 'test')
-              maint_str = ''
-              ack_str   = ''
+            type = 'unknown' unless type
+
+            maint_str = case type
+            when 'acknowledgement'
+              "has been acknowledged, unscheduled maintenance created for #{duration}"
+            when 'test'
+              ''
             else
-              maint_str = "is #{state.upcase}"
+              "is #{state.upcase}"
             end
 
             # FIXME - should probably put all the message composition stuff in one place so
             # the logic isn't duplicated in each notification channel.
             # TODO - templatise the messages so they can be customised without changing core code
-            headline = type.upcase
-            headline = "TEST NOTIFICATION" if type.downcase == "test"
+            headline = test.eql?(type.downcase) ? "TEST NOTIFICATION" : type.upcase
 
             msg = "#{headline} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
 

@@ -65,7 +65,7 @@ module Flapjack
           headline = headline_map[notification_type] || ''
 
           subject = "#{headline}'#{check}' on #{entity}"
-          subject += " is #{state.upcase}" unless (notification_type == 'acknowledgement' or notification_type == 'test')
+          subject += " is #{state.upcase}" unless ['acknowledgement', 'test'].include?(notification_type)
 
           notification['subject'] = subject
 
