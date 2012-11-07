@@ -163,6 +163,7 @@ module Flapjack
       when command =~ /^help$/
         msg  = "commands: \n"
         msg += "  ACKID <id> <comment> [duration: <time spec>] \n"
+        msg += "  test notifications for <entity>[:<check>] \n"
         msg += "  identify \n"
         msg += "  help \n"
 
@@ -174,6 +175,25 @@ module Flapjack
         msg += "User CPU Time: #{t.utime}\n"
         msg += "System CPU Time: #{t.stime}\n"
         msg += `uname -a`.chomp + "\n"
+
+      when command =~ /^test notifications for\s+([a-z0-9-]+)(:(.+))?$/i
+        entity_name = $1
+        check_name  = $3 ? $3 : 'test'
+
+        msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
+
+        entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis_handler)
+        if entity
+          summary = "Testing notifications to all contacts interested in entity: #{entity.name}, check: #{check_name}"
+
+          entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check_name, :redis => @redis_handler)
+          puts entity_check.inspect
+          entity_check.test_notifications('summary' => summary)
+
+        else
+          msg = "yeah, no i can't see #{entity_name} in my systems"
+        end
+
 
       when command =~ /^(.*)/
         words = $1
