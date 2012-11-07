@@ -186,9 +186,7 @@ describe 'Flapjack::API', :sinatra => true do
     entity.should_receive(:name).and_return(entity_name)
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, 'foo', :redis => redis).and_return(entity_check)
-    entity_check.should_receive(:create_event).
-      with(hash_including('type' => "action", 'state' => "test_notifications"))
-
+    entity_check.should_receive(:test_notifications)
 
     post "/test_notifications/#{entity_name_esc}/foo"
     last_response.status.should == 204
