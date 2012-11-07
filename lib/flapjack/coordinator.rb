@@ -11,6 +11,7 @@ require 'em-resque'
 require 'em-resque/worker'
 require 'thin'
 
+require 'flapjack/configuration'
 require 'flapjack/patches'
 require 'flapjack/daemonizing'
 require 'flapjack/executive'
@@ -30,9 +31,9 @@ module Flapjack
 
     include Flapjack::Daemonizable
 
-    def initialize(config, redis_options)
+    def initialize(config)
       @config = config
-      @redis_options = redis_options
+      @redis_options = config.for_redis
       @pikelets = []
 
       @logger = Log4r::Logger.new("flapjack-coordinator")
@@ -62,31 +63,27 @@ module Flapjack
 
   private
 
-    # map from config key to pikelet class
-    PIKELET_TYPES = {'executive'              => Flapjack::Executive,
-                     'jabber_gateway'         => Flapjack::Gateways::Jabber,
-                     'pagerduty_gateway'      => Flapjack::Gateways::Pagerduty,
-                     'oobetet_gateway'        => Flapjack::Gateways::Oobetet,
+    # map from config key to gateway class
+    GATEWAY_TYPES = {'jabber'         => Flapjack::Gateways::Jabber,
+                     'pagerduty'      => Flapjack::Gateways::Pagerduty,
+                     'oobetet'        => Flapjack::Gateways::Oobetet,
 
-                     'web_gateway'            => Flapjack::Gateways::Web,
-                     'api_gateway'            => Flapjack::Gateways::API,
+                     'web'            => Flapjack::Gateways::Web,
+                     'api'            => Flapjack::Gateways::API,
 
-                     'email_gateway'          => Flapjack::Gateways::Email,
-                     'sms_messagenet_gateway' => Flapjack::Gateways::SmsMessagenet}
+                     'email'          => Flapjack::Gateways::Email,
+                     'sms_messagenet' => Flapjack::Gateways::SmsMessagenet}
 
     def run(options = {})
 
       EM.synchrony do
-        @logger.debug "config keys: #{@config.keys}"
+        @logger.debug "config executive key found" if @config.for_executive
+        all = @config.all
+        gateway_keys = (all && all['gateways']) ? all['gateways'].keys : []
+        @logger.debug "config gateway keys: #{gateway_keys}"
 
-        @config.keys.each do |pikelet_type|
-          next unless PIKELET_TYPES.keys.include?(pikelet_type) &&
-            @config[pikelet_type].is_a?(Hash) &&
-            @config[pikelet_type]['enabled']
-          @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet"
-          pikelet_cfg = @config[pikelet_type]
-
-          build_pikelet(pikelet_type, pikelet_cfg)
+        (['executive'] + gateway_keys).each do |pikelet_type|
+          build_pikelet(pikelet_type)
         end
 
         setup_signals if @signals
@@ -106,8 +103,21 @@ module Flapjack
       end
     end
 
-    def build_pikelet(pikelet_type, pikelet_cfg)
-      return unless pikelet_class = PIKELET_TYPES[pikelet_type]
+    def build_pikelet(pikelet_type)
+      if 'executive'.eql?(pikelet_type)
+        pikelet_cfg = @config.for_executive
+        pikelet_class = Flapjack::Executive
+      elsif GATEWAY_TYPES.keys.include?(pikelet_type)
+        pikelet_cfg = @config.for_gateway(pikelet_type)
+        pikelet_class = GATEWAY_TYPES[pikelet_type]
+      else
+        pikelet_cfg = nil
+        pikelet_class = nil
+      end
+
+      return unless pikelet_cfg.is_a?(Hash) && (pikelet_cfg['enabled'] == 'yes')
+
+      @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet"
 
       inc_mod = pikelet_class.included_modules
       ext_mod = extended_modules(pikelet_class)
@@ -118,7 +128,6 @@ module Flapjack
       if inc_mod.include?(Flapjack::GenericPikelet)
         pikelet = pikelet_class.new
         pikelet.bootstrap(:config => pikelet_cfg, :redis_config => @redis_options)
-
       else
         pikelet_class.bootstrap(:config => pikelet_cfg, :redis_config => @redis_options)
 

@@ -3,21 +3,17 @@ require 'flapjack/coordinator'
 
 describe Flapjack::Coordinator do
 
-  let(:fiber) { mock('Fiber') }
+  let(:fiber)  { mock(Fiber) }
+  let(:config) { mock(Flapjack::Configuration) }
 
-  let(:config) {
-    {'redis'          => {},
-     'executive'      => {'enabled' => 'yes'},
-     'email_gateway'  => {'enabled' => 'yes'},
-     'web_gateway'    => {'enabled' => 'yes'}
-    }
-  }
-
-  let(:redis_config) { {} }
+  let(:gateways) { {'email'  => {'enabled' => 'yes'},
+                    'web'    => {'enabled' => 'yes'}} }
 
   # leaving actual testing of daemonisation to that class's tests
   it "daemonizes properly" do
-    fc = Flapjack::Coordinator.new(config, redis_config)
+    config.should_receive(:for_redis).and_return({})
+    fc = Flapjack::Coordinator.new(config)
+
     fc.should_receive(:daemonize)
     fc.should_not_receive(:build_pikelet)
     fc.start(:daemonize => true, :signals => false)
@@ -25,8 +21,11 @@ describe Flapjack::Coordinator do
 
   it "runs undaemonized" do
     EM.should_receive(:synchrony).and_yield
+    config.should_receive(:for_redis).and_return({})
+    config.should_receive(:for_executive).and_return({'enabled' => 'yes'})
+    config.should_receive(:all).and_return({'gateways' => gateways})
 
-    fc = Flapjack::Coordinator.new(config, redis_config)
+    fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:build_pikelet).exactly(3).times
     fc.start(:daemonize => false, :signals => false)
   end
@@ -34,7 +33,11 @@ describe Flapjack::Coordinator do
   it "starts after daemonizing" do
     EM.should_receive(:synchrony).and_yield
 
-    fc = Flapjack::Coordinator.new(config, redis_config)
+    config.should_receive(:for_redis).and_return({})
+    config.should_receive(:for_executive).and_return({'enabled' => 'yes'})
+    config.should_receive(:all).and_return({'gateways' => gateways})
+
+    fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:build_pikelet).exactly(3).times
     fc.after_daemonize
   end
@@ -46,7 +49,8 @@ describe Flapjack::Coordinator do
     Kernel.should_receive(:trap).with('TERM').and_yield
     Kernel.should_receive(:trap).with('QUIT').and_yield
 
-    fc = Flapjack::Coordinator.new(config, redis_config)
+    config.should_receive(:for_redis).and_return({})
+    fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:stop).exactly(3).times
 
     fc.send(:setup_signals)
@@ -59,7 +63,8 @@ describe Flapjack::Coordinator do
     Kernel.should_receive(:trap).with('TERM').and_yield
     Kernel.should_not_receive(:trap).with('QUIT')
 
-    fc = Flapjack::Coordinator.new(config, redis_config)
+    config.should_receive(:for_redis).and_return({})
+    fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:stop).twice
 
     fc.send(:setup_signals)
@@ -107,7 +112,9 @@ describe Flapjack::Coordinator do
                 {:fiber => fiber_rsq,  :instance => email, :class => Flapjack::Gateways::Email},
                 {:instance => web, :class => Flapjack::Gateways::Web}]
 
-    fc = Flapjack::Coordinator.new(config, redis_config)
+    config.should_receive(:for_redis).and_return({})
+
+    fc = Flapjack::Coordinator.new(config)
     fc.instance_variable_set('@redis_options', {})
     fc.instance_variable_set('@pikelets', pikelets)
     fc.stop
@@ -123,8 +130,11 @@ describe Flapjack::Coordinator do
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    fc = Flapjack::Coordinator.new(config, redis_config)
-    fc.send(:build_pikelet, 'executive', {})
+    config.should_receive(:for_redis).and_return({})
+    config.should_receive(:for_executive).and_return({'enabled' => 'yes'})
+
+    fc = Flapjack::Coordinator.new(config)
+    fc.send(:build_pikelet, 'executive')
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
@@ -142,9 +152,12 @@ describe Flapjack::Coordinator do
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    fc = Flapjack::Coordinator.new(config, redis_config)
+    config.should_receive(:for_redis).and_return({})
+    config.should_receive(:for_gateway).with('jabber').and_return({'enabled' => 'yes'})
+
+    fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:stop)
-    fc.send(:build_pikelet, 'jabber_gateway', {})
+    fc.send(:build_pikelet, 'jabber')
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
@@ -164,8 +177,11 @@ describe Flapjack::Coordinator do
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    fc = Flapjack::Coordinator.new(config, redis_config)
-    fc.send(:build_pikelet, 'email_gateway', {})
+    config.should_receive(:for_redis).and_return({})
+    config.should_receive(:for_gateway).with('email').and_return({'enabled' => 'yes'})
+
+    fc = Flapjack::Coordinator.new(config)
+    fc.send(:build_pikelet, 'email')
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
@@ -185,8 +201,11 @@ describe Flapjack::Coordinator do
 
     Flapjack::RedisPool.should_receive(:new)
 
-    fc = Flapjack::Coordinator.new(config, redis_config)
-    fc.send(:build_pikelet, 'web_gateway', {})
+    config.should_receive(:for_redis).and_return({})
+    config.should_receive(:for_gateway).with('web').and_return({'enabled' => 'yes'})
+
+    fc = Flapjack::Coordinator.new(config)
+    fc.send(:build_pikelet, 'web')
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
