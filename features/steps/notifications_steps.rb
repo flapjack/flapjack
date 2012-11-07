@@ -128,7 +128,7 @@ When /^the SMS notification handler runs successfully$/ do
   # returns success by default - currently matches all addresses, maybe load from config?
   stub_request(:get, /.*/)
   # TODO load config from cfg file instead?
-  Flapjack::Notification::Sms.class_variable_set('@@config', {'username' => 'abcd', 'password' => 'efgh'})
+  Flapjack::Notification::Sms.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
 
   lambda {
     Flapjack::Notification::Sms.dispatch(@sms_notification, :logger => @logger, :redis => @redis)
