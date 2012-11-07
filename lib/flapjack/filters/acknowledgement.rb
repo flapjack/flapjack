@@ -15,21 +15,24 @@ module Flapjack
         timestamp = Time.now.to_i
         result = false
         if event.type == 'action'
-          if event.acknowledgement? and @persistence.zscore("failed_checks", event.id)
-            ec = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @persistence)
-            if ec.nil?
-              @log.error "Filter: Acknowledgement: unknown entity for event '#{event.id}'"
+          if event.acknowledgement?
+            if @persistence.zscore("failed_checks", event.id)
+              ec = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @persistence)
+              if ec.nil?
+                @log.error "Filter: Acknowledgement: unknown entity for event '#{event.id}'"
+              else
+                ec.create_unscheduled_maintenance(:start_time => timestamp,
+                  :duration => (event.duration || (4 * 60 * 60)),
+                  :summary  => event.summary)
+                message = "unscheduled maintenance created for #{event.id}"
+              end
             else
-              ec.create_unscheduled_maintenance(:start_time => timestamp,
-                :duration => (event.duration || (4 * 60 * 60)),
-                :summary  => event.summary)
-              message = "unscheduled maintenance created for #{event.id}"
+              result = true
+              @log.debug("Filter: Acknowledgement: blocking because zscore of failed_checks for #{event.id} is false") unless @persistence.zscore("failed_checks", event.id)
             end
           else
             message = "no action taken"
-            result  = true
-            @log.debug("Filter: Acknowledgement: blocking because event.acknowledgement? is false") unless event.acknowledgement?
-            @log.debug("Filter: Acknowledgement: blocking because zscore of failed_checks for #{event.id} is false") unless @persistence.zscore("failed_checks", event.id)
+            result  = false
           end
         end
         @log.debug("Filter: Acknowledgement: #{result ? "block" : "pass"} (#{message})")

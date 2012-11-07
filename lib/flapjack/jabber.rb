@@ -298,14 +298,30 @@ module Flapjack
 
             logger.debug("processing jabber notification address: #{address}, event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
 
-            ack_str = event['event_count'] && !state.eql?('ok') && !'acknowledgement'.eql?(type) ?
+            ack_str =
+              event['event_count'] &&
+              !state.eql?('ok') &&
+              !'acknowledgement'.eql?(type) &&
+              !'test'.eql?(type) ?
               "::: flapjack: ACKID #{event['event_count']} " : ''
 
-            maint_str = (type && 'acknowledgement'.eql?(type)) ?
-              "has been acknowledged, unscheduled maintenance created for #{duration}" :
-              "is #{state.upcase}"
+            type = 'unknown' unless type
 
-            msg = "#{type.upcase} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
+            maint_str = case type
+            when 'acknowledgement'
+              "has been acknowledged, unscheduled maintenance created for #{duration}"
+            when 'test'
+              ''
+            else
+              "is #{state.upcase}"
+            end
+
+            # FIXME - should probably put all the message composition stuff in one place so
+            # the logic isn't duplicated in each notification channel.
+            # TODO - templatise the messages so they can be customised without changing core code
+            headline = "test".eql?(type.downcase) ? "TEST NOTIFICATION" : type.upcase
+
+            msg = "#{headline} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
 
             chat_type = :chat
             chat_type = :groupchat if @config['rooms'] && @config['rooms'].include?(address)
