@@ -19,6 +19,49 @@ module Flapjack
       @logger
     end
 
+    # TODO reduce/remove the use of this, just access parts
+    def all
+      @config_env
+    end
+
+    def for_redis
+      return unless @config_env
+
+      redis_defaults = {'host' => 'localhost',
+                        'port' => 6379,
+                        'path' => nil,
+                        'db'   => 0}
+
+      @config_env['redis'] = {} unless @config_env.has_key?('redis')
+
+      redis = @config_env['redis']
+      redis_defaults.each_pair do |k,v|
+        next if redis.has_key?(k) && redis[k] &&
+          !(redis[k].is_a?(String) && redis[k].empty?)
+        redis[k] = v
+      end
+
+      redis_path = (redis['path'] || nil)
+      base_opts = {:db => (redis['db'] || 0)}
+      redis_config = base_opts.merge(
+        (redis_path ? { :path => redis_path } :
+                      { :host => (redis['host'] || '127.0.0.1'),
+                        :port => (redis['port'] || 6379)})
+      )
+
+      redis_config
+    end
+
+    def for_executive
+      return unless @config_env
+      @config_env['executive']
+    end
+
+    def for_gateway(gw)
+      return unless @config_env && @config_env['gateways']
+      @config_env['gateways'][gw]
+    end
+
     def load(filename)
       unless File.file?(filename)
         logger.error "Could not find file '#{filename}'"
@@ -37,34 +80,12 @@ module Flapjack
         return
       end
 
-      config_env = config[FLAPJACK_ENV]
+      @config_env = config[FLAPJACK_ENV]
 
-      if config_env.nil?
+      if @config_env.nil?
         logger.error "No config data for environment '#{FLAPJACK_ENV}' found in '#{filename}'"
         return
       end
-
-      redis_defaults = {'host' => 'localhost',
-                        'port' => 6379,
-                        'path' => nil,
-                        'db'   => 0}
-
-      config_env['redis'] = {} unless config_env.has_key?('redis')
-      redis_defaults.each_pair do |k,v|
-        next if config_env['redis'].has_key?(k) && (config_env['redis'][k] &&
-          !(config_env['redis'][k].is_a?(String) && config_env['redis'][k].empty?))
-        config_env['redis'][k] = v
-      end
-
-      redis_path = (config_env['redis']['path'] || nil)
-      base_opts = {:db => (config_env['redis']['db'] || 0)}
-      redis_config = base_opts.merge(
-        (redis_path ? { :path => redis_path } :
-                      { :host => (config_env['redis']['host'] || '127.0.0.1'),
-                        :port => (config_env['redis']['port'] || 6379)})
-      )
-
-      return config_env, redis_config
     end
 
   end

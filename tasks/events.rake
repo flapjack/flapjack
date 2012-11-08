@@ -16,7 +16,10 @@ namespace :events do
 
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
     config_file = File.join('etc', 'flapjack_config.yaml')
-    @config, @redis_config = Flapjack::Configuration.new.load( config_file )
+    config = Flapjack::Configuration.new
+    config.load(config_file)
+    @config = config.all
+    @redis_config = config.for_redis
 
     if @config.nil? || @config.empty?
       puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{config_file}'"
