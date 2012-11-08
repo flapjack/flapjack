@@ -8,20 +8,19 @@
 
 require 'time'
 
+require 'async-rack'
 require 'rack/fiber_pool'
 require 'sinatra/base'
-
-require 'flapjack/pikelet'
-require 'flapjack/redis_pool'
-
-require 'flapjack/api/entity_presenter'
-
-require 'async-rack'
-require 'flapjack/rack_logger'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
+
+require 'flapjack/gateways/api/entity_presenter'
+require 'flapjack/rack_logger'
+require 'flapjack/redis_pool'
+
+require 'flapjack/gateways/base'
 
 # from https://github.com/sinatra/sinatra/issues/501
 # TODO move to its own file
@@ -49,315 +48,317 @@ end
 
 module Flapjack
 
-  class API < Sinatra::Base
+  module Gateways
 
-    set :show_exceptions, false
+    class API < Sinatra::Base
 
-    if defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
-      # expose test errors properly
-      set :raise_errors, true
-    else
-      # doesn't work with Rack::Test unless we wrap tests in EM.synchrony blocks
-      rescue_exception = Proc.new { |env, exception|
-        logger.error exception.message
-        logger.error exception.backtrace.join("\n")
-        [503, {}, {:errors => [exception.message]}.to_json]
-      }
+      set :show_exceptions, false
 
-      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
-    end
-    use Rack::MethodOverride
-    use Rack::JsonParamsParser
-
-    class << self
-      include Flapjack::ThinPikelet
-
-      attr_accessor :redis
-
-      alias_method :thin_bootstrap, :bootstrap
-      alias_method :thin_cleanup,   :cleanup
-
-      def bootstrap(opts = {})
-        thin_bootstrap(opts)
-        @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
-
-        if config && config['access_log']
-          access_logger = Flapjack::RackLogger.new(config['access_log'])
-          use Rack::CommonLogger, access_logger
-        end
-      end
-
-      def cleanup
-        @redis.empty! if @redis
-        thin_cleanup
-      end
-
-    end
-
-    def redis
-      self.class.instance_variable_get('@redis')
-    end
-
-    def logger
-      self.class.instance_variable_get('@logger')
-    end
-
-    get '/entities' do
-      content_type :json
-      ret = Flapjack::Data::Entity.all(:redis => redis).sort_by(&:name).collect {|e|
-        {'id' => e.id, 'name' => e.name,
-         'checks' => e.check_list.sort.collect {|c|
-                       entity_check_status(e, c)
-                     }
+      if defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
+        # expose test errors properly
+        set :raise_errors, true
+      else
+        # doesn't work with Rack::Test unless we wrap tests in EM.synchrony blocks
+        rescue_exception = Proc.new { |env, exception|
+          logger.error exception.message
+          logger.error exception.backtrace.join("\n")
+          [503, {}, {:errors => [exception.message]}.to_json]
         }
-      }
-      ret.to_json
-    end
 
-    get '/checks/:entity' do
-      content_type :json
-      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
-      if entity.nil?
-        status 404
-        return
+        use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
       end
-      entity.check_list.to_json
-    end
+      use Rack::MethodOverride
+      use Rack::JsonParamsParser
 
-    get %r{/status/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
-      content_type :json
+      class << self
+        include Flapjack::Gateways::Thin
 
-      entity_name = params[:captures][0]
-      check = params[:captures][1]
+        attr_accessor :redis
 
-      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
-      if entity.nil?
-        status 404
-        return
+        alias_method :thin_bootstrap, :bootstrap
+        alias_method :thin_cleanup,   :cleanup
+
+        def bootstrap(opts = {})
+          thin_bootstrap(opts)
+          @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
+
+          if config && config['access_log']
+            access_logger = Flapjack::RackLogger.new(config['access_log'])
+            use Rack::CommonLogger, access_logger
+          end
+        end
+
+        def cleanup
+          @redis.empty! if @redis
+          thin_cleanup
+        end
+
       end
 
-      ret = if check
-        entity_check_status(entity, check)
-      else
-        entity.check_list.sort.collect {|c|
-          entity_check_status(entity, c)
+      def redis
+        self.class.instance_variable_get('@redis')
+      end
+
+      def logger
+        self.class.instance_variable_get('@logger')
+      end
+
+      get '/entities' do
+        content_type :json
+        ret = Flapjack::Data::Entity.all(:redis => redis).sort_by(&:name).collect {|e|
+          {'id' => e.id, 'name' => e.name,
+           'checks' => e.check_list.sort.collect {|c|
+                         entity_check_status(e, c)
+                       }
+          }
         }
-      end
-      ret.to_json
-    end
-
-    # the first capture group in the regex checks for acceptable
-    # characters in a domain name -- this will also match strings
-    # that aren't acceptable domain names as well, of course.
-    get %r{/outages/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
-      content_type :json
-
-      entity_name = params[:captures][0]
-      check = params[:captures][1]
-
-      entity = entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
-      if entity.nil?
-        status 404
-        return
+        ret.to_json
       end
 
-      start_time = validate_and_parsetime(params[:start_time])
-      end_time   = validate_and_parsetime(params[:end_time])
-
-      presenter = if check
-        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-          check, :redis => redis)
-        Flapjack::API::EntityCheckPresenter.new(entity_check)
-      else
-        Flapjack::API::EntityPresenter.new(entity, :redis => redis)
-      end
-
-      presenter.outages(start_time, end_time).to_json
-    end
-
-    get %r{/unscheduled_maintenances/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
-      content_type :json
-
-      entity_name = params[:captures][0]
-      check = params[:captures][1]
-
-      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
-      if entity.nil?
-        status 404
-        return
-      end
-
-      start_time = validate_and_parsetime(params[:start_time])
-      end_time   = validate_and_parsetime(params[:end_time])
-
-      presenter = if check
-        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-          check, :redis => redis)
-        Flapjack::API::EntityCheckPresenter.new(entity_check)
-      else
-        Flapjack::API::EntityPresenter.new(entity, :redis => redis)
-      end
-
-      presenter.unscheduled_maintenance(start_time, end_time).to_json
-    end
-
-    get %r{/scheduled_maintenances/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
-      content_type :json
-
-      entity_name = params[:captures][0]
-      check = params[:captures][1]
-
-      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
-      if entity.nil?
-        status 404
-        return
-      end
-
-      start_time = validate_and_parsetime(params[:start_time])
-      end_time   = validate_and_parsetime(params[:end_time])
-
-      presenter = if check
-        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-          check, :redis => redis)
-        Flapjack::API::EntityCheckPresenter.new(entity_check)
-      else
-        Flapjack::API::EntityPresenter.new(entity, :redis => redis)
-      end
-      presenter.scheduled_maintenance(start_time, end_time).to_json
-    end
-
-    get %r{/downtime/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
-      content_type :json
-
-      entity_name = params[:captures][0]
-      check = params[:captures][1]
-
-      entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
-      if entity.nil?
-        status 404
-        return
-      end
-
-      start_time = validate_and_parsetime(params[:start_time])
-      end_time   = validate_and_parsetime(params[:end_time])
-
-      presenter = if check
-        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-          check, :redis => redis)
-        Flapjack::API::EntityCheckPresenter.new(entity_check)
-      else
-        Flapjack::API::EntityPresenter.new(entity, :redis => redis)
-      end
-
-      presenter.downtime(start_time, end_time).to_json
-    end
-
-    # create a scheduled maintenance period for a service on an entity
-    post '/scheduled_maintenances/:entity/:check' do
-      content_type :json
-      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
-      if entity.nil?
-        status 404
-        return
-      end
-      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => redis)
-      entity_check.create_scheduled_maintenance(:start_time => params[:start_time],
-        :duration => params[:duration], :summary => params[:summary])
-      status 204
-    end
-
-    # create an acknowledgement for a service on an entity
-    # NB currently, this does not acknowledge a specific failure event, just
-    # the entity-check as a whole
-    post '/acknowledgements/:entity/:check' do
-      content_type :json
-      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
-      if entity.nil?
-        status 404
-        return
-      end
-
-      dur = params[:duration] ? params[:duration].to_i : nil
-      duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
-
-      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => redis)
-      entity_check.create_acknowledgement('summary' => params[:summary],
-        'duration' => duration)
-      status 204
-    end
-
-    post '/test_notifications/:entity/:check' do
-      content_type :json
-      entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
-      if entity.nil?
-        status 404
-        return
-      end
-
-      summary = params[:summary] || "Testing notifications to all contacts interested in entity #{entity.name}"
-
-      entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-        params[:check], :redis => redis)
-      entity_check.test_notifications('summary' => summary)
-      status 204
-    end
-
-    post '/entities' do
-      pass unless 'application/json'.eql?(request.content_type)
-      content_type :json
-
-      errors = []
-      ret = nil
-
-      entities = params[:entities]
-      if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
-        entities.each do |entity|
-          unless entity['id']
-            errors << "Entity not imported as it has no id: #{entity.inspect}"
-            next
-          end
-          Flapjack::Data::Entity.add(entity, :redis => redis)
+      get '/checks/:entity' do
+        content_type :json
+        entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
+        if entity.nil?
+          status 404
+          return
         end
-        ret = 200
-      else
-        ret = 403
-        errors << "No valid entities were submitted"
+        entity.check_list.to_json
       end
-      errors.empty? ? ret : [ret, {}, {:errors => [errors]}.to_json]
-    end
 
-    post '/contacts' do
-      pass unless 'application/json'.eql?(request.content_type)
-      content_type :json
+      get %r{/status/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
+        content_type :json
 
-      errors = []
-      ret = nil
+        entity_name = params[:captures][0]
+        check = params[:captures][1]
 
-      contacts = params[:contacts]
-      if contacts && contacts.is_a?(Enumerable) && contacts.any? {|c| !c['id'].nil?}
-        Flapjack::Data::Contact.delete_all(:redis => redis)
-        contacts.each do |contact|
-          unless contact['id']
-            logger.warn "Contact not imported as it has no id: #{contact.inspect}"
-            next
-          end
-          Flapjack::Data::Contact.add(contact, :redis => redis)
+        entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
+        if entity.nil?
+          status 404
+          return
         end
-        ret = 200
-      else
-        ret = 403
-        errors << "No valid contacts were submitted"
+
+        ret = if check
+          entity_check_status(entity, check)
+        else
+          entity.check_list.sort.collect {|c|
+            entity_check_status(entity, c)
+          }
+        end
+        ret.to_json
       end
-      errors.empty? ? ret : [ret, {}, {:errors => [errors]}.to_json]
-    end
 
-    not_found do
-      [404, {}, {:errors => ["Not found"]}.to_json]
-    end
+      # the first capture group in the regex checks for acceptable
+      # characters in a domain name -- this will also match strings
+      # that aren't acceptable domain names as well, of course.
+      get %r{/outages/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
+        content_type :json
 
-    private
+        entity_name = params[:captures][0]
+        check = params[:captures][1]
+
+        entity = entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
+        if entity.nil?
+          status 404
+          return
+        end
+
+        start_time = validate_and_parsetime(params[:start_time])
+        end_time   = validate_and_parsetime(params[:end_time])
+
+        presenter = if check
+          entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+            check, :redis => redis)
+          Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
+        else
+          Flapjack::Gateways::API::EntityPresenter.new(entity, :redis => redis)
+        end
+
+        presenter.outages(start_time, end_time).to_json
+      end
+
+      get %r{/unscheduled_maintenances/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
+        content_type :json
+
+        entity_name = params[:captures][0]
+        check = params[:captures][1]
+
+        entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
+        if entity.nil?
+          status 404
+          return
+        end
+
+        start_time = validate_and_parsetime(params[:start_time])
+        end_time   = validate_and_parsetime(params[:end_time])
+
+        presenter = if check
+          entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+            check, :redis => redis)
+          Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
+        else
+          Flapjack::Gateways::API::EntityPresenter.new(entity, :redis => redis)
+        end
+
+        presenter.unscheduled_maintenance(start_time, end_time).to_json
+      end
+
+      get %r{/scheduled_maintenances/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
+        content_type :json
+
+        entity_name = params[:captures][0]
+        check = params[:captures][1]
+
+        entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
+        if entity.nil?
+          status 404
+          return
+        end
+
+        start_time = validate_and_parsetime(params[:start_time])
+        end_time   = validate_and_parsetime(params[:end_time])
+
+        presenter = if check
+          entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+            check, :redis => redis)
+          Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
+        else
+          Flapjack::Gateways::API::EntityPresenter.new(entity, :redis => redis)
+        end
+        presenter.scheduled_maintenance(start_time, end_time).to_json
+      end
+
+      get %r{/downtime/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
+        content_type :json
+
+        entity_name = params[:captures][0]
+        check = params[:captures][1]
+
+        entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
+        if entity.nil?
+          status 404
+          return
+        end
+
+        start_time = validate_and_parsetime(params[:start_time])
+        end_time   = validate_and_parsetime(params[:end_time])
+
+        presenter = if check
+          entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+            check, :redis => redis)
+          Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
+        else
+          Flapjack::Gateways::API::EntityPresenter.new(entity, :redis => redis)
+        end
+
+        presenter.downtime(start_time, end_time).to_json
+      end
+
+      # create a scheduled maintenance period for a service on an entity
+      post '/scheduled_maintenances/:entity/:check' do
+        content_type :json
+        entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
+        if entity.nil?
+          status 404
+          return
+        end
+        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+          params[:check], :redis => redis)
+        entity_check.create_scheduled_maintenance(:start_time => params[:start_time],
+          :duration => params[:duration], :summary => params[:summary])
+        status 204
+      end
+
+      # create an acknowledgement for a service on an entity
+      # NB currently, this does not acknowledge a specific failure event, just
+      # the entity-check as a whole
+      post '/acknowledgements/:entity/:check' do
+        content_type :json
+        entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
+        if entity.nil?
+          status 404
+          return
+        end
+
+        dur = params[:duration] ? params[:duration].to_i : nil
+        duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
+
+        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+          params[:check], :redis => redis)
+        entity_check.create_acknowledgement('summary' => params[:summary],
+          'duration' => duration)
+        status 204
+      end
+
+      post '/test_notifications/:entity/:check' do
+        content_type :json
+        entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
+        if entity.nil?
+          status 404
+          return
+        end
+
+        summary = params[:summary] || "Testing notifications to all contacts interested in entity #{entity.name}"
+
+        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+          params[:check], :redis => redis)
+        entity_check.test_notifications('summary' => summary)
+        status 204
+      end
+
+      post '/entities' do
+        pass unless 'application/json'.eql?(request.content_type)
+        content_type :json
+
+        errors = []
+        ret = nil
+
+        entities = params[:entities]
+        if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
+          entities.each do |entity|
+            unless entity['id']
+              errors << "Entity not imported as it has no id: #{entity.inspect}"
+              next
+            end
+            Flapjack::Data::Entity.add(entity, :redis => redis)
+          end
+          ret = 200
+        else
+          ret = 403
+          errors << "No valid entities were submitted"
+        end
+        errors.empty? ? ret : [ret, {}, {:errors => [errors]}.to_json]
+      end
+
+      post '/contacts' do
+        pass unless 'application/json'.eql?(request.content_type)
+        content_type :json
+
+        errors = []
+        ret = nil
+
+        contacts = params[:contacts]
+        if contacts && contacts.is_a?(Enumerable) && contacts.any? {|c| !c['id'].nil?}
+          Flapjack::Data::Contact.delete_all(:redis => redis)
+          contacts.each do |contact|
+            unless contact['id']
+              logger.warn "Contact not imported as it has no id: #{contact.inspect}"
+              next
+            end
+            Flapjack::Data::Contact.add(contact, :redis => redis)
+          end
+          ret = 200
+        else
+          ret = 403
+          errors << "No valid contacts were submitted"
+        end
+        errors.empty? ? ret : [ret, {}, {:errors => [errors]}.to_json]
+      end
+
+      not_found do
+        [404, {}, {:errors => ["Not found"]}.to_json]
+      end
+
+      private
 
       def entity_check_status(entity, check)
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
@@ -382,6 +383,8 @@ module Flapjack
         logger.error "Couldn't parse time from '#{value}'"
         nil
       end
+
+    end
 
   end
 

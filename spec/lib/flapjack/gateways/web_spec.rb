@@ -1,13 +1,13 @@
 require 'spec_helper'
-require 'flapjack/web'
+require 'flapjack/gateways/web'
 
 # TODO move the rest of the redis operations down to data models, then this
 # test won't need read/write redis data
 
-describe Flapjack::Web, :sinatra => true, :redis => true do
+describe Flapjack::Gateways::Web, :sinatra => true, :redis => true do
 
   def app
-    Flapjack::Web
+    Flapjack::Gateways::Web
   end
 
   let(:entity_name)     { 'example.com'}
@@ -19,7 +19,7 @@ describe Flapjack::Web, :sinatra => true, :redis => true do
 
   before(:each) do
     Flapjack::RedisPool.should_receive(:new).and_return(@redis)
-    Flapjack::Web.bootstrap(:config => {})
+    Flapjack::Gateways::Web.bootstrap(:config => {})
   end
 
   def expect_stats

@@ -4,15 +4,14 @@ require 'yaml'
 require 'logger'
 
 require 'flapjack/executive'
-require 'flapjack/api'
-require 'flapjack/web'
 
+require 'flapjack/gateways/api'
 require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
 require 'flapjack/gateways/pagerduty'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms'
-
+require 'flapjack/gateways/web'
 
 module Flapjack
 
@@ -63,11 +62,11 @@ module Flapjack
       redis_config
     end
 
-    PIKELET_TYPES = {'executive'  => Flapjack::Executive,
-                     'web'        => Flapjack::Web,
-                     'api'        => Flapjack::API}
+    PIKELET_TYPES = {'executive'  => Flapjack::Executive}
 
-    GATEWAY_TYPES = {'jabber'     => Flapjack::Gateways::Jabber,
+    GATEWAY_TYPES = {'web'        => Flapjack::Gateways::Web,
+                     'api'        => Flapjack::Gateways::API,
+                     'jabber'     => Flapjack::Gateways::Jabber,
                      'pagerduty'  => Flapjack::Gateways::Pagerduty,
                      'oobetet'    => Flapjack::Gateways::Oobetet,
                      'email'      => Flapjack::Gateways::Email,
@@ -84,8 +83,9 @@ module Flapjack
     end
 
     def gateways
-      return {} unless @config_env
-      @config_env.inject({}) {|memo, (k, v)|
+      return {} unless @config_env && @config_env['gateways'] &&
+        !@config_env['gateways'].nil?
+      @config_env['gateways'].inject({}) {|memo, (k, v)|
         if klass = GATEWAY_TYPES[k]
           memo[klass] = v
         end

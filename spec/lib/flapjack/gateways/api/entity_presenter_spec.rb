@@ -1,15 +1,15 @@
 require 'spec_helper'
-require 'flapjack/api/entity_presenter'
+require 'flapjack/gateways/api/entity_presenter'
 
-describe 'Flapjack::API::Entity::Presenter' do
+describe 'Flapjack::Gateways::API::Entity::Presenter' do
 
   let(:entity) { mock(Flapjack::Data::Entity) }
 
   let(:check_a) { mock(Flapjack::Data::EntityCheck) }
   let(:check_b) { mock(Flapjack::Data::EntityCheck) }
 
-  let(:checkpres_a) { mock(Flapjack::API::EntityCheckPresenter) }
-  let(:checkpres_b) { mock(Flapjack::API::EntityCheckPresenter) }
+  let(:checkpres_a) { mock(Flapjack::Gateways::API::EntityCheckPresenter) }
+  let(:checkpres_b) { mock(Flapjack::Gateways::API::EntityCheckPresenter) }
 
   let(:time) { Time.now.to_i }
 
@@ -23,9 +23,9 @@ describe 'Flapjack::API::Entity::Presenter' do
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, 'ping', anything).and_return(check_b)
 
-    Flapjack::API::EntityCheckPresenter.should_receive(:new).
+    Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(check_a).and_return(checkpres_a)
-    Flapjack::API::EntityCheckPresenter.should_receive(:new).
+    Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(check_b).and_return(checkpres_b)
   end
 
@@ -38,7 +38,7 @@ describe 'Flapjack::API::Entity::Presenter' do
     checkpres_b.should_receive(:outages).with(start_time, end_time).
       and_return(outages_b)
 
-    ep = Flapjack::API::EntityPresenter.new(entity)
+    ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
     outages = ep.outages(start_time, end_time)
     outages.should == [{:check => 'ssh',  :outages => outages_a},
                        {:check => 'ping', :outages => outages_b}]
@@ -53,7 +53,7 @@ describe 'Flapjack::API::Entity::Presenter' do
     checkpres_b.should_receive(:unscheduled_maintenance).with(start_time, end_time).
       and_return(unsched_maint_b)
 
-    ep = Flapjack::API::EntityPresenter.new(entity)
+    ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
     unsched_maint = ep.unscheduled_maintenance(start_time, end_time)
     unsched_maint.should == [{:check => 'ssh',  :unscheduled_maintenance => unsched_maint_a},
                              {:check => 'ping', :unscheduled_maintenance => unsched_maint_b}]
@@ -68,7 +68,7 @@ describe 'Flapjack::API::Entity::Presenter' do
     checkpres_b.should_receive(:scheduled_maintenance).with(start_time, end_time).
       and_return(sched_maint_b)
 
-    ep = Flapjack::API::EntityPresenter.new(entity)
+    ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
     sched_maint = ep.scheduled_maintenance(start_time, end_time)
     sched_maint.should == [{:check => 'ssh',  :scheduled_maintenance => sched_maint_a},
                            {:check => 'ping', :scheduled_maintenance => sched_maint_b}]
@@ -83,7 +83,7 @@ describe 'Flapjack::API::Entity::Presenter' do
     checkpres_b.should_receive(:downtime).with(start_time, end_time).
       and_return(downtime_b)
 
-    ep = Flapjack::API::EntityPresenter.new(entity)
+    ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
     downtime = ep.downtime(start_time, end_time)
     downtime.should == [{:check => 'ssh',  :downtime => downtime_a},
                         {:check => 'ping', :downtime => downtime_b}]

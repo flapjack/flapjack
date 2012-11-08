@@ -1,10 +1,7 @@
 require 'spec_helper'
-require 'flapjack/api/entity_check_presenter'
+require 'flapjack/gateways/api/entity_check_presenter'
 
-# require 'flapjack/data/entity'
-# require 'flapjack/data/entity_check'
-
-describe 'Flapjack::API::EntityCheck::Presenter' do
+describe 'Flapjack::Gateways::API::EntityCheck::Presenter' do
 
   let(:entity_check) { mock(Flapjack::Data::EntityCheck) }
 
@@ -47,7 +44,7 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     entity_check.should_receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
-    ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
+    ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     outages = ecp.outages(time - (5 * 60 * 60), time - (2 * 60 * 60))
     outages.should_not be_nil
     outages.should be_an(Array)
@@ -63,7 +60,7 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     entity_check.should_receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
-    ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
+    ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     outages = ecp.outages(nil, nil)
     outages.should_not be_nil
     outages.should be_an(Array)
@@ -78,7 +75,7 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     entity_check.should_receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
-    ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
+    ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     outages = ecp.outages(nil, nil)
     outages.should_not be_nil
     outages.should be_an(Array)
@@ -92,7 +89,7 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     entity_check.should_receive(:maintenances).
       with(nil, time - (12 * 60 * 60), :scheduled => false).and_return([])
 
-    ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
+    ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     unsched_maint = ecp.unscheduled_maintenance(time - (12 * 60 * 60), time)
 
     unsched_maint.should be_an(Array)
@@ -108,7 +105,7 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     entity_check.should_receive(:maintenances).
       with(nil, time - (12 * 60 * 60), :scheduled => true).and_return([])
 
-    ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
+    ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     sched_maint = ecp.scheduled_maintenance(time - (12 * 60 * 60), time)
 
     sched_maint.should be_an(Array)
@@ -130,7 +127,7 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     entity_check.should_receive(:maintenances).
       with(nil, time - (12 * 60 * 60), :scheduled => true).and_return([])
 
-    ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
+    ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     downtimes = ecp.downtime(time - (12 * 60 * 60), time)
 
     # 22 minutes, 3 + 8 + 11
@@ -155,7 +152,7 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     entity_check.should_receive(:maintenances).
       with(nil, nil, :scheduled => true).and_return(maintenances)
 
-    ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
+    ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     downtimes = ecp.downtime(nil, nil)
 
     # 22 minutes, 3 + 8 + 11
@@ -182,7 +179,7 @@ describe 'Flapjack::API::EntityCheck::Presenter' do
     entity_check.should_receive(:maintenances).
       with(nil, nil, :scheduled => true).and_return([])
 
-    ecp = Flapjack::API::EntityCheckPresenter.new(entity_check)
+    ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     downtimes = ecp.downtime(nil, nil)
 
     downtimes.should be_a(Hash)

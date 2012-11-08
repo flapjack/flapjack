@@ -1,10 +1,10 @@
 require 'spec_helper'
-require 'flapjack/api'
+require 'flapjack/gateways/api'
 
-describe 'Flapjack::API', :sinatra => true do
+describe 'Flapjack::Gateways::API', :sinatra => true do
 
   def app
-    Flapjack::API
+    Flapjack::Gateways::API
   end
 
   let(:entity)          { mock(Flapjack::Data::Entity) }
@@ -14,14 +14,14 @@ describe 'Flapjack::API', :sinatra => true do
   let(:entity_name_esc) { URI.escape(entity_name) }
   let(:check)           { 'ping' }
 
-  let(:entity_presenter)       { mock(Flapjack::API::EntityPresenter) }
-  let(:entity_check_presenter) { mock(Flapjack::API::EntityCheckPresenter) }
+  let(:entity_presenter)       { mock(Flapjack::Gateways::API::EntityPresenter) }
+  let(:entity_check_presenter) { mock(Flapjack::Gateways::API::EntityCheckPresenter) }
 
   let(:redis)           { mock(::Redis) }
 
   before(:each) do
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    Flapjack::API.bootstrap(:config => {})
+    Flapjack::Gateways::API.bootstrap(:config => {})
   end
 
   it "returns a list of checks for an entity" do
@@ -40,7 +40,7 @@ describe 'Flapjack::API', :sinatra => true do
     result_json = %q{"result"}
     result.should_receive(:to_json).and_return(result_json)
     entity_presenter.should_receive(:scheduled_maintenance).with(nil, nil).and_return(result)
-    Flapjack::API::EntityPresenter.should_receive(:new).
+    Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
       with(entity, :redis => redis).and_return(entity_presenter)
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
@@ -68,7 +68,7 @@ describe 'Flapjack::API', :sinatra => true do
     result_json = %q{"result"}
     result.should_receive(:to_json).and_return(result_json)
     entity_check_presenter.should_receive(:scheduled_maintenance).with(nil, nil).and_return(result)
-    Flapjack::API::EntityCheckPresenter.should_receive(:new).
+    Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check).and_return(entity_check_presenter)
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
@@ -85,7 +85,7 @@ describe 'Flapjack::API', :sinatra => true do
     result_json = %q{"result"}
     result.should_receive(:to_json).and_return(result_json)
     entity_presenter.should_receive(:unscheduled_maintenance).with(nil, nil).and_return(result)
-    Flapjack::API::EntityPresenter.should_receive(:new).
+    Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
       with(entity, :redis => redis).and_return(entity_presenter)
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
@@ -100,7 +100,7 @@ describe 'Flapjack::API', :sinatra => true do
     result_json = %q{"result"}
     result.should_receive(:to_json).and_return(result_json)
     entity_check_presenter.should_receive(:unscheduled_maintenance).with(nil, nil).and_return(result)
-    Flapjack::API::EntityCheckPresenter.should_receive(:new).
+    Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check).and_return(entity_check_presenter)
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
@@ -120,7 +120,7 @@ describe 'Flapjack::API', :sinatra => true do
     result_json = %q{"result"}
     result.should_receive(:to_json).and_return(result_json)
     entity_presenter.should_receive(:outages).with(nil, nil).and_return(result)
-    Flapjack::API::EntityPresenter.should_receive(:new).
+    Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
       with(entity, :redis => redis).and_return(entity_presenter)
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
@@ -135,7 +135,7 @@ describe 'Flapjack::API', :sinatra => true do
     result_json = %q{"result"}
     result.should_receive(:to_json).and_return(result_json)
     entity_check_presenter.should_receive(:outages).with(nil, nil).and_return(result)
-    Flapjack::API::EntityCheckPresenter.should_receive(:new).
+    Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check).and_return(entity_check_presenter)
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
@@ -152,7 +152,7 @@ describe 'Flapjack::API', :sinatra => true do
     result_json = %q{"result"}
     result.should_receive(:to_json).and_return(result_json)
     entity_presenter.should_receive(:downtime).with(nil, nil).and_return(result)
-    Flapjack::API::EntityPresenter.should_receive(:new).
+    Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
       with(entity, :redis => redis).and_return(entity_presenter)
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
@@ -167,7 +167,7 @@ describe 'Flapjack::API', :sinatra => true do
     result_json = %q{"result"}
     result.should_receive(:to_json).and_return(result_json)
     entity_check_presenter.should_receive(:downtime).with(nil, nil).and_return(result)
-    Flapjack::API::EntityCheckPresenter.should_receive(:new).
+    Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check).and_return(entity_check_presenter)
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)

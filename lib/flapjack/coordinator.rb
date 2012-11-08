@@ -17,14 +17,8 @@ require 'flapjack/daemonizing'
 require 'flapjack/executive'
 require 'flapjack/redis_pool'
 
-require 'flapjack/api'
-require 'flapjack/web'
-
-require 'flapjack/gateways/jabber'
-require 'flapjack/gateways/oobetet'
-require 'flapjack/gateways/pagerduty'
-require 'flapjack/gateways/email'
-require 'flapjack/gateways/sms'
+require 'flapjack/pikelet'
+require 'flapjack/gateways/base'
 
 module Flapjack
 
@@ -111,7 +105,7 @@ module Flapjack
       else
         pikelet_class.bootstrap(:config => pikelet_cfg, :redis_config => @redis_options)
 
-        if ext_mod.include?(Flapjack::ThinPikelet)
+        if ext_mod.include?(Flapjack::Gateways::Thin)
 
           unless @thin_silenced
             Thin::Logging.silent = true
@@ -164,7 +158,7 @@ module Flapjack
         pikelet_info[:fiber] = fiber
         fiber.resume
         @logger.debug "new fiber created for #{pikelet_class}"
-      elsif ext_mod.include?(Flapjack::ThinPikelet)
+      elsif ext_mod.include?(Flapjack::Gateways::Thin)
         pikelet.start
         @logger.debug "new thin server instance started for #{pikelet_class}"
       end
@@ -176,7 +170,7 @@ module Flapjack
     # cause everything else to be spammy
     def health_check
       @pikelets.each do |pik|
-        status = if extended_modules(pik[:class]).include?(Flapjack::ThinPikelet)
+        status = if extended_modules(pik[:class]).include?(Flapjack::Gateways::Thin)
           pik[:instance].backend.size > 0 ? 'running' : 'stopped'
         elsif pik[:fiber]
           pik[:fiber].alive? ? 'running' : 'stopped'
@@ -209,7 +203,7 @@ module Flapjack
         elsif ext_mod.include?(Flapjack::Gateways::Resque)
           # resque is polling, so we don't need a shutdown object
           pik_inst.shutdown if pik[:fiber] && pik[:fiber].alive?
-        elsif ext_mod.include?(Flapjack::ThinPikelet)
+        elsif ext_mod.include?(Flapjack::Gateways::Thin)
           # drop from this side, as HTTP keepalive etc. means browsers
           # keep connections alive for ages, and we'd be hanging around
           # waiting for them to drop
@@ -236,7 +230,7 @@ module Flapjack
 
                 pik_inst.cleanup
 
-              elsif [Flapjack::Gateways::Resque, Flapjack::ThinPikelet].any?{|fp|
+              elsif [Flapjack::Gateways::Resque, Flapjack::Gateways::Thin].any?{|fp|
                 ext_mod.include?(fp)
               }
 

@@ -3,7 +3,7 @@ require 'spec_helper'
 require 'flapjack/configuration'
 require 'flapjack/executive'
 
-require 'flapjack/web'
+require 'flapjack/gateways/web'
 require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/email'
 
@@ -96,7 +96,7 @@ describe Flapjack::Coordinator do
     web.should_receive(:is_a?).with(Flapjack::GenericPikelet).twice.and_return(false)
     web.should_receive(:backend).twice.and_return(backend)
     web.should_receive(:stop!)
-    Flapjack::Web.should_receive(:cleanup)
+    Flapjack::Gateways::Web.should_receive(:cleanup)
 
     redis = mock('redis')
     redis.should_receive(:quit)
@@ -115,7 +115,7 @@ describe Flapjack::Coordinator do
 
     pikelets = [{:fiber => fiber_exec, :instance => exec, :class => Flapjack::Executive},
                 {:fiber => fiber_rsq,  :instance => email, :class => Flapjack::Gateways::Email},
-                {:instance => web, :class => Flapjack::Web}]
+                {:instance => web, :class => Flapjack::Gateways::Web}]
 
     config.should_receive(:for_redis).and_return({})
 
@@ -198,7 +198,7 @@ describe Flapjack::Coordinator do
     server = mock('server')
     server.should_receive(:start)
     Thin::Server.should_receive(:new).
-      with(/^(?:\d{1,3}\.){3}\d{1,3}$/, an_instance_of(Fixnum), Flapjack::Web, :signals => false).
+      with(/^(?:\d{1,3}\.){3}\d{1,3}$/, an_instance_of(Fixnum), Flapjack::Gateways::Web, :signals => false).
       and_return(server)
 
     Flapjack::RedisPool.should_receive(:new)
@@ -206,12 +206,12 @@ describe Flapjack::Coordinator do
     config.should_receive(:for_redis).and_return({})
 
     fc = Flapjack::Coordinator.new(config)
-    fc.send(:build_pikelet, Flapjack::Web, {'enabled' => 'yes'})
+    fc.send(:build_pikelet, Flapjack::Gateways::Web, {'enabled' => 'yes'})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
     pikelets.should be_an(Array)
     pikelets.should have(1).pikelet
-    pikelets.first.should == {:class => Flapjack::Web, :instance => server}
+    pikelets.first.should == {:class => Flapjack::Gateways::Web, :instance => server}
   end
 
   # NB: exceptions are handled directly by the Thin pikelets
