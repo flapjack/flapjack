@@ -32,7 +32,7 @@ module Flapjack
         headline = headline_map[notification_type] || ''
 
         message = "#{headline}'#{check}' on #{entity}"
-        message += " is #{state.upcase}" unless notification_type == 'acknowledgement'
+        message += " is #{state.upcase}" unless ['acknowledgement', 'test'].include?(notification_type)
         message += " at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
 
         notification['message'] = message

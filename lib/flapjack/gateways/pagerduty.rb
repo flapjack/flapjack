@@ -75,6 +75,8 @@ module Flapjack
             summary       = event['summary']
             address       = event['address']
 
+            headline = type.upcase
+
             case type.downcase
             when 'acknowledgement'
               maint_str      = "has been acknowledged"
@@ -85,6 +87,10 @@ module Flapjack
             when 'recovery'
               maint_str      = "is #{state.upcase}"
               pagerduty_type = "resolve"
+            when 'test'
+              maint_str      = ""
+              pagerduty_type = "trigger"
+              headline       = "TEST NOTIFICATION"
             end
 
             message = "#{type.upcase} - \"#{check}\" on #{entity} #{maint_str} - #{summary}"
@@ -234,6 +240,8 @@ module Flapjack
       end
 
     end
+
   end
+
 end
 

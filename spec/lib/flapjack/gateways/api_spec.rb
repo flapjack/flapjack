@@ -179,6 +179,19 @@ describe 'Flapjack::Gateways::API', :sinatra => true do
     last_response.body.should == result_json
   end
 
+  it "creates a test notification event for check on an entity" do
+
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+    entity.should_receive(:name).and_return(entity_name)
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, 'foo', :redis => redis).and_return(entity_check)
+    entity_check.should_receive(:test_notifications)
+
+    post "/test_notifications/#{entity_name_esc}/foo"
+    last_response.status.should == 204
+  end
+
   it "creates entities from a submitted list" do
     entities = {'entities' =>
       [

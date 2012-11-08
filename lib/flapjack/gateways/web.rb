@@ -2,22 +2,24 @@
 
 require 'chronic'
 require 'chronic_duration'
-require 'sinatra/base'
-require 'haml'
-require 'rack/fiber_pool'
 
 require 'async-rack'
-require 'flapjack/rack_logger'
+require 'rack/fiber_pool'
+require 'sinatra/base'
+require 'haml'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
+require 'flapjack/rack_logger'
 require 'flapjack/redis_pool'
 require 'flapjack/utility'
 
 require 'flapjack/gateways/base'
 
 module Flapjack
+
   module Gateways
+
     class Web < Sinatra::Base
 
       if defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
@@ -44,9 +46,6 @@ module Flapjack
       end
       use Rack::MethodOverride
 
-      web_logger = Flapjack::RackLogger.new('log/web_access.log')
-      use Rack::CommonLogger, web_logger
-
       class << self
         include Flapjack::Gateways::Thin
 
@@ -58,6 +57,11 @@ module Flapjack
         def bootstrap(opts = {})
           thin_bootstrap(opts)
           @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
+
+          if config && config['access_log']
+            access_logger = Flapjack::RackLogger.new(config['access_log'])
+            use Rack::CommonLogger, access_logger
+          end
         end
 
         def cleanup
@@ -283,5 +287,6 @@ module Flapjack
       end
 
     end
+
   end
 end

@@ -8,16 +8,14 @@
 
 require 'time'
 
+require 'async-rack'
 require 'rack/fiber_pool'
 require 'sinatra/base'
-
-require 'async-rack'
-require 'flapjack/rack_logger'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
-
+require 'flapjack/rack_logger'
 require 'flapjack/redis_pool'
 
 require 'flapjack/gateways/base'
@@ -48,6 +46,7 @@ module Rack
 end
 
 module Flapjack
+
   module Gateways
 
     class API < Sinatra::Base
@@ -70,9 +69,6 @@ module Flapjack
       use Rack::MethodOverride
       use Rack::JsonParamsParser
 
-      api_logger = Flapjack::RackLogger.new('log/api_access.log')
-      use Rack::CommonLogger, api_logger
-
       class << self
         include Flapjack::Gateways::Thin
 
@@ -84,6 +80,11 @@ module Flapjack
         def bootstrap(opts = {})
           thin_bootstrap(opts)
           @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
+
+          if config && config['access_log']
+            access_logger = Flapjack::RackLogger.new(config['access_log'])
+            use Rack::CommonLogger, access_logger
+          end
         end
 
         def cleanup
@@ -284,6 +285,22 @@ module Flapjack
           params[:check], :redis => redis)
         entity_check.create_acknowledgement('summary' => params[:summary],
           'duration' => duration)
+        status 204
+      end
+
+      post '/test_notifications/:entity/:check' do
+        content_type :json
+        entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
+        if entity.nil?
+          status 404
+          return
+        end
+
+        summary = params[:summary] || "Testing notifications to all contacts interested in entity #{entity.name}"
+
+        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
+          params[:check], :redis => redis)
+        entity_check.test_notifications('summary' => summary)
         status 204
       end
 

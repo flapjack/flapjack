@@ -86,6 +86,16 @@ module Flapjack
         Flapjack::Data::Event.add(event, :redis => @redis)
       end
 
+      def test_notifications(options = {})
+        event = { 'type'               => 'action',
+                  'state'              => 'test_notifications',
+                  'summary'            => options['summary'],
+                  'entity'             => @entity.name,
+                  'check'              => @check
+                }
+        Flapjack::Data::Event.add(event, :redis => @redis)
+      end
+
       # FIXME: need to add summary to summary of existing unscheduled maintenance if there is
       # one, and extend duration / expiry time, instead of creating a separate unscheduled
       # outage as we are doing now...
