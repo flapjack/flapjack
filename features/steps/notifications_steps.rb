@@ -128,10 +128,10 @@ When /^the SMS notification handler runs successfully$/ do
   # returns success by default - currently matches all addresses, maybe load from config?
   stub_request(:get, /.*/)
   # TODO load config from cfg file instead?
-  Flapjack::Notification::Sms.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
+  Flapjack::Gateways::Sms.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
 
   lambda {
-    Flapjack::Notification::Sms.dispatch(@sms_notification, :logger => @logger, :redis => @redis)
+    Flapjack::Gateways::Sms.dispatch(@sms_notification, :logger => @logger, :redis => @redis)
   }.should_not raise_error
   @sms_sent = true
 end
@@ -140,16 +140,16 @@ When /^the SMS notification handler fails to send an SMS$/ do
   stub_request(:any, /.*/).to_return(:status => [500, "Internal Server Error"])
 
   lambda {
-    Flapjack::Notification::Sms.dispatch(@sms_notification, :logger => @logger, :redis => @redis)
+    Flapjack::Gateways::Sms.dispatch(@sms_notification, :logger => @logger, :redis => @redis)
   }.should raise_error
   @sms_sent = false
 end
 
 When /^the email notification handler runs successfully$/ do
   Resque.redis = @redis
-  Flapjack::Notification::Email.bootstrap(:config => {})
+  Flapjack::Gateways::Email.bootstrap(:config => {})
   lambda {
-    Flapjack::Notification::Email.perform(@email_notification)
+    Flapjack::Gateways::Email.perform(@email_notification)
   }.should_not raise_error
 end
 
@@ -160,7 +160,7 @@ When /^the email notification handler fails to send an email$/ do
   pending
   lambda {
     @email_notification['address'] = nil
-    Flapjack::Notification::Email.perform(@email_notification)
+    Flapjack::Gateways::Email.perform(@email_notification)
   }.should_not raise_error
 end
 

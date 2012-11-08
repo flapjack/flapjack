@@ -4,7 +4,7 @@ require 'net/http'
 require 'uri'
 
 module Flapjack
-  module Notification
+  module Gateways
     class Sms
       class Messagenet
 

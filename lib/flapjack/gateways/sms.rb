@@ -1,14 +1,13 @@
 #!/usr/bin/env ruby
 
 require 'flapjack/pikelet'
-require 'flapjack/notification/sms/messagenet'
+require 'flapjack/gateways/sms/messagenet'
 
 module Flapjack
-  module Notification
+  module Gateways
 
     class Sms
-
-      extend Flapjack::ResquePikelet
+      extend Flapjack::Gateways::Resque
 
       class << self
 
@@ -41,9 +40,9 @@ module Flapjack
           message += " at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
 
           notification['message'] = message
-          Flapjack::Notification::Sms::Messagenet.sender(notification,
+          Flapjack::Gateways::Sms::Messagenet.sender(notification,
             :logger => opts[:logger],
-            :config => Flapjack::Notification::Sms.instance_variable_get('@config'))
+            :config => Flapjack::Gateways::Sms.instance_variable_get('@config'))
         end
 
       end

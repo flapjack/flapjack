@@ -61,10 +61,6 @@ module Flapjack
 
   end
 
-  module ResquePikelet
-    include Flapjack::Pikelet
-  end
-
   module ThinPikelet
     include Flapjack::Pikelet
 
@@ -84,4 +80,5 @@ module Flapjack
     end
 
   end
+
 end

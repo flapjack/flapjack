@@ -1,7 +1,7 @@
 require 'spec_helper'
-require 'flapjack/oobetet'
+require 'flapjack/gateways/oobetet'
 
-describe Flapjack::Oobetet do
+describe Flapjack::Gateways::Oobetet do
 
   let(:config) { {'server'   => 'example.com',
                   'port'     => '5222',
@@ -19,7 +19,7 @@ describe Flapjack::Oobetet do
   it "raises an error if a required config setting is not set" do
     Socket.should_receive(:gethostname).and_return('thismachine')
 
-    fo = Flapjack::Oobetet.new
+    fo = Flapjack::Gateways::Oobetet.new
     fo.bootstrap(:config => config.delete('watched_check'))
 
     lambda {
@@ -28,7 +28,7 @@ describe Flapjack::Oobetet do
   end
 
   it "hooks up event handlers to the appropriate methods" do
-    fo = Flapjack::Oobetet.new
+    fo = Flapjack::Gateways::Oobetet.new
     fo.bootstrap(:config => config)
 
     EventMachine::Synchrony.should_receive(:next_tick).exactly(3).times.and_yield
@@ -46,7 +46,7 @@ describe Flapjack::Oobetet do
   end
 
   it "joins a chat room after connecting" do
-    fo = Flapjack::Oobetet.new
+    fo = Flapjack::Gateways::Oobetet.new
     fo.bootstrap(:config => config)
 
     fo.should_receive(:write).with(an_instance_of(Blather::Stanza::Presence))
@@ -56,7 +56,7 @@ describe Flapjack::Oobetet do
   end
 
   it "reconnects when disconnected (if not quitting)" do
-    fo = Flapjack::Oobetet.new
+    fo = Flapjack::Gateways::Oobetet.new
     fo.bootstrap(:config => config)
 
     EventMachine::Timer.should_receive(:new).with(1).and_yield
@@ -67,7 +67,7 @@ describe Flapjack::Oobetet do
   end
 
   it "records times of a problem status messages" do
-    fo = Flapjack::Oobetet.new
+    fo = Flapjack::Gateways::Oobetet.new
     fo.bootstrap(:config => config)
 
     fo.setup
@@ -85,7 +85,7 @@ describe Flapjack::Oobetet do
   end
 
   it "records times of a recovery status messages" do
-    fo = Flapjack::Oobetet.new
+    fo = Flapjack::Gateways::Oobetet.new
     fo.bootstrap(:config => config)
 
     fo.setup
@@ -103,7 +103,7 @@ describe Flapjack::Oobetet do
   end
 
   it "records times of an acknowledgement status messages" do
-    fo = Flapjack::Oobetet.new
+    fo = Flapjack::Gateways::Oobetet.new
     fo.bootstrap(:config => config)
 
     fo.setup
@@ -125,7 +125,7 @@ describe Flapjack::Oobetet do
     timer.should_receive(:cancel)
     EM::Synchrony.should_receive(:add_periodic_timer).with(60).and_return(timer)
 
-    fo = Flapjack::Oobetet.new
+    fo = Flapjack::Gateways::Oobetet.new
     fo.bootstrap(:config => config)
     fo.should_receive(:register_handler).exactly(3).times
 

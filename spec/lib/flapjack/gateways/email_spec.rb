@@ -1,6 +1,6 @@
 require 'spec_helper'
-require 'flapjack/notification/email'
+require 'flapjack/gateways/email'
 
-describe Flapjack::Notification::Email do
+describe Flapjack::Gateways::Email do
 
 end

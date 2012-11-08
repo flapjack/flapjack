@@ -1,7 +1,7 @@
 require 'spec_helper'
-require 'flapjack/jabber'
+require 'flapjack/gateways/jabber'
 
-describe Flapjack::Jabber do
+describe Flapjack::Gateways::Jabber do
 
   let(:config) { {'queue'    => 'jabber_notifications',
                   'server'   => 'example.com',
@@ -18,7 +18,7 @@ describe Flapjack::Jabber do
   it "hooks up event handlers to the appropriate methods" do
     Socket.should_receive(:gethostname).and_return('thismachine')
 
-    fj = Flapjack::Jabber.new
+    fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new)
     fj.bootstrap(:config => config)
 
@@ -40,7 +40,7 @@ describe Flapjack::Jabber do
   end
 
   it "joins a chat room after connecting" do
-    fj = Flapjack::Jabber.new
+    fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new).twice
     fj.bootstrap(:config => config)
 
@@ -72,7 +72,7 @@ describe Flapjack::Jabber do
       with('main-example.com:ping', :redis => redis).
       and_return(entity_check)
 
-    fj = Flapjack::Jabber.new
+    fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new)
     fj.bootstrap(:config => config)
     fj.instance_variable_set('@redis_handler', redis)
@@ -89,7 +89,7 @@ describe Flapjack::Jabber do
     from.should_receive(:stripped).and_return('sender')
     stanza.should_receive(:from).and_return(from)
 
-    fj = Flapjack::Jabber.new
+    fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new)
     fj.bootstrap(:config => config)
 
@@ -100,7 +100,7 @@ describe Flapjack::Jabber do
   end
 
   it "reconnects when disconnected (if not quitting)" do
-    fj = Flapjack::Jabber.new
+    fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new)
     fj.bootstrap(:config => config)
 
@@ -115,7 +115,7 @@ describe Flapjack::Jabber do
     redis = mock('redis')
     redis.should_receive(:rpush).with('jabber_notifications', %q{{"notification_type":"shutdown"}})
 
-    fj = Flapjack::Jabber.new
+    fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new)
     fj.bootstrap(:config => config)
 
@@ -133,7 +133,7 @@ describe Flapjack::Jabber do
     redis = mock('redis')
     redis.should_receive(:empty!)
 
-    fj = Flapjack::Jabber.new
+    fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fj.bootstrap(:config => config)
     fj.should_receive(:register_handler).exactly(4).times

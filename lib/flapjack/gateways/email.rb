@@ -5,15 +5,15 @@ require 'erb'
 require 'haml'
 require 'socket'
 
-require 'flapjack/pikelet'
 require 'flapjack/data/entity_check'
 
+require 'flapjack/gateways/base'
+
 module Flapjack
-  module Notification
+  module Gateways
 
     class Email
-
-      extend Flapjack::ResquePikelet
+      extend Flapjack::Gateways::Resque
 
       class << self
 
@@ -42,7 +42,6 @@ module Flapjack
 
         def perform(notification)
           @logger.debug "Woo, got a notification to send out: #{notification.inspect}"
-          opts = {:logger => @logger}
 
           notification_type  = notification['notification_type']
           contact_first_name = notification['contact_first_name']
