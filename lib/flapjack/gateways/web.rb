@@ -9,11 +9,12 @@ require 'rack/fiber_pool'
 require 'async-rack'
 require 'flapjack/rack_logger'
 
-require 'flapjack/pikelet'
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/redis_pool'
 require 'flapjack/utility'
+
+require 'flapjack/gateways/base'
 
 module Flapjack
   module Gateways
@@ -47,7 +48,7 @@ module Flapjack
       use Rack::CommonLogger, web_logger
 
       class << self
-        include Flapjack::ThinPikelet
+        include Flapjack::Gateways::Thin
 
         attr_accessor :redis
 

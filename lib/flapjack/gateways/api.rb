@@ -11,17 +11,17 @@ require 'time'
 require 'rack/fiber_pool'
 require 'sinatra/base'
 
-require 'flapjack/pikelet'
-require 'flapjack/redis_pool'
-
-require 'flapjack/gateways/api/entity_presenter'
-
 require 'async-rack'
 require 'flapjack/rack_logger'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
+
+require 'flapjack/redis_pool'
+
+require 'flapjack/gateways/base'
+require 'flapjack/gateways/api/entity_presenter'
 
 # from https://github.com/sinatra/sinatra/issues/501
 # TODO move to its own file
@@ -74,7 +74,7 @@ module Flapjack
       use Rack::CommonLogger, api_logger
 
       class << self
-        include Flapjack::ThinPikelet
+        include Flapjack::Gateways::Thin
 
         attr_accessor :redis
 

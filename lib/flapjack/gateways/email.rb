@@ -5,15 +5,15 @@ require 'erb'
 require 'haml'
 require 'socket'
 
-require 'flapjack/pikelet'
 require 'flapjack/data/entity_check'
+
+require 'flapjack/gateways/base'
 
 module Flapjack
   module Gateways
 
     class Email
-
-      extend Flapjack::ResquePikelet
+      extend Flapjack::Gateways::Resque
 
       class << self
 

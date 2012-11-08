@@ -17,18 +17,18 @@ require 'em-synchrony/fiber_iterator'
 require 'yajl/json_gem'
 
 require 'flapjack/data/entity_check'
-require 'flapjack/pikelet'
 require 'flapjack/redis_pool'
 require 'flapjack/utility'
 require 'flapjack/version'
+
+require 'flapjack/gateways/base'
 
 module Flapjack
 
   module Gateways
 
     class Jabber < Blather::Client
-
-      include Flapjack::GenericPikelet
+      include Flapjack::Gateways::Generic
       include Flapjack::Utility
 
       log = Logger.new(STDOUT)

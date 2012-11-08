@@ -7,16 +7,16 @@ require 'yajl/json_gem'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/data/global'
-require 'flapjack/pikelet'
 require 'flapjack/redis_pool'
+
+require 'flapjack/gateways/base'
 
 module Flapjack
 
   module Gateways
 
     class Pagerduty
-
-      include Flapjack::GenericPikelet
+      include Flapjack::Gateways::Generic
 
       PAGERDUTY_EVENTS_API_URL   = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
       SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'

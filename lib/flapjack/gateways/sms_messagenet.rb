@@ -3,13 +3,13 @@
 require 'net/http'
 require 'uri'
 
-require 'flapjack/pikelet'
+require 'flapjack/gateways/base'
 
 module Flapjack
   module Gateways
 
     class SmsMessagenet
-      extend Flapjack::ResquePikelet
+      extend Flapjack::Gateways::Resque
 
       def self.perform(notification)
         @logger.debug "Woo, got a notification to send out: #{notification.inspect}"

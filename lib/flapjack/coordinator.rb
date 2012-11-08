@@ -115,7 +115,8 @@ module Flapjack
         pikelet_class = nil
       end
 
-      return unless pikelet_cfg.is_a?(Hash) && (pikelet_cfg['enabled'] == 'yes')
+      return unless pikelet_cfg.is_a?(Hash) && pikelet_cfg['enabled'] &&
+        pikelet_class
 
       @logger.debug "coordinator is now initialising the #{pikelet_type} pikelet"
 
@@ -131,7 +132,7 @@ module Flapjack
       else
         pikelet_class.bootstrap(:config => pikelet_cfg, :redis_config => @redis_options)
 
-        if ext_mod.include?(Flapjack::ThinPikelet)
+        if ext_mod.include?(Flapjack::Gateways::Thin)
 
           unless @thin_silenced
             Thin::Logging.silent = true
@@ -142,7 +143,7 @@ module Flapjack
                       pikelet_class.instance_variable_get('@port'),
                       pikelet_class, :signals => false)
 
-        elsif ext_mod.include?(Flapjack::ResquePikelet)
+        elsif ext_mod.include?(Flapjack::Gateways::Resque)
 
           # set up connection pooling, stop resque errors
           unless @resque_pool
@@ -164,14 +165,14 @@ module Flapjack
       pikelet_info = {:class => pikelet_class, :instance => pikelet}
 
       if inc_mod.include?(Flapjack::GenericPikelet) ||
-        ext_mod.include?(Flapjack::ResquePikelet)
+        ext_mod.include?(Flapjack::Gateways::Resque)
 
         fiber = Fiber.new {
           begin
             # Can't use local inc_mod/ext_mod variables in the new fiber
             if pikelet.is_a?(Flapjack::GenericPikelet)
               pikelet.main
-            elsif extended_modules(pikelet_class).include?(Flapjack::ResquePikelet)
+            elsif extended_modules(pikelet_class).include?(Flapjack::Gateways::Resque)
               pikelet.work(0.1)
             end
           rescue Exception => e
@@ -184,7 +185,7 @@ module Flapjack
         pikelet_info[:fiber] = fiber
         fiber.resume
         @logger.debug "new fiber created for #{pikelet_type}"
-      elsif ext_mod.include?(Flapjack::ThinPikelet)
+      elsif ext_mod.include?(Flapjack::Gateways::Thin)
         pikelet.start
         @logger.debug "new thin server instance started for #{pikelet_type}"
       end
@@ -196,7 +197,7 @@ module Flapjack
     # cause everything else to be spammy
     def health_check
       @pikelets.each do |pik|
-        status = if extended_modules(pik[:class]).include?(Flapjack::ThinPikelet)
+        status = if extended_modules(pik[:class]).include?(Flapjack::Gateways::Thin)
           pik[:instance].backend.size > 0 ? 'running' : 'stopped'
         elsif pik[:fiber]
           pik[:fiber].alive? ? 'running' : 'stopped'
@@ -226,10 +227,10 @@ module Flapjack
               r.quit
             }.resume
           end
-        elsif ext_mod.include?(Flapjack::ResquePikelet)
+        elsif ext_mod.include?(Flapjack::Gateways::Resque)
           # resque is polling, so we don't need a shutdown object
           pik_inst.shutdown if pik[:fiber] && pik[:fiber].alive?
-        elsif ext_mod.include?(Flapjack::ThinPikelet)
+        elsif ext_mod.include?(Flapjack::Gateways::Thin)
           # drop from this side, as HTTP keepalive etc. means browsers
           # keep connections alive for ages, and we'd be hanging around
           # waiting for them to drop
@@ -256,7 +257,7 @@ module Flapjack
 
                 pik_inst.cleanup
 
-              elsif [Flapjack::ResquePikelet, Flapjack::ThinPikelet].any?{|fp|
+              elsif [Flapjack::Gateways::Resque, Flapjack::Gateways::Thin].any?{|fp|
                 ext_mod.include?(fp)
               }
 

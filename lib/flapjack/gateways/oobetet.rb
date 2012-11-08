@@ -1,16 +1,14 @@
 #!/usr/bin/env ruby
 
 require 'socket'
-
 require 'eventmachine'
 require 'em-synchrony'
-
 require 'blather/client/client'
 require 'em-synchrony/fiber_iterator'
 require 'yajl/json_gem'
 
-require 'flapjack/pikelet'
 require 'flapjack/utility'
+require 'flapjack/gateways/base'
 
 module Flapjack
 
@@ -18,7 +16,7 @@ module Flapjack
 
     class Oobetet < Blather::Client
 
-      include Flapjack::GenericPikelet
+      include Flapjack::Gateways::Generic
       include Flapjack::Utility
 
       log = Logger.new(STDOUT)
