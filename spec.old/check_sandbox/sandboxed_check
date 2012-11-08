@@ -1,5 +1,0 @@
-#!/bin/sh
-
-# either of these should produce an ok result
-echo $0
-pwd
