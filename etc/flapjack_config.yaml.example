@@ -9,16 +9,17 @@ quickstart:
     enabled: yes
     email_queue: email_notifications
     notification_log_file: log/flapjack-notification.log
-  email_notifier:
-    enabled: yes
-    queue: email_notifications
-    smtp_config:
-      address: "localhost"
-      domain: 'localhost.localdomain'
-      port: 25
-  web:
-    enabled: yes
-    port: 5080
+  gateways:
+    email:
+      enabled: yes
+      queue: email_notifications
+      smtp_config:
+        address: "localhost"
+        domain: 'localhost.localdomain'
+        port: 25
+    web:
+      enabled: yes
+      port: 5080
 
 development:
   pid_file: tmp/pids/flapjack.pid
@@ -34,97 +35,100 @@ development:
     sms_queue: sms_notifications
     jabber_queue: jabber_notifications
     notification_log_file: log/flapjack-notification.log
-  email_notifier:
-    enabled: yes
-    queue: email_notifications
-    smtp_config:
-      port: 2525
-      # address: "localhost"
-      # port: 25
-      # domain: 'localhost.localdomain'
-      # user_name: nil
-      # password: nil
-      # authentication: nil
-      # enable_starttls_auto: true
-  sms_notifier:
-    enabled: yes
-    queue: sms_notifications
-    username: "ermahgerd"
-    password: "xxxx"
-  jabber_gateway:
-    enabled: yes
-    queue: jabber_notifications
-    server: "jabber.domain.tld"
-    port: 5222
-    jabberid: "flapjack@jabber.domain.tld"
-    password: "good-password"
-    alias: "flapjack"
-    rooms:
-      - "gimp@conference.jabber.domain.tld"
-      - "log@conference.jabber.domain.tld"
-  oobetet:
-    enabled: yes
-    server: "jabber.domain.tld"
-    port: 5222
-    jabberid: "flapjacktest@jabber.domain.tld"
-    password: "nuther-good-password"
-    alias: "flapjacktest"
-    watched_check: "PING"
-    watched_entity: "foo.bar.net"
-    max_latency: 300
-    pagerduty_contact: "11111111111111111111111111111111"
-    rooms:
-      - "flapjacktest@conference.jabber.domain.tld"
-      - "gimp@conference.jabber.domain.tld"
-      - "log@conference.jabber.domain.tld"
-  pagerduty_gateway:
-    enabled: yes
-    queue: pagerduty_notifications
-  web:
-    enabled: yes
-    port: 5080
-    access_log: "log/web_access.log"
-  api:
-    enabled: yes
-    port: 5081
-    access_log: "log/api_access.log"
+  gateways:
+    email:
+      enabled: yes
+      queue: email_notifications
+      smtp_config:
+        port: 2525
+        # address: "localhost"
+        # port: 25
+        # domain: 'localhost.localdomain'
+        # user_name: nil
+        # password: nil
+        # authentication: nil
+        # enable_starttls_auto: true
+    sms:
+      enabled: yes
+      queue: sms_notifications
+      username: "ermahgerd"
+      password: "xxxx"
+    jabber:
+      enabled: yes
+      queue: jabber_notifications
+      server: "jabber.domain.tld"
+      port: 5222
+      jabberid: "flapjack@jabber.domain.tld"
+      password: "good-password"
+      alias: "flapjack"
+      rooms:
+        - "gimp@conference.jabber.domain.tld"
+        - "log@conference.jabber.domain.tld"
+    oobetet:
+      enabled: yes
+      server: "jabber.domain.tld"
+      port: 5222
+      jabberid: "flapjacktest@jabber.domain.tld"
+      password: "nuther-good-password"
+      alias: "flapjacktest"
+      watched_check: "PING"
+      watched_entity: "foo.bar.net"
+      max_latency: 300
+      pagerduty_contact: "11111111111111111111111111111111"
+      rooms:
+        - "flapjacktest@conference.jabber.domain.tld"
+        - "gimp@conference.jabber.domain.tld"
+        - "log@conference.jabber.domain.tld"
+    pagerduty:
+      enabled: yes
+      queue: pagerduty_notifications
+    web:
+      enabled: yes
+      port: 5080
+      access_log: "log/web_access.log"
+    api:
+      enabled: yes
+      port: 5081
+      access_log: "log/api_access.log"
 
 test:
   redis:
     database: 14
-  email_notifier:
-    instances: 1
-  sms_notifier:
-    instances: 1
-    username: "ermahgerd"
-    password: "xxxx"
-  web:
-    instances: 1
-
+  gateways:
+    email:
+      instances: 1
+    sms:
+      instances: 1
+      username: "ermahgerd"
+      password: "xxxx"
+    web:
+      instances: 1
 
 staging:
   redis:
     database: 15
-  email_notifier:
-    instances: 1
-  sms_notifier:
-    instances: 1
-    username: "ermahgerd"
-    password: "xxxx"
-  web:
-    instances: 1
+  gateways:
+    email:
+      instances: 1
+    sms:
+      instances: 1
+      username: "ermahgerd"
+      password: "xxxx"
+    web:
+      instances: 1
 
 production:
   redis:
     database: 12
-  email_notifier:
-    instances: 1
-  sms_notifier:
-    instances: 1
-    username: "ermahgerd"
-    password: "xxxx"
-  web:
-    instances: 1
+  gateways:
+    email:
+      instances: 1
+    sms:
+      instances: 1
+      username: "ermahgerd"
+      password: "xxxx"
+    web:
+      instances: 1
 
 profile:
   redis:
@@ -134,20 +138,21 @@ profile:
   executive:
     enabled: yes
     notification_log_file: log/flapjack-notification.log
-  email_notifier:
-    enabled: no
-    queue: email_notifications
-  jabber_gateway:
-    enabled: yes
-    queue: jabber_notifications
-    server: "jabber.domain.tld"
-    port: 5222
-    jabberid: "flapjack@jabber.domain.tld"
-    password: "good-password"
-    alias: "flapjack"
-    rooms:
-      - "gimp@conference.jabber.domain.tld"
-      - "log@conference.jabber.domain.tld"
-  web:
-    enabled: no
-    port: 5080
+  gateways:
+    email:
+      enabled: no
+      queue: email_notifications
+    jabber:
+      enabled: yes
+      queue: jabber_notifications
+      server: "jabber.domain.tld"
+      port: 5222
+      jabberid: "flapjack@jabber.domain.tld"
+      password: "good-password"
+      alias: "flapjack"
+      rooms:
+        - "gimp@conference.jabber.domain.tld"
+        - "log@conference.jabber.domain.tld"
+    web:
+      enabled: no
+      port: 5080

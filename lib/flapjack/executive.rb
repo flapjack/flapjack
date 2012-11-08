@@ -14,10 +14,11 @@ require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/notification'
 require 'flapjack/data/event'
-require 'flapjack/notification/sms'
-require 'flapjack/notification/email'
 require 'flapjack/pikelet'
 require 'flapjack/redis_pool'
+
+require 'flapjack/gateways/email'
+require 'flapjack/gateways/sms'
 
 module Flapjack
 
@@ -255,9 +256,9 @@ module Flapjack
         # TODO consider changing Resque jobs to use raw blpop like the others
         case media_type
         when :sms
-          Resque.enqueue_to(@queues[:sms], Flapjack::Notification::Sms, contents)
+          Resque.enqueue_to(@queues[:sms], Flapjack::Gateways::Sms, contents)
         when :email
-          Resque.enqueue_to(@queues[:email], Flapjack::Notification::Email, contents)
+          Resque.enqueue_to(@queues[:email], Flapjack::Gateways::Email, contents)
         when :jabber
           # TODO move next line up into other notif value setting above?
           contents['event_count'] = @event_count if @event_count

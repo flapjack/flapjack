@@ -43,7 +43,10 @@ end.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
-config_env, redis_options = Flapjack::Configuration.new.load(options.config)
+config = Flapjack::Configuration.new
+config.load(options.config)
+config_env = config.all
+redis_options = config.for_redis
 
 if config_env.nil? || config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
