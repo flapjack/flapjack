@@ -177,7 +177,7 @@ module Flapjack
         msg += "System CPU Time: #{t.stime}\n"
         msg += `uname -a`.chomp + "\n"
 
-      when command =~ /^test notifications for\s+([a-z0-9-]+)(:(.+))?$/i
+      when command =~ /^test notifications for\s+([a-z0-9\-\.]+)(:(.+))?$/i
         entity_name = $1
         check_name  = $3 ? $3 : 'test'
 
