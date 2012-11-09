@@ -14,6 +14,41 @@ describe Flapjack::Data::Entity, :redis => true do
     @redis.get("entity_id:#{name}").should == ''
   end
 
+  it "adds a registered contact with an entity" do
+    Flapjack::Data::Contact.add({'id'         => '362',
+                                 'first_name' => 'John',
+                                 'last_name'  => 'Johnson',
+                                 'email'      => 'johnj@example.com' },
+                                 :redis       => @redis)
+
+    Flapjack::Data::Entity.add({'id'   => '5000',
+                                'name' => name,
+                                'contacts' => ['362']},
+                                :redis => @redis)
+
+    entity = Flapjack::Data::Entity.find_by_id('5000', :redis => @redis)
+    entity.should_not be_nil
+    contacts = entity.contacts
+    contacts.should_not be_nil
+    contacts.should be_an(Array)
+    contacts.should have(1).contact
+    contacts.first.name.should == 'John Johnson'
+  end
+
+  it "does not add a registered contact with an entity if the contact is unknown" do
+    Flapjack::Data::Entity.add({'id'   => '5000',
+                                'name' => name,
+                                'contacts' => ['362']},
+                                :redis => @redis)
+
+    entity = Flapjack::Data::Entity.find_by_id('5000', :redis => @redis)
+    entity.should_not be_nil
+    contacts = entity.contacts
+    contacts.should_not be_nil
+    contacts.should be_an(Array)
+    contacts.should be_empty
+  end
+
   it "finds an entity by id" do
     Flapjack::Data::Entity.add({'id'   => '5000',
                                 'name' => name},
