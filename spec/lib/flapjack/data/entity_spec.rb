@@ -117,4 +117,22 @@ describe Flapjack::Data::Entity, :redis => true do
     check_count.should == 2
   end
 
+  it "finds entity names matching a pattern" do
+    Flapjack::Data::Entity.add({'id'       => '5000',
+                                'name'     => 'abc-123',
+                                'contacts' => []},
+                               :redis => @redis)
+
+    Flapjack::Data::Entity.add({'id'       => '5001',
+                                'name'     => 'def-456',
+                                'contacts' => []},
+                               :redis => @redis)
+
+    entities = Flapjack::Data::Entity.find_all_name_matching('abc', :redis => @redis)
+    entities.should_not be_nil
+    entities.should be_an(Array)
+    entities.should have(1).entity
+    entities.first.should == 'abc-123'
+  end
+
 end

@@ -65,13 +65,18 @@ module Flapjack
         self.new(:name => entity_name, :id => entity_id, :redis => redis)
       end
 
+      # NB: if we're worried about user input, https://github.com/mudge/re2
+      # has bindings for a non-backtracking RE engine that runs in linear
+      # time
       def self.find_all_name_matching(pattern, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        matched_entities = redis.keys('check:*').collect {|check|
-          a, entity, c = check.split(':')
-          match = (entity =~ /#{pattern}/) ? entity : nil
-        }
-        matched_entities.compact.sort.uniq
+        redis.keys('entity_id:*').inject([]) {|memo, check|
+          a, entity_name = check.split(':')
+          if (entity_name =~ /#{pattern}/) && !memo.include?(entity_name)
+            memo << entity_name
+          end
+          memo
+        }.sort
       end
 
       def contacts
