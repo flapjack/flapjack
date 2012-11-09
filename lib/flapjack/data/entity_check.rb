@@ -4,6 +4,7 @@ require 'yajl/json_gem'
 
 require 'flapjack/patches'
 
+require 'flapjack/data/contact'
 require 'flapjack/data/entity'
 
 # TODO might want to split the class methods out to a separate class, DAO pattern
@@ -49,7 +50,7 @@ module Flapjack
       end
 
       def entity_name
-        @entity.name
+        entity.name
       end
 
       # takes a key "entity:check", returns true if the check is in unscheduled
@@ -74,24 +75,26 @@ module Flapjack
         }
       end
 
+      # TODO move to Event
       def create_acknowledgement(options = {})
         event = { 'type'               => 'action',
                   'state'              => 'acknowledgement',
                   'summary'            => options['summary'],
                   'duration'           => options['duration'],
                   'acknowledgement_id' => options['acknowledgement_id'],
-                  'entity'             => @entity.name,
-                  'check'              => @check
+                  'entity'             => entity.name,
+                  'check'              => check
                 }
         Flapjack::Data::Event.add(event, :redis => @redis)
       end
 
+      # TODO move to Event
       def test_notifications(options = {})
         event = { 'type'               => 'action',
                   'state'              => 'test_notifications',
                   'summary'            => options['summary'],
-                  'entity'             => @entity.name,
-                  'check'              => @check
+                  'entity'             => entity.name,
+                  'check'              => check
                 }
         Flapjack::Data::Event.add(event, :redis => @redis)
       end
@@ -405,8 +408,6 @@ module Flapjack
       # has pagerduty credentials then there'll be one hash in the array for each set of
       # credentials.
       def pagerduty_credentials(options)
-        # raise "Redis connection not set" unless redis = options[:redis]
-
         self.contacts.inject([]) {|ret, contact|
           cred = contact.pagerduty_credentials
           ret << cred if cred
@@ -417,28 +418,25 @@ module Flapjack
       # takes a check, looks up contacts that are interested in this check (or in the check's entity)
       # and returns an array of contact records
       def contacts
-        entity = @entity
-        check  = @check
+        contact_ids = @redis.smembers("contacts_for:#{entity.id}:#{check}")
 
         if @logger
-          @logger.debug("contacts for #{@entity.id} (#{@entity.name}): " +
-            @redis.smembers("contacts_for:#{@entity.id}").length.to_s)
-          @logger.debug("contacts for #{check}: " +
-            @redis.smembers("contacts_for:#{check}").length.to_s)
+          @logger.debug("#{contact_ids.length} contact(s) for #{entity.id}:#{check}: " +
+            contact_ids.inspect)
         end
 
-        union = @redis.sunion("contacts_for:#{@entity.id}", "contacts_for:#{check}")
-        @logger.debug("contacts for union of #{@entity.id} and #{check}: " + union.length.to_s) if @logger
-        union.collect {|c_id| Flapjack::Data::Contact.find_by_id(c_id, :redis => @redis) }
+        entity.contacts + contact_ids.collect {|c_id|
+          Flapjack::Data::Contact.find_by_id(c_id, :redis => @redis)
+        }.compact
       end
 
     private
 
-      def initialize(entity, check, options = {})
+      def initialize(ent, che, options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
-        raise "Invalid entity" unless @entity = entity
-        raise "Invalid check" unless @check = check
-        @key = "#{entity.name}:#{check}"
+        raise "Invalid entity" unless @entity = ent
+        raise "Invalid check" unless @check = che
+        @key = "#{ent.name}:#{che}"
       end
 
       def validate_state(state)
