@@ -34,7 +34,7 @@ FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 config = Flapjack::Configuration.new
 config.load(options.config)
 @config_env = config.all
-@redis_options = @config.for_redis
+@redis_options = config.for_redis
 
 if @config_env.nil? || @config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
