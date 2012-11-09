@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'flapjack/data/contact'
+
 module Flapjack
 
   module Data
@@ -31,8 +33,9 @@ module Flapjack
 
           redis.del("contacts_for:#{entity['id']}")
           if entity['contacts'] && entity['contacts'].respond_to?(:each)
-            entity['contacts'].each {|contact|
-              redis.sadd("contacts_for:#{entity['id']}", contact)
+            entity['contacts'].each {|contact_id|
+              next if Flapjack::Data::Contact.find_by_id(contact_id, :redis => redis).nil?
+              redis.sadd("contacts_for:#{entity['id']}", contact_id)
             }
           end
         else
@@ -69,6 +72,19 @@ module Flapjack
           match = (entity =~ /#{pattern}/) ? entity : nil
         }
         matched_entities.compact.sort.uniq
+      end
+
+      def contacts
+        contact_ids = @redis.smembers("contacts_for:#{id}")
+
+        if @logger
+          @logger.debug("#{contact_ids.length} contact(s) for #{id} (#{name}): " +
+            contact_ids.length)
+        end
+
+        contact_ids.collect {|c_id|
+          Flapjack::Data::Contact.find_by_id(c_id, :redis => @redis)
+        }.compact
       end
 
       def check_list
