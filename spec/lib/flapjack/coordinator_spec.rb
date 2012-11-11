@@ -27,8 +27,7 @@ describe Flapjack::Coordinator do
   it "runs undaemonized" do
     EM.should_receive(:synchrony).and_yield
     config.should_receive(:for_redis).and_return({})
-    config.should_receive(:pikelets).and_return(Flapjack::Executive => {'enabled' => 'yes'})
-    config.should_receive(:gateways).and_return({})
+    config.should_receive(:all).and_return('executive' => {'enabled' => 'yes'})
 
     fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:build_pikelet)
@@ -39,8 +38,7 @@ describe Flapjack::Coordinator do
     EM.should_receive(:synchrony).and_yield
 
     config.should_receive(:for_redis).and_return({})
-    config.should_receive(:pikelets).and_return(Flapjack::Executive => {'enabled' => 'yes'})
-    config.should_receive(:gateways).and_return({})
+    config.should_receive(:all).and_return('executive' => {'enabled' => 'yes'})
 
     fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:build_pikelet)

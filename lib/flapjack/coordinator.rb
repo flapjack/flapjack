@@ -20,6 +20,16 @@ require 'flapjack/redis_pool'
 require 'flapjack/pikelet'
 require 'flapjack/gateways/base'
 
+require 'flapjack/executive'
+
+require 'flapjack/gateways/api'
+require 'flapjack/gateways/jabber'
+require 'flapjack/gateways/oobetet'
+require 'flapjack/gateways/pagerduty'
+require 'flapjack/gateways/email'
+require 'flapjack/gateways/sms'
+require 'flapjack/gateways/web'
+
 module Flapjack
 
   class Coordinator
@@ -62,12 +72,14 @@ module Flapjack
 
       EM.synchrony do
 
-        @config.pikelets.each_pair do |pikelet_class, pikelet_cfg|
+        config_env = @config.all
+
+        pikelets(config_env).each_pair do |pikelet_class, pikelet_cfg|
           next unless pikelet_cfg['enabled']
           build_pikelet(pikelet_class, pikelet_cfg)
         end
 
-        @config.gateways.each_pair do |gateway_class, gateway_cfg|
+        gateways(config_env).each_pair do |gateway_class, gateway_cfg|
           # TODO split out gateway logic to build_gateway
           next unless gateway_cfg['enabled']
           build_pikelet(gateway_class, gateway_cfg)
@@ -248,6 +260,38 @@ module Flapjack
 
     def extended_modules(klass)
       (class << klass; self; end).included_modules
+    end
+
+    PIKELET_TYPES = {'executive'  => Flapjack::Executive}
+
+    GATEWAY_TYPES = {'web'        => Flapjack::Gateways::Web,
+                     'api'        => Flapjack::Gateways::API,
+                     'jabber'     => Flapjack::Gateways::Jabber,
+                     'pagerduty'  => Flapjack::Gateways::Pagerduty,
+                     'oobetet'    => Flapjack::Gateways::Oobetet,
+                     'email'      => Flapjack::Gateways::Email,
+                     'sms'        => Flapjack::Gateways::Sms}
+
+
+    def pikelets(config_env)
+      return {} unless config_env
+      config_env.inject({}) {|memo, (k, v)|
+        if klass = PIKELET_TYPES[k]
+          memo[klass] = v
+        end
+        memo
+      }
+    end
+
+    def gateways(config_env)
+      return {} unless config_env && config_env['gateways'] &&
+        !config_env['gateways'].nil?
+      config_env['gateways'].inject({}) {|memo, (k, v)|
+        if klass = GATEWAY_TYPES[k]
+          memo[klass] = v
+        end
+        memo
+      }
     end
 
   end
