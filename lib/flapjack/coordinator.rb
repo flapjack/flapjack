@@ -13,7 +13,6 @@ require 'thin'
 
 require 'flapjack/configuration'
 require 'flapjack/patches'
-require 'flapjack/daemonizing'
 require 'flapjack/executive'
 require 'flapjack/redis_pool'
 
@@ -34,8 +33,6 @@ module Flapjack
 
   class Coordinator
 
-    include Flapjack::Daemonizable
-
     def initialize(config)
       @config = config
       @redis_options = config.for_redis
@@ -47,17 +44,7 @@ module Flapjack
     end
 
     def start(options = {})
-      @signals = options[:signals]
-      if options[:daemonize]
-        @signals = options[:signals]
-        daemonize
-      else
-        run(:signals => options[:signals])
-      end
-    end
-
-    def after_daemonize
-      run(:signals => @signals)
+      run(:signals => options[:signals])
     end
 
     def stop
@@ -69,7 +56,6 @@ module Flapjack
   private
 
     def run(options = {})
-
       EM.synchrony do
 
         config_env = @config.all
@@ -80,12 +66,11 @@ module Flapjack
         end
 
         gateways(config_env).each_pair do |gateway_class, gateway_cfg|
-          # TODO split out gateway logic to build_gateway
           next unless gateway_cfg['enabled']
           build_pikelet(gateway_class, gateway_cfg)
         end
 
-        setup_signals if @signals
+        setup_signals if options[:signals]
       end
 
     end

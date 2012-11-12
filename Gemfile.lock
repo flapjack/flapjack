@@ -6,7 +6,7 @@ PATH
       blather
       chronic
       chronic_duration
-      daemons
+      dante
       em-http-request
       em-resque
       em-synchrony (~> 1.0.2)
@@ -49,6 +49,7 @@ GEM
       gherkin (~> 2.11.0)
       json (>= 1.4.6)
     daemons (1.1.9)
+    dante (0.1.5)
     delorean (2.0.0)
       chronic
     diff-lcs (1.1.3)

@@ -4,21 +4,13 @@ require 'optparse'
 require 'ostruct'
 require 'redis'
 require 'yajl/json_gem'
+require 'dante'
 
-# add lib to the default include path
-unless $:.include?(File.dirname(__FILE__) + '/../lib/')
-  $: << File.dirname(__FILE__) + '/../lib'
-end
-
-require 'flapjack/configuration'
-
-options = OpenStruct.new
-options.config    = File.join('etc', 'flapjack_config.yaml')
-options.daemonize = nil
-
-OptionParser.new do |opts|
+runner = Dante::Runner.new('flapjack-nagios-receiver')
+# Sets the description in 'help'
+runner.description = "flapjack-nagios-receiver"
+runner.with_options do |opts|
   opts.banner = "Usage: flapjack-nagios-receiver [options]"
-
   opts.on("-c", "--config [PATH]", String, "PATH to the config file to use") do |c|
     options.config = c
   end
@@ -26,82 +18,97 @@ OptionParser.new do |opts|
   opts.on("-f", "--fifo FIFO", String, "Path to the nagios perfdata named pipe") do |f|
     options.fifo = f
   end
-
-end.parse!(ARGV)
-
-FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
-
-config = Flapjack::Configuration.new
-config.load(options.config)
-@config_env = config.all
-@redis_options = config.for_redis
-
-if @config_env.nil? || @config_env.empty?
-  puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
-  exit(false)
 end
 
-if !options.fifo
-  puts "You must specify a path to the nagios perfdata named pipe using the --fifo option"
-  exit(false)
-end
+dante_opts = {
+  :pid_path   => '/var/run/flapjack/flapjack-nagios-receiver.pid',
+  :log_path   => '/var/log/flapjack/flapjack-nagios-receiver.log'
+}
 
-@fifo = File.new(options.fifo)
+# Parse command-line options and execute the process
+runner.execute(dante_opts) do |opts|
 
-# nagios.cfg contains the following templates for host and service data (modified from the default
-# to include hoststate / servicestate, and a fake service 'HOST' for hostperfdata, so that the
-# fields match up
-# host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
-# service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
+  # add lib to the default include path
+  unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+    $: << File.dirname(__FILE__) + '/../lib'
+  end
 
-def process_input(redis)
-  begin
-    while line = @fifo.gets
-      skip unless line
-      split_line = line.split("\t")
+  require 'flapjack/configuration'
 
-      object_type, timestamp, entity, check, state, check_time, check_latency, check_output, check_perfdata = split_line
+  FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
-      case
-      when split_line.length != 9
-        puts "ERROR - rejecting this line as it doesn't split into 9 tab separated strings: [#{line}]"
-        next
-      when (timestamp !~ /^\d+$/)
-        puts "ERROR - rejecting this line as second string doesn't look like a timestamp: [#{line}]"
-        next
-      when (not ((object_type == '[HOSTPERFDATA]') or (object_type == '[SERVICEPERFDATA]')))
-        puts "ERROR - rejecting this line as first string is neither '[HOSTPERFDATA]' nor '[SERVICEPERFDATA]': [#{line}]"
-        next
+  config = Flapjack::Configuration.new
+  config.load(opts.config || File.join('etc', 'flapjack_config.yaml'))
+  @config_env = config.all
+  @redis_options = config.for_redis
+
+  if @config_env.nil? || @config_env.empty?
+    puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{opts.config}'"
+    exit(false)
+  end
+
+  if !opts.fifo
+    puts "You must specify a path to the nagios perfdata named pipe using the --fifo option"
+    exit(false)
+  end
+
+  @fifo = File.new(opts.fifo)
+
+  # nagios.cfg contains the following templates for host and service data (modified from the default
+  # to include hoststate / servicestate, and a fake service 'HOST' for hostperfdata, so that the
+  # fields match up
+  # host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
+  # service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
+
+  def process_input(redis)
+    begin
+      while line = @fifo.gets
+        skip unless line
+        split_line = line.split("\t")
+
+        object_type, timestamp, entity, check, state, check_time, check_latency, check_output, check_perfdata = split_line
+
+        case
+        when split_line.length != 9
+          puts "ERROR - rejecting this line as it doesn't split into 9 tab separated strings: [#{line}]"
+          next
+        when (timestamp !~ /^\d+$/)
+          puts "ERROR - rejecting this line as second string doesn't look like a timestamp: [#{line}]"
+          next
+        when (not ((object_type == '[HOSTPERFDATA]') or (object_type == '[SERVICEPERFDATA]')))
+          puts "ERROR - rejecting this line as first string is neither '[HOSTPERFDATA]' nor '[SERVICEPERFDATA]': [#{line}]"
+          next
+        end
+
+        puts "#{object_type}, #{timestamp}, #{entity}, #{check}, #{state}, #{check_output}"
+
+        state = 'ok'       if state.downcase == 'up'
+        state = 'critical' if state.downcase == 'down'
+        event = {
+          'entity'    => entity,
+          'check'     => check,
+          'type'      => 'service',
+          'state'     => state,
+          'summary'   => check_output,
+          'timestamp' => timestamp,
+        }.to_json
+        redis.rpush 'events', event
       end
-
-      puts "#{object_type}, #{timestamp}, #{entity}, #{check}, #{state}, #{check_output}"
-
-      state = 'ok'       if state.downcase == 'up'
-      state = 'critical' if state.downcase == 'down'
-      event = {
-        'entity'    => entity,
-        'check'     => check,
-        'type'      => 'service',
-        'state'     => state,
-        'summary'   => check_output,
-        'timestamp' => timestamp,
-      }.to_json
-      redis.rpush 'events', event
+    rescue Redis::CannotConnectError
+      puts "Error, unable to to connect to the redis server (#{$!})"
     end
-  rescue Redis::CannotConnectError
-    puts "Error, unable to to connect to the redis server (#{$!})"
   end
-end
 
-def main
-  redis = Redis.new(@redis_options)
+  def main
+    redis = Redis.new(@redis_options)
 
-  while true
-    process_input(redis)
-    puts "Whoops, restarting main loop in 10 seconds"
-    sleep 10
+    while true
+      process_input(redis)
+      puts "Whoops, restarting main loop in 10 seconds"
+      sleep 10
+    end
   end
+
+  main
+
 end
-
-main
-

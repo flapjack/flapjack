@@ -14,16 +14,6 @@ describe Flapjack::Coordinator do
   let(:fiber)  { mock(Fiber) }
   let(:config) { mock(Flapjack::Configuration) }
 
-  # leaving actual testing of daemonisation to that class's tests
-  it "daemonizes properly" do
-    config.should_receive(:for_redis).and_return({})
-    fc = Flapjack::Coordinator.new(config)
-
-    fc.should_receive(:daemonize)
-    fc.should_not_receive(:build_pikelet)
-    fc.start(:daemonize => true, :signals => false)
-  end
-
   it "runs undaemonized" do
     EM.should_receive(:synchrony).and_yield
     config.should_receive(:for_redis).and_return({})
@@ -32,17 +22,6 @@ describe Flapjack::Coordinator do
     fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:build_pikelet)
     fc.start(:daemonize => false, :signals => false)
-  end
-
-  it "starts after daemonizing" do
-    EM.should_receive(:synchrony).and_yield
-
-    config.should_receive(:for_redis).and_return({})
-    config.should_receive(:all).and_return('executive' => {'enabled' => 'yes'})
-
-    fc = Flapjack::Coordinator.new(config)
-    fc.should_receive(:build_pikelet)
-    fc.after_daemonize
   end
 
   it "traps system signals and shuts down" do
