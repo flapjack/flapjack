@@ -6,7 +6,9 @@ require 'redis'
 require 'yajl/json_gem'
 require 'dante'
 
-runner = Dante::Runner.new('flapjack-nagios-receiver')
+runner = Dante::Runner.new('flapjack-nagios-receiver',
+                           :pid_path   => '/var/run/flapjack/flapjack-nagios-receiver.pid',
+                           :log_path   => '/var/log/flapjack/flapjack-nagios-receiver.log')
 # Sets the description in 'help'
 runner.description = "flapjack-nagios-receiver"
 runner.with_options do |opts|
@@ -20,13 +22,8 @@ runner.with_options do |opts|
   end
 end
 
-dante_opts = {
-  :pid_path   => '/var/run/flapjack/flapjack-nagios-receiver.pid',
-  :log_path   => '/var/log/flapjack/flapjack-nagios-receiver.log'
-}
-
 # Parse command-line options and execute the process
-runner.execute(dante_opts) do |opts|
+runner.execute do |opts|
 
   # add lib to the default include path
   unless $:.include?(File.dirname(__FILE__) + '/../lib/')

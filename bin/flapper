@@ -4,20 +4,19 @@ require 'eventmachine'
 require 'socket'
 require 'dante'
 
-runner = Dante::Runner.new('flapper')
+runner = Dante::Runner.new('flapper',
+                           :pid_path   => '/var/run/flapjack/flapper.pid',
+                           :log_path   => '/var/log/flapjack/flapper.log')
 # Sets the description in 'help'
 runner.description = "flapper"
 runner.with_options do |opts|
   opts.banner = "Usage: flapper [options]"
 end
 
-dante_opts = {
-  :pid_path   => '/var/run/flapjack/flapper.pid',
-  :log_path   => '/var/log/flapjack/flapper.log'
-}
-
 # Parse command-line options and execute the process
-runner.execute(dante_opts) do |options|
+runner.execute do |options|
+
+  p options
 
   module Flapper
 
