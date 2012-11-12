@@ -35,6 +35,7 @@ config = Flapjack::Configuration.new
 config.load(options.config)
 @config_env = config.all
 @redis_options = config.for_redis
+puts @redis_options.inspect
 
 if @config_env.nil? || @config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
@@ -94,7 +95,7 @@ def process_input(redis)
 end
 
 def main
-  redis = Redis.new(@redis_options)
+  redis = Redis.new(@redis_options.merge(:driver => 'ruby'))
 
   while true
     process_input(redis)
