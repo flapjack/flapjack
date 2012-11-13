@@ -76,29 +76,34 @@ flapjack_coord = Proc.new {
 
 case ARGV[0]
 when "start"
-
-  puts "Called start on options #{options.inspect}"
+  print "Flapjack starting..."
   Dante::Runner.new('flapjack').execute(:daemonize => daemonize,
     :pid_path => pidfile, :log_path => logfile) {
 
     flapjack_coord.call
   }
-
+  puts " done."
 when "stop"
-
-  puts "Called stop on options #{options.inspect}"
+  print "Flapjack stopping..."
   Dante::Runner.new('flapjack').execute(:kill => true, :pid_path => pidfile)
-
+  puts " done."
 when "restart"
-
-  puts "Called restart on options #{options.inspect}"
+  print "Flapjack restarting..."
   Dante::Runner.new('flapjack').execute(:daemonize => true,
     :restart => true, :pid_path => pidfile, :log_path => logfile) {
 
     sleep 1 # get connection errors without this...
     flapjack_coord.call
   }
-
+  puts " done."
+when "status"
+  runner = Dante::Runner.new('flapjack', :pid_path => pidfile, :log_path => logfile)
+  uptime = (runner.daemon_running?) ? Time.now - File.stat(pidfile).ctime : 0
+  if runner.daemon_running?
+    puts "Flapjack is running: #{uptime}"
+  else
+    puts "Flapjack is not runninng"
+  end
 else
   if ARGV[0].empty?
     puts "No command provided"
