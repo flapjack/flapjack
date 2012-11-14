@@ -38,8 +38,9 @@ class MockLogger
   end
 end
 
-Mail.defaults do
-  delivery_method :test
+# poor man's stubbing
+class MockEmailer
+  include EM::Deferrable
 end
 
 redis_opts = { :db => 14, :driver => :ruby }
@@ -77,10 +78,6 @@ end
 
 Before('@resque') do
   ResqueSpec.reset!
-end
-
-Before('@email') do
-  Mail::TestMailer.deliveries.clear
 end
 
 After('@time') do

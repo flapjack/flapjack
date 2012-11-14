@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    flapjack (0.6.45)
+    flapjack (0.6.46)
       async-rack
       blather
       chronic

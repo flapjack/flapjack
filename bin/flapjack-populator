@@ -64,14 +64,12 @@ when "import-contacts"
 
   if contacts && contacts.is_a?(Enumerable) && contacts.any? {|e| !e['id'].nil?}
     @persistence = Redis.new(redis_options)
-    @persistence.multi do
-      contacts.each do |contact|
-        unless contact['id']
-          puts "Contact not imported as it has no id: " + contact.inspect
-          next
-        end
-        Flapjack::Data::Contact.add(contact, :redis => @persistence)
+    contacts.each do |contact|
+      unless contact['id']
+        puts "Contact not imported as it has no id: " + contact.inspect
+        next
       end
+      Flapjack::Data::Contact.add(contact, :redis => @persistence)
     end
     @persistence.quit
   end
@@ -81,7 +79,6 @@ when "import-entities"
 
   if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
     @persistence = Redis.new(redis_options)
-    @persistence.multi
     entities.each do |entity|
       unless entity['id']
         puts "Entity not imported as it has no id: " + entity.inspect
@@ -89,7 +86,6 @@ when "import-entities"
       end
       Flapjack::Data::Entity.add(entity, :redis => @persistence)
     end
-    @persistence.exec
     @persistence.quit
   end
 

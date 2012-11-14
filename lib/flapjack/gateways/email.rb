@@ -5,8 +5,10 @@ require 'erb'
 require 'haml'
 require 'socket'
 
-require 'flapjack/data/entity_check'
+require 'em-synchrony'
+require 'em/protocols/smtpclient'
 
+require 'flapjack/data/entity_check'
 require 'flapjack/gateways/base'
 
 module Flapjack
@@ -19,24 +21,10 @@ module Flapjack
 
         alias_method :orig_bootstrap, :bootstrap
 
-        # See https://github.com/mikel/mail/blob/master/lib/mail/mail.rb#L53
-        # & https://github.com/mikel/mail/blob/master/spec/mail/configuration_spec.rb
-        # for details of configuring mail gem. defaults to SMTP, localhost, port 25
         def bootstrap(opts = {})
           return if @bootstrapped
-
-          sc = opts[:config].delete('smtp_config')
-
-          if sc
-            smtp_config = sc.keys.inject({}) do |ret,obj|
-                ret[obj.to_sym] = sc[obj]
-                ret
-            end
-
-            Mail.defaults {
-              delivery_method :smtp, {:enable_starttls_auto => false}.merge(smtp_config)
-            }
-          end
+          @smtp_config = opts[:config].delete('smtp_config')
+          @sent = 0
           orig_bootstrap(opts)
         end
 
@@ -49,7 +37,6 @@ module Flapjack
           state              = notification['state']
           summary            = notification['summary']
           time               = notification['time']
-          entity, check      = notification['event_id'].split(':')
 
           entity_check = Flapjack::Data::EntityCheck.for_event_id(notification['event_id'],
             :redis => ::Resque.redis)
@@ -63,37 +50,66 @@ module Flapjack
 
           headline = headline_map[notification_type] || ''
 
-          subject = "#{headline}'#{check}' on #{entity}"
+          subject = "#{headline}'#{entity_check.check}' on #{entity_check.entity_name}"
           subject += " is #{state.upcase}" unless ['acknowledgement', 'test'].include?(notification_type)
 
           notification['subject'] = subject
 
-          mail = prepare_email(notification, :logger => @logger,
-                  :in_scheduled_maintenance   => entity_check.in_scheduled_maintenance?,
-                  :in_unscheduled_maintenance => entity_check.in_unscheduled_maintenance?)
-          mail.deliver!
+          begin
+            host = @smtp_config ? @smtp_config['host'] : nil
+            port = @smtp_config ? @smtp_config['port'] : nil
+
+            fqdn       = `/bin/hostname -f`.chomp
+            m_from     = "flapjack@#{fqdn}"
+            logger.debug("flapjack_mailer: set from to #{m_from}")
+            m_reply_to = m_from
+            m_to       = notification['address']
+
+            mail = prepare_email(notification,
+                    :from => m_from, :to => m_to,
+                    :in_scheduled_maintenance   => entity_check.in_scheduled_maintenance?,
+                    :in_unscheduled_maintenance => entity_check.in_unscheduled_maintenance?)
+
+            email = EM::P::SmtpClient.send(
+              :from     => m_from,
+              :to       => m_to,
+              :content  => "#{mail.to_s}\r\n.\r\n",
+              :domain   => fqdn,
+              :host     => host || 'localhost',
+              :port     => port || 25)
+
+            email.callback {
+              # Could log success here
+            }
+
+            email.errback {
+              # Could log error here
+            }
+
+            response = EM::Synchrony.sync(email)
+
+            # http://tools.ietf.org/html/rfc821#page-36 SMTP response codes
+            if response && response.respond_to?(:code) &&
+              ((response.code == 250) || (response.code == 251))
+              @logger.info "Email sending succeeded"
+              @sent += 1
+            else
+              @logger.info "Email sending failed"
+            end
+
+            @logger.info "Email response: #{response.inspect}"
+
+          rescue Exception => e
+            @logger.error "Error delivering email to #{mail.to}: #{e.message}"
+            @logger.error e.backtrace.join("\n")
+          end
         end
 
       end
 
     private
 
-      def self.prepare_email(notification, opts)
-
-        logger = opts[:logger]
-
-        # not using socket and gethostname as that doesn't give you a fqdn.
-        # see the facter issue: https://projects.puppetlabs.com/issues/3898
-        fqdn       = `/bin/hostname -f`.chomp
-        m_from     = "flapjack@#{fqdn}"
-        logger.debug("flapjack_mailer: set from to #{m_from}")
-        m_reply_to = m_from
-
-        m_to       = notification['address']
-        m_subject  = notification['subject']
-
-        logger.debug("sending Flapjack::Notification::Email " +
-          "#{notification['id']} to: #{m_to} subject: #{m_subject}")
+      def self.prepare_email(notification, opts = {})
 
         @notification_type  = notification['notification_type']
         @contact_first_name = notification['contact_first_name']
@@ -105,6 +121,11 @@ module Flapjack
         @in_unscheduled_maintenance = opts[:in_unscheduled_maintenance]
         @in_scheduled_maintenance   = opts[:in_scheduled_maintenance]
 
+        m_subject  = notification['subject']
+
+        @logger.debug("sending Flapjack::Notification::Email " +
+          "#{notification['id']} to: #{opts[:to]} subject: #{m_subject}")
+
         text_template = ERB.new(File.read(File.dirname(__FILE__) +
           '/email/alert.text.erb'))
 
@@ -113,11 +134,13 @@ module Flapjack
 
         mail_scope = self
 
+        # this part is the only use of the mail gem -- maybe this can be done
+        # using standard library calls instead?
         mail = Mail.new do
-          from     m_from
-          to       m_to
+          from     opts[:from]
+          to       opts[:to]
           subject  m_subject
-          reply_to m_reply_to
+          reply_to opts[:from]
 
           text_part do
             body text_template.result(binding)
