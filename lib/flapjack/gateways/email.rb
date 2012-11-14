@@ -78,14 +78,6 @@ module Flapjack
               :host     => host || 'localhost',
               :port     => port || 25)
 
-            email.callback {
-              # Could log success here
-            }
-
-            email.errback {
-              # Could log error here
-            }
-
             response = EM::Synchrony.sync(email)
 
             # http://tools.ietf.org/html/rfc821#page-36 SMTP response codes

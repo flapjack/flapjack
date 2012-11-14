@@ -149,7 +149,7 @@ When /^the email notification handler runs successfully$/ do
   EM::P::SmtpClient.class_eval {
     def self.send(args = {})
       me = MockEmailer.new
-      me.set_deferred_status :succeeded
+      me.set_deferred_status :succeeded, OpenStruct.new(:code => 250)
       me
     end
   }
@@ -167,7 +167,7 @@ When /^the email notification handler fails to send an email$/ do
   EM::P::SmtpClient.class_eval {
     def self.send(args = {})
       me = MockEmailer.new
-      me.set_deferred_status :failed
+      me.set_deferred_status :failed, OpenStruct.new(:code => 500)
       me
     end
   }
