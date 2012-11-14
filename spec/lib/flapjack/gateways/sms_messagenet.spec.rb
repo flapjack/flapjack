@@ -1,6 +1,6 @@
 require 'spec_helper'
-require 'flapjack/gateways/sms'
+require 'flapjack/gateways/sms_messagenet'
 
-describe Flapjack::Gateways::Sms do
+describe Flapjack::Gateways::SmsMessagenet do
 
 end
