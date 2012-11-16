@@ -23,6 +23,7 @@ OptionParser.new do |opts|
   opts.separator  "     start #{" " * 25} start flapjack"
   opts.separator  "     stop #{" " * 26} stop flapjack"
   opts.separator  "     restart #{" " * 23} restart flapjack"
+  opts.separator  "     reload #{" " * 24} reload flapjack configuration"
   opts.separator  ""
   opts.separator  "Options"
 
@@ -76,38 +77,76 @@ flapjack_coord = Proc.new {
 
 case ARGV[0]
 when "start"
-  print "Flapjack starting..."
-  Dante::Runner.new('flapjack').execute(:daemonize => daemonize,
-    :pid_path => pidfile, :log_path => logfile) {
+  runner = Dante::Runner.new('flapjack', :pid_path => pidfile,
+    :log_path => logfile)
 
-    flapjack_coord.call
-  }
-  puts " done."
+  if runner.daemon_running?
+    puts "Flapjack is already running."
+  else
+    print "Flapjack starting..."
+    runner.execute(:daemonize => daemonize) {
+      flapjack_coord.call
+    }
+    puts " done."
+  end
 when "stop"
-  print "Flapjack stopping..."
-  Dante::Runner.new('flapjack').execute(:kill => true, :pid_path => pidfile)
-  puts " done."
-when "restart"
-  print "Flapjack restarting..."
-  Dante::Runner.new('flapjack').execute(:daemonize => true,
-    :restart => true, :pid_path => pidfile, :log_path => logfile) {
+  runner = Dante::Runner.new('flapjack', :pid_path => pidfile,
+    :log_path => logfile)
 
-    sleep 1 # get connection errors without this...
-    flapjack_coord.call
-  }
-  puts " done."
+  if runner.daemon_running?
+    print "Flapjack stopping..."
+    runner.execute(:kill => true)
+    puts " done."
+  else
+    puts "Flapjack is not running."
+  end
+
+when "restart"
+  runner = Dante::Runner.new('flapjack', :pid_path => pidfile,
+    :log_path => logfile)
+
+  if runner.daemon_running?
+    print "Flapjack restarting..."
+    runner.execute(:daemonize => true, :restart => true) {
+      sleep 1 # get connection errors without this...
+      flapjack_coord.call
+    }
+    puts " done."
+  else
+    puts "Flapjack is not running."
+  end
+
+when "reload"
+  runner = Dante::Runner.new('flapjack', :pid_path => pidfile, :log_path => logfile)
+
+  if runner.daemon_running?
+    print "Reloading Flapjack configuration..."
+    begin
+      pid = IO.read(pidfile).chomp.to_i
+      Process.kill('HUP', pid)
+      puts " sent HUP to pid #{pid}."
+    rescue => e
+      puts " couldn't send HUP to pid '#{pid}'."
+    end
+  else
+    puts "Flapjack is not running daemonized."
+  end
+
 when "status"
   runner = Dante::Runner.new('flapjack', :pid_path => pidfile, :log_path => logfile)
+
   uptime = (runner.daemon_running?) ? Time.now - File.stat(pidfile).ctime : 0
   if runner.daemon_running?
     puts "Flapjack is running: #{uptime}"
   else
     puts "Flapjack is not runninng"
   end
+
 else
   if ARGV[0].empty?
     puts "No command provided"
   else
     puts "Unknown command provided: '#{ARGV[0]}'"
   end
+
 end
