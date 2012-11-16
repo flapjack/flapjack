@@ -9,7 +9,7 @@ require 'flapjack/gateways/email'
 
 require 'flapjack/coordinator'
 
-describe Flapjack::Coordinator do
+describe Flapjack::Coordinator, :logger => true do
 
   let(:fiber)  { mock(Fiber) }
   let(:config) { mock(Flapjack::Configuration) }
@@ -17,7 +17,7 @@ describe Flapjack::Coordinator do
   # leaving actual testing of daemonisation to that class's tests
   it "daemonizes properly" do
     config.should_receive(:for_redis).and_return({})
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, test_logger(self.class.description))
 
     fc.should_receive(:daemonize)
     fc.should_not_receive(:build_pikelet)
@@ -29,7 +29,7 @@ describe Flapjack::Coordinator do
     config.should_receive(:for_redis).and_return({})
     config.should_receive(:all).and_return('executive' => {'enabled' => 'yes'})
 
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, test_logger(self.class.description))
     fc.should_receive(:build_pikelet)
     fc.start(:daemonize => false, :signals => false)
   end
@@ -40,7 +40,7 @@ describe Flapjack::Coordinator do
     config.should_receive(:for_redis).and_return({})
     config.should_receive(:all).and_return('executive' => {'enabled' => 'yes'})
 
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, test_logger(self.class.description))
     fc.should_receive(:build_pikelet)
     fc.after_daemonize
   end
@@ -53,7 +53,7 @@ describe Flapjack::Coordinator do
     Kernel.should_receive(:trap).with('QUIT').and_yield
 
     config.should_receive(:for_redis).and_return({})
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, test_logger(self.class.description))
     fc.should_receive(:stop).exactly(3).times
 
     fc.send(:setup_signals)
@@ -67,7 +67,7 @@ describe Flapjack::Coordinator do
     Kernel.should_not_receive(:trap).with('QUIT')
 
     config.should_receive(:for_redis).and_return({})
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, test_logger(self.class.description))
     fc.should_receive(:stop).twice
 
     fc.send(:setup_signals)
@@ -117,7 +117,7 @@ describe Flapjack::Coordinator do
 
     config.should_receive(:for_redis).and_return({})
 
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, test_logger(self.class.description))
     fc.instance_variable_set('@redis_options', {})
     fc.instance_variable_set('@pikelets', pikelets)
     fc.stop
@@ -135,7 +135,7 @@ describe Flapjack::Coordinator do
 
     config.should_receive(:for_redis).and_return({})
 
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, test_logger(self.class.description))
     fc.send(:build_pikelet, Flapjack::Executive, {'enabled' => 'yes'})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
@@ -156,7 +156,7 @@ describe Flapjack::Coordinator do
 
     config.should_receive(:for_redis).and_return({})
 
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, test_logger(self.class.description))
     fc.should_receive(:stop)
     fc.send(:build_pikelet, Flapjack::Gateways::Jabber, {'enabled' => 'yes'})
     pikelets = fc.instance_variable_get('@pikelets')
@@ -180,7 +180,7 @@ describe Flapjack::Coordinator do
 
     config.should_receive(:for_redis).and_return({})
 
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, test_logger(self.class.description))
     fc.send(:build_pikelet, Flapjack::Gateways::Email, {'enabled' => 'yes'})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil
@@ -203,7 +203,7 @@ describe Flapjack::Coordinator do
 
     config.should_receive(:for_redis).and_return({})
 
-    fc = Flapjack::Coordinator.new(config)
+    fc = Flapjack::Coordinator.new(config, test_logger(self.class.description))
     fc.send(:build_pikelet, Flapjack::Gateways::Web, {'enabled' => 'yes'})
     pikelets = fc.instance_variable_get('@pikelets')
     pikelets.should_not be_nil

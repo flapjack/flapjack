@@ -38,6 +38,18 @@ RSpec.configure do |config|
   #     --seed 1234
   config.order = 'random'
 
+  config.before(:each, :logger => true) do
+    def test_logger(class_name)
+      logger = Log4r::Logger.new(class_name)
+      outp = Log4r::FileOutputter.new(class_name,
+        :filename => File.join(File.dirname(__FILE__), '..', 'log', 'test.log'))
+      outp.formatter = Log4r::PatternFormatter.new(:pattern => "[%l] %d :: #{class_name} :: %m",
+        :date_pattern => "%Y-%m-%dT%H:%M:%S%z")
+      logger.add(outp)
+      logger
+    end
+  end
+
   config.around(:each, :redis => true) do |example|
     @redis = ::Redis.new(:db => 14, :driver => :ruby)
     @redis.flushdb

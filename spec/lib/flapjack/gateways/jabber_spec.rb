@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'flapjack/gateways/jabber'
 
-describe Flapjack::Gateways::Jabber do
+describe Flapjack::Gateways::Jabber, :logger => true do
 
   let(:config) { {'queue'    => 'jabber_notifications',
                   'server'   => 'example.com',
@@ -20,7 +20,7 @@ describe Flapjack::Gateways::Jabber do
 
     fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new)
-    fj.bootstrap(:config => config)
+    fj.bootstrap(:config => config, :logger => test_logger(self.class.description))
 
     EventMachine::Synchrony.should_receive(:next_tick).exactly(4).times.and_yield
 
@@ -42,7 +42,7 @@ describe Flapjack::Gateways::Jabber do
   it "joins a chat room after connecting" do
     fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new).twice
-    fj.bootstrap(:config => config)
+    fj.bootstrap(:config => config, :logger => test_logger(self.class.description))
 
     fj.should_receive(:connected?).and_return(true)
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Presence))
@@ -74,7 +74,7 @@ describe Flapjack::Gateways::Jabber do
 
     fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new)
-    fj.bootstrap(:config => config)
+    fj.bootstrap(:config => config, :logger => test_logger(self.class.description))
     fj.instance_variable_set('@redis_handler', redis)
 
     fj.should_receive(:connected?).and_return(true)
@@ -91,7 +91,7 @@ describe Flapjack::Gateways::Jabber do
 
     fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new)
-    fj.bootstrap(:config => config)
+    fj.bootstrap(:config => config, :logger => test_logger(self.class.description))
 
     fj.should_receive(:connected?).and_return(true)
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
@@ -102,7 +102,7 @@ describe Flapjack::Gateways::Jabber do
   it "reconnects when disconnected (if not quitting)" do
     fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new)
-    fj.bootstrap(:config => config)
+    fj.bootstrap(:config => config, :logger => test_logger(self.class.description))
 
     EventMachine::Timer.should_receive(:new).with(1).and_yield
     fj.should_receive(:connect)
@@ -117,7 +117,7 @@ describe Flapjack::Gateways::Jabber do
 
     fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new)
-    fj.bootstrap(:config => config)
+    fj.bootstrap(:config => config, :logger => test_logger(self.class.description))
 
     fj.add_shutdown_event(:redis => redis)
   end
@@ -135,7 +135,7 @@ describe Flapjack::Gateways::Jabber do
 
     fj = Flapjack::Gateways::Jabber.new
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    fj.bootstrap(:config => config)
+    fj.bootstrap(:config => config, :logger => test_logger(self.class.description))
     fj.should_receive(:register_handler).exactly(4).times
 
     fj.should_receive(:connect)

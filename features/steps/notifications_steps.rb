@@ -147,7 +147,7 @@ end
 
 When /^the email notification handler runs successfully$/ do
   Resque.redis = @redis
-  Flapjack::Gateways::Email.bootstrap(:config => {})
+  Flapjack::Gateways::Email.bootstrap(:config => {}, :logger => @logger)
   lambda {
     Flapjack::Gateways::Email.perform(@email_notification)
   }.should_not raise_error
@@ -158,6 +158,7 @@ end
 # won't ever fail, don't test for failure?
 When /^the email notification handler fails to send an email$/ do
   pending
+  Flapjack::Gateways::Email.bootstrap(:config => {}, :logger => @logger)
   lambda {
     @email_notification['address'] = nil
     Flapjack::Gateways::Email.perform(@email_notification)

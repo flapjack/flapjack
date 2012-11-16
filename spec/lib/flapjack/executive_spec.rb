@@ -1,10 +1,11 @@
 require 'spec_helper'
 require 'flapjack/executive'
 
-describe Flapjack::Executive, :redis => true do
+describe Flapjack::Executive, :redis => true, :logger => true do
 
-  # NB: this is only testing the public API of the Executive class, which is pretty limited.
-  # (initialize, main, stop). Most test coverage for this class comes from the cucumber features.
+  # NB: this is only testing the public API of the Executive class,
+  # which is pretty limited (initialize, main, stop). Most test
+  # coverage for this class currently comes from the cucumber features.
 
   it "prompts the blocking redis connection to quit" do
     redis = mock('redis')
@@ -35,7 +36,7 @@ describe Flapjack::Executive, :redis => true do
 
     executive = Flapjack::Executive.new
     Flapjack::RedisPool.should_receive(:new).and_return(@redis)
-    executive.bootstrap(:config => {})
+    executive.bootstrap(:config => {}, :logger => test_logger(self.class.description))
     @redis.should_receive(:empty!)
 
     # hacky, but the behaviour it's mimicking (shutdown from another thread) isn't

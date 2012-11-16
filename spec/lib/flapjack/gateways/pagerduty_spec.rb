@@ -4,7 +4,7 @@ require 'yajl/json_gem'
 
 require 'flapjack/gateways/pagerduty'
 
-describe Flapjack::Gateways::Pagerduty, :redis => true do
+describe Flapjack::Gateways::Pagerduty, :redis => true, :logger => true do
 
   let(:config) { {'queue'    => 'pagerduty_notifications'} }
 
@@ -16,7 +16,7 @@ describe Flapjack::Gateways::Pagerduty, :redis => true do
 
     fp = Flapjack::Gateways::Pagerduty.new
     Flapjack::RedisPool.should_receive(:new)
-    fp.bootstrap(:config => config)
+    fp.bootstrap(:config => config, :logger => test_logger(self.class.description))
     fp.add_shutdown_event(:redis => redis)
   end
 
@@ -25,7 +25,7 @@ describe Flapjack::Gateways::Pagerduty, :redis => true do
 
     fp = Flapjack::Gateways::Pagerduty.new
     Flapjack::RedisPool.should_receive(:new)
-    fp.bootstrap(:config => config)
+    fp.bootstrap(:config => config, :logger => test_logger(self.class.description))
     fp.instance_variable_set("@redis_timer", @redis)
 
     fp.should_not_receive(:find_pagerduty_acknowledgements)
@@ -35,7 +35,7 @@ describe Flapjack::Gateways::Pagerduty, :redis => true do
   it "looks for acknowledgements if the search is not already running" do
     fp = Flapjack::Gateways::Pagerduty.new
     Flapjack::RedisPool.should_receive(:new)
-    fp.bootstrap(:config => config)
+    fp.bootstrap(:config => config, :logger => test_logger(self.class.description))
     fp.instance_variable_set("@redis_timer", @redis)
 
     fp.should_receive(:find_pagerduty_acknowledgements)
@@ -49,7 +49,7 @@ describe Flapjack::Gateways::Pagerduty, :redis => true do
   # NB: needs to run in synchrony block to catch the evented HTTP requests
   it "looks for acknowledgements via the PagerDuty API" do
     check = 'PING'
-    Time.should_receive(:now).and_return(time)
+    Time.should_receive(:now).at_least(:once).and_return(time)
     since = (time.utc - (60*60*24*7)).iso8601 # the last week
     unt   = (time.utc + (60*60*24)).iso8601   # 1 day in the future
 
@@ -74,7 +74,7 @@ describe Flapjack::Gateways::Pagerduty, :redis => true do
     EM.synchrony do
       fp = Flapjack::Gateways::Pagerduty.new
       Flapjack::RedisPool.should_receive(:new)
-      fp.bootstrap(:config => config)
+      fp.bootstrap(:config => config, :logger => test_logger(self.class.description))
 
       result = fp.send(:pagerduty_acknowledged?, 'subdomain' => 'flpjck', 'username' => 'flapjack',
         'password' => 'password123', 'check' => check)
@@ -91,7 +91,7 @@ describe Flapjack::Gateways::Pagerduty, :redis => true do
   it "creates acknowledgements when pagerduty acknowledgements are found" do
     fp = Flapjack::Gateways::Pagerduty.new
     Flapjack::RedisPool.should_receive(:new)
-    fp.bootstrap(:config => config)
+    fp.bootstrap(:config => config, :logger => test_logger(self.class.description))
 
     entity_check = mock('entity_check')
     entity_check.should_receive(:check).and_return('PING')
@@ -121,7 +121,7 @@ describe Flapjack::Gateways::Pagerduty, :redis => true do
 
     fp = Flapjack::Gateways::Pagerduty.new
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    fp.bootstrap(:config => config)
+    fp.bootstrap(:config => config, :logger => test_logger(self.class.description))
 
     fp.should_receive(:should_quit?).exactly(3).times.and_return(false, false, true)
     redis.should_receive(:blpop).twice.and_return(
@@ -149,7 +149,7 @@ describe Flapjack::Gateways::Pagerduty, :redis => true do
     EM.synchrony do
       fp = Flapjack::Gateways::Pagerduty.new
       Flapjack::RedisPool.should_receive(:new)
-      fp.bootstrap(:config => config)
+      fp.bootstrap(:config => config, :logger => test_logger(self.class.description))
 
       ret = fp.send(:test_pagerduty_connection)
       ret.should be_true
@@ -172,7 +172,7 @@ describe Flapjack::Gateways::Pagerduty, :redis => true do
 
       fp = Flapjack::Gateways::Pagerduty.new
       Flapjack::RedisPool.should_receive(:new)
-      fp.bootstrap(:config => config)
+      fp.bootstrap(:config => config, :logger => test_logger(self.class.description))
 
       ret = fp.send(:send_pagerduty_event, evt)
       ret.should_not be_nil
