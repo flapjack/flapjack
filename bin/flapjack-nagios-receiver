@@ -35,7 +35,7 @@ runner.execute do |opts|
   FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
   config = Flapjack::Configuration.new
-  config.load(opts.config || File.join('etc', 'flapjack_config.yaml'))
+  config.load(opts.config || File.join(File.dirname(__FILE__), 'etc', 'flapjack_config.yaml'))
   @config_env = config.all
   @redis_options = config.for_redis
 
