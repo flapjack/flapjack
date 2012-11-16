@@ -121,7 +121,7 @@ module Flapjack
         action       = nil
         entity_check = nil
         case
-        when command =~ /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration.*?(\d+.*\w+.*))?)$/i;
+        when command =~ /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i;
           ackid        = $1
           comment      = $2
           duration_str = $3
