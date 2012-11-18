@@ -135,4 +135,40 @@ describe Flapjack::Data::Entity, :redis => true do
     entities.first.should == 'abc-123'
   end
 
+  it "adds tags to entities" do
+    entity = Flapjack::Data::Entity.add({'id'       => '5000',
+                                         'name'     => 'abc-123',
+                                         'contacts' => []},
+                                        :redis => @redis)
+
+    entity.add_tags('source:foobar', 'foo')
+
+    entity.should_not be_nil
+    entity.should be_an(Flapjack::Data::Entity)
+    entity.name.should == 'abc-123'
+    entity.tags.should include("source:foobar")
+    entity.tags.should include("foo")
+  end
+
+  it "deletes tags from entities" do
+    entity = Flapjack::Data::Entity.add({'id'       => '5000',
+                                         'name'     => 'abc-123',
+                                         'contacts' => []},
+                                        :redis => @redis)
+
+    entity.add_tags('source:foobar', 'foo')
+
+    entity.should_not be_nil
+    entity.tags.should include("source:foobar")
+    entity.tags.should include("foo")
+
+    entity.delete_tags('source:foobar')
+
+    entity.tags.should_not include("source:foobar")
+    entity.tags.should include("foo")
+
+  end
+
+  it "finds entities by tag"
+
 end
