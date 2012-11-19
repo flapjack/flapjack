@@ -11,6 +11,8 @@ module Flapjack
 
       attr_accessor :name, :id, :tags
 
+      ENTITY_TAG_PREFIX = 'entity_tag'
+
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.keys("entity_id:*").collect {|k|
@@ -84,6 +86,22 @@ module Flapjack
         }.sort
       end
 
+      def self.find_all_with_tag(tag, options = {})
+        self.find_all_with_tags([tag], options)
+      end
+
+      def self.find_all_with_tags(tags, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        #tag_prefix = 'entity_tag'
+        tags_prefixed = tags.collect {|tag|
+          "#{ENTITY_TAG_PREFIX}:#{tag}"
+        }
+        puts "tags_prefixed: #{tags_prefixed.inspect}"
+        Flapjack::Data::Tag.find_intersection(tags_prefixed, :redis => redis).collect {|entity_id|
+          Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis).name
+        }.compact
+      end
+
       def contacts
         contact_ids = @redis.smembers("contacts_for:#{id}")
 
@@ -109,14 +127,14 @@ module Flapjack
 
       def add_tags(*enum)
         enum.each do |t|
-          Flapjack::Data::Tag.create("#{@tag_prefix}:#{t}", [@id], :redis => @redis)
+          Flapjack::Data::Tag.create("#{ENTITY_TAG_PREFIX}:#{t}", [@id], :redis => @redis)
           @tags.add(t)
         end
       end
 
       def delete_tags(*enum)
         enum.each do |t|
-          tag = Flapjack::Data::Tag.find("#{@tag_prefix}:#{t}", :redis => @redis)
+          tag = Flapjack::Data::Tag.find("#{ENTITY_TAG_PREFIX}:#{t}", :redis => @redis)
           tag.delete(@id)
           @tags.delete(t)
         end
@@ -132,11 +150,10 @@ module Flapjack
         @id = options[:id]
         @logger = options[:logger]
 
-        @tag_prefix = 'entity_tag'
         @tags = ::Set.new
-        tag_data = @redis.keys("#{@tag_prefix}:*").inject([]) do |memo, entity_tag|
+        tag_data = @redis.keys("#{ENTITY_TAG_PREFIX}:*").inject([]) do |memo, entity_tag|
           tag = Flapjack::Data::Tag.find(entity_tag, :redis => @redis)
-          memo << entity_tag.sub(%r(^#{@tag_prefix}:), '') if tag.include?(@id.to_s)
+          memo << entity_tag.sub(%r(^#{ENTITY_TAG_PREFIX}:), '') if tag.include?(@id.to_s)
           memo
         end
         @tags.merge(tag_data)

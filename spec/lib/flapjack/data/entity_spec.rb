@@ -176,16 +176,66 @@ describe Flapjack::Data::Entity, :redis => true do
   end
 
   it "finds entities by tag" do
-    entity = Flapjack::Data::Entity.add({'id'       => '5000',
+    entity0 = Flapjack::Data::Entity.add({'id'       => '5000',
                                          'name'     => 'abc-123',
                                          'contacts' => []},
                                         :redis => @redis)
 
-    entity.add_tags('source:foobar', 'foo')
+    entity1 = Flapjack::Data::Entity.add({'id'       => '5001',
+                                         'name'     => 'def-456',
+                                         'contacts' => []},
+                                        :redis => @redis)
 
-    entity.should_not be_nil
-    entity.should be_an(Flapjack::Data::Entity)
-    # TODO - the rest of it
+    entity0.add_tags('source:foobar', 'abc')
+    entity1.add_tags('source:foobar', 'def')
+
+    entity0.should_not be_nil
+    entity0.should be_an(Flapjack::Data::Entity)
+    entity0.tags.should include("source:foobar")
+    entity0.tags.should include("abc")
+    entity1.should_not be_nil
+    entity1.should be_an(Flapjack::Data::Entity)
+    entity1.tags.should include("source:foobar")
+    entity1.tags.should include("def")
+
+    entities = Flapjack::Data::Entity.find_all_with_tag('abc', :redis => @redis)
+    entities.should be_an(Array)
+    entities.should have(1).entity
+    entities.first.should == 'abc-123'
+
+  end
+
+  it "finds entities with several tags" do
+    entity0 = Flapjack::Data::Entity.add({'id'       => '5000',
+                                         'name'     => 'abc-123',
+                                         'contacts' => []},
+                                        :redis => @redis)
+
+    entity1 = Flapjack::Data::Entity.add({'id'       => '5001',
+                                         'name'     => 'def-456',
+                                         'contacts' => []},
+                                        :redis => @redis)
+
+    entity0.add_tags('source:foobar', 'abc')
+    entity1.add_tags('source:foobar', 'def')
+
+    entity0.should_not be_nil
+    entity0.should be_an(Flapjack::Data::Entity)
+    entity0.tags.should include("source:foobar")
+    entity0.tags.should include("abc")
+    entity1.should_not be_nil
+    entity1.should be_an(Flapjack::Data::Entity)
+    entity1.tags.should include("source:foobar")
+    entity1.tags.should include("def")
+
+    entities = Flapjack::Data::Entity.find_all_with_tags(['source:foobar'], :redis => @redis)
+    entities.should be_an(Array)
+    entities.should have(2).entity
+
+    entities = Flapjack::Data::Entity.find_all_with_tags(['source:foobar', 'def'], :redis => @redis)
+    entities.should be_an(Array)
+    entities.should have(1).entity
+    entities.first.should == 'def-456'
   end
 
 end

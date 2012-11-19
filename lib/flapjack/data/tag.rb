@@ -24,6 +24,11 @@ module Flapjack
                  :redis => opts[:redis])
       end
 
+      def self.find_intersection(tags, opts)
+        @redis = opts[:redis]
+        @redis.sinter(tags)
+      end
+
       def self.create(name, enum = [], opts)
         self.new(:name => name,
                  :create => enum,
