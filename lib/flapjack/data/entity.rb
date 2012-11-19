@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'flapjack/data/contact'
+require 'flapjack/data/tag'
 
 module Flapjack
 
@@ -8,7 +9,7 @@ module Flapjack
 
     class Entity
 
-      attr_accessor :name, :id
+      attr_accessor :name, :id, :tags
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
@@ -38,10 +39,14 @@ module Flapjack
               redis.sadd("contacts_for:#{entity['id']}", contact_id)
             }
           end
+          self.new(:name  => entity['name'],
+                   :id    => entity['id'],
+                   :redis => redis)
         else
           # empty string is the redis equivalent of a Ruby nil, i.e. key with
           # no value
           redis.set("entity_id:#{entity['name']}", '')
+          nil
         end
       end
 
@@ -102,6 +107,21 @@ module Flapjack
         checks.length
       end
 
+      def add_tags(*enum)
+        enum.each do |t|
+          Flapjack::Data::Tag.create("#{@tag_prefix}:#{t}", [@id], :redis => @redis)
+          @tags.add(t)
+        end
+      end
+
+      def delete_tags(*enum)
+        enum.each do |t|
+          tag = Flapjack::Data::Tag.find("#{@tag_prefix}:#{t}", :redis => @redis)
+          tag.delete(@id)
+          @tags.delete(t)
+        end
+      end
+
     private
 
       # NB: initializer should not be used directly -- instead one of the finder methods
@@ -111,6 +131,16 @@ module Flapjack
         raise "Entity name not set" unless @name = options[:name]
         @id = options[:id]
         @logger = options[:logger]
+
+        @tag_prefix = 'entity_tag'
+        @tags = ::Set.new
+        tag_data = @redis.keys("#{@tag_prefix}:*").inject([]) do |memo, entity_tag|
+          tag = Flapjack::Data::Tag.find(entity_tag, :redis => @redis)
+          memo << entity_tag.sub(%r(^#{@tag_prefix}:), '') if tag.include?(@id.to_s)
+          memo
+        end
+        @tags.merge(tag_data)
+
       end
 
     end
