@@ -18,7 +18,7 @@ require 'flapjack/pikelet'
 require 'flapjack/redis_pool'
 
 require 'flapjack/gateways/email'
-require 'flapjack/gateways/sms'
+require 'flapjack/gateways/sms_messagenet'
 
 module Flapjack
 
@@ -256,7 +256,7 @@ module Flapjack
         # TODO consider changing Resque jobs to use raw blpop like the others
         case media_type
         when :sms
-          Resque.enqueue_to(@queues[:sms], Flapjack::Gateways::Sms, contents)
+          Resque.enqueue_to(@queues[:sms], Flapjack::Gateways::SmsMessagenet, contents)
         when :email
           Resque.enqueue_to(@queues[:email], Flapjack::Gateways::Email, contents)
         when :jabber

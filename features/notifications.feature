@@ -44,13 +44,11 @@ Feature: notifications
     When the SMS notification handler fails to send an SMS
     Then the user should not receive an SMS notification
 
-  @email
   Scenario: Send a queued email notification
     Given a user email notification has been queued for entity 'example.com'
     When the email notification handler runs successfully
     Then the user should receive an email notification
 
-  @email
   Scenario: Handle a failure to send a queued email notification
     Given a user email notification has been queued for entity 'example.com'
     When the email notification handler fails to send an email

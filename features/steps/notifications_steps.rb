@@ -1,6 +1,4 @@
 
-include Mail::Matchers
-
 # copied from flapjack-populator
 # TODO use Flapjack::Data::Contact.add
 def add_contact(contact = {})
@@ -125,57 +123,72 @@ end
 
 # TODO may need to get more complex, depending which SMS provider is used
 When /^the SMS notification handler runs successfully$/ do
-  # returns success by default - currently matches all addresses, maybe load from config?
-  stub_request(:get, /.*/)
-  # TODO load config from cfg file instead?
-  Flapjack::Gateways::Sms.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
+  @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_URL)}/)
 
-  lambda {
-    Flapjack::Gateways::Sms.dispatch(@sms_notification, :logger => @logger, :redis => @redis)
-  }.should_not raise_error
-  @sms_sent = true
+  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
+  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@logger', @logger)
+  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@sent', 0)
+  Flapjack::Gateways::SmsMessagenet.perform(@sms_notification)
 end
 
 When /^the SMS notification handler fails to send an SMS$/ do
-  stub_request(:any, /.*/).to_return(:status => [500, "Internal Server Error"])
-
-  lambda {
-    Flapjack::Gateways::Sms.dispatch(@sms_notification, :logger => @logger, :redis => @redis)
-  }.should raise_error
-  @sms_sent = false
+  @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_URL)}/).to_return(:status => [500, "Internal Server Error"])
+  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
+  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@logger', @logger)
+  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@sent', 0)
+  Flapjack::Gateways::SmsMessagenet.perform(@sms_notification)
 end
 
 When /^the email notification handler runs successfully$/ do
   Resque.redis = @redis
-  Flapjack::Gateways::Email.bootstrap(:config => {})
-  lambda {
-    Flapjack::Gateways::Email.perform(@email_notification)
-  }.should_not raise_error
+  Flapjack::Gateways::Email.bootstrap(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}})
+  Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
+  Flapjack::Gateways::Email.instance_variable_set('@sent', 0)
+
+  # poor man's stubbing
+  EM::P::SmtpClient.class_eval {
+    def self.send(args = {})
+      me = MockEmailer.new
+      me.set_deferred_status :succeeded, OpenStruct.new(:code => 250)
+      me
+    end
+  }
+
+  Flapjack::Gateways::Email.perform(@email_notification)
 end
 
-# This doesn't work as I have it here -- sends a mail with an empty To: header instead.
-# Might have to introduce Rspec's stubs here to fake bad mailer behaviour -- or if mail sending
-# won't ever fail, don't test for failure?
 When /^the email notification handler fails to send an email$/ do
-  pending
-  lambda {
-    @email_notification['address'] = nil
-    Flapjack::Gateways::Email.perform(@email_notification)
-  }.should_not raise_error
+  Resque.redis = @redis
+  Flapjack::Gateways::Email.bootstrap(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}})
+  Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
+  Flapjack::Gateways::Email.instance_variable_set('@sent', 0)
+
+  # poor man's stubbing
+  EM::P::SmtpClient.class_eval {
+    def self.send(args = {})
+      me = MockEmailer.new
+      me.set_deferred_status :failed, OpenStruct.new(:code => 500)
+      me
+    end
+  }
+
+  Flapjack::Gateways::Email.perform(@email_notification)
 end
 
 Then /^the user should receive an SMS notification$/ do
-  @sms_sent.should be_true
+  @request.should have_been_requested
+  Flapjack::Gateways::SmsMessagenet.instance_variable_get('@sent').should == 1
 end
 
 Then /^the user should receive an email notification$/ do
-  have_sent_email.should be_true
+  Flapjack::Gateways::Email.instance_variable_get('@sent').should == 1
 end
 
 Then /^the user should not receive an SMS notification$/ do
-  @sms_sent.should be_false
+  @request.should have_been_requested
+  Flapjack::Gateways::SmsMessagenet.instance_variable_get('@sent').should == 0
 end
 
 Then /^the user should not receive an email notification$/ do
-  have_sent_email.should be_false
+  Flapjack::Gateways::Email.instance_variable_get('@sent').should == 0
 end
