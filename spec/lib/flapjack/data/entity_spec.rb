@@ -148,6 +148,12 @@ describe Flapjack::Data::Entity, :redis => true do
     entity.name.should == 'abc-123'
     entity.tags.should include("source:foobar")
     entity.tags.should include("foo")
+
+    # and test the tags as read back from redis
+    entity = Flapjack::Data::Entity.find_by_id('5000', :redis => @redis)
+    entity.tags.should include("source:foobar")
+    entity.tags.should include("foo")
+
   end
 
   it "deletes tags from entities" do
@@ -169,6 +175,17 @@ describe Flapjack::Data::Entity, :redis => true do
 
   end
 
-  it "finds entities by tag"
+  it "finds entities by tag" do
+    entity = Flapjack::Data::Entity.add({'id'       => '5000',
+                                         'name'     => 'abc-123',
+                                         'contacts' => []},
+                                        :redis => @redis)
+
+    entity.add_tags('source:foobar', 'foo')
+
+    entity.should_not be_nil
+    entity.should be_an(Flapjack::Data::Entity)
+    # TODO - the rest of it
+  end
 
 end

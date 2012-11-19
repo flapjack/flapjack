@@ -135,9 +135,8 @@ module Flapjack
         @tag_prefix = 'entity_tag'
         @tags = ::Set.new
         tag_data = @redis.keys("#{@tag_prefix}:*").inject([]) do |memo, entity_tag|
-          tag = Foo::Tag.find(entity_tag, :redis => @redis)
-          entity_tag.sub!(%r(^#{@tag_prefix}:), '')
-          memo << tag.name if tag.include?(@id.to_s)
+          tag = Flapjack::Data::Tag.find(entity_tag, :redis => @redis)
+          memo << entity_tag.sub(%r(^#{@tag_prefix}:), '') if tag.include?(@id.to_s)
           memo
         end
         @tags.merge(tag_data)
