@@ -36,24 +36,24 @@ module Flapjack
                    redis.keys('contacts_for:*') )
       end
 
-      def self.find_by_id(id, options = {})
+      def self.find_by_id(contact_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        raise "No id value passed" unless id
+        raise "No id value passed" unless contact_id
         logger = options[:logger]
 
-        return unless redis.hexists("contact:#{id}", 'first_name')
+        return unless redis.hexists("contact:#{contact_id}", 'first_name')
 
-        fn, ln, em = redis.hmget("contact:#{id}", 'first_name', 'last_name', 'email')
-        me = redis.hgetall("contact_media:#{id}")
+        fn, ln, em = redis.hmget("contact:#{contact_id}", 'first_name', 'last_name', 'email')
+        me = redis.hgetall("contact_media:#{contact_id}")
 
         # similar to code in instance method pagerduty_credentials
         pc = nil
-        if service_key = redis.hget("contact_media:#{id}", 'pagerduty')
-          pc = redis.hgetall("contact_pagerduty:#{id}").merge('service_key' => service_key)
+        if service_key = redis.hget("contact_media:#{contact_id}", 'pagerduty')
+          pc = redis.hgetall("contact_pagerduty:#{contact_id}").merge('service_key' => service_key)
         end
 
         self.new(:first_name => fn, :last_name => ln,
-          :email => em, :id => id, :media => me, :pagerduty_credentials => pc, :redis => redis )
+          :email => em, :id => contact_id, :media => me, :pagerduty_credentials => pc, :redis => redis )
       end
 
 

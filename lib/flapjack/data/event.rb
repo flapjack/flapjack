@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'yajl'
+
 module Flapjack
   module Data
     class Event
