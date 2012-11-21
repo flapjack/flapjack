@@ -26,7 +26,7 @@ require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
 require 'flapjack/gateways/pagerduty'
 require 'flapjack/gateways/email'
-require 'flapjack/gateways/sms'
+require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/web'
 
 module Flapjack
@@ -255,7 +255,7 @@ module Flapjack
                      'pagerduty'  => Flapjack::Gateways::Pagerduty,
                      'oobetet'    => Flapjack::Gateways::Oobetet,
                      'email'      => Flapjack::Gateways::Email,
-                     'sms'        => Flapjack::Gateways::Sms}
+                     'sms'        => Flapjack::Gateways::SmsMessagenet}
 
 
     def pikelets(config_env)
