@@ -111,7 +111,7 @@ module Flapjack
 
         stanza_body = stanza.body
 
-        logger.debug("groupchat stanza body: " + stanza_body)
+        logger.debug("groupchat stanza body: #{stanza_body}")
         logger.debug("groupchat message received: #{stanza.inspect}")
 
         if (stanza_body =~ /^(?:problem|recovery|acknowledgement)/i) &&
