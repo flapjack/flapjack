@@ -20,8 +20,6 @@ require 'flapjack/gateways/api/entity_presenter'
 require 'flapjack/rack_logger'
 require 'flapjack/redis_pool'
 
-require 'flapjack/gateways/base'
-
 # from https://github.com/sinatra/sinatra/issues/501
 # TODO move to its own file
 module Rack
@@ -60,8 +58,8 @@ module Flapjack
       else
         # doesn't work with Rack::Test unless we wrap tests in EM.synchrony blocks
         rescue_exception = Proc.new { |env, exception|
-          logger.error exception.message
-          logger.error exception.backtrace.join("\n")
+          @logger.error exception.message
+          @logger.error exception.backtrace.join("\n")
           [503, {}, {:errors => [exception.message]}.to_json]
         }
 
@@ -71,28 +69,14 @@ module Flapjack
       use Rack::JsonParamsParser
 
       class << self
-        include Flapjack::Gateways::Thin
+        def start
+          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
 
-        attr_accessor :redis
-
-        alias_method :thin_bootstrap, :bootstrap
-        alias_method :thin_cleanup,   :cleanup
-
-        def bootstrap(opts = {})
-          thin_bootstrap(opts)
-          @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
-
-          if config && config['access_log']
-            access_logger = Flapjack::RackLogger.new(config['access_log'])
+          if @config && @config['access_log']
+            access_logger = Flapjack::RackLogger.new(@config['access_log'])
             use Rack::CommonLogger, access_logger
           end
         end
-
-        def cleanup
-          @redis.empty! if @redis
-          thin_cleanup
-        end
-
       end
 
       def redis

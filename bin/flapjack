@@ -123,10 +123,10 @@ when "reload"
     print "Reloading Flapjack configuration..."
     begin
       pid = IO.read(pidfile).chomp.to_i
-      Process.kill('HUP', pid)
-      puts " sent HUP to pid #{pid}."
+      Process.kill('USR1', pid)
+      puts " sent USR1 to pid #{pid}."
     rescue => e
-      puts " couldn't send HUP to pid '#{pid}'."
+      puts " couldn't send USR1 to pid '#{pid}'."
     end
   else
     puts "Flapjack is not running daemonized."
@@ -143,7 +143,7 @@ when "status"
   end
 
 else
-  if ARGV[0].empty?
+  if ARGV.nil? || ARGV.empty?
     puts "No command provided"
   else
     puts "Unknown command provided: '#{ARGV[0]}'"

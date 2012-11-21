@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'yajl'
+require 'yajl/json_gem'
 
 module Flapjack
   module Data
@@ -43,7 +43,7 @@ module Flapjack
         raise "Redis connection not set" unless redis = opts[:redis]
 
         evt['time'] = Time.now.to_i if evt['time'].nil?
-        redis.rpush('events', Yajl::Encoder.encode(evt))
+        redis.rpush('events', ::Yajl::Encoder.encode(evt))
       end
 
       # Provide a count of the number of events on the queue to be processed.

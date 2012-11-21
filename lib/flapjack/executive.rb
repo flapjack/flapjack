@@ -3,7 +3,6 @@
 require 'log4r'
 require 'log4r/outputter/fileoutputter'
 
-require 'flapjack'
 require 'flapjack/filters/acknowledgement'
 require 'flapjack/filters/ok'
 require 'flapjack/filters/scheduled_maintenance'
@@ -14,7 +13,6 @@ require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/notification'
 require 'flapjack/data/event'
-require 'flapjack/pikelet'
 require 'flapjack/redis_pool'
 
 require 'flapjack/gateways/email'
@@ -23,15 +21,12 @@ require 'flapjack/gateways/sms_messagenet'
 module Flapjack
 
   class Executive
-    include Flapjack::GenericPikelet
 
-    alias_method :generic_bootstrap, :bootstrap
-    alias_method :generic_cleanup,   :cleanup
-
-    def bootstrap(opts = {})
-      generic_bootstrap(opts)
-
-      @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
+    def initialize(opts = {})
+      @config = opts[:config]
+      @redis_config = opts[:redis_config]
+      @logger = opts[:logger]
+      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
 
       @queues = {:email     => @config['email_queue'],
                  :sms       => @config['sms_queue'],
@@ -44,7 +39,7 @@ module Flapjack
 
       # FIXME: Put loading filters into separate method
       # FIXME: should we make the filters more configurable by the end user?
-      options = { :log => @logger, :persistence => @redis }
+      options = { :log => opts[:logger], :persistence => @redis }
       @filters = []
       @filters << Flapjack::Filters::Ok.new(options)
       @filters << Flapjack::Filters::ScheduledMaintenance.new(options)
@@ -80,15 +75,10 @@ module Flapjack
       @redis.hset("event_counters:#{@instance_id}", 'action', 0)
     end
 
-    def cleanup
-      @redis.empty! if @redis
-      generic_cleanup
-    end
-
-    def main
+    def start
       @logger.info("Booting main loop.")
 
-      until should_quit? && @received_shutdown
+      until @should_quit
         @logger.info("Waiting for event...")
         event = Flapjack::Data::Event.next(:redis => @redis)
         process_event(event) unless event.nil?
@@ -99,12 +89,12 @@ module Flapjack
 
     # this must use a separate connection to the main Executive one, as it's running
     # from a different fiber while the main one is blocking.
-    def add_shutdown_event(opts = {})
-      return unless redis = opts[:redis]
-      redis.rpush('events', JSON.generate('type'    => 'shutdown',
-                                          'host'    => '',
-                                          'service' => '',
-                                          'state'   => ''))
+    def stop
+      @should_quit = true
+      @redis.rpush('events', JSON.generate('type'    => 'shutdown',
+                                           'host'    => '',
+                                           'service' => '',
+                                           'state'   => ''))
     end
 
   private
@@ -117,7 +107,7 @@ module Flapjack
       time_at_str = time_at ? ", #{Time.at(time_at).to_s}" : ''
       @logger.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
 
-      entity_check = (event.type == 'shutdown') ? nil :
+      entity_check = ('shutdown' == event.type) ? nil :
                        Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
 
       result       = update_keys(event, entity_check)
@@ -200,7 +190,7 @@ module Flapjack
         end
       when 'shutdown'
         # should this be logged as an action instead? being minimally invasive for now
-        result[:shutdown] = @received_shutdown = true
+        result[:shutdown] = true
       end
 
       result

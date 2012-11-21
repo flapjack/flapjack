@@ -14,8 +14,6 @@ require 'flapjack/data/entity_check'
 require 'flapjack/redis_pool'
 require 'flapjack/utility'
 
-require 'flapjack/gateways/base'
-
 module Flapjack
 
   module Gateways
@@ -35,8 +33,8 @@ module Flapjack
             s, h, b = printer.call(env)
             [s, h, b]
           else
-            logger.error e.message
-            logger.error e.backtrace.join("\n")
+            @logger.error e.message
+            @logger.error e.backtrace.join("\n")
             [503, {}, ""]
           end
         end
@@ -47,28 +45,16 @@ module Flapjack
       use Rack::MethodOverride
 
       class << self
-        include Flapjack::Gateways::Thin
+        def start
+          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
 
-        attr_accessor :redis
+          @logger.info "starting web - class"
 
-        alias_method :thin_bootstrap, :bootstrap
-        alias_method :thin_cleanup,   :cleanup
-
-        def bootstrap(opts = {})
-          thin_bootstrap(opts)
-          @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
-
-          if config && config['access_log']
-            access_logger = Flapjack::RackLogger.new(config['access_log'])
+          if @config && @config['access_log']
+            access_logger = Flapjack::RackLogger.new(@config['access_log'])
             use Rack::CommonLogger, access_logger
           end
         end
-
-        def cleanup
-          @redis.empty! if @redis
-          thin_cleanup
-        end
-
       end
 
       include Flapjack::Utility

@@ -9,23 +9,17 @@ require 'em-synchrony'
 require 'em/protocols/smtpclient'
 
 require 'flapjack/data/entity_check'
-require 'flapjack/gateways/base'
 
 module Flapjack
   module Gateways
 
     class Email
-      extend Flapjack::Gateways::Resque
 
       class << self
 
-        alias_method :orig_bootstrap, :bootstrap
-
-        def bootstrap(opts = {})
-          return if @bootstrapped
-          @smtp_config = opts[:config].delete('smtp_config')
+        def start
+          @smtp_config = @config.delete('smtp_config')
           @sent = 0
-          orig_bootstrap(opts)
         end
 
         def perform(notification)

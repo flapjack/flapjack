@@ -9,45 +9,32 @@ require 'flapjack/data/entity_check'
 require 'flapjack/data/global'
 require 'flapjack/redis_pool'
 
-require 'flapjack/gateways/base'
-
 module Flapjack
 
   module Gateways
 
     class Pagerduty
-      include Flapjack::Gateways::Generic
-
       PAGERDUTY_EVENTS_API_URL   = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
       SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'
 
-      alias_method :generic_bootstrap, :bootstrap
-      alias_method :generic_cleanup,   :cleanup
-
-      def bootstrap(opts = {})
-        generic_bootstrap(opts)
-
+      def initialize(opts = {})
+        @config = opts[:config]
+        @logger = opts[:logger]
         @redis_config = opts[:redis_config]
-        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
 
-        logger.debug("New Pagerduty pikelet with the following options: #{@config.inspect}")
+        @logger.debug("New Pagerduty pikelet with the following options: #{@config.inspect}")
 
         @pagerduty_acks_started = nil
+        super()
       end
 
-      def cleanup
-        @redis.empty! if @redis
-        @redis_timer.empty! if @redis_timer
-        generic_cleanup
-      end
-
-      def add_shutdown_event(opts = {})
-        return unless redis = opts[:redis]
-        redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
+      def stop
+        @redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
       end
 
       def main
-        logger.debug("pagerduty gateway - commencing main method")
+        @logger.debug("pagerduty gateway - commencing main method")
         raise "Can't connect to the pagerduty API" unless test_pagerduty_connection
 
         # TODO: only clear this if there isn't another pagerduty gateway instance running
@@ -55,7 +42,6 @@ module Flapjack
         @redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
 
         acknowledgement_timer = EM::Synchrony.add_periodic_timer(10) do
-          @redis_timer ||= Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
           find_pagerduty_acknowledgements_if_safe
         end
 
@@ -63,11 +49,11 @@ module Flapjack
         events = {}
 
         until should_quit?
-          logger.debug("pagerduty gateway is going into blpop mode on #{queue}")
+          @logger.debug("pagerduty gateway is going into blpop mode on #{queue}")
           events[queue] = @redis.blpop(queue, 0)
           event         = Yajl::Parser.parse(events[queue][1])
           type          = event['notification_type']
-          logger.debug("pagerduty notification event popped off the queue: " + event.inspect)
+          @logger.debug("pagerduty notification event popped off the queue: " + event.inspect)
           unless 'shutdown'.eql?(type)
             event_id      = event['event_id']
             entity, check = event_id.split(':')
@@ -114,18 +100,18 @@ module Flapjack
         # timeout of five minutes to guard against stale locks caused by crashing code) either in this
         # process or in other processes
         if (@pagerduty_acks_started and @pagerduty_acks_started > (Time.now.to_i - 300)) or
-            @redis_timer.get(SEM_PAGERDUTY_ACKS_RUNNING) == 'true'
-          logger.debug("skipping looking for acks in pagerduty as this is already happening")
+            @redis.get(SEM_PAGERDUTY_ACKS_RUNNING) == 'true'
+          @logger.debug("skipping looking for acks in pagerduty as this is already happening")
           return
         end
 
         @pagerduty_acks_started = Time.now.to_i
-        @redis_timer.set(SEM_PAGERDUTY_ACKS_RUNNING, 'true')
-        @redis_timer.expire(SEM_PAGERDUTY_ACKS_RUNNING, 300)
+        @redis.set(SEM_PAGERDUTY_ACKS_RUNNING, 'true')
+        @redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, 300)
 
         find_pagerduty_acknowledgements
 
-        @redis_timer.del(SEM_PAGERDUTY_ACKS_RUNNING)
+        @redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
         @pagerduty_acks_started = nil
       end
 
@@ -138,7 +124,7 @@ module Flapjack
                  "description"  => "I love APIs with noops." }
         code, results = send_pagerduty_event(noop)
         return true if code == 200 && results['status'] =~ /success/i
-        logger.error "Error: test_pagerduty_connection: API returned #{code.to_s} #{results.inspect}"
+        @logger.error "Error: test_pagerduty_connection: API returned #{code.to_s} #{results.inspect}"
         false
       end
 
@@ -147,20 +133,19 @@ module Flapjack
         http = EM::HttpRequest.new(PAGERDUTY_EVENTS_API_URL).post(options)
         response = Yajl::Parser.parse(http.response)
         status   = http.response_header.status
-        logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
+        @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
         [status, response]
       end
 
       def find_pagerduty_acknowledgements
+        @logger.debug("looking for acks in pagerduty for unack'd problems")
 
-        logger.debug("looking for acks in pagerduty for unack'd problems")
-
-        unacknowledged_failing_checks = Flapjack::Data::Global.unacknowledged_failing_checks(:redis => @redis_timer)
+        unacknowledged_failing_checks = Flapjack::Data::Global.unacknowledged_failing_checks(:redis => @redis)
 
         @logger.debug "found unacknowledged failing checks as follows: " + unacknowledged_failing_checks.join(', ')
 
         unacknowledged_failing_checks.each do |entity_check|
-          pagerduty_credentials = entity_check.pagerduty_credentials(:redis => @redis_timer)
+          pagerduty_credentials = entity_check.pagerduty_credentials(:redis => @redis)
           check = entity_check.check
 
           if pagerduty_credentials.empty?
