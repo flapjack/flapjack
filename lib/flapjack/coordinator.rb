@@ -15,15 +15,6 @@ module Flapjack
 
   class Coordinator
 
-    ALL_PIKELET_TYPES =
-      [Flapjack::Pikelet::Generic,
-       Flapjack::Pikelet::Resque,
-       Flapjack::Pikelet::Thin].collect {|pk|
-
-        pk::PIKELET_TYPES
-
-      }.inject({}) {|m, h| m.merge(h)}
-
     def initialize(config)
       @config = config
       @redis_options = config.for_redis
@@ -64,7 +55,7 @@ module Flapjack
 
       enabled_pikelet_cfg = pikelets(@config.all)
 
-      PIKELET_TYPES.values.each do |p_klass|
+      (prev_pikelet_cfg.keys + enabled_pikelet_cfg.keys).each do |p_klass|
 
         if prev_pikelet_cfg.keys.include?(p_klass)
           if enabled_pikelet_cfg.keys.include?(p_klass)
@@ -113,14 +104,8 @@ module Flapjack
     # passed a hash with {PIKELET_TYPE => PIKELET_CFG, ...}
     def add_pikelets(pikelets_data = {})
       pikelets_data.each_pair do |type, cfg|
-        pikelet = nil
-        [Flapjack::Pikelet::Generic,
-         Flapjack::Pikelet::Resque,
-         Flapjack::Pikelet::Thin].each do |kl|
-          # TODO find a better way of expressing this
-          break if pikelet = kl.create(type, :config => cfg, :redis_config => @redis_options)
-        end
-        next unless pikelet
+        next unless pikelet = Flapjack::Pikelet.create(type,
+          :config => cfg, :redis_config => @redis_options)
         @pikelets << pikelet
         pikelet.start
       end
@@ -159,7 +144,7 @@ module Flapjack
       return exec_cfg unless config_env && config_env['gateways'] &&
         !config_env['gateways'].nil?
       exec_cfg.merge(config_env['gateways'].inject({}) {|memo, (k, v)|
-        memo[k] = v if ALL_PIKELET_TYPES.has_key?(k) && v['enabled']
+        memo[k] = v if Flapjack::Pikelet.is_pikelet?(k) && v['enabled']
         memo
       })
     end

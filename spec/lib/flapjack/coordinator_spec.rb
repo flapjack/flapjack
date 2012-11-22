@@ -19,7 +19,7 @@ describe Flapjack::Coordinator do
     executive.should_receive(:status).exactly(3).times.and_return('stopped')
 
     fc = Flapjack::Coordinator.new(config)
-    Flapjack::Pikelet::Generic.should_receive(:create).with('executive',
+    Flapjack::Pikelet.should_receive(:create).with('executive',
         :config => cfg['executive'], :redis_config => {}).and_return(executive)
 
     EM.should_receive(:stop)

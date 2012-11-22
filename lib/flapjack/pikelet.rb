@@ -34,6 +34,27 @@ module Flapjack
 
   module Pikelet
 
+    # TODO find a better way of expressing these two methods
+    def self.is_pikelet?(type)
+      type_klass = [Flapjack::Pikelet::Generic, Flapjack::Pikelet::Resque,
+        Flapjack::Pikelet::Thin].detect do |kl|
+
+        kl::PIKELET_TYPES[type]
+
+      end
+      !type_klass.nil?
+    end
+
+    def self.create(type, config = {})
+      pikelet = nil
+      [Flapjack::Pikelet::Generic,
+       Flapjack::Pikelet::Resque,
+       Flapjack::Pikelet::Thin].each do |kl|
+        break if pikelet = kl.create(type, config)
+      end
+      pikelet
+    end
+
     class Base
       attr_accessor :type
 
@@ -131,7 +152,7 @@ module Flapjack
 
         # TODO error if config['queue'].nil?
 
-        @worker = EM::Resque::Worker.new(opts[:config]['queue'])
+        @worker = EM::Resque::Worker.new(@config['queue'])
         # # Use these to debug the resque workers
         # worker.verbose = true
         # worker.very_verbose = true
@@ -143,7 +164,7 @@ module Flapjack
             @worker.work(0.1)
           rescue Exception => e
             trace = e.backtrace.join("\n")
-            logger.fatal "#{e.message}\n#{trace}"
+            @logger.fatal "#{e.message}\n#{trace}"
             stop
           end
         }
@@ -192,7 +213,8 @@ module Flapjack
         pikelet_klass.instance_variable_set('@logger', @logger)
 
         if @config
-          @port = @config['port'] ? @config['port'].to_i : nil
+          @port = @config['port']
+          @port = @port.nil? ? nil : @port.to_i
         end
         @port = 3001 if (@port.nil? || @port <= 0 || @port > 65535)
 
