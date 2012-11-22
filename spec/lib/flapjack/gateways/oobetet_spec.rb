@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'flapjack/gateways/oobetet'
 
-describe Flapjack::Gateways::Oobetet do
+describe Flapjack::Gateways::Oobetet, :logger => true do
 
   let(:config) { {'server'   => 'example.com',
                   'port'     => '5222',
@@ -19,8 +19,7 @@ describe Flapjack::Gateways::Oobetet do
   it "raises an error if a required config setting is not set" do
     Socket.should_receive(:gethostname).and_return('thismachine')
 
-    fo = Flapjack::Gateways::Oobetet.new
-    fo.bootstrap(:config => config.delete('watched_check'))
+    fo = Flapjack::Gateways::Oobetet.new(:config => config.delete('watched_check'), :logger => @logger)
 
     lambda {
       fo.setup
@@ -28,8 +27,7 @@ describe Flapjack::Gateways::Oobetet do
   end
 
   it "hooks up event handlers to the appropriate methods" do
-    fo = Flapjack::Gateways::Oobetet.new
-    fo.bootstrap(:config => config)
+    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
 
     EventMachine::Synchrony.should_receive(:next_tick).exactly(3).times.and_yield
 
@@ -46,8 +44,7 @@ describe Flapjack::Gateways::Oobetet do
   end
 
   it "joins a chat room after connecting" do
-    fo = Flapjack::Gateways::Oobetet.new
-    fo.bootstrap(:config => config)
+    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
 
     fo.should_receive(:write).with(an_instance_of(Blather::Stanza::Presence))
     fo.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
@@ -56,8 +53,7 @@ describe Flapjack::Gateways::Oobetet do
   end
 
   it "reconnects when disconnected (if not quitting)" do
-    fo = Flapjack::Gateways::Oobetet.new
-    fo.bootstrap(:config => config)
+    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
 
     EventMachine::Timer.should_receive(:new).with(1).and_yield
     fo.should_receive(:connect)
@@ -67,9 +63,7 @@ describe Flapjack::Gateways::Oobetet do
   end
 
   it "records times of a problem status messages" do
-    fo = Flapjack::Gateways::Oobetet.new
-    fo.bootstrap(:config => config)
-
+    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
     fo.setup
 
     t = Time.now
@@ -85,9 +79,7 @@ describe Flapjack::Gateways::Oobetet do
   end
 
   it "records times of a recovery status messages" do
-    fo = Flapjack::Gateways::Oobetet.new
-    fo.bootstrap(:config => config)
-
+    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
     fo.setup
 
     t = Time.now
@@ -103,9 +95,7 @@ describe Flapjack::Gateways::Oobetet do
   end
 
   it "records times of an acknowledgement status messages" do
-    fo = Flapjack::Gateways::Oobetet.new
-    fo.bootstrap(:config => config)
-
+    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
     fo.setup
 
     t = Time.now
@@ -125,16 +115,16 @@ describe Flapjack::Gateways::Oobetet do
     timer.should_receive(:cancel)
     EM::Synchrony.should_receive(:add_periodic_timer).with(60).and_return(timer)
 
-    fo = Flapjack::Gateways::Oobetet.new
-    fo.bootstrap(:config => config)
+    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
     fo.should_receive(:register_handler).exactly(3).times
-
     fo.should_receive(:connect)
-    fo.should_receive(:should_quit?).twice.and_return(false, true)
 
-    EM::Synchrony.should_receive(:sleep).with(10)
+    EM::Synchrony.should_receive(:sleep).with(10) {
+      fo.instance_variable_set('@should_quit', true)
+      nil
+    }
 
-    fo.main
+    fo.start
   end
 
 end

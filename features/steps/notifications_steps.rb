@@ -127,7 +127,8 @@ When /^the SMS notification handler runs successfully$/ do
 
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@logger', @logger)
-  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@sent', 0)
+  Flapjack::Gateways::SmsMessagenet.start
+
   Flapjack::Gateways::SmsMessagenet.perform(@sms_notification)
 end
 
@@ -135,15 +136,16 @@ When /^the SMS notification handler fails to send an SMS$/ do
   @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_URL)}/).to_return(:status => [500, "Internal Server Error"])
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@logger', @logger)
-  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@sent', 0)
+  Flapjack::Gateways::SmsMessagenet.start
+
   Flapjack::Gateways::SmsMessagenet.perform(@sms_notification)
 end
 
 When /^the email notification handler runs successfully$/ do
   Resque.redis = @redis
-  Flapjack::Gateways::Email.bootstrap(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}})
+  Flapjack::Gateways::Email.instance_variable_set('@config', {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}})
   Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
-  Flapjack::Gateways::Email.instance_variable_set('@sent', 0)
+  Flapjack::Gateways::Email.start
 
   # poor man's stubbing
   EM::P::SmtpClient.class_eval {
@@ -159,9 +161,9 @@ end
 
 When /^the email notification handler fails to send an email$/ do
   Resque.redis = @redis
-  Flapjack::Gateways::Email.bootstrap(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}})
+  Flapjack::Gateways::Email.instance_variable_set('@config', {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}})
   Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
-  Flapjack::Gateways::Email.instance_variable_set('@sent', 0)
+  Flapjack::Gateways::Email.start
 
   # poor man's stubbing
   EM::P::SmtpClient.class_eval {

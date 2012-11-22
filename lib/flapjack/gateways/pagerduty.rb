@@ -33,7 +33,7 @@ module Flapjack
         @redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
       end
 
-      def main
+      def start
         @logger.debug("pagerduty gateway - commencing main method")
         raise "Can't connect to the pagerduty API" unless test_pagerduty_connection
 
@@ -48,7 +48,7 @@ module Flapjack
         queue = @config['queue']
         events = {}
 
-        until should_quit?
+        until @should_quit
           @logger.debug("pagerduty gateway is going into blpop mode on #{queue}")
           events[queue] = @redis.blpop(queue, 0)
           event         = Yajl::Parser.parse(events[queue][1])

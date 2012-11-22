@@ -41,7 +41,7 @@ describe Flapjack::Executive, :logger => true do
     executive = Flapjack::Executive.new(:config => {}, :logger => @logger)
 
     shutdown_evt = mock(Flapjack::Data::Event)
-    shutdown_evt.should_receive(:inspect).twice
+    shutdown_evt.should_receive(:inspect)
     shutdown_evt.should_receive(:id).and_return('-:-')
     shutdown_evt.should_receive(:type).exactly(3).times.and_return('shutdown')
     shutdown_evt.should_receive(:state).and_return(nil)

@@ -55,7 +55,7 @@ module Flapjack
 
             fqdn       = `/bin/hostname -f`.chomp
             m_from     = "flapjack@#{fqdn}"
-            logger.debug("flapjack_mailer: set from to #{m_from}")
+            @logger.debug("flapjack_mailer: set from to #{m_from}")
             m_reply_to = m_from
             m_to       = notification['address']
 
@@ -86,7 +86,7 @@ module Flapjack
             @logger.info "Email response: #{response.inspect}"
 
           rescue Exception => e
-            @logger.error "Error delivering email to #{mail.to}: #{e.message}"
+            @logger.error "Error delivering email to #{m_to}: #{e.message}"
             @logger.error e.backtrace.join("\n")
           end
         end

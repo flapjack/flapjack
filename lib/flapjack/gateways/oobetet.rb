@@ -220,7 +220,7 @@ module Flapjack
         [status, response]
       end
 
-      def main
+      def start
         @logger.debug("New oobetet pikelet with the following options: #{@config.inspect}")
 
         keepalive_timer = EM::Synchrony.add_periodic_timer(60) do

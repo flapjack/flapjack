@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'flapjack/gateways/api'
 
-describe 'Flapjack::Gateways::API', :sinatra => true do
+describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
 
   def app
     Flapjack::Gateways::API
@@ -21,7 +21,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true do
 
   before(:each) do
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    Flapjack::Gateways::API.bootstrap(:config => {})
+    Flapjack::Gateways::API.instance_variable_set('@config', {})
+    Flapjack::Gateways::API.instance_variable_set('@logger', @logger)
+    Flapjack::Gateways::API.start
   end
 
   it "returns a list of checks for an entity" do
