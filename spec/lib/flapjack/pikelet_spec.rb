@@ -12,7 +12,15 @@ describe Flapjack::Pikelet do
 
   let(:fiber) { mock(Fiber) }
 
-  def setup_logger
+  def setup_logger(type)
+    formatter = mock('Formatter')
+    Log4r::PatternFormatter.should_receive(:new).with(
+      :pattern => "[%l] %d :: #{type} :: %m",
+      :date_pattern => "%Y-%m-%dT%H:%M:%S%z").and_return(formatter)
+
+    stdout_out.should_receive(:formatter=).with(formatter)
+    syslog_out.should_receive(:formatter=).with(formatter)
+
     Log4r::StdoutOutputter.should_receive(:new).and_return(stdout_out)
     Log4r::SyslogOutputter.should_receive(:new).and_return(syslog_out)
     logger.should_receive(:add).with(stdout_out)
@@ -21,7 +29,7 @@ describe Flapjack::Pikelet do
   end
 
   it "creates and starts an executive pikelet" do
-    setup_logger
+    setup_logger('executive')
 
     executive = mock('executive')
     executive.should_receive(:start)
@@ -38,7 +46,7 @@ describe Flapjack::Pikelet do
   end
 
   it "handles an exception raised by a jabber pikelet" do
-    setup_logger
+    setup_logger('jabber')
     logger.should_receive(:fatal)
 
     jabber = mock('jabber')
@@ -57,7 +65,7 @@ describe Flapjack::Pikelet do
   end
 
   it "creates and starts a resque worker gateway" do
-    setup_logger
+    setup_logger('email')
 
     config.should_receive(:[]).with('queue').and_return('email_notif')
 
@@ -83,7 +91,7 @@ describe Flapjack::Pikelet do
   end
 
   it "handles an exception raised by a resque worker gateway" do
-    setup_logger
+    setup_logger('email')
     logger.should_receive(:fatal)
 
     config.should_receive(:[]).with('queue').and_return('email_notif')
@@ -111,7 +119,7 @@ describe Flapjack::Pikelet do
   end
 
   it "creates a thin server gateway" do
-    setup_logger
+    setup_logger('web')
 
     config.should_receive(:[]).with('port').and_return(7654)
 

@@ -20,9 +20,18 @@ module Flapjack
       @redis_options = config.for_redis
       @pikelets = []
 
-      @logger = Log4r::Logger.new("flapjack-coordinator")
-      @logger.add(Log4r::StdoutOutputter.new("flapjack-coordinator"))
-      @logger.add(Log4r::SyslogOutputter.new("flapjack-coordinator"))
+      logger_name = "flapjack-coordinator"
+      @logger = Log4r::Logger.new(logger_name)
+
+      formatter = Log4r::PatternFormatter.new(:pattern => "[%l] %d :: #{logger_name} :: %m",
+        :date_pattern => "%Y-%m-%dT%H:%M:%S%z")
+
+      [Log4r::StdoutOutputter, Log4r::SyslogOutputter].each do |outp_klass|
+        outp = outp_klass.new(logger_name)
+        outp.formatter = formatter
+        @logger.add(outp)
+      end
+
     end
 
     def start(options = {})

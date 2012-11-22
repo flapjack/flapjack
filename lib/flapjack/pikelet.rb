@@ -9,6 +9,7 @@
 #    from http://en.wikipedia.org/wiki/Pancake
 
 require 'log4r'
+require 'log4r/formatter/patternformatter'
 require 'log4r/outputter/consoleoutputters'
 require 'log4r/outputter/syslogoutputter'
 
@@ -61,10 +62,18 @@ module Flapjack
       def initialize(type, pikelet_class, opts = {})
         @type = type
         @klass = pikelet_class
+
         unless @logger = opts[:logger]
-          @logger = Log4r::Logger.new("#{pikelet_class.to_s.downcase.gsub('::', '-')}")
-          @logger.add(Log4r::StdoutOutputter.new("flapjack"))
-          @logger.add(Log4r::SyslogOutputter.new("flapjack"))
+          @logger = Log4r::Logger.new("flapjack-#{type}")
+
+          formatter = Log4r::PatternFormatter.new(:pattern => "[%l] %d :: #{type} :: %m",
+            :date_pattern => "%Y-%m-%dT%H:%M:%S%z")
+
+          [Log4r::StdoutOutputter, Log4r::SyslogOutputter].each do |outp_klass|
+            outp = outp_klass.new("flapjack-#{type}")
+            outp.formatter = formatter
+            @logger.add(outp)
+          end
         end
 
         @config = opts[:config] || {}
