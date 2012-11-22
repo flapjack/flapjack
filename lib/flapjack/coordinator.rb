@@ -31,7 +31,6 @@ module Flapjack
         outp.formatter = formatter
         @logger.add(outp)
       end
-
     end
 
     def start(options = {})
@@ -51,7 +50,6 @@ module Flapjack
     # logfile, redis options) won't be checked on reload.
     # should we do a full restart if some of these change?
     def reload
-
       prev_pikelet_cfg = pikelets(@config.all)
 
       removed = []
@@ -60,25 +58,25 @@ module Flapjack
 
       cfg_filename = @config.filename
       @config = Flapjack::Configuration.new
-      config.load(cfg_filename)
+      @config.load(cfg_filename)
 
       enabled_pikelet_cfg = pikelets(@config.all)
 
-      (prev_pikelet_cfg.keys + enabled_pikelet_cfg.keys).each do |p_klass|
+      (prev_pikelet_cfg.keys + enabled_pikelet_cfg.keys).each do |type|
 
-        if prev_pikelet_cfg.keys.include?(p_klass)
-          if enabled_pikelet_cfg.keys.include?(p_klass)
-            ask_running << p_klass
+        if prev_pikelet_cfg.keys.include?(type)
+          if enabled_pikelet_cfg.keys.include?(type)
+            ask_running << type
           else
-            removed << p_klass
+            removed << type
           end
-        elsif enabled_pikelet_cfg.keys.include?(p_klass)
-          added << p_klass
+        elsif enabled_pikelet_cfg.keys.include?(type)
+          added << type
         end
 
       end
 
-      @pikelets.select {|pik| ask_running.include?(pik.class) }.each do |pik|
+      @pikelets.select {|pik| ask_running.include?(pik.type) }.each do |pik|
         # for sections previously there and still there, ask them
         # to make the config change; they will if they can, or will signal
         # restart is needed if not
@@ -86,14 +84,31 @@ module Flapjack
         # reload() returns trinary value here; true means the change was made, false
         # means the pikelet needs to be restarted, nil means no change
         # was required
-        next unless pik.reload(pik_config).is_a?(FalseClass)
-        removed << pik.class
+        next unless pik.reload(enabled_pikelet_cfg[pik.type]).is_a?(FalseClass)
+        removed << pik.type
+        added << pik.type
       end
 
-      removed_pikelets = @pikelets.select {|pik| removed.include?(pik.class) }
+      # puts "removed"
+      # p removed
 
-      remove_pikelets( removed_pikelets )
-      add_pikelets(enabled_pikelet_cfg)
+      # puts "added"
+      # p added
+
+      removed_pikelets = @pikelets.select {|pik| removed.include?(pik.type) }
+
+      # puts "removed pikelets"
+      # p removed_pikelets
+
+      remove_pikelets(removed_pikelets)
+
+      # is there a nicer way to only keep the parts of the hash with matching keys?
+      added_pikelets = enabled_pikelet_cfg.select {|k, v| added.include?(k) }
+
+      # puts "added pikelet configs"
+      # p added_pikelets
+
+      add_pikelets(added_pikelets)
     end
 
   private
@@ -152,10 +167,9 @@ module Flapjack
         {}
       return exec_cfg unless config_env && config_env['gateways'] &&
         !config_env['gateways'].nil?
-      exec_cfg.merge(config_env['gateways'].inject({}) {|memo, (k, v)|
-        memo[k] = v if Flapjack::Pikelet.is_pikelet?(k) && v['enabled']
-        memo
-      })
+      exec_cfg.merge( config_env['gateways'].select {|k, v|
+        Flapjack::Pikelet.is_pikelet?(k) && v['enabled']
+      } )
     end
 
   end
