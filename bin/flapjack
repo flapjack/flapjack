@@ -108,7 +108,8 @@ when "restart"
   if runner.daemon_running?
     print "Flapjack restarting..."
     runner.execute(:daemonize => true, :restart => true) {
-      sleep 1 # get connection errors without this...
+      sleep 1 # get connection errors without this... -- might move this to
+      # be default behaviour when starting jabber gateway
       flapjack_coord.call
     }
     puts " done."
@@ -123,10 +124,10 @@ when "reload"
     print "Reloading Flapjack configuration..."
     begin
       pid = IO.read(pidfile).chomp.to_i
-      Process.kill('USR1', pid)
-      puts " sent USR1 to pid #{pid}."
+      Process.kill('HUP', pid)
+      puts " sent HUP to pid #{pid}."
     rescue => e
-      puts " couldn't send USR1 to pid '#{pid}'."
+      puts " couldn't send HUP to pid '#{pid}'."
     end
   else
     puts "Flapjack is not running daemonized."

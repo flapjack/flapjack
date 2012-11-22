@@ -121,7 +121,7 @@ module Flapjack
       Kernel.trap('TERM') { stop }
       unless RbConfig::CONFIG['host_os'] =~ /mswin|windows|cygwin/i
         Kernel.trap('QUIT') { stop }
-        # Kernel.trap('USR1')  { reload }
+        # Kernel.trap('HUP')  { reload }
       end
     end
 
