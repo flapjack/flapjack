@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 
 require 'log4r'
 require 'log4r/formatter/patternformatter'

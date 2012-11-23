@@ -11,7 +11,9 @@ describe Flapjack::Pikelet do
   let(:fiber) { mock(Fiber) }
 
   it "creates and starts an executive pikelet" do
-    Flapjack::Logger.should_receive(:new)
+    Flapjack::Logger.should_receive(:new).and_return(logger)
+
+    config.should_receive(:[]).with('logger').and_return(nil)
 
     executive = mock('executive')
     executive.should_receive(:start)
@@ -31,6 +33,8 @@ describe Flapjack::Pikelet do
     Flapjack::Logger.should_receive(:new).and_return(logger)
     logger.should_receive(:fatal)
 
+    config.should_receive(:[]).with('logger').and_return(nil)
+
     jabber = mock('jabber')
     jabber.should_receive(:start).and_raise(RuntimeError)
     jabber.should_receive(:stop)
@@ -47,8 +51,9 @@ describe Flapjack::Pikelet do
   end
 
   it "creates and starts a resque worker gateway" do
-    Flapjack::Logger.should_receive(:new)
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
+    config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('queue').and_return('email_notif')
 
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
@@ -76,6 +81,7 @@ describe Flapjack::Pikelet do
     Flapjack::Logger.should_receive(:new).and_return(logger)
     logger.should_receive(:fatal)
 
+    config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('queue').and_return('email_notif')
 
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
@@ -101,8 +107,9 @@ describe Flapjack::Pikelet do
   end
 
   it "creates a thin server gateway" do
-    Flapjack::Logger.should_receive(:new)
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
+    config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('port').and_return(7654)
 
     server = mock('server')

@@ -38,6 +38,7 @@ describe Flapjack::Coordinator do
     executive = mock('executive')
     executive.should_receive(:start)
     executive.should_receive(:stop)
+    executive.should_receive(:update_status)
     executive.should_receive(:status).exactly(3).times.and_return('stopped')
 
     fc = Flapjack::Coordinator.new(config)
@@ -61,10 +62,12 @@ describe Flapjack::Coordinator do
     Kernel.should_receive(:trap).with('INT').and_yield
     Kernel.should_receive(:trap).with('TERM').and_yield
     Kernel.should_receive(:trap).with('QUIT').and_yield
+    Kernel.should_receive(:trap).with('HUP').and_yield
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:stop).exactly(3).times
+    fc.should_receive(:reload)
 
     fc.send(:setup_signals)
   end
@@ -77,6 +80,7 @@ describe Flapjack::Coordinator do
     Kernel.should_receive(:trap).with('INT').and_yield
     Kernel.should_receive(:trap).with('TERM').and_yield
     Kernel.should_not_receive(:trap).with('QUIT')
+    Kernel.should_not_receive(:trap).with('HUP')
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
@@ -104,6 +108,7 @@ describe Flapjack::Coordinator do
     executive = mock('executive')
     executive.should_receive(:type).twice.and_return('executive')
     executive.should_receive(:stop)
+    executive.should_receive(:update_status)
     executive.should_receive(:status).exactly(3).times.and_return('stopped')
 
     jabber = mock('jabber')
@@ -169,6 +174,7 @@ describe Flapjack::Coordinator do
     executive.should_receive(:type).exactly(5).times.and_return('executive')
     executive.should_receive(:reload).with(new_cfg['executive']).and_return(false)
     executive.should_receive(:stop)
+    executive.should_receive(:update_status)
     executive.should_receive(:status).exactly(3).times.and_return('stopped')
 
     fiber.should_receive(:resume)
