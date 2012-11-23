@@ -20,6 +20,7 @@ module Flapjack
       @redis_options = config.for_redis
       @pikelets = []
 
+      # TODO convert this to use flapjack-logger
       logger_name = "flapjack-coordinator"
       @logger = Log4r::Logger.new(logger_name)
 
@@ -121,7 +122,7 @@ module Flapjack
       Kernel.trap('TERM') { stop }
       unless RbConfig::CONFIG['host_os'] =~ /mswin|windows|cygwin/i
         Kernel.trap('QUIT') { stop }
-        # Kernel.trap('HUP')  { reload }
+        Kernel.trap('HUP')  { reload }
       end
     end
 
@@ -144,7 +145,8 @@ module Flapjack
           # cause everything else to be spammy
           piks.each do |pik|
             old_status = pik.status
-            status = pik.status(:check => true)
+            pik.update_status
+            status = pik.status
             next if old_status.eql?(status)
             @logger.info "#{pik.type}: #{old_status} -> #{status}"
           end

@@ -6,30 +6,12 @@ describe Flapjack::Pikelet do
   let(:config)       { mock('config') }
   let(:redis_config) { mock('redis_config') }
 
-  let(:logger)     { mock(Logger) }
-  let(:stdout_out) { mock('stdout_out') }
-  let(:syslog_out) { mock('syslog_out') }
+  let(:logger)     { mock(Flapjack::Logger) }
 
   let(:fiber) { mock(Fiber) }
 
-  def setup_logger(type)
-    formatter = mock('Formatter')
-    Log4r::PatternFormatter.should_receive(:new).with(
-      :pattern => "[%l] %d :: #{type} :: %m",
-      :date_pattern => "%Y-%m-%dT%H:%M:%S%z").and_return(formatter)
-
-    stdout_out.should_receive(:formatter=).with(formatter)
-    syslog_out.should_receive(:formatter=).with(formatter)
-
-    Log4r::StdoutOutputter.should_receive(:new).and_return(stdout_out)
-    Log4r::SyslogOutputter.should_receive(:new).and_return(syslog_out)
-    logger.should_receive(:add).with(stdout_out)
-    logger.should_receive(:add).with(syslog_out)
-    Log4r::Logger.should_receive(:new).and_return(logger)
-  end
-
   it "creates and starts an executive pikelet" do
-    setup_logger('executive')
+    Flapjack::Logger.should_receive(:new)
 
     executive = mock('executive')
     executive.should_receive(:start)
@@ -46,7 +28,7 @@ describe Flapjack::Pikelet do
   end
 
   it "handles an exception raised by a jabber pikelet" do
-    setup_logger('jabber')
+    Flapjack::Logger.should_receive(:new).and_return(logger)
     logger.should_receive(:fatal)
 
     jabber = mock('jabber')
@@ -65,7 +47,7 @@ describe Flapjack::Pikelet do
   end
 
   it "creates and starts a resque worker gateway" do
-    setup_logger('email')
+    Flapjack::Logger.should_receive(:new)
 
     config.should_receive(:[]).with('queue').and_return('email_notif')
 
@@ -91,7 +73,7 @@ describe Flapjack::Pikelet do
   end
 
   it "handles an exception raised by a resque worker gateway" do
-    setup_logger('email')
+    Flapjack::Logger.should_receive(:new).and_return(logger)
     logger.should_receive(:fatal)
 
     config.should_receive(:[]).with('queue').and_return('email_notif')
@@ -119,7 +101,7 @@ describe Flapjack::Pikelet do
   end
 
   it "creates a thin server gateway" do
-    setup_logger('web')
+    Flapjack::Logger.should_receive(:new)
 
     config.should_receive(:[]).with('port').and_return(7654)
 

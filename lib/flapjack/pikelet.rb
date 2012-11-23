@@ -8,11 +8,6 @@
 # with butter, at afternoon tea, but can also be served at morning tea."
 #    from http://en.wikipedia.org/wiki/Pancake
 
-require 'log4r'
-require 'log4r/formatter/patternformatter'
-require 'log4r/outputter/consoleoutputters'
-require 'log4r/outputter/syslogoutputter'
-
 # the redis/synchrony gems need to be required in this particular order, see
 # the redis-rb README for details
 require 'hiredis'
@@ -30,6 +25,7 @@ require 'flapjack/gateways/pagerduty'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/web'
+require 'flapjack/logger'
 
 module Flapjack
 
@@ -57,33 +53,27 @@ module Flapjack
     end
 
     class Base
-      attr_accessor :type
+      attr_reader :type, :status
 
       def initialize(type, pikelet_class, opts = {})
         @type = type
         @klass = pikelet_class
 
-        unless @logger = opts[:logger]
-          @logger = Log4r::Logger.new("flapjack-#{type}")
-
-          formatter = Log4r::PatternFormatter.new(:pattern => "[%l] %d :: #{type} :: %m",
-            :date_pattern => "%Y-%m-%dT%H:%M:%S%z")
-
-          [Log4r::StdoutOutputter, Log4r::SyslogOutputter].each do |outp_klass|
-            outp = outp_klass.new("flapjack-#{type}")
-            outp.formatter = formatter
-            @logger.add(outp)
-          end
-        end
-
         @config = opts[:config] || {}
         @redis_config = opts[:redis_config] || {}
+
+        @logger = Flapjack::Logger.new("flapjack-#{type}", @config['logger'])
 
         @status = 'initialized'
       end
 
       def start
         @status = 'started'
+      end
+
+      def reload(cfg)
+        @logger.configure(cfg['logger'])
+        true
       end
 
       def stop
@@ -122,10 +112,11 @@ module Flapjack
         @fiber.resume
       end
 
+      # this should only reload if all changes can be applied -- will
+      # return false to log warning otherwise
       def reload(cfg)
-        # TODO diff cfg, @config
-        return false unless @pikelet.respond_to?(:reload)
-        @pikelet.reload(cfg)
+        @pikelet.respond_to?(:reload) ?
+          (@pikelet.reload(cfg) && super(cfg)) : super(cfg)
       end
 
       def stop
@@ -133,13 +124,10 @@ module Flapjack
         super
       end
 
-      def status(opts = {})
-        if opts[:check] && 'stopping'.eql?(@status)
-          @status = 'stopped' if @fiber && !@fiber.alive?
-        end
-        @status
+      def update_status
+        return @status unless 'stopping'.eql?(@status)
+        @status = 'stopped' if @fiber && !@fiber.alive?
       end
-
     end
 
     class Resque < Flapjack::Pikelet::Base
@@ -182,10 +170,11 @@ module Flapjack
         @fiber.resume
       end
 
+      # this should only reload if all changes can be applied -- will
+      # return false to log warning otherwise
       def reload(cfg)
-        # TODO diff cfg, @config
-        return false unless @klass.respond_to?(:reload)
-        @klass.reload(cfg)
+        @klass.respond_to?(:reload) ?
+          (@klass.reload(cfg) && super(cfg)) : super(cfg)
       end
 
       def stop
@@ -194,13 +183,10 @@ module Flapjack
         super
       end
 
-      def status(opts = {})
-        if opts[:check] && 'stopping'.eql?(@status)
-          @status = 'stopped' if @fiber && !@fiber.alive?
-        end
-        @status
+      def update_status
+        return @status unless 'stopping'.eql?(@status)
+        @status = 'stopped' if @fiber && !@fiber.alive?
       end
-
     end
 
     class Thin < Flapjack::Pikelet::Base
@@ -237,10 +223,12 @@ module Flapjack
         @server.start
       end
 
-      def reload
-        # TODO diff cfg, @config
-        return false unless @klass.respond_to?(:reload)
-        @klass.reload(cfg)
+      # this should only reload if all changes can be applied -- will
+      # return false to log warning otherwise
+      def reload(cfg)
+        # TODO fail if port changes
+        @klass.respond_to?(:reload) ?
+          (@klass.reload(cfg) && super(cfg)) : super(cfg)
       end
 
       def stop
@@ -249,13 +237,10 @@ module Flapjack
         super
       end
 
-      def status(opts = {})
-        if opts[:check] && 'stopping'.eql?(@status)
-          @status = 'stopped' if (@server.backend.size <= 0)
-        end
-        @status
+      def update_status
+        return @status unless 'stopping'.eql?(@status)
+        @status = 'stopped' if (@server.backend.size <= 0)
       end
-
     end
 
   end
