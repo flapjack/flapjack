@@ -32,8 +32,10 @@ module Flapjack
 
         redis.del( redis.keys("contact:*") +
                    redis.keys("contact_media:*") +
-                   redis.keys("contact_pagerduty:*") +
-                   redis.keys('contacts_for:*') )
+                   # FIXME: when we do source tagging we can properly
+                   # clean up contacts_for: keys
+                   # redis.keys('contacts_for:*') +
+                   redis.keys("contact_pagerduty:*") )
       end
 
       def self.find_by_id(contact_id, options = {})
