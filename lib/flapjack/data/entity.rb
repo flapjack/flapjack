@@ -9,7 +9,9 @@ module Flapjack
 
     class Entity
 
-      attr_accessor :name, :id, :tags
+      attr_accessor :name, :id
+
+      TAG_PREFIX = 'entity_tag'
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
@@ -107,16 +109,22 @@ module Flapjack
         checks.length
       end
 
+      def tags
+        @tags ||= load_tags
+      end
+
       def add_tags(*enum)
+        @tags ||= load_tags
         enum.each do |t|
-          Flapjack::Data::Tag.create("#{@tag_prefix}:#{t}", [@id], :redis => @redis)
+          Flapjack::Data::Tag.create("#{TAG_PREFIX}:#{t}", [@id], :redis => @redis)
           @tags.add(t)
         end
       end
 
       def delete_tags(*enum)
+        @tags ||= load_tags
         enum.each do |t|
-          tag = Flapjack::Data::Tag.find("#{@tag_prefix}:#{t}", :redis => @redis)
+          tag = Flapjack::Data::Tag.find("#{TAG_PREFIX}:#{t}", :redis => @redis)
           tag.delete(@id)
           @tags.delete(t)
         end
@@ -131,16 +139,16 @@ module Flapjack
         raise "Entity name not set" unless @name = options[:name]
         @id = options[:id]
         @logger = options[:logger]
+      end
 
-        @tag_prefix = 'entity_tag'
-        @tags = ::Set.new
-        tag_data = @redis.keys("#{@tag_prefix}:*").inject([]) do |memo, entity_tag|
+      def load_tags
+        tags = ::Set.new
+        tag_data = @redis.keys("#{TAG_PREFIX}:*").inject([]) do |memo, entity_tag|
           tag = Flapjack::Data::Tag.find(entity_tag, :redis => @redis)
-          memo << entity_tag.sub(%r(^#{@tag_prefix}:), '') if tag.include?(@id.to_s)
+          memo << entity_tag.sub(/^#{TAG_PREFIX}:/, '') if tag.include?(@id.to_s)
           memo
         end
-        @tags.merge(tag_data)
-
+        tags.merge(tag_data)
       end
 
     end
