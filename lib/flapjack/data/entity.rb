@@ -114,19 +114,17 @@ module Flapjack
       end
 
       def add_tags(*enum)
-        @tags ||= load_tags
         enum.each do |t|
           Flapjack::Data::Tag.create("#{TAG_PREFIX}:#{t}", [@id], :redis => @redis)
-          @tags.add(t)
+          tags.add(t)
         end
       end
 
       def delete_tags(*enum)
-        @tags ||= load_tags
         enum.each do |t|
           tag = Flapjack::Data::Tag.find("#{TAG_PREFIX}:#{t}", :redis => @redis)
           tag.delete(@id)
-          @tags.delete(t)
+          tags.delete(t)
         end
       end
 
@@ -142,13 +140,13 @@ module Flapjack
       end
 
       def load_tags
-        tags = ::Set.new
+        entity_tags = ::Set.new
         tag_data = @redis.keys("#{TAG_PREFIX}:*").inject([]) do |memo, entity_tag|
           tag = Flapjack::Data::Tag.find(entity_tag, :redis => @redis)
           memo << entity_tag.sub(/^#{TAG_PREFIX}:/, '') if tag.include?(@id.to_s)
           memo
         end
-        tags.merge(tag_data)
+        entity_tags.merge(tag_data)
       end
 
     end
