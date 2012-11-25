@@ -110,20 +110,20 @@ module Flapjack
       entity_check = ('shutdown' == event.type) ? nil :
                        Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
 
-      result       = update_keys(event, entity_check)
+      result = update_keys(event, entity_check)
       return if result[:shutdown]
-      skip_filters = result[:skip_filters]
 
-      blocker = @filters.find {|filter| filter.block?(event) } unless skip_filters
+      blocker = nil
 
-      if skip_filters
+      if result[:skip_filters]
         @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because filtering was skipped")
         return
+      else
+        blocker = @filters.find {|filter| filter.block?(event) }
       end
 
       if blocker
-        blocker_names = [ blocker.name ]
-        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
+        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because this filter blocked: #{blocker.name}")
         return
       end
 
