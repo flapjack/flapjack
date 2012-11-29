@@ -173,7 +173,7 @@ module Flapjack
 
           acknowledged = pagerduty_acknowledged?(options)
           if acknowledged.nil?
-            @logger.debug "#{check} is not acknowledged in pagerduty, skipping"
+            @logger.debug "#{entity_check.entity_name}:#{check} is not acknowledged in pagerduty, skipping"
             next
           end
 
@@ -206,6 +206,10 @@ module Flapjack
         options = { :head  => { 'authorization' => [username, password] },
                     :query => query }
 
+        @logger.debug("pagerduty_acknowledged?: request to #{url}")
+        @logger.debug("pagerduty_acknowledged?: query: #{query.inspect}")
+        @logger.debug("pagerduty_acknowledged?: auth: #{options[:head].inspect}")
+
         http = EM::HttpRequest.new(url).get(options)
         # DEBUG flapjack-pagerduty: pagerduty_acknowledged?: decoded response as:
         # {"incidents"=>[{"incident_number"=>40, "status"=>"acknowledged",
@@ -217,11 +221,11 @@ module Flapjack
           response = Yajl::Parser.parse(http.response)
         rescue Yajl::ParseError
           @logger.error("failed to parse json from a post to #{url} ... response headers and body follows...")
-          @logger.error(http.response_header.inspect)
-          @logger.error(http.response)
           return nil
         end
         status   = http.response_header.status
+        @logger.debug(http.response_header.inspect)
+        @logger.debug(http.response)
 
         @logger.debug("pagerduty_acknowledged?: decoded response as: #{response.inspect}")
         if response.nil?
