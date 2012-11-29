@@ -169,7 +169,7 @@ module Flapjack
           end
 
           # FIXME: try each set of credentials until one works (may have stale contacts turning up)
-          options = pagerduty_credentials.first.merge('check' => check)
+          options = pagerduty_credentials.first.merge('check' => "#{entity_check.entity_name}:#{check}")
 
           acknowledged = pagerduty_acknowledged?(options)
           if acknowledged.nil?
@@ -178,7 +178,7 @@ module Flapjack
           end
 
           pg_acknowledged_by = acknowledged[:pg_acknowledged_by]
-          @logger.debug "#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
+          @logger.debug "#{entity_check.entity_name}:#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
           who_text = ""
           if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
             who_text = " by #{pg_acknowledged_by['name']}"

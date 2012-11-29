@@ -101,6 +101,7 @@ describe Flapjack::Gateways::Pagerduty, :redis => true do
       'username'    => 'flapjack',
       'password'    => 'password123'
     }])
+    entity_check.should_receive(:entity_name).exactly(2).times.and_return('foo-app-01.bar.net:PING')
     entity_check.should_receive(:create_acknowledgement).with('summary' => 'Acknowledged on PagerDuty')
 
     Flapjack::Data::Global.should_receive(:unacknowledged_failing_checks).and_return([entity_check])
