@@ -7,7 +7,7 @@ end
 
 # NB: seems to be buggy with the default --progress formatter, was
 # causing failures to parse the features
-guard 'cucumber', :cli => '--no-profile --color --format fuubar --strict' do
+guard 'cucumber', :cli => '--no-profile --color --format Cucumber::Formatter::Fuubar --strict' do
   watch(%r{^features/.+\.feature$})
   watch(%r{^features/support/.+$})          { 'features' }
   watch(%r{^features/step_definitions/(.+)_steps\.rb$}) { |m| Dir[File.join("**/#{m[1]}.feature")][0] || 'features' }
