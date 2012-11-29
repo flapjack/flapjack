@@ -6,7 +6,6 @@ require 'sinatra/base'
 require 'haml'
 require 'rack/fiber_pool'
 
-require 'async-rack'
 require 'flapjack/rack_logger'
 
 require 'flapjack/data/contact'
@@ -59,9 +58,10 @@ module Flapjack
           @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
 
           if config && config['access_log']
-            access_logger = Flapjack::RackLogger.new(config['access_log'])
-            use Rack::CommonLogger, access_logger
+            access_logger = Flapjack::AsyncLogger.new(config['access_log'])
+            use Flapjack::CommonLogger, access_logger
           end
+
         end
 
         def cleanup
@@ -91,6 +91,7 @@ module Flapjack
           parts  = r.split(':')[0..1]
           [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
         }.compact.sort_by {|parts| parts }
+
         haml :index
       end
 
