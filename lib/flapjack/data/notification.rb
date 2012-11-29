@@ -32,6 +32,7 @@ module Flapjack
                        'state'             => event.state,
                        'summary'           => event.summary,
                        'time'              => event.time,
+                       'duration'          => event.duration || nil,
                        'notification_type' => type}
       end
 
