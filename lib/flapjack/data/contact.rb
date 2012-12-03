@@ -30,12 +30,14 @@ module Flapjack
       def self.delete_all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        redis.del( redis.keys("contact:*") +
-                   redis.keys("contact_media:*") +
-                   # FIXME: when we do source tagging we can properly
-                   # clean up contacts_for: keys
-                   # redis.keys('contacts_for:*') +
-                   redis.keys("contact_pagerduty:*") )
+        keys_to_delete = redis.keys("contact:*") +
+                         redis.keys("contact_media:*") +
+                         # FIXME: when we do source tagging we can properly
+                         # clean up contacts_for: keys
+                         # redis.keys('contacts_for:*') +
+                         redis.keys("contact_pagerduty:*")
+
+        redis.del(keys_to_delete) unless keys_to_delete.length == 0
       end
 
       def self.find_by_id(contact_id, options = {})
