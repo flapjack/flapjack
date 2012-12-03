@@ -48,7 +48,10 @@ module Flapjack
 
       def main
         logger.debug("pagerduty gateway - commencing main method")
-        raise "Can't connect to the pagerduty API" unless test_pagerduty_connection
+        while not test_pagerduty_connection do
+          logger.error("Can't connect to the pagerduty API, retrying after 10 seconds")
+          EM::Synchrony.sleep(10)
+        end
 
         # TODO: only clear this if there isn't another pagerduty gateway instance running
         # or better, include an instance ID in the semaphore key name
