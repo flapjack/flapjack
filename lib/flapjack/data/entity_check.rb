@@ -5,6 +5,7 @@ require 'yajl/json_gem'
 require 'flapjack/patches'
 
 require 'flapjack/data/contact'
+require 'flapjack/data/event'
 require 'flapjack/data/entity'
 
 # TODO might want to split the class methods out to a separate class, DAO pattern
