@@ -13,8 +13,15 @@ describe Flapjack::Data::EntityCheck, :redis => true do
   let(:half_an_hour) { 30 * 60 }
 
   before(:each) do
+    Flapjack::Data::Contact.add({'id'         => '362',
+                                 'first_name' => 'John',
+                                 'last_name'  => 'Johnson',
+                                 'email'      => 'johnj@example.com' },
+                                 :redis       => @redis)
+
     Flapjack::Data::Entity.add({'id'   => '5000',
-                                'name' => name},
+                                'name' => name,
+                                'contacts' => ['362']},
                                :redis => @redis)
   end
 
@@ -518,4 +525,12 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec.last_recovery_notification.should == t
   end
 
+  it "finds all related contacts" do
+    ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+    contacts = ec.contacts
+    contacts.should_not be_nil
+    contacts.should be_an(Array)
+    contacts.should have(1).contact
+    contacts.first.name.should == 'John Johnson'
+  end
 end

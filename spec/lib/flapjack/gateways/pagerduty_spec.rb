@@ -93,14 +93,17 @@ describe Flapjack::Gateways::Pagerduty, :redis => true do
     Flapjack::RedisPool.should_receive(:new)
     fp.bootstrap(:config => config)
 
-    entity_check = mock('entity_check')
-    entity_check.should_receive(:check).and_return('PING')
-    entity_check.should_receive(:pagerduty_credentials).and_return([{
+    contact = mock('contact')
+    contact.should_receive(:pagerduty_credentials).and_return({
       'service_key' => '12345678',
       'subdomain"'  => 'flpjck',
       'username'    => 'flapjack',
       'password'    => 'password123'
-    }])
+    })
+
+    entity_check = mock('entity_check')
+    entity_check.should_receive(:check).and_return('PING')
+    entity_check.should_receive(:contacts).and_return([contact])
     entity_check.should_receive(:entity_name).exactly(2).times.and_return('foo-app-01.bar.net:PING')
     entity_check.should_receive(:create_acknowledgement).with('summary' => 'Acknowledged on PagerDuty')
 

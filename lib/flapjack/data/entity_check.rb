@@ -405,17 +405,6 @@ module Flapjack
         }
       end
 
-      # returns an array of pagerduty credentials. If more than one contact for this entity_check
-      # has pagerduty credentials then there'll be one hash in the array for each set of
-      # credentials.
-      def pagerduty_credentials(options)
-        self.contacts.inject([]) {|ret, contact|
-          cred = contact.pagerduty_credentials
-          ret << cred if cred
-          ret
-        }
-      end
-
       # takes a check, looks up contacts that are interested in this check (or in the check's entity)
       # and returns an array of contact records
       def contacts
