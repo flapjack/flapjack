@@ -45,5 +45,7 @@ RSpec.configure do |config|
     @redis.quit
   end
 
+  config.include HamlViewHelper, :haml_view => true
+
   config.include Rack::Test::Methods, :sinatra => true
 end
