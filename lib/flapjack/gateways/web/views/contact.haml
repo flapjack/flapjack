@@ -1,8 +1,6 @@
 !!! 5
-- nav_haml = Haml::Engine.new(File.read(File.dirname(__FILE__) + '/_nav.haml'))
-- nav      = nav_haml.render
-- css_haml = Haml::Engine.new(File.read(File.dirname(__FILE__) + '/_css.haml'))
-- css      = css_haml.render
+- nav = render_haml('_nav.haml', self)
+- css = render_haml('_css.haml', self)
 %html
   %head
     %title Flapjack - Contact: #{@contact.name}
@@ -39,7 +37,7 @@
                 %p= entity.name
               %td
                 - checks.each do |check|
-                  - link = "/check?entity=#{entity.name}&check=#{check}"
+                  - link = "/check?entity=#{CGI.escape(entity.name)}&check=#{CGI.escape(check)}"
                   %p
                     %a(title='check status' href=link) #{check}
       - else
