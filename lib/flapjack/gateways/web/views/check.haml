@@ -1,8 +1,7 @@
 !!! 5
-- nav_haml = Haml::Engine.new(File.read(File.dirname(__FILE__) + '/_nav.haml'))
-- nav      = nav_haml.render
-- css_haml = Haml::Engine.new(File.read(File.dirname(__FILE__) + '/_css.haml'))
-- css      = css_haml.render
+- nav = render_haml('_nav.haml', self)
+- css = render_haml('_css.haml', self)
+- check_path_escaped = URI.escape(@entity, ' #&;/=?') << '/' << URI.escape(@check, ' #&;/=?')
 %html
   %head
     %title Flapjack - Check: #{@entity}:#{@check}
@@ -11,7 +10,7 @@
     %div#wrapper
       = nav
       %h1 #{@check} on #{@entity}
-      %form{:action => "/acknowledgements/#{@entity}/#{@check}", :method => "post"}
+      %form{:action => "/acknowledgements/#{check_path_escaped}", :method => "post"}
         %h2
           State: #{@check_state ? @check_state.upcase : ''}
         - if (['warning', 'critical'].include?(@check_state) and !(@current_unscheduled_maintenance || @current_scheduled_maintenance))
@@ -26,7 +25,7 @@
           %input{:type => 'text', :name => 'duration', :value => ''}
       - if @current_unscheduled_maintenance
         %h3 (Acknowledged - #{@current_unscheduled_maintenance[:summary]})
-        %form{:action => "/end_unscheduled_maintenance/#{@entity}/#{@check}", :method => "post"}
+        %form{:action => "/end_unscheduled_maintenance/#{check_path_escaped}", :method => "post"}
           %p
             %input{:type => 'submit', :value => 'End Unscheduled Maintenance (Unacknowledge)', :class => 'button'}
       - if @current_scheduled_maintenance
@@ -93,12 +92,12 @@
               %td
                 - if end_time > Time.now.to_i
                   - if start_time > Time.now.to_i
-                    %form{ :action => "/scheduled_maintenances/#{@entity}/#{@check}", :method => "post"}
+                    %form{ :action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
                       %input{:type => 'hidden', :name => '_method', :value => 'delete'}
                       %input{:type => 'hidden', :name => 'start_time', :value => start_time}
                       %input{:type => 'submit', :value => 'Delete', :class => 'button'}
                   - else
-                    %form{ :action => "/scheduled_maintenances/#{@entity}/#{@check}", :method => "post"}
+                    %form{ :action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
                       %input{:type => 'hidden', :name => '_method',    :value => 'patch'}
                       %input{:type => 'hidden', :name => 'start_time', :value => start_time}
                       %input{:type => 'hidden', :name => 'end_time',   :value => 'now'}
@@ -106,7 +105,7 @@
       - else
         %p No maintenance is scheduled
       %h4 Add Scheduled Maintenance
-      %form{:action => "/scheduled_maintenances/#{@entity}/#{@check}", :method => "post"}
+      %form{:action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
         %fieldset
           %table
             %tr

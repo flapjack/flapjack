@@ -1,8 +1,6 @@
 !!! 5
-- nav_haml = Haml::Engine.new(File.read(File.dirname(__FILE__) + '/_nav.haml'))
-- nav      = nav_haml.render
-- css_haml = Haml::Engine.new(File.read(File.dirname(__FILE__) + '/_css.haml'))
-- css      = css_haml.render
+- nav = render_haml('_nav.haml', self)
+- css = render_haml('_css.haml', self)
 %html
   %head
     %title Flapjack - Self Stats
