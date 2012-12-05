@@ -45,5 +45,9 @@ RSpec.configure do |config|
     @redis.quit
   end
 
+  config.after(:each, :time => true) do
+    Delorean.back_to_the_present
+  end
+
   config.include Rack::Test::Methods, :sinatra => true
 end

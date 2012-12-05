@@ -161,4 +161,3 @@ end
 Then /^show me the notifications?$/ do
   puts @app.logger.messages.join("\n")
 end
-

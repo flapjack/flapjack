@@ -153,6 +153,7 @@ module Flapjack
       end
 
       # change the end time of a scheduled maintenance (including when one is current)
+      # TODO allow to update summary as well
       def update_scheduled_maintenance(start_time, patches = {})
 
         # check if there is such a scheduled maintenance period
@@ -162,7 +163,7 @@ module Flapjack
 
         if patches[:end_time]
           end_time = patches[:end_time]
-          raise ArgumentError unless end_time > start_time
+          raise ArgumentError, "end time must be after start time" unless end_time > start_time
           old_end_time = start_time + old_duration
           duration = end_time - start_time
           @redis.zadd("#{@key}:scheduled_maintenances", duration, start_time)
@@ -170,7 +171,6 @@ module Flapjack
 
         # scheduled maintenance periods have changed, revalidate
         update_current_scheduled_maintenance(:revalidate => true)
-
       end
 
       # delete a scheduled maintenance

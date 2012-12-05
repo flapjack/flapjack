@@ -106,21 +106,21 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       timestamp.should_not be_nil
       timestamp.should == t.to_s
 
-      umps = @redis.zrange("#{name}:#{check}:unscheduled_maintenances", 0, -1, :with_scores => true)
+      umps = ec.maintenances(nil, nil, :scheduled => false)
       umps.should_not be_nil
       umps.should be_an(Array)
       umps.should have(1).unscheduled_maintenance_period
-      umps[0].should be_an(Array)
+      umps[0].should be_a(Hash)
 
-      start_time = umps[0][0]
+      start_time = umps[0][:start_time]
       start_time.should_not be_nil
-      start_time.should be_a(String)
-      start_time.should == t.to_s
+      start_time.should be_an(Integer)
+      start_time.should == t
 
-      score = umps[0][1]
-      score.should_not be_nil
-      score.should be_a(Float)
-      score.should == half_an_hour
+      duration = umps[0][:duration]
+      duration.should_not be_nil
+      duration.should be_a(Float)
+      duration.should == half_an_hour
 
       summary = @redis.get("#{name}:#{check}:#{t}:unscheduled_maintenance:summary")
       summary.should_not be_nil
@@ -133,28 +133,112 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
         :duration => half_an_hour, :summary => "30 minutes")
 
-      smps = @redis.zrange("#{name}:#{check}:scheduled_maintenances", 0, -1, :with_scores => true)
+      smps = ec.maintenances(nil, nil, :scheduled => true)
       smps.should_not be_nil
       smps.should be_an(Array)
       smps.should have(1).scheduled_maintenance_period
-      smps[0].should be_an(Array)
+      smps[0].should be_a(Hash)
 
-      start_time = smps[0][0]
+      start_time = smps[0][:start_time]
       start_time.should_not be_nil
-      start_time.should be_a(String)
-      start_time.should == (t + (60 * 60)).to_s
+      start_time.should be_an(Integer)
+      start_time.should == (t + (60 * 60))
 
-      score = smps[0][1]
-      score.should_not be_nil
-      score.should be_a(Float)
-      score.should == half_an_hour
+      duration = smps[0][:duration]
+      duration.should_not be_nil
+      duration.should be_a(Float)
+      duration.should == half_an_hour
     end
 
-    it "creates a scheduled maintenance period covering the current time"
+    # TODO this should probably enforce that it starts in the future
+    it "creates a scheduled maintenance period covering the current time" do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_scheduled_maintenance(:start_time => t - (60 * 60),
+        :duration => 2 * (60 * 60), :summary => "2 hours")
 
-    it "updates a scheduled maintenance period for a future time"
+      smps = ec.maintenances(nil, nil, :scheduled => true)
+      smps.should_not be_nil
+      smps.should be_an(Array)
+      smps.should have(1).scheduled_maintenance_period
+      smps[0].should be_a(Hash)
 
-    it "updates a scheduled maintenance period covering the current time"
+      start_time = smps[0][:start_time]
+      start_time.should_not be_nil
+      start_time.should be_an(Integer)
+      start_time.should == (t - (60 * 60))
+
+      duration = smps[0][:duration]
+      duration.should_not be_nil
+      duration.should be_a(Float)
+      duration.should == 2 * (60 * 60)
+    end
+
+    it "updates a scheduled maintenance period for a future time" do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
+        :duration => 2 * (60 * 60), :summary => "2 hours")
+
+      ec.update_scheduled_maintenance(t + (60 * 60), :end_time => t + (4 * (60 * 60)))
+      smps = ec.maintenances(nil, nil, :scheduled => true)
+      smps.should_not be_nil
+      smps.should be_an(Array)
+      smps.should have(1).scheduled_maintenance_period
+      smps[0].should be_a(Hash)
+
+      start_time = smps[0][:start_time]
+      start_time.should_not be_nil
+      start_time.should be_an(Integer)
+      start_time.should == (t + (60 * 60))
+
+      duration = smps[0][:duration]
+      duration.should_not be_nil
+      duration.should be_a(Float)
+      duration.should == 3 * (60 * 60)
+    end
+
+    # TODO this should probably enforce that it starts in the future
+    it "updates a scheduled maintenance period covering the current time", :time => true do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
+        :duration => 2 * (60 * 60), :summary => "2 hours")
+
+      Delorean.time_travel_to( Time.at(t + (90 * 60)) )
+
+      ec.update_scheduled_maintenance(t + (60 * 60), :end_time => t + (4 * (60 * 60)))
+      smps = ec.maintenances(nil, nil, :scheduled => true)
+      smps.should_not be_nil
+      smps.should be_an(Array)
+      smps.should have(1).scheduled_maintenance_period
+      smps[0].should be_a(Hash)
+
+      start_time = smps[0][:start_time]
+      start_time.should_not be_nil
+      start_time.should be_an(Integer)
+      start_time.should == (t + (60 * 60))
+
+      duration = smps[0][:duration]
+      duration.should_not be_nil
+      duration.should be_a(Float)
+      duration.should == 3 * (60 * 60)
+    end
+
+    it "fails to update a scheduled maintenance period when not found" do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      lambda {
+        ec.update_scheduled_maintenance(t + (60 * 60), :end_time => t + (2 * (60 * 60)))
+      }.should raise_error(ArgumentError)
+
+      smps = ec.maintenances(nil, nil, :scheduled => true)
+      smps.should_not be_nil
+      smps.should be_an(Array)
+      smps.should be_empty
+    end
+
+    it "fails to update a scheduled maintenance period with invalid end time"
 
     it "removes a scheduled maintenance period for a future time"
 
