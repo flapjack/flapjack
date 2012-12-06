@@ -13,8 +13,15 @@ describe Flapjack::Data::EntityCheck, :redis => true do
   let(:half_an_hour) { 30 * 60 }
 
   before(:each) do
+    Flapjack::Data::Contact.add({'id'         => '362',
+                                 'first_name' => 'John',
+                                 'last_name'  => 'Johnson',
+                                 'email'      => 'johnj@example.com' },
+                                 :redis       => @redis)
+
     Flapjack::Data::Entity.add({'id'   => '5000',
-                                'name' => name},
+                                'name' => name,
+                                'contacts' => ['362']},
                                :redis => @redis)
   end
 
@@ -106,21 +113,21 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       timestamp.should_not be_nil
       timestamp.should == t.to_s
 
-      umps = @redis.zrange("#{name}:#{check}:unscheduled_maintenances", 0, -1, :with_scores => true)
+      umps = ec.maintenances(nil, nil, :scheduled => false)
       umps.should_not be_nil
       umps.should be_an(Array)
       umps.should have(1).unscheduled_maintenance_period
-      umps[0].should be_an(Array)
+      umps[0].should be_a(Hash)
 
-      start_time = umps[0][0]
+      start_time = umps[0][:start_time]
       start_time.should_not be_nil
-      start_time.should be_a(String)
-      start_time.should == t.to_s
+      start_time.should be_an(Integer)
+      start_time.should == t
 
-      score = umps[0][1]
-      score.should_not be_nil
-      score.should be_a(Float)
-      score.should == half_an_hour
+      duration = umps[0][:duration]
+      duration.should_not be_nil
+      duration.should be_a(Float)
+      duration.should == half_an_hour
 
       summary = @redis.get("#{name}:#{check}:#{t}:unscheduled_maintenance:summary")
       summary.should_not be_nil
@@ -133,32 +140,167 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
         :duration => half_an_hour, :summary => "30 minutes")
 
-      smps = @redis.zrange("#{name}:#{check}:scheduled_maintenances", 0, -1, :with_scores => true)
+      smps = ec.maintenances(nil, nil, :scheduled => true)
       smps.should_not be_nil
       smps.should be_an(Array)
       smps.should have(1).scheduled_maintenance_period
-      smps[0].should be_an(Array)
+      smps[0].should be_a(Hash)
 
-      start_time = smps[0][0]
+      start_time = smps[0][:start_time]
       start_time.should_not be_nil
-      start_time.should be_a(String)
-      start_time.should == (t + (60 * 60)).to_s
+      start_time.should be_an(Integer)
+      start_time.should == (t + (60 * 60))
 
-      score = smps[0][1]
-      score.should_not be_nil
-      score.should be_a(Float)
-      score.should == half_an_hour
+      duration = smps[0][:duration]
+      duration.should_not be_nil
+      duration.should be_a(Float)
+      duration.should == half_an_hour
     end
 
-    it "creates a scheduled maintenance period covering the current time"
+    # TODO this should probably enforce that it starts in the future
+    it "creates a scheduled maintenance period covering the current time" do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_scheduled_maintenance(:start_time => t - (60 * 60),
+        :duration => 2 * (60 * 60), :summary => "2 hours")
 
-    it "updates a scheduled maintenance period for a future time"
+      smps = ec.maintenances(nil, nil, :scheduled => true)
+      smps.should_not be_nil
+      smps.should be_an(Array)
+      smps.should have(1).scheduled_maintenance_period
+      smps[0].should be_a(Hash)
 
-    it "updates a scheduled maintenance period covering the current time"
+      start_time = smps[0][:start_time]
+      start_time.should_not be_nil
+      start_time.should be_an(Integer)
+      start_time.should == (t - (60 * 60))
 
-    it "removes a scheduled maintenance period for a future time"
+      duration = smps[0][:duration]
+      duration.should_not be_nil
+      duration.should be_a(Float)
+      duration.should == 2 * (60 * 60)
+    end
 
-    it "removes a scheduled maintenance period covering a current time"
+    it "updates a scheduled maintenance period for a future time" do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
+        :duration => 2 * (60 * 60), :summary => "2 hours")
+
+      ec.update_scheduled_maintenance(t + (60 * 60), :end_time => t + (4 * (60 * 60)))
+      smps = ec.maintenances(nil, nil, :scheduled => true)
+      smps.should_not be_nil
+      smps.should be_an(Array)
+      smps.should have(1).scheduled_maintenance_period
+      smps[0].should be_a(Hash)
+
+      start_time = smps[0][:start_time]
+      start_time.should_not be_nil
+      start_time.should be_an(Integer)
+      start_time.should == (t + (60 * 60))
+
+      duration = smps[0][:duration]
+      duration.should_not be_nil
+      duration.should be_a(Float)
+      duration.should == 3 * (60 * 60)
+    end
+
+    # TODO this should probably enforce that it starts in the future
+    it "updates a scheduled maintenance period covering the current time", :time => true do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
+        :duration => 2 * (60 * 60), :summary => "2 hours")
+
+      Delorean.time_travel_to( Time.at(t + (90 * 60)) )
+
+      ec.update_scheduled_maintenance(t + (60 * 60), :end_time => t + (4 * (60 * 60)))
+      smps = ec.maintenances(nil, nil, :scheduled => true)
+      smps.should_not be_nil
+      smps.should be_an(Array)
+      smps.should have(1).scheduled_maintenance_period
+      smps[0].should be_a(Hash)
+
+      start_time = smps[0][:start_time]
+      start_time.should_not be_nil
+      start_time.should be_an(Integer)
+      start_time.should == (t + (60 * 60))
+
+      duration = smps[0][:duration]
+      duration.should_not be_nil
+      duration.should be_a(Float)
+      duration.should == 3 * (60 * 60)
+    end
+
+    it "fails to update a scheduled maintenance period when not found" do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      lambda {
+        ec.update_scheduled_maintenance(t + (60 * 60), :end_time => t + (2 * (60 * 60)))
+      }.should raise_error(ArgumentError)
+
+      smps = ec.maintenances(nil, nil, :scheduled => true)
+      smps.should_not be_nil
+      smps.should be_an(Array)
+      smps.should be_empty
+    end
+
+    it "fails to update a scheduled maintenance period with invalid end time" do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
+        :duration => 2 * (60 * 60), :summary => "2 hours")
+
+      lambda {
+        ec.update_scheduled_maintenance(t + (60 * 60), :end_time => t - (4 * (60 * 60)))
+      }.should raise_error(ArgumentError)
+      smps = ec.maintenances(nil, nil, :scheduled => true)
+      smps.should_not be_nil
+      smps.should be_an(Array)
+      smps.should have(1).scheduled_maintenance_period
+      smps[0].should be_a(Hash)
+
+      start_time = smps[0][:start_time]
+      start_time.should_not be_nil
+      start_time.should be_an(Integer)
+      start_time.should == (t + (60 * 60))
+
+      duration = smps[0][:duration]
+      duration.should_not be_nil
+      duration.should be_a(Float)
+      duration.should == 2 * (60 * 60)
+    end
+
+    it "removes a scheduled maintenance period for a future time" do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
+        :duration => 2 * (60 * 60), :summary => "2 hours")
+
+      ec.delete_scheduled_maintenance(:start_time => t + (60 * 60))
+
+      smps = ec.maintenances(nil, nil, :scheduled => true)
+      smps.should_not be_nil
+      smps.should be_an(Array)
+      smps.should be_empty
+    end
+
+    # TODO this should probably enforce that it starts in the future
+    it "removes a scheduled maintenance period covering a current time", :time => true do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
+        :duration => 2 * (60 * 60), :summary => "2 hours")
+
+      Delorean.time_travel_to( Time.at(t + (90 * 60)) )
+
+      ec.delete_scheduled_maintenance(:start_time => t + (60 * 60))
+
+      smps = ec.maintenances(nil, nil, :scheduled => true)
+      smps.should_not be_nil
+      smps.should be_an(Array)
+      smps.should be_empty
+    end
 
     it "returns a list of scheduled maintenance periods" do
       t = Time.now.to_i
@@ -209,8 +351,6 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                         :duration   => half_an_hour,
                         :summary    => "second"}
     end
-
-    it "updates scheduled maintenance periods"
 
   end
 
@@ -300,20 +440,20 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
 
     t = Time.now.to_i
-    # ec.update_state('ok', :timestamp => time_before(t, 5), :summary => 'a')
-    # ec.update_state('critical', :timestamp => time_before(t, 4), :summary => 'b')
-    # ec.update_state('ok', :timestamp => time_before(t, 3), :summary => 'c')
-    # ec.update_state('critical', :timestamp => time_before(t, 2), :summary => 'd')
-    # ec.update_state('ok', :timestamp => time_before(t, 1), :summary => 'e')
+    ec.update_state('ok', :timestamp => time_before(t, 5), :summary => 'a')
+    ec.update_state('critical', :timestamp => time_before(t, 4), :summary => 'b')
+    ec.update_state('ok', :timestamp => time_before(t, 3), :summary => 'c')
+    ec.update_state('critical', :timestamp => time_before(t, 2), :summary => 'd')
+    ec.update_state('ok', :timestamp => time_before(t, 1), :summary => 'e')
 
-    # states = ec.historical_states(time_before(t, 4), t)
-    # states.should_not be_nil
-    # states.should be_an(Array)
-    # states.should have(4).data_hashes
-    # states[0][:summary].should == 'b'
-    # states[1][:summary].should == 'c'
-    # states[2][:summary].should == 'd'
-    # states[3][:summary].should == 'e'
+    states = ec.historical_states(time_before(t, 4), t)
+    states.should_not be_nil
+    states.should be_an(Array)
+    states.should have(4).data_hashes
+    states[0][:summary].should == 'b'
+    states[1][:summary].should == 'c'
+    states[2][:summary].should == 'd'
+    states[3][:summary].should == 'e'
   end
 
   it "returns a list of historical scheduled maintenances for a time range" do
@@ -360,7 +500,18 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec.should_not be_failed
   end
 
-  it "returns a status summary"
+  it "returns a status summary" do
+    ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+
+    t = Time.now.to_i
+    ec.update_state('ok', :timestamp => time_before(t, 5), :summary => 'a')
+    ec.update_state('critical', :timestamp => time_before(t, 4), :summary => 'b')
+    ec.update_state('ok', :timestamp => time_before(t, 3), :summary => 'c')
+    ec.update_state('critical', :timestamp => time_before(t, 2), :summary => 'd')
+
+    summary = ec.summary
+    summary.should == 'd'
+  end
 
   it "returns timestamps for its last notifications" do
     t = Time.now.to_i
@@ -374,4 +525,12 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec.last_recovery_notification.should == t
   end
 
+  it "finds all related contacts" do
+    ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+    contacts = ec.contacts
+    contacts.should_not be_nil
+    contacts.should be_an(Array)
+    contacts.should have(1).contact
+    contacts.first.name.should == 'John Johnson'
+  end
 end

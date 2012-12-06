@@ -110,7 +110,12 @@ module Flapjack
       end
 
       def tags
-        @tags ||= load_tags
+        @tags ||= ::Set.new( @redis.keys("#{TAG_PREFIX}:*").inject([]) {|memo, entity_tag|
+          if Flapjack::Data::Tag.find(entity_tag, :redis => @redis).include?(@id.to_s)
+            memo << entity_tag.sub(/^#{TAG_PREFIX}:/, '')
+          end
+          memo
+        } )
       end
 
       def add_tags(*enum)
@@ -137,16 +142,6 @@ module Flapjack
         raise "Entity name not set" unless @name = options[:name]
         @id = options[:id]
         @logger = options[:logger]
-      end
-
-      def load_tags
-        entity_tags = ::Set.new
-        tag_data = @redis.keys("#{TAG_PREFIX}:*").inject([]) do |memo, entity_tag|
-          tag = Flapjack::Data::Tag.find(entity_tag, :redis => @redis)
-          memo << entity_tag.sub(/^#{TAG_PREFIX}:/, '') if tag.include?(@id.to_s)
-          memo
-        end
-        entity_tags.merge(tag_data)
       end
 
     end
