@@ -238,6 +238,12 @@ module Flapjack
         haml :contact
       end
 
+    protected
+
+      def render_haml(file, scope)
+        Haml::Engine.new(File.read(File.dirname(__FILE__) + '/web/views/' + file)).render(scope)
+      end
+
     private
 
       def get_entity_check(entity, check)
