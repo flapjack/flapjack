@@ -216,8 +216,17 @@ describe Flapjack::Gateways::Web, :sinatra => true, :redis => true do
     last_response.should be_ok
   end
 
-  it "shows details of an individual contact found by email"
+  it "shows details of an individual contact found by id" do
+    contact = mock('contact')
+    contact.should_receive(:name).twice.and_return("Smithson Smith")
+    contact.should_receive(:media).exactly(3).times.and_return({})
+    contact.should_receive(:entities_and_checks).and_return([])
 
-  it "shows details of an individual contact found by id"
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with('0362', :redis => @redis).and_return(contact)
+
+    get "/contacts/0362"
+    last_response.should be_ok
+  end
 
 end

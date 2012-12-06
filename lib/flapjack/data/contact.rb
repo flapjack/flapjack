@@ -5,6 +5,8 @@
 
 require 'set'
 
+require 'flapjack/data/entity'
+
 module Flapjack
 
   module Data

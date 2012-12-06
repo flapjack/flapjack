@@ -61,7 +61,24 @@ describe 'Flapjack::Gateways::API', :sinatra => true do
     last_response.status.should == 204
   end
 
-  it "returns a list of scheduled maintenance periods within a time window for an entity"
+  it "returns a list of scheduled maintenance periods within a time window for an entity" do
+    start  = Time.parse('1 Jan 2012')
+    finish = Time.parse('6 Jan 2012')
+
+    result = mock('result')
+    result_json = %q{"result"}
+    result.should_receive(:to_json).and_return(result_json)
+    entity_presenter.should_receive(:scheduled_maintenance).with(start.to_i, finish.to_i).and_return(result)
+    Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
+      with(entity, :redis => redis).and_return(entity_presenter)
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+
+    get "/scheduled_maintenances/#{entity_name_esc}?" +
+      "start_time=#{CGI.escape(start.iso8601)}&end_time=#{CGI.escape(finish.iso8601)}"
+    last_response.should be_ok
+    last_response.body.should == result_json
+  end
 
   it "returns a list of scheduled maintenance periods for a check on an entity" do
     result = mock('result')
@@ -112,8 +129,26 @@ describe 'Flapjack::Gateways::API', :sinatra => true do
     last_response.body.should == result_json
   end
 
+  it "returns a list of unscheduled maintenance periods within a time window for a check an entity" do
+    start    = Time.parse('1 Jan 2012')
+    finish   = Time.parse('6 Jan 2012')
 
-  it "returns a list of unscheduled maintenance periods within a time window for a check an entity"
+    result = mock('result')
+    result_json = %q{"result"}
+    result.should_receive(:to_json).and_return(result_json)
+    entity_check_presenter.should_receive(:unscheduled_maintenance).with(start.to_i, finish.to_i).and_return(result)
+    Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
+      with(entity_check).and_return(entity_check_presenter)
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+
+    get "/unscheduled_maintenances/#{entity_name_esc}/#{check}" +
+      "?start_time=#{CGI.escape(start.iso8601)}&end_time=#{CGI.escape(finish.iso8601)}"
+    last_response.should be_ok
+    last_response.body.should == result_json
+  end
 
   it "returns a list of outages for an entity" do
     result = mock('result')
