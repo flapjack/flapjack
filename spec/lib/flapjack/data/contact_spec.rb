@@ -5,12 +5,21 @@ require 'flapjack/data/entity_check'
 
 describe Flapjack::Data::Contact, :redis => true do
 
-  def add_contacts
+  before(:each) do
     Flapjack::Data::Contact.add({'id'         => '362',
                                  'first_name' => 'John',
                                  'last_name'  => 'Johnson',
-                                 'email'      => 'johnj@example.com' },
+                                 'email'      => 'johnj@example.com',
+                                 'media' => {
+                                    'pagerduty' => {
+                                      'service_key' => '123456789012345678901234',
+                                      'subdomain'   => 'flpjck',
+                                      'username'    => 'flapjack',
+                                      'password'    => 'very_secure'
+                                    }
+                                  }},
                                  :redis       => @redis)
+
     Flapjack::Data::Contact.add({'id'         => '363',
                                  'first_name' => 'Jane',
                                  'last_name'  => 'Janeley',
@@ -19,8 +28,6 @@ describe Flapjack::Data::Contact, :redis => true do
   end
 
   it "returns a list of all contacts" do
-    add_contacts
-
     contacts = Flapjack::Data::Contact.all(:redis => @redis)
     contacts.should_not be_nil
     contacts.should be_an(Array)
@@ -30,16 +37,12 @@ describe Flapjack::Data::Contact, :redis => true do
   end
 
   it "finds a contact by id" do
-    add_contacts
-
     contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
     contact.should_not be_nil
     contact.name.should == "John Johnson"
   end
 
   it "deletes all contacts" do
-    add_contacts
-
     Flapjack::Data::Contact.delete_all(:redis => @redis)
     contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
     contact.should be_nil
@@ -48,8 +51,6 @@ describe Flapjack::Data::Contact, :redis => true do
   end
 
   it "returns a list of entities and their checks for a contact" do
-    add_contacts
-
     entity_name = 'abc-123'
 
     Flapjack::Data::Entity.add({'id'   => '5000',
@@ -74,9 +75,19 @@ describe Flapjack::Data::Contact, :redis => true do
     entity.name.should == entity_name
     checks = eandc[:checks]
     checks.should be_a(Set)
+    checks.should have(1).check
     checks.should include('PING')
   end
 
-  it "returns pagerduty credentials for a contact"
+  it "returns pagerduty credentials for a contact" do
+    contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
+    credentials = contact.pagerduty_credentials
+    credentials.should_not be_nil
+    credentials.should be_a(Hash)
+    credentials.should == {'service_key' => '123456789012345678901234',
+                           'subdomain'   => 'flpjck',
+                           'username'    => 'flapjack',
+                           'password'    => 'very_secure'}
+  end
 
 end
