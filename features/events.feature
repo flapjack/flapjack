@@ -152,3 +152,11 @@ Feature: events
     Given check 'abc' for entity 'def' is in a failure state
     When  an acknowledgement event is received for check 'abc' on entity 'def'
     Then  a notification should be generated for check 'abc' on entity 'def'
+
+  Scenario: Brief failure then OK
+    Given check 'abc' for entity 'def' is in an ok state
+    When  a failure event is received for check 'abc' on entity 'def'
+    And   10 seconds passes
+    And   an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+

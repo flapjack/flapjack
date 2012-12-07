@@ -6,7 +6,7 @@ module Flapjack
   module Data
     class Event
 
-      attr_accessor :previous_state
+      attr_accessor :previous_state, :previous_state_duration
 
       # Helper method for getting the next event.
       #
