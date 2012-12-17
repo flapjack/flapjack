@@ -160,3 +160,66 @@ Feature: events
     And   an ok event is received for check 'abc' on entity 'def'
     Then  a notification should not be generated for check 'abc' on entity 'def'
 
+  Scenario: Flapper (down for one minute, up for one minute, repeat)
+    Given check 'abc' for entity 'def' is in an ok state
+    When  a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    # 30 seconds
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    # 60 seconds
+    And   an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    And   an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    And   an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    And   an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    And   an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    And   an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    # 120 seconds
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    # 150 seconds
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    And   a failure event is received for check 'abc' on entity 'def'
+    Then  a notification should not be generated for check 'abc' on entity 'def'
+    When  10 seconds passes
+    # 180 seconds
+    And   an ok event is received for check 'abc' on entity 'def'
+    Then  a notification should be generated for check 'abc' on entity 'def'
