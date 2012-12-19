@@ -16,7 +16,7 @@ module Flapjack
 
       @log4r_logger = Log4r::Logger.new(name)
 
-      formatter = Log4r::PatternFormatter.new(:pattern => "[%l] %d :: #{name} :: %m",
+      formatter = Log4r::PatternFormatter.new(:pattern => "%d [%l] :: #{name} :: %m",
         :date_pattern => "%Y-%m-%dT%H:%M:%S%z")
 
       [Log4r::StdoutOutputter, Log4r::SyslogOutputter].each do |outp_klass|
