@@ -30,6 +30,7 @@ module Flapjack
       end
 
       def stop
+        @should_quit = true
         @redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
       end
 
