@@ -6,7 +6,6 @@ require 'sinatra/base'
 require 'haml'
 require 'rack/fiber_pool'
 
-require 'async-rack'
 require 'flapjack/rack_logger'
 
 require 'flapjack/data/contact'
@@ -51,9 +50,10 @@ module Flapjack
           @logger.info "starting web - class"
 
           if @config && @config['access_log']
-            access_logger = Flapjack::RackLogger.new(@config['access_log'])
-            use Rack::CommonLogger, access_logger
+            access_logger = Flapjack::AsyncLogger.new(config['access_log'])
+            use Flapjack::CommonLogger, access_logger
           end
+
         end
       end
 
@@ -77,6 +77,7 @@ module Flapjack
           parts  = r.split(':')[0..1]
           [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
         }.compact.sort_by {|parts| parts }
+
         haml :index
       end
 
@@ -221,6 +222,12 @@ module Flapjack
         }
 
         haml :contact
+      end
+
+    protected
+
+      def render_haml(file, scope)
+        Haml::Engine.new(File.read(File.dirname(__FILE__) + '/web/views/' + file)).render(scope)
       end
 
     private

@@ -158,6 +158,7 @@ module Flapjack
         end
 
         event.previous_state = entity_check.state
+        event.previous_state_duration = Time.now.to_i - entity_check.last_change.to_i
         @logger.info("No previous state for event #{event.id}") if event.previous_state.nil?
 
         # If there is a state change, update record with: the time, the new state

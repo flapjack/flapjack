@@ -35,7 +35,10 @@ module Flapjack
 
       def start
         @logger.debug("pagerduty gateway - commencing main method")
-        raise "Can't connect to the pagerduty API" unless test_pagerduty_connection
+        while not test_pagerduty_connection do
+          logger.error("Can't connect to the pagerduty API, retrying after 10 seconds")
+          EM::Synchrony.sleep(10)
+        end
 
         # TODO: only clear this if there isn't another pagerduty gateway instance running
         # or better, include an instance ID in the semaphore key name
@@ -145,25 +148,34 @@ module Flapjack
         @logger.debug "found unacknowledged failing checks as follows: " + unacknowledged_failing_checks.join(', ')
 
         unacknowledged_failing_checks.each do |entity_check|
-          pagerduty_credentials = entity_check.pagerduty_credentials(:redis => @redis)
+
+          # If more than one contact for this entity_check has pagerduty
+          # credentials then there'll be one hash in the array for each set of
+          # credentials.
+          ec_credentials = entity_check.contacts.inject([]) {|ret, contact|
+            cred = contact.pagerduty_credentials
+            ret << cred if cred
+            ret
+          }
+
           check = entity_check.check
 
-          if pagerduty_credentials.empty?
+          if ec_credentials.empty?
             @logger.debug("No pagerduty credentials found for #{entity_check.entity_name}:#{check}, skipping")
             next
           end
 
           # FIXME: try each set of credentials until one works (may have stale contacts turning up)
-          options = pagerduty_credentials.first.merge('check' => check)
+          options = ec_credentials.first.merge('check' => "#{entity_check.entity_name}:#{check}")
 
           acknowledged = pagerduty_acknowledged?(options)
           if acknowledged.nil?
-            @logger.debug "#{check} is not acknowledged in pagerduty, skipping"
+            @logger.debug "#{entity_check.entity_name}:#{check} is not acknowledged in pagerduty, skipping"
             next
           end
 
           pg_acknowledged_by = acknowledged[:pg_acknowledged_by]
-          @logger.debug "#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
+          @logger.debug "#{entity_check.entity_name}:#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
           who_text = ""
           if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
             who_text = " by #{pg_acknowledged_by['name']}"
@@ -191,6 +203,10 @@ module Flapjack
         options = { :head  => { 'authorization' => [username, password] },
                     :query => query }
 
+        @logger.debug("pagerduty_acknowledged?: request to #{url}")
+        @logger.debug("pagerduty_acknowledged?: query: #{query.inspect}")
+        @logger.debug("pagerduty_acknowledged?: auth: #{options[:head].inspect}")
+
         http = EM::HttpRequest.new(url).get(options)
         # DEBUG flapjack-pagerduty: pagerduty_acknowledged?: decoded response as:
         # {"incidents"=>[{"incident_number"=>40, "status"=>"acknowledged",
@@ -202,11 +218,11 @@ module Flapjack
           response = Yajl::Parser.parse(http.response)
         rescue Yajl::ParseError
           @logger.error("failed to parse json from a post to #{url} ... response headers and body follows...")
-          @logger.error(http.response_header.inspect)
-          @logger.error(http.response)
           return nil
         end
         status   = http.response_header.status
+        @logger.debug(http.response_header.inspect)
+        @logger.debug(http.response)
 
         @logger.debug("pagerduty_acknowledged?: decoded response as: #{response.inspect}")
         if response.nil?

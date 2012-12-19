@@ -5,6 +5,7 @@ require 'yajl/json_gem'
 require 'flapjack/patches'
 
 require 'flapjack/data/contact'
+require 'flapjack/data/event'
 require 'flapjack/data/entity'
 
 # TODO might want to split the class methods out to a separate class, DAO pattern
@@ -153,6 +154,7 @@ module Flapjack
       end
 
       # change the end time of a scheduled maintenance (including when one is current)
+      # TODO allow to update summary as well
       def update_scheduled_maintenance(start_time, patches = {})
 
         # check if there is such a scheduled maintenance period
@@ -162,7 +164,7 @@ module Flapjack
 
         if patches[:end_time]
           end_time = patches[:end_time]
-          raise ArgumentError unless end_time > start_time
+          raise ArgumentError, "end time must be after start time" unless end_time > start_time
           old_end_time = start_time + old_duration
           duration = end_time - start_time
           @redis.zadd("#{@key}:scheduled_maintenances", duration, start_time)
@@ -170,7 +172,6 @@ module Flapjack
 
         # scheduled maintenance periods have changed, revalidate
         update_current_scheduled_maintenance(:revalidate => true)
-
       end
 
       # delete a scheduled maintenance
@@ -401,17 +402,6 @@ module Flapjack
           md.merge!(md) {|k,ov,nv| (nv.class == Redis::Future) ? nv.value : nv }
           md[:end_time] = (md[:start_time] + md[:duration]).floor
           md
-        }
-      end
-
-      # returns an array of pagerduty credentials. If more than one contact for this entity_check
-      # has pagerduty credentials then there'll be one hash in the array for each set of
-      # credentials.
-      def pagerduty_credentials(options)
-        self.contacts.inject([]) {|ret, contact|
-          cred = contact.pagerduty_credentials
-          ret << cred if cred
-          ret
         }
       end
 
