@@ -71,7 +71,7 @@ module Flapjack
         def start
           @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
           if @config && @config['access_log']
-            access_logger = Flapjack::AsyncLogger.new(config['access_log'])
+            access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
             use Flapjack::CommonLogger, access_logger
           end
         end

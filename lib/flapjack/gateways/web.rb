@@ -50,7 +50,7 @@ module Flapjack
           @logger.info "starting web - class"
 
           if @config && @config['access_log']
-            access_logger = Flapjack::AsyncLogger.new(config['access_log'])
+            access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
             use Flapjack::CommonLogger, access_logger
           end
 

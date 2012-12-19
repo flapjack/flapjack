@@ -10,6 +10,7 @@ runner = Dante::Runner.new('flapjack-nagios-receiver',
                            :pid_path   => '/var/run/flapjack/flapjack-nagios-receiver.pid',
                            :log_path   => '/var/log/flapjack/flapjack-nagios-receiver.log')
 # Sets the description in 'help'
+options = OpenStruct.new
 runner.description = "flapjack-nagios-receiver"
 runner.with_options do |opts|
   opts.banner = "Usage: flapjack-nagios-receiver [options]"
@@ -35,21 +36,21 @@ runner.execute do |opts|
   FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
   config = Flapjack::Configuration.new
-  config.load(opts.config || File.join(File.dirname(__FILE__), 'etc', 'flapjack_config.yaml'))
+  config.load(options.config || File.join(File.dirname(__FILE__), 'etc', 'flapjack_config.yaml'))
   @config_env = config.all
   @redis_options = config.for_redis
 
   if @config_env.nil? || @config_env.empty?
-    puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{opts.config}'"
+    puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
     exit(false)
   end
 
-  if !opts.fifo
+  if !options.fifo
     puts "You must specify a path to the nagios perfdata named pipe using the --fifo option"
     exit(false)
   end
 
-  @fifo = File.new(opts.fifo)
+  @fifo = File.new(options.fifo)
 
   # nagios.cfg contains the following templates for host and service data (modified from the default
   # to include hoststate / servicestate, and a fake service 'HOST' for hostperfdata, so that the
