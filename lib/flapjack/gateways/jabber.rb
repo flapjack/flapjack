@@ -237,8 +237,8 @@ module Flapjack
 
         if msg || action
           EventMachine::Synchrony.next_tick do
+            @logger.info("sending to group chat: #{msg}")
             say(stanza.from.stripped, msg, :groupchat)
-            @logger.debug("Sent to group chat: #{msg}")
             action.call if action
           end
         end
@@ -261,20 +261,41 @@ module Flapjack
         if msg || action
           EventMachine::Synchrony.next_tick do
             say(stanza.from.stripped, msg, :chat)
-            @logger.debug("Sent to #{stanza.from.stripped}: #{msg}")
+            @logger.info("Sent to #{stanza.from.stripped}: #{msg}")
             action.call if action
           end
         end
       end
 
-      # returning true to prevent the reactor loop from stopping
-      def on_disconnect(stanza)
+      def connect_jabber(delay)
+        delay = 3 unless delay
+        EventMachine::Synchrony.sleep(delay)
+        @logger.debug("attempting connection to the jabber server")
+        connect # Blather::Client.connect
+      end
+
+      def connect_with_retry
+        attempt = 0
+        delay = 2
         @logger.warn("disconnect handler called")
         return true if @should_quit
-        @logger.warn("jabbers disconnected! reconnecting in 1 second ...")
-        EventMachine::Timer.new(1) do
-          connect # Blather::Client.connect
+        @logger.warn("jabbers disconnected! reconnecting after a short deley ...")
+        begin
+          attempt += 1
+          delay = 10 if attempt > 10
+          delay = 60 if attempt > 60
+          connect_jabber(delay)
+        rescue StandardError => detail
+          @logger.error("unable to connect to the jabber server (attempt #{attempt}), retrying in #{delay} seconds ...")
+          @logger.error("detail: #{detail.message}")
+          @logger.debug(detail.backtrace.join("\n"))
+          retry unless @should_quit
         end
+      end
+
+      # returning true to prevent the reactor loop from stopping
+      def on_disconnect(stanza)
+        connect_with_retry
         true
       end
 
@@ -290,11 +311,8 @@ module Flapjack
       end
 
       def start
-        @logger.debug("New Jabber pikelet with the following options: #{@config.inspect}")
-
-        count_timer = EM::Synchrony.add_periodic_timer(30) do
-          @logger.debug("connection count: #{EM.connection_count} #{Time.now.to_s}.#{Time.now.usec.to_s}")
-        end
+        @logger.info("starting")
+        @logger.debug("new jabber pikelet with the following options: #{@config.inspect}")
 
         keepalive_timer = EM::Synchrony.add_periodic_timer(60) do
           @logger.debug("calling keepalive on the jabber connection")
@@ -306,7 +324,7 @@ module Flapjack
         end
 
         setup
-        connect # Blather::Client.connect
+        connect_with_retry
 
         # simplified to use a single queue only as it makes the shutdown logic easier
         queue = @config['queue']
@@ -377,7 +395,6 @@ module Flapjack
           end
         end
 
-        count_timer.cancel
         keepalive_timer.cancel
       end
 
