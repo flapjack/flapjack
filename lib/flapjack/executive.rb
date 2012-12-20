@@ -79,7 +79,7 @@ module Flapjack
       @logger.info("Booting main loop.")
 
       until @should_quit
-        @logger.info("Waiting for event...")
+        @logger.debug("Waiting for event...")
         event = Flapjack::Data::Event.next(:redis => @redis)
         process_event(event) unless event.nil?
       end
@@ -105,7 +105,7 @@ module Flapjack
       @logger.debug("Raw event received: #{event.inspect}")
       time_at = event.time
       time_at_str = time_at ? ", #{Time.at(time_at).to_s}" : ''
-      @logger.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
+      @logger.debug("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
 
       entity_check = ('shutdown' == event.type) ? nil :
                        Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
@@ -116,18 +116,18 @@ module Flapjack
       blocker = nil
 
       if result[:skip_filters]
-        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because filtering was skipped")
+        @logger.debug("Not sending notifications for event #{event.id} because filtering was skipped")
         return
       else
         blocker = @filters.find {|filter| filter.block?(event) }
       end
 
       if blocker
-        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because this filter blocked: #{blocker.name}")
+        @logger.debug("Not sending notifications for event #{event.id} because this filter blocked: #{blocker.name}")
         return
       end
 
-      @logger.info("#{Time.now}: Sending notifications for event #{event.id}")
+      @logger.info("generating notifications for event #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
       send_notification_messages(event, entity_check)
     end
 
@@ -227,7 +227,7 @@ module Flapjack
       if contacts.empty?
         @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | NO CONTACTS")
         return
-       end
+      end
 
       notification = Flapjack::Data::Notification.for_event(event, :type => notification_type)
 
@@ -238,7 +238,7 @@ module Flapjack
           "#{notification_type} | #{msg.contact.id} | #{media_type.to_s} | #{msg.address}")
 
         unless @queues[media_type]
-          # TODO log error
+          @logger.error("no queue for media type: #{media_type}")
           next
         end
 

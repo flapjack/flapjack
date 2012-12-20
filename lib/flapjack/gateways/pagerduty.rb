@@ -30,14 +30,15 @@ module Flapjack
       end
 
       def stop
+        @logger.info("stopping")
         @should_quit = true
         @redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
       end
 
       def start
-        @logger.debug("pagerduty gateway - commencing main method")
+        @logger.info("starting")
         while not test_pagerduty_connection do
-          logger.error("Can't connect to the pagerduty API, retrying after 10 seconds")
+          @logger.error("Can't connect to the pagerduty API, retrying after 10 seconds")
           EM::Synchrony.sleep(10)
         end
 
@@ -176,7 +177,7 @@ module Flapjack
           end
 
           pg_acknowledged_by = acknowledged[:pg_acknowledged_by]
-          @logger.debug "#{entity_check.entity_name}:#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
+          @logger.info "#{entity_check.entity_name}:#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
           who_text = ""
           if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
             who_text = " by #{pg_acknowledged_by['name']}"
@@ -209,12 +210,6 @@ module Flapjack
         @logger.debug("pagerduty_acknowledged?: auth: #{options[:head].inspect}")
 
         http = EM::HttpRequest.new(url).get(options)
-        # DEBUG flapjack-pagerduty: pagerduty_acknowledged?: decoded response as:
-        # {"incidents"=>[{"incident_number"=>40, "status"=>"acknowledged",
-        # "last_status_change_by"=>{"id"=>"PO1NWPS", "name"=>"Jesse Reynolds",
-        # "email"=>"jesse@bulletproof.net",
-        # "html_url"=>"http://bltprf.pagerduty.com/users/PO1NWPS"}}], "limit"=>100, "offset"=>0,
-        # "total"=>1}
         begin
           response = Yajl::Parser.parse(http.response)
         rescue Yajl::ParseError
