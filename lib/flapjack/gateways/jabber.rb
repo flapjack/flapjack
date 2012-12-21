@@ -260,8 +260,8 @@ module Flapjack
 
         if msg || action
           EventMachine::Synchrony.next_tick do
+            @logger.info("Sending to #{stanza.from.stripped}: #{msg}")
             say(stanza.from.stripped, msg, :chat)
-            @logger.info("Sent to #{stanza.from.stripped}: #{msg}")
             action.call if action
           end
         end
