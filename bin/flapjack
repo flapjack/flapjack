@@ -22,7 +22,7 @@ OptionParser.new do |opts|
   opts.separator  "Commands"
   opts.separator  "     start #{" " * 25} start flapjack"
   opts.separator  "     stop #{" " * 26} stop flapjack"
-  opts.separator  "     restart #{" " * 23} restart flapjack"
+  opts.separator  "     restart #{" " * 23} (re)start flapjack"
   opts.separator  "     reload #{" " * 24} reload flapjack configuration"
   opts.separator  ""
   opts.separator  "Options"
@@ -89,6 +89,7 @@ when "start"
     }
     puts " done."
   end
+
 when "stop"
   runner = Dante::Runner.new('flapjack', :pid_path => pidfile,
     :log_path => logfile)
@@ -105,17 +106,13 @@ when "restart"
   runner = Dante::Runner.new('flapjack', :pid_path => pidfile,
     :log_path => logfile)
 
-  if runner.daemon_running?
-    print "Flapjack restarting..."
-    runner.execute(:daemonize => true, :restart => true) {
-      sleep 1 # get connection errors without this... -- might move this to
-      # be default behaviour when starting jabber gateway
-      flapjack_coord.call
-    }
-    puts " done."
-  else
-    puts "Flapjack is not running."
-  end
+  print "Flapjack restarting..."
+  runner.execute(:daemonize => true, :restart => true) {
+    sleep 1 # get connection errors without this... -- might move this to
+    # be default behaviour when starting jabber gateway
+    flapjack_coord.call
+  }
+  puts " done."
 
 when "reload"
   runner = Dante::Runner.new('flapjack', :pid_path => pidfile, :log_path => logfile)
