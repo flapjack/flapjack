@@ -102,7 +102,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     Flapjack::RedisPool.should_receive(:new)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
 
-    EventMachine::Timer.should_receive(:new).with(1).and_yield
+    EventMachine::Timer.should_receive(:new).with(2).and_yield
     fj.should_receive(:connect)
 
     ret = fj.on_disconnect(stanza)
