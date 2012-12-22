@@ -142,7 +142,6 @@ if config_env.nil? || config_env.empty?
 end
 
 config_nr = config_env['nagios-receiver'] || {}
-puts "config_nr: #{config_nr.inspect}"
 
 pidfile = options.pidfile.nil? ?
             (config_nr['pid_file'] || "/var/run/flapjack/#{exe}.pid") :
