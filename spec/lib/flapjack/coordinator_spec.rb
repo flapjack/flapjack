@@ -14,7 +14,7 @@ describe Flapjack::Coordinator do
   def setup_logger
     formatter = mock('Formatter')
     Log4r::PatternFormatter.should_receive(:new).with(
-      :pattern => "[%l] %d :: flapjack-coordinator :: %m",
+      :pattern => "%d [%l] :: flapjack-coordinator :: %m",
       :date_pattern => "%Y-%m-%dT%H:%M:%S%z").and_return(formatter)
 
     stdout_out.should_receive(:formatter=).with(formatter)
