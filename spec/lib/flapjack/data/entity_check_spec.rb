@@ -485,6 +485,9 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
     @redis.hset("check:#{name}:#{check}", 'state', 'critical')
     ec.should be_failed
+
+    @redis.hset("check:#{name}:#{check}", 'state', 'unknown')
+    ec.should be_failed
   end
 
   it "returns that it has not failed" do
@@ -494,9 +497,6 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec.should_not be_failed
 
     @redis.hset("check:#{name}:#{check}", 'state', 'acknowledgement')
-    ec.should_not be_failed
-
-    @redis.hset("check:#{name}:#{check}", 'state', 'unknown')
     ec.should_not be_failed
   end
 

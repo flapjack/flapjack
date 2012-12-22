@@ -13,7 +13,7 @@
       %form{:action => "/acknowledgements/#{check_path_escaped}", :method => "post"}
         %h2
           State: #{@check_state ? @check_state.upcase : ''}
-        - if (['warning', 'critical'].include?(@check_state) and !(@current_unscheduled_maintenance || @current_scheduled_maintenance))
+        - if (['warning', 'critical', 'unknown'].include?(@check_state) and !(@current_unscheduled_maintenance || @current_scheduled_maintenance))
           %input{:type => 'hidden', :name => 'acknowledgement_id', :value => "#{@acknowledgement_id}"}
           %input{:type => 'submit', :value => 'Acknowledge', :class => 'button'}
           with

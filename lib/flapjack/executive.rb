@@ -205,9 +205,9 @@ module Flapjack
       case event.type
       when 'service'
         case event.state
-        when 'ok', 'unknown'
+        when 'ok'
           notification_type = 'recovery'
-        when 'warning', 'critical'
+        when 'warning', 'critical', 'unknown'
           notification_type = 'problem'
         end
       when 'action'

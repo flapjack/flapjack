@@ -147,7 +147,7 @@ module Flapjack
       end
 
       def failure?
-        warning? or critical?
+        warning? or critical? or unknown?
       end
 
     end
