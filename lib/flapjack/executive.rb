@@ -116,18 +116,18 @@ module Flapjack
       blocker = nil
 
       if result[:skip_filters]
-        @logger.debug("Not sending notifications for event #{event.id} because filtering was skipped")
+        @logger.debug("Not generating notifications for event #{event.id} because filtering was skipped")
         return
       else
         blocker = @filters.find {|filter| filter.block?(event) }
       end
 
       if blocker
-        @logger.debug("Not sending notifications for event #{event.id} because this filter blocked: #{blocker.name}")
+        @logger.debug("Not generating notifications for event #{event.id} because this filter blocked: #{blocker.name}")
         return
       end
 
-      @logger.info("generating notifications for event #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
+      @logger.info("Generating notifications for event #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
       send_notification_messages(event, entity_check)
     end
 
