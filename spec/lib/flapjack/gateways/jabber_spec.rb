@@ -102,8 +102,13 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     Flapjack::RedisPool.should_receive(:new)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
 
-    EventMachine::Timer.should_receive(:new).with(2).and_yield
-    fj.should_receive(:connect)
+    attempts = 0
+
+    EventMachine::Synchrony.should_receive(:sleep).with(2).exactly(3).times
+    fj.should_receive(:connect).exactly(4).times.and_return {
+      attempts +=1
+      raise StandardError.new unless attempts > 3
+    }
 
     ret = fj.on_disconnect(stanza)
     ret.should be_true
@@ -120,12 +125,9 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   end
 
   it "runs a blocking loop listening for notifications" do
-    timer_1 = mock('timer_1')
-    timer_2 = mock('timer_2')
-    timer_1.should_receive(:cancel)
-    timer_2.should_receive(:cancel)
-    EM::Synchrony.should_receive(:add_periodic_timer).with(30).and_return(timer_1)
-    EM::Synchrony.should_receive(:add_periodic_timer).with(60).and_return(timer_2)
+    timer = mock('timer')
+    timer.should_receive(:cancel)
+    EM::Synchrony.should_receive(:add_periodic_timer).with(60).and_return(timer)
 
     redis = mock('redis')
 

@@ -267,37 +267,29 @@ module Flapjack
         end
       end
 
-      def connect_jabber(delay)
-        delay = 3 unless delay
-        EventMachine::Synchrony.sleep(delay)
-        @logger.debug("attempting connection to the jabber server")
-        connect # Blather::Client.connect
-      end
-
       def connect_with_retry
         attempt = 0
         delay = 2
-        @logger.warn("disconnect handler called")
-        return true if @should_quit
-        @logger.warn("jabbers disconnected! reconnecting after a short deley ...")
         begin
           attempt += 1
           delay = 10 if attempt > 10
           delay = 60 if attempt > 60
-          connect_jabber(delay)
+          EventMachine::Synchrony.sleep(delay || 3) if attempt > 1
+          @logger.debug("attempting connection to the jabber server")
+          connect # Blather::Client.connect
         rescue StandardError => detail
           @logger.error("unable to connect to the jabber server (attempt #{attempt}), retrying in #{delay} seconds ...")
           @logger.error("detail: #{detail.message}")
           @logger.debug(detail.backtrace.join("\n"))
-          # FIXME: obviously this is not good... but without it the spec
-          # tests go into an infinite loop at this point, I think because
-          # EventMachine::Synchrony.sleep is being stubbed out...
-          retry unless (@should_quit || FLAPJACK_ENV == 'test')
+          retry unless @should_quit
         end
       end
 
       # returning true to prevent the reactor loop from stopping
       def on_disconnect(stanza)
+        @logger.warn("disconnect handler called")
+        return true if @should_quit
+        @logger.warn("jabbers disconnected! reconnecting after a short deley ...")
         connect_with_retry
         true
       end
