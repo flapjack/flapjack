@@ -35,10 +35,14 @@ development:
     sms_queue: sms_notifications
     jabber_queue: jabber_notifications
     notification_log_file: log/flapjack-notification.log
+    logger:
+      level: INFO
   gateways:
     email:
       enabled: yes
       queue: email_notifications
+      logger:
+        level: INFO
       smtp_config:
         port: 2525
         # address: "localhost"
@@ -53,6 +57,8 @@ development:
       queue: sms_notifications
       username: "ermahgerd"
       password: "xxxx"
+      logger:
+        level: INFO
     jabber:
       enabled: yes
       queue: jabber_notifications
@@ -64,6 +70,8 @@ development:
       rooms:
         - "gimp@conference.jabber.domain.tld"
         - "log@conference.jabber.domain.tld"
+      logger:
+        level: INFO
     oobetet:
       enabled: yes
       server: "jabber.domain.tld"
@@ -79,17 +87,25 @@ development:
         - "flapjacktest@conference.jabber.domain.tld"
         - "gimp@conference.jabber.domain.tld"
         - "log@conference.jabber.domain.tld"
+      logger:
+        level: INFO
     pagerduty:
       enabled: yes
       queue: pagerduty_notifications
+      logger:
+        level: INFO
     web:
       enabled: yes
       port: 5080
       access_log: "log/web_access.log"
+      logger:
+        level: INFO
     api:
       enabled: yes
       port: 5081
       access_log: "log/api_access.log"
+      logger:
+        level: INFO
 
 test:
   redis:

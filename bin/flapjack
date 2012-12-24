@@ -1,12 +1,13 @@
 #!/usr/bin/env ruby
 
-require 'optparse'
-require 'ostruct'
-
 # add lib to the default include path
 unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
 end
+
+require 'dante'
+require 'optparse'
+require 'ostruct'
 
 require 'flapjack/configuration'
 
@@ -15,7 +16,16 @@ options.config    = File.join('etc', 'flapjack_config.yaml')
 options.daemonize = nil
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: flapjack [options]"
+  opts.banner = "Usage: flapjack COMMAND [OPTIONS]"
+
+  opts.separator  ""
+  opts.separator  "Commands"
+  opts.separator  "     start #{" " * 25} start flapjack"
+  opts.separator  "     stop #{" " * 26} stop flapjack"
+  opts.separator  "     restart #{" " * 23} (re)start flapjack"
+  opts.separator  "     reload #{" " * 24} reload flapjack configuration"
+  opts.separator  ""
+  opts.separator  "Options"
 
   opts.on("-c", "--config [PATH]", String, "PATH to the config file to use") do |c|
     options.config = c
@@ -27,6 +37,10 @@ OptionParser.new do |opts|
 
   opts.on("-p", "--pidfile [PATH]", String, "PATH to the pidfile to write to") do |p|
     options.pidfile = p
+  end
+
+  opts.on("-l", "--logfile [PATH]", String, "PATH to the logfile to write to") do |l|
+    options.log_path = l
   end
 
 end.parse!(ARGV)
@@ -42,25 +56,95 @@ if config_env.nil? || config_env.empty?
   exit(false)
 end
 
-if options.pidfile.nil?
-  pid_file = (config_env['pid_file'] || 'tmp/pids/flapjack.pid')
-else
-  pid_file = options.pidfile
-end
+pidfile = options.pidfile.nil? ?
+           (config_env['pid_file'] || 'tmp/pids/flapjack.pid') :
+           options.pidfile
 
-# TODO Flapjack falls over when Redis restarted -- trap errors and attempt reconnect
+logfile = options.logfile.nil? ?
+            (config_env['log_file'] || 'log/flapjack.log') :
+            options.logfile
+
+daemonize = options.daemonize.nil? ?
+              !!config_env['daemonize'] :
+              options.daemonize
 
 require 'flapjack/coordinator'
 
-coordinator = Flapjack::Coordinator.new(config)
-coordinator.log_file = (config_env['log_file'] || 'log/flapjack.log')
-coordinator.pid_file = pid_file
+flapjack_coord = Proc.new {
+  coordinator = Flapjack::Coordinator.new(config)
+  coordinator.start(:signals => true)
+}
 
-if options.daemonize.nil?
-  daemonize = !!config_env['daemonize']
+case ARGV[0]
+when "start"
+  runner = Dante::Runner.new('flapjack', :pid_path => pidfile,
+    :log_path => logfile)
+
+  if runner.daemon_running?
+    puts "Flapjack is already running."
+  else
+    print "Flapjack starting..."
+    runner.execute(:daemonize => daemonize) {
+      flapjack_coord.call
+    }
+    puts " done."
+  end
+
+when "stop"
+  runner = Dante::Runner.new('flapjack', :pid_path => pidfile,
+    :log_path => logfile)
+
+  if runner.daemon_running?
+    print "Flapjack stopping..."
+    runner.execute(:kill => true)
+    puts " done."
+  else
+    puts "Flapjack is not running."
+  end
+
+when "restart"
+  runner = Dante::Runner.new('flapjack', :pid_path => pidfile,
+    :log_path => logfile)
+
+  print "Flapjack restarting..."
+  runner.execute(:daemonize => true, :restart => true) {
+    sleep 1 # get connection errors without this... -- might move this to
+    # be default behaviour when starting jabber gateway
+    flapjack_coord.call
+  }
+  puts " done."
+
+when "reload"
+  runner = Dante::Runner.new('flapjack', :pid_path => pidfile, :log_path => logfile)
+
+  if runner.daemon_running?
+    print "Reloading Flapjack configuration..."
+    begin
+      pid = IO.read(pidfile).chomp.to_i
+      Process.kill('HUP', pid)
+      puts " sent HUP to pid #{pid}."
+    rescue => e
+      puts " couldn't send HUP to pid '#{pid}'."
+    end
+  else
+    puts "Flapjack is not running daemonized."
+  end
+
+when "status"
+  runner = Dante::Runner.new('flapjack', :pid_path => pidfile, :log_path => logfile)
+
+  uptime = (runner.daemon_running?) ? Time.now - File.stat(pidfile).ctime : 0
+  if runner.daemon_running?
+    puts "Flapjack is running: #{uptime}"
+  else
+    puts "Flapjack is not runninng"
+  end
+
 else
-  daemonize = options.daemonize
-end
+  if ARGV.nil? || ARGV.empty?
+    puts "No command provided"
+  else
+    puts "Unknown command provided: '#{ARGV[0]}'"
+  end
 
-puts "Daemonising ... " if daemonize
-coordinator.start(:daemonize => daemonize, :signals => true)
+end

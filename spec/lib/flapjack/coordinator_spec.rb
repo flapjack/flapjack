@@ -1,12 +1,5 @@
 require 'spec_helper'
 
-require 'flapjack/configuration'
-require 'flapjack/executive'
-
-require 'flapjack/gateways/web'
-require 'flapjack/gateways/jabber'
-require 'flapjack/gateways/email'
-
 require 'flapjack/coordinator'
 
 describe Flapjack::Coordinator do
@@ -14,57 +7,80 @@ describe Flapjack::Coordinator do
   let(:fiber)  { mock(Fiber) }
   let(:config) { mock(Flapjack::Configuration) }
 
-  # leaving actual testing of daemonisation to that class's tests
-  it "daemonizes properly" do
-    config.should_receive(:for_redis).and_return({})
-    fc = Flapjack::Coordinator.new(config)
+  let(:logger)     { mock(Logger) }
+  let(:stdout_out) { mock('stdout_out') }
+  let(:syslog_out) { mock('syslog_out') }
 
-    fc.should_receive(:daemonize)
-    fc.should_not_receive(:build_pikelet)
-    fc.start(:daemonize => true, :signals => false)
+  def setup_logger
+    formatter = mock('Formatter')
+    Log4r::PatternFormatter.should_receive(:new).with(
+      :pattern => "%d [%l] :: flapjack-coordinator :: %m",
+      :date_pattern => "%Y-%m-%dT%H:%M:%S%z").and_return(formatter)
+
+    stdout_out.should_receive(:formatter=).with(formatter)
+    syslog_out.should_receive(:formatter=).with(formatter)
+
+    Log4r::StdoutOutputter.should_receive(:new).and_return(stdout_out)
+    Log4r::SyslogOutputter.should_receive(:new).and_return(syslog_out)
+    logger.should_receive(:add).with(stdout_out)
+    logger.should_receive(:add).with(syslog_out)
+    Log4r::Logger.should_receive(:new).and_return(logger)
   end
 
-  it "runs undaemonized" do
+  it "starts and stops a pikelet" do
+    setup_logger
+
+    cfg = {'executive' => {'enabled' => 'yes'}}
     EM.should_receive(:synchrony).and_yield
     config.should_receive(:for_redis).and_return({})
-    config.should_receive(:all).and_return('executive' => {'enabled' => 'yes'})
+    config.should_receive(:all).and_return(cfg)
+
+    executive = mock('executive')
+    executive.should_receive(:start)
+    executive.should_receive(:stop)
+    executive.should_receive(:update_status)
+    executive.should_receive(:status).exactly(3).times.and_return('stopped')
 
     fc = Flapjack::Coordinator.new(config)
-    fc.should_receive(:build_pikelet)
-    fc.start(:daemonize => false, :signals => false)
-  end
+    Flapjack::Pikelet.should_receive(:create).with('executive',
+        :config => cfg['executive'], :redis_config => {}).and_return(executive)
 
-  it "starts after daemonizing" do
-    EM.should_receive(:synchrony).and_yield
+    fiber.should_receive(:resume)
+    Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    config.should_receive(:for_redis).and_return({})
-    config.should_receive(:all).and_return('executive' => {'enabled' => 'yes'})
+    EM.should_receive(:stop)
 
-    fc = Flapjack::Coordinator.new(config)
-    fc.should_receive(:build_pikelet)
-    fc.after_daemonize
+    fc.start(:signals => false)
+    fc.stop
   end
 
   it "traps system signals and shuts down" do
+    setup_logger
+
     RbConfig::CONFIG.should_receive(:[]).with('host_os').and_return('darwin12.0.0')
 
     Kernel.should_receive(:trap).with('INT').and_yield
     Kernel.should_receive(:trap).with('TERM').and_yield
     Kernel.should_receive(:trap).with('QUIT').and_yield
+    Kernel.should_receive(:trap).with('HUP').and_yield
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:stop).exactly(3).times
+    fc.should_receive(:reload)
 
     fc.send(:setup_signals)
   end
 
   it "only traps two system signals on Windows" do
+    setup_logger
+
     RbConfig::CONFIG.should_receive(:[]).with('host_os').and_return('mswin')
 
     Kernel.should_receive(:trap).with('INT').and_yield
     Kernel.should_receive(:trap).with('TERM').and_yield
     Kernel.should_not_receive(:trap).with('QUIT')
+    Kernel.should_not_receive(:trap).with('HUP')
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
@@ -73,145 +89,109 @@ describe Flapjack::Coordinator do
     fc.send(:setup_signals)
   end
 
-  it "stops its services when closing" do
-    fiber_exec = mock('fiber_exec')
-    fiber_rsq  = mock('fiber_rsq')
+  it "stops one pikelet and starts another on reload" do
+    setup_logger
 
-    exec  = mock('executive')
-    exec.should_receive(:is_a?).with(Flapjack::GenericPikelet).twice.and_return(true)
-    exec.should_receive(:stop)
-    exec.should_receive(:add_shutdown_event)
-    exec.should_receive(:cleanup)
+    old_cfg = {'executive' => {'enabled' => 'yes'}}
+    new_cfg = {'gateways' => {'jabber' => {'enabled' => 'yes'}}}
 
-    email = mock('worker')
-    email.should_receive(:is_a?).with(Flapjack::GenericPikelet).twice.and_return(false)
-    email.should_receive(:shutdown)
-    Flapjack::Gateways::Email.should_receive(:cleanup)
+    new_config = mock('new_config')
+    filename = mock('filename')
 
-    backend = mock('backend')
-    backend.should_receive(:size).twice.and_return(1, 0)
-    web = mock('web')
-    web.should_receive(:is_a?).with(Flapjack::GenericPikelet).twice.and_return(false)
-    web.should_receive(:backend).twice.and_return(backend)
-    web.should_receive(:stop!)
-    Flapjack::Gateways::Web.should_receive(:cleanup)
+    config.should_receive(:all).and_return(old_cfg)
+    config.should_receive(:filename).and_return(filename)
 
-    redis = mock('redis')
-    redis.should_receive(:quit)
-    Redis.should_receive(:new).and_return(redis)
+    Flapjack::Configuration.should_receive(:new).and_return(new_config)
+    new_config.should_receive(:load).with(filename)
+    new_config.should_receive(:all).and_return(new_cfg)
 
-    fiber.should_receive(:resume)
-    fiber_stop = mock('fiber_stop')
-    fiber_stop.should_receive(:resume)
-    Fiber.should_receive(:new).twice.and_yield.and_return(fiber, fiber_stop)
+    executive = mock('executive')
+    executive.should_receive(:type).twice.and_return('executive')
+    executive.should_receive(:stop)
+    executive.should_receive(:update_status)
+    executive.should_receive(:status).exactly(3).times.and_return('stopped')
 
-    fiber_exec.should_receive(:alive?).exactly(3).times.and_return(true, true, false)
-    fiber_rsq.should_receive(:alive?).exactly(3).and_return(true, false, false)
-
-    EM::Synchrony.should_receive(:sleep)
-    EM.should_receive(:stop)
-
-    pikelets = [{:fiber => fiber_exec, :instance => exec, :class => Flapjack::Executive},
-                {:fiber => fiber_rsq,  :instance => email, :class => Flapjack::Gateways::Email},
-                {:instance => web, :class => Flapjack::Gateways::Web}]
-
-    config.should_receive(:for_redis).and_return({})
-
-    fc = Flapjack::Coordinator.new(config)
-    fc.instance_variable_set('@redis_options', {})
-    fc.instance_variable_set('@pikelets', pikelets)
-    fc.stop
-  end
-
-  it "creates an executive pikelet" do
-    exec = mock('executive')
-    exec.should_receive(:bootstrap)
-    Flapjack::Executive.should_receive(:new).and_return(exec)
-    exec.should_receive(:is_a?).with(Flapjack::GenericPikelet).and_return(true)
-    exec.should_receive(:main)
-
-    fiber.should_receive(:resume)
-    Fiber.should_receive(:new).and_yield.and_return(fiber)
-
-    config.should_receive(:for_redis).and_return({})
-
-    fc = Flapjack::Coordinator.new(config)
-    fc.send(:build_pikelet, Flapjack::Executive, {'enabled' => 'yes'})
-    pikelets = fc.instance_variable_get('@pikelets')
-    pikelets.should_not be_nil
-    pikelets.should be_an(Array)
-    pikelets.should have(1).pikelet
-    pikelets.first.should == {:fiber => fiber, :class => Flapjack::Executive, :instance => exec}
-  end
-
-  it "handles an exception raised by a fiber pikelet" do
     jabber = mock('jabber')
-    jabber.should_receive(:bootstrap)
-    Flapjack::Gateways::Jabber.should_receive(:new).and_return(jabber)
-    jabber.should_receive(:is_a?).with(Flapjack::GenericPikelet).and_return(true)
-    jabber.should_receive(:main).and_raise(RuntimeError)
+    Flapjack::Pikelet.should_receive(:create).with('jabber',
+      :config => {"enabled" => "yes"}, :redis_config => {}).and_return(jabber)
+    jabber.should_receive(:start)
 
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
     config.should_receive(:for_redis).and_return({})
-
     fc = Flapjack::Coordinator.new(config)
-    fc.should_receive(:stop)
-    fc.send(:build_pikelet, Flapjack::Gateways::Jabber, {'enabled' => 'yes'})
-    pikelets = fc.instance_variable_get('@pikelets')
-    pikelets.should_not be_nil
-    pikelets.should be_an(Array)
-    pikelets.should have(1).pikelet
-    pikelets.first.should == {:fiber => fiber, :class => Flapjack::Gateways::Jabber, :instance => jabber}
+    fc.instance_variable_set('@pikelets', [executive])
+    fc.reload
+    fc.instance_variable_get('@pikelets').should == [jabber]
   end
 
-  it "creates a resque worker pikelet" do
-    redis = mock('redis')
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    Resque.should_receive(:redis=).with(redis)
+  it "reloads a pikelet config without restarting it" do
+    setup_logger
 
-    worker = mock('worker')
-    EM::Resque::Worker.should_receive(:new).and_return(worker)
-    worker.should_receive(:work)
+    old_cfg = {'executive' => {'enabled' => 'yes', 'foo' => 'bar'}}
+    new_cfg = {'executive' => {'enabled' => 'yes', 'foo' => 'baz'}}
+
+    new_config = mock('new_config')
+    filename = mock('filename')
+
+    config.should_receive(:all).and_return(old_cfg)
+    config.should_receive(:filename).and_return(filename)
+
+    Flapjack::Configuration.should_receive(:new).and_return(new_config)
+    new_config.should_receive(:load).with(filename)
+    new_config.should_receive(:all).and_return(new_cfg)
+
+    executive = mock('executive')
+    executive.should_receive(:type).exactly(3).times.and_return('executive')
+    executive.should_receive(:reload).with(new_cfg['executive']).and_return(true)
+    executive.should_not_receive(:stop)
+
+    config.should_receive(:for_redis).and_return({})
+    fc = Flapjack::Coordinator.new(config)
+    fc.instance_variable_set('@pikelets', [executive])
+    fc.reload
+    fc.instance_variable_get('@pikelets').should == [executive]
+  end
+
+  it "reloads a pikelet config while restarting it" do
+    setup_logger
+
+    old_cfg = {'executive' => {'enabled' => 'yes', 'foo' => 'bar'}}
+    new_cfg = {'executive' => {'enabled' => 'yes', 'baz' => 'qux'}}
+
+    new_config = mock('new_config')
+    filename = mock('filename')
+
+    config.should_receive(:all).and_return(old_cfg)
+    config.should_receive(:filename).and_return(filename)
+
+    Flapjack::Configuration.should_receive(:new).and_return(new_config)
+    new_config.should_receive(:load).with(filename)
+    new_config.should_receive(:all).and_return(new_cfg)
+
+    executive = mock('executive')
+    executive.should_receive(:type).exactly(5).times.and_return('executive')
+    executive.should_receive(:reload).with(new_cfg['executive']).and_return(false)
+    executive.should_receive(:stop)
+    executive.should_receive(:update_status)
+    executive.should_receive(:status).exactly(3).times.and_return('stopped')
 
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    config.should_receive(:for_redis).and_return({})
+    new_exec = mock('new_executive')
+    new_exec.should_receive(:start)
 
-    fc = Flapjack::Coordinator.new(config)
-    fc.send(:build_pikelet, Flapjack::Gateways::Email, {'enabled' => 'yes'})
-    pikelets = fc.instance_variable_get('@pikelets')
-    pikelets.should_not be_nil
-    pikelets.should be_an(Array)
-    pikelets.should have(1).pikelet
-    pikelets.first.should == {:fiber => fiber, :class => Flapjack::Gateways::Email,
-                              :instance => worker}
-  end
-
-  it "creates a thin server pikelet" do
-    redis = mock('redis')
-
-    server = mock('server')
-    server.should_receive(:start)
-    Thin::Server.should_receive(:new).
-      with(/^(?:\d{1,3}\.){3}\d{1,3}$/, an_instance_of(Fixnum), Flapjack::Gateways::Web, :signals => false).
-      and_return(server)
-
-    Flapjack::RedisPool.should_receive(:new)
+    Flapjack::Pikelet.should_receive(:create).
+      with('executive', :config => new_cfg['executive'], :redis_config => {}).
+      and_return(new_exec)
 
     config.should_receive(:for_redis).and_return({})
-
     fc = Flapjack::Coordinator.new(config)
-    fc.send(:build_pikelet, Flapjack::Gateways::Web, {'enabled' => 'yes'})
-    pikelets = fc.instance_variable_get('@pikelets')
-    pikelets.should_not be_nil
-    pikelets.should be_an(Array)
-    pikelets.should have(1).pikelet
-    pikelets.first.should == {:class => Flapjack::Gateways::Web, :instance => server}
+    fc.instance_variable_set('@pikelets', [executive])
+    fc.reload
+    fc.instance_variable_get('@pikelets').should == [new_exec]
   end
-
-  # NB: exceptions are handled directly by the Thin pikelets
 
 end

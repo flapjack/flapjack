@@ -7,19 +7,12 @@ module Flapjack
 
   class Configuration
 
+    attr_reader :filename
+
     def initialize(opts = {})
       @logger = opts[:logger]
-      unless @logger
-        @logger       = Logger.new(STDOUT)
-        @logger.level = Logger::ERROR
-      end
     end
 
-    def logger
-      @logger
-    end
-
-    # TODO reduce/remove the use of this, just access parts
     def all
       @config_env
     end
@@ -53,29 +46,34 @@ module Flapjack
     end
 
     def load(filename)
+      @filename = nil
+      @config_env = nil
+
       unless File.file?(filename)
-        logger.error "Could not find file '#{filename}'"
+        @logger.error "Could not find file '#{filename}'" if @logger
         return
       end
 
       unless defined?(FLAPJACK_ENV)
-        logger.error "Environment variable 'FLAPJACK_ENV' is not set"
+        @logger.error "Environment variable 'FLAPJACK_ENV' is not set" if @logger
         return
       end
 
       config = YAML::load_file(filename)
 
       if config.nil?
-        logger.error "Could not load config file '#{filename}'"
+        @logger.error "Could not load config file '#{filename}'" if @logger
         return
       end
 
       @config_env = config[FLAPJACK_ENV]
 
       if @config_env.nil?
-        logger.error "No config data for environment '#{FLAPJACK_ENV}' found in '#{filename}'"
+        @logger.error "No config data for environment '#{FLAPJACK_ENV}' found in '#{filename}'" if @logger
         return
       end
+
+      @filename = filename
     end
 
   end

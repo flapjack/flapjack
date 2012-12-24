@@ -17,7 +17,7 @@ Gem::Specification.new do |gem|
   gem.require_paths = ["lib"]
   gem.version       = Flapjack::VERSION
 
-  gem.add_dependency 'daemons'
+  gem.add_dependency 'dante'
   gem.add_dependency 'log4r'
   gem.add_dependency 'yajl-ruby'
   gem.add_dependency 'eventmachine', '~> 1.0.0'

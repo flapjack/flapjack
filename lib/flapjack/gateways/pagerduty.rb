@@ -9,47 +9,36 @@ require 'flapjack/data/entity_check'
 require 'flapjack/data/global'
 require 'flapjack/redis_pool'
 
-require 'flapjack/gateways/base'
-
 module Flapjack
 
   module Gateways
 
     class Pagerduty
-      include Flapjack::Gateways::Generic
-
       PAGERDUTY_EVENTS_API_URL   = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
       SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'
 
-      alias_method :generic_bootstrap, :bootstrap
-      alias_method :generic_cleanup,   :cleanup
-
-      def bootstrap(opts = {})
-        generic_bootstrap(opts)
-
+      def initialize(opts = {})
+        @config = opts[:config]
+        @logger = opts[:logger]
         @redis_config = opts[:redis_config]
-        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
 
-        logger.debug("New Pagerduty pikelet with the following options: #{@config.inspect}")
+        @logger.debug("New Pagerduty pikelet with the following options: #{@config.inspect}")
 
         @pagerduty_acks_started = nil
+        super()
       end
 
-      def cleanup
-        @redis.empty! if @redis
-        @redis_timer.empty! if @redis_timer
-        generic_cleanup
+      def stop
+        @logger.info("stopping")
+        @should_quit = true
+        @redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
       end
 
-      def add_shutdown_event(opts = {})
-        return unless redis = opts[:redis]
-        redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
-      end
-
-      def main
-        logger.debug("pagerduty gateway - commencing main method")
+      def start
+        @logger.info("starting")
         while not test_pagerduty_connection do
-          logger.error("Can't connect to the pagerduty API, retrying after 10 seconds")
+          @logger.error("Can't connect to the pagerduty API, retrying after 10 seconds")
           EM::Synchrony.sleep(10)
         end
 
@@ -58,19 +47,18 @@ module Flapjack
         @redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
 
         acknowledgement_timer = EM::Synchrony.add_periodic_timer(10) do
-          @redis_timer ||= Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
           find_pagerduty_acknowledgements_if_safe
         end
 
         queue = @config['queue']
         events = {}
 
-        until should_quit?
-          logger.debug("pagerduty gateway is going into blpop mode on #{queue}")
+        until @should_quit
+          @logger.debug("pagerduty gateway is going into blpop mode on #{queue}")
           events[queue] = @redis.blpop(queue, 0)
           event         = Yajl::Parser.parse(events[queue][1])
           type          = event['notification_type']
-          logger.debug("pagerduty notification event popped off the queue: " + event.inspect)
+          @logger.debug("pagerduty notification event popped off the queue: " + event.inspect)
           unless 'shutdown'.eql?(type)
             event_id      = event['event_id']
             entity, check = event_id.split(':')
@@ -117,18 +105,18 @@ module Flapjack
         # timeout of five minutes to guard against stale locks caused by crashing code) either in this
         # process or in other processes
         if (@pagerduty_acks_started and @pagerduty_acks_started > (Time.now.to_i - 300)) or
-            @redis_timer.get(SEM_PAGERDUTY_ACKS_RUNNING) == 'true'
-          logger.debug("skipping looking for acks in pagerduty as this is already happening")
+            @redis.get(SEM_PAGERDUTY_ACKS_RUNNING) == 'true'
+          @logger.debug("skipping looking for acks in pagerduty as this is already happening")
           return
         end
 
         @pagerduty_acks_started = Time.now.to_i
-        @redis_timer.set(SEM_PAGERDUTY_ACKS_RUNNING, 'true')
-        @redis_timer.expire(SEM_PAGERDUTY_ACKS_RUNNING, 300)
+        @redis.set(SEM_PAGERDUTY_ACKS_RUNNING, 'true')
+        @redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, 300)
 
         find_pagerduty_acknowledgements
 
-        @redis_timer.del(SEM_PAGERDUTY_ACKS_RUNNING)
+        @redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
         @pagerduty_acks_started = nil
       end
 
@@ -141,7 +129,7 @@ module Flapjack
                  "description"  => "I love APIs with noops." }
         code, results = send_pagerduty_event(noop)
         return true if code == 200 && results['status'] =~ /success/i
-        logger.error "Error: test_pagerduty_connection: API returned #{code.to_s} #{results.inspect}"
+        @logger.error "Error: test_pagerduty_connection: API returned #{code.to_s} #{results.inspect}"
         false
       end
 
@@ -150,15 +138,14 @@ module Flapjack
         http = EM::HttpRequest.new(PAGERDUTY_EVENTS_API_URL).post(options)
         response = Yajl::Parser.parse(http.response)
         status   = http.response_header.status
-        logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
+        @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
         [status, response]
       end
 
       def find_pagerduty_acknowledgements
+        @logger.debug("looking for acks in pagerduty for unack'd problems")
 
-        logger.debug("looking for acks in pagerduty for unack'd problems")
-
-        unacknowledged_failing_checks = Flapjack::Data::Global.unacknowledged_failing_checks(:redis => @redis_timer)
+        unacknowledged_failing_checks = Flapjack::Data::Global.unacknowledged_failing_checks(:redis => @redis)
 
         @logger.debug "found unacknowledged failing checks as follows: " + unacknowledged_failing_checks.join(', ')
 
@@ -190,7 +177,7 @@ module Flapjack
           end
 
           pg_acknowledged_by = acknowledged[:pg_acknowledged_by]
-          @logger.debug "#{entity_check.entity_name}:#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
+          @logger.info "#{entity_check.entity_name}:#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
           who_text = ""
           if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
             who_text = " by #{pg_acknowledged_by['name']}"
@@ -223,12 +210,6 @@ module Flapjack
         @logger.debug("pagerduty_acknowledged?: auth: #{options[:head].inspect}")
 
         http = EM::HttpRequest.new(url).get(options)
-        # DEBUG flapjack-pagerduty: pagerduty_acknowledged?: decoded response as:
-        # {"incidents"=>[{"incident_number"=>40, "status"=>"acknowledged",
-        # "last_status_change_by"=>{"id"=>"PO1NWPS", "name"=>"Jesse Reynolds",
-        # "email"=>"jesse@bulletproof.net",
-        # "html_url"=>"http://bltprf.pagerduty.com/users/PO1NWPS"}}], "limit"=>100, "offset"=>0,
-        # "total"=>1}
         begin
           response = Yajl::Parser.parse(http.response)
         rescue Yajl::ParseError

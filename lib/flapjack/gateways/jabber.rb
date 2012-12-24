@@ -21,14 +21,11 @@ require 'flapjack/redis_pool'
 require 'flapjack/utility'
 require 'flapjack/version'
 
-require 'flapjack/gateways/base'
-
 module Flapjack
 
   module Gateways
 
     class Jabber < Blather::Client
-      include Flapjack::Gateways::Generic
       include Flapjack::Utility
 
       log = Logger.new(STDOUT)
@@ -36,23 +33,21 @@ module Flapjack
       log.level = Logger::INFO
       Blather.logger = log
 
-      alias_method :generic_bootstrap, :bootstrap
-      alias_method :generic_cleanup,   :cleanup
-
-      def bootstrap(opts = {})
-        generic_bootstrap(opts)
-
+      def initialize(opts = {})
+        @config = opts[:config]
         @redis_config = opts[:redis_config]
-        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
+
+        @logger = opts[:logger]
 
         @buffer = []
         @hostname = Socket.gethostname
+        super()
       end
 
-      def cleanup
-        @redis.empty! if @redis
-        @redis_handler.empty! if @redis_handler
-        generic_cleanup
+      def stop
+        @should_quit = true
+        @redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
       end
 
       def setup
@@ -60,7 +55,7 @@ module Flapjack
 
         super(@flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
 
-        logger.debug("Building jabber connection with jabberid: " +
+        @logger.debug("Building jabber connection with jabberid: " +
           @flapjack_jid.to_s + ", port: " + @config['port'].to_s +
           ", server: " + @config['server'].to_s + ", password: " +
           @config['password'].to_s)
@@ -94,25 +89,28 @@ module Flapjack
 
       # Join the MUC Chat room after connecting.
       def on_ready(stanza)
-        return if should_quit? && @shutting_down
-        @redis_handler ||= Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+        return if @should_quit
         @connected_at = Time.now.to_i
-        logger.info("Jabber Connected")
+        @logger.info("Jabber Connected")
         if @config['rooms'] && @config['rooms'].length > 0
           @config['rooms'].each do |room|
-            logger.info("Joining room #{room}")
+            @logger.info("Joining room #{room}")
             presence = Blather::Stanza::Presence.new
             presence.from = @flapjack_jid
             presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
             presence << "<x xmlns='http://jabber.org/protocol/muc'/>"
-            write presence
-            say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
+            EventMachine::Synchrony.next_tick do
+              write presence
+              say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
+            end
           end
         end
         return if @buffer.empty?
         while stanza = @buffer.shift
           @logger.debug("Sending a buffered jabber message to: #{stanza.to}, using: #{stanza.type}, message: #{stanza.body}")
-          write(stanza)
+          EventMachine::Synchrony.next_tick do
+            write(stanza)
+          end
         end
       end
 
@@ -139,12 +137,12 @@ module Flapjack
           four_hours = 4 * 60 * 60
           duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
 
-          event_id = @redis_handler.hget('unacknowledged_failures', ackid)
+          event_id = @redis.hget('unacknowledged_failures', ackid)
 
           if event_id.nil?
             error = "not found"
           else
-            entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis_handler)
+            entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
             error = "unknown entity" if entity_check.nil?
           end
 
@@ -172,7 +170,7 @@ module Flapjack
 
         when command =~ /^identify$/
           t = Process.times
-          boot_time = Time.at(@redis_handler.get('boot_time').to_i)
+          boot_time = Time.at(@redis.get('boot_time').to_i)
           msg  = "Flapjack #{Flapjack::VERSION} process #{Process.pid} on #{`hostname -f`.chomp} \n"
           msg += "Boot time: #{boot_time}\n"
           msg += "User CPU Time: #{t.utime}\n"
@@ -185,11 +183,11 @@ module Flapjack
 
           msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
-          entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis_handler)
+          entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis)
           if entity
             summary = "Testing notifications to all contacts interested in entity: #{entity.name}, check: #{check_name}"
 
-            entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check_name, :redis => @redis_handler)
+            entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check_name, :redis => @redis)
             puts entity_check.inspect
             entity_check.test_notifications('summary' => summary)
 
@@ -199,7 +197,7 @@ module Flapjack
 
         when command =~ /^(find )?entities matching\s+\/(.*)\/.*$/i
           pattern = $2.chomp.strip
-          entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern, :redis => @redis_handler)
+          entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern, :redis => @redis)
           max_showable = 30
           number_found = entity_list.length
           entity_list = entity_list[0..(max_showable - 1)] if number_found > max_showable
@@ -226,8 +224,8 @@ module Flapjack
       end
 
       def on_groupchat(stanza)
-        return if should_quit? && @shutting_down
-        logger.debug("groupchat message received: #{stanza.inspect}")
+        return if @should_quit
+        @logger.debug("groupchat message received: #{stanza.inspect}")
 
         if stanza.body =~ /^flapjack:\s+(.*)/
           command = $1
@@ -238,15 +236,17 @@ module Flapjack
         action  = results[:action]
 
         if msg || action
-          say(stanza.from.stripped, msg, :groupchat)
-          logger.debug("Sent to group chat: #{msg}")
-          action.call if action
+          EventMachine::Synchrony.next_tick do
+            @logger.info("sending to group chat: #{msg}")
+            say(stanza.from.stripped, msg, :groupchat)
+            action.call if action
+          end
         end
       end
 
       def on_chat(stanza)
-        return if should_quit? && @shutting_down
-        logger.debug("chat message received: #{stanza.inspect}")
+        return if @should_quit
+        @logger.debug("chat message received: #{stanza.inspect}")
 
         if stanza.body =~ /^flapjack:\s+(.*)/
           command = $1
@@ -259,23 +259,42 @@ module Flapjack
         action  = results[:action]
 
         if msg || action
-          say(stanza.from.stripped, msg, :chat)
-          logger.debug("Sent to #{stanza.from.stripped}: #{msg}")
-          action.call if action
+          EventMachine::Synchrony.next_tick do
+            @logger.info("Sending to #{stanza.from.stripped}: #{msg}")
+            say(stanza.from.stripped, msg, :chat)
+            action.call if action
+          end
+        end
+      end
+
+      def connect_with_retry
+        attempt = 0
+        delay = 2
+        begin
+          attempt += 1
+          delay = 10 if attempt > 10
+          delay = 60 if attempt > 60
+          EventMachine::Synchrony.sleep(delay || 3) if attempt > 1
+          @logger.debug("attempting connection to the jabber server")
+          connect # Blather::Client.connect
+        rescue StandardError => detail
+          @logger.error("unable to connect to the jabber server (attempt #{attempt}), retrying in #{delay} seconds ...")
+          @logger.error("detail: #{detail.message}")
+          @logger.debug(detail.backtrace.join("\n"))
+          retry unless @should_quit
         end
       end
 
       # returning true to prevent the reactor loop from stopping
       def on_disconnect(stanza)
-        return true if should_quit? && @shutting_down
-        logger.warn("jabbers disconnected! reconnecting in 1 second ...")
-        EventMachine::Timer.new(1) do
-          connect # Blather::Client.connect
-        end
+        @logger.warn("disconnect handler called")
+        return true if @should_quit
+        @logger.warn("jabbers disconnected! reconnecting after a short deley ...")
+        connect_with_retry
         true
       end
 
-      def say(to, msg, using = :chat)
+      def say(to, msg, using = :chat, tick = true)
         stanza = Blather::Stanza::Message.new(to, msg, using)
         if connected?
           @logger.debug("Sending a jabber message to: #{to.to_s}, using: #{using.to_s}, message: #{msg}")
@@ -286,45 +305,40 @@ module Flapjack
         end
       end
 
-      def add_shutdown_event(opts = {})
-        return unless redis = opts[:redis]
-        redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
-      end
-
-      def main
-        logger.debug("New Jabber pikelet with the following options: #{@config.inspect}")
-
-        count_timer = EM::Synchrony.add_periodic_timer(30) do
-          logger.debug("connection count: #{EM.connection_count} #{Time.now.to_s}.#{Time.now.usec.to_s}")
-        end
+      def start
+        @logger.info("starting")
+        @logger.debug("new jabber pikelet with the following options: #{@config.inspect}")
 
         keepalive_timer = EM::Synchrony.add_periodic_timer(60) do
-          logger.debug("calling keepalive on the jabber connection")
-          write(' ') if connected?
+          @logger.debug("calling keepalive on the jabber connection")
+          if connected?
+            EventMachine::Synchrony.next_tick do
+              write(' ')
+            end
+          end
         end
 
         setup
-        connect # Blather::Client.connect
+        connect_with_retry
 
         # simplified to use a single queue only as it makes the shutdown logic easier
         queue = @config['queue']
         events = {}
 
-        until should_quit? && @shutting_down
+        until @should_quit
 
           # FIXME: should also check if presence has been established in any group chat rooms that are
           # configured before starting to process events, otherwise the first few may get lost (send
           # before joining the group chat rooms)
           if connected?
-            logger.debug("jabber is connected so commencing blpop on #{queue}")
+            @logger.debug("jabber is connected so commencing blpop on #{queue}")
             events[queue] = @redis.blpop(queue, 0)
             event         = Yajl::Parser.parse(events[queue][1])
             type          = event['notification_type'] || 'unknown'
-            logger.debug('jabber notification event received')
-            logger.debug(event.inspect)
+            @logger.debug('jabber notification event received')
+            @logger.debug(event.inspect)
             if 'shutdown'.eql?(type)
-              if should_quit?
-                @shutting_down = true
+              if @should_quit
                 EventMachine::Synchrony.next_tick do
                   # get delays without the next_tick
                   close # Blather::Client.close
@@ -337,7 +351,7 @@ module Flapjack
               duration      = event['duration'] ? time_period_in_words(event['duration']) : '4 hours'
               address       = event['address']
 
-              logger.debug("processing jabber notification address: #{address}, event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
+              @logger.debug("processing jabber notification address: #{address}, event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
 
               ack_str =
                 event['event_count'] &&
@@ -371,12 +385,11 @@ module Flapjack
               end
             end
           else
-            logger.debug("not connected, sleep 1 before retry")
+            @logger.debug("not connected, sleep 1 before retry")
             EM::Synchrony.sleep(1)
           end
         end
 
-        count_timer.cancel
         keepalive_timer.cancel
       end
 

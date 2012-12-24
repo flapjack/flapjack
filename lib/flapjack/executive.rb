@@ -3,7 +3,6 @@
 require 'log4r'
 require 'log4r/outputter/fileoutputter'
 
-require 'flapjack'
 require 'flapjack/filters/acknowledgement'
 require 'flapjack/filters/ok'
 require 'flapjack/filters/scheduled_maintenance'
@@ -14,7 +13,6 @@ require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/notification'
 require 'flapjack/data/event'
-require 'flapjack/pikelet'
 require 'flapjack/redis_pool'
 
 require 'flapjack/gateways/email'
@@ -23,15 +21,12 @@ require 'flapjack/gateways/sms_messagenet'
 module Flapjack
 
   class Executive
-    include Flapjack::GenericPikelet
 
-    alias_method :generic_bootstrap, :bootstrap
-    alias_method :generic_cleanup,   :cleanup
-
-    def bootstrap(opts = {})
-      generic_bootstrap(opts)
-
-      @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
+    def initialize(opts = {})
+      @config = opts[:config]
+      @redis_config = opts[:redis_config]
+      @logger = opts[:logger]
+      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
 
       @queues = {:email     => @config['email_queue'],
                  :sms       => @config['sms_queue'],
@@ -44,7 +39,7 @@ module Flapjack
 
       # FIXME: Put loading filters into separate method
       # FIXME: should we make the filters more configurable by the end user?
-      options = { :log => @logger, :persistence => @redis }
+      options = { :log => opts[:logger], :persistence => @redis }
       @filters = []
       @filters << Flapjack::Filters::Ok.new(options)
       @filters << Flapjack::Filters::ScheduledMaintenance.new(options)
@@ -80,16 +75,11 @@ module Flapjack
       @redis.hset("event_counters:#{@instance_id}", 'action', 0)
     end
 
-    def cleanup
-      @redis.empty! if @redis
-      generic_cleanup
-    end
-
-    def main
+    def start
       @logger.info("Booting main loop.")
 
-      until should_quit? && @received_shutdown
-        @logger.info("Waiting for event...")
+      until @should_quit
+        @logger.debug("Waiting for event...")
         event = Flapjack::Data::Event.next(:redis => @redis)
         process_event(event) unless event.nil?
       end
@@ -99,12 +89,12 @@ module Flapjack
 
     # this must use a separate connection to the main Executive one, as it's running
     # from a different fiber while the main one is blocking.
-    def add_shutdown_event(opts = {})
-      return unless redis = opts[:redis]
-      redis.rpush('events', JSON.generate('type'    => 'shutdown',
-                                          'host'    => '',
-                                          'service' => '',
-                                          'state'   => ''))
+    def stop
+      @should_quit = true
+      @redis.rpush('events', JSON.generate('type'    => 'shutdown',
+                                           'host'    => '',
+                                           'service' => '',
+                                           'state'   => ''))
     end
 
   private
@@ -115,29 +105,29 @@ module Flapjack
       @logger.debug("Raw event received: #{event.inspect}")
       time_at = event.time
       time_at_str = time_at ? ", #{Time.at(time_at).to_s}" : ''
-      @logger.info("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
+      @logger.debug("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
 
-      entity_check = (event.type == 'shutdown') ? nil :
+      entity_check = ('shutdown' == event.type) ? nil :
                        Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
 
-      result       = update_keys(event, entity_check)
+      result = update_keys(event, entity_check)
       return if result[:shutdown]
-      skip_filters = result[:skip_filters]
 
-      blocker = @filters.find {|filter| filter.block?(event) } unless skip_filters
+      blocker = nil
 
-      if skip_filters
-        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because filtering was skipped")
+      if result[:skip_filters]
+        @logger.debug("Not generating notifications for event #{event.id} because filtering was skipped")
         return
+      else
+        blocker = @filters.find {|filter| filter.block?(event) }
       end
 
       if blocker
-        blocker_names = [ blocker.name ]
-        @logger.info("#{Time.now}: Not sending notifications for event #{event.id} because these filters blocked: #{blocker_names.join(', ')}")
+        @logger.debug("Not generating notifications for event #{event.id} because this filter blocked: #{blocker.name}")
         return
       end
 
-      @logger.info("#{Time.now}: Sending notifications for event #{event.id}")
+      @logger.info("Generating notifications for event #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
       send_notification_messages(event, entity_check)
     end
 
@@ -201,7 +191,7 @@ module Flapjack
         end
       when 'shutdown'
         # should this be logged as an action instead? being minimally invasive for now
-        result[:shutdown] = @received_shutdown = true
+        result[:shutdown] = true
       end
 
       result
@@ -215,9 +205,9 @@ module Flapjack
       case event.type
       when 'service'
         case event.state
-        when 'ok', 'unknown'
+        when 'ok'
           notification_type = 'recovery'
-        when 'warning', 'critical'
+        when 'warning', 'critical', 'unknown'
           notification_type = 'problem'
         end
       when 'action'
@@ -237,7 +227,7 @@ module Flapjack
       if contacts.empty?
         @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | NO CONTACTS")
         return
-       end
+      end
 
       notification = Flapjack::Data::Notification.for_event(event, :type => notification_type)
 
@@ -248,7 +238,7 @@ module Flapjack
           "#{notification_type} | #{msg.contact.id} | #{media_type.to_s} | #{msg.address}")
 
         unless @queues[media_type]
-          # TODO log error
+          @logger.error("no queue for media type: #{media_type}")
           next
         end
 
