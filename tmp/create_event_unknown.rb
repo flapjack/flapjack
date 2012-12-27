@@ -3,24 +3,22 @@
 require 'redis'
 require 'json'
 
-id = "%.2d" % (1..10).to_a[rand(9)]
+#id = "%.2d" % (1..10).to_a[rand(9)]
 
 events = []
 
 events << {
-  'entity' => "client1-test-app-#{id}",
-  'check' => 'http',
+  'entity' => "client1-localhost-test-1",
+  'check' => 'foo',
   'type' => 'service',
-  'state' => 'ok',
+  'state' => 'unknown',
 }.to_json
 
 redis = Redis.new(:db => 13)
 
-4000.times do
-  events.each {|event|
-    redis.rpush 'events', event
-  }
-end
+events.each {|event|
+  redis.rpush 'events', event
+}
 
 puts "#{Time.now} - finished loading up events"
 previous_events_size = redis.llen 'events'
