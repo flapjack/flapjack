@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    flapjack (0.6.58)
+    flapjack (0.6.59)
       blather
       chronic
       chronic_duration
@@ -16,6 +16,7 @@ PATH
       mail
       rack-fiber_pool
       redis
+      resque (~> 1.23.0)
       sinatra
       thin
       yajl-ruby
