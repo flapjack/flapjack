@@ -209,6 +209,7 @@ when "status"
     puts "#{exe} is running: #{uptime}"
   else
     puts "#{exe} is not runninng"
+    exit 3
   end
 
 else

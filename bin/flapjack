@@ -140,7 +140,8 @@ when "status"
   if runner.daemon_running?
     puts "Flapjack is running: #{uptime}"
   else
-    puts "Flapjack is not runninng"
+    puts "Flapjack is not running"
+    exit 3
   end
 
 else
