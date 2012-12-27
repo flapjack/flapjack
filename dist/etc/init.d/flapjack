@@ -46,6 +46,7 @@ case "$1" in
   status)
     flapjack status --config /etc/flapjack/flapjack-config.yaml
     RETVAL=$?
+  ;;
   *)
     echo "Usage: flapjack {start|stop|restart|reload|status}"
     RETVAL=1
