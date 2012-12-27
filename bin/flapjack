@@ -82,6 +82,7 @@ when "start"
 
   if runner.daemon_running?
     puts "Flapjack is already running."
+    exit 1
   else
     print "Flapjack starting..."
     runner.execute(:daemonize => daemonize) {
@@ -100,6 +101,7 @@ when "stop"
     puts " done."
   else
     puts "Flapjack is not running."
+    exit 1
   end
 
 when "restart"
@@ -128,6 +130,7 @@ when "reload"
     end
   else
     puts "Flapjack is not running daemonized."
+    exit 1
   end
 
 when "status"
@@ -146,5 +149,6 @@ else
   else
     puts "Unknown command provided: '#{ARGV[0]}'"
   end
+  exit 1
 
 end

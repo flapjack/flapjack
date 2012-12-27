@@ -95,6 +95,7 @@ case ARGV[0]
 when "start"
   if runner.daemon_running?
     puts "#{exe} is already running."
+    exit 1
   else
     print "#{exe} starting..."
     runner.execute(:daemonize => daemonize) {
@@ -110,6 +111,7 @@ when "stop"
     puts " done."
   else
     puts "#{exe} is not running."
+    exit 1
   end
 
 when "restart"
@@ -133,5 +135,6 @@ else
   else
     puts "Unknown command provided: '#{ARGV[0]}'"
   end
+  exit 1
 
 end

@@ -28,15 +28,20 @@ fi
 case "$1" in
   start)
     rbenv shell 1.9.3-p125
-    flapjack --config /etc/flapjack/flapjack-config.yaml --daemonize
+    flapjack start --config /etc/flapjack/flapjack-config.yaml --daemonize
     RETVAL=$?
   ;;
   stop)
-    kill `cat /var/run/flapjack/flapjack.pid`
-    # FIXME: make this more robust, preferably use daemons foo
-    # or at least wait until the flapjack process has exited before exiting
+    flapjack stop --config /etc/flapjack/flapjack-config.yaml
     RETVAL=$?
   ;;
+  restart)
+    flapjack restart --config /etc/flapjack/flapjack-config.yaml
+    RETVAL=$?
+  ;;
+  reload)
+    flapjack reload --config /etc/flapjack/flapjack-config.yaml
+    RETVAL=$?
   *)
     echo "Usage: flapjack {start|stop}"
     RETVAL=1
