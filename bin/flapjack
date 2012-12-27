@@ -15,6 +15,8 @@ options = OpenStruct.new
 options.config    = File.join('etc', 'flapjack_config.yaml')
 options.daemonize = nil
 
+@exe = File.basename(__FILE__)
+
 OptionParser.new do |opts|
   opts.banner = "Usage: flapjack COMMAND [OPTIONS]"
 
@@ -24,6 +26,7 @@ OptionParser.new do |opts|
   opts.separator  "     stop #{" " * 26} stop flapjack"
   opts.separator  "     restart #{" " * 23} (re)start flapjack"
   opts.separator  "     reload #{" " * 24} reload flapjack configuration"
+  opts.separator  "     status #{" " * 24} see if flapjack is running"
   opts.separator  ""
   opts.separator  "Options"
 
@@ -68,21 +71,52 @@ daemonize = options.daemonize.nil? ?
               !!config_env['daemonize'] :
               options.daemonize
 
-require 'flapjack/coordinator'
 
 flapjack_coord = Proc.new {
+  require 'flapjack/coordinator'
   coordinator = Flapjack::Coordinator.new(config)
   coordinator.start(:signals => true)
 }
 
+@runner_opts = { :pid_path => pidfile, :log_path => logfile }
+def get_runner
+  Dante::Runner.new(@exe, @runner_opts)
+end
+
+def process_exists(pid)
+  return unless pid
+  begin
+    Process.kill(0, pid)
+    return true
+  rescue Errno::ESRCH
+    return false
+  end
+end
+
+# wait until the specified pid no longer exists, or until a timeout is reached
+def wait_pid_gone(pid, timeout = 30)
+  print "waiting for a max of #{timeout} seconds for process #{pid} to exit" if process_exists(pid)
+  started_at = Time.now.to_i
+  while process_exists(pid)
+    break unless (Time.now.to_i - started_at < timeout)
+    print '.'
+    sleep 1
+  end
+  puts ''
+  return !process_exists(pid)
+end
+
+begin
+  pid = IO.read(pidfile).chomp.to_i
+rescue StandardError
+  pid = nil
+end
+
 case ARGV[0]
 when "start"
-  runner = Dante::Runner.new('flapjack', :pid_path => pidfile,
-    :log_path => logfile)
-
+  runner = get_runner
   if runner.daemon_running?
     puts "Flapjack is already running."
-    exit 1
   else
     print "Flapjack starting..."
     runner.execute(:daemonize => daemonize) {
@@ -92,37 +126,37 @@ when "start"
   end
 
 when "stop"
-  runner = Dante::Runner.new('flapjack', :pid_path => pidfile,
-    :log_path => logfile)
-
+  runner = get_runner
   if runner.daemon_running?
     print "Flapjack stopping..."
     runner.execute(:kill => true)
     puts " done."
   else
     puts "Flapjack is not running."
-    exit 1
   end
+  exit 1 unless wait_pid_gone(pid)
 
 when "restart"
-  runner = Dante::Runner.new('flapjack', :pid_path => pidfile,
-    :log_path => logfile)
+  runner = get_runner
+  if runner.daemon_running?
+    print "Flapjack stopping..."
+    runner.execute(:kill => true)
+    puts " done."
+  end
+  exit 1 unless wait_pid_gone(pid)
 
-  print "Flapjack restarting..."
-  runner.execute(:daemonize => true, :restart => true) {
-    sleep 1 # get connection errors without this... -- might move this to
-    # be default behaviour when starting jabber gateway
+  runner = get_runner
+  print "Flapjack starting..."
+  runner.execute(:daemonize => daemonize) {
     flapjack_coord.call
   }
   puts " done."
 
 when "reload"
-  runner = Dante::Runner.new('flapjack', :pid_path => pidfile, :log_path => logfile)
-
+  runner = get_runner
   if runner.daemon_running?
     print "Reloading Flapjack configuration..."
     begin
-      pid = IO.read(pidfile).chomp.to_i
       Process.kill('HUP', pid)
       puts " sent HUP to pid #{pid}."
     rescue => e
@@ -134,11 +168,10 @@ when "reload"
   end
 
 when "status"
-  runner = Dante::Runner.new('flapjack', :pid_path => pidfile, :log_path => logfile)
-
+  runner = get_runner
   uptime = (runner.daemon_running?) ? Time.now - File.stat(pidfile).ctime : 0
   if runner.daemon_running?
-    puts "Flapjack is running: #{uptime}"
+    puts "Flapjack is running: pid #{pid}, uptime #{uptime}"
   else
     puts "Flapjack is not running"
     exit 3

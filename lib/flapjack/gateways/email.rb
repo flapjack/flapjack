@@ -80,7 +80,7 @@ module Flapjack
               @logger.info "Email sending succeeded"
               @sent += 1
             else
-              @logger.info "Email sending failed"
+              @logger.error "Email sending failed"
             end
 
             @logger.info "Email response: #{response.inspect}"
