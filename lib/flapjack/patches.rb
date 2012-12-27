@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 
 require 'ostruct'
-require 'daemons'
 require 'thin'
 require 'resque'
 # require 'log4r'
@@ -9,15 +8,6 @@ require 'resque'
 class OpenStruct
   def to_h
     @table
-  end
-end
-
-module Daemons
-  class PidFile
-    # we override this method so creating pid files is fork-safe
-    def filename
-      File.join(@dir, "#{@progname}#{Process.pid}.pid")
-    end
   end
 end
 

@@ -9,23 +9,17 @@ require 'em-synchrony'
 require 'em/protocols/smtpclient'
 
 require 'flapjack/data/entity_check'
-require 'flapjack/gateways/base'
 
 module Flapjack
   module Gateways
 
     class Email
-      extend Flapjack::Gateways::Resque
 
       class << self
 
-        alias_method :orig_bootstrap, :bootstrap
-
-        def bootstrap(opts = {})
-          return if @bootstrapped
-          @smtp_config = opts[:config].delete('smtp_config')
+        def start
+          @smtp_config = @config.delete('smtp_config')
           @sent = 0
-          orig_bootstrap(opts)
         end
 
         def perform(notification)
@@ -61,7 +55,7 @@ module Flapjack
 
             fqdn       = `/bin/hostname -f`.chomp
             m_from     = "flapjack@#{fqdn}"
-            logger.debug("flapjack_mailer: set from to #{m_from}")
+            @logger.debug("flapjack_mailer: set from to #{m_from}")
             m_reply_to = m_from
             m_to       = notification['address']
 
@@ -92,7 +86,7 @@ module Flapjack
             @logger.info "Email response: #{response.inspect}"
 
           rescue Exception => e
-            @logger.error "Error delivering email to #{mail.to}: #{e.message}"
+            @logger.error "Error delivering email to #{m_to}: #{e.message}"
             @logger.error e.backtrace.join("\n")
           end
         end

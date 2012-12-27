@@ -61,8 +61,7 @@ end
 Before do
   @logger = MockLogger.new
   # Use a separate database whilst testing
-  @app = Flapjack::Executive.new
-  @app.bootstrap(:logger => @logger,
+  @app = Flapjack::Executive.new(:logger => @logger,
     :config => {'email_queue' => 'email_notifications',
                 'sms_queue' => 'sms_notifications'},
     :redis_config => redis_opts)
