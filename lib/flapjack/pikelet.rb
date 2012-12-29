@@ -147,6 +147,11 @@ module Flapjack
         pikelet_klass.instance_variable_set('@redis_config', @redis_config)
         pikelet_klass.instance_variable_set('@logger', @logger)
 
+        unless defined?(@@resque_pool) && !@@resque_pool.nil?
+          @@resque_pool = Flapjack::RedisPool.new(:config => @redis_config)
+          ::Resque.redis = @@resque_pool
+        end
+
         # TODO error if config['queue'].nil?
 
         @worker = EM::Resque::Worker.new(@config['queue'])

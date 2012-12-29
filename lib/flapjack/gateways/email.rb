@@ -18,6 +18,8 @@ module Flapjack
       class << self
 
         def start
+          @logger.info("starting")
+          @logger.debug("new email gateway pikelet with the following options: #{@config.inspect}")
           @smtp_config = @config.delete('smtp_config')
           @sent = 0
         end

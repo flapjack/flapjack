@@ -56,6 +56,8 @@ describe Flapjack::Pikelet do
     config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('queue').and_return('email_notif')
 
+    redis_config.should_receive(:has_key?).with("url").and_return(true)
+
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
       with('@config', config)
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
@@ -83,6 +85,8 @@ describe Flapjack::Pikelet do
 
     config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('queue').and_return('email_notif')
+
+    redis_config.should_receive(:has_key?).with("url").and_return(true)
 
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
       with('@config', config)
