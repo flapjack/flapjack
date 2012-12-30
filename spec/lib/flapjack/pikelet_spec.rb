@@ -10,6 +10,10 @@ describe Flapjack::Pikelet do
 
   let(:fiber) { mock(Fiber) }
 
+  before do
+    Flapjack::Pikelet::Resque.class_variable_set(:@@resque_pool, nil)
+  end
+
   it "creates and starts an executive pikelet" do
     Flapjack::Logger.should_receive(:new).and_return(logger)
 
@@ -56,7 +60,9 @@ describe Flapjack::Pikelet do
     config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('queue').and_return('email_notif')
 
-    redis_config.should_receive(:has_key?).with("url").and_return(true)
+    redis = mock('redis')
+    Flapjack::RedisPool.should_receive(:new).and_return(redis)
+    Resque.should_receive(:redis=).with( redis )
 
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
       with('@config', config)
@@ -79,14 +85,18 @@ describe Flapjack::Pikelet do
     pik.start
   end
 
+
   it "handles an exception raised by a resque worker gateway" do
+
     Flapjack::Logger.should_receive(:new).and_return(logger)
     logger.should_receive(:fatal)
 
     config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('queue').and_return('email_notif')
 
-    redis_config.should_receive(:has_key?).with("url").and_return(true)
+    redis = mock('redis')
+    Flapjack::RedisPool.should_receive(:new).and_return(redis)
+    Resque.should_receive(:redis=).with( redis )
 
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
       with('@config', config)
