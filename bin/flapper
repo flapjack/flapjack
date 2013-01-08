@@ -63,6 +63,7 @@ OptionParser.new do |opts|
   opts.separator  "     start #{" " * 25} start #{exe}"
   opts.separator  "     stop #{" " * 26} stop #{exe}"
   opts.separator  "     restart #{" " * 23} (re)start #{exe}"
+  opts.separator  "     status #{" " * 24} see if #{exe} is running"
   opts.separator  ""
   opts.separator  "Options"
 
