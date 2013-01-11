@@ -290,6 +290,7 @@ module Flapjack
         @logger.warn("disconnect handler called")
         return true if @should_quit
         @logger.warn("jabbers disconnected! reconnecting after a short deley ...")
+        EventMachine::Synchrony.sleep(5)
         connect_with_retry
         true
       end
