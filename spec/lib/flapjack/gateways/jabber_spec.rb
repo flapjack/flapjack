@@ -104,6 +104,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     attempts = 0
 
+    EventMachine::Synchrony.should_receive(:sleep).with(5).exactly(1).times
     EventMachine::Synchrony.should_receive(:sleep).with(2).exactly(3).times
     fj.should_receive(:connect).exactly(4).times.and_return {
       attempts +=1
