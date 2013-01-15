@@ -13,7 +13,7 @@ module Flapjack
 
     class Contact
 
-      attr_accessor :first_name, :last_name, :email, :media, :pagerduty_credentials, :id
+      attr_accessor :first_name, :last_name, :email, :media, :pagerduty_credentials, :id, :notification_rules
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
@@ -130,6 +130,13 @@ module Flapjack
 
       def name
         [(self.first_name || ''), (self.last_name || '')].join(" ").strip
+      end
+
+      def notification_rules
+        # use Flapjack::Data::NotificationRule to construct each rule
+        rule = Flapjack::Data::NotificationRule.new(:foo => 'bar')
+        rules << rule
+        rules
       end
 
     private
