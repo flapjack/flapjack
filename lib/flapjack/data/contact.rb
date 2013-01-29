@@ -13,7 +13,7 @@ module Flapjack
 
     class Contact
 
-      attr_accessor :first_name, :last_name, :email, :media, :pagerduty_credentials, :id, :notification_rules
+      attr_accessor :first_name, :last_name, :email, :media, :pagerduty_credentials, :id
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
@@ -132,11 +132,47 @@ module Flapjack
         [(self.first_name || ''), (self.last_name || '')].join(" ").strip
       end
 
+      # return an array of the notification rules of this contact
       def notification_rules
         # use Flapjack::Data::NotificationRule to construct each rule
-        rule = Flapjack::Data::NotificationRule.new(:foo => 'bar')
-        rules << rule
+        rules = []
+        return rules unless rule_ids = @redis.smembers("contact_notification_rules:#{self.id}")
+        rule_ids.each do |rule_id|
+          rules << Flapjack::Data::NotificationRule.find_by_id(rule_id, :redis => @redis)
+        end
         rules
+      end
+
+      # how often to notify this contact on the given media
+      def interval_for_media(media)
+        # FIXME: actually look this up from redis
+        return 15 * 60
+      end
+
+      # has a given (media, entity:check, severity) been notified within a given period?
+      def notified_within?(opts)
+        # FIXME: must remember to nuke the keys used for this on recovery (and any state change?)
+        media    = opts[:media]
+        check    = opts[:check]
+        state    = opts[:state]
+        duration = opts[:duration]
+        raise "unimplemented"
+      end
+
+      # drop notifications for
+      def drop_notifications?(opts)
+        media    = opts[:media]
+        check    = opts[:check]
+        state    = opts[:state]
+        # build it and they will come
+        return true if @redis.exists("drop_alerts_for_contact:#{self.id}")
+        return true if media and
+          @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}")
+        return true if media and check and
+          @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{check}")
+        return true if media and check and state and
+          @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}")
+        return false
       end
 
     private

@@ -71,6 +71,18 @@ def submit_ok(entity, check)
   submit_event(event)
 end
 
+def submit_warning(entity, check)
+  event = {
+    'type'    => 'service',
+    'state'   => 'warning',
+    'summary' => '25% packet loss',
+    'entity'  => entity,
+    'check'   => check,
+    'client'  => 'clientx'
+  }
+  submit_event(event)
+end
+
 def submit_critical(entity, check)
   event = {
     'type'    => 'service',
@@ -102,57 +114,93 @@ Given /^an entity '([\w\.\-]+)' exists$/ do |entity|
                              :redis => @redis )
 end
 
-Given /^^check '([\w\.\-]+)' for entity '([\w\.\-]+)' is in an ok state$/ do |check, entity|
+Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in an ok state$/ do |check, entity|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
   remove_unscheduled_maintenance(entity, check)
   remove_scheduled_maintenance(entity, check)
   remove_notifications(entity, check)
   set_ok_state(entity, check)
 end
 
-Given /^check '([\w\.\-]+)' for entity '([\w\.\-]+)' is in a failure state$/ do |check, entity|
+Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in a failure state$/ do |check, entity|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
   remove_unscheduled_maintenance(entity, check)
   remove_scheduled_maintenance(entity, check)
   remove_notifications(entity, check)
   set_failure_state(entity, check)
 end
 
-Given /^check '([\w\.\-]+)' for entity '([\w\.\-]+)' is in scheduled maintenance$/ do |check, entity|
+Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in scheduled maintenance$/ do |check, entity|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
   remove_unscheduled_maintenance(entity, check)
   set_scheduled_maintenance(entity, check)
 end
 
 # TODO set the state directly rather than submit & drain
-Given /^check '([\w\.\-]+)' for entity '([\w\.\-]+)' is in unscheduled maintenance$/ do |check, entity|
+Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unscheduled maintenance$/ do |check, entity|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
   remove_scheduled_maintenance(entity, check)
   set_failure_state(entity, check)
   submit_acknowledgement(entity, check)
   drain_events  # TODO these should only be in When clauses
 end
 
-When /^an ok event is received for check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
+Given /^the check is check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
+  @check  = check
+  @entity = entity
+end
+
+When /^an ok event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
   submit_ok(entity, check)
   drain_events
 end
 
-When /^a failure event is received for check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
+When /^a failure event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
   submit_critical(entity, check)
   drain_events
 end
 
-When /^an acknowledgement .*is received for check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
+When /^a critical event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
+  submit_critical(entity, check)
+  drain_events
+end
+
+When /^a warning event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
+  submit_warning(entity, check)
+  drain_events
+end
+
+When /^an acknowledgement .*is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
   submit_acknowledgement(entity, check)
   drain_events
 end
 
-
 # TODO logging is a side-effect, should test for notification generation itself
-Then /^a notification should not be generated for check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
+Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
   message = @logger.messages.find_all {|m| m =~ /enerating notifications for event #{entity}:#{check}/ }.last
   message ? happy = message.match(/Not generating notifications/) : happy = false
   happy.should be_true
 end
 
-Then /^a notification should be generated for check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
+Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
   message = @logger.messages.find_all {|m| m =~ /enerating notifications for event #{entity}:#{check}/ }.last
   message ? happy = message.match(/Generating notifications/) : happy = false
   happy.should be_true

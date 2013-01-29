@@ -1,24 +1,29 @@
-tuple = [
-  [ alice, sms ],
-  [ alice, email ],
-  [ boby, email ],
-  [ carol, sms ],
-]
+#!/usr/bin/env ruby
+
+
+
+#tuple = [
+#  [ alice, sms ],
+#  [ alice, email ],
+#  [ boby, email ],
+#  [ carol, sms ],
+#]
 
 event
 
 # delete media based on entity name(s), tags, severity, time of day
+# first get all rules matching entity and time
 tuple.map! do |contact, media|
   rules    = contact.notification_rules
   # filter based on tags, severity, time of day
-  matchers = rules.find_all do |rule|
-    rule.match?(event, contact, media)
+  matchers = contact.notification_rules do |rule|
+    rule.match_entity?(event) && rule.match_time?(event)
   end
   matchers.empty? ? nil : [ contact, media, matchers ]
 end
 
-# matchers are rules of the contact that have matched the current (event, contac, media) tuple
-# but matched it how? ... details schmetails
+# matchers are rules of the contact that have matched the current event
+# for time and entity
 
 tuple.compact!
 
@@ -27,8 +32,24 @@ tuple.compact!
 #   [ boby, email, matchers ],
 # ]
 
+# delete the matcher for all entities if there are more specific matchers
+tuple = tuple.map do |contact, media, matchers|
+  if matchers.lengh > 1
+    have_specific = matchers.detect do |matcher|
+      matcher.entities or matcher.entity_tags
+    end
+    if have_specific
+      # delete the rule for all entities
+      matchers.map! do |matcher|
+        matcher.entities.nil? and matcher.entity_tags.nil? ? nil : matcher
+      end
+    end
+  end
+  [contact, media, matchers]
+end
+
 # delete media based on blackholes
-tuple.find_all do |contact, media, matchers|
+tuple = tuple.find_all do |contact, media, matchers|
   matchers.none? {|matcher| matcher.blackhole? }
 end
 

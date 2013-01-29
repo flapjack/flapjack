@@ -128,7 +128,7 @@ module Flapjack
       end
 
       @logger.info("Generating notifications for event #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
-      send_notification_messages(event, entity_check)
+      generate_notification_messages(event, entity_check)
     end
 
     def update_keys(event, entity_check)
@@ -198,8 +198,8 @@ module Flapjack
     end
 
     # takes an event for which a notification needs to be generated, works out the type of
-    # notification, updates the notification history in redis, sends the notifications
-    def send_notification_messages(event, entity_check)
+    # notification, updates the notification history in redis, generates the notifications
+    def generate_notification_messages(event, entity_check)
       timestamp = Time.now.to_i
       notification_type = 'unknown'
       case event.type
@@ -231,35 +231,114 @@ module Flapjack
 
       notification = Flapjack::Data::Notification.for_event(event, :type => notification_type)
 
-      notification.messages(:contacts => contacts).each do |msg|
-        media_type = msg.medium.to_sym
+      messages = notification.messages(:contacts => contacts)
+      puts "#{event.id} - size of messages: #{messages.length}"
 
-        @notifylog.info("#{Time.now.to_s} | #{event.id} | " +
-          "#{notification_type} | #{msg.contact.id} | #{media_type.to_s} | #{msg.address}")
+      messages = apply_notification_rules(messages)
+      puts "#{event.id} - after apply_notification_rules - size of messages: #{messages.length}"
 
-        unless @queues[media_type]
-          @logger.error("no queue for media type: #{media_type}")
-          next
-        end
-
-        contents = msg.contents
-
-        # TODO consider changing Resque jobs to use raw blpop like the others
-        case media_type
-        when :sms
-          Resque.enqueue_to(@queues[:sms], Flapjack::Gateways::SmsMessagenet, contents)
-        when :email
-          Resque.enqueue_to(@queues[:email], Flapjack::Gateways::Email, contents)
-        when :jabber
-          # TODO move next line up into other notif value setting above?
-          contents['event_count'] = @event_count if @event_count
-          @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(contents))
-        when :pagerduty
-          @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(contents))
-        end
-
+      messages.each do |message|
+        dispatch_message(message)
       end
     end
+
+    # delete messages based on entity name(s), tags, severity, time of day
+    def apply_notification_rules(messages)
+      # first get all rules matching entity and time
+      puts "apply_notification_rules: got messages with size #{messages.size}"
+
+      # don't consider notification rules if the contact has none
+
+      tuple = messages.map do |message|
+        puts "considering message: #{message.inspect}"
+        rules    = message.contact.notification_rules
+        event_id = message.notification.event.id
+        options  = {}
+        options[:no_rules_for_contact] = true if rules.empty?
+        # filter based on tags, severity, time of day
+        matchers = rules.find_all do |rule|
+          rule.match_entity?(event_id) && rule.match_time?(event_id)
+        end
+        if rules.empty?
+          [message, matchers, options]
+        else
+          matchers.empty? ? nil : [message, matchers, options]
+        end
+      end
+
+      # matchers are rules of the contact that have matched the current event
+      # for time and entity
+
+      tuple.compact!
+      puts "apply_notification_rules: num messages after entity and time matching: #{tuple.size}"
+
+      # delete the matcher for all entities if there are more specific matchers
+      tuple = tuple.map do |message, matchers, options|
+        if matchers.length > 1
+          have_specific = matchers.detect do |matcher|
+            matcher.entities or matcher.entity_tags
+          end
+          if have_specific
+            # delete the rule for all entities
+            matchers.map! do |matcher|
+              matcher.entities.nil? and matcher.entity_tags.nil? ? nil : matcher
+            end
+          end
+        end
+        [message, matchers, options]
+      end
+
+      # delete media based on blackholes
+      tuple = tuple.find_all do |message, matchers, options|
+        severity = message.notification.event.state
+        # or use message.notification.contents['state']
+        matchers.none? {|matcher| matcher.blackhole?(severity) }
+      end
+
+      puts "apply_notification_rules: num messages after removing blackhole matches: #{tuple.size}"
+
+      # delete media based on notification interval
+      tuple = tuple.find_all do |message, matchers, options|
+        not message.contact.drop_notifications?(:media => message.medium,
+                                                :check => message.notification.event.id,
+                                                :state => message.notification.event.state)
+      end
+
+      puts "apply_notification_rules: num messages after pruning for notification intervals: #{tuple.size}"
+
+      tuple.map do |message, matchers, options|  
+        message
+      end
+    end
+
+    def dispatch_message(message)
+
+      media_type = message.medium.to_sym
+      contents   = message.contents
+
+      @notifylog.info("#{Time.now.to_s} | #{message.notification.event.id} | " +
+        "#{message.notification.type} | #{message.contact.id} | #{message.medium.to_s} | #{message.address}")
+
+      unless @queues[media_type]
+        @logger.error("no queue for media type: #{media_type}")
+        return
+      end
+
+      # TODO consider changing Resque jobs to use raw blpop like the others
+      case media_type
+      when :sms
+        Resque.enqueue_to(@queues[:sms], Flapjack::Gateways::SmsMessagenet, contents)
+      when :email
+        Resque.enqueue_to(@queues[:email], Flapjack::Gateways::Email, contents)
+      when :jabber
+        # TODO move next line up into other notif value setting above?
+        contents['event_count'] = @event_count if @event_count
+        @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(contents))
+      when :pagerduty
+        @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(contents))
+      end
+
+   end
 
   end
 end
