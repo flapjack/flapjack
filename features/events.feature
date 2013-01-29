@@ -8,218 +8,235 @@ Feature: events
     Given an entity 'def' exists
 
   Scenario: Check ok to ok
-    Given check 'abc' for entity 'def' is in an ok state
-    When  an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in an ok state
+    When  an ok event is received
+    Then  a notification should not be generated
 
   Scenario: Check ok to failed
-    Given check 'abc' for entity 'def' is in an ok state
-    When  a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in an ok state
+    When  a failure event is received
+    Then  a notification should not be generated
 
   @time
   Scenario: Check failed to failed after 10 seconds
-    Given check 'abc' for entity 'def' is in an ok state
-    When  a failure event is received for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in an ok state
+    When  a failure event is received
     And   10 seconds passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
 
   @time
   Scenario: Check ok to failed for 1 minute
-    Given check 'abc' for entity 'def' is in an ok state
-    When  a failure event is received for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in an ok state
+    When  a failure event is received
     And   1 minute passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should be generated
 
   @time
   Scenario: Check failed and alerted to failed for 1 minute
-    Given check 'abc' for entity 'def' is in an ok state
-    When  a failure event is received for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in an ok state
+    When  a failure event is received
     And   1 minute passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should be generated
     When  1 minute passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
 
   @time
   Scenario: Check failed and alerted to failed for 6 minutes
-    Given check 'abc' for entity 'def' is in an ok state
-    When  a failure event is received for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in an ok state
+    When  a failure event is received
     And   1 minute passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should be generated
     When  6 minutes passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should be generated
 
   @time
   Scenario: Check ok to failed for 1 minute when in scheduled maintenance
-    Given check 'abc' for entity 'def' is in an ok state
-    And   check 'abc' for entity 'def' is in scheduled maintenance
-    When  a failure event is received for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in an ok state
+    And   the check is in scheduled maintenance
+    When  a failure event is received
     And   1 minute passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
 
   @time
   Scenario: Check ok to failed for 1 minute when in unscheduled maintenance
-    Given check 'abc' for entity 'def' is in an ok state
-    And   check 'abc' for entity 'def' is in unscheduled maintenance
-    When  a failure event is received for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in an ok state
+    And   the check is in unscheduled maintenance
+    When  a failure event is received
     And   1 minute passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
 
   @time
   Scenario: Check ok to failed for 1 minute, acknowledged, and failed for 6 minutes
-    Given check 'abc' for entity 'def' is in an ok state
-    When  a failure event is received for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in an ok state
+    When  a failure event is received
     And   1 minute passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
-    When  an acknowledgement is received for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should be generated
+    When  an acknowledgement event is received
     And   6 minute passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
 
   Scenario: Check failed to ok
-    Given check 'abc' for entity 'def' is in a failure state
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in a failure state
     And   5 minutes passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should be generated
     When  5 minutes passes
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should be generated
 
   @time
   Scenario: Check failed to ok when acknowledged
-    Given check 'abc' for entity 'def' is in a failure state
-    When  an acknowledgement event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in a failure state
+    When  an acknowledgement event is received
+    Then  a notification should be generated
     When  1 minute passes
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should be generated
 
   @time
   Scenario: Check failed to ok when acknowledged, and fails after 6 minutes
-    Given check 'abc' for entity 'def' is in a failure state
-    When  an acknowledgement event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in a failure state
+    When  an acknowledgement event is received
+    Then  a notification should be generated
     When  1 minute passes
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should be generated
     When  6 minutes passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
     When  6 minutes passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should be generated
 
   @time
   Scenario: Osciliating state, period of two minutes
-    Given check 'abc' for entity 'def' is in an ok state
-    When  a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in an ok state
+    When  a failure event is received
+    Then  a notification should not be generated
     When  50 seconds passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should be generated
     When  10 seconds passes
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should be generated
     When  50 seconds passes
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
     When  50 seconds passes
-    And   a failure event is received for check 'abc' on entity 'def'
+    And   a failure event is received
     #And   show me the notifications
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    Then  a notification should be generated
     When  10 seconds passes
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should be generated
 
   Scenario: Acknowledgement when ok
-    Given check 'abc' for entity 'def' is in an ok state
-    When  an acknowledgement event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in an ok state
+    When  an acknowledgement event is received
+    Then  a notification should not be generated
 
   Scenario: Acknowledgement when failed
-    Given check 'abc' for entity 'def' is in a failure state
-    When  an acknowledgement event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in a failure state
+    When  an acknowledgement event is received
+    Then  a notification should be generated
 
   Scenario: Brief failure then OK
-    Given check 'abc' for entity 'def' is in an ok state
-    When  a failure event is received for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in an ok state
+    When  a failure event is received
     And   10 seconds passes
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should not be generated
 
   Scenario: Flapper (down for one minute, up for one minute, repeat)
-    Given check 'abc' for entity 'def' is in an ok state
-    When  a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    Given the check is check 'abc' on entity 'def'
+    Given the check is in an ok state
+    When  a failure event is received
+    Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
     When  10 seconds passes
     # 30 seconds
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should be generated
     When  10 seconds passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
     When  10 seconds passes
     # 60 seconds
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should be generated
     When  10 seconds passes
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should not be generated
     When  10 seconds passes
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should not be generated
     When  10 seconds passes
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should not be generated
     When  10 seconds passes
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should not be generated
     When  10 seconds passes
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should not be generated
     When  10 seconds passes
     # 120 seconds
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
     When  10 seconds passes
     # 150 seconds
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should be generated
     When  10 seconds passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received for check 'abc' on entity 'def'
-    Then  a notification should not be generated for check 'abc' on entity 'def'
+    And   a failure event is received
+    Then  a notification should not be generated
     When  10 seconds passes
     # 180 seconds
-    And   an ok event is received for check 'abc' on entity 'def'
-    Then  a notification should be generated for check 'abc' on entity 'def'
+    And   an ok event is received
+    Then  a notification should be generated
