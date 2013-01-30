@@ -17,14 +17,10 @@ Background:
     | 15    | 60  |
 
   And user 1 has the following notification rules:
-    | id | entities | entity_tags | warning_media | critical_media   | warning_blackhole |
-    | 1  | foo      |             | email         | sms,email        |                   |
-    | 2  | bar      |             | email         | email            |                   |
-    | 3  | car      |             |               | sms,email        | true              |
-
-  And notification rule 1 has the following time restrictions:
-    | start_time | duration | days_of_week                             |
-    | 8:00       | 10 hours | monday,tuesday,wednesday,thursday,friday |
+    | id | entities | entity_tags | warning_media | critical_media   | warning_blackhole | time_restrictions |
+    | 1  | foo      |             | email         | sms,email        |                   | 8-18 weekdays     |
+    | 2  | bar      |             | email         | email            |                   |                   |
+    | 3  | car      |             |               | sms,email        | true              |                   |
 
 Scenario: Alerts only during specified time restrictions
   Given the check is check 'ping' on entity 'foo'

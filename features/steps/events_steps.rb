@@ -2,6 +2,8 @@
 
 require 'flapjack/data/entity_check'
 require 'flapjack/data/event'
+require 'delorean'
+require 'chronic'
 
 def drain_events
   loop do
@@ -240,29 +242,44 @@ Given /^the following users exist:$/ do |contacts|
   end
 end
 
-Given /^user (\d+) has the following contact media:$/ do |arg1, table|
-
-  # table is a Cucumber::Ast::Table
-  pending # express the regexp above with the code you wish you had
+Given /^user (\d+) has the following notification intervals:$/ do |contact_id, intervals|
+  contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
+  intervals.hashes.each do |interval|
+    contact.set_interval_for_media('email', interval['email'].to_i)
+    contact.set_interval_for_media('sms',   interval['sms'].to_i)
+  end
 end
 
-Given /^user (\d+) has the following notification intervals:$/ do |arg1, table|
-  # table is a Cucumber::Ast::Table
-  pending # express the regexp above with the code you wish you had
+Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules|
+  contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
+  rules.hashes.each do |rule|
+    entities           = rule['entities'].split(',').map { |x| x.strip }
+    entity_tags        = rule['entity_tags'].split(',').map { |x| x.strip }
+    warning_media      = rule['warning_media'].split(',').map { |x| x.strip }
+    critical_media     = rule['critical_media'].split(',').map { |x| x.strip }
+    warning_blackhole  = rule['warning_blackhole'].downcase == 'true' ? 'true' : 'false'
+    time_restrictions  = []
+    rule['time_restrictions'].split(',').map { |x| x.strip }.each do |time_restriction|
+      case time_restriction
+      when '8-18 weekdays'
+        time_restrictions << {'start_time'   => 8 * 60 * 60,
+                              'duration'     => (18 - 8) * 60 * 60,
+                              'days_of_week' => ['monday', 'tuesday', 'wednesday',
+                                                 'thursday', 'friday']}
+      end
+    end
+    contact.add_notification_rule({'id'                 => rule['id'],
+                                   'entities'           => entities,
+                                   'entity_tags'        => entity_tags,
+                                   'warning_media'      => warning_media,
+                                   'critical_media'     => critical_media,
+                                   'warning_blackhole'  => warning_blackhole,
+                                   'time_restrictions'  => time_restrictions})
+  end
 end
 
-Given /^user (\d+) has the following notification rules:$/ do |arg1, table|
-  # table is a Cucumber::Ast::Table
-  pending # express the regexp above with the code you wish you had
-end
-
-Given /^notification rule (\d+) has the following time restrictions:$/ do |arg1, table|
-  # table is a Cucumber::Ast::Table
-  pending # express the regexp above with the code you wish you had
-end
-
-Given /^the time is (\d+)am on a Wednesday$/ do |arg1|
-  pending # express the regexp above with the code you wish you had
+Given /^the time is (.*) on a (.*)$/ do |time, day_of_week|
+  Delorean.time_travel_to(Chronic.parse("#{time} on #{day_of_week}"))
 end
 
 Then /^an email alert should not be queued to jane@example\.com$/ do

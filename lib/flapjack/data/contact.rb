@@ -143,20 +143,39 @@ module Flapjack
         rules
       end
 
-      # how often to notify this contact on the given media
-      def interval_for_media(media)
-        # FIXME: actually look this up from redis
-        return 15 * 60
+      def add_notification_rule(rule)
+        # FIXME: wondering now if notification rules should be just one json encoded
+        # string in redis, rather than a redis hash with multiple json encoded 
+        # strings within it...
+        if @redis.sismember("contact_notification_rules:#{self.id}", rule['id'])
+          self.delete_notification_rule(rule['id'])
+        end
+        rule_id = rule['id']
+        rule.delete('id')
+        rule['entities']           = Yajl::Encoder.encode(rule['entities'])
+        rule['entity_tags']        = Yajl::Encoder.encode(rule['entity_tags'])
+        rule['warning_media']      = Yajl::Encoder.encode(rule['warning_media'])
+        rule['critical_media']     = Yajl::Encoder.encode(rule['critical_media'])
+        rule['time_restrictions']  = Yajl::Encoder.encode(rule['time_restrictions'])
+
+        @redis.sadd("contact_notification_rules:#{self.id}", rule_id)
+        @redis.hmset("notification_rule:#{rule_id}", *rule.flatten)
       end
 
-      # has a given (media, entity:check, severity) been notified within a given period?
-      def notified_within?(opts)
-        # FIXME: must remember to nuke the keys used for this on recovery (and any state change?)
-        media    = opts[:media]
-        check    = opts[:check]
-        state    = opts[:state]
-        duration = opts[:duration]
-        raise "unimplemented"
+      def delete_notification_rule(rule_id)
+        @redis.srem("contact_notification_rules:#{self.id}", rule_id)
+        @redis.del("notification_rule:#{rule_id}")
+      end
+
+      # how often to notify this contact on the given media
+      # return 15 mins if no value is set
+      def interval_for_media(media)
+        @redis.hget("contact_media_alert_intervals:#{self.id}", media) || 15 * 60
+      end
+
+      def set_interval_for_media(media, interval)
+        raise "invalid interval" unless interval.is_a?(Integer)
+        @redis.hset("contact_media_alert_intervals:#{self.id}", media, interval)
       end
 
       # drop notifications for
