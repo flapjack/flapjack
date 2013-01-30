@@ -149,7 +149,7 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unsched
   drain_events  # TODO these should only be in When clauses
 end
 
-Given /^the check is check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
+Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check, entity|
   @check  = check
   @entity = entity
 end
@@ -208,4 +208,67 @@ end
 
 Then /^show me the notifications?$/ do
   puts @logger.messages.join("\n")
+end
+
+# added for notification rules:
+
+Given /^the following entities exist:$/ do |entities|
+  entities.hashes.each do |entity|
+    contacts = entity['contacts'].split(',')
+    contacts.map! do |contact| 
+      contact.strip
+    end
+    #puts "adding entity #{entity['name']} (#{entity['id']}) with contacts: [#{contacts.join(', ')}]"
+    Flapjack::Data::Entity.add({'id'       => entity['id'],
+                                'name'     => entity['name'],
+                                'contacts' => contacts},
+                               :redis => @redis )
+  end
+end
+
+Given /^the following users exist:$/ do |contacts|
+  contacts.hashes.each do |contact|
+    media = {}
+    media['email'] = contact['email']
+    media['sms']   = contact['sms']
+    Flapjack::Data::Contact.add({'id'         => contact['id'],
+                                 'first_name' => contact['first_name'],
+                                 'last_name'  => contact['last_name'],
+                                 'email'      => contact['email'],
+                                 'media'      => media},
+                                :redis => @redis )
+  end
+end
+
+Given /^user (\d+) has the following contact media:$/ do |arg1, table|
+
+  # table is a Cucumber::Ast::Table
+  pending # express the regexp above with the code you wish you had
+end
+
+Given /^user (\d+) has the following notification intervals:$/ do |arg1, table|
+  # table is a Cucumber::Ast::Table
+  pending # express the regexp above with the code you wish you had
+end
+
+Given /^user (\d+) has the following notification rules:$/ do |arg1, table|
+  # table is a Cucumber::Ast::Table
+  pending # express the regexp above with the code you wish you had
+end
+
+Given /^notification rule (\d+) has the following time restrictions:$/ do |arg1, table|
+  # table is a Cucumber::Ast::Table
+  pending # express the regexp above with the code you wish you had
+end
+
+Given /^the time is (\d+)am on a Wednesday$/ do |arg1|
+  pending # express the regexp above with the code you wish you had
+end
+
+Then /^an email alert should not be queued to jane@example\.com$/ do
+  pending # express the regexp above with the code you wish you had
+end
+
+Then /^an email alert should be queued to jane@example\.com$/ do
+  pending # express the regexp above with the code you wish you had
 end
