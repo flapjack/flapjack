@@ -238,7 +238,7 @@ module Flapjack
       puts "#{event.id} - after apply_notification_rules - size of messages: #{messages.length}"
 
       messages.each do |message|
-        dispatch_message(message)
+        enqueue_message(message)
       end
     end
 
@@ -250,16 +250,17 @@ module Flapjack
       # don't consider notification rules if the contact has none
 
       tuple = messages.map do |message|
-        puts "considering message: #{message.inspect}"
+        puts "considering message: #{message.medium}"
         rules    = message.contact.notification_rules
+        puts "found #{rules.length} rules for this message's contact"
         event_id = message.notification.event.id
         options  = {}
         options[:no_rules_for_contact] = true if rules.empty?
         # filter based on tags, severity, time of day
         matchers = rules.find_all do |rule|
-          rule.match_entity?(event_id) && rule.match_time?(event_id)
+          rule.match_entity?(event_id) && rule.match_time?
         end
-        if rules.empty?
+        if not rules.empty?
           [message, matchers, options]
         else
           matchers.empty? ? nil : [message, matchers, options]
@@ -306,26 +307,36 @@ module Flapjack
 
       puts "apply_notification_rules: num messages after pruning for notification intervals: #{tuple.size}"
 
-      tuple.map do |message, matchers, options|  
+      tuple.map do |message, matchers, options|
         message
       end
     end
 
-    def dispatch_message(message)
+    def enqueue_message(message)
 
-      media_type = message.medium.to_sym
+      #puts "enqueue_message:"
+      #pp message
+      media_type = message.medium
       contents   = message.contents
+      event_id   = message.notification.event.id
 
-      @notifylog.info("#{Time.now.to_s} | #{message.notification.event.id} | " +
-        "#{message.notification.type} | #{message.contact.id} | #{message.medium.to_s} | #{message.address}")
+      @notifylog.info("#{Time.now.to_s} | #{event_id} | " +
+        "#{message.notification.type} | #{message.contact.id} | #{media_type} | #{message.address}")
 
-      unless @queues[media_type]
+      unless @queues[media_type.to_sym]
         @logger.error("no queue for media type: #{media_type}")
         return
       end
 
+      @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{message.address}")
+
+      message.contact.update_sent_alert_keys(:media => message.medium,
+                                             :check => message.notification.event.id,
+                                             :state => message.notification.event.state)
+        # drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}
+
       # TODO consider changing Resque jobs to use raw blpop like the others
-      case media_type
+      case media_type.to_sym
       when :sms
         Resque.enqueue_to(@queues[:sms], Flapjack::Gateways::SmsMessagenet, contents)
       when :email

@@ -196,16 +196,16 @@ Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on enti
   check  = check  ? check  : @check
   entity = entity ? entity : @entity
   message = @logger.messages.find_all {|m| m =~ /enerating notifications for event #{entity}:#{check}/ }.last
-  message ? happy = message.match(/Not generating notifications/) : happy = false
-  happy.should be_true
+  found = message ? message.match(/Not generating notifications/) : false
+  found.should be_true
 end
 
 Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
   check  = check  ? check  : @check
   entity = entity ? entity : @entity
   message = @logger.messages.find_all {|m| m =~ /enerating notifications for event #{entity}:#{check}/ }.last
-  message ? happy = message.match(/Generating notifications/) : happy = false
-  happy.should be_true
+  found = message ? message.match(/Generating notifications/) : false
+  found.should be_true
 end
 
 Then /^show me the notifications?$/ do
@@ -266,6 +266,12 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
                               'duration'     => (18 - 8) * 60 * 60,
                               'days_of_week' => ['monday', 'tuesday', 'wednesday',
                                                  'thursday', 'friday']}
+        # if switching to ice_box this can be represented as a single json
+        # field in 
+        # {"start_date":"2013-02-01 08:00:00 +1030","end_time":"2013-02-01 18:00:00 +1030","rrules":[{"validations":{"day":[1,2,3,4,5]},"rule_type":"IceCube::WeeklyRule","interval":1}],"exrules":[],"rtimes":[],"extimes":[]}
+        # or create like this:
+        # weekdays_8_18 = IceCube::Schedule.new(Time.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10) 
+        # weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday)) 
       end
     end
     contact.add_notification_rule({'id'                 => rule['id'],
@@ -282,10 +288,13 @@ Given /^the time is (.*) on a (.*)$/ do |time, day_of_week|
   Delorean.time_travel_to(Chronic.parse("#{time} on #{day_of_week}"))
 end
 
-Then /^an email alert should not be queued to jane@example\.com$/ do
-  pending # express the regexp above with the code you wish you had
-end
-
-Then /^an email alert should be queued to jane@example\.com$/ do
-  pending # express the regexp above with the code you wish you had
+Then /^(.*) email alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
+  case num_queued
+  when 'no'
+    num_queued = 0
+  end
+  queue  = Resque.peek('email_notifications', 0, 30)
+  queue.find_all {|n| n['args'].first['address'] == address }.length.should == num_queued.to_i
 end

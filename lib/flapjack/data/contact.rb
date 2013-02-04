@@ -6,6 +6,7 @@
 require 'set'
 
 require 'flapjack/data/entity'
+require 'flapjack/data/notification_rule'
 
 module Flapjack
 
@@ -138,14 +139,15 @@ module Flapjack
         rules = []
         return rules unless rule_ids = @redis.smembers("contact_notification_rules:#{self.id}")
         rule_ids.each do |rule_id|
-          rules << Flapjack::Data::NotificationRule.find_by_id(rule_id, :redis => @redis)
+          puts "rule_id: #{rule_id}"
+          rules << Flapjack::Data::NotificationRule.find_by_id(rule_id, {:redis => @redis})
         end
         rules
       end
 
       def add_notification_rule(rule)
         # FIXME: wondering now if notification rules should be just one json encoded
-        # string in redis, rather than a redis hash with multiple json encoded 
+        # string in redis, rather than a redis hash with multiple json encoded
         # strings within it...
         if @redis.sismember("contact_notification_rules:#{self.id}", rule['id'])
           self.delete_notification_rule(rule['id'])
@@ -192,6 +194,15 @@ module Flapjack
         return true if media and check and state and
           @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}")
         return false
+      end
+
+      def update_sent_alert_keys(opts)
+        media = opts[:media]
+        check = opts[:check]
+        state = opts[:state]
+        key = "drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}"
+        @redis.set(key, 'd')
+        @redis.expire(key, self.interval_for_media(media))
       end
 
     private

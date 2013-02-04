@@ -77,6 +77,7 @@ end
 
 Before('@resque') do
   ResqueSpec.reset!
+  @queues = {:email => 'email_queue'}
 end
 
 After('@time') do
