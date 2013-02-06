@@ -1,5 +1,5 @@
 @notification_rules @resque
-Feature: Notification rules - custom interval per contact,check
+Feature: Notification rules on a per contact basis
 
 Background:
   Given the following users exist:
@@ -36,16 +36,24 @@ Scenario: Alerts only during specified time restrictions
   And   a critical event is received
   Then  1 email alert should be queued for malak@example.com
 
+@severity
+Scenario: Alerts only when severity matches a rule
+
 @intervals
 Scenario: Alerts according to custom interval
-  Given the check is check 'ping' on entity 'bar'
+  Given the check is check 'ping' on entity 'foo'
   And   the check is in an ok state
-  When  a critical event is received for check 'ping' on entity 'foo'
+  When  a critical event is received
   Then  no email alerts should be queued for malak@example.com
   When  1 minute passes
-  And   a critical event is received for check 'ping' on entity 'foo'
+  And   a critical event is received
   Then  1 email alert should be queued for malak@example.com
-  When  9 minutes passes
-  And   a critical event is received for check 'ping' on entity 'foo'
+  When  10 minutes passes
+  And   a critical event is received
   Then  1 email alert should be queued for malak@example.com
+  When  5 minutes passes
+  And   the email alert block for user 1 for the check for state critical expires
+  And   a critical event is received
+  Then  2 email alerts should be queued for malak@example.com
+
 

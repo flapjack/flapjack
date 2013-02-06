@@ -217,7 +217,7 @@ end
 Given /^the following entities exist:$/ do |entities|
   entities.hashes.each do |entity|
     contacts = entity['contacts'].split(',')
-    contacts.map! do |contact| 
+    contacts.map! do |contact|
       contact.strip
     end
     #puts "adding entity #{entity['name']} (#{entity['id']}) with contacts: [#{contacts.join(', ')}]"
@@ -267,11 +267,11 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
                               'days_of_week' => ['monday', 'tuesday', 'wednesday',
                                                  'thursday', 'friday']}
         # if switching to ice_box this can be represented as a single json
-        # field in 
+        # field in
         # {"start_date":"2013-02-01 08:00:00 +1030","end_time":"2013-02-01 18:00:00 +1030","rrules":[{"validations":{"day":[1,2,3,4,5]},"rule_type":"IceCube::WeeklyRule","interval":1}],"exrules":[],"rtimes":[],"extimes":[]}
         # or create like this:
-        # weekdays_8_18 = IceCube::Schedule.new(Time.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10) 
-        # weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday)) 
+        # weekdays_8_18 = IceCube::Schedule.new(Time.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
+        # weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
       end
     end
     contact.add_notification_rule({'id'                 => rule['id'],
@@ -286,6 +286,13 @@ end
 
 Given /^the time is (.*) on a (.*)$/ do |time, day_of_week|
   Delorean.time_travel_to(Chronic.parse("#{time} on #{day_of_week}"))
+end
+
+When /^the (\w*) alert block for user (\d*) for (?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') for state (.*) expires$/ do |media, contact, check, entity, state|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
+  num_deleted = @redis.del("drop_alerts_for_contact:#{contact}:#{media}:#{entity}:#{check}:#{state}")
+  puts "Warning: no keys expired" unless num_deleted > 0
 end
 
 Then /^(.*) email alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
