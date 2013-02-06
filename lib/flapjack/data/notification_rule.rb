@@ -78,7 +78,7 @@ module Flapjack
         when 'critical'
           media_list = @critical_media
         end
-        puts "media_for_severity('#{severity}') - returning #{media_list.join(', ')}"
+        puts "media_for_severity('#{severity}') - returning [#{media_list.join(', ')}]"
         media_list
       end
 

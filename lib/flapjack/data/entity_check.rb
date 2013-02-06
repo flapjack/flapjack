@@ -271,6 +271,18 @@ module Flapjack
         lpn.to_i
       end
 
+      def last_warning_notification
+        lwn = @redis.get("#{@key}:last_warning_notification")
+        return unless (lwn && lwn =~ /^\d+$/)
+        lwn.to_i
+      end
+
+      def last_critical_notification
+        lcn = @redis.get("#{@key}:last_critical_notification")
+        return unless (lcn && lcn =~ /^\d+$/)
+        lcn.to_i
+      end
+
       def last_recovery_notification
         lrn = @redis.get("#{@key}:last_recovery_notification")
         return unless (lrn && lrn =~ /^\d+$/)
@@ -285,6 +297,8 @@ module Flapjack
 
       def last_notifications_of_each_type
         ln = {:problem         => last_problem_notification,
+              :warning         => last_warning_notification,
+              :critical        => last_critical_notification,
               :recovery        => last_recovery_notification,
               :acknowledgement => last_acknowledgement_notification }
         ln
@@ -295,9 +309,12 @@ module Flapjack
       def last_notification
         nils = { :type => nil, :timestamp => nil }
         lne = last_notifications_of_each_type
-        ln = lne.delete_if {|type, timestamp|
-          timestamp.nil? || timestamp.to_i == 0
-        }
+        puts("*************** last_notifications: #{lne.inspect}")
+        ln = lne.delete_if {|type, timestamp| timestamp.nil? || timestamp.to_i == 0 }
+        if ln.find {|type, timestamp| type == :warning or type == :critical}
+          puts("***************** last_notifications: found a warning or a critical")
+          ln = ln.delete_if {|type, timestamp| type == :problem }
+        end
         return nils unless ln.length > 0
         lns = ln.sort_by { |type, timestamp| timestamp }.last
         { :type => lns[0], :timestamp => lns[1] }
@@ -422,11 +439,11 @@ module Flapjack
 
     private
 
-      def initialize(ent, che, options = {})
+      def initialize(entity, check, options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
-        raise "Invalid entity" unless @entity = ent
-        raise "Invalid check" unless @check = che
-        @key = "#{ent.name}:#{che}"
+        raise "Invalid entity" unless @entity = entity
+        raise "Invalid check" unless @check = check
+        @key = "#{entity.name}:#{check}"
       end
 
       def validate_state(state)

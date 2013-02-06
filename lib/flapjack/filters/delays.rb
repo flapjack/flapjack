@@ -6,6 +6,12 @@ require 'flapjack/filters/base'
 module Flapjack
   module Filters
 
+    # * If the service event’s state is a failure, and the time since the last state change
+    #   is below a threshold (e.g. 30 seconds), then don't alert
+    # * If the service event’s state is a failure, and the time since the last alert is below a
+    #   threshold (5 minutes), and the last notification state is the same as the current state, then don’t alert
+    #
+    # OLD:
     # * If the service event’s state is a failure, and the time since the ok => failure state change
     #   is below a threshold (e.g. 30 seconds), then don't alert
     # * If the service event’s state is a failure, and the time since the last alert is below a
@@ -26,28 +32,34 @@ module Flapjack
 
           if entity_check.failed?
             last_problem_alert   = entity_check.last_problem_notification
+            last_warning_alert   = entity_check.last_warning_notification
+            last_critical_alert  = entity_check.last_critical_notification
             last_change          = entity_check.last_change
             last_notification    = entity_check.last_notification
-            last_alert_type      = last_notification[:type]
+            last_alert_state     = last_notification[:type]
             last_alert_timestamp = last_notification[:timestamp]
 
-            current_failure_duration = current_time - last_change
+            current_state_duration   = current_time - last_change
             time_since_last_alert    = current_time - last_problem_alert unless last_problem_alert.nil?
             @log.debug("Filter: Delays: last_problem_alert: #{last_problem_alert.to_s}, " +
-                       "last_change: #{last_change.to_s}, " +
-                       "current_failure_duration: #{current_failure_duration}, " +
-                       "time_since_last_alert: #{time_since_last_alert.to_s}")
-            if (current_failure_duration < failure_delay)
+                       "last_change: #{last_change.inspect}, " +
+                       "current_state_duration: #{current_state_duration.inspect}, " +
+                       "time_since_last_alert: #{time_since_last_alert.inspect}, " +
+                       "last_alert_state: [#{last_alert_state.inspect}], " +
+                       "event.state: [#{event.state.inspect}], " +
+                       "last_alert_state == event.state ? #{last_alert_state.to_s == event.state}")
+            if (current_state_duration < failure_delay)
               result = true
               @log.debug("Filter: Delays: blocking because duration of current failure " +
-                         "(#{current_failure_duration}) is less than failure_delay (#{failure_delay})")
+                         "(#{current_state_duration}) is less than failure_delay (#{failure_delay})")
             elsif !last_problem_alert.nil? && (time_since_last_alert < resend_delay) &&
-              (last_alert_type !~ /recovery/i)
+              (last_alert_state.to_s == event.state)
 
               result = true
               @log.debug("Filter: Delays: blocking because time since last alert for " +
                          "current problem (#{time_since_last_alert}) is less than " +
-                         "resend_delay (#{resend_delay}) and last alert type (#{last_alert_type}) was not a recovery")
+                         "resend_delay (#{resend_delay}) and last alert state (#{last_alert_state}) " +
+                         "is equal to current event state (#{event.state})")
             else
               @log.debug("Filter: Delays: not blocking because neither of the time comparison " +
                          "conditions were met")

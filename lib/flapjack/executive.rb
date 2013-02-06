@@ -219,7 +219,9 @@ module Flapjack
         end
       end
       @redis.set("#{event.id}:last_#{notification_type}_notification", timestamp)
+      @redis.set("#{event.id}:last_#{event.state}_notification", timestamp) if event.failure?
       @redis.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
+      @redis.rpush("#{event.id}:#{event.state}_notifications", timestamp) if event.failure?
       @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}.")
 
       contacts = entity_check.contacts
@@ -250,10 +252,10 @@ module Flapjack
       # don't consider notification rules if the contact has none
 
       tuple = messages.map do |message|
-        puts "considering message: #{message.medium} #{message.notification.event.id} #{message.notification.event.state}"
-        puts "contact_id: #{message.contact.id}"
+        @logger.debug "considering message: #{message.medium} #{message.notification.event.id} #{message.notification.event.state}"
+        @logger.debug "contact_id: #{message.contact.id}"
         rules    = message.contact.notification_rules
-        puts "found #{rules.length} rules for this message's contact"
+        @logger.debug "found #{rules.length} rules for this message's contact"
         event_id = message.notification.event.id
         options  = {}
         options[:no_rules_for_contact] = true if rules.empty?
@@ -264,7 +266,8 @@ module Flapjack
         if not rules.empty?
           [message, matchers, options]
         else
-          matchers.empty? ? nil : [message, matchers, options]
+          #matchers.empty? ? nil : [message, matchers, options]
+          [message, matchers, options]
         end
       end
 
@@ -301,9 +304,13 @@ module Flapjack
 
       # delete any media that doesn't meet severity<->media constraints
       tuple = tuple.find_all do |message, matchers, options|
-        severity = message.notification.event.state
-        matchers.any? do |matcher|
-          matcher.media_for_severity(severity).include?(message.medium) ? matcher : nil
+        if not options[:no_rules_for_contact]
+          severity = message.notification.event.state
+          matchers.any? do |matcher|
+            matcher.media_for_severity(severity).include?(message.medium) ? matcher : nil
+          end
+        else
+          true
         end
       end
       tuple.compact!

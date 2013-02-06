@@ -36,7 +36,7 @@ Scenario: Alerts only during specified time restrictions
   Then  1 email alert should be queued for malak@example.com
 
 @severity
-Scenario: Alerts only when media,severity matches a matching rule's severity's media
+Scenario: Don't alert when media,severity does not match any matching rule's severity's media
   Given the check is check 'ping' on entity 'bar'
   And   the check is in an ok state
   When  a warning event is received
@@ -45,7 +45,7 @@ Scenario: Alerts only when media,severity matches a matching rule's severity's m
   Then  no email alerts should be queued for malak@example.com
 
 @severity
-Scenario: Alerts only when media,severity matches a matching rule's severity's media with ok->warning->critical
+Scenario: Alerts only when media,severity matches any matching rule's severity's media with ok->warning->critical
   Given the check is check 'ping' on entity 'bar'
   And   the check is in an ok state
   When  a warning event is received
@@ -53,7 +53,7 @@ Scenario: Alerts only when media,severity matches a matching rule's severity's m
   And   a warning event is received
   Then  no email alerts should be queued for malak@example.com
   When  a critical event is received
-  And   1 minute passes
+  And   5 minute passes
   And   a critical event is received
   Then  1 email alert should be queued for malak@example.com
 

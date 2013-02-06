@@ -12,91 +12,117 @@ Feature: events
     When  an ok event is received
     Then  a notification should not be generated
 
-  Scenario: Check ok to failed
+  Scenario: Check ok to warning
     Given the check is in an ok state
-    When  a failure event is received
+    When  a warning event is received
+    Then  a notification should not be generated
+
+  Scenario: Check ok to critical
+    Given the check is in an ok state
+    When  a critical event is received
     Then  a notification should not be generated
 
   @time
-  Scenario: Check failed to failed after 10 seconds
+  Scenario: Check critical to critical after 10 seconds
     Given the check is in an ok state
-    When  a failure event is received
+    When  a critical event is received
     And   10 seconds passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
 
   @time
-  Scenario: Check ok to failed for 1 minute
+  Scenario: Check ok to warning for 1 minute
     Given the check is in an ok state
-    When  a failure event is received
+    When  a warning event is received
     And   1 minute passes
-    And   a failure event is received
+    And   a warning event is received
     Then  a notification should be generated
 
   @time
-  Scenario: Check failed and alerted to failed for 1 minute
+  Scenario: Check ok to critical for 1 minute
     Given the check is in an ok state
-    When  a failure event is received
+    When  a critical event is received
     And   1 minute passes
-    And   a failure event is received
+    And   a critical event is received
+    Then  a notification should be generated
+
+  @time
+  Scenario: Check ok to warning, 1 min, then critical
+    Given the check is in an ok state
+    When  a warning event is received
+    And   1 minute passes
+    And   a warning event is received
+    Then  a notification should be generated
+    When  a critical event is received
+    Then  a notification should not be generated
+    When  1 minute passes
+    And   a critical event is received
+    Then  a notification should be generated
+
+  @time
+  Scenario: Check critical and alerted to critical for 1 minute
+    Given the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
     Then  a notification should be generated
     When  1 minute passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
 
   @time
-  Scenario: Check failed and alerted to failed for 6 minutes
+  Scenario: Check critical and alerted to critical for 6 minutes
     Given the check is in an ok state
-    When  a failure event is received
+    When  a critical event is received
     And   1 minute passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should be generated
     When  6 minutes passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should be generated
 
   @time
-  Scenario: Check ok to failed for 1 minute when in scheduled maintenance
+  Scenario: Check ok to critical for 1 minute when in scheduled maintenance
     Given the check is in an ok state
     And   the check is in scheduled maintenance
-    When  a failure event is received
+    When  a critical event is received
     And   1 minute passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
 
   @time
-  Scenario: Check ok to failed for 1 minute when in unscheduled maintenance
+  Scenario: Check ok to critical for 1 minute when in unscheduled maintenance
     Given the check is in an ok state
     And   the check is in unscheduled maintenance
-    When  a failure event is received
+    When  a critical event is received
     And   1 minute passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
 
   @time
-  Scenario: Check ok to failed for 1 minute, acknowledged, and failed for 6 minutes
+  Scenario: Check ok to critical for 1 minute, acknowledged, and critical for 6 minutes
     Given the check is in an ok state
-    When  a failure event is received
+    When  a critical event is received
     And   1 minute passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should be generated
     When  an acknowledgement event is received
     And   6 minute passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
 
-  Scenario: Check failed to ok
-    Given the check is in a failure state
+  Scenario: Check critical to ok
+    Given the check is in a critical state
     When  5 minutes passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should be generated
     When  5 minutes passes
     And   an ok event is received
     Then  a notification should be generated
 
   @time
-  Scenario: Check failed to ok when acknowledged
-    Given the check is in a failure state
+  Scenario: Check critical to ok when acknowledged
+    Given the check is in a critical state
     When  an acknowledgement event is received
     Then  a notification should be generated
     When  1 minute passes
@@ -104,27 +130,27 @@ Feature: events
     Then  a notification should be generated
 
   @time
-  Scenario: Check failed to ok when acknowledged, and fails after 6 minutes
-    Given the check is in a failure state
+  Scenario: Check critical to ok when acknowledged, and fails after 6 minutes
+    Given the check is in a critical state
     When  an acknowledgement event is received
     Then  a notification should be generated
     When  1 minute passes
     And   an ok event is received
     Then  a notification should be generated
     When  6 minutes passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
     When  6 minutes passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should be generated
 
   @time
   Scenario: Osciliating state, period of two minutes
     Given the check is in an ok state
-    When  a failure event is received
+    When  a critical event is received
     Then  a notification should not be generated
     When  50 seconds passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should be generated
     When  10 seconds passes
     And   an ok event is received
@@ -133,11 +159,10 @@ Feature: events
     And   an ok event is received
     Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
     When  50 seconds passes
-    And   a failure event is received
-    #And   show me the notifications
+    And   a critical event is received
     Then  a notification should be generated
     When  10 seconds passes
     And   an ok event is received
@@ -148,37 +173,37 @@ Feature: events
     When  an acknowledgement event is received
     Then  a notification should not be generated
 
-  Scenario: Acknowledgement when failed
-    Given the check is in a failure state
+  Scenario: Acknowledgement when critical
+    Given the check is in a critical state
     When  an acknowledgement event is received
     Then  a notification should be generated
 
-  Scenario: Brief failure then OK
+  Scenario: Brief critical then OK
     Given the check is in an ok state
-    When  a failure event is received
+    When  a critical event is received
     And   10 seconds passes
     And   an ok event is received
     Then  a notification should not be generated
 
   Scenario: Flapper (down for one minute, up for one minute, repeat)
     Given the check is in an ok state
-    When  a failure event is received
+    When  a critical event is received
     Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
     When  10 seconds passes
     # 30 seconds
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should be generated
     When  10 seconds passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
     When  10 seconds passes
     # 60 seconds
@@ -201,23 +226,23 @@ Feature: events
     Then  a notification should not be generated
     When  10 seconds passes
     # 120 seconds
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
     When  10 seconds passes
     # 150 seconds
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should be generated
     When  10 seconds passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
     When  10 seconds passes
-    And   a failure event is received
+    And   a critical event is received
     Then  a notification should not be generated
     When  10 seconds passes
     # 180 seconds

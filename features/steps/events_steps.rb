@@ -55,9 +55,15 @@ def set_ok_state(entity, check)
     :timestamp => (Time.now.to_i - (60*60*24)))
 end
 
-def set_failure_state(entity, check)
+def set_critical_state(entity, check)
   entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
   entity_check.update_state(Flapjack::Data::EntityCheck::STATE_CRITICAL,
+    :timestamp => (Time.now.to_i - (60*60*24)))
+end
+
+def set_warning_state(entity, check)
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+  entity_check.update_state(Flapjack::Data::EntityCheck::STATE_WARNING,
     :timestamp => (Time.now.to_i - (60*60*24)))
 end
 
@@ -125,13 +131,13 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in an ok s
   set_ok_state(entity, check)
 end
 
-Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in a failure state$/ do |check, entity|
+Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in a critical state$/ do |check, entity|
   check  = check  ? check  : @check
   entity = entity ? entity : @entity
   remove_unscheduled_maintenance(entity, check)
   remove_scheduled_maintenance(entity, check)
   remove_notifications(entity, check)
-  set_failure_state(entity, check)
+  set_critical_state(entity, check)
 end
 
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in scheduled maintenance$/ do |check, entity|
@@ -146,7 +152,7 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unsched
   check  = check  ? check  : @check
   entity = entity ? entity : @entity
   remove_scheduled_maintenance(entity, check)
-  set_failure_state(entity, check)
+  set_critical_state(entity, check)
   submit_acknowledgement(entity, check)
   drain_events  # TODO these should only be in When clauses
 end
@@ -208,7 +214,7 @@ Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '
   found.should be_true
 end
 
-Then /^show me the notifications?$/ do
+Then /^show me the log$/ do
   puts @logger.messages.join("\n")
 end
 
