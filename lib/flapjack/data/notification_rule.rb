@@ -71,6 +71,17 @@ module Flapjack
         return false
       end
 
+      def media_for_severity(severity)
+        case severity
+        when 'warning'
+          media_list = @warning_media
+        when 'critical'
+          media_list = @critical_media
+        end
+        puts "media_for_severity('#{severity}') - returning #{media_list.join(', ')}"
+        media_list
+      end
+
     private
       def initialize(opts)
         @entity_tags        = opts[:entity_tags]

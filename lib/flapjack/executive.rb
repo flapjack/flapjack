@@ -250,7 +250,8 @@ module Flapjack
       # don't consider notification rules if the contact has none
 
       tuple = messages.map do |message|
-        puts "considering message: #{message.medium}"
+        puts "considering message: #{message.medium} #{message.notification.event.id} #{message.notification.event.state}"
+        puts "contact_id: #{message.contact.id}"
         rules    = message.contact.notification_rules
         puts "found #{rules.length} rules for this message's contact"
         event_id = message.notification.event.id
@@ -297,6 +298,17 @@ module Flapjack
       end
 
       puts "apply_notification_rules: num messages after removing blackhole matches: #{tuple.size}"
+
+      # delete any media that doesn't meet severity<->media constraints
+      tuple = tuple.find_all do |message, matchers, options|
+        severity = message.notification.event.state
+        matchers.any? do |matcher|
+          matcher.media_for_severity(severity).include?(message.medium) ? matcher : nil
+        end
+      end
+      tuple.compact!
+
+      puts "apply_notification_rules: num messages after severity-media constraints: #{tuple.size}"
 
       # delete media based on notification interval
       tuple = tuple.find_all do |message, matchers, options|
