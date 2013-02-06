@@ -40,6 +40,15 @@ Scenario: Alerts only when media,severity matches a matching rule's severity's m
   Given the check is check 'ping' on entity 'bar'
   And   the check is in an ok state
   When  a warning event is received
+  And   60 minutes passes
+  And   a warning event is received
+  Then  no email alerts should be queued for malak@example.com
+
+@severity
+Scenario: Alerts only when media,severity matches a matching rule's severity's media with ok->warning->critical
+  Given the check is check 'ping' on entity 'bar'
+  And   the check is in an ok state
+  When  a warning event is received
   And   1 minute passes
   And   a warning event is received
   Then  no email alerts should be queued for malak@example.com
