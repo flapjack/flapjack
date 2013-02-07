@@ -234,10 +234,10 @@ module Flapjack
       notification = Flapjack::Data::Notification.for_event(event, :type => notification_type)
 
       messages = notification.messages(:contacts => contacts)
-      puts "#{event.id} - size of messages: #{messages.length}"
+      @logger.debug "#{event.id} - size of messages: #{messages.length}"
 
       messages = apply_notification_rules(messages)
-      puts "#{event.id} - after apply_notification_rules - size of messages: #{messages.length}"
+      @logger.debug "#{event.id} - after apply_notification_rules - size of messages: #{messages.length}"
 
       messages.each do |message|
         enqueue_message(message)
@@ -247,7 +247,7 @@ module Flapjack
     # delete messages based on entity name(s), tags, severity, time of day
     def apply_notification_rules(messages)
       # first get all rules matching entity and time
-      puts "apply_notification_rules: got messages with size #{messages.size}"
+      @logger.debug "apply_notification_rules: got messages with size #{messages.size}"
 
       # don't consider notification rules if the contact has none
 
@@ -275,7 +275,7 @@ module Flapjack
       # for time and entity
 
       tuple.compact!
-      puts "apply_notification_rules: num messages after entity and time matching: #{tuple.size}"
+      @logger.debug "apply_notification_rules: num messages after entity and time matching: #{tuple.size}"
 
       # delete the matcher for all entities if there are more specific matchers
       tuple = tuple.map do |message, matchers, options|
@@ -300,7 +300,7 @@ module Flapjack
         matchers.none? {|matcher| matcher.blackhole?(severity) }
       end
 
-      puts "apply_notification_rules: num messages after removing blackhole matches: #{tuple.size}"
+      @logger.debug "apply_notification_rules: num messages after removing blackhole matches: #{tuple.size}"
 
       # delete any media that doesn't meet severity<->media constraints
       tuple = tuple.find_all do |message, matchers, options|
@@ -315,7 +315,7 @@ module Flapjack
       end
       tuple.compact!
 
-      puts "apply_notification_rules: num messages after severity-media constraints: #{tuple.size}"
+      @logger.debug "apply_notification_rules: num messages after severity-media constraints: #{tuple.size}"
 
       # delete media based on notification interval
       tuple = tuple.find_all do |message, matchers, options|
@@ -324,7 +324,7 @@ module Flapjack
                                                 :state => message.notification.event.state)
       end
 
-      puts "apply_notification_rules: num messages after pruning for notification intervals: #{tuple.size}"
+      @logger.debug "apply_notification_rules: num messages after pruning for notification intervals: #{tuple.size}"
 
       tuple.map do |message, matchers, options|
         message

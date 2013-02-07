@@ -309,10 +309,8 @@ module Flapjack
       def last_notification
         nils = { :type => nil, :timestamp => nil }
         lne = last_notifications_of_each_type
-        puts("*************** last_notifications: #{lne.inspect}")
         ln = lne.delete_if {|type, timestamp| timestamp.nil? || timestamp.to_i == 0 }
         if ln.find {|type, timestamp| type == :warning or type == :critical}
-          puts("***************** last_notifications: found a warning or a critical")
           ln = ln.delete_if {|type, timestamp| type == :problem }
         end
         return nils unless ln.length > 0
