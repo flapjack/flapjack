@@ -1,4 +1,11 @@
 #!/usr/bin/env ruby
+#
+require 'delorean'
+require 'chronic'
+require 'active_support/time_with_zone'
+require 'ice_cube'
+require 'flapjack/data/entity_check'
+require 'flapjack/data/event'
 
 if ENV['COVERAGE']
   require 'simplecov'

@@ -248,3 +248,97 @@ Feature: events
     # 180 seconds
     And   an ok event is received
     Then  a notification should be generated
+
+@time
+Scenario: a lot of quick ok -> warning -> ok -> warning
+    Given the check is in an ok state
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an ok event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an ok event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an ok event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an ok event is received
+    Then  a notification should be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an ok event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an ok event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an ok event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an ok event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an ok event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an ok event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   a warning event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an ok event is received
+    Then  a notification should not be generated

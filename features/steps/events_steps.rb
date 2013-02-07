@@ -1,10 +1,10 @@
 #!/usr/bin/env ruby
 
-require 'flapjack/data/entity_check'
-require 'flapjack/data/event'
-require 'delorean'
-require 'chronic'
-require 'ice_cube'
+#require 'flapjack/data/entity_check'
+#require 'flapjack/data/event'
+#require 'delorean'
+#require 'chronic'
+#require 'ice_cube'
 
 def drain_events
   loop do
