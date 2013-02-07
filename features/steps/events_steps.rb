@@ -4,6 +4,7 @@ require 'flapjack/data/entity_check'
 require 'flapjack/data/event'
 require 'delorean'
 require 'chronic'
+require 'ice_cube'
 
 def drain_events
   loop do
@@ -268,16 +269,9 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
     rule['time_restrictions'].split(',').map { |x| x.strip }.each do |time_restriction|
       case time_restriction
       when '8-18 weekdays'
-        time_restrictions << {'start_time'   => 8 * 60 * 60,
-                              'duration'     => (18 - 8) * 60 * 60,
-                              'days_of_week' => ['monday', 'tuesday', 'wednesday',
-                                                 'thursday', 'friday']}
-        # if switching to ice_box this can be represented as a single json
-        # field in
-        # {"start_date":"2013-02-01 08:00:00 +1030","end_time":"2013-02-01 18:00:00 +1030","rrules":[{"validations":{"day":[1,2,3,4,5]},"rule_type":"IceCube::WeeklyRule","interval":1}],"exrules":[],"rtimes":[],"extimes":[]}
-        # or create like this:
-        # weekdays_8_18 = IceCube::Schedule.new(Time.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
-        # weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
+        weekdays_8_18 = IceCube::Schedule.new(Time.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
+        weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
+        time_restrictions << weekdays_8_18.to_hash
       end
     end
     contact.add_notification_rule({'id'                 => rule['id'],

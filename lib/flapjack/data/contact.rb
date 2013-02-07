@@ -4,7 +4,7 @@
 # structure to avoid the need for this type of query
 
 require 'set'
-
+require 'ice_cube'
 require 'flapjack/data/entity'
 require 'flapjack/data/notification_rule'
 

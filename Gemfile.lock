@@ -12,6 +12,7 @@ PATH
       eventmachine (~> 1.0.0)
       haml
       hiredis
+      ice_cube
       log4r
       mail
       rack-fiber_pool
@@ -96,6 +97,7 @@ GEM
     hiredis (0.4.5)
     http_parser.rb (0.5.3)
     i18n (0.6.1)
+    ice_cube (0.9.3)
     json (1.7.6)
     listen (0.7.1)
     log4r (1.1.10)
