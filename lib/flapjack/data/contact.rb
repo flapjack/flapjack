@@ -135,14 +135,9 @@ module Flapjack
 
       # return an array of the notification rules of this contact
       def notification_rules
-        # use Flapjack::Data::NotificationRule to construct each rule
-        rules = []
-        return rules unless rule_ids = @redis.smembers("contact_notification_rules:#{self.id}")
-        rule_ids.each do |rule_id|
-          puts "rule_id: #{rule_id}"
-          rules << Flapjack::Data::NotificationRule.find_by_id(rule_id, {:redis => @redis})
+        @redis.smembers("contact_notification_rules:#{self.id}").collect do |rule_id|
+          Flapjack::Data::NotificationRule.find_by_id(rule_id, {:redis => @redis})
         end
-        rules
       end
 
       def add_notification_rule(rule)
@@ -186,14 +181,12 @@ module Flapjack
         check    = opts[:check]
         state    = opts[:state]
         # build it and they will come
-        return true if @redis.exists("drop_alerts_for_contact:#{self.id}")
-        return true if media and
-          @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}")
-        return true if media and check and
-          @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{check}")
-        return true if media and check and state and
-          @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}")
-        return false
+        @redis.exists("drop_alerts_for_contact:#{self.id}") ||
+          (media && @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}")) ||
+          (media && check &&
+            @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{check}")) ||
+          (media && check && state &&
+            @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}"))
       end
 
       def update_sent_alert_keys(opts)

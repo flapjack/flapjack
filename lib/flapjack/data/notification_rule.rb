@@ -21,7 +21,7 @@ module Flapjack
         time_restrictions  = Yajl::Parser.parse(rule['time_restrictions'] || '')
         warning_media      = Yajl::Parser.parse(rule['warning_media'] || '')
         critical_media     = Yajl::Parser.parse(rule['critical_media'] || '')
-        warning_blackhole  = rule['warning_blackhole'].downcase == 'true' ? true : false
+        warning_blackhole  = (rule['warning_blackhole'].downcase == 'true')
 
         self.new(:id                => rule_id,
                  :entity_tags       => entity_tags,
