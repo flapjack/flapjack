@@ -14,6 +14,10 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
   let(:entity_name_esc) { URI.escape(entity_name) }
   let(:check)           { 'ping' }
 
+  let(:contact)         { mock(Flapjack::Data::Contact) }
+  let(:contact_id)      { '21' }
+  let(:contact_media_list) { [ 'email', 'sms' ] }
+
   let(:entity_presenter)       { mock(Flapjack::Gateways::API::EntityPresenter) }
   let(:entity_check_presenter) { mock(Flapjack::Gateways::API::EntityCheckPresenter) }
 
@@ -326,6 +330,17 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 200
+  end
+
+  it "returns a list of medias for a contact" do
+    result_json = contact_media_list.to_json
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact_id, :redis => redis).and_return(contact)
+    contact.should_receive(:media_list).and_return(contact_media_list)
+
+    get "/contacts/#{contact_id}/media"
+    last_response.should be_ok
+    last_response.body.should == result_json
   end
 
 end

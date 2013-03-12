@@ -32,6 +32,23 @@ module Flapjack
                  :timezone          => timezone)
       end
 
+      def as_json(opts = {})
+        if opts[:root]
+          # { notification_rule: {...} }
+        end
+
+        buf = { "rule_id"            => self.id,
+                "entity_tags"        => self.entity_tags,
+                "entities"           => self.entities,
+                "time_restrictions"  => self.time_restrictions,
+                "warning_media"      => self.warning_media,
+                "critical_media"     => self.critical_media,
+                "warning_blackhole"  => self.warning_blackhole,
+                "critical_blackhole" => self.critical_blackhole }
+
+        buf.to_json
+      end
+
       # tags or entity names match?
       # nil @entity_tags and nil @entities matches
       def match_entity?(event)

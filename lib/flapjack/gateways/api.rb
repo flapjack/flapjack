@@ -336,6 +336,107 @@ module Flapjack
         errors.empty? ? ret : [ret, {}, {:errors => [errors]}.to_json]
       end
 
+      # Returns all the contacts
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
+      get '/contacts' do
+        content_type :json
+        output = '[ '
+        output += Flapjack::Data::Contact.all(:redis => redis).map {|contact|
+          contact.as_json
+        }.join(', ')
+        output += ' ]'
+        output
+      end
+
+      # Returns the core information about the specified contact
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id
+      get '/contacts/:contact_id' do
+        content_type :json
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        contact.as_json
+      end
+
+      # Lists the IDs of this contact's notification rules
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_notification_rules
+      get '/contacts/:contact_id/notification_rules' do
+        content_type :json
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        contact.notification_rules.collect {|r| r[:id]}.to_json
+      end
+
+      # Get the specified notification rule for this user
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_notification_rules_id
+      get 'contacts/:contact_id/notification_rules/:rule_id' do
+        content_type :json
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+
+        rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
+        if rule.nil?
+          status 404
+          return
+        end
+        rule.as_json
+      end
+
+      # Create a new notification rule for the specified contact.
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-post_contacts_id_notification_rules
+      post '/contacts/:contact_id/notification_rules' do
+        pass unless 'application/json'.eql?(request.content_type)
+        content_type :json
+
+        errors = []
+        ret = nil
+        rule = {}
+
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+
+        if params[:rule_id]
+          if Flapjack::Data::NotificationRule.find_by_id(params[:rule_id])
+            # post cannot be used for update, do a put instead
+            status 403
+            return
+          end
+          rule[:id] = params[:rule_id]
+        end
+
+
+        rule = contact.add_notification_rule({'id'                 => rule['id'],
+                                       'entities'           => entities,
+                                       'entity_tags'        => entity_tags,
+                                       'warning_media'      => warning_media,
+                                       'critical_media'     => critical_media,
+                                       'warning_blackhole'  => warning_blackhole,
+                                       'time_restrictions'  => time_restrictions})
+
+        errors.empty? ? ret : [ret, {}, {:errors => [errors]}.to_json]
+      end
+
+      get '/contacts/:contact_id/media' do
+        content_type :json
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        contact.media_list.to_json
+      end
+
       not_found do
         [404, {}, {:errors => ["Not found"]}.to_json]
       end
