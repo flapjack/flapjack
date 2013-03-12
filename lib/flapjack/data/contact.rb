@@ -147,9 +147,12 @@ module Flapjack
         # string in redis, rather than a redis hash with multiple json encoded
         # strings within it...
         if not rule['id']
+          c = 0
           loop do
+            c += 1
             rule_id = SecureRandom.uuid
             break unless @redis.exists("notification_rule:#{self.id}:#{rule_id}")
+            raise "unable to find non-clashing UUID for this new notification rule o_O " unless c < 100
           end
         elsif @redis.sismember("contact_notification_rules:#{self.id}", rule['id'])
           self.delete_notification_rule(rule['id'])
