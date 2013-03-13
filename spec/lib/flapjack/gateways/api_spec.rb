@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'flapjack/gateways/api'
+require 'json_spec'
 
 describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
 
@@ -340,7 +341,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
 
     get "/contacts/#{contact_id}/media"
     last_response.should be_ok
-    last_response.body.should == result_json
+    last_response.body.should be_json_eql(result_json)
   end
 
 end
