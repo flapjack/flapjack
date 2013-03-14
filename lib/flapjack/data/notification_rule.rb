@@ -13,7 +13,8 @@ module Flapjack
         raise "No id value passed" unless rule_id
         logger   = options[:logger]
 
-        return unless rule = redis.hgetall("notification_rule:#{rule_id}")
+        return unless redis.exists("notification_rule:#{rule_id}")
+        rule = redis.hgetall("notification_rule:#{rule_id}")
 
         contact_id         = rule['contact_id']
         entity_tags        = Yajl::Parser.parse(rule['entity_tags'] || '')
@@ -21,10 +22,9 @@ module Flapjack
         time_restrictions  = Yajl::Parser.parse(rule['time_restrictions'] || '')
         warning_media      = Yajl::Parser.parse(rule['warning_media'] || '')
         critical_media     = Yajl::Parser.parse(rule['critical_media'] || '')
-        warning_blackhole  = (rule['warning_blackhole'].downcase == 'true')
-        critical_blackhole = (rule['critical_blackhole'].downcase == 'true')
+        warning_blackhole  = ((rule['warning_blackhole'] || 'false').downcase == 'true')
+        critical_blackhole = ((rule['critical_blackhole'] || 'false').downcase == 'true')
 
-        # FIXME: include contact_id
         self.new({:id                 => rule_id,
                   :contact_id         => contact_id,
                   :entity_tags        => entity_tags,
@@ -126,6 +126,7 @@ module Flapjack
 
     private
       def initialize(rule, opts = {})
+        p rule.inspect
         @redis  ||= opts[:redis]
         @logger = opts[:logger]
         raise "a redis connection must be supplied" unless @redis
