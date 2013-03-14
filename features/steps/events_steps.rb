@@ -265,6 +265,7 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
     warning_media      = rule['warning_media'].split(',').map { |x| x.strip }
     critical_media     = rule['critical_media'].split(',').map { |x| x.strip }
     warning_blackhole  = rule['warning_blackhole'].downcase == 'true' ? 'true' : 'false'
+    critical_blackhole = rule['critical_blackhole'].downcase == 'true' ? 'true' : 'false'
     time_restrictions  = []
     rule['time_restrictions'].split(',').map { |x| x.strip }.each do |time_restriction|
       case time_restriction
@@ -274,13 +275,17 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
         time_restrictions << weekdays_8_18.to_hash
       end
     end
-    contact.add_notification_rule({'id'                 => rule['id'],
-                                   'entities'           => entities,
-                                   'entity_tags'        => entity_tags,
-                                   'warning_media'      => warning_media,
-                                   'critical_media'     => critical_media,
-                                   'warning_blackhole'  => warning_blackhole,
-                                   'time_restrictions'  => time_restrictions})
+    #contact.add_notification_rule({'id' => rule['id'],
+    nr = Flapjack::Data::NotificationRule.new({:id                 => rule['id'],
+                                               :contact_id         => contact.id,
+                                               :entities           => entities,
+                                               :entity_tags        => entity_tags,
+                                               :warning_media      => warning_media,
+                                               :critical_media     => critical_media,
+                                               :warning_blackhole  => warning_blackhole,
+                                               :critical_blackhole => critical_blackhole,
+                                               :time_restrictions  => time_restrictions}, :redis => @redis)
+    nr.save!
   end
 end
 

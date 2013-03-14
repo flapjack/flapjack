@@ -6,30 +6,39 @@ module Flapjack
   module Data
     class NotificationRule
 
-      attr_accessor :tags
+      attr_accessor :entity_tags, :id, :contact_id
 
       def self.find_by_id(rule_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         raise "No id value passed" unless rule_id
         logger   = options[:logger]
-        timezone           = options[:timezone]
 
         return unless rule = redis.hgetall("notification_rule:#{rule_id}")
 
+        contact_id         = rule['contact_id']
         entity_tags        = Yajl::Parser.parse(rule['entity_tags'] || '')
         entities           = Yajl::Parser.parse(rule['entities'] || '')
         time_restrictions  = Yajl::Parser.parse(rule['time_restrictions'] || '')
         warning_media      = Yajl::Parser.parse(rule['warning_media'] || '')
         critical_media     = Yajl::Parser.parse(rule['critical_media'] || '')
         warning_blackhole  = (rule['warning_blackhole'].downcase == 'true')
+        critical_blackhole = (rule['critical_blackhole'].downcase == 'true')
 
-        self.new(:id                => rule_id,
-                 :entity_tags       => entity_tags,
-                 :entities          => entities,
-                 :time_restrictions => time_restrictions,
-                 :warning_media     => warning_media,
-                 :critical_media    => critical_media,
-                 :timezone          => timezone)
+        # FIXME: include contact_id
+        self.new({:id                 => rule_id,
+                  :contact_id         => contact_id,
+                  :entity_tags        => entity_tags,
+                  :entities           => entities,
+                  :time_restrictions  => time_restrictions,
+                  :warning_media      => warning_media,
+                  :critical_media     => critical_media,
+                  :warning_blackhole  => warning_blackhole,
+                  :critical_blackhole => critical_blackhole}, :redis => redis)
+      end
+
+      def delete!
+        @redis.srem("contact_notification_rules:#{self.contact_id}", self.id)
+        @redis.del("notification_rule:#{self.id}")
       end
 
       def as_json(opts = {})
@@ -38,6 +47,7 @@ module Flapjack
         end
 
         buf = { "rule_id"            => self.id,
+                "contact_id"         => self.contact_id,
                 "entity_tags"        => self.entity_tags,
                 "entities"           => self.entities,
                 "time_restrictions"  => self.time_restrictions,
@@ -99,17 +109,46 @@ module Flapjack
         media_list
       end
 
+      def save!
+        rule = {}
+        rule['contact_id']         = @contact_id
+        rule['entities']           = Yajl::Encoder.encode(@entities)
+        rule['entity_tags']        = Yajl::Encoder.encode(@entity_tags)
+        rule['time_restrictions']  = Yajl::Encoder.encode(@time_restrictions)
+        rule['warning_media']      = Yajl::Encoder.encode(@warning_media)
+        rule['critical_media']     = Yajl::Encoder.encode(@critical_media)
+        rule['warning_blackhole']  = @warning_blackhole
+        rule['critical_blackhole'] = @critical_blackhole
+
+        @redis.sadd("contact_notification_rules:#{@contact_id}", @id)
+        @redis.hmset("notification_rule:#{@id}", *rule.flatten)
+      end
+
     private
-      def initialize(opts)
-        @entity_tags        = opts[:entity_tags]
-        @entities           = opts[:entities]
-        @time_restrictions  = opts[:time_restrictions]
-        @warning_media      = opts[:warning_media]
-        @critical_media     = opts[:critical_media]
-        @warning_blackhole  = opts[:warning_blackhole]
-        @critical_blackhole = opts[:critical_blackhole]
-        @timezone           = opts[:timezone]
-        @logger             = opts[:logger]
+      def initialize(rule, opts = {})
+        @redis  ||= opts[:redis]
+        @logger = opts[:logger]
+        raise "a redis connection must be supplied" unless @redis
+        raise "contact_id is required" unless
+          @contact_id       = rule[:contact_id]
+        @entities           = rule[:entities]
+        @entity_tags        = rule[:entity_tags]
+        @time_restrictions  = rule[:time_restrictions]
+        @warning_media      = rule[:warning_media]
+        @critical_media     = rule[:critical_media]
+        @warning_blackhole  = rule[:warning_blackhole]
+        @critical_blackhole = rule[:critical_blackhole]
+        if not rule[:id]
+          c = 0
+          loop do
+            c += 1
+            rule[:id] = SecureRandom.uuid
+            break unless @redis.exists("notification_rule:#{opts[:id]}")
+            raise "unable to find non-clashing UUID for this new notification rule o_O " unless c < 100
+          end
+          self.save!
+        end
+        @id                 = rule[:id]
       end
 
       # @warning_media  = [ 'email' ]

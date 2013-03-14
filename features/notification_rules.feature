@@ -17,9 +17,9 @@ Feature: Notification rules on a per contact basis
       | 15    | 60  |
 
     And user 1 has the following notification rules:
-      | id | entities | entity_tags | warning_media | critical_media   | warning_blackhole | time_restrictions |
-      | 1  | foo      |             | email         | sms,email        |                   | 8-18 weekdays     |
-      | 2  | bar      |             |               | sms,email        | true              |                   |
+      | id | entities | entity_tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
+      | 1  | foo      |             | email         | sms,email        |                   |                    | 8-18 weekdays     |
+      | 2  | bar      |             |               | sms,email        | true              |                    |                   |
 
 # FIXME: haven't built the time restrictions part of this yet
 #  @time_restrictions

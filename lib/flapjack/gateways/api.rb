@@ -369,21 +369,23 @@ module Flapjack
           status 404
           return
         end
-        contact.notification_rules.collect {|r| r[:id]}.to_json
+        contact.notification_rules.collect {|r| r[:rule_id]}.to_json
       end
 
       # Get the specified notification rule for this user
       # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_notification_rules_id
-      get 'contacts/:contact_id/notification_rules/:rule_id' do
+      get '/notification_rules/:rule_id' do
         content_type :json
-        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
-        if contact.nil?
-          status 404
-          return
-        end
+        #contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        #if contact.nil?
+        #  logger.warn("Unable to find a contact with id [#{:contact_id}]")
+        #  status 404
+        #  return
+        #end
 
         rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
         if rule.nil?
+          logger.warn("Unable to find a notification rule with id [#{:rule_id}]")
           status 404
           return
         end
@@ -392,39 +394,38 @@ module Flapjack
 
       # Create a new notification rule for the specified contact.
       # https://github.com/flpjck/flapjack/wiki/API#wiki-post_contacts_id_notification_rules
-      post '/contacts/:contact_id/notification_rules' do
+      post '/notification_rules' do
         pass unless 'application/json'.eql?(request.content_type)
         content_type :json
 
         errors = []
         ret = nil
-        rule = {}
+        rule_data = {}
 
         contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
         if contact.nil?
+          logger.warn "contact not found with id #{params[:contact_id]}"
           status 404
           return
         end
 
-        if params[:rule_id]
-          if Flapjack::Data::NotificationRule.find_by_id(params[:rule_id])
-            # post cannot be used for update, do a put instead
-            status 403
-            return
-          end
-          rule[:id] = params[:rule_id]
+        if params[:id]
+          logger.warn "post cannot be used for update, do a put instead"
+          status 403
+          return
         end
 
+        rule_data = {:contact_id         => params[:contact_id],
+                     :entities           => Yajl::Parser.parse(params[:entities]),
+                     :entity_tags        => Yajl::Parser.parse(params[:entity_tags]),
+                     :warning_media      => Yajl::Parser.parse(params[:warning_media]),
+                     :critical_media     => Yajl::Parser.parse(params[:critical_media]),
+                     :time_restrictions  => Yajl::Parser.parse(params[:time_restrictions]),
+                     :warning_blackhole  => params[:warning_blackhole],
+                     :critical_blackhole => params[:critical_blackhole] }
+        rule = Flapjack::Data::NotificationRule.new(rule_data)
 
-        rule = contact.add_notification_rule({'id'                 => rule['id'],
-                                       'entities'           => entities,
-                                       'entity_tags'        => entity_tags,
-                                       'warning_media'      => warning_media,
-                                       'critical_media'     => critical_media,
-                                       'warning_blackhole'  => warning_blackhole,
-                                       'time_restrictions'  => time_restrictions})
-
-        errors.empty? ? ret : [ret, {}, {:errors => [errors]}.to_json]
+        errors.empty? ? rule.as_json : [ret, {}, {:errors => [errors]}.to_json]
       end
 
       get '/contacts/:contact_id/media' do

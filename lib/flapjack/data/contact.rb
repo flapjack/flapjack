@@ -142,7 +142,8 @@ module Flapjack
         end
       end
 
-      def add_notification_rule(rule)
+      # FIXME: move this to a NotificationRule class method
+      def add_notification_rule_foo(rule)
         # FIXME: wondering now if notification rules should be just one json encoded
         # string in redis, rather than a redis hash with multiple json encoded
         # strings within it...
@@ -160,6 +161,7 @@ module Flapjack
 
         rule_id = rule['id']
         rule.delete('id')
+        rule['contact_id']         = self.id
         rule['entities']           = Yajl::Encoder.encode(rule['entities'])
         rule['entity_tags']        = Yajl::Encoder.encode(rule['entity_tags'])
         rule['warning_media']      = Yajl::Encoder.encode(rule['warning_media'])
@@ -170,7 +172,7 @@ module Flapjack
         @redis.hmset("notification_rule:#{rule_id}", *rule.flatten)
       end
 
-      def delete_notification_rule(rule_id)
+      def delete_notification_rule_foo(rule_id)
         @redis.srem("contact_notification_rules:#{self.id}", rule_id)
         @redis.del("notification_rule:#{rule_id}")
       end
