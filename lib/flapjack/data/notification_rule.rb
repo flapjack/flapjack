@@ -6,11 +6,12 @@ module Flapjack
   module Data
     class NotificationRule
 
-      attr_accessor :entity_tags, :id, :contact_id
+      attr_accessor :id, :contact_id, :entities, :entity_tags, :time_restrictions,
+        :warning_media, :critical_media, :warning_blackhole, :critical_blackhole
 
       def self.find_by_id(rule_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        raise "No id value passed" unless rule_id
+        raise "No id value passed" unless not (rule_id.nil? || rule_id == '')
         logger   = options[:logger]
 
         return unless redis.exists("notification_rule:#{rule_id}")
@@ -62,8 +63,6 @@ module Flapjack
       # tags or entity names match?
       # nil @entity_tags and nil @entities matches
       def match_entity?(event)
-        puts "match_entity? event:"
-        pp event
         return true if (@entity_tags.nil? or @entity_tags.empty?) and
                        (@entities.nil? or @entities.empty?)
         return true if @entities.include?(event.split(':').first)
@@ -85,7 +84,6 @@ module Flapjack
           tz = TZInfo::Timezone.get('UTC')
         end
         now_secs = tz.utc_to_local
-        puts @time_restrictions.inspect
         match = @time_restrictions.find do |tr|
         end
         return true if match
@@ -105,7 +103,6 @@ module Flapjack
         when 'critical'
           media_list = @critical_media
         end
-        puts "media_for_severity('#{severity}') - returning [#{media_list.join(', ')}]"
         media_list
       end
 
@@ -120,13 +117,12 @@ module Flapjack
         rule['warning_blackhole']  = @warning_blackhole
         rule['critical_blackhole'] = @critical_blackhole
 
-        @redis.sadd("contact_notification_rules:#{@contact_id}", @id)
-        @redis.hmset("notification_rule:#{@id}", *rule.flatten)
+        @redis.sadd("contact_notification_rules:#{@contact_id}", self.id)
+        @redis.hmset("notification_rule:#{self.id}", *rule.flatten)
       end
 
     private
       def initialize(rule, opts = {})
-        p rule.inspect
         @redis  ||= opts[:redis]
         @logger = opts[:logger]
         raise "a redis connection must be supplied" unless @redis
@@ -144,12 +140,14 @@ module Flapjack
           loop do
             c += 1
             rule[:id] = SecureRandom.uuid
-            break unless @redis.exists("notification_rule:#{opts[:id]}")
+            break unless @redis.exists("notification_rule:#{rule[:id]}")
             raise "unable to find non-clashing UUID for this new notification rule o_O " unless c < 100
           end
+          @id = rule[:id]
           self.save!
+        else
+          @id = rule[:id]
         end
-        @id                 = rule[:id]
       end
 
       # @warning_media  = [ 'email' ]

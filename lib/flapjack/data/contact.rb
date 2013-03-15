@@ -137,9 +137,11 @@ module Flapjack
 
       # return an array of the notification rules of this contact
       def notification_rules
-        @redis.smembers("contact_notification_rules:#{self.id}").collect do |rule_id|
+        rules = @redis.smembers("contact_notification_rules:#{self.id}").collect { |rule_id|
+          next if (rule_id.nil? || rule_id == '')
           Flapjack::Data::NotificationRule.find_by_id(rule_id, {:redis => @redis})
-        end
+        }.compact
+        rules
       end
 
       # FIXME: move this to a NotificationRule class method

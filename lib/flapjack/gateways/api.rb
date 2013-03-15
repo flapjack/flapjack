@@ -369,7 +369,8 @@ module Flapjack
           status 404
           return
         end
-        contact.notification_rules.collect {|r| r[:rule_id]}.to_json
+        notification_rules = contact.notification_rules
+        notification_rules.collect {|r| r.id}.to_json
       end
 
       # Get the specified notification rule for this user
@@ -385,7 +386,7 @@ module Flapjack
 
         rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
         if rule.nil?
-          logger.warn("Unable to find a notification rule with id [#{:rule_id}]")
+          logger.warn("Unable to find a notification rule with id [#{params[:rule_id]}]")
           status 404
           return
         end
@@ -416,14 +417,14 @@ module Flapjack
         end
 
         rule_data = {:contact_id         => params[:contact_id],
-                     :entities           => Yajl::Parser.parse(params[:entities]),
-                     :entity_tags        => Yajl::Parser.parse(params[:entity_tags]),
-                     :warning_media      => Yajl::Parser.parse(params[:warning_media]),
-                     :critical_media     => Yajl::Parser.parse(params[:critical_media]),
-                     :time_restrictions  => Yajl::Parser.parse(params[:time_restrictions]),
+                     :entities           => params[:entities],
+                     :entity_tags        => params[:entity_tags],
+                     :warning_media      => params[:warning_media],
+                     :critical_media     => params[:critical_media],
+                     :time_restrictions  => params[:time_restrictions],
                      :warning_blackhole  => params[:warning_blackhole],
                      :critical_blackhole => params[:critical_blackhole] }
-        rule = Flapjack::Data::NotificationRule.new(rule_data)
+        rule = Flapjack::Data::NotificationRule.new(rule_data, :redis => redis)
 
         errors.empty? ? rule.as_json : [ret, {}, {:errors => [errors]}.to_json]
       end
