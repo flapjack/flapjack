@@ -47,7 +47,7 @@ module Flapjack
           # { notification_rule: {...} }
         end
 
-        buf = { "rule_id"            => self.id,
+        buf = { "id"                 => self.id,
                 "contact_id"         => self.contact_id,
                 "entity_tags"        => self.entity_tags,
                 "entities"           => self.entities,

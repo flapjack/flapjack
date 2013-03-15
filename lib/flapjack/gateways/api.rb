@@ -377,12 +377,6 @@ module Flapjack
       # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_notification_rules_id
       get '/notification_rules/:rule_id' do
         content_type :json
-        #contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
-        #if contact.nil?
-        #  logger.warn("Unable to find a contact with id [#{:contact_id}]")
-        #  status 404
-        #  return
-        #end
 
         rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
         if rule.nil?
@@ -393,7 +387,7 @@ module Flapjack
         rule.as_json
       end
 
-      # Create a new notification rule for the specified contact.
+      # Creates a notification rule for a contact
       # https://github.com/flpjck/flapjack/wiki/API#wiki-post_contacts_id_notification_rules
       post '/notification_rules' do
         pass unless 'application/json'.eql?(request.content_type)
@@ -409,13 +403,11 @@ module Flapjack
           status 404
           return
         end
-
         if params[:id]
           logger.warn "post cannot be used for update, do a put instead"
           status 403
           return
         end
-
         rule_data = {:contact_id         => params[:contact_id],
                      :entities           => params[:entities],
                      :entity_tags        => params[:entity_tags],
@@ -429,6 +421,53 @@ module Flapjack
         errors.empty? ? rule.as_json : [ret, {}, {:errors => [errors]}.to_json]
       end
 
+      # Updates a notification rule
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
+      put('/notification_rules/:rule_id') do
+        pass unless 'application/json'.eql?(request.content_type)
+        content_type :json
+
+        errors = []
+        ret = nil
+
+        rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
+        if not rule
+          status 404
+          return
+        end
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          logger.warn "contact not found with id #{params[:contact_id]}"
+          status 403
+          return
+        end
+        rule.contact_id         = params[:contact_id]
+        rule.entities           = params[:entities]
+        rule.entity_tags        = params[:entity_tags]
+        rule.warning_media      = params[:warning_media]
+        rule.critical_media     = params[:critical_media]
+        rule.time_restrictions  = params[:time_restrictions]
+        rule.warning_blackhole  = params[:warning_blackhole]
+        rule.critical_blackhole = params[:critical_blackhole]
+        rule.save!
+
+        errors.empty? ? rule.as_json : [ret, {}, {:errors => [errors]}.to_json]
+      end
+
+      # Deletes a notification rule
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
+      delete('/notification_rules/:rule_id') do
+        rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
+        if not rule
+          status 404
+          return
+        end
+        rule.delete!
+        status 204
+      end
+
+      # Returns the media of a contact
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_media
       get '/contacts/:contact_id/media' do
         content_type :json
         contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
@@ -437,6 +476,40 @@ module Flapjack
           return
         end
         contact.media_list.to_json
+      end
+
+      # Returns the specified media of a contact
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_media_media
+      get('/contacts/:contact_id/media/:media_id') do
+        status 405
+        return
+      end
+
+      # Create or updates a media of a contact
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_media_media
+      put('/contacts/:contact_id/media/:media_id') do
+        status 405
+        return
+      end
+
+      # delete a media of a contact
+      delete('/contacts/:contact_id/media/:media_id') do
+        status 405
+        return
+      end
+
+      # Returns the timezone of a contact
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_timezone
+      get('/contacts/:contact_id/timezone') do
+        status 405
+        return
+      end
+
+      # Sets the timezone of a contact
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_timezone
+      put('/contacts/:contact_id/timezone') do
+        status 405
+        return
       end
 
       not_found do

@@ -34,7 +34,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
   let(:redis)           { mock(::Redis) }
 
   let(:notification_rules) { [{
-    :rule_id            => "1",
+    :contact_id         => "21",
     :entity_tags        => [ "database", "physical" ],
     :entities           => [ "foo-app-01.example.com" ],
     :time_restrictions  => [ { "TODO" => "TODO" } ],
@@ -44,7 +44,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
     :critical_blackhole => false
   },
   {
-    :rule_id            => "2",
+    :contact_id         => "21",
     :entity_tags        => [ ],
     :entities           => [ "foo-app-02.example.com" ],
     :time_restrictions  => [ { "TODO" => "TODO" } ],

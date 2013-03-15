@@ -113,6 +113,7 @@ class Foo
     response = get(url)
     response_body = response.body ? response.body[0..300] : nil
     puts "GET #{url}", "#{response.code} - #{response.message}", response.headers.inspect, response_body
+    puts "---------------------------------------------------"
   end
 
   def self.do_post(url, body)
