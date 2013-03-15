@@ -501,15 +501,34 @@ module Flapjack
       # Returns the timezone of a contact
       # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_timezone
       get('/contacts/:contact_id/timezone') do
-        status 405
-        return
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        contact.timezone
       end
 
       # Sets the timezone of a contact
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_timezone
       put('/contacts/:contact_id/timezone') do
-        status 405
-        return
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        contact.set_timezone(params[:timezone])
+      end
+
+      # Removes the timezone of a contact
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_timezone
+      delete('/contacts/:contact_id/timezone') do
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        contact.remove_timezone
       end
 
       not_found do

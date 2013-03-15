@@ -7,6 +7,7 @@ require 'set'
 require 'ice_cube'
 require 'flapjack/data/entity'
 require 'flapjack/data/notification_rule'
+require 'tzinfo'
 
 module Flapjack
 
@@ -250,14 +251,34 @@ module Flapjack
         @redis.hkeys("contact_media:#{self.id}")
       end
 
-      # return the timezone of the contact, or the system default if none is set
+      # return the timezone string of the contact, or the system default if none is set
       def timezone
-
+        tz_string = @redis.get("contact_tz:#{self.id}")
+        tz_string = 'UTC' if (tz_string.nil? || tz_string.empty?)
+        begin
+          tz = ::TZInfo::Timezone.new(tz_string)
+        rescue ::TZInfo::InvalidTimezoneIdentifier
+          logger.warn("Invalid timezone string set for contact #{self.id} (#{tz_string})")
+          # FIXME: allow setting a default other than UTC in flapjack_config.yml
+          tz = ::TZInfo::Timezone.new('UTC')
+        end
+        tz.identifier
       end
 
       # sets the timezone string for the contact
-      def set_timezone(timezone)
+      def set_timezone(tz_string)
+        begin
+          tz = ::TZInfo::Timezone.new(tz_string)
+        rescue ::TZInfo::InvalidTimezoneIdentifier
+          logger.warn("Invalid timezone requested to be set for contact #{self.id} (#{tz_string})")
+          return false
+        end
+        @redis.set("contact_tz:#{self.id}", tz.identifier)
+      end
 
+      # removes the timezone from a contact
+      def remove_timezone
+        @redis.del("contact_tz:#{self.id}")
       end
 
       def as_json(opts = {})
