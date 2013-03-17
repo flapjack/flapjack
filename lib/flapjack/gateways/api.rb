@@ -481,43 +481,74 @@ module Flapjack
       # Returns the specified media of a contact
       # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_media_media
       get('/contacts/:contact_id/media/:media_id') do
-        status 405
-        return
-      end
-
-      # Create or updates a media of a contact
-      # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_media_media
-      put('/contacts/:contact_id/media/:media_id') do
-        status 405
-        return
-      end
-
-      # delete a media of a contact
-      delete('/contacts/:contact_id/media/:media_id') do
-        status 405
-        return
-      end
-
-      # Returns the timezone of a contact
-      # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_timezone
-      get('/contacts/:contact_id/timezone') do
+        content_type :json
         contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
         if contact.nil?
           status 404
           return
         end
-        contact.timezone
+        if contact.media[params[:media_id]].nil?
+          status 404
+          return
+        end
+        { 'address'  => contact.media[params[:media_id]],
+          'interval' => contact.media_intervals[params[:media_id]] }.to_json
+      end
+
+      # Creates or updates a media of a contact
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_media_media
+      put('/contacts/:contact_id/media/:media_id') do
+        content_type :json
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        if not (params[:address].nil? || params[:address].empty?)
+          contact.set_address_for_media(params[:media_id], params[:address])
+          contact.set_interval_for_media(params[:media_id], params[:interval])
+        else
+          status 403
+          return
+        end
+        { 'address'  => contact.media[params[:media_id]],
+          'interval' => contact.media_intervals[params[:media_id]] }.to_json
+      end
+
+      # delete a media of a contact
+      delete('/contacts/:contact_id/media/:media_id') do
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        contact.remove_media(params[:media_id])
+        contact.media_list.to_json
+      end
+
+      # Returns the timezone of a contact
+      # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_timezone
+      get('/contacts/:contact_id/timezone') do
+        content_type :json
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        contact.timezone.to_json
       end
 
       # Sets the timezone of a contact
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_timezone
       put('/contacts/:contact_id/timezone') do
+        content_type :json
         contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
         if contact.nil?
           status 404
           return
         end
         contact.set_timezone(params[:timezone])
+        contact.timezone.to_json
       end
 
       # Removes the timezone of a contact
@@ -529,6 +560,7 @@ module Flapjack
           return
         end
         contact.remove_timezone
+        status 204
       end
 
       not_found do

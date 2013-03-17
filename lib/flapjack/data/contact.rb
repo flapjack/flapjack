@@ -15,7 +15,7 @@ module Flapjack
 
     class Contact
 
-      attr_accessor :first_name, :last_name, :email, :media, :pagerduty_credentials, :id
+      attr_accessor :id, :first_name, :last_name, :email, :media, :pagerduty_credentials
 
       TAG_PREFIX = 'contact_tag'
 
@@ -54,7 +54,7 @@ module Flapjack
         return unless redis.hexists("contact:#{contact_id}", 'first_name')
 
         fn, ln, em = redis.hmget("contact:#{contact_id}", 'first_name', 'last_name', 'email')
-        me = redis.hgetall("contact_media:#{contact_id}")
+        media_addresses = redis.hgetall("contact_media:#{contact_id}")
 
         # similar to code in instance method pagerduty_credentials
         pc = nil
@@ -62,8 +62,13 @@ module Flapjack
           pc = redis.hgetall("contact_pagerduty:#{contact_id}").merge('service_key' => service_key)
         end
 
-        self.new(:first_name => fn, :last_name => ln,
-          :email => em, :id => contact_id, :media => me, :pagerduty_credentials => pc, :redis => redis )
+        self.new(:first_name            => fn,
+                 :last_name             => ln,
+                 :email                 => em,
+                 :id                    => contact_id,
+                 :media                 => media_addresses,
+                 :pagerduty_credentials => pc,
+                 :redis                 => redis )
       end
 
 
@@ -94,6 +99,7 @@ module Flapjack
           }
         end
       end
+
 
       def pagerduty_credentials
         return unless service_key = @redis.hget("contact_media:#{self.id}", 'pagerduty')
@@ -180,15 +186,36 @@ module Flapjack
         @redis.del("notification_rule:#{rule_id}")
       end
 
+      def media_intervals
+        @redis.hgetall("contact_media_intervals:#{self.id}")
+      end
+
       # how often to notify this contact on the given media
       # return 15 mins if no value is set
       def interval_for_media(media)
-        @redis.hget("contact_media_alert_intervals:#{self.id}", media) || 15 * 60
+        @redis.hget("contact_media_intervals:#{self.id}", media) || 15 * 60
       end
 
       def set_interval_for_media(media, interval)
         raise "invalid interval" unless interval.is_a?(Integer)
-        @redis.hset("contact_media_alert_intervals:#{self.id}", media, interval)
+        @redis.hset("contact_media_intervals:#{self.id}", media, interval)
+      end
+
+      def set_address_for_media(media, address)
+        @redis.hset("contact_media:#{self.id}", media, address)
+        if media == 'pagerduty'
+          # FIXME - work out what to do when changing the pagerduty service key (address)
+          # probably best solution is to remove the need to have the username and password
+          # and subdomain as pagerduty's updated api's mean we don't them anymore I think...
+        end
+      end
+
+      def remove_media(media)
+        @redis.hdel("contact_media:#{self.id}", media)
+        @redis.hdel("contact_media_intervals:#{self.id}", media)
+        if media == 'pagerduty'
+          @redis.del("contact_pagerduty:#{self.id}")
+        end
       end
 
       # drop notifications for

@@ -36,6 +36,9 @@ class Foo
     "/contacts/#{test_contact}",
     "/contacts/#{test_contact}/notification_rules",
     "/notification_rules/1",
+    "/contacts/#{test_contact}/media",
+    "/contacts/#{test_contact}/media/email",
+    "/contacts/#{test_contact}/timezone",
   ]
 
   test_rule = '{
