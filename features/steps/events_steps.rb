@@ -164,8 +164,8 @@ Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check, entity|
 end
 
 When /^an ok event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
+  check  ||= @check
+  entity ||= @entity
   submit_ok(entity, check)
   drain_events
 end
