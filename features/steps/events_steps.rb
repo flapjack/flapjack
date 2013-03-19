@@ -171,45 +171,45 @@ When /^an ok event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)
 end
 
 When /^a failure event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
+  check  ||= @check
+  entity ||= @entity
   submit_critical(entity, check)
   drain_events
 end
 
 When /^a critical event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
+  check  ||= @check
+  entity ||= @entity
   submit_critical(entity, check)
   drain_events
 end
 
 When /^a warning event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
+  check  ||= @check
+  entity ||= @entity
   submit_warning(entity, check)
   drain_events
 end
 
 When /^an acknowledgement .*is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
+  check  ||= @check
+  entity ||= @entity
   submit_acknowledgement(entity, check)
   drain_events
 end
 
 # TODO logging is a side-effect, should test for notification generation itself
 Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
+  check  ||= @check
+  entity ||= @entity
   message = @logger.messages.find_all {|m| m =~ /enerating notifications for event #{entity}:#{check}/ }.last
   found = message ? message.match(/Not generating notifications/) : false
   found.should be_true
 end
 
 Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
+  check  ||= @check
+  entity ||= @entity
   message = @logger.messages.find_all {|m| m =~ /enerating notifications for event #{entity}:#{check}/ }.last
   found = message ? message.match(/Generating notifications/) : false
   found.should be_true
