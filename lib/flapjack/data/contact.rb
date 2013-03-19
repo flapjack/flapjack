@@ -151,41 +151,6 @@ module Flapjack
         rules
       end
 
-      # FIXME: move this to a NotificationRule class method
-      def add_notification_rule_foo(rule)
-        # FIXME: wondering now if notification rules should be just one json encoded
-        # string in redis, rather than a redis hash with multiple json encoded
-        # strings within it...
-        if not rule['id']
-          c = 0
-          loop do
-            c += 1
-            rule_id = SecureRandom.uuid
-            break unless @redis.exists("notification_rule:#{self.id}:#{rule_id}")
-            raise "unable to find non-clashing UUID for this new notification rule o_O " unless c < 100
-          end
-        elsif @redis.sismember("contact_notification_rules:#{self.id}", rule['id'])
-          self.delete_notification_rule(rule['id'])
-        end
-
-        rule_id = rule['id']
-        rule.delete('id')
-        rule['contact_id']         = self.id
-        rule['entities']           = Yajl::Encoder.encode(rule['entities'])
-        rule['entity_tags']        = Yajl::Encoder.encode(rule['entity_tags'])
-        rule['warning_media']      = Yajl::Encoder.encode(rule['warning_media'])
-        rule['critical_media']     = Yajl::Encoder.encode(rule['critical_media'])
-        rule['time_restrictions']  = Yajl::Encoder.encode(rule['time_restrictions'])
-
-        @redis.sadd("contact_notification_rules:#{self.id}", rule_id)
-        @redis.hmset("notification_rule:#{rule_id}", *rule.flatten)
-      end
-
-      def delete_notification_rule_foo(rule_id)
-        @redis.srem("contact_notification_rules:#{self.id}", rule_id)
-        @redis.del("notification_rule:#{rule_id}")
-      end
-
       def media_intervals
         @redis.hgetall("contact_media_intervals:#{self.id}")
       end
