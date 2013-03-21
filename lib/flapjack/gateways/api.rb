@@ -431,7 +431,7 @@ module Flapjack
         ret = nil
 
         rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
-        if not rule
+        unless rule
           status 404
           return
         end
@@ -458,7 +458,7 @@ module Flapjack
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
       delete('/notification_rules/:rule_id') do
         rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
-        if not rule
+        unless rule
           status 404
           return
         end

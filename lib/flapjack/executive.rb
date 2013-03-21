@@ -233,15 +233,8 @@ module Flapjack
 
       notification = Flapjack::Data::Notification.for_event(event, :type => notification_type)
 
-      messages = notification.messages(:contacts => contacts)
-      @logger.debug "#{event.id} - size of messages: #{messages.length}"
+      enqueue_messages( apply_notification_rules( notification.messages(:contacts => contacts) ) )
 
-      messages = apply_notification_rules(messages)
-      @logger.debug "#{event.id} - after apply_notification_rules - size of messages: #{messages.length}"
-
-      messages.each do |message|
-        enqueue_message(message)
-      end
     end
 
     # delete messages based on entity name(s), tags, severity, time of day
@@ -331,41 +324,41 @@ module Flapjack
       end
     end
 
-    def enqueue_message(message)
+    def enqueue_messages(messages)
 
-      #puts "enqueue_message:"
-      #pp message
-      media_type = message.medium
-      contents   = message.contents
-      event_id   = message.notification.event.id
+      messages.each do |message|
+        media_type = message.medium
+        contents   = message.contents
+        event_id   = message.notification.event.id
 
-      @notifylog.info("#{Time.now.to_s} | #{event_id} | " +
-        "#{message.notification.type} | #{message.contact.id} | #{media_type} | #{message.address}")
+        @notifylog.info("#{Time.now.to_s} | #{event_id} | " +
+          "#{message.notification.type} | #{message.contact.id} | #{media_type} | #{message.address}")
 
-      unless @queues[media_type.to_sym]
-        @logger.error("no queue for media type: #{media_type}")
-        return
-      end
+        unless @queues[media_type.to_sym]
+          @logger.error("no queue for media type: #{media_type}")
+          return
+        end
 
-      @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{message.address}")
+        @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{message.address}")
 
-      message.contact.update_sent_alert_keys(:media => message.medium,
-                                             :check => message.notification.event.id,
-                                             :state => message.notification.event.state)
-        # drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}
+        message.contact.update_sent_alert_keys(:media => message.medium,
+                                               :check => message.notification.event.id,
+                                               :state => message.notification.event.state)
+          # drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}
 
-      # TODO consider changing Resque jobs to use raw blpop like the others
-      case media_type.to_sym
-      when :sms
-        Resque.enqueue_to(@queues[:sms], Flapjack::Gateways::SmsMessagenet, contents)
-      when :email
-        Resque.enqueue_to(@queues[:email], Flapjack::Gateways::Email, contents)
-      when :jabber
-        # TODO move next line up into other notif value setting above?
-        contents['event_count'] = @event_count if @event_count
-        @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(contents))
-      when :pagerduty
-        @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(contents))
+        # TODO consider changing Resque jobs to use raw blpop like the others
+        case media_type.to_sym
+        when :sms
+          Resque.enqueue_to(@queues[:sms], Flapjack::Gateways::SmsMessagenet, contents)
+        when :email
+          Resque.enqueue_to(@queues[:email], Flapjack::Gateways::Email, contents)
+        when :jabber
+          # TODO move next line up into other notif value setting above?
+          contents['event_count'] = @event_count if @event_count
+          @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(contents))
+        when :pagerduty
+          @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(contents))
+        end
       end
 
    end
