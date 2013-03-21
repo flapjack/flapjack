@@ -33,7 +33,22 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
 
   let(:redis)           { mock(::Redis) }
 
-  let(:notification_rules) { [{
+  let(:notification_rule_1) {
+    nr = mock("notification_rule")
+    nr.stub(:id) { '1' }
+    nr.stub(:contact_id) { '21' }
+    nr.stub(:to_json) { '{ }' }
+    nr
+  }
+  let(:notification_rule_2) {
+    nr = mock("notification_rule")
+    nr.stub(:id) { '2' }
+    nr.stub(:contact_id) { '21' }
+    nr
+  }
+  let(:notification_rules) { [ notification_rule_1, notification_rule_2 ] }
+
+  let(:notification_rules_old) { [{
     :contact_id         => "21",
     :entity_tags        => [ "database", "physical" ],
     :entities           => [ "foo-app-01.example.com" ],
@@ -389,15 +404,14 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
   end
 
   it "returns a specified notification rule" do
-    rule_id = notification_rules.first[:rule_id]
-    result_data = notification_rules.first.merge(:contact_id => '21')
+    rule_id = notification_rules.first.id
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(rule_id, :redis => redis).and_return(notification_rule)
-    notification_rule.should_receive(:as_json).and_return(result_data.to_json)
+    notification_rule.should_receive(:as_json).and_return(notification_rule_1.to_json)
 
     get "/notification_rules/#{rule_id}"
     last_response.should be_ok
-    last_response.body.should be_json_eql(result_data.to_json)
+    last_response.body.should be_json_eql(notification_rule_1.to_json)
   end
 
   # TODO
