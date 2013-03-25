@@ -17,6 +17,8 @@ module Flapjack
       def id
         return @id if @id
         t = Time.now
+        # FIXME: consider just using a UUID here
+        # this is planned to be used as part of alert history keys
         @id = self.object_id.to_i.to_s + '-' + t.to_i.to_s + '.' + t.tv_usec.to_s
       end
 

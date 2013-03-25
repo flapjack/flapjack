@@ -4,8 +4,10 @@
 # structure to avoid the need for this type of query
 
 require 'set'
-
+require 'ice_cube'
 require 'flapjack/data/entity'
+require 'flapjack/data/notification_rule'
+require 'tzinfo'
 
 module Flapjack
 
@@ -13,7 +15,9 @@ module Flapjack
 
     class Contact
 
-      attr_accessor :first_name, :last_name, :email, :media, :pagerduty_credentials, :id
+      attr_accessor :id, :first_name, :last_name, :email, :media, :pagerduty_credentials
+
+      TAG_PREFIX = 'contact_tag'
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
@@ -50,7 +54,7 @@ module Flapjack
         return unless redis.hexists("contact:#{contact_id}", 'first_name')
 
         fn, ln, em = redis.hmget("contact:#{contact_id}", 'first_name', 'last_name', 'email')
-        me = redis.hgetall("contact_media:#{contact_id}")
+        media_addresses = redis.hgetall("contact_media:#{contact_id}")
 
         # similar to code in instance method pagerduty_credentials
         pc = nil
@@ -58,8 +62,13 @@ module Flapjack
           pc = redis.hgetall("contact_pagerduty:#{contact_id}").merge('service_key' => service_key)
         end
 
-        self.new(:first_name => fn, :last_name => ln,
-          :email => em, :id => contact_id, :media => me, :pagerduty_credentials => pc, :redis => redis )
+        self.new(:first_name            => fn,
+                 :last_name             => ln,
+                 :email                 => em,
+                 :id                    => contact_id,
+                 :media                 => media_addresses,
+                 :pagerduty_credentials => pc,
+                 :redis                 => redis )
       end
 
 
@@ -90,6 +99,7 @@ module Flapjack
           }
         end
       end
+
 
       def pagerduty_credentials
         return unless service_key = @redis.hget("contact_media:#{self.id}", 'pagerduty')
@@ -130,6 +140,147 @@ module Flapjack
 
       def name
         [(self.first_name || ''), (self.last_name || '')].join(" ").strip
+      end
+
+      # return an array of the notification rules of this contact
+      def notification_rules
+        rules = @redis.smembers("contact_notification_rules:#{self.id}").collect { |rule_id|
+          next if (rule_id.nil? || rule_id == '')
+          Flapjack::Data::NotificationRule.find_by_id(rule_id, {:redis => @redis})
+        }.compact
+        rules
+      end
+
+      def media_intervals
+        @redis.hgetall("contact_media_intervals:#{self.id}")
+      end
+
+      # how often to notify this contact on the given media
+      # return 15 mins if no value is set
+      def interval_for_media(media)
+        @redis.hget("contact_media_intervals:#{self.id}", media) || 15 * 60
+      end
+
+      def set_interval_for_media(media, interval)
+        raise "invalid interval" unless interval.is_a?(Integer)
+        @redis.hset("contact_media_intervals:#{self.id}", media, interval)
+      end
+
+      def set_address_for_media(media, address)
+        @redis.hset("contact_media:#{self.id}", media, address)
+        if media == 'pagerduty'
+          # FIXME - work out what to do when changing the pagerduty service key (address)
+          # probably best solution is to remove the need to have the username and password
+          # and subdomain as pagerduty's updated api's mean we don't them anymore I think...
+        end
+      end
+
+      def remove_media(media)
+        @redis.hdel("contact_media:#{self.id}", media)
+        @redis.hdel("contact_media_intervals:#{self.id}", media)
+        if media == 'pagerduty'
+          @redis.del("contact_pagerduty:#{self.id}")
+        end
+      end
+
+      # drop notifications for
+      def drop_notifications?(opts)
+        media    = opts[:media]
+        check    = opts[:check]
+        state    = opts[:state]
+        # build it and they will come
+        @redis.exists("drop_alerts_for_contact:#{self.id}") ||
+          (media && @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}")) ||
+          (media && check &&
+            @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{check}")) ||
+          (media && check && state &&
+            @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}"))
+      end
+
+      def update_sent_alert_keys(opts)
+        media = opts[:media]
+        check = opts[:check]
+        state = opts[:state]
+        key = "drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}"
+        @redis.set(key, 'd')
+        @redis.expire(key, self.interval_for_media(media))
+      end
+
+      # FIXME
+      # do a mixin with the following tag methods, they will be the same
+      # across all objects we allow tags on
+
+      # return the set of tags for this contact
+      def tags
+        @tags ||= ::Set.new( @redis.keys("#{TAG_PREFIX}:*").inject([]) {|memo, tag|
+          if Flapjack::Data::Tag.find(tag, :redis => @redis).include?(@id.to_s)
+            memo << tag.sub(/^#{TAG_PREFIX}:/, '')
+          end
+          memo
+        } )
+      end
+
+      # adds tags to this contact
+      def add_tags(*enum)
+        enum.each do |t|
+          Flapjack::Data::Tag.create("#{TAG_PREFIX}:#{t}", [@id], :redis => @redis)
+          tags.add(t)
+        end
+      end
+
+      # removes tags from this contact
+      def delete_tags(*enum)
+        enum.each do |t|
+          tag = Flapjack::Data::Tag.find("#{TAG_PREFIX}:#{t}", :redis => @redis)
+          tag.delete(@id)
+          tags.delete(t)
+        end
+      end
+
+      # return a list of media enabled for this contact
+      # eg [ 'email', 'sms' ]
+      def media_list
+        @redis.hkeys("contact_media:#{self.id}")
+      end
+
+      # return the timezone string of the contact, or the system default if none is set
+      def timezone
+        tz_string = @redis.get("contact_tz:#{self.id}")
+        tz_string = 'UTC' if (tz_string.nil? || tz_string.empty?)
+        begin
+          tz = ::TZInfo::Timezone.new(tz_string)
+        rescue ::TZInfo::InvalidTimezoneIdentifier
+          logger.warn("Invalid timezone string set for contact #{self.id} (#{tz_string})")
+          # FIXME: allow setting a default other than UTC in flapjack_config.yml
+          tz = ::TZInfo::Timezone.new('UTC')
+        end
+        tz.identifier
+      end
+
+      # sets the timezone string for the contact
+      def set_timezone(tz_string)
+        begin
+          tz = ::TZInfo::Timezone.new(tz_string)
+        rescue ::TZInfo::InvalidTimezoneIdentifier
+          logger.warn("Invalid timezone requested to be set for contact #{self.id} (#{tz_string})")
+          return false
+        end
+        @redis.set("contact_tz:#{self.id}", tz.identifier)
+      end
+
+      # removes the timezone from a contact
+      def remove_timezone
+        @redis.del("contact_tz:#{self.id}")
+      end
+
+      def as_json(opts = {})
+        tags = self.tags.to_a
+        buf = { "id"         => self.id,
+                "first_name" => self.first_name,
+                "last_name"  => self.last_name,
+                "email"      => self.email,
+                "tags"       => tags }
+        buf.to_json
       end
 
     private

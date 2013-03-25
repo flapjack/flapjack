@@ -76,6 +76,8 @@ RSpec.configure do |config|
   config.around(:each, :logger => true) do |example|
     @logger = MockLogger.new
     example.run
+    #messages = @logger.messages.compact
+    #p "logger: " + messages.join(", ") unless messages.empty?
     @logger.messages.clear
   end
 

@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'flapjack/gateways/api'
+require 'json_spec'
 
 describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
 
@@ -14,10 +15,61 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
   let(:entity_name_esc) { URI.escape(entity_name) }
   let(:check)           { 'ping' }
 
+  let(:contact)            { mock(Flapjack::Data::Contact) }
+  let(:contact_id)         { '21' }
+  let(:contact_core)       { {
+    :id         => "21",
+    :first_name => "Ada",
+    :last_name  => "Lovelace",
+    :email      => "ada@example.com",
+    :tags       => ["legend", "first computer programmer"]
+  } }
+  let(:contact_media_list) { [ 'email', 'sms' ] }
+
+  let(:notification_rule) { mock(Flapjack::Data::NotificationRule) }
+
   let(:entity_presenter)       { mock(Flapjack::Gateways::API::EntityPresenter) }
   let(:entity_check_presenter) { mock(Flapjack::Gateways::API::EntityCheckPresenter) }
 
   let(:redis)           { mock(::Redis) }
+
+  let(:notification_rule_1) {
+    nr = mock("notification_rule")
+    nr.stub(:id) { '1' }
+    nr.stub(:contact_id) { '21' }
+    nr.stub(:to_json) { '{ }' }
+    nr
+  }
+  let(:notification_rule_2) {
+    nr = mock("notification_rule")
+    nr.stub(:id) { '2' }
+    nr.stub(:contact_id) { '21' }
+    nr
+  }
+  let(:notification_rules) { [ notification_rule_1, notification_rule_2 ] }
+
+  let(:notification_rules_old) { [{
+    :contact_id         => "21",
+    :entity_tags        => [ "database", "physical" ],
+    :entities           => [ "foo-app-01.example.com" ],
+    :time_restrictions  => [ { "TODO" => "TODO" } ],
+    :warning_media      => [ "email" ],
+    :critical_media     => [ "sms", "email" ],
+    :warning_blackhole  => false,
+    :critical_blackhole => false
+  },
+  {
+    :contact_id         => "21",
+    :entity_tags        => [ ],
+    :entities           => [ "foo-app-02.example.com" ],
+    :time_restrictions  => [ { "TODO" => "TODO" } ],
+    :warning_media      => [ ],
+    :critical_media     => [ "email" ],
+    :warning_blackhole  => true,
+    :critical_blackhole => false
+  }] }
+
+  let(:notification_rules_ids) { ["1", "2"] }
 
   before(:each) do
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
@@ -327,5 +379,76 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 200
   end
+
+  # TODO
+  it "returns all the contacts"
+
+  it "returns the core information of a specified contact" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact_id, :redis => redis).and_return(contact)
+    contact.should_receive(:as_json).and_return(contact_core.to_json)
+
+    get "/contacts/#{contact_id}"
+    last_response.should be_ok
+    last_response.body.should be_json_eql(contact_core.to_json)
+  end
+
+  it "lists the IDs of a contact's notification rules" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact_id, :redis => redis).and_return(contact)
+    contact.should_receive(:notification_rules).and_return(notification_rules)
+
+    get "/contacts/#{contact_id}/notification_rules"
+    last_response.should be_ok
+    last_response.body.should be_json_eql(notification_rules_ids.to_json)
+  end
+
+  it "returns a specified notification rule" do
+    rule_id = notification_rules.first.id
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
+      with(rule_id, :redis => redis).and_return(notification_rule)
+    notification_rule.should_receive(:as_json).and_return(notification_rule_1.to_json)
+
+    get "/notification_rules/#{rule_id}"
+    last_response.should be_ok
+    last_response.body.should be_json_eql(notification_rule_1.to_json)
+  end
+
+  # TODO
+  # POST /notification_rules
+  it "creates a new notification rule"
+
+  # TODO
+  # PUT, DELETE /notification_rules/RULE_ID
+  it "updates a notification rule"
+
+  it "deletes a notification rule"
+
+  it "returns the media of a contact" do
+    result_json = contact_media_list.to_json
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact_id, :redis => redis).and_return(contact)
+    contact.should_receive(:media_list).and_return(contact_media_list)
+
+    get "/contacts/#{contact_id}/media"
+    last_response.should be_ok
+    last_response.body.should be_json_eql(result_json)
+  end
+
+  # TODO
+  # GET /contacts/CONTACT_ID/media/MEDIA
+  it "returns the specified media of a contact"
+
+  # PUT, DELETE /contacts/CONTACT_ID/media/MEDIA
+  it "creates a media of a contact"
+  it "updates a media of a contact"
+  it "deletes a media of a contact"
+
+  # GET /contacts/CONTACT_ID/timezone
+  it "returns the timezone of a contact"
+
+  # PUT, DELETE /contacts/CONTACT_ID/timezone
+  it "sets the timezone of a contact"
+  it "deletes the timezone of a contact"
 
 end
