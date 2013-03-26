@@ -340,12 +340,11 @@ module Flapjack
       # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
       get '/contacts' do
         content_type :json
-        output = '[ '
-        output += Flapjack::Data::Contact.all(:redis => redis).map {|contact|
-          contact.as_json
-        }.join(', ')
-        output += ' ]'
-        output
+        '[' <<
+          Flapjack::Data::Contact.all(:redis => redis).map {|contact|
+            contact.to_json
+          }.join(', ') <<
+        ']'
       end
 
       # Returns the core information about the specified contact
@@ -354,10 +353,11 @@ module Flapjack
         content_type :json
         contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
         if contact.nil?
+          logger.warn "contact not found with id #{params[:contact_id]}"
           status 404
           return
         end
-        contact.as_json
+        contact.to_json
       end
 
       # Lists the IDs of this contact's notification rules
@@ -366,11 +366,11 @@ module Flapjack
         content_type :json
         contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
         if contact.nil?
+          logger.warn "contact not found with id #{params[:contact_id]}"
           status 404
           return
         end
-        notification_rules = contact.notification_rules
-        notification_rules.collect {|r| r.id}.to_json
+        contact.notification_rules.collect {|r| r.id}.to_json
       end
 
       # Get the specified notification rule for this user
@@ -384,18 +384,15 @@ module Flapjack
           status 404
           return
         end
-        rule.as_json
+        rule.to_json
       end
 
       # Creates a notification rule for a contact
       # https://github.com/flpjck/flapjack/wiki/API#wiki-post_contacts_id_notification_rules
       post '/notification_rules' do
-        pass unless 'application/json'.eql?(request.content_type)
+        # # NB if parameters are correctly passed, we shouldn't mandate a request format
+        # pass unless 'application/json'.eql?(request.content_type)
         content_type :json
-
-        errors = []
-        ret = nil
-        rule_data = {}
 
         contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
         if contact.nil?
@@ -408,30 +405,30 @@ module Flapjack
           status 403
           return
         end
-        rule_data = {:contact_id         => params[:contact_id],
-                     :entities           => params[:entities],
-                     :entity_tags        => params[:entity_tags],
-                     :warning_media      => params[:warning_media],
-                     :critical_media     => params[:critical_media],
-                     :time_restrictions  => params[:time_restrictions],
-                     :warning_blackhole  => params[:warning_blackhole],
-                     :critical_blackhole => params[:critical_blackhole] }
+
+        rule_data = Hash[ *([:contact_id, :entities, :entity_tags,
+          :warning_media, :critical_media, :time_restrictions,
+          :warning_blackhole, :critical_blackhole].collect {|k|
+          [k, params[k]]
+         }).flatten ]
+
         rule = Flapjack::Data::NotificationRule.new(rule_data, :redis => redis)
 
-        errors.empty? ? rule.as_json : [ret, {}, {:errors => [errors]}.to_json]
+        rule.to_json
       end
 
       # Updates a notification rule
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
       put('/notification_rules/:rule_id') do
-        pass unless 'application/json'.eql?(request.content_type)
+        # # NB if parameters are correctly passed, we shouldn't mandate a request format
+        # pass unless 'application/json'.eql?(request.content_type)
         content_type :json
 
-        errors = []
         ret = nil
 
         rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
-        unless rule
+        if rule.nil?
+          logger.warn "rule not found with id #{params[:rule_id]}"
           status 404
           return
         end
@@ -441,24 +438,21 @@ module Flapjack
           status 403
           return
         end
-        rule.contact_id         = params[:contact_id]
-        rule.entities           = params[:entities]
-        rule.entity_tags        = params[:entity_tags]
-        rule.warning_media      = params[:warning_media]
-        rule.critical_media     = params[:critical_media]
-        rule.time_restrictions  = params[:time_restrictions]
-        rule.warning_blackhole  = params[:warning_blackhole]
-        rule.critical_blackhole = params[:critical_blackhole]
+
+        [:contact_id, :entities, :entity_tags, :warning_media,
+         :critical_media, :time_restrictions, :warning_blackhole,
+         :critical_blackhole].each {|k| rule.send(k, params[k]) }
+
         rule.save!
 
-        errors.empty? ? rule.as_json : [ret, {}, {:errors => [errors]}.to_json]
+        rule.to_json
       end
 
       # Deletes a notification rule
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
       delete('/notification_rules/:rule_id') do
         rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
-        unless rule
+        if rule.nil?
           status 404
           return
         end
@@ -504,13 +498,14 @@ module Flapjack
           status 404
           return
         end
-        if not (params[:address].nil? || params[:address].empty?)
-          contact.set_address_for_media(params[:media_id], params[:address])
-          contact.set_interval_for_media(params[:media_id], params[:interval])
-        else
+        if params[:address].nil? || params[:address].empty? ||
+          params[:interval].nil? || params[:interval].empty?
           status 403
           return
         end
+        contact.set_address_for_media(params[:media_id], params[:address])
+        contact.set_interval_for_media(params[:media_id], params[:interval])
+
         { 'address'  => contact.media[params[:media_id]],
           'interval' => contact.media_intervals[params[:media_id]] }.to_json
       end
@@ -547,7 +542,7 @@ module Flapjack
           status 404
           return
         end
-        contact.set_timezone(params[:timezone])
+        contact.timezone = params[:timezone]
         contact.timezone.to_json
       end
 
@@ -559,7 +554,7 @@ module Flapjack
           status 404
           return
         end
-        contact.remove_timezone
+        contact.timezone = nil
         status 204
       end
 
