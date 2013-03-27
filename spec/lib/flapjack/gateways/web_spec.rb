@@ -16,6 +16,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
   let(:redis) { mock('redis') }
 
+  before(:all) do
+    Flapjack::Gateways::Web.instance_variable_get('@middleware').unshift [AsyncMiddleware, nil, nil]
+  end
+
   before(:each) do
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     Flapjack::Gateways::Web.instance_variable_set('@config', {})

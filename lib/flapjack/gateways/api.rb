@@ -48,22 +48,15 @@ module Flapjack
   module Gateways
 
     class API < Sinatra::Base
-
       set :show_exceptions, false
 
-      if defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
-        # expose test errors properly
-        set :raise_errors, true
-      else
-        # doesn't work with Rack::Test unless we wrap tests in EM.synchrony blocks
-        rescue_exception = Proc.new { |env, exception|
-          @logger.error exception.message
-          @logger.error exception.backtrace.join("\n")
-          [503, {}, {:errors => [exception.message]}.to_json]
-        }
+      rescue_exception = Proc.new { |env, exception|
+        @logger.error exception.message
+        @logger.error exception.backtrace.join("\n")
+        [503, {}, {:errors => [exception.message]}.to_json]
+      }
+      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
 
-        use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
-      end
       use Rack::MethodOverride
       use Rack::JsonParamsParser
 
@@ -410,7 +403,7 @@ module Flapjack
           :warning_media, :critical_media, :time_restrictions,
           :warning_blackhole, :critical_blackhole].collect {|k|
           [k, params[k]]
-         }).flatten ]
+         }).flatten(1) ]
 
         rule = Flapjack::Data::NotificationRule.new(rule_data, :redis => redis)
 
@@ -426,16 +419,16 @@ module Flapjack
 
         ret = nil
 
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          logger.warn "contact not found with id #{params[:contact_id]}"
+          status 404
+          return
+        end
         rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
         if rule.nil?
           logger.warn "rule not found with id #{params[:rule_id]}"
           status 404
-          return
-        end
-        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
-        if contact.nil?
-          logger.warn "contact not found with id #{params[:contact_id]}"
-          status 403
           return
         end
 

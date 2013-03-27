@@ -56,13 +56,17 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     {"contact_id"         => "21",
      "entity_tags"        => ["database","physical"],
      "entities"           => ["foo-app-01.example.com"],
-     "time_restrictions"  => [],
+     "time_restrictions"  => nil,
      "warning_media"      => ["email"],
      "critical_media"     => ["sms", "email"],
      "warning_blackhole"  => false,
      "critical_blackhole" => false
     }
   }
+
+  before(:all) do
+    Flapjack::Gateways::API.instance_variable_get('@middleware').unshift [AsyncMiddleware, nil, nil]
+  end
 
   before(:each) do
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
@@ -420,9 +424,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   it "returns a specified notification rule" do
+    notification_rule.should_receive(:to_json).and_return(notification_rule.to_json)
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id, :redis => redis).and_return(notification_rule)
-    notification_rule.should_receive(:to_json).and_return(notification_rule.to_json)
 
     get "/notification_rules/#{notification_rule.id}"
     last_response.should be_ok
@@ -438,16 +442,79 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   # POST /notification_rules
-  it "creates a new notification rule"
+  it "creates a new notification rule" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+    notification_rule.should_receive(:to_json).and_return(notification_rule.to_json)
+
+    # symbolize the keys
+    notification_rule_data_sym =
+      Hash[ *((notification_rule_data.keys.collect{|k|
+          k.to_sym
+        }.zip(notification_rule_data.values)).flatten(1)) ]
+
+    Flapjack::Data::NotificationRule.should_receive(:new).
+      with(notification_rule_data_sym, :redis => redis).and_return(notification_rule)
+
+    post "/notification_rules", notification_rule_data.to_json,
+      {'CONTENT_TYPE' => 'application/json'}
+    last_response.should be_ok
+    last_response.body.should be_json_eql(notification_rule.to_json)
+  end
+
+  it "does not create a notification_rule for a contact that's not present" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    post "/notification_rules", notification_rule_data.to_json,
+      {'CONTENT_TYPE' => 'application/json'}
+    last_response.should be_not_found
+  end
+
+  it "does not create a notification_rule if a rule id is provided" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    post "/notification_rules", notification_rule_data.merge(:id => 1).to_json,
+      {'CONTENT_TYPE' => 'application/json'}
+    last_response.status.should == 403
+  end
 
   # PUT /notification_rules/RULE_ID
-  it "updates a notification rule"
+  it "updates a notification rule" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+    notification_rule.should_receive(:to_json).and_return(notification_rule.to_json)
+    notification_rule.should_receive(:save!)
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
+      with(notification_rule.id, :redis => redis).and_return(notification_rule)
+
+    notification_rule_data.each_pair do |k, v|
+      notification_rule.should_receive(k.to_sym).with(v)
+    end
+
+    put "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
+      {'CONTENT_TYPE' => 'application/json'}
+    last_response.should be_ok
+    last_response.body.should be_json_eql(notification_rule.to_json)
+  end
 
   it "does not update a notification rule that's not present" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id, :redis => redis).and_return(nil)
 
-    put "/notification_rules/#{notification_rule.id}", {}
+    put "/notification_rules/#{notification_rule.id}", notification_rule_data
+    last_response.should be_not_found
+  end
+
+  it "does not update a notification_rule for a contact that's not present" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    put "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
+      {'CONTENT_TYPE' => 'application/json'}
     last_response.should be_not_found
   end
 
