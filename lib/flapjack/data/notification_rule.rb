@@ -9,6 +9,13 @@ module Flapjack
       attr_accessor :id, :contact_id, :entities, :entity_tags, :time_restrictions,
         :warning_media, :critical_media, :warning_blackhole, :critical_blackhole
 
+      def self.exists_with_id?(rule_id, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        raise "No id value passed" unless not (rule_id.nil? || rule_id == '')
+        logger   = options[:logger]
+        redis.exists("notification_rule:#{rule_id}")
+      end
+
       def self.find_by_id(rule_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         raise "No id value passed" unless not (rule_id.nil? || rule_id == '')
@@ -35,6 +42,45 @@ module Flapjack
                   :critical_media     => critical_media,
                   :warning_blackhole  => warning_blackhole,
                   :critical_blackhole => critical_blackhole}, :redis => redis)
+      end
+
+      # replacing save! etc
+      def self.add(rule, options)
+        raise "Redis connection not set" unless redis = options[:redis]
+        rule[:entities]           = Yajl::Encoder.encode(rule['entities'])
+        rule[:entity_tags]        = Yajl::Encoder.encode(rule['entity_tags'])
+        rule[:time_restrictions]  = Yajl::Encoder.encode(rule['time_restrictions'])
+        rule[:warning_media]      = Yajl::Encoder.encode(rule['warning_media'])
+        rule[:critical_media]     = Yajl::Encoder.encode(rule['critical_media'])
+
+        c = 0
+        loop do
+          c += 1
+          rule[:id] = SecureRandom.uuid
+          break unless redis.exists("notification_rule:#{rule[:id]}")
+          raise "unable to find non-clashing UUID for this new notification rule o_O " unless c < 100
+        end
+
+        redis.sadd("contact_notification_rules:#{@contact_id}", rule[:id])
+        redis.hmset("notification_rule:#{rule[:id]}", *rule.flatten)
+        self.new(rule, :redis => redis)
+      end
+
+      # replacing save! etc
+      def self.update(rule, options)
+        raise "Redis connection not set" unless redis = options[:redis]
+        raise "A rule id must be supplied" unless rule_id = rule[:id]
+        raise "No such rule exists with the supplied id: #{rule_id}" unless self.exists_with_id?(rule_id, :redis => redis)
+
+        rule[:entities]           = Yajl::Encoder.encode(rule[:entities])
+        rule[:entity_tags]        = Yajl::Encoder.encode(rule[:entity_tags])
+        rule[:time_restrictions]  = Yajl::Encoder.encode(rule[:time_restrictions])
+        rule[:warning_media]      = Yajl::Encoder.encode(rule[:warning_media])
+        rule[:critical_media]     = Yajl::Encoder.encode(rule[:critical_media])
+
+        redis.sadd("contact_notification_rules:#{@contact_id}", rule[:id])
+        redis.hmset("notification_rule:#{rule[:id]}", *rule.flatten)
+        self.new(rule, :redis => redis)
       end
 
       def delete!
@@ -106,7 +152,7 @@ module Flapjack
         media_list
       end
 
-      def save!
+      def save_foo!
         rule = {}
         rule['contact_id']         = @contact_id
         rule['entities']           = Yajl::Encoder.encode(@entities)
@@ -128,6 +174,7 @@ module Flapjack
         raise "a redis connection must be supplied" unless @redis
         raise "contact_id is required" unless
           @contact_id       = rule[:contact_id]
+        @id                 = rule[:id]
         @entities           = rule[:entities]
         @entity_tags        = rule[:entity_tags]
         @time_restrictions  = rule[:time_restrictions]
@@ -135,19 +182,6 @@ module Flapjack
         @critical_media     = rule[:critical_media]
         @warning_blackhole  = rule[:warning_blackhole]
         @critical_blackhole = rule[:critical_blackhole]
-        if not rule[:id]
-          c = 0
-          loop do
-            c += 1
-            rule[:id] = SecureRandom.uuid
-            break unless @redis.exists("notification_rule:#{rule[:id]}")
-            raise "unable to find non-clashing UUID for this new notification rule o_O " unless c < 100
-          end
-          @id = rule[:id]
-          self.save!
-        else
-          @id = rule[:id]
-        end
       end
 
       # @warning_media  = [ 'email' ]

@@ -276,7 +276,7 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
       end
     end
     #contact.add_notification_rule({'id' => rule['id'],
-    nr = Flapjack::Data::NotificationRule.new({:id                 => rule['id'],
+    nr = Flapjack::Data::NotificationRule.add({:id                 => rule['id'],
                                                :contact_id         => contact.id,
                                                :entities           => entities,
                                                :entity_tags        => entity_tags,
@@ -285,7 +285,6 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
                                                :warning_blackhole  => warning_blackhole,
                                                :critical_blackhole => critical_blackhole,
                                                :time_restrictions  => time_restrictions}, :redis => @redis)
-    nr.save!
   end
 end
 

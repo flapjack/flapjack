@@ -320,6 +320,11 @@ module Flapjack
 
         contacts = params[:contacts]
         if contacts && contacts.is_a?(Enumerable) && contacts.any? {|c| !c['id'].nil?}
+
+          # TODO: perhaps instead of deleting all we should just delete the contacts 
+          # that are not present in the POST, as this would allow tighter cleanup of 
+          # linked notification rules (and anything else linked that is not present 
+          # in this POST)
           Flapjack::Data::Contact.delete_all(:redis => redis)
           contacts.each do |contact|
             unless contact['id']
@@ -416,7 +421,7 @@ module Flapjack
                      :time_restrictions  => params[:time_restrictions],
                      :warning_blackhole  => params[:warning_blackhole],
                      :critical_blackhole => params[:critical_blackhole] }
-        rule = Flapjack::Data::NotificationRule.new(rule_data, :redis => redis)
+        rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => redis)
 
         errors.empty? ? rule.as_json : [ret, {}, {:errors => [errors]}.to_json]
       end
@@ -430,26 +435,27 @@ module Flapjack
         errors = []
         ret = nil
 
-        rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
-        unless rule
+        unless Flapjack::Data::NotificationRule.exists_with_id?(params[:rule_id], :redis => redis)
           status 404
           return
         end
-        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
-        if contact.nil?
+        unless contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
           logger.warn "contact not found with id #{params[:contact_id]}"
           status 403
           return
         end
-        rule.contact_id         = params[:contact_id]
-        rule.entities           = params[:entities]
-        rule.entity_tags        = params[:entity_tags]
-        rule.warning_media      = params[:warning_media]
-        rule.critical_media     = params[:critical_media]
-        rule.time_restrictions  = params[:time_restrictions]
-        rule.warning_blackhole  = params[:warning_blackhole]
-        rule.critical_blackhole = params[:critical_blackhole]
-        rule.save!
+
+        rule_data = {:id                 => params[:rule_id],
+                     :contact_id         => params[:contact_id],
+                     :entities           => params[:entities],
+                     :entity_tags        => params[:entity_tags],
+                     :warning_media      => params[:warning_media],
+                     :critical_media     => params[:critical_media],
+                     :time_restrictions  => params[:time_restrictions],
+                     :warning_blackhole  => params[:warning_blackhole],
+                     :critical_blackhole => params[:critical_blackhole] }
+
+        rule = Flapjack::Data::NotificationRule.update(rule_data, :redis => redis)
 
         errors.empty? ? rule.as_json : [ret, {}, {:errors => [errors]}.to_json]
       end
@@ -457,8 +463,7 @@ module Flapjack
       # Deletes a notification rule
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
       delete('/notification_rules/:rule_id') do
-        rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
-        unless rule
+        unless rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
           status 404
           return
         end
