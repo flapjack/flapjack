@@ -258,7 +258,6 @@ Given /^user (\d+) has the following notification intervals:$/ do |contact_id, i
 end
 
 Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules|
-  contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
   rules.hashes.each do |rule|
     entities           = rule['entities'].split(',').map { |x| x.strip }
     entity_tags        = rule['entity_tags'].split(',').map { |x| x.strip }
@@ -275,17 +274,16 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
         time_restrictions << weekdays_8_18.to_hash
       end
     end
-    #contact.add_notification_rule({'id' => rule['id'],
-    nr = Flapjack::Data::NotificationRule.new({:id                 => rule['id'],
-                                               :contact_id         => contact.id,
-                                               :entities           => entities,
-                                               :entity_tags        => entity_tags,
-                                               :warning_media      => warning_media,
-                                               :critical_media     => critical_media,
-                                               :warning_blackhole  => warning_blackhole,
-                                               :critical_blackhole => critical_blackhole,
-                                               :time_restrictions  => time_restrictions}, :redis => @redis)
-    nr.save!
+
+    Flapjack::Data::NotificationRule.add({:id                 => rule['id'],
+                                          :contact_id         => contact_id,
+                                          :entities           => entities,
+                                          :entity_tags        => entity_tags,
+                                          :warning_media      => warning_media,
+                                          :critical_media     => critical_media,
+                                          :warning_blackhole  => warning_blackhole,
+                                          :critical_blackhole => critical_blackhole,
+                                          :time_restrictions  => time_restrictions}, :redis => @redis)
   end
 end
 

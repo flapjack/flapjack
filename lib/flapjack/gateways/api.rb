@@ -313,6 +313,11 @@ module Flapjack
 
         contacts = params[:contacts]
         if contacts && contacts.is_a?(Enumerable) && contacts.any? {|c| !c['id'].nil?}
+
+          # TODO: perhaps instead of deleting all we should just delete the contacts
+          # that are not present in the POST, as this would allow tighter cleanup of
+          # linked notification rules (and anything else linked that is not present
+          # in this POST)
           Flapjack::Data::Contact.delete_all(:redis => redis)
           contacts.each do |contact|
             unless contact['id']
@@ -405,8 +410,7 @@ module Flapjack
           [k, params[k]]
          }).flatten(1) ]
 
-        rule = Flapjack::Data::NotificationRule.new(rule_data, :redis => redis)
-
+        rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => redis)
         rule.to_json
       end
 
@@ -432,12 +436,13 @@ module Flapjack
           return
         end
 
-        [:contact_id, :entities, :entity_tags, :warning_media,
-         :critical_media, :time_restrictions, :warning_blackhole,
-         :critical_blackhole].each {|k| rule.send(k, params[k]) }
+       rule_data = Hash[ *([:contact_id, :entities, :entity_tags,
+            :warning_media, :critical_media, :time_restrictions,
+            :warning_blackhole, :critical_blackhole].collect {|k|
+            [k, params[k]]
+           }).flatten(1) ]
 
-        rule.save!
-
+        rule = Flapjack::Data::NotificationRule.update(rule_data, :redis => redis)
         rule.to_json
       end
 

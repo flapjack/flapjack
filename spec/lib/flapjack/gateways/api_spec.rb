@@ -453,7 +453,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
           k.to_sym
         }.zip(notification_rule_data.values)).flatten(1)) ]
 
-    Flapjack::Data::NotificationRule.should_receive(:new).
+    Flapjack::Data::NotificationRule.should_receive(:add).
       with(notification_rule_data_sym, :redis => redis).and_return(notification_rule)
 
     post "/notification_rules", notification_rule_data.to_json,
@@ -485,13 +485,17 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :redis => redis).and_return(contact)
     notification_rule.should_receive(:to_json).and_return(notification_rule.to_json)
-    notification_rule.should_receive(:save!)
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id, :redis => redis).and_return(notification_rule)
 
-    notification_rule_data.each_pair do |k, v|
-      notification_rule.should_receive(k.to_sym).with(v)
-    end
+    # symbolize the keys
+    notification_rule_data_sym =
+      Hash[ *((notification_rule_data.keys.collect{|k|
+          k.to_sym
+        }.zip(notification_rule_data.values)).flatten(1)) ]
+
+    Flapjack::Data::NotificationRule.should_receive(:update).
+      with(notification_rule_data_sym, :redis => redis).and_return(notification_rule)
 
     put "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
