@@ -358,7 +358,7 @@ module Flapjack
         contact.to_json
       end
 
-      # Lists the IDs of this contact's notification rules
+      # Lists this contact's notification rules
       # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_notification_rules
       get '/contacts/:contact_id/notification_rules' do
         content_type :json
@@ -368,7 +368,7 @@ module Flapjack
           status 404
           return
         end
-        contact.notification_rules.collect {|r| r.id}.to_json
+        contact.notification_rules.to_json
       end
 
       # Get the specified notification rule for this user
