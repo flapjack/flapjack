@@ -1,62 +1,27 @@
 #!/usr/bin/env ruby
 
-require 'optparse'
-require 'ostruct'
-require 'redis'
-require 'yajl/json_gem'
-
-# add lib to the default include path
 unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
 end
 
+require 'optparse'
+require 'ostruct'
+require 'redis'
+require 'yajl/json_gem'
+require 'dante'
+
 require 'flapjack/configuration'
 
-options = OpenStruct.new
-options.config    = File.join('etc', 'flapjack_config.yaml')
-options.daemonize = nil
-
-OptionParser.new do |opts|
-  opts.banner = "Usage: flapjack-nagios-receiver [options]"
-
-  opts.on("-c", "--config [PATH]", String, "PATH to the config file to use") do |c|
-    options.config = c
-  end
-
-  opts.on("-f", "--fifo FIFO", String, "Path to the nagios perfdata named pipe") do |f|
-    options.fifo = f
-  end
-
-end.parse!(ARGV)
-
-FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
-
-config = Flapjack::Configuration.new
-config.load(options.config)
-@config_env = config.all
-@redis_options = config.for_redis
-
-if @config_env.nil? || @config_env.empty?
-  puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
-  exit(false)
+def pike(message)
+  puts "piking out: #{message}"
+  exit 1
 end
 
-if !options.fifo
-  puts "You must specify a path to the nagios perfdata named pipe using the --fifo option"
-  exit(false)
-end
-
-@fifo = File.new(options.fifo)
-
-# nagios.cfg contains the following templates for host and service data (modified from the default
-# to include hoststate / servicestate, and a fake service 'HOST' for hostperfdata, so that the
-# fields match up
-# host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
-# service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
-
-def process_input(redis)
+def process_input(opts)
+  redis = opts[:redis]
+  fifo  = File.new(opts[:fifo])
   begin
-    while line = @fifo.gets
+    while line = fifo.gets
       skip unless line
       split_line = line.split("\t")
 
@@ -93,15 +58,169 @@ def process_input(redis)
   end
 end
 
-def main
-  redis = Redis.new(@redis_options)
-
+def main(opts)
+  fifo = opts[:fifo]
+  redis = Redis.new(opts[:redis_options])
   while true
-    process_input(redis)
+    process_input(:redis => redis, :fifo => fifo)
     puts "Whoops, restarting main loop in 10 seconds"
     sleep 10
   end
 end
 
-main
+options = OpenStruct.new
+options.config    = nil
+options.daemonize = nil
+
+exe = File.basename(__FILE__)
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: #{exe} COMMAND [OPTIONS]"
+
+  opts.separator  ""
+  opts.separator  "Commands"
+  opts.separator  "     start #{" " * 25} start #{exe}"
+  opts.separator  "     stop #{" " * 26} stop #{exe}"
+  opts.separator  "     restart #{" " * 23} (re)start #{exe}"
+  opts.separator  "     status #{" " * 24} see if #{exe} is running"
+  opts.separator  ""
+  opts.separator  "Options"
+
+  opts.on("-c", "--config [PATH]", String, "PATH to the config file to use") do |c|
+    options.config = c
+  end
+
+  opts.on("-f", "--fifo FIFO", String, "Path to the nagios perfdata named pipe") do |f|
+    options.fifo = f
+  end
+
+  opts.on("-d", "--[no-]daemonize", "Daemonize?") do |d|
+    options.daemonize = d
+  end
+
+  opts.on("-p", "--pidfile [PATH]", String, "PATH to the pidfile to write to") do |p|
+    options.pidfile = p
+  end
+
+  opts.on("-l", "--logfile [PATH]", String, "PATH to the logfile to write to") do |l|
+    options.log_path = l
+  end
+
+end.parse!(ARGV)
+
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+
+#runner = Dante::Runner.new('flapjack-nagios-receiver',
+#                           :pid_path   => '/var/run/flapjack/flapjack-nagios-receiver.pid',
+#                           :log_path   => '/var/log/flapjack/flapjack-nagios-receiver.log')
+
+
+if options.config
+  config_file = options.config
+  pike "specified config file cannot be read" unless File.readable?(config_file)
+else
+  [ 'etc/flapjack_config.yaml',
+    File.dirname(__FILE__) + 'etc/flapjack_config.yaml',
+    '/etc/flapjack/flapjack_config.yaml' ].each do |candidate|
+    if File.readable?(candidate)
+      config_file = candidate
+      break
+    else
+      puts "not found and/or not readable: #{candidate}"
+    end
+  end
+  pike "no config file specified and none found in default locations" unless config_file
+end
+
+config = Flapjack::Configuration.new
+config.load(config_file)
+config_env = config.all
+redis_options = config.for_redis
+
+if config_env.nil? || config_env.empty?
+  puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
+  exit(false)
+end
+
+config_nr = config_env['nagios-receiver'] || {}
+
+pidfile = options.pidfile.nil? ?
+            (config_nr['pid_file'] || "/var/run/flapjack/#{exe}.pid") :
+            options.pidfile
+
+logfile = options.logfile.nil? ?
+            (config_nr['log_file'] || "/var/log/flapjack/#{exe}.log") :
+            options.logfile
+
+fifo = options.fifo.nil? ?
+         (config_nr['fifo'] || '/var/cache/nagios3/event_stream.fifo') :
+         options.fifo
+
+daemonize = options.daemonize.nil? ?
+              !!config_nr['daemonize'] :
+              options.daemonize
+
+
+  # nagios.cfg contains the following templates for host and service data (modified from the default
+  # to include hoststate / servicestate, and a fake service 'HOST' for hostperfdata, so that the
+  # fields match up
+  # host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
+  # service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
+
+
+runner = Dante::Runner.new(exe, :pid_path => pidfile, :log_path => logfile)
+case ARGV[0]
+when "start", "restart"
+  pike "You must specify a path to the nagios perfdata named pipe using the --fifo option" unless fifo
+end
+
+case ARGV[0]
+when "start"
+  if runner.daemon_running?
+    puts "#{exe} is already running."
+    exit 1
+  else
+    print "#{exe} starting..."
+    runner.execute(:daemonize => daemonize) {
+      main(:redis_options => redis_options, :fifo => fifo)
+    }
+    puts " done."
+  end
+
+when "stop"
+  if runner.daemon_running?
+    print "#{exe} stopping..."
+    runner.execute(:kill => true)
+    puts " done."
+  else
+    puts "#{exe} is not running."
+    exit 1
+  end
+
+when "restart"
+  print "#{exe} restarting..."
+  runner.execute(:daemonize => true, :restart => true) {
+    main(:redis_options => redis_options, :fifo => fifo)
+  }
+  puts " done."
+
+when "status"
+  uptime = (runner.daemon_running?) ? Time.now - File.stat(pidfile).ctime : 0
+  if runner.daemon_running?
+    puts "#{exe} is running: #{uptime}"
+  else
+    puts "#{exe} is not runninng"
+    exit 3
+  end
+
+else
+  if ARGV.nil? || ARGV.empty?
+    puts "No command provided"
+  else
+    puts "Unknown command provided: '#{ARGV[0]}'"
+  end
+  exit 1
+
+end
+
 

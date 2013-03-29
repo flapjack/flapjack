@@ -17,7 +17,7 @@ Gem::Specification.new do |gem|
   gem.require_paths = ["lib"]
   gem.version       = Flapjack::VERSION
 
-  gem.add_dependency 'daemons'
+  gem.add_dependency 'dante'
   gem.add_dependency 'log4r'
   gem.add_dependency 'yajl-ruby'
   gem.add_dependency 'eventmachine', '~> 1.0.0'
@@ -26,12 +26,13 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'em-http-request'
   gem.add_dependency 'redis'
   gem.add_dependency 'em-resque'
+  gem.add_dependency 'resque', '~> 1.23.0'
   gem.add_dependency 'sinatra'
   gem.add_dependency 'rack-fiber_pool'
   gem.add_dependency 'haml'
   gem.add_dependency 'thin'
   gem.add_dependency 'mail'
-  gem.add_dependency 'blather'
+  gem.add_dependency 'blather', '0.8.1'
   gem.add_dependency 'chronic'
   gem.add_dependency 'chronic_duration'
 

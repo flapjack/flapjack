@@ -1,35 +1,36 @@
 require 'spec_helper'
 require 'flapjack/gateways/web'
 
-# TODO move the rest of the redis operations down to data models, then this
-# test won't need read/write redis data
-
-describe Flapjack::Gateways::Web, :sinatra => true, :redis => true do
+describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
   def app
     Flapjack::Gateways::Web
   end
 
   let(:entity_name)     { 'example.com'}
-  let(:entity_name_esc) { URI.escape(entity_name) }
+  let(:entity_name_esc) { CGI.escape(entity_name) }
   let(:check)           { 'ping' }
 
   let(:entity)          { mock(Flapjack::Data::Entity) }
   let(:entity_check)    { mock(Flapjack::Data::EntityCheck) }
 
+  let(:redis) { mock('redis') }
+
   before(:each) do
-    Flapjack::RedisPool.should_receive(:new).and_return(@redis)
-    Flapjack::Gateways::Web.bootstrap(:config => {})
+    Flapjack::RedisPool.should_receive(:new).and_return(redis)
+    Flapjack::Gateways::Web.instance_variable_set('@config', {})
+    Flapjack::Gateways::Web.instance_variable_set('@logger', @logger)
+    Flapjack::Gateways::Web.start
   end
 
   def expect_stats
-    @redis.should_receive(:keys).with('*').and_return([])
-    @redis.should_receive(:zcard).with('failed_checks')
-    @redis.should_receive(:keys).with('check:*:*').and_return([])
-    @redis.should_receive(:zscore).with('executive_instances', anything).and_return(Time.now.to_i)
-    @redis.should_receive(:hgetall).twice.and_return({'all' => '8001', 'ok' => '8002'},
-      {'all' => '9001', 'ok' => '9002'}) #
-    @redis.should_receive(:llen).with('events')
+    redis.should_receive(:keys).with('*').and_return([])
+    redis.should_receive(:zcard).with('failed_checks')
+    redis.should_receive(:keys).with('check:*:*').and_return([])
+    redis.should_receive(:zscore).with('executive_instances', anything).and_return(Time.now.to_i)
+    redis.should_receive(:hgetall).twice.and_return({'all' => '8001', 'ok' => '8002'},
+      {'all' => '9001', 'ok' => '9002'})
+    redis.should_receive(:llen).with('events')
   end
 
   def expect_entity_check_status(ec)
@@ -49,41 +50,44 @@ describe Flapjack::Gateways::Web, :sinatra => true, :redis => true do
   # (for the methods that access redis directly)
 
   it "shows a page listing all checks" do
-    @redis.should_receive(:keys).with('*:*:states').and_return(["#{entity_name}:#{check}:states"])
+    redis.should_receive(:keys).with('*:*:states').and_return(["#{entity_name}:#{check}:states"])
 
     expect_stats
+
+    redis.should_receive(:zrange).with("executive_instances", "0", "-1", :withscores => true)
 
     expect_entity_check_status(entity_check)
 
     Flapjack::Data::Entity.should_receive(:find_by_name).
-      with(entity_name, :redis => @redis).and_return(entity)
+      with(entity_name, :redis => redis).and_return(entity)
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
-      with(entity, 'ping', :redis => @redis).and_return(entity_check)
+      with(entity, 'ping', :redis => redis).and_return(entity_check)
 
     get '/'
     last_response.should be_ok
   end
 
   it "shows a page listing failing checks" do
-    @redis.should_receive(:zrange).with("executive_instances", "0", "-1", :withscores => true)
-    @redis.should_receive(:zrange).with('failed_checks', 0, -1).and_return(["#{entity_name}:#{check}:states"])
+    redis.should_receive(:zrange).with("executive_instances", "0", "-1", :withscores => true)
+    redis.should_receive(:zrange).with('failed_checks', 0, -1).and_return(["#{entity_name}:#{check}:states"])
 
     expect_stats
 
     expect_entity_check_status(entity_check)
 
     Flapjack::Data::Entity.should_receive(:find_by_name).
-      with(entity_name, :redis => @redis).and_return(entity)
+      with(entity_name, :redis => redis).and_return(entity)
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
-      with(entity, 'ping', :redis => @redis).and_return(entity_check)
+      with(entity, 'ping', :redis => redis).and_return(entity_check)
     get '/failing'
     last_response.should be_ok
   end
 
   it "shows a page listing flapjack statistics" do
     expect_stats
+    redis.should_receive(:zrange).with("executive_instances", "0", "-1", :withscores => true)
 
     get '/self_stats'
     last_response.should be_ok
@@ -108,10 +112,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :redis => true do
     entity_check.should_receive(:contacts).and_return([])
 
     Flapjack::Data::Entity.should_receive(:find_by_name).
-      with(entity_name, :redis => @redis).and_return(entity)
+      with(entity_name, :redis => redis).and_return(entity)
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
-      with(entity, 'ping', :redis => @redis).and_return(entity_check)
+      with(entity, 'ping', :redis => redis).and_return(entity_check)
 
     get "/check?entity=#{entity_name_esc}&check=ping"
     last_response.should be_ok
@@ -119,25 +123,28 @@ describe Flapjack::Gateways::Web, :sinatra => true, :redis => true do
   end
 
   it "returns 404 if an unknown entity is requested" do
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name_esc, :redis => redis).and_return(nil)
+
     get "/check?entity=#{entity_name_esc}&check=ping"
     last_response.should be_not_found
   end
 
   # TODO shouldn't create actual entity record
   it "returns 404 if no entity check is passed" do
-    Flapjack::Data::Entity.add({'id'   => '5000',
-                                'name' => entity_name},
-                               :redis => @redis)
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+
     get "/check?entity=#{entity_name_esc}"
     last_response.should be_not_found
   end
 
   it "creates an acknowledgement for an entity check" do
     Flapjack::Data::Entity.should_receive(:find_by_name).
-      with(entity_name, :redis => @redis).and_return(entity)
+      with(entity_name, :redis => redis).and_return(entity)
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
-      with(entity, 'ping', :redis => @redis).and_return(entity_check)
+      with(entity, 'ping', :redis => redis).and_return(entity_check)
 
     entity_check.should_receive(:create_acknowledgement).
       with(an_instance_of(Hash))
@@ -157,10 +164,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :redis => true do
     ChronicDuration.should_receive(:parse).with('30 minutes').and_return(duration)
 
     Flapjack::Data::Entity.should_receive(:find_by_name).
-      with(entity_name, :redis => @redis).and_return(entity)
+      with(entity_name, :redis => redis).and_return(entity)
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
-      with(entity, 'ping', :redis => @redis).and_return(entity_check)
+      with(entity, 'ping', :redis => redis).and_return(entity_check)
 
     entity_check.should_receive(:create_scheduled_maintenance).
       with(:start_time => start_time.to_i, :duration => duration, :summary => summary)
@@ -176,10 +183,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :redis => true do
     start_time = t - (24 * 60 * 60)
 
     Flapjack::Data::Entity.should_receive(:find_by_name).
-      with(entity_name, :redis => @redis).and_return(entity)
+      with(entity_name, :redis => redis).and_return(entity)
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
-      with(entity, 'ping', :redis => @redis).and_return(entity_check)
+      with(entity, 'ping', :redis => redis).and_return(entity_check)
 
     Chronic.should_receive(:parse).with('now').and_return(t)
 
@@ -197,10 +204,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :redis => true do
     start_time = t - (24 * 60 * 60)
 
     Flapjack::Data::Entity.should_receive(:find_by_name).
-      with(entity_name, :redis => @redis).and_return(entity)
+      with(entity_name, :redis => redis).and_return(entity)
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
-      with(entity, 'ping', :redis => @redis).and_return(entity_check)
+      with(entity, 'ping', :redis => redis).and_return(entity_check)
 
     entity_check.should_receive(:delete_scheduled_maintenance).
       with(:start_time => start_time)
@@ -223,7 +230,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :redis => true do
     contact.should_receive(:entities_and_checks).and_return([])
 
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with('0362', :redis => @redis).and_return(contact)
+      with('0362', :redis => redis).and_return(contact)
 
     get "/contacts/0362"
     last_response.should be_ok

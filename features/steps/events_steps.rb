@@ -147,17 +147,17 @@ end
 
 # TODO logging is a side-effect, should test for notification generation itself
 Then /^a notification should not be generated for check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
-  message = @app.logger.messages.find_all {|m| m =~ /ending notifications for event #{entity}:#{check}/ }.last
-  message ? happy = message.match(/Not sending notifications/) : happy = false
+  message = @logger.messages.find_all {|m| m =~ /enerating notifications for event #{entity}:#{check}/ }.last
+  message ? happy = message.match(/Not generating notifications/) : happy = false
   happy.should be_true
 end
 
 Then /^a notification should be generated for check '([\w\.\-]+)' on entity '([\w\.\-]+)'$/ do |check, entity|
-  message = @app.logger.messages.find_all {|m| m =~ /ending notifications for event #{entity}:#{check}/ }.last
-  message ? happy = message.match(/Sending notifications/) : happy = false
+  message = @logger.messages.find_all {|m| m =~ /enerating notifications for event #{entity}:#{check}/ }.last
+  message ? happy = message.match(/Generating notifications/) : happy = false
   happy.should be_true
 end
 
 Then /^show me the notifications?$/ do
-  puts @app.logger.messages.join("\n")
+  puts @logger.messages.join("\n")
 end

@@ -15,25 +15,10 @@ module Flapjack
 
     def initialize(opts = {})
       config = opts.delete(:config)
-      super(:size => opts[:size] || 5) {
+      @size = opts[:size] || 5
+      super(:size => @size) {
         ::Redis.new(config)
       }
-    end
-
-    def empty!
-      f = Fiber.current
-
-      until @available.empty? && @pending.empty?
-        begin
-          conn = acquire(f)
-          conn.quit
-          @available.delete(conn)
-        ensure
-          if pending = @pending.shift
-            pending.resume
-          end
-        end
-      end
     end
 
   end
