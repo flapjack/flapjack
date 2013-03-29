@@ -57,7 +57,13 @@ module Flapjack
           thin_bootstrap(opts)
           @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
 
-          if config && config['access_log']
+          if accesslog = (config && config['access_log'])
+            if not File.directory?(File.dirname(accesslog))
+              puts "Parent directory for log file #{accesslog} doesn't exist"
+              puts "Exiting!"
+              exit
+            end
+
             access_logger = Flapjack::AsyncLogger.new(config['access_log'])
             use Flapjack::CommonLogger, access_logger
           end

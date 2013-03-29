@@ -39,6 +39,11 @@ module Flapjack
                  :pagerduty => @config['pagerduty_queue']}
 
       notifylog  = @config['notification_log_file'] || 'log/notify.log'
+      if not File.directory?(File.dirname(notifylog))
+        puts "Parent directory for log file #{notifylog} doesn't exist"
+        puts "Exiting!"
+        exit
+      end
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => notifylog))
 
