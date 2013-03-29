@@ -300,7 +300,12 @@ module Flapjack
         if not options[:no_rules_for_contact]
           severity = message.notification.event.state
           matchers.any? do |matcher|
-            matcher.media_for_severity(severity).include?(message.medium) ? matcher : nil
+            mfs = matcher.media_for_severity(severity)
+            unless mfs
+              @logger.warn "got nil for matcher.media_for_severity(#{severity}), matcher: #{matcher.inspect}"
+            else
+              mfs.include?(message.medium) ? matcher : nil
+            end
           end
         else
           true

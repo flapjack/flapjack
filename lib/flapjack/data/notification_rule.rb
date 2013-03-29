@@ -61,7 +61,7 @@ module Flapjack
           raise "unable to find non-clashing UUID for this new notification rule o_O " unless c < 100
         end
 
-        redis.sadd("contact_notification_rules:#{@contact_id}", rule[:id])
+        redis.sadd("contact_notification_rules:#{rule[:contact_id]}", rule[:id])
         redis.hmset("notification_rule:#{rule[:id]}", *rule.flatten)
         self.new(rule, :redis => redis)
       end
