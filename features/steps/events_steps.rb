@@ -1,11 +1,5 @@
 #!/usr/bin/env ruby
 
-#require 'flapjack/data/entity_check'
-#require 'flapjack/data/event'
-#require 'delorean'
-#require 'chronic'
-#require 'ice_cube'
-
 def drain_events
   loop do
     event = Flapjack::Data::Event.next(:block => false, :redis => @redis)
@@ -274,9 +268,7 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
         time_restrictions << weekdays_8_18.to_hash
       end
     end
-
-    Flapjack::Data::NotificationRule.add({:id                 => rule['id'],
-                                          :contact_id         => contact_id,
+    Flapjack::Data::NotificationRule.add({:contact_id         => contact_id,
                                           :entities           => entities,
                                           :entity_tags        => entity_tags,
                                           :warning_media      => warning_media,

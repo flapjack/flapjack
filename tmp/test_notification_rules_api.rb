@@ -158,11 +158,10 @@ class Foo
 
   do_get("/notification_rules/#{rule_id}")
   do_put("/notification_rules/#{rule_id}", test_rule)
-  do_delete("/notification_rules/#{rule_id}")
   do_delete("/contacts/21/media/email")
   do_put("/contacts/21/media/email", test_email)
-  do_put("/contacts/21/timezone", test_timezone)
   do_delete("/contacts/21/timezone")
+  do_put("/contacts/21/timezone", test_timezone)
 
   puts "\nSummary:\n"
   puts @summary

@@ -291,9 +291,11 @@ module Flapjack
 
       # delete any media that doesn't meet severity<->media constraints
       tuple = tuple.find_all do |message, matchers, options|
+        severity = message.notification.event.state
         options[:no_rules_for_contact] ||
           matchers.any? {|matcher|
-            matcher.media_for_severity(message.notification.event.state).include?(message.medium)
+            matcher.media_for_severity(severity).include?(message.medium) ||
+              (@logger.warn("got nil for matcher.media_for_severity(#{severity}), matcher: #{matcher.inspect}") && false)
           }
       end
 
