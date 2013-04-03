@@ -67,11 +67,7 @@ module Flapjack
         @redis.del("notification_rule:#{self.id}")
       end
 
-      def to_json(opts = {})
-        if opts[:root]
-          # { notification_rule: {...} }
-        end
-
+      def to_json(*args)
         (Hash[ *([:id, :contact_id, :entity_tags, :entities,
           :time_restrictions, :warning_media, :critical_media,
           :warning_blackhole, :critical_blackhole].collect {|k|

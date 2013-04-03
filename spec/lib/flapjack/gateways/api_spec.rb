@@ -488,7 +488,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
     # symbolize the keys
     notification_rule_data_sym =
-      Hash[ *((notification_rule_data.keys.collect{|k|
+      Hash[ *((notification_rule_data.merge('id' => notification_rule.id).keys.collect{|k|
           k.to_sym
         }.zip(notification_rule_data.values)).flatten(1)) ]
 
@@ -635,13 +635,11 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "deletes a media of a contact" do
     contact.should_receive(:remove_media).with('sms')
-    contact.should_receive(:media_list).and_return(media.keys - ['sms'])
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :redis => redis).and_return(contact)
 
     delete "/contacts/#{contact.id}/media/sms"
-    last_response.should be_ok
-    last_response.body.should be_json_eql( (media.keys - ['sms']).to_json )
+    last_response.status.should == 204
   end
 
   it "does not delete a media of a contact that's not present" do
