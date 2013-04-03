@@ -338,11 +338,7 @@ module Flapjack
       # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
       get '/contacts' do
         content_type :json
-        '[' <<
-          Flapjack::Data::Contact.all(:redis => redis).map {|contact|
-            contact.to_json
-          }.join(', ') <<
-        ']'
+        Flapjack::Data::Contact.all(:redis => redis).to_json
       end
 
       # Returns the core information about the specified contact
@@ -436,7 +432,7 @@ module Flapjack
           return
         end
 
-       rule_data = Hash[ *([:contact_id, :entities, :entity_tags,
+       rule_data = Hash[ *([:id, :contact_id, :entities, :entity_tags,
             :warning_media, :critical_media, :time_restrictions,
             :warning_blackhole, :critical_blackhole].collect {|k|
             [k, params[k]]
@@ -467,7 +463,10 @@ module Flapjack
           status 404
           return
         end
-        contact.media_list.to_json
+        Hash[ *(contact.media_list.collect {|m|
+          [m, {'address'  => contact.media[m],
+               'interval' => contact.media_intervals[m] }]
+          }).flatten(1)].to_json
       end
 
       # Returns the specified media of a contact
@@ -496,8 +495,7 @@ module Flapjack
           status 404
           return
         end
-        if params[:address].nil? || params[:address].empty? ||
-          params[:interval].nil? || params[:interval].empty?
+        if params[:address].nil? || params[:interval].nil?
           status 403
           return
         end
@@ -516,7 +514,7 @@ module Flapjack
           return
         end
         contact.remove_media(params[:media_id])
-        contact.media_list.to_json
+        status 204
       end
 
       # Returns the timezone of a contact

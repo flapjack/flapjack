@@ -271,12 +271,12 @@ module Flapjack
         end
       end
 
-      def as_json(opts = {})
+      def to_json(opts = {})
         { "id"         => self.id,
           "first_name" => self.first_name,
           "last_name"  => self.last_name,
           "email"      => self.email,
-          "tags"       => self.tags.to_a }
+          "tags"       => self.tags.to_a }.to_json
       end
 
     private
