@@ -256,18 +256,12 @@ module Flapjack
         matchers = rules.find_all do |rule|
           rule.match_entity?(event_id) && rule.match_time?
         end
-        if not rules.empty?
-          [message, matchers, options]
-        else
-          #matchers.empty? ? nil : [message, matchers, options]
-          [message, matchers, options]
-        end
+        [message, matchers, options]
       end
 
       # matchers are rules of the contact that have matched the current event
       # for time and entity
 
-      tuple.compact!
       @logger.debug "apply_notification_rules: num messages after entity and time matching: #{tuple.size}"
 
       # delete the matcher for all entities if there are more specific matchers
@@ -297,21 +291,13 @@ module Flapjack
 
       # delete any media that doesn't meet severity<->media constraints
       tuple = tuple.find_all do |message, matchers, options|
-        if not options[:no_rules_for_contact]
-          severity = message.notification.event.state
-          matchers.any? do |matcher|
-            mfs = matcher.media_for_severity(severity)
-            unless mfs
-              @logger.warn "got nil for matcher.media_for_severity(#{severity}), matcher: #{matcher.inspect}"
-            else
-              mfs.include?(message.medium) ? matcher : nil
-            end
-          end
-        else
-          true
-        end
+        severity = message.notification.event.state
+        options[:no_rules_for_contact] ||
+          matchers.any? {|matcher|
+            matcher.media_for_severity(severity).include?(message.medium) ||
+              (@logger.warn("got nil for matcher.media_for_severity(#{severity}), matcher: #{matcher.inspect}") && false)
+          }
       end
-      tuple.compact!
 
       @logger.debug "apply_notification_rules: num messages after severity-media constraints: #{tuple.size}"
 

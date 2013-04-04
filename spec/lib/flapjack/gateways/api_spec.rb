@@ -1,8 +1,7 @@
 require 'spec_helper'
 require 'flapjack/gateways/api'
-require 'json_spec'
 
-describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
+describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => true do
 
   def app
     Flapjack::Gateways::API
@@ -15,61 +14,54 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
   let(:entity_name_esc) { URI.escape(entity_name) }
   let(:check)           { 'ping' }
 
-  let(:contact)            { mock(Flapjack::Data::Contact) }
-  let(:contact_id)         { '21' }
-  let(:contact_core)       { {
-    :id         => "21",
-    :first_name => "Ada",
-    :last_name  => "Lovelace",
-    :email      => "ada@example.com",
-    :tags       => ["legend", "first computer programmer"]
-  } }
-  let(:contact_media_list) { [ 'email', 'sms' ] }
+  let(:contact)         { mock(Flapjack::Data::Contact, :id => '21') }
+  let(:contact_core)    {
+    {'id'         => contact.id,
+     'first_name' => "Ada",
+     'last_name'  => "Lovelace",
+     'email'      => "ada@example.com",
+     'tags'       => ["legend", "first computer programmer"]
+    }
+  }
 
-  let(:notification_rule) { mock(Flapjack::Data::NotificationRule) }
+  let(:media) {
+    {'email' => 'ada@example.com',
+     'sms'   => '04123456789'
+    }
+  }
+
+  let(:media_intervals) {
+    {'email' => 500,
+     'sms'   => 300
+    }
+  }
 
   let(:entity_presenter)       { mock(Flapjack::Gateways::API::EntityPresenter) }
   let(:entity_check_presenter) { mock(Flapjack::Gateways::API::EntityCheckPresenter) }
 
   let(:redis)           { mock(::Redis) }
 
-  let(:notification_rule_1) {
-    nr = mock("notification_rule")
-    nr.stub(:id) { '1' }
-    nr.stub(:contact_id) { '21' }
-    nr.stub(:to_json) { '{ }' }
-    nr
+  let(:notification_rule) {
+    mock(Flapjack::Data::NotificationRule, :id => '1', :contact_id => '21')
   }
-  let(:notification_rule_2) {
-    nr = mock("notification_rule")
-    nr.stub(:id) { '2' }
-    nr.stub(:contact_id) { '21' }
-    nr
+
+  let(:notification_rule_data) {
+    {"contact_id"         => "21",
+     "entity_tags"        => ["database","physical"],
+     "entities"           => ["foo-app-01.example.com"],
+     "time_restrictions"  => nil,
+     "warning_media"      => ["email"],
+     "critical_media"     => ["sms", "email"],
+     "warning_blackhole"  => false,
+     "critical_blackhole" => false
+    }
   }
-  let(:notification_rules) { [ notification_rule_1, notification_rule_2 ] }
 
-  let(:notification_rules_old) { [{
-    :contact_id         => "21",
-    :entity_tags        => [ "database", "physical" ],
-    :entities           => [ "foo-app-01.example.com" ],
-    :time_restrictions  => [ { "TODO" => "TODO" } ],
-    :warning_media      => [ "email" ],
-    :critical_media     => [ "sms", "email" ],
-    :warning_blackhole  => false,
-    :critical_blackhole => false
-  },
-  {
-    :contact_id         => "21",
-    :entity_tags        => [ ],
-    :entities           => [ "foo-app-02.example.com" ],
-    :time_restrictions  => [ { "TODO" => "TODO" } ],
-    :warning_media      => [ ],
-    :critical_media     => [ "email" ],
-    :warning_blackhole  => true,
-    :critical_blackhole => false
-  }] }
-
-  let(:notification_rules_ids) { ["1", "2"] }
+  before(:all) do
+    Flapjack::Gateways::API.instance_variable_get('@middleware').delete_if {|m|
+      m[0] == Rack::FiberPool
+    }
+  end
 
   before(:each) do
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
@@ -380,75 +372,345 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
     last_response.status.should == 200
   end
 
-  # TODO
-  it "returns all the contacts"
+  it "returns all the contacts" do
+    contact.should_receive(:to_json).and_return(contact_core.to_json)
+    Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).
+      and_return([contact])
+
+    get '/contacts'
+    last_response.should be_ok
+    last_response.body.should be_json_eql([contact_core].to_json)
+  end
 
   it "returns the core information of a specified contact" do
+    contact.should_receive(:to_json).and_return(contact_core.to_json)
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact_id, :redis => redis).and_return(contact)
-    contact.should_receive(:as_json).and_return(contact_core.to_json)
+      with(contact.id, :redis => redis).and_return(contact)
 
-    get "/contacts/#{contact_id}"
+    get "/contacts/#{contact.id}"
     last_response.should be_ok
     last_response.body.should be_json_eql(contact_core.to_json)
   end
 
-  it "lists the IDs of a contact's notification rules" do
+  it "does not return information for a contact that does not exist" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact_id, :redis => redis).and_return(contact)
-    contact.should_receive(:notification_rules).and_return(notification_rules)
+      with(contact.id, :redis => redis).and_return(nil)
 
-    get "/contacts/#{contact_id}/notification_rules"
+    get "/contacts/#{contact.id}"
+    last_response.should be_not_found
+  end
+
+  it "lists a contact's notification rules" do
+    notification_rule_2 = mock(Flapjack::Data::NotificationRule, :id => '2', :contact_id => '21')
+    notification_rule.should_receive(:to_json).and_return('"rule_1"')
+    notification_rule_2.should_receive(:to_json).and_return('"rule_2"')
+    notification_rules = [ notification_rule, notification_rule_2 ]
+
+    contact.should_receive(:notification_rules).and_return(notification_rules)
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    get "/contacts/#{contact.id}/notification_rules"
     last_response.should be_ok
-    last_response.body.should be_json_eql(notification_rules_ids.to_json)
+    last_response.body.should be_json_eql( '["rule_1", "rule_2"]' )
+  end
+
+  it "does not list notification rules for a contact that does not exist" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    get "/contacts/#{contact.id}/notification_rules"
+    last_response.should be_not_found
   end
 
   it "returns a specified notification rule" do
-    rule_id = notification_rules.first.id
+    notification_rule.should_receive(:to_json).and_return('"rule_1"')
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
-      with(rule_id, :redis => redis).and_return(notification_rule)
-    notification_rule.should_receive(:as_json).and_return(notification_rule_1.to_json)
+      with(notification_rule.id, :redis => redis).and_return(notification_rule)
 
-    get "/notification_rules/#{rule_id}"
+    get "/notification_rules/#{notification_rule.id}"
     last_response.should be_ok
-    last_response.body.should be_json_eql(notification_rule_1.to_json)
+    last_response.body.should be_json_eql('"rule_1"')
   end
 
-  # TODO
+  it "does not return a notification rule that does not exist" do
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
+      with(notification_rule.id, :redis => redis).and_return(nil)
+
+    get "/notification_rules/#{notification_rule.id}"
+    last_response.should be_not_found
+  end
+
   # POST /notification_rules
-  it "creates a new notification rule"
-
-  # TODO
-  # PUT, DELETE /notification_rules/RULE_ID
-  it "updates a notification rule"
-
-  it "deletes a notification rule"
-
-  it "returns the media of a contact" do
-    result_json = contact_media_list.to_json
+  it "creates a new notification rule" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact_id, :redis => redis).and_return(contact)
-    contact.should_receive(:media_list).and_return(contact_media_list)
+      with(contact.id, :redis => redis).and_return(contact)
+    notification_rule.should_receive(:to_json).and_return('"rule_1"')
 
-    get "/contacts/#{contact_id}/media"
+    # symbolize the keys
+    notification_rule_data_sym =
+      Hash[ *((notification_rule_data.keys.collect{|k|
+          k.to_sym
+        }.zip(notification_rule_data.values)).flatten(1)) ]
+
+    Flapjack::Data::NotificationRule.should_receive(:add).
+      with(notification_rule_data_sym, :redis => redis).and_return(notification_rule)
+
+    post "/notification_rules", notification_rule_data.to_json,
+      {'CONTENT_TYPE' => 'application/json'}
     last_response.should be_ok
-    last_response.body.should be_json_eql(result_json)
+    last_response.body.should be_json_eql('"rule_1"')
   end
 
-  # TODO
+  it "does not create a notification_rule for a contact that's not present" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    post "/notification_rules", notification_rule_data.to_json,
+      {'CONTENT_TYPE' => 'application/json'}
+    last_response.should be_not_found
+  end
+
+  it "does not create a notification_rule if a rule id is provided" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    post "/notification_rules", notification_rule_data.merge(:id => 1).to_json,
+      {'CONTENT_TYPE' => 'application/json'}
+    last_response.status.should == 403
+  end
+
+  # PUT /notification_rules/RULE_ID
+  it "updates a notification rule" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+    notification_rule.should_receive(:to_json).and_return('"rule_1"')
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
+      with(notification_rule.id, :redis => redis).and_return(notification_rule)
+
+    # symbolize the keys
+    notification_rule_data_sym =
+      Hash[ *((notification_rule_data.merge('id' => notification_rule.id).keys.collect{|k|
+          k.to_sym
+        }.zip(notification_rule_data.values)).flatten(1)) ]
+
+    Flapjack::Data::NotificationRule.should_receive(:update).
+      with(notification_rule_data_sym, :redis => redis).and_return(notification_rule)
+
+    put "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
+      {'CONTENT_TYPE' => 'application/json'}
+    last_response.should be_ok
+    last_response.body.should be_json_eql('"rule_1"')
+  end
+
+  it "does not update a notification rule that's not present" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
+      with(notification_rule.id, :redis => redis).and_return(nil)
+
+    put "/notification_rules/#{notification_rule.id}", notification_rule_data
+    last_response.should be_not_found
+  end
+
+  it "does not update a notification_rule for a contact that's not present" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    put "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
+      {'CONTENT_TYPE' => 'application/json'}
+    last_response.should be_not_found
+  end
+
+  # DELETE /notification_rules/RULE_ID
+  it "deletes a notification rule" do
+    notification_rule.should_receive(:delete!)
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
+      with(notification_rule.id, :redis => redis).and_return(notification_rule)
+
+    delete "/notification_rules/#{notification_rule.id}"
+    last_response.status.should == 204
+  end
+
+  it "does not delete a notification rule that's not present" do
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
+      with(notification_rule.id, :redis => redis).and_return(nil)
+
+    delete "/notification_rules/#{notification_rule.id}"
+    last_response.should be_not_found
+  end
+
+  # GET /contacts/CONTACT_ID/media
+  it "returns the media of a contact" do
+    contact.should_receive(:media).and_return(media)
+    contact.should_receive(:media_intervals).and_return(media_intervals)
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+    result = Hash[ *(media.keys.collect {|m|
+      [m, {'address'  => media[m],
+           'interval' => media_intervals[m] }]
+      }).flatten(1)].to_json
+
+    get "/contacts/#{contact.id}/media"
+    last_response.should be_ok
+    last_response.body.should be_json_eql(result)
+  end
+
+  it "does not return the media of a contact if the contact is not present" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    get "/contacts/#{contact.id}/media"
+    last_response.should be_not_found
+  end
+
   # GET /contacts/CONTACT_ID/media/MEDIA
-  it "returns the specified media of a contact"
+  it "returns the specified media of a contact" do
+    contact.should_receive(:media).twice.and_return(media)
+    contact.should_receive(:media_intervals).and_return(media_intervals)
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    result = {'address' => media['sms'], 'interval' => media_intervals['sms']}
+
+    get "/contacts/#{contact.id}/media/sms"
+    last_response.should be_ok
+    last_response.body.should be_json_eql(result.to_json)
+  end
+
+  it "does not return the media of a contact if the contact is not present" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    get "/contacts/#{contact.id}/media/sms"
+    last_response.should be_not_found
+  end
+
+  it "does not return the media of a contact if the media is not present" do
+    contact.should_receive(:media).and_return(media)
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    get "/contacts/#{contact.id}/media/telepathy"
+    last_response.should be_not_found
+  end
 
   # PUT, DELETE /contacts/CONTACT_ID/media/MEDIA
-  it "creates a media of a contact"
-  it "updates a media of a contact"
-  it "deletes a media of a contact"
+  it "creates/updates a media of a contact" do
+    # as far as API is concerned these are the same -- contact.rb spec test
+    # may distinguish between them
+    alt_media = media.merge('sms' => '04987654321')
+    alt_media_intervals = media_intervals.merge('sms' => '200')
+
+    contact.should_receive(:set_address_for_media).with('sms', '04987654321')
+    contact.should_receive(:set_interval_for_media).with('sms', '200')
+    contact.should_receive(:media).and_return(alt_media)
+    contact.should_receive(:media_intervals).and_return(alt_media_intervals)
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    result = {'address' => alt_media['sms'], 'interval' => alt_media_intervals['sms']}
+
+    put "/contacts/#{contact.id}/media/sms", {:address => '04987654321', :interval => '200'}
+    last_response.should be_ok
+    last_response.body.should be_json_eql(result.to_json)
+  end
+
+  it "does not create a media of a contact that's not present" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    put "/contacts/#{contact.id}/media/sms", {:address => '04987654321', :interval => '200'}
+    last_response.should be_not_found
+  end
+
+  it "does not create a media of a contact if no address is provided" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    put "/contacts/#{contact.id}/media/sms", {:interval => '200'}
+    last_response.should be_forbidden
+  end
+
+  it "does not create a media of a contact if no interval is provided" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    put "/contacts/#{contact.id}/media/sms", {:address => '04987654321'}
+    last_response.should be_forbidden
+  end
+
+  it "deletes a media of a contact" do
+    contact.should_receive(:remove_media).with('sms')
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    delete "/contacts/#{contact.id}/media/sms"
+    last_response.status.should == 204
+  end
+
+  it "does not delete a media of a contact that's not present" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    delete "/contacts/#{contact.id}/media/sms"
+    last_response.should be_not_found
+  end
 
   # GET /contacts/CONTACT_ID/timezone
-  it "returns the timezone of a contact"
+  it "returns the timezone of a contact" do
+    contact.should_receive(:timezone).and_return('Australia/Sydney')
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
 
-  # PUT, DELETE /contacts/CONTACT_ID/timezone
-  it "sets the timezone of a contact"
-  it "deletes the timezone of a contact"
+    get "/contacts/#{contact.id}/timezone"
+    last_response.should be_ok
+    last_response.body.should be_json_eql('"Australia/Sydney"')
+  end
+
+  it "doesn't get the timezone of a contact that doesn't exist" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    get "/contacts/#{contact.id}/timezone"
+    last_response.should be_not_found
+  end
+
+  # PUT /contacts/CONTACT_ID/timezone
+  it "sets the timezone of a contact" do
+    contact.should_receive(:timezone=).with('Australia/Perth')
+    contact.should_receive(:timezone).and_return('Australia/Perth')
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    put "/contacts/#{contact.id}/timezone", {:timezone => 'Australia/Perth'}
+    last_response.should be_ok
+  end
+
+  it "doesn't set the timezone of a contact who can't be found" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    put "/contacts/#{contact.id}/timezone", {:timezone => 'Australia/Perth'}
+    last_response.should be_not_found
+  end
+
+  # DELETE /contacts/CONTACT_ID/timezone
+  it "deletes the timezone of a contact" do
+    contact.should_receive(:timezone=).with(nil)
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    delete "/contacts/#{contact.id}/timezone"
+    last_response.status.should == 204
+  end
+
+  it "does not delete the timezone of a contact that's not present" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    delete "/contacts/#{contact.id}/timezone"
+    last_response.should be_not_found
+  end
 
 end
