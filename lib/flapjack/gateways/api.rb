@@ -463,9 +463,11 @@ module Flapjack
           status 404
           return
         end
-        Hash[ *(contact.media_list.collect {|m|
-          [m, {'address'  => contact.media[m],
-               'interval' => contact.media_intervals[m] }]
+        media = contact.media
+        media_intervals = contact.media_intervals
+        Hash[ *(media.keys.collect {|m|
+          [m, {'address'  => media[m],
+               'interval' => media_intervals[m] }]
           }).flatten(1)].to_json
       end
 

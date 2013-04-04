@@ -58,7 +58,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   }
 
   before(:all) do
-    Flapjack::Gateways::API.instance_variable_get('@middleware').unshift [AsyncMiddleware, nil, nil]
+    Flapjack::Gateways::API.instance_variable_get('@middleware').delete_if {|m|
+      m[0] == Rack::FiberPool
+    }
   end
 
   before(:each) do
@@ -400,8 +402,8 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "lists a contact's notification rules" do
     notification_rule_2 = mock(Flapjack::Data::NotificationRule, :id => '2', :contact_id => '21')
-    notification_rule.should_receive(:to_json).and_return("rule_1")
-    notification_rule_2.should_receive(:to_json).and_return("rule_2")
+    notification_rule.should_receive(:to_json).and_return('"rule_1"')
+    notification_rule_2.should_receive(:to_json).and_return('"rule_2"')
     notification_rules = [ notification_rule, notification_rule_2 ]
 
     contact.should_receive(:notification_rules).and_return(notification_rules)
@@ -422,7 +424,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   it "returns a specified notification rule" do
-    notification_rule.should_receive(:to_json).and_return("rule_1")
+    notification_rule.should_receive(:to_json).and_return('"rule_1"')
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id, :redis => redis).and_return(notification_rule)
 
@@ -443,7 +445,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "creates a new notification rule" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :redis => redis).and_return(contact)
-    notification_rule.should_receive(:to_json).and_return("rule_1")
+    notification_rule.should_receive(:to_json).and_return('"rule_1"')
 
     # symbolize the keys
     notification_rule_data_sym =
@@ -482,7 +484,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "updates a notification rule" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :redis => redis).and_return(contact)
-    notification_rule.should_receive(:to_json).and_return("rule_1")
+    notification_rule.should_receive(:to_json).and_return('"rule_1"')
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id, :redis => redis).and_return(notification_rule)
 
@@ -540,13 +542,18 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   # GET /contacts/CONTACT_ID/media
   it "returns the media of a contact" do
-    contact.should_receive(:media_list).and_return(media.keys)
+    contact.should_receive(:media).and_return(media)
+    contact.should_receive(:media_intervals).and_return(media_intervals)
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :redis => redis).and_return(contact)
+    result = Hash[ *(media.keys.collect {|m|
+      [m, {'address'  => media[m],
+           'interval' => media_intervals[m] }]
+      }).flatten(1)].to_json
 
     get "/contacts/#{contact.id}/media"
     last_response.should be_ok
-    last_response.body.should be_json_eql(media.keys.to_json)
+    last_response.body.should be_json_eql(result)
   end
 
   it "does not return the media of a contact if the contact is not present" do

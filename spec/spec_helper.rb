@@ -9,6 +9,8 @@ end
 $testing = true
 
 FLAPJACK_ENV = ENV["FLAPJACK_ENV"] || 'test'
+ENV['RACK_ENV'] = ENV["FLAPJACK_ENV"]
+
 require 'bundler'
 Bundler.require(:default, :test)
 
@@ -84,24 +86,6 @@ RSpec.configure do |config|
     #messages = @logger.messages.compact
     #p "logger: " + messages.join(", ") unless messages.empty?
     @logger.messages.clear
-  end
-
-  # hackery for async sinatra testing
-  # must be prepended to the middleware chain, to run outside rack_fiber-pool
-  class AsyncMiddleware < Struct.new(:app)
-    def call(env)
-      env['async.callback'] = proc {|result| result}
-      app.call(env)
-    end
-  end
-
-  config.around(:each, :sinatra => true) do |example|
-    EM.synchrony do
-      catch(:async) {
-        example.run
-      }
-      EM.stop
-    end
   end
 
   config.after(:each, :time => true) do
