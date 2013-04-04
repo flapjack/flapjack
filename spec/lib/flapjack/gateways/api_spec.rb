@@ -493,10 +493,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
     # symbolize the keys
     notification_rule_data_sym =
-      Hash[ *((notification_rule_data.merge('id' => notification_rule.id).keys.collect{|k|
-      #Hash[ *((notification_rule_data.keys.collect{|k|
+      Hash[ *(((notification_rule_data.keys << 'id').collect{|k|
           k.to_sym
-        }.zip(notification_rule_data.values)).flatten(1)) ]
+        }.zip(notification_rule_data.values << notification_rule.id)).flatten(1)) ]
 
     Flapjack::Data::NotificationRule.should_receive(:update).
       with(notification_rule_data_sym, :redis => redis).and_return(notification_rule)
