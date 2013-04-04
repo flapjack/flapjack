@@ -61,6 +61,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Gateways::API.instance_variable_get('@middleware').delete_if {|m|
       m[0] == Rack::FiberPool
     }
+    Flapjack::Gateways::API.class_eval {
+      set :raise_errors, true
+    }
   end
 
   before(:each) do
@@ -491,6 +494,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     # symbolize the keys
     notification_rule_data_sym =
       Hash[ *((notification_rule_data.merge('id' => notification_rule.id).keys.collect{|k|
+      #Hash[ *((notification_rule_data.keys.collect{|k|
           k.to_sym
         }.zip(notification_rule_data.values)).flatten(1)) ]
 
