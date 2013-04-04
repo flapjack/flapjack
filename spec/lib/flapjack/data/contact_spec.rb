@@ -42,12 +42,23 @@ describe Flapjack::Data::Contact, :redis => true do
     contact.name.should == "John Johnson"
   end
 
-  it "deletes all contacts" do
-    Flapjack::Data::Contact.delete_all(:redis => @redis)
+  it "deletes a contact by id, including linked entities, checks and tags" do
     contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
-    contact.should be_nil
-    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
-    contact.should be_nil
+    contact.add_tags('admin')
+
+    entity_name = 'abc-123'
+
+    Flapjack::Data::Entity.add({'id'   => '5000',
+                                'name' => entity_name,
+                                'contacts' => ['362']},
+                                :redis => @redis)
+
+    # TODO check entity has one less linked contact, once that code's done
+    expect {
+      expect {
+        Flapjack::Data::Contact.delete_by_id(contact.id, :redis => @redis)
+      }.to change { Flapjack::Data::Contact.all(:redis => @redis).size }.by(-1)
+    }.to change { @redis.smembers('contact_tag:admin').size }.by(-1)
   end
 
   it "returns a list of entities and their checks for a contact" do

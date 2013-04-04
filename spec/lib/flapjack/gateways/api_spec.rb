@@ -337,7 +337,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       ]
     }
 
-    Flapjack::Data::Contact.should_receive(:delete_all)
+    Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([])
     Flapjack::Data::Contact.should_receive(:add).twice
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
@@ -345,7 +345,6 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   it "does not create contacts if the data is improperly formatted" do
-    Flapjack::Data::Contact.should_not_receive(:delete_all)
     Flapjack::Data::Contact.should_not_receive(:add)
 
     post "/contacts", {'contacts' => ["Hello", "again"]}.to_json,
@@ -368,8 +367,56 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       ]
     }
 
-    Flapjack::Data::Contact.should_receive(:delete_all)
+    Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([])
     Flapjack::Data::Contact.should_receive(:add)
+
+    post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    last_response.status.should == 200
+  end
+
+  it "updates a contact if it is already present" do
+    contacts = {'contacts' =>
+      [{"id" => "0362",
+        "first_name" => "John",
+        "last_name" => "Smith",
+        "email" => "johns@example.dom",
+        "media" => {"email"  => "johns@example.dom",
+                    "jabber" => "johns@conference.localhost"}},
+       {"id" => "0363",
+        "first_name" => "Jane",
+        "last_name" => "Jones",
+        "email" => "jane@example.dom",
+        "media" => {"email" => "jane@example.dom"}}
+      ]
+    }
+
+    existing = mock(Flapjack::Data::Contact)
+    existing.should_receive(:id).and_return("0363")
+
+    Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([existing])
+    Flapjack::Data::Contact.should_receive(:add).with(contacts['contacts'][0], :redis => redis)
+    Flapjack::Data::Contact.should_receive(:update).with(contacts['contacts'][1], :redis => redis)
+
+    post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    last_response.status.should == 200
+  end
+
+  it "deletes a contact not found in a bulk update list" do
+    contacts = {'contacts' =>
+      [{"id" => "0363",
+        "first_name" => "Jane",
+        "last_name" => "Jones",
+        "email" => "jane@example.dom",
+        "media" => {"email" => "jane@example.dom"}}
+      ]
+    }
+
+    existing = mock(Flapjack::Data::Contact)
+    existing.should_receive(:id).and_return("0362")
+
+    Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([existing])
+    Flapjack::Data::Contact.should_receive(:delete_by_id).with("0362", :redis => redis)
+    Flapjack::Data::Contact.should_receive(:add).with(contacts['contacts'][0], :redis => redis)
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 200

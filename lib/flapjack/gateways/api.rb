@@ -309,29 +309,34 @@ module Flapjack
         content_type :json
 
         errors = []
-        ret = nil
 
-        contacts = params[:contacts]
-        if contacts && contacts.is_a?(Enumerable) && contacts.any? {|c| !c['id'].nil?}
-
-          # TODO: perhaps instead of deleting all we should just delete the contacts
-          # that are not present in the POST, as this would allow tighter cleanup of
-          # linked notification rules (and anything else linked that is not present
-          # in this POST)
-          Flapjack::Data::Contact.delete_all(:redis => redis)
-          contacts.each do |contact|
-            unless contact['id']
-              logger.warn "Contact not imported as it has no id: #{contact.inspect}"
-              next
-            end
-            Flapjack::Data::Contact.add(contact, :redis => redis)
-          end
-          ret = 200
-        else
-          ret = 403
+        contacts_data = params[:contacts]
+        if contacts_data.nil? || !contacts_data.is_a?(Enumerable)
           errors << "No valid contacts were submitted"
+        else
+          contacts_data_ids = contacts_data.collect {|c| c['id'] }.compact
+          if contacts_data_ids.empty?
+            errors << "No contacts with IDs were submitted"
+          else
+            contacts = Flapjack::Data::Contact.all(:redis => redis)
+            contacts_ids = contacts.map(&:id)
+
+            # delete contacts not found in the bulk list
+            (contacts_ids - contacts_data_ids).each do |contact_to_delete_id|
+              Flapjack::Data::Contact.delete_by_id(contact_to_delete_id, :redis => redis)
+            end
+
+            # add or update contacts found in the bulk list
+            contacts_data.select {|cd| !cd['id'].nil? }.each do |contact_data|
+              if contacts_ids.include?(contact_data['id'])
+                Flapjack::Data::Contact.update(contact_data, :redis => redis)
+              else
+                Flapjack::Data::Contact.add(contact_data, :redis => redis)
+              end
+            end
+          end
         end
-        errors.empty? ? ret : [ret, {}, {:errors => [errors]}.to_json]
+        errors.empty? ? 200 : [403, {}, {:errors => [errors]}.to_json]
       end
 
       # Returns all the contacts

@@ -33,17 +33,22 @@ module Flapjack
         }.sort_by {|c| [c.last_name, c.first_name]}
       end
 
-      def self.delete_all(options = {})
+      def self.delete_by_id(contact_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
+        return unless contact = self.find_by_id(contact_id, :redis => redis)
 
-        keys_to_delete = redis.keys("contact:*") +
-                         redis.keys("contact_media:*") +
-                         # FIXME: when we do source tagging we can properly
-                         # clean up contacts_for: keys
-                         # redis.keys('contacts_for:*') +
-                         redis.keys("contact_pagerduty:*")
+        # NB ideally contacts_for:* keys would scope the entity and check by an
+        # input source, for namespacing purposes
 
-        redis.del(keys_to_delete) unless keys_to_delete.length == 0
+        # TODO check contacts_for:ENTITY and contacts_for:ENTITY::CHECK
+        # p contact.entities_and_checks
+
+        # remove this contact from all tags it's marked with
+        contact.delete_tags(*contact.tags.to_a)
+
+        redis.del("contact:#{contact_id}", "contact_media:#{contact_id}",
+                  "contact_media_intervals:#{contact_id}",
+                  "contact_tz:#{contact_id}", "contact_pagerduty:#{contact_id}")
       end
 
       def self.find_by_id(contact_id, options = {})
@@ -71,35 +76,19 @@ module Flapjack
                  :redis                 => redis )
       end
 
-
-      # NB: should probably be called in the context of a Redis multi block; not doing so
-      # here as calling classes may well be adding/updating multiple records in the one
-      # operation
-      # TODO maybe return the instantiated Contact record?
-      def self.add(contact, options = {})
+      def self.add(contact_data, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        redis.del("contact:#{contact['id']}",
-                  "contact_media:#{contact['id']}",
-                  "contact_pagerduty:#{contact['id']}")
-
-        redis.hmset("contact:#{contact['id']}",
-                    *['first_name', 'last_name', 'email'].collect {|f| [f, contact[f]]})
-
-        unless contact['media'].nil?
-          contact['media'].each_pair {|medium, address|
-            case medium
-            when 'pagerduty'
-              redis.hset("contact_media:#{contact['id']}", medium, address['service_key'])
-              redis.hmset("contact_pagerduty:#{contact['id']}",
-                          *['subdomain', 'username', 'password'].collect {|f| [f, address[f]]})
-            else
-              redis.hset("contact_media:#{contact['id']}", medium, address)
-            end
-          }
-        end
+        self.add_or_update(contact_data, :add => true, :redis => redis)
+        self.find_by_id(contact_data['id'], :redis => redis)
       end
 
+      def self.update(contact_data, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        self.add_or_update(contact_data, :add => true, :redis => redis)
+        self.find_by_id(contact_data['id'], :redis => redis)
+      end
 
       def pagerduty_credentials
         return unless service_key = @redis.hget("contact_media:#{self.id}", 'pagerduty')
@@ -285,6 +274,39 @@ module Flapjack
         raise "Redis connection not set" unless @redis = options[:redis]
         [:first_name, :last_name, :email, :media, :id].each do |field|
           instance_variable_set(:"@#{field.to_s}", options[field])
+        end
+      end
+
+      # NB: should probably be called in the context of a Redis multi block; not doing so
+      # here as calling classes may well be adding/updating multiple records in the one
+      # operation
+      # TODO maybe return the instantiated Contact record?
+      def self.add_or_update(contact_data, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        contact_id = contact_data['id']
+
+        raise "Contact id value not provided" if contact_id.nil?
+
+        if options[:add]
+          self.delete_by_id(contact_id, :redis => redis)
+        end
+
+        # TODO check that the rest of this is safe for the update case
+        redis.hmset("contact:#{contact_id}",
+                    *['first_name', 'last_name', 'email'].collect {|f| [f, contact_data[f]]})
+
+        unless contact_data['media'].nil?
+          contact_data['media'].each_pair {|medium, address|
+            case medium
+            when 'pagerduty'
+              redis.hset("contact_media:#{contact_id}", medium, address['service_key'])
+              redis.hmset("contact_pagerduty:#{contact_id}",
+                          *['subdomain', 'username', 'password'].collect {|f| [f, address[f]]})
+            else
+              redis.hset("contact_media:#{contact_id}", medium, address)
+            end
+          }
         end
       end
 
