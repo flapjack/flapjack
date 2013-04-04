@@ -556,6 +556,94 @@ module Flapjack
         status 204
       end
 
+      post '/contacts/:contact_id/tags' do
+        content_type :json
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        tags = params[:tag]
+        if tags.nil? || tags.empty?
+          status 403
+          return
+        end
+        tags = [tags] unless tags.respond_to?(:each)
+        contact.add_tags(*tags)
+        contact.tags.to_json
+      end
+
+      delete '/contacts/:contact_id/tags' do
+        content_type :json
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        tags = params[:tag]
+        if tags.nil? || tags.empty?
+          status 403
+          return
+        end
+        tags = [tags] unless tags.respond_to?(:each)
+        contact.delete_tags(*tags)
+        status 204
+      end
+
+      get '/contacts/:contact_id/tags' do
+        content_type :json
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        contact.tags.to_json
+      end
+
+      post '/entities/:entity/tags' do
+        content_type :json
+        entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
+        if entity.nil?
+          status 404
+          return
+        end
+        tags = params[:tag]
+        if tags.nil? || tags.empty?
+          status 403
+          return
+        end
+        tags = [tags] unless tags.respond_to?(:each)
+        entity.add_tags(*tags)
+        entity.tags.to_json
+      end
+
+      delete '/entities/:entity/tags' do
+        content_type :json
+        entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
+        if entity.nil?
+          status 404
+          return
+        end
+        tags = params[:tag]
+        if tags.nil? || tags.empty?
+          status 403
+          return
+        end
+        tags = [tags] unless tags.respond_to?(:each)
+        entity.delete_tags(*tags)
+        status 204
+      end
+
+      get '/entities/:entity/tags' do
+        content_type :json
+        entity = Flapjack::Data::Entity.find_by_name(params[:entity], :redis => redis)
+        if entity.nil?
+          status 404
+          return
+        end
+        entity.tags.to_json
+      end
+
       not_found do
         [404, {}, {:errors => ["Not found"]}.to_json]
       end
