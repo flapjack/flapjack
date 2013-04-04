@@ -412,7 +412,7 @@ module Flapjack
 
       # Updates a notification rule
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
-      put('/notification_rules/:rule_id') do
+      put('/notification_rules/:id') do
         # # NB if parameters are correctly passed, we shouldn't mandate a request format
         # pass unless 'application/json'.eql?(request.content_type)
         content_type :json
@@ -425,9 +425,9 @@ module Flapjack
           status 404
           return
         end
-        rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
+        rule = Flapjack::Data::NotificationRule.find_by_id(params[:id], :redis => redis)
         if rule.nil?
-          logger.warn "rule not found with id #{params[:rule_id]}"
+          logger.warn "rule not found with id #{params[:id]}"
           status 404
           return
         end
@@ -444,8 +444,8 @@ module Flapjack
 
       # Deletes a notification rule
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
-      delete('/notification_rules/:rule_id') do
-        rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
+      delete('/notification_rules/:id') do
+        rule = Flapjack::Data::NotificationRule.find_by_id(params[:id], :redis => redis)
         if rule.nil?
           status 404
           return
