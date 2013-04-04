@@ -144,11 +144,10 @@ module Flapjack
 
       # return an array of the notification rules of this contact
       def notification_rules
-        rules = @redis.smembers("contact_notification_rules:#{self.id}").collect { |rule_id|
+        @redis.smembers("contact_notification_rules:#{self.id}").collect { |rule_id|
           next if (rule_id.nil? || rule_id == '')
           Flapjack::Data::NotificationRule.find_by_id(rule_id, {:redis => @redis})
         }.compact
-        rules
       end
 
       def media_intervals
@@ -257,30 +256,27 @@ module Flapjack
         tz.identifier
       end
 
-      # sets the timezone string for the contact
-      def set_timezone(tz_string)
-        begin
-          tz = ::TZInfo::Timezone.new(tz_string)
-        rescue ::TZInfo::InvalidTimezoneIdentifier
-          logger.warn("Invalid timezone requested to be set for contact #{self.id} (#{tz_string})")
-          return false
+      # sets or removes the timezone string for the contact
+      def timezone=(tz_string)
+        if tz_string.nil?
+          @redis.del("contact_tz:#{self.id}")
+        else
+          begin
+            tz = ::TZInfo::Timezone.new(tz_string)
+          rescue ::TZInfo::InvalidTimezoneIdentifier
+            logger.warn("Invalid timezone requested to be set for contact #{self.id} (#{tz_string})")
+            return false
+          end
+          @redis.set("contact_tz:#{self.id}", tz.identifier)
         end
-        @redis.set("contact_tz:#{self.id}", tz.identifier)
       end
 
-      # removes the timezone from a contact
-      def remove_timezone
-        @redis.del("contact_tz:#{self.id}")
-      end
-
-      def as_json(opts = {})
-        tags = self.tags.to_a
-        buf = { "id"         => self.id,
-                "first_name" => self.first_name,
-                "last_name"  => self.last_name,
-                "email"      => self.email,
-                "tags"       => tags }
-        buf.to_json
+      def to_json(*args)
+        { "id"         => self.id,
+          "first_name" => self.first_name,
+          "last_name"  => self.last_name,
+          "email"      => self.email,
+          "tags"       => self.tags.to_a }.to_json
       end
 
     private

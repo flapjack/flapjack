@@ -20,4 +20,5 @@ group :test do
   gem 'fuubar'
   gem 'fuubar-cucumber'
   gem 'simplecov', :require => false
+  gem 'json_spec'
 end
