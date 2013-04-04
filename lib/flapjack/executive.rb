@@ -133,7 +133,7 @@ module Flapjack
       end
 
       @logger.info("Generating notifications for event #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
-      send_notification_messages(event, entity_check)
+      generate_notification_messages(event, entity_check)
     end
 
     def update_keys(event, entity_check)
@@ -203,8 +203,8 @@ module Flapjack
     end
 
     # takes an event for which a notification needs to be generated, works out the type of
-    # notification, updates the notification history in redis, sends the notifications
-    def send_notification_messages(event, entity_check)
+    # notification, updates the notification history in redis, generates the notifications
+    def generate_notification_messages(event, entity_check)
       timestamp = Time.now.to_i
       notification_type = 'unknown'
       case event.type
@@ -224,7 +224,9 @@ module Flapjack
         end
       end
       @redis.set("#{event.id}:last_#{notification_type}_notification", timestamp)
+      @redis.set("#{event.id}:last_#{event.state}_notification", timestamp) if event.failure?
       @redis.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
+      @redis.rpush("#{event.id}:#{event.state}_notifications", timestamp) if event.failure?
       @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}.")
 
       contacts = entity_check.contacts
@@ -236,21 +238,112 @@ module Flapjack
 
       notification = Flapjack::Data::Notification.for_event(event, :type => notification_type)
 
-      notification.messages(:contacts => contacts).each do |msg|
-        media_type = msg.medium.to_sym
+      enqueue_messages( apply_notification_rules( notification.messages(:contacts => contacts) ) )
 
-        @notifylog.info("#{Time.now.to_s} | #{event.id} | " +
-          "#{notification_type} | #{msg.contact.id} | #{media_type.to_s} | #{msg.address}")
+    end
 
-        unless @queues[media_type]
+    # delete messages based on entity name(s), tags, severity, time of day
+    def apply_notification_rules(messages)
+      # first get all rules matching entity and time
+      @logger.debug "apply_notification_rules: got messages with size #{messages.size}"
+
+      # don't consider notification rules if the contact has none
+
+      tuple = messages.map do |message|
+        @logger.debug "considering message: #{message.medium} #{message.notification.event.id} #{message.notification.event.state}"
+        @logger.debug "contact_id: #{message.contact.id}"
+        rules    = message.contact.notification_rules
+        @logger.debug "found #{rules.length} rules for this message's contact"
+        event_id = message.notification.event.id
+        options  = {}
+        options[:no_rules_for_contact] = true if rules.empty?
+        # filter based on tags, severity, time of day
+        matchers = rules.find_all do |rule|
+          rule.match_entity?(event_id) && rule.match_time?
+        end
+        [message, matchers, options]
+      end
+
+      # matchers are rules of the contact that have matched the current event
+      # for time and entity
+
+      @logger.debug "apply_notification_rules: num messages after entity and time matching: #{tuple.size}"
+
+      # delete the matcher for all entities if there are more specific matchers
+      tuple = tuple.map do |message, matchers, options|
+        if matchers.length > 1
+          have_specific = matchers.detect do |matcher|
+            matcher.entities or matcher.entity_tags
+          end
+          if have_specific
+            # delete the rule for all entities
+            matchers.map! do |matcher|
+              matcher.entities.nil? and matcher.entity_tags.nil? ? nil : matcher
+            end
+          end
+        end
+        [message, matchers, options]
+      end
+
+      # delete media based on blackholes
+      tuple = tuple.find_all do |message, matchers, options|
+        severity = message.notification.event.state
+        # or use message.notification.contents['state']
+        matchers.none? {|matcher| matcher.blackhole?(severity) }
+      end
+
+      @logger.debug "apply_notification_rules: num messages after removing blackhole matches: #{tuple.size}"
+
+      # delete any media that doesn't meet severity<->media constraints
+      tuple = tuple.find_all do |message, matchers, options|
+        severity = message.notification.event.state
+        options[:no_rules_for_contact] ||
+          matchers.any? {|matcher|
+            matcher.media_for_severity(severity).include?(message.medium) ||
+              (@logger.warn("got nil for matcher.media_for_severity(#{severity}), matcher: #{matcher.inspect}") && false)
+          }
+      end
+
+      @logger.debug "apply_notification_rules: num messages after severity-media constraints: #{tuple.size}"
+
+      # delete media based on notification interval
+      tuple = tuple.find_all do |message, matchers, options|
+        not message.contact.drop_notifications?(:media => message.medium,
+                                                :check => message.notification.event.id,
+                                                :state => message.notification.event.state)
+      end
+
+      @logger.debug "apply_notification_rules: num messages after pruning for notification intervals: #{tuple.size}"
+
+      tuple.map do |message, matchers, options|
+        message
+      end
+    end
+
+    def enqueue_messages(messages)
+
+      messages.each do |message|
+        media_type = message.medium
+        contents   = message.contents
+        event_id   = message.notification.event.id
+
+        @notifylog.info("#{Time.now.to_s} | #{event_id} | " +
+          "#{message.notification.type} | #{message.contact.id} | #{media_type} | #{message.address}")
+
+        unless @queues[media_type.to_sym]
           @logger.error("no queue for media type: #{media_type}")
-          next
+          return
         end
 
-        contents = msg.contents
+        @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{message.address}")
+
+        message.contact.update_sent_alert_keys(:media => message.medium,
+                                               :check => message.notification.event.id,
+                                               :state => message.notification.event.state)
+          # drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}
 
         # TODO consider changing Resque jobs to use raw blpop like the others
-        case media_type
+        case media_type.to_sym
         when :sms
           Resque.enqueue_to(@queues[:sms], Flapjack::Gateways::SmsMessagenet, contents)
         when :email
@@ -262,9 +355,9 @@ module Flapjack
         when :pagerduty
           @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(contents))
         end
-
       end
-    end
+
+   end
 
   end
 end
