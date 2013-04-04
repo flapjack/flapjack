@@ -154,7 +154,7 @@ GEM
     rubinius-actor (0.0.2)
       rubinius-core-api
     rubinius-core-api (0.0.1)
-    ruby-prof (0.12.1)
+    ruby-prof (0.13.0)
     ruby-progressbar (1.0.2)
     simplecov (0.7.1)
       multi_json (~> 1.0)
