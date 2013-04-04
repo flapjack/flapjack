@@ -16,6 +16,12 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
   let(:redis) { mock('redis') }
 
+  before(:all) do
+    Flapjack::Gateways::Web.instance_variable_get('@middleware').delete_if {|m|
+      m[0] == Rack::FiberPool
+    }
+  end
+
   before(:each) do
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     Flapjack::Gateways::Web.instance_variable_set('@config', {})
@@ -174,6 +180,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     post "/scheduled_maintenances/#{entity_name_esc}/ping?"+
       "start_time=1+day+ago&duration=30+minutes&summary=wow"
+
     last_response.status.should == 302
   end
 

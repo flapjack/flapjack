@@ -19,28 +19,21 @@ module Flapjack
 
     class Web < Sinatra::Base
 
-      if defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
-        # expose test errors properly
-        set :raise_errors, true
-        set :show_exceptions, false
-      else
-        rescue_exception = Proc.new do |env, e|
-          if settings.show_exceptions?
-            # ensure the sinatra error page shows properly
-            request = Sinatra::Request.new(env)
-            printer = Sinatra::ShowExceptions.new(proc{ raise e })
-            s, h, b = printer.call(env)
-            [s, h, b]
-          else
-            @logger.error e.message
-            @logger.error e.backtrace.join("\n")
-            [503, {}, ""]
-          end
+      rescue_exception = Proc.new do |env, e|
+        if settings.show_exceptions?
+          # ensure the sinatra error page shows properly
+          request = Sinatra::Request.new(env)
+          printer = Sinatra::ShowExceptions.new(proc{ raise e })
+          s, h, b = printer.call(env)
+          [s, h, b]
+        else
+          @logger.error e.message
+          @logger.error e.backtrace.join("\n")
+          [503, {}, ""]
         end
-
-        # doesn't work with Rack::Test unless we wrap tests in EM.synchrony blocks
-        use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
       end
+      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+
       use Rack::MethodOverride
 
       class << self
