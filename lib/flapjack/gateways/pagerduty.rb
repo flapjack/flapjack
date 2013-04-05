@@ -37,7 +37,7 @@ module Flapjack
 
       def start
         @logger.info("starting")
-        while not test_pagerduty_connection do
+        while not test_pagerduty_connection and not @should_quit do
           @logger.error("Can't connect to the pagerduty API, retrying after 10 seconds")
           EM::Synchrony.sleep(10)
         end
