@@ -22,9 +22,7 @@ module Flapjack
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        contact_keys = redis.keys('contact:*')
-
-        contact_keys.inject([]) {|ret, k|
+        redis.keys('contact:*').inject([]) {|ret, k|
           k =~ /^contact:(\d+)$/
           id = $1
           contact = self.find_by_id(id, :redis => redis)
@@ -33,61 +31,88 @@ module Flapjack
         }.sort_by {|c| [c.last_name, c.first_name]}
       end
 
-      def self.delete_by_id(contact_id, options = {})
-        raise "Redis connection not set" unless redis = options[:redis]
-        return unless contact = self.find_by_id(contact_id, :redis => redis)
-
-        # NB ideally contacts_for:* keys would scope the entity and check by an
-        # input source, for namespacing purposes
-
-        # TODO check contacts_for:ENTITY and contacts_for:ENTITY::CHECK
-        # p contact.entities_and_checks
-
-        # remove this contact from all tags it's marked with
-        contact.delete_tags(*contact.tags.to_a)
-
-        redis.del("contact:#{contact_id}", "contact_media:#{contact_id}",
-                  "contact_media_intervals:#{contact_id}",
-                  "contact_tz:#{contact_id}", "contact_pagerduty:#{contact_id}")
-      end
-
       def self.find_by_id(contact_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         raise "No id value passed" unless contact_id
         logger = options[:logger]
 
+        # sanity check
         return unless redis.hexists("contact:#{contact_id}", 'first_name')
 
-        fn, ln, em = redis.hmget("contact:#{contact_id}", 'first_name', 'last_name', 'email')
-        media_addresses = redis.hgetall("contact_media:#{contact_id}")
-
-        # similar to code in instance method pagerduty_credentials
-        pc = nil
-        if service_key = redis.hget("contact_media:#{contact_id}", 'pagerduty')
-          pc = redis.hgetall("contact_pagerduty:#{contact_id}").merge('service_key' => service_key)
-        end
-
-        self.new(:first_name            => fn,
-                 :last_name             => ln,
-                 :email                 => em,
-                 :id                    => contact_id,
-                 :media                 => media_addresses,
-                 :pagerduty_credentials => pc,
-                 :redis                 => redis )
+        contact = self.new(:id => contact_id, :redis => redis)
+        contact.refresh
+        contact
       end
 
       def self.add(contact_data, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
+        contact_id = contact_data['id']
+        raise "Contact id value not provided" if contact_id.nil?
 
-        self.add_or_update(contact_data, :add => true, :redis => redis)
-        self.find_by_id(contact_data['id'], :redis => redis)
+        if contact = self.find_by_id(contact_id, :redis => redis)
+          contact.delete!
+        end
+
+        self.add_or_update(contact_id, contact_data, :redis => redis)
+        self.find_by_id(contact_id, :redis => redis)
       end
 
-      def self.update(contact_data, options = {})
+      def self.delete_all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        self.add_or_update(contact_data, :add => true, :redis => redis)
-        self.find_by_id(contact_data['id'], :redis => redis)
+        self.all(:redis => redis).each do |contact|
+          contact.delete!
+        end
+      end
+
+      # ensure that instance variables match redis state
+      # TODO may want to make this protected/private, it's only
+      # used in this class
+      def refresh
+        self.first_name, self.last_name, self.email =
+          @redis.hmget("contact:#{@id}", 'first_name', 'last_name', 'email')
+        self.media = @redis.hgetall("contact_media:#{@id}")
+
+        # similar to code in instance method pagerduty_credentials
+        if service_key = @redis.hget("contact_media:#{@id}", 'pagerduty')
+          self.pagerduty_credentials =
+            @redis.hgetall("contact_pagerduty:#{@id}").merge('service_key' => service_key)
+        end
+      end
+
+      def update(contact_data)
+        self.class.add_or_update(@id, contact_data, :redis => @redis)
+        self.refresh
+      end
+
+      def delete!
+        # remove entity & check registrations -- ugh, this will be slow.
+        # rather than check if the key is present we'll just request its
+        # deletion anyway, fewer round-trips
+        @redis.keys('contacts_for:*').each do |cfk|
+          @redis.srem(cfk, self.id)
+        end
+
+        @redis.del("drop_alerts_for_contact:#{self.id}")
+        dafc = @redis.keys("drop_alerts_for_contact:#{self.id}:*")
+        @redis.del(*dafc) unless dafc.empty?
+
+        # TODO if implemented, alerts_by_contact & alerts_by_check:
+        # list all alerts from all matched keys, remove them from
+        # the main alerts sorted set, remove all alerts_by sorted sets
+        # for the contact
+
+        # remove this contact from all tags it's marked with
+        self.delete_tags(*self.tags.to_a)
+
+        # remove all associated notification rules
+        self.notification_rules.each do |nr|
+          self.delete_notification_rule(nr)
+        end
+
+        @redis.del("contact:#{self.id}", "contact_media:#{self.id}",
+                   "contact_media_intervals:#{self.id}",
+                   "contact_tz:#{self.id}", "contact_pagerduty:#{self.id}")
       end
 
       def pagerduty_credentials
@@ -96,6 +121,8 @@ module Flapjack
           merge('service_key' => service_key)
       end
 
+      # NB ideally contacts_for:* keys would scope the entity and check by an
+      # input source, for namespacing purposes
       def entities_and_checks
         @redis.keys('contacts_for:*').inject({}) {|ret, k|
           if @redis.sismember(k, self.id)
@@ -137,6 +164,16 @@ module Flapjack
           next if (rule_id.nil? || rule_id == '')
           Flapjack::Data::NotificationRule.find_by_id(rule_id, {:redis => @redis})
         }.compact
+      end
+
+      def add_notification_rule(rule_data)
+        Flapjack::Data::NotificationRule.add(rule_data.merge(:contact_id => self.id),
+          :redis => @redis)
+      end
+
+      def delete_notification_rule(rule)
+        @redis.srem("contact_notification_rules:#{self.id}", rule.id)
+        @redis.del("notification_rule:#{rule.id}")
       end
 
       def media_intervals
@@ -272,25 +309,14 @@ module Flapjack
 
       def initialize(options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
-        [:first_name, :last_name, :email, :media, :id].each do |field|
-          instance_variable_set(:"@#{field.to_s}", options[field])
-        end
+        @id = options[:id]
       end
 
       # NB: should probably be called in the context of a Redis multi block; not doing so
       # here as calling classes may well be adding/updating multiple records in the one
       # operation
-      # TODO maybe return the instantiated Contact record?
-      def self.add_or_update(contact_data, options = {})
+      def self.add_or_update(contact_id, contact_data, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-
-        contact_id = contact_data['id']
-
-        raise "Contact id value not provided" if contact_id.nil?
-
-        if options[:add]
-          self.delete_by_id(contact_id, :redis => redis)
-        end
 
         # TODO check that the rest of this is safe for the update case
         redis.hmset("contact:#{contact_id}",

@@ -7,13 +7,9 @@ describe Flapjack::Data::NotificationRule do
 
   it "returns a notification rule if it exists"
 
-  it "does not return a notifivation rule if it does not exist"
-
-  it "adds a notification rule"
+  it "does not return a notification rule if it does not exist"
 
   it "updates a notification rule"
-
-  it "deletes a notification rule"
 
   it "checks whether tag or entity names match"
 
