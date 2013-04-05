@@ -10,9 +10,10 @@ module Flapjack
 
       attr_accessor :name
 
-      def initialize(opts)
+      def initialize(opts = {})
+        raise "Redis connection not set" unless @redis = opts[:redis]
+
         @name  = opts[:name]
-        @redis = opts[:redis]
         preset = @redis.smembers(@name)
         enum = opts[:create] || []
         @redis.sadd(@name, enum) unless enum.empty?

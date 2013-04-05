@@ -337,7 +337,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       ]
     }
 
-    Flapjack::Data::Contact.should_receive(:delete_all)
+    Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([])
     Flapjack::Data::Contact.should_receive(:add).twice
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
@@ -345,7 +345,6 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   it "does not create contacts if the data is improperly formatted" do
-    Flapjack::Data::Contact.should_not_receive(:delete_all)
     Flapjack::Data::Contact.should_not_receive(:add)
 
     post "/contacts", {'contacts' => ["Hello", "again"]}.to_json,
@@ -368,8 +367,56 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       ]
     }
 
-    Flapjack::Data::Contact.should_receive(:delete_all)
+    Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([])
     Flapjack::Data::Contact.should_receive(:add)
+
+    post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    last_response.status.should == 200
+  end
+
+  it "updates a contact if it is already present" do
+    contacts = {'contacts' =>
+      [{"id" => "0362",
+        "first_name" => "John",
+        "last_name" => "Smith",
+        "email" => "johns@example.dom",
+        "media" => {"email"  => "johns@example.dom",
+                    "jabber" => "johns@conference.localhost"}},
+       {"id" => "0363",
+        "first_name" => "Jane",
+        "last_name" => "Jones",
+        "email" => "jane@example.dom",
+        "media" => {"email" => "jane@example.dom"}}
+      ]
+    }
+
+    existing = mock(Flapjack::Data::Contact)
+    existing.should_receive(:id).twice.and_return("0363")
+    existing.should_receive(:update).with(contacts['contacts'][1])
+
+    Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([existing])
+    Flapjack::Data::Contact.should_receive(:add).with(contacts['contacts'][0], :redis => redis)
+
+    post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    last_response.status.should == 200
+  end
+
+  it "deletes a contact not found in a bulk update list" do
+    contacts = {'contacts' =>
+      [{"id" => "0363",
+        "first_name" => "Jane",
+        "last_name" => "Jones",
+        "email" => "jane@example.dom",
+        "media" => {"email" => "jane@example.dom"}}
+      ]
+    }
+
+    existing = mock(Flapjack::Data::Contact)
+    existing.should_receive(:id).exactly(3).times.and_return("0362")
+    existing.should_receive(:delete!)
+
+    Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([existing])
+    Flapjack::Data::Contact.should_receive(:add).with(contacts['contacts'][0], :redis => redis)
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 200
@@ -451,13 +498,13 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     notification_rule.should_receive(:to_json).and_return('"rule_1"')
 
     # symbolize the keys
-    notification_rule_data_sym =
-      Hash[ *((notification_rule_data.keys.collect{|k|
-          k.to_sym
-        }.zip(notification_rule_data.values)).flatten(1)) ]
+    notification_rule_data_sym = notification_rule_data.inject({}){|memo,(k,v)|
+      memo[k.to_sym] = v; memo
+    }
+    notification_rule_data_sym.delete(:contact_id)
 
-    Flapjack::Data::NotificationRule.should_receive(:add).
-      with(notification_rule_data_sym, :redis => redis).and_return(notification_rule)
+    contact.should_receive(:add_notification_rule).
+      with(notification_rule_data_sym).and_return(notification_rule)
 
     post "/notification_rules", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
@@ -475,6 +522,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   it "does not create a notification_rule if a rule id is provided" do
+    contact.should_not_receive(:add_notification_rule)
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :redis => redis).and_return(contact)
 
@@ -492,13 +540,12 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       with(notification_rule.id, :redis => redis).and_return(notification_rule)
 
     # symbolize the keys
-    notification_rule_data_sym =
-      Hash[ *(((notification_rule_data.keys << 'id').collect{|k|
-          k.to_sym
-        }.zip(notification_rule_data.values << notification_rule.id)).flatten(1)) ]
+    notification_rule_data_sym = notification_rule_data.inject({}){|memo,(k,v)|
+      memo[k.to_sym] = v; memo
+    }
+    notification_rule_data_sym.delete(:contact_id)
 
-    Flapjack::Data::NotificationRule.should_receive(:update).
-      with(notification_rule_data_sym, :redis => redis).and_return(notification_rule)
+    notification_rule.should_receive(:update).with(notification_rule_data_sym)
 
     put "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
@@ -527,9 +574,12 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   # DELETE /notification_rules/RULE_ID
   it "deletes a notification rule" do
-    notification_rule.should_receive(:delete!)
+    notification_rule.should_receive(:contact_id).and_return(contact.id)
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id, :redis => redis).and_return(notification_rule)
+    contact.should_receive(:delete_notification_rule).with(notification_rule)
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
 
     delete "/notification_rules/#{notification_rule.id}"
     last_response.status.should == 204
@@ -538,6 +588,17 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "does not delete a notification rule that's not present" do
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id, :redis => redis).and_return(nil)
+
+    delete "/notification_rules/#{notification_rule.id}"
+    last_response.should be_not_found
+  end
+
+  it "does not delete a notification rule if the contact is not present" do
+    notification_rule.should_receive(:contact_id).and_return(contact.id)
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
+      with(notification_rule.id, :redis => redis).and_return(notification_rule)
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
 
     delete "/notification_rules/#{notification_rule.id}"
     last_response.should be_not_found
