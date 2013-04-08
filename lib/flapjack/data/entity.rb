@@ -2,6 +2,7 @@
 
 require 'flapjack/data/contact'
 require 'flapjack/data/tag'
+require 'flapjack/data/tag_set'
 
 module Flapjack
 
@@ -110,7 +111,7 @@ module Flapjack
       end
 
       def tags
-        @tags ||= ::Set.new( @redis.keys("#{TAG_PREFIX}:*").inject([]) {|memo, entity_tag|
+        @tags ||= Flapjack::Data::TagSet.new( @redis.keys("#{TAG_PREFIX}:*").inject([]) {|memo, entity_tag|
           if Flapjack::Data::Tag.find(entity_tag, :redis => @redis).include?(@id.to_s)
             memo << entity_tag.sub(/^#{TAG_PREFIX}:/, '')
           end
