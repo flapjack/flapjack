@@ -309,29 +309,40 @@ module Flapjack
         content_type :json
 
         errors = []
-        ret = nil
 
-        contacts = params[:contacts]
-        if contacts && contacts.is_a?(Enumerable) && contacts.any? {|c| !c['id'].nil?}
-
-          # TODO: perhaps instead of deleting all we should just delete the contacts
-          # that are not present in the POST, as this would allow tighter cleanup of
-          # linked notification rules (and anything else linked that is not present
-          # in this POST)
-          Flapjack::Data::Contact.delete_all(:redis => redis)
-          contacts.each do |contact|
-            unless contact['id']
-              logger.warn "Contact not imported as it has no id: #{contact.inspect}"
-              next
-            end
-            Flapjack::Data::Contact.add(contact, :redis => redis)
-          end
-          ret = 200
-        else
-          ret = 403
+        contacts_data = params[:contacts]
+        if contacts_data.nil? || !contacts_data.is_a?(Enumerable)
           errors << "No valid contacts were submitted"
+        else
+          # stringifying as integer string params are automatically integered,
+          # but our redis ids are strings
+          contacts_data_ids = contacts_data.reject {|c| c['id'].nil? }.
+            map {|co| co['id'].to_s }
+
+          if contacts_data_ids.empty?
+            errors << "No contacts with IDs were submitted"
+          else
+            contacts = Flapjack::Data::Contact.all(:redis => redis)
+            contacts_h = Hash[ *(contacts.collect {|c| [c.id, c]}).flatten(1) ]
+            contacts_ids = contacts.map(&:id)
+
+            # delete contacts not found in the bulk list
+            (contacts_ids - contacts_data_ids).each do |contact_to_delete_id|
+              contact_to_delete = contacts.detect {|c| c.id == contact_to_delete_id }
+              contact_to_delete.delete!
+            end
+
+            # add or update contacts found in the bulk list
+            contacts_data.reject {|cd| cd['id'].nil? }.each do |contact_data|
+              if contacts_ids.include?(contact_data['id'].to_s)
+                contacts_h[contact_data['id'].to_s].update(contact_data)
+              else
+                Flapjack::Data::Contact.add(contact_data, :redis => redis)
+              end
+            end
+          end
         end
-        errors.empty? ? ret : [ret, {}, {:errors => [errors]}.to_json]
+        errors.empty? ? 200 : [403, {}, {:errors => [errors]}.to_json]
       end
 
       # Returns all the contacts
@@ -400,19 +411,19 @@ module Flapjack
           return
         end
 
-        rule_data = Hash[ *([:contact_id, :entities, :entity_tags,
+        rule_data = Hash[ *([:entities, :entity_tags,
           :warning_media, :critical_media, :time_restrictions,
           :warning_blackhole, :critical_blackhole].collect {|k|
-          [k, params[k]]
-         }).flatten(1) ]
+            [k, params[k]]
+          }).flatten(1) ]
 
-        rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => redis)
+        rule = contact.add_notification_rule(rule_data)
         rule.to_json
       end
 
       # Updates a notification rule
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
-      put('/notification_rules/:rule_id') do
+      put('/notification_rules/:id') do
         # # NB if parameters are correctly passed, we shouldn't mandate a request format
         # pass unless 'application/json'.eql?(request.content_type)
         content_type :json
@@ -425,32 +436,38 @@ module Flapjack
           status 404
           return
         end
-        rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
+        rule = Flapjack::Data::NotificationRule.find_by_id(params[:id], :redis => redis)
         if rule.nil?
-          logger.warn "rule not found with id #{params[:rule_id]}"
+          logger.warn "rule not found with id #{params[:id]}"
           status 404
           return
         end
 
-       rule_data = Hash[ *([:id, :contact_id, :entities, :entity_tags,
-            :warning_media, :critical_media, :time_restrictions,
-            :warning_blackhole, :critical_blackhole].collect {|k|
+        rule_data = Hash[ *([:entities, :entity_tags,
+          :warning_media, :critical_media, :time_restrictions,
+          :warning_blackhole, :critical_blackhole].collect {|k|
             [k, params[k]]
-           }).flatten(1) ]
+          }).flatten(1) ]
 
-        rule = Flapjack::Data::NotificationRule.update(rule_data, :redis => redis)
+        rule.update(rule_data)
         rule.to_json
       end
 
       # Deletes a notification rule
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
-      delete('/notification_rules/:rule_id') do
-        rule = Flapjack::Data::NotificationRule.find_by_id(params[:rule_id], :redis => redis)
+      delete('/notification_rules/:id') do
+        rule = Flapjack::Data::NotificationRule.find_by_id(params[:id], :redis => redis)
         if rule.nil?
           status 404
           return
         end
-        rule.delete!
+        contact = Flapjack::Data::Contact.find_by_id(rule.contact_id, :redis => redis)
+        if contact.nil?
+          logger.warn "contact not found with id #{rule.contact_id}"
+          status 404
+          return
+        end
+        contact.delete_notification_rule(rule)
         status 204
       end
 

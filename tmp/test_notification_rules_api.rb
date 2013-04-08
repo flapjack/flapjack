@@ -153,7 +153,9 @@ class Foo
     do_post(url, data)
   end
 
-  rule_id = JSON.parse(get('/contacts/21/notification_rules').body).last
+  rule = JSON.parse(get('/contacts/21/notification_rules').body).last
+  rule_id = rule['id']
+  raise RuntimeError unless rule_id
   puts "****** NOTIFICATION RULE ID TO PICK ON (PUT, DELETE) IS: #{rule_id} ******"
 
   do_get("/notification_rules/#{rule_id}")

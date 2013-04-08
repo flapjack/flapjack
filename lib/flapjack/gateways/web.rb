@@ -42,7 +42,13 @@ module Flapjack
 
           @logger.info "starting web - class"
 
-          if @config && @config['access_log']
+          if accesslog = (@config && @config['access_log'])
+            if not File.directory?(File.dirname(accesslog))
+              puts "Parent directory for log file #{accesslog} doesn't exist"
+              puts "Exiting!"
+              exit
+            end
+
             access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
             use Flapjack::CommonLogger, access_logger
           end
@@ -86,6 +92,35 @@ module Flapjack
       get '/self_stats' do
         self_stats
         haml :self_stats
+      end
+
+      get '/self_stats.json' do
+        self_stats
+
+        {
+          'events_queued'    => @events_queued,
+          'failing_services' => @count,
+          'processed_events' => {
+            'all_time' => {
+              'total'   => @event_counters['all'],
+              'ok'      => @event_counters['ok'],
+              'failure' => @event_counters['failure'],
+              'action'  => @event_counters['action'],
+            },
+            'instance' => {
+              'total'   => @event_counters_instance['all'],
+              'ok'      => @event_counters_instance['ok'],
+              'failure' => @event_counters_instance['failure'],
+              'action'  => @event_counters_instance['action'],
+              'average' => @event_rate_all,
+            }
+          },
+          'total_keys' => @keys.length,
+          'uptime'     => @uptime_string,
+          'boottime'   => @boot_time,
+          'current_time' => Time.now,
+          'executive_instances' => @executive_instances,
+        }.to_json
       end
 
       get '/check' do

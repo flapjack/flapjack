@@ -2,8 +2,20 @@ require 'spec_helper'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
+require 'flapjack/data/notification_rule'
 
 describe Flapjack::Data::Contact, :redis => true do
+
+  let(:notification_rule_data) {
+    {:entity_tags        => ["database","physical"],
+     :entities           => ["foo-app-01.example.com"],
+     :time_restrictions  => nil,
+     :warning_media      => ["email"],
+     :critical_media     => ["sms", "email"],
+     :warning_blackhole  => false,
+     :critical_blackhole => false
+    }
+  }
 
   before(:each) do
     Flapjack::Data::Contact.add({'id'         => '362',
@@ -42,13 +54,92 @@ describe Flapjack::Data::Contact, :redis => true do
     contact.name.should == "John Johnson"
   end
 
-  it "deletes all contacts" do
-    Flapjack::Data::Contact.delete_all(:redis => @redis)
-    contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
-    contact.should be_nil
+  it "adds a contact with the same id as an existing one, clears notification rules" do
     contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
-    contact.should be_nil
+    contact.should_not be_nil
+
+    contact.add_notification_rule(notification_rule_data)
+
+    nr = contact.notification_rules
+    nr.should_not be_nil
+    nr.should have(1).notification_rule
+
+    Flapjack::Data::Contact.add({'id'         => '363',
+                                 'first_name' => 'Smithy',
+                                 'last_name'  => 'Smith',
+                                 'email'      => 'smithys@example.com'},
+                                 :redis       => @redis)
+
+    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
+    contact.should_not be_nil
+    contact.name.should == 'Smithy Smith'
+
+    nr = contact.notification_rules
+    nr.should_not be_nil
+    nr.should be_empty
   end
+
+  it "updates a contact, does not clear notification rules" do
+    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
+    contact.should_not be_nil
+
+    contact.add_notification_rule(notification_rule_data)
+
+    nr = contact.notification_rules
+    nr.should_not be_nil
+    nr.should have(1).notification_rule
+
+    contact.update('first_name' => 'John',
+                   'last_name'  => 'Smith',
+                   'email'      => 'johns@example.com')
+    contact.name.should == 'John Smith'
+
+    nr = contact.notification_rules
+    nr.should_not be_nil
+    nr.should have(1).notification_rule
+  end
+
+  it "adds a notification rule for a contact" do
+    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
+    contact.should_not be_nil
+
+    expect {
+      contact.add_notification_rule(notification_rule_data)
+    }.to change { contact.notification_rules.size }.from(0).to(1)
+  end
+
+  it "removes a notification rule from a contact" do
+    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
+    contact.should_not be_nil
+
+    rule = contact.add_notification_rule(notification_rule_data)
+
+    expect {
+      contact.delete_notification_rule(rule)
+    }.to change { contact.notification_rules.size }.from(1).to(0)
+  end
+
+  it "deletes a contact by id, including linked entities, checks, tags and notification rules" do
+    contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
+    contact.add_tags('admin')
+
+    entity_name = 'abc-123'
+
+    entity = Flapjack::Data::Entity.add({'id'   => '5000',
+                                         'name' => entity_name,
+                                         'contacts' => ['362']},
+                                         :redis => @redis)
+
+    expect {
+      expect {
+        expect {
+          contact.delete!
+        }.to change { Flapjack::Data::Contact.all(:redis => @redis).size }.by(-1)
+      }.to change { @redis.smembers('contact_tag:admin').size }.by(-1)
+    }.to change { entity.contacts.size }.by(-1)
+  end
+
+  it "deletes all contacts"
 
   it "returns a list of entities and their checks for a contact" do
     entity_name = 'abc-123'
