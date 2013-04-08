@@ -58,6 +58,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   }
 
   before(:all) do
+    Flapjack::Gateways::API.class_eval {
+      set :raise_errors, true
+    }
     Flapjack::Gateways::API.instance_variable_get('@middleware').delete_if {|m|
       m[0] == Rack::FiberPool
     }
@@ -774,6 +777,190 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       with(contact.id, :redis => redis).and_return(nil)
 
     delete "/contacts/#{contact.id}/timezone"
+    last_response.should be_not_found
+  end
+
+
+
+  it "sets a single tag on an entity and returns current tags" do
+    entity.should_receive(:add_tags).with('web')
+    entity.should_receive(:tags).and_return(['web'])
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+
+    post "entities/#{entity_name}/tags", :tag => 'web'
+    last_response.should be_ok
+    last_response.body.should be_json_eql( ['web'].to_json )
+  end
+
+  it "does not set a single tag on an entity that's not found" do
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(nil)
+
+    post "entities/#{entity_name}/tags", :tag => 'web'
+    last_response.should be_not_found
+  end
+
+  it "sets multiple tags on an entity and returns current tags" do
+    entity.should_receive(:add_tags).with('web', 'app')
+    entity.should_receive(:tags).and_return(['web', 'app'])
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+
+    # NB submitted at a lower level as tag[]=web&tag[]=app
+    post "entities/#{entity_name}/tags", :tag => ['web', 'app']
+    last_response.should be_ok
+    last_response.body.should be_json_eql( ['web', 'app'].to_json )
+  end
+
+  it "does not set multiple tags on an entity that's not found" do
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(nil)
+
+    post "entities/#{entity_name}/tags", :tag => ['web', 'app']
+    last_response.should be_not_found
+  end
+
+  it "removes a single tag from an entity" do
+    entity.should_receive(:delete_tags).with('web')
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+
+    delete "entities/#{entity_name}/tags", :tag => 'web'
+    last_response.status.should == 204
+  end
+
+  it "does not remove a single tag from an entity that's not found" do
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(nil)
+
+    delete "entities/#{entity_name}/tags", :tag => 'web'
+    last_response.should be_not_found
+  end
+
+  it "removes multiple tags from an entity" do
+    entity.should_receive(:delete_tags).with('web', 'app')
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+
+    delete "entities/#{entity_name}/tags", :tag => ['web', 'app']
+    last_response.status.should == 204
+  end
+
+  it "does not remove multiple tags from an entity that's not found" do
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(nil)
+
+    delete "entities/#{entity_name}/tags", :tag => ['web', 'app']
+    last_response.should be_not_found
+  end
+
+  it "gets all tags on an entity" do
+    entity.should_receive(:tags).and_return(['web', 'app'])
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+
+    get "entities/#{entity_name}/tags"
+    last_response.should be_ok
+    last_response.body.should be_json_eql( ['web', 'app'].to_json )
+  end
+
+  it "does not get all tags on an entity that's not found" do
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(nil)
+
+    get "entities/#{entity_name}/tags"
+    last_response.should be_not_found
+  end
+
+
+  it "sets a single tag on a contact and returns current tags" do
+    contact.should_receive(:add_tags).with('web')
+    contact.should_receive(:tags).and_return(['web'])
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    post "contacts/#{contact.id}/tags", :tag => 'web'
+    last_response.should be_ok
+    last_response.body.should be_json_eql( ['web'].to_json )
+  end
+
+  it "does not set a single tag on a contact that's not found" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    post "contacts/#{contact.id}/tags", :tag => 'web'
+    last_response.should be_not_found
+  end
+
+  it "sets multiple tags on a contact and returns current tags" do
+    contact.should_receive(:add_tags).with('web', 'app')
+    contact.should_receive(:tags).and_return(['web', 'app'])
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    post "contacts/#{contact.id}/tags", :tag => ['web', 'app']
+    last_response.should be_ok
+    last_response.body.should be_json_eql( ['web', 'app'].to_json )
+  end
+
+  it "does not set multiple tags on a contact that's not found" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    post "contacts/#{contact.id}/tags", :tag => ['web', 'app']
+    last_response.should be_not_found
+  end
+
+  it "removes a single tag from a contact" do
+    contact.should_receive(:delete_tags).with('web')
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    delete "contacts/#{contact.id}/tags", :tag => 'web'
+    last_response.status.should == 204
+  end
+
+  it "does not remove a single tag from a contact that's not found" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    delete "contacts/#{contact.id}/tags", :tag => 'web'
+    last_response.should be_not_found
+  end
+
+  it "removes multiple tags from a contact" do
+    contact.should_receive(:delete_tags).with('web', 'app')
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    delete "contacts/#{contact.id}/tags", :tag => ['web', 'app']
+    last_response.status.should == 204
+  end
+
+  it "does not remove multiple tags from a contact that's not found" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    delete "contacts/#{contact.id}/tags", :tag => ['web', 'app']
+    last_response.should be_not_found
+  end
+
+  it "gets all tags on a contact" do
+    contact.should_receive(:tags).and_return(['web', 'app'])
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    get "contacts/#{contact.id}/tags"
+    last_response.should be_ok
+    last_response.body.should be_json_eql( ['web', 'app'].to_json )
+  end
+
+  it "does not get all tags on a contact that's not found" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    get "contacts/#{contact.id}/tags"
     last_response.should be_not_found
   end
 
