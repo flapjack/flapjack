@@ -17,6 +17,9 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   let(:redis) { mock('redis') }
 
   before(:all) do
+    Flapjack::Gateways::Web.class_eval {
+      set :raise_errors, true
+    }
     Flapjack::Gateways::Web.instance_variable_get('@middleware').delete_if {|m|
       m[0] == Rack::FiberPool
     }

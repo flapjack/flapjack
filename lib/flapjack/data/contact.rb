@@ -7,6 +7,8 @@ require 'set'
 require 'ice_cube'
 require 'flapjack/data/entity'
 require 'flapjack/data/notification_rule'
+require 'flapjack/data/tag'
+require 'flapjack/data/tag_set'
 require 'tzinfo'
 
 module Flapjack
@@ -237,7 +239,7 @@ module Flapjack
 
       # return the set of tags for this contact
       def tags
-        @tags ||= ::Set.new( @redis.keys("#{TAG_PREFIX}:*").inject([]) {|memo, tag|
+        @tags ||= Flapjack::Data::TagSet.new( @redis.keys("#{TAG_PREFIX}:*").inject([]) {|memo, tag|
           if Flapjack::Data::Tag.find(tag, :redis => @redis).include?(@id.to_s)
             memo << tag.sub(/^#{TAG_PREFIX}:/, '')
           end
