@@ -152,7 +152,7 @@ module Flapjack
               end
 
               if options[:tags]
-                ret[entity_id][:tags]
+                ret[entity_id][:tags] = entity.tags
               end
             end
           end
