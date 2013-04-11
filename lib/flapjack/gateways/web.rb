@@ -245,7 +245,7 @@ module Flapjack
           @pagerduty_credentials = @contact.pagerduty_credentials
         end
 
-        @entities_and_checks = @contact.entities_and_checks.sort_by {|ec|
+        @entities_and_checks = @contact.entities(:checks => true).sort_by {|ec|
           ec[:entity].name
         }
 

@@ -125,7 +125,7 @@ module Flapjack
 
       # NB ideally contacts_for:* keys would scope the entity and check by an
       # input source, for namespacing purposes
-      def entities_and_checks
+      def entities(options = {})
         @redis.keys('contacts_for:*').inject({}) {|ret, k|
           if @redis.sismember(k, self.id)
             if k =~ /^contacts_for:([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?::(\w+))?$/
@@ -139,16 +139,20 @@ module Flapjack
                              :id => entity_id, :redis => @redis)
                   ret[entity_id][:entity] = entity
                 end
-                # using a set to ensure unique check values
-                ret[entity_id][:checks] = Set.new
+                if options[:checks]
+                  # using a set to ensure unique check values
+                  ret[entity_id][:checks] = Set.new
+                end
               end
 
-              if check
-                # just add this check for the entity
-                ret[entity_id][:checks] |= check
-              else
-                # registered for the entity so add all checks
-                ret[entity_id][:checks] |= entity.check_list
+              if options[:checks]
+                # if not registered for the check, then was registered for
+                # the entity, so add all checks
+                ret[entity_id][:checks] |= (check || entity.check_list)
+              end
+
+              if options[:tags]
+                ret[entity_id][:tags]
               end
             end
           end
