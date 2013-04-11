@@ -154,7 +154,7 @@ describe Flapjack::Data::Contact, :redis => true do
     ec.update_state('ok', :timestamp => t, :summary => 'a')
 
     contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
-    eandcs = contact.entities_and_checks
+    eandcs = contact.entities(:checks => true)
     eandcs.should_not be_nil
     eandcs.should be_an(Array)
     eandcs.should have(1).entity_and_checks
