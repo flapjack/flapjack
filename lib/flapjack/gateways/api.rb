@@ -590,6 +590,22 @@ module Flapjack
         contact.tags.to_json
       end
 
+      post '/contacts/:contact_id/entity_tags' do
+        content_type :json
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        contact.entities.map {|e| e[:entity]}.each do |entity|
+          next unless tags = params[:entity][entity.name]
+          entity.add_tags(*tags)
+        end
+        (Hash[ *contact.entities(:tags => true).collect {|et|
+          [et[:entity].name, et[:tags]] }.flatten(1)
+        ]).to_json
+      end
+
       delete '/contacts/:contact_id/tags' do
         content_type :json
         contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
@@ -607,6 +623,20 @@ module Flapjack
         status 204
       end
 
+      delete '/contacts/:contact_id/entity_tags' do
+        content_type :json
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        contact.entities.map {|e| e[:entity]}.each do |entity|
+          next unless tags = params[:entity][entity.name]
+          entity.delete_tags(*tags)
+        end
+        status 204
+      end
+
       get '/contacts/:contact_id/tags' do
         content_type :json
         contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
@@ -615,6 +645,18 @@ module Flapjack
           return
         end
         contact.tags.to_json
+      end
+
+      get '/contacts/:contact_id/entity_tags' do
+        content_type :json
+        contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+        if contact.nil?
+          status 404
+          return
+        end
+        (Hash[ *contact.entities(:tags => true).collect {|et|
+          [et[:entity].name, et[:tags]] }.flatten(1)
+        ]).to_json
       end
 
       post '/entities/:entity/tags' do

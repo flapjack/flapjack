@@ -64,9 +64,6 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Gateways::API.instance_variable_get('@middleware').delete_if {|m|
       m[0] == Rack::FiberPool
     }
-    Flapjack::Gateways::API.class_eval {
-      set :raise_errors, true
-    }
   end
 
   before(:each) do
@@ -961,6 +958,96 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       with(contact.id, :redis => redis).and_return(nil)
 
     get "contacts/#{contact.id}/tags"
+    last_response.should be_not_found
+  end
+
+  it "gets all entity tags for a contact" do
+    entity_1 = mock(Flapjack::Data::Entity)
+    entity_1.should_receive(:name).and_return('entity_1')
+    entity_2 = mock(Flapjack::Data::Entity)
+    entity_2.should_receive(:name).and_return('entity_2')
+    tag_data = [{:entity => entity_1, :tags => ['web']},
+                {:entity => entity_2, :tags => ['app']}]
+    contact.should_receive(:entities).with(:tags => true).
+      and_return(tag_data)
+
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    get "contacts/#{contact.id}/entity_tags"
+    last_response.should be_ok
+    tag_response = {'entity_1' => ['web'],
+                    'entity_2' => ['app']}
+    last_response.body.should be_json_eql( tag_response.to_json )
+  end
+
+  it "does not get all entity tags for a contact that's not found" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    get "contacts/#{contact.id}/entity_tags"
+    last_response.should be_not_found
+  end
+
+  it "adds tags to multiple entities for a contact" do
+    entity_1 = mock(Flapjack::Data::Entity)
+    entity_1.should_receive(:name).twice.and_return('entity_1')
+    entity_1.should_receive(:add_tags).with('web')
+    entity_2 = mock(Flapjack::Data::Entity)
+    entity_2.should_receive(:name).twice.and_return('entity_2')
+    entity_2.should_receive(:add_tags).with('app')
+
+    entities = [{:entity => entity_1}, {:entity => entity_2}]
+    contact.should_receive(:entities).and_return(entities)
+    tag_data = [{:entity => entity_1, :tags => ['web']},
+                {:entity => entity_2, :tags => ['app']}]
+    contact.should_receive(:entities).with(:tags => true).and_return(tag_data)
+
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    post "contacts/#{contact.id}/entity_tags",
+      :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
+    last_response.should be_ok
+    tag_response = {'entity_1' => ['web'],
+                    'entity_2' => ['app']}
+    last_response.body.should be_json_eql( tag_response.to_json )
+  end
+
+  it "does not add tags to multiple entities for a contact that's not found" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    post "contacts/#{contact.id}/entity_tags",
+      :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
+    last_response.should be_not_found
+  end
+
+  it "deletes tags from multiple entities for a contact" do
+    entity_1 = mock(Flapjack::Data::Entity)
+    entity_1.should_receive(:name).and_return('entity_1')
+    entity_1.should_receive(:delete_tags).with('web')
+    entity_2 = mock(Flapjack::Data::Entity)
+    entity_2.should_receive(:name).and_return('entity_2')
+    entity_2.should_receive(:delete_tags).with('app')
+
+    entities = [{:entity => entity_1}, {:entity => entity_2}]
+    contact.should_receive(:entities).and_return(entities)
+
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(contact)
+
+    delete "contacts/#{contact.id}/entity_tags",
+      :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
+    last_response.status.should == 204
+  end
+
+  it "does not delete tags from multiple entities for a contact that's not found" do
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, :redis => redis).and_return(nil)
+
+    delete "contacts/#{contact.id}/entity_tags",
+      :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
     last_response.should be_not_found
   end
 
