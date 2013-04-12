@@ -49,6 +49,12 @@ module Flapjack
         @critical_media     = Yajl::Parser.parse(rule_data['critical_media'] || '')
         @warning_blackhole  = ((rule_data['warning_blackhole'] || 'false').downcase == 'true')
         @critical_blackhole = ((rule_data['critical_blackhole'] || 'false').downcase == 'true')
+
+        @time_restrictions = @time_restrictions.map do |tr|
+          tr['start_date'] = Time.parse(tr['start_date'])
+          tr['end_time']   = Time.parse(tr['end_time'])
+          tr
+        end
       end
 
       def update(rule_data)
@@ -78,8 +84,7 @@ module Flapjack
       # nil @time_restrictions matches
       def match_time?
         return true if @time_restrictions.nil? or @time_restrictions.empty?
-        return true
-        # TODO: return true if current time falls within any of the time restriction periods
+
         tzstr = @timezone || 'UTC'
         begin
           tz = TZInfo::Timezone.get(tzstr)
@@ -87,8 +92,11 @@ module Flapjack
           @logger.error("Unrecognised timezone string: '#{tzstr}', NotificationRule.match_time? proceeding with UTC")
           tz = TZInfo::Timezone.get('UTC')
         end
-        now_secs = tz.utc_to_local
-        match = @time_restrictions.find do |tr|
+        usertime = tz.utc_to_local(Time.now.utc)
+
+        match = @time_restrictions.any? do |tr|
+          schedule = IceCube::Schedule.from_hash(tr)
+          schedule.occurring_at?(usertime)
         end
         return true if match
         return false

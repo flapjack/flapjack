@@ -279,8 +279,8 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
   end
 end
 
-Given /^the time is (.*) on a (.*)$/ do |time, day_of_week|
-  Delorean.time_travel_to(Chronic.parse("#{time} on #{day_of_week}"))
+Given /^the time is (.*)$/ do |time|
+  Delorean.time_travel_to(Chronic.parse("#{time}"))
 end
 
 When /^the (\w*) alert block for user (\d*) for (?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') for state (.*) expires$/ do |media, contact, check, entity, state|
