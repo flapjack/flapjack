@@ -290,14 +290,8 @@ module Flapjack
           tr[:end_time][:zone] = timezone.identifier
         end
 
-        puts "\nusertime: #{usertime}, timezone: #{timezone}"
-        puts "tr hash: #{tr.inspect}"
         schedule = IceCube::Schedule.from_hash(tr)
-        puts "schedule: #{schedule} - #{schedule.to_yaml}"
-        puts schedule.first(3)
-        occurring = schedule.occurring_at?(usertime)
-        puts "occurring? #{occurring}"
-        occurring
+        schedule.occurring_at?(usertime)
       end
       !!match
     end

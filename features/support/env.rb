@@ -71,7 +71,7 @@ Before do
   @app = Flapjack::Executive.new(:logger => @logger,
     :config => {'email_queue' => 'email_notifications',
                 'sms_queue' => 'sms_notifications',
-                'default_contact_timezone' => 'Australia/Adelaide'},
+                'default_contact_timezone' => 'America/New_York'},
     :redis_config => redis_opts)
   @redis = @app.instance_variable_get('@redis')
 end

@@ -285,7 +285,6 @@ module Flapjack
           logger.warn("Invalid timezone string set for contact #{self.id} or in default_contact_timezone or TZ (#{tz_string}), returning 'UTC'!")
           tz = ::TZInfo::Timezone.new('UTC')
         end
-        puts "Contact#timezone: [#{tz_string}] -> [#{tz.identifier}]"
         tz
       end
 

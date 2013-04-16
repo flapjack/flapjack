@@ -263,8 +263,8 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
     rule['time_restrictions'].split(',').map { |x| x.strip }.each do |time_restriction|
       case time_restriction
       when '8-18 weekdays'
-        # FIXME: get timezone from the user definition
-        Time.zone = "Australia/Adelaide"
+        # FIXME: get timezone from the user definition (or config[:default_contact_timezone])
+        Time.zone = "America/New_York"
         weekdays_8_18 = IceCube::Schedule.new(Time.zone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
         weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
         time_restrictions << weekdays_8_18.to_hash
