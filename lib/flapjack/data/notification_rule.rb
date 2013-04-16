@@ -1,6 +1,8 @@
 #!/usr/bin/env ruby
 
 require 'yajl/json_gem'
+require 'active_support/time'
+require 'ice_cube'
 
 module Flapjack
   module Data
@@ -50,11 +52,6 @@ module Flapjack
         @warning_blackhole  = ((rule_data['warning_blackhole'] || 'false').downcase == 'true')
         @critical_blackhole = ((rule_data['critical_blackhole'] || 'false').downcase == 'true')
 
-        @time_restrictions = @time_restrictions.map do |tr|
-          tr['start_date'] = Time.parse(tr['start_date'])
-          tr['end_time']   = Time.parse(tr['end_time'])
-          tr
-        end
       end
 
       def update(rule_data)
@@ -80,28 +77,6 @@ module Flapjack
         return false
       end
 
-      # time restrictions match?
-      # nil @time_restrictions matches
-      def match_time?
-        return true if @time_restrictions.nil? or @time_restrictions.empty?
-
-        tzstr = @timezone || 'UTC'
-        begin
-          tz = TZInfo::Timezone.get(tzstr)
-        rescue
-          @logger.error("Unrecognised timezone string: '#{tzstr}', NotificationRule.match_time? proceeding with UTC")
-          tz = TZInfo::Timezone.get('UTC')
-        end
-        usertime = tz.utc_to_local(Time.now.utc)
-
-        match = @time_restrictions.any? do |tr|
-          schedule = IceCube::Schedule.from_hash(tr)
-          schedule.occurring_at?(usertime)
-        end
-        return true if match
-        return false
-      end
-
       def blackhole?(severity)
         return true if 'warning'.eql?(severity.downcase) and @warning_blackhole
         return true if 'critical'.eql?(severity.downcase) and @critical_blackhole
@@ -122,7 +97,7 @@ module Flapjack
 
       def initialize(rule_data, opts = {})
         @redis  ||= opts[:redis]
-        @logger = opts[:logger]
+        @logger   = opts[:logger]
         raise "a redis connection must be supplied" unless @redis
         @id = rule_data[:id]
       end

@@ -2,6 +2,7 @@
 
 require 'delorean'
 require 'chronic'
+require 'active_support/time'
 
 When /^(.+) passes$/ do |time|
   period = Chronic.parse("#{time} from now")
@@ -12,6 +13,15 @@ end
 Given /^I time travel to (.+)$/ do |period|
   Delorean.time_travel_to(period)
   # puts "Time Travelled to #{Time.now.to_s}"
+end
+
+Given /^the timezone is (.*)$/ do |tz|
+  Time.zone = tz
+  Chronic.time_class = Time.zone
+end
+
+Given /^the time is (.*)$/ do |time|
+  Delorean.time_travel_to(Chronic.parse("#{time}"))
 end
 
 Given /^I come back to the present$/ do

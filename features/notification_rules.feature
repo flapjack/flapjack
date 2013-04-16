@@ -26,7 +26,8 @@ Feature: Notification rules on a per contact basis
 Scenario: Alerts only during specified time restrictions
   Given the check is check 'ping' on entity 'foo'
   And   the check is in an ok state
-  And   the time is February 1 2013 7am
+  And   the timezone is Australia/Adelaide
+  And   the time is February 1 2013 6:59am
   And   a critical event is received
   Then  no email alerts should be queued for malak@example.com
   When  5 minutes passes

@@ -165,10 +165,11 @@ module Flapjack
       end
 
       # return an array of the notification rules of this contact
-      def notification_rules
+      def notification_rules(options = {})
         @redis.smembers("contact_notification_rules:#{self.id}").collect { |rule_id|
           next if (rule_id.nil? || rule_id == '')
-          Flapjack::Data::NotificationRule.find_by_id(rule_id, {:redis => @redis})
+          Flapjack::Data::NotificationRule.find_by_id(rule_id,
+            {:redis => @redis })
         }.compact
       end
 
@@ -274,18 +275,18 @@ module Flapjack
         @redis.hkeys("contact_media:#{self.id}")
       end
 
-      # return the timezone string of the contact, or the system default if none is set
-      def timezone
+      # return the timezone of the contact, or the system default if none is set
+      def timezone(opts = {})
         tz_string = @redis.get("contact_tz:#{self.id}")
-        tz_string = 'UTC' if (tz_string.nil? || tz_string.empty?)
+        tz_string = opts[:default] if (tz_string.nil? || tz_string.empty?)
         begin
           tz = ::TZInfo::Timezone.new(tz_string)
         rescue ::TZInfo::InvalidTimezoneIdentifier
-          logger.warn("Invalid timezone string set for contact #{self.id} (#{tz_string})")
-          # FIXME: allow setting a default other than UTC in flapjack_config.yml
+          logger.warn("Invalid timezone string set for contact #{self.id} or in default_contact_timezone or TZ (#{tz_string}), returning 'UTC'!")
           tz = ::TZInfo::Timezone.new('UTC')
         end
-        tz.identifier
+        puts "Contact#timezone: [#{tz_string}] -> [#{tz.identifier}]"
+        tz
       end
 
       # sets or removes the timezone string for the contact

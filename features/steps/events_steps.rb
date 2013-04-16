@@ -263,7 +263,9 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
     rule['time_restrictions'].split(',').map { |x| x.strip }.each do |time_restriction|
       case time_restriction
       when '8-18 weekdays'
-        weekdays_8_18 = IceCube::Schedule.new(Time.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
+        # FIXME: get timezone from the user definition
+        Time.zone = "Australia/Adelaide"
+        weekdays_8_18 = IceCube::Schedule.new(Time.zone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
         weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
         time_restrictions << weekdays_8_18.to_hash
       end
@@ -277,10 +279,6 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
                                           :critical_blackhole => critical_blackhole,
                                           :time_restrictions  => time_restrictions}, :redis => @redis)
   end
-end
-
-Given /^the time is (.*)$/ do |time|
-  Delorean.time_travel_to(Chronic.parse("#{time}"))
 end
 
 When /^the (\w*) alert block for user (\d*) for (?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') for state (.*) expires$/ do |media, contact, check, entity, state|
