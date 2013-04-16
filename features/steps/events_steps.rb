@@ -281,6 +281,12 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
   end
 end
 
+Given /^all alert dropping keys for user (\d+) have expired$/ do |contact_id|
+  @redis.keys("drop_alerts_for_contact:#{contact_id}*").each do |key|
+    @redis.del(key)
+  end
+end
+
 When /^the (\w*) alert block for user (\d*) for (?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') for state (.*) expires$/ do |media, contact, check, entity, state|
   check  = check  ? check  : @check
   entity = entity ? entity : @entity

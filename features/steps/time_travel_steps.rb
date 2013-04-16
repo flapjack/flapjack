@@ -7,7 +7,7 @@ require 'active_support/time'
 When /^(.+) passes$/ do |time|
   period = Chronic.parse("#{time} from now")
   Delorean.time_travel_to(period)
-  # puts "Time Travelled to #{Time.now.to_s}"
+  #puts "Time Travelled to #{Time.now.to_s}"
 end
 
 Given /^I time travel to (.+)$/ do |period|
@@ -22,6 +22,7 @@ end
 
 Given /^the time is (.*)$/ do |time|
   Delorean.time_travel_to(Chronic.parse("#{time}"))
+  #puts "Time Travelled to #{Time.now.to_s}"
 end
 
 Given /^I come back to the present$/ do
