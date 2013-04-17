@@ -271,24 +271,7 @@ module Flapjack
       match = rule.time_restrictions.any? do |tr|
 
         # add contact's timezone to the time restriction hash
-        # TODO: move back to Data::NotificationRule ?
-
-        tr = symbolize(tr)
-        if tr[:start_date].is_a?(String)
-          tr[:start_date] = { :time => tr[:start_date] }
-        end
-        if tr[:start_date].is_a?(Hash)
-          tr[:start_date][:time] = Time.zone.parse(tr[:start_date][:time])
-          tr[:start_date][:zone] = timezone.identifier
-        end
-
-        if tr[:end_time].is_a?(String)
-          tr[:end_time] = { :time => tr[:end_time] }
-        end
-        if tr[:end_time].is_a?(Hash)
-          tr[:end_time][:time] = Time.zone.parse(tr[:end_time][:time])
-          tr[:end_time][:zone] = timezone.identifier
-        end
+        tr = Flapjack::Data::NotificationRule.time_restriction_to_ice_cube_hash(tr, timezone)
 
         schedule = IceCube::Schedule.from_hash(tr)
         schedule.occurring_at?(usertime)

@@ -3,10 +3,13 @@
 require 'yajl/json_gem'
 require 'active_support/time'
 require 'ice_cube'
+require 'flapjack/utility'
 
 module Flapjack
   module Data
     class NotificationRule
+
+      extend Flapjack::Utility
 
       attr_accessor :id, :contact_id, :entities, :entity_tags, :time_restrictions,
         :warning_media, :critical_media, :warning_blackhole, :critical_blackhole
@@ -60,11 +63,46 @@ module Flapjack
       end
 
       def to_json(*args)
-        (Hash[ *([:id, :contact_id, :entity_tags, :entities,
-          :time_restrictions, :warning_media, :critical_media,
-          :warning_blackhole, :critical_blackhole].collect {|k|
-            [k, self.send(k)]
-          }).flatten(1) ]).to_json
+        hash = (Hash[ *([:id, :contact_id, :entity_tags, :entities,
+                 :warning_media, :critical_media,
+                 :warning_blackhole, :critical_blackhole].collect {|k|
+                   [k, self.send(k)]
+                 }).flatten(1) ])
+
+        time_restrictions = @time_restrictions.collect {|tr|
+          tr[:start_time]
+        }
+
+        hash[:time_restrictions]
+        hash.to_json
+      end
+
+      # add user's timezone string to the hash, deserialise
+      # time in the user's timezone also
+      def self.time_restriction_to_ice_cube_hash(tr, timezone)
+        Time.zone = timezone.identifier
+        tr = symbolize(tr)
+        if tr[:start_date].is_a?(String)
+          tr[:start_date] = { :time => tr[:start_date] }
+        end
+        if tr[:start_date].is_a?(Hash)
+          tr[:start_date][:time] = Time.zone.parse(tr[:start_date][:time])
+          tr[:start_date][:zone] = timezone.identifier
+        end
+
+        if tr[:end_time].is_a?(String)
+          tr[:end_time] = { :time => tr[:end_time] }
+        end
+        if tr[:end_time].is_a?(Hash)
+          tr[:end_time][:time] = Time.zone.parse(tr[:end_time][:time])
+          tr[:end_time][:zone] = timezone.identifier
+        end
+        tr
+      end
+
+      def self.time_restriction_from_ice_cube_hash(ich)
+
+
       end
 
       # tags or entity names match?
