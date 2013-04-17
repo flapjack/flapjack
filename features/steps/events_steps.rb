@@ -246,8 +246,8 @@ end
 Given /^user (\d+) has the following notification intervals:$/ do |contact_id, intervals|
   contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
   intervals.hashes.each do |interval|
-    contact.set_interval_for_media('email', interval['email'].to_i)
-    contact.set_interval_for_media('sms',   interval['sms'].to_i)
+    contact.set_interval_for_media('email', interval['email'].to_i * 60)
+    contact.set_interval_for_media('sms',   interval['sms'].to_i * 60)
   end
 end
 
@@ -264,10 +264,11 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
       case time_restriction
       when '8-18 weekdays'
         # FIXME: get timezone from the user definition (or config[:default_contact_timezone])
-        Time.zone = "America/New_York"
+        timezone = TZInfo::Timezone.get("America/New_York")
+        Time.zone = timezone.identifier
         weekdays_8_18 = IceCube::Schedule.new(Time.zone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
         weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
-        time_restrictions << weekdays_8_18.to_hash
+        time_restrictions << Flapjack::Data::NotificationRule.time_restriction_from_ice_cube_hash(weekdays_8_18.to_hash, timezone)
       end
     end
     Flapjack::Data::NotificationRule.add({:contact_id         => contact_id,

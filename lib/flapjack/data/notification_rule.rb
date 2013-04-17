@@ -43,6 +43,56 @@ module Flapjack
         self.find_by_id(rule_id, :redis => redis)
       end
 
+      # add user's timezone string to the hash, deserialise
+      # time in the user's timezone also
+      def self.time_restriction_to_ice_cube_hash(tr, timezone)
+        Time.zone = timezone.identifier
+        tr = symbolize(tr)
+
+        tr[:start_date] = tr[:start_time].dup
+        tr.delete(:start_time)
+
+        if tr[:start_date].is_a?(String)
+          tr[:start_date] = { :time => tr[:start_date] }
+        end
+        if tr[:start_date].is_a?(Hash)
+          tr[:start_date][:time] = Time.zone.parse(tr[:start_date][:time])
+          tr[:start_date][:zone] = timezone.identifier
+        end
+
+        if tr[:end_time].is_a?(String)
+          tr[:end_time] = { :time => tr[:end_time] }
+        end
+        if tr[:end_time].is_a?(Hash)
+          tr[:end_time][:time] = Time.zone.parse(tr[:end_time][:time])
+          tr[:end_time][:zone] = timezone.identifier
+        end
+
+        # rewrite Weekly to IceCube::WeeklyRule, etc
+        tr[:rrules].each {|rrule|
+          rrule[:rule_type] = "IceCube::#{rrule[:rule_type]}Rule"
+        }
+
+        tr
+      end
+
+      def self.time_restriction_from_ice_cube_hash(tr, timezone)
+        Time.zone = timezone.identifier
+
+        tr[:start_date] = Time.zone.utc_to_local(tr[:start_date][:time]).strftime "%Y-%m-%d %H:%M:%S"
+        tr[:end_time]   = Time.zone.utc_to_local(tr[:end_time][:time]).strftime "%Y-%m-%d %H:%M:%S"
+
+        # rewrite IceCube::WeeklyRule to Weekly, etc
+        tr[:rrules].each {|rrule|
+          rrule[:rule_type] = /^.*\:\:(.*)Rule$/.match(rrule[:rule_type])[1]
+        }
+
+        tr[:start_time] = tr[:start_date].dup
+        tr.delete(:start_date)
+
+        tr
+      end
+
       def refresh
         rule_data = @redis.hgetall("notification_rule:#{@id}")
 
@@ -75,34 +125,6 @@ module Flapjack
 
         hash[:time_restrictions]
         hash.to_json
-      end
-
-      # add user's timezone string to the hash, deserialise
-      # time in the user's timezone also
-      def self.time_restriction_to_ice_cube_hash(tr, timezone)
-        Time.zone = timezone.identifier
-        tr = symbolize(tr)
-        if tr[:start_date].is_a?(String)
-          tr[:start_date] = { :time => tr[:start_date] }
-        end
-        if tr[:start_date].is_a?(Hash)
-          tr[:start_date][:time] = Time.zone.parse(tr[:start_date][:time])
-          tr[:start_date][:zone] = timezone.identifier
-        end
-
-        if tr[:end_time].is_a?(String)
-          tr[:end_time] = { :time => tr[:end_time] }
-        end
-        if tr[:end_time].is_a?(Hash)
-          tr[:end_time][:time] = Time.zone.parse(tr[:end_time][:time])
-          tr[:end_time][:zone] = timezone.identifier
-        end
-        tr
-      end
-
-      def self.time_restriction_from_ice_cube_hash(ich)
-
-
       end
 
       # tags or entity names match?
