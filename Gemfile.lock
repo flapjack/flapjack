@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     flapjack (0.6.61)
-      active_support
+      activesupport
       blather (= 0.8.1)
       chronic
       chronic_duration
@@ -27,9 +27,9 @@ PATH
 GEM
   remote: http://rubygems.org/
   specs:
-    active_support (3.0.0)
-      activesupport (= 3.0.0)
-    activesupport (3.0.0)
+    activesupport (3.2.12)
+      i18n (~> 0.6)
+      multi_json (~> 1.0)
     addressable (2.3.2)
     blather (0.8.1)
       activesupport (>= 2.3.11)
