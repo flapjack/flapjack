@@ -114,16 +114,10 @@ module Flapjack
 
       def to_json(*args)
         hash = (Hash[ *([:id, :contact_id, :entity_tags, :entities,
-                 :warning_media, :critical_media,
+                 :time_restrictions, :warning_media, :critical_media,
                  :warning_blackhole, :critical_blackhole].collect {|k|
                    [k, self.send(k)]
                  }).flatten(1) ])
-
-        time_restrictions = @time_restrictions.collect {|tr|
-          tr[:start_time]
-        }
-
-        hash[:time_restrictions]
         hash.to_json
       end
 
