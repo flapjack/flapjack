@@ -288,15 +288,15 @@ module Flapjack
         tz
       end
 
-      # sets or removes the timezone string for the contact
-      def timezone=(tz_string)
-        if tz_string.nil?
+      # sets or removes the timezone for the contact
+      def timezone=(tz)
+        if tz.nil?
           @redis.del("contact_tz:#{self.id}")
         else
           begin
-            tz = ::TZInfo::Timezone.new(tz_string)
-          rescue ::TZInfo::InvalidTimezoneIdentifier
-            logger.warn("Invalid timezone requested to be set for contact #{self.id} (#{tz_string})")
+            tz_string = tz.identifier
+          rescue RuntimeError
+            logger.warn("Invalid timezone requested to be set for contact #{self.id} (#{tz})")
             return false
           end
           @redis.set("contact_tz:#{self.id}", tz.identifier)

@@ -723,7 +723,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   # GET /contacts/CONTACT_ID/timezone
   it "returns the timezone of a contact" do
-    contact.should_receive(:timezone).and_return('Australia/Sydney')
+    contact.should_receive(:timezone).and_return(::TZInfo::Timezone.new('Australia/Sydney'))
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :redis => redis).and_return(contact)
 
@@ -742,8 +742,8 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   # PUT /contacts/CONTACT_ID/timezone
   it "sets the timezone of a contact" do
-    contact.should_receive(:timezone=).with('Australia/Perth')
-    contact.should_receive(:timezone).and_return('Australia/Perth')
+    contact.should_receive(:timezone=).with(::TZInfo::Timezone.new('Australia/Perth'))
+    contact.should_receive(:timezone).and_return(::TZInfo::Timezone.new('Australia/Perth'))
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :redis => redis).and_return(contact)
 
