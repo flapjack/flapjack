@@ -56,26 +56,52 @@ class RedisDelorean
     local keys = redis.call('keys', KEYS[1])
     local current_time = tonumber(ARGV[1])
     local expire_as_if_at = tonumber(ARGV[2])
+    local counter = 0
 
     for i,k in ipairs(keys) do
       local key_ttl = redis.call('ttl', k)
 
       -- key does not have timeout if < 0
-      if ( (key_ttl >= 0) and ((current_time + key_ttl) < expire_as_if_at) ) then
+      if ( (key_ttl >= 0) and ((current_time + key_ttl) <= expire_as_if_at) ) then
         redis.call('del', k)
+        counter = counter + 1
       end
     end
+    return counter
 EXPIRE_AS_IF_AT
 
-  def self.setup(options = {})
+  def self.before_all(options = {})
+    redis = options[:redis]
+    @expire_as_if_at_sha = redis.script(:load, ExpireAsIfAtScript)
+  end
+
+  def self.before_each(options = {})
     @redis = options[:redis]
-    @expire_as_if_at_sha = @redis.script(:load, ExpireAsIfAtScript)
   end
 
   def self.time_travel_to(dest_time)
+    # puts "travelling to #{Time.now.in_time_zone}, real time is #{Time.now_without_delorean.in_time_zone}"
+    old_maybe_fake_time = Time.now.in_time_zone
+
     Delorean.time_travel_to(dest_time)
-    @redis.evalsha(@expire_as_if_at_sha, ['*'],
-      [Time.now_without_delorean, dest_time])
+    # puts "travelled to #{Time.now.in_time_zone}, real time is #{Time.now_without_delorean.in_time_zone}"
+    return if dest_time < old_maybe_fake_time
+
+    # dumps the first offset -- we're not interested in time difference from
+    # real, only with context to the fake frame of reference...
+    # This may mean all scenarios using this code should have an initial
+    #    Given it is *datetime*
+    # step
+    offsets = Delorean.send(:time_travel_offsets).dup
+    offsets.shift
+    delta = -offsets.inject(0){ |sum, val| sum + val }.floor
+
+    real_time = Time.now_without_delorean.to_i
+    # puts "delta #{delta}, expire before real time #{Time.at(real_time + delta)}"
+
+    result = @redis.evalsha(@expire_as_if_at_sha, ['*'],
+               [real_time, real_time + delta])
+    # puts "Expired #{result} key#{(result == 1) ? '' : 's'}"
   end
 
 end
@@ -83,6 +109,7 @@ end
 redis_opts = { :db => 14, :driver => :ruby }
 redis = ::Redis.new(redis_opts)
 redis.flushdb
+RedisDelorean.before_all(:redis => redis)
 redis.quit
 
 # NB: this seems to execute outside the Before/After hooks
@@ -119,7 +146,7 @@ Before('@resque') do
 end
 
 Before('@time') do
-  RedisDelorean.setup(:redis => @redis)
+  RedisDelorean.before_each(:redis => @redis)
 end
 
 After('@time') do

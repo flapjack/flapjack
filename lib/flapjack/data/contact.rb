@@ -190,7 +190,8 @@ module Flapjack
       # how often to notify this contact on the given media
       # return 15 mins if no value is set
       def interval_for_media(media)
-        @redis.hget("contact_media_intervals:#{self.id}", media) || 15 * 60
+        interval = @redis.hget("contact_media_intervals:#{self.id}", media)
+        ((interval.nil? || (interval.to_i <= 0)) ? 15 : interval.to_i) * 60
       end
 
       def set_interval_for_media(media, interval)
