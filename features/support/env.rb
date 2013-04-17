@@ -50,6 +50,36 @@ class MockEmailer
   include EM::Deferrable
 end
 
+class RedisDelorean
+
+  ExpireAsIfAtScript = <<EXPIRE_AS_IF_AT
+    local keys = redis.call('keys', KEYS[1])
+    local current_time = tonumber(ARGV[1])
+    local expire_as_if_at = tonumber(ARGV[2])
+
+    for i,k in ipairs(keys) do
+      local key_ttl = redis.call('ttl', k)
+
+      -- key does not have timeout if < 0
+      if ( (key_ttl >= 0) and ((current_time + key_ttl) < expire_as_if_at) ) then
+        redis.call('del', k)
+      end
+    end
+EXPIRE_AS_IF_AT
+
+  def self.setup(options = {})
+    @redis = options[:redis]
+    @expire_as_if_at_sha = @redis.script(:load, ExpireAsIfAtScript)
+  end
+
+  def self.time_travel_to(dest_time)
+    Delorean.time_travel_to(dest_time)
+    @redis.evalsha(@expire_as_if_at_sha, ['*'],
+      [Time.now_without_delorean, dest_time])
+  end
+
+end
+
 redis_opts = { :db => 14, :driver => :ruby }
 redis = ::Redis.new(redis_opts)
 redis.flushdb
@@ -85,6 +115,10 @@ end
 Before('@resque') do
   ResqueSpec.reset!
   @queues = {:email => 'email_queue'}
+end
+
+Before('@time') do
+  RedisDelorean.setup(:redis => @redis)
 end
 
 After('@time') do
