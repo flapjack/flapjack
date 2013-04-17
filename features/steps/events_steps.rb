@@ -281,18 +281,16 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
   end
 end
 
-Given /^all alert dropping keys for user (\d+) have expired$/ do |contact_id|
-  @redis.keys("drop_alerts_for_contact:#{contact_id}*").each do |key|
-    @redis.del(key)
-  end
+Then /^all alert dropping keys for user (\d+) should have expired$/ do |contact_id|
+  @redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
 end
 
-When /^the (\w*) alert block for user (\d*) for (?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') for state (.*) expires$/ do |media, contact, check, entity, state|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
-  num_deleted = @redis.del("drop_alerts_for_contact:#{contact}:#{media}:#{entity}:#{check}:#{state}")
-  puts "Warning: no keys expired" unless num_deleted > 0
-end
+# When /^the (\w*) alert block for user (\d*) for (?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') for state (.*) expires$/ do |media, contact, check, entity, state|
+#   check  = check  ? check  : @check
+#   entity = entity ? entity : @entity
+#   num_deleted = @redis.del("drop_alerts_for_contact:#{contact}:#{media}:#{entity}:#{check}:#{state}")
+#   puts "Warning: no keys expired" unless num_deleted > 0
+# end
 
 Then /^(.*) email alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
   check  = check  ? check  : @check
