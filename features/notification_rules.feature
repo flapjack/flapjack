@@ -21,21 +21,35 @@ Feature: Notification rules on a per contact basis
       | 1  | foo      |             | email         | sms,email        |                   |                    | 8-18 weekdays     |
       | 2  | bar      |             |               | sms,email        | true              |                    |                   |
 
-# FIXME: haven't built the time restrictions part of this yet
-#  @time_restrictions
-#  @time
-#  Scenario: Alerts only during specified time restrictions
-#    Given the check is check 'ping' on entity 'foo'
-#    And   the check is in an ok state
-#    And   the time is 7am on a Wednesday
-#    And   a critical event is received
-#    Then  no email alerts should be queued for malak@example.com
-#    When  5 minutes passes
-#    And   a critical event is received
-#    Then  no email alerts should be queued for malak@example.com
-#    When  60 minutes passes
-#    And   a critical event is received
-#    Then  1 email alert should be queued for malak@example.com
+  @time_restrictions
+  @time
+  Scenario: Alerts only during specified time restrictions
+    Given the check is check 'ping' on entity 'foo'
+    And   the check is in an ok state
+    And   the timezone is America/New_York
+    And   the time is February 1 2013 6:59
+    And   a critical event is received
+    Then  no email alerts should be queued for malak@example.com
+    And   the time is February 1 2013 7:01
+    And   a critical event is received
+    Then  no email alerts should be queued for malak@example.com
+    And   the time is February 1 2013 8:01
+    And   a critical event is received
+    Then  1 email alert should be queued for malak@example.com
+    When  the time is February 1 2013 12:00
+    And   all alert dropping keys for user 1 have expired
+    And   a critical event is received
+    Then  2 email alerts should be queued for malak@example.com
+    When  the time is February 1 2013 17:59
+    And   all alert dropping keys for user 1 have expired
+    And   a critical event is received
+    Then  3 email alerts should be queued for malak@example.com
+    When  the time is February 1 2013 18:01
+    And   all alert dropping keys for user 1 have expired
+    And   a critical event is received
+    Then  3 email alerts should be queued for malak@example.com
+
+  Scenario: time restrictions continue to work as expected when a contact changes timezone
 
   @severity
   @time
@@ -67,7 +81,7 @@ Feature: Notification rules on a per contact basis
   @intervals
   @time
   Scenario: Alerts according to custom interval
-    Given the check is check 'ping' on entity 'foo'
+    Given the check is check 'ping' on entity 'bar'
     And   the check is in an ok state
     When  a critical event is received
     Then  no email alerts should be queued for malak@example.com

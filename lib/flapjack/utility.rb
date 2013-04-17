@@ -42,5 +42,15 @@ module Flapjack
       "#{tzname} (UTC#{tzoffset})"
     end
 
+    def remove_utc_offset(time)
+      Time.utc(time.year, time.month, time.day, time.hour, time.min, time.sec)
+    end
+
+    def symbolize(obj)
+      return obj.inject({}){|memo,(k,v)| memo[k.to_sym] =  symbolize(v); memo} if obj.is_a? Hash
+      return obj.inject([]){|memo,v    | memo           << symbolize(v); memo} if obj.is_a? Array
+      return obj
+    end
+
   end
 end

@@ -1,15 +1,21 @@
 require 'spec_helper'
 
+require 'active_support/time_with_zone'
+require 'ice_cube'
+
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/notification_rule'
 
 describe Flapjack::Data::Contact, :redis => true do
 
+  weekdays_8_18 = IceCube::Schedule.new(Time.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
+  weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
+
   let(:notification_rule_data) {
     {:entity_tags        => ["database","physical"],
      :entities           => ["foo-app-01.example.com"],
-     :time_restrictions  => nil,
+     :time_restrictions  => [ weekdays_8_18.to_hash ],
      :warning_media      => ["email"],
      :critical_media     => ["sms", "email"],
      :warning_blackhole  => false,
