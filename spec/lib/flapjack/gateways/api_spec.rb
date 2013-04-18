@@ -391,7 +391,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     }
 
     existing = mock(Flapjack::Data::Contact)
-    existing.should_receive(:id).twice.and_return("0363")
+    existing.should_receive(:id).and_return("0363")
     existing.should_receive(:update).with(contacts['contacts'][1])
 
     Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([existing])
@@ -412,7 +412,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     }
 
     existing = mock(Flapjack::Data::Contact)
-    existing.should_receive(:id).exactly(3).times.and_return("0362")
+    existing.should_receive(:id).twice.and_return("0362")
     existing.should_receive(:delete!)
 
     Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([existing])

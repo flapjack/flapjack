@@ -323,8 +323,8 @@ module Flapjack
             errors << "No contacts with IDs were submitted"
           else
             contacts = Flapjack::Data::Contact.all(:redis => redis)
-            contacts_h = Hash[ *(contacts.collect {|c| [c.id, c]}).flatten(1) ]
-            contacts_ids = contacts.map(&:id)
+            contacts_h = hashify(*contacts) {|c| [c.id, c] }
+            contacts_ids = contacts_h.keys
 
             # delete contacts not found in the bulk list
             (contacts_ids - contacts_data_ids).each do |contact_to_delete_id|
@@ -411,12 +411,9 @@ module Flapjack
           return
         end
 
-        rule_data = Hash[ *([:entities, :entity_tags,
+        rule_data = hashify(:entities, :entity_tags,
           :warning_media, :critical_media, :time_restrictions,
-          :warning_blackhole, :critical_blackhole].collect {|k|
-            [k, params[k]]
-          }).flatten(1) ]
-
+          :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
         rule = contact.add_notification_rule(rule_data)
         rule.to_json
       end
@@ -443,12 +440,9 @@ module Flapjack
           return
         end
 
-        rule_data = Hash[ *([:entities, :entity_tags,
+        rule_data = hashify(:entities, :entity_tags,
           :warning_media, :critical_media, :time_restrictions,
-          :warning_blackhole, :critical_blackhole].collect {|k|
-            [k, params[k]]
-          }).flatten(1) ]
-
+          :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
         rule.update(rule_data)
         rule.to_json
       end
@@ -482,10 +476,11 @@ module Flapjack
         end
         media = contact.media
         media_intervals = contact.media_intervals
-        Hash[ *(media.keys.collect {|m|
-          [m, {'address'  => media[m],
-               'interval' => media_intervals[m] }]
-          }).flatten(1)].to_json
+        media_addr_int = hashify(*media.keys) {|k|
+          [k, {'address'  => media[k],
+               'interval' => media_intervals[k] }]
+        }
+        media_addr_int.to_json
       end
 
       # Returns the specified media of a contact
@@ -601,9 +596,10 @@ module Flapjack
           next unless tags = params[:entity][entity.name]
           entity.add_tags(*tags)
         end
-        (Hash[ *contact.entities(:tags => true).collect {|et|
-          [et[:entity].name, et[:tags]] }.flatten(1)
-        ]).to_json
+        contact_ent_tag = hashify(*contact.entities(:tags => true)) {|et|
+          [et[:entity].name, et[:tags]]
+        }
+        contact_ent_tag.to_json
       end
 
       delete '/contacts/:contact_id/tags' do
@@ -654,9 +650,10 @@ module Flapjack
           status 404
           return
         end
-        (Hash[ *contact.entities(:tags => true).collect {|et|
-          [et[:entity].name, et[:tags]] }.flatten(1)
-        ]).to_json
+        contact_ent_tag = hashify(*contact.entities(:tags => true)) {|et|
+          [et[:entity].name, et[:tags]]
+        }
+        contact_ent_tag.to_json
       end
 
       post '/entities/:entity/tags' do
@@ -731,6 +728,22 @@ module Flapjack
       rescue ArgumentError => e
         logger.error "Couldn't parse time from '#{value}'"
         nil
+      end
+
+      # The passed block will be provided each value from the args
+      # and must return array pairs [key, value] representing members of
+      # the hash this method returns. Keys should be unique -- if they're
+      # not, the earlier pair for that key will be overwritten.
+      def hashify(*args, &block)
+        key_value_pairs = args.map {|a| yield(a) }
+
+        # if using Ruby 1.9,
+        #   Hash[ key_value_pairs ]
+        # is all that's needed, but for Ruby 1.8 compatability, these must
+        # be flattened and the resulting array unpacked. flatten(1) only
+        # flattens the arrays constructed in the block, it won't mess up
+        # any values (or keys) that are themselves arrays.
+        Hash[ *( key_value_pairs.flatten(1) )]
       end
 
     end
