@@ -45,8 +45,7 @@ module Flapjack
 
       # add user's timezone string to the hash, deserialise
       # time in the user's timezone also
-      def self.time_restriction_to_ice_cube_hash(tr, timezone)
-        Time.zone = timezone.identifier
+      def self.time_restriction_to_ice_cube_hash(tr, time_zone)
         tr = symbolize(tr)
 
         tr[:start_date] = tr[:start_time].dup
@@ -56,16 +55,16 @@ module Flapjack
           tr[:start_date] = { :time => tr[:start_date] }
         end
         if tr[:start_date].is_a?(Hash)
-          tr[:start_date][:time] = Time.zone.parse(tr[:start_date][:time])
-          tr[:start_date][:zone] = timezone.identifier
+          tr[:start_date][:time] = time_zone.parse(tr[:start_date][:time])
+          tr[:start_date][:zone] = time_zone.name
         end
 
         if tr[:end_time].is_a?(String)
           tr[:end_time] = { :time => tr[:end_time] }
         end
         if tr[:end_time].is_a?(Hash)
-          tr[:end_time][:time] = Time.zone.parse(tr[:end_time][:time])
-          tr[:end_time][:zone] = timezone.identifier
+          tr[:end_time][:time] = time_zone.parse(tr[:end_time][:time])
+          tr[:end_time][:zone] = time_zone.name
         end
 
         # rewrite Weekly to IceCube::WeeklyRule, etc
@@ -76,11 +75,9 @@ module Flapjack
         tr
       end
 
-      def self.time_restriction_from_ice_cube_hash(tr, timezone)
-        Time.zone = timezone.identifier
-
-        tr[:start_date] = Time.zone.utc_to_local(tr[:start_date][:time]).strftime "%Y-%m-%d %H:%M:%S"
-        tr[:end_time]   = Time.zone.utc_to_local(tr[:end_time][:time]).strftime "%Y-%m-%d %H:%M:%S"
+      def self.time_restriction_from_ice_cube_hash(tr, time_zone)
+        tr[:start_date] = time_zone.utc_to_local(tr[:start_date][:time]).strftime "%Y-%m-%d %H:%M:%S"
+        tr[:end_time]   = time_zone.utc_to_local(tr[:end_time][:time]).strftime "%Y-%m-%d %H:%M:%S"
 
         # rewrite IceCube::WeeklyRule to Weekly, etc
         tr[:rrules].each {|rrule|

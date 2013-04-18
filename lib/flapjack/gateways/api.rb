@@ -545,7 +545,7 @@ module Flapjack
           status 404
           return
         end
-        contact.timezone.identifier.to_json
+        contact.timezone.name.to_json
       end
 
       # Sets the timezone of a contact
@@ -557,8 +557,8 @@ module Flapjack
           status 404
           return
         end
-        contact.timezone = ::TZInfo::Timezone.new(params[:timezone])
-        contact.timezone.identifier.to_json
+        contact.timezone = params[:timezone]
+        contact.timezone.name.to_json
       end
 
       # Removes the timezone of a contact

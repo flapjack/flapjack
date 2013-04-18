@@ -278,12 +278,15 @@ module Flapjack
       # return the timezone of the contact, or the system default if none is set
       def timezone(opts = {})
         tz_string = @redis.get("contact_tz:#{self.id}")
-        tz_string = opts[:default] if (tz_string.nil? || tz_string.empty?)
-        begin
-          tz = ::TZInfo::Timezone.new(tz_string)
-        rescue ::TZInfo::InvalidTimezoneIdentifier
-          logger.warn("Invalid timezone string set for contact #{self.id} or in default_contact_timezone or TZ (#{tz_string}), returning 'UTC'!")
-          tz = ::TZInfo::Timezone.new('UTC')
+        tz = opts[:default] if (tz_string.nil? || tz_string.empty?)
+
+        if tz.nil?
+          begin
+            tz = ActiveSupport::Timezone.new(tz_string)
+          rescue ArgumentError
+            logger.warn("Invalid timezone string set for contact #{self.id} or TZ (#{tz_string}), using 'UTC'!")
+            tz = ActiveSupport::Timezone.new('UTC')
+          end
         end
         tz
       end
@@ -293,7 +296,9 @@ module Flapjack
         if tz.nil?
           @redis.del("contact_tz:#{self.id}")
         else
-          @redis.set("contact_tz:#{self.id}", tz.identifier)
+          # ActiveSupport::TimeZone or String
+          @redis.set("contact_tz:#{self.id}",
+            tz.respond_to?(:name) ? tz.name : tz )
         end
       end
 

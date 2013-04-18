@@ -47,14 +47,15 @@ module Flapjack
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => notifylog))
 
+      tz = nil
       tz_string = @config['default_contact_timezone'] || ENV['TZ'] || 'UTC'
       begin
-        tz = ::TZInfo::Timezone.new(tz_string)
-      rescue ::TZInfo::InvalidTimezoneIdentifier
+        tz = ActiveSupport::TimeZone.new(tz_string)
+      rescue ArgumentError
         logger.error("Invalid timezone string specified in default_contact_timezone or TZ (#{tz_string})")
         exit 1
       end
-      @default_contact_timezone = tz.identifier
+      @default_contact_timezone = tz
 
       # FIXME: Put loading filters into separate method
       # FIXME: should we make the filters more configurable by the end user?
@@ -264,14 +265,12 @@ module Flapjack
       contact = opts[:contact]
       return true if rule.time_restrictions.nil? or rule.time_restrictions.empty?
 
-      timezone = contact.timezone(:default => @default_contact_timezone)
-      Time.zone = timezone.identifier
-      usertime = Time.zone.now
+      time_zone = contact.timezone(:default => @default_contact_timezone)
+      usertime = time_zone.now
 
       match = rule.time_restrictions.any? do |tr|
-
         # add contact's timezone to the time restriction hash
-        tr = Flapjack::Data::NotificationRule.time_restriction_to_ice_cube_hash(tr, timezone)
+        tr = Flapjack::Data::NotificationRule.time_restriction_to_ice_cube_hash(tr, time_zone)
 
         schedule = IceCube::Schedule.from_hash(tr)
         schedule.occurring_at?(usertime)
