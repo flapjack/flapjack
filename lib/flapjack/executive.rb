@@ -2,6 +2,8 @@
 
 require 'log4r'
 require 'log4r/outputter/fileoutputter'
+require 'tzinfo'
+require 'active_support/time'
 
 require 'flapjack/filters/acknowledgement'
 require 'flapjack/filters/ok'
@@ -14,6 +16,7 @@ require 'flapjack/data/entity_check'
 require 'flapjack/data/notification'
 require 'flapjack/data/event'
 require 'flapjack/redis_pool'
+require 'flapjack/utility'
 
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
@@ -21,6 +24,8 @@ require 'flapjack/gateways/sms_messagenet'
 module Flapjack
 
   class Executive
+
+    include Flapjack::Utility
 
     def initialize(opts = {})
       @config = opts[:config]
@@ -41,6 +46,16 @@ module Flapjack
       end
       @notifylog = Log4r::Logger.new("executive")
       @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => notifylog))
+
+      tz = nil
+      tz_string = @config['default_contact_timezone'] || ENV['TZ'] || 'UTC'
+      begin
+        tz = ActiveSupport::TimeZone.new(tz_string)
+      rescue ArgumentError
+        logger.error("Invalid timezone string specified in default_contact_timezone or TZ (#{tz_string})")
+        exit 1
+      end
+      @default_contact_timezone = tz
 
       # FIXME: Put loading filters into separate method
       # FIXME: should we make the filters more configurable by the end user?
@@ -242,6 +257,27 @@ module Flapjack
 
     end
 
+    # time restrictions match?
+    # nil rule.time_restrictions matches
+    # times (start, end) within time restrictions will have any UTC offset removed and will be
+    # considered to be in the timezone of the contact
+    def rule_occurring_now?(rule, opts)
+      contact = opts[:contact]
+      return true if rule.time_restrictions.nil? or rule.time_restrictions.empty?
+
+      time_zone = contact.timezone(:default => @default_contact_timezone)
+      usertime = time_zone.now
+
+      match = rule.time_restrictions.any? do |tr|
+        # add contact's timezone to the time restriction hash
+        tr = Flapjack::Data::NotificationRule.time_restriction_to_ice_cube_hash(tr, time_zone)
+
+        schedule = IceCube::Schedule.from_hash(tr)
+        schedule.occurring_at?(usertime)
+      end
+      !!match
+    end
+
     # delete messages based on entity name(s), tags, severity, time of day
     def apply_notification_rules(messages)
       # first get all rules matching entity and time
@@ -257,9 +293,9 @@ module Flapjack
         event_id = message.notification.event.id
         options  = {}
         options[:no_rules_for_contact] = true if rules.empty?
-        # filter based on tags, severity, time of day
+        # filter based on entity, tags, severity, time of day
         matchers = rules.find_all do |rule|
-          rule.match_entity?(event_id) && rule.match_time?
+          rule.match_entity?(event_id) && rule_occurring_now?(rule, :contact => message.contact)
         end
         [message, matchers, options]
       end

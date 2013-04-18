@@ -246,8 +246,8 @@ end
 Given /^user (\d+) has the following notification intervals:$/ do |contact_id, intervals|
   contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
   intervals.hashes.each do |interval|
-    contact.set_interval_for_media('email', interval['email'].to_i)
-    contact.set_interval_for_media('sms',   interval['sms'].to_i)
+    contact.set_interval_for_media('email', interval['email'].to_i * 60)
+    contact.set_interval_for_media('sms',   interval['sms'].to_i * 60)
   end
 end
 
@@ -263,9 +263,11 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
     rule['time_restrictions'].split(',').map { |x| x.strip }.each do |time_restriction|
       case time_restriction
       when '8-18 weekdays'
-        weekdays_8_18 = IceCube::Schedule.new(Time.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
+        # FIXME: get timezone from the user definition (or config[:default_contact_timezone])
+        time_zone = ActiveSupport::TimeZone.new("America/New_York")
+        weekdays_8_18 = IceCube::Schedule.new(time_zone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
         weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
-        time_restrictions << weekdays_8_18.to_hash
+        time_restrictions << Flapjack::Data::NotificationRule.time_restriction_from_ice_cube_hash(weekdays_8_18.to_hash, time_zone)
       end
     end
     Flapjack::Data::NotificationRule.add({:contact_id         => contact_id,
@@ -279,16 +281,16 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
   end
 end
 
-Given /^the time is (.*) on a (.*)$/ do |time, day_of_week|
-  Delorean.time_travel_to(Chronic.parse("#{time} on #{day_of_week}"))
+Then /^all alert dropping keys for user (\d+) should have expired$/ do |contact_id|
+  @redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
 end
 
-When /^the (\w*) alert block for user (\d*) for (?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') for state (.*) expires$/ do |media, contact, check, entity, state|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
-  num_deleted = @redis.del("drop_alerts_for_contact:#{contact}:#{media}:#{entity}:#{check}:#{state}")
-  puts "Warning: no keys expired" unless num_deleted > 0
-end
+# When /^the (\w*) alert block for user (\d*) for (?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') for state (.*) expires$/ do |media, contact, check, entity, state|
+#   check  = check  ? check  : @check
+#   entity = entity ? entity : @entity
+#   num_deleted = @redis.del("drop_alerts_for_contact:#{contact}:#{media}:#{entity}:#{check}:#{state}")
+#   puts "Warning: no keys expired" unless num_deleted > 0
+# end
 
 Then /^(.*) email alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
   check  = check  ? check  : @check

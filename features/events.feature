@@ -111,6 +111,7 @@ Feature: events
     And   a critical event is received
     Then  a notification should not be generated
 
+  @time
   Scenario: Check critical to ok
     Given the check is in a critical state
     When  5 minutes passes
@@ -185,6 +186,7 @@ Feature: events
     And   an ok event is received
     Then  a notification should not be generated
 
+  @time
   Scenario: Flapper (down for one minute, up for one minute, repeat)
     Given the check is in an ok state
     When  a critical event is received

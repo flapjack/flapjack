@@ -9,7 +9,6 @@ require 'flapjack/data/entity'
 require 'flapjack/data/notification_rule'
 require 'flapjack/data/tag'
 require 'flapjack/data/tag_set'
-require 'tzinfo'
 
 module Flapjack
 
@@ -168,7 +167,7 @@ module Flapjack
       def notification_rules
         @redis.smembers("contact_notification_rules:#{self.id}").collect { |rule_id|
           next if (rule_id.nil? || rule_id == '')
-          Flapjack::Data::NotificationRule.find_by_id(rule_id, {:redis => @redis})
+          Flapjack::Data::NotificationRule.find_by_id(rule_id, {:redis => @redis })
         }.compact
       end
 
@@ -189,7 +188,8 @@ module Flapjack
       # how often to notify this contact on the given media
       # return 15 mins if no value is set
       def interval_for_media(media)
-        @redis.hget("contact_media_intervals:#{self.id}", media) || 15 * 60
+        interval = @redis.hget("contact_media_intervals:#{self.id}", media)
+        (interval.nil? || (interval.to_i <= 0)) ? (15 * 60) : interval.to_i
       end
 
       def set_interval_for_media(media, interval)
@@ -274,32 +274,30 @@ module Flapjack
         @redis.hkeys("contact_media:#{self.id}")
       end
 
-      # return the timezone string of the contact, or the system default if none is set
-      def timezone
+      # return the timezone of the contact, or the system default if none is set
+      def timezone(opts = {})
         tz_string = @redis.get("contact_tz:#{self.id}")
-        tz_string = 'UTC' if (tz_string.nil? || tz_string.empty?)
-        begin
-          tz = ::TZInfo::Timezone.new(tz_string)
-        rescue ::TZInfo::InvalidTimezoneIdentifier
-          logger.warn("Invalid timezone string set for contact #{self.id} (#{tz_string})")
-          # FIXME: allow setting a default other than UTC in flapjack_config.yml
-          tz = ::TZInfo::Timezone.new('UTC')
+        tz = opts[:default] if (tz_string.nil? || tz_string.empty?)
+
+        if tz.nil?
+          begin
+            tz = ActiveSupport::TimeZone.new(tz_string)
+          rescue ArgumentError
+            logger.warn("Invalid timezone string set for contact #{self.id} or TZ (#{tz_string}), using 'UTC'!")
+            tz = ActiveSupport::TimeZone.new('UTC')
+          end
         end
-        tz.identifier
+        tz
       end
 
-      # sets or removes the timezone string for the contact
-      def timezone=(tz_string)
-        if tz_string.nil?
+      # sets or removes the timezone for the contact
+      def timezone=(tz)
+        if tz.nil?
           @redis.del("contact_tz:#{self.id}")
         else
-          begin
-            tz = ::TZInfo::Timezone.new(tz_string)
-          rescue ::TZInfo::InvalidTimezoneIdentifier
-            logger.warn("Invalid timezone requested to be set for contact #{self.id} (#{tz_string})")
-            return false
-          end
-          @redis.set("contact_tz:#{self.id}", tz.identifier)
+          # ActiveSupport::TimeZone or String
+          @redis.set("contact_tz:#{self.id}",
+            tz.respond_to?(:name) ? tz.name : tz )
         end
       end
 
