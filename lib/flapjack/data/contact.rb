@@ -9,7 +9,6 @@ require 'flapjack/data/entity'
 require 'flapjack/data/notification_rule'
 require 'flapjack/data/tag'
 require 'flapjack/data/tag_set'
-require 'tzinfo'
 
 module Flapjack
 
@@ -282,10 +281,10 @@ module Flapjack
 
         if tz.nil?
           begin
-            tz = ActiveSupport::Timezone.new(tz_string)
+            tz = ActiveSupport::TimeZone.new(tz_string)
           rescue ArgumentError
             logger.warn("Invalid timezone string set for contact #{self.id} or TZ (#{tz_string}), using 'UTC'!")
-            tz = ActiveSupport::Timezone.new('UTC')
+            tz = ActiveSupport::TimeZone.new('UTC')
           end
         end
         tz
