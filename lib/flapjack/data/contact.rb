@@ -293,12 +293,6 @@ module Flapjack
         if tz.nil?
           @redis.del("contact_tz:#{self.id}")
         else
-          begin
-            tz_string = tz.identifier
-          rescue RuntimeError
-            logger.warn("Invalid timezone requested to be set for contact #{self.id} (#{tz})")
-            return false
-          end
           @redis.set("contact_tz:#{self.id}", tz.identifier)
         end
       end
