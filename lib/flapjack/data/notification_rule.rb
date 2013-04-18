@@ -1,10 +1,15 @@
 #!/usr/bin/env ruby
 
 require 'yajl/json_gem'
+require 'active_support/time'
+require 'ice_cube'
+require 'flapjack/utility'
 
 module Flapjack
   module Data
     class NotificationRule
+
+      extend Flapjack::Utility
 
       attr_accessor :id, :contact_id, :entities, :entity_tags, :time_restrictions,
         :warning_media, :critical_media, :warning_blackhole, :critical_blackhole
@@ -38,6 +43,53 @@ module Flapjack
         self.find_by_id(rule_id, :redis => redis)
       end
 
+      # add user's timezone string to the hash, deserialise
+      # time in the user's timezone also
+      def self.time_restriction_to_ice_cube_hash(tr, time_zone)
+        tr = symbolize(tr)
+
+        tr[:start_date] = tr[:start_time].dup
+        tr.delete(:start_time)
+
+        if tr[:start_date].is_a?(String)
+          tr[:start_date] = { :time => tr[:start_date] }
+        end
+        if tr[:start_date].is_a?(Hash)
+          tr[:start_date][:time] = time_zone.parse(tr[:start_date][:time])
+          tr[:start_date][:zone] = time_zone.name
+        end
+
+        if tr[:end_time].is_a?(String)
+          tr[:end_time] = { :time => tr[:end_time] }
+        end
+        if tr[:end_time].is_a?(Hash)
+          tr[:end_time][:time] = time_zone.parse(tr[:end_time][:time])
+          tr[:end_time][:zone] = time_zone.name
+        end
+
+        # rewrite Weekly to IceCube::WeeklyRule, etc
+        tr[:rrules].each {|rrule|
+          rrule[:rule_type] = "IceCube::#{rrule[:rule_type]}Rule"
+        }
+
+        tr
+      end
+
+      def self.time_restriction_from_ice_cube_hash(tr, time_zone)
+        tr[:start_date] = time_zone.utc_to_local(tr[:start_date][:time]).strftime "%Y-%m-%d %H:%M:%S"
+        tr[:end_time]   = time_zone.utc_to_local(tr[:end_time][:time]).strftime "%Y-%m-%d %H:%M:%S"
+
+        # rewrite IceCube::WeeklyRule to Weekly, etc
+        tr[:rrules].each {|rrule|
+          rrule[:rule_type] = /^.*\:\:(.*)Rule$/.match(rrule[:rule_type])[1]
+        }
+
+        tr[:start_time] = tr[:start_date].dup
+        tr.delete(:start_date)
+
+        tr
+      end
+
       def refresh
         rule_data = @redis.hgetall("notification_rule:#{@id}")
 
@@ -49,6 +101,7 @@ module Flapjack
         @critical_media     = Yajl::Parser.parse(rule_data['critical_media'] || '')
         @warning_blackhole  = ((rule_data['warning_blackhole'] || 'false').downcase == 'true')
         @critical_blackhole = ((rule_data['critical_blackhole'] || 'false').downcase == 'true')
+
       end
 
       def update(rule_data)
@@ -57,11 +110,12 @@ module Flapjack
       end
 
       def to_json(*args)
-        (Hash[ *([:id, :contact_id, :entity_tags, :entities,
-          :time_restrictions, :warning_media, :critical_media,
-          :warning_blackhole, :critical_blackhole].collect {|k|
-            [k, self.send(k)]
-          }).flatten(1) ]).to_json
+        hash = (Hash[ *([:id, :contact_id, :entity_tags, :entities,
+                 :time_restrictions, :warning_media, :critical_media,
+                 :warning_blackhole, :critical_blackhole].collect {|k|
+                   [k, self.send(k)]
+                 }).flatten(1) ])
+        hash.to_json
       end
 
       # tags or entity names match?
@@ -71,26 +125,6 @@ module Flapjack
                        (@entities.nil? or @entities.empty?)
         return true if @entities.include?(event.split(':').first)
         # TODO: return true if event's entity tags match entity tag list on the rule
-        return false
-      end
-
-      # time restrictions match?
-      # nil @time_restrictions matches
-      def match_time?
-        return true if @time_restrictions.nil? or @time_restrictions.empty?
-        return true
-        # TODO: return true if current time falls within any of the time restriction periods
-        tzstr = @timezone || 'UTC'
-        begin
-          tz = TZInfo::Timezone.get(tzstr)
-        rescue
-          @logger.error("Unrecognised timezone string: '#{tzstr}', NotificationRule.match_time? proceeding with UTC")
-          tz = TZInfo::Timezone.get('UTC')
-        end
-        now_secs = tz.utc_to_local
-        match = @time_restrictions.find do |tr|
-        end
-        return true if match
         return false
       end
 
@@ -114,7 +148,7 @@ module Flapjack
 
       def initialize(rule_data, opts = {})
         @redis  ||= opts[:redis]
-        @logger = opts[:logger]
+        @logger   = opts[:logger]
         raise "a redis connection must be supplied" unless @redis
         @id = rule_data[:id]
       end

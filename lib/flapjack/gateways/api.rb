@@ -540,7 +540,7 @@ module Flapjack
           status 404
           return
         end
-        contact.timezone.to_json
+        contact.timezone.name.to_json
       end
 
       # Sets the timezone of a contact
@@ -553,7 +553,7 @@ module Flapjack
           return
         end
         contact.timezone = params[:timezone]
-        contact.timezone.to_json
+        contact.timezone.name.to_json
       end
 
       # Removes the timezone of a contact
