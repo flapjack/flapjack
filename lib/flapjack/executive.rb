@@ -57,6 +57,9 @@ module Flapjack
       end
       @default_contact_timezone = tz
 
+      @archive_events        = @config['archive_events'] || false
+      @events_archive_maxage = @config['events_archive_maxage']
+
       # FIXME: Put loading filters into separate method
       # FIXME: should we make the filters more configurable by the end user?
       options = { :log => opts[:logger], :persistence => @redis }
@@ -100,7 +103,9 @@ module Flapjack
 
       until @should_quit
         @logger.debug("Waiting for event...")
-        event = Flapjack::Data::Event.next(:redis => @redis)
+        event = Flapjack::Data::Event.next(:redis => @redis,
+                                           :archive_events => @archive_events,
+                                           :events_archive_maxage => @events_archive_maxage)
         process_event(event) unless event.nil?
       end
 

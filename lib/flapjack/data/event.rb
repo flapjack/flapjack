@@ -21,17 +21,30 @@ module Flapjack
       def self.next(opts={})
         raise "Redis connection not set" unless redis = opts[:redis]
 
-        defaults = { :block => true }
+        defaults = { :block => true,
+                     :archive_events => false,
+                     :events_archive_maxage => (3 * 60 * 60) }
         options  = defaults.merge(opts)
 
-        # In production, we wait indefinitely for events coming from other systems.
-        if options[:block]
-          return self.new( ::JSON.parse( redis.blpop('events', 0).last ) )
+        if options[:archive_events]
+          dest = "events_archive:#{Time.now.utc.strftime "%Y%m%d%H"}"
+          if options[:block]
+            raw = redis.brpoplpush('events', dest, 0)
+          else
+            raw = redis.rpoplpush('events', dest)
+            return unless raw
+          end
+          redis.expire(dest, options[:events_archive_maxage])
+        else
+          if options[:block]
+            raw = redis.brpop('events', 0)[1]
+          else
+            raw = redis.rpop('events')
+            return unless raw
+          end
         end
+        return self.new( ::JSON.parse( raw ) )
 
-        # In testing, we take care that there are no events on the queue.
-        return unless raw = redis.lpop('events')
-        self.new( ::JSON.parse(raw) )
       end
 
       # creates, or modifies, an event object and adds it to the events list in redis

@@ -51,7 +51,7 @@ def process_input(opts)
         'summary'   => check_output,
         'timestamp' => timestamp,
       }.to_json
-      redis.rpush 'events', event
+      redis.lpush 'events', event
     end
   rescue Redis::CannotConnectError
     puts "Error, unable to to connect to the redis server (#{$!})"
