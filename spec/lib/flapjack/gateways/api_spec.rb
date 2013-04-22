@@ -74,14 +74,100 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   it "returns a list of checks for an entity" do
-    check_list = ['ping']
-    entity.should_receive(:check_list).and_return(check_list)
+    entity.should_receive(:check_list).and_return([check])
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
     get "/checks/#{entity_name_esc}"
     last_response.should be_ok
-    last_response.body.should == check_list.to_json
+    last_response.body.should == [check].to_json
+  end
+
+  it "returns the status for all checks on an entity" do
+    entity.should_receive(:check_list).and_return([check])
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+
+    now = Time.now.to_i
+
+    entity_check.should_receive(:state).and_return('OK')
+    entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
+    entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
+    entity_check.should_receive(:last_update).and_return(now - 30)
+    entity_check.should_receive(:last_problem_notification).and_return(now - 60)
+    entity_check.should_receive(:last_recovery_notification).and_return(now - 30)
+    entity_check.should_receive(:last_acknowledgement_notification).and_return(now - 45)
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+
+    get "/status/#{entity_name_esc}"
+    last_response.should be_ok
+    last_response.body.should == [{'name' => check,
+                                   'state' => 'OK',
+                                   'in_unscheduled_maintenance' => false,
+                                   'in_scheduled_maintenance' => false,
+                                   'last_update' => (now - 30),
+                                   'last_problem_notification' => (now - 60),
+                                   'last_recovery_notification' => (now - 30),
+                                   'last_acknowledgement_notification' => (now - 45)
+                                  }].to_json
+  end
+
+  it "should not show the status for an entity that's not found" do
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(nil)
+
+    get "/status/#{entity_name_esc}"
+    last_response.should be_not_found
+  end
+
+  it "returns the status for a check (with non-word characters) on an entity" do
+    nw_check = "HTTP Port 443"
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+
+    now = Time.now.to_i
+
+    entity_check.should_receive(:state).and_return('OK')
+    entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
+    entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
+    entity_check.should_receive(:last_update).and_return(now - 30)
+    entity_check.should_receive(:last_problem_notification).and_return(now - 60)
+    entity_check.should_receive(:last_recovery_notification).and_return(now - 30)
+    entity_check.should_receive(:last_acknowledgement_notification).and_return(now - 45)
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, nw_check, :redis => redis).and_return(entity_check)
+
+    get "/status/#{entity_name_esc}/#{URI.escape(nw_check)}"
+    last_response.should be_ok
+    last_response.body.should == {'name' => nw_check,
+                                  'state' => 'OK',
+                                  'in_unscheduled_maintenance' => false,
+                                  'in_scheduled_maintenance' => false,
+                                  'last_update' => (now - 30),
+                                  'last_problem_notification' => (now - 60),
+                                  'last_recovery_notification' => (now - 30),
+                                  'last_acknowledgement_notification' => (now - 45)
+                                 }.to_json
+  end
+
+  it "should not show the status for a check on an entity that's not found" do
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(nil)
+
+    get "/status/#{entity_name_esc}/#{check}"
+    last_response.should be_not_found
+  end
+
+  it "should not show the status for a check that's not found on an entity" do
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(nil)
+
+    get "/status/#{entity_name_esc}/#{check}"
+    last_response.should be_not_found
   end
 
   it "returns a list of scheduled maintenance periods for an entity" do
