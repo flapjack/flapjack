@@ -100,7 +100,7 @@ module Flapjack
         entity.check_list.to_json
       end
 
-      get %r{/status/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
+      get %r{/status/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(.+))?} do
         content_type :json
 
         entity_name = params[:captures][0]
@@ -118,6 +118,10 @@ module Flapjack
           entity.check_list.sort.collect {|c|
             entity_check_status(entity, c)
           }
+        end
+        if ret.nil?
+          status 404
+          return
         end
         ret.to_json
       end
