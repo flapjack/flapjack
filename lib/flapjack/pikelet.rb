@@ -26,6 +26,16 @@ require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/web'
 require 'flapjack/logger'
+require 'thin/version'
+
+
+module Thin
+  # disable Thin's loading of daemons
+  # workaround for https://github.com/flpjck/flapjack/issues/133
+  def self.win?
+    true
+  end
+end
 
 module Flapjack
 
