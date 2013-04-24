@@ -1,9 +1,6 @@
 # Flapjack
 
-[![Travis CI Status][id_travis_img]][id_travis_link]
-
-[id_travis_link]: https://secure.travis-ci.org/#!/flpjck/flapjack
-[id_travis_img]: https://secure.travis-ci.org/flpjck/flapjack.png
+[![Build Status](https://travis-ci.org/flpjck/flapjack.png)](https://travis-ci.org/flpjck/flapjack)
 
 [flapjack-project.com](http://flapjack-project.com/)
 
