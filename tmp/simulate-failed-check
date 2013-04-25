@@ -1,0 +1,135 @@
+#!/usr/bin/env ruby
+
+unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+  $: << File.dirname(__FILE__) + '/../lib'
+end
+
+require 'optparse'
+require 'ostruct'
+require 'redis'
+require 'yajl/json_gem'
+require 'eventmachine'
+
+require 'flapjack/configuration'
+
+def pike(message)
+  puts "piking out: #{message}"
+  exit 1
+end
+
+def send_event(event, opts)
+	redis = opts[:redis]
+  redis.lpush 'events', event.to_json
+end
+
+def fail(opts)
+	redis = Redis.new(opts[:redis_options])
+	stop_after = opts[:minutes].to_i * 60
+	recover = opts[:recover]
+	event  = {
+    'entity'    => opts[:entity] || 'foo-app-01',
+    'check'     => opts[:check]  || 'HTTP',
+    'type'      => 'service',
+    'timestamp' => Time.now.to_i
+	}
+	failure  = event.merge('state' => 'critical', 'summary' => 'Connection refused')
+	recovery = event.merge('state' => 'ok',       'summary' => '200 OK, 37 ms')
+	key = "#{event['entity']}:#{event['check']}"
+
+ 	puts "#{Time.now}: sending failure event for #{key}"
+  send_event(failure, :redis => redis)
+
+  EM.run {
+
+    EM.add_timer(stop_after) do
+      puts "#{Time.now}: stopping"
+      if recover
+      	puts "#{Time.now}: sending recovery event for #{key}"
+        send_event(recovery, :redis => redis)
+      end
+      EM.stop
+    end
+
+    EM.add_periodic_timer(10) do
+     	puts "#{Time.now}: sending failure event for #{key}"
+      send_event(failure, :redis => redis)
+    end
+
+  }
+
+end
+
+
+options = OpenStruct.new
+options.config    = nil
+options.daemonize = nil
+
+exe = File.basename(__FILE__)
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: #{exe} COMMAND [OPTIONS]"
+
+  opts.separator  ""
+  opts.separator  "Commands"
+  opts.separator  "     fail-and-recover"
+  opts.separator  "     fail"
+  opts.separator  ""
+  opts.separator  "Options"
+
+  opts.on("-c", "--config [PATH]", String, "PATH to the config file to use") do |c|
+    options.config = c
+  end
+
+  opts.on("-t", "--time MINUTES", String, "MINUTES to generate failure events for") do |t|
+    options.minutes = t
+  end
+
+  opts.on("-e", "--entity ENTITY", String, "ENTITY to generate failure events for ('foo-app-01')") do |e|
+    options.entity = e
+  end
+
+  opts.on("-k", "--check CHECK", String, "CHECK to generate failure events for ('HTTP')") do |k|
+    options.check = k
+  end
+
+end.parse!(ARGV)
+
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+
+if options.config
+  config_file = options.config
+  pike "specified config file cannot be read" unless File.readable?(config_file)
+else
+  [ 'etc/flapjack_config.yaml',
+    File.dirname(__FILE__) + 'etc/flapjack_config.yaml',
+    '/etc/flapjack/flapjack_config.yaml' ].each do |candidate|
+    if File.readable?(candidate)
+      config_file = candidate
+      break
+    else
+      puts "not found and/or not readable: #{candidate}"
+    end
+  end
+  pike "no config file specified and none found in default locations" unless config_file
+end
+
+config = Flapjack::Configuration.new
+config.load(config_file)
+config_env = config.all
+redis_options = config.for_redis
+
+if config_env.nil? || config_env.empty?
+  puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
+  exit(false)
+end
+             
+options = {:redis_options => redis_options, :minutes => options.minutes, 
+  	       :entity => options.entity, :check => options.check}
+case ARGV[0]
+when "fail-and-recover"
+	fail(options.merge(:recover => true))
+  puts " done."
+when "fail"
+	fail(options.merge(:recover => false))
+  puts " done."
+end
