@@ -25,6 +25,9 @@ module Flapjack
                      :archive_events => false,
                      :events_archive_maxage => (3 * 60 * 60) }
         options  = defaults.merge(opts)
+        if options[:logger]
+          logger = options[:logger]
+        end
 
         if options[:archive_events]
           dest = "events_archive:#{Time.now.utc.strftime "%Y%m%d%H"}"
@@ -43,8 +46,13 @@ module Flapjack
             return unless raw
           end
         end
-        return self.new( ::JSON.parse( raw ) )
-
+        begin
+          parsed = ::JSON.parse( raw )
+        rescue => e
+          logger.warn("Error deserialising event json: #{e}, raw json: #{raw.inspect}")
+          return nil
+        end
+        return self.new( parsed )
       end
 
       # creates, or modifies, an event object and adds it to the events list in redis
