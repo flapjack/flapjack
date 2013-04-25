@@ -8,10 +8,12 @@ id = "%.2d" % (1..10).to_a[rand(9)]
 events = []
 
 events << {
-  'entity' => "app-#{id}",
-  'check' => 'http',
-  'type' => 'service',
-  'state' => 'critical',
+  'entity'    => "app-#{id}",
+  'check'     => 'http',
+  'type'      => 'service',
+  'state'     => 'critical',
+  'summary'   => "It's failing, yo!",
+  'timestamp' => Time.now.to_i,
 }.to_json
 
 redis = Redis.new
