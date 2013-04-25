@@ -105,7 +105,8 @@ module Flapjack
         @logger.debug("Waiting for event...")
         event = Flapjack::Data::Event.next(:redis => @redis,
                                            :archive_events => @archive_events,
-                                           :events_archive_maxage => @events_archive_maxage)
+                                           :events_archive_maxage => @events_archive_maxage,
+                                           :logger => @logger)
         process_event(event) unless event.nil?
       end
 
