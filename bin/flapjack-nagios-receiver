@@ -74,7 +74,7 @@ options.daemonize = nil
 
 exe = File.basename(__FILE__)
 
-OptionParser.new do |opts|
+optparse = OptionParser.new do |opts|
   opts.banner = "Usage: #{exe} COMMAND [OPTIONS]"
 
   opts.separator  ""
@@ -106,7 +106,8 @@ OptionParser.new do |opts|
     options.log_path = l
   end
 
-end.parse!(ARGV)
+end
+optparse.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
@@ -219,6 +220,7 @@ else
   else
     puts "Unknown command provided: '#{ARGV[0]}'"
   end
+  puts "\n#{optparse}"
   exit 1
 
 end
