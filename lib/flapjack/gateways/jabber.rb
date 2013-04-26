@@ -66,7 +66,7 @@ module Flapjack
           end
         end
 
-        register_handler :message, :groupchat?, :body => /^flapjack:\s+/ do |stanza|
+        register_handler :message, :groupchat?, :body => /^#{@config['alias']}:\s+/ do |stanza|
           EventMachine::Synchrony.next_tick do
             on_groupchat(stanza)
           end
@@ -227,7 +227,7 @@ module Flapjack
         return if @should_quit
         @logger.debug("groupchat message received: #{stanza.inspect}")
 
-        if stanza.body =~ /^flapjack:\s+(.*)/
+        if stanza.body =~ /^#{@config['alias']}:\s+(.*)/
           command = $1
         end
 

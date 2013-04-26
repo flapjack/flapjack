@@ -32,7 +32,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'haml'
   gem.add_dependency 'thin'
   gem.add_dependency 'mail'
-  gem.add_dependency 'blather', '0.8.1'
+  gem.add_dependency 'blather', '~> 0.8.3'
   gem.add_dependency 'chronic'
   gem.add_dependency 'chronic_duration'
   gem.add_dependency 'activesupport'
