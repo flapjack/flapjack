@@ -10,6 +10,7 @@ require 'optparse'
 require 'ostruct'
 
 require 'flapjack/configuration'
+require 'flapjack/version'
 
 options = OpenStruct.new
 options.config    = File.join('etc', 'flapjack_config.yaml')
@@ -17,7 +18,7 @@ options.daemonize = nil
 
 @exe = File.basename(__FILE__)
 
-OptionParser.new do |opts|
+optparse = OptionParser.new do |opts|
   opts.banner = "Usage: flapjack COMMAND [OPTIONS]"
 
   opts.separator  ""
@@ -27,6 +28,8 @@ OptionParser.new do |opts|
   opts.separator  "     restart #{" " * 23} (re)start flapjack"
   opts.separator  "     reload #{" " * 24} reload flapjack configuration"
   opts.separator  "     status #{" " * 24} see if flapjack is running"
+  opts.separator  "     version #{" " * 23} display flapjack version and exit"
+  opts.separator  "     help #{" " * 26} display this usage info"
   opts.separator  ""
   opts.separator  "Options"
 
@@ -46,7 +49,8 @@ OptionParser.new do |opts|
     options.log_path = l
   end
 
-end.parse!(ARGV)
+end
+optparse.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
@@ -177,12 +181,20 @@ when "status"
     exit 3
   end
 
+when "help"
+  puts optparse
+  exit
+
+when "version"
+  puts Flapjack::VERSION
+
 else
   if ARGV.nil? || ARGV.empty?
     puts "No command provided"
   else
     puts "Unknown command provided: '#{ARGV[0]}'"
   end
+  puts "\n#{optparse}"
   exit 1
 
 end
