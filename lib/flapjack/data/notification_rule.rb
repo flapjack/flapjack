@@ -105,7 +105,7 @@ module Flapjack
       end
 
       def update(rule_data)
-        self.class.add_or_update(rule_data, :redis => @redis)
+        self.class.add_or_update(rule_data.merge(:id => @id), :redis => @redis)
         self.refresh
       end
 
@@ -154,6 +154,8 @@ module Flapjack
       end
 
       def self.add_or_update(rule_data, options = {})
+        raise ":id is a required key in rule_data" unless rule_data[:id]
+
         redis = options[:redis]
 
         rule_data[:entities]          = Yajl::Encoder.encode(rule_data[:entities])
