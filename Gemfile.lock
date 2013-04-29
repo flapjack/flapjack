@@ -3,7 +3,7 @@ PATH
   specs:
     flapjack (0.7.1)
       activesupport
-      blather (= 0.8.1)
+      blather (~> 0.8.3)
       chronic
       chronic_duration
       dante
@@ -31,12 +31,12 @@ GEM
       i18n (= 0.6.1)
       multi_json (~> 1.0)
     addressable (2.3.2)
-    blather (0.8.1)
+    blather (0.8.3)
       activesupport (>= 2.3.11)
-      eventmachine (>= 0.12.6)
+      eventmachine (>= 1.0.0)
       girl_friday
       niceogiri (~> 1.0)
-      nokogiri (~> 1.5.5)
+      nokogiri (~> 1.5, >= 1.5.6)
     builder (3.1.4)
     chronic (0.9.0)
     chronic_duration (0.10.2)
@@ -114,7 +114,7 @@ GEM
       mime-types (~> 1.16)
       treetop (~> 1.4.8)
     method_source (0.8.1)
-    mime-types (1.22)
+    mime-types (1.23)
     multi_json (1.5.0)
     niceogiri (1.1.1)
       nokogiri (~> 1.5)
