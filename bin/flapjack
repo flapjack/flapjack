@@ -49,6 +49,11 @@ optparse = OptionParser.new do |opts|
     options.log_path = l
   end
 
+  opts.on("-v", "--version", "display flapjack version") do |v|
+    options.version = v
+  end
+
+
 end
 optparse.parse!(ARGV)
 
@@ -75,6 +80,10 @@ daemonize = options.daemonize.nil? ?
               !!config_env['daemonize'] :
               options.daemonize
 
+if options.version
+  puts Flapjack::VERSION
+  exit
+end
 
 flapjack_coord = Proc.new {
   require 'flapjack/coordinator'
@@ -187,6 +196,7 @@ when "help"
 
 when "version"
   puts Flapjack::VERSION
+  exit
 
 else
   if ARGV.nil? || ARGV.empty?
