@@ -259,7 +259,11 @@ module Flapjack
 
       notification = Flapjack::Data::Notification.for_event(event, :type => notification_type)
 
-      enqueue_messages( apply_notification_rules( notification.messages(:contacts => contacts) ) )
+      #enqueue_messages( apply_notification_rules( notification.messages(:contacts => contacts) ) )
+
+      messages = notification.messages(:contacts => contacts)
+      messages = apply_notification_rules(messages)
+      enqueue_messages(messages)
 
     end
 
@@ -344,9 +348,11 @@ module Flapjack
             mms = matcher.media_for_severity(severity)
             unless mms
               @logger.warn("got nil for matcher.media_for_severity(#{severity}), matcher: #{matcher.inspect}")
-              return false
+              answer = false
+            else
+              answer = mms.include?(message.medium)
             end
-            mms.include?(message.medium)
+            answer
           }
       end
 
