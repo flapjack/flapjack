@@ -232,8 +232,8 @@ end
 Given /^the following users exist:$/ do |contacts|
   contacts.hashes.each do |contact|
     media = {}
-    media['email'] = contact['email']
-    media['sms']   = contact['sms']
+    media['email'] = { 'address' => contact['email'] }
+    media['sms']   = { 'address' => contact['sms'] }
     Flapjack::Data::Contact.add({'id'         => contact['id'],
                                  'first_name' => contact['first_name'],
                                  'last_name'  => contact['last_name'],

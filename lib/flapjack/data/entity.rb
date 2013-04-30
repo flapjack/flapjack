@@ -78,9 +78,17 @@ module Flapjack
       # time
       def self.find_all_name_matching(pattern, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
+        begin
+          regex = /#{pattern}/
+        rescue => e
+          if @logger
+            @logger.info("Jabber#self.find_all_name_matching - unable to use /#{pattern}/ as a regex pattern: #{e}")
+          end
+          return nil
+        end
         redis.keys('entity_id:*').inject([]) {|memo, check|
           a, entity_name = check.split(':')
-          if (entity_name =~ /#{pattern}/) && !memo.include?(entity_name)
+          if (entity_name =~ regex) && !memo.include?(entity_name)
             memo << entity_name
           end
           memo
