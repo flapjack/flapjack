@@ -331,14 +331,15 @@ module Flapjack
                     *['first_name', 'last_name', 'email'].collect {|f| [f, contact_data[f]]})
 
         unless contact_data['media'].nil?
-          contact_data['media'].each_pair {|medium, address|
+          contact_data['media'].each_pair {|medium, details|
             case medium
             when 'pagerduty'
-              redis.hset("contact_media:#{contact_id}", medium, address['service_key'])
+              redis.hset("contact_media:#{contact_id}", medium, details['service_key'])
               redis.hmset("contact_pagerduty:#{contact_id}",
-                          *['subdomain', 'username', 'password'].collect {|f| [f, address[f]]})
+                          *['subdomain', 'username', 'password'].collect {|f| [f, details[f]]})
             else
-              redis.hset("contact_media:#{contact_id}", medium, address)
+              redis.hset("contact_media:#{contact_id}", medium, details['address'])
+              redis.hset("contact_media_intervals:#{contact_id}", medium, details['interval']) if details['interval']
             end
           }
         end
