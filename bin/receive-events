@@ -36,13 +36,14 @@ def receive(opts)
   case
   when opts[:all]
     archive_key = archives[0][:name]
-    cursor      = 0
+    cursor      = -1
   when opts[:last], opts[:time]
     raise "Sorry, unimplemented"
   else
     # cursor will be pointing to the position after the last item in the last list
     archive_key = archives[-1][:name]
-    cursor      = archives[-1][:size]
+    #cursor     = archives[-1][:size]
+    cursor      = -1
   end
 
   puts archive_key
@@ -50,24 +51,22 @@ def receive(opts)
   loop do
     new_archive_key = false
     # something to read at cursor?
-    events = source_redis.lrange(archive_key, cursor, cursor)
-    if events.length > 0
-      events.each {|event|
-        send_event(event, :redis => redis)
-        events_sent += 1
-        print "#{events_sent} " if events_sent % 1000 == 0
-      }
-      cursor += 1
+    event = source_redis.lindex(archive_key, cursor)
+    if event
+      send_event(event, :redis => redis)
+      events_sent += 1
+      print "#{events_sent} " if events_sent % 1000 == 0
+      cursor -= 1
     else
       puts "\narchive key: #{archive_key}, cursor: #{cursor}"
       # do we need to look at the next archive bucket?
       archives = get_archive_keys_stats(source_redis)
       i = archives.index {|a| a[:name] == archive_key }
-      if archives[i][:size] = cursor
+      if archives[i][:size] = (cursor.abs + 1)
         if archives[i + 1]
           archive_key = archives[i + 1][:name]
           puts archive_key
-          cursor = 0
+          cursor = -1
           new_archive_key = true
         else
           return unless opts[:follow]
