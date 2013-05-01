@@ -196,6 +196,21 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     last_response.status.should == 204
   end
 
+  it "creates a scheduled maintenance for an entity check" do
+    start = Time.now + (60 * 60) # an hour from now
+    duration = (2 * 60 * 60)     # two hours
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+    entity_check.should_receive(:create_scheduled_maintenance).
+      with(:summary => 'test', :duration => duration, :start_time => start.getutc.to_i)
+
+    post "/scheduled_maintenances/#{entity_name_esc}/#{check}?" +
+       "start_time=#{CGI.escape(start.iso8601)}&summary=test&duration=#{duration}"
+    last_response.status.should == 204
+  end
+
   it "returns a list of scheduled maintenance periods within a time window for an entity" do
     start  = Time.parse('1 Jan 2012')
     finish = Time.parse('6 Jan 2012')
