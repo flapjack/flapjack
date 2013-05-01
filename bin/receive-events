@@ -32,6 +32,12 @@ def receive(opts)
 
   puts "found archives: #{archives.inspect}"
 
+  # each archive bucket is a redis list that is written
+  # with brpoplpush, that is newest items are added to the left (head)
+  # of the list, so oldest events are to be found at the tail of the list.
+  #
+  # the index of these archives, in the 'archives' array, also stores the
+  # redis key names for each bucket in oldest to newest
   events_sent = 0
   case
   when opts[:all]
@@ -40,10 +46,10 @@ def receive(opts)
   when opts[:last], opts[:time]
     raise "Sorry, unimplemented"
   else
-    # cursor will be pointing to the position after the last item in the last list
+    # wait for the next event to be archived, so point the cursor at a non-existant
+    # slot in the list, the one before the 0'th
     archive_key = archives[-1][:name]
-    #cursor     = archives[-1][:size]
-    cursor      = -1
+    cursor      = -1 - archives[-1][:size]
   end
 
   puts archive_key
