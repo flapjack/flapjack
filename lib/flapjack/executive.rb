@@ -296,8 +296,7 @@ module Flapjack
       # don't consider notification rules if the contact has none
 
       tuple = messages.map do |message|
-        @logger.debug "considering message: #{message.medium} #{message.notification.event.id} #{message.notification.event.state}"
-        @logger.debug "contact_id: #{message.contact.id}"
+        @logger.debug "considering message for contact: #{message.contact.id} #{message.medium} #{message.notification.event.id} #{message.notification.event.state}"
         rules    = message.contact.notification_rules
         @logger.debug "found #{rules.length} rules for this message's contact"
         event_id = message.notification.event.id
