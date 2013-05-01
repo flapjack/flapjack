@@ -347,7 +347,6 @@ module Flapjack
           matchers.any? {|matcher|
             mms = matcher.media_for_severity(severity)
             unless mms
-              @logger.warn("got nil for matcher.media_for_severity(#{severity}), matcher: #{matcher.inspect}")
               answer = false
             else
               answer = mms.include?(message.medium)
