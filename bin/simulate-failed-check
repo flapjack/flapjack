@@ -18,25 +18,25 @@ def pike(message)
 end
 
 def send_event(event, opts)
-	redis = opts[:redis]
+  redis = opts[:redis]
   redis.lpush 'events', event.to_json
 end
 
 def fail(opts)
-	redis = Redis.new(opts[:redis_options])
-	stop_after = opts[:minutes].to_i * 60
-	recover = opts[:recover]
-	event  = {
+  redis = Redis.new(opts[:redis_options])
+  stop_after = opts[:minutes].to_i * 60
+  recover = opts[:recover]
+  event  = {
     'entity'    => opts[:entity] || 'foo-app-01',
     'check'     => opts[:check]  || 'HTTP',
     'type'      => 'service',
     'timestamp' => Time.now.to_i
-	}
-	failure  = event.merge('state' => 'critical', 'summary' => 'Connection refused')
-	recovery = event.merge('state' => 'ok',       'summary' => '200 OK, 37 ms')
-	key = "#{event['entity']}:#{event['check']}"
+  }
+  failure  = event.merge('state' => 'critical', 'summary' => 'Connection refused')
+  recovery = event.merge('state' => 'ok',       'summary' => '200 OK, 37 ms')
+  key = "#{event['entity']}:#{event['check']}"
 
- 	puts "#{Time.now}: sending failure event for #{key}"
+  puts "#{Time.now}: sending failure event for #{key}"
   send_event(failure, :redis => redis)
 
   EM.run {
@@ -44,14 +44,14 @@ def fail(opts)
     EM.add_timer(stop_after) do
       puts "#{Time.now}: stopping"
       if recover
-      	puts "#{Time.now}: sending recovery event for #{key}"
+        puts "#{Time.now}: sending recovery event for #{key}"
         send_event(recovery, :redis => redis)
       end
       EM.stop
     end
 
     EM.add_periodic_timer(10) do
-     	puts "#{Time.now}: sending failure event for #{key}"
+      puts "#{Time.now}: sending failure event for #{key}"
       send_event(failure, :redis => redis)
     end
 
@@ -66,7 +66,7 @@ options.daemonize = nil
 
 exe = File.basename(__FILE__)
 
-OptionParser.new do |opts|
+optparse = OptionParser.new do |opts|
   opts.banner = "Usage: #{exe} COMMAND [OPTIONS]"
 
   opts.separator  ""
@@ -92,7 +92,8 @@ OptionParser.new do |opts|
     options.check = k
   end
 
-end.parse!(ARGV)
+end
+optparse.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
@@ -122,14 +123,22 @@ if config_env.nil? || config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
   exit(false)
 end
-             
-options = {:redis_options => redis_options, :minutes => options.minutes, 
-  	       :entity => options.entity, :check => options.check}
+
+options = {:redis_options => redis_options, :minutes => options.minutes,
+           :entity => options.entity, :check => options.check}
 case ARGV[0]
 when "fail-and-recover"
-	fail(options.merge(:recover => true))
+  fail(options.merge(:recover => true))
   puts " done."
 when "fail"
-	fail(options.merge(:recover => false))
+  fail(options.merge(:recover => false))
   puts " done."
+else
+  if ARGV.nil? || ARGV.empty?
+    puts "No command provided."
+  else
+    puts "Unknown command provided: '#{ARGV[0]}'"
+  end
+  puts "\n#{optparse}"
+  exit 1
 end
