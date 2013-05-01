@@ -37,9 +37,7 @@ def receive(opts)
   when opts[:all]
     archive_key = archives[0][:name]
     cursor      = 0
-  when opts[:last] && opts[:last] > 0
-    raise "Sorry, unimplemented"
-  when opts[:time] && time = Chronic.parse(opts[:time])
+  when opts[:last], opts[:time]
     raise "Sorry, unimplemented"
   else
     # cursor will be pointing to the position after the last item in the last list
@@ -49,8 +47,7 @@ def receive(opts)
 
   puts archive_key
 
-  keep_going = true
-  while keep_going
+  loop do
     new_archive_key = false
     # something to read at cursor?
     events = source_redis.lrange(archive_key, cursor, cursor)
@@ -80,7 +77,6 @@ def receive(opts)
     end
   end
 end
-
 
 def get_archive_keys_stats(source_redis)
   source_redis.keys("events_archive:*").sort.map {|a|
@@ -131,7 +127,6 @@ optparse = OptionParser.new do |opts|
 end
 optparse.parse!(ARGV)
 
-puts "options: #{options.inspect}"
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
 if options.config
@@ -161,6 +156,11 @@ if config_env.nil? || config_env.empty?
   exit(false)
 end
 
+unless options.source
+  puts "--source URL is required"
+  exit 1
+end
+
 case ARGV[0]
 when "help"
   puts optparse
@@ -179,4 +179,5 @@ receive(:follow => options.follow,
         :last => options.last,
         :time => options.time,
         :redis_options => redis_options)
+
 
