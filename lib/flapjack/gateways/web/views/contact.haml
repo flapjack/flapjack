@@ -22,6 +22,11 @@
                     %li= "#{pk}: #{pv}"
             - else
               %li= "#{mk.capitalize}: #{mv}"
+              %ul
+                - if interval = @contact.media_intervals[mk]
+                  %li= "Interval: #{@contact.media_intervals[mk]} seconds"
+                - else
+                  %li= "Interval: no custom interval"
       - else
         %p No media
       - if @entities_and_checks && !@entities_and_checks.empty?
