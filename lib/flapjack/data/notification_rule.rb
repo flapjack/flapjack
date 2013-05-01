@@ -29,7 +29,7 @@ module Flapjack
         # sanity check
         return unless redis.exists("notification_rule:#{rule_id}")
 
-        rule = self.new({:id => rule_id}, {:redis => redis})
+        rule = self.new({:id => rule_id.to_s}, {:redis => redis})
         rule.refresh
         rule
       end
@@ -101,12 +101,12 @@ module Flapjack
         @critical_media     = Yajl::Parser.parse(rule_data['critical_media'] || '')
         @warning_blackhole  = ((rule_data['warning_blackhole'] || 'false').downcase == 'true')
         @critical_blackhole = ((rule_data['critical_blackhole'] || 'false').downcase == 'true')
-
       end
 
       def update(rule_data)
-        self.class.add_or_update(rule_data.merge(:id => @id), :redis => @redis)
+        return false unless self.class.add_or_update(rule_data.merge(:id => @id), :redis => @redis)
         self.refresh
+        true
       end
 
       def to_json(*args)
@@ -148,15 +148,16 @@ module Flapjack
 
       def initialize(rule_data, opts = {})
         @redis  ||= opts[:redis]
-        @logger   = opts[:logger]
         raise "a redis connection must be supplied" unless @redis
-        @id = rule_data[:id]
+        @logger   = opts[:logger]
+        @id       = rule_data[:id]
       end
 
       def self.add_or_update(rule_data, options = {})
-        raise ":id is a required key in rule_data" unless rule_data[:id]
-
         redis = options[:redis]
+        raise "a redis connection must be supplied" unless redis
+
+        return unless self.validate_data(rule_data)
 
         rule_data[:entities]          = Yajl::Encoder.encode(rule_data[:entities])
         rule_data[:entity_tags]       = Yajl::Encoder.encode(rule_data[:entity_tags])
@@ -166,8 +167,20 @@ module Flapjack
 
         redis.sadd("contact_notification_rules:#{rule_data[:contact_id]}", rule_data[:id])
         redis.hmset("notification_rule:#{rule_data[:id]}", *rule_data.flatten)
+        true
       end
 
+      def self.validate_data(rule_data)
+        # TODO proper validation
+
+        rule_data[:id] &&
+          rule_data[:entities] &&
+          rule_data[:entity_tags] &&
+          rule_data[:time_restrictions] &&
+          rule_data[:warning_media] &&
+          rule_data[:critical_media]
+
+      end
     end
   end
 end
