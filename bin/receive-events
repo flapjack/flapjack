@@ -166,6 +166,11 @@ unless options.source
   exit 1
 end
 
+unless options.follow || options.all
+  puts "one or both of --follow or --all is required"
+  exit 1
+end
+
 case ARGV[0]
 when "help"
   puts optparse
