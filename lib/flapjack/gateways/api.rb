@@ -242,8 +242,11 @@ module Flapjack
         end
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
           params[:check], :redis => redis)
-        entity_check.create_scheduled_maintenance(:start_time => params[:start_time],
-          :duration => params[:duration], :summary => params[:summary])
+
+        start_time = validate_and_parsetime(params[:start_time])
+
+        entity_check.create_scheduled_maintenance(:start_time => start_time,
+          :duration => params[:duration].to_i, :summary => params[:summary])
         status 204
       end
 
