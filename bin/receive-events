@@ -8,8 +8,6 @@ require 'optparse'
 require 'ostruct'
 require 'redis'
 require 'yajl/json_gem'
-require 'eventmachine'
-require 'chronic'
 
 require 'flapjack/configuration'
 
