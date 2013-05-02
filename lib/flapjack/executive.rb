@@ -97,13 +97,17 @@ module Flapjack
       touch_keys
     end
 
+    # expire instance keys after one week
+    # TODO: set up a separate EM timer to reset key expiry every minute
+    # and reduce the expiry to, say, five minutes
+    # TODO: remove these keys on process exit
     def touch_keys
       [ "executive_instance:#{@instance_id}",
         "event_counters:#{@instance_id}",
         "event_counters:#{@instance_id}",
         "event_counters:#{@instance_id}",
         "event_counters:#{@instance_id}" ].each {|key|
-          @redis.expire(key, 3600)
+          @redis.expire(key, 1036800)
         }
     end
 
