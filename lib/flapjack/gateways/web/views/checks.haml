@@ -1,0 +1,49 @@
+!!! 5
+- nav = render_haml('_nav.haml', self)
+- head = render_haml('_head.haml', self)
+- foot = render_haml('_foot.haml', self)
+%html
+  %head
+    %title Flapjack - #{@adjective.capitalize} Checks
+    = head
+  %body
+    %div#wrap
+      %div{:class => "container"}
+        %div{:class => "page-header"}
+          = nav
+          %h1 #{@adjective.capitalize} Checks
+        %p #{@count_failing_checks} failing out of #{@count_all_checks}
+        %table{:class => "table table-bordered table-hover"}
+          %tr
+            %th Entity
+            %th Check
+            %th State
+            %th Last State Change
+            %th Last Update
+            %th Last Notification
+          - @states.each do |entity, check, status, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified_kind, notified|
+            - colour_class = status
+            - case status
+            - when 'critical', 'unknown'
+              - colour_class = 'error'
+            - when 'ok', 'up'
+              - colour_class = 'success'
+            %tr{:class => colour_class}
+              %td= entity
+              %td
+                - link = "/check?entity=" + CGI.escape(entity) + "&check=" + CGI.escape(check)
+                %a(title='check detail' href=link) #{check}
+              %td{:class => status}
+                = status.upcase
+                = " (Acknowledged)" if in_unscheduled_outage
+                = " (Scheduled Maintenance)" if in_scheduled_outage
+              %td= relative_time_ago(Time.at(changed.to_i)) + ' ago'
+              %td= (Time.now.to_i - updated.to_i).to_s + ' seconds ago'
+              - if notified && (notified > 0)
+                - last_notified = relative_time_ago(Time.at(notified.to_i)) + " ago, #{notified_kind}"
+              - else
+                - last_notified = 'never'
+              %td= last_notified
+      %div#push
+    %div#footer
+      = foot
