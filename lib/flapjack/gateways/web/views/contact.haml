@@ -63,7 +63,7 @@
           %p No entities
         %h3= "Notification Rules"
         - rules = @contact.notification_rules
-        - if rules.length > 0
+        - if rules && rules.length > 0
           %table{:class => "table table-bordered table-hover"}
             %tr
               %th ID

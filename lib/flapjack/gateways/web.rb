@@ -85,6 +85,7 @@ module Flapjack
           [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
         }.compact.sort_by {|parts| parts }
 
+        puts "ok so far, I guess"
         haml :checks
       end
 
@@ -159,13 +160,13 @@ module Flapjack
       end
 
       get '/check' do
-        self_stats
         @entity = params[:entity]
         @check  = params[:check]
 
         entity_check = get_entity_check(@entity, @check)
         return 404 if entity_check.nil?
 
+        self_stats
         last_change = entity_check.last_change
 
         @check_state                = entity_check.state
