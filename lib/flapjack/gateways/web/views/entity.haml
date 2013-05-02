@@ -13,7 +13,7 @@
           = nav
           %h1 #{@entity}
         - if @states.length > 0
-          %table
+          %table{:class => "table table-bordered table-hover"}
             %tr
               %th Check
               %th State
