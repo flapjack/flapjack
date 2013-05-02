@@ -12,7 +12,7 @@
         %div{:class => "page-header"}
           = nav
           %h1 Internal Statistics
-        %table{:class => "table table-bordered table-hover"}
+        %table{:class => "table table-bordered table-hover table-condensed"}
           %tr
             %td Events queued:
             %td= @events_queued
@@ -31,7 +31,7 @@
           %tr
             %td Events processed (all time)
             %td #{@event_counters['all']} (ok: #{@event_counters['ok']}, failure: #{@event_counters['failure']}, action: #{@event_counters['action']})
-          %tr 
+          %tr
             %td Events processed (this instance)
             %td #{@event_counters_instance['all']} (ok: #{@event_counters_instance['ok']}, failure: #{@event_counters_instance['failure']}, action: #{@event_counters_instance['action']})
           %tr
@@ -43,10 +43,10 @@
           %tr
             %td Uptime
             %td= @uptime_string
-          %tr 
+          %tr
             %td Boot time
             %td= @boot_time
-          %tr 
+          %tr
             %td Current time
             %td= Time.now
         %h4

@@ -14,7 +14,7 @@
           %h1= @contact.name
         %h3= "Contact Media"
         - if @contact.media && !@contact.media.empty?
-          %table{:class => "table table-bordered table-hover"}
+          %table{:class => "table table-bordered table-hover table-condensed"}
             %tr
               %th Media
               %th Address
@@ -42,7 +42,7 @@
           %p No media
         %h3= "Entities and Checks"
         - if @entities_and_checks && !@entities_and_checks.empty?
-          %table{:class => "table table-bordered table-hover"}
+          %table{:class => "table table-bordered table-hover table-condensed"}
             %tr
               %th Entity
               %th Checks
@@ -52,19 +52,17 @@
               %tr
                 %td
                   - link = "/entity/#{CGI.escape(entity.name)}"
-                  %p
-                    %a(title='entity status' href=link) #{entity.name}
+                  %a(title='entity status' href=link) #{entity.name}
                 %td
                   - checks.each do |check|
                     - link = "/check?entity=#{CGI.escape(entity.name)}&check=#{CGI.escape(check)}"
-                    %p
-                      %a(title='check status' href=link) #{check}
+                    %a(title='check status' href=link) #{check}
         - else
           %p No entities
         %h3= "Notification Rules"
         - rules = @contact.notification_rules
         - if rules && rules.length > 0
-          %table{:class => "table table-bordered table-hover"}
+          %table{:class => "table table-bordered table-hover table-condensed"}
             %tr
               %th ID
               %th Entities
@@ -76,7 +74,7 @@
               %tr
                 %td #{r.id}
                 %td #{r.entities.join(', ')}
-                %td #{r.entity_tags.join(', ')}
+                %td #{r.entity_tags ? r.entity_tags.join(', ') : ''}
                 %td #{r.warning_media.join(', ')}
                 %td #{r.critical_media.join(', ')}
                 %td #{r.time_restrictions}

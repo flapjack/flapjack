@@ -13,7 +13,7 @@
           = nav
           %h1 #{@adjective.capitalize} Checks
         %p #{@count_failing_checks} failing out of #{@count_all_checks}
-        %table{:class => "table table-bordered table-hover"}
+        %table{:class => "table table-bordered table-hover table-condensed"}
           %tr
             %th Entity
             %th Check

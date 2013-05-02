@@ -13,9 +13,8 @@
         %div{:class => "page-header"}
           = nav
           %h1 #{@check} on #{@entity}
-        %form{:action => "/acknowledgements/#{check_path_escaped}", :method => "post"}
+        %form{:action => "/acknowledgements/#{check_path_escaped}", :method => "post", :class => "form-inline"}
           %h2 State: #{@check_state ? @check_state.upcase : ''}
-          %h3 Output: #{@check_summary}
           - if (['warning', 'critical', 'unknown'].include?(@check_state) and !(@current_unscheduled_maintenance || @current_scheduled_maintenance))
             %input{:type => 'hidden', :name => 'acknowledgement_id', :value => "#{@acknowledgement_id}"}
             %input{:type => 'submit', :value => 'Acknowledge', :class => 'button'}
@@ -26,6 +25,7 @@
             %label{:for => 'duration'}
               duration:
             %input{:type => 'text', :name => 'duration', :value => ''}
+            eg "5 hours"
         - if @current_unscheduled_maintenance
           %h3 (Acknowledged - #{@current_unscheduled_maintenance[:summary]})
           %form{:action => "/end_unscheduled_maintenance/#{check_path_escaped}", :method => "post"}
@@ -33,7 +33,8 @@
               %input{:type => 'submit', :value => 'End Unscheduled Maintenance (Unacknowledge)', :class => 'button'}
         - if @current_scheduled_maintenance
           %h3 (Scheduled Maintenance - #{@current_scheduled_maintenance[:summary]})
-        %table{:class => "table table-hover"}
+        %h3 Output: #{@check_summary}
+        %table{:class => "table table-hover table-condensed"}
           %tr
             %td Last state change:
             %td #{relative_time_ago(Time.at(@check_last_change.to_i))} ago
@@ -74,7 +75,7 @@
             %td= last_ack
         %h3 Scheduled Maintenance Periods
         - if @scheduled_maintenances && !@scheduled_maintenances.empty?
-          %table{:class => "table table-bordered table-hover"}
+          %table{:class => "table table-bordered table-hover table-condensed"}
             %tr
               %th Start
               %th End
@@ -107,30 +108,25 @@
         - else
           %p No maintenance is scheduled
         %h4 Add Scheduled Maintenance
-        %form{:action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
-          %fieldset
-            %table{:class => "table table-bordered"}
-              %tr
-                %td
-                  %label{:for => 'start_time'} Start time:
-                %td
-                  %input{:type => 'text', :name => 'start_time', :class => 'text', :size => '20', :maxlength => '80'}
-                  %p eg "today 4pm", "two hours hence", "friday 2pm", "2012-01-28 13:00", etc. Times are taken to be in #{local_timezone}
-              %tr
-                %td
-                  %label{:for => 'duration'} Duration:
-                %td
-                  %input{:type => 'text', :name => 'duration', :class => 'text', :size => '20', :maxlength => '80'}
-                  %p eg "1 hour", "2:30:00", "three days", etc
-              %tr
-                %td
-                  %label{:for => 'summary'} Summary:
-                %td
-                  %input{:type => 'text', :name => 'summary', :class => 'text', :size => '80', :maxlength => '160'}
-              %tr
-                %td
-                %td
-                  %input{:type => 'submit', :value => 'Save', :class => 'button'}
+        %form{:action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post", :class => "form-horizontal"}
+          %div{:class => "control-group"}
+            %label{:class => "control-label", :for => 'start_time'} Start time:
+            %div{:class => "controls"}
+              %input{:type => 'text', :name => 'start_time', :class => 'text', :size => '20', :maxlength => '80'}
+              eg "today 4pm", "two hours hence", "friday 2pm", "2012-01-28 13:00"
+          %div{:class => "control-group"}
+            %label{:class => "control-label", :for => 'duration'} Duration:
+            %div{:class => "controls"}
+              %input{:type => 'text', :name => 'duration', :class => 'text', :size => '20', :maxlength => '80'}
+              eg "1 hour", "2:30:00", "three days", etc
+          %div{:class => "control-group"}
+            %label{:class => "control-label", :for => 'summary'} Summary:
+            %div{:class => "controls"}
+              %input{:type => 'text', :name => 'summary', :class => 'text', :size => '80', :maxlength => '160'}
+          %div{:class => "control-group"}
+            %div{:class => "controls"}
+              %input{:type => 'submit', :value => 'Save', :class => 'button'}
+        %p Times given will be interpreted in the local timezone of  #{local_timezone}
         %h3 Contacts
         - if @contacts && !@contacts.empty?
           %table{:class => "table table-bordered table-hover"}
