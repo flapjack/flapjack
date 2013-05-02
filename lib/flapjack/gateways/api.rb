@@ -48,6 +48,9 @@ module Flapjack
   module Gateways
 
     class API < Sinatra::Base
+
+      include Flapjack::Utility
+
       set :show_exceptions, false
 
       rescue_exception = Proc.new { |env, exception|
@@ -328,9 +331,11 @@ module Flapjack
         end
 
         find_contact(params[:contact_id]) do |contact|
+
           rule_data = hashify(:entities, :entity_tags,
             :warning_media, :critical_media, :time_restrictions,
             :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
+
           unless rule = contact.add_notification_rule(rule_data)
             return error(403, "invalid notification rule data")
           end
@@ -621,22 +626,6 @@ module Flapjack
       rescue ArgumentError => e
         logger.error "Couldn't parse time from '#{value}'"
         nil
-      end
-
-      # The passed block will be provided each value from the args
-      # and must return array pairs [key, value] representing members of
-      # the hash this method returns. Keys should be unique -- if they're
-      # not, the earlier pair for that key will be overwritten.
-      def hashify(*args, &block)
-        key_value_pairs = args.map {|a| yield(a) }
-
-        # if using Ruby 1.9,
-        #   Hash[ key_value_pairs ]
-        # is all that's needed, but for Ruby 1.8 compatability, these must
-        # be flattened and the resulting array unpacked. flatten(1) only
-        # flattens the arrays constructed in the block, it won't mess up
-        # any values (or keys) that are themselves arrays.
-        Hash[ *( key_value_pairs.flatten(1) )]
       end
 
     end

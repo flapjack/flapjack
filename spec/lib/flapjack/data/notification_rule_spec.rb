@@ -3,17 +3,19 @@ require 'flapjack/data/notification_rule'
 
 describe Flapjack::Data::NotificationRule, :redis => true do
 
-  # TODO remove duplicated functionality from contact_spec.rb
   let(:weekdays_8_18) {
     wd = IceCube::Schedule.new(Time.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
     wd.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
+    wd = wd.to_hash
+    wd[:start_time] = wd.delete(:start_date)
+    wd[:rrules].first[:rule_type] = wd[:rrules].first[:rule_type].sub(/\AIceCube::(\w+)Rule\z/, '\1')
     wd
   }
 
   let(:rule_data) {
     {:entity_tags        => ["database","physical"],
      :entities           => ["foo-app-01.example.com"],
-     :time_restrictions  => [ weekdays_8_18.to_hash ],
+     :time_restrictions  => [ weekdays_8_18 ],
      :warning_media      => ["email"],
      :critical_media     => ["sms", "email"],
      :warning_blackhole  => false,
@@ -23,8 +25,10 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
   let(:rule_id) { 'ABC123' }
 
+  let(:time_zone) { ActiveSupport::TimeZone.new("Europe/Moscow") }
+
   let(:existing_rule) {
-    Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
+    Flapjack::Data::NotificationRule.add(rule_data, time_zone, :redis => @redis)
   }
 
   it "checks that a notification rule exists" do
@@ -45,13 +49,18 @@ describe Flapjack::Data::NotificationRule, :redis => true do
   it "updates a notification rule" do
     rule = Flapjack::Data::NotificationRule.find_by_id(existing_rule.id, :redis => @redis)
 
-    success = rule.update(rule_data.merge(:warning_blackhole => true))
-    success.should be_true
+    expect {
+      rule_data[:warning_blackhole] = true
+      success = rule.update(rule_data, time_zone)
+      success.should be_true
+    }.to change { rule.warning_blackhole }.from(false).to(true)
   end
 
-  it "checks whether tag or entity names match"
+  it "converts time restriction data to an IceCube hash"
 
-  it "checks whether times match"
+  it "generates a JSON string representing its data"
+
+  it "checks whether tag or entity names match"
 
   it "checks if blackhole settings for a rule match a severity level"
 
@@ -59,9 +68,21 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
   context 'validation' do
 
-    it "fails to add a notification rule with invalid data"
+    it "fails to add a notification rule with invalid data" do
+      rule_data[:entities] = []
+      rule_data[:entity_tags] = []
+      rule = Flapjack::Data::NotificationRule.add(rule_data, time_zone, :redis => @redis)
+      rule.should be_nil
+    end
 
-    it "fails to update a notification rule with invalid data"
+    it "fails to update a notification rule with invalid data" do
+      rule = Flapjack::Data::NotificationRule.add(rule_data, time_zone, :redis => @redis)
+      expect {
+        rule_data[:entities] = [57]
+        success = rule.update(rule_data, time_zone)
+        success.should be_false
+      }.not_to change { rule.entities }
+    end
 
   end
 

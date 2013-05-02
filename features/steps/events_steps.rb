@@ -111,6 +111,21 @@ def submit_acknowledgement(entity, check)
   submit_event(event)
 end
 
+# move back to notification
+def icecube_hash_to_time_restriction(tr, time_zone)
+  tr[:start_time] = time_zone.utc_to_local(tr[:start_date][:time]).strftime "%Y-%m-%d %H:%M:%S"
+  tr[:end_time]   = time_zone.utc_to_local(tr[:end_time][:time]).strftime "%Y-%m-%d %H:%M:%S"
+
+  # rewrite IceCube::WeeklyRule to Weekly, etc
+  tr[:rrules].each {|rrule|
+    rrule[:rule_type] = /^.*\:\:(.*)Rule$/.match(rrule[:rule_type])[1]
+  }
+
+  tr[:start_time] = tr.delete(:start_date).dup
+
+  tr
+end
+
 Given /^an entity '([\w\.\-]+)' exists$/ do |entity|
   Flapjack::Data::Entity.add({'id'       => '5000',
                               'name'     => entity},
@@ -259,15 +274,15 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
     critical_media     = rule['critical_media'].split(',').map { |x| x.strip }
     warning_blackhole  = rule['warning_blackhole'].downcase == 'true' ? 'true' : 'false'
     critical_blackhole = rule['critical_blackhole'].downcase == 'true' ? 'true' : 'false'
+    time_zone = ActiveSupport::TimeZone.new("America/New_York")
     time_restrictions  = []
     rule['time_restrictions'].split(',').map { |x| x.strip }.each do |time_restriction|
       case time_restriction
       when '8-18 weekdays'
         # FIXME: get timezone from the user definition (or config[:default_contact_timezone])
-        time_zone = ActiveSupport::TimeZone.new("America/New_York")
         weekdays_8_18 = IceCube::Schedule.new(time_zone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
         weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
-        time_restrictions << Flapjack::Data::NotificationRule.time_restriction_from_ice_cube_hash(weekdays_8_18.to_hash, time_zone)
+        time_restrictions << icecube_hash_to_time_restriction(weekdays_8_18.to_hash, time_zone)
       end
     end
     Flapjack::Data::NotificationRule.add({:contact_id         => contact_id,
@@ -277,7 +292,7 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
                                           :critical_media     => critical_media,
                                           :warning_blackhole  => warning_blackhole,
                                           :critical_blackhole => critical_blackhole,
-                                          :time_restrictions  => time_restrictions}, :redis => @redis)
+                                          :time_restrictions  => time_restrictions}, time_zone, :redis => @redis)
   end
 end
 
