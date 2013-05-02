@@ -170,8 +170,11 @@ module Flapjack
 
         when command =~ /^identify$/
           t = Process.times
-          boot_time = Time.at(@redis.get('boot_time').to_i)
-          msg  = "Flapjack #{Flapjack::VERSION} process #{Process.pid} on #{`hostname -f`.chomp} \n"
+          fqdn         = `/bin/hostname -f`.chomp
+          pid          = Process.pid
+          instance_id  = "#{@fqdn}:#{@pid}"
+          boot_time = Time.at(@redis.hget("executive_instance:#{instance_id}", 'boot_time').to_i)
+          msg  = "Flapjack #{Flapjack::VERSION} process #{pid} on #{fqdn} \n"
           msg += "Boot time: #{boot_time}\n"
           msg += "User CPU Time: #{t.utime}\n"
           msg += "System CPU Time: #{t.stime}\n"

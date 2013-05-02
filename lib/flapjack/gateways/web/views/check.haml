@@ -1,149 +1,155 @@
 !!! 5
 - nav = render_haml('_nav.haml', self)
-- css = render_haml('_css.haml', self)
+- head = render_haml('_head.haml', self)
+- foot = render_haml('_foot.haml', self)
 - check_path_escaped = URI.escape(@entity, ' #&;/=?') << '/' << URI.escape(@check, ' #&;/=?')
 %html
   %head
     %title Flapjack - Check: #{@entity}:#{@check}
-    = css
+    = head
   %body
-    %div#wrapper
-      = nav
-      %h1 #{@check} on #{@entity}
-      %form{:action => "/acknowledgements/#{check_path_escaped}", :method => "post"}
-        %h2
-          State: #{@check_state ? @check_state.upcase : ''}
-        - if (['warning', 'critical', 'unknown'].include?(@check_state) and !(@current_unscheduled_maintenance || @current_scheduled_maintenance))
-          %input{:type => 'hidden', :name => 'acknowledgement_id', :value => "#{@acknowledgement_id}"}
-          %input{:type => 'submit', :value => 'Acknowledge', :class => 'button'}
-          with
-          %label{:for => 'summary'}
-            summary:
-          %input{:type => 'text', :name => 'summary', :value => ''}
-          %label{:for => 'duration'}
-            duration:
-          %input{:type => 'text', :name => 'duration', :value => ''}
-      - if @current_unscheduled_maintenance
-        %h3 (Acknowledged - #{@current_unscheduled_maintenance[:summary]})
-        %form{:action => "/end_unscheduled_maintenance/#{check_path_escaped}", :method => "post"}
-          %p
-            %input{:type => 'submit', :value => 'End Unscheduled Maintenance (Unacknowledge)', :class => 'button'}
-      - if @current_scheduled_maintenance
-        %h3 (Scheduled Maintenance - #{@current_scheduled_maintenance[:summary]})
-      %h3 Output: #{@check_summary}
-      %table
-        %tr
-          %td Last state change:
-          %td #{relative_time_ago(Time.at(@check_last_change.to_i))} ago
-          %td #{Time.at(@check_last_change.to_i)}
-        %tr
-          %td Last update:
-          %td #{relative_time_ago(Time.at(@check_last_update.to_i))} ago
-          %td #{Time.at(@check_last_update.to_i)}
-        - if @last_notifications[:problem]
-          - last_problem_relative = relative_time_ago(Time.at(@last_notifications[:problem])) + " ago"
-          - last_problem          = Time.at(@last_notifications[:problem]).to_s
-        - else
-          - last_problem_relative = 'never'
-          - last_problem          = ''
-        %tr
-          %td Last problem notification:
-          %td= last_problem_relative
-          %td= last_problem
-        - if @last_notifications[:recovery]
-          - last_recovery_relative = relative_time_ago(Time.at(@last_notifications[:recovery])) + " ago"
-          - last_recovery          = Time.at(@last_notifications[:recovery]).to_s
-        - else
-          - last_recovery_relative = 'never'
-          - last_recovery          = ''
-        %tr
-          %td Last recovery notification:
-          %td= last_recovery_relative
-          %td= last_recovery
-        - if @last_notifications[:acknowledgement]
-          - last_ack_relative = relative_time_ago(Time.at(@last_notifications[:acknowledgement])) + " ago"
-          - last_ack          = Time.at(@last_notifications[:acknowledgement]).to_s
-        - else
-          - last_ack_relative = 'never'
-          - last_ack          = ''
-        %tr
-          %td Last acknowledgement notification:
-          %td= last_ack_relative
-          %td= last_ack
-      %h3 Scheduled Maintenance Periods
-      - if @scheduled_maintenances && !@scheduled_maintenances.empty?
-        %table
+    %div#wrap
+      %div{:class => "container"}
+        %div{:class => "page-header"}
+          = nav
+          %h1 #{@check} on #{@entity}
+        %form{:action => "/acknowledgements/#{check_path_escaped}", :method => "post"}
+          %h2 State: #{@check_state ? @check_state.upcase : ''}
+          %h3 Output: #{@check_summary}
+          - if (['warning', 'critical', 'unknown'].include?(@check_state) and !(@current_unscheduled_maintenance || @current_scheduled_maintenance))
+            %input{:type => 'hidden', :name => 'acknowledgement_id', :value => "#{@acknowledgement_id}"}
+            %input{:type => 'submit', :value => 'Acknowledge', :class => 'button'}
+            with
+            %label{:for => 'summary'}
+              summary:
+            %input{:type => 'text', :name => 'summary', :value => ''}
+            %label{:for => 'duration'}
+              duration:
+            %input{:type => 'text', :name => 'duration', :value => ''}
+        - if @current_unscheduled_maintenance
+          %h3 (Acknowledged - #{@current_unscheduled_maintenance[:summary]})
+          %form{:action => "/end_unscheduled_maintenance/#{check_path_escaped}", :method => "post"}
+            %p
+              %input{:type => 'submit', :value => 'End Unscheduled Maintenance (Unacknowledge)', :class => 'button'}
+        - if @current_scheduled_maintenance
+          %h3 (Scheduled Maintenance - #{@current_scheduled_maintenance[:summary]})
+        %table{:class => "table table-hover"}
           %tr
-            %th Start
-            %th End
-            %th Duration
-            %th Summary
-            %th Actions
-          - @scheduled_maintenances.sort_by {|s| s[:start_time]}.each do |scheduled_maintenance|
-            - start_time = scheduled_maintenance[:start_time]
-            - end_time   = scheduled_maintenance[:end_time]
-            - duration   = scheduled_maintenance[:duration]
-            - summary    = scheduled_maintenance[:summary]
+            %td Last state change:
+            %td #{relative_time_ago(Time.at(@check_last_change.to_i))} ago
+            %td #{Time.at(@check_last_change.to_i)}
+          %tr
+            %td Last update:
+            %td #{relative_time_ago(Time.at(@check_last_update.to_i))} ago
+            %td #{Time.at(@check_last_update.to_i)}
+          - if @last_notifications[:problem]
+            - last_problem_relative = relative_time_ago(Time.at(@last_notifications[:problem])) + " ago"
+            - last_problem          = Time.at(@last_notifications[:problem]).to_s
+          - else
+            - last_problem_relative = 'never'
+            - last_problem          = ''
+          %tr
+            %td Last problem notification:
+            %td= last_problem_relative
+            %td= last_problem
+          - if @last_notifications[:recovery]
+            - last_recovery_relative = relative_time_ago(Time.at(@last_notifications[:recovery])) + " ago"
+            - last_recovery          = Time.at(@last_notifications[:recovery]).to_s
+          - else
+            - last_recovery_relative = 'never'
+            - last_recovery          = ''
+          %tr
+            %td Last recovery notification:
+            %td= last_recovery_relative
+            %td= last_recovery
+          - if @last_notifications[:acknowledgement]
+            - last_ack_relative = relative_time_ago(Time.at(@last_notifications[:acknowledgement])) + " ago"
+            - last_ack          = Time.at(@last_notifications[:acknowledgement]).to_s
+          - else
+            - last_ack_relative = 'never'
+            - last_ack          = ''
+          %tr
+            %td Last acknowledgement notification:
+            %td= last_ack_relative
+            %td= last_ack
+        %h3 Scheduled Maintenance Periods
+        - if @scheduled_maintenances && !@scheduled_maintenances.empty?
+          %table{:class => "table table-bordered table-hover"}
             %tr
-              %td= Time.at(start_time).to_s
-              %td= Time.at(end_time).to_s
-              %td= ChronicDuration.output(duration)
-              %td= summary
-              %td
-                - if end_time > Time.now.to_i
-                  - if start_time > Time.now.to_i
-                    %form{ :action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
-                      %input{:type => 'hidden', :name => '_method', :value => 'delete'}
-                      %input{:type => 'hidden', :name => 'start_time', :value => start_time}
-                      %input{:type => 'submit', :value => 'Delete', :class => 'button'}
+              %th Start
+              %th End
+              %th Duration
+              %th Summary
+              %th Actions
+            - @scheduled_maintenances.sort_by {|s| s[:start_time]}.each do |scheduled_maintenance|
+              - start_time = scheduled_maintenance[:start_time]
+              - end_time   = scheduled_maintenance[:end_time]
+              - duration   = scheduled_maintenance[:duration]
+              - summary    = scheduled_maintenance[:summary]
+              %tr
+                %td= Time.at(start_time).to_s
+                %td= Time.at(end_time).to_s
+                %td= ChronicDuration.output(duration)
+                %td= summary
+                %td
+                  - if end_time > Time.now.to_i
+                    - if start_time > Time.now.to_i
+                      %form{ :action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
+                        %input{:type => 'hidden', :name => '_method', :value => 'delete'}
+                        %input{:type => 'hidden', :name => 'start_time', :value => start_time}
+                        %input{:type => 'submit', :value => 'Delete', :class => 'button'}
+                    - else
+                      %form{ :action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
+                        %input{:type => 'hidden', :name => '_method',    :value => 'patch'}
+                        %input{:type => 'hidden', :name => 'start_time', :value => start_time}
+                        %input{:type => 'hidden', :name => 'end_time',   :value => 'now'}
+                        %input{:type => 'submit', :value => 'End Now', :class => 'button'}
+        - else
+          %p No maintenance is scheduled
+        %h4 Add Scheduled Maintenance
+        %form{:action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
+          %fieldset
+            %table{:class => "table table-bordered"}
+              %tr
+                %td
+                  %label{:for => 'start_time'} Start time:
+                %td
+                  %input{:type => 'text', :name => 'start_time', :class => 'text', :size => '20', :maxlength => '80'}
+                  %p eg "today 4pm", "two hours hence", "friday 2pm", "2012-01-28 13:00", etc. Times are taken to be in #{local_timezone}
+              %tr
+                %td
+                  %label{:for => 'duration'} Duration:
+                %td
+                  %input{:type => 'text', :name => 'duration', :class => 'text', :size => '20', :maxlength => '80'}
+                  %p eg "1 hour", "2:30:00", "three days", etc
+              %tr
+                %td
+                  %label{:for => 'summary'} Summary:
+                %td
+                  %input{:type => 'text', :name => 'summary', :class => 'text', :size => '80', :maxlength => '160'}
+              %tr
+                %td
+                %td
+                  %input{:type => 'submit', :value => 'Save', :class => 'button'}
+        %h3 Contacts
+        - if @contacts && !@contacts.empty?
+          %table{:class => "table table-bordered table-hover"}
+            %tr
+              %th Name
+              %th Media
+            - @contacts.sort_by {|c| [c.last_name, c.first_name] }.each do |contact|
+              %tr
+                %td
+                  - link = "/contacts/#{contact.id}"
+                  %a(title='contact details' href=link) #{contact.name}
+                %td
+                  - if contact.media && !contact.media.empty?
+                    %p= contact.media.keys.collect(&:capitalize).join(", ")
                   - else
-                    %form{ :action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
-                      %input{:type => 'hidden', :name => '_method',    :value => 'patch'}
-                      %input{:type => 'hidden', :name => 'start_time', :value => start_time}
-                      %input{:type => 'hidden', :name => 'end_time',   :value => 'now'}
-                      %input{:type => 'submit', :value => 'End Now', :class => 'button'}
-      - else
-        %p No maintenance is scheduled
-      %h4 Add Scheduled Maintenance
-      %form{:action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
-        %fieldset
-          %table
-            %tr
-              %td
-                %label{:for => 'start_time'} Start time:
-              %td
-                %input{:type => 'text', :name => 'start_time', :class => 'text', :size => '20', :maxlength => '80'}
-                %p uses chronic, so eg "today 4pm", "two hours hence", "friday 2pm", "2012-01-28 13:00", etc. Times are taken to be in #{local_timezone}
-            %tr
-              %td
-                %label{:for => 'duration'} Duration:
-              %td
-                %input{:type => 'text', :name => 'duration', :class => 'text', :size => '20', :maxlength => '80'}
-                %p uses chronic_duration, so eg "1 hour", "2:30:00", "three days", etc
-            %tr
-              %td
-                %label{:for => 'summary'} Summary:
-              %td
-                %input{:type => 'text', :name => 'summary', :class => 'text', :size => '80', :maxlength => '160'}
-            %tr
-              %td
-              %td
-                %input{:type => 'submit', :value => 'Save', :class => 'button'}
-      %h3 Contacts
-      - if @contacts && !@contacts.empty?
-        %table
-          %tr
-            %th Name
-            %th Media
-          - @contacts.sort_by {|c| [c.last_name, c.first_name] }.each do |contact|
-            %tr
-              %td
-                - link = "/contacts/#{contact.id}"
-                %a(title='contact details' href=link) #{contact.name}
-              %td
-                - if contact.media && !contact.media.empty?
-                  %p= contact.media.keys.collect(&:capitalize).join(", ")
-                - else
-                  %p No media
-      - else
-        %p No contacts
+                    %p No media
+        - else
+          %p No contacts
+      %div#push
+    %div#footer
+      = foot
+
