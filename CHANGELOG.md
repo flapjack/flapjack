@@ -3,6 +3,7 @@
 # 0.7.2 - UNRELEASED
 - Feature: command line - support "--version", "help" etc gh-134 (@jessereynolds)
 - Feature: replay events from another flapjack gh-138 (@jessereynolds)
+- Bug: recoveries are blocked for users with notification rules gh-148 (@jessereynolds)
 - Bug: jabber gateway now uses configured alias for commands gh-138 (@jessereynolds)
 - Bug: jabber gateway was crashing on querying entities with invalid regex gh-147 (@jessereynolds)
 - Bug: handle media addresses correctly when adding contacts and generating messages gh-145 (@jessereynolds)
