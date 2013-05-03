@@ -11,6 +11,7 @@ Feature: Notification rules on a per contact basis
       | id  | name | contacts |
       | 1   | foo  | 1        |
       | 2   | bar  | 1,2      |
+      | 3   | baz  | 1        |
 
     And user 1 has the following notification intervals:
       | email | sms |
@@ -74,7 +75,7 @@ Feature: Notification rules on a per contact basis
 
   @severity @time
   Scenario: Alerts are sent to media of highest severity reached since last ok
-    Given the check is check 'ping' on entity 'bar'
+    Given the check is check 'ping' on entity 'baz'
     And   the check is in an ok state
     When  a warning event is received
     And   1 minute passes
@@ -83,9 +84,13 @@ Feature: Notification rules on a per contact basis
     And   0 sms alerts should be queued for +61400000001
     When  70 minutes passes
     And   a critical event is received
+    And   1 minute passes
+    And   a critical event is received
     Then  2 email alerts should be queued for malak@example.com
     And   1 sms alert should be queued for +61400000001
     When  70 minutes passes
+    And   a warning event is received
+    And   1 minute passes
     And   a warning event is received
     Then  3 email alerts should be queued for malak@example.com
     And   2 sms alerts should be queued for +61400000001

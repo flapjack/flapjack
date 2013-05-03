@@ -304,6 +304,18 @@ module Flapjack
         ln
       end
 
+      def max_notified_severity_of_current_failure
+        last_recovery = last_recovery_notification || 0
+
+        last_critical = last_critical_notification
+        return STATE_CRITICAL if last_critical && (last_critical > last_recovery)
+
+        last_warning = last_warning_notification
+        return STATE_WARNING if last_warning && (last_warning > last_recovery)
+
+        nil
+      end
+
       # unpredictable results if there are multiple notifications of different
       # types sent at the same time
       def last_notification

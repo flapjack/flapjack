@@ -244,6 +244,9 @@ module Flapjack
           notification_type = 'test'
         end
       end
+
+      max_notified_severity = entity_check.max_notified_severity_of_current_failure
+
       @redis.set("#{event.id}:last_#{notification_type}_notification", timestamp)
       @redis.set("#{event.id}:last_#{event.state}_notification", timestamp) if event.failure?
       @redis.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
@@ -253,13 +256,13 @@ module Flapjack
       contacts = entity_check.contacts
 
       if contacts.empty?
+        @logger.debug("No contacts for #{event.id}")
         @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | NO CONTACTS")
         return
       end
 
-      notification = Flapjack::Data::Notification.for_event(event, :type => notification_type)
-
-      #enqueue_messages( apply_notification_rules( notification.messages(:contacts => contacts) ) )
+      notification = Flapjack::Data::Notification.for_event(
+        event, :type => notification_type, :max_notified_severity => max_notified_severity)
 
       messages = notification.messages(:contacts => contacts)
       messages = apply_notification_rules(messages)
@@ -341,7 +344,19 @@ module Flapjack
 
       # delete any media that doesn't meet severity<->media constraints
       tuple = tuple.find_all do |message, matchers, options|
-        severity = message.notification.event.state
+        state = message.notification.event.state
+        max_notified_severity = message.notification.max_notified_severity
+
+        # use EntityCheck#max_notified_severity_of_current_failure
+        # as calculated prior to updating the last_notification* keys
+        # if it's a higher severity than the current state
+        severity = 'ok'
+        case
+        when ([state, max_notified_severity] & ['critical', 'unknown']).any?
+          severity = 'critical'
+        when [state, max_notified_severity].include?('warning')
+          severity = 'warning'
+        end
         options[:no_rules_for_contact] ||
           matchers.any? {|matcher|
             mms = matcher.media_for_severity(severity)
