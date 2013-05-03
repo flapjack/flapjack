@@ -11,7 +11,7 @@
       %div{:class => "container"}
         %div{:class => "page-header"}
           = nav
-          %h1= @contact.name
+          %h2= @contact.name
         %h3= "Contact Media"
         - if @contact.media && !@contact.media.empty?
           %table{:class => "table table-bordered table-hover table-condensed"}

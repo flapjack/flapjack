@@ -85,17 +85,18 @@ module Flapjack
           [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
         }.compact.sort_by {|parts| parts }
 
-        puts "ok so far, I guess"
         haml :checks
       end
 
       get '/checks_failing' do
         self_stats
         @adjective = 'failing'
+
         @states = redis.zrange('failed_checks', 0, -1).map {|key|
           parts  = key.split(':')
           [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
         }.compact.sort_by {|parts| parts}
+
         haml :checks
       end
 

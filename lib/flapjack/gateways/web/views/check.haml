@@ -12,10 +12,10 @@
       %div{:class => "container"}
         %div{:class => "page-header"}
           = nav
-          %h1 #{@check} on #{@entity}
-        %form{:action => "/acknowledgements/#{check_path_escaped}", :method => "post", :class => "form-inline"}
-          %h2 State: #{@check_state ? @check_state.upcase : ''}
-          - if (['warning', 'critical', 'unknown'].include?(@check_state) and !(@current_unscheduled_maintenance || @current_scheduled_maintenance))
+          %h2 #{@check} on #{@entity}
+        %h3 State: #{@check_state ? @check_state.upcase : ''}
+        - if (['warning', 'critical', 'unknown'].include?(@check_state) and !(@current_unscheduled_maintenance || @current_scheduled_maintenance))
+          %form{:action => "/acknowledgements/#{check_path_escaped}", :method => "post", :class => "form-inline"}
             %input{:type => 'hidden', :name => 'acknowledgement_id', :value => "#{@acknowledgement_id}"}
             %input{:type => 'submit', :value => 'Acknowledge', :class => 'button'}
             with
@@ -32,7 +32,7 @@
             %p
               %input{:type => 'submit', :value => 'End Unscheduled Maintenance (Unacknowledge)', :class => 'button'}
         - if @current_scheduled_maintenance
-          %h3 (Scheduled Maintenance - #{@current_scheduled_maintenance[:summary]})
+          %h4 (Scheduled Maintenance - #{@current_scheduled_maintenance[:summary]})
         %h3 Output: #{@check_summary}
         %table{:class => "table table-hover table-condensed"}
           %tr
