@@ -369,7 +369,7 @@ module Flapjack
           }
       end
 
-      @logger.debug "apply_notification_rules: num messages after severity-media constraints: #{tuple.size}"
+      @logger.debug "apply_notification_rules: num messages after pruning for severity-media constraints: #{tuple.size}"
 
       # delete media based on notification interval
       tuple = tuple.find_all do |message, matchers, options|
@@ -402,10 +402,23 @@ module Flapjack
 
         @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{message.address}")
 
-        message.contact.update_sent_alert_keys(:media => message.medium,
-                                               :check => message.notification.event.id,
-                                               :state => message.notification.event.state)
-          # drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}
+        if message.notification.event.state == 'ok'
+          message.contact.update_sent_alert_keys(
+            :media => message.medium,
+            :check => message.notification.event.id,
+            :state => 'warning',
+            :delete => true)
+          message.contact.update_sent_alert_keys(
+            :media => message.medium,
+            :check => message.notification.event.id,
+            :state => 'critical',
+            :delete => true)
+        else
+          message.contact.update_sent_alert_keys(
+            :media => message.medium,
+            :check => message.notification.event.id,
+            :state => message.notification.event.state)
+        end
 
         # TODO consider changing Resque jobs to use raw blpop like the others
         case media_type.to_sym

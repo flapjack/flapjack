@@ -229,12 +229,17 @@ module Flapjack
       end
 
       def update_sent_alert_keys(opts)
-        media = opts[:media]
-        check = opts[:check]
-        state = opts[:state]
+        media  = opts[:media]
+        check  = opts[:check]
+        state  = opts[:state]
+        delete = !! opts[:delete]
         key = "drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}"
-        @redis.set(key, 'd')
-        @redis.expire(key, self.interval_for_media(media))
+        if delete
+          @redis.del(key)
+        else
+          @redis.set(key, 'd')
+          @redis.expire(key, self.interval_for_media(media))
+        end
       end
 
       # FIXME

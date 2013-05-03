@@ -209,7 +209,8 @@ Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '
   found.should be_true
 end
 
-Then /^show me the log$/ do
+Then /^show me the (\w+ )*log$/ do |adjective|
+  puts "the #{adjective}log:"
   puts @logger.messages.join("\n")
 end
 
