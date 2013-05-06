@@ -95,6 +95,16 @@ module Flapjack
         }.sort
       end
 
+      def self.find_all_with_checks(options)
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.keys("check:*").map {|s| s.match(/.*:(.*):.*/)[1] }.to_set
+      end
+
+      def self.find_all_with_failing_checks(options)
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.zrange("failed_checks", 0, -1).map {|s| s.match(/(.*):.*/)[1] }.to_set
+      end
+
       def contacts
         contact_ids = @redis.smembers("contacts_for:#{id}")
 

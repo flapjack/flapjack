@@ -1,44 +1,85 @@
 !!! 5
 - nav = render_haml('_nav.haml', self)
-- css = render_haml('_css.haml', self)
+- head = render_haml('_head.haml', self)
+- foot = render_haml('_foot.haml', self)
 %html
   %head
-    %title Flapjack - Contact: #{@contact.name}
-    = css
+    %title Flapjack - #{@contact.name} (contact)
+    = head
   %body
-    %div#wrapper
-      = nav
-      %h1= @contact.name
-      - if @contact.media && !@contact.media.empty?
-        %ul
-          - @contact.media.each_pair do |mk, mv|
-            - if 'pagerduty'.eql?(mk)
-              %li= "PagerDuty: "
-              %ul
-                - @pagerduty_credentials.each_pair do |pk, pv|
-                  - if 'password'.eql?(pk)
-                    %li= "#{pk}: ..."
-                  - else
-                    %li= "#{pk}: #{pv}"
-            - else
-              %li= "#{mk.capitalize}: #{mv}"
-      - else
-        %p No media
-      - if @entities_and_checks && !@entities_and_checks.empty?
-        %table
-          %tr
-            %th Entity name
-            %th Checks
-          - @entities_and_checks.each do |ec|
-            - entity = ec[:entity]
-            - checks = ec[:checks]
+    %div#wrap
+      %div{:class => "container"}
+        %div{:class => "page-header"}
+          = nav
+          %h2= @contact.name
+        %h3= "Contact Media"
+        - if @contact.media && !@contact.media.empty?
+          %table{:class => "table table-bordered table-hover table-condensed"}
             %tr
-              %td
-                %p= entity.name
-              %td
-                - checks.each do |check|
-                  - link = "/check?entity=#{CGI.escape(entity.name)}&check=#{CGI.escape(check)}"
-                  %p
+              %th Media
+              %th Address
+              %th Interval
+            - @contact.media.each_pair do |mk, mv|
+              %tr
+                - if 'pagerduty'.eql?(mk)
+                  %td PagerDuty
+                  %td
+                    - @pagerduty_credentials.each_pair do |pk, pv|
+                      - if 'password'.eql?(pk)
+                        %p= "#{pk}: ..."
+                      - else
+                        %p= "#{pk}: #{pv}"
+                  %td -
+                - else
+                  %td #{mk.capitalize}
+                  %td #{mv}
+                  %td
+                    - if interval = @contact.media_intervals[mk]
+                      #{@contact.media_intervals[mk]} seconds
+                    - else
+                      no custom interval
+        - else
+          %p No media
+        %h3= "Entities and Checks"
+        - if @entities_and_checks && !@entities_and_checks.empty?
+          %table{:class => "table table-bordered table-hover table-condensed"}
+            %tr
+              %th Entity
+              %th Checks
+            - @entities_and_checks.each do |ec|
+              - entity = ec[:entity]
+              - checks = ec[:checks]
+              %tr
+                %td
+                  - link = "/entity/#{CGI.escape(entity.name)}"
+                  %a(title='entity status' href=link) #{entity.name}
+                %td
+                  - checks.each do |check|
+                    - link = "/check?entity=#{CGI.escape(entity.name)}&check=#{CGI.escape(check)}"
                     %a(title='check status' href=link) #{check}
-      - else
-        %p No entities
+        - else
+          %p No entities
+        %h3= "Notification Rules"
+        - rules = @contact.notification_rules
+        - if rules && rules.length > 0
+          %table{:class => "table table-bordered table-hover table-condensed"}
+            %tr
+              %th ID
+              %th Entities
+              %th Entity Tags
+              %th Warning Media
+              %th Critical Media
+              %th Time Restrictions
+            - rules.each do |r|
+              %tr
+                %td #{r.id}
+                %td #{r.entities.join(', ')}
+                %td #{r.entity_tags ? r.entity_tags.join(', ') : ''}
+                %td #{r.warning_media.join(', ')}
+                %td #{r.critical_media.join(', ')}
+                %td #{r.time_restrictions}
+        - else
+          %p No notification rules
+      %div#push
+    %div#footer
+      = foot

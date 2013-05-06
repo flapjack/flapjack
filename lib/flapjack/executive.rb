@@ -80,9 +80,6 @@ module Flapjack
       # we could generate a fuid and save it to disk, and prepend it from that
       # point on...
 
-      # TODO unset on exit?
-      @redis.set('boot_time', @boot_time.to_i)
-
       # FIXME: add an administrative function to reset all event counters
       if @redis.hget('event_counters', 'all').nil?
         @redis.hset('event_counters', 'all', 0)
@@ -91,11 +88,27 @@ module Flapjack
         @redis.hset('event_counters', 'action', 0)
       end
 
-      @redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
+      #@redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
+      @redis.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
       @redis.hset("event_counters:#{@instance_id}", 'all', 0)
       @redis.hset("event_counters:#{@instance_id}", 'ok', 0)
       @redis.hset("event_counters:#{@instance_id}", 'failure', 0)
       @redis.hset("event_counters:#{@instance_id}", 'action', 0)
+      touch_keys
+    end
+
+    # expire instance keys after one week
+    # TODO: set up a separate EM timer to reset key expiry every minute
+    # and reduce the expiry to, say, five minutes
+    # TODO: remove these keys on process exit
+    def touch_keys
+      [ "executive_instance:#{@instance_id}",
+        "event_counters:#{@instance_id}",
+        "event_counters:#{@instance_id}",
+        "event_counters:#{@instance_id}",
+        "event_counters:#{@instance_id}" ].each {|key|
+          @redis.expire(key, 1036800)
+        }
     end
 
     def start
@@ -158,6 +171,10 @@ module Flapjack
     end
 
     def update_keys(event, entity_check)
+
+      # TODO: run touch_keys from a separate EM timer for efficiency
+      touch_keys
+
       result    = { :skip_filters => false }
       timestamp = Time.now.to_i
       @event_count = @redis.hincrby('event_counters', 'all', 1)
