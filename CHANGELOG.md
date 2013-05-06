@@ -1,6 +1,6 @@
 ## Flapjack Changelog
 
-# 0.7.2 - UNRELEASED
+# 0.7.2 - 2013-05-06
 - Feature: executive instance keys now expire after 7 days, touched every event gh-111 (@jessereynolds)
 - Feature: slightly less sucky looking web UI, also now includes entity listing screens (@jessereynolds)
 - Feature: expose notification rules and intervals via the Web UI gh-150, gh-151 (@jessereynolds)
