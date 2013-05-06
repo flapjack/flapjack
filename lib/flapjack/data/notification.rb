@@ -6,10 +6,12 @@ module Flapjack
   module Data
     class Notification
 
-      attr_accessor :event, :type
+      attr_accessor :event, :type, :max_notified_severity
 
       def self.for_event(event, opts = {})
-        self.new(:event => event, :type => opts[:type])
+        self.new(:event => event,
+                 :type => opts[:type],
+                 :max_notified_severity => opts[:max_notified_severity])
       end
 
       def messages(opts = {})
@@ -28,12 +30,13 @@ module Flapjack
       end
 
       def contents
-        @contents ||= {'event_id'          => event.id,
-                       'state'             => event.state,
-                       'summary'           => event.summary,
-                       'time'              => event.time,
-                       'duration'          => event.duration || nil,
-                       'notification_type' => type}
+        @contents ||= {'event_id'              => event.id,
+                       'state'                 => event.state,
+                       'summary'               => event.summary,
+                       'time'                  => event.time,
+                       'duration'              => event.duration || nil,
+                       'notification_type'     => type,
+                       'max_notified_severity' => max_notified_severity }
       end
 
     private
@@ -42,6 +45,7 @@ module Flapjack
         raise "Event not passed" unless event = opts[:event]
         @event = event
         @type  = opts[:type]
+        @max_notified_severity = opts[:max_notified_severity]
       end
 
     end
