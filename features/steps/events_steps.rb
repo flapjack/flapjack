@@ -121,8 +121,6 @@ def icecube_hash_to_time_restriction(tr, time_zone)
     rrule[:rule_type] = /^.*\:\:(.*)Rule$/.match(rrule[:rule_type])[1]
   }
 
-  tr[:start_time] = tr.delete(:start_date).dup
-
   tr
 end
 
@@ -272,8 +270,8 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
     entity_tags        = rule['entity_tags'].split(',').map { |x| x.strip }
     warning_media      = rule['warning_media'].split(',').map { |x| x.strip }
     critical_media     = rule['critical_media'].split(',').map { |x| x.strip }
-    warning_blackhole  = rule['warning_blackhole'].downcase == 'true' ? 'true' : 'false'
-    critical_blackhole = rule['critical_blackhole'].downcase == 'true' ? 'true' : 'false'
+    warning_blackhole  = (rule['warning_blackhole'].downcase == 'true')
+    critical_blackhole = (rule['critical_blackhole'].downcase == 'true')
     time_zone = ActiveSupport::TimeZone.new("America/New_York")
     time_restrictions  = []
     rule['time_restrictions'].split(',').map { |x| x.strip }.each do |time_restriction|
@@ -285,14 +283,15 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
         time_restrictions << icecube_hash_to_time_restriction(weekdays_8_18.to_hash, time_zone)
       end
     end
-    Flapjack::Data::NotificationRule.add({:contact_id         => contact_id,
-                                          :entities           => entities,
-                                          :entity_tags        => entity_tags,
-                                          :warning_media      => warning_media,
-                                          :critical_media     => critical_media,
-                                          :warning_blackhole  => warning_blackhole,
-                                          :critical_blackhole => critical_blackhole,
-                                          :time_restrictions  => time_restrictions}, time_zone, :redis => @redis)
+    rule_data = {:contact_id         => contact_id,
+                 :entities           => entities,
+                 :entity_tags        => entity_tags,
+                 :warning_media      => warning_media,
+                 :critical_media     => critical_media,
+                 :warning_blackhole  => warning_blackhole,
+                 :critical_blackhole => critical_blackhole,
+                 :time_restrictions  => time_restrictions}
+    Flapjack::Data::NotificationRule.add(rule_data, time_zone, :redis => @redis)
   end
 end
 

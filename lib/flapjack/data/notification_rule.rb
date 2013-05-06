@@ -66,8 +66,11 @@ module Flapjack
         return unless tr.has_key?(:start_time) && tr.has_key?(:end_time)
 
         parsed_time = proc {|t|
-          return t if t.is_a?(Time)
-          begin; time_zone.parse(t); rescue ArgumentError; nil; end
+          if t.is_a?(Time)
+            t
+          else
+            begin; time_zone.parse(t); rescue ArgumentError; nil; end
+          end
         }
 
         start_time = case tr[:start_time]
@@ -114,9 +117,9 @@ module Flapjack
       end
 
       def to_json(*args)
-        hashify(:id, :contact_id, :entity_tags, :entities,
-                :time_restrictions, :warning_media, :critical_media,
-                :warning_blackhole, :critical_blackhole) {|k|
+        self.class.hashify(:id, :contact_id, :entity_tags, :entities,
+            :time_restrictions, :warning_media, :critical_media,
+            :warning_blackhole, :critical_blackhole) {|k|
           [k, self.send(k)]
         }.to_json
       end
@@ -124,27 +127,23 @@ module Flapjack
       # tags or entity names match?
       # nil @entity_tags and nil @entities matches
       def match_entity?(event)
-        return true if (@entity_tags.nil? or @entity_tags.empty?) and
-                       (@entities.nil? or @entities.empty?)
-        return true if @entities.include?(event.split(':').first)
         # TODO: return true if event's entity tags match entity tag list on the rule
-        return false
+        ((@entity_tags.nil? || @entity_tags.empty?) && (@entities.nil? || @entities.empty?)) ||
+         (@entities.include?(event.split(':').first))
       end
 
       def blackhole?(severity)
-        return true if 'warning'.eql?(severity.downcase) and @warning_blackhole
-        return true if 'critical'.eql?(severity.downcase) and @critical_blackhole
-        return false
+        ('warning'.eql?(severity.downcase) && @warning_blackhole) ||
+          ('critical'.eql?(severity.downcase) && @critical_blackhole)
       end
 
       def media_for_severity(severity)
         case severity
         when 'warning'
-          media_list = @warning_media
+          @warning_media
         when 'critical'
-          media_list = @critical_media
+          @critical_media
         end
-        media_list
       end
 
     private
@@ -203,12 +202,12 @@ module Flapjack
                               d[:entity_tags].all? {|et| et.is_a?(String)}} =>
                        "entity_tags must be a list of strings",
 
-                       proc { (!d.has_key?(:entities) ||
-                               !d[:entities].is_a?(Array) ||
-                               d[:entities].size > 0) &&
-                              (!d.has_key?(:entity_tags) ||
-                               !d[:entity_tags].is_a?(Array) ||
-                               d[:entity_tags].size > 0) } =>
+                       proc { (d.has_key?(:entities) &&
+                               d[:entities].is_a?(Array) &&
+                               (d[:entities].size > 0)) ||
+                              (d.has_key?(:entity_tags) &&
+                               d[:entity_tags].is_a?(Array) &&
+                               (d[:entity_tags].size > 0)) } =>
                        "entities or entity tags must have at least one value",
 
                        proc { d.has_key?(:time_restrictions) &&
@@ -248,7 +247,6 @@ module Flapjack
         if logger = options[:logger]
           error_str = errors.join(", ")
           logger.info "validation error: #{error_str}"
-          p error_str # testing, TODO remove
         end
         false
       end
