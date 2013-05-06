@@ -6,9 +6,10 @@ describe 'web/views/contact.haml', :haml_view => true do
     @contact = mock('contact')
     @contact.should_receive(:media)
     @contact.should_receive(:name).twice.and_return('Aeschylus')
+    @contact.should_receive(:notification_rules)
 
     entity = mock('entity')
-    entity.should_receive(:name).twice.and_return('abc-xyz-01')
+    entity.should_receive(:name).exactly(3).times.and_return('abc-xyz-01')
 
     checks = ['Disk / Utilisation']
 

@@ -1,27 +1,70 @@
 !!! 5
 - nav = render_haml('_nav.haml', self)
-- css = render_haml('_css.haml', self)
+- head = render_haml('_head.haml', self)
+- foot = render_haml('_foot.haml', self)
 %html
   %head
-    %title Flapjack - Self Stats
-    = css
+    %title Flapjack - Internal Statistics
+    = head
   %body
-    %div#wrapper
-      = nav
-      %h1 Flapjack Self Status
-      %h4
-        Events queued:
-        = @events_queued
-      %h4
-        Number of failing services:
-        = @count
-      %p Events processed (all time): #{@event_counters['all']} (ok: #{@event_counters['ok']}, failure: #{@event_counters['failure']}, action: #{@event_counters['action']})
-      %p Events processed (this instance): #{@event_counters_instance['all']} (ok: #{@event_counters_instance['ok']}, failure: #{@event_counters_instance['failure']}, action: #{@event_counters_instance['action']})
-      %p Average rate (this instance): #{@event_rate_all} events per second
-      %p Total keys in redis: #{@keys.length}
-      %p Uptime: #{@uptime_string}
-      %p Boot time: #{@boot_time}
-      %p Current time: #{Time.now}
-      %p Executive Instances: #{@executive_instances.inspect}
-      %p
-        %a{:href => 'self_stats.json'} Instrument as JSON
+    %div#wrap
+      %div{:class => "container"}
+        %div{:class => "page-header"}
+          = nav
+          %h2 Internal Statistics
+        %table{:class => "table table-bordered table-hover table-condensed"}
+          %tr
+            %td Events queued:
+            %td= @events_queued
+          %tr
+            %td Number of entities:
+            %td= @count_all_entities
+          %tr
+            %td Number of failing entities:
+            %td= @count_failing_entities
+          %tr
+            %td Number of checks:
+            %td= @count_all_checks
+          %tr
+            %td Number of failing checks:
+            %td= @count_failing_checks
+          %tr
+            %td Events processed (all time)
+            %td #{@event_counters['all']} (ok: #{@event_counters['ok']}, failure: #{@event_counters['failure']}, action: #{@event_counters['action']})
+          %tr
+            %td Events processed (this instance)
+            %td #{@event_counters_instance['all']} (ok: #{@event_counters_instance['ok']}, failure: #{@event_counters_instance['failure']}, action: #{@event_counters_instance['action']})
+          %tr
+            %td Average rate (this instance)
+            %td #{@event_rate_all} events per second
+          %tr
+            %td Total keys in redis
+            %td #{@keys.length}
+          %tr
+            %td Uptime
+            %td= @uptime_string
+          %tr
+            %td Boot time
+            %td= @boot_time
+          %tr
+            %td Current time
+            %td= Time.now
+        %h4
+          Executive Instances:
+        %table{:class => "table table-bordered table-hover"}
+          %tr
+            %th Hostname
+            %th PID
+            %th Started
+          - @executive_instances.each do |i|
+            - hostname, pid = i[0].split(':')
+            - started = "#{relative_time_ago(Time.at(i[1].to_i))} ago"
+            %tr
+              %td= hostname
+              %td= pid
+              %td= started
+        %p
+          %a{:href => 'self_stats.json'} Instrument as JSON
+      %div#push
+    %div#footer
+      = foot
