@@ -53,12 +53,14 @@ module Flapjack
             use Flapjack::CommonLogger, access_logger
           end
 
+
         end
       end
 
       include Flapjack::Utility
 
       set :views, settings.root + '/web/views'
+      set :public_folder, settings.root + '/web/public'
 
       def redis
         self.class.instance_variable_get('@redis')
@@ -70,6 +72,12 @@ module Flapjack
 
       get '/' do
         self_stats
+        haml :index
+      end
+
+      get '/checks_all' do
+        self_stats
+        @adjective = 'all'
 
         # TODO (?) recast as Entity.all do |e|; e.checks.do |ec|; ...
         @states = redis.keys('*:*:states').map { |r|
@@ -77,16 +85,19 @@ module Flapjack
           [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
         }.compact.sort_by {|parts| parts }
 
-        haml :index
+        haml :checks
       end
 
-      get '/failing' do
+      get '/checks_failing' do
         self_stats
+        @adjective = 'failing'
+
         @states = redis.zrange('failed_checks', 0, -1).map {|key|
           parts  = key.split(':')
           [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
         }.compact.sort_by {|parts| parts}
-        haml :index
+
+        haml :checks
       end
 
       get '/self_stats' do
@@ -96,10 +107,12 @@ module Flapjack
 
       get '/self_stats.json' do
         self_stats
-
         {
           'events_queued'    => @events_queued,
-          'failing_services' => @count,
+          'all_entities'     => @count_all_entities,
+          'failing_entities' => @count_failing_entities,
+          'all_checks'       => @count_all_checks,
+          'failing_checks'   => @count_failing_checks,
           'processed_events' => {
             'all_time' => {
               'total'   => @event_counters['all'],
@@ -123,6 +136,30 @@ module Flapjack
         }.to_json
       end
 
+      get '/entities_all' do
+        self_stats
+        @adjective = 'all'
+        @entities = Flapjack::Data::Entity.find_all_with_checks(:redis => redis)
+        haml :entities
+      end
+
+      get '/entities_failing' do
+        self_stats
+        @adjective = 'failing'
+        @entities = Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis)
+        haml :entities
+      end
+
+      get '/entity/:entity' do
+        self_stats
+        @entity = params[:entity]
+        @states = redis.keys("#{@entity}:*:states").map { |r|
+          parts  = r.split(':')[0..1]
+          [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
+        }.compact.sort_by {|parts| parts }
+        haml :entity
+      end
+
       get '/check' do
         @entity = params[:entity]
         @check  = params[:check]
@@ -130,6 +167,7 @@ module Flapjack
         entity_check = get_entity_check(@entity, @check)
         return 404 if entity_check.nil?
 
+        self_stats
         last_change = entity_check.last_change
 
         @check_state                = entity_check.state
@@ -225,11 +263,13 @@ module Flapjack
       end
 
       get '/contacts' do
+        self_stats
         @contacts = Flapjack::Data::Contact.all(:redis => redis)
         haml :contacts
       end
 
       get "/contacts/:contact" do
+        self_stats
         contact_id = params[:contact]
 
         if contact_id
@@ -292,19 +332,24 @@ module Flapjack
         @fqdn         = `/bin/hostname -f`.chomp
         @pid          = Process.pid
         @instance_id  = "#{@fqdn}:#{@pid}"
+        @version      = Flapjack::VERSION
 
         @keys = redis.keys '*'
-        @count_failing_checks    = redis.zcard 'failed_checks'
         @count_all_checks        = redis.keys('check:*:*').length
-        @executive_instances     = redis.zrange('executive_instances', '0', '-1', :withscores => true)
+        @count_failing_checks    = redis.zcard 'failed_checks'
+        @count_all_entities      = Flapjack::Data::Entity.find_all_with_checks(:redis => redis).length
+        @count_failing_entities  = Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis).length
+        @executive_instances     = redis.keys("executive_instance:*").map {|i|
+          [ i.match(/executive_instance:(.*)/)[1], redis.hget(i, 'boot_time').to_i ]
+        }.sort {|a, b| b[1] <=> a[1]}
         @event_counters          = redis.hgetall('event_counters')
         @event_counters_instance = redis.hgetall("event_counters:#{@instance_id}")
-        @boot_time               = Time.at(redis.zscore('executive_instances', @instance_id).to_i)
+        @boot_time               = Time.at(redis.hget("executive_instance:#{@instance_id}", 'boot_time').to_i)
         @uptime                  = Time.now.to_i - @boot_time.to_i
         @uptime_string           = time_period_in_words(@uptime)
         @event_rate_all          = (@uptime > 0) ?
                                    (@event_counters_instance['all'].to_f / @uptime) : 0
-        @events_queued = redis.llen('events')
+        @events_queued           = redis.llen('events')
       end
 
     end

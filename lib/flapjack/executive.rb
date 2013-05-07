@@ -80,9 +80,6 @@ module Flapjack
       # we could generate a fuid and save it to disk, and prepend it from that
       # point on...
 
-      # TODO unset on exit?
-      @redis.set('boot_time', @boot_time.to_i)
-
       # FIXME: add an administrative function to reset all event counters
       if @redis.hget('event_counters', 'all').nil?
         @redis.hset('event_counters', 'all', 0)
@@ -91,11 +88,27 @@ module Flapjack
         @redis.hset('event_counters', 'action', 0)
       end
 
-      @redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
+      #@redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
+      @redis.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
       @redis.hset("event_counters:#{@instance_id}", 'all', 0)
       @redis.hset("event_counters:#{@instance_id}", 'ok', 0)
       @redis.hset("event_counters:#{@instance_id}", 'failure', 0)
       @redis.hset("event_counters:#{@instance_id}", 'action', 0)
+      touch_keys
+    end
+
+    # expire instance keys after one week
+    # TODO: set up a separate EM timer to reset key expiry every minute
+    # and reduce the expiry to, say, five minutes
+    # TODO: remove these keys on process exit
+    def touch_keys
+      [ "executive_instance:#{@instance_id}",
+        "event_counters:#{@instance_id}",
+        "event_counters:#{@instance_id}",
+        "event_counters:#{@instance_id}",
+        "event_counters:#{@instance_id}" ].each {|key|
+          @redis.expire(key, 1036800)
+        }
     end
 
     def start
@@ -158,6 +171,10 @@ module Flapjack
     end
 
     def update_keys(event, entity_check)
+
+      # TODO: run touch_keys from a separate EM timer for efficiency
+      touch_keys
+
       result    = { :skip_filters => false }
       timestamp = Time.now.to_i
       @event_count = @redis.hincrby('event_counters', 'all', 1)
@@ -244,6 +261,9 @@ module Flapjack
           notification_type = 'test'
         end
       end
+
+      max_notified_severity = entity_check.max_notified_severity_of_current_failure
+
       @redis.set("#{event.id}:last_#{notification_type}_notification", timestamp)
       @redis.set("#{event.id}:last_#{event.state}_notification", timestamp) if event.failure?
       @redis.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
@@ -253,11 +273,13 @@ module Flapjack
       contacts = entity_check.contacts
 
       if contacts.empty?
+        @logger.debug("No contacts for #{event.id}")
         @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | NO CONTACTS")
         return
       end
 
-      notification = Flapjack::Data::Notification.for_event(event, :type => notification_type)
+      notification = Flapjack::Data::Notification.for_event(
+        event, :type => notification_type, :max_notified_severity => max_notified_severity)
 
       messages = notification.messages(:contacts => contacts)
       messages = apply_notification_rules(messages, event.state)
@@ -292,8 +314,7 @@ module Flapjack
       # don't consider notification rules if the contact has none
 
       tuple = messages.map do |message|
-        @logger.debug "considering message: #{message.medium} #{message.notification.event.id} #{message.notification.event.state}"
-        @logger.debug "contact_id: #{message.contact.id}"
+        @logger.debug "considering message for contact: #{message.contact.id} #{message.medium} #{message.notification.event.id} #{message.notification.event.state}"
         rules    = message.contact.notification_rules
         @logger.debug "found #{rules.length} rules for this message's contact"
         event_id = message.notification.event.id
@@ -337,6 +358,19 @@ module Flapjack
 
       # delete any media that doesn't meet severity<->media constraints
       tuple = tuple.find_all do |message, matchers, options|
+        state = message.notification.event.state
+        max_notified_severity = message.notification.max_notified_severity
+
+        # use EntityCheck#max_notified_severity_of_current_failure
+        # as calculated prior to updating the last_notification* keys
+        # if it's a higher severity than the current state
+        severity = 'ok'
+        case
+        when ([state, max_notified_severity] & ['critical', 'unknown']).any?
+          severity = 'critical'
+        when [state, max_notified_severity].include?('warning')
+          severity = 'warning'
+        end
         options[:no_rules_for_contact] ||
           matchers.any? {|matcher|
             if mms = matcher.media_for_severity(severity)
@@ -348,7 +382,7 @@ module Flapjack
           }
       end
 
-      @logger.debug "apply_notification_rules: num messages after severity-media constraints: #{tuple.size}"
+      @logger.debug "apply_notification_rules: num messages after pruning for severity-media constraints: #{tuple.size}"
 
       # delete media based on notification interval
       tuple = tuple.find_all do |message, matchers, options|
@@ -381,10 +415,23 @@ module Flapjack
 
         @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{message.address}")
 
-        message.contact.update_sent_alert_keys(:media => message.medium,
-                                               :check => message.notification.event.id,
-                                               :state => message.notification.event.state)
-          # drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}
+        if message.notification.event.state == 'ok'
+          message.contact.update_sent_alert_keys(
+            :media => message.medium,
+            :check => message.notification.event.id,
+            :state => 'warning',
+            :delete => true)
+          message.contact.update_sent_alert_keys(
+            :media => message.medium,
+            :check => message.notification.event.id,
+            :state => 'critical',
+            :delete => true)
+        else
+          message.contact.update_sent_alert_keys(
+            :media => message.medium,
+            :check => message.notification.event.id,
+            :state => message.notification.event.state)
+        end
 
         # TODO consider changing Resque jobs to use raw blpop like the others
         case media_type.to_sym

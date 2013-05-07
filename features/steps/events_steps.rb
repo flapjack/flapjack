@@ -222,7 +222,8 @@ Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '
   found.should be_true
 end
 
-Then /^show me the log$/ do
+Then /^show me the (\w+ )*log$/ do |adjective|
+  puts "the #{adjective}log:"
   puts @logger.messages.join("\n")
 end
 
@@ -314,5 +315,16 @@ Then /^(.*) email alert(?:s)? should be queued for (.*)$/ do |num_queued, addres
     num_queued = 0
   end
   queue  = Resque.peek('email_notifications', 0, 30)
+  queue.find_all {|n| n['args'].first['address'] == address }.length.should == num_queued.to_i
+end
+
+Then /^(.*) sms alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
+  check  = check  ? check  : @check
+  entity = entity ? entity : @entity
+  case num_queued
+  when 'no'
+    num_queued = 0
+  end
+  queue  = Resque.peek('sms_notifications', 0, 30)
   queue.find_all {|n| n['args'].first['address'] == address }.length.should == num_queued.to_i
 end

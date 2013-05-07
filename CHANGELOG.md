@@ -1,8 +1,13 @@
 ## Flapjack Changelog
 
-# 0.7.2 - UNRELEASED
+# 0.7.2 - 2013-05-06
+- Feature: executive instance keys now expire after 7 days, touched every event gh-111 (@jessereynolds)
+- Feature: slightly less sucky looking web UI, also now includes entity listing screens (@jessereynolds)
+- Feature: expose notification rules and intervals via the Web UI gh-150, gh-151 (@jessereynolds)
 - Feature: command line - support "--version", "help" etc gh-134 (@jessereynolds)
 - Feature: replay events from another flapjack gh-138 (@jessereynolds)
+- Bug: recovery is not resetting notification intervals gh-136 (@jessereynolds)
+- Bug: recoveries are blocked for users with notification rules gh-148 (@jessereynolds)
 - Bug: jabber gateway now uses configured alias for commands gh-138 (@jessereynolds)
 - Bug: jabber gateway was crashing on querying entities with invalid regex gh-147 (@jessereynolds)
 - Bug: handle media addresses correctly when adding contacts and generating messages gh-145 (@jessereynolds)

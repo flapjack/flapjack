@@ -11,6 +11,7 @@ Feature: Notification rules on a per contact basis
       | id  | name | contacts |
       | 1   | foo  | 1        |
       | 2   | bar  | 1,2      |
+      | 3   | baz  | 1        |
 
     And user 1 has the following notification intervals:
       | email | sms |
@@ -20,6 +21,7 @@ Feature: Notification rules on a per contact basis
       | id | entities | entity_tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
       | 1  | foo      |             | email         | sms,email        |                   |                    | 8-18 weekdays     |
       | 2  | bar      |             |               | sms,email        | true              |                    |                   |
+      | 3  | baz      |             | email         | sms,email        |                   |                    |                   |
 
   @time_restrictions @time
   Scenario: Alerts only during specified time restrictions
@@ -60,7 +62,45 @@ Feature: Notification rules on a per contact basis
     Then  no email alerts should be queued for malak@example.com
 
   @severity @time
-  Scenario: Alerts only when media,severity matches any matching rule's severity's media with ok->warning->critical
+  Scenario: Recoveries are not affected by notification rules
+    Given the check is check 'ping' on entity 'baz'
+    And   the check is in an ok state
+    When  a critical event is received
+    And   5 minutes passes
+    And   a critical event is received
+    Then  1 email alert should be queued for malak@example.com
+    When  1 minute passes
+    And   an ok event is received
+    Then  2 email alerts should be queued for malak@example.com
+
+  @severity @time
+  Scenario: Alerts are sent to media of highest severity reached since last ok
+    Given the check is check 'ping' on entity 'baz'
+    And   the check is in an ok state
+    When  a warning event is received
+    And   1 minute passes
+    And   a warning event is received
+    Then  1 email alert should be queued for malak@example.com
+    And   0 sms alerts should be queued for +61400000001
+    When  70 minutes passes
+    And   a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  2 email alerts should be queued for malak@example.com
+    And   1 sms alert should be queued for +61400000001
+    When  70 minutes passes
+    And   a warning event is received
+    And   1 minute passes
+    And   a warning event is received
+    Then  3 email alerts should be queued for malak@example.com
+    And   2 sms alerts should be queued for +61400000001
+    When  70 minutes passes
+    And   an ok event is received
+    Then  4 email alerts should be queued for malak@example.com
+    And   3 sms alerts should be queued for +61400000001
+
+  @severity @time
+  Scenario: Alerts only when media,severity matches any matching rule's severity's media with ok->warning->critical->ok
     Given the check is check 'ping' on entity 'bar'
     And   the check is in an ok state
     When  a warning event is received
@@ -68,9 +108,12 @@ Feature: Notification rules on a per contact basis
     And   a warning event is received
     Then  no email alerts should be queued for malak@example.com
     When  a critical event is received
-    And   5 minute passes
+    And   5 minutes passes
     And   a critical event is received
     Then  1 email alert should be queued for malak@example.com
+    When  1 minute passes
+    And   an ok event is received
+    Then  2 email alert should be queued for malak@example.com
 
   @blackhole
   Scenario: Drop alerts matching a blackhole rule
@@ -91,3 +134,21 @@ Feature: Notification rules on a per contact basis
     And   a critical event is received
     Then  2 email alerts should be queued for malak@example.com
 
+  @intervals @time
+  Scenario: Problem directly after Recovery should alert despite notification intervals
+    Given the check is check 'ping' on entity 'baz'
+    And   the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  1 email alert should be queued for malak@example.com
+    And   1 sms alert should be queued for +61400000001
+    When  an ok event is received
+    Then  2 email alerts should be queued for malak@example.com
+    And   2 sms alerts should be queued for +61400000001
+    When  1 minute passes
+    And   a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  3 email alerts should be queued for malak@example.com
+    And   3 sms alerts should be queued for +61400000001

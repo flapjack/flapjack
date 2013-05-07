@@ -19,18 +19,22 @@ describe Flapjack::Executive, :logger => true do
 
     redis = mock('redis')
 
-    redis.should_receive(:set).with('boot_time', a_kind_of(Integer))
+    #redis.should_receive(:set).with('boot_time', a_kind_of(Integer))
+    redis.should_receive(:hset).with(/^executive_instance:/, "boot_time", anything)
     redis.should_receive(:hget).with('event_counters', 'all').and_return(nil)
     redis.should_receive(:hset).with('event_counters', 'all', 0)
     redis.should_receive(:hset).with('event_counters', 'ok', 0)
     redis.should_receive(:hset).with('event_counters', 'failure', 0)
     redis.should_receive(:hset).with('event_counters', 'action', 0)
 
-    redis.should_receive(:zadd).with('executive_instances', a_kind_of(Integer), a_kind_of(String))
+    #redis.should_receive(:zadd).with('executive_instances', a_kind_of(Integer), a_kind_of(String))
     redis.should_receive(:hset).with(/^event_counters:/, 'all', 0)
     redis.should_receive(:hset).with(/^event_counters:/, 'ok', 0)
     redis.should_receive(:hset).with(/^event_counters:/, 'failure', 0)
     redis.should_receive(:hset).with(/^event_counters:/, 'action', 0)
+
+    redis.should_receive(:expire).with(/^executive_instance:/, anything).twice
+    redis.should_receive(:expire).with(/^event_counters:/, anything).exactly(8).times
 
     redis.should_receive(:hincrby).with('event_counters', 'all', 1)
     redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
