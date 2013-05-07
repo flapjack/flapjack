@@ -93,6 +93,7 @@ module Flapjack
 
         tr[:start_date] = {:time => start_time, :zone => time_zone.name}
         tr[:end_date]   = {:time => end_time, :zone => time_zone.name}
+        tr[:duration]   = end_time - start_time
 
         # check that rrule types are valid IceCube rule types
         return unless tr[:rrules].is_a?(Array) &&

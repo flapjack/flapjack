@@ -111,8 +111,8 @@ def submit_acknowledgement(entity, check)
   submit_event(event)
 end
 
-# move back to notification
-def icecube_hash_to_time_restriction(tr, time_zone)
+def icecube_schedule_to_time_restriction(sched, time_zone)
+  tr = sched.to_hash
   tr[:start_time] = time_zone.utc_to_local(tr[:start_date][:time]).strftime "%Y-%m-%d %H:%M:%S"
   tr[:end_time]   = time_zone.utc_to_local(tr[:end_time][:time]).strftime "%Y-%m-%d %H:%M:%S"
 
@@ -280,7 +280,7 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
         # FIXME: get timezone from the user definition (or config[:default_contact_timezone])
         weekdays_8_18 = IceCube::Schedule.new(time_zone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
         weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
-        time_restrictions << icecube_hash_to_time_restriction(weekdays_8_18.to_hash, time_zone)
+        time_restrictions << icecube_schedule_to_time_restriction(weekdays_8_18, time_zone)
       end
     end
     rule_data = {:contact_id         => contact_id,

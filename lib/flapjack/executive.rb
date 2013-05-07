@@ -259,12 +259,9 @@ module Flapjack
 
       notification = Flapjack::Data::Notification.for_event(event, :type => notification_type)
 
-      #enqueue_messages( apply_notification_rules( notification.messages(:contacts => contacts) ) )
-
       messages = notification.messages(:contacts => contacts)
-      messages = apply_notification_rules(messages)
+      messages = apply_notification_rules(messages, event.state)
       enqueue_messages(messages)
-
     end
 
     # time restrictions match?
@@ -288,7 +285,7 @@ module Flapjack
     end
 
     # delete messages based on entity name(s), tags, severity, time of day
-    def apply_notification_rules(messages)
+    def apply_notification_rules(messages, severity)
       # first get all rules matching entity and time
       @logger.debug "apply_notification_rules: got messages with size #{messages.size}"
 
@@ -322,8 +319,8 @@ module Flapjack
           end
           if have_specific
             # delete the rule for all entities
-            matchers.map! do |matcher|
-              matcher.entities.nil? and matcher.entity_tags.nil? ? nil : matcher
+            matchers.reject! do |matcher|
+              matcher.entities.nil? && matcher.entity_tags.nil?
             end
           end
         end
@@ -332,7 +329,6 @@ module Flapjack
 
       # delete media based on blackholes
       tuple = tuple.find_all do |message, matchers, options|
-        severity = message.notification.event.state
         # or use message.notification.contents['state']
         matchers.none? {|matcher| matcher.blackhole?(severity) }
       end
@@ -341,17 +337,14 @@ module Flapjack
 
       # delete any media that doesn't meet severity<->media constraints
       tuple = tuple.find_all do |message, matchers, options|
-        severity = message.notification.event.state
         options[:no_rules_for_contact] ||
           matchers.any? {|matcher|
-            mms = matcher.media_for_severity(severity)
-            unless mms
-              @logger.warn("got nil for matcher.media_for_severity(#{severity}), matcher: #{matcher.inspect}")
-              answer = false
+            if mms = matcher.media_for_severity(severity)
+              mms.include?(message.medium)
             else
-              answer = mms.include?(message.medium)
+              @logger.warn("got nil for matcher.media_for_severity(#{severity}), matcher: #{matcher.inspect}")
+              false
             end
-            answer
           }
       end
 
