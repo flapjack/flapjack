@@ -4,7 +4,6 @@ require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
 require 'haml'
-require 'rack/fiber_pool'
 
 require 'flapjack/rack_logger'
 

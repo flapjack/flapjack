@@ -16,7 +16,6 @@ PATH
       ice_cube
       log4r
       mail
-      rack-fiber_pool
       redis
       resque (~> 1.23.0)
       sinatra
@@ -126,7 +125,6 @@ GEM
       method_source (~> 0.8)
       slop (~> 3.4)
     rack (1.5.1)
-    rack-fiber_pool (0.9.3)
     rack-protection (1.3.2)
       rack
     rack-test (0.6.2)

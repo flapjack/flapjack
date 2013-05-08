@@ -8,7 +8,6 @@
 
 require 'time'
 
-require 'rack/fiber_pool'
 require 'sinatra/base'
 
 require 'flapjack/data/contact'
