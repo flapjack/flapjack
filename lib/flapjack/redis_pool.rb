@@ -14,10 +14,10 @@ module Flapjack
   class RedisPool < EventMachine::Synchrony::ConnectionPool
 
     def initialize(opts = {})
-      config = opts.delete(:config)
+      config = opts.delete(:config) || {}
       @size = opts[:size] || 5
       super(:size => @size) {
-        ::Redis.new(config.merge(:driver => 'synchrony'))
+        ::Redis.new(config)
       }
     end
 

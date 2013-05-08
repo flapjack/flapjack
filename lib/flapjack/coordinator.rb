@@ -39,9 +39,6 @@ module Flapjack
         Flapjack::Pikelet::Thin::PIKELET_TYPES.include?(k)
       }.map {|v| Hash[v] }
 
-      p http_defs
-      p non_http_defs
-
       return if http_defs.empty? && non_http_defs.empty?
 
       add_pikelets(http_defs) unless http_defs.empty?

@@ -106,7 +106,7 @@ EXPIRE_AS_IF_AT
 
 end
 
-redis_opts = { :db => 14, :driver => :ruby }
+redis_opts = { :db => 14, :driver => 'ruby' }
 redis = ::Redis.new(redis_opts)
 redis.flushdb
 RedisDelorean.before_all(:redis => redis)
