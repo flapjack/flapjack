@@ -42,15 +42,8 @@ module Flapjack
       return if http_defs.empty? && non_http_defs.empty?
 
       add_pikelets(http_defs) unless http_defs.empty?
-
-      if non_http_defs.empty?
-        setup_signals if options[:signals]
-      else
-        EM.synchrony do
-          add_pikelets(non_http_defs)
-          setup_signals if options[:signals]
-        end
-      end
+      setup_signals if options[:signals]
+      EM.synchrony { add_pikelets(non_http_defs) } unless non_http_defs.empty?
     end
 
     def stop

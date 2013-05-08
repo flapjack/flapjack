@@ -3,6 +3,7 @@
 require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
+require 'rack/fiber_pool'
 require 'haml'
 
 require 'flapjack/rack_logger'
@@ -17,12 +18,28 @@ module Flapjack
   module Gateways
 
     class Web < Sinatra::Base
+      set :raise_errors, true
+
+      rescue_exception = Proc.new do |env, e|
+        if settings.show_exceptions?
+          # ensure the sinatra error page shows properly
+          request = Sinatra::Request.new(env)
+          printer = Sinatra::ShowExceptions.new(proc{ raise e })
+          s, h, b = printer.call(env)
+          [s, h, b]
+        else
+          @logger.error e.message
+          @logger.error e.backtrace.join("\n")
+          [503, {}, ""]
+        end
+      end
+      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
 
       use Rack::MethodOverride
 
       class << self
         def start
-          @redis = ::Redis.new(@redis_config)
+          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
 
           @logger.info "starting web - class"
 

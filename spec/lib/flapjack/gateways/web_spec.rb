@@ -21,10 +21,13 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       set :raise_errors, true
       set :show_exceptions, false
     }
+    Flapjack::Gateways::Web.instance_variable_get('@middleware').delete_if {|m|
+      m[0] == Rack::FiberPool
+    }
   end
 
   before(:each) do
-    ::Redis.should_receive(:new).and_return(redis)
+    Flapjack::RedisPool.should_receive(:new).and_return(redis)
     Flapjack::Gateways::Web.instance_variable_set('@config', {})
     Flapjack::Gateways::Web.instance_variable_set('@logger', @logger)
     Flapjack::Gateways::Web.start

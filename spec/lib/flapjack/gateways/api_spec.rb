@@ -61,10 +61,13 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Gateways::API.class_eval {
       set :raise_errors, true
     }
+    Flapjack::Gateways::API.instance_variable_get('@middleware').delete_if {|m|
+      m[0] == Rack::FiberPool
+    }
   end
 
   before(:each) do
-    ::Redis.should_receive(:new).and_return(redis)
+    Flapjack::RedisPool.should_receive(:new).and_return(redis)
     Flapjack::Gateways::API.instance_variable_set('@config', {})
     Flapjack::Gateways::API.instance_variable_set('@logger', @logger)
     Flapjack::Gateways::API.start

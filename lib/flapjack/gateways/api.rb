@@ -9,6 +9,7 @@
 require 'time'
 
 require 'sinatra/base'
+require 'rack/fiber_pool'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
@@ -48,13 +49,21 @@ module Flapjack
 
     class API < Sinatra::Base
       set :show_exceptions, false
+      set :raise_errors, true
+
+      rescue_exception = Proc.new { |env, exception|
+        @logger.error exception.message
+        @logger.error exception.backtrace.join("\n")
+        [503, {}, {:errors => [exception.message]}.to_json]
+      }
+      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
 
       use Rack::MethodOverride
       use Rack::JsonParamsParser
 
       class << self
         def start
-          @redis = ::Redis.new(@redis_config)
+          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
           if @config && @config['access_log']
             access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
             use Flapjack::CommonLogger, access_logger

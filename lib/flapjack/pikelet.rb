@@ -208,7 +208,6 @@ module Flapjack
 
         @server = ::Thin::Server.new('0.0.0.0', @port,
                     @klass, :signals => false)
-        @server.threaded = true
       end
 
       def start
