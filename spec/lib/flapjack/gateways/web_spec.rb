@@ -34,14 +34,20 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   def expect_stats
-    redis.should_receive(:keys).with('*').and_return(['a', 'b', 'c'])
-    redis.should_receive(:keys).with('check:*:*').and_return([])
-    redis.should_receive(:zcard).with('failed_checks')
+    redis.should_receive(:dbsize).and_return(3)
     redis.should_receive(:keys).with('executive_instance:*').and_return(["executive_instance:foo-app-01"])
     redis.should_receive(:hget).twice.and_return(Time.now.to_i - 60)
     redis.should_receive(:hgetall).twice.and_return({'all' => '8001', 'ok' => '8002'},
       {'all' => '9001', 'ok' => '9002'})
     redis.should_receive(:llen).with('events')
+  end
+
+  def expect_check_stats
+    redis.should_receive(:keys).with('check:*:*').and_return([])
+    redis.should_receive(:zcard).with('failed_checks')
+  end
+
+  def expect_entity_stats
   end
 
   def expect_entity_check_status(ec)
@@ -62,11 +68,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
   it "shows a page listing all checks" do
     redis.should_receive(:keys).with('*:*:states').and_return(["#{entity_name}:#{check}:states"])
-    redis.should_receive(:keys).with('check:*').and_return(["#{entity_name}:#{check}:states"])
 
-    expect_stats
-
-    redis.should_receive(:zrange).with("failed_checks", 0, -1).and_return([])
+    expect_check_stats
 
     expect_entity_check_status(entity_check)
 
@@ -81,10 +84,9 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   it "shows a page listing failing checks" do
-    redis.should_receive(:zrange).with('failed_checks', 0, -1).twice.and_return(["#{entity_name}:#{check}:states"])
-    redis.should_receive(:keys).with('check:*').and_return(["#{entity_name}:#{check}:states"])
+    redis.should_receive(:zrange).with('failed_checks', 0, -1).and_return(["#{entity_name}:#{check}:states"])
 
-    expect_stats
+    expect_check_stats
 
     expect_entity_check_status(entity_check)
 
@@ -101,6 +103,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     redis.should_receive(:keys).with('check:*').and_return([])
     redis.should_receive(:zrange).with('failed_checks', 0, -1).and_return(["#{entity_name}:#{check}:states"])
     expect_stats
+    expect_check_stats
+    expect_entity_stats
 
     get '/self_stats'
     last_response.should be_ok
@@ -113,9 +117,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
                           :recovery        => time - (3 * 60 * 60),
                           :acknowledgement => nil }
 
-    expect_stats
-    redis.should_receive(:keys).with('check:*').and_return([])
-    redis.should_receive(:zrange).with('failed_checks', 0, -1).and_return([])
+    expect_check_stats
     entity_check.should_receive(:state).and_return('ok')
     entity_check.should_receive(:last_update).and_return(time - (3 * 60 * 60))
     entity_check.should_receive(:last_change).and_return(time - (3 * 60 * 60))
@@ -235,9 +237,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
   it "shows a list of all known contacts" do
     Flapjack::Data::Contact.should_receive(:all)
-    redis.should_receive(:keys).with('check:*').and_return([])
-    redis.should_receive(:zrange).with('failed_checks', 0, -1).and_return(["#{entity_name}:#{check}:states"])
-    expect_stats
 
     get "/contacts"
     last_response.should be_ok
@@ -249,9 +248,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     contact.should_receive(:media).exactly(3).times.and_return({})
     contact.should_receive(:entities).with(:checks => true).and_return([])
     contact.should_receive(:notification_rules).and_return([])
-    redis.should_receive(:keys).with('check:*').and_return([])
-    redis.should_receive(:zrange).with('failed_checks', 0, -1).and_return(["#{entity_name}:#{check}:states"])
-    expect_stats
 
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362', :redis => redis).and_return(contact)
