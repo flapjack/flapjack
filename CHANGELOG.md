@@ -2,6 +2,7 @@
 
 # 0.7.3 - UNRELEASED
 - Bug: Web UI very slow with large number of keys gh-164 (@jessereynolds)
+- Bug: crash in executive should exit flapjack gh-143 (@ali-graham)
 
 # 0.7.2 - 2013-05-06
 - Feature: executive instance keys now expire after 7 days, touched every event gh-111 (@jessereynolds)
