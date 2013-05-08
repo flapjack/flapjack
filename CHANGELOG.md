@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.7.3 - UNRELEASED
+- Bug: crash in executive should exit flapjack gh-143 (@ali-graham)
+
 # 0.7.2 - 2013-05-06
 - Feature: executive instance keys now expire after 7 days, touched every event gh-111 (@jessereynolds)
 - Feature: slightly less sucky looking web UI, also now includes entity listing screens (@jessereynolds)
