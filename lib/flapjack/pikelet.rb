@@ -100,13 +100,7 @@ module Flapjack
 
       def start
         @fiber = Fiber.new {
-          begin
-            @pikelet.start
-          rescue Exception => e
-            trace = e.backtrace.join("\n")
-            @logger.fatal "#{e.message}\n#{trace}"
-            stop
-          end
+          @pikelet.start
         }
         super
         @fiber.resume
@@ -162,13 +156,7 @@ module Flapjack
 
       def start
         @fiber = Fiber.new {
-          begin
-            @worker.work(0.1)
-          rescue Exception => e
-            trace = e.backtrace.join("\n")
-            @logger.fatal "#{e.message}\n#{trace}"
-            stop
-          end
+          @worker.work(0.1)
         }
         super
         @klass.start if @klass.respond_to?(:start)

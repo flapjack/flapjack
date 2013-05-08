@@ -54,6 +54,34 @@ describe Flapjack::Coordinator do
     fc.stop
   end
 
+  it "handles an exception raised by a pikelet and shuts down" do
+    setup_logger
+    logger.should_receive(:fatal)
+
+    cfg = {'executive' => {'enabled' => 'yes'}}
+    EM.should_receive(:synchrony).and_yield
+    config.should_receive(:for_redis).and_return({})
+    config.should_receive(:all).and_return(cfg)
+
+    executive = mock('executive')
+    executive.should_receive(:start).and_raise(RuntimeError)
+    executive.should_receive(:stop)
+    executive.should_receive(:update_status)
+    executive.should_receive(:status).exactly(3).times.and_return('stopped')
+
+    fc = Flapjack::Coordinator.new(config)
+    Flapjack::Pikelet.should_receive(:create).with('executive',
+        :config => cfg['executive'], :redis_config => {}).and_return(executive)
+
+    fiber.should_receive(:resume)
+    Fiber.should_receive(:new).and_yield.and_return(fiber)
+
+    EM.should_receive(:stop)
+
+    fc.start(:signals => false)
+    fc.stop
+  end
+
   it "traps system signals and shuts down" do
     setup_logger
 
@@ -143,6 +171,7 @@ describe Flapjack::Coordinator do
     new_config.should_receive(:all).and_return(new_cfg)
 
     executive = mock('executive')
+    executive.should_not_receive(:start)
     executive.should_receive(:type).exactly(3).times.and_return('executive')
     executive.should_receive(:reload).with(new_cfg['executive']).and_return(true)
     executive.should_not_receive(:stop)
