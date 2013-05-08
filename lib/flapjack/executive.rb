@@ -373,12 +373,7 @@ module Flapjack
         end
         options[:no_rules_for_contact] ||
           matchers.any? {|matcher|
-            if mms = matcher.media_for_severity(severity)
-              mms.include?(message.medium)
-            else
-              @logger.warn("got nil for matcher.media_for_severity(#{severity}), matcher: #{matcher.inspect}")
-              false
-            end
+            (matcher.media_for_severity(severity) || []).include?(message.medium)
           }
       end
 
