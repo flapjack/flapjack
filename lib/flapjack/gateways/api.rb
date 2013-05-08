@@ -50,19 +50,12 @@ module Flapjack
     class API < Sinatra::Base
       set :show_exceptions, false
 
-      rescue_exception = Proc.new { |env, exception|
-        @logger.error exception.message
-        @logger.error exception.backtrace.join("\n")
-        [503, {}, {:errors => [exception.message]}.to_json]
-      }
-      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
-
       use Rack::MethodOverride
       use Rack::JsonParamsParser
 
       class << self
         def start
-          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+          @redis = ::Redis.new(@redis_config)
           if @config && @config['access_log']
             access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
             use Flapjack::CommonLogger, access_logger

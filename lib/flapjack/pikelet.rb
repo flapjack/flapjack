@@ -28,15 +28,6 @@ require 'flapjack/gateways/web'
 require 'flapjack/logger'
 require 'thin/version'
 
-
-module Thin
-  # disable Thin's loading of daemons
-  # workaround for https://github.com/flpjck/flapjack/issues/133
-  def self.win?
-    true
-  end
-end
-
 module Flapjack
 
   module Pikelet
@@ -47,7 +38,6 @@ module Flapjack
         Flapjack::Pikelet::Thin].detect do |kl|
 
         kl::PIKELET_TYPES[type]
-
       end
       !type_klass.nil?
     end
@@ -219,7 +209,7 @@ module Flapjack
         super(type, pikelet_klass, opts)
 
         pikelet_klass.instance_variable_set('@config', @config)
-        pikelet_klass.instance_variable_set('@redis_config', @redis_config)
+        pikelet_klass.instance_variable_set('@redis_config', @redis_config.merge(:driver => 'hiredis'))
         pikelet_klass.instance_variable_set('@logger', @logger)
 
         if @config
@@ -230,20 +220,20 @@ module Flapjack
 
         @server = ::Thin::Server.new('0.0.0.0', @port,
                     @klass, :signals => false)
+        @server.threaded = true
       end
 
       def start
         super
-        @klass.start if @klass.respond_to?(:start)
-        @server.start
+        Thread.new {
+          @klass.start if @klass.respond_to?(:start)
+          @server.start
+        }
       end
 
-      # this should only reload if all changes can be applied -- will
-      # return false to log warning otherwise
+      # NB not supporting reload or restart as running outside of em-synchrony
       def reload(cfg)
-        # TODO fail if port changes
-        @klass.respond_to?(:reload) ?
-          (@klass.reload(cfg) && super(cfg)) : super(cfg)
+        nil
       end
 
       def stop

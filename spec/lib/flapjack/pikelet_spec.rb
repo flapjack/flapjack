@@ -127,6 +127,7 @@ describe Flapjack::Pikelet do
     config.should_receive(:[]).with('port').and_return(7654)
 
     server = mock('server')
+    server.should_receive(:threaded=).with(true)
     server.should_receive(:start)
     Thin::Server.should_receive(:new).
       with(/^(?:\d{1,3}\.){3}\d{1,3}$/, 7654,
@@ -140,6 +141,7 @@ describe Flapjack::Pikelet do
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
       with('@logger', logger)
 
+    Thread.should_receive(:new).and_yield
     Flapjack::Gateways::Web.should_receive(:start)
 
     pik = Flapjack::Pikelet.create('web', :config => config,

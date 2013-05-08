@@ -17,7 +17,7 @@ module Flapjack
       config = opts.delete(:config)
       @size = opts[:size] || 5
       super(:size => @size) {
-        ::Redis.new(config)
+        ::Redis.new(config.merge(:driver => 'synchrony'))
       }
     end
 

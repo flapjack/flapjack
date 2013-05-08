@@ -19,26 +19,11 @@ module Flapjack
 
     class Web < Sinatra::Base
 
-      rescue_exception = Proc.new do |env, e|
-        if settings.show_exceptions?
-          # ensure the sinatra error page shows properly
-          request = Sinatra::Request.new(env)
-          printer = Sinatra::ShowExceptions.new(proc{ raise e })
-          s, h, b = printer.call(env)
-          [s, h, b]
-        else
-          @logger.error e.message
-          @logger.error e.backtrace.join("\n")
-          [503, {}, ""]
-        end
-      end
-      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
-
       use Rack::MethodOverride
 
       class << self
         def start
-          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+          @redis = ::Redis.new(@redis_config)
 
           @logger.info "starting web - class"
 
@@ -52,8 +37,6 @@ module Flapjack
             access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
             use Flapjack::CommonLogger, access_logger
           end
-
-
         end
       end
 
