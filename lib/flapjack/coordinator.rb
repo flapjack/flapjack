@@ -128,11 +128,19 @@ module Flapjack
 
     # passed a hash with {PIKELET_TYPE => PIKELET_CFG, ...}
     def add_pikelets(pikelets_data = {})
+      start_piks = []
       pikelets_data.each_pair do |type, cfg|
         next unless pikelet = Flapjack::Pikelet.create(type,
           :config => cfg, :redis_config => @redis_options)
+        start_piks << pikelet
         @pikelets << pikelet
-        pikelet.start
+      end
+      begin
+        start_piks.each {|pik| pik.start }
+      rescue Exception => e
+        trace = e.backtrace.join("\n")
+        @logger.fatal "#{e.message}\n#{trace}"
+        stop
       end
     end
 
