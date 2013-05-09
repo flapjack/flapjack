@@ -1,6 +1,7 @@
 ## Flapjack Changelog
 
 # 0.7.3 - UNRELEASED
+- Bug: Web UI very slow with large number of keys gh-164 (@jessereynolds)
 - Bug: crash in executive should exit flapjack gh-143 (@ali-graham)
 
 # 0.7.2 - 2013-05-06

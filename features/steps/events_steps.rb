@@ -273,15 +273,15 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
     critical_media     = rule['critical_media'].split(',').map { |x| x.strip }
     warning_blackhole  = (rule['warning_blackhole'].downcase == 'true')
     critical_blackhole = (rule['critical_blackhole'].downcase == 'true')
-    time_zone = ActiveSupport::TimeZone.new("America/New_York")
+    timezone = ActiveSupport::TimeZone.new("America/New_York")
     time_restrictions  = []
     rule['time_restrictions'].split(',').map { |x| x.strip }.each do |time_restriction|
       case time_restriction
       when '8-18 weekdays'
         # FIXME: get timezone from the user definition (or config[:default_contact_timezone])
-        weekdays_8_18 = IceCube::Schedule.new(time_zone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
+        weekdays_8_18 = IceCube::Schedule.new(timezone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
         weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
-        time_restrictions << icecube_schedule_to_time_restriction(weekdays_8_18, time_zone)
+        time_restrictions << icecube_schedule_to_time_restriction(weekdays_8_18, timezone)
       end
     end
     rule_data = {:contact_id         => contact_id,
@@ -292,7 +292,7 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
                  :warning_blackhole  => warning_blackhole,
                  :critical_blackhole => critical_blackhole,
                  :time_restrictions  => time_restrictions}
-    Flapjack::Data::NotificationRule.add(rule_data, time_zone, :redis => @redis)
+    Flapjack::Data::NotificationRule.add(rule_data, :timezone => timezone, :redis => @redis)
   end
 end
 

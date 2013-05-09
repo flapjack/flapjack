@@ -33,16 +33,17 @@ module Flapjack
       end
 
       # replacing save! etc
-      def self.add(rule_data, time_zone, options = {})
+      def self.add(rule_data, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
         rule_id = SecureRandom.uuid
-        self.add_or_update(rule_data.merge(:id => rule_id), time_zone, :redis => redis)
+        self.add_or_update(rule_data.merge(:id => rule_id), :timezone => options[:timezone], :redis => redis)
         self.find_by_id(rule_id, :redis => redis)
       end
 
-      def update(rule_data, time_zone)
-        return false unless self.class.add_or_update(rule_data.merge(:id => @id), time_zone, :redis => @redis)
+      def update(rule_data, options = {})
+        return false unless self.class.add_or_update(rule_data.merge(:id => @id),
+          :timezone => options[:timezone], :redis => @redis)
         refresh
         true
       end
@@ -56,9 +57,9 @@ module Flapjack
       #
       # We don't want to replicate IceCube's from_hash behaviour here,
       # but we do need to apply some sanity checking on the passed data.
-      def self.time_restriction_to_icecube_schedule(tr, time_zone)
-        return unless !tr.nil? && tr.is_a?(Hash) &&
-                      !time_zone.nil? && time_zone.is_a?(ActiveSupport::TimeZone)
+      def self.time_restriction_to_icecube_schedule(tr, time_zone = nil)
+        return unless !tr.nil? && tr.is_a?(Hash)
+        return if !time_zone.nil? && !time_zone.is_a?(ActiveSupport::TimeZone)
 
         # this will hand back a 'deep' copy
         tr = symbolize(tr)
@@ -69,7 +70,7 @@ module Flapjack
           if t.is_a?(Time)
             t
           else
-            begin; time_zone.parse(t); rescue ArgumentError; nil; end
+            begin; (time_zone || Time.zone).parse(t); rescue ArgumentError; nil; end
           end
         }
 
@@ -157,11 +158,11 @@ module Flapjack
         refresh
       end
 
-      def self.add_or_update(rule_data, time_zone, options = {})
+      def self.add_or_update(rule_data, options = {})
         redis = options[:redis]
         raise "a redis connection must be supplied" unless redis
 
-        return unless self.validate_data(rule_data, time_zone, options)
+        return unless self.validate_data(rule_data, options)
 
         # whitelisting fields, rather than passing through submitted data directly
         json_rule_data = {
@@ -183,7 +184,7 @@ module Flapjack
         true
       end
 
-      def self.validate_data(d, time_zone, options = {})
+      def self.validate_data(d, options = {})
         # hash with validation => error_message
         validations = {proc { d.has_key?(:id) } =>
                        "id not set",
@@ -192,11 +193,6 @@ module Flapjack
                               d[:entities].is_a?(Array) &&
                               d[:entities].all? {|e| e.is_a?(String)} } =>
                        "entities must be a list of strings",
-
-                       proc { d.has_key?(:entity_tags) &&
-                              d[:entity_tags].is_a?(Array) &&
-                              d[:entity_tags].all? {|et| et.is_a?(String)}} =>
-                       "entity_tags must be a list of strings",
 
                        proc { d.has_key?(:entity_tags) &&
                               d[:entity_tags].is_a?(Array) &&
@@ -213,7 +209,7 @@ module Flapjack
 
                        proc { d.has_key?(:time_restrictions) &&
                               d[:time_restrictions].all? {|tr|
-                                !!time_restriction_to_icecube_schedule(tr, time_zone)
+                                !!time_restriction_to_icecube_schedule(tr, options[:timezone])
                               }
                             } =>
                        "time restrictions are invalid",
@@ -227,7 +223,7 @@ module Flapjack
                        proc { d.has_key?(:critical_media) &&
                               d[:critical_media].is_a?(Array) &&
                               d[:critical_media].all? {|et| et.is_a?(String)}} =>
-                       "warning_media must be a list of strings",
+                       "critical_media must be a list of strings",
 
                        proc { d.has_key?(:warning_blackhole) &&
                               [TrueClass, FalseClass].include?(d[:warning_blackhole].class) } =>
