@@ -60,7 +60,7 @@ module Flapjack
       def self.time_restriction_to_icecube_schedule(tr, timezone)
         return unless !tr.nil? && tr.is_a?(Hash)
         return if timezone.nil? && !timezone.is_a?(ActiveSupport::TimeZone)
-        return unless tr = prepare_time_restriction(tr)
+        return unless tr = prepare_time_restriction(tr, timezone)
 
         IceCube::Schedule.from_hash(tr)
       end
