@@ -292,7 +292,7 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
                  :warning_blackhole  => warning_blackhole,
                  :critical_blackhole => critical_blackhole,
                  :time_restrictions  => time_restrictions}
-    Flapjack::Data::NotificationRule.add(rule_data, :timezone => timezone, :redis => @redis)
+    Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
   end
 end
 
