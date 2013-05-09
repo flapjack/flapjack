@@ -158,9 +158,9 @@ module Flapjack
         @fiber = Fiber.new {
           @worker.work(0.1)
         }
-        super
         @klass.start if @klass.respond_to?(:start)
         @fiber.resume
+        super
       end
 
       # this should only reload if all changes can be applied -- will
@@ -211,16 +211,21 @@ module Flapjack
       end
 
       def start
+        Thread.new do
+          EM.run do
+            @klass.start if @klass.respond_to?(:start)
+            @server.start
+          end
+        end
         super
-        Thread.new {
-          @klass.start if @klass.respond_to?(:start)
-          @server.start
-        }
       end
 
-      # NB not supporting reload or restart as running outside of em-synchrony
+      # this should only reload if all changes can be applied -- will
+      # return false to log warning otherwise
       def reload(cfg)
-        nil
+        # TODO fail if port changes
+        @klass.respond_to?(:reload) ?
+          (@klass.reload(cfg) && super(cfg)) : super(cfg)
       end
 
       def stop

@@ -41,8 +41,6 @@ module Flapjack
         def start
           @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
 
-          @logger.info "starting web - class"
-
           if accesslog = (@config && @config['access_log'])
             if not File.directory?(File.dirname(accesslog))
               puts "Parent directory for log file #{accesslog} doesn't exist"
