@@ -393,7 +393,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Entity.should_receive(:add).twice
 
     post "/entities", entities.to_json, {'CONTENT_TYPE' => 'application/json'}
-    last_response.status.should == 200
+    last_response.status.should == 204
   end
 
   it "does not create entities if the data is improperly formatted" do
@@ -419,7 +419,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Entity.should_receive(:add)
 
     post "/entities", entities.to_json, {'CONTENT_TYPE' => 'application/json'}
-    last_response.status.should == 200
+    last_response.status.should == 403
   end
 
   it "creates contacts from a submitted list" do
@@ -442,7 +442,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Contact.should_receive(:add).twice
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
-    last_response.status.should == 200
+    last_response.status.should == 204
   end
 
   it "does not create contacts if the data is improperly formatted" do
@@ -472,7 +472,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Contact.should_receive(:add)
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
-    last_response.status.should == 200
+    last_response.status.should == 204
   end
 
   it "updates a contact if it is already present" do
@@ -499,7 +499,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Contact.should_receive(:add).with(contacts['contacts'][0], :redis => redis)
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
-    last_response.status.should == 200
+    last_response.status.should == 204
   end
 
   it "deletes a contact not found in a bulk update list" do
@@ -520,7 +520,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Contact.should_receive(:add).with(contacts['contacts'][0], :redis => redis)
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
-    last_response.status.should == 200
+    last_response.status.should == 204
   end
 
   it "returns all the contacts" do
@@ -624,8 +624,6 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not create a notification_rule if a rule id is provided" do
     contact.should_not_receive(:add_notification_rule)
-    Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
 
     post "/notification_rules", notification_rule_data.merge(:id => 1).to_json,
       {'CONTENT_TYPE' => 'application/json'}
@@ -646,7 +644,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     }
     notification_rule_data_sym.delete(:contact_id)
 
-    notification_rule.should_receive(:update).with(notification_rule_data_sym)
+    notification_rule.should_receive(:update).with(notification_rule_data_sym).and_return(true)
 
     put "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
@@ -655,8 +653,6 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   it "does not update a notification rule that's not present" do
-    Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id, :redis => redis).and_return(nil)
 
@@ -665,6 +661,8 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   it "does not update a notification_rule for a contact that's not present" do
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
+      with(notification_rule.id, :redis => redis).and_return(notification_rule)
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :redis => redis).and_return(nil)
 
