@@ -173,7 +173,7 @@ module Flapjack
 
       def add_notification_rule(rule_data)
         Flapjack::Data::NotificationRule.add(rule_data.merge(:contact_id => self.id),
-          :redis => @redis)
+          timezone, :redis => @redis)
       end
 
       def delete_notification_rule(rule)
@@ -280,6 +280,7 @@ module Flapjack
       end
 
       # return the timezone of the contact, or the system default if none is set
+      # TODO cache?
       def timezone(opts = {})
         logger = opts[:logger]
 

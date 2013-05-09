@@ -282,9 +282,8 @@ module Flapjack
         event, :type => notification_type, :max_notified_severity => max_notified_severity)
 
       messages = notification.messages(:contacts => contacts)
-      messages = apply_notification_rules(messages)
+      messages = apply_notification_rules(messages, event.state)
       enqueue_messages(messages)
-
     end
 
     # time restrictions match?
@@ -299,17 +298,16 @@ module Flapjack
       usertime = time_zone.now
 
       match = rule.time_restrictions.any? do |tr|
-        # add contact's timezone to the time restriction hash
-        tr = Flapjack::Data::NotificationRule.time_restriction_to_ice_cube_hash(tr, time_zone)
-
-        schedule = IceCube::Schedule.from_hash(tr)
-        schedule.occurring_at?(usertime)
+        # add contact's timezone to the time restriction schedule
+        schedule = Flapjack::Data::NotificationRule.
+                     time_restriction_to_icecube_schedule(tr, time_zone)
+        schedule && schedule.occurring_at?(usertime)
       end
       !!match
     end
 
     # delete messages based on entity name(s), tags, severity, time of day
-    def apply_notification_rules(messages)
+    def apply_notification_rules(messages, severity)
       # first get all rules matching entity and time
       @logger.debug "apply_notification_rules: got messages with size #{messages.size}"
 
@@ -342,8 +340,8 @@ module Flapjack
           end
           if have_specific
             # delete the rule for all entities
-            matchers.map! do |matcher|
-              matcher.entities.nil? and matcher.entity_tags.nil? ? nil : matcher
+            matchers.reject! do |matcher|
+              matcher.entities.nil? && matcher.entity_tags.nil?
             end
           end
         end
@@ -352,7 +350,6 @@ module Flapjack
 
       # delete media based on blackholes
       tuple = tuple.find_all do |message, matchers, options|
-        severity = message.notification.event.state
         # or use message.notification.contents['state']
         matchers.none? {|matcher| matcher.blackhole?(severity) }
       end
@@ -376,13 +373,7 @@ module Flapjack
         end
         options[:no_rules_for_contact] ||
           matchers.any? {|matcher|
-            mms = matcher.media_for_severity(severity)
-            unless mms
-              answer = false
-            else
-              answer = mms.include?(message.medium)
-            end
-            answer
+            (matcher.media_for_severity(severity) || []).include?(message.medium)
           }
       end
 
