@@ -280,6 +280,7 @@ module Flapjack
       end
 
       # return the timezone of the contact, or the system default if none is set
+      # TODO cache?
       def timezone(opts = {})
         logger = opts[:logger]
 
