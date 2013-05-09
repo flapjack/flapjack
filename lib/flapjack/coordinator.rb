@@ -89,8 +89,7 @@ module Flapjack
 
         # reload() returns trinary value here; true means the change was made, false
         # means the pikelet needs to be restarted, nil means no change
-        # was required. Thin pikelets don't support this as they need to run
-        # outside of the em-synchrony block.
+        # was required.
         next unless pik.reload(enabled_pikelet_cfg[pik.type]).is_a?(FalseClass)
         removed << pik.type
         added << pik.type

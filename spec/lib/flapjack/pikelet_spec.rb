@@ -70,10 +70,6 @@ describe Flapjack::Pikelet do
     config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('port').and_return(7654)
 
-    redis_config_hi = mock('redis_config_hi')
-    redis_config.should_receive(:merge).with(:driver => 'hiredis').
-      and_return(redis_config_hi)
-
     server = mock('server')
     server.should_receive(:start)
     Thin::Server.should_receive(:new).
@@ -84,7 +80,7 @@ describe Flapjack::Pikelet do
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
       with('@config', config)
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
-      with('@redis_config', redis_config_hi)
+      with('@redis_config', redis_config)
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
       with('@logger', logger)
 

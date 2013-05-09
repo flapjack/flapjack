@@ -197,7 +197,7 @@ module Flapjack
         super(type, pikelet_klass, opts)
 
         pikelet_klass.instance_variable_set('@config', @config)
-        pikelet_klass.instance_variable_set('@redis_config', @redis_config.merge(:driver => 'hiredis'))
+        pikelet_klass.instance_variable_set('@redis_config', @redis_config)
         pikelet_klass.instance_variable_set('@logger', @logger)
 
         if @config
