@@ -173,7 +173,7 @@ module Flapjack
 
       def add_notification_rule(rule_data)
         Flapjack::Data::NotificationRule.add(rule_data.merge(:contact_id => self.id),
-          :timezone => timezone, :redis => @redis)
+          :redis => @redis)
       end
 
       def delete_notification_rule(rule)

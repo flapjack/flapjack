@@ -29,7 +29,7 @@ describe Flapjack::Data::NotificationRule, :redis => true do
   let(:timezone) { ActiveSupport::TimeZone.new("Europe/Moscow") }
 
   let(:existing_rule) {
-    Flapjack::Data::NotificationRule.add(rule_data, :timezone => timezone, :redis => @redis)
+    Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
   }
 
   it "checks that a notification rule exists" do
@@ -52,7 +52,7 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
     expect {
       rule_data[:warning_blackhole] = true
-      success = rule.update(rule_data, :timezone => timezone)
+      success = rule.update(rule_data)
       success.should be_true
     }.to change { rule.warning_blackhole }.from(false).to(true)
   end
@@ -80,7 +80,7 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
   it "checks if blackhole settings for a rule match a severity level" do
     rule_data[:warning_blackhole] = true
-    rule = Flapjack::Data::NotificationRule.add(rule_data, :timezone => timezone, :redis => @redis)
+    rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
 
     rule.blackhole?('warning').should be_true
     rule.blackhole?('critical').should be_false
@@ -97,15 +97,15 @@ describe Flapjack::Data::NotificationRule, :redis => true do
     it "fails to add a notification rule with invalid data" do
       rule_data[:entities] = []
       rule_data[:entity_tags] = []
-      rule = Flapjack::Data::NotificationRule.add(rule_data, :timezone => timezone, :redis => @redis)
+      rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
       rule.should be_nil
     end
 
     it "fails to update a notification rule with invalid data" do
-      rule = Flapjack::Data::NotificationRule.add(rule_data, :timezone => timezone, :redis => @redis)
+      rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
       expect {
         rule_data[:entities] = [57]
-        success = rule.update(rule_data, :timezone => timezone)
+        success = rule.update(rule_data)
         success.should be_false
       }.not_to change { rule.entities }
     end
