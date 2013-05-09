@@ -294,13 +294,13 @@ module Flapjack
       contact = opts[:contact]
       return true if rule.time_restrictions.nil? or rule.time_restrictions.empty?
 
-      time_zone = contact.timezone(:default => @default_contact_timezone)
-      usertime = time_zone.now
+      timezone = contact.timezone(:default => @default_contact_timezone)
+      usertime = timezone.now
 
       match = rule.time_restrictions.any? do |tr|
         # add contact's timezone to the time restriction schedule
         schedule = Flapjack::Data::NotificationRule.
-                     time_restriction_to_icecube_schedule(tr, time_zone)
+                     time_restriction_to_icecube_schedule(tr, timezone)
         schedule && schedule.occurring_at?(usertime)
       end
       !!match
