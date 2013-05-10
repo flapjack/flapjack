@@ -18,6 +18,17 @@ module Flapjack
           @entity_check = entity_check
         end
 
+        def status
+          {'name'                              => @entity_check.check,
+           'state'                             => @entity_check.state,
+           'in_unscheduled_maintenance'        => @entity_check.in_unscheduled_maintenance?,
+           'in_scheduled_maintenance'          => @entity_check.in_scheduled_maintenance?,
+           'last_update'                       => @entity_check.last_update,
+           'last_problem_notification'         => @entity_check.last_problem_notification,
+           'last_recovery_notification'        => @entity_check.last_recovery_notification,
+           'last_acknowledgement_notification' => @entity_check.last_acknowledgement_notification}
+        end
+
         def outages(start_time, end_time, options = {})
           # hist_states is an array of hashes, with [state, timestamp, summary] keys
           hist_states = @entity_check.historical_states(start_time, end_time)

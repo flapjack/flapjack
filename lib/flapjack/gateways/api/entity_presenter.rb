@@ -22,6 +22,10 @@ module Flapjack
           @redis = options[:redis]
         end
 
+        def status
+          checks.collect {|c| check_presenter(c).status }
+        end
+
         def outages(start_time, end_time)
           checks.collect {|c|
             {:check => c, :outages => check_presenter(c).outages(start_time, end_time)}
@@ -52,7 +56,7 @@ module Flapjack
       private
 
         def checks
-          @check_list ||= @entity.check_list
+          @check_list ||= @entity.check_list.sort
         end
 
         def check_presenter(check)
