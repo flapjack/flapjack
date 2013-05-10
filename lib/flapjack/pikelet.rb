@@ -28,15 +28,6 @@ require 'flapjack/gateways/web'
 require 'flapjack/logger'
 require 'thin/version'
 
-
-module Thin
-  # disable Thin's loading of daemons
-  # workaround for https://github.com/flpjck/flapjack/issues/133
-  def self.win?
-    true
-  end
-end
-
 module Flapjack
 
   module Pikelet
@@ -47,7 +38,6 @@ module Flapjack
         Flapjack::Pikelet::Thin].detect do |kl|
 
         kl::PIKELET_TYPES[type]
-
       end
       !type_klass.nil?
     end
@@ -168,9 +158,9 @@ module Flapjack
         @fiber = Fiber.new {
           @worker.work(0.1)
         }
-        super
         @klass.start if @klass.respond_to?(:start)
         @fiber.resume
+        super
       end
 
       # this should only reload if all changes can be applied -- will
@@ -221,9 +211,13 @@ module Flapjack
       end
 
       def start
+        Thread.new do
+          EM.run do
+            @klass.start if @klass.respond_to?(:start)
+            @server.start
+          end
+        end
         super
-        @klass.start if @klass.respond_to?(:start)
-        @server.start
       end
 
       # this should only reload if all changes can be applied -- will

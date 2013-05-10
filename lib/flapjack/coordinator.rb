@@ -35,10 +35,15 @@ module Flapjack
     end
 
     def start(options = {})
-      EM.synchrony do
-        add_pikelets(pikelets(@config.all))
-        setup_signals if options[:signals]
-      end
+      http_defs, non_http_defs = pikelets(@config.all).partition {|k, pd|
+        Flapjack::Pikelet::Thin::PIKELET_TYPES.include?(k)
+      }.map {|v| Hash[v] }
+
+      return if http_defs.empty? && non_http_defs.empty?
+
+      add_pikelets(http_defs) unless http_defs.empty?
+      setup_signals if options[:signals]
+      EM.synchrony { add_pikelets(non_http_defs) } unless non_http_defs.empty?
     end
 
     def stop
@@ -84,31 +89,17 @@ module Flapjack
 
         # reload() returns trinary value here; true means the change was made, false
         # means the pikelet needs to be restarted, nil means no change
-        # was required
+        # was required.
         next unless pik.reload(enabled_pikelet_cfg[pik.type]).is_a?(FalseClass)
         removed << pik.type
         added << pik.type
       end
 
-      # puts "removed"
-      # p removed
-
-      # puts "added"
-      # p added
-
       removed_pikelets = @pikelets.select {|pik| removed.include?(pik.type) }
-
-      # puts "removed pikelets"
-      # p removed_pikelets
-
       remove_pikelets(removed_pikelets)
 
       # is there a nicer way to only keep the parts of the hash with matching keys?
       added_pikelets = enabled_pikelet_cfg.select {|k, v| added.include?(k) }
-
-      # puts "added pikelet configs"
-      # p added_pikelets
-
       add_pikelets(added_pikelets)
     end
 

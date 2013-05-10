@@ -45,6 +45,7 @@ class Hash
 end
 
 # we don't want to stop the entire EM reactor when we stop a web server
+# & @connections data type changed in thin 1.5.1
 module Thin
   module Backends
     class Base
@@ -53,7 +54,13 @@ module Thin
         @stopping = false
 
         # EventMachine.stop if EventMachine.reactor_running?
-        @connections.each { |connection| connection.close_connection }
+
+        case @connections
+        when Array
+          @connections.each { |connection| connection.close_connection }
+        when Hash
+          @connections.each_value { |connection| connection.close_connection }
+        end
         close
       end
     end

@@ -8,8 +8,8 @@
 
 require 'time'
 
-require 'rack/fiber_pool'
 require 'sinatra/base'
+require 'rack/fiber_pool'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
@@ -52,6 +52,7 @@ module Flapjack
       include Flapjack::Utility
 
       set :show_exceptions, false
+      set :raise_errors, true
 
       rescue_exception = Proc.new { |env, exception|
         @logger.error exception.message

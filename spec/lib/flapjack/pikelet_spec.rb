@@ -84,6 +84,8 @@ describe Flapjack::Pikelet do
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
       with('@logger', logger)
 
+    Thread.should_receive(:new).and_yield
+    EM.should_receive(:run).and_yield
     Flapjack::Gateways::Web.should_receive(:start)
 
     pik = Flapjack::Pikelet.create('web', :config => config,
