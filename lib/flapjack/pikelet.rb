@@ -218,6 +218,7 @@ module Flapjack
 
         @server = ::Thin::Server.new('0.0.0.0', @port,
                     @klass, :signals => false)
+        @server.timeout = 300
       end
 
       def start
