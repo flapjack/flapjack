@@ -19,35 +19,13 @@ require 'flapjack/gateways/api/entity_presenter'
 require 'flapjack/rack_logger'
 require 'flapjack/redis_pool'
 
-# see https://github.com/flpjck/flapjack/issues/169
-module Thin
-  class ThinTempfile < Tempfile
-    def eql?(obj)
-      obj.equal?(self) && (obj == self)
-    end
-  end
-
-  class Request
-    def move_body_to_tempfile
-      current_body = @body
-      current_body.rewind
-      @body = ThinTempfile.new(BODY_TMPFILE)
-      @body.binmode
-      @body << current_body.read
-      @env[RACK_INPUT] = @body
-    end
-  end
-end
-
 # from https://github.com/sinatra/sinatra/issues/501
 # TODO move to its own file
 module Rack
   class JsonParamsParser < Struct.new(:app)
     def call(env)
       if env['rack.input'] and not input_parsed?(env) and type_match?(env)
-
         env['rack.request.form_input'] = env['rack.input']
-
         data = env['rack.input'].read
         env['rack.input'].rewind
         env['rack.request.form_hash'] = data.empty? ? {} : JSON.parse(data)
