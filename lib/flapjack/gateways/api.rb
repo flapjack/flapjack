@@ -19,15 +19,38 @@ require 'flapjack/gateways/api/entity_presenter'
 require 'flapjack/rack_logger'
 require 'flapjack/redis_pool'
 
+# see https://github.com/flpjck/flapjack/issues/169
+module Thin
+  class ThinTempfile < Tempfile
+    def eql?(obj)
+      obj.equal?(self) && (obj == self)
+    end
+  end
+
+  class Request
+    def move_body_to_tempfile
+      current_body = @body
+      current_body.rewind
+      @body = ThinTempfile.new(BODY_TMPFILE)
+      @body.binmode
+      @body << current_body.read
+      @env[RACK_INPUT] = @body
+    end
+  end
+end
+
 # from https://github.com/sinatra/sinatra/issues/501
 # TODO move to its own file
 module Rack
   class JsonParamsParser < Struct.new(:app)
     def call(env)
       if env['rack.input'] and not input_parsed?(env) and type_match?(env)
+
         env['rack.request.form_input'] = env['rack.input']
+
         data = env['rack.input'].read
-        env['rack.request.form_hash'] = data.empty?? {} : JSON.parse(data)
+        env['rack.input'].rewind
+        env['rack.request.form_hash'] = data.empty? ? {} : JSON.parse(data)
       end
       app.call(env)
     end
@@ -66,6 +89,9 @@ module Flapjack
       class << self
         def start
           @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+
+          @logger.info "starting api - class"
+
           if @config && @config['access_log']
             access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
             use Flapjack::CommonLogger, access_logger
@@ -232,17 +258,22 @@ module Flapjack
         # FIXME should scan for invalid records before making any changes, fail early
 
         entities = params[:entities]
-        if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
-          entities.each do |entity|
-            unless entity['id']
-              errors << "Entity not imported as it has no id: #{entity.inspect}"
-              next
-            end
-            Flapjack::Data::Entity.add(entity, :redis => redis)
-          end
-        else
-          errors << "No valid entities were submitted"
+        unless entities
+          logger.debug("no entities object found in the following supplied JSON:")
+          logger.debug(request.body)
+          return error(403, "No entities object received")
         end
+        return error(403, "The received entities object is not an Enumerable") unless entities.is_a?(Enumerable)
+        return error(403, "Entity with a nil id detected") unless entities.any? {|e| !e['id'].nil?}
+
+        entities.each do |entity|
+          unless entity['id']
+            errors << "Entity not imported as it has no id: #{entity.inspect}"
+            next
+          end
+          Flapjack::Data::Entity.add(entity, :redis => redis)
+        end
+
         errors.empty? ? 204 : error(403, *errors)
       end
 
