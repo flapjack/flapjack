@@ -44,6 +44,9 @@ class Hash
   end
 end
 
+# silence thin's console spam
+::Thin::Logging.silent = true
+
 # we don't want to stop the entire EM reactor when we stop a web server
 # & @connections data type changed in thin 1.5.1
 module Thin

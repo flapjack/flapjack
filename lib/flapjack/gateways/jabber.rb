@@ -3,17 +3,9 @@
 require 'socket'
 
 require 'eventmachine'
-# the redis/synchrony gems need to be required in this particular order, see
-# the redis-rb README for details
-require 'hiredis'
-require 'em-synchrony'
-require 'redis/connection/synchrony'
-require 'redis'
-
 require 'chronic_duration'
 
 require 'blather/client/client'
-require 'em-synchrony/fiber_iterator'
 require 'yajl/json_gem'
 
 require 'flapjack/data/entity_check'
@@ -47,7 +39,9 @@ module Flapjack
 
       def stop
         @should_quit = true
-        @redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
+        Fiber.new {
+          @redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
+        }.resume
       end
 
       def setup
@@ -60,27 +54,35 @@ module Flapjack
           ", server: " + @config['server'].to_s + ", password: " +
           @config['password'].to_s)
 
+        clear_handlers :error
+
+        register_handler :error do |err|
+          EventMachine.next_tick do
+            Kernel.throw :halt
+          end
+        end
+
         register_handler :ready do |stanza|
-          EventMachine::Synchrony.next_tick do
+          EventMachine.next_tick do
             on_ready(stanza)
           end
         end
 
         register_handler :message, :groupchat?, :body => /^#{@config['alias']}:\s+/ do |stanza|
-          EventMachine::Synchrony.next_tick do
+          EventMachine.next_tick do
             on_groupchat(stanza)
           end
         end
 
         register_handler :message, :chat? do |stanza|
-          EventMachine::Synchrony.next_tick do
+          EventMachine.next_tick do
             on_chat(stanza)
           end
         end
 
         register_handler :disconnected do |stanza|
           ret = true
-          EventMachine::Synchrony.next_tick do
+          EventMachine.next_tick do
             ret = on_disconnect(stanza)
           end
           ret
@@ -99,7 +101,7 @@ module Flapjack
             presence.from = @flapjack_jid
             presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
             presence << "<x xmlns='http://jabber.org/protocol/muc'/>"
-            EventMachine::Synchrony.next_tick do
+            EventMachine.next_tick do
               write presence
               say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
             end
@@ -108,7 +110,7 @@ module Flapjack
         return if @buffer.empty?
         while stanza = @buffer.shift
           @logger.debug("Sending a buffered jabber message to: #{stanza.to}, using: #{stanza.type}, message: #{stanza.body}")
-          EventMachine::Synchrony.next_tick do
+          EventMachine.next_tick do
             write(stanza)
           end
         end
@@ -137,28 +139,30 @@ module Flapjack
           four_hours = 4 * 60 * 60
           duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
 
-          event_id = @redis.hget('unacknowledged_failures', ackid)
+          Fiber.new {
+            event_id = @redis.hget('unacknowledged_failures', ackid)
 
-          if event_id.nil?
-            error = "not found"
-          else
-            entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
-            error = "unknown entity" if entity_check.nil?
-          end
+            if event_id.nil?
+              error = "not found"
+            else
+              entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
+              error = "unknown entity" if entity_check.nil?
+            end
 
-          if entity_check && entity_check.in_unscheduled_maintenance?
-            error = "#{event_id} is already acknowledged"
-          end
+            if entity_check && entity_check.in_unscheduled_maintenance?
+              error = "#{event_id} is already acknowledged"
+            end
 
-          if error
-            msg = "ERROR - couldn't ACK #{ackid} - #{error}"
-          else
-            msg = "ACKing #{entity_check.check} on #{entity_check.entity_name} (#{ackid})"
-            action = Proc.new {
-              entity_check.create_acknowledgement('summary' => (comment || ''),
-                'acknowledgement_id' => ackid, 'duration' => duration)
-            }
-          end
+            if error
+              msg = "ERROR - couldn't ACK #{ackid} - #{error}"
+            else
+              msg = "ACKing #{entity_check.check} on #{entity_check.entity_name} (#{ackid})"
+              action = Proc.new {
+                entity_check.create_acknowledgement('summary' => (comment || ''),
+                  'acknowledgement_id' => ackid, 'duration' => duration)
+              }
+            end
+          }.resume
 
         when command =~ /^help$/
           msg  = "commands: \n"
@@ -173,7 +177,11 @@ module Flapjack
           fqdn         = `/bin/hostname -f`.chomp
           pid          = Process.pid
           instance_id  = "#{@fqdn}:#{@pid}"
-          boot_time = Time.at(@redis.hget("executive_instance:#{instance_id}", 'boot_time').to_i)
+          bt = nil
+          Fiber.new {
+            bt = @redis.hget("executive_instance:#{instance_id}", 'boot_time').to_i
+          }.resume
+          boot_time = Time.at(bt)
           msg  = "Flapjack #{Flapjack::VERSION} process #{pid} on #{fqdn} \n"
           msg += "Boot time: #{boot_time}\n"
           msg += "User CPU Time: #{t.utime}\n"
@@ -186,21 +194,24 @@ module Flapjack
 
           msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
-          entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis)
-          if entity
-            summary = "Testing notifications to all contacts interested in entity: #{entity.name}, check: #{check_name}"
-
-            entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check_name, :redis => @redis)
-            puts entity_check.inspect
-            entity_check.test_notifications('summary' => summary)
-
-          else
-            msg = "yeah, no i can't see #{entity_name} in my systems"
-          end
+          Fiber.new {
+            entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis)
+            if entity
+              summary = "Testing notifications to all contacts interested in entity: #{entity.name}, check: #{check_name}"
+              entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check_name, :redis => @redis)
+              # p entity_check
+              entity_check.test_notifications('summary' => summary)
+            else
+              msg = "yeah, no i can't see #{entity_name} in my systems"
+            end
+          }.resume
 
         when command =~ /^(find )?entities matching\s+\/(.*)\/.*$/i
           pattern = $2.chomp.strip
-          entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern, :redis => @redis)
+          entity_list = nil
+          Fiber.new {
+            entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern, :redis => @redis)
+          }.resume
 
           if entity_list
             max_showable = 30
@@ -245,7 +256,7 @@ module Flapjack
         action  = results[:action]
 
         if msg || action
-          EventMachine::Synchrony.next_tick do
+          EventMachine.next_tick do
             @logger.info("sending to group chat: #{msg}")
             say(stanza.from.stripped, msg, :groupchat)
             action.call if action
@@ -268,7 +279,7 @@ module Flapjack
         action  = results[:action]
 
         if msg || action
-          EventMachine::Synchrony.next_tick do
+          EventMachine.next_tick do
             @logger.info("Sending to #{stanza.from.stripped}: #{msg}")
             say(stanza.from.stripped, msg, :chat)
             action.call if action
@@ -283,7 +294,7 @@ module Flapjack
           attempt += 1
           delay = 10 if attempt > 10
           delay = 60 if attempt > 60
-          EventMachine::Synchrony.sleep(delay || 3) if attempt > 1
+          Kernel.sleep(delay || 3) if attempt > 1
           @logger.debug("attempting connection to the jabber server")
           connect # Blather::Client.connect
         rescue StandardError => detail
@@ -299,7 +310,7 @@ module Flapjack
         @logger.warn("disconnect handler called")
         return true if @should_quit
         @logger.warn("jabbers disconnected! reconnecting after a short deley ...")
-        EventMachine::Synchrony.sleep(5)
+        Kernel.sleep(5)
         connect_with_retry
         true
       end
@@ -319,10 +330,10 @@ module Flapjack
         @logger.info("starting")
         @logger.debug("new jabber pikelet with the following options: #{@config.inspect}")
 
-        keepalive_timer = EM::Synchrony.add_periodic_timer(60) do
+        keepalive_timer = EventMachine.add_periodic_timer(60) do
           @logger.debug("calling keepalive on the jabber connection")
           if connected?
-            EventMachine::Synchrony.next_tick do
+            EventMachine.next_tick do
               write(' ')
             end
           end
@@ -342,14 +353,18 @@ module Flapjack
           # before joining the group chat rooms)
           if connected?
             @logger.debug("jabber is connected so commencing blpop on #{queue}")
-            events[queue] = @redis.blpop(queue, 0)
+            evt = nil
+            Fiber.new {
+              evt = @redis.blpop(queue, 0)
+            }.resume
+            events[queue] = evt
             event         = Yajl::Parser.parse(events[queue][1])
             type          = event['notification_type'] || 'unknown'
-            @logger.debug('jabber notification event received')
-            @logger.debug(event.inspect)
+            @logger.info('jabber notification event received')
+            @logger.info(event.inspect)
             if 'shutdown'.eql?(type)
               if @should_quit
-                EventMachine::Synchrony.next_tick do
+                EventMachine.next_tick do
                   # get delays without the next_tick
                   close # Blather::Client.close
                 end
@@ -390,13 +405,13 @@ module Flapjack
 
               chat_type = :chat
               chat_type = :groupchat if @config['rooms'] && @config['rooms'].include?(address)
-              EventMachine::Synchrony.next_tick do
+              EventMachine.next_tick do
                 say(Blather::JID.new(address), msg, chat_type)
               end
             end
           else
             @logger.debug("not connected, sleep 1 before retry")
-            EM::Synchrony.sleep(1)
+            Kernel.sleep(1)
           end
         end
 

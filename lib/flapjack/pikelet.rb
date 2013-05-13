@@ -8,6 +8,9 @@
 # with butter, at afternoon tea, but can also be served at morning tea."
 #    from http://en.wikipedia.org/wiki/Pancake
 
+require 'eventmachine'
+require 'em-synchrony'
+
 # the redis/synchrony gems need to be required in this particular order, see
 # the redis-rb README for details
 require 'hiredis'
@@ -15,6 +18,7 @@ require 'redis/connection/synchrony'
 require 'redis'
 require 'em-resque'
 require 'em-resque/worker'
+
 require 'thin'
 
 require 'flapjack/executive'
@@ -32,26 +36,6 @@ module Flapjack
 
   module Pikelet
 
-    # TODO find a better way of expressing these two methods
-    def self.is_pikelet?(type)
-      type_klass = [Flapjack::Pikelet::Generic, Flapjack::Pikelet::Resque,
-        Flapjack::Pikelet::Thin].detect do |kl|
-
-        kl::PIKELET_TYPES[type]
-      end
-      !type_klass.nil?
-    end
-
-    def self.create(type, config = {})
-      pikelet = nil
-      [Flapjack::Pikelet::Generic,
-       Flapjack::Pikelet::Resque,
-       Flapjack::Pikelet::Thin].each do |kl|
-        break if pikelet = kl.create(type, config)
-      end
-      pikelet
-    end
-
     class Base
       attr_reader :type, :status
 
@@ -65,6 +49,12 @@ module Flapjack
         @logger = Flapjack::Logger.new("flapjack-#{type}", @config['logger'])
 
         @status = 'initialized'
+      end
+
+      def block_until_finished
+        return if @thread.nil?
+        @thread.join
+        @thread = nil
       end
 
       def start
@@ -84,14 +74,7 @@ module Flapjack
     class Generic < Flapjack::Pikelet::Base
 
      PIKELET_TYPES = {'executive'  => Flapjack::Executive,
-                      'jabber'     => Flapjack::Gateways::Jabber,
-                      'pagerduty'  => Flapjack::Gateways::Pagerduty,
-                      'oobetet'    => Flapjack::Gateways::Oobetet}
-
-      def self.create(type, config = {})
-        return unless pikelet_klass = PIKELET_TYPES[type]
-        self.new(type, pikelet_klass, config)
-      end
+                      'pagerduty'  => Flapjack::Gateways::Pagerduty}
 
       def initialize(type, pikelet_klass, opts = {})
         super(type, pikelet_klass, opts)
@@ -99,11 +82,17 @@ module Flapjack
       end
 
       def start
-        @fiber = Fiber.new {
-          @pikelet.start
+        @thread = Thread.new {
+          EM.sync {
+            begin
+              @pikelet.start
+            rescue Exception => e
+              @logger.warn e.message
+              @logger.warn e.backtrace.join("\n")
+            end
+          }
         }
         super
-        @fiber.resume
       end
 
       # this should only reload if all changes can be applied -- will
@@ -129,9 +118,8 @@ module Flapjack
       PIKELET_TYPES = {'email' => Flapjack::Gateways::Email,
                        'sms'   => Flapjack::Gateways::SmsMessagenet}
 
-      def self.create(type, opts = {})
-        return unless pikelet_klass = PIKELET_TYPES[type]
-        self.new(type, pikelet_klass, opts)
+      def self.sync_safe?
+        true
       end
 
       def initialize(type, pikelet_klass, opts = {})
@@ -155,11 +143,17 @@ module Flapjack
       end
 
       def start
-        @fiber = Fiber.new {
-          @worker.work(0.1)
+        @thread = Thread.new {
+          @klass.start if @klass.respond_to?(:start)
+          EM.sync {
+            begin
+              @worker.work(0.1)
+            rescue Exception => e
+              @logger.warn e.message
+              @logger.warn e.backtrace.join("\n")
+            end
+          }
         }
-        @klass.start if @klass.respond_to?(:start)
-        @fiber.resume
         super
       end
 
@@ -182,15 +176,60 @@ module Flapjack
       end
     end
 
+    class Blather < Flapjack::Pikelet::Base
+
+     PIKELET_TYPES = {'jabber'     => Flapjack::Gateways::Jabber,
+                      'oobetet'    => Flapjack::Gateways::Oobetet}
+
+      def self.sync_safe?
+        false
+      end
+
+      def initialize(type, pikelet_klass, opts = {})
+        super(type, pikelet_klass, opts)
+        @pikelet = @klass.new(opts.merge(:logger => @logger))
+      end
+
+      def start
+        @thread = Thread.new {
+          EM.run {
+            begin
+              @pikelet.start
+            rescue Exception => e
+              @logger.warn e.message
+              @logger.warn e.backtrace.join("\n")
+            end
+          }
+        }
+        super
+      end
+
+      # this should only reload if all changes can be applied -- will
+      # return false to log warning otherwise
+      def reload(cfg)
+        @pikelet.respond_to?(:reload) ?
+          (@pikelet.reload(cfg) && super(cfg)) : super(cfg)
+      end
+
+      def stop
+        @pikelet.stop
+        super
+      end
+
+      def update_status
+        return @status unless 'stopping'.eql?(@status)
+        @status = 'stopped' if @fiber && !@fiber.alive?
+      end
+
+    end
+
     class Thin < Flapjack::Pikelet::Base
 
       PIKELET_TYPES = {'web'  => Flapjack::Gateways::Web,
                        'api'  => Flapjack::Gateways::API}
 
-      def self.create(type, opts = {})
-        return unless pikelet_klass = PIKELET_TYPES[type]
-        ::Thin::Logging.silent = true
-        self.new(type, pikelet_klass, :config => opts[:config], :redis_config => opts[:redis_config])
+      def self.sync_safe?
+        false
       end
 
       def initialize(type, pikelet_klass, opts = {})
@@ -211,12 +250,18 @@ module Flapjack
       end
 
       def start
-        Thread.new do
-          EM.run do
+
+        @thread = Thread.new {
+          EM.run {
+            begin
             @klass.start if @klass.respond_to?(:start)
             @server.start
-          end
-        end
+            rescue Exception => e
+              @logger.warn e.message
+              @logger.warn e.backtrace.join("\n")
+            end
+          }
+        }
         super
       end
 
@@ -238,6 +283,27 @@ module Flapjack
         return @status unless 'stopping'.eql?(@status)
         @status = 'stopped' if (@server.backend.size <= 0)
       end
+    end
+
+    # TODO find a better way of expressing this
+    WRAPPERS = [Flapjack::Pikelet::Generic, Flapjack::Pikelet::Resque,
+                Flapjack::Pikelet::Blather, Flapjack::Pikelet::Thin]
+
+    TYPES    = WRAPPERS.inject({}) do |memo, type|
+                 memo.update(type::PIKELET_TYPES)
+               end
+
+    def self.is_pikelet?(type)
+      TYPES.has_key?(type)
+    end
+
+    def self.wrapper_for_type(type)
+      WRAPPERS.detect {|kl| kl::PIKELET_TYPES.keys.include?(type) }
+    end
+
+    def self.create(type, opts = {})
+      return unless wrapper = wrapper_for_type(type)
+      wrapper.new(type, TYPES[type], opts)
     end
 
   end

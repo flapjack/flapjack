@@ -13,6 +13,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
                  }
   }
 
+  let(:fiber) { mock(Fiber) }
+
   let(:stanza) { mock('stanza') }
 
   it "hooks up event handlers to the appropriate methods" do
@@ -21,7 +23,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     Flapjack::RedisPool.should_receive(:new)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
 
-    EventMachine::Synchrony.should_receive(:next_tick).exactly(4).times.and_yield
+    EventMachine.should_receive(:next_tick).exactly(5).times.and_yield
 
     fj.should_receive(:register_handler).with(:ready).and_yield(stanza)
     fj.should_receive(:on_ready).with(stanza)
@@ -35,6 +37,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     fj.should_receive(:register_handler).with(:disconnected).and_yield(stanza)
     fj.should_receive(:on_disconnect).with(stanza).and_return(true)
 
+    error = mock('error')
+    fj.should_receive(:register_handler).with(:error).and_yield(error)
+    Kernel.should_receive(:throw).with(:halt)
+
     fj.setup
   end
 
@@ -44,7 +50,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
     fj.should_receive(:connected?).and_return(true)
 
-    EventMachine::Synchrony.should_receive(:next_tick).and_yield
+    EventMachine.should_receive(:next_tick).and_yield
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Presence))
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
 
@@ -75,9 +81,12 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
 
-    EventMachine::Synchrony.should_receive(:next_tick).and_yield
+    EventMachine.should_receive(:next_tick).and_yield
     fj.should_receive(:connected?).and_return(true)
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
+
+    fiber.should_receive(:resume)
+    Fiber.should_receive(:new).and_yield.and_return(fiber)
 
     fj.on_groupchat(stanza)
   end
@@ -91,7 +100,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     Flapjack::RedisPool.should_receive(:new)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
 
-    EventMachine::Synchrony.should_receive(:next_tick).and_yield
+    EventMachine.should_receive(:next_tick).and_yield
     fj.should_receive(:connected?).and_return(true)
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
 
@@ -104,8 +113,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     attempts = 0
 
-    EventMachine::Synchrony.should_receive(:sleep).with(5).exactly(1).times
-    EventMachine::Synchrony.should_receive(:sleep).with(2).exactly(3).times
+    Kernel.should_receive(:sleep).with(5).exactly(1).times
+    Kernel.should_receive(:sleep).with(2).exactly(3).times
     fj.should_receive(:connect).exactly(4).times.and_return {
       attempts +=1
       raise StandardError.new unless attempts > 3
@@ -122,24 +131,31 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
 
+    fiber.should_receive(:resume)
+    Fiber.should_receive(:new).and_yield.and_return(fiber)
+
     fj.stop
   end
 
   it "runs a blocking loop listening for notifications" do
     timer = mock('timer')
     timer.should_receive(:cancel)
-    EM::Synchrony.should_receive(:add_periodic_timer).with(60).and_return(timer)
+    EventMachine.should_receive(:add_periodic_timer).with(60).and_return(timer)
 
     redis = mock('redis')
 
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
-    fj.should_receive(:register_handler).exactly(4).times
+    fj.should_receive(:clear_handlers).with(:error)
+    fj.should_receive(:register_handler).exactly(5).times
 
     fj.should_receive(:connect)
     fj.should_receive(:connected?).exactly(3).times.and_return(true)
 
     blpop_count = 0
+
+    fiber.should_receive(:resume).twice
+    Fiber.should_receive(:new).twice.and_yield.and_return(fiber)
 
     redis.should_receive(:blpop).twice {
       blpop_count += 1
@@ -151,7 +167,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       end
     }
 
-    EventMachine::Synchrony.should_receive(:next_tick).twice.and_yield
+    EventMachine.should_receive(:next_tick).twice.and_yield
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
     fj.should_receive(:close)
 

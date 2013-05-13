@@ -6,7 +6,7 @@ describe Flapjack::Pikelet do
   let(:config)       { mock('config') }
   let(:redis_config) { mock('redis_config') }
 
-  let(:logger)     { mock(Flapjack::Logger) }
+  let(:logger)       { mock(Flapjack::Logger) }
 
   let(:fiber) { mock(Fiber) }
 
@@ -24,8 +24,8 @@ describe Flapjack::Pikelet do
     Flapjack::Executive.should_receive(:new).with(:config => config,
       :redis_config => redis_config, :logger => logger).and_return(executive)
 
-    fiber.should_receive(:resume)
-    Fiber.should_receive(:new).and_yield.and_return(fiber)
+    Thread.should_receive(:new).and_yield
+    EM.should_receive(:sync).and_yield
 
     pik = Flapjack::Pikelet.create('executive', :config => config,
       :redis_config => redis_config)
@@ -55,14 +55,16 @@ describe Flapjack::Pikelet do
     Flapjack::Gateways::Email.should_receive(:start)
     EM::Resque::Worker.should_receive(:new).with('email_notif').and_return(worker)
 
-    fiber.should_receive(:resume)
-    Fiber.should_receive(:new).and_yield.and_return(fiber)
+    Thread.should_receive(:new).and_yield
+    EM.should_receive(:sync).and_yield
 
     pik = Flapjack::Pikelet.create('email', :config => config,
       :redis_config => redis_config)
     pik.should be_a(Flapjack::Pikelet::Resque)
     pik.start
   end
+
+  it "creates and starts a blather server gateway"
 
   it "creates a thin server gateway" do
     Flapjack::Logger.should_receive(:new).and_return(logger)

@@ -31,52 +31,22 @@ describe Flapjack::Coordinator do
     setup_logger
 
     cfg = {'executive' => {'enabled' => 'yes'}}
-    EM.should_receive(:synchrony).and_yield
     config.should_receive(:for_redis).and_return({})
     config.should_receive(:all).and_return(cfg)
 
     executive = mock('executive')
     executive.should_receive(:start)
     executive.should_receive(:stop)
-    executive.should_receive(:update_status)
-    executive.should_receive(:status).exactly(3).times.and_return('stopped')
+    executive.should_receive(:block_until_finished)
+
+    thread = mock(Thread)
+    Thread.should_receive(:current).and_return(thread)
+    thread.should_receive(:sleep)
+    thread.should_receive(:wakeup)
 
     fc = Flapjack::Coordinator.new(config)
     Flapjack::Pikelet.should_receive(:create).with('executive',
         :config => cfg['executive'], :redis_config => {}).and_return(executive)
-
-    fiber.should_receive(:resume)
-    Fiber.should_receive(:new).and_yield.and_return(fiber)
-
-    EM.should_receive(:stop)
-
-    fc.start(:signals => false)
-    fc.stop
-  end
-
-  it "handles an exception raised by a pikelet and shuts down" do
-    setup_logger
-    logger.should_receive(:fatal)
-
-    cfg = {'executive' => {'enabled' => 'yes'}}
-    EM.should_receive(:synchrony).and_yield
-    config.should_receive(:for_redis).and_return({})
-    config.should_receive(:all).and_return(cfg)
-
-    executive = mock('executive')
-    executive.should_receive(:start).and_raise(RuntimeError)
-    executive.should_receive(:stop)
-    executive.should_receive(:update_status)
-    executive.should_receive(:status).exactly(3).times.and_return('stopped')
-
-    fc = Flapjack::Coordinator.new(config)
-    Flapjack::Pikelet.should_receive(:create).with('executive',
-        :config => cfg['executive'], :redis_config => {}).and_return(executive)
-
-    fiber.should_receive(:resume)
-    Fiber.should_receive(:new).and_yield.and_return(fiber)
-
-    EM.should_receive(:stop)
 
     fc.start(:signals => false)
     fc.stop
@@ -134,18 +104,14 @@ describe Flapjack::Coordinator do
     new_config.should_receive(:all).and_return(new_cfg)
 
     executive = mock('executive')
-    executive.should_receive(:type).twice.and_return('executive')
+    executive.should_receive(:type).and_return('executive')
     executive.should_receive(:stop)
-    executive.should_receive(:update_status)
-    executive.should_receive(:status).exactly(3).times.and_return('stopped')
+    executive.should_receive(:block_until_finished)
 
     jabber = mock('jabber')
     Flapjack::Pikelet.should_receive(:create).with('jabber',
       :config => {"enabled" => "yes"}, :redis_config => {}).and_return(jabber)
     jabber.should_receive(:start)
-
-    fiber.should_receive(:resume)
-    Fiber.should_receive(:new).and_yield.and_return(fiber)
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
@@ -203,11 +169,7 @@ describe Flapjack::Coordinator do
     executive.should_receive(:type).exactly(5).times.and_return('executive')
     executive.should_receive(:reload).with(new_cfg['executive']).and_return(false)
     executive.should_receive(:stop)
-    executive.should_receive(:update_status)
-    executive.should_receive(:status).exactly(3).times.and_return('stopped')
-
-    fiber.should_receive(:resume)
-    Fiber.should_receive(:new).and_yield.and_return(fiber)
+    executive.should_receive(:block_until_finished)
 
     new_exec = mock('new_executive')
     new_exec.should_receive(:start)

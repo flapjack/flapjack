@@ -29,7 +29,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
   it "hooks up event handlers to the appropriate methods" do
     fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
 
-    EventMachine::Synchrony.should_receive(:next_tick).exactly(3).times.and_yield
+    EventMachine::should_receive(:next_tick).exactly(3).times.and_yield
 
     fo.should_receive(:register_handler).with(:ready).and_yield(stanza)
     fo.should_receive(:on_ready).with(stanza)
@@ -113,13 +113,13 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
   it "runs a loop checking for recorded problems" do
     timer = mock('timer')
     timer.should_receive(:cancel)
-    EM::Synchrony.should_receive(:add_periodic_timer).with(60).and_return(timer)
+    EventMachine.should_receive(:add_periodic_timer).with(60).and_return(timer)
 
     fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
     fo.should_receive(:register_handler).exactly(3).times
     fo.should_receive(:connect)
 
-    EM::Synchrony.should_receive(:sleep).with(10) {
+    Kernel.should_receive(:sleep).with(10) {
       fo.instance_variable_set('@should_quit', true)
       nil
     }

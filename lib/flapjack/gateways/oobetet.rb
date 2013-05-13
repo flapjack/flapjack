@@ -2,9 +2,7 @@
 
 require 'socket'
 require 'eventmachine'
-require 'em-synchrony'
 require 'blather/client/client'
-require 'em-synchrony/fiber_iterator'
 require 'yajl/json_gem'
 
 require 'flapjack/utility'
@@ -64,20 +62,20 @@ module Flapjack
       # split out to ease testing
       def register_handlers
         register_handler :ready do |stanza|
-          EventMachine::Synchrony.next_tick do
+          EventMachine.next_tick do
             on_ready(stanza)
           end
         end
 
         register_handler :message, :groupchat? do |stanza|
-          EventMachine::Synchrony.next_tick do
+          EventMachine.next_tick do
             on_groupchat(stanza)
           end
         end
 
         register_handler :disconnected do |stanza|
           ret = true
-          EventMachine::Synchrony.next_tick do
+          EventMachine.next_tick do
             ret = on_disconnect(stanza)
           end
           ret
@@ -213,7 +211,7 @@ module Flapjack
 
       def send_pagerduty_event(event)
         options  = { :body => Yajl::Encoder.encode(event) }
-        http = EM::HttpRequest.new(@pagerduty_events_api_url).post(options)
+        http = EventMachine::HttpRequest.new(@pagerduty_events_api_url).post(options)
         response = Yajl::Parser.parse(http.response)
         status   = http.response_header.status
         @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
@@ -223,7 +221,7 @@ module Flapjack
       def start
         @logger.debug("New oobetet pikelet with the following options: #{@config.inspect}")
 
-        keepalive_timer = EM::Synchrony.add_periodic_timer(60) do
+        keepalive_timer = EventMachine.add_periodic_timer(60) do
           @logger.debug("calling keepalive on the jabber connection")
           write(' ') if connected?
         end
@@ -233,7 +231,7 @@ module Flapjack
         connect # Blather::Client.connect
 
         until @should_quit
-          EM::Synchrony.sleep(10)
+          Kernel.sleep(10)
           check_timers
         end
 
