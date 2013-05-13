@@ -213,12 +213,14 @@ module Flapjack
         if @config
           @port = @config['port']
           @port = @port.nil? ? nil : @port.to_i
+          @timeout = @config['timeout']
+          @timeout = @timeout.nil? ? 300 : @timeout.to_i
         end
         @port = 3001 if (@port.nil? || @port <= 0 || @port > 65535)
 
         @server = ::Thin::Server.new('0.0.0.0', @port,
                     @klass, :signals => false)
-        @server.timeout = 300
+        @server.timeout = @timeout
       end
 
       def start
