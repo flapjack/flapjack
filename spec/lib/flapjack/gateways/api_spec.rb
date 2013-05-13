@@ -84,7 +84,8 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   it "returns the status for all checks on an entity" do
-    result = [{'name' => check, 'state' => 'OK'}]
+    status = mock('status')
+    result = [{:entity => entity_name, :check => check, :status => status}]
     entity_presenter.should_receive(:status).and_return(result)
 
     Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
@@ -94,7 +95,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       with(entity_name, :redis => redis).and_return(entity)
 
     get "/status", :entity => entity_name
-    last_response.body.should == {entity_name => result}.to_json
+    last_response.body.should == result.to_json
   end
 
   it "should not show the status for an entity that's not found" do
@@ -106,8 +107,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   it "returns the status for a check on an entity" do
-    result = [{'name' => check, 'state' => 'OK'}]
-    entity_check_presenter.should_receive(:status).and_return(result)
+    status = mock('status')
+    result = [{:entity => entity_name, :check => check, :status => status}]
+    entity_check_presenter.should_receive(:status).and_return(status)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check, :redis => redis).and_return(entity_check_presenter)
@@ -120,7 +122,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
     get "/status", :entity => {entity_name => check}
     last_response.should be_ok
-    last_response.body.should == {entity_name => {check => result}}.to_json
+    last_response.body.should == result.to_json
   end
 
   it "should not show the status for a check on an entity that's not found" do
@@ -169,7 +171,8 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   it "returns a list of scheduled maintenance periods for an entity" do
-    result = 'result'
+    sm = mock('sched_maint')
+    result = [{:entity => entity_name, :check => check, :scheduled_maintenances => sm}]
 
     entity_presenter.should_receive(:scheduled_maintenance).with(nil, nil).and_return(result)
 
@@ -181,14 +184,15 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
     get "/scheduled_maintenances", :entity => entity_name
     last_response.should be_ok
-    last_response.body.should == {entity_name => result}.to_json
+    last_response.body.should == result.to_json
   end
 
   it "returns a list of scheduled maintenance periods within a time window for an entity" do
     start  = Time.parse('1 Jan 2012')
     finish = Time.parse('6 Jan 2012')
 
-    result = 'result'
+    sm = mock('sched_maint')
+    result = [{:entity => entity_name, :check => check, :scheduled_maintenances => sm}]
 
     entity_presenter.should_receive(:scheduled_maintenance).with(start.to_i, finish.to_i).and_return(result)
 
@@ -201,13 +205,14 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     get "/scheduled_maintenances", :entity => entity_name,
       :start_time => start.iso8601, :end_time => finish.iso8601
     last_response.should be_ok
-    last_response.body.should == {entity_name => result}.to_json
+    last_response.body.should == result.to_json
   end
 
   it "returns a list of scheduled maintenance periods for a check on an entity" do
-    result = 'result'
+    sm = mock('sched_maint')
+    result = [{:entity => entity_name, :check => check, :scheduled_maintenances => sm}]
 
-    entity_check_presenter.should_receive(:scheduled_maintenance).with(nil, nil).and_return(result)
+    entity_check_presenter.should_receive(:scheduled_maintenance).with(nil, nil).and_return(sm)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check, :redis => redis).and_return(entity_check_presenter)
@@ -220,11 +225,12 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
     get "/scheduled_maintenances", :entity => {entity_name => check}
     last_response.should be_ok
-    last_response.body.should == {entity_name => {check => result}}.to_json
+    last_response.body.should == result.to_json
   end
 
   it "returns a list of unscheduled maintenance periods for an entity" do
-    result = 'result'
+    um = mock('unsched_maint')
+    result = [{:entity => entity_name, :check => check, :unscheduled_maintenances => um}]
 
     entity_presenter.should_receive(:unscheduled_maintenance).with(nil, nil).and_return(result)
 
@@ -236,13 +242,14 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
     get "/unscheduled_maintenances", :entity => entity_name
     last_response.should be_ok
-    last_response.body.should == {entity_name => result}.to_json
+    last_response.body.should == result.to_json
   end
 
   it "returns a list of unscheduled maintenance periods for a check on an entity" do
-    result = 'result'
+    um = mock('unsched_maint')
+    result = [{:entity => entity_name, :check => check, :unscheduled_maintenances => um}]
 
-    entity_check_presenter.should_receive(:unscheduled_maintenance).with(nil, nil).and_return(result)
+    entity_check_presenter.should_receive(:unscheduled_maintenance).with(nil, nil).and_return(um)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check, :redis => redis).and_return(entity_check_presenter)
@@ -255,16 +262,17 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
     get "/unscheduled_maintenances", :entity => {entity_name => check}
     last_response.should be_ok
-    last_response.body.should == {entity_name => {check => result}}.to_json
+    last_response.body.should == result.to_json
   end
 
   it "returns a list of unscheduled maintenance periods within a time window for a check an entity" do
     start  = Time.parse('1 Jan 2012')
     finish = Time.parse('6 Jan 2012')
 
-    result = 'result'
+    um = mock('unsched_maint')
+    result = [{:entity => entity_name, :check => check, :unscheduled_maintenances => um}]
 
-    entity_check_presenter.should_receive(:unscheduled_maintenance).with(start.to_i, finish.to_i).and_return(result)
+    entity_check_presenter.should_receive(:unscheduled_maintenance).with(start.to_i, finish.to_i).and_return(um)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check, :redis => redis).and_return(entity_check_presenter)
@@ -278,18 +286,20 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     get "/unscheduled_maintenances", :entity => {entity_name => check},
       :start_time => start.iso8601, :end_time => finish.iso8601
     last_response.should be_ok
-    last_response.body.should == {entity_name => {check => result}}.to_json
+    last_response.body.should == result.to_json
   end
 
   it "returns a list of outages, for one whole entity and two checks on another entity" do
-    result_1 = 'result_1'
-    result_2 = 'result_2'
-    result_3 = 'result_3'
+    outages_1 = mock('outages_1')
+    outages_2 = mock('outages_2')
+    outages_3 = mock('outages_3')
 
     entity_2_name = 'entity_2'
     entity_2 = mock(Flapjack::Data::Entity)
 
-    result = {entity_name => result_1, 'entity_2' => {'foo' => result_2, 'bar' => result_3}}
+    result = [{:entity => entity_name,   :check => check, :outages => outages_1},
+              {:entity => entity_2_name, :check => 'foo', :outages => outages_2},
+              {:entity => entity_2_name, :check => 'bar', :outages => outages_3}]
 
     foo_check = mock(Flapjack::Data::EntityCheck)
     bar_check = mock(Flapjack::Data::EntityCheck)
@@ -297,9 +307,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     foo_check_presenter = mock(Flapjack::Gateways::API::EntityCheckPresenter)
     bar_check_presenter = mock(Flapjack::Gateways::API::EntityCheckPresenter)
 
-    entity_presenter.should_receive(:outages).with(nil, nil).and_return(result_1)
-    foo_check_presenter.should_receive(:outages).with(nil, nil).and_return(result_2)
-    bar_check_presenter.should_receive(:outages).with(nil, nil).and_return(result_3)
+    entity_presenter.should_receive(:outages).with(nil, nil).and_return(result[0])
+    foo_check_presenter.should_receive(:outages).with(nil, nil).and_return(outages_2)
+    bar_check_presenter.should_receive(:outages).with(nil, nil).and_return(outages_3)
 
     Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
       with(entity, :redis => redis).and_return(entity_presenter)
@@ -325,9 +335,10 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   it "returns a list of outages for a check on an entity" do
-    result = 'result'
+    outages = mock('outages')
+    result = [{:entity => entity_name, :check => check, :outages => outages}]
 
-    entity_check_presenter.should_receive(:outages).with(nil, nil).and_return(result)
+    entity_check_presenter.should_receive(:outages).with(nil, nil).and_return(outages)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check, :redis => redis).and_return(entity_check_presenter)
@@ -340,11 +351,12 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
     get "/outages", :entity => {entity_name => check}
     last_response.should be_ok
-    last_response.body.should == {entity_name => {check => result}}.to_json
+    last_response.body.should == result.to_json
   end
 
   it "returns a list of downtimes for an entity" do
-    result = 'result'
+    downtime = mock('downtime')
+    result = [{:entity => entity_name, :check => check, :downtime => downtime}]
 
     entity_presenter.should_receive(:downtime).with(nil, nil).and_return(result)
 
@@ -356,13 +368,14 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
     get "/downtime", :entity => entity_name
     last_response.should be_ok
-    last_response.body.should == {entity_name => result}.to_json
+    last_response.body.should == result.to_json
   end
 
   it "returns a list of downtimes for a check on an entity" do
-    result = 'result'
+    downtime = mock('downtime')
+    result = [{:entity => entity_name, :check => check, :downtime => downtime}]
 
-    entity_check_presenter.should_receive(:downtime).with(nil, nil).and_return(result)
+    entity_check_presenter.should_receive(:downtime).with(nil, nil).and_return(downtime)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check, :redis => redis).and_return(entity_check_presenter)
@@ -375,11 +388,10 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
     get "/downtime", :entity => {entity_name => check}
     last_response.should be_ok
-    last_response.body.should == {entity_name => {check => result}}.to_json
+    last_response.body.should == result.to_json
   end
 
   it "creates a test notification event for check on an entity" do
-
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
     entity.should_receive(:name).and_return(entity_name)

@@ -130,7 +130,7 @@ module Flapjack
         halt err(403, "no entities") if entities.nil? || entities.empty?
         entities = [entities] unless entities.is_a?(Array)
 
-        present_api_results(entities) {|presenter|
+        present_api_results(entities, 'status') {|presenter|
           presenter.status
         }
       end
@@ -143,7 +143,7 @@ module Flapjack
         halt err(403, "no entities") if entities.nil? || entities.empty?
         entities = [entities] unless entities.is_a?(Array)
 
-        present_api_results(entities) {|presenter|
+        present_api_results(entities, 'outages') {|presenter|
           presenter.outages(start_time, end_time)
         }
       end
@@ -156,7 +156,7 @@ module Flapjack
         halt err(403, "no entities") if entities.nil? || entities.empty?
         entities = [entities] unless entities.is_a?(Array)
 
-        present_api_results(entities) {|presenter|
+        present_api_results(entities, 'unscheduled_maintenances') {|presenter|
           presenter.unscheduled_maintenance(start_time, end_time)
         }
       end
@@ -169,7 +169,7 @@ module Flapjack
         halt err(403, "no entities") if entities.nil? || entities.empty?
         entities = [entities] unless entities.is_a?(Array)
 
-        present_api_results(entities) {|presenter|
+        present_api_results(entities, 'scheduled_maintenances') {|presenter|
           presenter.scheduled_maintenance(start_time, end_time)
         }
       end
@@ -182,7 +182,7 @@ module Flapjack
         halt err(403, "no entities") if entities.nil? || entities.empty?
         entities = [entities] unless entities.is_a?(Array)
 
-        present_api_results(entities) {|presenter|
+        present_api_results(entities, 'downtime') {|presenter|
           presenter.downtime(start_time, end_time)
         }
       end
@@ -601,8 +601,8 @@ module Flapjack
         entity_check
       end
 
-      def present_api_results(entities, &block)
-        hashify(*entities) {|entity_name_or_hash|
+      def present_api_results(entities, result_type, &block)
+        entities.collect {|entity_name_or_hash|
           # hash of {entity_name => 'check', entity_name_2 => ['check_2', 'check_3']}
           if entity_name_or_hash.is_a?(Hash)
             # is there a simpler way to express this?
@@ -610,21 +610,21 @@ module Flapjack
               checks = entity_name_or_hash[entity_name]
               checks = [checks] unless checks.is_a?(Array)
               entity = find_entity(entity_name)
-              check_values = hashify(*checks){|check|
+              checks.collect {|check|
                 entity_check = find_entity_check(entity, check)
-                [check,
-                 yield(Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check, :redis => redis))]
+                {:entity => entity_name,
+                 :check => check,
+                 result_type => yield(Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check, :redis => redis))
+                }
               }
-              [entity_name, check_values]
             }.flatten(1)
           else
             # entity name string, so get results for all checks for that entity
             entity_name = entity_name_or_hash
             entity = find_entity(entity_name)
-            [entity_name,
-             yield(Flapjack::Gateways::API::EntityPresenter.new(entity, :redis => redis))]
+            yield(Flapjack::Gateways::API::EntityPresenter.new(entity, :redis => redis))
           end
-        }.to_json
+        }.flatten(1).to_json
       end
 
       def find_tags(tags)
