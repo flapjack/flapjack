@@ -1,6 +1,9 @@
 ## Flapjack Changelog
 
 # 0.7.3 - UNRELEASED
+- Bug: Web and api gateways have configuable http timeout gh-170 (@jessereynolds)
+- Bug: Support POSTs to API larger than ~112 KB gh-169 (@jessereynolds)
+- Bug: Validate notification rules before adding, updating gh-146 (@ali-graham)
 - Bug: Web UI very slow with large number of keys gh-164 (@jessereynolds)
 - Bug: crash in executive should exit flapjack gh-143 (@ali-graham)
 
