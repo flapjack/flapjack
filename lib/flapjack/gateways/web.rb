@@ -70,6 +70,10 @@ module Flapjack
         self.class.instance_variable_get('@logger')
       end
 
+      def version
+        Flapjack::VERSION
+      end
+
       get '/' do
         check_stats
         entity_stats
@@ -338,7 +342,6 @@ module Flapjack
         @fqdn         = `/bin/hostname -f`.chomp
         @pid          = Process.pid
         @instance_id  = "#{@fqdn}:#{@pid}"
-        @version      = Flapjack::VERSION
 
         @dbsize                  = redis.dbsize
         @executive_instances     = redis.keys("executive_instance:*").map {|i|
@@ -363,6 +366,7 @@ module Flapjack
         @count_all_checks        = redis.keys('check:*:*').length
         @count_failing_checks    = redis.zcard 'failed_checks'
       end
+
 
     end
 
