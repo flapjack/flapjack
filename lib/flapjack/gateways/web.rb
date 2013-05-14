@@ -70,10 +70,6 @@ module Flapjack
         self.class.instance_variable_get('@logger')
       end
 
-      def version
-        Flapjack::VERSION
-      end
-
       get '/' do
         check_stats
         entity_stats
