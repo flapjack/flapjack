@@ -71,8 +71,10 @@ describe Flapjack::Pikelet do
 
     config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('port').and_return(7654)
+    config.should_receive(:[]).with('timeout').and_return(90)
 
     server = mock('server')
+    server.should_receive(:timeout=).with(90)
     server.should_receive(:start)
     Thin::Server.should_receive(:new).
       with(/^(?:\d{1,3}\.){3}\d{1,3}$/, 7654,

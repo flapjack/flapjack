@@ -21,11 +21,17 @@
               %th Last Update
               %th Last Notification
             - @states.each do |entity, check, status, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified_kind, notified|
-              %tr
+              - colour_class = status
+              - case status
+              - when 'critical', 'unknown'
+                - colour_class = 'error'
+              - when 'ok', 'up'
+                - colour_class = 'success'
+              %tr{:class => colour_class}
                 %td
                   - link = "/check?entity=" + CGI.escape(entity) + "&check=" + CGI.escape(check)
                   %a(title='check detail' href=link) #{check}
-                %td{:class => status}
+                %td
                   = status.upcase
                   = " (Acknowledged)" if in_unscheduled_outage
                   = " (Scheduled Maintenance)" if in_scheduled_outage

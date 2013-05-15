@@ -68,12 +68,13 @@ module Flapjack
       end
 
       get '/' do
-        self_stats
+        check_stats
+        entity_stats
         haml :index
       end
 
       get '/checks_all' do
-        self_stats
+        check_stats
         @adjective = 'all'
 
         # TODO (?) recast as Entity.all do |e|; e.checks.do |ec|; ...
@@ -86,7 +87,7 @@ module Flapjack
       end
 
       get '/checks_failing' do
-        self_stats
+        check_stats
         @adjective = 'failing'
 
         @states = redis.zrange('failed_checks', 0, -1).map {|key|
@@ -99,11 +100,15 @@ module Flapjack
 
       get '/self_stats' do
         self_stats
+        entity_stats
+        check_stats
         haml :self_stats
       end
 
       get '/self_stats.json' do
         self_stats
+        entity_stats
+        check_stats
         {
           'events_queued'    => @events_queued,
           'all_entities'     => @count_all_entities,
@@ -125,7 +130,7 @@ module Flapjack
               'average' => @event_rate_all,
             }
           },
-          'total_keys' => @keys.length,
+          'total_keys' => @dbsize,
           'uptime'     => @uptime_string,
           'boottime'   => @boot_time,
           'current_time' => Time.now,
@@ -134,22 +139,22 @@ module Flapjack
       end
 
       get '/entities_all' do
-        self_stats
+        entity_stats
         @adjective = 'all'
         @entities = Flapjack::Data::Entity.find_all_with_checks(:redis => redis)
         haml :entities
       end
 
       get '/entities_failing' do
-        self_stats
+        entity_stats
         @adjective = 'failing'
         @entities = Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis)
         haml :entities
       end
 
       get '/entity/:entity' do
-        self_stats
         @entity = params[:entity]
+        entity_stats
         @states = redis.keys("#{@entity}:*:states").map { |r|
           parts  = r.split(':')[0..1]
           [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
@@ -164,7 +169,8 @@ module Flapjack
         entity_check = get_entity_check(@entity, @check)
         return 404 if entity_check.nil?
 
-        self_stats
+        check_stats
+
         last_change = entity_check.last_change
 
         @check_state                = entity_check.state
@@ -260,13 +266,13 @@ module Flapjack
       end
 
       get '/contacts' do
-        self_stats
+        #self_stats
         @contacts = Flapjack::Data::Contact.all(:redis => redis)
         haml :contacts
       end
 
       get "/contacts/:contact" do
-        self_stats
+        #self_stats
         contact_id = params[:contact]
 
         if contact_id
@@ -329,13 +335,8 @@ module Flapjack
         @fqdn         = `/bin/hostname -f`.chomp
         @pid          = Process.pid
         @instance_id  = "#{@fqdn}:#{@pid}"
-        @version      = Flapjack::VERSION
 
-        @keys = redis.keys '*'
-        @count_all_checks        = redis.keys('check:*:*').length
-        @count_failing_checks    = redis.zcard 'failed_checks'
-        @count_all_entities      = Flapjack::Data::Entity.find_all_with_checks(:redis => redis).length
-        @count_failing_entities  = Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis).length
+        @dbsize                  = redis.dbsize
         @executive_instances     = redis.keys("executive_instance:*").map {|i|
           [ i.match(/executive_instance:(.*)/)[1], redis.hget(i, 'boot_time').to_i ]
         }.sort {|a, b| b[1] <=> a[1]}
@@ -348,6 +349,17 @@ module Flapjack
                                    (@event_counters_instance['all'].to_f / @uptime) : 0
         @events_queued           = redis.llen('events')
       end
+
+      def entity_stats
+        @count_all_entities      = Flapjack::Data::Entity.find_all_with_checks(:redis => redis).length
+        @count_failing_entities  = Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis).length
+      end
+
+      def check_stats
+        @count_all_checks        = redis.keys('check:*:*').length
+        @count_failing_checks    = redis.zcard 'failed_checks'
+      end
+
 
     end
 

@@ -80,12 +80,14 @@ development:
     web:
       enabled: yes
       port: 5080
+      timeout: 300
       access_log: "log/web_access.log"
       logger:
         level: INFO
     api:
       enabled: yes
       port: 5081
+      timeout: 300
       access_log: "log/api_access.log"
       logger:
         level: INFO

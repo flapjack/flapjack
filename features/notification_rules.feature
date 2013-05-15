@@ -3,9 +3,9 @@ Feature: Notification rules on a per contact basis
 
   Background:
     Given the following users exist:
-      | id  | first_name | last_name | email             | sms          |
-      | 1   | Malak      | Al-Musawi | malak@example.com | +61400000001 |
-      | 2   | Imani      | Farooq    | imani@example.com | +61400000002 |
+      | id  | first_name | last_name | email             | sms          | timezone         |
+      | 1   | Malak      | Al-Musawi | malak@example.com | +61400000001 | Asia/Baghdad     |
+      | 2   | Imani      | Farooq    | imani@example.com | +61400000002 | Europe/Moscow    |
 
     And the following entities exist:
       | id  | name | contacts |
@@ -25,7 +25,7 @@ Feature: Notification rules on a per contact basis
 
   @time_restrictions @time
   Scenario: Alerts only during specified time restrictions
-    Given the timezone is America/New_York
+    Given the timezone is Asia/Baghdad
     And   the time is February 1 2013 6:59
     And   the check is check 'ping' on entity 'foo'
     And   the check is in an ok state

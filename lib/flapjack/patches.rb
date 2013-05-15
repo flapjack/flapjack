@@ -50,6 +50,26 @@ end
 # we don't want to stop the entire EM reactor when we stop a web server
 # & @connections data type changed in thin 1.5.1
 module Thin
+
+  # see https://github.com/flpjck/flapjack/issues/169
+  class Request
+    class EqlTempfile < ::Tempfile
+      def eql?(obj)
+        obj.equal?(self) && (obj == self)
+      end
+    end
+
+    def move_body_to_tempfile
+      current_body = @body
+      current_body.rewind
+      @body = Thin::Request::EqlTempfile.new(BODY_TMPFILE)
+      @body.binmode
+      @body << current_body.read
+      @env[RACK_INPUT] = @body
+    end
+  end
+
+  # we don't want to stop the entire EM reactor when we stop a web server
   module Backends
     class Base
       def stop!
