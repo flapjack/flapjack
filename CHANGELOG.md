@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.7.4 - UNRELEASED
+- Bug: Event counter values are strings, not integers gh-173 (@auxesis)
+
 # 0.7.3 - 2013-05-14
 - Bug: Web and api gateways have configuable http timeout gh-170 (@jessereynolds)
 - Bug: Support POSTs to API larger than ~112 KB gh-169 (@jessereynolds)
