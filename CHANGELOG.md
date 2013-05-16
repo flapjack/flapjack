@@ -1,6 +1,6 @@
 ## Flapjack Changelog
 
-# 0.7.4 - UNRELEASED
+# 0.7.4 - 2013-05-16
 - Bug: Event counter values are strings, not integers gh-173 (@auxesis)
 
 # 0.7.3 - 2013-05-14
