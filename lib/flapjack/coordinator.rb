@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'monitor'
+
 require 'flapjack/configuration'
 require 'flapjack/patches'
 require 'flapjack/pikelet'
@@ -9,9 +11,12 @@ module Flapjack
   class Coordinator
 
     def initialize(config)
-      @config = config
-      @redis_options = config.for_redis
-      @pikelets = []
+      @config     = config
+      @redis_opts = config.for_redis
+      @pikelets   = []
+
+      @monitor = Monitor.new
+      @running_cond = @monitor.new_cond
 
       # TODO convert this to use flapjack-logger
       logger_name = "flapjack-coordinator"
@@ -27,27 +32,49 @@ module Flapjack
       end
     end
 
-    def start(options = {})
+    def start(opts = {})
       pikelet_defs = pikelet_definitions(@config.all)
       return if pikelet_defs.empty?
 
-      create_pikelets(pikelet_defs).each do |pik|
-        @pikelets << pik
-        pik.start
+      error = false
+
+      begin
+        create_pikelets(pikelet_defs).each do |pik|
+          @pikelets << pik
+          pik.start
+        end
+      rescue Exception => e
+        @logger.fatal "Caught exception from started pikelet"
+        @logger.fatal e.message
+        @logger.fatal e.backtrace.join("\n")
+        error = true
       end
 
-      setup_signals if options[:signals]
+      if error
+        stop(:error => true)
+      else
+        setup_signals if opts[:signals]
 
-      @main_thread = Thread.current
-      @main_thread.sleep
+        # block this thread until 'stop' has been called, and
+        # all pikelets have been stopped
+        @monitor.synchronize {
+          @running_cond.wait
+        }
+      end
     end
 
-    def stop
+    def stop(opts = {})
       return if @stopping
       @stopping = true
-      stop_pikelets(@pikelets)
-      @pikelets.clear
-      @main_thread.wakeup if @main_thread
+      # new thread in signal handler is required to avoid deadlock errors
+      Thread.new {
+        @pikelets.map(&:stop)
+        @pikelets.clear
+        return if opts[:error]
+        @monitor.synchronize {
+          @running_cond.signal
+        }
+      }
     end
 
     # NB: global config options (e.g. daemonize, pidfile,
@@ -86,13 +113,21 @@ module Flapjack
       end
 
       pikelets_to_remove = @pikelets.select{|pik| removed.include?(pik.type) }
-      stop_pikelets(pikelets_to_remove)
+      pikelets_to_remove.map(&:stop)
       @pikelets -= pikelets_to_remove
 
       added_defs = current_pikelet_cfg.select {|k, v| added.include?(k) }
-      create_pikelets(added_defs).each do |pik|
-        @pikelets << pik
-        pik.start
+
+      begin
+        create_pikelets(added_defs).each do |pik|
+          @pikelets << pik
+          pik.start
+        end
+      rescue Exception => e
+        @logger.fatal "Caught exception from restarted pikelet"
+        @logger.fatal e.message
+        @logger.fatal e.backtrace.join("\n")
+        stop
       end
     end
 
@@ -115,15 +150,10 @@ module Flapjack
     def create_pikelets(pikelets_data = {})
       pikelets_data.inject([]) do |memo, (type, cfg)|
         pikelet = Flapjack::Pikelet.create(type, :config => cfg,
-                                           :redis_config => @redis_options)
+                                           :redis_config => @redis_opts)
         memo << pikelet if pikelet
         memo
       end
-    end
-
-    def stop_pikelets(pikelets, opts = {})
-      pikelets.map(&:stop)
-      pikelets.map(&:block_until_finished)
     end
 
     def pikelet_definitions(config_env)

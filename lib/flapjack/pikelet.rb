@@ -19,6 +19,8 @@ require 'redis'
 require 'em-resque'
 require 'em-resque/worker'
 
+require 'monitor'
+
 require 'thin'
 
 require 'flapjack/executive'
@@ -37,7 +39,7 @@ module Flapjack
   module Pikelet
 
     class Base
-      attr_reader :type, :status
+      attr_reader :type
 
       def initialize(type, pikelet_class, opts = {})
         @type = type
@@ -46,19 +48,33 @@ module Flapjack
         @config = opts[:config] || {}
         @redis_config = opts[:redis_config] || {}
 
+        # TODO is logger threadsafe?
         @logger = Flapjack::Logger.new("flapjack-#{type}", @config['logger'])
 
-        @status = 'initialized'
+        @monitor = Monitor.new
       end
 
-      def block_until_finished
-        return if @thread.nil?
-        @thread.join
-        @thread = nil
-      end
+      def start(&block)
+        @thread = Thread.new do
+          Thread.current.abort_on_exception = true
 
-      def start
-        @status = 'started'
+          @monitor.synchronize do
+            EM.run do
+              EM.error_handler do |err|
+                @logger.warn err.message
+                trace = err.backtrace
+                @logger.warn trace.join("\n") if trace
+                @error = err
+                EM.stop_event_loop
+              end
+              yield
+            end
+          end
+
+          # TODO propagate higher-level shutdown instead -- or restart
+          # pikelet -- might depend on the exception type?
+          Kernel.raise @error if @error
+        end
       end
 
       def reload(cfg)
@@ -67,49 +83,53 @@ module Flapjack
       end
 
       def stop
-        @status = 'stopping'
+        @logger.info "check for stop, wait if required"
+        @monitor.synchronize do
+          if @error
+            @logger.info "had error #{e.message}"
+          end
+          @logger.info "has stopped"
+        end
       end
+
     end
 
     class Generic < Flapjack::Pikelet::Base
 
-     PIKELET_TYPES = {'executive'  => Flapjack::Executive,
-                      'pagerduty'  => Flapjack::Gateways::Pagerduty}
-
-      def initialize(type, pikelet_klass, opts = {})
-        super(type, pikelet_klass, opts)
-        @pikelet = @klass.new(opts.merge(:logger => @logger))
-      end
+      PIKELET_TYPES = {'executive'  => Flapjack::Executive,
+                       'pagerduty'  => Flapjack::Gateways::Pagerduty}
 
       def start
-        @thread = Thread.new {
-          EM.sync {
+        super do
+          EM.synchrony do
             begin
+              @pikelet = @klass.new(:config => @config,
+                :redis_config => @redis_config, :logger => @logger)
+              # start only finishes when the pikelet does
               @pikelet.start
             rescue Exception => e
               @logger.warn e.message
-              @logger.warn e.backtrace.join("\n")
+              trace = e.backtrace
+              @logger.warn trace.join("\n") if trace
+              @error = e
             end
-          }
-        }
-        super
+            EM.stop_event_loop
+          end
+        end
       end
 
       # this should only reload if all changes can be applied -- will
       # return false to log warning otherwise
       def reload(cfg)
+        # TODO what if start didn't work?
         @pikelet.respond_to?(:reload) ?
           (@pikelet.reload(cfg) && super(cfg)) : super(cfg)
       end
 
       def stop
+        # TODO what if start didn't work?
         @pikelet.stop
         super
-      end
-
-      def update_status
-        return @status unless 'stopping'.eql?(@status)
-        @status = 'stopped' if @fiber && !@fiber.alive?
       end
     end
 
@@ -118,90 +138,81 @@ module Flapjack
       PIKELET_TYPES = {'email' => Flapjack::Gateways::Email,
                        'sms'   => Flapjack::Gateways::SmsMessagenet}
 
-      def self.sync_safe?
-        true
-      end
-
       def initialize(type, pikelet_klass, opts = {})
         super(type, pikelet_klass, opts)
 
         pikelet_klass.instance_variable_set('@config', @config)
         pikelet_klass.instance_variable_set('@redis_config', @redis_config)
         pikelet_klass.instance_variable_set('@logger', @logger)
-
-        unless defined?(@@resque_pool) && !@@resque_pool.nil?
-          @@resque_pool = Flapjack::RedisPool.new(:config => @redis_config)
-          ::Resque.redis = @@resque_pool
-        end
-
-        # TODO error if config['queue'].nil?
-
-        @worker = EM::Resque::Worker.new(@config['queue'])
-        # # Use these to debug the resque workers
-        # worker.verbose = true
-        # worker.very_verbose = true
       end
 
       def start
-        @thread = Thread.new {
-          @klass.start if @klass.respond_to?(:start)
-          EM.sync {
+        super do
+          EM.synchrony do
             begin
+              @klass.start if @klass.respond_to?(:start)
+
+              unless defined?(@@resque_pool) && !@@resque_pool.nil?
+                @@resque_pool = Flapjack::RedisPool.new(:config => @redis_config)
+                ::Resque.redis = @@resque_pool
+              end
+
+              # TODO error if config['queue'].nil?
+
+              @worker = EM::Resque::Worker.new(@config['queue'])
+              # # Use these to debug the resque workers
+              # worker.verbose = true
+              # worker.very_verbose = true
+
+              # work only finishes when the pikelet does
               @worker.work(0.1)
             rescue Exception => e
               @logger.warn e.message
-              @logger.warn e.backtrace.join("\n")
+              trace = e.backtrace
+              @logger.warn trace.join("\n") if trace
+              @error = e
             end
-          }
-        }
-        super
+            EM.stop_event_loop
+          end
+        end
       end
 
       # this should only reload if all changes can be applied -- will
       # return false to log warning otherwise
       def reload(cfg)
-        @klass.respond_to?(:reload) ?
-          (@klass.reload(cfg) && super(cfg)) : super(cfg)
+        # TODO what if start didn't work?
+        @pikelet.respond_to?(:reload) ?
+          (@pikelet.reload(cfg) && super(cfg)) : super(cfg)
       end
 
       def stop
+        # TODO what if start didn't work?
         @worker.shutdown if @worker && @fiber && @fiber.alive?
         @klass.stop if @klass.respond_to?(:stop)
         super
-      end
-
-      def update_status
-        return @status unless 'stopping'.eql?(@status)
-        @status = 'stopped' if @fiber && !@fiber.alive?
       end
     end
 
     class Blather < Flapjack::Pikelet::Base
 
-     PIKELET_TYPES = {'jabber'     => Flapjack::Gateways::Jabber,
-                      'oobetet'    => Flapjack::Gateways::Oobetet}
-
-      def self.sync_safe?
-        false
-      end
-
-      def initialize(type, pikelet_klass, opts = {})
-        super(type, pikelet_klass, opts)
-        @pikelet = @klass.new(opts.merge(:logger => @logger))
-      end
+      PIKELET_TYPES = {'jabber'     => Flapjack::Gateways::Jabber,
+                       'oobetet'    => Flapjack::Gateways::Oobetet}
 
       def start
-        @thread = Thread.new {
-          EM.run {
-            begin
-              @pikelet.start
-            rescue Exception => e
-              @logger.warn e.message
-              @logger.warn e.backtrace.join("\n")
-            end
-          }
-        }
-        super
+        super do
+          begin
+            @pikelet = @klass.new(:config => @config,
+              :redis_config => @redis_config, :logger => @logger)
+            @pikelet.start
+          rescue Exception => e
+            @logger.warn e.message
+            trace = e.backtrace
+            @logger.warn trace.join("\n") if trace
+            @error = e
+          end
+
+          EM.stop_event_loop
+        end
       end
 
       # this should only reload if all changes can be applied -- will
@@ -215,12 +226,6 @@ module Flapjack
         @pikelet.stop
         super
       end
-
-      def update_status
-        return @status unless 'stopping'.eql?(@status)
-        @status = 'stopped' if @fiber && !@fiber.alive?
-      end
-
     end
 
     class Thin < Flapjack::Pikelet::Base
@@ -228,44 +233,39 @@ module Flapjack
       PIKELET_TYPES = {'web'  => Flapjack::Gateways::Web,
                        'api'  => Flapjack::Gateways::API}
 
-      def self.sync_safe?
-        false
-      end
-
       def initialize(type, pikelet_klass, opts = {})
         super(type, pikelet_klass, opts)
 
         pikelet_klass.instance_variable_set('@config', @config)
         pikelet_klass.instance_variable_set('@redis_config', @redis_config)
         pikelet_klass.instance_variable_set('@logger', @logger)
-
-        if @config
-          @port = @config['port']
-          @port = @port.nil? ? nil : @port.to_i
-          @timeout = @config['timeout']
-          @timeout = @timeout.nil? ? 300 : @timeout.to_i
-        end
-        @port = 3001 if (@port.nil? || @port <= 0 || @port > 65535)
-
-        @server = ::Thin::Server.new('0.0.0.0', @port,
-                    @klass, :signals => false)
-        @server.timeout = @timeout
       end
 
       def start
+        super do
+          begin
+            if @config
+              @port = @config['port']
+              @port = @port.nil? ? nil : @port.to_i
+              @timeout = @config['timeout']
+              @timeout = @timeout.nil? ? 300 : @timeout.to_i
+            end
+            @port = 3001 if (@port.nil? || @port <= 0 || @port > 65535)
 
-        @thread = Thread.new {
-          EM.run {
-            begin
+            @server = ::Thin::Server.new('0.0.0.0', @port,
+                        @klass, :signals => false)
+            @server.timeout = @timeout
+
             @klass.start if @klass.respond_to?(:start)
             @server.start
-            rescue Exception => e
-              @logger.warn e.message
-              @logger.warn e.backtrace.join("\n")
-            end
-          }
-        }
-        super
+          rescue Exception => e
+            @logger.warn e.message
+            trace = e.backtrace
+            @logger.warn trace.join("\n") if trace
+            @error = e
+          end
+          # NB: Thin itself calls EM.stop within server.stop!
+        end
       end
 
       # this should only reload if all changes can be applied -- will
@@ -280,11 +280,6 @@ module Flapjack
         @server.stop!
         @klass.stop if @klass.respond_to?(:stop)
         super
-      end
-
-      def update_status
-        return @status unless 'stopping'.eql?(@status)
-        @status = 'stopped' if (@server.backend.size <= 0)
       end
     end
 
@@ -308,7 +303,6 @@ module Flapjack
       return unless wrapper = wrapper_for_type(type)
       wrapper.new(type, TYPES[type], opts)
     end
-
   end
 
 end

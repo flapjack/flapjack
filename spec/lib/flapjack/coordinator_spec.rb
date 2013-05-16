@@ -37,12 +37,17 @@ describe Flapjack::Coordinator do
     executive = mock('executive')
     executive.should_receive(:start)
     executive.should_receive(:stop)
-    executive.should_receive(:block_until_finished)
 
-    thread = mock(Thread)
-    Thread.should_receive(:current).and_return(thread)
-    thread.should_receive(:sleep)
-    thread.should_receive(:wakeup)
+    Thread.should_receive(:new).and_yield
+
+    running_cond = mock(MonitorMixin::ConditionVariable)
+    running_cond.should_receive(:wait)
+    running_cond.should_receive(:signal)
+
+    monitor = mock(Monitor)
+    monitor.should_receive(:synchronize).twice.and_yield
+    monitor.should_receive(:new_cond).and_return(running_cond)
+    Monitor.should_receive(:new).and_return(monitor)
 
     fc = Flapjack::Coordinator.new(config)
     Flapjack::Pikelet.should_receive(:create).with('executive',
@@ -106,7 +111,6 @@ describe Flapjack::Coordinator do
     executive = mock('executive')
     executive.should_receive(:type).and_return('executive')
     executive.should_receive(:stop)
-    executive.should_receive(:block_until_finished)
 
     jabber = mock('jabber')
     Flapjack::Pikelet.should_receive(:create).with('jabber',
@@ -169,7 +173,6 @@ describe Flapjack::Coordinator do
     executive.should_receive(:type).exactly(5).times.and_return('executive')
     executive.should_receive(:reload).with(new_cfg['executive']).and_return(false)
     executive.should_receive(:stop)
-    executive.should_receive(:block_until_finished)
 
     new_exec = mock('new_executive')
     new_exec.should_receive(:start)
