@@ -337,6 +337,7 @@ module Flapjack
                     *['first_name', 'last_name', 'email'].collect {|f| [f, contact_data[f]]})
 
         unless contact_data['media'].nil?
+          redis.del("contact_media:#{contact_id}")
           contact_data['media'].each_pair {|medium, details|
             case medium
             when 'pagerduty'
