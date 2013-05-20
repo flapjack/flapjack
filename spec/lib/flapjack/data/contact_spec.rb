@@ -38,7 +38,13 @@ describe Flapjack::Data::Contact, :redis => true do
     Flapjack::Data::Contact.add({'id'         => '363',
                                  'first_name' => 'Jane',
                                  'last_name'  => 'Janeley',
-                                 'email'      => 'janej@example.com'},
+                                 'email'      => 'janej@example.com',
+                                 'media'      => {
+                                    'email' => {
+                                      'address'  => 'janej@example.com',
+                                      'interval' => 60
+                                      }
+                                  }},
                                  :redis       => @redis)
   end
 
@@ -80,6 +86,13 @@ describe Flapjack::Data::Contact, :redis => true do
     nr = contact.notification_rules
     nr.should_not be_nil
     nr.should be_empty
+  end
+
+  it "updates a contact and clears their media settings" do
+    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
+
+    contact.update('media' => {})
+    contact.media.should be_empty
   end
 
   it "updates a contact, does not clear notification rules" do
