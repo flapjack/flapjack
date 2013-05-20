@@ -1,5 +1,7 @@
 ## Flapjack Changelog
 
+# 0.7.5 - 2013-05-20
+- Bug: Removal of contact media via POST /contacts is not working gh-175 (@ali-graham)
 # 0.7.4 - 2013-05-16
 - Bug: Event counter values are strings, not integers gh-173 (@auxesis)
 
