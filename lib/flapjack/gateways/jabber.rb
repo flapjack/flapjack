@@ -60,6 +60,15 @@ module Flapjack
           ", server: " + @config['server'].to_s + ", password: " +
           @config['password'].to_s)
 
+        clear_handlers :error
+
+        register_handler :stream_error do |err|
+          EventMachine::Synchrony.next_tick do
+            @logger.info "Caught error: #{err.message}"
+          end
+          true
+        end
+
         register_handler :ready do |stanza|
           EventMachine::Synchrony.next_tick do
             on_ready(stanza)
@@ -87,14 +96,22 @@ module Flapjack
         end
       end
 
+      # NB: any use of the logger should be within a next_tick block to avoid
+      # odd timing problems. (If we stop using em-synchrony for this pikelet
+      # this shouldn't be necessary.)
+
       # Join the MUC Chat room after connecting.
       def on_ready(stanza)
         return if @should_quit
         @connected_at = Time.now.to_i
-        @logger.info("Jabber Connected")
+        EventMachine::Synchrony.next_tick do
+          @logger.info("Jabber Connected")
+        end
         if @config['rooms'] && @config['rooms'].length > 0
           @config['rooms'].each do |room|
-            @logger.info("Joining room #{room}")
+            EventMachine::Synchrony.next_tick do
+              @logger.info("Joining room #{room}")
+            end
             presence = Blather::Stanza::Presence.new
             presence.from = @flapjack_jid
             presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
@@ -107,8 +124,8 @@ module Flapjack
         end
         return if @buffer.empty?
         while stanza = @buffer.shift
-          @logger.debug("Sending a buffered jabber message to: #{stanza.to}, using: #{stanza.type}, message: #{stanza.body}")
           EventMachine::Synchrony.next_tick do
+            @logger.debug("Sending a buffered jabber message to: #{stanza.to}, using: #{stanza.type}, message: #{stanza.body}")
             write(stanza)
           end
         end
@@ -234,7 +251,9 @@ module Flapjack
 
       def on_groupchat(stanza)
         return if @should_quit
-        @logger.debug("groupchat message received: #{stanza.inspect}")
+        EventMachine::Synchrony.next_tick do
+          @logger.debug("groupchat message received: #{stanza.inspect}")
+        end
 
         if stanza.body =~ /^#{@config['alias']}:\s+(.*)/
           command = $1
@@ -255,7 +274,9 @@ module Flapjack
 
       def on_chat(stanza)
         return if @should_quit
-        @logger.debug("chat message received: #{stanza.inspect}")
+        EventMachine::Synchrony.next_tick do
+          @logger.debug("chat message received: #{stanza.inspect}")
+        end
 
         if stanza.body =~ /^flapjack:\s+(.*)/
           command = $1
@@ -284,26 +305,37 @@ module Flapjack
           delay = 10 if attempt > 10
           delay = 60 if attempt > 60
           EventMachine::Synchrony.sleep(delay || 3) if attempt > 1
-          @logger.debug("attempting connection to the jabber server")
+          EventMachine::Synchrony.next_tick do
+            @logger.debug("attempting connection to the jabber server")
+          end
           connect # Blather::Client.connect
         rescue StandardError => detail
-          @logger.error("unable to connect to the jabber server (attempt #{attempt}), retrying in #{delay} seconds ...")
-          @logger.error("detail: #{detail.message}")
-          @logger.debug(detail.backtrace.join("\n"))
+          EventMachine::Synchrony.next_tick do
+            @logger.error("unable to connect to the jabber server (attempt #{attempt}), retrying in #{delay} seconds ...")
+            @logger.error("detail: #{detail.message}")
+            @logger.debug(detail.backtrace.join("\n"))
+          end
           retry unless @should_quit
         end
       end
 
       # returning true to prevent the reactor loop from stopping
       def on_disconnect(stanza)
-        @logger.warn("disconnect handler called")
+        EventMachine::Synchrony.next_tick do
+          @logger.warn("disconnect handler called")
+        end
         return true if @should_quit
-        @logger.warn("jabbers disconnected! reconnecting after a short deley ...")
+        EventMachine::Synchrony.next_tick do
+          @logger.warn("jabbers disconnected! reconnecting after a short deley ...")
+        end
         EventMachine::Synchrony.sleep(5)
         connect_with_retry
         true
       end
 
+      # NB: any use of #say should be within a next_tick block to avoid odd
+      # timing problems. (If we stop using em-synchrony for this pikelet
+      # this shouldn't be necessary.)
       def say(to, msg, using = :chat, tick = true)
         stanza = Blather::Stanza::Message.new(to, msg, using)
         if connected?
@@ -320,9 +352,9 @@ module Flapjack
         @logger.debug("new jabber pikelet with the following options: #{@config.inspect}")
 
         keepalive_timer = EM::Synchrony.add_periodic_timer(60) do
-          @logger.debug("calling keepalive on the jabber connection")
           if connected?
             EventMachine::Synchrony.next_tick do
+              @logger.debug("calling keepalive on the jabber connection")
               write(' ')
             end
           end
@@ -341,12 +373,16 @@ module Flapjack
           # configured before starting to process events, otherwise the first few may get lost (send
           # before joining the group chat rooms)
           if connected?
-            @logger.debug("jabber is connected so commencing blpop on #{queue}")
+            EventMachine::Synchrony.next_tick do
+              @logger.debug("jabber is connected so commencing blpop on #{queue}")
+            end
             events[queue] = @redis.blpop(queue, 0)
             event         = Yajl::Parser.parse(events[queue][1])
             type          = event['notification_type'] || 'unknown'
-            @logger.debug('jabber notification event received')
-            @logger.debug(event.inspect)
+            EventMachine::Synchrony.next_tick do
+              @logger.debug('jabber notification event received')
+              @logger.debug(event.inspect)
+            end
             if 'shutdown'.eql?(type)
               if @should_quit
                 EventMachine::Synchrony.next_tick do
@@ -361,7 +397,9 @@ module Flapjack
               duration      = event['duration'] ? time_period_in_words(event['duration']) : '4 hours'
               address       = event['address']
 
-              @logger.debug("processing jabber notification address: #{address}, event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
+              EventMachine::Synchrony.next_tick do
+                @logger.debug("processing jabber notification address: #{address}, event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
+              end
 
               ack_str =
                 event['event_count'] &&
@@ -395,7 +433,9 @@ module Flapjack
               end
             end
           else
-            @logger.debug("not connected, sleep 1 before retry")
+            EventMachine::Synchrony.next_tick do
+              @logger.debug("not connected, sleep 1 before retry")
+            end
             EM::Synchrony.sleep(1)
           end
         end
