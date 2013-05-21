@@ -172,6 +172,9 @@ module Flapjack
       end
 
       def add_notification_rule(rule_data, opts = {})
+        if logger = opts[:logger]
+          logger.debug("add_notification_rule: contact_id: #{self.id} (#{self.id.class})")
+        end
         Flapjack::Data::NotificationRule.add(rule_data.merge(:contact_id => self.id),
           opts.merge(:redis => @redis))
       end

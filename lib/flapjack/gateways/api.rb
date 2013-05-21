@@ -380,7 +380,9 @@ module Flapjack
       # Deletes a notification rule
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
       delete('/notification_rules/:id') do
+        logger.debug("delete /notification_rules/#{params[:id]}")
         find_rule(params[:id]) do |rule|
+          logger.debug("rule to delete: #{rule.inspect}, contact_id: #{rule.contact_id}")
           find_contact(rule.contact_id) do |contact|
             contact.delete_notification_rule(rule)
             status 204
@@ -566,6 +568,7 @@ module Flapjack
       end
 
       not_found do
+        logger.debug("in not_found :-(")
         error(404, "not routable")
       end
 
@@ -593,7 +596,7 @@ module Flapjack
 
       # following a callback-heavy pattern -- feels like nodejs :)
       def find_contact(contact_id, &block)
-        contact = Flapjack::Data::Contact.find_by_id(contact_id, {:redis => redis, :logger => logger})
+        contact = Flapjack::Data::Contact.find_by_id(contact_id.to_s, {:redis => redis, :logger => logger})
         return(yield(contact)) if contact
         error(404, "could not find contact with id '#{contact_id}'")
       end
