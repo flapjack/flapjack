@@ -27,7 +27,8 @@ module Rack
       if env['rack.input'] and not input_parsed?(env) and type_match?(env)
         env['rack.request.form_input'] = env['rack.input']
         data = env['rack.input'].read
-        env['rack.request.form_hash'] = data.empty?? {} : JSON.parse(data)
+        env['rack.input'].rewind
+        env['rack.request.form_hash'] = data.empty? ? {} : JSON.parse(data)
       end
       app.call(env)
     end
@@ -95,6 +96,9 @@ module Flapjack
       class << self
         def start
           @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+
+          @logger.info "starting api - class"
+
           if @config && @config['access_log']
             access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
             use Flapjack::CommonLogger, access_logger
@@ -237,16 +241,20 @@ module Flapjack
         # FIXME should scan for invalid records before making any changes, fail early
 
         entities = params[:entities]
-        if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
-          entities.each do |entity|
-            unless entity['id']
-              errors << "Entity not imported as it has no id: #{entity.inspect}"
-              next
-            end
-            Flapjack::Data::Entity.add(entity, :redis => redis)
+        unless entities
+          logger.debug("no entities object found in the following supplied JSON:")
+          logger.debug(request.body)
+          return err(403, "No entities object received")
+        end
+        return err(403, "The received entities object is not an Enumerable") unless entities.is_a?(Enumerable)
+        return err(403, "Entity with a nil id detected") unless entities.any? {|e| !e['id'].nil?}
+
+        entities.each do |entity|
+          unless entity['id']
+            errors << "Entity not imported as it has no id: #{entity.inspect}"
+            next
           end
-        else
-          errors << "No valid entities were submitted"
+          Flapjack::Data::Entity.add(entity, :redis => redis)
         end
         errors.empty? ? 204 : err(403, *errors)
       end

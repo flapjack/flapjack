@@ -1,6 +1,18 @@
 ## Flapjack Changelog
 
-# 0.7.3 - UNRELEASED
+# 0.7.6 - 2013-05-20
+- Bug: Problems with email notifications (no name, text part missing fields) gh-158 (@ali-graham)
+
+# 0.7.5 - 2013-05-20
+- Bug: Removal of contact media via POST /contacts is not working gh-175 (@ali-graham)
+
+# 0.7.4 - 2013-05-16
+- Bug: Event counter values are strings, not integers gh-173 (@auxesis)
+
+# 0.7.3 - 2013-05-14
+- Bug: Web and api gateways have configuable http timeout gh-170 (@jessereynolds)
+- Bug: Support POSTs to API larger than ~112 KB gh-169 (@jessereynolds)
+- Bug: Validate notification rules before adding, updating gh-146 (@ali-graham)
 - Bug: Web UI very slow with large number of keys gh-164 (@jessereynolds)
 - Bug: crash in executive should exit flapjack gh-143 (@ali-graham)
 
