@@ -18,6 +18,11 @@ module Flapjack
         contacts = opts[:contacts]
         return [] if contacts.nil?
         @messages ||= contacts.collect {|contact|
+
+           # TODO don't include messages here if the contact doesn't have
+           # the medium enabled or has blackholed at this level -- this
+           # will simplify the executive logic
+
           contact.media.keys.inject([]) { |ret, mk|
             m = Flapjack::Data::Message.for_contact(:contact => contact)
             m.notification = self

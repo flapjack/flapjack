@@ -117,18 +117,18 @@ module Flapjack
           'failing_checks'   => @count_failing_checks,
           'processed_events' => {
             'all_time' => {
-              'total'   => @event_counters['all'],
-              'ok'      => @event_counters['ok'],
-              'failure' => @event_counters['failure'],
-              'action'  => @event_counters['action'],
-            },
-            'instance' => {
-              'total'   => @event_counters_instance['all'],
-              'ok'      => @event_counters_instance['ok'],
-              'failure' => @event_counters_instance['failure'],
-              'action'  => @event_counters_instance['action'],
-              'average' => @event_rate_all,
+              'total'   => @event_counters['all'].to_i,
+              'ok'      => @event_counters['ok'].to_i,
+              'failure' => @event_counters['failure'].to_i,
+              'action'  => @event_counters['action'].to_i,
             }
+#            'instance' => {
+#              'total'   => @event_counters_instance['all'].to_i,
+#              'ok'      => @event_counters_instance['ok'].to_i,
+#              'failure' => @event_counters_instance['failure'].to_i,
+#              'action'  => @event_counters_instance['action'].to_i,
+#              'average' => @event_rate_all.to_i,
+#            }
           },
           'total_keys' => @dbsize,
           'uptime'     => @uptime_string,
