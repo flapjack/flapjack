@@ -171,9 +171,9 @@ module Flapjack
         }.compact
       end
 
-      def add_notification_rule(rule_data)
+      def add_notification_rule(rule_data, opts = {})
         Flapjack::Data::NotificationRule.add(rule_data.merge(:contact_id => self.id),
-          :redis => @redis)
+          opts.merge(:redis => @redis))
       end
 
       def delete_notification_rule(rule)

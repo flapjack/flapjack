@@ -37,13 +37,14 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
 
         rule_id = SecureRandom.uuid
-        self.add_or_update(rule_data.merge(:id => rule_id), :redis => redis)
+        self.add_or_update(rule_data.merge(:id => rule_id), options)
         self.find_by_id(rule_id, :redis => redis)
       end
 
-      def update(rule_data)
+      def update(rule_data, opts = {})
+
         return false unless self.class.add_or_update(rule_data.merge(:id => @id),
-          :redis => @redis)
+          opts.merge(:redis => @redis))
         refresh
         true
       end
@@ -200,12 +201,14 @@ module Flapjack
         validations = {proc { d.has_key?(:id) } =>
                        "id not set",
 
-                       proc { d.has_key?(:entities) &&
+                       proc { !d.has_key?(:entities) ||
+                              d.has_key?(:entities) &&
                               d[:entities].is_a?(Array) &&
                               d[:entities].all? {|e| e.is_a?(String)} } =>
                        "entities must be a list of strings",
 
-                       proc { d.has_key?(:entity_tags) &&
+                       proc { !d.has_key?(:entity_tags) ||
+                              d.has_key?(:entity_tags) &&
                               d[:entity_tags].is_a?(Array) &&
                               d[:entity_tags].all? {|et| et.is_a?(String)}} =>
                        "entity_tags must be a list of strings",
@@ -226,21 +229,25 @@ module Flapjack
                        "time restrictions are invalid",
 
                        # TODO should the media types be checked against a whitelist?
-                       proc { d.has_key?(:warning_media) &&
+                       proc { !d.has_key?(:warning_media) ||
+                              d.has_key?(:warning_media) &&
                               d[:warning_media].is_a?(Array) &&
                               d[:warning_media].all? {|et| et.is_a?(String)}} =>
                        "warning_media must be a list of strings",
 
-                       proc { d.has_key?(:critical_media) &&
+                       proc { !d.has_key?(:critical_media) ||
+                              d.has_key?(:critical_media) &&
                               d[:critical_media].is_a?(Array) &&
                               d[:critical_media].all? {|et| et.is_a?(String)}} =>
                        "critical_media must be a list of strings",
 
-                       proc { d.has_key?(:warning_blackhole) &&
+                       proc { !d.has_key?(:warning_blackhole) ||
+                              d.has_key?(:warning_blackhole) &&
                               [TrueClass, FalseClass].include?(d[:warning_blackhole].class) } =>
                        "warning_blackhole must be true or false",
 
-                       proc { d.has_key?(:critical_blackhole) &&
+                       proc { !d.has_key?(:critical_blackhole) ||
+                              d.has_key?(:critical_blackhole) &&
                               [TrueClass, FalseClass].include?(d[:critical_blackhole].class) } =>
                        "critical_blackhole must be true or false",
                       }
@@ -255,6 +262,7 @@ module Flapjack
         if logger = options[:logger]
           error_str = errors.join(", ")
           logger.info "validation error: #{error_str}"
+          logger.debug "rule failing validations: #{d.inspect}"
         end
         false
       end

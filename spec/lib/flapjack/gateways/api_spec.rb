@@ -536,7 +536,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "returns the core information of a specified contact" do
     contact.should_receive(:to_json).and_return(contact_core.to_json)
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     get "/contacts/#{contact.id}"
     last_response.should be_ok
@@ -545,7 +545,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not return information for a contact that does not exist" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     get "/contacts/#{contact.id}"
     last_response.should be_not_found
@@ -559,7 +559,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
     contact.should_receive(:notification_rules).and_return(notification_rules)
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     get "/contacts/#{contact.id}/notification_rules"
     last_response.should be_ok
@@ -568,7 +568,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not list notification rules for a contact that does not exist" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     get "/contacts/#{contact.id}/notification_rules"
     last_response.should be_not_found
@@ -577,7 +577,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "returns a specified notification rule" do
     notification_rule.should_receive(:to_json).and_return('"rule_1"')
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
-      with(notification_rule.id, :redis => redis).and_return(notification_rule)
+      with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
 
     get "/notification_rules/#{notification_rule.id}"
     last_response.should be_ok
@@ -586,7 +586,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not return a notification rule that does not exist" do
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
-      with(notification_rule.id, :redis => redis).and_return(nil)
+      with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     get "/notification_rules/#{notification_rule.id}"
     last_response.should be_not_found
@@ -595,7 +595,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   # POST /notification_rules
   it "creates a new notification rule" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
     notification_rule.should_receive(:to_json).and_return('"rule_1"')
 
     # symbolize the keys
@@ -605,7 +605,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     notification_rule_data_sym.delete(:contact_id)
 
     contact.should_receive(:add_notification_rule).
-      with(notification_rule_data_sym).and_return(notification_rule)
+      with(notification_rule_data_sym, :logger => @logger).and_return(notification_rule)
 
     post "/notification_rules", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
@@ -615,7 +615,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not create a notification_rule for a contact that's not present" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     post "/notification_rules", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
@@ -633,10 +633,10 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   # PUT /notification_rules/RULE_ID
   it "updates a notification rule" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
     notification_rule.should_receive(:to_json).and_return('"rule_1"')
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
-      with(notification_rule.id, :redis => redis).and_return(notification_rule)
+      with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
 
     # symbolize the keys
     notification_rule_data_sym = notification_rule_data.inject({}){|memo,(k,v)|
@@ -644,7 +644,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     }
     notification_rule_data_sym.delete(:contact_id)
 
-    notification_rule.should_receive(:update).with(notification_rule_data_sym).and_return(true)
+    notification_rule.should_receive(:update).with(notification_rule_data_sym, :logger => @logger).and_return(true)
 
     put "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
@@ -654,7 +654,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not update a notification rule that's not present" do
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
-      with(notification_rule.id, :redis => redis).and_return(nil)
+      with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     put "/notification_rules/#{notification_rule.id}", notification_rule_data
     last_response.should be_not_found
@@ -662,9 +662,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not update a notification_rule for a contact that's not present" do
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
-      with(notification_rule.id, :redis => redis).and_return(notification_rule)
+      with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     put "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
@@ -675,10 +675,10 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "deletes a notification rule" do
     notification_rule.should_receive(:contact_id).and_return(contact.id)
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
-      with(notification_rule.id, :redis => redis).and_return(notification_rule)
+      with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
     contact.should_receive(:delete_notification_rule).with(notification_rule)
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     delete "/notification_rules/#{notification_rule.id}"
     last_response.status.should == 204
@@ -686,7 +686,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not delete a notification rule that's not present" do
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
-      with(notification_rule.id, :redis => redis).and_return(nil)
+      with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     delete "/notification_rules/#{notification_rule.id}"
     last_response.should be_not_found
@@ -695,9 +695,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "does not delete a notification rule if the contact is not present" do
     notification_rule.should_receive(:contact_id).and_return(contact.id)
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
-      with(notification_rule.id, :redis => redis).and_return(notification_rule)
+      with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     delete "/notification_rules/#{notification_rule.id}"
     last_response.should be_not_found
@@ -708,7 +708,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     contact.should_receive(:media).and_return(media)
     contact.should_receive(:media_intervals).and_return(media_intervals)
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
     result = Hash[ *(media.keys.collect {|m|
       [m, {'address'  => media[m],
            'interval' => media_intervals[m] }]
@@ -721,7 +721,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not return the media of a contact if the contact is not present" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     get "/contacts/#{contact.id}/media"
     last_response.should be_not_found
@@ -732,7 +732,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     contact.should_receive(:media).twice.and_return(media)
     contact.should_receive(:media_intervals).and_return(media_intervals)
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     result = {'address' => media['sms'], 'interval' => media_intervals['sms']}
 
@@ -743,7 +743,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not return the media of a contact if the contact is not present" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     get "/contacts/#{contact.id}/media/sms"
     last_response.should be_not_found
@@ -752,7 +752,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "does not return the media of a contact if the media is not present" do
     contact.should_receive(:media).and_return(media)
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     get "/contacts/#{contact.id}/media/telepathy"
     last_response.should be_not_found
@@ -770,7 +770,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     contact.should_receive(:media).and_return(alt_media)
     contact.should_receive(:media_intervals).and_return(alt_media_intervals)
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     result = {'address' => alt_media['sms'], 'interval' => alt_media_intervals['sms']}
 
@@ -781,7 +781,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not create a media of a contact that's not present" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     put "/contacts/#{contact.id}/media/sms", {:address => '04987654321', :interval => '200'}
     last_response.should be_not_found
@@ -789,7 +789,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not create a media of a contact if no address is provided" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     put "/contacts/#{contact.id}/media/sms", {:interval => '200'}
     last_response.should be_forbidden
@@ -797,7 +797,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not create a media of a contact if no interval is provided" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     put "/contacts/#{contact.id}/media/sms", {:address => '04987654321'}
     last_response.should be_forbidden
@@ -806,7 +806,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "deletes a media of a contact" do
     contact.should_receive(:remove_media).with('sms')
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     delete "/contacts/#{contact.id}/media/sms"
     last_response.status.should == 204
@@ -814,7 +814,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not delete a media of a contact that's not present" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     delete "/contacts/#{contact.id}/media/sms"
     last_response.should be_not_found
@@ -824,7 +824,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "returns the timezone of a contact" do
     contact.should_receive(:timezone).and_return(::ActiveSupport::TimeZone.new('Australia/Sydney'))
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     get "/contacts/#{contact.id}/timezone"
     last_response.should be_ok
@@ -833,7 +833,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "doesn't get the timezone of a contact that doesn't exist" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     get "/contacts/#{contact.id}/timezone"
     last_response.should be_not_found
@@ -844,7 +844,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     contact.should_receive(:timezone=).with('Australia/Perth')
     contact.should_receive(:timezone).and_return(ActiveSupport::TimeZone.new('Australia/Perth'))
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     put "/contacts/#{contact.id}/timezone", {:timezone => 'Australia/Perth'}
     last_response.should be_ok
@@ -852,7 +852,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "doesn't set the timezone of a contact who can't be found" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     put "/contacts/#{contact.id}/timezone", {:timezone => 'Australia/Perth'}
     last_response.should be_not_found
@@ -862,7 +862,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "deletes the timezone of a contact" do
     contact.should_receive(:timezone=).with(nil)
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     delete "/contacts/#{contact.id}/timezone"
     last_response.status.should == 204
@@ -870,7 +870,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not delete the timezone of a contact that's not present" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     delete "/contacts/#{contact.id}/timezone"
     last_response.should be_not_found
@@ -974,7 +974,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     contact.should_receive(:add_tags).with('web')
     contact.should_receive(:tags).and_return(['web'])
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     post "contacts/#{contact.id}/tags", :tag => 'web'
     last_response.should be_ok
@@ -983,7 +983,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not set a single tag on a contact that's not found" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     post "contacts/#{contact.id}/tags", :tag => 'web'
     last_response.should be_not_found
@@ -993,7 +993,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     contact.should_receive(:add_tags).with('web', 'app')
     contact.should_receive(:tags).and_return(['web', 'app'])
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     post "contacts/#{contact.id}/tags", :tag => ['web', 'app']
     last_response.should be_ok
@@ -1002,7 +1002,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not set multiple tags on a contact that's not found" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     post "contacts/#{contact.id}/tags", :tag => ['web', 'app']
     last_response.should be_not_found
@@ -1011,7 +1011,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "removes a single tag from a contact" do
     contact.should_receive(:delete_tags).with('web')
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     delete "contacts/#{contact.id}/tags", :tag => 'web'
     last_response.status.should == 204
@@ -1019,7 +1019,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not remove a single tag from a contact that's not found" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     delete "contacts/#{contact.id}/tags", :tag => 'web'
     last_response.should be_not_found
@@ -1028,7 +1028,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "removes multiple tags from a contact" do
     contact.should_receive(:delete_tags).with('web', 'app')
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     delete "contacts/#{contact.id}/tags", :tag => ['web', 'app']
     last_response.status.should == 204
@@ -1036,7 +1036,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not remove multiple tags from a contact that's not found" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     delete "contacts/#{contact.id}/tags", :tag => ['web', 'app']
     last_response.should be_not_found
@@ -1045,7 +1045,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   it "gets all tags on a contact" do
     contact.should_receive(:tags).and_return(['web', 'app'])
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     get "contacts/#{contact.id}/tags"
     last_response.should be_ok
@@ -1054,7 +1054,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not get all tags on a contact that's not found" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     get "contacts/#{contact.id}/tags"
     last_response.should be_not_found
@@ -1071,7 +1071,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       and_return(tag_data)
 
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     get "contacts/#{contact.id}/entity_tags"
     last_response.should be_ok
@@ -1082,7 +1082,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not get all entity tags for a contact that's not found" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     get "contacts/#{contact.id}/entity_tags"
     last_response.should be_not_found
@@ -1103,7 +1103,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     contact.should_receive(:entities).with(:tags => true).and_return(tag_data)
 
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     post "contacts/#{contact.id}/entity_tags",
       :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
@@ -1115,7 +1115,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not add tags to multiple entities for a contact that's not found" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     post "contacts/#{contact.id}/entity_tags",
       :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
@@ -1134,7 +1134,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     contact.should_receive(:entities).and_return(entities)
 
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(contact)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     delete "contacts/#{contact.id}/entity_tags",
       :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
@@ -1143,7 +1143,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
   it "does not delete tags from multiple entities for a contact that's not found" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
-      with(contact.id, :redis => redis).and_return(nil)
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     delete "contacts/#{contact.id}/entity_tags",
       :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
