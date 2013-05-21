@@ -4,6 +4,9 @@
 # from which individual 'Message' objects are created, one for each
 # contact+media recipient.
 
+require 'flapjack/data/contact'
+require 'flapjack/data/notification'
+
 module Flapjack
   module Data
     class Message
@@ -17,9 +20,9 @@ module Flapjack
       def id
         return @id if @id
         t = Time.now
-        # FIXME: consider just using a UUID here
+        # FIXME: consider using a UUID here
         # this is planned to be used as part of alert history keys
-        @id = self.object_id.to_i.to_s + '-' + t.to_i.to_s + '.' + t.tv_usec.to_s
+        @id = "#{self.object_id.to_i}-#{t.to_i}.#{t.tv_usec}"
       end
 
       def contents
@@ -27,12 +30,12 @@ module Flapjack
              'address'            => address,
              'id'                 => id}
         if contact
-          c.merge('contact_id'         => contact.id,
-                  'contact_first_name' => contact.first_name,
-                  'contact_last_name'  => contact.last_name)
+          c.update('contact_id'         => contact.id,
+                   'contact_first_name' => contact.first_name,
+                   'contact_last_name'  => contact.last_name)
         end
         c['duration'] = duration if duration
-        c.merge(notification.contents) if notification
+        c.update(notification.contents) if notification
       end
 
     private
