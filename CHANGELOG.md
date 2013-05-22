@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 0.7.7 - UNRELEASED
+- Bug: relax notification rule validations somewhat gh-185 (@jessereynolds)
+- Chore: log notification rule validation errors from api gh-183 (@jessereynolds)
+
 # 0.7.6 - 2013-05-20
 - Bug: Problems with email notifications (no name, text part missing fields) gh-158 (@ali-graham)
 
