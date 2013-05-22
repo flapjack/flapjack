@@ -596,13 +596,13 @@ module Flapjack
 
       # following a callback-heavy pattern -- feels like nodejs :)
       def find_contact(contact_id, &block)
-        contact = Flapjack::Data::Contact.find_by_id(contact_id.to_s, {:redis => redis, :logger => logger})
+        contact = Flapjack::Data::Contact.find_by_id(contact_id.to_s, :redis => redis, :logger => logger)
         return(yield(contact)) if contact
         error(404, "could not find contact with id '#{contact_id}'")
       end
 
       def find_rule(rule_id, &block)
-        rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, {:redis => redis, :logger => logger})
+        rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :redis => redis, :logger => logger)
         return(yield(rule)) if rule
         error(404, "could not find notification rule with id '#{rule_id}'")
       end

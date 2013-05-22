@@ -43,7 +43,7 @@ module Flapjack
 
       def update(rule_data, opts = {})
         return false unless self.class.add_or_update({:contact_id => @contact_id}.merge(rule_data.merge(:id => @id)),
-          opts.merge(:redis => @redis))
+          :redis => @redis, :logger => opts[:logger])
         refresh
         true
       end
@@ -207,14 +207,12 @@ module Flapjack
                        "id not set",
 
                        proc { !d.has_key?(:entities) ||
-                              d.has_key?(:entities) &&
                               ( d[:entities].nil? ||
                                 d[:entities].is_a?(Array) &&
                                 d[:entities].all? {|e| e.is_a?(String)} ) } =>
                        "entities must be a list of strings",
 
                        proc { !d.has_key?(:entity_tags) ||
-                              d.has_key?(:entity_tags) &&
                               ( d[:entity_tags].nil? ||
                                 d[:entity_tags].is_a?(Array) &&
                                 d[:entity_tags].all? {|et| et.is_a?(String)} ) } =>
@@ -229,7 +227,6 @@ module Flapjack
                        "entities or entity tags must have at least one value",
 
                        proc { !d.has_key?(:time_restrictions) ||
-                              d.has_key?(:time_restrictions) &&
                               ( d[:time_restrictions].nil? ||
                                 d[:time_restrictions].all? {|tr|
                                   !!prepare_time_restriction(symbolize(tr))
@@ -239,26 +236,22 @@ module Flapjack
 
                        # TODO should the media types be checked against a whitelist?
                        proc { !d.has_key?(:warning_media) ||
-                              d.has_key?(:warning_media) &&
                               ( d[:warning_media].nil? ||
                                 d[:warning_media].is_a?(Array) &&
                                 d[:warning_media].all? {|et| et.is_a?(String)} ) } =>
                        "warning_media must be a list of strings",
 
                        proc { !d.has_key?(:critical_media) ||
-                              d.has_key?(:critical_media) &&
                               ( d[:critical_media].nil? ||
                                 d[:critical_media].is_a?(Array) &&
                                 d[:critical_media].all? {|et| et.is_a?(String)} ) } =>
                        "critical_media must be a list of strings",
 
                        proc { !d.has_key?(:warning_blackhole) ||
-                              d.has_key?(:warning_blackhole) &&
                               [TrueClass, FalseClass].include?(d[:warning_blackhole].class) } =>
                        "warning_blackhole must be true or false",
 
                        proc { !d.has_key?(:critical_blackhole) ||
-                              d.has_key?(:critical_blackhole) &&
                               [TrueClass, FalseClass].include?(d[:critical_blackhole].class) } =>
                        "critical_blackhole must be true or false",
                       }
