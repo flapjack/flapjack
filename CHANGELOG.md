@@ -1,6 +1,6 @@
 ## Flapjack Changelog
 
-# 0.7.7 - UNRELEASED
+# 0.7.7 - 2012-05-22
 - Bug: relax notification rule validations somewhat gh-185 (@jessereynolds)
 - Chore: log notification rule validation errors from api gh-183 (@jessereynolds)
 
