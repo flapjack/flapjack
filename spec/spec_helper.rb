@@ -23,8 +23,6 @@ $:.unshift(File.dirname(__FILE__) + '/../lib')
 # in ./support/ and its subdirectories.
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each {|f| require f}
 
-Thread.abort_on_exception = true
-
 class MockLogger
   attr_accessor :messages
 

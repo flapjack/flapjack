@@ -27,6 +27,11 @@ module Flapjack
 
     include Flapjack::Utility
 
+    def self.pikelet_settings
+      {:em_synchrony => true,
+       :em_stop      => true}
+    end
+
     def initialize(opts = {})
       @config = opts[:config]
       @redis_config = opts[:redis_config]

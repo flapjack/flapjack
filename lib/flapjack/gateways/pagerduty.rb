@@ -17,6 +17,11 @@ module Flapjack
       PAGERDUTY_EVENTS_API_URL   = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
       SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'
 
+      def self.pikelet_settings
+        {:em_synchrony => true,
+         :em_stop      => true}
+      end
+
       def initialize(opts = {})
         @config = opts[:config]
         @logger = opts[:logger]

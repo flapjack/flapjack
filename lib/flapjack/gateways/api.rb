@@ -66,6 +66,12 @@ module Flapjack
       use Rack::JsonParamsParser
 
       class << self
+
+        def pikelet_settings
+          {:em_synchrony => false,
+           :em_stop      => false}
+        end
+
         def start
           @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
 

@@ -19,6 +19,11 @@ module Flapjack
       log.level = Logger::INFO
       Blather.logger = log
 
+      def self.pikelet_settings
+        {:em_synchrony => true,
+         :em_stop      => true}
+      end
+
       def initialize(opts = {})
         @config = opts[:config]
         @logger = opts[:logger]

@@ -149,9 +149,9 @@ module Flapjack
     # returns unstarted pikelet instances.
     def create_pikelets(pikelets_data = {})
       pikelets_data.inject([]) do |memo, (type, cfg)|
-        pikelet = Flapjack::Pikelet.create(type, :config => cfg,
-                                           :redis_config => @redis_opts)
-        memo << pikelet if pikelet
+        pikelets = Flapjack::Pikelet.create(type, :config => cfg,
+                                            :redis_config => @redis_opts)
+        memo += pikelets
         memo
       end
     end
