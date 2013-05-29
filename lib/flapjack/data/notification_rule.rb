@@ -218,13 +218,13 @@ module Flapjack
                                 d[:entity_tags].all? {|et| et.is_a?(String)} ) } =>
                        "entity_tags must be a list of strings",
 
-                       proc { (d.has_key?(:entities) &&
-                               d[:entities].is_a?(Array) &&
-                               (d[:entities].size > 0)) ||
-                              (d.has_key?(:entity_tags) &&
-                               d[:entity_tags].is_a?(Array) &&
-                               (d[:entity_tags].size > 0)) } =>
-                       "entities or entity tags must have at least one value",
+                       #proc { (d.has_key?(:entities) &&
+                       #        d[:entities].is_a?(Array) &&
+                       #        (d[:entities].size > 0)) ||
+                       #       (d.has_key?(:entity_tags) &&
+                       #        d[:entity_tags].is_a?(Array) &&
+                       #        (d[:entity_tags].size > 0)) } =>
+                       #"entities or entity tags must have at least one value",
 
                        proc { !d.has_key?(:time_restrictions) ||
                               ( d[:time_restrictions].nil? ||
