@@ -180,6 +180,7 @@ module Flapjack
         @check_last_update          = entity_check.last_update
         @check_last_change          = last_change
         @check_summary              = entity_check.summary
+        @check_details              = entity_check.details
         @last_notifications         = entity_check.last_notifications_of_each_type
         @scheduled_maintenances     = entity_check.maintenances(nil, nil, :scheduled => true)
         @acknowledgement_id         = entity_check.failed? ?

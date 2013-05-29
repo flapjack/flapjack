@@ -45,12 +45,14 @@ describe Flapjack::Data::Notification, :redis => true do
     event.should_receive(:id).and_return('example.com:ping')
     event.should_receive(:state).and_return('ok')
     event.should_receive(:summary).and_return('Shiny & happy')
+    event.should_receive(:details).and_return('Really Shiny & happy')
     event.should_receive(:time).and_return(t)
     event.should_receive(:duration).and_return(nil)
 
     notification.contents.should == {'event_id'              => 'example.com:ping',
                                      'state'                 => 'ok',
                                      'summary'               => 'Shiny & happy',
+                                     'details'               => 'Really Shiny & happy',
                                      'time'                  => t,
                                      'duration'              => nil,
                                      'notification_type'     => 'problem',

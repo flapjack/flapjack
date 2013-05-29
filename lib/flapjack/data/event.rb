@@ -126,6 +126,10 @@ module Flapjack
         @attrs['summary']
       end
 
+      def details
+        @attrs['details']
+      end
+
       def time
         return unless @attrs['time']
         @attrs['time'].to_i
