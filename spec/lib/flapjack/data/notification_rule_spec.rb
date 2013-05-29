@@ -95,8 +95,7 @@ describe Flapjack::Data::NotificationRule, :redis => true do
   context 'validation' do
 
     it "fails to add a notification rule with invalid data" do
-      rule_data[:entities] = []
-      rule_data[:entity_tags] = []
+      rule_data[:entities] = [1, {}]
       rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
       rule.should be_nil
     end

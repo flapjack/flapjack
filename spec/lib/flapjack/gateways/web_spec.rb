@@ -122,6 +122,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     entity_check.should_receive(:last_update).and_return(time - (3 * 60 * 60))
     entity_check.should_receive(:last_change).and_return(time - (3 * 60 * 60))
     entity_check.should_receive(:summary).and_return('all good')
+    entity_check.should_receive(:details).and_return('seriously, all very wonderful')
     entity_check.should_receive(:last_notifications_of_each_type).and_return(last_notifications)
     entity_check.should_receive(:maintenances).with(nil, nil, :scheduled => true).and_return([])
     entity_check.should_receive(:failed?).and_return(false)

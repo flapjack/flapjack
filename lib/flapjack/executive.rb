@@ -208,7 +208,7 @@ module Flapjack
         if event.state != event.previous_state
           entity_check.update_state(event.state, :timestamp => timestamp,
             :summary => event.summary, :client => event.client,
-            :count => @event_count)
+            :count => @event_count, :details => event.details)
         end
 
         # No state change, and event is ok, so no need to run through filters
@@ -314,16 +314,23 @@ module Flapjack
       # don't consider notification rules if the contact has none
 
       tuple = messages.map do |message|
-        @logger.debug "considering message for contact: #{message.contact.id} #{message.medium} #{message.notification.event.id} #{message.notification.event.state}"
         rules    = message.contact.notification_rules
-        @logger.debug "found #{rules.length} rules for this message's contact"
         event_id = message.notification.event.id
+
+        @logger.debug "considering message for contact: #{message.contact.id} #{message.medium} #{event_id} #{message.notification.event.state}"
+        @logger.debug "found #{rules.length} rules for this message's contact"
+
         options  = {}
         options[:no_rules_for_contact] = true if rules.empty?
+
         # filter based on entity, tags, severity, time of day
         matchers = rules.find_all do |rule|
           rule.match_entity?(event_id) && rule_occurring_now?(rule, :contact => message.contact)
         end
+        @logger.debug "#{matchers.length} matchers remain for this message:"
+        matchers.each {|matcher|
+          @logger.debug "matcher: #{matcher.to_json}"
+        }
         [message, matchers, options]
       end
 
@@ -332,18 +339,25 @@ module Flapjack
 
       @logger.debug "apply_notification_rules: num messages after entity and time matching: #{tuple.size}"
 
-      # delete the matcher for all entities if there are more specific matchers
+      # delete any matchers for all entities if there are more specific matchers
       tuple = tuple.map do |message, matchers, options|
+        num_matchers = matchers.length
         if matchers.length > 1
+          @logger.debug("general removal when entity specific: #{matchers.length} matchers")
           have_specific = matchers.detect do |matcher|
-            matcher.entities or matcher.entity_tags
+            ( matcher.entities && !matcher.entities.empty? ) or
+              ( matcher.entity_tags && !matcher.entity_tags.empty? )
           end
           if have_specific
-            # delete the rule for all entities
+            # delete any rules for all entities
             matchers.reject! do |matcher|
-              matcher.entities.nil? && matcher.entity_tags.nil?
+              ( matcher.entities.nil? || matcher.entities.empty? ) &&
+                ( matcher.entity_tags.nil? || matcher.entity_tags.empty? )
             end
           end
+        end
+        if num_matchers != matchers.length
+          @logger.debug("apply_notification_rules: removal of general matchers when entity specific matchers are present: number of matchers changed from #{num_matchers} to #{matchers.length} for message id: #{message.contact.id}, medium: #{message.medium}")
         end
         [message, matchers, options]
       end
@@ -361,6 +375,7 @@ module Flapjack
         state = message.notification.event.state
         max_notified_severity = message.notification.max_notified_severity
 
+        @logger.debug "apply_notification_rules severity-media constraints: considering message: #{message.contact.id} #{message.medium} #{state}"
         # use EntityCheck#max_notified_severity_of_current_failure
         # as calculated prior to updating the last_notification* keys
         # if it's a higher severity than the current state
@@ -371,10 +386,13 @@ module Flapjack
         when [state, max_notified_severity].include?('warning')
           severity = 'warning'
         end
-        options[:no_rules_for_contact] ||
-          matchers.any? {|matcher|
+
+        no_rules_for_contact = !!options[:no_rules_for_contact]
+        sev_media_matchers = matchers.any? {|matcher|
             (matcher.media_for_severity(severity) || []).include?(message.medium)
           }
+        @logger.debug "apply_notification_rules severity-media constraints: no_rules_for_contact: #{no_rules_for_contact}, sev_media_matchers: #{sev_media_matchers}"
+        no_rules_for_contact || sev_media_matchers
       end
 
       @logger.debug "apply_notification_rules: num messages after pruning for severity-media constraints: #{tuple.size}"
