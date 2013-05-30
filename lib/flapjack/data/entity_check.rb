@@ -94,6 +94,7 @@ module Flapjack
         event = { 'type'               => 'action',
                   'state'              => 'test_notifications',
                   'summary'            => options['summary'],
+                  'details'            => options['details'],
                   'entity'             => entity.name,
                   'check'              => check
                 }
@@ -221,6 +222,7 @@ module Flapjack
         timestamp = options[:timestamp] || Time.now.to_i
         client = options[:client]
         summary = options[:summary]
+        details = options[:details]
         count = options[:count]
 
         # Note the current state (for speedy lookups)
@@ -233,6 +235,7 @@ module Flapjack
         @redis.rpush("#{@key}:states", timestamp)
         @redis.set("#{@key}:#{timestamp}:state",   state)
         @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
+        @redis.set("#{@key}:#{timestamp}:details", details) if details
         @redis.set("#{@key}:#{timestamp}:count", count) if count
 
         @redis.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
@@ -349,6 +352,11 @@ module Flapjack
         @redis.get("#{@key}:#{timestamp}:summary")
       end
 
+      def details
+        timestamp = @redis.lindex("#{@key}:states", -1)
+        @redis.get("#{@key}:#{timestamp}:details")
+      end
+
       # Returns a list of states for this entity check, sorted by timestamp.
       #
       # start_time and end_time should be passed as integer timestamps; these timestamps
@@ -368,7 +376,8 @@ module Flapjack
           state_data = state_ts.collect {|ts|
             {:timestamp => ts.to_i,
              :state     => r.get("#{@key}:#{ts}:state"),
-             :summary   => r.get("#{@key}:#{ts}:summary")}
+             :summary   => r.get("#{@key}:#{ts}:summary"),
+             :details   => r.get("#{@key}:#{ts}:details")}
           }
         end
 
@@ -392,7 +401,8 @@ module Flapjack
         return if ts.nil? || ts.empty?
         {:timestamp => ts.first.to_i,
          :state     => @redis.get("#{@key}:#{ts.first}:state"),
-         :summary   => @redis.get("#{@key}:#{ts.first}:summary")}
+         :summary   => @redis.get("#{@key}:#{ts.first}:summary"),
+         :details   => @redis.get("#{@key}:#{ts.first}:details")}
       end
 
       # Returns a list of maintenance periods (either unscheduled or scheduled) for this

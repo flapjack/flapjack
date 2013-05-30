@@ -39,6 +39,7 @@ module Flapjack
         @contents ||= {'event_id'              => event.id,
                        'state'                 => event.state,
                        'summary'               => event.summary,
+                       'details'               => event.details,
                        'time'                  => event.time,
                        'duration'              => event.duration || nil,
                        'notification_type'     => type,
