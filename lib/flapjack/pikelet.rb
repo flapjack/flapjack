@@ -8,6 +8,8 @@
 # with butter, at afternoon tea, but can also be served at morning tea."
 #    from http://en.wikipedia.org/wiki/Pancake
 
+require 'monitor'
+
 require 'eventmachine'
 require 'em-synchrony'
 
@@ -18,9 +20,6 @@ require 'redis/connection/synchrony'
 require 'redis'
 require 'em-resque'
 require 'em-resque/worker'
-
-require 'monitor'
-
 require 'thin'
 
 require 'flapjack/executive'
@@ -32,7 +31,6 @@ require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/web'
 require 'flapjack/logger'
-require 'thin/version'
 
 module Flapjack
 
@@ -42,10 +40,11 @@ module Flapjack
 
       include MonitorMixin
 
+      attr_reader :error
+
       def initialize(pikelet_class, options = {})
         @pikelet_class = pikelet_class
-        @settings      = pikelet_class.respond_to?(:pikelet_settings) ?
-                           pikelet_class.pikelet_settings : {}
+        @settings      = pikelet_class.pikelet_settings
 
         @config        = options[:config]
         @redis_config  = options[:redis_config]
@@ -55,20 +54,20 @@ module Flapjack
       end
 
       def start(&block)
-        @condition     = new_cond
+        @condition = new_cond
 
         @thread = Thread.new do
           Thread.current.abort_on_exception = true
 
           synchronize do
+            EM.error_handler do |err|
+              @logger.warn err.message
+              trace = err.backtrace
+              @logger.warn trace.join("\n") if trace
+              @error = err
+              EM.stop_event_loop
+            end
             action = proc {
-              EM.error_handler do |err|
-                @logger.warn err.message
-                trace = err.backtrace
-                @logger.warn trace.join("\n") if trace
-                @error = err
-                EM.stop_event_loop
-              end
               begin
                 yield
               rescue Exception => e
@@ -80,18 +79,27 @@ module Flapjack
               EM.stop_event_loop if !!@settings[:em_stop]
             }
 
-            EM.send(!!@settings[:em_synchrony] ? :synchrony : :run, &action)
+            # TODO rename this, it's only relevant in the error case
+            max_runs = @config['max_runs'] || 1
+            runs = 0
+
+            loop do
+              @error = nil
+              EM.send(!!@settings[:em_synchrony] ? :synchrony : :run, &action)
+              runs += 1
+              break unless @error && (max_runs > 0) && (runs < max_runs)
+            end
+
             @finished = true
             @condition.signal
           end
-          # TODO propagate higher-level shutdown instead -- or restart
-          # pikelet -- might depend on the exception type?
-          Kernel.raise @error if @error
         end
       end
 
-      # def reload(cfg)
-      # end
+      def reload(cfg, &block)
+        @logger.configure(cfg['logger'])
+        yield
+      end
 
       def stop(&block)
         return if @thread.nil?
@@ -116,15 +124,12 @@ module Flapjack
         end
       end
 
-      # # this should only reload if all changes can be applied -- will
-      # # return false to log warning otherwise
-      # def reload(cfg)
-      #   super(cfg) do
-      #     # TODO what if start didn't work?
-      #     @pikelet.respond_to?(:reload) ?
-      #       (@pikelet.reload(cfg) && super(cfg)) : super(cfg)
-      #   end
-      # end
+      # this should only reload if all changes can be applied -- will
+      # return false to log warning otherwise
+      def reload(cfg)
+        return false unless @pikelet.respond_to?(:reload)
+        super(cfg) { @pikelet.reload(cfg) }
+      end
 
       def stop
         super { @pikelet.stop }
@@ -157,15 +162,13 @@ module Flapjack
         end
       end
 
-      # # this should only reload if all changes can be applied -- will
-      # # return false to log warning otherwise
-      # def reload(cfg)
-      #   super do
-      #     # TODO fail if port changes
-      #     @pikelet_class.respond_to?(:reload) ?
-      #       (@pikelet_class.reload(cfg) && super(cfg)) : super(cfg)
-      #   end
-      # end
+      # this should only reload if all changes can be applied -- will
+      # return false to log warning otherwise
+      def reload(cfg)
+         # TODO fail if port changes
+        return false unless @pikelet_class.respond_to?(:reload)
+        super(cfg) { @pikelet_class.reload(cfg) }
+      end
 
       def stop
         super do
@@ -185,13 +188,12 @@ module Flapjack
         @pikelet_class.instance_variable_set('@logger', @logger)
 
         super do
-          @pikelet_class.start if @pikelet_class.respond_to?(:start)
-
-          # TODO move to class
-          unless defined?(@@resque_pool) && !@@resque_pool.nil?
-            @@resque_pool = Flapjack::RedisPool.new(:config => @redis_config)
-            ::Resque.redis = @@resque_pool
+          if self.class.instance_variable_get('@resque_redis').nil?
+            self.class.instance_variable_set('@resque_redis', Flapjack::RedisPool.new(:config => @redis_config))
+            ::Resque.redis = self.class.instance_variable_get('@resque_redis')
           end
+
+          @pikelet_class.start if @pikelet_class.respond_to?(:start)
 
           @worker = EM::Resque::Worker.new(@config['queue'])
           # # Use these to debug the resque workers
@@ -203,15 +205,12 @@ module Flapjack
         end
       end
 
-      # # this should only reload if all changes can be applied -- will
-      # # return false to log warning otherwise
-      # def reload(cfg)
-      #   super do
-      #     # TODO fail if port changes
-      #     @pikelet_class.respond_to?(:reload) ?
-      #       (@pikelet_class.reload(cfg) && super(cfg)) : super(cfg)
-      #   end
-      # end
+      # this should only reload if all changes can be applied -- will
+      # return false to log warning otherwise
+      def reload(cfg)
+        return false unless @pikelet_class.respond_to?(:reload)
+        super(cfg) { @pikelet_class.reload(cfg) }
+      end
 
       def stop
         super do

@@ -36,45 +36,28 @@ module Flapjack
       pikelet_defs = pikelet_definitions(@config.all)
       return if pikelet_defs.empty?
 
-      error = false
-
-      begin
-        create_pikelets(pikelet_defs).each do |pik|
-          @pikelets << pik
-          pik.start
-        end
-      rescue Exception => e
-        @logger.fatal "Caught exception from started pikelet"
-        @logger.fatal e.message
-        @logger.fatal e.backtrace.join("\n")
-        error = true
+      create_pikelets(pikelet_defs).each do |pik|
+        @pikelets << pik
+        pik.start
       end
 
-      if error
-        stop(:error => true)
-      else
-        setup_signals if opts[:signals]
+      setup_signals if opts[:signals]
 
-        # block this thread until 'stop' has been called, and
-        # all pikelets have been stopped
-        @monitor.synchronize {
-          @running_cond.wait
-        }
-      end
+      # block this thread until 'stop' has been called, and
+      # all pikelets have been stopped
+      @monitor.synchronize { @running_cond.wait }
     end
 
-    def stop(opts = {})
+    def stop
       return if @stopping
       @stopping = true
-      # new thread in signal handler is required to avoid deadlock errors
-      Thread.new {
+      # a new thread is required to avoid deadlock errors; signal
+      # handler runs by jumping into main thread
+      Thread.new do
         @pikelets.map(&:stop)
         @pikelets.clear
-        return if opts[:error]
-        @monitor.synchronize {
-          @running_cond.signal
-        }
-      }
+        @monitor.synchronize { @running_cond.signal }
+      end
     end
 
     # NB: global config options (e.g. daemonize, pidfile,
@@ -118,16 +101,9 @@ module Flapjack
 
       added_defs = current_pikelet_cfg.select {|k, v| added.include?(k) }
 
-      begin
-        create_pikelets(added_defs).each do |pik|
-          @pikelets << pik
-          pik.start
-        end
-      rescue Exception => e
-        @logger.fatal "Caught exception from restarted pikelet"
-        @logger.fatal e.message
-        @logger.fatal e.backtrace.join("\n")
-        stop
+      create_pikelets(added_defs).each do |pik|
+        @pikelets << pik
+        pik.start
       end
     end
 
