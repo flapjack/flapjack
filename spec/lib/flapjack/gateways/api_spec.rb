@@ -91,6 +91,8 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     now = Time.now.to_i
 
     entity_check.should_receive(:state).and_return('OK')
+    entity_check.should_receive(:summary).and_return('not bad')
+    entity_check.should_receive(:details).and_return(nil)
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:last_update).and_return(now - 30)
@@ -104,6 +106,8 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     last_response.should be_ok
     last_response.body.should == [{'name' => check,
                                    'state' => 'OK',
+                                   'summary' => 'not bad',
+                                   'details' => nil,
                                    'in_unscheduled_maintenance' => false,
                                    'in_scheduled_maintenance' => false,
                                    'last_update' => (now - 30),
@@ -129,6 +133,8 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     now = Time.now.to_i
 
     entity_check.should_receive(:state).and_return('OK')
+    entity_check.should_receive(:summary).and_return('not bad')
+    entity_check.should_receive(:details).and_return(nil)
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:last_update).and_return(now - 30)
@@ -142,6 +148,8 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     last_response.should be_ok
     last_response.body.should == {'name' => nw_check,
                                   'state' => 'OK',
+                                  'summary' => 'not bad',
+                                  'details' => nil,
                                   'in_unscheduled_maintenance' => false,
                                   'in_scheduled_maintenance' => false,
                                   'last_update' => (now - 30),
