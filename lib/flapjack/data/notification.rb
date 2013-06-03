@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'flapjack/data/contact'
+require 'flapjack/data/event'
 require 'flapjack/data/message'
 
 module Flapjack
@@ -19,15 +21,14 @@ module Flapjack
         return [] if contacts.nil?
         @messages ||= contacts.collect {|contact|
 
-           # TODO don't include messages here if the contact doesn't have
-           # the medium enabled or has blackholed at this level -- this
-           # will simplify the executive logic
+          # TODO move the message filtering logic from executive into this
+          # class and apply here, don't generate message if it won't be sent
 
-          contact.media.keys.inject([]) { |ret, mk|
+          contact.media.each_pair.inject([]) { |ret, (k, v)|
             m = Flapjack::Data::Message.for_contact(:contact => contact)
             m.notification = self
-            m.medium  = mk
-            m.address = contact.media[mk]
+            m.medium  = k
+            m.address = v
             ret << m
             ret
           }
@@ -38,6 +39,7 @@ module Flapjack
         @contents ||= {'event_id'              => event.id,
                        'state'                 => event.state,
                        'summary'               => event.summary,
+                       'details'               => event.details,
                        'time'                  => event.time,
                        'duration'              => event.duration || nil,
                        'notification_type'     => type,

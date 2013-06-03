@@ -344,13 +344,16 @@ module Flapjack
           halt err(403, "post cannot be used for update, do a put instead")
         end
 
+        logger.debug("post /notification_rules data: ")
+        logger.debug(params.inspect)
+
         contact = find_contact(params[:contact_id])
 
         rule_data = hashify(:entities, :entity_tags,
           :warning_media, :critical_media, :time_restrictions,
           :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
 
-        unless rule = contact.add_notification_rule(rule_data)
+        unless rule = contact.add_notification_rule(rule_data, :logger => logger)
           halt err(403, "invalid notification rule data")
         end
         rule.to_json
@@ -361,6 +364,9 @@ module Flapjack
       put('/notification_rules/:id') do
         content_type :json
 
+        logger.debug("put /notification_rules/#{params[:id]} data: ")
+        logger.debug(params.inspect)
+
         rule = find_rule(params[:id])
         contact = find_contact(rule.contact_id)
 
@@ -368,7 +374,7 @@ module Flapjack
           :warning_media, :critical_media, :time_restrictions,
           :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
 
-        unless rule.update(rule_data)
+        unless rule.update(rule_data, :logger => logger)
           halt err(403, "invalid notification rule data")
         end
         rule.to_json
@@ -377,7 +383,9 @@ module Flapjack
       # Deletes a notification rule
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
       delete('/notification_rules/:id') do
+        logger.debug("delete /notification_rules/#{params[:id]}")
         rule = find_rule(params[:id])
+        logger.debug("rule to delete: #{rule.inspect}, contact_id: #{rule.contact_id}")
         contact = find_contact(rule.contact_id)
         contact.delete_notification_rule(rule)
         status 204
@@ -553,6 +561,7 @@ module Flapjack
       end
 
       not_found do
+        logger.debug("in not_found :-(")
         err(404, "not routable")
       end
 
@@ -585,13 +594,13 @@ module Flapjack
       end
 
       def find_contact(contact_id)
-        contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => redis)
+        contact = Flapjack::Data::Contact.find_by_id(contact_id, :logger => logger, :redis => redis)
         raise Flapjack::Gateways::API::ContactNotFound.new(contact_id) if contact.nil?
         contact
       end
 
       def find_rule(rule_id)
-        rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :redis => redis)
+        rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :logger => logger, :redis => redis)
         raise Flapjack::Gateways::API::NotificationRuleNotFound.new(rule_id) if rule.nil?
         rule
       end

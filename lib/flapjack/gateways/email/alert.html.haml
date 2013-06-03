@@ -33,6 +33,11 @@
       %td
         %strong Summary
       %td= @summary
+    - if @details
+      %tr
+        %td
+          %strong Details
+        %td= @details
     %tr
       %td
         %strong Time
