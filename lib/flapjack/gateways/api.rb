@@ -584,14 +584,16 @@ module Flapjack
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
           check, :redis => redis)
         return if entity_check.nil?
-        {'name'                                => check,
-         'state'                               => entity_check.state,
-         'in_unscheduled_maintenance'          => entity_check.in_unscheduled_maintenance?,
-         'in_scheduled_maintenance'            => entity_check.in_scheduled_maintenance?,
-         'last_update'                         => entity_check.last_update,
-         'last_problem_notification'           => entity_check.last_problem_notification,
-         'last_recovery_notification'          => entity_check.last_recovery_notification,
-         'last_acknowledgement_notification'   => entity_check.last_acknowledgement_notification}
+        {'name'                               => check,
+         'state'                              => entity_check.state,
+         'summary'                            => entity_check.summary,
+         'details'                            => entity_check.details,
+         'in_unscheduled_maintenance'         => entity_check.in_unscheduled_maintenance?,
+         'in_scheduled_maintenance'           => entity_check.in_scheduled_maintenance?,
+         'last_update'                        => entity_check.last_update,
+         'last_problem_notification'          => entity_check.last_problem_notification,
+         'last_recovery_notification'         => entity_check.last_recovery_notification,
+         'last_acknowledgement_notification'  => entity_check.last_acknowledgement_notification}
       end
 
       # following a callback-heavy pattern -- feels like nodejs :)
