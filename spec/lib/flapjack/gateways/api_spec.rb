@@ -91,39 +91,11 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
       with(entity, :redis => redis).and_return(entity_presenter)
 
-# <<<<<<< HEAD
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
     get "/status", :entity => entity_name
     last_response.body.should == result.to_json
-# =======
-#     entity_check.should_receive(:state).and_return('OK')
-#     entity_check.should_receive(:summary).and_return('not bad')
-#     entity_check.should_receive(:details).and_return(nil)
-#     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
-#     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
-#     entity_check.should_receive(:last_update).and_return(now - 30)
-#     entity_check.should_receive(:last_problem_notification).and_return(now - 60)
-#     entity_check.should_receive(:last_recovery_notification).and_return(now - 30)
-#     entity_check.should_receive(:last_acknowledgement_notification).and_return(now - 45)
-#     Flapjack::Data::EntityCheck.should_receive(:for_entity).
-#       with(entity, check, :redis => redis).and_return(entity_check)
-
-#     get "/status/#{entity_name_esc}"
-#     last_response.should be_ok
-#     last_response.body.should == [{'name' => check,
-#                                    'state' => 'OK',
-#                                    'summary' => 'not bad',
-#                                    'details' => nil,
-#                                    'in_unscheduled_maintenance' => false,
-#                                    'in_scheduled_maintenance' => false,
-#                                    'last_update' => (now - 30),
-#                                    'last_problem_notification' => (now - 60),
-#                                    'last_recovery_notification' => (now - 30),
-#                                    'last_acknowledgement_notification' => (now - 45)
-#                                   }].to_json
-# >>>>>>> 8bce67d98b8a69482596629148ac73c058f60bd6
   end
 
   it "should not show the status for an entity that's not found" do
@@ -142,18 +114,6 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check, :redis => redis).and_return(entity_check_presenter)
 
-# <<<<<<< HEAD
-# =======
-#     entity_check.should_receive(:state).and_return('OK')
-#     entity_check.should_receive(:summary).and_return('not bad')
-#     entity_check.should_receive(:details).and_return(nil)
-#     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
-#     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
-#     entity_check.should_receive(:last_update).and_return(now - 30)
-#     entity_check.should_receive(:last_problem_notification).and_return(now - 60)
-#     entity_check.should_receive(:last_recovery_notification).and_return(now - 30)
-#     entity_check.should_receive(:last_acknowledgement_notification).and_return(now - 45)
-# >>>>>>> 8bce67d98b8a69482596629148ac73c058f60bd6
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
 
@@ -162,21 +122,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
     get "/status", :entity => {entity_name => check}
     last_response.should be_ok
-# <<<<<<< HEAD
     last_response.body.should == result.to_json
-# =======
-#     last_response.body.should == {'name' => nw_check,
-#                                   'state' => 'OK',
-#                                   'summary' => 'not bad',
-#                                   'details' => nil,
-#                                   'in_unscheduled_maintenance' => false,
-#                                   'in_scheduled_maintenance' => false,
-#                                   'last_update' => (now - 30),
-#                                   'last_problem_notification' => (now - 60),
-#                                   'last_recovery_notification' => (now - 30),
-#                                   'last_acknowledgement_notification' => (now - 45)
-#                                  }.to_json
-# >>>>>>> 8bce67d98b8a69482596629148ac73c058f60bd6
   end
 
   it "should not show the status for a check on an entity that's not found" do
