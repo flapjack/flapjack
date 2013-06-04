@@ -1,5 +1,15 @@
 ## Flapjack Changelog
 
+# 0.7.8 - 2013-05-30
+- Feature: support multiline check output (thanks @bs-github) gh-100 (@jessereynolds)
+- Bug: notification rule with no entities or entity tags not being allowed gh-193 (@jessereynolds)
+- Bug: correct jabber alias in example acknowledgement strings gh-189 (@jessereynolds)
+- Bug: entity lists in Web UI should be sorted alphabetically gh-195 (@jessereynolds)
+
+# 0.7.7 - 2013-05-22
+- Bug: relax notification rule validations somewhat gh-185 (@jessereynolds)
+- Chore: log notification rule validation errors from api gh-183 (@jessereynolds)
+
 # 0.7.6 - 2013-05-20
 - Bug: Problems with email notifications (no name, text part missing fields) gh-158 (@ali-graham)
 

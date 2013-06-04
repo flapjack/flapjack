@@ -259,7 +259,7 @@ module Flapjack
           action       = nil
           entity_check = nil
           case
-          when command =~ /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i
+          when command =~ /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i;
             ackid        = $1
             comment      = $2
             duration_str = $3
@@ -268,7 +268,7 @@ module Flapjack
             dur   = nil
 
             if comment.nil? || (comment.length == 0)
-              error = "please provide a comment, eg \"flapjack: ACKID #{$1} AL looking\""
+              error = "please provide a comment, eg \"#{@config['alias']}: ACKID #{$1} AL looking\""
             elsif duration_str
               # a fairly liberal match above, we'll let chronic_duration do the heavy lifting
               dur = ChronicDuration.parse(duration_str)

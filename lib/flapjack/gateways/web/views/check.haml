@@ -34,6 +34,7 @@
         - if @current_scheduled_maintenance
           %h4 (Scheduled Maintenance - #{@current_scheduled_maintenance[:summary]})
         %h3 Output: #{@check_summary}
+        %p #{@check_details}
         %table{:class => "table table-hover table-condensed"}
           %tr
             %td Last state change:

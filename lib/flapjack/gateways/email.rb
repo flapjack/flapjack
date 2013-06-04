@@ -37,6 +37,7 @@ module Flapjack
           @contact_last_name          = notification['contact_last_name']
           @state                      = notification['state']
           @summary                    = notification['summary']
+          @details                    = notification['details']
           @time                       = notification['time']
           @entity_name, @check        = notification['event_id'].split(':')
 

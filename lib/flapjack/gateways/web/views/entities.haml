@@ -15,7 +15,7 @@
         %p #{@count_failing_entities} failing out of #{@count_all_entities}
         %table{:class => "table table-bordered table-hover table-condensed"}
           - if @entities.length > 0
-            - @entities.each do |entity|
+            - @entities.sort.each do |entity|
               %tr
                 %td
                   - link = "/entity/#{CGI.escape(entity)}"
