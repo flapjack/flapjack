@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.7.9 - 2013-06-04
+- Feature: Include summary and details in the /status API call gh-179 (@ali-graham)
+
 # 0.7.8 - 2013-05-30
 - Feature: support multiline check output (thanks @bs-github) gh-100 (@jessereynolds)
 - Bug: notification rule with no entities or entity tags not being allowed gh-193 (@jessereynolds)
