@@ -260,7 +260,50 @@ describe Flapjack::Pikelet do
     pikelet.start
   end
 
-  it "creates and starts a thin server gateway"
+  it "creates and starts a thin server gateway" do
+    Flapjack::Logger.should_receive(:new).and_return(logger)
+
+    config.should_receive(:[]).with('logger').and_return(nil)
+    config.should_receive(:[]).with('max_runs').and_return(nil)
+    config.should_receive(:[]).with('port').and_return(7654)
+    config.should_receive(:[]).with('timeout').and_return(90)
+
+    server = mock('server')
+    server.should_receive(:timeout=).with(90)
+    server.should_receive(:start)
+    Thin::Server.should_receive(:new).
+      with(/^(?:\d{1,3}\.){3}\d{1,3}$/, 7654,
+        Flapjack::Gateways::Web, :signals => false).
+      and_return(server)
+
+    Flapjack::Gateways::Web.should_receive(:instance_variable_set).
+      with('@config', config)
+    Flapjack::Gateways::Web.should_receive(:instance_variable_set).
+      with('@redis_config', redis_config)
+    Flapjack::Gateways::Web.should_receive(:instance_variable_set).
+      with('@logger', logger)
+
+    Thread.should_receive(:new).and_yield
+    thread.should_receive(:abort_on_exception=).with(true)
+    Thread.should_receive(:current).and_return(thread)
+
+    condition.should_receive(:signal)
+
+    EM.should_receive(:run).and_yield
+    EM.should_receive(:error_handler)
+
+    Flapjack::Gateways::Web.should_receive(:start)
+
+    pikelets = Flapjack::Pikelet.create('web', :config => config,
+      :redis_config => redis_config, :logger => logger)
+    pikelets.should_not be_nil
+    pikelets.should have(1).pikelet
+    pikelet = pikelets.first
+    pikelet.should be_a(Flapjack::Pikelet::HTTP)
+    pikelet.should_receive(:new_cond).and_return(condition)
+    pikelet.should_receive(:synchronize).and_yield
+    pikelet.start
+  end
 
   it "handles an exception from a thin server gateway" do
     exc = RuntimeError.new
