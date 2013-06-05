@@ -1,6 +1,6 @@
 ## Flapjack Changelog
 
-# 0.7.10 - UNRELEASED
+# 0.7.10 - 2013-06-05
 - Bug: unknown events not fully treated as problems - no notification delay blocking gh-154 (@jessereynolds)
 
 # 0.7.9 - 2013-06-04
