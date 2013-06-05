@@ -131,27 +131,24 @@ module Flapjack
               entity_id = $1
               check = $2
 
-              unless ret.has_key?(entity_id)
-                ret[entity_id] = {}
-                if entity_name = @redis.hget("entity:#{entity_id}", 'name')
-                  entity = Flapjack::Data::Entity.new(:name => entity_name,
-                             :id => entity_id, :redis => @redis)
-                  ret[entity_id][:entity] = entity
-                end
-                if options[:checks]
-                  # using a set to ensure unique check values
-                  ret[entity_id][:checks] = Set.new
-                end
+              entity = nil
+
+              if ret.has_key?(entity_id)
+                entity = ret[entity_id][:entity]
+              else
+                entity = Flapjack::Data::Entity.find_by_id(entity_id, :redis => @redis)
+                ret[entity_id] = {
+                  :entity => entity
+                }
+                # using a set to ensure unique check values
+                ret[entity_id][:checks] = Set.new if options[:checks]
+                ret[entity_id][:tags] = entity.tags if entity && options[:tags]
               end
 
               if options[:checks]
                 # if not registered for the check, then was registered for
                 # the entity, so add all checks
-                ret[entity_id][:checks] |= (check || entity.check_list)
-              end
-
-              if options[:tags]
-                ret[entity_id][:tags] = entity.tags
+                ret[entity_id][:checks] |= (check || (entity ? entity.check_list : []))
               end
             end
           end
