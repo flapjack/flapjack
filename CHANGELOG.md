@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.7.10 - UNRELEASED
+- Bug: unknown events not fully treated as problems - no notification delay blocking gh-154 (@jessereynolds)
+
 # 0.7.9 - 2013-06-04
 - Feature: Include summary and details in the /status API call gh-179 (@ali-graham)
 
