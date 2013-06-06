@@ -288,19 +288,20 @@ module Flapjack
       notification.messages.each do |message|
         media_type = message.medium
         contents   = message.contents
-        event_id   = message.notification.event.id
+        address    = message.address
+        event_id   = event.id
 
         @notifylog.info("#{Time.now.to_s} | #{event_id} | " +
-          "#{message.notification.type} | #{message.contact.id} | #{media_type} | #{message.address}")
+          "#{notification_type} | #{message.contact.id} | #{media_type} | #{address}")
 
         unless @queues[media_type.to_sym]
           @logger.error("no queue for media type: #{media_type}")
           return
         end
 
-        @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{message.address}")
+        @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{address}")
 
-        if message.notification.event.state == 'ok'
+        if event.ok?
           message.contact.update_sent_alert_keys(
             :media => media_type,
             :check => event_id,
@@ -315,7 +316,7 @@ module Flapjack
           message.contact.update_sent_alert_keys(
             :media => media_type,
             :check => event_id,
-            :state => message.notification.event.state)
+            :state => event.state)
         end
 
         # TODO consider changing Resque jobs to use raw blpop like the others

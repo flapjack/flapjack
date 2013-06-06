@@ -8,7 +8,7 @@ module Flapjack
   module Data
     class Notification
 
-      attr_accessor :event, :type, :max_notified_severity, :contacts,
+      attr_reader :event, :type, :max_notified_severity, :contacts,
         :default_timezone
 
       def self.for_event(event, opts = {})
@@ -33,6 +33,15 @@ module Flapjack
         else
           'ok'
         end
+
+        contents = {'event_id'              => event_id,
+                    'state'                 => event_state,
+                    'summary'               => event.summary,
+                    'details'               => event.details,
+                    'time'                  => event.time,
+                    'duration'              => event.duration || nil,
+                    'notification_type'     => type,
+                    'max_notified_severity' => max_notified_severity }
 
         @messages ||= contacts.collect {|contact|
           contact_id = contact.id
@@ -103,25 +112,13 @@ module Flapjack
           @logger.debug "notification: media_to_use: #{media_to_use}"
 
           media_to_use.each_pair.inject([]) { |ret, (k, v)|
-            m = Flapjack::Data::Message.for_contact(:contact => contact)
-            m.notification = self
-            m.medium  = k
-            m.address = v
+            m = Flapjack::Data::Message.for_contact(contact,
+              :notification_contents => contents,
+              :medium => k, :address => v)
             ret << m
             ret
           }
         }.compact.flatten
-      end
-
-      def contents
-        @contents ||= {'event_id'              => event.id,
-                       'state'                 => event.state,
-                       'summary'               => event.summary,
-                       'details'               => event.details,
-                       'time'                  => event.time,
-                       'duration'              => event.duration || nil,
-                       'notification_type'     => type,
-                       'max_notified_severity' => max_notified_severity }
       end
 
     private
