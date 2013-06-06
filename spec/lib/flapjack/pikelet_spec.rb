@@ -10,6 +10,7 @@ describe Flapjack::Pikelet do
 
   let(:condition)    { mock(MonitorMixin::ConditionVariable) }
   let(:thread)       { mock(Thread) }
+  let(:shutdown)     { mock(Proc) }
 
   it "creates and starts an executive pikelet" do
     Flapjack::Logger.should_receive(:new).and_return(logger)
@@ -30,9 +31,10 @@ describe Flapjack::Pikelet do
 
     EM.should_receive(:synchrony).and_yield
     EM.should_receive(:error_handler)
+    EM.should_receive(:reactor_running?).and_return(true)
     EM.should_receive(:stop_event_loop)
 
-    pikelets = Flapjack::Pikelet.create('executive', :config => config,
+    pikelets = Flapjack::Pikelet.create('executive', shutdown, :config => config,
       :redis_config => redis_config, :logger => logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
@@ -61,13 +63,14 @@ describe Flapjack::Pikelet do
     thread.should_receive(:abort_on_exception=).with(true)
     Thread.should_receive(:current).and_return(thread)
 
-    condition.should_receive(:signal)
+    shutdown.should_receive(:call)
 
     EM.should_receive(:synchrony).twice.and_yield
     EM.should_receive(:error_handler)
+    EM.should_receive(:reactor_running?).twice.and_return(true)
     EM.should_receive(:stop_event_loop).twice
 
-    pikelets = Flapjack::Pikelet.create('executive', :config => config,
+    pikelets = Flapjack::Pikelet.create('executive', shutdown, :config => config,
       :redis_config => redis_config, :logger => logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
@@ -91,10 +94,12 @@ describe Flapjack::Pikelet do
     thread.should_receive(:abort_on_exception=).with(true)
     Thread.should_receive(:current).and_return(thread)
 
-    condition.should_receive(:signal)
+    shutdown.should_receive(:call)
 
     EM.should_receive(:synchrony).and_yield
-    # really only once, but and_yield doesn't break control flow like the real code does
+    # really only once for the following two, but and_yield doesn't break
+    # control flow like the real code does
+    EM.should_receive(:reactor_running?).at_least(:once).and_return(true)
     EM.should_receive(:stop_event_loop).at_least(:once)
 
     executive = mock('executive')
@@ -104,7 +109,7 @@ describe Flapjack::Pikelet do
     Flapjack::Executive.should_receive(:new).with(:config => config,
       :redis_config => redis_config, :logger => logger).and_return(executive)
 
-    pikelets = Flapjack::Pikelet.create('executive', :config => config,
+    pikelets = Flapjack::Pikelet.create('executive', shutdown, :config => config,
       :redis_config => redis_config, :logger => logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
@@ -148,9 +153,10 @@ describe Flapjack::Pikelet do
 
     EM.should_receive(:synchrony).and_yield
     EM.should_receive(:error_handler)
+    EM.should_receive(:reactor_running?).and_return(true)
     EM.should_receive(:stop_event_loop)
 
-    pikelets = Flapjack::Pikelet.create('email', :config => config,
+    pikelets = Flapjack::Pikelet.create('email', shutdown, :config => config,
       :redis_config => redis_config, :logger => logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
@@ -193,13 +199,14 @@ describe Flapjack::Pikelet do
     thread.should_receive(:abort_on_exception=).with(true)
     Thread.should_receive(:current).and_return(thread)
 
-    condition.should_receive(:signal)
+    shutdown.should_receive(:call)
 
     EM.should_receive(:synchrony).and_yield
     EM.should_receive(:error_handler)
+    EM.should_receive(:reactor_running?).and_return(true)
     EM.should_receive(:stop_event_loop)
 
-    pikelets = Flapjack::Pikelet.create('email', :config => config,
+    pikelets = Flapjack::Pikelet.create('email', shutdown, :config => config,
       :redis_config => redis_config, :logger => logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
@@ -237,7 +244,7 @@ describe Flapjack::Pikelet do
     thread.should_receive(:abort_on_exception=).with(true)
     Thread.should_receive(:current).and_return(thread)
 
-    condition.should_receive(:signal)
+    shutdown.should_receive(:call)
 
     worker = mock('worker')
     worker.should_receive(:work).with(0.1).and_return {
@@ -247,9 +254,10 @@ describe Flapjack::Pikelet do
     EM::Resque::Worker.should_receive(:new).with('email_notif').and_return(worker)
 
     EM.should_receive(:synchrony).and_yield
+    EM.should_receive(:reactor_running?).at_least(:once).and_return(true)
     EM.should_receive(:stop_event_loop).at_least(:once)
 
-    pikelets = Flapjack::Pikelet.create('email', :config => config,
+    pikelets = Flapjack::Pikelet.create('email', shutdown, :config => config,
       :redis_config => redis_config, :logger => logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
@@ -291,10 +299,11 @@ describe Flapjack::Pikelet do
 
     EM.should_receive(:run).and_yield
     EM.should_receive(:error_handler)
+    EM.should_receive(:reactor_running?).and_return(true)
 
     Flapjack::Gateways::Web.should_receive(:start)
 
-    pikelets = Flapjack::Pikelet.create('web', :config => config,
+    pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config,
       :redis_config => redis_config, :logger => logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
@@ -335,14 +344,16 @@ describe Flapjack::Pikelet do
     thread.should_receive(:abort_on_exception=).with(true)
     Thread.should_receive(:current).and_return(thread)
 
-    condition.should_receive(:signal)
+    shutdown.should_receive(:call)
 
     EM.should_receive(:run).and_yield
     EM.should_receive(:error_handler)
+    EM.should_receive(:reactor_running?).and_return(true)
+    EM.should_receive(:stop_event_loop)
 
     Flapjack::Gateways::Web.should_receive(:start)
 
-    pikelets = Flapjack::Pikelet.create('web', :config => config,
+    pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config,
       :redis_config => redis_config, :logger => logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
@@ -385,14 +396,15 @@ describe Flapjack::Pikelet do
     thread.should_receive(:abort_on_exception=).with(true)
     Thread.should_receive(:current).and_return(thread)
 
-    condition.should_receive(:signal)
+    shutdown.should_receive(:call)
 
     EM.should_receive(:run).and_yield
-    EM.should_receive(:stop_event_loop)
+    EM.should_receive(:reactor_running?).twice.and_return(true)
+    EM.should_receive(:stop_event_loop).twice
 
     Flapjack::Gateways::Web.should_receive(:start)
 
-    pikelets = Flapjack::Pikelet.create('web', :config => config,
+    pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config,
       :redis_config => redis_config, :logger => logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet

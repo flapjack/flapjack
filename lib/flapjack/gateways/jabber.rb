@@ -33,13 +33,14 @@ module Flapjack
 
           @logger = options[:logger]
 
-          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
+          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
         end
 
         def stop
           # TODO synchronize access to @should_quit ??
           @should_quit = true
-          @redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
+          re = Redis.new((@redis_config || {}).merge(:driver => :hiredis))
+          re.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
         end
 
         def start
@@ -147,13 +148,12 @@ module Flapjack
             ", server: " + @config['server'].to_s + ", password: " +
             @config['password'].to_s)
 
-          # # FIXME possible to block using filter?
-          # clear_handlers :error
-
-          # register_handler :error do |err|
-          #   @logger.warn(err.inspect)
-          #   # Kernel.throw :halt
-          # end
+          # need direct access to the real blather client to mangle the handlers
+          blather_client = @client.send(:client)
+          blather_client.clear_handlers :error
+          blather_client.register_handler :error do |err|
+            @logger.warn(err.message)
+          end
 
           @client.when_ready do |stanza|
             on_ready(stanza)
@@ -177,14 +177,14 @@ module Flapjack
         def stop
           synced do
             @should_quit = true
-            @client.shutdown
+            @client.shutdown if @connected
           end
 
           # without this eventmachine in the bot thread seems to wait for
           # an event of some sort (network activity, or a timer firing)
           # before it realises that it has finished.
           # (should maybe use @bot_thread.wakeup instead)
-          @bot_thread.run
+          @bot_thread.run if @bot_thread.alive?
         end
 
         def announce(msg, address)
@@ -220,9 +220,7 @@ module Flapjack
 
         # Join the MUC Chat room after connecting.
         def on_ready(stanza)
-          ret = synced { @should_quit }
-          @logger.info "on_ready #{ret}"
-          return if ret
+          return if synced { @should_quit }
           @connected_at = Time.now.to_i
           @logger.info("Jabber Connected")
 

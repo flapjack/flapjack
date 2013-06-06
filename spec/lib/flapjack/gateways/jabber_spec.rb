@@ -26,8 +26,15 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     ::Blather::JID.should_receive(:new).
       with('flapjack@example.com/thismachine').and_return(jid)
 
+    client = mock(Blather::Client)
+    client.should_receive(:clear_handlers).with(:error)
+    error = mock(Exception)
+    error.should_receive(:message).and_return('oh no')
+    client.should_receive(:register_handler).with(:error).and_yield(error)
+
     fjc = mock(Flapjack::Gateways::Jabber::BotClient)
     fjc.should_receive(:setup).with(jid, 'password', 'example.com', 5222)
+    fjc.should_receive(:client).and_return(client)
     fjc.should_receive(:run)
     Flapjack::Gateways::Jabber::BotClient.should_receive(:new).and_return(fjc)
 
@@ -45,16 +52,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     fj.should_receive(:on_disconnect).with(stanza).and_return(true)
     fjc.should_receive(:disconnected).and_yield(stanza)
 
-    # error = mock('error')
-    # fj.should_receive(:register_handler).with(:error).and_yield(error)
-    # Kernel.should_receive(:throw).with(:halt)
-
     fj.start
   end
 
   it "joins a chat room after connecting" do
     ::Redis.should_receive(:new)
-
 
     fjc = mock(Flapjack::Gateways::Jabber::BotClient)
     fjc.should_receive(:write_to_stream).with(an_instance_of(Blather::Stanza::Presence))
@@ -149,7 +151,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     redis = mock('redis')
     redis.should_receive(:rpush).with('jabber_notifications', %q{{"notification_type":"shutdown"}})
 
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
+    ::Redis.should_receive(:new).and_return(redis)
+    Flapjack::RedisPool.should_receive(:new)
     fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config, :logger => @logger)
 
     fjn.stop

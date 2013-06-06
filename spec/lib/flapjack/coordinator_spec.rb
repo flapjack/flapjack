@@ -51,7 +51,8 @@ describe Flapjack::Coordinator do
 
     fc = Flapjack::Coordinator.new(config)
     Flapjack::Pikelet.should_receive(:create).with('executive',
-        :config => cfg['executive'], :redis_config => {}).and_return([executive])
+      an_instance_of(Proc), :config => cfg['executive'],
+      :redis_config => {}).and_return([executive])
 
     fc.start(:signals => false)
     fc.stop
@@ -114,7 +115,8 @@ describe Flapjack::Coordinator do
 
     jabber = mock('jabber')
     Flapjack::Pikelet.should_receive(:create).with('jabber',
-      :config => {"enabled" => "yes"}, :redis_config => {}).and_return([jabber])
+      an_instance_of(Proc), :config => {"enabled" => "yes"},
+      :redis_config => {}).and_return([jabber])
     jabber.should_receive(:start)
 
     config.should_receive(:for_redis).and_return({})
@@ -178,7 +180,8 @@ describe Flapjack::Coordinator do
     new_exec.should_receive(:start)
 
     Flapjack::Pikelet.should_receive(:create).
-      with('executive', :config => new_cfg['executive'], :redis_config => {}).
+      with('executive', an_instance_of(Proc), :config => new_cfg['executive'],
+           :redis_config => {}).
       and_return([new_exec])
 
     config.should_receive(:for_redis).and_return({})

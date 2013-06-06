@@ -42,13 +42,14 @@ module Flapjack
 
       attr_reader :error
 
-      def initialize(pikelet_class, options = {})
+      def initialize(pikelet_class, shutdown, options = {})
         @pikelet_class = pikelet_class
         @settings      = pikelet_class.pikelet_settings
 
         @config        = options[:config]
         @redis_config  = options[:redis_config]
         @logger        = options[:logger]
+        @shutdown      = shutdown
 
         mon_initialize
       end
@@ -65,7 +66,7 @@ module Flapjack
               trace = err.backtrace
               @logger.warn trace.join("\n") if trace
               @error = err
-              EM.stop_event_loop
+              EM.stop_event_loop if EM.reactor_running?
             end
             action = proc {
               begin
@@ -75,8 +76,9 @@ module Flapjack
                 trace = e.backtrace
                 @logger.warn trace.join("\n") if trace
                 @error = e
+              ensure
+                EM.stop_event_loop if EM.reactor_running? && (@error || !!@settings[:em_stop])
               end
-              EM.stop_event_loop if !!@settings[:em_stop]
             }
 
             # TODO rename this, it's only relevant in the error case
@@ -91,7 +93,12 @@ module Flapjack
             end
 
             @finished = true
-            @condition.signal
+
+            if @error
+              @shutdown.call
+            else
+              @condition.signal
+            end
           end
         end
       end
@@ -238,7 +245,7 @@ module Flapjack
       TYPES.has_key?(type)
     end
 
-    def self.create(type, opts = {})
+    def self.create(type, shutdown, opts = {})
       config = opts[:config] || {}
       redis_config = opts[:redis_config] || {}
 
@@ -250,7 +257,7 @@ module Flapjack
 
       types.collect {|pikelet_class|
         wrapper = WRAPPERS.detect {|wrap| wrap::TYPES.include?(type) }
-        wrapper.new(pikelet_class, :config => config,
+        wrapper.new(pikelet_class, shutdown, :config => config,
                     :redis_config => redis_config, :logger => logger)
       }
     end

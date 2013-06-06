@@ -16,7 +16,13 @@ module Flapjack
       @pikelets   = []
 
       @monitor = Monitor.new
-      @running_cond = @monitor.new_cond
+      @shutdown_cond = @monitor.new_cond
+
+      @shutdown = proc {
+        @monitor.synchronize {
+          @shutdown_cond.signal
+        }
+      }
 
       # TODO convert this to use flapjack-logger
       logger_name = "flapjack-coordinator"
@@ -45,7 +51,11 @@ module Flapjack
 
       # block this thread until 'stop' has been called, and
       # all pikelets have been stopped
-      @monitor.synchronize { @running_cond.wait }
+      @monitor.synchronize {
+        @shutdown_cond.wait
+        @pikelets.map(&:stop)
+        @pikelets.clear
+      }
     end
 
     def stop
@@ -54,9 +64,7 @@ module Flapjack
       # a new thread is required to avoid deadlock errors; signal
       # handler runs by jumping into main thread
       Thread.new do
-        @pikelets.map(&:stop)
-        @pikelets.clear
-        @monitor.synchronize { @running_cond.signal }
+        @monitor.synchronize { @shutdown_cond.signal }
       end
     end
 
@@ -125,7 +133,7 @@ module Flapjack
     # returns unstarted pikelet instances.
     def create_pikelets(pikelets_data = {})
       pikelets_data.inject([]) do |memo, (type, cfg)|
-        pikelets = Flapjack::Pikelet.create(type, :config => cfg,
+        pikelets = Flapjack::Pikelet.create(type, @shutdown, :config => cfg,
                                             :redis_config => @redis_opts)
         memo += pikelets
         memo
