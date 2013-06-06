@@ -134,7 +134,7 @@
             %tr
               %th Name
               %th Media
-            - @contacts.sort_by {|c| [c.last_name, c.first_name] }.each do |contact|
+            - @contacts.sort_by {|c| [c.first_name, c.last_name] }.each do |contact|
               %tr
                 %td
                   - link = "/contacts/#{contact.id}"

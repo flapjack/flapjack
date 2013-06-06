@@ -98,6 +98,18 @@ def submit_critical(entity, check)
   submit_event(event)
 end
 
+def submit_unknown(entity, check)
+  event = {
+    'type'    => 'service',
+    'state'   => 'unknown',
+    'summary' => 'check execution error',
+    'entity'  => entity,
+    'check'   => check,
+    'client'  => 'clientx'
+  }
+  submit_event(event)
+end
+
 def submit_acknowledgement(entity, check)
   event = {
     'type'               => 'action',
@@ -195,6 +207,13 @@ When /^a warning event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\
   check  ||= @check
   entity ||= @entity
   submit_warning(entity, check)
+  drain_events
+end
+
+When /^an unknown event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
+  check  ||= @check
+  entity ||= @entity
+  submit_unknown(entity, check)
   drain_events
 end
 
