@@ -1,15 +1,18 @@
 require 'spec_helper'
 require 'flapjack/data/notification'
 
-describe Flapjack::Data::Notification, :redis => true do
+describe Flapjack::Data::Notification, :redis => true, :logger => true do
 
-  let(:event) { mock(Flapjack::Data::Event) }
+  let(:event)   { mock(Flapjack::Data::Event) }
 
   let(:contact) { mock(Flapjack::Data::Contact) }
 
+  let(:timezone) { mock('timezone') }
+
   it "generates a notification for an event" do
     notification = Flapjack::Data::Notification.for_event(event, :type => 'problem',
-      :max_notified_severity => nil)
+      :max_notified_severity => nil, :contacts => [contact],
+      :default_timezone => timezone, :logger => @logger)
     notification.should_not be_nil
     notification.event.should == event
     notification.type.should == 'problem'
@@ -17,11 +20,18 @@ describe Flapjack::Data::Notification, :redis => true do
 
   it "generates messages for contacts" do
     notification = Flapjack::Data::Notification.for_event(event, :type => 'problem',
-      :max_notified_severity => nil)
+      :max_notified_severity => nil, :contacts => [contact],
+      :default_timezone => timezone, :logger => @logger)
+
+    contact.should_receive(:id).and_return('23')
+    contact.should_receive(:notification_rules).and_return([])
     contact.should_receive(:media).and_return('email' => 'example@example.com',
                                               'sms'   => '0123456789')
 
-    messages = notification.messages(:contacts => [contact])
+    event.should_receive(:id).and_return('abc-123.com:ping')
+    event.should_receive(:state).and_return('critical')
+
+    messages = notification.messages
     messages.should_not be_nil
     messages.should have(2).items
 
@@ -38,7 +48,8 @@ describe Flapjack::Data::Notification, :redis => true do
 
   it "returns its contained data" do
     notification = Flapjack::Data::Notification.for_event(event, :type => 'problem',
-      :max_notified_severity => nil)
+      :max_notified_severity => nil, :contacts => [contact],
+      :default_timezone => timezone, :logger => @logger)
 
     t = Time.now.to_i
 

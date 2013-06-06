@@ -8,23 +8,101 @@ module Flapjack
   module Data
     class Notification
 
-      attr_accessor :event, :type, :max_notified_severity
+      attr_accessor :event, :type, :max_notified_severity, :contacts,
+        :default_timezone
 
       def self.for_event(event, opts = {})
         self.new(:event => event,
                  :type => opts[:type],
-                 :max_notified_severity => opts[:max_notified_severity])
+                 :max_notified_severity => opts[:max_notified_severity],
+                 :contacts => opts[:contacts],
+                 :default_timezone => opts[:default_timezone],
+                 :logger => opts[:logger])
       end
 
-      def messages(opts = {})
-        contacts = opts[:contacts]
-        return [] if contacts.nil?
+      def messages
+        return [] if contacts.nil? || contacts.empty?
+
+        event_id = event.id
+        event_state = event.state
+
+        severity = if ([event_state, max_notified_severity] & ['critical', 'unknown']).any?
+          'critical'
+        elsif [event_state, max_notified_severity].include?('warning')
+          'warning'
+        else
+          'ok'
+        end
+
         @messages ||= contacts.collect {|contact|
+          contact_id = contact.id
+          rules = contact.notification_rules
+          media = contact.media
 
-          # TODO move the message filtering logic from executive into this
-          # class and apply here, don't generate message if it won't be sent
+          @logger.debug "considering messages for contact: #{contact_id} #{event_id} #{event_state} (media) #{media.inspect}"
+          rlen = rules.length
+          @logger.debug "found #{rlen} rule#{(rlen == 1) ? '' : 's'} for contact"
 
-          contact.media.each_pair.inject([]) { |ret, (k, v)|
+          media_to_use = if rules.empty?
+            media
+          else
+            # matchers are rules of the contact that have matched the current event
+            # for time and entity
+            matchers = rules.select do |rule|
+              rule.match_entity?(event_id) &&
+                rule_occurring_now?(rule, :contact => contact, :default_timezone => default_timezone)
+            end
+
+            @logger.debug "#{matchers.length} matchers remain for this contact:"
+            matchers.each do |matcher|
+              @logger.debug "matcher: #{matcher.to_json}"
+            end
+
+            # delete any matchers for all entities if there are more specific matchers
+            has_specific_matcher = matchers.any? do |matcher|
+              ( !matcher.entities.nil? && !matcher.entities.empty? ) ||
+                  ( !matcher.entity_tags.nil? && !matcher.entity_tags.empty? )
+            end
+
+            if has_specific_matcher
+
+              @logger.debug("general removal when entity specific: #{matchers.length} matchers")
+              num_matchers = matchers.length
+
+              matchers.reject! do |matcher|
+                ( matcher.entities.nil? || matcher.entities.empty? ) &&
+                  ( matcher.entity_tags.nil? || matcher.entity_tags.empty? )
+              end
+
+              if num_matchers != matchers.length
+                @logger.debug("notification: removal of general matchers when entity specific matchers are present: number of matchers changed from #{num_matchers} to #{matchers.length} for contact id: #{contact_id}")
+              end
+            end
+
+            # delete media based on blackholes
+            next if matchers.any? {|matcher| matcher.blackhole?(event_state) }
+
+            @logger.debug "notification: num matchers after removing blackhole matchers: #{matchers.size}"
+
+            rule_media = matchers.collect{|matcher|
+              matcher.media_for_severity(severity)
+            }.flatten.uniq
+
+            @logger.debug "notification: collected media_for_severity: #{rule_media}"
+            rule_media = rule_media.flatten.uniq.reject {|medium|
+              contact.drop_notifications?(:media => medium,
+                                          :check => event_id,
+                                          :state => event_state)
+            }
+
+            @logger.debug "notification: media after contact_drop?: #{rule_media}"
+
+            media.select {|medium, address| rule_media.include?(medium) }
+          end
+
+          @logger.debug "notification: media_to_use: #{media_to_use}"
+
+          media_to_use.each_pair.inject([]) { |ret, (k, v)|
             m = Flapjack::Data::Message.for_contact(:contact => contact)
             m.notification = self
             m.medium  = k
@@ -32,7 +110,7 @@ module Flapjack
             ret << m
             ret
           }
-        }.flatten
+        }.compact.flatten
       end
 
       def contents
@@ -53,6 +131,30 @@ module Flapjack
         @event = event
         @type  = opts[:type]
         @max_notified_severity = opts[:max_notified_severity]
+        @contacts = opts[:contacts]
+        @default_timezone = opts[:default_timezone]
+        @logger = opts[:logger]
+      end
+
+      # # time restrictions match?
+      # nil rule.time_restrictions matches
+      # times (start, end) within time restrictions will have any UTC offset removed and will be
+      # considered to be in the timezone of the contact
+      def rule_occurring_now?(rule, options = {})
+        contact = options[:contact]
+        default_timezone = options[:default_timezone]
+
+        return true if rule.time_restrictions.nil? or rule.time_restrictions.empty?
+
+        timezone = contact.timezone(:default => default_timezone)
+        usertime = timezone.now
+
+        rule.time_restrictions.any? do |tr|
+          # add contact's timezone to the time restriction schedule
+          schedule = Flapjack::Data::NotificationRule.
+                       time_restriction_to_icecube_schedule(tr, timezone)
+          schedule && schedule.occurring_at?(usertime)
+        end
       end
 
     end

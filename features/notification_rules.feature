@@ -35,8 +35,7 @@ Feature: Notification rules on a per contact basis
 
     And user 2 has the following notification rules:
       | entities | entity_tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          |             | email         | email            |                   |                    |                   |
-      |          |             | sms           | sms              |                   |                    |                   |
+      |          |             | email, sms    | email, sms       |                   |                    |                   |
       | bar      |             | email         | email,sms        |                   |                    |                   |
 
     And user 3 has the following notification rules:
