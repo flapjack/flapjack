@@ -199,11 +199,6 @@ module Flapjack
         @pikelet_class.instance_variable_set('@logger', @logger)
 
         super do
-          if self.class.instance_variable_get('@resque_redis').nil?
-            self.class.instance_variable_set('@resque_redis', Flapjack::RedisPool.new(:config => @redis_config))
-            ::Resque.redis = self.class.instance_variable_get('@resque_redis')
-          end
-
           @pikelet_class.start if @pikelet_class.respond_to?(:start)
 
           @worker = EM::Resque::Worker.new(@config['queue'])
@@ -239,7 +234,8 @@ module Flapjack
              'executive'  => [Flapjack::Executive],
              'jabber'     => [Flapjack::Gateways::Jabber::Bot,
                               Flapjack::Gateways::Jabber::Notifier],
-             'oobetet'    => [Flapjack::Gateways::Oobetet],
+             'oobetet'    => [Flapjack::Gateways::Oobetet::Bot,
+                              Flapjack::Gateways::Oobetet::Notifier],
              'pagerduty'  => [Flapjack::Gateways::Pagerduty],
              'sms'        => [Flapjack::Gateways::SmsMessagenet],
              'web'        => [Flapjack::Gateways::Web],

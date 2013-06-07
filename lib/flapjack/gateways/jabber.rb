@@ -175,7 +175,8 @@ module Flapjack
             on_disconnect(stanza)
           end
 
-          connect_with_retry
+          @logger.debug("attempting connection to the jabber server")
+          @client.run
         end
 
         def stop
@@ -197,24 +198,6 @@ module Flapjack
         end
 
         private
-
-        def connect_with_retry
-          attempt = 0
-          delay = 2
-          begin
-            attempt += 1
-            delay = 10 if attempt > 10
-            delay = 60 if attempt > 60
-            Kernel.sleep(delay || 3) if attempt > 1
-            @logger.debug("attempting connection to the jabber server")
-            @client.run
-          rescue StandardError => detail
-            @logger.error("unable to connect to the jabber server (attempt #{attempt}), retrying in #{delay} seconds...")
-            @logger.error("detail: #{detail.message}")
-            @logger.debug(detail.backtrace.join("\n"))
-            retry unless @should_quit
-          end
-        end
 
         def synced(&block)
           ret = nil
@@ -420,8 +403,7 @@ module Flapjack
           @keepalive_timer = nil
           return false if sq = synced { @connected = false; @should_quit }
           @logger.warn("jabbers disconnected! reconnecting after a short delay...")
-          Kernel.sleep(5)
-          connect_with_retry
+          EventMachine::Timer.new(5) { @client.run }
           true
         end
 

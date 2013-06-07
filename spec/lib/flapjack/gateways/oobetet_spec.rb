@@ -17,93 +17,118 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
   let(:stanza) { mock('stanza') }
 
   it "raises an error if a required config setting is not set" do
-    Socket.should_receive(:gethostname).and_return('thismachine')
-
-    fo = Flapjack::Gateways::Oobetet.new(:config => config.delete('watched_check'), :logger => @logger)
-
     lambda {
-      fo.setup
+      Flapjack::Gateways::Oobetet::Bot.new(:config => config.delete('watched_check'), :logger => @logger)
+    }.should raise_error
+    lambda {
+      Flapjack::Gateways::Oobetet::Notifier.new(:config => config.delete('watched_check'), :logger => @logger)
     }.should raise_error
   end
 
   it "hooks up event handlers to the appropriate methods" do
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
+    Socket.should_receive(:gethostname).and_return('thismachine')
 
-    EventMachine::should_receive(:next_tick).exactly(3).times.and_yield
+    pid = 23
+    Process.should_receive(:pid).and_return(pid)
 
-    fo.should_receive(:register_handler).with(:ready).and_yield(stanza)
+    jid = mock(::Blather::JID)
+    ::Blather::JID.should_receive(:new).
+      with("flapjack@example.com/thismachine:#{pid}").and_return(jid)
+
+    client = mock(Blather::Client)
+    client.should_receive(:clear_handlers).with(:error)
+    error = mock(Exception)
+    error.should_receive(:message).and_return('oh no')
+    client.should_receive(:register_handler).with(:error).and_yield(error)
+
+    foc = mock(Flapjack::Gateways::Oobetet::BotClient)
+    foc.should_receive(:setup).with(jid, 'password', 'example.com', 5222)
+    foc.should_receive(:client).and_return(client)
+    foc.should_receive(:run)
+    Flapjack::Gateways::Oobetet::BotClient.should_receive(:new).and_return(foc)
+
+    fo = Flapjack::Gateways::Oobetet::Bot.new(:config => config, :logger => @logger)
+
     fo.should_receive(:on_ready).with(stanza)
+    foc.should_receive(:when_ready).and_yield(stanza)
 
-    fo.should_receive(:register_handler).with(:message, :groupchat?).and_yield(stanza)
     fo.should_receive(:on_groupchat).with(stanza)
+    foc.should_receive(:message).with(:groupchat?).and_yield(stanza)
 
-    fo.should_receive(:register_handler).with(:disconnected).and_yield(stanza)
     fo.should_receive(:on_disconnect).with(stanza).and_return(true)
+    foc.should_receive(:disconnected).and_yield(stanza)
 
-    fo.register_handlers
+    fo.start
   end
 
   it "joins a chat room after connecting" do
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
+    fo = Flapjack::Gateways::Oobetet::Bot.new(:config => config, :logger => @logger)
 
-    fo.should_receive(:write).with(an_instance_of(Blather::Stanza::Presence))
-    fo.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
+    foc = mock(Flapjack::Gateways::Oobetet::BotClient)
+    foc.should_receive(:write_to_stream).with(an_instance_of(Blather::Stanza::Presence))
+    foc.should_receive(:say).with(config['rooms'].first, an_instance_of(String), :groupchat)
 
-    fo.on_ready(stanza)
+    fo = Flapjack::Gateways::Oobetet::Bot.new(:config => config, :logger => @logger)
+    fo.instance_variable_set('@client', foc)
+
+    kat = mock(EventMachine::PeriodicTimer)
+    EventMachine.should_receive(:add_periodic_timer).with(60).and_yield.and_return(kat)
+    foc.should_receive(:connected?).and_return(true)
+    foc.should_receive(:write).with(' ')
+
+    fo.send(:on_ready, stanza)
   end
 
   it "reconnects when disconnected (if not quitting)" do
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
+    kat = mock(EventMachine::PeriodicTimer)
+    kat.should_receive(:cancel)
 
-    EventMachine::Timer.should_receive(:new).with(1).and_yield
-    fo.should_receive(:connect)
+    foc = mock(Flapjack::Gateways::Oobetet::BotClient)
+    fo = Flapjack::Gateways::Oobetet::Bot.new(:config => config, :logger => @logger)
+    fo.instance_variable_set('@client', foc)
+    fo.instance_variable_set('@keepalive_timer', kat)
 
-    ret = fo.on_disconnect(stanza)
+    EM::Timer.should_receive(:new).with(1).and_yield
+    foc.should_receive(:run)
+
+    ret = fo.send(:on_disconnect, stanza)
     ret.should be_true
   end
 
-  it "records times of a problem status messages" do
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
-    fo.setup
-
+  it "records times of a problem status message" do
     t = Time.now
 
     stanza.should_receive(:body).and_return( %q{PROBLEM: "PING" on foo.bar.net} )
     Time.should_receive(:now).and_return(t)
 
-    fo.on_groupchat(stanza)
+    fo = Flapjack::Gateways::Oobetet::Bot.new(:config => config, :logger => @logger)
+    fo.send(:on_groupchat, stanza)
     fo_times = fo.instance_variable_get('@times')
     fo_times.should_not be_nil
     fo_times.should have_key(:last_problem)
     fo_times[:last_problem].should == t.to_i
   end
 
-  it "records times of a recovery status messages" do
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
-    fo.setup
-
+  it "records times of a recovery status message" do
     t = Time.now
 
     stanza.should_receive(:body).and_return( %q{RECOVERY: "PING" on foo.bar.net} )
-    Time.should_receive(:now).and_return(t)
 
-    fo.on_groupchat(stanza)
+    fo = Flapjack::Gateways::Oobetet::Bot.new(:config => config, :logger => @logger)
+    fo.send(:on_groupchat, stanza)
     fo_times = fo.instance_variable_get('@times')
     fo_times.should_not be_nil
     fo_times.should have_key(:last_recovery)
     fo_times[:last_recovery].should == t.to_i
   end
 
-  it "records times of an acknowledgement status messages" do
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
-    fo.setup
-
+  it "records times of an acknowledgement status message" do
     t = Time.now
 
     stanza.should_receive(:body).and_return( %q{ACKNOWLEDGEMENT: "PING" on foo.bar.net} )
-    Time.should_receive(:now).and_return(t)
 
-    fo.on_groupchat(stanza)
+    fo = Flapjack::Gateways::Oobetet::Bot.new(:config => config, :logger => @logger)
+    fo.send(:on_groupchat, stanza)
     fo_times = fo.instance_variable_get('@times')
     fo_times.should_not be_nil
     fo_times.should have_key(:last_ack)
@@ -111,20 +136,13 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
   end
 
   it "runs a loop checking for recorded problems" do
-    timer = mock('timer')
-    timer.should_receive(:cancel)
-    EventMachine.should_receive(:add_periodic_timer).with(60).and_return(timer)
+    EventMachine.should_receive(:add_periodic_timer).with(10).and_yield
 
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
-    fo.should_receive(:register_handler).exactly(3).times
-    fo.should_receive(:connect)
-
-    Kernel.should_receive(:sleep).with(10) {
-      fo.instance_variable_set('@should_quit', true)
-      nil
-    }
-
+    fo = Flapjack::Gateways::Oobetet::Notifier.new(:config => config, :logger => @logger)
+    fo.should_receive(:check_timers)
     fo.start
   end
+
+  it "checks timer values from the jabber client"
 
 end

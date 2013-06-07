@@ -134,14 +134,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     fj.instance_variable_set('@client', fjc)
     fj.instance_variable_set('@keepalive_timer', kat)
 
-    attempts = 0
-
-    Kernel.should_receive(:sleep).with(5)
-    Kernel.should_receive(:sleep).with(2).exactly(3).times
-    fjc.should_receive(:run).exactly(4).times.and_return {
-      attempts +=1
-      raise StandardError.new unless attempts > 3
-    }
+    EM::Timer.should_receive(:new).with(5).and_yield
+    fjc.should_receive(:run)
 
     ret = fj.send(:on_disconnect, stanza)
     ret.should be_true

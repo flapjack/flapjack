@@ -129,10 +129,6 @@ describe Flapjack::Pikelet do
     config.should_receive(:[]).with('max_runs').and_return(nil)
     config.should_receive(:[]).with('queue').and_return('email_notif')
 
-    redis = mock('redis')
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    Resque.should_receive(:redis=).with( redis )
-
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
       with('@config', config)
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
@@ -151,7 +147,7 @@ describe Flapjack::Pikelet do
 
     condition.should_receive(:signal)
 
-    EM.should_receive(:synchrony).and_yield
+    EM.should_receive(:run).and_yield
     EM.should_receive(:error_handler)
     EM.should_receive(:reactor_running?).and_return(true)
     EM.should_receive(:stop_event_loop)
@@ -179,10 +175,6 @@ describe Flapjack::Pikelet do
     config.should_receive(:[]).with('queue').and_return('email_notif')
     config.should_receive(:[]).with('max_runs').and_return(nil)
 
-    redis = mock('redis')
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    Resque.should_receive(:redis=).with( redis )
-
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
       with('@config', config)
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
@@ -201,7 +193,7 @@ describe Flapjack::Pikelet do
 
     shutdown.should_receive(:call)
 
-    EM.should_receive(:synchrony).and_yield
+    EM.should_receive(:run).and_yield
     EM.should_receive(:error_handler)
     EM.should_receive(:reactor_running?).and_return(true)
     EM.should_receive(:stop_event_loop)
@@ -229,10 +221,6 @@ describe Flapjack::Pikelet do
     config.should_receive(:[]).with('queue').and_return('email_notif')
     config.should_receive(:[]).with('max_runs').and_return(nil)
 
-    redis = mock('redis')
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    Resque.should_receive(:redis=).with( redis )
-
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
       with('@config', config)
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
@@ -253,7 +241,7 @@ describe Flapjack::Pikelet do
     Flapjack::Gateways::Email.should_receive(:start)
     EM::Resque::Worker.should_receive(:new).with('email_notif').and_return(worker)
 
-    EM.should_receive(:synchrony).and_yield
+    EM.should_receive(:run).and_yield
     EM.should_receive(:reactor_running?).at_least(:once).and_return(true)
     EM.should_receive(:stop_event_loop).at_least(:once)
 

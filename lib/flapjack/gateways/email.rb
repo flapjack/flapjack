@@ -18,7 +18,7 @@ module Flapjack
       class << self
 
         def pikelet_settings
-          {:em_synchrony => true,
+          {:em_synchrony => false,
            :em_stop      => true}
         end
 
