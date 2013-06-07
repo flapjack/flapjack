@@ -44,6 +44,9 @@ class Hash
   end
 end
 
+# silence thin's console spam
+::Thin::Logging.silent = true
+
 module Thin
 
   # see https://github.com/flpjck/flapjack/issues/169
@@ -61,20 +64,6 @@ module Thin
       @body.binmode
       @body << current_body.read
       @env[RACK_INPUT] = @body
-    end
-  end
-
-  # we don't want to stop the entire EM reactor when we stop a web server
-  module Backends
-    class Base
-      def stop!
-        @running  = false
-        @stopping = false
-
-        # EventMachine.stop if EventMachine.reactor_running?
-        @connections.each { |connection| connection.close_connection }
-        close
-      end
     end
   end
 end

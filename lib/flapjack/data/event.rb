@@ -18,13 +18,13 @@ module Flapjack
       # Calling next with :block => false, will return a nil if there are no
       # events on the queue.
       #
-      def self.next(opts={})
+      def self.next(opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
 
-        defaults = { :block => true,
-                     :archive_events => false,
-                     :events_archive_maxage => (3 * 60 * 60) }
-        options  = defaults.merge(opts)
+        options = { :block => true,
+                    :archive_events => false,
+                    :events_archive_maxage => (3 * 60 * 60) }.update(opts)
+
         if options[:logger]
           logger = options[:logger]
         end

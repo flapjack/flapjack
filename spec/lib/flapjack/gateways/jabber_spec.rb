@@ -13,42 +13,64 @@ describe Flapjack::Gateways::Jabber, :logger => true do
                  }
   }
 
+  let(:fiber) { mock(Fiber) }
+
   let(:stanza) { mock('stanza') }
 
   it "hooks up event handlers to the appropriate methods" do
     Socket.should_receive(:gethostname).and_return('thismachine')
 
-    Flapjack::RedisPool.should_receive(:new)
-    fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
+    ::Redis.should_receive(:new)
 
-    EventMachine::Synchrony.should_receive(:next_tick).exactly(4).times.and_yield
+    jid = mock(::Blather::JID)
+    ::Blather::JID.should_receive(:new).
+      with('flapjack@example.com/thismachine').and_return(jid)
 
-    fj.should_receive(:register_handler).with(:ready).and_yield(stanza)
+    client = mock(Blather::Client)
+    client.should_receive(:clear_handlers).with(:error)
+    error = mock(Exception)
+    error.should_receive(:message).and_return('oh no')
+    client.should_receive(:register_handler).with(:error).and_yield(error)
+
+    fjc = mock(Flapjack::Gateways::Jabber::BotClient)
+    fjc.should_receive(:setup).with(jid, 'password', 'example.com', 5222)
+    fjc.should_receive(:client).and_return(client)
+    fjc.should_receive(:run)
+    Flapjack::Gateways::Jabber::BotClient.should_receive(:new).and_return(fjc)
+
+    fj = Flapjack::Gateways::Jabber::Bot.new(:config => config, :logger => @logger)
+
     fj.should_receive(:on_ready).with(stanza)
+    fjc.should_receive(:when_ready).and_yield(stanza)
 
-    fj.should_receive(:register_handler).with(:message, :groupchat?, :body => /^flapjack:\s+/).and_yield(stanza)
     fj.should_receive(:on_groupchat).with(stanza)
+    fjc.should_receive(:message).with(:groupchat?, :body => /^flapjack:\s+/).and_yield(stanza)
 
-    fj.should_receive(:register_handler).with(:message, :chat?).and_yield(stanza)
     fj.should_receive(:on_chat).with(stanza)
+    fjc.should_receive(:message).with(:chat?).and_yield(stanza)
 
-    fj.should_receive(:register_handler).with(:disconnected).and_yield(stanza)
     fj.should_receive(:on_disconnect).with(stanza).and_return(true)
+    fjc.should_receive(:disconnected).and_yield(stanza)
 
-    fj.setup
+    fj.start
   end
 
   it "joins a chat room after connecting" do
-    Flapjack::RedisPool.should_receive(:new)
+    ::Redis.should_receive(:new)
 
-    fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
-    fj.should_receive(:connected?).and_return(true)
+    fjc = mock(Flapjack::Gateways::Jabber::BotClient)
+    fjc.should_receive(:write_to_stream).with(an_instance_of(Blather::Stanza::Presence))
+    fjc.should_receive(:say).with(config['rooms'].first, an_instance_of(String), :groupchat)
 
-    EventMachine::Synchrony.should_receive(:next_tick).and_yield
-    fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Presence))
-    fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
+    fj = Flapjack::Gateways::Jabber::Bot.new(:config => config, :logger => @logger)
+    fj.instance_variable_set('@client', fjc)
 
-    fj.on_ready(stanza)
+    kat = mock(EventMachine::PeriodicTimer)
+    EventMachine.should_receive(:add_periodic_timer).with(60).and_yield.and_return(kat)
+    fjc.should_receive(:connected?).and_return(true)
+    fjc.should_receive(:write).with(' ')
+
+    fj.send(:on_ready, stanza)
   end
 
   it "receives an acknowledgement message" do
@@ -60,6 +82,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     redis = mock('redis')
     redis.should_receive(:hget).with('unacknowledged_failures', '876').
       and_return('main-example.com:ping')
+    Redis.should_receive(:new).and_return(redis)
 
     entity_check = mock(Flapjack::Data::EntityCheck)
     entity_check.should_receive(:in_unscheduled_maintenance?)
@@ -72,46 +95,49 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       with('main-example.com:ping', :redis => redis).
       and_return(entity_check)
 
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
+    fjc = mock(Flapjack::Gateways::Jabber::BotClient)
+    fjc.should_receive(:say).with('sender', an_instance_of(String), :groupchat)
 
-    EventMachine::Synchrony.should_receive(:next_tick).and_yield
-    fj.should_receive(:connected?).and_return(true)
-    fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
+    fj = Flapjack::Gateways::Jabber::Bot.new(:config => config, :logger => @logger)
+    fj.instance_variable_set('@connected', true)
+    fj.instance_variable_set('@client', fjc)
 
-    fj.on_groupchat(stanza)
+    fj.send(:on_groupchat, stanza)
   end
 
   it "receives a message it doesn't understand" do
+    ::Redis.should_receive(:new)
+
     stanza.should_receive(:body).once.and_return('flapjack: hello!')
     from = mock('from')
     from.should_receive(:stripped).and_return('sender')
     stanza.should_receive(:from).and_return(from)
 
-    Flapjack::RedisPool.should_receive(:new)
-    fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
+    fjc = mock(Flapjack::Gateways::Jabber::BotClient)
+    fjc.should_receive(:say).with('sender', an_instance_of(String), :groupchat)
 
-    EventMachine::Synchrony.should_receive(:next_tick).and_yield
-    fj.should_receive(:connected?).and_return(true)
-    fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
+    fj = Flapjack::Gateways::Jabber::Bot.new(:config => config, :logger => @logger)
+    fj.instance_variable_set('@connected', true)
+    fj.instance_variable_set('@client', fjc)
 
-    fj.on_groupchat(stanza)
+    fj.send(:on_groupchat, stanza)
   end
 
   it "reconnects when disconnected (if not quitting)" do
-    Flapjack::RedisPool.should_receive(:new)
-    fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
+    ::Redis.should_receive(:new)
 
-    attempts = 0
+    kat = mock(EventMachine::PeriodicTimer)
+    kat.should_receive(:cancel)
 
-    EventMachine::Synchrony.should_receive(:sleep).with(5).exactly(1).times
-    EventMachine::Synchrony.should_receive(:sleep).with(2).exactly(3).times
-    fj.should_receive(:connect).exactly(4).times.and_return {
-      attempts +=1
-      raise StandardError.new unless attempts > 3
-    }
+    fjc = mock(Flapjack::Gateways::Jabber::BotClient)
+    fj = Flapjack::Gateways::Jabber::Bot.new(:config => config, :logger => @logger)
+    fj.instance_variable_set('@client', fjc)
+    fj.instance_variable_set('@keepalive_timer', kat)
 
-    ret = fj.on_disconnect(stanza)
+    EM::Timer.should_receive(:new).with(5).and_yield
+    fjc.should_receive(:run)
+
+    ret = fj.send(:on_disconnect, stanza)
     ret.should be_true
   end
 
@@ -119,43 +145,35 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     redis = mock('redis')
     redis.should_receive(:rpush).with('jabber_notifications', %q{{"notification_type":"shutdown"}})
 
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
+    ::Redis.should_receive(:new).twice.and_return(redis)
+    fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config, :logger => @logger)
 
-    fj.stop
+    fjn.stop
   end
 
   it "runs a blocking loop listening for notifications" do
-    timer = mock('timer')
-    timer.should_receive(:cancel)
-    EM::Synchrony.should_receive(:add_periodic_timer).with(60).and_return(timer)
-
     redis = mock('redis')
+    ::Redis.should_receive(:new).and_return(redis)
 
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
-    fj.should_receive(:register_handler).exactly(4).times
+    jb = mock(Flapjack::Gateways::Jabber::Bot)
+    jb.should_receive(:announce).with(an_instance_of(String), "example@example.com")
 
-    fj.should_receive(:connect)
-    fj.should_receive(:connected?).exactly(3).times.and_return(true)
+    fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config, :logger => @logger,
+            :siblings => [jb])
 
     blpop_count = 0
 
     redis.should_receive(:blpop).twice {
       blpop_count += 1
       if blpop_count == 1
-        ["jabber_notifications", %q{{"notification_type":"problem","event_id":"main-example.com:ping","state":"critical","summary":"!!!"}}]
+        ["jabber_notifications", %q{{"notification_type":"problem","event_id":"main-example.com:ping","state":"critical","summary":"!!!","address":"example@example.com"}}]
       else
-        fj.instance_variable_set('@should_quit', true)
+        fjn.instance_variable_set('@should_quit', true)
         ["jabber_notifications", %q{{"notification_type":"shutdown"}}]
       end
     }
 
-    EventMachine::Synchrony.should_receive(:next_tick).twice.and_yield
-    fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
-    fj.should_receive(:close)
-
-    fj.start
+    fjn.start
   end
 
 end

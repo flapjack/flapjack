@@ -3,8 +3,8 @@
 require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
-require 'haml'
 require 'rack/fiber_pool'
+require 'haml'
 
 require 'flapjack/rack_logger'
 
@@ -18,6 +18,7 @@ module Flapjack
   module Gateways
 
     class Web < Sinatra::Base
+      set :raise_errors, true
 
       rescue_exception = Proc.new do |env, e|
         if settings.show_exceptions?
@@ -37,10 +38,14 @@ module Flapjack
       use Rack::MethodOverride
 
       class << self
+
+        def pikelet_settings
+          {:em_synchrony => false,
+           :em_stop      => false}
+        end
+
         def start
           @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
-
-          @logger.info "starting web - class"
 
           if accesslog = (@config && @config['access_log'])
             if not File.directory?(File.dirname(accesslog))
@@ -52,8 +57,6 @@ module Flapjack
             access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
             use Flapjack::CommonLogger, access_logger
           end
-
-
         end
       end
 

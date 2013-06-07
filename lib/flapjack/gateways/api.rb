@@ -8,8 +8,8 @@
 
 require 'time'
 
-require 'rack/fiber_pool'
 require 'sinatra/base'
+require 'rack/fiber_pool'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
@@ -53,6 +53,7 @@ module Flapjack
       include Flapjack::Utility
 
       set :show_exceptions, false
+      set :raise_errors, true
 
       rescue_exception = Proc.new { |env, exception|
         @logger.error exception.message
@@ -65,6 +66,12 @@ module Flapjack
       use Rack::JsonParamsParser
 
       class << self
+
+        def pikelet_settings
+          {:em_synchrony => false,
+           :em_stop      => false}
+        end
+
         def start
           @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
 

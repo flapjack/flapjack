@@ -27,11 +27,17 @@ module Flapjack
 
     include Flapjack::Utility
 
+    def self.pikelet_settings
+      {:em_synchrony => true,
+       :em_stop      => true}
+    end
+
     def initialize(opts = {})
       @config = opts[:config]
       @redis_config = opts[:redis_config]
       @logger = opts[:logger]
-      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
+
+      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
 
       @queues = {:email     => @config['email_queue'],
                  :sms       => @config['sms_queue'],
@@ -70,7 +76,23 @@ module Flapjack
       @filters << Flapjack::Filters::DetectMassClientFailures.new(options)
       @filters << Flapjack::Filters::Delays.new(options)
       @filters << Flapjack::Filters::Acknowledgement.new(options)
+    end
 
+    # expire instance keys after one week
+    # TODO: set up a separate EM timer to reset key expiry every minute
+    # and reduce the expiry to, say, five minutes
+    # TODO: remove these keys on process exit
+    def touch_keys
+      [ "executive_instance:#{@instance_id}",
+        "event_counters:#{@instance_id}",
+        "event_counters:#{@instance_id}",
+        "event_counters:#{@instance_id}",
+        "event_counters:#{@instance_id}" ].each {|key|
+          @redis.expire(key, 1036800)
+        }
+    end
+
+    def start
       @boot_time    = Time.now
       @fqdn         = `/bin/hostname -f`.chomp
       @pid          = Process.pid
@@ -95,23 +117,7 @@ module Flapjack
       @redis.hset("event_counters:#{@instance_id}", 'failure', 0)
       @redis.hset("event_counters:#{@instance_id}", 'action', 0)
       touch_keys
-    end
 
-    # expire instance keys after one week
-    # TODO: set up a separate EM timer to reset key expiry every minute
-    # and reduce the expiry to, say, five minutes
-    # TODO: remove these keys on process exit
-    def touch_keys
-      [ "executive_instance:#{@instance_id}",
-        "event_counters:#{@instance_id}",
-        "event_counters:#{@instance_id}",
-        "event_counters:#{@instance_id}",
-        "event_counters:#{@instance_id}" ].each {|key|
-          @redis.expire(key, 1036800)
-        }
-    end
-
-    def start
       @logger.info("Booting main loop.")
 
       until @should_quit
@@ -126,14 +132,15 @@ module Flapjack
       @logger.info("Exiting main loop.")
     end
 
-    # this must use a separate connection to the main Executive one, as it's running
-    # from a different fiber while the main one is blocking.
+    # have to create a new connection here as it's running in a different thread
+    # (used to isolate exception handling between different pikelets)
     def stop
       @should_quit = true
-      @redis.rpush('events', JSON.generate('type'    => 'shutdown',
-                                           'host'    => '',
-                                           'service' => '',
-                                           'state'   => ''))
+      shutdown_redis = Redis.new(@redis_config.merge(:driver => :hiredis))
+      shutdown_redis.rpush('events', JSON.generate('type'    => 'shutdown',
+                                                   'host'    => '',
+                                                   'service' => '',
+                                                   'state'   => ''))
     end
 
   private

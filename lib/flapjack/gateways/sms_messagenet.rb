@@ -11,6 +11,11 @@ module Flapjack
 
       class << self
 
+        def pikelet_settings
+          {:em_synchrony => false,
+           :em_stop      => true}
+        end
+
         def start
           @sent = 0
         end
