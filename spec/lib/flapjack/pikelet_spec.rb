@@ -21,7 +21,7 @@ describe Flapjack::Pikelet do
     executive = mock('executive')
     executive.should_receive(:start)
     Flapjack::Executive.should_receive(:new).with(:config => config,
-      :redis_config => redis_config, :logger => logger).and_return(executive)
+      :redis_config => redis_config, :logger => logger, :siblings => []).and_return(executive)
 
     Thread.should_receive(:new).and_yield
     thread.should_receive(:abort_on_exception=).with(true)
@@ -57,7 +57,7 @@ describe Flapjack::Pikelet do
     executive = mock('executive')
     executive.should_receive(:start).twice.and_raise(exc)
     Flapjack::Executive.should_receive(:new).with(:config => config,
-      :redis_config => redis_config, :logger => logger).twice.and_return(executive)
+      :redis_config => redis_config, :logger => logger, :siblings => []).twice.and_return(executive)
 
     Thread.should_receive(:new).and_yield
     thread.should_receive(:abort_on_exception=).with(true)
@@ -107,7 +107,7 @@ describe Flapjack::Pikelet do
       EM.instance_variable_get("@error_handler").call(exc)
     }
     Flapjack::Executive.should_receive(:new).with(:config => config,
-      :redis_config => redis_config, :logger => logger).and_return(executive)
+      :redis_config => redis_config, :logger => logger, :siblings => []).and_return(executive)
 
     pikelets = Flapjack::Pikelet.create('executive', shutdown, :config => config,
       :redis_config => redis_config, :logger => logger)

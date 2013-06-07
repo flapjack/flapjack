@@ -151,8 +151,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     redis = mock('redis')
     redis.should_receive(:rpush).with('jabber_notifications', %q{{"notification_type":"shutdown"}})
 
-    ::Redis.should_receive(:new).and_return(redis)
-    Flapjack::RedisPool.should_receive(:new)
+    ::Redis.should_receive(:new).twice.and_return(redis)
     fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config, :logger => @logger)
 
     fjn.stop
@@ -160,13 +159,13 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
   it "runs a blocking loop listening for notifications" do
     redis = mock('redis')
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
+    ::Redis.should_receive(:new).and_return(redis)
 
     jb = mock(Flapjack::Gateways::Jabber::Bot)
     jb.should_receive(:announce).with(an_instance_of(String), "example@example.com")
 
     fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config, :logger => @logger,
-            :jabber_bot => jb)
+            :siblings => [jb])
 
     blpop_count = 0
 

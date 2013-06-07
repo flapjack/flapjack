@@ -8,7 +8,6 @@ require 'blather/client/dsl'
 require 'yajl/json_gem'
 
 require 'flapjack/data/entity_check'
-require 'flapjack/redis_pool'
 require 'flapjack/utility'
 require 'flapjack/version'
 
@@ -21,23 +20,29 @@ module Flapjack
       class Notifier
 
         def self.pikelet_settings
-          {:em_synchrony => true,
+          {:em_synchrony => false,
            :em_stop      => true}
         end
 
         def initialize(options = {})
-          @bot = options[:jabber_bot]
-
           @config = options[:config]
           @redis_config = options[:redis_config]
 
           @logger = options[:logger]
 
-          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+          @redis = Redis.new((@redis_config || {}).merge(:driver => :hiredis))
+
+          if options[:siblings]
+            # only works because the bot instance was initialised already (and
+            # the siblings array was transformed via map(&:pikelet))
+            # TODO clean up the sibling code so that it would work in
+            # either arrangement
+            @bot = options[:siblings].first
+          end
         end
 
         def stop
-          # TODO synchronize access to @should_quit ??
+          # TODO synchronize access to @should_quit
           @should_quit = true
           re = Redis.new((@redis_config || {}).merge(:driver => :hiredis))
           re.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
@@ -53,7 +58,6 @@ module Flapjack
           # before joining the group chat rooms)
 
           until @should_quit
-
             @logger.debug("jabber is connected so commencing blpop on #{queue}")
             evt = @redis.blpop(queue, 0)
             events[queue] = evt

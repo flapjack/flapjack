@@ -40,7 +40,8 @@ module Flapjack
 
       include MonitorMixin
 
-      attr_reader :error
+      attr_accessor :siblings
+      attr_reader :pikelet, :error
 
       def initialize(pikelet_class, shutdown, options = {})
         @pikelet_class = pikelet_class
@@ -50,6 +51,8 @@ module Flapjack
         @redis_config  = options[:redis_config]
         @logger        = options[:logger]
         @shutdown      = shutdown
+
+        @siblings      = []
 
         mon_initialize
       end
@@ -126,7 +129,8 @@ module Flapjack
       def start
         super do
           @pikelet = @pikelet_class.new(:config => @config,
-            :redis_config => @redis_config, :logger => @logger)
+            :redis_config => @redis_config, :logger => @logger,
+            :siblings => siblings.map(&:pikelet))
           @pikelet.start
         end
       end
@@ -255,11 +259,13 @@ module Flapjack
 
       return [] if types.nil?
 
-      types.collect {|pikelet_class|
+      created = types.collect {|pikelet_class|
         wrapper = WRAPPERS.detect {|wrap| wrap::TYPES.include?(type) }
         wrapper.new(pikelet_class, shutdown, :config => config,
                     :redis_config => redis_config, :logger => logger)
       }
+      created.each {|c| c.siblings = created - [c] }
+      created
     end
 
   end
