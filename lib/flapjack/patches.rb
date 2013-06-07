@@ -3,6 +3,7 @@
 require 'ostruct'
 require 'thin'
 require 'resque'
+require 'blather'
 # require 'log4r'
 
 class OpenStruct
@@ -40,6 +41,24 @@ class Hash
       value = Hash === v ? v.symbolize_keys : v
       acc[key] = value
       acc
+    end
+  end
+end
+
+# Should we be using a separately created Stream class? See
+#   https://github.com/adhearsion/blather/blob/develop/lib/blather/stream.rb#L5
+module Blather
+  class Stream < EventMachine::Connection
+    def unbind
+      cleanup
+
+      # # working around https://github.com/adhearsion/blather/issues/73
+      # raise NoConnection unless @inited
+      # raise ConnectionFailed unless @connected
+
+      @state = :stopped
+      @client.receive_data @error if @error
+      @client.unbind
     end
   end
 end

@@ -21,7 +21,9 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     Flapjack::RedisPool.should_receive(:new)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
 
-    EventMachine::Synchrony.should_receive(:next_tick).exactly(4).times.and_yield
+    EventMachine::Synchrony.should_receive(:next_tick).exactly(5).times.and_yield
+
+    fj.should_receive(:clear_handlers).with(:error)
 
     fj.should_receive(:register_handler).with(:ready).and_yield(stanza)
     fj.should_receive(:on_ready).with(stanza)
@@ -35,6 +37,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     fj.should_receive(:register_handler).with(:disconnected).and_yield(stanza)
     fj.should_receive(:on_disconnect).with(stanza).and_return(true)
 
+    fj.should_receive(:register_handler).with(:stream_error).and_yield(RuntimeError.new)
+
     fj.setup
   end
 
@@ -44,7 +48,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
     fj.should_receive(:connected?).and_return(true)
 
-    EventMachine::Synchrony.should_receive(:next_tick).and_yield
+    EventMachine::Synchrony.should_receive(:next_tick).exactly(3).times.and_yield
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Presence))
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
 
@@ -75,7 +79,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
 
-    EventMachine::Synchrony.should_receive(:next_tick).and_yield
+    EventMachine::Synchrony.should_receive(:next_tick).twice.and_yield
     fj.should_receive(:connected?).and_return(true)
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
 
@@ -91,7 +95,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     Flapjack::RedisPool.should_receive(:new)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
 
-    EventMachine::Synchrony.should_receive(:next_tick).and_yield
+    EventMachine::Synchrony.should_receive(:next_tick).twice.and_yield
     fj.should_receive(:connected?).and_return(true)
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
 
@@ -134,7 +138,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
-    fj.should_receive(:register_handler).exactly(4).times
+    fj.should_receive(:register_handler).exactly(5).times
 
     fj.should_receive(:connect)
     fj.should_receive(:connected?).exactly(3).times.and_return(true)
@@ -151,7 +155,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       end
     }
 
-    EventMachine::Synchrony.should_receive(:next_tick).twice.and_yield
+    EventMachine::Synchrony.should_receive(:next_tick).exactly(8).times.and_yield
     fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
     fj.should_receive(:close)
 
