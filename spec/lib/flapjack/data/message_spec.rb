@@ -6,20 +6,15 @@ describe Flapjack::Data::Message do
   let(:contact) { mock(Flapjack::Data::Contact) }
 
   it "assigns itself an ID" do
-    message = Flapjack::Data::Message.for_contact(:contact => contact)
+    message = Flapjack::Data::Message.for_contact(contact)
     mid = message.id
     mid.should_not be_nil
     mid.should be_a(String)
   end
 
   it "returns its contained data" do
-    notification = mock(Flapjack::Data::Notification)
-    notification.should_receive(:contents).and_return('notification' => 'contents')
-
-    message = Flapjack::Data::Message.for_contact(:contact => contact)
-    message.notification = notification
-    message.medium = 'email'
-    message.address = 'jja@example.com'
+    message = Flapjack::Data::Message.for_contact(contact, :medium => 'email',
+                :address => 'jja@example.com', :notification_contents => {'notification' => 'contents'})
 
     contact.should_receive(:id).and_return('23')
     contact.should_receive(:first_name).and_return('James')
