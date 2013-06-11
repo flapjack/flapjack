@@ -185,6 +185,7 @@ module Flapjack
         super do
           @server.stop!
           @pikelet_class.stop if @pikelet_class.respond_to?(:stop)
+          @thread.run if @thread.alive?
         end
       end
     end

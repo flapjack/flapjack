@@ -9,15 +9,12 @@
 require 'time'
 
 require 'sinatra/base'
-require 'rack/fiber_pool'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
 
 require 'flapjack/gateways/api/entity_presenter'
-require 'flapjack/rack_logger'
-require 'flapjack/redis_pool'
 
 # from https://github.com/sinatra/sinatra/issues/501
 # TODO move to its own file
@@ -52,15 +49,8 @@ module Flapjack
 
       include Flapjack::Utility
 
-      set :show_exceptions, false
       set :raise_errors, true
-
-      rescue_exception = Proc.new { |env, exception|
-        @logger.error exception.message
-        @logger.error exception.backtrace.join("\n")
-        [503, {}, {:errors => [exception.message]}.to_json]
-      }
-      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+      set :show_exceptions, false
 
       use Rack::MethodOverride
       use Rack::JsonParamsParser
@@ -73,13 +63,19 @@ module Flapjack
         end
 
         def start
-          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
-
           @logger.info "starting api - class"
 
-          if @config && @config['access_log']
-            access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
-            use Flapjack::CommonLogger, access_logger
+          @redis = Redis.new((@redis_config || {}).merge(:driver => :hiredis))
+
+          if accesslog = (@config && @config['access_log'])
+            if not File.directory?(File.dirname(accesslog))
+              puts "Parent directory for log file #{accesslog} doesn't exist"
+              puts "Exiting!"
+              exit
+            end
+
+            access_logger = Logger.new(@config['access_log'])
+            use Rack::CommonLogger, access_logger
           end
         end
       end

@@ -3,14 +3,10 @@
 require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
-require 'rack/fiber_pool'
 require 'haml'
-
-require 'flapjack/rack_logger'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
-require 'flapjack/redis_pool'
 require 'flapjack/utility'
 
 module Flapjack
@@ -19,21 +15,6 @@ module Flapjack
 
     class Web < Sinatra::Base
       set :raise_errors, true
-
-      rescue_exception = Proc.new do |env, e|
-        if settings.show_exceptions?
-          # ensure the sinatra error page shows properly
-          request = Sinatra::Request.new(env)
-          printer = Sinatra::ShowExceptions.new(proc{ raise e })
-          s, h, b = printer.call(env)
-          [s, h, b]
-        else
-          @logger.error e.message
-          @logger.error e.backtrace.join("\n")
-          [503, {}, ""]
-        end
-      end
-      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
 
       use Rack::MethodOverride
 
@@ -45,7 +26,9 @@ module Flapjack
         end
 
         def start
-          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+          @logger.info "starting web - class"
+
+          @redis = Redis.new((@redis_config || {}).merge(:driver => :hiredis))
 
           if accesslog = (@config && @config['access_log'])
             if not File.directory?(File.dirname(accesslog))
@@ -54,8 +37,8 @@ module Flapjack
               exit
             end
 
-            access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
-            use Flapjack::CommonLogger, access_logger
+            access_logger = Logger.new(@config['access_log'])
+            use Rack::CommonLogger, access_logger
           end
         end
       end
