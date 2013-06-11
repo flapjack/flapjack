@@ -26,17 +26,18 @@ def fail(opts)
   redis = Redis.new(opts[:redis_options])
   stop_after = opts[:minutes].to_i * 60
   recover = opts[:recover]
+  state = opts[:state] || 'critical'
   event  = {
     'entity'    => opts[:entity] || 'foo-app-01',
     'check'     => opts[:check]  || 'HTTP',
     'type'      => 'service',
     'timestamp' => Time.now.to_i
   }
-  failure  = event.merge('state' => 'critical', 'summary' => 'Connection refused')
-  recovery = event.merge('state' => 'ok',       'summary' => '200 OK, 37 ms')
+  failure  = event.merge('state' => state, 'summary' => 'Simulated check output (test by operator)')
+  recovery = event.merge('state' => 'ok',  'summary' => 'Simulated check output (test by operator)')
   key = "#{event['entity']}:#{event['check']}"
 
-  puts "#{Time.now}: sending failure event for #{key}"
+  puts "#{Time.now}: sending failure event (#{state}) for #{key}"
   send_event(failure, :redis => redis)
 
   EM.run {
@@ -51,7 +52,7 @@ def fail(opts)
     end
 
     EM.add_periodic_timer(10) do
-      puts "#{Time.now}: sending failure event for #{key}"
+      puts "#{Time.now}: sending failure event (#{state}) for #{key}"
       send_event(failure, :redis => redis)
     end
 
@@ -92,6 +93,10 @@ optparse = OptionParser.new do |opts|
     options.check = k
   end
 
+  opts.on("-s", "--state STATE", String, "optional STATE to generate failure events with ('CRITICAL')") do |s|
+    options.state = s
+  end
+
 end
 optparse.parse!(ARGV)
 
@@ -125,7 +130,7 @@ if config_env.nil? || config_env.empty?
 end
 
 options = {:redis_options => redis_options, :minutes => options.minutes,
-           :entity => options.entity, :check => options.check}
+           :entity => options.entity, :check => options.check, :state => options.state}
 case ARGV[0]
 when "fail-and-recover"
   fail(options.merge(:recover => true))
