@@ -11,10 +11,13 @@ module Flapjack
   module Data
     class Message
 
-      attr_accessor :medium, :address, :id, :duration, :contact, :notification
+      attr_reader :medium, :address, :duration, :contact
 
-      def self.for_contact(opts = {})
-        self.new(:contact => opts[:contact])
+      def self.for_contact(contact, opts = {})
+        self.new(:contact => contact,
+                 :notification_contents => opts[:notification_contents],
+                 :medium => opts[:medium], :address => opts[:address],
+                 :duration => opts[:duration])
       end
 
       def id
@@ -28,20 +31,23 @@ module Flapjack
       def contents
         c = {'media'              => medium,
              'address'            => address,
-             'id'                 => id}
-        if contact
-          c.update('contact_id'         => contact.id,
-                   'contact_first_name' => contact.first_name,
-                   'contact_last_name'  => contact.last_name)
-        end
+             'id'                 => id,
+             'contact_id'         => contact.id,
+             'contact_first_name' => contact.first_name,
+             'contact_last_name'  => contact.last_name}
         c['duration'] = duration if duration
-        c.update(notification.contents) if notification
+        return c if @notification_contents.nil?
+        c.merge(@notification_contents)
       end
 
     private
 
       def initialize(opts = {})
         @contact = opts[:contact]
+        @notification_contents = opts[:notification_contents]
+        @medium = opts[:medium]
+        @address = opts[:address]
+        @duration = opts[:duration]
       end
 
     end
