@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 0.7.11 - 2013-06-11
+- Bug: unknown events not fully treated as problems - no notification delay blocking (second swing) gh-154 (@jessereynolds)
+- Bug: correct jabber alias in example acknowledgement strings (second swing) gh-189 (@jessereynolds)
+
 # 0.7.10 - 2013-06-05
 - Bug: unknown events not fully treated as problems - no notification delay blocking gh-154 (@jessereynolds)
 
