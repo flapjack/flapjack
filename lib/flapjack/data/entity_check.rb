@@ -305,8 +305,7 @@ module Flapjack
       end
 
       def last_notifications_of_each_type
-        ln = {:problem         => last_problem_notification,
-              :warning         => last_warning_notification,
+        ln = {:warning         => last_warning_notification,
               :critical        => last_critical_notification,
               :unknown         => last_unknown_notification,
               :recovery        => last_recovery_notification,
