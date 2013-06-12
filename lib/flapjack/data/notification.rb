@@ -48,7 +48,7 @@ module Flapjack
           rules = contact.notification_rules
           media = contact.media
 
-          @logger.debug "considering messages for contact: #{contact_id} #{event_id} #{event_state} (media) #{media.inspect}"
+          @logger.debug "considering messages for contact id #{contact_id} #{event_id} #{event_state} (media) #{media.inspect}"
           rlen = rules.length
           @logger.debug "found #{rlen} rule#{(rlen == 1) ? '' : 's'} for contact"
 
@@ -75,7 +75,7 @@ module Flapjack
 
             if has_specific_matcher
 
-              @logger.debug("general removal when entity specific: #{matchers.length} matchers")
+              @logger.debug("general removal: found #{matchers.length} entity specific matchers")
               num_matchers = matchers.length
 
               matchers.reject! do |matcher|
@@ -97,7 +97,7 @@ module Flapjack
               matcher.media_for_severity(severity)
             }.flatten.uniq
 
-            @logger.debug "notification: collected media_for_severity: #{rule_media}"
+            @logger.debug "notification: collected media_for_severity(#{severity}): #{rule_media}"
             rule_media = rule_media.flatten.uniq.reject {|medium|
               contact.drop_notifications?(:media => medium,
                                           :check => event_id,
