@@ -322,6 +322,9 @@ module Flapjack
         last_warning = last_warning_notification
         return STATE_WARNING if last_warning && (last_warning > last_recovery)
 
+        last_unknown = last_unknown_notification
+        return STATE_UNKNOWN if last_unknown && (last_unknown > last_recovery)
+
         nil
       end
 
