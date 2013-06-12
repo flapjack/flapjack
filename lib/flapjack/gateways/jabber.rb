@@ -368,7 +368,7 @@ module Flapjack
                 !state.eql?('ok') &&
                 !'acknowledgement'.eql?(type) &&
                 !'test'.eql?(type) ?
-                "::: flapjack: ACKID #{event['event_count']} " : ''
+                "::: #{@config['alias']}: ACKID #{event['event_count']} " : ''
 
               type = 'unknown' unless type
 

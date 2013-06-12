@@ -187,6 +187,50 @@ Feature: events
     Then  a notification should not be generated
 
   @time
+  Scenario: Quick stream of unknown
+    Given the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  a notification should be generated
+    When  10 minutes passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  60 seconds passes
+    And   an unknown event is received
+    Then  a notification should be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  5 minutes passes
+    And   an unknown event is received
+    Then  a notification should be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+
+  @time
   Scenario: Flapper (down for one minute, up for one minute, repeat)
     Given the check is in an ok state
     When  a critical event is received

@@ -1,5 +1,19 @@
 ## Flapjack Changelog
 
+# 0.7.12 - UNRELEASED
+- Bug: no recovery for unknown for contact with notification rules gh-203 (@jessereynolds)
+- Bug: UNKNOWN -> OK (brief) -> [any problem state] alert is masked by notification interval gh-204 (@jessereynolds)
+
+# 0.7.11 - 2013-06-11
+- Bug: unknown events not fully treated as problems - no notification delay blocking (second swing) gh-154 (@jessereynolds)
+- Bug: correct jabber alias in example acknowledgement strings (second swing) gh-189 (@jessereynolds)
+
+# 0.7.10 - 2013-06-05
+- Bug: unknown events not fully treated as problems - no notification delay blocking gh-154 (@jessereynolds)
+
+# 0.7.9 - 2013-06-04
+- Feature: Include summary and details in the /status API call gh-179 (@ali-graham)
+
 # 0.7.8 - 2013-05-30
 - Feature: support multiline check output (thanks @bs-github) gh-100 (@jessereynolds)
 - Bug: notification rule with no entities or entity tags not being allowed gh-193 (@jessereynolds)

@@ -286,6 +286,12 @@ module Flapjack
         lcn.to_i
       end
 
+      def last_unknown_notification
+        lcn = @redis.get("#{@key}:last_unknown_notification")
+        return unless (lcn && lcn =~ /^\d+$/)
+        lcn.to_i
+      end
+
       def last_recovery_notification
         lrn = @redis.get("#{@key}:last_recovery_notification")
         return unless (lrn && lrn =~ /^\d+$/)
@@ -299,9 +305,9 @@ module Flapjack
       end
 
       def last_notifications_of_each_type
-        ln = {:problem         => last_problem_notification,
-              :warning         => last_warning_notification,
+        ln = {:warning         => last_warning_notification,
               :critical        => last_critical_notification,
+              :unknown         => last_unknown_notification,
               :recovery        => last_recovery_notification,
               :acknowledgement => last_acknowledgement_notification }
         ln
@@ -315,6 +321,9 @@ module Flapjack
 
         last_warning = last_warning_notification
         return STATE_WARNING if last_warning && (last_warning > last_recovery)
+
+        last_unknown = last_unknown_notification
+        return STATE_UNKNOWN if last_unknown && (last_unknown > last_recovery)
 
         nil
       end

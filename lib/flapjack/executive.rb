@@ -279,171 +279,49 @@ module Flapjack
       end
 
       notification = Flapjack::Data::Notification.for_event(
-        event, :type => notification_type, :max_notified_severity => max_notified_severity)
+        event, :type => notification_type,
+               :max_notified_severity => max_notified_severity,
+               :contacts => contacts,
+               :default_timezone => @default_contact_timezone,
+               :logger => @logger)
 
-      messages = notification.messages(:contacts => contacts)
-      messages = apply_notification_rules(messages, event.state)
-      enqueue_messages(messages)
-    end
-
-    # time restrictions match?
-    # nil rule.time_restrictions matches
-    # times (start, end) within time restrictions will have any UTC offset removed and will be
-    # considered to be in the timezone of the contact
-    def rule_occurring_now?(rule, opts)
-      contact = opts[:contact]
-      return true if rule.time_restrictions.nil? or rule.time_restrictions.empty?
-
-      timezone = contact.timezone(:default => @default_contact_timezone)
-      usertime = timezone.now
-
-      match = rule.time_restrictions.any? do |tr|
-        # add contact's timezone to the time restriction schedule
-        schedule = Flapjack::Data::NotificationRule.
-                     time_restriction_to_icecube_schedule(tr, timezone)
-        schedule && schedule.occurring_at?(usertime)
-      end
-      !!match
-    end
-
-    # delete messages based on entity name(s), tags, severity, time of day
-    def apply_notification_rules(messages, severity)
-      # first get all rules matching entity and time
-      @logger.debug "apply_notification_rules: got messages with size #{messages.size}"
-
-      # don't consider notification rules if the contact has none
-
-      tuple = messages.map do |message|
-        rules    = message.contact.notification_rules
-        event_id = message.notification.event.id
-
-        @logger.debug "considering message for contact: #{message.contact.id} #{message.medium} #{event_id} #{message.notification.event.state}"
-        @logger.debug "found #{rules.length} rules for this message's contact"
-
-        options  = {}
-        options[:no_rules_for_contact] = true if rules.empty?
-
-        # filter based on entity, tags, severity, time of day
-        matchers = rules.find_all do |rule|
-          rule.match_entity?(event_id) && rule_occurring_now?(rule, :contact => message.contact)
-        end
-        @logger.debug "#{matchers.length} matchers remain for this message:"
-        matchers.each {|matcher|
-          @logger.debug "matcher: #{matcher.to_json}"
-        }
-        [message, matchers, options]
-      end
-
-      # matchers are rules of the contact that have matched the current event
-      # for time and entity
-
-      @logger.debug "apply_notification_rules: num messages after entity and time matching: #{tuple.size}"
-
-      # delete any matchers for all entities if there are more specific matchers
-      tuple = tuple.map do |message, matchers, options|
-        num_matchers = matchers.length
-        if matchers.length > 1
-          @logger.debug("general removal when entity specific: #{matchers.length} matchers")
-          have_specific = matchers.detect do |matcher|
-            ( matcher.entities && !matcher.entities.empty? ) or
-              ( matcher.entity_tags && !matcher.entity_tags.empty? )
-          end
-          if have_specific
-            # delete any rules for all entities
-            matchers.reject! do |matcher|
-              ( matcher.entities.nil? || matcher.entities.empty? ) &&
-                ( matcher.entity_tags.nil? || matcher.entity_tags.empty? )
-            end
-          end
-        end
-        if num_matchers != matchers.length
-          @logger.debug("apply_notification_rules: removal of general matchers when entity specific matchers are present: number of matchers changed from #{num_matchers} to #{matchers.length} for message id: #{message.contact.id}, medium: #{message.medium}")
-        end
-        [message, matchers, options]
-      end
-
-      # delete media based on blackholes
-      tuple = tuple.find_all do |message, matchers, options|
-        # or use message.notification.contents['state']
-        matchers.none? {|matcher| matcher.blackhole?(severity) }
-      end
-
-      @logger.debug "apply_notification_rules: num messages after removing blackhole matches: #{tuple.size}"
-
-      # delete any media that doesn't meet severity<->media constraints
-      tuple = tuple.find_all do |message, matchers, options|
-        state = message.notification.event.state
-        max_notified_severity = message.notification.max_notified_severity
-
-        @logger.debug "apply_notification_rules severity-media constraints: considering message: #{message.contact.id} #{message.medium} #{state}"
-        # use EntityCheck#max_notified_severity_of_current_failure
-        # as calculated prior to updating the last_notification* keys
-        # if it's a higher severity than the current state
-        severity = 'ok'
-        case
-        when ([state, max_notified_severity] & ['critical', 'unknown']).any?
-          severity = 'critical'
-        when [state, max_notified_severity].include?('warning')
-          severity = 'warning'
-        end
-
-        no_rules_for_contact = !!options[:no_rules_for_contact]
-        sev_media_matchers = matchers.any? {|matcher|
-            (matcher.media_for_severity(severity) || []).include?(message.medium)
-          }
-        @logger.debug "apply_notification_rules severity-media constraints: no_rules_for_contact: #{no_rules_for_contact}, sev_media_matchers: #{sev_media_matchers}"
-        no_rules_for_contact || sev_media_matchers
-      end
-
-      @logger.debug "apply_notification_rules: num messages after pruning for severity-media constraints: #{tuple.size}"
-
-      # delete media based on notification interval
-      tuple = tuple.find_all do |message, matchers, options|
-        not message.contact.drop_notifications?(:media => message.medium,
-                                                :check => message.notification.event.id,
-                                                :state => message.notification.event.state)
-      end
-
-      @logger.debug "apply_notification_rules: num messages after pruning for notification intervals: #{tuple.size}"
-
-      tuple.map do |message, matchers, options|
-        message
-      end
-    end
-
-    def enqueue_messages(messages)
-
-      messages.each do |message|
+      notification.messages.each do |message|
         media_type = message.medium
         contents   = message.contents
-        event_id   = message.notification.event.id
+        address    = message.address
+        event_id   = event.id
 
         @notifylog.info("#{Time.now.to_s} | #{event_id} | " +
-          "#{message.notification.type} | #{message.contact.id} | #{media_type} | #{message.address}")
+          "#{notification_type} | #{message.contact.id} | #{media_type} | #{address}")
 
         unless @queues[media_type.to_sym]
           @logger.error("no queue for media type: #{media_type}")
           return
         end
 
-        @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{message.address}")
+        @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{address}")
 
-        if message.notification.event.state == 'ok'
+        if event.ok?
           message.contact.update_sent_alert_keys(
-            :media => message.medium,
-            :check => message.notification.event.id,
+            :media => media_type,
+            :check => event_id,
             :state => 'warning',
             :delete => true)
           message.contact.update_sent_alert_keys(
-            :media => message.medium,
-            :check => message.notification.event.id,
+            :media => media_type,
+            :check => event_id,
             :state => 'critical',
+            :delete => true)
+          message.contact.update_sent_alert_keys(
+            :media => media_type,
+            :check => event_id,
+            :state => 'unknown',
             :delete => true)
         else
           message.contact.update_sent_alert_keys(
-            :media => message.medium,
-            :check => message.notification.event.id,
-            :state => message.notification.event.state)
+            :media => media_type,
+            :check => event_id,
+            :state => event.state)
         end
 
         # TODO consider changing Resque jobs to use raw blpop like the others
@@ -460,8 +338,7 @@ module Flapjack
           @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(contents))
         end
       end
-
-   end
+    end
 
   end
 end
