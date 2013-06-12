@@ -312,6 +312,11 @@ module Flapjack
             :check => event_id,
             :state => 'critical',
             :delete => true)
+          message.contact.update_sent_alert_keys(
+            :media => media_type,
+            :check => event_id,
+            :state => 'unknown',
+            :delete => true)
         else
           message.contact.update_sent_alert_keys(
             :media => media_type,
