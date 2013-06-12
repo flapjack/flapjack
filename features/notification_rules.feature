@@ -208,7 +208,6 @@ Feature: Notification rules on a per contact basis
     And   an unknown event is received
     And   1 minute passes
     And   an unknown event is received
-    And show me the freaking log
     Then  3 email alerts should be queued for malak@example.com
     And   3 sms alerts should be queued for +61400000001
 
