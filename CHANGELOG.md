@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 0.7.12 - UNRELEASED
+- Bug: no recovery for unknown for contact with notification rules gh-203 (@jessereynolds)
+- Bug: UNKNOWN -> OK (brief) -> [any problem state] alert is masked by notification interval gh-204 (@jessereynolds)
+
 # 0.7.11 - 2013-06-11
 - Bug: unknown events not fully treated as problems - no notification delay blocking (second swing) gh-154 (@jessereynolds)
 - Bug: correct jabber alias in example acknowledgement strings (second swing) gh-189 (@jessereynolds)
