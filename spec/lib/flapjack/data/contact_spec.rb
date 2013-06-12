@@ -20,6 +20,16 @@ describe Flapjack::Data::Contact, :redis => true do
     }
   }
 
+  let(:general_notification_rule_data) {
+    {:entities           => [],
+     :entity_tags        => [],
+     :time_restrictions  => [],
+     :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'],
+     :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'],
+     :warning_blackhole  => false,
+     :critical_blackhole => false}
+  }
+
   before(:each) do
     Flapjack::Data::Contact.add({'id'         => '362',
                                  'first_name' => 'John',
@@ -71,7 +81,7 @@ describe Flapjack::Data::Contact, :redis => true do
 
     nr = contact.notification_rules
     nr.should_not be_nil
-    nr.should have(1).notification_rule
+    nr.should have(2).notification_rules
 
     Flapjack::Data::Contact.add({'id'         => '363',
                                  'first_name' => 'Smithy',
@@ -82,10 +92,9 @@ describe Flapjack::Data::Contact, :redis => true do
     contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
     contact.should_not be_nil
     contact.name.should == 'Smithy Smith'
-
-    nr = contact.notification_rules
-    nr.should_not be_nil
-    nr.should be_empty
+    rules = contact.notification_rules
+    rules.should have(1).notification_rule
+    nr.map(&:id).should_not include(rules.first.id)
   end
 
   it "updates a contact and clears their media settings" do
@@ -101,18 +110,19 @@ describe Flapjack::Data::Contact, :redis => true do
 
     contact.add_notification_rule(notification_rule_data)
 
-    nr = contact.notification_rules
-    nr.should_not be_nil
-    nr.should have(1).notification_rule
+    nr1 = contact.notification_rules
+    nr1.should_not be_nil
+    nr1.should have(2).notification_rules
 
     contact.update('first_name' => 'John',
                    'last_name'  => 'Smith',
                    'email'      => 'johns@example.com')
     contact.name.should == 'John Smith'
 
-    nr = contact.notification_rules
-    nr.should_not be_nil
-    nr.should have(1).notification_rule
+    nr2 = contact.notification_rules
+    nr2.should_not be_nil
+    nr2.should have(2).notification_rules
+    nr1.map(&:id).should == nr2.map(&:id)
   end
 
   it "adds a notification rule for a contact" do
@@ -121,7 +131,7 @@ describe Flapjack::Data::Contact, :redis => true do
 
     expect {
       contact.add_notification_rule(notification_rule_data)
-    }.to change { contact.notification_rules.size }.from(0).to(1)
+    }.to change { contact.notification_rules.size }.from(1).to(2)
   end
 
   it "removes a notification rule from a contact" do
@@ -132,7 +142,38 @@ describe Flapjack::Data::Contact, :redis => true do
 
     expect {
       contact.delete_notification_rule(rule)
-    }.to change { contact.notification_rules.size }.from(1).to(0)
+    }.to change { contact.notification_rules.size }.from(2).to(1)
+  end
+
+  it "creates a general notification rule for a pre-existing contact if none exists" do
+    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
+
+    @redis.smembers("contact_notification_rules:363").each do |rule_id|
+      @redis.srem("contact_notification_rules:363", rule_id)
+    end
+    @redis.smembers("contact_notification_rules:363").should be_empty
+
+    rules = contact.notification_rules
+    rules.should have(1).rule
+    rule = rules.first
+    [:entities, :entity_tags, :time_restrictions,
+     :warning_media, :critical_media,
+     :warning_blackhole, :critical_blackhole].each do |k|
+      rule.send(k).should == general_notification_rule_data[k]
+    end
+  end
+
+  it "creates a general notification rule for a pre-existing contact if the existing general one was changed" do
+    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
+    rules = contact.notification_rules
+    rules.should have(1).notification_rule
+    rule = rules.first
+
+    rule.update(notification_rule_data)
+
+    rules = contact.notification_rules
+    rules.should have(2).notification_rules
+    rules.select {|r| r.is_specific? }.should have(1).rule
   end
 
   it "deletes a contact by id, including linked entities, checks, tags and notification rules" do

@@ -55,7 +55,10 @@ module Flapjack
         end
 
         self.add_or_update(contact_id, contact_data, :redis => redis)
-        self.find_by_id(contact_id, :redis => redis)
+        if contact = self.find_by_id(contact_id, :redis => redis)
+          contact.notification_rules # invoke to create general rule
+        end
+        contact
       end
 
       def self.delete_all(options = {})
@@ -161,11 +164,26 @@ module Flapjack
       end
 
       # return an array of the notification rules of this contact
-      def notification_rules
-        @redis.smembers("contact_notification_rules:#{self.id}").collect { |rule_id|
-          next if (rule_id.nil? || rule_id == '')
-          Flapjack::Data::NotificationRule.find_by_id(rule_id, {:redis => @redis })
-        }.compact
+      def notification_rules(opts = {})
+        rules = @redis.smembers("contact_notification_rules:#{self.id}").inject([]) do |ret, rule_id|
+          unless (rule_id.nil? || rule_id == '')
+            ret << Flapjack::Data::NotificationRule.find_by_id(rule_id, :redis => @redis)
+          end
+          ret
+        end
+        if rules.all? {|r| r.is_specific? } # also true if empty
+          rule = self.add_notification_rule({
+              :entities           => [],
+              :entity_tags        => [],
+              :time_restrictions  => [],
+              :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'],
+              :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'],
+              :warning_blackhole  => false,
+              :critical_blackhole => false,
+            }, :logger => opts[:logger])
+          rules.unshift(rule)
+        end
+        rules
       end
 
       def add_notification_rule(rule_data, opts = {})
