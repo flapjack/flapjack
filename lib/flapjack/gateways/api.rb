@@ -138,15 +138,18 @@ module Flapjack
 
         if entity_name
           # backwards-compatible, single entity or entity&check from route
-          entities = [ check ? {entity_name => check} : entity_name ]
+          entities = check ? nil : [entity_name]
+          checks   = check ? {entity_name => check} : nil
         else
           # new and improved bulk API query
           entities = params[:entity]
-          halt err(403, "no entities") if entities.nil? || entities.empty?
-          entities = [entities] unless entities.is_a?(Array)
+          checks   = params[:check]
+          # halt err(403, "no entities") if entities.nil? || entities.empty?
+          entities = [entities] unless entities.nil? || entities.is_a?(Array)
+          # TODO err if checks isn't a Hash (similar rules as in flapjack-diner)
         end
 
-        results = present_api_results(entities, 'status') {|presenter|
+        results = present_api_results(entities, checks, 'status') {|presenter|
           presenter.status
         }
 
@@ -167,18 +170,21 @@ module Flapjack
 
         if entity_name
           # backwards-compatible, single entity or entity&check from route
-          entities = [ check ? {entity_name => check} : entity_name ]
+          entities = check ? nil : [entity_name]
+          checks   = check ? {entity_name => check} : nil
         else
           # new and improved bulk API queries
           entities = params[:entity]
-          halt err(403, "no entities") if entities.nil? || entities.empty?
-          entities = [entities] unless entities.is_a?(Array)
+          checks   = params[:check]
+          # halt err(403, "no entities") if entities.nil? || entities.empty?
+          entities = [entities] unless entities.nil? || entities.is_a?(Array)
+          # TODO err if checks isn't a Hash (similar rules as in flapjack-diner)
         end
 
         start_time = validate_and_parsetime(params[:start_time])
         end_time   = validate_and_parsetime(params[:end_time])
 
-        results = present_api_results(entities, action) {|presenter|
+        results = present_api_results(entities, checks, action) {|presenter|
           presenter.send(action, start_time, end_time)
         }
 
@@ -633,30 +639,31 @@ module Flapjack
         entity_check
       end
 
-      def present_api_results(entities, result_type, &block)
-        entities.collect {|entity_name_or_hash|
-          # hash of {entity_name => 'check', entity_name_2 => ['check_2', 'check_3']}
-          if entity_name_or_hash.is_a?(Hash)
-            # is there a simpler way to express this?
-            entity_name_or_hash.keys.collect {|entity_name|
-              checks = entity_name_or_hash[entity_name]
-              checks = [checks] unless checks.is_a?(Array)
-              entity = find_entity(entity_name)
-              checks.collect {|check|
-                entity_check = find_entity_check(entity, check)
-                {:entity => entity_name,
-                 :check => check,
-                 result_type.to_sym => yield(Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check, :redis => redis))
-                }
-              }
-            }.flatten(1)
-          else
-            # entity name string, so get results for all checks for that entity
-            entity_name = entity_name_or_hash
+      def present_api_results(entities, entity_checks, result_type, &block)
+        result = []
+
+        unless entities.nil? || entities.empty?
+          result += entities.collect {|entity_name|
             entity = find_entity(entity_name)
             yield(Flapjack::Gateways::API::EntityPresenter.new(entity, :redis => redis))
-          end
-        }.flatten(1)
+          }.flatten(1)
+        end
+
+        unless entity_checks.nil? || entity_checks.empty?
+          result += entity_checks.inject([]) {|memo, (entity_name, checks)|
+            checks = [checks] unless checks.is_a?(Array)
+            entity = find_entity(entity_name)
+            memo += checks.collect {|check|
+              entity_check = find_entity_check(entity, check)
+              {:entity => entity_name,
+               :check => check,
+               result_type.to_sym => yield(Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check, :redis => redis))
+              }
+            }
+          }.flatten(1)
+        end
+
+        result
       end
 
       def find_tags(tags)

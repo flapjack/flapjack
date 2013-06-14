@@ -338,7 +338,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    get "/status", :entity => {entity_name => check}
+    get "/status", :check => {entity_name => check}
     last_response.should be_ok
     last_response.body.should == result.to_json
   end
@@ -347,7 +347,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(nil)
 
-    get "/status", :entity => {entity_name => check}
+    get "/status", :check => {entity_name => check}
     last_response.should be_forbidden
   end
 
@@ -358,7 +358,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(nil)
 
-    get "/status", :entity => {entity_name => check}
+    get "/status", :check => {entity_name => check}
     last_response.should be_forbidden
   end
 
@@ -441,7 +441,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    get "/scheduled_maintenances", :entity => {entity_name => check}
+    get "/scheduled_maintenances", :check => {entity_name => check}
     last_response.should be_ok
     last_response.body.should == result.to_json
   end
@@ -478,7 +478,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    get "/unscheduled_maintenances", :entity => {entity_name => check}
+    get "/unscheduled_maintenances", :check => {entity_name => check}
     last_response.should be_ok
     last_response.body.should == result.to_json
   end
@@ -501,7 +501,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    get "/unscheduled_maintenances", :entity => {entity_name => check},
+    get "/unscheduled_maintenances", :check => {entity_name => check},
       :start_time => start.iso8601, :end_time => finish.iso8601
     last_response.should be_ok
     last_response.body.should == result.to_json
@@ -547,7 +547,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity_2, 'bar', :redis => redis).and_return(bar_check)
 
-    get "/outages", :entity => [entity_name, {entity_2_name => ['foo', 'bar']}]
+    get "/outages", :entity => entity_name, :check => {entity_2_name => ['foo', 'bar']}
     last_response.should be_ok
     last_response.body.should == result.to_json
   end
@@ -567,7 +567,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    get "/outages", :entity => {entity_name => check}
+    get "/outages", :check => {entity_name => check}
     last_response.should be_ok
     last_response.body.should == result.to_json
   end
@@ -604,7 +604,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    get "/downtime", :entity => {entity_name => check}
+    get "/downtime", :check => {entity_name => check}
     last_response.should be_ok
     last_response.body.should == result.to_json
   end
