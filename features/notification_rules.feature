@@ -29,6 +29,7 @@ Feature: Notification rules on a per contact basis
 
     And user 1 has the following notification rules:
       | entities | entity_tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
+      |          |             | email         | sms,email        | true              | true               |                   |
       | foo      |             | email         | sms,email        |                   |                    | 8-18 weekdays     |
       | bar      |             |               | sms,email        | true              |                    |                   |
       | baz      |             | email         | sms,email        |                   |                    |                   |
@@ -41,10 +42,10 @@ Feature: Notification rules on a per contact basis
 
     And user 3 has the following notification rules:
       | entities | entity_tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      | buf      |             | email         | email            |                   |                    |                   |
-      | buf      |             | sms           | sms              |                   |                    |                   |
       |          |             | email         | email            |                   |                    |                   |
       | baz      |             | sms           | sms              |                   |                    |                   |
+      | buf      |             | email         | email            |                   |                    |                   |
+      | buf      |             | sms           | sms              |                   |                    |                   |
 
   @time_restrictions @time
   Scenario: Alerts only during specified time restrictions

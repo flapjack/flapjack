@@ -68,20 +68,12 @@ module Flapjack
             end
 
             # delete any matchers for all entities if there are more specific matchers
-            has_specific_matcher = matchers.any? do |matcher|
-              ( !matcher.entities.nil? && !matcher.entities.empty? ) ||
-                  ( !matcher.entity_tags.nil? && !matcher.entity_tags.empty? )
-            end
-
-            if has_specific_matcher
+            if matchers.any? {|matcher| matcher.is_specific? }
 
               @logger.debug("general removal: found #{matchers.length} entity specific matchers")
               num_matchers = matchers.length
 
-              matchers.reject! do |matcher|
-                ( matcher.entities.nil? || matcher.entities.empty? ) &&
-                  ( matcher.entity_tags.nil? || matcher.entity_tags.empty? )
-              end
+              matchers.reject! {|matcher| !matcher.is_specific? }
 
               if num_matchers != matchers.length
                 @logger.debug("notification: removal of general matchers when entity specific matchers are present: number of matchers changed from #{num_matchers} to #{matchers.length} for contact id: #{contact_id}")

@@ -1,6 +1,7 @@
 ## Flapjack Changelog
 
-# 0.7.12 - UNRELEASED
+# 0.7.12 - 2013-06-12
+- Feature: auto-generate a general notification rule for contacts that don't have any gh-199 (@ali-graham)
 - Bug: no recovery for unknown for contact with notification rules gh-203 (@jessereynolds)
 - Bug: UNKNOWN -> OK (brief) -> [any problem state] alert is masked by notification interval gh-204 (@jessereynolds)
 
