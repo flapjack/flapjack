@@ -63,30 +63,30 @@ describe 'Flapjack::Gateways::API::Entity::Presenter' do
     expect_check_presenters
     unsched_maint_a = mock('unsched_maint_a')
     unsched_maint_b = mock('unsched_maint_b')
-    checkpres_a.should_receive(:unscheduled_maintenance).with(start_time, end_time).
+    checkpres_a.should_receive(:unscheduled_maintenances).with(start_time, end_time).
       and_return(unsched_maint_a)
-    checkpres_b.should_receive(:unscheduled_maintenance).with(start_time, end_time).
+    checkpres_b.should_receive(:unscheduled_maintenances).with(start_time, end_time).
       and_return(unsched_maint_b)
 
     ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
-    unsched_maint = ep.unscheduled_maintenance(start_time, end_time)
-    unsched_maint.should == [{:entity => entity, :check => 'ping', :unscheduled_maintenance => unsched_maint_b},
-                             {:entity => entity, :check => 'ssh',  :unscheduled_maintenance => unsched_maint_a}]
+    unsched_maint = ep.unscheduled_maintenances(start_time, end_time)
+    unsched_maint.should == [{:entity => entity, :check => 'ping', :unscheduled_maintenances => unsched_maint_b},
+                             {:entity => entity, :check => 'ssh',  :unscheduled_maintenances => unsched_maint_a}]
   end
 
   it "returns a list of scheduled maintenance periods for each check on an entity" do
     expect_check_presenters
     sched_maint_a = mock('sched_maint_a')
     sched_maint_b = mock('sched_maint_b')
-    checkpres_a.should_receive(:scheduled_maintenance).with(start_time, end_time).
+    checkpres_a.should_receive(:scheduled_maintenances).with(start_time, end_time).
       and_return(sched_maint_a)
-    checkpres_b.should_receive(:scheduled_maintenance).with(start_time, end_time).
+    checkpres_b.should_receive(:scheduled_maintenances).with(start_time, end_time).
       and_return(sched_maint_b)
 
     ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
-    sched_maint = ep.scheduled_maintenance(start_time, end_time)
-    sched_maint.should == [{:entity => entity, :check => 'ping', :scheduled_maintenance => sched_maint_b},
-                           {:entity => entity, :check => 'ssh',  :scheduled_maintenance => sched_maint_a}]
+    sched_maint = ep.scheduled_maintenances(start_time, end_time)
+    sched_maint.should == [{:entity => entity, :check => 'ping', :scheduled_maintenances => sched_maint_b},
+                           {:entity => entity, :check => 'ssh',  :scheduled_maintenances => sched_maint_a}]
   end
 
   it "returns a list of downtime for each check on an entity" do

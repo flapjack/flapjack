@@ -33,17 +33,17 @@ module Flapjack
           }
         end
 
-        def unscheduled_maintenance(start_time, end_time)
+        def unscheduled_maintenances(start_time, end_time)
           checks.collect {|c|
-            {:entity => @entity, :check => c, :unscheduled_maintenance =>
-              check_presenter(c).unscheduled_maintenance(start_time, end_time)}
+            {:entity => @entity, :check => c, :unscheduled_maintenances =>
+              check_presenter(c).unscheduled_maintenances(start_time, end_time)}
           }
         end
 
-        def scheduled_maintenance(start_time, end_time)
+        def scheduled_maintenances(start_time, end_time)
           checks.collect {|c|
-            {:entity => @entity, :check => c, :scheduled_maintenance =>
-              check_presenter(c).scheduled_maintenance(start_time, end_time)}
+            {:entity => @entity, :check => c, :scheduled_maintenances =>
+              check_presenter(c).scheduled_maintenances(start_time, end_time)}
           }
         end
 

@@ -83,6 +83,224 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     last_response.body.should == [check].to_json
   end
 
+  context 'old API calling format' do
+
+    it "returns the status for all checks on an entity" do
+      status = mock('status', :to_json => 'status!'.to_json)
+      result = {:entity => entity_name, :check => check, :status => status}
+      entity_presenter.should_receive(:status).and_return(result)
+
+      Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
+        with(entity, :redis => redis).and_return(entity_presenter)
+
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+
+      get "/status/#{entity_name_esc}"
+      last_response.should be_ok
+      last_response.body.should == ['status!'].to_json
+    end
+
+    it "should not show the status for an entity that's not found" do
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(nil)
+
+      get "/status/#{entity_name_esc}"
+      last_response.should be_forbidden
+    end
+
+    it "returns the status for a check on an entity" do
+      status = mock('status', :to_json => 'status!'.to_json)
+      entity_check_presenter.should_receive(:status).and_return(status)
+
+      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
+        with(entity_check, :redis => redis).and_return(entity_check_presenter)
+
+      Flapjack::Data::EntityCheck.should_receive(:for_entity).
+        with(entity, check, :redis => redis).and_return(entity_check)
+
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+
+      get "/status/#{entity_name_esc}/#{check}"
+      last_response.should be_ok
+      last_response.body.should == 'status!'.to_json
+    end
+
+    it "should not show the status for a check on an entity that's not found" do
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(nil)
+
+      get "/status/#{entity_name_esc}/#{check}"
+      last_response.should be_forbidden
+    end
+
+    it "should not show the status for a check that's not found on an entity" do
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+
+      Flapjack::Data::EntityCheck.should_receive(:for_entity).
+        with(entity, check, :redis => redis).and_return(nil)
+
+      get "/status/#{entity_name_esc}/#{check}"
+      last_response.should be_forbidden
+    end
+
+    it "returns a list of scheduled maintenance periods for an entity" do
+      sched = mock('sched', :to_json => 'sched!'.to_json)
+      result = {:entity => entity_name, :check => check, :scheduled_maintenances => sched}
+      entity_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(result)
+      Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
+        with(entity, :redis => redis).and_return(entity_presenter)
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+
+      get "/scheduled_maintenances/#{entity_name_esc}"
+      last_response.should be_ok
+      last_response.body.should == [{:check => check, :scheduled_maintenance => sched}].to_json
+    end
+
+    it "returns a list of scheduled maintenance periods within a time window for an entity" do
+      start  = Time.parse('1 Jan 2012')
+      finish = Time.parse('6 Jan 2012')
+
+      sched = mock('sched', :to_json => 'sched!'.to_json)
+      result = {:entity => entity_name, :check => check, :scheduled_maintenances => sched}
+      entity_presenter.should_receive(:scheduled_maintenances).with(start.to_i, finish.to_i).and_return(result)
+      Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
+        with(entity, :redis => redis).and_return(entity_presenter)
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+
+      get "/scheduled_maintenances/#{entity_name_esc}?" +
+        "start_time=#{CGI.escape(start.iso8601)}&end_time=#{CGI.escape(finish.iso8601)}"
+      last_response.should be_ok
+      last_response.body.should == [{:check => check, :scheduled_maintenance => sched}].to_json
+    end
+
+    it "returns a list of scheduled maintenance periods for a check on an entity" do
+      sched = mock('sched', :to_json => 'sched!'.to_json)
+      entity_check_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(sched)
+      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
+        with(entity_check, :redis => redis).and_return(entity_check_presenter)
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+      Flapjack::Data::EntityCheck.should_receive(:for_entity).
+        with(entity, check, :redis => redis).and_return(entity_check)
+
+      get "/scheduled_maintenances/#{entity_name_esc}/#{check}"
+      last_response.should be_ok
+      last_response.body.should == 'sched!'.to_json
+    end
+
+    it "returns a list of unscheduled maintenance periods for an entity" do
+      unsched = mock('unsched', :to_json => 'unsched!'.to_json)
+      result = {:entity => entity_name, :check => check, :unscheduled_maintenances => unsched}
+      entity_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(result)
+      Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
+        with(entity, :redis => redis).and_return(entity_presenter)
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+
+      get "/unscheduled_maintenances/#{entity_name_esc}"
+      last_response.should be_ok
+      last_response.body.should == [{:check => check, :unscheduled_maintenance => unsched}].to_json
+    end
+
+    it "returns a list of unscheduled maintenance periods for a check on an entity" do
+      unsched = mock('unsched', :to_json => 'unsched!'.to_json)
+      entity_check_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(unsched)
+      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
+        with(entity_check, :redis => redis).and_return(entity_check_presenter)
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+      Flapjack::Data::EntityCheck.should_receive(:for_entity).
+        with(entity, check, :redis => redis).and_return(entity_check)
+
+      get "/unscheduled_maintenances/#{entity_name_esc}/#{check}"
+      last_response.should be_ok
+      last_response.body.should == 'unsched!'.to_json
+    end
+
+    it "returns a list of unscheduled maintenance periods within a time window for a check an entity" do
+      start    = Time.parse('1 Jan 2012')
+      finish   = Time.parse('6 Jan 2012')
+
+      unsched = mock('unsched', :to_json => 'unsched!'.to_json)
+      entity_check_presenter.should_receive(:unscheduled_maintenances).with(start.to_i, finish.to_i).and_return(unsched)
+      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
+        with(entity_check, :redis => redis).and_return(entity_check_presenter)
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+      Flapjack::Data::EntityCheck.should_receive(:for_entity).
+        with(entity, check, :redis => redis).and_return(entity_check)
+
+      get "/unscheduled_maintenances/#{entity_name_esc}/#{check}" +
+        "?start_time=#{CGI.escape(start.iso8601)}&end_time=#{CGI.escape(finish.iso8601)}"
+      last_response.should be_ok
+      last_response.body.should == 'unsched!'.to_json
+    end
+
+    it "returns a list of outages for an entity" do
+      out = mock('out', :to_json => 'out!'.to_json)
+      result = {:entity => entity_name, :check => check, :outages => out}
+      entity_presenter.should_receive(:outages).with(nil, nil).and_return(result)
+      Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
+        with(entity, :redis => redis).and_return(entity_presenter)
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+
+      get "/outages/#{entity_name_esc}"
+      last_response.should be_ok
+      last_response.body.should == [{:check => check, :outages => out}].to_json
+    end
+
+    it "returns a list of outages for a check on an entity" do
+      out = mock('out', :to_json => 'out!'.to_json)
+      entity_check_presenter.should_receive(:outages).with(nil, nil).and_return(out)
+      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
+        with(entity_check, :redis => redis).and_return(entity_check_presenter)
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+      Flapjack::Data::EntityCheck.should_receive(:for_entity).
+        with(entity, check, :redis => redis).and_return(entity_check)
+
+      get "/outages/#{entity_name_esc}/#{check}"
+      last_response.should be_ok
+      last_response.body.should == 'out!'.to_json
+    end
+
+    it "returns a list of downtimes for an entity" do
+      down = mock('down', :to_json => 'down!'.to_json)
+      result = {:entity => entity_name, :check => check, :downtime => down}
+      entity_presenter.should_receive(:downtime).with(nil, nil).and_return(result)
+      Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
+        with(entity, :redis => redis).and_return(entity_presenter)
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+
+      get "/downtime/#{entity_name_esc}"
+      last_response.should be_ok
+      last_response.body.should == [{:check => check, :downtime => down}].to_json
+    end
+
+    it "returns a list of downtimes for a check on an entity" do
+      down = mock('down', :to_json => 'down!'.to_json)
+      entity_check_presenter.should_receive(:downtime).with(nil, nil).and_return(down)
+      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
+        with(entity_check, :redis => redis).and_return(entity_check_presenter)
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+      Flapjack::Data::EntityCheck.should_receive(:for_entity).
+        with(entity, check, :redis => redis).and_return(entity_check)
+
+      get "/downtime/#{entity_name_esc}/#{check}"
+      last_response.should be_ok
+      last_response.body.should == 'down!'.to_json
+    end
+
+  end
+
   it "returns the status for all checks on an entity" do
     status = mock('status')
     result = [{:entity => entity_name, :check => check, :status => status}]
@@ -174,7 +392,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     sm = mock('sched_maint')
     result = [{:entity => entity_name, :check => check, :scheduled_maintenances => sm}]
 
-    entity_presenter.should_receive(:scheduled_maintenance).with(nil, nil).and_return(result)
+    entity_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(result)
 
     Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
       with(entity, :redis => redis).and_return(entity_presenter)
@@ -194,7 +412,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     sm = mock('sched_maint')
     result = [{:entity => entity_name, :check => check, :scheduled_maintenances => sm}]
 
-    entity_presenter.should_receive(:scheduled_maintenance).with(start.to_i, finish.to_i).and_return(result)
+    entity_presenter.should_receive(:scheduled_maintenances).with(start.to_i, finish.to_i).and_return(result)
 
     Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
       with(entity, :redis => redis).and_return(entity_presenter)
@@ -212,7 +430,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     sm = mock('sched_maint')
     result = [{:entity => entity_name, :check => check, :scheduled_maintenances => sm}]
 
-    entity_check_presenter.should_receive(:scheduled_maintenance).with(nil, nil).and_return(sm)
+    entity_check_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(sm)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check, :redis => redis).and_return(entity_check_presenter)
@@ -232,7 +450,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     um = mock('unsched_maint')
     result = [{:entity => entity_name, :check => check, :unscheduled_maintenances => um}]
 
-    entity_presenter.should_receive(:unscheduled_maintenance).with(nil, nil).and_return(result)
+    entity_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(result)
 
     Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
       with(entity, :redis => redis).and_return(entity_presenter)
@@ -249,7 +467,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     um = mock('unsched_maint')
     result = [{:entity => entity_name, :check => check, :unscheduled_maintenances => um}]
 
-    entity_check_presenter.should_receive(:unscheduled_maintenance).with(nil, nil).and_return(um)
+    entity_check_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(um)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check, :redis => redis).and_return(entity_check_presenter)
@@ -272,7 +490,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     um = mock('unsched_maint')
     result = [{:entity => entity_name, :check => check, :unscheduled_maintenances => um}]
 
-    entity_check_presenter.should_receive(:unscheduled_maintenance).with(start.to_i, finish.to_i).and_return(um)
+    entity_check_presenter.should_receive(:unscheduled_maintenances).with(start.to_i, finish.to_i).and_return(um)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(entity_check, :redis => redis).and_return(entity_check_presenter)

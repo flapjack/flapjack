@@ -129,66 +129,81 @@ module Flapjack
         entity.check_list.to_json
       end
 
-      get '/status' do
-        entities = params[:entity]
-        halt err(403, "no entities") if entities.nil? || entities.empty?
-        entities = [entities] unless entities.is_a?(Array)
+      get %r{/status(?:/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(.+))?)?} do
+        content_type :json
 
-        present_api_results(entities, 'status') {|presenter|
+        captures    = params[:captures] || []
+        entity_name = captures[0]
+        check       = captures[1]
+
+        if entity_name
+          # backwards-compatible, single entity or entity&check from route
+          entities = [ check ? {entity_name => check} : entity_name ]
+        else
+          # new and improved bulk API query
+          entities = params[:entity]
+          halt err(403, "no entities") if entities.nil? || entities.empty?
+          entities = [entities] unless entities.is_a?(Array)
+        end
+
+        results = present_api_results(entities, 'status') {|presenter|
           presenter.status
         }
+
+        if entity_name
+          # compatible with previous data format
+          results = results.collect {|status_h| status_h[:status]}
+          (check ? results.first : results).to_json
+        else
+          # new and improved data format which reflects the request param structure
+          results.to_json
+        end
       end
 
-      get '/outages' do
+      get %r{/((?:outages|(?:un)?scheduled_maintenances|downtime))(?:/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(.+))?)?} do
+        action      = params[:captures][0].to_sym
+        entity_name = params[:captures][1]
+        check       = params[:captures][2]
+
+        if entity_name
+          # backwards-compatible, single entity or entity&check from route
+          entities = [ check ? {entity_name => check} : entity_name ]
+        else
+          # new and improved bulk API queries
+          entities = params[:entity]
+          halt err(403, "no entities") if entities.nil? || entities.empty?
+          entities = [entities] unless entities.is_a?(Array)
+        end
+
         start_time = validate_and_parsetime(params[:start_time])
         end_time   = validate_and_parsetime(params[:end_time])
 
-        entities = params[:entity]
-        halt err(403, "no entities") if entities.nil? || entities.empty?
-        entities = [entities] unless entities.is_a?(Array)
-
-        present_api_results(entities, 'outages') {|presenter|
-          presenter.outages(start_time, end_time)
+        results = present_api_results(entities, action) {|presenter|
+          presenter.send(action, start_time, end_time)
         }
-      end
 
-      get '/unscheduled_maintenances' do
-        start_time = validate_and_parsetime(params[:start_time])
-        end_time   = validate_and_parsetime(params[:end_time])
-
-        entities = params[:entity]
-        halt err(403, "no entities") if entities.nil? || entities.empty?
-        entities = [entities] unless entities.is_a?(Array)
-
-        present_api_results(entities, 'unscheduled_maintenances') {|presenter|
-          presenter.unscheduled_maintenance(start_time, end_time)
-        }
-      end
-
-      get '/scheduled_maintenances' do
-        start_time = validate_and_parsetime(params[:start_time])
-        end_time   = validate_and_parsetime(params[:end_time])
-
-        entities = params[:entity]
-        halt err(403, "no entities") if entities.nil? || entities.empty?
-        entities = [entities] unless entities.is_a?(Array)
-
-        present_api_results(entities, 'scheduled_maintenances') {|presenter|
-          presenter.scheduled_maintenance(start_time, end_time)
-        }
-      end
-
-      get '/downtime' do
-        start_time = validate_and_parsetime(params[:start_time])
-        end_time   = validate_and_parsetime(params[:end_time])
-
-        entities = params[:entity]
-        halt err(403, "no entities") if entities.nil? || entities.empty?
-        entities = [entities] unless entities.is_a?(Array)
-
-        present_api_results(entities, 'downtime') {|presenter|
-          presenter.downtime(start_time, end_time)
-        }
+        if check
+          # compatible with previous data format
+          results.first[action].to_json
+        elsif entity_name
+          # compatible with previous data format
+          rename = {:unscheduled_maintenances => :unscheduled_maintenance,
+                    :scheduled_maintenances   => :scheduled_maintenance}
+          drop   = [:entity]
+          results.collect{|r|
+            r.inject({}) {|memo, (k, v)|
+              if new_k = rename[k]
+                memo[new_k] = v
+              elsif !drop.include?(k)
+                memo[k] = v
+              end
+             memo
+            }
+          }.to_json
+        else
+          # new and improved data format which reflects the request param structure
+          results.to_json
+        end
       end
 
       # create a scheduled maintenance period for a check on an entity
@@ -631,7 +646,7 @@ module Flapjack
                 entity_check = find_entity_check(entity, check)
                 {:entity => entity_name,
                  :check => check,
-                 result_type => yield(Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check, :redis => redis))
+                 result_type.to_sym => yield(Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check, :redis => redis))
                 }
               }
             }.flatten(1)
@@ -641,7 +656,7 @@ module Flapjack
             entity = find_entity(entity_name)
             yield(Flapjack::Gateways::API::EntityPresenter.new(entity, :redis => redis))
           end
-        }.flatten(1).to_json
+        }.flatten(1)
       end
 
       def find_tags(tags)

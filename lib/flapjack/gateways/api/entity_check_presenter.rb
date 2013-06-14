@@ -64,7 +64,7 @@ module Flapjack
           hist_states.reject {|obj| obj[:state] == 'ok'}
         end
 
-        def unscheduled_maintenance(start_time, end_time)
+        def unscheduled_maintenances(start_time, end_time)
           # unsched_maintenance is an array of hashes, with [duration, timestamp, summary] keys
           unsched_maintenance = @entity_check.maintenances(start_time, end_time,
             :scheduled => false)
@@ -79,7 +79,7 @@ module Flapjack
           start_in_unsched + unsched_maintenance
         end
 
-        def scheduled_maintenance(start_time, end_time)
+        def scheduled_maintenances(start_time, end_time)
           # sched_maintenance is an array of hashes, with [duration, timestamp, summary] keys
           sched_maintenance = @entity_check.maintenances(start_time, end_time,
             :scheduled => true)
@@ -100,7 +100,7 @@ module Flapjack
         #
         # TODO test performance with larger data sets
         def downtime(start_time, end_time)
-          sched_maintenances = scheduled_maintenance(start_time, end_time)
+          sched_maintenances = scheduled_maintenances(start_time, end_time)
 
           outs = outages(start_time, end_time)
 
