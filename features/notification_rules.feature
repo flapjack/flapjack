@@ -273,10 +273,14 @@ Feature: Notification rules on a per contact basis
     And   an acknowledgement event is received
     Then  2 email alerts should be queued for malak@example.com
     And   2 sms alerts should be queued for +61400000001
+    When  6 minutes passes
+    And   an unknown event is received
+    Then  2 email alerts should be queued for malak@example.com
+    And   2 sms alerts should be queued for +61400000001
     When  1 minute passes
     And   an unknown event is received
-    Then  2 email alert should be queued for malak@example.com
-    And   2 sms alert should be queued for +61400000001
+    Then  2 email alerts should be queued for malak@example.com
+    And   2 sms alerts should be queued for +61400000001
 
   @time
   Scenario: A blackhole rule on an entity should override another matching entity specific rule
