@@ -26,7 +26,7 @@ module Flapjack
         event_id = event.id
         event_state = event.state
 
-        severity = if ([event_state, max_notified_severity] & ['critical', 'unknown']).any?
+        severity = if ([event_state, max_notified_severity] & ['critical', 'unknown', 'test_notifications']).any?
           'critical'
         elsif [event_state, max_notified_severity].include?('warning')
           'warning'
