@@ -50,6 +50,9 @@ module Flapjack
 
     class API < Sinatra::Base
 
+      # used for backwards-compatible route matching below
+      ENTITY_CHECK_FRAGMENT = '(?:/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(.+))?)?'
+
       class EntityCheckNotFound < RuntimeError
         attr_reader :entity, :check
         def initialize(entity, check)
@@ -129,25 +132,14 @@ module Flapjack
         entity.check_list.to_json
       end
 
-      get %r{/status(?:/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(.+))?)?} do
+      get %r{/status#{ENTITY_CHECK_FRAGMENT}} do
         content_type :json
 
         captures    = params[:captures] || []
         entity_name = captures[0]
         check       = captures[1]
 
-        if entity_name
-          # backwards-compatible, single entity or entity&check from route
-          entities = check ? nil : [entity_name]
-          checks   = check ? {entity_name => check} : nil
-        else
-          # new and improved bulk API query
-          entities = params[:entity]
-          checks   = params[:check]
-          # halt err(403, "no entities") if entities.nil? || entities.empty?
-          entities = [entities] unless entities.nil? || entities.is_a?(Array)
-          # TODO err if checks isn't a Hash (similar rules as in flapjack-diner)
-        end
+        entities, checks = entities_and_checks(entity_name, check)
 
         results = present_api_results(entities, checks, 'status') {|presenter|
           presenter.status
@@ -163,23 +155,12 @@ module Flapjack
         end
       end
 
-      get %r{/((?:outages|(?:un)?scheduled_maintenances|downtime))(?:/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(.+))?)?} do
+      get %r{/((?:outages|(?:un)?scheduled_maintenances|downtime))#{ENTITY_CHECK_FRAGMENT}} do
         action      = params[:captures][0].to_sym
         entity_name = params[:captures][1]
         check       = params[:captures][2]
 
-        if entity_name
-          # backwards-compatible, single entity or entity&check from route
-          entities = check ? nil : [entity_name]
-          checks   = check ? {entity_name => check} : nil
-        else
-          # new and improved bulk API queries
-          entities = params[:entity]
-          checks   = params[:check]
-          # halt err(403, "no entities") if entities.nil? || entities.empty?
-          entities = [entities] unless entities.nil? || entities.is_a?(Array)
-          # TODO err if checks isn't a Hash (similar rules as in flapjack-diner)
-        end
+        entities, checks = entities_and_checks(entity_name, check)
 
         start_time = validate_and_parsetime(params[:start_time])
         end_time   = validate_and_parsetime(params[:end_time])
@@ -213,48 +194,90 @@ module Flapjack
       end
 
       # create a scheduled maintenance period for a check on an entity
-      post '/scheduled_maintenances/:entity/:check' do
-        content_type :json
+      post %r{/scheduled_maintenances#{ENTITY_CHECK_FRAGMENT}} do
+        entity_name = params[:captures][0]
+        check       = params[:captures][1]
+
+        entities, checks = entities_and_checks(entity_name, check)
 
         start_time = validate_and_parsetime(params[:start_time])
 
-        entity = find_entity(params[:entity])
-        entity_check = find_entity_check(entity, params[:check])
-        entity_check.create_scheduled_maintenance(:start_time => start_time,
-          :duration => params[:duration].to_i, :summary => params[:summary])
+        act_proc = proc {|entity_check|
+          entity_check.create_scheduled_maintenance(:start_time => start_time,
+            :duration => params[:duration].to_i, :summary => params[:summary])
+        }
+
+        bulk_api_check_action(entities, checks, act_proc)
         status 204
       end
 
       # create an acknowledgement for a service on an entity
       # NB currently, this does not acknowledge a specific failure event, just
       # the entity-check as a whole
-      post '/acknowledgements/:entity/:check' do
-        content_type :json
+      post %r{/acknowledgements#{ENTITY_CHECK_FRAGMENT}} do
+        captures    = params[:captures] || []
+        entity_name = captures[0]
+        check       = captures[1]
+
+        entities, checks = entities_and_checks(entity_name, check)
 
         dur = params[:duration] ? params[:duration].to_i : nil
         duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
-        entity = find_entity(params[:entity])
-        entity_check = find_entity_check(entity, params[:check])
+        summary = params[:summary]
 
-        entity_check.create_acknowledgement('summary' => params[:summary],
-          'duration' => duration)
+        opts = {'duration' => duration}
+        opts['summary'] = summary if summary
+
+        act_proc = proc {|entity_check|
+          entity_check.create_acknowledgement(opts)
+        }
+
+        bulk_api_check_action(entities, checks, act_proc)
         status 204
       end
 
-      post '/test_notifications/:entity/:check' do
-        content_type :json
+      delete %r{/((?:un)?scheduled_maintenances)} do
+        action = params[:captures][0]
 
-        entity = find_entity(params[:entity])
-        entity_check = find_entity_check(entity, params[:check])
-        summary = params[:summary] || "Testing notifications to all contacts interested in entity #{entity.name}"
+        # no backwards-compatible mode here, it's a new method
+        entities, checks = entities_and_checks(nil, nil)
 
-        entity_check.test_notifications('summary' => summary)
+        act_proc = case action
+        when 'scheduled_maintenances'
+          start_time = validate_and_parsetime(params[:start_time])
+          opts = {}
+          opts[:start_time] = start_time.to_i if start_time
+          proc {|entity_check| entity_check.delete_scheduled_maintenance(opts) }
+        when 'unscheduled_maintenances'
+          end_time = validate_and_parsetime(params[:end_time])
+          opts = {}
+          opts[:end_time] = end_time.to_i if end_time
+          proc {|entity_check| entity_check.end_unscheduled_maintenance(opts) }
+        end
+
+        bulk_api_check_action(entities, checks, act_proc)
+        status 204
+      end
+
+      post %r{/test_notifications#{ENTITY_CHECK_FRAGMENT}} do
+        captures    = params[:captures] || []
+        entity_name = captures[0]
+        check       = captures[1]
+
+        entities, checks = entities_and_checks(entity_name, check)
+
+        act_proc = proc {|entity_check|
+          summary = params[:summary] ||
+                    "Testing notifications to all contacts interested in entity #{entity_check.entity.name}"
+          entity_check.test_notifications('summary' => summary)
+        }
+
+        bulk_api_check_action(entities, checks, act_proc)
         status 204
       end
 
       post '/entities' do
         pass unless 'application/json'.eql?(request.content_type)
-        content_type :json
 
         errors = []
         ret = nil
@@ -637,6 +660,43 @@ module Flapjack
           check, :redis => redis)
         raise Flapjack::Gateways::API::EntityCheckNotFound.new(entity, check) if entity_check.nil?
         entity_check
+      end
+
+      def entities_and_checks(entity_name, check)
+        if entity_name
+          # backwards-compatible, single entity or entity&check from route
+          entities = check ? nil : [entity_name]
+          checks   = check ? {entity_name => check} : nil
+        else
+          # new and improved bulk API queries
+          entities = params[:entity]
+          checks   = params[:check]
+          entities = [entities] unless entities.nil? || entities.is_a?(Array)
+          # TODO err if checks isn't a Hash (similar rules as in flapjack-diner)
+        end
+        [entities, checks]
+      end
+
+      def bulk_api_check_action(entities, entity_checks, action, params = {})
+        unless entities.nil? || entities.empty?
+          entities.each do |entity_name|
+            entity = find_entity(entity_name)
+            checks = entity.check_list.sort
+            checks.each do |check|
+              action.call( find_entity_check(entity, check) )
+            end
+          end
+        end
+
+        unless entity_checks.nil? || entity_checks.empty?
+          entity_checks.each_pair do |entity_name, checks|
+            entity = find_entity(entity_name)
+            checks = [checks] unless checks.is_a?(Array)
+            checks.each do |check|
+              action.call( find_entity_check(entity, check) )
+            end
+          end
+        end
       end
 
       def present_api_results(entities, entity_checks, result_type, &block)

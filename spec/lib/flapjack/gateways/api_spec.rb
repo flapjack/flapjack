@@ -193,6 +193,17 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       last_response.body.should == 'sched!'.to_json
     end
 
+    it "creates an acknowledgement for an entity check" do
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+      Flapjack::Data::EntityCheck.should_receive(:for_entity).
+        with(entity, check, :redis => redis).and_return(entity_check)
+      entity_check.should_receive(:create_acknowledgement).with('duration' => (4 * 60 * 60))
+
+      post "/acknowledgements/#{entity_name_esc}/#{check}"
+      last_response.status.should == 204
+    end
+
     it "returns a list of unscheduled maintenance periods for an entity" do
       unsched = mock('unsched', :to_json => 'unsched!'.to_json)
       result = {:entity => entity_name, :check => check, :unscheduled_maintenances => unsched}
@@ -299,6 +310,19 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       last_response.body.should == 'down!'.to_json
     end
 
+    it "creates a test notification event for check on an entity" do
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+      entity.should_receive(:name).and_return(entity_name)
+      entity_check.should_receive(:entity).and_return(entity)
+      Flapjack::Data::EntityCheck.should_receive(:for_entity).
+        with(entity, 'foo', :redis => redis).and_return(entity_check)
+      entity_check.should_receive(:test_notifications)
+
+      post "/test_notifications/#{entity_name_esc}/foo"
+      last_response.status.should == 204
+    end
+
   end
 
   it "returns the status for all checks on an entity" do
@@ -367,13 +391,27 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       with(entity_name, :redis => redis).and_return(entity)
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
-    entity_check.should_receive(:create_acknowledgement).with('summary' => nil, 'duration' => (4 * 60 * 60))
+    entity_check.should_receive(:create_acknowledgement).with('duration' => (4 * 60 * 60))
 
-    post "/acknowledgements/#{entity_name_esc}/#{check}"
+    post '/acknowledgements',:check => {entity_name => check}
     last_response.status.should == 204
   end
 
-  it "creates a scheduled maintenance for an entity check" do
+  it "deletes an unscheduled maintenance period for an entity check" do
+    end_time = Time.now + (60 * 60) # an hour from now
+    entity_check.should_receive(:end_unscheduled_maintenance).with(:end_time => end_time.to_i)
+
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+
+    delete "/unscheduled_maintenances", :check => {entity_name => check}, :end_time => end_time.iso8601
+    last_response.status.should == 204
+  end
+
+  it "creates a scheduled maintenance period for an entity check" do
     start = Time.now + (60 * 60) # an hour from now
     duration = (2 * 60 * 60)     # two hours
     Flapjack::Data::Entity.should_receive(:find_by_name).
@@ -385,6 +423,40 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
 
     post "/scheduled_maintenances/#{entity_name_esc}/#{check}?" +
        "start_time=#{CGI.escape(start.iso8601)}&summary=test&duration=#{duration}"
+    last_response.status.should == 204
+  end
+
+  it "deletes a scheduled maintenance period for an entity check" do
+    start_time = Time.now + (60 * 60) # an hour from now
+    entity_check.should_receive(:delete_scheduled_maintenance).with(:start_time => start_time.to_i)
+
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+
+    delete "/scheduled_maintenances", :check => {entity_name => check}, :start_time => start_time.iso8601
+    last_response.status.should == 204
+  end
+
+  it "deletes scheduled maintenance periods for multiple entity checks" do
+    start_time = Time.now + (60 * 60) # an hour from now
+
+    entity_check_2 = mock(Flapjack::Data::EntityCheck)
+
+    entity_check.should_receive(:delete_scheduled_maintenance).with(:start_time => start_time.to_i)
+    entity_check_2.should_receive(:delete_scheduled_maintenance).with(:start_time => start_time.to_i)
+
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, 'foo', :redis => redis).and_return(entity_check_2)
+
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+
+    delete "/scheduled_maintenances", :check => {entity_name => [check, 'foo']}, :start_time => start_time.iso8601
     last_response.status.should == 204
   end
 
@@ -609,16 +681,38 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     last_response.body.should == result.to_json
   end
 
-  it "creates a test notification event for check on an entity" do
+  it "creates test notification events for all checks on an entity" do
+    entity.should_receive(:check_list).and_return([check, 'foo'])
+    entity.should_receive(:name).twice.and_return(entity_name)
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
-    entity.should_receive(:name).and_return(entity_name)
-    Flapjack::Data::EntityCheck.should_receive(:for_entity).
-      with(entity, 'foo', :redis => redis).and_return(entity_check)
-    entity_check.should_receive(:test_notifications)
 
-    post "/test_notifications/#{entity_name_esc}/foo"
+    entity_check.should_receive(:entity).and_return(entity)
+    entity_check.should_receive(:test_notifications)
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+
+    entity_check_2 = mock(Flapjack::Data::EntityCheck)
+    entity_check_2.should_receive(:entity).and_return(entity)
+    entity_check_2.should_receive(:test_notifications)
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, 'foo', :redis => redis).and_return(entity_check_2)
+
+    post '/test_notifications', :entity => entity_name
     last_response.status.should == 204
+  end
+
+  it "creates a test notification event for check on an entity" do
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+      entity.should_receive(:name).and_return(entity_name)
+      entity_check.should_receive(:entity).and_return(entity)
+      Flapjack::Data::EntityCheck.should_receive(:for_entity).
+        with(entity, check, :redis => redis).and_return(entity_check)
+      entity_check.should_receive(:test_notifications)
+
+      post '/test_notifications', :check => {entity_name => check}
+      last_response.status.should == 204
   end
 
   it "creates entities from a submitted list" do
