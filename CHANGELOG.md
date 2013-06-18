@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.7.13 - UNRELEASED
+- Bug: unscheduled maintenances does not prevent alerts for checks with colons in their name gh-208 (@jessereynolds)
+
 # 0.7.12 - 2013-06-12
 - Feature: auto-generate a general notification rule for contacts that don't have any gh-199 (@ali-graham)
 - Bug: no recovery for unknown for contact with notification rules gh-203 (@jessereynolds)
