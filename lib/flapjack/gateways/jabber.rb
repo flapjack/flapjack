@@ -355,7 +355,7 @@ module Flapjack
                 end
               end
             else
-              entity, check = event['event_id'].split(':')
+              entity, check = event['event_id'].split(':', 2)
               state         = event['state']
               summary       = event['summary']
               duration      = event['duration'] ? time_period_in_words(event['duration']) : '4 hours'
