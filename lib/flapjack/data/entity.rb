@@ -87,7 +87,7 @@ module Flapjack
           return nil
         end
         redis.keys('entity_id:*').inject([]) {|memo, check|
-          a, entity_name = check.split(':')
+          a, entity_name = check.split(':', 2)
           if (entity_name =~ regex) && !memo.include?(entity_name)
             memo << entity_name
           end
