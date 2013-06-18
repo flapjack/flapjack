@@ -82,8 +82,8 @@ module Flapjack
 
         # TODO (?) recast as Entity.all do |e|; e.checks.do |ec|; ...
         @states = redis.keys('*:*:states').map { |r|
-          parts  = r.split(':')[0..1]
-          [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
+          entity, check = r.sub(/:states$/, '').split(':', 2)
+          [entity, check] + entity_check_state(entity, check)
         }.compact.sort_by {|parts| parts }
 
         haml :checks
@@ -94,7 +94,8 @@ module Flapjack
         @adjective = 'failing'
 
         @states = redis.zrange('failed_checks', 0, -1).map {|key|
-          parts  = key.split(':')
+          puts "key: #{key}"
+          parts  = key.split(':', 2)
           [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
         }.compact.sort_by {|parts| parts}
 
@@ -159,8 +160,8 @@ module Flapjack
         @entity = params[:entity]
         entity_stats
         @states = redis.keys("#{@entity}:*:states").map { |r|
-          parts  = r.split(':')[0..1]
-          [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
+          check = r.sub(/^#{@entity}:/, '').sub(/:states$/, '')
+          [@entity, check] + entity_check_state(@entity, check)
         }.compact.sort_by {|parts| parts }
         haml :entity
       end
