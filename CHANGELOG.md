@@ -1,6 +1,7 @@
 ## Flapjack Changelog
 
 # 0.7.13 - UNRELEASED
+- Bug: test notifications are blocked by notification rules gh-188 (@jessereynolds)
 - Bug: unscheduled maintenances does not prevent alerts for checks with colons in their name gh-208 (@jessereynolds)
 
 # 0.7.12 - 2013-06-12
