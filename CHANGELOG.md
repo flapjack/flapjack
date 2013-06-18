@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.7.14 - UNRELEASED
+- Bug: Display of checks on web ui with a colon in their name is screwed gh-213 (@jessereynolds)
+
 # 0.7.13 - 2013-06-18
 - Bug: test notifications are blocked by notification rules gh-188 (@jessereynolds)
 - Bug: unscheduled maintenances does not prevent alerts for checks with colons in their name gh-208 (@jessereynolds)
