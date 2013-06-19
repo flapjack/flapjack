@@ -9,4 +9,5 @@ before_script:
   - mkdir -p ./log
 before_install:
   - git submodule update --init --recursive
+  - gem install bundler
 script: bundle exec rspec spec && bundle exec cucumber features
