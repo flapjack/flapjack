@@ -94,7 +94,6 @@ module Flapjack
         @adjective = 'failing'
 
         @states = redis.zrange('failed_checks', 0, -1).map {|key|
-          puts "key: #{key}"
           parts  = key.split(':', 2)
           [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
         }.compact.sort_by {|parts| parts}
