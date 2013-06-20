@@ -7,10 +7,10 @@ module Flapjack
       period_mm, period_ss  = period.divmod(60)
       period_hh, period_mm  = period_mm.divmod(60)
       period_dd, period_hh  = period_hh.divmod(24)
-      ["#{period_dd} days",
-       "#{period_hh} hours",
-       "#{period_mm} minutes",
-       "#{period_ss} seconds"].reject {|s| s =~ /^0 /}.join(', ')
+      ["#{period_dd} day#{plural_s(period_dd)}",
+       "#{period_hh} hour#{plural_s(period_hh)}",
+       "#{period_mm} minute#{plural_s(period_mm)}",
+       "#{period_ss} second#{plural_s(period_ss)}"].reject {|s| s =~ /^0 /}.join(', ')
     end
 
     # Returns relative time in words referencing the given date
@@ -66,6 +66,12 @@ module Flapjack
       # flattens the arrays constructed in the block, it won't mess up
       # any values (or keys) that are themselves arrays/hashes.
       Hash[ *( key_value_pairs.flatten(1) )]
+    end
+
+    private
+
+    def plural_s(value)
+      (value == 1) ? '' : 's'
     end
 
   end
