@@ -11,6 +11,8 @@ describe Flapjack::Coordinator do
   let(:stdout_out) { mock('stdout_out') }
   let(:syslog_out) { mock('syslog_out') }
 
+  let!(:time)   { Time.now }
+
   def setup_logger
     formatter = mock('Formatter')
     Log4r::PatternFormatter.should_receive(:new).with(
@@ -41,9 +43,12 @@ describe Flapjack::Coordinator do
     executive.should_receive(:update_status)
     executive.should_receive(:status).exactly(3).times.and_return('stopped')
 
+    Time.should_receive(:now).and_return(time)
+
     fc = Flapjack::Coordinator.new(config)
     Flapjack::Pikelet.should_receive(:create).with('executive',
-        :config => cfg['executive'], :redis_config => {}).and_return(executive)
+        :config => cfg['executive'], :redis_config => {}, :boot_time => time).
+      and_return(executive)
 
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
@@ -69,9 +74,12 @@ describe Flapjack::Coordinator do
     executive.should_receive(:update_status)
     executive.should_receive(:status).exactly(3).times.and_return('stopped')
 
+    Time.should_receive(:now).and_return(time)
+
     fc = Flapjack::Coordinator.new(config)
     Flapjack::Pikelet.should_receive(:create).with('executive',
-        :config => cfg['executive'], :redis_config => {}).and_return(executive)
+        :config => cfg['executive'], :redis_config => {}, :boot_time => time)
+      .and_return(executive)
 
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
@@ -140,8 +148,10 @@ describe Flapjack::Coordinator do
     executive.should_receive(:status).exactly(3).times.and_return('stopped')
 
     jabber = mock('jabber')
-    Flapjack::Pikelet.should_receive(:create).with('jabber',
-      :config => {"enabled" => "yes"}, :redis_config => {}).and_return(jabber)
+    Flapjack::Pikelet.should_receive(:create).
+      with('jabber', :config => {"enabled" => "yes"}, :redis_config => {},
+        :boot_time => time).
+      and_return(jabber)
     jabber.should_receive(:start)
 
     fiber.should_receive(:resume)
@@ -149,6 +159,7 @@ describe Flapjack::Coordinator do
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
+    fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [executive])
     fc.reload
     fc.instance_variable_get('@pikelets').should == [jabber]
@@ -178,6 +189,7 @@ describe Flapjack::Coordinator do
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
+    fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [executive])
     fc.reload
     fc.instance_variable_get('@pikelets').should == [executive]
@@ -213,11 +225,13 @@ describe Flapjack::Coordinator do
     new_exec.should_receive(:start)
 
     Flapjack::Pikelet.should_receive(:create).
-      with('executive', :config => new_cfg['executive'], :redis_config => {}).
+      with('executive', :config => new_cfg['executive'], :redis_config => {},
+        :boot_time => time).
       and_return(new_exec)
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
+    fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [executive])
     fc.reload
     fc.instance_variable_get('@pikelets').should == [new_exec]

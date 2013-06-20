@@ -28,7 +28,6 @@ require 'flapjack/gateways/web'
 require 'flapjack/logger'
 require 'thin/version'
 
-
 module Thin
   # disable Thin's loading of daemons
   # workaround for https://github.com/flpjck/flapjack/issues/133
@@ -52,12 +51,13 @@ module Flapjack
       !type_klass.nil?
     end
 
-    def self.create(type, config = {})
+    def self.create(type, opts = {})
       pikelet = nil
       [Flapjack::Pikelet::Generic,
        Flapjack::Pikelet::Resque,
        Flapjack::Pikelet::Thin].each do |kl|
-        break if pikelet = kl.create(type, config)
+        next unless kl::PIKELET_TYPES[type]
+        break if pikelet = kl.create(type, opts)
       end
       pikelet
     end
@@ -71,6 +71,7 @@ module Flapjack
 
         @config = opts[:config] || {}
         @redis_config = opts[:redis_config] || {}
+        @boot_time = opts[:boot_time]
 
         @logger = Flapjack::Logger.new("flapjack-#{type}", @config['logger'])
 
@@ -98,9 +99,10 @@ module Flapjack
                       'pagerduty'  => Flapjack::Gateways::Pagerduty,
                       'oobetet'    => Flapjack::Gateways::Oobetet}
 
-      def self.create(type, config = {})
-        return unless pikelet_klass = PIKELET_TYPES[type]
-        self.new(type, pikelet_klass, config)
+      def self.create(type, opts = {})
+        self.new(type, PIKELET_TYPES[type], :config => opts[:config],
+          :redis_config => opts[:redis_config],
+          :boot_time => opts[:boot_time])
       end
 
       def initialize(type, pikelet_klass, opts = {})
@@ -140,8 +142,9 @@ module Flapjack
                        'sms'   => Flapjack::Gateways::SmsMessagenet}
 
       def self.create(type, opts = {})
-        return unless pikelet_klass = PIKELET_TYPES[type]
-        self.new(type, pikelet_klass, opts)
+        self.new(type, PIKELET_TYPES[type], :config => opts[:config],
+          :redis_config => opts[:redis_config],
+          :boot_time => opts[:boot_time])
       end
 
       def initialize(type, pikelet_klass, opts = {})
@@ -198,9 +201,10 @@ module Flapjack
                        'api'  => Flapjack::Gateways::API}
 
       def self.create(type, opts = {})
-        return unless pikelet_klass = PIKELET_TYPES[type]
         ::Thin::Logging.silent = true
-        self.new(type, pikelet_klass, :config => opts[:config], :redis_config => opts[:redis_config])
+        self.new(type, PIKELET_TYPES[type], :config => opts[:config],
+          :redis_config => opts[:redis_config],
+          :boot_time => opts[:boot_time])
       end
 
       def initialize(type, pikelet_klass, opts = {})
