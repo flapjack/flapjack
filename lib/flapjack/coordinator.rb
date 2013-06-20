@@ -35,6 +35,8 @@ module Flapjack
     end
 
     def start(options = {})
+      @boot_time = Time.now
+
       EM.synchrony do
         add_pikelets(pikelets(@config.all))
         setup_signals if options[:signals]
@@ -131,7 +133,7 @@ module Flapjack
       start_piks = []
       pikelets_data.each_pair do |type, cfg|
         next unless pikelet = Flapjack::Pikelet.create(type,
-          :config => cfg, :redis_config => @redis_options)
+          :config => cfg, :redis_config => @redis_options, :boot_time => @boot_time)
         start_piks << pikelet
         @pikelets << pikelet
       end

@@ -10,6 +10,8 @@ describe Flapjack::Pikelet do
 
   let(:fiber) { mock(Fiber) }
 
+  let(:time) { Time.now }
+
   before do
     Flapjack::Pikelet::Resque.class_variable_set(:@@resque_pool, nil)
   end
@@ -22,13 +24,14 @@ describe Flapjack::Pikelet do
     executive = mock('executive')
     executive.should_receive(:start)
     Flapjack::Executive.should_receive(:new).with(:config => config,
-      :redis_config => redis_config, :logger => logger).and_return(executive)
+        :redis_config => redis_config, :boot_time => time, :logger => logger).
+      and_return(executive)
 
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
     pik = Flapjack::Pikelet.create('executive', :config => config,
-      :redis_config => redis_config)
+      :redis_config => redis_config, :boot_time => time)
     pik.should be_a(Flapjack::Pikelet::Generic)
     pik.start
   end

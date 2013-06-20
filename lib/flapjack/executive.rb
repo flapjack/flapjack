@@ -71,7 +71,7 @@ module Flapjack
       @filters << Flapjack::Filters::Delays.new(options)
       @filters << Flapjack::Filters::Acknowledgement.new(options)
 
-      @boot_time    = Time.now
+      @boot_time    = opts[:boot_time]
       @fqdn         = `/bin/hostname -f`.chomp
       @pid          = Process.pid
       @instance_id  = "#{@fqdn}:#{@pid}"
