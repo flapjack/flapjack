@@ -269,7 +269,7 @@ Feature: Notification rules on a per contact basis
     And   1 sms alert should be queued for +61400000001
   @time
   Scenario: Critical straight after test
-    Given the check is check 'ping' on entity 'foo'
+    Given the check is check 'ping' on entity 'baz'
     And   the check is in an ok state
     When  a test event is received
     Then  1 email alert should be queued for malak@example.com
