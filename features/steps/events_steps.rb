@@ -118,7 +118,18 @@ def submit_acknowledgement(entity, check)
     'entity'             => entity,
     'check'              => check,
     'client'             => 'clientx',
-    # 'acknowledgement_id' =>
+  }
+  submit_event(event)
+end
+
+def submit_test(entity, check)
+  event = {
+    'type'               => 'action',
+    'state'              => 'test_notifications',
+    'summary'            => "test notification for all contacts interested in #{entity}",
+    'entity'             => entity,
+    'check'              => check,
+    'client'             => 'clientx',
   }
   submit_event(event)
 end
@@ -221,6 +232,13 @@ When /^an acknowledgement .*is received(?: for check '([\w\.\-]+)' on entity '([
   check  ||= @check
   entity ||= @entity
   submit_acknowledgement(entity, check)
+  drain_events
+end
+
+When /^a test .*is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
+  check  ||= @check
+  entity ||= @entity
+  submit_test(entity, check)
   drain_events
 end
 

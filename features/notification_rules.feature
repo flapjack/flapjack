@@ -261,6 +261,50 @@ Feature: Notification rules on a per contact basis
     Then  1 sms alert should be queued for +61400000003
 
   @time
+  Scenario: Test notifications behave like a critical notification
+    Given the check is check 'ping' on entity 'foo'
+    And   the check is in an ok state
+    When  a test event is received
+    Then  1 email alert should be queued for malak@example.com
+    And   1 sms alert should be queued for +61400000001
+  @time
+  Scenario: Critical straight after test
+    Given the check is check 'ping' on entity 'foo'
+    And   the check is in an ok state
+    When  a test event is received
+    Then  1 email alert should be queued for malak@example.com
+    And   1 sms alert should be queued for +61400000001
+    When  10 seconds passes
+    And   a critical event is received
+    Then  1 email alert should be queued for malak@example.com
+    And   1 sms alert should be queued for +61400000001
+    When  40 seconds passes
+    And   a critical event is received
+    Then  2 email alert should be queued for malak@example.com
+    And   2 sms alert should be queued for +61400000001
+
+  Scenario: Unknown event during unscheduled maintenance
+    Given the check is check 'ping' on entity 'foo'
+    And   the check is in an ok state
+    When  an unknown event is received
+    And   1 minute passes
+    And   an unknown event is received
+    Then  1 email alert should be queued for malak@example.com
+    And   1 sms alert should be queued for +61400000001
+    When  6 minutes passes
+    And   an acknowledgement event is received
+    Then  2 email alerts should be queued for malak@example.com
+    And   2 sms alerts should be queued for +61400000001
+    When  6 minutes passes
+    And   an unknown event is received
+    Then  2 email alerts should be queued for malak@example.com
+    And   2 sms alerts should be queued for +61400000001
+    When  1 minute passes
+    And   an unknown event is received
+    Then  2 email alerts should be queued for malak@example.com
+    And   2 sms alerts should be queued for +61400000001
+
+  @time
   Scenario: A blackhole rule on an entity should override another matching entity specific rule
 
   @time

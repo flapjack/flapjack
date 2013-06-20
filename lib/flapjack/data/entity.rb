@@ -87,7 +87,7 @@ module Flapjack
           return nil
         end
         redis.keys('entity_id:*').inject([]) {|memo, check|
-          a, entity_name = check.split(':')
+          a, entity_name = check.split(':', 2)
           if (entity_name =~ regex) && !memo.include?(entity_name)
             memo << entity_name
           end
@@ -97,12 +97,12 @@ module Flapjack
 
       def self.find_all_with_checks(options)
         raise "Redis connection not set" unless redis = options[:redis]
-        redis.keys("check:*").map {|s| s.match(/.*:(.*):.*/)[1] }.to_set
+        redis.keys("check:*").map {|s| s.sub(/^check:/, '').split(':', 2).first }.to_set
       end
 
       def self.find_all_with_failing_checks(options)
         raise "Redis connection not set" unless redis = options[:redis]
-        redis.zrange("failed_checks", 0, -1).map {|s| s.match(/(.*):.*/)[1] }.to_set
+        redis.zrange("failed_checks", 0, -1).map {|s| s.split(':', 2).first }.to_set
       end
 
       def contacts

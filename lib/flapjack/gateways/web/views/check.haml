@@ -44,16 +44,36 @@
             %td Last update:
             %td #{relative_time_ago(Time.at(@check_last_update.to_i))} ago
             %td #{Time.at(@check_last_update.to_i)}
-          - if @last_notifications[:problem]
-            - last_problem_relative = relative_time_ago(Time.at(@last_notifications[:problem])) + " ago"
-            - last_problem          = Time.at(@last_notifications[:problem]).to_s
+          - if @last_notifications[:critical]
+            - last_critical_relative = relative_time_ago(Time.at(@last_notifications[:critical])) + " ago"
+            - last_critical          = Time.at(@last_notifications[:critical]).to_s
           - else
-            - last_problem_relative = 'never'
-            - last_problem          = ''
+            - last_critical_relative = 'never'
+            - last_critical          = ''
           %tr
-            %td Last problem notification:
-            %td= last_problem_relative
-            %td= last_problem
+            %td Last critical notification:
+            %td= last_critical_relative
+            %td= last_critical
+          - if @last_notifications[:warning]
+            - last_warning_relative = relative_time_ago(Time.at(@last_notifications[:warning])) + " ago"
+            - last_warning          = Time.at(@last_notifications[:warning]).to_s
+          - else
+            - last_warning_relative = 'never'
+            - last_warning          = ''
+          %tr
+            %td Last warning notification:
+            %td= last_warning_relative
+            %td= last_warning
+          - if @last_notifications[:unknown]
+            - last_unknown_relative = relative_time_ago(Time.at(@last_notifications[:unknown])) + " ago"
+            - last_unknown          = Time.at(@last_notifications[:unknown]).to_s
+          - else
+            - last_unknown_relative = 'never'
+            - last_unknown          = ''
+          %tr
+            %td Last unknown notification:
+            %td= last_unknown_relative
+            %td= last_unknown
           - if @last_notifications[:recovery]
             - last_recovery_relative = relative_time_ago(Time.at(@last_notifications[:recovery])) + " ago"
             - last_recovery          = Time.at(@last_notifications[:recovery]).to_s

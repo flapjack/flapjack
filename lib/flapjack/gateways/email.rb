@@ -34,7 +34,7 @@ module Flapjack
           @summary                    = notification['summary']
           @details                    = notification['details']
           @time                       = notification['time']
-          @entity_name, @check        = notification['event_id'].split(':')
+          @entity_name, @check        = notification['event_id'].split(':', 2)
 
           entity_check = Flapjack::Data::EntityCheck.for_event_id(notification['event_id'],
             :redis => ::Resque.redis)
