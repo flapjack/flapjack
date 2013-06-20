@@ -16,6 +16,7 @@ require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
 
 require 'flapjack/gateways/api/entity_presenter'
+require 'flapjack/gateways/api/entity_check_presenter'
 require 'flapjack/rack_logger'
 require 'flapjack/redis_pool'
 
