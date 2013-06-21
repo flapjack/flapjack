@@ -44,6 +44,8 @@ class Hash
   end
 end
 
+# we don't want to stop the entire EM reactor when we stop a web server
+# & @connections data type changed in thin 1.5.1
 module Thin
 
   # see https://github.com/flpjck/flapjack/issues/169
@@ -64,7 +66,6 @@ module Thin
     end
   end
 
-  # we don't want to stop the entire EM reactor when we stop a web server
   module Backends
     class Base
       def stop!
@@ -72,7 +73,13 @@ module Thin
         @stopping = false
 
         # EventMachine.stop if EventMachine.reactor_running?
-        @connections.each { |connection| connection.close_connection }
+
+        case @connections
+        when Array
+          @connections.each { |connection| connection.close_connection }
+        when Hash
+          @connections.each_value { |connection| connection.close_connection }
+        end
         close
       end
     end
