@@ -74,6 +74,29 @@ module Flapjack
         redis.llen('events')
       end
 
+      def self.create_acknowledgement(entity_name, check, options = {})
+        data = { 'type'               => 'action',
+                 'state'              => 'acknowledgement',
+                 'summary'            => options[:summary],
+                 'duration'           => options[:duration],
+                 'acknowledgement_id' => options[:acknowledgement_id],
+                 'entity'             => entity_name,
+                 'check'              => check
+               }
+        add(data, :redis => options[:redis])
+      end
+
+      def self.test_notifications(entity_name, check, options = {})
+        data = { 'type'               => 'action',
+                 'state'              => 'test_notifications',
+                 'summary'            => options[:summary],
+                 'details'            => options[:details],
+                 'entity'             => entity_name,
+                 'check'              => check
+               }
+        add(data, :redis => options[:redis])
+      end
+
       def initialize(attrs={})
         @attrs = attrs
         @attrs['time'] = Time.now.to_i unless @attrs.has_key?('time')

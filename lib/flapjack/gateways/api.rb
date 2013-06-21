@@ -208,8 +208,11 @@ module Flapjack
 
         find_entity(params[:entity]) do |entity|
           find_entity_check(entity, params[:check]) do |entity_check|
-            entity_check.create_acknowledgement('summary' => params[:summary],
-              'duration' => duration)
+            Flapjack::Data::Event.create_acknowledgement(
+              params[:entity], params[:check],
+              :summary => params[:summary],
+              :duration => duration,
+              :redis => redis)
             status 204
           end
         end
@@ -220,7 +223,10 @@ module Flapjack
         find_entity(params[:entity]) do |entity|
           find_entity_check(entity, params[:check]) do |entity_check|
             summary = params[:summary] || "Testing notifications to all contacts interested in entity #{entity.name}"
-            entity_check.test_notifications('summary' => summary)
+            Flapjack::Data::Event.test_notifications(
+              params[:entity], params[:check],
+              :summary => summary,
+              :redis => redis)
             status 204
           end
         end
@@ -591,9 +597,9 @@ module Flapjack
          'in_unscheduled_maintenance'         => entity_check.in_unscheduled_maintenance?,
          'in_scheduled_maintenance'           => entity_check.in_scheduled_maintenance?,
          'last_update'                        => entity_check.last_update,
-         'last_problem_notification'          => entity_check.last_problem_notification,
-         'last_recovery_notification'         => entity_check.last_recovery_notification,
-         'last_acknowledgement_notification'  => entity_check.last_acknowledgement_notification}
+         'last_problem_notification'          => entity_check.last_notification_for_state(:problem),
+         'last_recovery_notification'         => entity_check.last_notification_for_state(:recovery),
+         'last_acknowledgement_notification'  => entity_check.last_notification_for_state(:acknowledgement)}
       end
 
       # following a callback-heavy pattern -- feels like nodejs :)

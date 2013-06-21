@@ -22,6 +22,9 @@ module Flapjack
       STATE_CRITICAL        = 'critical'
       STATE_UNKNOWN         = 'unknown'
 
+      NOTIFICATION_STATES = [:problem, :warning, :critical, :unknown,
+                             :recovery, :acknowledgement]
+
       attr_accessor :entity, :check
 
       # TODO probably shouldn't always be creating on query -- work out when this should be happening
@@ -76,35 +79,9 @@ module Flapjack
         }
       end
 
-      # TODO move to Event
-      def create_acknowledgement(options = {})
-        event = { 'type'               => 'action',
-                  'state'              => 'acknowledgement',
-                  'summary'            => options['summary'],
-                  'duration'           => options['duration'],
-                  'acknowledgement_id' => options['acknowledgement_id'],
-                  'entity'             => entity.name,
-                  'check'              => check
-                }
-        Flapjack::Data::Event.add(event, :redis => @redis)
-      end
-
-      # TODO move to Event
-      def test_notifications(options = {})
-        event = { 'type'               => 'action',
-                  'state'              => 'test_notifications',
-                  'summary'            => options['summary'],
-                  'details'            => options['details'],
-                  'entity'             => entity.name,
-                  'check'              => check
-                }
-        Flapjack::Data::Event.add(event, :redis => @redis)
-      end
-
-      # FIXME: need to add summary to summary of existing unscheduled maintenance if there is
-      # one, and extend duration / expiry time, instead of creating a separate unscheduled
-      # outage as we are doing now...
       def create_unscheduled_maintenance(opts = {})
+        end_unscheduled_maintenance if in_unscheduled_maintenance?
+
         start_time = opts[:start_time]  # unix timestamp
         duration   = opts[:duration]    # seconds
         summary    = opts[:summary]
@@ -268,61 +245,30 @@ module Flapjack
         lc.to_i
       end
 
-      def last_problem_notification
-        lpn = @redis.get("#{@key}:last_problem_notification")
-        return unless (lpn && lpn =~ /^\d+$/)
-        lpn.to_i
-      end
-
-      def last_warning_notification
-        lwn = @redis.get("#{@key}:last_warning_notification")
-        return unless (lwn && lwn =~ /^\d+$/)
-        lwn.to_i
-      end
-
-      def last_critical_notification
-        lcn = @redis.get("#{@key}:last_critical_notification")
-        return unless (lcn && lcn =~ /^\d+$/)
-        lcn.to_i
-      end
-
-      def last_unknown_notification
-        lcn = @redis.get("#{@key}:last_unknown_notification")
-        return unless (lcn && lcn =~ /^\d+$/)
-        lcn.to_i
-      end
-
-      def last_recovery_notification
-        lrn = @redis.get("#{@key}:last_recovery_notification")
-        return unless (lrn && lrn =~ /^\d+$/)
-        lrn.to_i
-      end
-
-      def last_acknowledgement_notification
-        lan = @redis.get("#{@key}:last_acknowledgement_notification")
-        return unless (lan && lan =~ /^\d+$/)
-        lan.to_i
+      def last_notification_for_state(state)
+        return unless NOTIFICATION_STATES.include?(state)
+        ln = @redis.get("#{@key}:last_#{state.to_s}_notification")
+        return unless (ln && ln =~ /^\d+$/)
+        ln.to_i
       end
 
       def last_notifications_of_each_type
-        ln = {:warning         => last_warning_notification,
-              :critical        => last_critical_notification,
-              :unknown         => last_unknown_notification,
-              :recovery        => last_recovery_notification,
-              :acknowledgement => last_acknowledgement_notification }
-        ln
+        NOTIFICATION_STATES.inject({}) do |memo, state|
+          memo[state] = last_notification_for_state(state) unless (state == :problem)
+          memo
+        end
       end
 
       def max_notified_severity_of_current_failure
-        last_recovery = last_recovery_notification || 0
+        last_recovery = last_notification_for_state(:recovery) || 0
 
-        last_critical = last_critical_notification
+        last_critical = last_notification_for_state(:critical)
         return STATE_CRITICAL if last_critical && (last_critical > last_recovery)
 
-        last_warning = last_warning_notification
+        last_warning = last_notification_for_state(:warning)
         return STATE_WARNING if last_warning && (last_warning > last_recovery)
 
-        last_unknown = last_unknown_notification
+        last_unknown = last_notification_for_state(:unknown)
         return STATE_UNKNOWN if last_unknown && (last_unknown > last_recovery)
 
         nil

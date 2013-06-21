@@ -63,10 +63,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     entity_check = mock(Flapjack::Data::EntityCheck)
     entity_check.should_receive(:in_unscheduled_maintenance?)
-    entity_check.should_receive(:create_acknowledgement).
-      with('summary' => 'fixing now', 'acknowledgement_id' => '876', 'duration' => (90 * 60))
-    entity_check.should_receive(:entity_name).and_return('main-example.com')
-    entity_check.should_receive(:check).and_return('ping')
+
+    Flapjack::Data::Event.should_receive(:create_acknowledgement).
+      with('main-example.com', 'ping', :summary => 'fixing now',
+           :acknowledgement_id => '876',
+           :duration => (90 * 60), :redis => redis)
 
     Flapjack::Data::EntityCheck.should_receive(:for_event_id).
       with('main-example.com:ping', :redis => redis).

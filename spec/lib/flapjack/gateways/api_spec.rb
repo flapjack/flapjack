@@ -96,9 +96,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:last_update).and_return(now - 30)
-    entity_check.should_receive(:last_problem_notification).and_return(now - 60)
-    entity_check.should_receive(:last_recovery_notification).and_return(now - 30)
-    entity_check.should_receive(:last_acknowledgement_notification).and_return(now - 45)
+    entity_check.should_receive(:last_notification_for_state).with(:problem).and_return(now - 60)
+    entity_check.should_receive(:last_notification_for_state).with(:recovery).and_return(now - 30)
+    entity_check.should_receive(:last_notification_for_state).with(:acknowledgement).and_return(now - 45)
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
 
@@ -138,9 +138,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:last_update).and_return(now - 30)
-    entity_check.should_receive(:last_problem_notification).and_return(now - 60)
-    entity_check.should_receive(:last_recovery_notification).and_return(now - 30)
-    entity_check.should_receive(:last_acknowledgement_notification).and_return(now - 45)
+    entity_check.should_receive(:last_notification_for_state).with(:problem).and_return(now - 60)
+    entity_check.should_receive(:last_notification_for_state).with(:recovery).and_return(now - 30)
+    entity_check.should_receive(:last_notification_for_state).with(:acknowledgement).and_return(now - 45)
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, nw_check, :redis => redis).and_return(entity_check)
 
@@ -198,7 +198,10 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       with(entity_name, :redis => redis).and_return(entity)
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
-    entity_check.should_receive(:create_acknowledgement).with('summary' => nil, 'duration' => (4 * 60 * 60))
+
+    Flapjack::Data::Event.should_receive(:create_acknowledgement).
+      with(entity_name, check, :summary => nil, :duration => (4 * 60 * 60),
+           :redis => redis)
 
     post "/acknowledgements/#{entity_name_esc}/#{check}"
     last_response.status.should == 204
@@ -373,13 +376,14 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
   end
 
   it "creates a test notification event for check on an entity" do
-
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
     entity.should_receive(:name).and_return(entity_name)
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, 'foo', :redis => redis).and_return(entity_check)
-    entity_check.should_receive(:test_notifications)
+
+    Flapjack::Data::Event.should_receive(:test_notifications).
+      with(entity_name, 'foo', hash_including(:redis => redis))
 
     post "/test_notifications/#{entity_name_esc}/foo"
     last_response.status.should == 204

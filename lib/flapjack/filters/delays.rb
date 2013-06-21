@@ -31,9 +31,9 @@ module Flapjack
           current_time = Time.now.to_i
 
           if entity_check.failed?
-            last_problem_alert   = entity_check.last_problem_notification
-            last_warning_alert   = entity_check.last_warning_notification
-            last_critical_alert  = entity_check.last_critical_notification
+            last_problem_alert   = entity_check.last_notification_for_state(:problem)
+            last_warning_alert   = entity_check.last_notification_for_state(:warning)
+            last_critical_alert  = entity_check.last_notification_for_state(:critical)
             last_change          = entity_check.last_change
             last_notification    = entity_check.last_notification
             last_alert_state     = last_notification[:type]
