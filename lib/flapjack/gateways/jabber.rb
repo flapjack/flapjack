@@ -155,7 +155,7 @@ module Flapjack
 
             if entity_check.in_unscheduled_maintenance?
               # ack = entity_check.current_maintenance(:unscheduled => true)
-              # FIXME details from current
+              # FIXME details from current?
               msg = "Changing ACK for #{check} on #{entity_name} (#{ackid})"
             else
               msg = "ACKing #{check} on #{entity_name} (#{ackid})"
@@ -200,7 +200,7 @@ module Flapjack
             summary = "Testing notifications to all contacts interested in entity: #{entity_name}, check: #{check_name}"
             Flapjack::Data::Event.test_notifications(entity_name, check_name, :summary => summary, :redis => @redis)
           else
-            msg = "yeah, no i can't see #{entity_name} in my systems"
+            msg = "yeah, no I can't see #{entity_name} in my systems"
           end
 
         when command =~ /^tell me about\s+([a-z0-9\-\.]+)(?::(.+))?$+/
@@ -209,9 +209,9 @@ module Flapjack
 
           if entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis)
             check_str = check_name.nil? ? '' : ", check: #{check_name}"
-            msg = "so you'd like details on entity: #{entity_name}#{check_str} hmm? ... OK!"
+            msg = "so you'd like details on entity: #{entity_name}#{check_str} hmm? ... OK!\n"
 
-            t = Time.now
+            current_time = Time.now
 
             get_details = proc {|entity_check|
               sched   = entity_check.current_maintenance(:scheduled => true)
@@ -219,7 +219,7 @@ module Flapjack
 
               if (sched || unsched) && check_name.nil?
                 check = entity_check.check
-                msg += "#{entity_name}:#{check}\n7"
+                msg += "---\n#{entity_name}:#{check}\n"
               end
 
               unless sched.nil?
@@ -237,21 +237,21 @@ module Flapjack
                 # TODO a simpler time format?
                 msg += "Currently in unscheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
               end
-
-              if (sched || unsched) && check_name.nil?
-                msg += "---\n"
-              end
             }
 
             check_names = check_name.nil? ? entity.check_list.sort : [check_name]
 
-            check_names.each do |check|
-              entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check, :redis => @redis)
-              next if entity_check.nil?
-              get_details.call(entity_check)
+            if check_names.empty?
+              msg += "I couldn't find any checks for entity: #{entity_name}"
+            else
+              check_names.each do |check|
+                entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check, :redis => @redis)
+                next if entity_check.nil?
+                get_details.call(entity_check)
+              end
             end
           else
-            msg = "hmmm, i can't see #{entity_name} in my systems"
+            msg = "hmmm, I can't see #{entity_name} in my systems"
           end
 
         when command =~ /^(find )?entities matching\s+\/(.*)\/.*$/i
