@@ -52,8 +52,6 @@ module Flapjack
             access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
             use Flapjack::CommonLogger, access_logger
           end
-
-
         end
       end
 

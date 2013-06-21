@@ -14,10 +14,10 @@
           = nav
           %h2 #{@check} on #{@entity}
         %h3 State: #{@check_state ? @check_state.upcase : ''}
-        - if (['warning', 'critical', 'unknown'].include?(@check_state) and !(@current_unscheduled_maintenance || @current_scheduled_maintenance))
+        - if (['warning', 'critical', 'unknown'].include?(@check_state) and !@current_scheduled_maintenance)
           %form{:action => "/acknowledgements/#{check_path_escaped}", :method => "post", :class => "form-inline"}
             %input{:type => 'hidden', :name => 'acknowledgement_id', :value => "#{@acknowledgement_id}"}
-            %input{:type => 'submit', :value => 'Acknowledge', :class => 'button'}
+            %input{:type => 'submit', :value => @current_unscheduled_maintenance ? 'Replace acknowledgment' : 'Acknowledge', :class => 'button'}
             with
             %label{:for => 'summary'}
               summary:
@@ -26,13 +26,22 @@
               duration:
             %input{:type => 'text', :name => 'duration', :value => ''}
             eg "5 hours"
+        - current_time = (@current_unscheduled_maintenance || @current_scheduled_maintenance) ? Time.now : nil
         - if @current_unscheduled_maintenance
           %h3 (Acknowledged - #{@current_unscheduled_maintenance[:summary]})
+          - start  = Time.at(@current_unscheduled_maintenance[:start_time])
+          - finish = Time.at(@current_unscheduled_maintenance[:start_time] + @current_unscheduled_maintenance[:duration])
+          - remain = time_period_in_words( (finish - current_time).ceil )
+          %p #{start} -&gt; #{finish} (#{remain} remaining)
           %form{:action => "/end_unscheduled_maintenance/#{check_path_escaped}", :method => "post"}
             %p
               %input{:type => 'submit', :value => 'End Unscheduled Maintenance (Unacknowledge)', :class => 'button'}
         - if @current_scheduled_maintenance
           %h4 (Scheduled Maintenance - #{@current_scheduled_maintenance[:summary]})
+          - start  = Time.at(@current_scheduled_maintenance[:start_time])
+          - finish = Time.at(@current_scheduled_maintenance[:start_time] + @current_scheduled_maintenance[:duration])
+          - remain = time_period_in_words( (finish - current_time).ceil )
+          %p #{start} -&gt; #{finish} (#{remain} remaining)
         %h3 Output: #{@check_summary}
         %p #{@check_details}
         %table{:class => "table table-hover table-condensed"}

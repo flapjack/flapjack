@@ -8,7 +8,8 @@ module Flapjack
       include Base
 
       def block?(event)
-        result = @persistence.exists("#{event.id}:unscheduled_maintenance")
+        result = @persistence.exists("#{event.id}:unscheduled_maintenance") &&
+          !event.acknowledgement?
         @log.debug("Filter: Unscheduled Maintenance: #{result ? "block" : "pass"}")
         result
       end

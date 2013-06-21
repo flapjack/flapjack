@@ -225,7 +225,7 @@ module Flapjack
               unless sched.nil?
                 start  = Time.at(sched[:start_time])
                 finish = Time.at(sched[:start_time] + sched[:duration])
-                remain = time_period_in_words(finish - t)
+                remain = time_period_in_words( (finish - current_time).ceil )
                 # TODO a simpler time format?
                 msg += "Currently in scheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
               end
@@ -233,7 +233,7 @@ module Flapjack
               unless unsched.nil?
                 start  = Time.at(unsched[:start_time])
                 finish = Time.at(unsched[:start_time] + unsched[:duration])
-                remain = time_period_in_words(finish - t)
+                remain = time_period_in_words( (finish - current_time).ceil )
                 # TODO a simpler time format?
                 msg += "Currently in unscheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
               end
