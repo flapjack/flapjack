@@ -36,6 +36,8 @@ module Flapjack
       def initialize(opts = {})
         @config = opts[:config]
         @redis_config = opts[:redis_config]
+        @boot_time = opts[:boot_time]
+
         @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
 
         @logger = opts[:logger]
@@ -170,25 +172,23 @@ module Flapjack
           end
 
         when command =~ /^help$/
-          msg  = "commands: \n"
-          msg += "  ACKID <id> <comment> [duration: <time spec>] \n"
-          msg += "  find entities matching /pattern/ \n"
-          msg += "  test notifications for <entity>[:<check>] \n"
-          msg += "  tell me about <entity>[:<check>]"
-          msg += "  identify \n"
-          msg += "  help \n"
+          msg = "commands: \n" +
+                "  ACKID <id> <comment> [duration: <time spec>] \n" +
+                "  find entities matching /pattern/ \n" +
+                "  test notifications for <entity>[:<check>] \n" +
+                "  tell me about <entity>[:<check>]" +
+                "  identify \n" +
+                "  help \n"
 
         when command =~ /^identify$/
-          t = Process.times
-          fqdn         = `/bin/hostname -f`.chomp
-          pid          = Process.pid
-          instance_id  = "#{@fqdn}:#{@pid}"
-          boot_time = Time.at(@redis.hget("executive_instance:#{instance_id}", 'boot_time').to_i)
-          msg  = "Flapjack #{Flapjack::VERSION} process #{pid} on #{fqdn} \n"
-          msg += "Boot time: #{boot_time}\n"
-          msg += "User CPU Time: #{t.utime}\n"
-          msg += "System CPU Time: #{t.stime}\n"
-          msg += `uname -a`.chomp + "\n"
+          t    = Process.times
+          fqdn = `/bin/hostname -f`.chomp
+          pid  = Process.pid
+          msg  = "Flapjack #{Flapjack::VERSION} process #{pid} on #{fqdn} \n" +
+                 "Boot time: #{@boot_time}\n" +
+                 "User CPU Time: #{t.utime}\n" +
+                 "System CPU Time: #{t.stime}\n" +
+                 `uname -a`.chomp + "\n"
 
         when command =~ /^test notifications for\s+([a-z0-9\-\.]+)(?::(.+))?$/i
           entity_name = $1
