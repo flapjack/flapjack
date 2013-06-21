@@ -8,6 +8,8 @@ module Flapjack
 
       attr_accessor :previous_state, :previous_state_duration
 
+      attr_reader :check, :summary, :details, :acknowledgement_id
+
       # Helper method for getting the next event.
       #
       # Has a blocking and non-blocking method signature.
@@ -97,38 +99,32 @@ module Flapjack
         add(data, :redis => options[:redis])
       end
 
-      def initialize(attrs={})
-        @attrs = attrs
-        @attrs['time'] = Time.now.to_i unless @attrs.has_key?('time')
+      def initialize(attrs = {})
+        ['type', 'state', 'entity', 'check', 'time', 'summary', 'details',
+         'acknowledgement_id', 'duration'].each do |key|
+          instance_variable_set("@#{key}", attrs[key])
+        end
       end
 
       def state
-        return unless @attrs['state']
-        @attrs['state'].downcase
+        return unless @state
+        @state.downcase
       end
 
       def entity
-        return unless @attrs['entity']
-        @attrs['entity'].downcase
-      end
-
-      def check
-        @attrs['check']
-      end
-
-
-      # FIXME some values are only set for certain event types --
-      # this may not be the best way to do this
-      def acknowledgement_id
-        @attrs['acknowledgement_id']
+        return unless @entity
+        @entity.downcase
       end
 
       def duration
-        return unless @attrs['duration']
-        @attrs['duration'].to_i
+        return unless @duration
+        @duration.to_i
       end
-      # end FIXME
 
+      def time
+        return unless @time
+        @time.to_i
+      end
 
       def id
         (entity || '-') + ':' + (check || '-')
@@ -141,25 +137,8 @@ module Flapjack
       end
 
       def type
-        return unless @attrs['type']
-        @attrs['type'].downcase
-      end
-
-      def summary
-        @attrs['summary']
-      end
-
-      def details
-        @attrs['details']
-      end
-
-      def time
-        return unless @attrs['time']
-        @attrs['time'].to_i
-      end
-
-      def action?
-        type == 'action'
+        return unless @type
+        @type.downcase
       end
 
       def service?
@@ -167,37 +146,25 @@ module Flapjack
       end
 
       def acknowledgement?
-        action? and state == 'acknowledgement'
+        (type == 'action') && (state == 'acknowledgement')
       end
 
       def test_notifications?
-        action? and state == 'test_notifications'
+        (type == 'action') && state == 'test_notifications'
       end
 
       def ok?
-        (state == 'ok') or (state == 'up')
-      end
-
-      def unknown?
-        state == 'unknown'
-      end
-
-      def unreachable?
-        state == 'unreachable'
-      end
-
-      def warning?
-        state == 'warning'
-      end
-
-      def critical?
-        state == 'critical'
+        (state == 'ok') || (state == 'up')
       end
 
       def failure?
-        warning? or critical? or unknown?
+        ['critical', 'warning', 'unknown'].include?(state)
       end
 
+      # # Not used anywhere
+      # def unreachable?
+      #   state == 'unreachable'
+      # end
     end
   end
 end

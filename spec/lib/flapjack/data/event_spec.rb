@@ -3,31 +3,25 @@ require 'flapjack/data/event'
 
 describe Flapjack::Data::Event, :redis => true do
 
-  it "creates an acknowledgement" # do
-    # ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-    # t = Time.now.to_i
-    # ec.create_acknowledgement('summary'            => 'looking now',
-    #                           'time'               => t,
-    #                           'acknowledgement_id' => '75',
-    #                           'duration'           => 40 * 60)
-    # event_json = @redis.rpop('events')
-    # event_json.should_not be_nil
-    # event = nil
-    # expect {
-    #   event = JSON.parse(event_json)
-    # }.not_to raise_error
-    # event.should_not be_nil
-    # event.should be_a(Hash)
-    # event.should == {
-    #   'entity'             => name,
-    #   'check'              => check,
-    #   'type'               => 'action',
-    #   'state'              => 'acknowledgement',
-    #   'summary'            => 'looking now',
-    #   'time'               => t,
-    #   'acknowledgement_id' => '75',
-    #   'duration'           => 2400
-    # }
-  # end
+  let(:entity_name) { 'example.org' }
+  let(:check)       { 'ping' }
+
+  let!(:time) { Time.now}
+
+  it "creates a notification testing event" do
+    Time.should_receive(:now).and_return(time)
+    @redis.should_receive(:rpush).with('events', /"testing"/ )
+
+    Flapjack::Data::Event.test_notifications(entity_name, check,
+      :summary => 'test', :details => 'testing', :redis => @redis)
+  end
+
+  it "creates an acknowledgement event" do
+    Time.should_receive(:now).and_return(time)
+    @redis.should_receive(:rpush).with('events', /"acking"/ )
+
+    Flapjack::Data::Event.create_acknowledgement(entity_name, check,
+      :summary => 'acking', :time => time.to_i, :redis => @redis)
+  end
 
 end
