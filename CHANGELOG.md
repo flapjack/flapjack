@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 0.7.15 - UNRELEASED
+- Bug: Fix jabber identify boot time gh-172 (@ali-graham)
+- Bug: Don't pluralise singular time periods in jabber messages gh-209 (@ali-graham)
+
 # 0.7.14 - 2013-06-19
 - Bug: Display of checks on web ui with a colon in their name is screwed gh-213 (@jessereynolds)
 - Bug: show last critical, warning, unknown notificaiton times in web ui gh-211 (@jessereynolds)
