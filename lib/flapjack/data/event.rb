@@ -76,27 +76,27 @@ module Flapjack
         redis.llen('events')
       end
 
-      def self.create_acknowledgement(entity_name, check, options = {})
+      def self.create_acknowledgement(entity_name, check, opts = {})
         data = { 'type'               => 'action',
                  'state'              => 'acknowledgement',
-                 'summary'            => options[:summary],
-                 'duration'           => options[:duration],
-                 'acknowledgement_id' => options[:acknowledgement_id],
                  'entity'             => entity_name,
-                 'check'              => check
+                 'check'              => check,
+                 'summary'            => opts[:summary],
+                 'duration'           => opts[:duration],
+                 'acknowledgement_id' => opts[:acknowledgement_id]
                }
-        add(data, :redis => options[:redis])
+        add(data, :redis => opts[:redis])
       end
 
-      def self.test_notifications(entity_name, check, options = {})
+      def self.test_notifications(entity_name, check, opts = {})
         data = { 'type'               => 'action',
                  'state'              => 'test_notifications',
-                 'summary'            => options[:summary],
-                 'details'            => options[:details],
                  'entity'             => entity_name,
-                 'check'              => check
+                 'check'              => check,
+                 'summary'            => opts[:summary],
+                 'details'            => opts[:details]
                }
-        add(data, :redis => options[:redis])
+        add(data, :redis => opts[:redis])
       end
 
       def initialize(attrs = {})
@@ -150,7 +150,7 @@ module Flapjack
       end
 
       def test_notifications?
-        (type == 'action') && state == 'test_notifications'
+        (type == 'action') && (state == 'test_notifications')
       end
 
       def ok?

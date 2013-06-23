@@ -19,22 +19,22 @@ module Flapjack
 
         if event.ok?
           if event.previous_state == 'ok'
-            @log.debug("Filter: Ok: existing state was ok, and the previous state was ok, so blocking")
+            @logger.debug("Filter: Ok: existing state was ok, and the previous state was ok, so blocking")
             result = true
           end
 
-          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @persistence)
+          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
 
           last_notification = entity_check.last_notification
-          @log.debug("Filter: Ok: last notification: #{last_notification.inspect}")
+          @logger.debug("Filter: Ok: last notification: #{last_notification.inspect}")
           if last_notification[:type] == 'recovery'
-            @log.debug("Filter: Ok: last notification was a recovery, so blocking")
+            @logger.debug("Filter: Ok: last notification was a recovery, so blocking")
             result = true
           end
 
           if event.previous_state != 'ok'
             if event.previous_state_duration < 30
-              @log.debug("Filter: Ok: previous non ok state was for less than 30 seconds, so blocking")
+              @logger.debug("Filter: Ok: previous non ok state was for less than 30 seconds, so blocking")
               result = true
             end
           end
@@ -43,7 +43,7 @@ module Flapjack
           entity_check.end_unscheduled_maintenance
         end
 
-        @log.debug("Filter: Ok: #{result ? "block" : "pass"}")
+        @logger.debug("Filter: Ok: #{result ? "block" : "pass"}")
         result
       end
     end
