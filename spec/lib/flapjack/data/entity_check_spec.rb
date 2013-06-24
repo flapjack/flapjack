@@ -520,9 +520,9 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     @redis.set("#{name}:#{check}:last_recovery_notification", t)
 
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-    ec.last_problem_notification.should == t - 30
-    ec.last_acknowledgement_notification.should == t - 15
-    ec.last_recovery_notification.should == t
+    ec.last_notification_for_state(:problem)[:timestamp].should == t - 30
+    ec.last_notification_for_state(:acknowledgement)[:timestamp].should == t - 15
+    ec.last_notification_for_state(:recovery)[:timestamp].should == t
   end
 
   it "finds all related contacts" do

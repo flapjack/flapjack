@@ -53,7 +53,6 @@ module Flapjack
             use Flapjack::CommonLogger, access_logger
           end
 
-
         end
       end
 
@@ -324,9 +323,9 @@ module Flapjack
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
           check, :redis => redis)
         latest_notif =
-          {:problem         => entity_check.last_problem_notification,
-           :recovery        => entity_check.last_recovery_notification,
-           :acknowledgement => entity_check.last_acknowledgement_notification
+          {:problem         => entity_check.last_notification_for_state(:problem)[:timestamp],
+           :recovery        => entity_check.last_notification_for_state(:recovery)[:timestamp],
+           :acknowledgement => entity_check.last_notification_for_state(:acknowledgement)[:timestamp]
           }.max_by {|n| n[1] || 0}
         [(entity_check.state       || '-'),
          (entity_check.last_change || '-'),

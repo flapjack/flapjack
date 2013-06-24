@@ -56,9 +56,9 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     ec.should_receive(:state).and_return('ok')
     ec.should_receive(:last_update).and_return(time - (3 * 60 * 60))
     ec.should_receive(:last_change).and_return(time - (3 * 60 * 60))
-    ec.should_receive(:last_problem_notification).and_return(time - ((3 * 60 * 60) + (5 * 60)))
-    ec.should_receive(:last_recovery_notification).and_return(time - (3 * 60 * 60))
-    ec.should_receive(:last_acknowledgement_notification).and_return(nil)
+    ec.should_receive(:last_notification_for_state).with(:problem).and_return({:timestamp => time - ((3 * 60 * 60) + (5 * 60))})
+    ec.should_receive(:last_notification_for_state).with(:recovery).and_return({:timestamp => time - (3 * 60 * 60)})
+    ec.should_receive(:last_notification_for_state).with(:acknowledgement).and_return({:timestamp => nil})
     ec.should_receive(:in_scheduled_maintenance?).and_return(false)
     ec.should_receive(:in_unscheduled_maintenance?).and_return(false)
   end
@@ -114,9 +114,9 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     time = Time.now
     Time.should_receive(:now).exactly(4).times.and_return(time)
 
-    last_notifications = {:problem         => time.to_i - ((3 * 60 * 60) + (5 * 60)),
-                          :recovery        => time.to_i - (3 * 60 * 60),
-                          :acknowledgement => nil }
+    last_notifications = {:problem         => {:timestamp => time.to_i - ((3 * 60 * 60) + (5 * 60)), :summary => 'prob'},
+                          :recovery        => {:timestamp => time.to_i - (3 * 60 * 60), :summary => nil},
+                          :acknowledgement => {:timestamp => nil, :summary => nil} }
 
     expect_check_stats
     entity_check.should_receive(:state).and_return('ok')

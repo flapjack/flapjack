@@ -25,7 +25,7 @@
             %label{:for => 'duration'}
               duration:
             %input{:type => 'text', :name => 'duration', :value => ''}
-            eg "5 hours"
+            e.g. "5 hours"
         - if @current_unscheduled_maintenance
           %h3 (Acknowledged - #{@current_unscheduled_maintenance[:summary]})
           %form{:action => "/end_unscheduled_maintenance/#{check_path_escaped}", :method => "post"}
@@ -40,60 +40,62 @@
             %td Last state change:
             %td #{relative_time_ago(Time.at(@check_last_change.to_i))} ago
             %td #{Time.at(@check_last_change.to_i)}
+            %td &nbsp;
           %tr
             %td Last update:
             %td #{relative_time_ago(Time.at(@check_last_update.to_i))} ago
             %td #{Time.at(@check_last_update.to_i)}
-          - if @last_notifications[:critical]
-            - last_critical_relative = relative_time_ago(Time.at(@last_notifications[:critical])) + " ago"
-            - last_critical          = Time.at(@last_notifications[:critical]).to_s
-          - else
-            - last_critical_relative = 'never'
-            - last_critical          = ''
+            %td &nbsp;
+          - last_critical = nil
+          - if @last_notifications[:critical] && @last_notifications[:critical][:timestamp]
+            - t = Time.at(@last_notifications[:critical][:timestamp])
+            - last_critical = {:time => t.to_s, :relative => relative_time_ago(t) + " ago", :summary => @last_notifications[:critical][:summary]}
           %tr
             %td Last critical notification:
-            %td= last_critical_relative
-            %td= last_critical
-          - if @last_notifications[:warning]
-            - last_warning_relative = relative_time_ago(Time.at(@last_notifications[:warning])) + " ago"
-            - last_warning          = Time.at(@last_notifications[:warning]).to_s
-          - else
-            - last_warning_relative = 'never'
-            - last_warning          = ''
+            %td= last_critical ? last_critical[:relative] : 'never'
+            %td= last_critical ? last_critical[:time] : ''
+            %td= last_critical ? last_critical[:summary] : ''
+
+          - last_warning = nil
+          - if @last_notifications[:warning] && @last_notifications[:warning][:timestamp]
+            - t = Time.at(@last_notifications[:warning][:timestamp])
+            - last_warning = {:time => t.to_s, :relative => relative_time_ago(t) + " ago", :summary => @last_notifications[:warning][:summary]}
           %tr
             %td Last warning notification:
-            %td= last_warning_relative
-            %td= last_warning
-          - if @last_notifications[:unknown]
-            - last_unknown_relative = relative_time_ago(Time.at(@last_notifications[:unknown])) + " ago"
-            - last_unknown          = Time.at(@last_notifications[:unknown]).to_s
-          - else
-            - last_unknown_relative = 'never'
-            - last_unknown          = ''
+            %td= last_warning ? last_warning[:relative] : 'never'
+            %td= last_warning ? last_warning[:time] : ''
+            %td= last_warning ? last_warning[:summary] : ''
+
+          - last_unknown = nil
+          - if @last_notifications[:unknown] && @last_notifications[:unknown][:timestamp]
+            - t = Time.at(@last_notifications[:unknown][:timestamp])
+            - last_unknown = {:time => t.to_s, :relative => relative_time_ago(t) + " ago", :summary => @last_notifications[:unknown][:summary]}
           %tr
             %td Last unknown notification:
-            %td= last_unknown_relative
-            %td= last_unknown
-          - if @last_notifications[:recovery]
-            - last_recovery_relative = relative_time_ago(Time.at(@last_notifications[:recovery])) + " ago"
-            - last_recovery          = Time.at(@last_notifications[:recovery]).to_s
-          - else
-            - last_recovery_relative = 'never'
-            - last_recovery          = ''
+            %td= last_unknown ? last_unknown[:relative] : 'never'
+            %td= last_unknown ? last_unknown[:time] : ''
+            %td= last_unknown ? last_unknown[:summary] : ''
+
+          - last_recovery = nil
+          - if @last_notifications[:recovery] && @last_notifications[:recovery][:timestamp]
+            - t = Time.at(@last_notifications[:recovery][:timestamp])
+            - last_recovery = {:time => t.to_s, :relative => relative_time_ago(t) + " ago", :summary => @last_notifications[:recovery][:summary]}
           %tr
             %td Last recovery notification:
-            %td= last_recovery_relative
-            %td= last_recovery
-          - if @last_notifications[:acknowledgement]
-            - last_ack_relative = relative_time_ago(Time.at(@last_notifications[:acknowledgement])) + " ago"
-            - last_ack          = Time.at(@last_notifications[:acknowledgement]).to_s
-          - else
-            - last_ack_relative = 'never'
-            - last_ack          = ''
+            %td= last_recovery ? last_recovery[:relative] : 'never'
+            %td= last_recovery ? last_recovery[:time] : ''
+            %td= last_recovery ? last_recovery[:summary] : ''
+
+          - last_ack = nil
+          - if @last_notifications[:acknowledgement] && @last_notifications[:acknowledgement][:timestamp]
+            - t = Time.at(@last_notifications[:acknowledgement][:timestamp])
+            - last_ack = {:time => t.to_s, :relative => relative_time_ago(t) + " ago", :summary => @last_notifications[:acknowledgement][:summary]}
           %tr
             %td Last acknowledgement notification:
-            %td= last_ack_relative
-            %td= last_ack
+            %td= last_ack ? last_ack[:relative] : 'never'
+            %td= last_ack ? last_ack[:time] : ''
+            %td= last_ack ? last_ack[:summary] : ''
+
         %h3 Scheduled Maintenance Periods
         - if @scheduled_maintenances && !@scheduled_maintenances.empty?
           %table{:class => "table table-bordered table-hover table-condensed"}
@@ -134,12 +136,12 @@
             %label{:class => "control-label", :for => 'start_time'} Start time:
             %div{:class => "controls"}
               %input{:type => 'text', :name => 'start_time', :class => 'text', :size => '20', :maxlength => '80'}
-              eg "today 4pm", "two hours hence", "friday 2pm", "2012-01-28 13:00"
+              e.g. "today 4pm", "two hours hence", "friday 2pm", "2012-01-28 13:00"
           %div{:class => "control-group"}
             %label{:class => "control-label", :for => 'duration'} Duration:
             %div{:class => "controls"}
               %input{:type => 'text', :name => 'duration', :class => 'text', :size => '20', :maxlength => '80'}
-              eg "1 hour", "2:30:00", "three days", etc
+              e.g. "1 hour", "2:30:00", "three days", etc
           %div{:class => "control-group"}
             %label{:class => "control-label", :for => 'summary'} Summary:
             %div{:class => "controls"}

@@ -96,9 +96,10 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:last_update).and_return(now - 30)
-    entity_check.should_receive(:last_problem_notification).and_return(now - 60)
-    entity_check.should_receive(:last_recovery_notification).and_return(now - 30)
-    entity_check.should_receive(:last_acknowledgement_notification).and_return(now - 45)
+    entity_check.should_receive(:last_notification_for_state).with(:problem).and_return({:timestamp => now - 60})
+    entity_check.should_receive(:last_notification_for_state).with(:recovery).and_return({:timestamp => now - 30})
+    entity_check.should_receive(:last_notification_for_state).with(:acknowledgement).and_return({:timestamp => now - 45})
+
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
 
@@ -138,9 +139,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:last_update).and_return(now - 30)
-    entity_check.should_receive(:last_problem_notification).and_return(now - 60)
-    entity_check.should_receive(:last_recovery_notification).and_return(now - 30)
-    entity_check.should_receive(:last_acknowledgement_notification).and_return(now - 45)
+    entity_check.should_receive(:last_notification_for_state).with(:problem).and_return({:timestamp => now - 60})
+    entity_check.should_receive(:last_notification_for_state).with(:recovery).and_return({:timestamp => now - 30})
+    entity_check.should_receive(:last_notification_for_state).with(:acknowledgement).and_return({:timestamp => now - 45})
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, nw_check, :redis => redis).and_return(entity_check)
 

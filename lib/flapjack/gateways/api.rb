@@ -591,9 +591,10 @@ module Flapjack
          'in_unscheduled_maintenance'         => entity_check.in_unscheduled_maintenance?,
          'in_scheduled_maintenance'           => entity_check.in_scheduled_maintenance?,
          'last_update'                        => entity_check.last_update,
-         'last_problem_notification'          => entity_check.last_problem_notification,
-         'last_recovery_notification'         => entity_check.last_recovery_notification,
-         'last_acknowledgement_notification'  => entity_check.last_acknowledgement_notification}
+         'last_problem_notification'          => entity_check.last_notification_for_state(:problem)[:timestamp],
+         'last_recovery_notification'         => entity_check.last_notification_for_state(:recovery)[:timestamp],
+         'last_acknowledgement_notification'  => entity_check.last_notification_for_state(:acknowledgement)[:timestamp]
+        }
       end
 
       # following a callback-heavy pattern -- feels like nodejs :)
