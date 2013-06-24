@@ -84,6 +84,7 @@ module Flapjack
         @attrs['state'].downcase
       end
 
+
       def entity
         return unless @attrs['entity']
         @attrs['entity'].downcase
