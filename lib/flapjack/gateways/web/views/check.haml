@@ -148,6 +148,20 @@
             %div{:class => "controls"}
               %input{:type => 'submit', :value => 'Save', :class => 'button'}
         %p Times given will be interpreted in the local timezone of  #{local_timezone}
+
+        - if @state_changes && !@state_changes.empty?
+          %h3 Recent state changes
+          %table{:class => "table table-bordered table-hover table-condensed"}
+            %tr
+              %th Timestamp
+              %th State
+              %th Summary
+            - @state_changes.each do |sc|
+              %tr
+                %td= Time.at(sc[:timestamp]).to_s
+                %td= sc[:state]
+                %td= sc[:summary]
+
         %h3 Contacts
         - if @contacts && !@contacts.empty?
           %table{:class => "table table-bordered table-hover table-condensed"}

@@ -373,20 +373,37 @@ module Flapjack
       # from midnight to 11:59:59 PM. Pass nil for either end to leave that
       # side unbounded.
       def historical_states(start_time, end_time, opts = {})
-        start_time ||= '-inf'
-        end_time ||= '+inf'
+        start_time = '-inf' if start_time.to_i <= 0
+        end_time = '+inf' if end_time.to_i <= 0
+
+        args = ["#{@key}:sorted_state_timestamps"]
+
         order = opts[:order]
-        query = (order && 'desc'.eql?(order.downcase)) ? :zrevrangebyscore : :zrangebyscore
-        state_ts = @redis.send(query, "#{@key}:sorted_state_timestamps", start_time, end_time)
+        if (order && 'desc'.eql?(order.downcase))
+          query = :zrevrangebyscore
+          args += [end_time.to_s, start_time.to_s]
+        else
+          query = :zrangebyscore
+          args += [start_time.to_s, end_time.to_s]
+        end
+
+        if opts[:limit] && (opts[:limit].to_i > 0)
+          args << {:limit => [0, opts[:limit]]}
+        end
+
+        state_ts = @redis.send(query, *args)
 
         state_data = nil
 
         @redis.multi do |r|
           state_data = state_ts.collect {|ts|
-            {:timestamp => ts.to_i,
-             :state     => r.get("#{@key}:#{ts}:state"),
-             :summary   => r.get("#{@key}:#{ts}:summary"),
-             :details   => r.get("#{@key}:#{ts}:details")}
+            {:timestamp     => ts.to_i,
+             :state         => r.get("#{@key}:#{ts}:state"),
+             :summary       => r.get("#{@key}:#{ts}:summary"),
+             :details       => r.get("#{@key}:#{ts}:details"),
+             # :count         => r.get("#{@key}:#{ts}:count"),
+             # :check_latency => r.get("#{@key}:#{ts}:check_latency")
+            }
           }
         end
 

@@ -191,6 +191,9 @@ module Flapjack
 
         @contacts                   = entity_check.contacts
 
+        @state_changes = entity_check.historical_states(nil, Time.now.to_i,
+                           :order => 'desc', :limit => 20)
+
         haml :check
       end
 
