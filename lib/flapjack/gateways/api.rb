@@ -230,7 +230,11 @@ module Flapjack
         opts['summary'] = summary if summary
 
         act_proc = proc {|entity_check|
-          entity_check.create_acknowledgement(opts)
+          Flapjack::Data::Event.create_acknowledgement(
+            entity_check.entity_name, entity_check.check,
+            :summary => params[:summary],
+            :duration => duration,
+            :redis => redis)
         }
 
         bulk_api_check_action(entities, checks, act_proc)
@@ -270,7 +274,10 @@ module Flapjack
         act_proc = proc {|entity_check|
           summary = params[:summary] ||
                     "Testing notifications to all contacts interested in entity #{entity_check.entity.name}"
-          entity_check.test_notifications('summary' => summary)
+          Flapjack::Data::Event.test_notifications(
+            entity_check.entity_name, entity_check.check,
+            :summary => summary,
+            :redis => redis)
         }
 
         bulk_api_check_action(entities, checks, act_proc)

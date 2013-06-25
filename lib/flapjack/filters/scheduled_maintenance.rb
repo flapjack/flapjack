@@ -8,8 +8,8 @@ module Flapjack
       include Base
 
       def block?(event)
-        result = @persistence.exists("#{event.id}:scheduled_maintenance")
-        @log.debug("Filter: Scheduled Maintenance: #{result ? "block" : "pass"}")
+        result = @redis.exists("#{event.id}:scheduled_maintenance")
+        @logger.debug("Filter: Scheduled Maintenance: #{result ? "block" : "pass"}")
         result
       end
     end
