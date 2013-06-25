@@ -5,6 +5,9 @@ require 'log4r/outputter/fileoutputter'
 require 'tzinfo'
 require 'active_support/time'
 
+require 'chronic'
+require 'chronic_duration'
+
 require 'flapjack/filters/acknowledgement'
 require 'flapjack/filters/ok'
 require 'flapjack/filters/scheduled_maintenance'
@@ -59,6 +62,9 @@ module Flapjack
 
       @archive_events        = @config['archive_events'] || false
       @events_archive_maxage = @config['events_archive_maxage']
+
+      ncsm_duration_conf = @config['new_check_scheduled_maintenance_duration'] || '100 years'
+      @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf)
 
       # FIXME: Put loading filters into separate method
       # FIXME: should we make the filters more configurable by the end user?
@@ -195,8 +201,18 @@ module Flapjack
         end
 
         event.previous_state = entity_check.state
-        event.previous_state_duration = timestamp - entity_check.last_change.to_i
-        @logger.info("No previous state for event #{event.id}") if event.previous_state.nil?
+
+        if event.previous_state.nil?
+          @logger.info("No previous state for event #{event.id}")
+
+          if @ncsm_duration >= 0
+            @logger.info("Setting scheduled maintenance for #{time_period_in_words(@ncsm_duration)}")
+            entity_check.create_scheduled_maintenance(:start_time => timestamp,
+              :duration => @ncsm_duration, :summary => 'Automatically created for new check')
+          end
+        else
+          event.previous_state_duration = timestamp - entity_check.last_change.to_i
+        end
 
         entity_check.update_state(event.state, :timestamp => timestamp,
           :summary => event.summary, :client => event.client,

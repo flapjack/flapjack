@@ -153,9 +153,23 @@ Given /^an entity '([\w\.\-]+)' exists$/ do |entity|
                              :redis => @redis )
 end
 
+Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check, entity|
+  @check  = check
+  @entity = entity
+end
+
+Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') has no state$/ do |check, entity|
+  check  ||= @check
+  entity ||= @entity
+  remove_unscheduled_maintenance(entity, check)
+  remove_scheduled_maintenance(entity, check)
+  remove_notifications(entity, check)
+  @redis.hdel("check:#{@key}", 'state')
+end
+
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in an ok state$/ do |check, entity|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
+  check  ||= @check
+  entity ||= @entity
   remove_unscheduled_maintenance(entity, check)
   remove_scheduled_maintenance(entity, check)
   remove_notifications(entity, check)
@@ -163,8 +177,8 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in an ok s
 end
 
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in a critical state$/ do |check, entity|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
+  check  ||= @check
+  entity ||= @entity
   remove_unscheduled_maintenance(entity, check)
   remove_scheduled_maintenance(entity, check)
   remove_notifications(entity, check)
@@ -172,25 +186,20 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in a criti
 end
 
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in scheduled maintenance$/ do |check, entity|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
+  check  ||= @check
+  entity ||= @entity
   remove_unscheduled_maintenance(entity, check)
   set_scheduled_maintenance(entity, check)
 end
 
 # TODO set the state directly rather than submit & drain
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unscheduled maintenance$/ do |check, entity|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
+  check  ||= @check
+  entity ||= @entity
   remove_scheduled_maintenance(entity, check)
   set_critical_state(entity, check)
   submit_acknowledgement(entity, check)
   drain_events  # TODO these should only be in When clauses
-end
-
-Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check, entity|
-  @check  = check
-  @entity = entity
 end
 
 When /^an ok event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
@@ -257,6 +266,12 @@ Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '
   message = @logger.messages.find_all {|m| m =~ /enerating notifications for event #{entity}:#{check}/ }.last
   found = message ? message.match(/Generating notifications/) : false
   found.should be_true
+end
+
+Then /^scheduled maintenance should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
+  check  ||= @check
+  entity ||= @entity
+  @redis.get("#{entity}:#{check}:scheduled_maintenance").should_not be_nil
 end
 
 Then /^show me the (\w+ )*log$/ do |adjective|

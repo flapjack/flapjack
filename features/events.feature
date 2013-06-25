@@ -390,3 +390,8 @@ Feature: events
 #     When  10 seconds passes
 #     And   an ok event is received
 #     Then  a notification should not be generated
+
+  Scenario: scheduled maintenance created for initial check reference
+    Given the check has no state
+    When  an ok event is received
+    Then  scheduled maintenance should be generated
