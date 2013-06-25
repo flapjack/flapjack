@@ -142,41 +142,35 @@ module Flapjack
       pending = Flapjack::Data::Event.pending_count(:redis => @redis)
       @logger.debug("#{pending} events waiting on the queue")
       @logger.debug("Raw event received: #{event.inspect}")
-      time_at = event.time
-      time_at_str = time_at ? ", #{Time.at(time_at).to_s}" : ''
-      @logger.debug("Processing Event: #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
+      return if ('shutdown' == event.type)
 
-      entity_check = ('shutdown' == event.type) ? nil :
-                       Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
+      event_str = "#{event.id}, #{event.type}, #{event.state}, #{event.summary}"
+      event_str << ", #{Time.at(event.time).to_s}" if event.time
+      @logger.debug("Processing Event: #{event_str}")
 
+      entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
       timestamp = Time.now.to_i
-      result = update_keys(event, entity_check, timestamp)
-      return if result[:shutdown]
 
-      blocker = nil
+      should_notify = update_keys(event, entity_check, timestamp)
 
-      if result[:skip_filters]
+      if !should_notify
         @logger.debug("Not generating notifications for event #{event.id} because filtering was skipped")
         return
-      else
-        blocker = @filters.find {|filter| filter.block?(event) }
-      end
-
-      if blocker
+      elsif blocker = @filters.find {|filter| filter.block?(event) }
         @logger.debug("Not generating notifications for event #{event.id} because this filter blocked: #{blocker.name}")
         return
       end
 
-      @logger.info("Generating notifications for event #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
+      @logger.info("Generating notifications for event #{event_str}")
       generate_notification_messages(event, entity_check, timestamp)
     end
 
     def update_keys(event, entity_check, timestamp)
-
       # TODO: run touch_keys from a separate EM timer for efficiency
       touch_keys
 
-      result    = { :skip_filters => false }
+      result = true
+
       @event_count = @redis.hincrby('event_counters', 'all', 1)
       @redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
 
@@ -204,12 +198,9 @@ module Flapjack
         event.previous_state_duration = timestamp - entity_check.last_change.to_i
         @logger.info("No previous state for event #{event.id}") if event.previous_state.nil?
 
-        # If there is a state change, update record with: the time, the new state
-        if event.state != event.previous_state
-          entity_check.update_state(event.state, :timestamp => timestamp,
-            :summary => event.summary, :client => event.client,
-            :count => @event_count, :details => event.details)
-        end
+        entity_check.update_state(event.state, :timestamp => timestamp,
+          :summary => event.summary, :client => event.client,
+          :count => @event_count, :details => event.details)
 
         # No state change, and event is ok, so no need to run through filters
         # OR
@@ -217,7 +208,7 @@ module Flapjack
         # This stops new checks from alerting as "recovery" after they have been added.
         if !event.previous_state && event.ok?
           @logger.debug("setting skip_filters to true because there was no previous state and event is ok")
-          result[:skip_filters] = true
+          result = false
         end
 
         entity_check.update_current_scheduled_maintenance
@@ -232,9 +223,6 @@ module Flapjack
         if event.acknowledgement? && event.acknowledgement_id
           @redis.hdel('unacknowledged_failures', event.acknowledgement_id)
         end
-      when 'shutdown'
-        # should this be logged as an action instead? being minimally invasive for now
-        result[:shutdown] = true
       end
 
       result
