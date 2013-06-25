@@ -487,9 +487,6 @@ module Flapjack
         if params[:address].nil?
           errors << "no address for '#{params[:id]}' media"
         end
-        if params[:interval].nil?
-          errors << "no interval for '#{params[:id]}' media"
-        end
 
         halt err(403, *errors) unless errors.empty?
 
