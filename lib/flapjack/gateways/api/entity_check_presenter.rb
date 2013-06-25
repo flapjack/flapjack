@@ -39,29 +39,47 @@ module Flapjack
           initial = @entity_check.historical_state_before(hist_states.first[:timestamp])
           hist_states.unshift(initial) if initial
 
+          # TODO the following works, but isn't the neatest
           num_states = hist_states.size
 
-          hist_states.each_with_index do |obj, index|
-            ts = obj.delete(:timestamp)
-            if index == (num_states - 1)
-              # last (even if the only one)
-              obj[:start_time] = start_time ? [ts, start_time].max : ts
-              obj[:end_time]   = end_time
-            elsif (index == 0)
-              # initial
-              obj[:start_time] = start_time ? [ts, start_time].max : ts
-              obj[:end_time]   = hist_states[index + 1][:timestamp]
-            else
-              # except for first and last
-              obj[:start_time] = ts
-              obj[:end_time]   = hist_states[index + 1][:timestamp]
+          index = 0
+          result = []
+          obj = nil
+
+          while index < num_states do
+            last_obj = obj
+            obj = hist_states[index]
+            index += 1
+
+            if last_obj && (last_obj[:state] == obj[:state])
+              # TODO maybe build up arrays of these instead, and leave calling
+              # classes to join them together if needed?
+              result.last[:summary] << " / #{obj[:summary]}"
+              result.last[:details] << " / #{obj[:details]}"
+              next
             end
-            obj[:duration] = obj[:end_time] ? (obj[:end_time] - obj[:start_time]) : nil
+
+            next if obj[:state] == 'ok'
+
+            ts = obj[:timestamp]
+
+            obj_st  = (last_obj || !start_time) ? ts : [ts, start_time].max
+
+            next_ts_obj = hist_states[index..-1].detect {|hs| hs[:state] != obj[:state] }
+            obj_et  = next_ts_obj ? next_ts_obj[:timestamp] : end_time
+
+            obj_dur = obj_et ? obj_et - obj_st : nil
+
+            result << {:state      => obj[:state],
+                       :start_time => obj_st,
+                       :end_time   => obj_et,
+                       :duration   => obj_dur,
+                       :summary    => obj[:summary] || '',
+                       :details    => obj[:details] || ''
+                      }
           end
 
-          # p hist_states
-
-          hist_states.reject {|obj| obj[:state] == 'ok'}
+          result
         end
 
         def unscheduled_maintenances(start_time, end_time)

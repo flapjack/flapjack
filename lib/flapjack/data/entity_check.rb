@@ -194,39 +194,43 @@ module Flapjack
         @redis.hget("check:#{@key}", 'state')
       end
 
-      def update_state(state, options = {})
-        return unless validate_state(state)
+      def update_state(new_state, options = {})
+        return unless [STATE_OK, STATE_WARNING,
+          STATE_CRITICAL, STATE_UNKNOWN].include?(new_state)
+
         timestamp = options[:timestamp] || Time.now.to_i
-        client = options[:client]
         summary = options[:summary]
         details = options[:details]
         count = options[:count]
 
-        # Note the current state (for speedy lookups)
-        @redis.hset("check:#{@key}", 'state', state)
+        if self.state != new_state
+          client = options[:client]
 
-        # FIXME: rename to last_state_change?
-        @redis.hset("check:#{@key}", 'last_change', timestamp)
+          # Note the current state (for speedy lookups)
+          @redis.hset("check:#{@key}", 'state', new_state)
 
-        # Retain all state changes for entity:check pair
+          # FIXME: rename to last_state_change?
+          @redis.hset("check:#{@key}", 'last_change', timestamp)
+          case state
+          when STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN
+            @redis.zadd('failed_checks', timestamp, @key)
+            # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
+            @redis.zadd("failed_checks:client:#{client}", timestamp, @key) if client
+          else
+            @redis.zrem("failed_checks", @key)
+            # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
+            @redis.zrem("failed_checks:client:#{client}", @key) if client
+          end
+        end
+
+        # Retain event data for entity:check pair
         @redis.rpush("#{@key}:states", timestamp)
-        @redis.set("#{@key}:#{timestamp}:state",   state)
+        @redis.set("#{@key}:#{timestamp}:state", new_state)
         @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
         @redis.set("#{@key}:#{timestamp}:details", details) if details
         @redis.set("#{@key}:#{timestamp}:count", count) if count
 
         @redis.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
-
-        case state
-        when STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN
-          @redis.zadd('failed_checks', timestamp, @key)
-          # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-          @redis.zadd("failed_checks:client:#{client}", timestamp, @key) if client
-        else
-          @redis.zrem("failed_checks", @key)
-          # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-          @redis.zrem("failed_checks:client:#{client}", @key) if client
-        end
       end
 
       def last_update
@@ -438,10 +442,6 @@ module Flapjack
         raise "Invalid entity" unless @entity = entity
         raise "Invalid check" unless @check = check
         @key = "#{entity.name}:#{check}"
-      end
-
-      def validate_state(state)
-        [STATE_OK, STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN].include?(state)
       end
 
     end
