@@ -18,25 +18,25 @@ module Flapjack
         client_mass_fail_threshold = 10
         timestamp = Time.now.to_i
 
-        if event.type == 'service'
-          client_fail_count = @persistence.zcount("failed_checks:#{event.client}", '-inf', '+inf')
+        if event.service?
+          client_fail_count = @redis.zcount("failed_checks:#{event.client}", '-inf', '+inf')
 
           if client_fail_count >= client_mass_fail_threshold
             # set the flag
             # FIXME: perhaps implement this with tagging
-            @persistence.add("mass_failed_client:#{event.client}", timestamp)
-            @persistence.zadd("mass_failure_events_client:#{event.client}", 0, timestamp)
+            @redis.add("mass_failed_client:#{event.client}", timestamp)
+            @redis.zadd("mass_failure_events_client:#{event.client}", 0, timestamp)
           else
             # unset the flag
-            start_mf = @persistence.get("mass_failed_client:#{event.client}")
+            start_mf = @redis.get("mass_failed_client:#{event.client}")
             duration = Time.now.to_i - start_mf.to_i
-            @persistence.del("mass_failed_client:#{event.client}")
-            @persistence.zadd("mass_failure_events_client:#{event.client}", duration, start_mf)
+            @redis.del("mass_failed_client:#{event.client}")
+            @redis.zadd("mass_failure_events_client:#{event.client}", duration, start_mf)
           end
         end
 
         result = false
-        @log.debug("Filter: DetectMassClientFailures: #{result ? "block" : "pass"}")
+        @logger.debug("Filter: DetectMassClientFailures: #{result ? "block" : "pass"}")
         result
       end
     end

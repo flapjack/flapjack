@@ -52,8 +52,6 @@ module Flapjack
             access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
             use Flapjack::CommonLogger, access_logger
           end
-
-
         end
       end
 
@@ -203,11 +201,14 @@ module Flapjack
         dur = ChronicDuration.parse(params[:duration] || '')
         @duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
-        entity_check = get_entity_check(@entity, @check)
-        return 404 if entity_check.nil?
+        return 404 if get_entity_check(@entity, @check).nil?
 
-        ack = entity_check.create_acknowledgement('summary' => (@summary || ''),
-          'acknowledgement_id' => @acknowledgement_id, 'duration' => @duration)
+        ack = Flapjack::Data::Event.create_acknowledgement(
+          @entity, @check,
+          :summary => (@summary || ''),
+          :acknowledgement_id => @acknowledgement_id,
+          :duration => @duration,
+          :redis => redis)
 
         redirect back
       end
@@ -321,9 +322,9 @@ module Flapjack
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
           check, :redis => redis)
         latest_notif =
-          {:problem         => entity_check.last_problem_notification,
-           :recovery        => entity_check.last_recovery_notification,
-           :acknowledgement => entity_check.last_acknowledgement_notification
+          {:problem         => entity_check.last_notification_for_state(:problem),
+           :recovery        => entity_check.last_notification_for_state(:recovery),
+           :acknowledgement => entity_check.last_notification_for_state(:acknowledgement)
           }.max_by {|n| n[1] || 0}
         [(entity_check.state       || '-'),
          (entity_check.last_change || '-'),

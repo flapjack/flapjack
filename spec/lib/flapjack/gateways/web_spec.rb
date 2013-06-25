@@ -56,9 +56,9 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     ec.should_receive(:state).and_return('ok')
     ec.should_receive(:last_update).and_return(time - (3 * 60 * 60))
     ec.should_receive(:last_change).and_return(time - (3 * 60 * 60))
-    ec.should_receive(:last_problem_notification).and_return(time - ((3 * 60 * 60) + (5 * 60)))
-    ec.should_receive(:last_recovery_notification).and_return(time - (3 * 60 * 60))
-    ec.should_receive(:last_acknowledgement_notification).and_return(nil)
+    ec.should_receive(:last_notification_for_state).with(:problem).and_return(time - ((3 * 60 * 60) + (5 * 60)))
+    ec.should_receive(:last_notification_for_state).with(:recovery).and_return(time - (3 * 60 * 60))
+    ec.should_receive(:last_notification_for_state).with(:acknowledgement).and_return(nil)
     ec.should_receive(:in_scheduled_maintenance?).and_return(false)
     ec.should_receive(:in_unscheduled_maintenance?).and_return(false)
   end
@@ -165,10 +165,11 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, 'ping', :redis => redis).and_return(entity_check)
 
-    entity_check.should_receive(:create_acknowledgement).
-      with(an_instance_of(Hash))
+    Flapjack::Data::Event.should_receive(:create_acknowledgement).
+      with(entity_name, 'ping', :summary => "", :duration => (4 * 60 * 60),
+           :acknowledgement_id => '1234', :redis => redis)
 
-    post "/acknowledgements/#{entity_name_esc}/ping"
+    post "/acknowledgements/#{entity_name_esc}/ping?acknowledgement_id=1234"
     last_response.status.should == 302
   end
 
