@@ -32,11 +32,10 @@ module Flapjack
             result = true
           end
 
-          if event.previous_state != 'ok'
-            if event.previous_state_duration < 30
-              @log.debug("Filter: Ok: previous non ok state was for less than 30 seconds, so blocking")
-              result = true
-            end
+          if (event.previous_state != 'ok') && event.previous_state_duration &&
+            (event.previous_state_duration < 30)
+            @log.debug("Filter: Ok: previous non ok state was for less than 30 seconds, so blocking")
+            result = true
           end
 
           # end any unscheduled downtime
