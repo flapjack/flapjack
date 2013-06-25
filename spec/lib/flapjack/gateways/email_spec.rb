@@ -38,6 +38,8 @@ describe Flapjack::Gateways::Email, :logger => true do
                     'contact_last_name'   => 'Smith',
                     'state'               => 'ok',
                     'summary'             => 'smile',
+                    'last_state'          => 'problem',
+                    'last_summary'        => 'frown',
                     'time'                => Time.now.to_i,
                     'event_id'            => 'example.com:ping'}
 

@@ -109,7 +109,7 @@ describe 'Flapjack::Gateways::API::EntityCheck::Presenter' do
       with(nil, time - (12 * 60 * 60), :scheduled => false).and_return([])
 
     ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
-    unsched_maint = ecp.unscheduled_maintenance(time - (12 * 60 * 60), time)
+    unsched_maint = ecp.unscheduled_maintenances(time - (12 * 60 * 60), time)
 
     unsched_maint.should be_an(Array)
     unsched_maint.should have(4).time_ranges
@@ -125,7 +125,7 @@ describe 'Flapjack::Gateways::API::EntityCheck::Presenter' do
       with(nil, time - (12 * 60 * 60), :scheduled => true).and_return([])
 
     ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
-    sched_maint = ecp.scheduled_maintenance(time - (12 * 60 * 60), time)
+    sched_maint = ecp.scheduled_maintenances(time - (12 * 60 * 60), time)
 
     sched_maint.should be_an(Array)
     sched_maint.should have(4).time_ranges
