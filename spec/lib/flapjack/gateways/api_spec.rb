@@ -1162,12 +1162,19 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     last_response.should be_forbidden
   end
 
-  it "does not create a media of a contact if no interval is provided" do
+  it "creates a media of a contact even if no interval is provided" do
+    alt_media = media.merge('sms' => '04987654321')
+    alt_media_intervals = media_intervals.merge('sms' => nil)
+
+    contact.should_receive(:set_address_for_media).with('sms', '04987654321')
+    contact.should_receive(:set_interval_for_media).with('sms', nil)
+    contact.should_receive(:media).and_return(alt_media)
+    contact.should_receive(:media_intervals).and_return(alt_media_intervals)
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     put "/contacts/#{contact.id}/media/sms", {:address => '04987654321'}
-    last_response.should be_forbidden
+    last_response.should be_ok
   end
 
   it "deletes a media of a contact" do
