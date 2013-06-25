@@ -8,6 +8,8 @@ require 'socket'
 require 'em-synchrony'
 require 'em/protocols/smtpclient'
 
+require 'flapjack/utility'
+
 require 'flapjack/data/entity_check'
 
 module Flapjack
@@ -16,6 +18,8 @@ module Flapjack
     class Email
 
       class << self
+
+        include Flapjack::Utility
 
         def start
           @logger.info("starting")
@@ -32,8 +36,11 @@ module Flapjack
           @contact_last_name          = notification['contact_last_name']
           @state                      = notification['state']
           @summary                    = notification['summary']
+          @last_state                 = notification['last_state']
+          @last_summary               = notification['last_summary']
           @details                    = notification['details']
           @time                       = notification['time']
+          @relative                   = relative_time_ago(Time.at(@time))
           @entity_name, @check        = notification['event_id'].split(':', 2)
 
           entity_check = Flapjack::Data::EntityCheck.for_event_id(notification['event_id'],

@@ -149,7 +149,8 @@ module Flapjack
       entity_check = ('shutdown' == event.type) ? nil :
                        Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
 
-      result = update_keys(event, entity_check)
+      timestamp = Time.now.to_i
+      result = update_keys(event, entity_check, timestamp)
       return if result[:shutdown]
 
       blocker = nil
@@ -167,16 +168,15 @@ module Flapjack
       end
 
       @logger.info("Generating notifications for event #{event.id}, #{event.type}, #{event.state}, #{event.summary}#{time_at_str}")
-      generate_notification_messages(event, entity_check)
+      generate_notification_messages(event, entity_check, timestamp)
     end
 
-    def update_keys(event, entity_check)
+    def update_keys(event, entity_check, timestamp)
 
       # TODO: run touch_keys from a separate EM timer for efficiency
       touch_keys
 
       result    = { :skip_filters => false }
-      timestamp = Time.now.to_i
       @event_count = @redis.hincrby('event_counters', 'all', 1)
       @redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
 
@@ -201,7 +201,7 @@ module Flapjack
         end
 
         event.previous_state = entity_check.state
-        event.previous_state_duration = Time.now.to_i - entity_check.last_change.to_i
+        event.previous_state_duration = timestamp - entity_check.last_change.to_i
         @logger.info("No previous state for event #{event.id}") if event.previous_state.nil?
 
         # If there is a state change, update record with: the time, the new state
@@ -242,8 +242,7 @@ module Flapjack
 
     # takes an event for which a notification needs to be generated, works out the type of
     # notification, updates the notification history in redis, generates the notifications
-    def generate_notification_messages(event, entity_check)
-      timestamp = Time.now.to_i
+    def generate_notification_messages(event, entity_check, timestamp)
       notification_type = 'unknown'
       case event.type
       when 'service'
@@ -274,7 +273,7 @@ module Flapjack
 
       if contacts.empty?
         @logger.debug("No contacts for #{event.id}")
-        @notifylog.info("#{Time.now.to_s} | #{event.id} | #{notification_type} | NO CONTACTS")
+        @notifylog.info("#{Time.at(timestamp).to_s} | #{event.id} | #{notification_type} | NO CONTACTS")
         return
       end
 
@@ -283,6 +282,7 @@ module Flapjack
                :max_notified_severity => max_notified_severity,
                :contacts => contacts,
                :default_timezone => @default_contact_timezone,
+               :last_state => entity_check.historical_state_before(timestamp),
                :logger => @logger)
 
       notification.messages.each do |message|
@@ -291,7 +291,7 @@ module Flapjack
         address    = message.address
         event_id   = event.id
 
-        @notifylog.info("#{Time.now.to_s} | #{event_id} | " +
+        @notifylog.info("#{Time.at(timestamp).to_s} | #{event_id} | " +
           "#{notification_type} | #{message.contact.id} | #{media_type} | #{address}")
 
         unless @queues[media_type.to_sym]

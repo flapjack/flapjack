@@ -16,6 +16,7 @@ require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
 
 require 'flapjack/gateways/api/entity_presenter'
+require 'flapjack/gateways/api/entity_check_presenter'
 require 'flapjack/rack_logger'
 require 'flapjack/redis_pool'
 
@@ -49,6 +50,38 @@ module Flapjack
   module Gateways
 
     class API < Sinatra::Base
+
+      # used for backwards-compatible route matching below
+      ENTITY_CHECK_FRAGMENT = '(?:/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(.+))?)?'
+
+      class EntityCheckNotFound < RuntimeError
+        attr_reader :entity, :check
+        def initialize(entity, check)
+          @entity = entity
+          @check = check
+        end
+      end
+
+      class EntityNotFound < RuntimeError
+        attr_reader :entity
+        def initialize(entity)
+          @entity = entity
+        end
+      end
+
+      class ContactNotFound < RuntimeError
+        attr_reader :contact_id
+        def initialize(contact_id)
+          @contact_id = contact_id
+        end
+      end
+
+      class NotificationRuleNotFound < RuntimeError
+        attr_reader :rule_id
+        def initialize(rule_id)
+          @rule_id = rule_id
+        end
+      end
 
       include Flapjack::Utility
 
@@ -88,147 +121,164 @@ module Flapjack
       get '/entities' do
         content_type :json
         ret = Flapjack::Data::Entity.all(:redis => redis).sort_by(&:name).collect {|e|
-          {'id' => e.id, 'name' => e.name,
-           'checks' => e.check_list.sort.collect {|c|
-                         entity_check_status(e, c)
-                       }
-          }
+          presenter = Flapjack::Gateways::API::EntityPresenter.new(e, :redis => redis)
+          {'id' => e.id, 'name' => e.name, 'checks' => presenter.status }
         }
         ret.to_json
       end
 
       get '/checks/:entity' do
         content_type :json
-        find_entity(params[:entity]) do |entity|
-          entity.check_list.to_json
+        entity = find_entity(params[:entity])
+        entity.check_list.to_json
+      end
+
+      get %r{/status#{ENTITY_CHECK_FRAGMENT}} do
+        content_type :json
+
+        captures    = params[:captures] || []
+        entity_name = captures[0]
+        check       = captures[1]
+
+        entities, checks = entities_and_checks(entity_name, check)
+
+        results = present_api_results(entities, checks, 'status') {|presenter|
+          presenter.status
+        }
+
+        if entity_name
+          # compatible with previous data format
+          results = results.collect {|status_h| status_h[:status]}
+          (check ? results.first : results).to_json
+        else
+          # new and improved data format which reflects the request param structure
+          results.to_json
         end
       end
 
-      get %r{/status/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(.+))?} do
-        content_type :json
+      get %r{/((?:outages|(?:un)?scheduled_maintenances|downtime))#{ENTITY_CHECK_FRAGMENT}} do
+        action      = params[:captures][0].to_sym
+        entity_name = params[:captures][1]
+        check       = params[:captures][2]
 
-        entity_name = params[:captures][0]
-        check = params[:captures][1]
+        entities, checks = entities_and_checks(entity_name, check)
 
-        find_entity(entity_name) do |entity|
-          ret = if check
-            entity_check_status(entity, check)
-          else
-            entity.check_list.sort.collect {|c|
-              entity_check_status(entity, c)
+        start_time = validate_and_parsetime(params[:start_time])
+        end_time   = validate_and_parsetime(params[:end_time])
+
+        results = present_api_results(entities, checks, action) {|presenter|
+          presenter.send(action, start_time, end_time)
+        }
+
+        if check
+          # compatible with previous data format
+          results.first[action].to_json
+        elsif entity_name
+          # compatible with previous data format
+          rename = {:unscheduled_maintenances => :unscheduled_maintenance,
+                    :scheduled_maintenances   => :scheduled_maintenance}
+          drop   = [:entity]
+          results.collect{|r|
+            r.inject({}) {|memo, (k, v)|
+              if new_k = rename[k]
+                memo[new_k] = v
+              elsif !drop.include?(k)
+                memo[k] = v
+              end
+             memo
             }
-          end
-          return error(404, "could not find entity check '#{entity_name}:#{check}'") if ret.nil?
-          ret.to_json
+          }.to_json
+        else
+          # new and improved data format which reflects the request param structure
+          results.to_json
         end
       end
 
-      # the first capture group in the regex checks for acceptable
-      # characters in a domain name -- this will also match strings
-      # that aren't acceptable domain names as well, of course.
-      get %r{/outages/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
-        content_type :json
-
+      # create a scheduled maintenance period for a check on an entity
+      post %r{/scheduled_maintenances#{ENTITY_CHECK_FRAGMENT}} do
         entity_name = params[:captures][0]
-        check = params[:captures][1]
+        check       = params[:captures][1]
 
-        start_time = validate_and_parsetime(params[:start_time])
-        end_time   = validate_and_parsetime(params[:end_time])
-
-        find_api_presenter(entity_name, check) do |presenter|
-          presenter.outages(start_time, end_time).to_json
-        end
-      end
-
-      get %r{/unscheduled_maintenances/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
-        content_type :json
-
-        entity_name = params[:captures][0]
-        check = params[:captures][1]
-
-        start_time = validate_and_parsetime(params[:start_time])
-        end_time   = validate_and_parsetime(params[:end_time])
-
-        find_api_presenter(entity_name, check) do |presenter|
-          presenter.unscheduled_maintenance(start_time, end_time).to_json
-        end
-      end
-
-      get %r{/scheduled_maintenances/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
-        content_type :json
-
-        entity_name = params[:captures][0]
-        check = params[:captures][1]
-
-        start_time = validate_and_parsetime(params[:start_time])
-        end_time   = validate_and_parsetime(params[:end_time])
-
-        find_api_presenter(entity_name, check) do |presenter|
-          presenter.scheduled_maintenance(start_time, end_time).to_json
-        end
-      end
-
-      get %r{/downtime/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(\w+))?} do
-        content_type :json
-
-        entity_name = params[:captures][0]
-        check = params[:captures][1]
-
-        start_time = validate_and_parsetime(params[:start_time])
-        end_time   = validate_and_parsetime(params[:end_time])
-
-        find_api_presenter(entity_name, check) do |presenter|
-          presenter.downtime(start_time, end_time).to_json
-        end
-      end
-
-      # create a scheduled maintenance period for a service on an entity
-      post '/scheduled_maintenances/:entity/:check' do
-        content_type :json
+        entities, checks = entities_and_checks(entity_name, check)
 
         start_time = validate_and_parsetime(params[:start_time])
 
-        find_entity(params[:entity]) do |entity|
-          find_entity_check(entity, params[:check]) do |entity_check|
-            entity_check.create_scheduled_maintenance(:start_time => start_time,
-              :duration => params[:duration].to_i, :summary => params[:summary])
-            status 204
-          end
-        end
+        act_proc = proc {|entity_check|
+          entity_check.create_scheduled_maintenance(:start_time => start_time,
+            :duration => params[:duration].to_i, :summary => params[:summary])
+        }
+
+        bulk_api_check_action(entities, checks, act_proc)
+        status 204
       end
 
       # create an acknowledgement for a service on an entity
       # NB currently, this does not acknowledge a specific failure event, just
       # the entity-check as a whole
-      post '/acknowledgements/:entity/:check' do
-        content_type :json
+      post %r{/acknowledgements#{ENTITY_CHECK_FRAGMENT}} do
+        captures    = params[:captures] || []
+        entity_name = captures[0]
+        check       = captures[1]
+
+        entities, checks = entities_and_checks(entity_name, check)
 
         dur = params[:duration] ? params[:duration].to_i : nil
         duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
+        summary = params[:summary]
 
-        find_entity(params[:entity]) do |entity|
-          find_entity_check(entity, params[:check]) do |entity_check|
-            entity_check.create_acknowledgement('summary' => params[:summary],
-              'duration' => duration)
-            status 204
-          end
-        end
+        opts = {'duration' => duration}
+        opts['summary'] = summary if summary
+
+        act_proc = proc {|entity_check|
+          entity_check.create_acknowledgement(opts)
+        }
+
+        bulk_api_check_action(entities, checks, act_proc)
+        status 204
       end
 
-      post '/test_notifications/:entity/:check' do
-        content_type :json
-        find_entity(params[:entity]) do |entity|
-          find_entity_check(entity, params[:check]) do |entity_check|
-            summary = params[:summary] || "Testing notifications to all contacts interested in entity #{entity.name}"
-            entity_check.test_notifications('summary' => summary)
-            status 204
-          end
+      delete %r{/((?:un)?scheduled_maintenances)} do
+        action = params[:captures][0]
+
+        # no backwards-compatible mode here, it's a new method
+        entities, checks = entities_and_checks(nil, nil)
+
+        act_proc = case action
+        when 'scheduled_maintenances'
+          start_time = validate_and_parsetime(params[:start_time])
+          opts = {}
+          opts[:start_time] = start_time.to_i if start_time
+          proc {|entity_check| entity_check.delete_scheduled_maintenance(opts) }
+        when 'unscheduled_maintenances'
+          end_time = validate_and_parsetime(params[:end_time])
+          opts = {}
+          opts[:end_time] = end_time.to_i if end_time
+          proc {|entity_check| entity_check.end_unscheduled_maintenance(opts) }
         end
+
+        bulk_api_check_action(entities, checks, act_proc)
+        status 204
+      end
+
+      post %r{/test_notifications#{ENTITY_CHECK_FRAGMENT}} do
+        captures    = params[:captures] || []
+        entity_name = captures[0]
+        check       = captures[1]
+
+        entities, checks = entities_and_checks(entity_name, check)
+
+        act_proc = proc {|entity_check|
+          summary = params[:summary] ||
+                    "Testing notifications to all contacts interested in entity #{entity_check.entity.name}"
+          entity_check.test_notifications('summary' => summary)
+        }
+
+        bulk_api_check_action(entities, checks, act_proc)
+        status 204
       end
 
       post '/entities' do
         pass unless 'application/json'.eql?(request.content_type)
-        content_type :json
 
         errors = []
         ret = nil
@@ -239,10 +289,10 @@ module Flapjack
         unless entities
           logger.debug("no entities object found in the following supplied JSON:")
           logger.debug(request.body)
-          return error(403, "No entities object received")
+          return err(403, "No entities object received")
         end
-        return error(403, "The received entities object is not an Enumerable") unless entities.is_a?(Enumerable)
-        return error(403, "Entity with a nil id detected") unless entities.any? {|e| !e['id'].nil?}
+        return err(403, "The received entities object is not an Enumerable") unless entities.is_a?(Enumerable)
+        return err(403, "Entity with a nil id detected") unless entities.any? {|e| !e['id'].nil?}
 
         entities.each do |entity|
           unless entity['id']
@@ -251,8 +301,7 @@ module Flapjack
           end
           Flapjack::Data::Entity.add(entity, :redis => redis)
         end
-
-        errors.empty? ? 204 : error(403, *errors)
+        errors.empty? ? 204 : err(403, *errors)
       end
 
       post '/contacts' do
@@ -293,13 +342,14 @@ module Flapjack
             end
           end
         end
-        errors.empty? ? 204 : error(403, *errors)
+        errors.empty? ? 204 : err(403, *errors)
       end
 
       # Returns all the contacts
       # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
       get '/contacts' do
         content_type :json
+
         Flapjack::Data::Contact.all(:redis => redis).to_json
       end
 
@@ -307,18 +357,18 @@ module Flapjack
       # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id
       get '/contacts/:contact_id' do
         content_type :json
-        find_contact(params[:contact_id]) do |contact|
-          contact.to_json
-        end
+
+        contact = find_contact(params[:contact_id])
+        contact.to_json
       end
 
       # Lists this contact's notification rules
       # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_notification_rules
       get '/contacts/:contact_id/notification_rules' do
         content_type :json
-        find_contact(params[:contact_id]) do |contact|
-          contact.notification_rules.to_json
-        end
+
+        contact = find_contact(params[:contact_id])
+        contact.notification_rules.to_json
       end
 
       # Get the specified notification rule for this user
@@ -326,318 +376,360 @@ module Flapjack
       get '/notification_rules/:id' do
         content_type :json
 
-        find_rule(params[:id]) do |rule|
-          rule.to_json
-        end
+        rule = find_rule(params[:id])
+        rule.to_json
       end
 
       # Creates a notification rule for a contact
       # https://github.com/flpjck/flapjack/wiki/API#wiki-post_contacts_id_notification_rules
       post '/notification_rules' do
         content_type :json
+
         if params[:id]
-          return error(403, "post cannot be used for update, do a put instead")
+          halt err(403, "post cannot be used for update, do a put instead")
         end
 
         logger.debug("post /notification_rules data: ")
         logger.debug(params.inspect)
 
-        find_contact(params[:contact_id]) do |contact|
+        contact = find_contact(params[:contact_id])
 
-          rule_data = hashify(:entities, :entity_tags,
-            :warning_media, :critical_media, :time_restrictions,
-            :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
+        rule_data = hashify(:entities, :entity_tags,
+          :warning_media, :critical_media, :time_restrictions,
+          :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
 
-          unless rule = contact.add_notification_rule(rule_data, :logger => logger)
-            return error(403, "invalid notification rule data")
-          end
-          rule.to_json
+        unless rule = contact.add_notification_rule(rule_data, :logger => logger)
+          halt err(403, "invalid notification rule data")
         end
+        rule.to_json
       end
 
       # Updates a notification rule
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
       put('/notification_rules/:id') do
         content_type :json
+
         logger.debug("put /notification_rules/#{params[:id]} data: ")
         logger.debug(params.inspect)
 
-        find_rule(params[:id]) do |rule|
-          find_contact(rule.contact_id) do |contact|
+        rule = find_rule(params[:id])
+        contact = find_contact(rule.contact_id)
 
-            rule_data = hashify(:entities, :entity_tags,
-              :warning_media, :critical_media, :time_restrictions,
-              :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
+        rule_data = hashify(:entities, :entity_tags,
+          :warning_media, :critical_media, :time_restrictions,
+          :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
 
-            unless rule.update(rule_data, :logger => logger)
-              return error(403, "invalid notification rule data")
-            end
-            rule.to_json
-          end
+        unless rule.update(rule_data, :logger => logger)
+          halt err(403, "invalid notification rule data")
         end
+        rule.to_json
       end
 
       # Deletes a notification rule
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
       delete('/notification_rules/:id') do
         logger.debug("delete /notification_rules/#{params[:id]}")
-        find_rule(params[:id]) do |rule|
-          logger.debug("rule to delete: #{rule.inspect}, contact_id: #{rule.contact_id}")
-          find_contact(rule.contact_id) do |contact|
-            contact.delete_notification_rule(rule)
-            status 204
-          end
-        end
+        rule = find_rule(params[:id])
+        logger.debug("rule to delete: #{rule.inspect}, contact_id: #{rule.contact_id}")
+        contact = find_contact(rule.contact_id)
+        contact.delete_notification_rule(rule)
+        status 204
       end
 
       # Returns the media of a contact
       # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_media
       get '/contacts/:contact_id/media' do
         content_type :json
-        find_contact(params[:contact_id]) do |contact|
-          media = contact.media
-          media_intervals = contact.media_intervals
-          media_addr_int = hashify(*media.keys) {|k|
-            [k, {'address'  => media[k],
-                 'interval' => media_intervals[k] }]
-          }
-          media_addr_int.to_json
-        end
+
+        contact = find_contact(params[:contact_id])
+
+        media = contact.media
+        media_intervals = contact.media_intervals
+        media_addr_int = hashify(*media.keys) {|k|
+          [k, {'address'  => media[k],
+               'interval' => media_intervals[k] }]
+        }
+        media_addr_int.to_json
       end
 
       # Returns the specified media of a contact
       # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_media_media
       get('/contacts/:contact_id/media/:id') do
         content_type :json
-        find_contact(params[:contact_id]) do |contact|
-          if contact.media[params[:id]].nil?
-            status 404
-            return
-          end
-          {'address'  => contact.media[params[:id]],
-           'interval' => contact.media_intervals[params[:id]]}.to_json
+
+        contact = find_contact(params[:contact_id])
+        media = contact.media[params[:id]]
+        if media.nil?
+          halt err(403, "no #{params[:id]} for contact '#{params[:contact_id]}'")
         end
+        interval = contact.media_intervals[params[:id]]
+        if interval.nil?
+          halt err(403, "no #{params[:id]} interval for contact '#{params[:contact_id]}'")
+        end
+        {'address'  => media,
+         'interval' => interval}.to_json
       end
 
       # Creates or updates a media of a contact
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_media_media
       put('/contacts/:contact_id/media/:id') do
         content_type :json
-        find_contact(params[:contact_id]) do |contact|
-          errors = []
-          if params[:address].nil?
-            errors << "no address for '#{params[:id]}' media"
-          end
-          if params[:interval].nil?
-            errors << "no interval for '#{params[:id]}' media"
-          end
 
-          return error(403, *errors) unless errors.empty?
-
-          contact.set_address_for_media(params[:id], params[:address])
-          contact.set_interval_for_media(params[:id], params[:interval])
-
-          {'address'  => contact.media[params[:id]],
-           'interval' => contact.media_intervals[params[:id]]}.to_json
+        contact = find_contact(params[:contact_id])
+        errors = []
+        if params[:address].nil?
+          errors << "no address for '#{params[:id]}' media"
         end
+        if params[:interval].nil?
+          errors << "no interval for '#{params[:id]}' media"
+        end
+
+        halt err(403, *errors) unless errors.empty?
+
+        contact.set_address_for_media(params[:id], params[:address])
+        contact.set_interval_for_media(params[:id], params[:interval])
+
+        {'address'  => contact.media[params[:id]],
+         'interval' => contact.media_intervals[params[:id]]}.to_json
       end
 
       # delete a media of a contact
       delete('/contacts/:contact_id/media/:id') do
-        find_contact(params[:contact_id]) do |contact|
-          contact.remove_media(params[:id])
-          status 204
-        end
+        contact = find_contact(params[:contact_id])
+        contact.remove_media(params[:id])
+        status 204
       end
 
       # Returns the timezone of a contact
       # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_timezone
       get('/contacts/:contact_id/timezone') do
         content_type :json
-        find_contact(params[:contact_id]) do |contact|
-          contact.timezone.name.to_json
-        end
+
+        contact = find_contact(params[:contact_id])
+        contact.timezone.name.to_json
       end
 
       # Sets the timezone of a contact
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_timezone
       put('/contacts/:contact_id/timezone') do
         content_type :json
-        find_contact(params[:contact_id]) do |contact|
-          contact.timezone = params[:timezone]
-          contact.timezone.name.to_json
-        end
+
+        contact = find_contact(params[:contact_id])
+        contact.timezone = params[:timezone]
+        contact.timezone.name.to_json
       end
 
       # Removes the timezone of a contact
       # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_timezone
       delete('/contacts/:contact_id/timezone') do
-        find_contact(params[:contact_id]) do |contact|
-          contact.timezone = nil
-          status 204
-        end
+        contact = find_contact(params[:contact_id])
+        contact.timezone = nil
+        status 204
       end
 
       post '/contacts/:contact_id/tags' do
         content_type :json
-        check_tags(params[:tag]) do |tags|
-          find_contact(params[:contact_id]) do |contact|
-            contact.add_tags(*tags)
-            contact.tags.to_json
-          end
-        end
+
+        tags = find_tags(params[:tag])
+        contact = find_contact(params[:contact_id])
+        contact.add_tags(*tags)
+        contact.tags.to_json
       end
 
       post '/contacts/:contact_id/entity_tags' do
         content_type :json
-        find_contact(params[:contact_id]) do |contact|
-          contact.entities.map {|e| e[:entity]}.each do |entity|
-            next unless tags = params[:entity][entity.name]
-            entity.add_tags(*tags)
-          end
-          contact_ent_tag = hashify(*contact.entities(:tags => true)) {|et|
-            [et[:entity].name, et[:tags]]
-          }
-          contact_ent_tag.to_json
+        contact = find_contact(params[:contact_id])
+        contact.entities.map {|e| e[:entity]}.each do |entity|
+          next unless tags = params[:entity][entity.name]
+          entity.add_tags(*tags)
         end
+        contact_ent_tag = hashify(*contact.entities(:tags => true)) {|et|
+          [et[:entity].name, et[:tags]]
+        }
+        contact_ent_tag.to_json
       end
 
       delete '/contacts/:contact_id/tags' do
-        content_type :json
-        check_tags(params[:tag]) do |tags|
-          find_contact(params[:contact_id]) do |contact|
-            contact.delete_tags(*tags)
-            status 204
-          end
-        end
+        tags = find_tags(params[:tag])
+        contact = find_contact(params[:contact_id])
+        contact.delete_tags(*tags)
+        status 204
       end
 
       delete '/contacts/:contact_id/entity_tags' do
-        content_type :json
-        find_contact(params[:contact_id]) do |contact|
-          contact.entities.map {|e| e[:entity]}.each do |entity|
-            next unless tags = params[:entity][entity.name]
-            entity.delete_tags(*tags)
-          end
-          status 204
+        contact = find_contact(params[:contact_id])
+        contact.entities.map {|e| e[:entity]}.each do |entity|
+          next unless tags = params[:entity][entity.name]
+          entity.delete_tags(*tags)
         end
+        status 204
       end
 
       get '/contacts/:contact_id/tags' do
         content_type :json
-        find_contact(params[:contact_id]) do |contact|
-          contact.tags.to_json
-        end
+
+        contact = find_contact(params[:contact_id])
+        contact.tags.to_json
       end
 
       get '/contacts/:contact_id/entity_tags' do
         content_type :json
-        find_contact(params[:contact_id]) do |contact|
-          contact_ent_tag = hashify(*contact.entities(:tags => true)) {|et|
-            [et[:entity].name, et[:tags]]
-          }
-          contact_ent_tag.to_json
-        end
+
+        contact = find_contact(params[:contact_id])
+        contact_ent_tag = hashify(*contact.entities(:tags => true)) {|et|
+          [et[:entity].name, et[:tags]]
+        }
+        contact_ent_tag.to_json
       end
 
       post '/entities/:entity/tags' do
         content_type :json
-        check_tags(params[:tag]) do |tags|
-          find_entity(params[:entity]) do |entity|
-            entity.add_tags(*tags)
-            entity.tags.to_json
-          end
-        end
+
+        tags = find_tags(params[:tag])
+        entity = find_entity(params[:entity])
+        entity.add_tags(*tags)
+        entity.tags.to_json
       end
 
       delete '/entities/:entity/tags' do
-        content_type :json
-        check_tags(params[:tag]) do |tags|
-          find_entity(params[:entity]) do |entity|
-            entity.delete_tags(*tags)
-            status 204
-          end
-        end
+        tags = find_tags(params[:tag])
+        entity = find_entity(params[:entity])
+        entity.delete_tags(*tags)
+        status 204
       end
 
       get '/entities/:entity/tags' do
         content_type :json
-        find_entity(params[:entity]) do |entity|
-          entity.tags.to_json
-        end
+
+        entity = find_entity(params[:entity])
+        entity.tags.to_json
       end
 
       not_found do
         logger.debug("in not_found :-(")
-        error(404, "not routable")
+        err(404, "not routable")
+      end
+
+      error Flapjack::Gateways::API::ContactNotFound do
+        e = env['sinatra.error']
+        err(403, "could not find contact '#{e.contact_id}'")
+      end
+
+      error Flapjack::Gateways::API::NotificationRuleNotFound do
+        e = env['sinatra.error']
+        err(403, "could not find notification rule '#{e.rule_id}'")
+      end
+
+      error Flapjack::Gateways::API::EntityNotFound do
+        e = env['sinatra.error']
+        err(403, "could not find entity '#{e.entity}'")
+      end
+
+      error Flapjack::Gateways::API::EntityCheckNotFound do
+        e = env['sinatra.error']
+        err(403, "could not find entity check '#{e.check}'")
       end
 
       private
 
-      def error(status, *msg)
+      def err(status, *msg)
         msg_str = msg.join(", ")
         logger.info "Error: #{msg_str}"
         [status, {}, {:errors => msg}.to_json]
       end
 
-      def entity_check_status(entity, check)
-        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-          check, :redis => redis)
-        return if entity_check.nil?
-        {'name'                               => check,
-         'state'                              => entity_check.state,
-         'summary'                            => entity_check.summary,
-         'details'                            => entity_check.details,
-         'in_unscheduled_maintenance'         => entity_check.in_unscheduled_maintenance?,
-         'in_scheduled_maintenance'           => entity_check.in_scheduled_maintenance?,
-         'last_update'                        => entity_check.last_update,
-         'last_problem_notification'          => entity_check.last_notification_for_state(:problem)[:timestamp],
-         'last_recovery_notification'         => entity_check.last_notification_for_state(:recovery)[:timestamp],
-         'last_acknowledgement_notification'  => entity_check.last_notification_for_state(:acknowledgement)[:timestamp]
-        }
+      def find_contact(contact_id)
+        contact = Flapjack::Data::Contact.find_by_id(contact_id, :logger => logger, :redis => redis)
+        raise Flapjack::Gateways::API::ContactNotFound.new(contact_id) if contact.nil?
+        contact
       end
 
-      # following a callback-heavy pattern -- feels like nodejs :)
-      def find_contact(contact_id, &block)
-        contact = Flapjack::Data::Contact.find_by_id(contact_id.to_s, :redis => redis, :logger => logger)
-        return(yield(contact)) if contact
-        error(404, "could not find contact with id '#{contact_id}'")
+      def find_rule(rule_id)
+        rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :logger => logger, :redis => redis)
+        raise Flapjack::Gateways::API::NotificationRuleNotFound.new(rule_id) if rule.nil?
+        rule
       end
 
-      def find_rule(rule_id, &block)
-        rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :redis => redis, :logger => logger)
-        return(yield(rule)) if rule
-        error(404, "could not find notification rule with id '#{rule_id}'")
-      end
-
-      def find_entity(entity_name, &block)
+      def find_entity(entity_name)
         entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
-        return(yield(entity)) if entity
-        error(404, "could not find entity '#{entity_name}'")
+        raise Flapjack::Gateways::API::EntityNotFound.new(entity_name) if entity.nil?
+        entity
       end
 
-      def find_entity_check(entity, check, &block)
+      def find_entity_check(entity, check)
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
           check, :redis => redis)
-        return(yield(entity_check)) if entity_check
-        error(404, "could not find entity check '#{entity.name}:#{check}'")
+        raise Flapjack::Gateways::API::EntityCheckNotFound.new(entity, check) if entity_check.nil?
+        entity_check
       end
 
-      def find_api_presenter(entity_name, check, &block)
-        find_entity(entity_name) do |entity|
-          if check
-            find_entity_check(entity, check) do |entity_check|
-              yield(Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check))
+      def entities_and_checks(entity_name, check)
+        if entity_name
+          # backwards-compatible, single entity or entity&check from route
+          entities = check ? nil : [entity_name]
+          checks   = check ? {entity_name => check} : nil
+        else
+          # new and improved bulk API queries
+          entities = params[:entity]
+          checks   = params[:check]
+          entities = [entities] unless entities.nil? || entities.is_a?(Array)
+          # TODO err if checks isn't a Hash (similar rules as in flapjack-diner)
+        end
+        [entities, checks]
+      end
+
+      def bulk_api_check_action(entities, entity_checks, action, params = {})
+        unless entities.nil? || entities.empty?
+          entities.each do |entity_name|
+            entity = find_entity(entity_name)
+            checks = entity.check_list.sort
+            checks.each do |check|
+              action.call( find_entity_check(entity, check) )
             end
-          else
-            yield(Flapjack::Gateways::API::EntityPresenter.new(entity, :redis => redis))
+          end
+        end
+
+        unless entity_checks.nil? || entity_checks.empty?
+          entity_checks.each_pair do |entity_name, checks|
+            entity = find_entity(entity_name)
+            checks = [checks] unless checks.is_a?(Array)
+            checks.each do |check|
+              action.call( find_entity_check(entity, check) )
+            end
           end
         end
       end
 
-      def check_tags(tags)
-        return(yield(tags)) unless tags.nil? || tags.empty?
-        error(403, "no tag params passed")
+      def present_api_results(entities, entity_checks, result_type, &block)
+        result = []
+
+        unless entities.nil? || entities.empty?
+          result += entities.collect {|entity_name|
+            entity = find_entity(entity_name)
+            yield(Flapjack::Gateways::API::EntityPresenter.new(entity, :redis => redis))
+          }.flatten(1)
+        end
+
+        unless entity_checks.nil? || entity_checks.empty?
+          result += entity_checks.inject([]) {|memo, (entity_name, checks)|
+            checks = [checks] unless checks.is_a?(Array)
+            entity = find_entity(entity_name)
+            memo += checks.collect {|check|
+              entity_check = find_entity_check(entity, check)
+              {:entity => entity_name,
+               :check => check,
+               result_type.to_sym => yield(Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check, :redis => redis))
+              }
+            }
+          }.flatten(1)
+        end
+
+        result
+      end
+
+      def find_tags(tags)
+        halt err(403, "no tags") if tags.nil? || tags.empty?
+        tags
       end
 
       # NB: casts to UTC before converting to a timestamp
