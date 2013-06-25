@@ -31,8 +31,6 @@ module Flapjack
         def perform(notification)
           @logger.debug "Woo, got a notification to send out: #{notification.inspect}"
 
-          current_time = Time.now
-
           @notification_type          = notification['notification_type']
           @contact_first_name         = notification['contact_first_name']
           @contact_last_name          = notification['contact_last_name']
@@ -42,7 +40,7 @@ module Flapjack
           @last_summary               = notification['last_summary']
           @details                    = notification['details']
           @time                       = notification['time']
-          @relative                   = relative_time_ago(current_time - @time)
+          @relative                   = relative_time_ago(Time.at(@time))
           @entity_name, @check        = notification['event_id'].split(':', 2)
 
           entity_check = Flapjack::Data::EntityCheck.for_event_id(notification['event_id'],
