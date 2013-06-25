@@ -405,7 +405,7 @@ module Flapjack
       # if any.
       def historical_state_before(timestamp)
         pos = @redis.zrank("#{@key}:sorted_state_timestamps", timestamp)
-        return if pos < 1
+        return if pos.nil? || pos < 1
         ts = @redis.zrange("#{@key}:sorted_state_timestamps", pos - 1, pos)
         return if ts.nil? || ts.empty?
         {:timestamp => ts.first.to_i,

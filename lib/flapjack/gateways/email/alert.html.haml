@@ -41,7 +41,19 @@
     %tr
       %td
         %strong Time
-      %td= Time.at(@time.to_i).to_s
+      %td
+        = Time.at(@time.to_i).to_s
+        ( #{@relative} ago)
+
+    - if @last_state
+      %tr
+        %td Previous state
+        %td= @last_state
+
+    - if @last_summary
+      %tr
+        %td Previous summary
+        %td= @last_summary
 
 %p Cheers,
 %p Flapjack
