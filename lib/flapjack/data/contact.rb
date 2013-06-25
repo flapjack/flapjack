@@ -211,7 +211,10 @@ module Flapjack
       end
 
       def set_interval_for_media(media, interval)
-        raise "invalid interval" unless interval.is_a?(Integer)
+        if interval.nil?
+          @redis.hdel("contact_media_intervals:#{self.id}", media)
+          return
+        end
         @redis.hset("contact_media_intervals:#{self.id}", media, interval)
       end
 
