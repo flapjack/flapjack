@@ -9,7 +9,7 @@ module Flapjack
     class Notification
 
       attr_reader :event, :type, :max_notified_severity, :contacts,
-        :default_timezone
+        :default_timezone, :last_state
 
       def self.for_event(event, opts = {})
         self.new(:event => event,
@@ -17,6 +17,7 @@ module Flapjack
                  :max_notified_severity => opts[:max_notified_severity],
                  :contacts => opts[:contacts],
                  :default_timezone => opts[:default_timezone],
+                 :last_state => opts[:last_state],
                  :logger => opts[:logger])
       end
 
@@ -37,6 +38,8 @@ module Flapjack
         contents = {'event_id'              => event_id,
                     'state'                 => event_state,
                     'summary'               => event.summary,
+                    'last_state'            => @last_state ? @last_state[:state] : nil,
+                    'last_summary'          => @last_state ? @last_state[:summary] : nil,
                     'details'               => event.details,
                     'time'                  => event.time,
                     'duration'              => event.duration || nil,
@@ -122,6 +125,7 @@ module Flapjack
         @max_notified_severity = opts[:max_notified_severity]
         @contacts = opts[:contacts]
         @default_timezone = opts[:default_timezone]
+        @last_state = opts[:last_state]
         @logger = opts[:logger]
       end
 
