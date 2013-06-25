@@ -62,7 +62,7 @@ module Flapjack
 
       # FIXME: Put loading filters into separate method
       # FIXME: should we make the filters more configurable by the end user?
-      options = { :log => opts[:logger], :persistence => @redis }
+      options = { :logger => opts[:logger], :redis => @redis }
       @filters = []
       @filters << Flapjack::Filters::Ok.new(options)
       @filters << Flapjack::Filters::ScheduledMaintenance.new(options)

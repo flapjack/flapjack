@@ -25,9 +25,9 @@ module Flapjack
 
         result = false
 
-        if (event.type == 'service') and (event.failure?)
+        if event.service? && event.failure?
 
-          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @persistence)
+          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
           current_time = Time.now.to_i
 
           if entity_check.failed?
@@ -41,7 +41,7 @@ module Flapjack
 
             current_state_duration   = current_time - last_change
             time_since_last_alert    = current_time - last_problem_alert unless last_problem_alert.nil?
-            @log.debug("Filter: Delays: last_problem_alert: #{last_problem_alert.to_s}, " +
+            @logger.debug("Filter: Delays: last_problem_alert: #{last_problem_alert.to_s}, " +
                        "last_change: #{last_change.inspect}, " +
                        "current_state_duration: #{current_state_duration.inspect}, " +
                        "time_since_last_alert: #{time_since_last_alert.inspect}, " +
@@ -50,26 +50,26 @@ module Flapjack
                        "last_alert_state == event.state ? #{last_alert_state.to_s == event.state}")
             if (current_state_duration < failure_delay)
               result = true
-              @log.debug("Filter: Delays: blocking because duration of current failure " +
+              @logger.debug("Filter: Delays: blocking because duration of current failure " +
                          "(#{current_state_duration}) is less than failure_delay (#{failure_delay})")
             elsif !last_problem_alert.nil? && (time_since_last_alert < resend_delay) &&
               (last_alert_state.to_s == event.state)
 
               result = true
-              @log.debug("Filter: Delays: blocking because time since last alert for " +
+              @logger.debug("Filter: Delays: blocking because time since last alert for " +
                          "current problem (#{time_since_last_alert}) is less than " +
                          "resend_delay (#{resend_delay}) and last alert state (#{last_alert_state}) " +
                          "is equal to current event state (#{event.state})")
             else
-              @log.debug("Filter: Delays: not blocking because neither of the time comparison " +
+              @logger.debug("Filter: Delays: not blocking because neither of the time comparison " +
                          "conditions were met")
             end
           else
-            @log.debug("Filter: Delays: entity_check.failed? returned false ...")
+            @logger.debug("Filter: Delays: entity_check.failed? returned false ...")
           end
         end
 
-        @log.debug("Filter: Delays: #{result ? "block" : "pass"}")
+        @logger.debug("Filter: Delays: #{result ? "block" : "pass"}")
         result
       end
     end

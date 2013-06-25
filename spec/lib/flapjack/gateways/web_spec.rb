@@ -169,10 +169,11 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, 'ping', :redis => redis).and_return(entity_check)
 
-    entity_check.should_receive(:create_acknowledgement).
-      with(an_instance_of(Hash))
+    Flapjack::Data::Event.should_receive(:create_acknowledgement).
+      with(entity_name, 'ping', :summary => "", :duration => (4 * 60 * 60),
+           :acknowledgement_id => '1234', :redis => redis)
 
-    post "/acknowledgements/#{entity_name_esc}/ping"
+    post "/acknowledgements/#{entity_name_esc}/ping?acknowledgement_id=1234"
     last_response.status.should == 302
   end
 

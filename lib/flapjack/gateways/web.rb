@@ -205,11 +205,14 @@ module Flapjack
         dur = ChronicDuration.parse(params[:duration] || '')
         @duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
-        entity_check = get_entity_check(@entity, @check)
-        return 404 if entity_check.nil?
+        return 404 if get_entity_check(@entity, @check).nil?
 
-        ack = entity_check.create_acknowledgement('summary' => (@summary || ''),
-          'acknowledgement_id' => @acknowledgement_id, 'duration' => @duration)
+        ack = Flapjack::Data::Event.create_acknowledgement(
+          @entity, @check,
+          :summary => (@summary || ''),
+          :acknowledgement_id => @acknowledgement_id,
+          :duration => @duration,
+          :redis => redis)
 
         redirect back
       end

@@ -194,11 +194,15 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     end
 
     it "creates an acknowledgement for an entity check" do
+      entity_check.should_receive(:entity_name).and_return(entity_name)
+      entity_check.should_receive(:check).and_return(check)
+
       Flapjack::Data::Entity.should_receive(:find_by_name).
         with(entity_name, :redis => redis).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
         with(entity, check, :redis => redis).and_return(entity_check)
-      entity_check.should_receive(:create_acknowledgement).with('duration' => (4 * 60 * 60))
+      Flapjack::Data::Event.should_receive(:create_acknowledgement).
+        with(entity_name, check, :summary => nil, :duration => (4 * 60 * 60), :redis => redis)
 
       post "/acknowledgements/#{entity_name_esc}/#{check}"
       last_response.status.should == 204
@@ -315,9 +319,13 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
         with(entity_name, :redis => redis).and_return(entity)
       entity.should_receive(:name).and_return(entity_name)
       entity_check.should_receive(:entity).and_return(entity)
+      entity_check.should_receive(:entity_name).and_return(entity_name)
+      entity_check.should_receive(:check).and_return('foo')
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
         with(entity, 'foo', :redis => redis).and_return(entity_check)
-      entity_check.should_receive(:test_notifications)
+
+      Flapjack::Data::Event.should_receive(:test_notifications).
+        with(entity_name, 'foo', hash_including(:redis => redis))
 
       post "/test_notifications/#{entity_name_esc}/foo"
       last_response.status.should == 204
@@ -391,7 +399,12 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       with(entity_name, :redis => redis).and_return(entity)
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
-    entity_check.should_receive(:create_acknowledgement).with('duration' => (4 * 60 * 60))
+
+    entity_check.should_receive(:entity_name).and_return(entity_name)
+    entity_check.should_receive(:check).and_return(check)
+
+    Flapjack::Data::Event.should_receive(:create_acknowledgement).
+      with(entity_name, check, :summary => nil, :duration => (4 * 60 * 60), :redis => redis)
 
     post '/acknowledgements',:check => {entity_name => check}
     last_response.status.should == 204
@@ -688,31 +701,47 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       with(entity_name, :redis => redis).and_return(entity)
 
     entity_check.should_receive(:entity).and_return(entity)
-    entity_check.should_receive(:test_notifications)
+    entity_check.should_receive(:entity_name).and_return(entity_name)
+    entity_check.should_receive(:check).and_return(check)
+
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
 
     entity_check_2 = mock(Flapjack::Data::EntityCheck)
     entity_check_2.should_receive(:entity).and_return(entity)
-    entity_check_2.should_receive(:test_notifications)
+    entity_check_2.should_receive(:entity_name).and_return(entity_name)
+    entity_check_2.should_receive(:check).and_return('foo')
+
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, 'foo', :redis => redis).and_return(entity_check_2)
+
+    Flapjack::Data::Event.should_receive(:test_notifications).
+      with(entity_name, check, hash_including(:redis => redis))
+
+    Flapjack::Data::Event.should_receive(:test_notifications).
+      with(entity_name, 'foo', hash_including(:redis => redis))
+
 
     post '/test_notifications', :entity => entity_name
     last_response.status.should == 204
   end
 
   it "creates a test notification event for check on an entity" do
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
-      entity.should_receive(:name).and_return(entity_name)
-      entity_check.should_receive(:entity).and_return(entity)
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
-      entity_check.should_receive(:test_notifications)
+    Flapjack::Data::Entity.should_receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+    entity.should_receive(:name).and_return(entity_name)
+    entity_check.should_receive(:entity).and_return(entity)
+    entity_check.should_receive(:entity_name).and_return(entity_name)
+    entity_check.should_receive(:check).and_return(check)
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+  
+    Flapjack::Data::Event.should_receive(:test_notifications).
+    with(entity_name, check, hash_including(:redis => redis))
 
-      post '/test_notifications', :check => {entity_name => check}
-      last_response.status.should == 204
+
+    post '/test_notifications', :check => {entity_name => check}
+    last_response.status.should == 204
   end
 
   it "creates entities from a submitted list" do
@@ -1133,12 +1162,19 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     last_response.should be_forbidden
   end
 
-  it "does not create a media of a contact if no interval is provided" do
+  it "creates a media of a contact even if no interval is provided" do
+    alt_media = media.merge('sms' => '04987654321')
+    alt_media_intervals = media_intervals.merge('sms' => nil)
+
+    contact.should_receive(:set_address_for_media).with('sms', '04987654321')
+    contact.should_receive(:set_interval_for_media).with('sms', nil)
+    contact.should_receive(:media).and_return(alt_media)
+    contact.should_receive(:media_intervals).and_return(alt_media_intervals)
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     put "/contacts/#{contact.id}/media/sms", {:address => '04987654321'}
-    last_response.should be_forbidden
+    last_response.should be_ok
   end
 
   it "deletes a media of a contact" do

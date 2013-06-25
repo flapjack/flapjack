@@ -79,35 +79,9 @@ module Flapjack
         }
       end
 
-      # TODO move to Event
-      def create_acknowledgement(options = {})
-        event = { 'type'               => 'action',
-                  'state'              => 'acknowledgement',
-                  'summary'            => options['summary'],
-                  'duration'           => options['duration'],
-                  'acknowledgement_id' => options['acknowledgement_id'],
-                  'entity'             => entity.name,
-                  'check'              => check
-                }
-        Flapjack::Data::Event.add(event, :redis => @redis)
-      end
-
-      # TODO move to Event
-      def test_notifications(options = {})
-        event = { 'type'               => 'action',
-                  'state'              => 'test_notifications',
-                  'summary'            => options['summary'],
-                  'details'            => options['details'],
-                  'entity'             => entity.name,
-                  'check'              => check
-                }
-        Flapjack::Data::Event.add(event, :redis => @redis)
-      end
-
-      # FIXME: need to add summary to summary of existing unscheduled maintenance if there is
-      # one, and extend duration / expiry time, instead of creating a separate unscheduled
-      # outage as we are doing now...
       def create_unscheduled_maintenance(opts = {})
+        end_unscheduled_maintenance if in_unscheduled_maintenance?
+
         start_time = opts[:start_time]  # unix timestamp
         duration   = opts[:duration]    # seconds
         summary    = opts[:summary]
