@@ -36,7 +36,7 @@
                   = " (Acknowledged)" if in_unscheduled_outage
                   = " (Scheduled Maintenance)" if in_scheduled_outage
                 %td= relative_time_ago(Time.at(changed.to_i)) + ' ago'
-                %td= (Time.now.to_i - updated.to_i).to_s + ' seconds ago'
+                %td= relative_time_ago(Time.at(updated.to_i)) + ' ago'
                 - if notified && (notified > 0)
                   - last_notified = relative_time_ago(Time.at(notified.to_i)) + " ago, #{notified_kind}"
                 - else
