@@ -25,7 +25,8 @@
             %label{:for => 'duration'}
               duration:
             %input{:type => 'text', :name => 'duration', :value => ''}
-            e.g. "5 hours"
+              e.g. "5 hours"
+        - current_time = (@current_unscheduled_maintenance || @current_scheduled_maintenance) ? Time.now : nil
         - if @current_unscheduled_maintenance
           %h3 (Acknowledged - #{@current_unscheduled_maintenance[:summary]})
           - start  = Time.at(@current_unscheduled_maintenance[:start_time])
