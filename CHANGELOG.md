@@ -1,6 +1,6 @@
 ## Flapjack Changelog
 
-# 0.7.16 - UNRELEASED
+# 0.7.16 - 2013-06-27
 - Bug: errors accessing API gh-231 (@ali-graham)
 
 # 0.7.15 - 2013-06-27
