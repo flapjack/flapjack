@@ -114,7 +114,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       entity_check_presenter.should_receive(:status).and_return(status)
 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check, :redis => redis).and_return(entity_check_presenter)
+        with(entity_check).and_return(entity_check_presenter)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
         with(entity, check, :redis => redis).and_return(entity_check)
@@ -182,7 +182,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       sched = mock('sched', :to_json => 'sched!'.to_json)
       entity_check_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(sched)
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check, :redis => redis).and_return(entity_check_presenter)
+        with(entity_check).and_return(entity_check_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
         with(entity_name, :redis => redis).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
@@ -226,7 +226,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       unsched = mock('unsched', :to_json => 'unsched!'.to_json)
       entity_check_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(unsched)
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check, :redis => redis).and_return(entity_check_presenter)
+        with(entity_check).and_return(entity_check_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
         with(entity_name, :redis => redis).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
@@ -244,7 +244,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       unsched = mock('unsched', :to_json => 'unsched!'.to_json)
       entity_check_presenter.should_receive(:unscheduled_maintenances).with(start.to_i, finish.to_i).and_return(unsched)
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check, :redis => redis).and_return(entity_check_presenter)
+        with(entity_check).and_return(entity_check_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
         with(entity_name, :redis => redis).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
@@ -274,7 +274,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       out = mock('out', :to_json => 'out!'.to_json)
       entity_check_presenter.should_receive(:outages).with(nil, nil).and_return(out)
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check, :redis => redis).and_return(entity_check_presenter)
+        with(entity_check).and_return(entity_check_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
         with(entity_name, :redis => redis).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
@@ -303,7 +303,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       down = mock('down', :to_json => 'down!'.to_json)
       entity_check_presenter.should_receive(:downtime).with(nil, nil).and_return(down)
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check, :redis => redis).and_return(entity_check_presenter)
+        with(entity_check).and_return(entity_check_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
         with(entity_name, :redis => redis).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
@@ -362,7 +362,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     entity_check_presenter.should_receive(:status).and_return(status)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-      with(entity_check, :redis => redis).and_return(entity_check_presenter)
+      with(entity_check).and_return(entity_check_presenter)
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
@@ -518,7 +518,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     entity_check_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(sm)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-      with(entity_check, :redis => redis).and_return(entity_check_presenter)
+      with(entity_check).and_return(entity_check_presenter)
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
@@ -555,7 +555,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     entity_check_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(um)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-      with(entity_check, :redis => redis).and_return(entity_check_presenter)
+      with(entity_check).and_return(entity_check_presenter)
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
@@ -578,7 +578,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     entity_check_presenter.should_receive(:unscheduled_maintenances).with(start.to_i, finish.to_i).and_return(um)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-      with(entity_check, :redis => redis).and_return(entity_check_presenter)
+      with(entity_check).and_return(entity_check_presenter)
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
@@ -618,9 +618,9 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
       with(entity, :redis => redis).and_return(entity_presenter)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-      with(foo_check, :redis => redis).and_return(foo_check_presenter)
+      with(foo_check).and_return(foo_check_presenter)
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-      with(bar_check, :redis => redis).and_return(bar_check_presenter)
+      with(bar_check).and_return(bar_check_presenter)
 
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
@@ -644,7 +644,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     entity_check_presenter.should_receive(:outages).with(nil, nil).and_return(outages)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-      with(entity_check, :redis => redis).and_return(entity_check_presenter)
+      with(entity_check).and_return(entity_check_presenter)
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
@@ -681,7 +681,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     entity_check_presenter.should_receive(:downtime).with(nil, nil).and_return(downtime)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-      with(entity_check, :redis => redis).and_return(entity_check_presenter)
+      with(entity_check).and_return(entity_check_presenter)
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
@@ -735,7 +735,7 @@ describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true, :json => 
     entity_check.should_receive(:check).and_return(check)
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
-  
+
     Flapjack::Data::Event.should_receive(:test_notifications).
     with(entity_name, check, hash_including(:redis => redis))
 

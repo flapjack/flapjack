@@ -722,7 +722,7 @@ module Flapjack
               entity_check = find_entity_check(entity, check)
               {:entity => entity_name,
                :check => check,
-               result_type.to_sym => yield(Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check, :redis => redis))
+               result_type.to_sym => yield(Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check))
               }
             }
           }.flatten(1)
