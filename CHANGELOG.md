@@ -1,8 +1,14 @@
 ## Flapjack Changelog
 
 # 0.7.15 - UNRELEASED
+- Feature: Show acknowledgement duration on web interface, queryable via jabber gh-159 (@ali-graham)
+- Feature: More info on check state in email gh-207 (@ali-graham)
+- Feature: Bulk API operations gh-123 (@ali-graham)
+- Bug: You can't remove an interval from a contact's media once it has one gh-153 (@ali-graham)
 - Bug: Fix jabber identify boot time gh-172 (@ali-graham)
 - Bug: Don't pluralise singular time periods in jabber messages gh-209 (@ali-graham)
+- Bug: PUT /contacts/ID/media/MEDIA returns previous value for address gh-152 (@ali-graham)
+- Bug: 'last update' shows large numbers of seconds gh-157 (@ali-graham)
 
 # 0.7.14 - 2013-06-19
 - Bug: Display of checks on web ui with a colon in their name is screwed gh-213 (@jessereynolds)
