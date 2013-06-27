@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.7.16 - UNRELEASED
+- Bug: errors accessing API gh-231 (@ali-graham)
+
 # 0.7.15 - 2013-06-27
 - Feature: Show acknowledgement duration on web interface, queryable via jabber gh-159 (@ali-graham)
 - Feature: More info on check state in email gh-207 (@ali-graham)

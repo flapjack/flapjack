@@ -51,6 +51,8 @@ module Flapjack
             obj = hist_states[index]
             index += 1
 
+            next if obj[:state] == 'ok'
+
             if last_obj && (last_obj[:state] == obj[:state])
               # TODO maybe build up arrays of these instead, and leave calling
               # classes to join them together if needed?
@@ -58,8 +60,6 @@ module Flapjack
               result.last[:details] << " / #{obj[:details]}"
               next
             end
-
-            next if obj[:state] == 'ok'
 
             ts = obj[:timestamp]
 
