@@ -17,6 +17,7 @@ describe 'Flapjack::Gateways::API::Entity::Presenter' do
   let(:end_time)   { time - (2 * 60 * 60) }
 
   def expect_check_presenters
+    entity.should_receive(:name).exactly(4).times.and_return('foo')
     entity.should_receive(:check_list).and_return(['ping', 'ssh'])
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, 'ssh', anything).and_return(check_a)
@@ -39,8 +40,8 @@ describe 'Flapjack::Gateways::API::Entity::Presenter' do
 
     ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
     status = ep.status
-    status.should == [{:entity => entity, :check => 'ping', :status => status_b},
-                      {:entity => entity, :check => 'ssh',  :status => status_a}]
+    status.should == [{:entity => entity.name, :check => 'ping', :status => status_b},
+                      {:entity => entity.name, :check => 'ssh',  :status => status_a}]
 
   end
 
@@ -55,8 +56,8 @@ describe 'Flapjack::Gateways::API::Entity::Presenter' do
 
     ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
     outages = ep.outages(start_time, end_time)
-    outages.should == [{:entity => entity, :check => 'ping', :outages => outages_b},
-                       {:entity => entity, :check => 'ssh',  :outages => outages_a}]
+    outages.should == [{:entity => entity.name, :check => 'ping', :outages => outages_b},
+                       {:entity => entity.name, :check => 'ssh',  :outages => outages_a}]
   end
 
   it "returns a list of unscheduled maintenance periods for each check on an entity" do
@@ -70,8 +71,8 @@ describe 'Flapjack::Gateways::API::Entity::Presenter' do
 
     ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
     unsched_maint = ep.unscheduled_maintenances(start_time, end_time)
-    unsched_maint.should == [{:entity => entity, :check => 'ping', :unscheduled_maintenances => unsched_maint_b},
-                             {:entity => entity, :check => 'ssh',  :unscheduled_maintenances => unsched_maint_a}]
+    unsched_maint.should == [{:entity => entity.name, :check => 'ping', :unscheduled_maintenances => unsched_maint_b},
+                             {:entity => entity.name, :check => 'ssh',  :unscheduled_maintenances => unsched_maint_a}]
   end
 
   it "returns a list of scheduled maintenance periods for each check on an entity" do
@@ -85,8 +86,8 @@ describe 'Flapjack::Gateways::API::Entity::Presenter' do
 
     ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
     sched_maint = ep.scheduled_maintenances(start_time, end_time)
-    sched_maint.should == [{:entity => entity, :check => 'ping', :scheduled_maintenances => sched_maint_b},
-                           {:entity => entity, :check => 'ssh',  :scheduled_maintenances => sched_maint_a}]
+    sched_maint.should == [{:entity => entity.name, :check => 'ping', :scheduled_maintenances => sched_maint_b},
+                           {:entity => entity.name, :check => 'ssh',  :scheduled_maintenances => sched_maint_a}]
   end
 
   it "returns a list of downtime for each check on an entity" do
@@ -100,8 +101,8 @@ describe 'Flapjack::Gateways::API::Entity::Presenter' do
 
     ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
     downtime = ep.downtime(start_time, end_time)
-    downtime.should == [{:entity => entity, :check => 'ping', :downtime => downtime_b},
-                        {:entity => entity, :check => 'ssh',  :downtime => downtime_a}]
+    downtime.should == [{:entity => entity.name, :check => 'ping', :downtime => downtime_b},
+                        {:entity => entity.name, :check => 'ssh',  :downtime => downtime_a}]
   end
 
 end
