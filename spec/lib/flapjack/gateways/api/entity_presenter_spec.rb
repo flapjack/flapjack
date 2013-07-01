@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'flapjack/gateways/api/entity_presenter'
 
-describe 'Flapjack::Gateways::API::Entity::Presenter' do
+describe 'Flapjack::Gateways::API::EntityPresenter' do
 
   let(:entity) { mock(Flapjack::Data::Entity) }
 
