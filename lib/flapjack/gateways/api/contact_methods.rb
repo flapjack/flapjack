@@ -146,10 +146,12 @@ module Flapjack
               :warning_media, :critical_media, :time_restrictions,
               :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
 
-            unless rule = contact.add_notification_rule(rule_data, :logger => logger)
-              halt err(403, "invalid notification rule data")
+            rule_or_errors = contact.add_notification_rule(rule_data, :logger => logger)
+
+            unless rule_or_errors.respond_to?(:critical_media)
+              halt err(403, *rule_or_errors)
             end
-            rule.to_json
+            rule_or_errors.to_json
           end
 
           # Updates a notification rule
@@ -167,8 +169,10 @@ module Flapjack
               :warning_media, :critical_media, :time_restrictions,
               :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
 
-            unless rule.update(rule_data, :logger => logger)
-              halt err(403, "invalid notification rule data")
+            errors = rule.update(rule_data, :logger => logger)
+
+            unless errors.nil? || errors.empty?
+              halt err(403, *errors)
             end
             rule.to_json
           end
