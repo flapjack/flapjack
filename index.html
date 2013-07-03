@@ -4,7 +4,7 @@ layout: default
 ---
 
 <div id='logo'>
-  <img alt='http://www.flickr.com/photos/ewedistrict/23110406/' src='/images/flapjack.png' />
+  <img alt='http://www.flickr.com/photos/ewedistrict/23110406/' src='/images/flapjack-website.jpg' />
 </div>
 <div id='what'>
   <p>
@@ -13,25 +13,61 @@ layout: default
     monitoring engines like Nagios and Sensu, and does event processing &amp; notifications.
   </p>
   <p>
-  Flapjack provides an API for configuration, <a
-    href='https://github.com/flpjck/flapjack/wiki/GLOSSARY'>scheduling maintenance</a>,
+  <em>Flapjack</em> provides
+  <a href="https://github.com/flpjck/flapjack/wiki/API">an API</a>
+    for configuration,
+  <a href='https://github.com/flpjck/flapjack/wiki/GLOSSARY'>scheduling maintenance</a>,
   acknowledging failures, and querying entity history (conveniently wrapped in a <a
     href='https://github.com/flpjck/flapjack-diner'>client library</a>).
   </p>
   <p>
-    Flapjack can notify via PagerDuty, XMPP, and email, and also supports receiving acknowledgements
-    from PagerDuty + XMPP. Reference implementations for messaging via SMS gateways are also provided.
+    <em>Flapjack</em> can notify via <a href="http://pagerduty.com">PagerDuty</a>, XMPP,
+    and email, and also supports receiving acknowledgements from PagerDuty +
+    XMPP. Reference implementations for messaging via SMS gateways are also
+    provided.
   </p>
 </div>
-<div id='developing'>
-  <h2>Developing</h2>
+<div>
+  <a id='getting-started'></a>
+  <h2>Getting Started</h2>
   <p>
-    Flapjack lives on <a href='http://github.com/flpjck/flapjack'>GitHub</a>. There is <a
-      href="https://github.com/flpjck/flapjack/wiki/DEVELOPING">a guide</a> to get you hacking.
+    Check out the instructions to <a href="https://github.com/flpjck/flapjack/wiki/USING">
+      install + configure Flapjack</a>.
   </p>
+
+  <ul>
+    <li>
+      Report bugs on our
+      <a href="https://github.com/flpjck/flapjack/issues">issue tracker</a>.
+    </li>
+    <li>
+      Ask questions on the
+      <a href="https://groups.google.com/forum/#!forum/flapjack-project">
+      Flapjack mailing list</a>.
+    </li>
+    <li>
+      Contribute documentation on
+      <a href="https://github.com/flpjck/flapjack/wiki">our wiki</a>.
+    </li>
+    <li>
+      Help make Flapjack
+      <a href="https://github.com/flpjck/omnibus-flapjack/">easier to install</a>.
+    </li>
+    <li>
+      Integrate Flapjack into your infrastructure
+      <a href="https://github.com/flpjck/flapjack/wiki/API">with the API</a>.
+    </li>
+    <li>
+      Start hacking by following our
+      <a href="https://github.com/flpjck/flapjack/wiki/DEVELOPING">
+      development guide</a>.
+    </li>
+  </ul>
+
 </div>
-<div id='who'>
-  <h2>Who's reponsible?</h2>
+<div>
+  <a id='credits'></a>
+  <h2>Credits</h2>
   <p>
     <em>Flapjack</em> was conceptualised by&nbsp;<a href='http://holmwood.id.au/~lindsay/'>Lindsay
       Holmwood</a>. <a href='https://github.com/jessereynolds'>Jesse Reynolds</a> &amp; <a
@@ -39,7 +75,7 @@ layout: default
     is sponsored by <a href='http://bulletproof.net/'>Bulletproof Networks</a>.
   </p>
   <p>
-    Logo derived from
+    <a href="https://github.com/flpjck/flapjack/wiki#logo">Logo</a> derived from
     <em>
       <a href='http://www.flickr.com/photos/ewedistrict/23110406/'>Pancake</a>
     </em>
@@ -48,43 +84,5 @@ layout: default
     licenced.
   </p>
 </div>
-<div id='friends'>
-  <h2>Friends of Flapjack</h2>
-  <ul>
-    <li>
-      <a href='http://collectd.org/'>collectd</a>, the lightweight statistics collection daemon.
-    </li>
-    <li>
-      <a href='http://cucumber-nagios.org/'>cucumber-nagios</a>, helps you
-      describe how a website should work in plain text, and outputs whether it does in
-      the Nagios plugin format.
-    </li>
-  </ul>
-</div>
 
 
-
-
-
-
-
-<div id="nav-below" class="navigation">
-  {% if paginator.next_page %}
-    <div class="nav-next">
-      <a href="{{ site.url }}/page{{ paginator.next_page }}#posts">
-        Older posts
-      </a>
-    </div>
-  {% endif %}
-  {% if paginator.previous_page %}
-    <div class="nav-previous">
-      {% if paginator.page == 2 %}
-        <a href="{{ site.url }}#posts">
-      {% else %}
-        <a href="{{ site.url }}/page{{ paginator.previous_page }}#posts">
-      {% endif %}
-        Newer posts
-      </a>
-    </div>
-  {% endif %}
-</div>
