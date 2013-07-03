@@ -7,6 +7,6 @@ end
 
 desc "build site"
 task :build do
-  system('jekyll')
+  system('jekyll build')
 end
 
