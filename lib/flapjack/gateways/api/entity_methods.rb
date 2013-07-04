@@ -219,6 +219,7 @@ module Flapjack
             entities, checks = entities_and_checks(entity_name, check)
 
             start_time = validate_and_parsetime(params[:start_time])
+            halt( err(403, "start time must be provided") ) unless start_time
 
             act_proc = proc {|entity_check|
               entity_check.create_scheduled_maintenance(:start_time => start_time,
@@ -267,8 +268,9 @@ module Flapjack
             act_proc = case action
             when 'scheduled_maintenances'
               start_time = validate_and_parsetime(params[:start_time])
+              halt( err(403, "start time must be provided") ) unless start_time
               opts = {}
-              opts[:start_time] = start_time.to_i if start_time
+              opts[:start_time] = start_time.to_i
               proc {|entity_check| entity_check.delete_scheduled_maintenance(opts) }
             when 'unscheduled_maintenances'
               end_time = validate_and_parsetime(params[:end_time])
