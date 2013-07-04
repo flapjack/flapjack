@@ -181,103 +181,13 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       duration.should == 2 * (60 * 60)
     end
 
-    it "updates a scheduled maintenance period for a future time" do
-      t = Time.now.to_i
-      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-      ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
-        :duration => 2 * (60 * 60), :summary => "2 hours")
-
-      ec.update_scheduled_maintenance(t + (60 * 60), :end_time => t + (4 * (60 * 60)))
-      smps = ec.maintenances(nil, nil, :scheduled => true)
-      smps.should_not be_nil
-      smps.should be_an(Array)
-      smps.should have(1).scheduled_maintenance_period
-      smps[0].should be_a(Hash)
-
-      start_time = smps[0][:start_time]
-      start_time.should_not be_nil
-      start_time.should be_an(Integer)
-      start_time.should == (t + (60 * 60))
-
-      duration = smps[0][:duration]
-      duration.should_not be_nil
-      duration.should be_a(Float)
-      duration.should == 3 * (60 * 60)
-    end
-
-    # TODO this should probably enforce that it starts in the future
-    it "updates a scheduled maintenance period covering the current time", :time => true do
-      t = Time.now.to_i
-      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-      ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
-        :duration => 2 * (60 * 60), :summary => "2 hours")
-
-      Delorean.time_travel_to( Time.at(t + (90 * 60)) )
-
-      ec.update_scheduled_maintenance(t + (60 * 60), :end_time => t + (4 * (60 * 60)))
-      smps = ec.maintenances(nil, nil, :scheduled => true)
-      smps.should_not be_nil
-      smps.should be_an(Array)
-      smps.should have(1).scheduled_maintenance_period
-      smps[0].should be_a(Hash)
-
-      start_time = smps[0][:start_time]
-      start_time.should_not be_nil
-      start_time.should be_an(Integer)
-      start_time.should == (t + (60 * 60))
-
-      duration = smps[0][:duration]
-      duration.should_not be_nil
-      duration.should be_a(Float)
-      duration.should == 3 * (60 * 60)
-    end
-
-    it "fails to update a scheduled maintenance period when not found" do
-      t = Time.now.to_i
-      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-      lambda {
-        ec.update_scheduled_maintenance(t + (60 * 60), :end_time => t + (2 * (60 * 60)))
-      }.should raise_error(ArgumentError)
-
-      smps = ec.maintenances(nil, nil, :scheduled => true)
-      smps.should_not be_nil
-      smps.should be_an(Array)
-      smps.should be_empty
-    end
-
-    it "fails to update a scheduled maintenance period with invalid end time" do
-      t = Time.now.to_i
-      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-      ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
-        :duration => 2 * (60 * 60), :summary => "2 hours")
-
-      lambda {
-        ec.update_scheduled_maintenance(t + (60 * 60), :end_time => t - (4 * (60 * 60)))
-      }.should raise_error(ArgumentError)
-      smps = ec.maintenances(nil, nil, :scheduled => true)
-      smps.should_not be_nil
-      smps.should be_an(Array)
-      smps.should have(1).scheduled_maintenance_period
-      smps[0].should be_a(Hash)
-
-      start_time = smps[0][:start_time]
-      start_time.should_not be_nil
-      start_time.should be_an(Integer)
-      start_time.should == (t + (60 * 60))
-
-      duration = smps[0][:duration]
-      duration.should_not be_nil
-      duration.should be_a(Float)
-      duration.should == 2 * (60 * 60)
-    end
-
     it "removes a scheduled maintenance period for a future time" do
       t = Time.now.to_i
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
       ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
         :duration => 2 * (60 * 60), :summary => "2 hours")
 
-      ec.delete_scheduled_maintenance(:start_time => t + (60 * 60))
+      ec.end_scheduled_maintenance(t + (60 * 60))
 
       smps = ec.maintenances(nil, nil, :scheduled => true)
       smps.should_not be_nil
@@ -285,8 +195,9 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       smps.should be_empty
     end
 
-    # TODO this should probably enforce that it starts in the future
-    it "removes a scheduled maintenance period covering a current time", :time => true do
+    # maint period starts an hour from now, goes for two hours -- at 30 minutes into
+    # it we stop it, and its duration should be 30 minutes
+    it "shortens a scheduled maintenance period covering a current time", :time => true do
       t = Time.now.to_i
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
       ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
@@ -294,12 +205,32 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
       Delorean.time_travel_to( Time.at(t + (90 * 60)) )
 
-      ec.delete_scheduled_maintenance(:start_time => t + (60 * 60))
+      ec.end_scheduled_maintenance(t + (60 * 60))
 
       smps = ec.maintenances(nil, nil, :scheduled => true)
       smps.should_not be_nil
       smps.should be_an(Array)
-      smps.should be_empty
+      smps.should_not be_empty
+      smps.should have(1).item
+      smps.first[:duration].should == (30 * 60)
+    end
+
+    it "does not alter or remove a scheduled maintenance period covering a past time", :time => true do
+      t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_scheduled_maintenance(:start_time => t + (60 * 60),
+        :duration => 2 * (60 * 60), :summary => "2 hours")
+
+      Delorean.time_travel_to( Time.at(t + (6 * (60 * 60)) ))
+
+      ec.end_scheduled_maintenance(t + (60 * 60))
+
+      smps = ec.maintenances(nil, nil, :scheduled => true)
+      smps.should_not be_nil
+      smps.should be_an(Array)
+      smps.should_not be_empty
+      smps.should have(1).item
+      smps.first[:duration].should == 2 * (60 * 60)
     end
 
     it "returns a list of scheduled maintenance periods" do

@@ -3,6 +3,7 @@
 - head = render_haml('_head.haml', self)
 - foot = render_haml('_foot.haml', self)
 - check_path_escaped = URI.escape(@entity, ' #&;/=?') << '/' << URI.escape(@check, ' #&;/=?')
+- current_time = Time.now.to_i
 %html
   %head
     %title Flapjack - Check: #{@entity}:#{@check}
@@ -26,7 +27,6 @@
               duration:
             %input{:type => 'text', :name => 'duration', :value => ''}
               e.g. "5 hours"
-        - current_time = (@current_unscheduled_maintenance || @current_scheduled_maintenance) ? Time.now : nil
         - if @current_unscheduled_maintenance
           %h3 (Acknowledged - #{@current_unscheduled_maintenance[:summary]})
           - start  = Time.at(@current_unscheduled_maintenance[:start_time])
@@ -125,18 +125,12 @@
                 %td= ChronicDuration.output(duration)
                 %td= summary
                 %td
-                  - if end_time > Time.now.to_i
-                    - if start_time > Time.now.to_i
-                      %form{ :action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
-                        %input{:type => 'hidden', :name => '_method', :value => 'delete'}
-                        %input{:type => 'hidden', :name => 'start_time', :value => start_time}
-                        %input{:type => 'submit', :value => 'Delete', :class => 'button'}
-                    - else
-                      %form{ :action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
-                        %input{:type => 'hidden', :name => '_method',    :value => 'patch'}
-                        %input{:type => 'hidden', :name => 'start_time', :value => start_time}
-                        %input{:type => 'hidden', :name => 'end_time',   :value => 'now'}
-                        %input{:type => 'submit', :value => 'End Now', :class => 'button'}
+                  - if end_time > current_time
+                    - label = (start_time > current_time) ? 'Delete' : 'End Now'
+                    %form{ :action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
+                      %input{:type => 'hidden', :name => '_method', :value => 'delete'}
+                      %input{:type => 'hidden', :name => 'start_time', :value => start_time}
+                      %input{:type => 'submit', :value => label, :class => 'button'}
         - else
           %p No maintenance is scheduled
         %h4 Add Scheduled Maintenance
