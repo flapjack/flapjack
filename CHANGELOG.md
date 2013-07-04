@@ -4,6 +4,7 @@
 - Feature: split API methods into two separate files, also specs gh-215 (@ali-graham)
 - Feature: unlock ruby version, build with Ruby 2 in travis gh-237 (@ali-graham)
 - Feature: include notification rule validation error details in api add, update functions gh-184 (@ali-graham)
+- Feature: API: delete scheduled maintenance should return an error if no start_time parameter is passed gh-240 (@ali-graham)
 - Bug: entity name in bulk status api response is incorrect gh-233 (@jessereynolds)
 - Bug: non-changing checks creating state-change records gh-235 (@ali-graham)
 - Bug: posting scheduled maintenance in new api format throwing 500 gh-239 (@jessereynolds)
