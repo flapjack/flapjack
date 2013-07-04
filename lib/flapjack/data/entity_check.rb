@@ -221,16 +221,21 @@ module Flapjack
             # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
             @redis.zrem("failed_checks:client:#{client}", @key) if client
           end
+
+          # Retain event data for entity:check pair
+          @redis.rpush("#{@key}:states", timestamp)
+          @redis.set("#{@key}:#{timestamp}:state", new_state)
+          @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
+          @redis.set("#{@key}:#{timestamp}:details", details) if details
+          @redis.set("#{@key}:#{timestamp}:count", count) if count
+
+          @redis.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
         end
 
-        # Retain event data for entity:check pair
-        @redis.rpush("#{@key}:states", timestamp)
-        @redis.set("#{@key}:#{timestamp}:state", new_state)
-        @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
-        @redis.set("#{@key}:#{timestamp}:details", details) if details
-        @redis.set("#{@key}:#{timestamp}:count", count) if count
-
-        @redis.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
+        # Even if this isn't a state change, we need to update the current state
+        # hash summary and details (as they may have changed)
+        @redis.hset("check:#{@key}", 'summary', (summary || ''))
+        @redis.hset("check:#{@key}", 'details', (details || ''))
       end
 
       def last_update

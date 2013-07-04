@@ -23,4 +23,7 @@ tmp/pids/*
 tmp/spec*
 tmp/profiles
 flapjack-*.gem
+.rbenv-version
+.ruby-version
+.rvmrc
 
