@@ -60,6 +60,18 @@ module Flapjack
         self.class.instance_variable_get('@logger')
       end
 
+      before do
+        input = env['rack.input'].read
+        input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
+        logger.info("#{request.request_method} #{request.path_info}#{request.query_string} #{input_short[0..80]}")
+        logger.debug("#{request.request_method} #{request.path_info}#{request.query_string} #{input}")
+        env['rack.input'].rewind
+      end
+
+      after do
+        logger.debug("Returning #{response.status} for #{request.request_method} #{request.path_info}#{request.query_string}")
+      end
+
       register Flapjack::Gateways::API::EntityMethods
 
       register Flapjack::Gateways::API::ContactMethods
@@ -87,6 +99,12 @@ module Flapjack
       error Flapjack::Gateways::API::EntityCheckNotFound do
         e = env['sinatra.error']
         err(403, "could not find entity check '#{e.check}'")
+      end
+
+      error do
+        e = env['sinatra.error']
+        logger.error("Error - #{e.inspect}")
+        "Sorry there was a nasty error - #{e.inspect}"
       end
 
       private
