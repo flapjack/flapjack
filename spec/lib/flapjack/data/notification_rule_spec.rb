@@ -52,8 +52,8 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
     expect {
       rule_data[:warning_blackhole] = true
-      success = rule.update(rule_data)
-      success.should be_true
+      errors = rule.update(rule_data)
+      errors.should be_nil
     }.to change { rule.warning_blackhole }.from(false).to(true)
   end
 
@@ -96,16 +96,21 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
     it "fails to add a notification rule with invalid data" do
       rule_data[:entities] = [1, {}]
-      rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
-      rule.should be_nil
+      rule_or_errors = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
+      rule_or_errors.should_not be_nil
+      rule_or_errors.should be_an(Array)
+      rule_or_errors.should have(1).error
+      rule_or_errors.should == ["Rule entities must be a list of strings"]
     end
 
     it "fails to update a notification rule with invalid data" do
       rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
       expect {
         rule_data[:entities] = [57]
-        success = rule.update(rule_data)
-        success.should be_false
+        errors = rule.update(rule_data)
+        errors.should_not be_nil
+        errors.should have(1).error
+        errors.should == ["Rule entities must be a list of strings"]
       }.not_to change { rule.entities }
     end
 
