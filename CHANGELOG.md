@@ -1,11 +1,12 @@
 ## Flapjack Changelog
 
-# 0.7.17 - UNRELEASED
-- Bug: entity name in bulk status api response is incorrect gh-233 (@jessereynolds)
+# 0.7.17 - 2013-07-04
 - Feature: split API methods into two separate files, also specs gh-215 (@ali-graham)
 - Feature: unlock ruby version, build with Ruby 2 in travis gh-237 (@ali-graham)
-- Bug: non-changing checks creating state-change records gh-235 (@ali-graham)
 - Feature: include notification rule validation error details in api add, update functions gh-184 (@ali-graham)
+- Bug: entity name in bulk status api response is incorrect gh-233 (@jessereynolds)
+- Bug: non-changing checks creating state-change records gh-235 (@ali-graham)
+- Bug: posting scheduled maintenance in new api format throwing 500 gh-239 (@jessereynolds)
 
 # 0.7.16 - 2013-06-27
 - Bug: errors accessing API gh-231 (@ali-graham)
