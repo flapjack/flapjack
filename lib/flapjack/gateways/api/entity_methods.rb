@@ -270,8 +270,7 @@ module Flapjack
               start_time = validate_and_parsetime(params[:start_time])
               halt( err(403, "start time must be provided") ) unless start_time
               opts = {}
-              opts[:start_time] = start_time.to_i
-              proc {|entity_check| entity_check.delete_scheduled_maintenance(opts) }
+              proc {|entity_check| entity_check.end_scheduled_maintenance(start_time.to_i) }
             when 'unscheduled_maintenances'
               end_time = validate_and_parsetime(params[:end_time])
               opts = {}
