@@ -23,4 +23,4 @@ tmp/pids/*
 tmp/spec*
 tmp/profiles
 flapjack-*.gem
-
+_site/*
