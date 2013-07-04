@@ -29,12 +29,16 @@ module Flapjack
 
       set :show_exceptions, false
 
-      rescue_exception = Proc.new { |env, exception|
-        @logger.error exception.message
-        @logger.error exception.backtrace.join("\n")
-        [503, {}, {:errors => [exception.message]}.to_json]
-      }
-      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+      #rescue_exception = Proc.new { |env, exception|
+      #  @logger.error exception.message
+      #  @logger.error exception.backtrace.join("\n")
+      #  [503, {}, {:errors => [exception.message]}.to_json]
+      #}
+      #use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+      #
+      # FIXME: not sure why the above isn't working, had to add a general
+      # error handler later in this file
+      use Rack::FiberPool, :size => 25
 
       use Rack::MethodOverride
       use Rack::JsonParamsParser
@@ -103,8 +107,7 @@ module Flapjack
 
       error do
         e = env['sinatra.error']
-        logger.error("Error - #{e.inspect}")
-        "Sorry there was a nasty error - #{e.inspect}"
+        err(response.status, "#{e.class} - #{e.message}")
       end
 
       private
