@@ -29,7 +29,7 @@ module Flapjack
           state              = notification['state']
           summary            = notification['summary']
           time               = notification['time']
-          entity, check      = notification['event_id'].split(':')
+          entity, check      = notification['event_id'].split(':', 2)
 
           headline_map = {'problem'         => 'PROBLEM: ',
                           'recovery'        => 'RECOVERY: ',

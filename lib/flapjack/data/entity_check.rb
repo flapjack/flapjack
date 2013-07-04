@@ -22,12 +22,15 @@ module Flapjack
       STATE_CRITICAL        = 'critical'
       STATE_UNKNOWN         = 'unknown'
 
+      NOTIFICATION_STATES = [:problem, :warning, :critical, :unknown,
+                             :recovery, :acknowledgement]
+
       attr_accessor :entity, :check
 
       # TODO probably shouldn't always be creating on query -- work out when this should be happening
       def self.for_event_id(event_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        entity_name, check = event_id.split(':')
+        entity_name, check = event_id.split(':', 2)
         self.new(Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis, :create => true), check,
           :redis => redis)
       end
@@ -76,35 +79,9 @@ module Flapjack
         }
       end
 
-      # TODO move to Event
-      def create_acknowledgement(options = {})
-        event = { 'type'               => 'action',
-                  'state'              => 'acknowledgement',
-                  'summary'            => options['summary'],
-                  'duration'           => options['duration'],
-                  'acknowledgement_id' => options['acknowledgement_id'],
-                  'entity'             => entity.name,
-                  'check'              => check
-                }
-        Flapjack::Data::Event.add(event, :redis => @redis)
-      end
-
-      # TODO move to Event
-      def test_notifications(options = {})
-        event = { 'type'               => 'action',
-                  'state'              => 'test_notifications',
-                  'summary'            => options['summary'],
-                  'details'            => options['details'],
-                  'entity'             => entity.name,
-                  'check'              => check
-                }
-        Flapjack::Data::Event.add(event, :redis => @redis)
-      end
-
-      # FIXME: need to add summary to summary of existing unscheduled maintenance if there is
-      # one, and extend duration / expiry time, instead of creating a separate unscheduled
-      # outage as we are doing now...
       def create_unscheduled_maintenance(opts = {})
+        end_unscheduled_maintenance if in_unscheduled_maintenance?
+
         start_time = opts[:start_time]  # unix timestamp
         duration   = opts[:duration]    # seconds
         summary    = opts[:summary]
@@ -217,39 +194,48 @@ module Flapjack
         @redis.hget("check:#{@key}", 'state')
       end
 
-      def update_state(state, options = {})
-        return unless validate_state(state)
+      def update_state(new_state, options = {})
+        return unless [STATE_OK, STATE_WARNING,
+          STATE_CRITICAL, STATE_UNKNOWN].include?(new_state)
+
         timestamp = options[:timestamp] || Time.now.to_i
-        client = options[:client]
         summary = options[:summary]
         details = options[:details]
         count = options[:count]
 
-        # Note the current state (for speedy lookups)
-        @redis.hset("check:#{@key}", 'state', state)
+        if self.state != new_state
+          client = options[:client]
 
-        # FIXME: rename to last_state_change?
-        @redis.hset("check:#{@key}", 'last_change', timestamp)
+          # Note the current state (for speedy lookups)
+          @redis.hset("check:#{@key}", 'state', new_state)
 
-        # Retain all state changes for entity:check pair
-        @redis.rpush("#{@key}:states", timestamp)
-        @redis.set("#{@key}:#{timestamp}:state",   state)
-        @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
-        @redis.set("#{@key}:#{timestamp}:details", details) if details
-        @redis.set("#{@key}:#{timestamp}:count", count) if count
+          # FIXME: rename to last_state_change?
+          @redis.hset("check:#{@key}", 'last_change', timestamp)
+          case state
+          when STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN
+            @redis.zadd('failed_checks', timestamp, @key)
+            # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
+            @redis.zadd("failed_checks:client:#{client}", timestamp, @key) if client
+          else
+            @redis.zrem("failed_checks", @key)
+            # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
+            @redis.zrem("failed_checks:client:#{client}", @key) if client
+          end
 
-        @redis.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
+          # Retain event data for entity:check pair
+          @redis.rpush("#{@key}:states", timestamp)
+          @redis.set("#{@key}:#{timestamp}:state", new_state)
+          @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
+          @redis.set("#{@key}:#{timestamp}:details", details) if details
+          @redis.set("#{@key}:#{timestamp}:count", count) if count
 
-        case state
-        when STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN
-          @redis.zadd('failed_checks', timestamp, @key)
-          # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-          @redis.zadd("failed_checks:client:#{client}", timestamp, @key) if client
-        else
-          @redis.zrem("failed_checks", @key)
-          # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-          @redis.zrem("failed_checks:client:#{client}", @key) if client
+          @redis.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
         end
+
+        # Even if this isn't a state change, we need to update the current state
+        # hash summary and details (as they may have changed)
+        @redis.hset("check:#{@key}", 'summary', (summary || ''))
+        @redis.hset("check:#{@key}", 'details', (details || ''))
       end
 
       def last_update
@@ -268,60 +254,32 @@ module Flapjack
         lc.to_i
       end
 
-      def last_problem_notification
-        lpn = @redis.get("#{@key}:last_problem_notification")
-        return unless (lpn && lpn =~ /^\d+$/)
-        lpn.to_i
-      end
-
-      def last_warning_notification
-        lwn = @redis.get("#{@key}:last_warning_notification")
-        return unless (lwn && lwn =~ /^\d+$/)
-        lwn.to_i
-      end
-
-      def last_critical_notification
-        lcn = @redis.get("#{@key}:last_critical_notification")
-        return unless (lcn && lcn =~ /^\d+$/)
-        lcn.to_i
-      end
-
-      def last_unknown_notification
-        lcn = @redis.get("#{@key}:last_unknown_notification")
-        return unless (lcn && lcn =~ /^\d+$/)
-        lcn.to_i
-      end
-
-      def last_recovery_notification
-        lrn = @redis.get("#{@key}:last_recovery_notification")
-        return unless (lrn && lrn =~ /^\d+$/)
-        lrn.to_i
-      end
-
-      def last_acknowledgement_notification
-        lan = @redis.get("#{@key}:last_acknowledgement_notification")
-        return unless (lan && lan =~ /^\d+$/)
-        lan.to_i
+      def last_notification_for_state(state)
+        return unless NOTIFICATION_STATES.include?(state)
+        ln = @redis.get("#{@key}:last_#{state.to_s}_notification")
+        return {:timestamp => nil, :summary => nil} unless (ln && ln =~ /^\d+$/)
+        { :timestamp => ln.to_i,
+          :summary => @redis.get("#{@key}:#{ln.to_i}:summary") }
       end
 
       def last_notifications_of_each_type
-        ln = {:problem         => last_problem_notification,
-              :warning         => last_warning_notification,
-              :critical        => last_critical_notification,
-              :unknown         => last_unknown_notification,
-              :recovery        => last_recovery_notification,
-              :acknowledgement => last_acknowledgement_notification }
-        ln
+        NOTIFICATION_STATES.inject({}) do |memo, state|
+          memo[state] = last_notification_for_state(state) unless (state == :problem)
+          memo
+        end
       end
 
       def max_notified_severity_of_current_failure
-        last_recovery = last_recovery_notification || 0
+        last_recovery = last_notification_for_state(:recovery)[:timestamp] || 0
 
-        last_critical = last_critical_notification
+        last_critical = last_notification_for_state(:critical)[:timestamp]
         return STATE_CRITICAL if last_critical && (last_critical > last_recovery)
 
-        last_warning = last_warning_notification
+        last_warning = last_notification_for_state(:warning)[:timestamp]
         return STATE_WARNING if last_warning && (last_warning > last_recovery)
+
+        last_unknown = last_notification_for_state(:unknown)[:timestamp]
+        return STATE_UNKNOWN if last_unknown && (last_unknown > last_recovery)
 
         nil
       end
@@ -329,15 +287,16 @@ module Flapjack
       # unpredictable results if there are multiple notifications of different
       # types sent at the same time
       def last_notification
-        nils = { :type => nil, :timestamp => nil }
+        nils = { :type => nil, :timestamp => nil, :summary => nil }
+
         lne = last_notifications_of_each_type
-        ln = lne.delete_if {|type, timestamp| timestamp.nil? || timestamp.to_i == 0 }
-        if ln.find {|type, timestamp| type == :warning or type == :critical}
-          ln = ln.delete_if {|type, timestamp| type == :problem }
+        ln = lne.delete_if {|type, notif| notif[:timestamp].nil? || notif[:timestamp].to_i <= 0 }
+        if ln.find {|type, notif| type == :warning or type == :critical}
+          ln = ln.delete_if {|type, notif| type == :problem }
         end
-        return nils unless ln.length > 0
-        lns = ln.sort_by { |type, timestamp| timestamp }.last
-        { :type => lns[0], :timestamp => lns[1] }
+        return nils if ln.empty?
+        lns = ln.sort_by { |type, notif| notif[:timestamp] }.last
+        { :type => lns[0], :timestamp => lns[1][:timestamp], :summary => lns[1][:summary] }
       end
 
       def event_count_at(timestamp)
@@ -371,20 +330,37 @@ module Flapjack
       # from midnight to 11:59:59 PM. Pass nil for either end to leave that
       # side unbounded.
       def historical_states(start_time, end_time, opts = {})
-        start_time ||= '-inf'
-        end_time ||= '+inf'
+        start_time = '-inf' if start_time.to_i <= 0
+        end_time = '+inf' if end_time.to_i <= 0
+
+        args = ["#{@key}:sorted_state_timestamps"]
+
         order = opts[:order]
-        query = (order && 'desc'.eql?(order.downcase)) ? :zrevrangebyscore : :zrangebyscore
-        state_ts = @redis.send(query, "#{@key}:sorted_state_timestamps", start_time, end_time)
+        if (order && 'desc'.eql?(order.downcase))
+          query = :zrevrangebyscore
+          args += [end_time.to_s, start_time.to_s]
+        else
+          query = :zrangebyscore
+          args += [start_time.to_s, end_time.to_s]
+        end
+
+        if opts[:limit] && (opts[:limit].to_i > 0)
+          args << {:limit => [0, opts[:limit]]}
+        end
+
+        state_ts = @redis.send(query, *args)
 
         state_data = nil
 
         @redis.multi do |r|
           state_data = state_ts.collect {|ts|
-            {:timestamp => ts.to_i,
-             :state     => r.get("#{@key}:#{ts}:state"),
-             :summary   => r.get("#{@key}:#{ts}:summary"),
-             :details   => r.get("#{@key}:#{ts}:details")}
+            {:timestamp     => ts.to_i,
+             :state         => r.get("#{@key}:#{ts}:state"),
+             :summary       => r.get("#{@key}:#{ts}:summary"),
+             :details       => r.get("#{@key}:#{ts}:details"),
+             # :count         => r.get("#{@key}:#{ts}:count"),
+             # :check_latency => r.get("#{@key}:#{ts}:check_latency")
+            }
           }
         end
 
@@ -403,7 +379,7 @@ module Flapjack
       # if any.
       def historical_state_before(timestamp)
         pos = @redis.zrank("#{@key}:sorted_state_timestamps", timestamp)
-        return if pos < 1
+        return if pos.nil? || pos < 1
         ts = @redis.zrange("#{@key}:sorted_state_timestamps", pos - 1, pos)
         return if ts.nil? || ts.empty?
         {:timestamp => ts.first.to_i,
@@ -471,10 +447,6 @@ module Flapjack
         raise "Invalid entity" unless @entity = entity
         raise "Invalid check" unless @check = check
         @key = "#{entity.name}:#{check}"
-      end
-
-      def validate_state(state)
-        [STATE_OK, STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN].include?(state)
       end
 
     end

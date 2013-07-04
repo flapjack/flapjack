@@ -11,6 +11,8 @@ describe Flapjack::Coordinator do
   let(:stdout_out) { mock('stdout_out') }
   let(:syslog_out) { mock('syslog_out') }
 
+  let!(:time)   { Time.now }
+
   def setup_logger
     formatter = mock('Formatter')
     Log4r::PatternFormatter.should_receive(:new).with(
@@ -48,6 +50,8 @@ describe Flapjack::Coordinator do
     monitor.should_receive(:synchronize).twice.and_yield
     monitor.should_receive(:new_cond).and_return(running_cond)
     Monitor.should_receive(:new).and_return(monitor)
+
+    Time.should_receive(:now).and_return(time)
 
     fc = Flapjack::Coordinator.new(config)
     Flapjack::Pikelet.should_receive(:create).with('executive',
@@ -121,6 +125,7 @@ describe Flapjack::Coordinator do
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
+    fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [executive])
     fc.reload
     fc.instance_variable_get('@pikelets').should == [jabber]
@@ -150,6 +155,7 @@ describe Flapjack::Coordinator do
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
+    fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [executive])
     fc.reload
     fc.instance_variable_get('@pikelets').should == [executive]
@@ -186,6 +192,7 @@ describe Flapjack::Coordinator do
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
+    fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [executive])
     fc.reload
     fc.instance_variable_get('@pikelets').should == [new_exec]

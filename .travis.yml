@@ -1,6 +1,7 @@
 language: ruby
 rvm:
   - "1.9.3"
+  - "2.0.0"
 gemfile:
   - Gemfile
 services:
@@ -9,4 +10,5 @@ before_script:
   - mkdir -p ./log
 before_install:
   - git submodule update --init --recursive
+  - gem install bundler
 script: bundle exec rspec spec && bundle exec cucumber features

@@ -39,6 +39,8 @@ module Flapjack
     end
 
     def start(opts = {})
+      @boot_time = Time.now
+
       pikelet_defs = pikelet_definitions(@config.all)
       return if pikelet_defs.empty?
 

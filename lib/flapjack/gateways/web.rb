@@ -68,8 +68,8 @@ module Flapjack
 
         # TODO (?) recast as Entity.all do |e|; e.checks.do |ec|; ...
         @states = redis.keys('*:*:states').map { |r|
-          parts  = r.split(':')[0..1]
-          [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
+          entity, check = r.sub(/:states$/, '').split(':', 2)
+          [entity, check] + entity_check_state(entity, check)
         }.compact.sort_by {|parts| parts }
 
         haml :checks
@@ -80,7 +80,7 @@ module Flapjack
         @adjective = 'failing'
 
         @states = redis.zrange('failed_checks', 0, -1).map {|key|
-          parts  = key.split(':')
+          parts  = key.split(':', 2)
           [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
         }.compact.sort_by {|parts| parts}
 
@@ -145,8 +145,8 @@ module Flapjack
         @entity = params[:entity]
         entity_stats
         @states = redis.keys("#{@entity}:*:states").map { |r|
-          parts  = r.split(':')[0..1]
-          [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
+          check = r.sub(/^#{@entity}:/, '').sub(/:states$/, '')
+          [@entity, check] + entity_check_state(@entity, check)
         }.compact.sort_by {|parts| parts }
         haml :entity
       end
@@ -177,6 +177,9 @@ module Flapjack
 
         @contacts                   = entity_check.contacts
 
+        @state_changes = entity_check.historical_states(nil, Time.now.to_i,
+                           :order => 'desc', :limit => 20)
+
         haml :check
       end
 
@@ -189,11 +192,14 @@ module Flapjack
         dur = ChronicDuration.parse(params[:duration] || '')
         @duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
-        entity_check = get_entity_check(@entity, @check)
-        return 404 if entity_check.nil?
+        return 404 if get_entity_check(@entity, @check).nil?
 
-        ack = entity_check.create_acknowledgement('summary' => (@summary || ''),
-          'acknowledgement_id' => @acknowledgement_id, 'duration' => @duration)
+        ack = Flapjack::Data::Event.create_acknowledgement(
+          @entity, @check,
+          :summary => (@summary || ''),
+          :acknowledgement_id => @acknowledgement_id,
+          :duration => @duration,
+          :redis => redis)
 
         redirect back
       end
@@ -307,9 +313,9 @@ module Flapjack
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
           check, :redis => redis)
         latest_notif =
-          {:problem         => entity_check.last_problem_notification,
-           :recovery        => entity_check.last_recovery_notification,
-           :acknowledgement => entity_check.last_acknowledgement_notification
+          {:problem         => entity_check.last_notification_for_state(:problem)[:timestamp],
+           :recovery        => entity_check.last_notification_for_state(:recovery)[:timestamp],
+           :acknowledgement => entity_check.last_notification_for_state(:acknowledgement)[:timestamp]
           }.max_by {|n| n[1] || 0}
         [(entity_check.state       || '-'),
          (entity_check.last_change || '-'),

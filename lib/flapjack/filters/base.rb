@@ -4,8 +4,8 @@ module Flapjack
   module Filters
     module Base
       def initialize(opts={})
-        @log         = opts[:log]
-        @persistence = opts[:persistence]
+        @logger = opts[:logger]
+        @redis  = opts[:redis]
       end
 
       def name

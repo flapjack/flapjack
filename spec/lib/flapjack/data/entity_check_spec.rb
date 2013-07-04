@@ -354,33 +354,6 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
   end
 
-  it "creates an acknowledgement" do
-    ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-    t = Time.now.to_i
-    ec.create_acknowledgement('summary'            => 'looking now',
-                              'time'               => t,
-                              'acknowledgement_id' => '75',
-                              'duration'           => 40 * 60)
-    event_json = @redis.rpop('events')
-    event_json.should_not be_nil
-    event = nil
-    expect {
-      event = JSON.parse(event_json)
-    }.not_to raise_error
-    event.should_not be_nil
-    event.should be_a(Hash)
-    event.should == {
-      'entity'             => name,
-      'check'              => check,
-      'type'               => 'action',
-      'state'              => 'acknowledgement',
-      'summary'            => 'looking now',
-      'time'               => t,
-      'acknowledgement_id' => '75',
-      'duration'           => 2400
-    }
-  end
-
   it "returns its state" do
     @redis.hset("check:#{name}:#{check}", 'state', 'ok')
 
@@ -410,6 +383,27 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     state = @redis.hget("check:#{name}:#{check}", 'state')
     state.should_not be_nil
     state.should == 'ok'
+  end
+
+  it "does not update state with a repeated state value" do
+    ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+    ec.update_state('critical', :summary => 'small problem')
+    changed_at = @redis.hget("check:#{name}:#{check}", 'last_change')
+    summary = @redis.hget("check:#{name}:#{check}", 'summary')
+
+    ec.update_state('critical', :summary => 'big problem')
+    new_changed_at = @redis.hget("check:#{name}:#{check}", 'last_change')
+    new_summary = @redis.hget("check:#{name}:#{check}", 'summary')
+
+    changed_at.should_not be_nil
+    new_changed_at.should_not be_nil
+    new_changed_at.should == changed_at
+
+    summary.should_not be_nil
+    new_summary.should_not be_nil
+    new_summary.should_not == summary
+    summary.should == 'small problem'
+    new_summary.should == 'big problem'
   end
 
   def time_before(t, min, sec = 0)
@@ -520,9 +514,9 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     @redis.set("#{name}:#{check}:last_recovery_notification", t)
 
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-    ec.last_problem_notification.should == t - 30
-    ec.last_acknowledgement_notification.should == t - 15
-    ec.last_recovery_notification.should == t
+    ec.last_notification_for_state(:problem)[:timestamp].should == t - 30
+    ec.last_notification_for_state(:acknowledgement)[:timestamp].should == t - 15
+    ec.last_notification_for_state(:recovery)[:timestamp].should == t
   end
 
   it "finds all related contacts" do

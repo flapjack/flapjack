@@ -16,7 +16,7 @@ module Flapjack
 
     class Contact
 
-      attr_accessor :id, :first_name, :last_name, :email, :media, :pagerduty_credentials
+      attr_accessor :id, :first_name, :last_name, :email, :media, :media_intervals, :pagerduty_credentials
 
       TAG_PREFIX = 'contact_tag'
 
@@ -55,7 +55,10 @@ module Flapjack
         end
 
         self.add_or_update(contact_id, contact_data, :redis => redis)
-        self.find_by_id(contact_id, :redis => redis)
+        if contact = self.find_by_id(contact_id, :redis => redis)
+          contact.notification_rules # invoke to create general rule
+        end
+        contact
       end
 
       def self.delete_all(options = {})
@@ -73,6 +76,7 @@ module Flapjack
         self.first_name, self.last_name, self.email =
           @redis.hmget("contact:#{@id}", 'first_name', 'last_name', 'email')
         self.media = @redis.hgetall("contact_media:#{@id}")
+        self.media_intervals = @redis.hgetall("contact_media_intervals:#{self.id}")
 
         # similar to code in instance method pagerduty_credentials
         if service_key = @redis.hget("contact_media:#{@id}", 'pagerduty')
@@ -161,11 +165,26 @@ module Flapjack
       end
 
       # return an array of the notification rules of this contact
-      def notification_rules
-        @redis.smembers("contact_notification_rules:#{self.id}").collect { |rule_id|
-          next if (rule_id.nil? || rule_id == '')
-          Flapjack::Data::NotificationRule.find_by_id(rule_id, {:redis => @redis })
-        }.compact
+      def notification_rules(opts = {})
+        rules = @redis.smembers("contact_notification_rules:#{self.id}").inject([]) do |ret, rule_id|
+          unless (rule_id.nil? || rule_id == '')
+            ret << Flapjack::Data::NotificationRule.find_by_id(rule_id, :redis => @redis)
+          end
+          ret
+        end
+        if rules.all? {|r| r.is_specific? } # also true if empty
+          rule = self.add_notification_rule({
+              :entities           => [],
+              :entity_tags        => [],
+              :time_restrictions  => [],
+              :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'],
+              :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'],
+              :warning_blackhole  => false,
+              :critical_blackhole => false,
+            }, :logger => opts[:logger])
+          rules.unshift(rule)
+        end
+        rules
       end
 
       def add_notification_rule(rule_data, opts = {})
@@ -181,10 +200,6 @@ module Flapjack
         @redis.del("notification_rule:#{rule.id}")
       end
 
-      def media_intervals
-        @redis.hgetall("contact_media_intervals:#{self.id}")
-      end
-
       # how often to notify this contact on the given media
       # return 15 mins if no value is set
       def interval_for_media(media)
@@ -193,8 +208,12 @@ module Flapjack
       end
 
       def set_interval_for_media(media, interval)
-        raise "invalid interval" unless interval.is_a?(Integer)
+        if interval.nil?
+          @redis.hdel("contact_media_intervals:#{self.id}", media)
+          return
+        end
         @redis.hset("contact_media_intervals:#{self.id}", media, interval)
+        self.media_intervals = @redis.hgetall("contact_media_intervals:#{self.id}")
       end
 
       def set_address_for_media(media, address)
@@ -204,6 +223,7 @@ module Flapjack
           # probably best solution is to remove the need to have the username and password
           # and subdomain as pagerduty's updated api's mean we don't them anymore I think...
         end
+        self.media = @redis.hgetall("contact_media:#{@id}")
       end
 
       def remove_media(media)

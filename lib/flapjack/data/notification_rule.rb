@@ -95,6 +95,11 @@ module Flapjack
         end
       end
 
+      def is_specific?
+        (!@entities.nil? && !@entities.empty?) ||
+          (!@entity_tags.nil? && !@entity_tags.empty?)
+      end
+
     private
 
       def initialize(rule_data, opts = {})

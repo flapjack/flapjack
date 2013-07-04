@@ -1,5 +1,35 @@
 ## Flapjack Changelog
 
+# 0.7.16 - 2013-06-27
+- Bug: errors accessing API gh-231 (@ali-graham)
+
+# 0.7.15 - 2013-06-27
+- Feature: Show acknowledgement duration on web interface, queryable via jabber gh-159 (@ali-graham)
+- Feature: More info on check state in email gh-207 (@ali-graham)
+- Feature: Bulk API operations gh-123 (@ali-graham)
+- Bug: You can't remove an interval from a contact's media once it has one gh-153 (@ali-graham)
+- Bug: Fix jabber identify boot time gh-172 (@ali-graham)
+- Bug: Don't pluralise singular time periods in jabber messages gh-209 (@ali-graham)
+- Bug: PUT /contacts/ID/media/MEDIA returns previous value for address gh-152 (@ali-graham)
+- Bug: 'last update' shows large numbers of seconds gh-157 (@ali-graham)
+
+# 0.7.14 - 2013-06-19
+- Bug: Display of checks on web ui with a colon in their name is screwed gh-213 (@jessereynolds)
+- Bug: show last critical, warning, unknown notificaiton times in web ui gh-211 (@jessereynolds)
+
+# 0.7.13 - 2013-06-18
+- Bug: test notifications are blocked by notification rules gh-188 (@jessereynolds)
+- Bug: unscheduled maintenances does not prevent alerts for checks with colons in their name gh-208 (@jessereynolds)
+
+# 0.7.12 - 2013-06-12
+- Feature: auto-generate a general notification rule for contacts that don't have any gh-199 (@ali-graham)
+- Bug: no recovery for unknown for contact with notification rules gh-203 (@jessereynolds)
+- Bug: UNKNOWN -> OK (brief) -> [any problem state] alert is masked by notification interval gh-204 (@jessereynolds)
+
+# 0.7.11 - 2013-06-11
+- Bug: unknown events not fully treated as problems - no notification delay blocking (second swing) gh-154 (@jessereynolds)
+- Bug: correct jabber alias in example acknowledgement strings (second swing) gh-189 (@jessereynolds)
+
 # 0.7.10 - 2013-06-05
 - Bug: unknown events not fully treated as problems - no notification delay blocking gh-154 (@jessereynolds)
 

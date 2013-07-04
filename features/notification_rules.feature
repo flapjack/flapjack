@@ -29,6 +29,7 @@ Feature: Notification rules on a per contact basis
 
     And user 1 has the following notification rules:
       | entities | entity_tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
+      |          |             | email         | sms,email        | true              | true               |                   |
       | foo      |             | email         | sms,email        |                   |                    | 8-18 weekdays     |
       | bar      |             |               | sms,email        | true              |                    |                   |
       | baz      |             | email         | sms,email        |                   |                    |                   |
@@ -41,10 +42,10 @@ Feature: Notification rules on a per contact basis
 
     And user 3 has the following notification rules:
       | entities | entity_tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      | buf      |             | email         | email            |                   |                    |                   |
-      | buf      |             | sms           | sms              |                   |                    |                   |
       |          |             | email         | email            |                   |                    |                   |
       | baz      |             | sms           | sms              |                   |                    |                   |
+      | buf      |             | email         | email            |                   |                    |                   |
+      | buf      |             | sms           | sms              |                   |                    |                   |
 
   @time_restrictions @time
   Scenario: Alerts only during specified time restrictions
@@ -158,6 +159,22 @@ Feature: Notification rules on a per contact basis
     Then  2 email alerts should be queued for malak@example.com
 
   @intervals @time
+  Scenario: Alerts according to custom interval with unknown
+    Given the check is check 'ping' on entity 'bar'
+    And   the check is in an ok state
+    When  an unknown event is received
+    Then  no email alerts should be queued for malak@example.com
+    When  1 minute passes
+    And   an unknown event is received
+    Then  1 email alert should be queued for malak@example.com
+    When  10 minutes passes
+    And   an unknown event is received
+    Then  1 email alert should be queued for malak@example.com
+    When  5 minutes passes
+    And   an unknown event is received
+    Then  2 email alerts should be queued for malak@example.com
+
+  @intervals @time
   Scenario: Problem directly after Recovery should alert despite notification intervals
     Given the check is check 'ping' on entity 'baz'
     And   the check is in an ok state
@@ -173,6 +190,25 @@ Feature: Notification rules on a per contact basis
     And   a critical event is received
     And   1 minute passes
     And   a critical event is received
+    Then  3 email alerts should be queued for malak@example.com
+    And   3 sms alerts should be queued for +61400000001
+
+  @intervals @time
+  Scenario: Problem directly after Recovery should alert despite notification intervals with unknown
+    Given the check is check 'ping' on entity 'baz'
+    And   the check is in an ok state
+    When  an unknown event is received
+    And   1 minute passes
+    And   an unknown event is received
+    Then  1 email alert should be queued for malak@example.com
+    And   1 sms alert should be queued for +61400000001
+    When  an ok event is received
+    Then  2 email alert should be queued for malak@example.com
+    And   2 sms alerts should be queued for +61400000001
+    When  1 minute passes
+    And   an unknown event is received
+    And   1 minute passes
+    And   an unknown event is received
     Then  3 email alerts should be queued for malak@example.com
     And   3 sms alerts should be queued for +61400000001
 
@@ -223,6 +259,50 @@ Feature: Notification rules on a per contact basis
     And   a critical event is received
     Then  0 email alerts should be queued for vera@example.com
     Then  1 sms alert should be queued for +61400000003
+
+  @time
+  Scenario: Test notifications behave like a critical notification
+    Given the check is check 'ping' on entity 'foo'
+    And   the check is in an ok state
+    When  a test event is received
+    Then  1 email alert should be queued for malak@example.com
+    And   1 sms alert should be queued for +61400000001
+  @time
+  Scenario: Critical straight after test
+    Given the check is check 'ping' on entity 'baz'
+    And   the check is in an ok state
+    When  a test event is received
+    Then  1 email alert should be queued for malak@example.com
+    And   1 sms alert should be queued for +61400000001
+    When  10 seconds passes
+    And   a critical event is received
+    Then  1 email alert should be queued for malak@example.com
+    And   1 sms alert should be queued for +61400000001
+    When  40 seconds passes
+    And   a critical event is received
+    Then  2 email alert should be queued for malak@example.com
+    And   2 sms alert should be queued for +61400000001
+
+  Scenario: Unknown event during unscheduled maintenance
+    Given the check is check 'ping' on entity 'foo'
+    And   the check is in an ok state
+    When  an unknown event is received
+    And   1 minute passes
+    And   an unknown event is received
+    Then  1 email alert should be queued for malak@example.com
+    And   1 sms alert should be queued for +61400000001
+    When  6 minutes passes
+    And   an acknowledgement event is received
+    Then  2 email alerts should be queued for malak@example.com
+    And   2 sms alerts should be queued for +61400000001
+    When  6 minutes passes
+    And   an unknown event is received
+    Then  2 email alerts should be queued for malak@example.com
+    And   2 sms alerts should be queued for +61400000001
+    When  1 minute passes
+    And   an unknown event is received
+    Then  2 email alerts should be queued for malak@example.com
+    And   2 sms alerts should be queued for +61400000001
 
   @time
   Scenario: A blackhole rule on an entity should override another matching entity specific rule

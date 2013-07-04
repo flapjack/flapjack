@@ -66,7 +66,7 @@ module Flapjack
           @logger.debug("pagerduty notification event popped off the queue: " + event.inspect)
           unless 'shutdown'.eql?(type)
             event_id      = event['event_id']
-            entity, check = event_id.split(':')
+            entity, check = event_id.split(':', 2)
             state         = event['state']
             summary       = event['summary']
             address       = event['address']
@@ -182,12 +182,16 @@ module Flapjack
           end
 
           pg_acknowledged_by = acknowledged[:pg_acknowledged_by]
-          @logger.info "#{entity_check.entity_name}:#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
+          entity_name = entity_check.entity_name
+          @logger.info "#{entity_name}:#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
           who_text = ""
           if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
             who_text = " by #{pg_acknowledged_by['name']}"
           end
-          entity_check.create_acknowledgement('summary' => "Acknowledged on PagerDuty" + who_text)
+          Flapjack::Data::Event.create_acknowledgement(
+            entity_name, check,
+            :summary => "Acknowledged on PagerDuty" + who_text,
+            :redis => @redis)
         end
 
       end
