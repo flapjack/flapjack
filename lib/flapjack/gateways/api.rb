@@ -29,12 +29,16 @@ module Flapjack
 
       set :show_exceptions, false
 
-      rescue_exception = Proc.new { |env, exception|
-        @logger.error exception.message
-        @logger.error exception.backtrace.join("\n")
-        [503, {}, {:errors => [exception.message]}.to_json]
-      }
-      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+      #rescue_exception = Proc.new { |env, exception|
+      #  @logger.error exception.message
+      #  @logger.error exception.backtrace.join("\n")
+      #  [503, {}, {:errors => [exception.message]}.to_json]
+      #}
+      #use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+      #
+      # FIXME: not sure why the above isn't working, had to add a general
+      # error handler later in this file
+      use Rack::FiberPool, :size => 25
 
       use Rack::MethodOverride
       use Rack::JsonParamsParser
@@ -58,6 +62,18 @@ module Flapjack
 
       def logger
         self.class.instance_variable_get('@logger')
+      end
+
+      before do
+        input = env['rack.input'].read
+        input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
+        logger.info("#{request.request_method} #{request.path_info}#{request.query_string} #{input_short[0..80]}")
+        logger.debug("#{request.request_method} #{request.path_info}#{request.query_string} #{input}")
+        env['rack.input'].rewind
+      end
+
+      after do
+        logger.debug("Returning #{response.status} for #{request.request_method} #{request.path_info}#{request.query_string}")
       end
 
       register Flapjack::Gateways::API::EntityMethods
@@ -87,6 +103,11 @@ module Flapjack
       error Flapjack::Gateways::API::EntityCheckNotFound do
         e = env['sinatra.error']
         err(403, "could not find entity check '#{e.check}'")
+      end
+
+      error do
+        e = env['sinatra.error']
+        err(response.status, "#{e.class} - #{e.message}")
       end
 
       private

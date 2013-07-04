@@ -211,8 +211,10 @@ module Flapjack
 
           # create a scheduled maintenance period for a check on an entity
           app.post %r{/scheduled_maintenances#{ENTITY_CHECK_FRAGMENT}} do
-            entity_name = params[:captures][0]
-            check       = params[:captures][1]
+
+            captures    = params[:captures] || []
+            entity_name = captures[0]
+            check       = captures[1]
 
             entities, checks = entities_and_checks(entity_name, check)
 
