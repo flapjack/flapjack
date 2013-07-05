@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.7.18 - 2013-07-05
+- Feature: delete currently active scheduled maintenance via api should truncate from Time.now gh-242 (@ali-graham)
+
 # 0.7.17 - 2013-07-04
 - Feature: split API methods into two separate files, also specs gh-215 (@ali-graham)
 - Feature: unlock ruby version, build with Ruby 2 in travis gh-237 (@ali-graham)
