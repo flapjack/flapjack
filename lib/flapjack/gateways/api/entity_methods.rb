@@ -272,10 +272,8 @@ module Flapjack
               opts = {}
               proc {|entity_check| entity_check.end_scheduled_maintenance(start_time.to_i) }
             when 'unscheduled_maintenances'
-              end_time = validate_and_parsetime(params[:end_time])
-              opts = {}
-              opts[:end_time] = end_time.to_i if end_time
-              proc {|entity_check| entity_check.end_unscheduled_maintenance(opts) }
+              end_time = validate_and_parsetime(params[:end_time]) || Time.now
+              proc {|entity_check| entity_check.end_unscheduled_maintenance(end_time.to_i) }
             end
 
             bulk_api_check_action(entities, checks, act_proc)

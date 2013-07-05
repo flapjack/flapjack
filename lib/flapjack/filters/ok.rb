@@ -40,7 +40,7 @@ module Flapjack
           end
 
           # end any unscheduled downtime
-          entity_check.end_unscheduled_maintenance
+          entity_check.end_unscheduled_maintenance(Time.now.to_i)
         end
 
         @logger.debug("Filter: Ok: #{result ? "block" : "pass"}")
