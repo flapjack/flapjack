@@ -131,37 +131,39 @@ module Flapjack
         update_current_scheduled_maintenance(:revalidate => true)
       end
 
-      # change the end time of a scheduled maintenance (including when one is current)
-      # TODO allow to update summary as well
-      def update_scheduled_maintenance(start_time, patches = {})
+      # TODO allow summary to be changed as part of the termination
+      def end_scheduled_maintenance(start_time)
+        raise ArgumentError, 'start time must be supplied as a Unix timestamp' unless start_time && start_time.is_a?(Integer)
 
-        # check if there is such a scheduled maintenance period
-        old_duration = @redis.zscore("#{@key}:scheduled_maintenances", start_time)
-        raise ArgumentError, 'no such scheduled maintenance period can be found' unless old_duration
-        raise ArgumentError, 'no handled patches have been supplied' unless patches[:end_time]
+        # don't do anything if a scheduled maintenance period with that start time isn't stored
+        duration = @redis.zscore("#{@key}:scheduled_maintenances", start_time)
+        return false if duration.nil?
 
-        if patches[:end_time]
-          end_time = patches[:end_time]
-          raise ArgumentError, "end time must be after start time" unless end_time > start_time
-          old_end_time = start_time + old_duration
-          duration = end_time - start_time
-          @redis.zadd("#{@key}:scheduled_maintenances", duration, start_time)
+        current_time = Time.now.to_i
+
+        if start_time > current_time
+          # the scheduled maintenance period (if it exists) is in the future
+          @redis.del("#{@key}:#{start_time}:scheduled_maintenance:summary")
+          @redis.zrem("#{@key}:scheduled_maintenances", start_time)
+
+          @redis.zremrangebyscore("#{@key}:sorted_scheduled_maintenance_timestamps", start_time, start_time)
+
+          # scheduled maintenance periods (may) have changed, revalidate
+          update_current_scheduled_maintenance(:revalidate => true)
+
+          return true
+        elsif (start_time + duration) > current_time
+          # it spans the current time, so we'll stop it at that point
+          new_duration = current_time - start_time
+          @redis.zadd("#{@key}:scheduled_maintenances", new_duration, start_time)
+
+          # scheduled maintenance periods have changed, revalidate
+          update_current_scheduled_maintenance(:revalidate => true)
+
+          return true
         end
-
-        # scheduled maintenance periods have changed, revalidate
-        update_current_scheduled_maintenance(:revalidate => true)
-      end
-
-      # delete a scheduled maintenance
-      def delete_scheduled_maintenance(opts = {})
-        start_time = opts[:start_time]
-        @redis.del("#{@key}:#{start_time}:scheduled_maintenance:summary")
-        @redis.zrem("#{@key}:scheduled_maintenances", start_time)
-
-        @redis.zremrangebyscore("#{@key}:sorted_scheduled_maintenance_timestamps", start_time, start_time)
-
-        # scheduled maintenance periods have changed, revalidate
-        update_current_scheduled_maintenance(:revalidate => true)
+          
+        false
       end
 
       # if not in scheduled maintenance, looks in scheduled maintenance list for a check to see if
@@ -174,9 +176,9 @@ module Flapjack
         end
 
         # are we within a scheduled maintenance period?
-        t = Time.now.to_i
+        current_time = Time.now.to_i
         current_sched_ms = maintenances(nil, nil, :scheduled => true).select {|sm|
-          (sm[:start_time] <= t) && (t < sm[:end_time])
+          (sm[:start_time] <= current_time) && (current_time < sm[:end_time])
         }
         return if current_sched_ms.empty?
 

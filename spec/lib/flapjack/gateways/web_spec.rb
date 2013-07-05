@@ -112,7 +112,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
   it "shows the state of a check for an entity" do
     time = Time.now
-    Time.should_receive(:now).exactly(4).times.and_return(time)
+    Time.should_receive(:now).exactly(5).times.and_return(time)
 
     last_notifications = {:problem         => {:timestamp => time.to_i - ((3 * 60 * 60) + (5 * 60)), :summary => 'prob'},
                           :recovery        => {:timestamp => time.to_i - (3 * 60 * 60), :summary => nil},
@@ -202,27 +202,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     last_response.status.should == 302
   end
 
-  it "updates a scheduled maintenance period for an entity check" do
-    t = Time.new.to_i
-
-    start_time = t - (24 * 60 * 60)
-
-    Flapjack::Data::Entity.should_receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
-
-    Flapjack::Data::EntityCheck.should_receive(:for_entity).
-      with(entity, 'ping', :redis => redis).and_return(entity_check)
-
-    Chronic.should_receive(:parse).with('now').and_return(t)
-
-    entity_check.should_receive(:update_scheduled_maintenance).
-      with(start_time, {:end_time => t})
-
-    patch "/scheduled_maintenances/#{entity_name_esc}/ping",
-      {"start_time" => start_time, "end_time" => 'now'}
-    last_response.status.should == 302
-  end
-
   it "deletes a scheduled maintenance period for an entity check" do
     t = Time.now.to_i
 
@@ -234,8 +213,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, 'ping', :redis => redis).and_return(entity_check)
 
-    entity_check.should_receive(:delete_scheduled_maintenance).
-      with(:start_time => start_time)
+    entity_check.should_receive(:end_scheduled_maintenance).with(start_time)
 
     delete "/scheduled_maintenances/#{entity_name_esc}/ping?start_time=#{start_time}"
     last_response.status.should == 302

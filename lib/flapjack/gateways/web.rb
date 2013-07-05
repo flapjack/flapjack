@@ -247,30 +247,12 @@ module Flapjack
         redirect back
       end
 
-      # modify scheduled maintenance
-      patch '/scheduled_maintenances/:entity/:check' do
-        entity_check = get_entity_check(params[:entity], params[:check])
-        return 404 if entity_check.nil?
-
-        end_time   = Chronic.parse(params[:end_time]).to_i
-        start_time = params[:start_time].to_i
-        raise ArgumentError, "start time parsed to zero" unless start_time > 0
-
-        patches = {}
-        patches[:end_time] = end_time if end_time && (end_time > start_time)
-
-        raise ArgumentError.new("no valid data received to patch with") if patches.empty?
-
-        entity_check.update_scheduled_maintenance(start_time, patches)
-        redirect back
-      end
-
       # delete a scheduled maintenance
       delete '/scheduled_maintenances/:entity/:check' do
         entity_check = get_entity_check(params[:entity], params[:check])
         return 404 if entity_check.nil?
 
-        entity_check.delete_scheduled_maintenance(:start_time => params[:start_time].to_i)
+        entity_check.end_scheduled_maintenance(params[:start_time].to_i)
         redirect back
       end
 
