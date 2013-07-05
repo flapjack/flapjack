@@ -3,7 +3,7 @@
 - head = render_haml('_head.haml', self)
 - foot = render_haml('_foot.haml', self)
 - check_path_escaped = URI.escape(@entity, ' #&;/=?') << '/' << URI.escape(@check, ' #&;/=?')
-- current_time = Time.now.to_i
+- current_time = Time.now
 %html
   %head
     %title Flapjack - Check: #{@entity}:#{@check}
@@ -125,8 +125,8 @@
                 %td= ChronicDuration.output(duration)
                 %td= summary
                 %td
-                  - if end_time > current_time
-                    - label = (start_time > current_time) ? 'Delete' : 'End Now'
+                  - if end_time > current_time.to_i
+                    - label = (start_time > current_time.to_i) ? 'Delete' : 'End Now'
                     %form{ :action => "/scheduled_maintenances/#{check_path_escaped}", :method => "post"}
                       %input{:type => 'hidden', :name => '_method', :value => 'delete'}
                       %input{:type => 'hidden', :name => 'start_time', :value => start_time}
