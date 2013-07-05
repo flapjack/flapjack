@@ -21,8 +21,8 @@ module Flapjack
               if ec.nil?
                 @logger.error "Filter: Acknowledgement: unknown entity for event '#{event.id}'"
               else
-                ec.create_unscheduled_maintenance(:start_time => timestamp,
-                  :duration => (event.duration || (4 * 60 * 60)),
+                ec.create_unscheduled_maintenance(timestamp,
+                  (event.duration || (4 * 60 * 60)),
                   :summary  => event.summary)
                 message = "unscheduled maintenance created for #{event.id}"
               end

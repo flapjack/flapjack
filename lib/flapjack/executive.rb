@@ -207,8 +207,8 @@ module Flapjack
 
           if @ncsm_duration >= 0
             @logger.info("Setting scheduled maintenance for #{time_period_in_words(@ncsm_duration)}")
-            entity_check.create_scheduled_maintenance(:start_time => timestamp,
-              :duration => @ncsm_duration, :summary => 'Automatically created for new check')
+            entity_check.create_scheduled_maintenance(timestamp,
+              @ncsm_duration, :summary => 'Automatically created for new check')
           end
         else
           event.previous_state_duration = timestamp - entity_check.last_change.to_i

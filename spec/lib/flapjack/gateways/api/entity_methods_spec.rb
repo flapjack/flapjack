@@ -376,7 +376,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "deletes an unscheduled maintenance period for an entity check" do
       end_time = Time.now + (60 * 60) # an hour from now
-      entity_check.should_receive(:end_unscheduled_maintenance).with(:end_time => end_time.to_i)
+      entity_check.should_receive(:end_unscheduled_maintenance).with(end_time.to_i)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
         with(entity, check, :redis => redis).and_return(entity_check)
