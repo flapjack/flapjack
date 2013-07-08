@@ -1,9 +1,9 @@
 require 'spec_helper'
-require 'flapjack/executive'
+require 'flapjack/processor'
 
-describe Flapjack::Executive, :logger => true do
+describe Flapjack::Processor, :logger => true do
 
-  # NB: this is only testing the public API of the Executive class, which is pretty limited.
+  # NB: this is only testing the public API of the Processor class, which is pretty limited.
   # (initialize, main, stop). Most test coverage for this class comes from the cucumber features.
 
   # TODO this does too much -- split it up
@@ -40,7 +40,7 @@ describe Flapjack::Executive, :logger => true do
     Flapjack::Data::Event.should_receive(:pending_count).with(:redis => redis).and_return(0)
 
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    executive = Flapjack::Executive.new(:config => {}, :logger => @logger)
+    executive = Flapjack::Processor.new(:config => {}, :logger => @logger)
 
     shutdown_evt = mock(Flapjack::Data::Event)
     shutdown_evt.should_receive(:inspect)

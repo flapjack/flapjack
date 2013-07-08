@@ -16,7 +16,8 @@ module Flapjack
       def self.for_contact(contact, opts = {})
         self.new(:contact => contact,
                  :notification_contents => opts[:notification_contents],
-                 :medium => opts[:medium], :address => opts[:address],
+                 :medium => opts[:medium],
+                 :address => opts[:address],
                  :duration => opts[:duration])
       end
 

@@ -5,11 +5,9 @@ require 'em-synchrony'
 
 require 'flapjack/configuration'
 require 'flapjack/patches'
-require 'flapjack/executive'
 require 'flapjack/redis_pool'
 
 require 'flapjack/pikelet'
-require 'flapjack/executive'
 
 module Flapjack
 

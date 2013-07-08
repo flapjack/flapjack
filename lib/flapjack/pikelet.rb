@@ -17,7 +17,8 @@ require 'em-resque'
 require 'em-resque/worker'
 require 'thin'
 
-require 'flapjack/executive'
+require 'flapjack/notifier'
+require 'flapjack/processor'
 require 'flapjack/gateways/api'
 require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
@@ -94,7 +95,8 @@ module Flapjack
 
     class Generic < Flapjack::Pikelet::Base
 
-     PIKELET_TYPES = {'executive'  => Flapjack::Executive,
+     PIKELET_TYPES = {'notifier'   => Flapjack::Notifier,
+                      'processor'  => Flapjack::Processor,
                       'jabber'     => Flapjack::Gateways::Jabber,
                       'pagerduty'  => Flapjack::Gateways::Pagerduty,
                       'oobetet'    => Flapjack::Gateways::Oobetet}

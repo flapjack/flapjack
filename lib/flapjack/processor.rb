@@ -1,11 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'log4r'
-require 'log4r/outputter/fileoutputter'
-require 'tzinfo'
-require 'active_support/time'
-
-require 'chronic'
 require 'chronic_duration'
 
 require 'flapjack/filters/acknowledgement'
@@ -14,19 +8,15 @@ require 'flapjack/filters/scheduled_maintenance'
 require 'flapjack/filters/unscheduled_maintenance'
 require 'flapjack/filters/detect_mass_client_failures'
 require 'flapjack/filters/delays'
-require 'flapjack/data/contact'
+
 require 'flapjack/data/entity_check'
-require 'flapjack/data/notification'
 require 'flapjack/data/event'
 require 'flapjack/redis_pool'
 require 'flapjack/utility'
 
-require 'flapjack/gateways/email'
-require 'flapjack/gateways/sms_messagenet'
-
 module Flapjack
 
-  class Executive
+  class Processor
 
     include Flapjack::Utility
 
@@ -36,29 +26,8 @@ module Flapjack
       @logger = opts[:logger]
       @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
 
-      @queues = {:email     => @config['email_queue'],
-                 :sms       => @config['sms_queue'],
-                 :jabber    => @config['jabber_queue'],
-                 :pagerduty => @config['pagerduty_queue']}
-
-      notifylog  = @config['notification_log_file'] || 'log/notify.log'
-      if not File.directory?(File.dirname(notifylog))
-        puts "Parent directory for log file #{notifylog} doesn't exist"
-        puts "Exiting!"
-        exit
-      end
-      @notifylog = Log4r::Logger.new("executive")
-      @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => notifylog))
-
-      tz = nil
-      tz_string = @config['default_contact_timezone'] || ENV['TZ'] || 'UTC'
-      begin
-        tz = ActiveSupport::TimeZone.new(tz_string)
-      rescue ArgumentError
-        logger.error("Invalid timezone string specified in default_contact_timezone or TZ (#{tz_string})")
-        exit 1
-      end
-      @default_contact_timezone = tz
+      # TODO load executive config fields first, for backwards compatability
+      # (probably do this in coordinator)
 
       @archive_events        = @config['archive_events'] || false
       @events_archive_maxage = @config['events_archive_maxage']
@@ -66,8 +35,6 @@ module Flapjack
       ncsm_duration_conf = @config['new_check_scheduled_maintenance_duration'] || '100 years'
       @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf)
 
-      # FIXME: Put loading filters into separate method
-      # FIXME: should we make the filters more configurable by the end user?
       options = { :logger => opts[:logger], :redis => @redis }
       @filters = []
       @filters << Flapjack::Filters::Ok.new(options)
@@ -77,10 +44,10 @@ module Flapjack
       @filters << Flapjack::Filters::Delays.new(options)
       @filters << Flapjack::Filters::Acknowledgement.new(options)
 
-      @boot_time    = opts[:boot_time]
-      @fqdn         = `/bin/hostname -f`.chomp
-      @pid          = Process.pid
-      @instance_id  = "#{@fqdn}:#{@pid}"
+      boot_time     = opts[:boot_time]
+      fqdn          = `/bin/hostname -f`.chomp
+      pid           = Process.pid
+      @instance_id  = "#{fqdn}:#{pid}"
 
       # FIXME: all of the below keys assume there is only ever one executive running;
       # we could generate a fuid and save it to disk, and prepend it from that
@@ -94,8 +61,8 @@ module Flapjack
         @redis.hset('event_counters', 'action', 0)
       end
 
-      #@redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
-      @redis.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
+      #@redis.zadd('executive_instances', boot_time.to_i, @instance_id)
+      @redis.hset("executive_instance:#{@instance_id}", 'boot_time', boot_time.to_i)
       @redis.hset("event_counters:#{@instance_id}", 'all', 0)
       @redis.hset("event_counters:#{@instance_id}", 'ok', 0)
       @redis.hset("event_counters:#{@instance_id}", 'failure', 0)
@@ -167,8 +134,8 @@ module Flapjack
         return
       end
 
-      @logger.info("Generating notifications for event #{event_str}")
-      generate_notification_messages(event, entity_check, timestamp)
+      @logger.info("Generating notification for event #{event_str}")
+      generate_notification(event, entity_check, timestamp)
     end
 
     def update_keys(event, entity_check, timestamp)
@@ -244,28 +211,8 @@ module Flapjack
       result
     end
 
-    # takes an event for which a notification needs to be generated, works out the type of
-    # notification, updates the notification history in redis, generates the notifications
-    def generate_notification_messages(event, entity_check, timestamp)
-      notification_type = 'unknown'
-      case event.type
-      when 'service'
-        case event.state
-        when 'ok'
-          notification_type = 'recovery'
-        when 'warning', 'critical', 'unknown'
-          notification_type = 'problem'
-        end
-      when 'action'
-        case event.state
-        when 'acknowledgement'
-          notification_type = 'acknowledgement'
-        when 'test_notifications'
-          notification_type = 'test'
-        end
-      end
-
-      max_notified_severity = entity_check.max_notified_severity_of_current_failure
+    def generate_notification(event, entity_check, timestamp)
+      notification_type = Flapjack::Data::Notification.type_for_event(event)
 
       @redis.set("#{event.id}:last_#{notification_type}_notification", timestamp)
       @redis.set("#{event.id}:last_#{event.state}_notification", timestamp) if event.failure?
@@ -273,75 +220,12 @@ module Flapjack
       @redis.rpush("#{event.id}:#{event.state}_notifications", timestamp) if event.failure?
       @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}.")
 
-      contacts = entity_check.contacts
+      max_notified_severity = entity_check.max_notified_severity_of_current_failure
+      severity = Flapjack::Data::Notification.severity_for_event(event, max_notified_severity)
+      last_state = entity_check.historical_state_before(timestamp)
 
-      if contacts.empty?
-        @logger.debug("No contacts for #{event.id}")
-        @notifylog.info("#{Time.at(timestamp).to_s} | #{event.id} | #{notification_type} | NO CONTACTS")
-        return
-      end
-
-      notification = Flapjack::Data::Notification.for_event(
-        event, :type => notification_type,
-               :max_notified_severity => max_notified_severity,
-               :contacts => contacts,
-               :default_timezone => @default_contact_timezone,
-               :last_state => entity_check.historical_state_before(timestamp),
-               :logger => @logger)
-
-      notification.messages.each do |message|
-        media_type = message.medium
-        contents   = message.contents
-        address    = message.address
-        event_id   = event.id
-
-        @notifylog.info("#{Time.at(timestamp).to_s} | #{event_id} | " +
-          "#{notification_type} | #{message.contact.id} | #{media_type} | #{address}")
-
-        unless @queues[media_type.to_sym]
-          @logger.error("no queue for media type: #{media_type}")
-          return
-        end
-
-        @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{address}")
-
-        if event.ok?
-          message.contact.update_sent_alert_keys(
-            :media => media_type,
-            :check => event_id,
-            :state => 'warning',
-            :delete => true)
-          message.contact.update_sent_alert_keys(
-            :media => media_type,
-            :check => event_id,
-            :state => 'critical',
-            :delete => true)
-          message.contact.update_sent_alert_keys(
-            :media => media_type,
-            :check => event_id,
-            :state => 'unknown',
-            :delete => true)
-        else
-          message.contact.update_sent_alert_keys(
-            :media => media_type,
-            :check => event_id,
-            :state => event.state)
-        end
-
-        # TODO consider changing Resque jobs to use raw blpop like the others
-        case media_type.to_sym
-        when :sms
-          Resque.enqueue_to(@queues[:sms], Flapjack::Gateways::SmsMessagenet, contents)
-        when :email
-          Resque.enqueue_to(@queues[:email], Flapjack::Gateways::Email, contents)
-        when :jabber
-          # TODO move next line up into other notif value setting above?
-          contents['event_count'] = @event_count if @event_count
-          @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(contents))
-        when :pagerduty
-          @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(contents))
-        end
-      end
+      Flapjack::Data::Notification.add(@notifications_queue, event,
+        :type => notification_type, :severity => severity, :last_state => last_state)
     end
 
   end

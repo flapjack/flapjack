@@ -8,6 +8,26 @@ development:
     host: 127.0.0.1
     port: 6379
     db: 13
+  processor:
+    enabled: no
+    queue: events
+    notifier_queue: notifications
+    archive_events: true
+    events_archive_maxage: 10800
+    new_check_scheduled_maintenance_duration: 1 month
+    logger:
+      level: INFO
+  notifier:
+    enabled: no
+    queue: notifications
+    email_queue: email_notifications
+    sms_queue: sms_notifications
+    jabber_queue: jabber_notifications
+    pagerduty_queue: pagerduty_notifications
+    notification_log_file: log/notification.log
+    default_contact_timezone: Australia/Broken_Hill
+    logger:
+      level: INFO
   executive:
     enabled: yes
     email_queue: email_notifications
