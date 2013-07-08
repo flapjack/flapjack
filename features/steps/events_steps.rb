@@ -4,7 +4,7 @@ def drain_events
   loop do
     event = Flapjack::Data::Event.next(:block => false, :redis => @redis)
     break unless event
-    @app.send(:process_event, event)
+    @processor.send(:process_event, event)
   end
 end
 
@@ -255,16 +255,16 @@ end
 Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
   check  ||= @check
   entity ||= @entity
-  message = @logger.messages.find_all {|m| m =~ /enerating notifications for event #{entity}:#{check}/ }.last
-  found = message ? message.match(/Not generating notifications/) : false
+  message = @logger.messages.find_all {|m| m =~ /enerating notification for event #{entity}:#{check}/ }.last
+  found = message ? message.match(/Not generating notification/) : false
   found.should be_true
 end
 
 Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
   check  ||= @check
   entity ||= @entity
-  message = @logger.messages.find_all {|m| m =~ /enerating notifications for event #{entity}:#{check}/ }.last
-  found = message ? message.match(/Generating notifications/) : false
+  message = @logger.messages.find_all {|m| m =~ /enerating notification for event #{entity}:#{check}/ }.last
+  found = message ? message.match(/Generating notification/) : false
   found.should be_true
 end
 
@@ -357,13 +357,6 @@ end
 Then /^all alert dropping keys for user (\d+) should have expired$/ do |contact_id|
   @redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
 end
-
-# When /^the (\w*) alert block for user (\d*) for (?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') for state (.*) expires$/ do |media, contact, check, entity, state|
-#   check  = check  ? check  : @check
-#   entity = entity ? entity : @entity
-#   num_deleted = @redis.del("drop_alerts_for_contact:#{contact}:#{media}:#{entity}:#{check}:#{state}")
-#   puts "Warning: no keys expired" unless num_deleted > 0
-# end
 
 Then /^(.*) email alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
   check  = check  ? check  : @check

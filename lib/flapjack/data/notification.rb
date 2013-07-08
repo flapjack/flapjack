@@ -42,6 +42,8 @@ module Flapjack
       end
 
       def self.add(queue, event, opts = {})
+        raise "Redis connection not set" unless redis = opts[:redis]
+
         last_state = opts[:last_state] || {}
 
         notif = {'event_id'     => event.id,

@@ -59,14 +59,26 @@ Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)' and
                              :redis => @redis )
 end
 
+# TODO create the notification object in redis, flag the relevant operation as
+# only needing that part running, split up the before block that covers these
 When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity|
   event = Flapjack::Data::Event.new('type'    => 'service',
                                     'state'   => 'critical',
                                     'summary' => '100% packet loss',
                                     'entity'  => entity,
                                     'check'   => 'ping')
+
+  notification_type = Flapjack::Data::Notification.type_for_event(event)
+
   entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, 'ping', :redis => @redis)
-  @app.send(:generate_notification_messages, event, entity_check, Time.now.to_i)
+  max_notified_severity = entity_check.max_notified_severity_of_current_failure
+
+  severity = Flapjack::Data::Notification.severity_for_event(event, max_notified_severity)
+  last_state = entity_check.historical_state_before(event.time)
+
+  Flapjack::Data::Notification.add('notifications', event,
+    :type => notification_type, :severity => severity, :last_state => last_state,
+    :redis => @redis)
 end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|

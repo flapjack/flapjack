@@ -127,10 +127,10 @@ module Flapjack
       should_notify = update_keys(event, entity_check, timestamp)
 
       if !should_notify
-        @logger.debug("Not generating notifications for event #{event.id} because filtering was skipped")
+        @logger.debug("Not generating notification for event #{event.id} because filtering was skipped")
         return
       elsif blocker = @filters.find {|filter| filter.block?(event) }
-        @logger.debug("Not generating notifications for event #{event.id} because this filter blocked: #{blocker.name}")
+        @logger.debug("Not generating notification for event #{event.id} because this filter blocked: #{blocker.name}")
         return
       end
 
@@ -225,7 +225,8 @@ module Flapjack
       last_state = entity_check.historical_state_before(timestamp)
 
       Flapjack::Data::Notification.add(@notifications_queue, event,
-        :type => notification_type, :severity => severity, :last_state => last_state)
+        :type => notification_type, :severity => severity, :last_state => last_state,
+        :redis => @redis)
     end
 
   end

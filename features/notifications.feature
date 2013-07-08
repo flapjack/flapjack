@@ -1,4 +1,4 @@
-@notifications
+@notifications @processor @notifier
 Feature: notifications
   So people can be notified when things break and recover
   flapjack-notifier must send notifications correctly
