@@ -29,6 +29,10 @@ module Flapjack
       # TODO load executive config fields first, for backwards compatability
       # (probably do this in coordinator)
 
+      @queue = @config['queue'] || 'events'
+
+      @notifier_queue = @config['notifier_queue'] || 'notifications'
+
       @archive_events        = @config['archive_events'] || false
       @events_archive_maxage = @config['events_archive_maxage']
 
@@ -89,7 +93,8 @@ module Flapjack
 
       until @should_quit
         @logger.debug("Waiting for event...")
-        event = Flapjack::Data::Event.next(:redis => @redis,
+        event = Flapjack::Data::Event.next(@queue,
+                                           :redis => @redis,
                                            :archive_events => @archive_events,
                                            :events_archive_maxage => @events_archive_maxage,
                                            :logger => @logger)
@@ -144,6 +149,7 @@ module Flapjack
 
       result = true
 
+      # FIXME @event_count will need to be passed through from processor to notifier
       @event_count = @redis.hincrby('event_counters', 'all', 1)
       @redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
 
@@ -213,6 +219,7 @@ module Flapjack
 
     def generate_notification(event, entity_check, timestamp)
       notification_type = Flapjack::Data::Notification.type_for_event(event)
+      max_notified_severity = entity_check.max_notified_severity_of_current_failure
 
       @redis.set("#{event.id}:last_#{notification_type}_notification", timestamp)
       @redis.set("#{event.id}:last_#{event.state}_notification", timestamp) if event.failure?
@@ -220,11 +227,10 @@ module Flapjack
       @redis.rpush("#{event.id}:#{event.state}_notifications", timestamp) if event.failure?
       @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}.")
 
-      max_notified_severity = entity_check.max_notified_severity_of_current_failure
       severity = Flapjack::Data::Notification.severity_for_event(event, max_notified_severity)
       last_state = entity_check.historical_state_before(timestamp)
 
-      Flapjack::Data::Notification.add(@notifications_queue, event,
+      Flapjack::Data::Notification.add(@notifier_queue, event,
         :type => notification_type, :severity => severity, :last_state => last_state,
         :redis => @redis)
     end

@@ -26,14 +26,14 @@ describe Flapjack::Data::Event do
       mock_redis.should_receive(:brpoplpush).with('events', /^events_archive:/, 0).and_return(event_data.to_json)
       mock_redis.should_receive(:expire)
 
-      result = Flapjack::Data::Event.next(:block => true, :archive_events => true, :redis => mock_redis)
+      result = Flapjack::Data::Event.next('events', :block => true, :archive_events => true, :redis => mock_redis)
       result.should be_an_instance_of(Flapjack::Data::Event)
     end
 
     it "returns the next event (blocking, not archiving)" do
       mock_redis.should_receive(:brpop).with('events', 0).and_return(['events', event_data.to_json])
 
-      result = Flapjack::Data::Event.next(:block => true, :archive_events => false, :redis => mock_redis)
+      result = Flapjack::Data::Event.next('events', :block => true, :archive_events => false, :redis => mock_redis)
       result.should be_an_instance_of(Flapjack::Data::Event)
     end
 
@@ -41,14 +41,14 @@ describe Flapjack::Data::Event do
       mock_redis.should_receive(:rpoplpush).with('events', /^events_archive:/).and_return(event_data.to_json)
       mock_redis.should_receive(:expire)
 
-      result = Flapjack::Data::Event.next(:block => false, :archive_events => true, :redis => mock_redis)
+      result = Flapjack::Data::Event.next('events', :block => false, :archive_events => true, :redis => mock_redis)
       result.should be_an_instance_of(Flapjack::Data::Event)
     end
 
     it "returns the next event (non-blocking, not archiving)" do
       mock_redis.should_receive(:rpop).with('events').and_return(event_data.to_json)
 
-      result = Flapjack::Data::Event.next(:block => false, :archive_events => false, :redis => mock_redis)
+      result = Flapjack::Data::Event.next('events', :block => false, :archive_events => false, :redis => mock_redis)
       result.should be_an_instance_of(Flapjack::Data::Event)
     end
 

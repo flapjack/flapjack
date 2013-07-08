@@ -8,7 +8,7 @@ module Flapjack
   module Data
     class Notification
 
-      attr_reader :event_id
+      attr_reader :type, :event_id, :event_state
 
       def self.type_for_event(event)
         case event.type
@@ -31,7 +31,7 @@ module Flapjack
         end
       end
 
-      def self.severity_for_event(event, max_notified_severity )
+      def self.severity_for_event(event, max_notified_severity)
         if ([event.state, max_notified_severity] & ['critical', 'unknown', 'test_notifications']).any?
           'critical'
         elsif [event.state, max_notified_severity].include?('warning')
@@ -146,7 +146,7 @@ module Flapjack
             }.flatten.uniq
 
             logger.debug "notification: collected media_for_severity(#{@severity}): #{rule_media}"
-            rule_media = rule_media.flatten.uniq.reject {|medium|
+            rule_media = rule_media.reject {|medium|
               contact.drop_notifications?(:media => medium,
                                           :check => @event_id,
                                           :state => @event_state)
@@ -158,6 +158,8 @@ module Flapjack
           end
 
           logger.debug "notification: media_to_use: #{media_to_use}"
+
+          # puts logger.messages.join("\n")
 
           media_to_use.each_pair.inject([]) { |ret, (k, v)|
             m = Flapjack::Data::Message.for_contact(contact,

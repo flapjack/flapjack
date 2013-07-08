@@ -149,12 +149,12 @@ Before('@notifier') do
     :config => {'email_queue' => 'email_notifications',
                 'sms_queue' => 'sms_notifications',
                 'default_contact_timezone' => 'America/New_York'})
-  @redis = @notifier.instance_variable_get('@redis')
+  @notifier_redis = @notifier.instance_variable_get('@redis')
 end
 
 After('@notifier') do
-  @redis.flushdb
-  @redis.quit
+  @notifier_redis.flushdb
+  @notifier_redis.quit
 end
 
 Before('@resque') do

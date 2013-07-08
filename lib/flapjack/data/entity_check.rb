@@ -162,7 +162,7 @@ module Flapjack
 
           return true
         end
-          
+
         false
       end
 

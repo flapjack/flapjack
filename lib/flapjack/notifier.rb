@@ -65,7 +65,7 @@ module Flapjack
         notification = Flapjack::Data::Notification.next(@notifications_queue,
                                                          :redis => @redis,
                                                          :logger => @logger)
-        generate_messages(notification) unless notification.nil? || (notification.type == 'shutdown')
+        process_notification(notification) unless notification.nil? || (notification.type == 'shutdown')
       end
 
       @logger.info("Exiting main loop.")
@@ -83,7 +83,7 @@ module Flapjack
     # takes an event for which messages should be generated, works out the type of
     # notification, updates the notification history in redis, generates the
     # notifications
-    def generate_messages(notification)
+    def process_notification(notification)
       timestamp = Time.now
       event_id = notification.event_id
       entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
@@ -95,7 +95,8 @@ module Flapjack
         return
       end
 
-      messages = notification.messages(contacts, :default_timezone => @default_contact_timezone)
+      messages = notification.messages(contacts, :default_timezone => @default_contact_timezone,
+        :logger => @logger)
 
       messages.each do |message|
         media_type = message.medium
@@ -114,7 +115,8 @@ module Flapjack
 
         contact = message.contact
 
-        if event.ok?
+        # was event.ok?
+        if (notification.event_state == 'ok') || (notification.event_state == 'up')
           contact.update_sent_alert_keys(
             :media => media_type,
             :check => event_id,
@@ -134,7 +136,7 @@ module Flapjack
           contact.update_sent_alert_keys(
             :media => media_type,
             :check => event_id,
-            :state => event.state)
+            :state => notification.event_state)
         end
 
         # TODO consider changing Resque jobs to use raw blpop like the others
@@ -145,6 +147,7 @@ module Flapjack
           Resque.enqueue_to(@queues[:email], Flapjack::Gateways::Email, contents)
         when :jabber
           # TODO move next line up into other notif value setting above?
+          # FIXME @event_count will need to be passed through from processor to notifier
           contents['event_count'] = @event_count if @event_count
           @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(contents))
         when :pagerduty

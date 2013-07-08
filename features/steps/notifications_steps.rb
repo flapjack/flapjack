@@ -79,6 +79,7 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity|
   Flapjack::Data::Notification.add('notifications', event,
     :type => notification_type, :severity => severity, :last_state => last_state,
     :redis => @redis)
+  drain_notifications
 end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|

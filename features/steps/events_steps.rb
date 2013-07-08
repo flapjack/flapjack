@@ -2,9 +2,19 @@
 
 def drain_events
   loop do
-    event = Flapjack::Data::Event.next(:block => false, :redis => @redis)
+    event = Flapjack::Data::Event.next('events', :block => false, :redis => @redis)
     break unless event
     @processor.send(:process_event, event)
+  end
+  drain_notifications
+end
+
+def drain_notifications
+  return unless @notifier_redis
+  loop do
+    notification = Flapjack::Data::Notification.next('notifications', :block => false, :redis => @notifier_redis)
+    break unless notification
+    @notifier.send(:process_notification, notification)
   end
 end
 
@@ -280,14 +290,12 @@ Then /^show me the (\w+ )*log$/ do |adjective|
 end
 
 # added for notification rules:
-
 Given /^the following entities exist:$/ do |entities|
   entities.hashes.each do |entity|
     contacts = entity['contacts'].split(',')
     contacts.map! do |contact|
       contact.strip
     end
-    #puts "adding entity #{entity['name']} (#{entity['id']}) with contacts: [#{contacts.join(', ')}]"
     Flapjack::Data::Entity.add({'id'       => entity['id'],
                                 'name'     => entity['name'],
                                 'contacts' => contacts},
