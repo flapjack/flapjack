@@ -216,27 +216,38 @@ module Flapjack
             get_details = proc {|entity_check|
               sched   = entity_check.current_maintenance(:scheduled => true)
               unsched = entity_check.current_maintenance(:unscheduled => true)
+              out = ''
 
-              if (sched || unsched) && check_name.nil?
+              if check_name.nil?
                 check = entity_check.check
-                msg += "---\n#{entity_name}:#{check}\n"
+                out += "---\n#{entity_name}:#{check}\n"
               end
 
-              unless sched.nil?
-                start  = Time.at(sched[:start_time])
-                finish = Time.at(sched[:start_time] + sched[:duration])
-                remain = time_period_in_words( (finish - current_time).ceil )
-                # TODO a simpler time format?
-                msg += "Currently in scheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
+              if sched.nil? && unsched.nil?
+                out += "Not in scheduled or unscheduled maintenance.\n"
+              else
+                if sched.nil?
+                  out += "Not in scheduled maintenance.\n"
+                else
+                  start  = Time.at(sched[:start_time])
+                  finish = Time.at(sched[:start_time] + sched[:duration])
+                  remain = time_period_in_words( (finish - current_time).ceil )
+                  # TODO a simpler time format?
+                  out += "In scheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
+                end
+
+                if unsched.nil?
+                  out += "Not in unscheduled maintenance.\n"
+                else
+                  start  = Time.at(unsched[:start_time])
+                  finish = Time.at(unsched[:start_time] + unsched[:duration])
+                  remain = time_period_in_words( (finish - current_time).ceil )
+                  # TODO a simpler time format?
+                  out += "In unscheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
+                end
               end
 
-              unless unsched.nil?
-                start  = Time.at(unsched[:start_time])
-                finish = Time.at(unsched[:start_time] + unsched[:duration])
-                remain = time_period_in_words( (finish - current_time).ceil )
-                # TODO a simpler time format?
-                msg += "Currently in unscheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
-              end
+              out
             }
 
             check_names = check_name.nil? ? entity.check_list.sort : [check_name]
@@ -247,7 +258,7 @@ module Flapjack
               check_names.each do |check|
                 entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check, :redis => @redis)
                 next if entity_check.nil?
-                get_details.call(entity_check)
+                msg += get_details.call(entity_check)
               end
             end
           else
