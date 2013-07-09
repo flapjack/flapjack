@@ -7,30 +7,14 @@ describe Flapjack::Coordinator do
   let(:fiber)  { mock(Fiber) }
   let(:config) { mock(Flapjack::Configuration) }
 
-  let(:logger)     { mock(Logger) }
+  let(:logger)     { mock(Flapjack::Logger) }
   let(:stdout_out) { mock('stdout_out') }
   let(:syslog_out) { mock('syslog_out') }
 
   let!(:time)   { Time.now }
 
-  def setup_logger
-    formatter = mock('Formatter')
-    Log4r::PatternFormatter.should_receive(:new).with(
-      :pattern => "%d [%l] :: flapjack-coordinator :: %m",
-      :date_pattern => "%Y-%m-%dT%H:%M:%S%z").and_return(formatter)
-
-    stdout_out.should_receive(:formatter=).with(formatter)
-    syslog_out.should_receive(:formatter=).with(formatter)
-
-    Log4r::StdoutOutputter.should_receive(:new).and_return(stdout_out)
-    Log4r::SyslogOutputter.should_receive(:new).and_return(syslog_out)
-    logger.should_receive(:add).with(stdout_out)
-    logger.should_receive(:add).with(syslog_out)
-    Log4r::Logger.should_receive(:new).and_return(logger)
-  end
-
   it "starts and stops a pikelet" do
-    setup_logger
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
     cfg = {'executive' => {'enabled' => 'yes'}}
     EM.should_receive(:synchrony).and_yield
@@ -60,7 +44,7 @@ describe Flapjack::Coordinator do
   end
 
   it "handles an exception raised by a pikelet and shuts down" do
-    setup_logger
+    Flapjack::Logger.should_receive(:new).and_return(logger)
     logger.should_receive(:fatal)
 
     cfg = {'executive' => {'enabled' => 'yes'}}
@@ -91,7 +75,7 @@ describe Flapjack::Coordinator do
   end
 
   it "traps system signals and shuts down" do
-    setup_logger
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
     RbConfig::CONFIG.should_receive(:[]).with('host_os').and_return('darwin12.0.0')
 
@@ -109,7 +93,7 @@ describe Flapjack::Coordinator do
   end
 
   it "only traps two system signals on Windows" do
-    setup_logger
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
     RbConfig::CONFIG.should_receive(:[]).with('host_os').and_return('mswin')
 
@@ -126,7 +110,7 @@ describe Flapjack::Coordinator do
   end
 
   it "stops one pikelet and starts another on reload" do
-    setup_logger
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
     old_cfg = {'executive' => {'enabled' => 'yes'}}
     new_cfg = {'gateways' => {'jabber' => {'enabled' => 'yes'}}}
@@ -166,7 +150,7 @@ describe Flapjack::Coordinator do
   end
 
   it "reloads a pikelet config without restarting it" do
-    setup_logger
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
     old_cfg = {'executive' => {'enabled' => 'yes', 'foo' => 'bar'}}
     new_cfg = {'executive' => {'enabled' => 'yes', 'foo' => 'baz'}}
@@ -196,7 +180,7 @@ describe Flapjack::Coordinator do
   end
 
   it "reloads a pikelet config while restarting it" do
-    setup_logger
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
     old_cfg = {'executive' => {'enabled' => 'yes', 'foo' => 'bar'}}
     new_cfg = {'executive' => {'enabled' => 'yes', 'baz' => 'qux'}}

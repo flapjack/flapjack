@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'log4r'
-require 'log4r/outputter/fileoutputter'
 require 'tzinfo'
 require 'active_support/time'
 
@@ -41,14 +39,16 @@ module Flapjack
                  :jabber    => @config['jabber_queue'],
                  :pagerduty => @config['pagerduty_queue']}
 
-      notifylog  = @config['notification_log_file'] || 'log/notify.log'
-      if not File.directory?(File.dirname(notifylog))
-        puts "Parent directory for log file #{notifylog} doesn't exist"
+      notify_logfile  = @config['notification_log_file'] || 'log/notify.log'
+      if not File.directory?(File.dirname(notify_logfile))
+        puts "Parent directory for log file '#{notify_logfile}' doesn't exist"
         puts "Exiting!"
         exit
       end
-      @notifylog = Log4r::Logger.new("executive")
-      @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => notifylog))
+      @notifylog = ::Logger.new(notify_logfile)
+      @notifylog.formatter = proc do |severity, datetime, progname, msg|
+        "#{datetime.iso8601} [#{severity}] :: notify :: #{msg}\n"
+      end
 
       tz = nil
       tz_string = @config['default_contact_timezone'] || ENV['TZ'] || 'UTC'
@@ -277,7 +277,7 @@ module Flapjack
 
       if contacts.empty?
         @logger.debug("No contacts for #{event.id}")
-        @notifylog.info("#{Time.at(timestamp).to_s} | #{event.id} | #{notification_type} | NO CONTACTS")
+        @notifylog.info("#{event.id} | #{notification_type} | NO CONTACTS")
         return
       end
 
@@ -295,7 +295,7 @@ module Flapjack
         address    = message.address
         event_id   = event.id
 
-        @notifylog.info("#{Time.at(timestamp).to_s} | #{event_id} | " +
+        @notifylog.info("#{event_id} | " +
           "#{notification_type} | #{message.contact.id} | #{media_type} | #{address}")
 
         unless @queues[media_type.to_sym]
