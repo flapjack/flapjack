@@ -98,10 +98,12 @@ module Flapjack
       messages = notification.messages(contacts, :default_timezone => @default_contact_timezone,
         :logger => @logger)
 
+      notification_contents = notification.contents
+
       messages.each do |message|
         media_type = message.medium
-        contents   = message.contents
         address    = message.address
+        contents   = message.contents.merge(notification_contents)
 
         @notifylog.info("#{timestamp.to_s} | #{event_id} | " +
           "#{notification.type} | #{message.contact.id} | #{media_type} | #{address}")
@@ -146,9 +148,6 @@ module Flapjack
         when :email
           Resque.enqueue_to(@queues[:email], Flapjack::Gateways::Email, contents)
         when :jabber
-          # TODO move next line up into other notif value setting above?
-          # FIXME @event_count will need to be passed through from processor to notifier
-          contents['event_count'] = @event_count if @event_count
           @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(contents))
         when :pagerduty
           @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(contents))

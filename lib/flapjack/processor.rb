@@ -149,8 +149,7 @@ module Flapjack
 
       result = true
 
-      # FIXME @event_count will need to be passed through from processor to notifier
-      @event_count = @redis.hincrby('event_counters', 'all', 1)
+      event.counter = @redis.hincrby('event_counters', 'all', 1)
       @redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
 
       # FIXME skip if entity_check.nil?
@@ -170,7 +169,7 @@ module Flapjack
         elsif event.failure?
           @redis.hincrby('event_counters', 'failure', 1)
           @redis.hincrby("event_counters:#{@instance_id}", 'failure', 1)
-          @redis.hset('unacknowledged_failures', @event_count, event.id)
+          @redis.hset('unacknowledged_failures', event.counter, event.id)
         end
 
         event.previous_state = entity_check.state
@@ -189,7 +188,7 @@ module Flapjack
 
         entity_check.update_state(event.state, :timestamp => timestamp,
           :summary => event.summary, :client => event.client,
-          :count => @event_count, :details => event.details)
+          :count => event.counter, :details => event.details)
 
         # No state change, and event is ok, so no need to run through filters
         # OR

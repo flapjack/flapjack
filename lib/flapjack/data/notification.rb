@@ -8,7 +8,7 @@ module Flapjack
   module Data
     class Notification
 
-      attr_reader :type, :event_id, :event_state
+      attr_reader :type, :event_id, :event_state, :event_count
 
       def self.type_for_event(event)
         case event.type
@@ -55,7 +55,8 @@ module Flapjack
                  'time'         => event.time,
                  'duration'     => event.duration || nil,
                  'type'         => opts[:type] || type_for_event(event),
-                 'severity'     => opts[:severity] }
+                 'severity'     => opts[:severity],
+                 'count'        => event.counter }
 
         redis.rpush(queue, ::Yajl::Encoder.encode(notif))
       end
@@ -83,21 +84,25 @@ module Flapjack
         self.new( parsed )
       end
 
+      def contents
+        @contents ||= {'event_id'          => @event_id,
+                       'state'             => @event_state,
+                       'summary'           => @event_summary,
+                       'last_state'        => @last_event_state,
+                       'last_summary'      => @last_event_summary,
+                       'details'           => @event_details,
+                       'time'              => @event_time,
+                       'duration'          => @event_duration,
+                       'notification_type' => @type,
+                       'event_count'       => @event_count
+                      }
+      end
+
       def messages(contacts, opts = {})
         return [] if contacts.nil? || contacts.empty?
 
         default_timezone = opts[:default_timezone]
         logger = opts[:logger]
-
-        contents = {'event_id'          => @event_id,
-                    'state'             => @event_state,
-                    'summary'           => @event_summary,
-                    'last_state'        => @last_event_state,
-                    'last_summary'      => @last_event_summary,
-                    'details'           => @event_details,
-                    'time'              => @event_time,
-                    'duration'          => @event_duration,
-                    'notification_type' => @type }
 
         @messages ||= contacts.collect {|contact|
           contact_id = contact.id
@@ -159,12 +164,9 @@ module Flapjack
 
           logger.debug "notification: media_to_use: #{media_to_use}"
 
-          # puts logger.messages.join("\n")
-
           media_to_use.each_pair.inject([]) { |ret, (k, v)|
             m = Flapjack::Data::Message.for_contact(contact,
-              :notification_contents => contents,
-              :medium => k, :address => v)
+                  :medium => k, :address => v)
             ret << m
             ret
           }
@@ -181,6 +183,7 @@ module Flapjack
         @event_details  = opts['details']
         @event_time     = opts['time']
         @event_duration = opts['duration']
+        @event_count    = opts['count']
 
         @last_event_state   = opts['last_state']
         @last_event_summary = opts['last_summary']

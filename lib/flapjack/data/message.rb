@@ -5,7 +5,6 @@
 # contact+media recipient.
 
 require 'flapjack/data/contact'
-require 'flapjack/data/notification'
 
 module Flapjack
   module Data
@@ -15,7 +14,6 @@ module Flapjack
 
       def self.for_contact(contact, opts = {})
         self.new(:contact => contact,
-                 :notification_contents => opts[:notification_contents],
                  :medium => opts[:medium],
                  :address => opts[:address],
                  :duration => opts[:duration])
@@ -37,15 +35,13 @@ module Flapjack
              'contact_first_name' => contact.first_name,
              'contact_last_name'  => contact.last_name}
         c['duration'] = duration if duration
-        return c if @notification_contents.nil?
-        c.merge(@notification_contents)
+        c
       end
 
     private
 
       def initialize(opts = {})
         @contact = opts[:contact]
-        @notification_contents = opts[:notification_contents]
         @medium = opts[:medium]
         @address = opts[:address]
         @duration = opts[:duration]
