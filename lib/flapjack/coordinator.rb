@@ -171,15 +171,39 @@ module Flapjack
     end
 
     def pikelets(config_env)
-      return {} unless config_env
-      exec_cfg = config_env.has_key?('executive') && config_env['executive']['enabled'] ?
-        {'executive' => config_env['executive']} :
-        {}
-      return exec_cfg unless config_env && config_env['gateways'] &&
+      config = {}
+      return config unless config_env
+
+      # backwards-compatible with config file for previous 'executive' pikelet
+      exec_cfg = nil
+      if config_env.has_key?('executive') && truthish?(config_env['executive']['enabled'])
+        exec_cfg = config_env['executive']
+      end
+      ['processor', 'notifier'].each do |k|
+        if exec_cfg
+          if config_env.has_key?(k)
+            # need to allow for new config fields to override old settings if both present
+            merged = exec_cfg.merge(config_env[k])
+            config.update(k => merged) if truthish?(merged['enabled'])
+          else
+            config.update(k => exec_cfg)
+          end
+        else
+          next unless (config_env.has_key?(k) && truthish?(config_env[k]['enabled']))
+          config.update(k => config_env[k])
+        end
+      end
+
+      return config unless config_env && config_env['gateways'] &&
         !config_env['gateways'].nil?
-      exec_cfg.merge( config_env['gateways'].select {|k, v|
-        Flapjack::Pikelet.is_pikelet?(k) && v['enabled']
+      config.merge( config_env['gateways'].select {|k, v|
+        Flapjack::Pikelet.is_pikelet?(k) && truthish?(v['enabled'])
       } )
+    end
+
+    def truthish?(v)
+      !v.nil? && v.respond_to?(:downcase) &&
+        ['yes', 'true'].include?(v.downcase)
     end
 
   end
