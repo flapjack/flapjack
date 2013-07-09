@@ -1,7 +1,9 @@
 #!/usr/bin/env ruby
 
 require 'redis'
-require 'json'
+
+require 'oj'
+Oj.default_options = { :indent => 0, :mode => :strict }
 
 if not id = ARGV.first then
   puts "Usage: acknowledge.rb <id>"

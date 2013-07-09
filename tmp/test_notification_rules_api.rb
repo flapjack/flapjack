@@ -1,7 +1,9 @@
 #!/usr/bin/env ruby
 
-require "httparty"
-require "json"
+require 'httparty'
+
+require 'oj'
+Oj.default_options = { :indent => 0, :mode => :strict }
 
 class Foo
 
@@ -153,7 +155,7 @@ class Foo
     do_post(url, data)
   end
 
-  rule = JSON.parse(get('/contacts/21/notification_rules').body).last
+  rule = Oj.load(get('/contacts/21/notification_rules').body).last
   rule_id = rule['id']
   raise RuntimeError unless rule_id
   puts "****** NOTIFICATION RULE ID TO PICK ON (PUT, DELETE) IS: #{rule_id} ******"

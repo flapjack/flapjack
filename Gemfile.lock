@@ -16,13 +16,13 @@ PATH
       ice_cube
       log4r
       mail
+      oj
       rack-fiber_pool
       redis
       resque (~> 1.23.0)
       sinatra
       thin
       tzinfo
-      yajl-ruby
 
 GEM
   remote: https://rubygems.org/
@@ -120,6 +120,7 @@ GEM
       nokogiri (~> 1.5)
     nokogiri (1.5.9)
     numerizer (0.1.1)
+    oj (2.1.4)
     polyglot (0.3.3)
     pry (0.9.11.4)
       coderay (~> 1.0.5)
@@ -183,7 +184,6 @@ GEM
     webmock (1.9.0)
       addressable (>= 2.2.7)
       crack (>= 0.1.7)
-    yajl-ruby (1.1.0)
 
 PLATFORMS
   ruby

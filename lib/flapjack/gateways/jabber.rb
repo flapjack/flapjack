@@ -10,11 +10,9 @@ require 'em-synchrony'
 require 'redis/connection/synchrony'
 require 'redis'
 
-require 'chronic_duration'
-
 require 'blather/client/client'
-require 'em-synchrony/fiber_iterator'
-require 'yajl/json_gem'
+require 'chronic_duration'
+require 'oj'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/redis_pool'
@@ -49,7 +47,7 @@ module Flapjack
 
       def stop
         @should_quit = true
-        @redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
+        @redis.rpush(@config['queue'], Oj.dump('notification_type' => 'shutdown'))
       end
 
       def setup
@@ -399,7 +397,7 @@ module Flapjack
           if connected?
             @logger.debug("jabber is connected so commencing blpop on #{queue}")
             events[queue] = @redis.blpop(queue, 0)
-            event         = Yajl::Parser.parse(events[queue][1])
+            event         = Oj.load(events[queue][1])
             type          = event['notification_type'] || 'unknown'
             @logger.debug('jabber notification event received')
             @logger.debug(event.inspect)

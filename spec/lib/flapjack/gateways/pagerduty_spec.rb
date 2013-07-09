@@ -1,7 +1,5 @@
 require 'spec_helper'
 
-require 'yajl/json_gem'
-
 require 'flapjack/gateways/pagerduty'
 
 describe Flapjack::Gateways::Pagerduty, :logger => true do
