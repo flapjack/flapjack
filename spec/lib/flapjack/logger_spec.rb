@@ -14,7 +14,8 @@ describe Flapjack::Logger do
     ::Logger.should_receive(:new).with(STDOUT).and_return(logger)
 
     if Syslog.const_defined?('Logger', false)
-      sys_logger.should_receive(:warn).with(an_instance_of(String))
+      sys_logger.should_receive(:formatter=).with(an_instance_of(Proc))
+      sys_logger.should_receive(:warn).with("Yowza!")
       Syslog.const_get('Logger', false).should_receive(:new).with('flapjack').and_return(sys_logger)
     else
       syslog.should_receive(:log).with(Syslog::Constants::LOG_WARNING, /\[WARN\] :: spec :: %m/, "Yowza!")
