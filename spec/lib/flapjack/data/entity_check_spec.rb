@@ -390,6 +390,15 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     saved_ts.should == ts
   end
 
+  it "disables checks" do
+    @redis.zadd("current_checks", Time.now.to_i, "#{name}:#{check}")
+    ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+    ec.disable!
+
+    saved_ts = @redis.zscore("current_checks", "#{name}:#{check}")
+    saved_ts.should be_nil
+  end
+
   it "does not update state with invalid value" do
     @redis.hset("check:#{name}:#{check}", 'state', 'ok')
 

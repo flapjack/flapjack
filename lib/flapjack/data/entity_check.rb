@@ -247,6 +247,12 @@ module Flapjack
         @redis.zadd("current_checks", timestamp, @key)
       end
 
+      # disables a check (removes from current_checks set)
+      def disable!
+        @logger.debug("disabling check [#{@key}]") if @logger
+        @redis.zrem("current_checks", @key)
+      end
+
       def last_change
         lc = @redis.hget("check:#{@key}", 'last_change')
         return unless (lc && lc =~ /^\d+$/)
