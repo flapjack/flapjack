@@ -14,8 +14,7 @@ end
 
 Then /^I should see a valid JSON output$/ do
   lambda {
-    parser = Yajl::Parser.new
-    @data = parser.parse(@output)
+    @data = Oj.load(@output)
   }.should_not raise_error
 end
 

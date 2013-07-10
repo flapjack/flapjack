@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'yajl/json_gem'
+require 'oj'
 
 require 'flapjack/patches'
 
