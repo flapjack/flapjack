@@ -5,7 +5,7 @@ require 'logger'
 begin
   # Ruby 2.0+
   require 'syslog/logger'
-rescue Exception
+rescue LoadError
   # Ruby 1.9
   require 'syslog'
 end
