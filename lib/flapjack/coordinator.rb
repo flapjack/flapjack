@@ -3,6 +3,8 @@
 require 'eventmachine'
 require 'em-synchrony'
 
+require 'syslog'
+
 require 'flapjack/configuration'
 require 'flapjack/patches'
 require 'flapjack/executive'
@@ -37,6 +39,7 @@ module Flapjack
       return if @stopping
       @stopping = true
       remove_pikelets(@pikelets, :shutdown => true)
+      Syslog.close if Syslog.opened?
     end
 
     # NB: global config options (e.g. daemonize, pidfile,

@@ -73,15 +73,20 @@ module Flapjack
       @logger.error(err) if err
 
       @logger.level = new_level
-      # if @syslogger
-      # if @syslog
+      if @sys_logger
+        @sys_logger.level = new_level
+      elsif @syslog
+        Syslog.mask = Syslog::LOG_UPTO(SYSLOG_LEVELS_MAP[level.downcase.to_sym])
+      end
+
     end
 
     LEVELS.each do |level|
       define_method(level) {|*args, &block|
         @logger.send(level.to_sym, *args, &block)
-        @sys_logger.send(level.to_sym, *args, &block) if @sys_logger
-        if @syslog
+        if @sys_logger
+          @sys_logger.send(level.to_sym, *args, &block)
+        elsif @syslog
           t = Time.now.iso8601
           l = level.to_s.upcase
           @syslog.log(SYSLOG_LEVELS_MAP[level],
