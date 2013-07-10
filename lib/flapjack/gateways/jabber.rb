@@ -33,6 +33,23 @@ module Flapjack
       log.level = Logger::INFO
       Blather.logger = log
 
+      # TODO if we use 'xmpp4r' rather than 'blather', port this to 'rexml'
+      class TextHandler < Nokogiri::XML::SAX::Document
+        def initialize
+          @chunks = []
+        end
+
+        attr_reader :chunks
+
+        def cdata_block(string)
+          characters(string)
+        end
+
+        def characters(string)
+          @chunks << string.strip if string.strip != ""
+        end
+      end
+
       def initialize(opts = {})
         @config = opts[:config]
         @redis_config = opts[:redis_config]
@@ -116,12 +133,18 @@ module Flapjack
         end
       end
 
-      def interpreter(command)
+      def interpreter(command_raw)
         msg          = nil
         action       = nil
         entity_check = nil
-        case
-        when command =~ /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i;
+
+        th = TextHandler.new
+        parser = Nokogiri::HTML::SAX::Parser.new(th)
+        parser.parse(command_raw)
+        command = th.chunks.join(' ')
+
+        case command
+        when /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i
           ackid        = $1
           comment      = $2
           duration_str = $3
@@ -171,7 +194,7 @@ module Flapjack
             }
           end
 
-        when command =~ /^help$/
+        when /^help$/i
           msg = "commands: \n" +
                 "  ACKID <id> <comment> [duration: <time spec>] \n" +
                 "  find entities matching /pattern/ \n" +
@@ -180,7 +203,7 @@ module Flapjack
                 "  identify \n" +
                 "  help \n"
 
-        when command =~ /^identify$/
+        when /^identify$/i
           t    = Process.times
           fqdn = `/bin/hostname -f`.chomp
           pid  = Process.pid
@@ -190,7 +213,7 @@ module Flapjack
                  "System CPU Time: #{t.stime}\n" +
                  `uname -a`.chomp + "\n"
 
-        when command =~ /^test notifications for\s+([a-z0-9\-\.]+)(?::(.+))?$/i
+        when /^test notifications for\s+([a-z0-9\-\.]+)(?::(.+))?$/i
           entity_name = $1
           check_name  = $2 || 'test'
 
@@ -203,7 +226,7 @@ module Flapjack
             msg = "yeah, no I can't see #{entity_name} in my systems"
           end
 
-        when command =~ /^tell me about\s+([a-z0-9\-\.]+)(?::(.+))?$+/
+        when /^tell me about\s+([a-z0-9\-\.]+)(?::(.+))?$+/i
           entity_name = $1
           check_name  = $2
 
@@ -265,7 +288,7 @@ module Flapjack
             msg = "hmmm, I can't see #{entity_name} in my systems"
           end
 
-        when command =~ /^(find )?entities matching\s+\/(.*)\/.*$/i
+        when /^(find )?entities matching\s+\/(.*)\/.*$/i
           pattern = $2.chomp.strip
           entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern, :redis => @redis)
 
@@ -290,7 +313,7 @@ module Flapjack
             msg = "that doesn't seem to be a valid pattern - /#{pattern}/"
           end
 
-        when command =~ /^(.*)/
+        when /^(.*)/
           words = $1
           msg   = "what do you mean, '#{words}'? Type 'help' for a list of acceptable commands."
 
