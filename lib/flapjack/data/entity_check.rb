@@ -253,6 +253,10 @@ module Flapjack
         @redis.zrem("current_checks", @key)
       end
 
+      def enabled?
+        !! @redis.zscore("current_checks", @key)
+      end
+
       def last_change
         lc = @redis.hget("check:#{@key}", 'last_change')
         return unless (lc && lc =~ /^\d+$/)

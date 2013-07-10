@@ -124,13 +124,6 @@ module Flapjack
               'failure' => @event_counters['failure'].to_i,
               'action'  => @event_counters['action'].to_i,
             }
-#            'instance' => {
-#              'total'   => @event_counters_instance['all'].to_i,
-#              'ok'      => @event_counters_instance['ok'].to_i,
-#              'failure' => @event_counters_instance['failure'].to_i,
-#              'action'  => @event_counters_instance['action'].to_i,
-#              'average' => @event_rate_all.to_i,
-#            }
           },
           'total_keys' => @dbsize,
           'uptime'     => @uptime_string,
@@ -176,6 +169,7 @@ module Flapjack
         last_change = entity_check.last_change
 
         @check_state                = entity_check.state
+        @check_enabled              = entity_check.enabled?
         @check_last_update          = entity_check.last_update
         @check_last_change          = last_change
         @check_summary              = entity_check.summary
@@ -253,6 +247,15 @@ module Flapjack
         return 404 if entity_check.nil?
 
         entity_check.end_scheduled_maintenance(params[:start_time].to_i)
+        redirect back
+      end
+
+      # delete a check (actually just disables it)
+      delete '/checks/:entity/:check' do
+        entity_check = get_entity_check(params[:entity], params[:check])
+        return 404 if entity_check.nil?
+
+        entity_check.disable!
         redirect back
       end
 
