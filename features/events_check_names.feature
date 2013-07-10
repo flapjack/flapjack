@@ -1,4 +1,4 @@
-@events
+@events @processor
 Feature: events and check names
   Flapjack must handle weird characters in check names in events
 
