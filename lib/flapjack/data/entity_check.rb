@@ -69,7 +69,7 @@ module Flapjack
       end
 
       # return data about current maintenance (scheduled or unscheduled, as specified)
-      def current_maintenance(opts)
+      def current_maintenance(opts = {})
         sched = opts[:scheduled] ? 'scheduled' : 'unscheduled'
         ts = @redis.get("#{@key}:#{sched}_maintenance")
         return unless ts
@@ -79,14 +79,14 @@ module Flapjack
         }
       end
 
-      def create_unscheduled_maintenance(opts = {})
-        end_unscheduled_maintenance if in_unscheduled_maintenance?
+      def create_unscheduled_maintenance(start_time, duration, opts = {})
+        raise ArgumentError, 'start time must be provided as a Unix timestamp' unless start_time && start_time.is_a?(Integer)
+        raise ArgumentError, 'duration in seconds must be provided' unless duration && duration.is_a?(Integer) && (duration > 0)
 
-        start_time = opts[:start_time]  # unix timestamp
-        duration   = opts[:duration]    # seconds
         summary    = opts[:summary]
         time_remaining = (start_time + duration) - Time.now.to_i
         if time_remaining > 0
+          end_unscheduled_maintenance(start_time) if in_unscheduled_maintenance?
           @redis.setex("#{@key}:unscheduled_maintenance", time_remaining, start_time)
         end
         @redis.zadd("#{@key}:unscheduled_maintenances", duration, start_time)
@@ -96,19 +96,14 @@ module Flapjack
       end
 
       # ends any unscheduled maintenance
-      def end_unscheduled_maintenance(opts = {})
-        defaults = {
-          :end_time => Time.now.to_i
-        }
-        options  = defaults.merge(opts)
-        end_time = options[:end_time]
+      def end_unscheduled_maintenance(end_time)
+        raise ArgumentError, 'end time must be provided as a Unix timestamp' unless end_time && end_time.is_a?(Integer)
 
         if (um_start = @redis.get("#{@key}:unscheduled_maintenance"))
           duration = end_time - um_start.to_i
           @logger.debug("ending unscheduled downtime for #{@key} at #{Time.at(end_time).to_s}") if @logger
           @redis.del("#{@key}:unscheduled_maintenance")
-          @redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start)
-          @redis.zadd("#{@key}:sorted_unscheduled_maintenance_timestamps", um_start, um_start)
+          @redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start) # updates existing UM 'score'
         else
           @logger.debug("end_unscheduled_maintenance called for #{@key} but none found") if @logger
         end
@@ -118,10 +113,11 @@ module Flapjack
       # TODO: consider adding some validation to the data we're adding in here
       # eg start_time is a believable unix timestamp (not in the past and not too
       # far in the future), duration is within some bounds...
-      def create_scheduled_maintenance(opts = {})
-        start_time = opts[:start_time]  # unix timestamp
-        duration   = opts[:duration]    # seconds
-        summary    = opts[:summary]
+      def create_scheduled_maintenance(start_time, duration, opts = {})
+        raise ArgumentError, 'start time must be provided as a Unix timestamp' unless start_time && start_time.is_a?(Integer)
+        raise ArgumentError, 'duration in seconds must be provided' unless duration && duration.is_a?(Integer) && (duration > 0)
+
+        summary = opts[:summary]
         @redis.zadd("#{@key}:scheduled_maintenances", duration, start_time)
         @redis.set("#{@key}:#{start_time}:scheduled_maintenance:summary", summary)
 
@@ -129,6 +125,30 @@ module Flapjack
 
         # scheduled maintenance periods have changed, revalidate
         update_current_scheduled_maintenance(:revalidate => true)
+      end
+
+      # if not in scheduled maintenance, looks in scheduled maintenance list for a check to see if
+      # current state should be set to scheduled maintenance, and sets it as appropriate
+      def update_current_scheduled_maintenance(opts = {})
+        if opts[:revalidate]
+          @redis.del("#{@key}:scheduled_maintenance")
+        else
+          return if in_scheduled_maintenance?
+        end
+
+        # are we within a scheduled maintenance period?
+        current_time = Time.now.to_i
+        current_sched_ms = maintenances(nil, nil, :scheduled => true).select {|sm|
+          (sm[:start_time] <= current_time) && (current_time < sm[:end_time])
+        }
+        return if current_sched_ms.empty?
+
+        # yes! so set current scheduled maintenance
+        # if multiple scheduled maintenances found, find the end_time furthest in the future
+        most_futuristic = current_sched_ms.max {|sm| sm[:end_time] }
+        start_time = most_futuristic[:start_time]
+        duration   = most_futuristic[:duration]
+        @redis.setex("#{@key}:scheduled_maintenance", duration.to_i, start_time)
       end
 
       # TODO allow summary to be changed as part of the termination
@@ -164,30 +184,6 @@ module Flapjack
         end
 
         false
-      end
-
-      # if not in scheduled maintenance, looks in scheduled maintenance list for a check to see if
-      # current state should be set to scheduled maintenance, and sets it as appropriate
-      def update_current_scheduled_maintenance(opts = {})
-        if opts[:revalidate]
-          @redis.del("#{@key}:scheduled_maintenance")
-        else
-          return if in_scheduled_maintenance?
-        end
-
-        # are we within a scheduled maintenance period?
-        current_time = Time.now.to_i
-        current_sched_ms = maintenances(nil, nil, :scheduled => true).select {|sm|
-          (sm[:start_time] <= current_time) && (current_time < sm[:end_time])
-        }
-        return if current_sched_ms.empty?
-
-        # yes! so set current scheduled maintenance
-        # if multiple scheduled maintenances found, find the end_time furthest in the future
-        most_futuristic = current_sched_ms.max {|sm| sm[:end_time] }
-        start_time = most_futuristic[:start_time]
-        duration   = most_futuristic[:duration]
-        @redis.setex("#{@key}:scheduled_maintenance", duration.to_i, start_time)
       end
 
       # returns nil if no previous state; this must be considered as a possible

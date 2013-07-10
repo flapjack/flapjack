@@ -83,6 +83,40 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     fj.on_groupchat(stanza)
   end
 
+  it "strips XML tags from the received message" do
+    stanza.should_receive(:body).
+      and_return('flapjack: tell me about <span style="text-decoration: underline;">' +
+                 '<a href="http://example.org/">example.org</a></span>')
+
+    from = mock('from')
+    from.should_receive(:stripped).and_return('sender')
+    stanza.should_receive(:from).and_return(from)
+
+    redis = mock('redis')
+    entity = mock(Flapjack::Data::Entity)
+    entity.should_receive(:check_list).and_return(['ping'])
+
+    Flapjack::Data::Entity.should_receive(:find_by_name).with('example.org',
+      :redis => redis).and_return(entity)
+
+    entity_check = mock(Flapjack::Data::EntityCheck)
+    entity_check.should_receive(:current_maintenance).with(:scheduled => true).and_return(nil)
+    entity_check.should_receive(:current_maintenance).with(:unscheduled => true).and_return(nil)
+    entity_check.should_receive(:check).and_return('ping')
+
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).with(entity, 'ping',
+      :redis => redis).and_return(entity_check)
+
+    Flapjack::RedisPool.should_receive(:new).and_return(redis)
+    fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
+
+    EventMachine::Synchrony.should_receive(:next_tick).and_yield
+    fj.should_receive(:connected?).and_return(true)
+    fj.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
+
+    fj.on_groupchat(stanza)
+  end
+
   it "receives a message it doesn't understand" do
     stanza.should_receive(:body).once.and_return('flapjack: hello!')
     from = mock('from')
