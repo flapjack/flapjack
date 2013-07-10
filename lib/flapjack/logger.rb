@@ -90,7 +90,7 @@ module Flapjack
           t = Time.now.iso8601
           l = level.to_s.upcase
           @syslog.log(SYSLOG_LEVELS_MAP[level],
-                      "#{t} [#{l}] :: #{@name} :: %m",
+                      "#{t} [#{l}] :: #{@name} :: %s",
                       (block ? block.call : args.first))
         end
       }

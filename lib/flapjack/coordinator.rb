@@ -39,7 +39,7 @@ module Flapjack
       return if @stopping
       @stopping = true
       remove_pikelets(@pikelets, :shutdown => true)
-      Syslog.close if Syslog.opened?
+      # Syslog.close if Syslog.opened? # TODO revisit in threading branch
     end
 
     # NB: global config options (e.g. daemonize, pidfile,

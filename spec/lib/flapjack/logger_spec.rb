@@ -19,7 +19,7 @@ describe Flapjack::Logger do
       sys_logger.should_receive(:warn).with("Yowza!")
       Syslog.const_get('Logger', false).should_receive(:new).with('flapjack').and_return(sys_logger)
     else
-      syslog.should_receive(:log).with(Syslog::Constants::LOG_WARNING, /\[WARN\] :: spec :: %m/, "Yowza!")
+      syslog.should_receive(:log).with(Syslog::Constants::LOG_WARNING, /\[WARN\] :: spec :: %s/, "Yowza!")
       Syslog.should_receive(:"opened?").and_return(false)
       Syslog.should_receive(:open).with('flapjack',
         (Syslog::Constants::LOG_PID | Syslog::Constants::LOG_CONS),

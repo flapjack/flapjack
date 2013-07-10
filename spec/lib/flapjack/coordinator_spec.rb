@@ -8,8 +8,6 @@ describe Flapjack::Coordinator do
   let(:config) { mock(Flapjack::Configuration) }
 
   let(:logger)     { mock(Flapjack::Logger) }
-  # let(:stdout_out) { mock('stdout_out') }
-  # let(:syslog_out) { mock('syslog_out') }
 
   let!(:time)   { Time.now }
 
@@ -39,8 +37,8 @@ describe Flapjack::Coordinator do
 
     EM.should_receive(:stop)
 
-    Syslog.should_receive(:opened?).and_return(true)
-    Syslog.should_receive(:close)
+    # Syslog.should_receive(:opened?).and_return(true)
+    # Syslog.should_receive(:close)
 
     fc.start(:signals => false)
     fc.stop
@@ -73,8 +71,8 @@ describe Flapjack::Coordinator do
 
     EM.should_receive(:stop)
 
-    Syslog.should_receive(:opened?).and_return(true)
-    Syslog.should_receive(:close)
+    # Syslog.should_receive(:opened?).and_return(true)
+    # Syslog.should_receive(:close)
 
     fc.start(:signals => false)
     fc.stop
