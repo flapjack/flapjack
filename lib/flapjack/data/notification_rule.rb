@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'yajl/json_gem'
+require 'oj'
 require 'active_support/time'
 require 'ice_cube'
 require 'flapjack/utility'
@@ -129,11 +129,11 @@ module Flapjack
         json_rule_data = {
           :id                 => rule_data[:id].to_s,
           :contact_id         => rule_data[:contact_id].to_s,
-          :entities           => Yajl::Encoder.encode(rule_data[:entities]),
-          :entity_tags        => Yajl::Encoder.encode(rule_data[:entity_tags]),
-          :time_restrictions  => Yajl::Encoder.encode(rule_data[:time_restrictions]),
-          :warning_media      => Yajl::Encoder.encode(rule_data[:warning_media]),
-          :critical_media     => Yajl::Encoder.encode(rule_data[:critical_media]),
+          :entities           => Oj.dump(rule_data[:entities]),
+          :entity_tags        => Oj.dump(rule_data[:entity_tags]),
+          :time_restrictions  => Oj.dump(rule_data[:time_restrictions]),
+          :warning_media      => Oj.dump(rule_data[:warning_media]),
+          :critical_media     => Oj.dump(rule_data[:critical_media]),
           :warning_blackhole  => rule_data[:warning_blackhole],
           :critical_blackhole => rule_data[:critical_blackhole],
         }
@@ -284,11 +284,11 @@ module Flapjack
         rule_data = @redis.hgetall("notification_rule:#{@id}")
 
         @contact_id         = rule_data['contact_id']
-        @entity_tags        = Yajl::Parser.parse(rule_data['entity_tags'] || '')
-        @entities           = Yajl::Parser.parse(rule_data['entities'] || '')
-        @time_restrictions  = Yajl::Parser.parse(rule_data['time_restrictions'] || '')
-        @warning_media      = Yajl::Parser.parse(rule_data['warning_media'] || '')
-        @critical_media     = Yajl::Parser.parse(rule_data['critical_media'] || '')
+        @entity_tags        = Oj.load(rule_data['entity_tags'] || '')
+        @entities           = Oj.load(rule_data['entities'] || '')
+        @time_restrictions  = Oj.load(rule_data['time_restrictions'] || '')
+        @warning_media      = Oj.load(rule_data['warning_media'] || '')
+        @critical_media     = Oj.load(rule_data['critical_media'] || '')
         @warning_blackhole  = ((rule_data['warning_blackhole'] || 'false').downcase == 'true')
         @critical_blackhole = ((rule_data['critical_blackhole'] || 'false').downcase == 'true')
       end

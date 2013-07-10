@@ -9,7 +9,7 @@ module Rack
         env['rack.request.form_input'] = env['rack.input']
         data = env['rack.input'].read
         env['rack.input'].rewind
-        env['rack.request.form_hash'] = data.empty? ? {} : JSON.parse(data)
+        env['rack.request.form_hash'] = data.empty? ? {} : Oj.load(data)
       end
       app.call(env)
     end

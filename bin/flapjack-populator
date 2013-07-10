@@ -2,7 +2,10 @@
 
 require 'optparse'
 require 'ostruct'
-require 'yajl/json_gem'
+
+require 'oj'
+Oj.default_options = { :indent => 0, :mode => :strict }
+
 require 'redis'
 
 # add lib to the default include path
@@ -60,7 +63,7 @@ end
 
 case command
 when "import-contacts"
-  contacts = JSON.parse(file)
+  contacts = Oj.load(file)
 
   if contacts && contacts.is_a?(Enumerable) && contacts.any? {|e| !e['id'].nil?}
     @persistence = Redis.new(redis_options)
@@ -75,7 +78,7 @@ when "import-contacts"
   end
 
 when "import-entities"
-  entities = JSON.parse(file)
+  entities = Oj.load(file)
 
   if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
     @persistence = Redis.new(redis_options)

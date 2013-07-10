@@ -136,10 +136,10 @@ module Flapjack
     # from a different fiber while the main one is blocking.
     def stop
       @should_quit = true
-      @redis.rpush('events', JSON.generate('type'    => 'shutdown',
-                                           'host'    => '',
-                                           'service' => '',
-                                           'state'   => ''))
+      @redis.rpush('events', Oj.dump('type'    => 'shutdown',
+                                     'host'    => '',
+                                     'service' => '',
+                                     'state'   => ''))
     end
 
   private
@@ -337,9 +337,9 @@ module Flapjack
         when :jabber
           # TODO move next line up into other notif value setting above?
           contents['event_count'] = @event_count if @event_count
-          @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(contents))
+          @redis.rpush(@queues[:jabber], Oj.dump(contents))
         when :pagerduty
-          @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(contents))
+          @redis.rpush(@queues[:pagerduty], Oj.dump(contents))
         end
       end
     end

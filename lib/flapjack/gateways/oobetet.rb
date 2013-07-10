@@ -4,8 +4,7 @@ require 'socket'
 require 'eventmachine'
 require 'em-synchrony'
 require 'blather/client/client'
-require 'em-synchrony/fiber_iterator'
-require 'yajl/json_gem'
+require 'oj'
 
 require 'flapjack/utility'
 
@@ -211,9 +210,9 @@ module Flapjack
       end
 
       def send_pagerduty_event(event)
-        options  = { :body => Yajl::Encoder.encode(event) }
+        options  = { :body => Oj.dump(event) }
         http = EM::HttpRequest.new(@pagerduty_events_api_url).post(options)
-        response = Yajl::Parser.parse(http.response)
+        response = Oj.load(http.response)
         status   = http.response_header.status
         @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
         [status, response]
