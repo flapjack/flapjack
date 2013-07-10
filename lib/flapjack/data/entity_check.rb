@@ -244,6 +244,7 @@ module Flapjack
 
       def last_update=(timestamp)
         @redis.hset("check:#{@key}", 'last_update', timestamp)
+        @redis.zadd("current_checks", timestamp, @key)
       end
 
       def last_change

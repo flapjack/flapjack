@@ -380,6 +380,16 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     state.should == 'critical'
   end
 
+  it "updates current checks" do
+    ts = Time.now.to_i
+    ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+    ec.last_update = ts
+
+    saved_ts = @redis.zscore("current_checks", "#{name}:#{check}")
+    saved_ts.should_not be_nil
+    saved_ts.should == ts
+  end
+
   it "does not update state with invalid value" do
     @redis.hset("check:#{name}:#{check}", 'state', 'ok')
 
