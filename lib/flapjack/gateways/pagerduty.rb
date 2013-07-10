@@ -3,7 +3,7 @@
 require 'em-synchrony'
 require 'em-synchrony/em-http'
 
-require 'yajl/json_gem'
+require 'oj'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/data/global'
@@ -32,7 +32,7 @@ module Flapjack
       def stop
         @logger.info("stopping")
         @should_quit = true
-        @redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
+        @redis.rpush(@config['queue'], Oj.dump('notification_type' => 'shutdown'))
       end
 
       def start
@@ -56,7 +56,7 @@ module Flapjack
         until @should_quit
           @logger.debug("pagerduty gateway is going into blpop mode on #{queue}")
           events[queue] = @redis.blpop(queue, 0)
-          event         = Yajl::Parser.parse(events[queue][1])
+          event         = Oj.load(events[queue][1])
           type          = event['notification_type']
           @logger.debug("pagerduty notification event popped off the queue: " + event.inspect)
           unless 'shutdown'.eql?(type)
@@ -134,9 +134,9 @@ module Flapjack
       end
 
       def send_pagerduty_event(event)
-        options  = { :body => Yajl::Encoder.encode(event) }
+        options  = { :body => Oj.dump(event) }
         http = EM::HttpRequest.new(PAGERDUTY_EVENTS_API_URL).post(options)
-        response = Yajl::Parser.parse(http.response)
+        response = Oj.load(http.response)
         status   = http.response_header.status
         @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
         [status, response]
@@ -215,8 +215,8 @@ module Flapjack
 
         http = EM::HttpRequest.new(url).get(options)
         begin
-          response = Yajl::Parser.parse(http.response)
-        rescue Yajl::ParseError
+          response = Oj.load(http.response)
+        rescue Oj::Error
           @logger.error("failed to parse json from a post to #{url} ... response headers and body follows...")
           return nil
         end

@@ -1,7 +1,5 @@
 require 'spec_helper'
 
-require 'yajl/json_gem'
-
 require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
 

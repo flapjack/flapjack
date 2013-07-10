@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'oj'
+
 require 'flapjack/data/contact'
 require 'flapjack/data/event'
 require 'flapjack/data/message'
@@ -58,7 +60,7 @@ module Flapjack
                  'severity'     => opts[:severity],
                  'count'        => event.counter }
 
-        redis.rpush(queue, ::Yajl::Encoder.encode(notif))
+        redis.rpush(queue, Oj.dump(notif))
       end
 
       def self.next(queue, opts = {})
@@ -74,8 +76,8 @@ module Flapjack
           return unless raw
         end
         begin
-          parsed = ::JSON.parse( raw )
-        rescue => e
+          parsed = ::Oj.load( raw )
+        rescue Oj::Error => e
           if options[:logger]
             options[:logger].warn("Error deserialising notification json: #{e}, raw json: #{raw.inspect}")
           end

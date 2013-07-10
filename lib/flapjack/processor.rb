@@ -26,9 +26,6 @@ module Flapjack
       @logger = opts[:logger]
       @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
 
-      # TODO load executive config fields first, for backwards compatability
-      # (probably do this in coordinator)
-
       @queue = @config['queue'] || 'events'
 
       @notifier_queue = @config['notifier_queue'] || 'notifications'
@@ -108,10 +105,10 @@ module Flapjack
     # from a different fiber while the main one is blocking.
     def stop
       @should_quit = true
-      @redis.rpush('events', JSON.generate('type'    => 'shutdown',
-                                           'host'    => '',
-                                           'service' => '',
-                                           'state'   => ''))
+      @redis.rpush('events', Oj.dump('type'    => 'shutdown',
+                                     'host'    => '',
+                                     'service' => '',
+                                     'state'   => ''))
     end
 
   private

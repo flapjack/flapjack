@@ -3,10 +3,13 @@
 require 'eventmachine'
 require 'em-synchrony'
 
+require 'syslog'
+
 require 'flapjack/configuration'
 require 'flapjack/patches'
 require 'flapjack/redis_pool'
 
+require 'flapjack/logger'
 require 'flapjack/pikelet'
 
 module Flapjack
@@ -18,18 +21,7 @@ module Flapjack
       @redis_options = config.for_redis
       @pikelets = []
 
-      # TODO convert this to use flapjack-logger
-      logger_name = "flapjack-coordinator"
-      @logger = Log4r::Logger.new(logger_name)
-
-      formatter = Log4r::PatternFormatter.new(:pattern => "%d [%l] :: #{logger_name} :: %m",
-        :date_pattern => "%Y-%m-%dT%H:%M:%S%z")
-
-      [Log4r::StdoutOutputter, Log4r::SyslogOutputter].each do |outp_klass|
-        outp = outp_klass.new(logger_name)
-        outp.formatter = formatter
-        @logger.add(outp)
-      end
+      @logger = Flapjack::Logger.new("flapjack-coordinator")
     end
 
     def start(options = {})
@@ -45,6 +37,7 @@ module Flapjack
       return if @stopping
       @stopping = true
       remove_pikelets(@pikelets, :shutdown => true)
+      # Syslog.close if Syslog.opened? # TODO revisit in threading branch
     end
 
     # NB: global config options (e.g. daemonize, pidfile,
@@ -176,7 +169,7 @@ module Flapjack
 
       # backwards-compatible with config file for previous 'executive' pikelet
       exec_cfg = nil
-      if config_env.has_key?('executive') && truthish?(config_env['executive']['enabled'])
+      if config_env.has_key?('executive') && config_env['executive']['enabled']
         exec_cfg = config_env['executive']
       end
       ['processor', 'notifier'].each do |k|
@@ -184,12 +177,12 @@ module Flapjack
           if config_env.has_key?(k)
             # need to allow for new config fields to override old settings if both present
             merged = exec_cfg.merge(config_env[k])
-            config.update(k => merged) if truthish?(merged['enabled'])
+            config.update(k => merged) if merged['enabled']
           else
             config.update(k => exec_cfg)
           end
         else
-          next unless (config_env.has_key?(k) && truthish?(config_env[k]['enabled']))
+          next unless (config_env.has_key?(k) && config_env[k]['enabled'])
           config.update(k => config_env[k])
         end
       end
@@ -197,13 +190,8 @@ module Flapjack
       return config unless config_env && config_env['gateways'] &&
         !config_env['gateways'].nil?
       config.merge( config_env['gateways'].select {|k, v|
-        Flapjack::Pikelet.is_pikelet?(k) && truthish?(v['enabled'])
+        Flapjack::Pikelet.is_pikelet?(k) && v['enabled']
       } )
-    end
-
-    def truthish?(v)
-      !v.nil? && v.respond_to?(:downcase) &&
-        ['yes', 'true'].include?(v.downcase)
     end
 
   end

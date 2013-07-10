@@ -1,10 +1,8 @@
 #!/usr/bin/env ruby
 
-require 'log4r'
-require 'log4r/outputter/fileoutputter'
 require 'active_support/time'
 
-require 'yajl/json_gem'
+require 'oj'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
@@ -28,8 +26,6 @@ module Flapjack
       @logger = opts[:logger]
       @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
 
-      # TODO load executive config fields first, for backwards compatability
-      # (probably do this in coordinator)
       @notifications_queue = @config['queue'] || 'notifications'
 
       @queues = {:email     => @config['email_queue'],
@@ -37,14 +33,16 @@ module Flapjack
                  :jabber    => @config['jabber_queue'],
                  :pagerduty => @config['pagerduty_queue']}
 
-      notifylog  = @config['notification_log_file'] || 'log/notify.log'
-      if not File.directory?(File.dirname(notifylog))
-        puts "Parent directory for log file #{notifylog} doesn't exist"
+      notify_logfile  = @config['notification_log_file'] || 'log/notify.log'
+      if not File.directory?(File.dirname(notify_logfile))
+        puts "Parent directory for log file '#{notify_logfile}' doesn't exist"
         puts "Exiting!"
         exit
       end
-      @notifylog = Log4r::Logger.new("notifier")
-      @notifylog.add(Log4r::FileOutputter.new("notifylog", :filename => notifylog))
+      @notifylog = ::Logger.new(notify_logfile)
+      @notifylog.formatter = proc do |severity, datetime, progname, msg|
+        "#{datetime.iso8601} [#{severity}] :: notify :: #{msg}\n"
+      end
 
       tz = nil
       tz_string = @config['default_contact_timezone'] || ENV['TZ'] || 'UTC'
@@ -75,7 +73,7 @@ module Flapjack
     # from a different fiber while the main one is blocking.
     def stop
       @should_quit = true
-      @redis.rpush(@notifications_queue, JSON.generate('type' => 'shutdown'))
+      @redis.rpush(@notifications_queue, Oj.dump('type' => 'shutdown'))
     end
 
   private
@@ -91,7 +89,7 @@ module Flapjack
 
       if contacts.empty?
         @logger.debug("No contacts for #{event_id}")
-        @notifylog.info("#{timestamp.to_s} | #{event_id} | #{notification_type} | NO CONTACTS")
+        @notifylog.info("#{event_id} | #{notification.type} | NO CONTACTS")
         return
       end
 
@@ -105,7 +103,7 @@ module Flapjack
         address    = message.address
         contents   = message.contents.merge(notification_contents)
 
-        @notifylog.info("#{timestamp.to_s} | #{event_id} | " +
+        @notifylog.info("#{event_id} | " +
           "#{notification.type} | #{message.contact.id} | #{media_type} | #{address}")
 
         unless @queues[media_type.to_sym]
@@ -148,9 +146,9 @@ module Flapjack
         when :email
           Resque.enqueue_to(@queues[:email], Flapjack::Gateways::Email, contents)
         when :jabber
-          @redis.rpush(@queues[:jabber], Yajl::Encoder.encode(contents))
+          @redis.rpush(@queues[:jabber], Oj.dump(contents))
         when :pagerduty
-          @redis.rpush(@queues[:pagerduty], Yajl::Encoder.encode(contents))
+          @redis.rpush(@queues[:pagerduty], Oj.dump(contents))
         end
       end
     end

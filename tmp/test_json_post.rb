@@ -1,7 +1,9 @@
 #!/usr/bin/env ruby
 
-require 'HTTParty'
-require 'json'
+require 'httparty'
+
+require 'oj'
+Oj.default_options = { :indent => 0, :mode => :strict }
 
 @payload ={
     "email" => "phil@gmail.com",
@@ -12,5 +14,5 @@ require 'json'
     "auto_action" => "true"
  }
 
-HTTParty.post( 'http://localhost:4091/notification_rules', :body => JSON.dump(@payload), :options => { :headers => { 'ContentType' => 'application/json' } })
+HTTParty.post( 'http://localhost:4091/notification_rules', :body => Oj.dump(@payload), :options => { :headers => { 'ContentType' => 'application/json' } })
 

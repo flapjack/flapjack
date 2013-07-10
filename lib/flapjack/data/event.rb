@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'yajl/json_gem'
+require 'oj'
 
 module Flapjack
   module Data
@@ -46,8 +46,8 @@ module Flapjack
           end
         end
         begin
-          parsed = ::JSON.parse( raw )
-        rescue => e
+          parsed = ::Oj.load( raw )
+        rescue Oj::Error => e
           if options[:logger]
             options[:logger].warn("Error deserialising event json: #{e}, raw json: #{raw.inspect}")
           end
@@ -65,7 +65,7 @@ module Flapjack
         raise "Redis connection not set" unless redis = opts[:redis]
 
         evt['time'] = Time.now.to_i if evt['time'].nil?
-        redis.rpush('events', ::Yajl::Encoder.encode(evt))
+        redis.rpush('events', ::Oj.dump(evt))
       end
 
       # Provide a count of the number of events on the queue to be processed.
