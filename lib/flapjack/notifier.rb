@@ -41,7 +41,7 @@ module Flapjack
       end
       @notifylog = ::Logger.new(notify_logfile)
       @notifylog.formatter = proc do |severity, datetime, progname, msg|
-        "#{datetime.iso8601} [#{severity}] :: notify :: #{msg}\n"
+        "#{datetime.to_s} | #{msg}\n"
       end
 
       tz = nil
