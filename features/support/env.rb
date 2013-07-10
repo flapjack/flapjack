@@ -24,7 +24,8 @@ require 'pathname'
 require 'webmock/cucumber'
 WebMock.disable_net_connect!
 
-require 'flapjack/executive'
+require 'flapjack/notifier'
+require 'flapjack/processor'
 require 'flapjack/patches'
 
 require 'resque_spec'
@@ -124,20 +125,36 @@ end
 
 Before do
   @logger = MockLogger.new
-  # Use a separate database whilst testing
-  @app = Flapjack::Executive.new(:logger => @logger,
-    :config => {'email_queue' => 'email_notifications',
-                'sms_queue' => 'sms_notifications',
-                'default_contact_timezone' => 'America/New_York'},
-    :redis_config => redis_opts)
-  @redis = @app.instance_variable_get('@redis')
 end
 
 After do
+  @logger.messages = []
+end
+
+
+Before('@processor') do
+  @processor = Flapjack::Processor.new(:logger => @logger,
+    :redis_config => redis_opts, :config => {})
+  @redis = @processor.instance_variable_get('@redis')
+end
+
+After('@processor') do
   @redis.flushdb
   @redis.quit
-  # Reset the logged messages
-  @logger.messages = []
+end
+
+Before('@notifier') do
+  @notifier  = Flapjack::Notifier.new(:logger => @logger,
+    :redis_config => redis_opts,
+    :config => {'email_queue' => 'email_notifications',
+                'sms_queue' => 'sms_notifications',
+                'default_contact_timezone' => 'America/New_York'})
+  @notifier_redis = @notifier.instance_variable_get('@redis')
+end
+
+After('@notifier') do
+  @notifier_redis.flushdb
+  @notifier_redis.quit
 end
 
 Before('@resque') do

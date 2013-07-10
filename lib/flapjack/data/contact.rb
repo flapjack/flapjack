@@ -235,10 +235,11 @@ module Flapjack
       end
 
       # drop notifications for
-      def drop_notifications?(opts)
+      def drop_notifications?(opts = {})
         media    = opts[:media]
         check    = opts[:check]
         state    = opts[:state]
+
         # build it and they will come
         @redis.exists("drop_alerts_for_contact:#{self.id}") ||
           (media && @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}")) ||
@@ -248,7 +249,7 @@ module Flapjack
             @redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}"))
       end
 
-      def update_sent_alert_keys(opts)
+      def update_sent_alert_keys(opts = {})
         media  = opts[:media]
         check  = opts[:check]
         state  = opts[:state]

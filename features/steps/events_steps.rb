@@ -2,9 +2,19 @@
 
 def drain_events
   loop do
-    event = Flapjack::Data::Event.next(:block => false, :redis => @redis)
+    event = Flapjack::Data::Event.next('events', :block => false, :redis => @redis)
     break unless event
-    @app.send(:process_event, event)
+    @processor.send(:process_event, event)
+  end
+  drain_notifications
+end
+
+def drain_notifications
+  return unless @notifier_redis
+  loop do
+    notification = Flapjack::Data::Notification.next('notifications', :block => false, :redis => @notifier_redis)
+    break unless notification
+    @notifier.send(:process_notification, notification)
   end
 end
 
@@ -255,16 +265,16 @@ end
 Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
   check  ||= @check
   entity ||= @entity
-  message = @logger.messages.find_all {|m| m =~ /enerating notifications for event #{entity}:#{check}/ }.last
-  found = message ? message.match(/Not generating notifications/) : false
+  message = @logger.messages.find_all {|m| m =~ /enerating notification for event #{entity}:#{check}/ }.last
+  found = message ? message.match(/Not generating notification/) : false
   found.should be_true
 end
 
 Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
   check  ||= @check
   entity ||= @entity
-  message = @logger.messages.find_all {|m| m =~ /enerating notifications for event #{entity}:#{check}/ }.last
-  found = message ? message.match(/Generating notifications/) : false
+  message = @logger.messages.find_all {|m| m =~ /enerating notification for event #{entity}:#{check}/ }.last
+  found = message ? message.match(/Generating notification/) : false
   found.should be_true
 end
 
@@ -280,14 +290,12 @@ Then /^show me the (\w+ )*log$/ do |adjective|
 end
 
 # added for notification rules:
-
 Given /^the following entities exist:$/ do |entities|
   entities.hashes.each do |entity|
     contacts = entity['contacts'].split(',')
     contacts.map! do |contact|
       contact.strip
     end
-    #puts "adding entity #{entity['name']} (#{entity['id']}) with contacts: [#{contacts.join(', ')}]"
     Flapjack::Data::Entity.add({'id'       => entity['id'],
                                 'name'     => entity['name'],
                                 'contacts' => contacts},
@@ -357,13 +365,6 @@ end
 Then /^all alert dropping keys for user (\d+) should have expired$/ do |contact_id|
   @redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
 end
-
-# When /^the (\w*) alert block for user (\d*) for (?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') for state (.*) expires$/ do |media, contact, check, entity, state|
-#   check  = check  ? check  : @check
-#   entity = entity ? entity : @entity
-#   num_deleted = @redis.del("drop_alerts_for_contact:#{contact}:#{media}:#{entity}:#{check}:#{state}")
-#   puts "Warning: no keys expired" unless num_deleted > 0
-# end
 
 Then /^(.*) email alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
   check  = check  ? check  : @check
