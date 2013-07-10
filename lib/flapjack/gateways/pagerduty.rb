@@ -216,7 +216,7 @@ module Flapjack
         http = EM::HttpRequest.new(url).get(options)
         begin
           response = Oj.load(http.response)
-        rescue Exception
+        rescue Oj::Error
           @logger.error("failed to parse json from a post to #{url} ... response headers and body follows...")
           return nil
         end
