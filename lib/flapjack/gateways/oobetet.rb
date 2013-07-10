@@ -15,9 +15,8 @@ module Flapjack
     class Oobetet < Blather::Client
       include Flapjack::Utility
 
-      log = Logger.new(STDOUT)
-      # log.level = Logger::DEBUG
-      log.level = Logger::INFO
+      log = ::Logger.new(STDOUT)
+      log.level = ::Logger::INFO
       Blather.logger = log
 
       def initialize(opts = {})

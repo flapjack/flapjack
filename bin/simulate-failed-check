@@ -9,8 +9,7 @@ require 'ostruct'
 require 'redis'
 require 'eventmachine'
 
-require 'oj'
-Oj.default_options = { :indent => 0, :mode => :strict }
+require 'json'
 
 require 'flapjack/configuration'
 

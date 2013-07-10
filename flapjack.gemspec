@@ -18,7 +18,6 @@ Gem::Specification.new do |gem|
   gem.version       = Flapjack::VERSION
 
   gem.add_dependency 'dante'
-  gem.add_dependency 'log4r'
   gem.add_dependency 'oj'
   gem.add_dependency 'eventmachine', '~> 1.0.0'
   gem.add_dependency 'hiredis'
