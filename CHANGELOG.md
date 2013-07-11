@@ -1,5 +1,10 @@
 ## Flapjack Changelog
 
+# 0.7.19 - UNRELEASED
+- Removed log4r and YAJL dependencies gh-25 (@ali-graham)
+- Made jabber entity status messages more verbose gh-245 (@ali-graham)
+- Split executive pikelet into two parts (processor and notifier) gh-247 (@ali-graham)
+
 # 0.7.18 - 2013-07-05
 - Feature: delete currently active scheduled maintenance via api should truncate from Time.now gh-242 (@ali-graham)
 
