@@ -1,32 +1,27 @@
-!!! 5
-- nav = render_haml('_nav.haml', self)
-- head = render_haml('_head.haml', self)
-- foot = render_haml('_foot.haml', self)
-%html
-  %head
-    %title Flapjack - Summary
-    = head
-  %body
-    %div#wrap
-      %div{:class => "container"}
-        %div{:class => "page-header"}
-          = nav
-          %h2 Summary
-        %h4
-          %a(title='failing entities' href='/entities_failing')
-            #{@count_failing_entities}
-          out of
-          %a(title='all entities' href='/entities_all')
-            #{@count_all_entities}
-          entities have failing checks
-        %h4
-          %a(title='failing checks' href='/checks_failing')
-            #{@count_failing_checks}
-          out of
-          %a(title='all checks' href='/checks_all')
-            #{@count_all_checks}
-          checks are failing
-        %img{:src => '/img/flapjack_white_bg_400_353.jpeg', :height => 353, :width => 400}
-      %div#push
-    %div#footer
-      = foot
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <% nav  = render_erb('_nav.html.erb', binding) %>
+    <% head = render_erb('_head.html.erb', binding) %>
+    <% foot = render_erb('_foot.html.erb', binding) %>
+    <title>Flapjack - Summary</title>
+    <%= head %>
+  </head>
+  <body>
+    <div id="wrap">
+      <div class="container">
+        <div class="page-header">
+          <%= nav %>
+          <h2>Summary</h2>
+        </div>
+        <h4><a href="/entities_failing" title="failing entities"><%= h @count_failing_entities %></a> out of <a href="/entities_all" title="all entities"><%= h @count_all_entities %></a> entities have failing checks</h4>
+        <h4><a href="/checks_failing" title="failing checks"><%= h @count_failing_checks %></a> out of <a href="/checks_all" title="all checks"><%= h @count_all_checks %></a> checks are failing</h4>
+        <img src="/img/flapjack_white_bg_400_353.jpeg" width="400" height="353">
+      </div>
+      <div id="push"></div>
+    </div>
+    <div id="footer">
+      <%= foot %>
+    </div>
+  </body>
+</html>

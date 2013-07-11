@@ -1,70 +1,97 @@
-!!! 5
-- nav = render_haml('_nav.haml', self)
-- head = render_haml('_head.haml', self)
-- foot = render_haml('_foot.haml', self)
-%html
-  %head
-    %title Flapjack - Internal Statistics
-    = head
-  %body
-    %div#wrap
-      %div{:class => "container"}
-        %div{:class => "page-header"}
-          = nav
-          %h2 Internal Statistics
-        %table{:class => "table table-bordered table-hover table-condensed"}
-          %tr
-            %td Events queued:
-            %td= @events_queued
-          %tr
-            %td Number of entities:
-            %td= @count_all_entities
-          %tr
-            %td Number of failing entities:
-            %td= @count_failing_entities
-          %tr
-            %td Number of checks:
-            %td= @count_all_checks
-          %tr
-            %td Number of failing checks:
-            %td= @count_failing_checks
-          %tr
-            %td Events processed (all time)
-            %td #{@event_counters['all']} (ok: #{@event_counters['ok']}, failure: #{@event_counters['failure']}, action: #{@event_counters['action']})
-          %tr
-            %td Events processed (this instance)
-            %td #{@event_counters_instance['all']} (ok: #{@event_counters_instance['ok']}, failure: #{@event_counters_instance['failure']}, action: #{@event_counters_instance['action']})
-          %tr
-            %td Average rate (this instance)
-            %td #{@event_rate_all} events per second
-          %tr
-            %td Total keys in redis
-            %td #{@dbsize}
-          %tr
-            %td Uptime
-            %td= @uptime_string
-          %tr
-            %td Boot time
-            %td= @boot_time
-          %tr
-            %td Current time
-            %td= Time.now
-        %h4
-          Executive Instances:
-        %table{:class => "table table-bordered table-hover"}
-          %tr
-            %th Hostname
-            %th PID
-            %th Started
-          - @executive_instances.each do |i|
-            - hostname, pid = i[0].split(':')
-            - started = "#{relative_time_ago(Time.at(i[1].to_i))} ago"
-            %tr
-              %td= hostname
-              %td= pid
-              %td= started
-        %p
-          %a{:href => 'self_stats.json'} Instrument as JSON
-      %div#push
-    %div#footer
-      = foot
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <% nav  = render_erb('_nav.html.erb', binding) %>
+    <% head = render_erb('_head.html.erb', binding) %>
+    <% foot = render_erb('_foot.html.erb', binding) %>
+    <title>Flapjack - Internal Statistics</title>
+    <%= head %>
+  </head>
+  <body>
+    <div id="wrap">
+      <div class="container">
+        <div class="page-header">
+          <%= nav %>
+          <h2>Internal Statistics</h2>
+        </div>
+
+        <table class="table table-bordered table-hover table-condensed">
+          <tr>
+            <td>Events queued:</td>
+            <td><%= h @events_queued %></td>
+          </tr>
+          <tr>
+            <td>Number of entities:</td>
+            <td><%= h @count_all_entities %></td>
+          </tr>
+          <tr>
+            <td>Number of failing entities:</td>
+            <td><%= h @count_failing_entities %></td>
+          </tr>
+          <tr>
+            <td>Number of checks:</td>
+            <td><%= h @count_all_checks %></td>
+          </tr>
+          <tr>
+            <td>Number of failing checks:</td>
+            <td><%= h @count_failing_checks %></td>
+          </tr>
+          <tr>
+            <td>Events processed (all time)</td>
+            <td><%= h @event_counters['all'] %> (ok: <%= h @event_counters['ok'] %>, failure: <%= h @event_counters['failure'] %>, action: <%= h @event_counters['action'] %>)</td>
+          </tr>
+          <tr>
+            <td>Events processed (this instance)</td>
+            <td><%= h @event_counters_instance['all'] %> (ok: <%= h @event_counters_instance['ok'] %>, failure: <%= h @event_counters_instance['failure'] %>, action: <%= h @event_counters_instance['action'] %>)</td>
+          </tr>
+          <tr>
+            <td>Average rate (this instance)</td>
+            <td><%= h @event_rate_all %></td> events per second
+          </tr>
+          <tr>
+            <td>Total keys in redis</td>
+            <td><%= h @dbsize %></td>
+          </tr>
+          <tr>
+            <td>Uptime</td>
+            <td><%= h @uptime_string %></td>
+          </tr>
+          <tr>
+            <td>Boot Time</td>
+            <td><%= h @boot_time %></td>
+          </tr>
+          <tr>
+            <td>Current time</td>
+            <td><%= h Time.now.to_s %></td>
+          </tr>
+        </table>
+
+        <h4>Executive Instances:</h4>
+        <table class="table table-bordered table-hover">
+          <tr>
+            <th>Hostname</th>
+            <th>PID</th>
+            <th>Started</th>
+          </tr>
+          <% @executive_instances.each do |i| %>
+            <%
+              hostname, pid = i[0].split(':')
+              started = "#{relative_time_ago(Time.at(i[1].to_i))} ago"
+             %>
+            <tr>
+              <td><%= h hostname %></td>
+              <td><%= h pid %></td>
+              <td><%= h started %></td>
+            </tr>
+          <% end %>
+        </table>
+
+        <p><a href="/self_stats.json">Instrument as JSON</a></p>
+      </div>
+      <div id="push"></div>
+    </div>
+    <div id="footer">
+      <%= foot %>
+    </div>
+  </body>
+</html>

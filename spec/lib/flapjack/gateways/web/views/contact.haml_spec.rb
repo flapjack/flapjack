@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe 'web/views/contact.haml', :haml_view => true do
+describe 'web/views/contact.html.erb', :erb_view => true do
 
   it "should escape unsafe check characters in URI parameters" do
     @contact = mock('contact')
@@ -15,8 +15,8 @@ describe 'web/views/contact.haml', :haml_view => true do
 
     @entities_and_checks = [{:entity => entity, :checks => checks}]
 
-    page = render_haml('contact.haml', self)
-    page.should match(%r{\?entity=abc-xyz-01&amp;check=Disk\+%2F\+Utilisation})
+    page = render_erb('contact.html.erb', binding)
+    page.should match(%r{\?entity=abc-xyz-01&amp;check=Disk%20%2F%20Utilisation})
   end
 
 end

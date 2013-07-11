@@ -1,30 +1,42 @@
-!!! 5
-- nav = render_haml('_nav.haml', self)
-- head = render_haml('_head.haml', self)
-- foot = render_haml('_foot.haml', self)
-%html
-  %head
-    %title Flapjack - Contacts
-    = head
-  %body
-    %div#wrap
-      %div{:class => "container"}
-        %div{:class => "page-header"}
-          = nav
-          %h2 Contacts
-        - if @contacts && !@contacts.empty?
-          %table{:class => "table table-bordered table-hover table-condensed"}
-            %tr
-              %th Name
-              %th Email
-            - @contacts.sort_by {|c| [c.first_name, c.last_name] }.each do |contact|
-              %tr
-                %td
-                  - link = "/contacts/#{contact.id}"
-                  %a(title='contact details' href=link) #{contact.name}
-                %td= contact.email
-        - else
-          %p No contacts
-      %div#push
-    %div#footer
-      = foot
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <% nav  = render_erb('_nav.html.erb', binding) %>
+    <% head = render_erb('_head.html.erb', binding) %>
+    <% foot = render_erb('_foot.html.erb', binding) %>
+    <title>Flapjack - Contacts</title>
+    <%= head %>
+  </head>
+  <body>
+    <div id="wrap">
+      <div class="container">
+        <div class="page-header">
+          <%= nav %>
+          <h2>Contacts</h2>
+        </div>
+
+        <% if !@contacts || @contacts.empty? %>
+          <p>No contacts</p>
+        <% else %>
+          <table class="table table-bordered table-hover table-condensed">
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+            </tr>
+            <% @contacts.sort_by {|c| [c.last_name, c.first_name] }.each do |contact| %>
+            <tr>
+              <td><a href="/contacts/<%= contact.id %>" title="contact details"><%= h contact.name %></a></td>
+              <td><%= h contact.email %></td>
+            </tr>
+            <% end %>
+          </table>
+        <% end %>
+
+      </div>
+      <div id="push"></div>
+    </div>
+    <div id="footer">
+      <%= foot %>
+    </div>
+  </body>
+</html>

@@ -80,7 +80,7 @@ RSpec.configure do |config|
     Delorean.back_to_the_present
   end
 
-  config.include HamlViewHelper, :haml_view => true
+  config.include ErbViewHelper, :erb_view => true
   config.include Rack::Test::Methods, :sinatra => true
   config.include JsonSpec::Helpers, :json => true
 end

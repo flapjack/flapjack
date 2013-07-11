@@ -1,28 +1,39 @@
-!!! 5
-- nav = render_haml('_nav.haml', self)
-- head = render_haml('_head.haml', self)
-- foot = render_haml('_foot.haml', self)
-%html
-  %head
-    %title Flapjack - #{@adjective.capitalize} Entities
-    = head
-  %body
-    %div#wrap
-      %div{:class => "container"}
-        %div{:class => "page-header"}
-          = nav
-          %h2 #{@adjective.capitalize} Entities
-        %p #{@count_failing_entities} failing out of #{@count_all_entities}
-        %table{:class => "table table-bordered table-hover table-condensed"}
-          - if @entities.length > 0
-            - @entities.sort.each do |entity|
-              %tr
-                %td
-                  - link = "/entity/#{CGI.escape(entity)}"
-                  %a{:href => link}
-                    #{entity}
-          - else
-            %p No check output has been processed yet, so there's no entities we can show you here.
-      %div#push
-    %div#footer
-      = foot
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <% nav  = render_erb('_nav.html.erb', binding) %>
+    <% head = render_erb('_head.html.erb', binding) %>
+    <% foot = render_erb('_foot.html.erb', binding) %>
+    <title>Flapjack - <%= h @adjective.capitalize %> Entities</title>
+    <%= head %>
+  </head>
+  <body>
+    <div id="wrap">
+      <div class="container">
+        <div class="page-header">
+          <%= nav %>
+          <h2><%= h @adjective.capitalize %> Entities</h2>
+        </div>
+
+        <p><%= h @count_failing_entities %> failing out of <%= h @count_all_entities %></p>
+
+        <% if @entities.length > 0 %>
+        <table class="table table-bordered table-hover table-condensed">
+          <% @entities.sort.each do |entity| %>
+            <tr>
+              <td><a href="/entity/<%= CGI.escape(entity) %>"><%= h entity %></a>
+              </td>
+            </tr>
+          <% end %>
+        </table>
+        <% else %>
+          <p>No check output has been processed yet, so there are no entities we can show you here.</p>
+        <% end %>
+      </div>
+      <div id="push"></div>
+    </div>
+    <div id="footer">
+      <%= foot %>
+    </div>
+  </body>
+</html>
