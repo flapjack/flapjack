@@ -14,14 +14,13 @@ describe Flapjack::Data::Message do
 
   it "returns its contained data" do
     message = Flapjack::Data::Message.for_contact(contact, :medium => 'email',
-                :address => 'jja@example.com', :notification_contents => {'notification' => 'contents'})
+                :address => 'jja@example.com')
 
     contact.should_receive(:id).and_return('23')
     contact.should_receive(:first_name).and_return('James')
     contact.should_receive(:last_name).and_return('Jameson')
 
-    message.contents.should include('notification' => 'contents',
-                                    'contact_id' => '23',
+    message.contents.should include('contact_id' => '23',
                                     'contact_first_name' => 'James',
                                     'contact_last_name' => 'Jameson',
                                     'media' => 'email',

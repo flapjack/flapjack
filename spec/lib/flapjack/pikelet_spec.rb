@@ -3,10 +3,10 @@ require 'flapjack/pikelet'
 
 describe Flapjack::Pikelet do
 
-  let(:config)       { mock('config') }
+  let(:config) { mock('config') }
   let(:redis_config) { mock('redis_config') }
 
-  let(:logger)     { mock(Flapjack::Logger) }
+  let(:logger) { mock(Flapjack::Logger) }
 
   let(:fiber) { mock(Fiber) }
 
@@ -16,21 +16,21 @@ describe Flapjack::Pikelet do
     Flapjack::Pikelet::Resque.class_variable_set(:@@resque_pool, nil)
   end
 
-  it "creates and starts an executive pikelet" do
+  it "creates and starts a processor pikelet" do
     Flapjack::Logger.should_receive(:new).and_return(logger)
 
     config.should_receive(:[]).with('logger').and_return(nil)
 
-    executive = mock('executive')
-    executive.should_receive(:start)
-    Flapjack::Executive.should_receive(:new).with(:config => config,
+    processor = mock('processor')
+    processor.should_receive(:start)
+    Flapjack::Processor.should_receive(:new).with(:config => config,
         :redis_config => redis_config, :boot_time => time, :logger => logger).
-      and_return(executive)
+      and_return(processor)
 
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    pik = Flapjack::Pikelet.create('executive', :config => config,
+    pik = Flapjack::Pikelet.create('processor', :config => config,
       :redis_config => redis_config, :boot_time => time)
     pik.should be_a(Flapjack::Pikelet::Generic)
     pik.start

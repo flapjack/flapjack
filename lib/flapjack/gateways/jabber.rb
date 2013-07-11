@@ -196,7 +196,7 @@ module Flapjack
                 "  ACKID <id> <comment> [duration: <time spec>] \n" +
                 "  find entities matching /pattern/ \n" +
                 "  test notifications for <entity>[:<check>] \n" +
-                "  tell me about <entity>[:<check>]" +
+                "  tell me about <entity>[:<check>] \n" +
                 "  identify \n" +
                 "  help \n"
 

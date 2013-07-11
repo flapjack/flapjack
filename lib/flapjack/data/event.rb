@@ -6,7 +6,7 @@ module Flapjack
   module Data
     class Event
 
-      attr_accessor :previous_state, :previous_state_duration
+      attr_accessor :counter, :previous_state, :previous_state_duration
 
       attr_reader :check, :summary, :details, :acknowledgement_id
 
@@ -20,7 +20,7 @@ module Flapjack
       # Calling next with :block => false, will return a nil if there are no
       # events on the queue.
       #
-      def self.next(opts={})
+      def self.next(queue, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
 
         defaults = { :block => true,
@@ -31,23 +31,23 @@ module Flapjack
         if options[:archive_events]
           dest = "events_archive:#{Time.now.utc.strftime "%Y%m%d%H"}"
           if options[:block]
-            raw = redis.brpoplpush('events', dest, 0)
+            raw = redis.brpoplpush(queue, dest, 0)
           else
-            raw = redis.rpoplpush('events', dest)
+            raw = redis.rpoplpush(queue, dest)
             return unless raw
           end
           redis.expire(dest, options[:events_archive_maxage])
         else
           if options[:block]
-            raw = redis.brpop('events', 0)[1]
+            raw = redis.brpop(queue, 0)[1]
           else
-            raw = redis.rpop('events')
+            raw = redis.rpop(queue)
             return unless raw
           end
         end
         begin
           parsed = ::Oj.load( raw )
-        rescue => e
+        rescue Oj::Error => e
           if options[:logger]
             options[:logger].warn("Error deserialising event json: #{e}, raw json: #{raw.inspect}")
           end
