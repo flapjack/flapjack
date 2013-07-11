@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <% nav  = render_erb('_nav.html.erb', binding) %>
+    <% head = render_erb('_head.html.erb', binding) %>
+    <% foot = render_erb('_foot.html.erb', binding) %>
+    <title>Flapjack - <%= @adjective.capitalize %> Checks</title>
+    <%= head %>
+  </head>
+  <body>
+    <div id="wrap">
+      <div class="container">
+        <div class="page-header">
+          <%= nav %>
+          <h2><%= @adjective.capitalize %> Checks</h2>
+        </div>
+
+        <p><%= h @count_failing_checks %> failing out of <%= h @count_all_checks %></p>
+
+        <table class="table table-bordered table-hover table-condensed">
+          <tr>
+            <th>Entity</th>
+            <th>Check</th>
+            <th>State</th>
+            <th>Last State Change</th>
+            <th>Last Update</th>
+            <th>Last Notification</th>
+          </tr>
+          <% @states.each do |entity, check, status, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified_kind, notified| %>
+            <%
+              row_colour = case status
+              when 'critical', 'unknown'
+                'error'
+              when 'ok', 'up'
+                'success'
+              else
+                status
+              end
+
+              check_link = "/check?entity=" << u(entity) << "&amp;check=" << u(check)
+
+              last_notified = if notified && (notified > 0)
+                relative_time_ago(Time.at(notified.to_i)) + " ago, #{notified_kind}"
+              else
+                'never'
+              end
+            %>
+            <tr class="<%= row_colour %>">
+              <td><%= h entity %></td>
+              <td><a href="<%= check_link %>" title="check detail"><%= h check %></a></td>
+              <td class="<%= status %>">
+                <%= h status.upcase %>
+                <% if in_unscheduled_outage%> (Acknowledged)<% end %>
+                <% if in_scheduled_outage %> (Scheduled Maintenance)<% end %>
+              </td>
+              <td><%= relative_time_ago(Time.at(changed.to_i)) %> ago</td>
+              <td><%= relative_time_ago(Time.at(updated.to_i)) %> ago</td>
+              <td><%= h last_notified %></td>
+            </tr>
+
+          <% end %>
+        </table>
+
+      </div>
+      <div id="push"></div>
+    </div>
+    <div id="footer">
+      <%= foot %>
+    </div>
+  </body>
+</html>
