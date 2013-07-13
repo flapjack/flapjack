@@ -380,23 +380,45 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     state.should == 'critical'
   end
 
-  it "updates current checks" do
+  it "updates enabled checks" do
     ts = Time.now.to_i
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
     ec.last_update = ts
 
-    saved_ts = @redis.zscore("current_checks", "#{name}:#{check}")
-    saved_ts.should_not be_nil
-    saved_ts.should == ts
+    saved_check_ts = @redis.zscore("current_checks:#{name}", check)
+    saved_check_ts.should_not be_nil
+    saved_check_ts.should == ts
+    saved_entity_ts = @redis.zscore("current_entities", name)
+    saved_entity_ts.should_not be_nil
+    saved_entity_ts.should == ts
+  end
+
+  it "exposes that it is enabled" do
+    @redis.zadd("current_checks:#{name}", Time.now.to_i, check)
+    @redis.zadd("current_entities", Time.now.to_i, name)
+    ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+
+    e = ec.enabled?
+    e.should be_true
+  end
+
+  it "exposes that it is disabled" do
+    ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+
+    e = ec.enabled?
+    e.should be_false
   end
 
   it "disables checks" do
-    @redis.zadd("current_checks", Time.now.to_i, "#{name}:#{check}")
+    @redis.zadd("current_checks:#{name}", Time.now.to_i, check)
+    @redis.zadd("current_entities", Time.now.to_i, name)
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
     ec.disable!
 
-    saved_ts = @redis.zscore("current_checks", "#{name}:#{check}")
-    saved_ts.should be_nil
+    saved_check_ts = @redis.zscore("current_checks:#{name}", check)
+    saved_entity_ts = @redis.zscore("current_entities", name)
+    saved_check_ts.should be_nil
+    saved_entity_ts.should be_nil
   end
 
   it "does not update state with invalid value" do

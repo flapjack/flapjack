@@ -43,11 +43,17 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   def expect_check_stats
-    redis.should_receive(:keys).with('check:*:*').and_return([])
-    redis.should_receive(:zcard).with('failed_checks')
+    Flapjack::Data::EntityCheck.should_receive(:count_all).
+      with(:redis => redis).and_return(1)
+    Flapjack::Data::EntityCheck.should_receive(:count_all_failing).
+      with(:redis => redis).and_return(1)
   end
 
   def expect_entity_stats
+    Flapjack::Data::Entity.should_receive(:find_all_with_checks).
+      with(:redis => redis).and_return([entity_name])
+    Flapjack::Data::Entity.should_receive(:find_all_with_failing_checks).
+      with(:redis => redis).and_return([entity_name])
   end
 
   def expect_entity_check_status(ec)
@@ -67,8 +73,9 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   # (for the methods that access redis directly)
 
   it "shows a page listing all checks" do
-    redis.should_receive(:keys).with('*:*:states').and_return(["#{entity_name}:#{check}"])
-
+    #redis.should_receive(:keys).with('*:*:states').and_return(["#{entity_name}:#{check}"])
+    Flapjack::Data::EntityCheck.should_receive(:find_all_by_entity).
+      with(:redis => redis).and_return({entity_name => [check]})
     expect_check_stats
 
     expect_entity_check_status(entity_check)
@@ -84,7 +91,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   it "shows a page listing failing checks" do
-    redis.should_receive(:zrange).with('failed_checks', 0, -1).and_return(["#{entity_name}:#{check}"])
+    #redis.should_receive(:zrange).with('failed_checks', 0, -1).and_return(["#{entity_name}:#{check}"])
 
     expect_check_stats
 
@@ -93,6 +100,9 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
+    Flapjack::Data::EntityCheck.should_receive(:find_all_failing_by_entity).
+      with(:redis => redis).and_return({entity_name => [check]})
+
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, 'ping', :redis => redis).and_return(entity_check)
     get '/checks_failing'
@@ -100,8 +110,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   it "shows a page listing flapjack statistics" do
-    redis.should_receive(:keys).with('check:*').and_return([])
-    redis.should_receive(:zrange).with('failed_checks', 0, -1).and_return(["#{entity_name}:#{check}"])
+    #redis.should_receive(:keys).with('check:*').and_return([])
+    #redis.should_receive(:zrange).with('failed_checks', 0, -1).and_return(["#{entity_name}:#{check}"])
     expect_stats
     expect_check_stats
     expect_entity_stats
@@ -130,9 +140,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     entity_check.should_receive(:current_maintenance).with(:scheduled => true).and_return(false)
     entity_check.should_receive(:current_maintenance).with(:scheduled => false).and_return(false)
     entity_check.should_receive(:contacts).and_return([])
-
     entity_check.should_receive(:historical_states).
       with(nil, time.to_i, :order => 'desc', :limit => 20).and_return([])
+    entity_check.should_receive(:enabled?).with().
+      and_return(true)
 
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)

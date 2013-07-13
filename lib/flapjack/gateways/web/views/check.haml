@@ -13,15 +13,12 @@
       %div{:class => "container"}
         %div{:class => "page-header"}
           = nav
-          %h2 #{@check} on #{@entity}
-        %h3 State: #{@check_state ? @check_state.upcase : ''}
-        %div#currency
-          - if @check_enabled
-            %form{ :action => "/checks/#{check_path_escaped}", :method => "post"}
-              %input{:type => 'hidden', :name => '_method', :value => 'delete'}
-                %input{:type => 'submit', :value => "Disable", :class => 'button'}
-          - else
-            Disabled
+          - entity_link = "/entity/#{CGI.escape(@entity)}"
+          %h2
+            = "#{@check} on "
+            %a(title="@entity" href=entity_link) #{@entity}
+        - state_qualifier = @check_enabled ? '' : "DISABLED. Last "
+        %h3 #{state_qualifier} State: #{@check_state ? @check_state.upcase : ''}
         - if (['warning', 'critical', 'unknown'].include?(@check_state) and !@current_scheduled_maintenance)
           %form{:action => "/acknowledgements/#{check_path_escaped}", :method => "post", :class => "form-inline"}
             %input{:type => 'hidden', :name => 'acknowledgement_id', :value => "#{@acknowledgement_id}"}
@@ -111,6 +108,15 @@
             %td= last_ack ? last_ack[:relative] : 'never'
             %td= last_ack ? last_ack[:time] : ''
             %td= last_ack ? last_ack[:summary] : ''
+
+        %div#currency
+          - if @check_enabled
+            Enabled ...
+            %form{ :action => "/checks/#{check_path_escaped}", :method => "post", :style => "display:inline-block"}
+              %input{:type => 'hidden', :name => '_method', :value => 'delete'}
+              %input{:type => 'submit', :value => "Disable", :class => 'button'}
+          - else
+            Disabled
 
         %h3 Scheduled Maintenance Periods
         - if @scheduled_maintenances && !@scheduled_maintenances.empty?

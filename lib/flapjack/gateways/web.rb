@@ -79,11 +79,13 @@ module Flapjack
         check_stats
         @adjective = 'all'
 
-        # TODO (?) recast as Entity.all do |e|; e.checks.do |ec|; ...
-        @states = redis.keys('*:*:states').map { |r|
-          entity, check = r.sub(/:states$/, '').split(':', 2)
-          [entity, check] + entity_check_state(entity, check)
-        }.compact.sort_by {|parts| parts }
+        @states = []
+        Flapjack::Data::EntityCheck.find_all_by_entity(:redis => redis).each {|entity, checks|
+          checks.each {|check|
+            @states << [entity, check] + entity_check_state(entity, check)
+          }
+        }
+        @states.sort_by! {|parts| parts}
 
         haml :checks
       end
@@ -92,10 +94,13 @@ module Flapjack
         check_stats
         @adjective = 'failing'
 
-        @states = redis.zrange('failed_checks', 0, -1).map {|key|
-          parts  = key.split(':', 2)
-          [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
-        }.compact.sort_by {|parts| parts}
+        @states = []
+        Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => redis).each {|entity, checks|
+          checks.each {|check|
+            @states << [entity, check] + entity_check_state(entity, check)
+          }
+        }
+        @states.sort_by! {|parts| parts}
 
         haml :checks
       end
@@ -150,8 +155,7 @@ module Flapjack
       get '/entity/:entity' do
         @entity = params[:entity]
         entity_stats
-        @states = redis.keys("#{@entity}:*:states").map { |r|
-          check = r.sub(/^#{@entity}:/, '').sub(/:states$/, '')
+        @states = Flapjack::Data::EntityCheck.find_all_for_entity_name(@entity, :redis => redis).map { |check|
           [@entity, check] + entity_check_state(@entity, check)
         }.compact.sort_by {|parts| parts }
         haml :entity
@@ -266,7 +270,6 @@ module Flapjack
       end
 
       get "/contacts/:contact" do
-        #self_stats
         contact_id = params[:contact]
 
         if contact_id
@@ -282,6 +285,7 @@ module Flapjack
           @pagerduty_credentials = @contact.pagerduty_credentials
         end
 
+        # FIXME: intersect with current checks, or push down to Contact.entities
         @entities_and_checks = @contact.entities(:checks => true).sort_by {|ec|
           ec[:entity].name
         }
@@ -350,8 +354,9 @@ module Flapjack
       end
 
       def check_stats
-        @count_all_checks        = redis.keys('check:*:*').length
-        @count_failing_checks    = redis.zcard 'failed_checks'
+        # FIXME: move this logic to Flapjack::Data::EntityCheck
+        @count_all_checks        = Flapjack::Data::EntityCheck.count_all(:redis => redis)
+        @count_failing_checks    = Flapjack::Data::EntityCheck.count_all_failing(:redis => redis)
       end
 
 
