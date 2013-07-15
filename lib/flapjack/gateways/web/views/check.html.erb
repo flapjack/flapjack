@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <% nav  = render_erb('_nav.html.erb', binding) %>
+    <% head = render_erb('_head.html.erb', binding) %>
+    <% foot = render_erb('_foot.html.erb', binding) %>
+    <% check_path_escaped = u(@entity) << '/' << u(@check) %>
+    <% current_time = Time.now %>
+    <title>Flapjack - Check: <%= h @entity %>:<%= h @check %></title>
+    <%= head %>
+  </head>
+  <body>
+    <div id="wrap">
+      <div class="container">
+        <div class="page-header">
+          <%= nav %>
+          <h2><%= h @check %> on <%= h @entity %></h2>
+        </div>
+        <h3>State: <%= @check_state ? h(@check_state.upcase) : '' %></h3>
+        <% if (['warning', 'critical', 'unknown'].include?(@check_state) and !@current_scheduled_maintenance) %>
+          <form action="/acknowledgements/<%= check_path_escaped %>" method="post" class="form-inline">
+            <input type="hidden" name="acknowledgement_id" value="<%= @acknowledgement_id %>">
+            <input type="submit" value="<%= @current_unscheduled_maintenance ? 'Replace acknowledgment' : 'Acknowledge' %>" class="button">
+            with
+            <label>summary:</label>
+            <input type="text" name="summary" value="">
+            <label>duration:</label>
+            <input type="text" name="duration" value="">
+            e.g. "5 hours"
+          </form>
+        <% end %>
+        <% if @current_unscheduled_maintenance %>
+          <h3>(Acknowledged - <%= h @current_unscheduled_maintenance[:summary] %>)</h3>
+          <% start  = Time.at(@current_unscheduled_maintenance[:start_time]) %>
+          <% finish = Time.at(@current_unscheduled_maintenance[:start_time] + @current_unscheduled_maintenance[:duration]) %>
+          <% remain = time_period_in_words( (finish - current_time).ceil ) %>
+          <p><%= h start.to_s %> -&gt; <%= h finish.to_s %> (<%= h remain %> remaining)</p>
+          <form action="/end_unscheduled_maintenance/<%= check_path_escaped %>" method="post">
+            <input type="submit" value="End Unscheduled Maintenance (Unacknowledge)" class="button">
+          </form>
+        <% end %>
+        <% if @current_scheduled_maintenance %>
+          <h4>(Scheduled Maintenance - <%= h @current_scheduled_maintenance[:summary] %></h4>
+          <% start  = Time.at(@current_scheduled_maintenance[:start_time]) %>
+          <% finish = Time.at(@current_scheduled_maintenance[:start_time] + @current_scheduled_maintenance[:duration]) %>
+          <% remain = time_period_in_words( (finish - current_time).ceil ) %>
+          <p><%= h start.to_s %> -&gt; <%= h finish.to_s %> (<%= h remain %> remaining)</p>
+        <% end %>
+        <h3>Output: <%= h @check_summary %></h3>
+        <p><%= h @check_details %></p>
+        <table class="table table-hover table-condensed">
+          <tr>
+            <td>Last state change:</td>
+            <td><%= h relative_time_ago(Time.at(@check_last_change.to_i)) %> ago</td>
+            <td><%= h Time.at(@check_last_change.to_i).to_s %></td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <td>Last update:</td>
+            <td><%= h relative_time_ago(Time.at(@check_last_update.to_i)) %> ago</td>
+            <td><%= h Time.at(@check_last_update.to_i).to_s %></td>
+            <td>&nbsp;</td>
+          </tr>
+          <% [:critical, :warning, :unknown, :recovery, :acknowledgement].each do |type| %>
+            <tr>
+              <td>Last <%= h type.to_s %> notification:</td>
+              <td><%= @last_notifications[type] ? h(@last_notifications[type][:relative]) : 'never' %></td>
+              <td><%= @last_notifications[type] ? h(@last_notifications[type][:time].to_s) : '&nbsp;' %></td>
+              <td><%= @last_notifications[type] ? h(@last_notifications[type][:summary]) : '&nbsp;' %></td>
+            </tr>
+          <% end %>
+        </table>
+        <h3>Scheduled Maintenance Periods</h3>
+          <% if @scheduled_maintenances && !@scheduled_maintenances.empty? %>
+            <table class="table table-bordered table-hover table-condensed">
+              <tr>
+              <th>Start</th>
+              <th>End</th>
+              <th>Duration</th>
+              <th>Summary</th>
+              <th>Actions</th>
+              </tr>
+
+              <% @scheduled_maintenances.sort_by {|s| s[:start_time]}.each do |scheduled_maintenance| %>
+                <% start_time = scheduled_maintenance[:start_time]
+                   end_time   = scheduled_maintenance[:end_time]
+                   duration   = scheduled_maintenance[:duration]
+                   summary    = scheduled_maintenance[:summary]
+                 %>
+                <tr>
+                <td><%= h Time.at(start_time).to_s %></td>
+                <td><%= h Time.at(end_time).to_s %></td>
+                <td><%= h ChronicDuration.output(duration) %></td>
+                <td><%= h summary %></td>
+                <td>
+                  <% if end_time > current_time.to_i %>
+                    <% label = (start_time > current_time.to_i) ? 'Delete' : 'End Now' %>
+                    <form action="/scheduled_maintenances/<%= check_path_escaped %>" method="post">
+                      <input type="hidden" name="_method" value="delete">
+                      <input type="hidden" name="start_time" value="<%= start_time %>">
+                      <input type="submit" value="<%= label %>" class="button">
+                    </form>
+                  <% else %>
+                    &nbsp;
+                  <% end %>
+                </td>
+                </tr>
+              <% end %>
+
+            </table>
+          <% else %>
+            <p>No maintenance is scheduled</p>
+          <% end %>
+        <h4>Add Scheduled Maintenance</h4>
+        <form action="/scheduled_maintenances/<%= check_path_escaped %>" method="post" class="form-horizontal">
+          <div class="control-group">
+            <label class="control-label" for="start_time">Start time:</label>
+            <div class="controls">
+              <input type="text" name="start_time" class="text" size="20" maxlength="80" value="">
+              e.g. "today 4pm", "two hours hence", "friday 2pm", "2012-01-28 13:00"
+            </div>
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="duration">Duration:</label>
+            <div class="controls">
+              <input type="text" name="duration" class="text" size="20" maxlength="80" value="">
+              e.g. "1 hour", "2:30:00", "three days", etc
+            </div>
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="summary">Summary:</label>
+            <div class="controls">
+              <input type="text" name="summary" class="text" size="80" maxlength="160" value="">
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="controls">
+              <input type="submit" value="Save" class="button">
+            </div>
+          </div>
+        </form>
+        <p>Times given will be interpreted in the local timezone of <%= h local_timezone %></p>
+        <% if @state_changes && !@state_changes.empty? %>
+          <h3>Recent state changes</h3>
+          <table class="table table-bordered table-hover table-condensed">
+            <tr>
+            <th>Timestamp</th>
+            <th>State</th>
+            <th>Summary</th>
+            </tr>
+            <% @state_changes.each do |state_change| %>
+            <tr>
+            <td><%= h Time.at(state_change[:timestamp]).to_s %></td>
+            <td><%= h state_change[:state] %></td>
+            <td><%= h state_change[:summary] %></td>
+            </tr>
+            <% end %>
+          </table>
+        <% end %>
+        <h3>Contacts</h3>
+        <% if @contacts && !@contacts.empty? %>
+          <table class="table table-bordered table-hover table-condensed">
+            <tr>
+              <th>Name</th>
+              <th>Media</th>
+            </tr>
+            <% @contacts.sort_by {|c| [c.first_name, c.last_name] }.each do |contact| %>
+              <tr>
+                <td><a href="/contacts/<% contact.id %>" title="contact details"><%= h contact.name %></a></td>
+                <td>
+                  <% if contact.media && !contact.media.empty? %>
+                    <p><%= h contact.media.keys.collect(&:capitalize).join(", ") %></p>
+                  <% else %>
+                    <p>No media</p>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </table>
+        <% else %>
+          <p>No contacts</p>
+        <% end %>
+      </div>
+      <div id="push"></div>
+    </div>
+    <div id="footer">
+      <%= foot %>
+    </div>
+  </body>
+</html>
