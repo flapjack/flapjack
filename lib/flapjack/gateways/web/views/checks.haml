@@ -18,32 +18,36 @@
             %th Entity
             %th Check
             %th State
+            %th Summary
             %th Last State Change
             %th Last Update
             %th Last Notification
-          - @states.each do |entity, check, status, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified_kind, notified|
-            - colour_class = status
-            - case status
-            - when 'critical', 'unknown'
-              - colour_class = 'error'
-            - when 'ok', 'up'
-              - colour_class = 'success'
-            %tr{:class => colour_class}
-              %td= entity
-              %td
-                - link = "/check?entity=" + CGI.escape(entity) + "&check=" + CGI.escape(check)
-                %a(title='check detail' href=link) #{check}
-              %td{:class => status}
-                = status.upcase
-                = " (Acknowledged)" if in_unscheduled_outage
-                = " (Scheduled Maintenance)" if in_scheduled_outage
-              %td= relative_time_ago(Time.at(changed.to_i)) + ' ago'
-              %td= relative_time_ago(Time.at(updated.to_i)) + ' ago'
-              - if notified && (notified > 0)
-                - last_notified = relative_time_ago(Time.at(notified.to_i)) + " ago, #{notified_kind}"
-              - else
-                - last_notified = 'never'
-              %td= last_notified
+          - @entities_sorted.each do |entity|
+            - row_entity = nil
+            - @states[entity].each do |check, status, summary, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified|
+              - colour_class = status
+              - case status
+              - when 'critical', 'unknown'
+                - colour_class = 'error'
+              - when 'ok', 'up'
+                - colour_class = 'success'
+              %tr{:class => colour_class}
+                - unless row_entity && entity == row_entity
+                  %td{:rowspan => @states[entity].length}
+                    - link = "/entity/" + CGI.escape(entity)
+                    %a(href=link) #{entity}
+                - row_entity = entity
+                %td{:class => colour_class}
+                  - link = "/check?entity=" + CGI.escape(entity) + "&check=" + CGI.escape(check)
+                  %a(title='check detail' href=link) #{check}
+                %td{:class => colour_class}
+                  = status.upcase
+                  = " (Ack'd)" if in_unscheduled_outage
+                  = " (Sched)" if in_scheduled_outage
+                %td{:class => colour_class}= summary
+                %td= changed
+                %td= updated
+                %td= notified
       %div#push
     %div#footer
       = foot

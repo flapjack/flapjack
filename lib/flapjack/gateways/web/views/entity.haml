@@ -17,10 +17,11 @@
             %tr
               %th Check
               %th State
+              %th Summary
               %th Last State Change
               %th Last Update
               %th Last Notification
-            - @states.each do |entity, check, status, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified_kind, notified|
+            - @states.each do |check, status, summary, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified|
               - colour_class = status
               - case status
               - when 'critical', 'unknown'
@@ -29,19 +30,16 @@
                 - colour_class = 'success'
               %tr{:class => colour_class}
                 %td
-                  - link = "/check?entity=" + CGI.escape(entity) + "&check=" + CGI.escape(check)
+                  - link = "/check?entity=" + CGI.escape(@entity) + "&check=" + CGI.escape(check)
                   %a(title='check detail' href=link) #{check}
                 %td
                   = status.upcase
-                  = " (Acknowledged)" if in_unscheduled_outage
-                  = " (Scheduled Maintenance)" if in_scheduled_outage
-                %td= relative_time_ago(Time.at(changed.to_i)) + ' ago'
-                %td= relative_time_ago(Time.at(updated.to_i)) + ' ago'
-                - if notified && (notified > 0)
-                  - last_notified = relative_time_ago(Time.at(notified.to_i)) + " ago, #{notified_kind}"
-                - else
-                  - last_notified = 'never'
-                %td= last_notified
+                  = " (Ack'd)" if in_unscheduled_outage
+                  = " (Sched)" if in_scheduled_outage
+                %td= summary
+                %td= changed
+                %td= updated
+                %td= notified
         - else
           %div#foo
             %p This entity has no check output associated with it

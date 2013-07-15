@@ -60,6 +60,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     time = Time.now.to_i
 
     ec.should_receive(:state).and_return('ok')
+    ec.should_receive(:summary).and_return('happy results are returned')
     ec.should_receive(:last_update).and_return(time - (3 * 60 * 60))
     ec.should_receive(:last_change).and_return(time - (3 * 60 * 60))
     ec.should_receive(:last_notification_for_state).with(:problem).and_return({:timestamp => time - ((3 * 60 * 60) + (5 * 60))})

@@ -5,6 +5,7 @@ require 'chronic_duration'
 require 'sinatra/base'
 require 'haml'
 require 'rack/fiber_pool'
+require 'json'
 
 require 'flapjack/rack_logger'
 
@@ -79,13 +80,14 @@ module Flapjack
         check_stats
         @adjective = 'all'
 
-        @states = []
-        Flapjack::Data::EntityCheck.find_all_by_entity(:redis => redis).each {|entity, checks|
-          checks.each {|check|
-            @states << [entity, check] + entity_check_state(entity, check)
+        checks_by_entity = Flapjack::Data::EntityCheck.find_all_by_entity(:redis => redis)
+        @states = checks_by_entity.keys.inject({}) {|result, entity|
+          result[entity] = checks_by_entity[entity].sort.map {|check|
+            [check] + entity_check_state(entity, check)
           }
+          result
         }
-        @states.sort_by! {|parts| parts}
+        @entities_sorted = checks_by_entity.keys.sort
 
         haml :checks
       end
@@ -94,13 +96,14 @@ module Flapjack
         check_stats
         @adjective = 'failing'
 
-        @states = []
-        Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => redis).each {|entity, checks|
-          checks.each {|check|
-            @states << [entity, check] + entity_check_state(entity, check)
+        checks_by_entity = Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => redis)
+        @states = checks_by_entity.keys.inject({}) {|result, entity|
+          result[entity] = checks_by_entity[entity].sort.map {|check|
+            [check] + entity_check_state(entity, check)
           }
+          result
         }
-        @states.sort_by! {|parts| parts}
+        @entities_sorted = checks_by_entity.keys.sort
 
         haml :checks
       end
@@ -155,9 +158,9 @@ module Flapjack
       get '/entity/:entity' do
         @entity = params[:entity]
         entity_stats
-        @states = Flapjack::Data::EntityCheck.find_all_for_entity_name(@entity, :redis => redis).map { |check|
-          [@entity, check] + entity_check_state(@entity, check)
-        }.compact.sort_by {|parts| parts }
+        @states = Flapjack::Data::EntityCheck.find_all_for_entity_name(@entity, :redis => redis).sort.map { |check|
+          [check] + entity_check_state(@entity, check)
+        }.sort_by {|parts| parts }
         haml :entity
       end
 
@@ -314,18 +317,33 @@ module Flapjack
         return if entity.nil?
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
           check, :redis => redis)
+        summary = entity_check.summary
+        summary = summary[0..76] + '&hellip;' unless summary.length < 81
         latest_notif =
           {:problem         => entity_check.last_notification_for_state(:problem)[:timestamp],
            :recovery        => entity_check.last_notification_for_state(:recovery)[:timestamp],
            :acknowledgement => entity_check.last_notification_for_state(:acknowledgement)[:timestamp]
           }.max_by {|n| n[1] || 0}
+
+        lc = entity_check.last_change
+        last_change   = lc ? ChronicDuration.output(Time.now.to_i - lc.to_i,
+                               :format => :short, :keep_zero => true, :units => 2) : 'never'
+
+        lu = entity_check.last_update
+        last_update   = lu ? ChronicDuration.output(Time.now.to_i - lu.to_i,
+                               :format => :short, :keep_zero => true, :units => 2) : 'never'
+
+        ln = latest_notif[1]
+        last_notified = ln ? ChronicDuration.output(Time.now.to_i - ln.to_i,
+                               :format => :short, :keep_zero => true, :units => 2) + ", #{latest_notif[0]}" : 'never'
+
         [(entity_check.state       || '-'),
-         (entity_check.last_change || '-'),
-         (entity_check.last_update || '-'),
+         (summary                  || '-'),
+         last_change,
+         last_update,
          entity_check.in_unscheduled_maintenance?,
          entity_check.in_scheduled_maintenance?,
-         latest_notif[0],
-         latest_notif[1]
+         last_notified
         ]
       end
 
