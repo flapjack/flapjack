@@ -53,6 +53,67 @@ module Flapjack
         self.new(entity, check, :redis => redis)
       end
 
+      def self.find_all_for_entity_name(entity_name, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.zrange("current_checks:#{entity_name}", 0, -1)
+      end
+
+      def self.find_all(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        self.conflate_to_keys(self.find_all_by_entity(:redis => redis))
+      end
+
+      def self.find_all_by_entity(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        d = {}
+        redis.zrange("current_entities", 0, -1).each {|entity|
+          d[entity] = redis.zrange("current_checks:#{entity}", 0, -1)
+        }
+        d
+      end
+
+      def self.count_all(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.zrange("current_entities", 0, -1).inject(0) {|memo, entity|
+          memo + redis.zcount("current_checks:#{entity}", '-inf', '+inf')
+        }
+      end
+
+      def self.find_all_failing(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        self.conflate_to_keys(self.find_all_failing_by_entity(:redis => redis))
+      end
+
+      def self.find_all_failing_by_entity(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.zrange("failed_checks", 0, -1).inject({}) do |memo, key|
+          entity, check = key.split(':', 2)
+          if !!redis.zscore("current_checks:#{entity}", check)
+            memo[entity] ||= []
+            memo[entity] << check
+          end
+          memo  
+        end
+      end
+
+      def self.count_all_failing(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.zrange("failed_checks", 0, -1).count do |key|
+          entity, check = key.split(':', 2) 
+          !!redis.zscore("current_checks:#{entity}", check)
+        end
+      end
+
+      def self.conflate_to_keys(entity_checks_hash)
+        result = []
+        entity_checks_hash.each {|entity, checks|
+          checks.each {|check|
+            result << "#{entity}:#{check}"
+          }
+        }
+        result
+      end
+
       def entity_name
         entity.name
       end
@@ -244,6 +305,22 @@ module Flapjack
 
       def last_update=(timestamp)
         @redis.hset("check:#{@key}", 'last_update', timestamp)
+        @redis.zadd("current_checks:#{entity.name}", timestamp, check)
+        @redis.zadd("current_entities", timestamp, entity.name)
+      end
+
+      # disables a check (removes currency)
+      def disable!
+        @logger.debug("disabling check [#{@key}]") if @logger
+        @redis.zrem("current_checks:#{entity.name}", check)
+        if @redis.zcount("current_checks:#{entity.name}", '-inf', '+inf') == 0
+          @redis.zrem("current_checks:#{entity.name}", check)
+          @redis.zrem("current_entities", entity.name)
+        end
+      end
+
+      def enabled?
+        !! @redis.zscore("current_checks:#{entity.name}", check)
       end
 
       def last_change

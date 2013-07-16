@@ -209,6 +209,7 @@ describe Flapjack::Data::Contact, :redis => true do
     ec = Flapjack::Data::EntityCheck.for_entity_name(entity_name, 'PING', :redis => @redis)
     t = Time.now.to_i
     ec.update_state('ok', :timestamp => t, :summary => 'a')
+    ec.last_update = t
 
     contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
     eandcs = contact.entities(:checks => true)

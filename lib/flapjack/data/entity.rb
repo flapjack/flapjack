@@ -97,12 +97,12 @@ module Flapjack
 
       def self.find_all_with_checks(options)
         raise "Redis connection not set" unless redis = options[:redis]
-        redis.keys("check:*").map {|s| s.sub(/^check:/, '').split(':', 2).first }.to_set
+        redis.zrange("current_entities", 0, -1)
       end
 
       def self.find_all_with_failing_checks(options)
         raise "Redis connection not set" unless redis = options[:redis]
-        redis.zrange("failed_checks", 0, -1).map {|s| s.split(':', 2).first }.to_set
+        Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => redis).keys
       end
 
       def contacts
@@ -119,7 +119,7 @@ module Flapjack
       end
 
       def check_list
-        @redis.keys("check:#{@name}:*").map {|k| k =~ /^check:#{@name}:(.+)$/; $1}
+        @redis.zrange("current_checks:#{@name}", 0, -1)        
       end
 
       def check_count
