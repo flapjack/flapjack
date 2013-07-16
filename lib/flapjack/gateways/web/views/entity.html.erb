@@ -23,11 +23,12 @@
             <tr>
               <th>Check</th>
               <th>State</th>
+              <th>Summary</th>
               <th>Last State Change</th>
               <th>Last Update</th>
               <th>Last Notification</th>
             </tr>
-            <% @states.each do |entity, check, status, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified_kind, notified| %>
+            <% @states.each do |check, status, summary, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified| %>
               <%
                 row_colour = case status
                 when 'critical', 'unknown'
@@ -38,24 +39,20 @@
                   status
                 end
 
-                check_link = "/check?entity=" << u(entity) << "&amp;check=" << u(check)
+                check_link = "/check?entity=" << u(@entity) << "&amp;check=" << u(check)
 
-                last_notified = if notified && (notified > 0)
-                  relative_time_ago(Time.at(notified.to_i)) + " ago, #{notified_kind}"
-                else
-                  'never'
-                end
               %>
               <tr class="<%= row_colour %>">
                 <td><a href="<%= check_link %>" title="check detail"><%= h check %></a></td>
                 <td class="<%= status %>">
                   <%= h status.upcase %>
-                  <% if in_unscheduled_outage%> (Acknowledged)<% end %>
-                  <% if in_scheduled_outage %> (Scheduled Maintenance)<% end %>
+                  <% if in_unscheduled_outage%> (Ack'd)<% end %>
+                  <% if in_scheduled_outage %> (Sched)<% end %>
                 </td>
-                <td><%= relative_time_ago(Time.at(changed.to_i)) %> ago</td>
-                <td><%= relative_time_ago(Time.at(updated.to_i)) %> ago</td>
-                <td><%= h last_notified %></td>
+                <td><%= summary %></td>
+                <td><%= changed %></td>
+                <td><%= updated %></td>
+                <td><%= notified %></td>
               </tr>
             <% end %>
           </table>

@@ -14,9 +14,11 @@
       <div class="container">
         <div class="page-header">
           <%= nav %>
-          <h2><%= h @check %> on <%= h @entity %></h2>
+          <% entity_link = "/entity/" + u(@entity) %>
+          <h2><%= h @check %> on <a href="<%= entity_link %>" title="entity summary"><%= h @entity %></a></h2>
         </div>
-        <h3>State: <%= @check_state ? h(@check_state.upcase) : '' %></h3>
+        <% state_qualifier = @check_enabled ? '' : "DISABLED. Last " %>
+        <h3><%= state_qualifier %>State: <%= @check_state ? h(@check_state.upcase) : '' %></h3>
         <% if (['warning', 'critical', 'unknown'].include?(@check_state) and !@current_scheduled_maintenance) %>
           <form action="/acknowledgements/<%= check_path_escaped %>" method="post" class="form-inline">
             <input type="hidden" name="acknowledgement_id" value="<%= @acknowledgement_id %>">
@@ -70,6 +72,18 @@
             </tr>
           <% end %>
         </table>
+
+        <div id="currency">
+          <% if @check_enabled %>
+            Enabled ...
+            <form action="/checks/<%= check_path_escaped %>" method="post" style="display:inline-block">
+              <input type='hidden' name='_method' value='delete'>
+              <input type='submit' value="Disable" class='button'>
+            </form>
+          <% else %>
+            Disabled
+          <% end %>
+
         <h3>Scheduled Maintenance Periods</h3>
           <% if @scheduled_maintenances && !@scheduled_maintenances.empty? %>
             <table class="table table-bordered table-hover table-condensed">
