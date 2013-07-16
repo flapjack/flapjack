@@ -21,6 +21,7 @@ module Flapjack
         def status
           {'name'                              => @entity_check.check,
            'state'                             => @entity_check.state,
+           'enabled'                           => @entity_check.enabled?,
            'summary'                           => @entity_check.summary,
            'details'                           => @entity_check.details,
            'in_unscheduled_maintenance'        => @entity_check.in_unscheduled_maintenance?,

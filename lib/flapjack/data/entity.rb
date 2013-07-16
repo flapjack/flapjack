@@ -119,7 +119,7 @@ module Flapjack
       end
 
       def check_list
-        @redis.keys("check:#{@name}:*").map {|k| k =~ /^check:#{@name}:(.+)$/; $1}
+        @redis.zrange("current_checks:#{@name}", 0, -1)        
       end
 
       def check_count
