@@ -86,25 +86,22 @@ module Flapjack
 
       def self.find_all_failing_by_entity(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        result = {}
-        redis.zrange("failed_checks", 0, -1).each {|key|
+        redis.zrange("failed_checks", 0, -1).inject({}) do |memo, key|
           entity, check = key.split(':', 2)
-          if self.for_entity_name(entity, check, :redis => redis).enabled?
-            result[entity] = [] unless result[entity]
-            result[entity] << check
+          if !!redis.zscore("current_checks:#{entity}", check)
+            memo[entity] ||= []
+            memo[entity] << check
           end
-        }
-        result
+          memo  
+        end
       end
 
       def self.count_all_failing(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        count = 0
-        redis.zrange("failed_checks", 0, -1).each {|key|
-          entity, check = key.split(':', 2)
-          count += 1 if self.for_entity_name(entity, check, :redis => redis).enabled?
-        }
-        count
+        redis.zrange("failed_checks", 0, -1).count do |key|
+          entity, check = key.split(':', 2) 
+          !!redis.zscore("current_checks:#{entity}", check)
+        end
       end
 
       def self.conflate_to_keys(entity_checks_hash)
