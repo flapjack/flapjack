@@ -47,7 +47,7 @@ def process_input(opts)
       state = 'ok'       if state.downcase == 'up'
       state = 'critical' if state.downcase == 'down'
       details = check_long_output ? check_long_output.gsub(/\\n/, "\n") : nil
-      event = {
+      event = Oj.dump({
         'entity'    => entity,
         'check'     => check,
         'type'      => 'service',
@@ -55,7 +55,7 @@ def process_input(opts)
         'summary'   => check_output,
         'details'   => details,
         'timestamp' => timestamp,
-      }.to_json
+      })
       redis.lpush 'events', event
     end
   rescue Redis::CannotConnectError
