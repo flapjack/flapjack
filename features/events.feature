@@ -1,4 +1,4 @@
-@events
+@events @processor
 Feature: events
   So people can be notified when things break and recover
   flapjack-executive must process events correctly

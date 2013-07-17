@@ -18,8 +18,7 @@ Gem::Specification.new do |gem|
   gem.version       = Flapjack::VERSION
 
   gem.add_dependency 'dante'
-  gem.add_dependency 'log4r'
-  gem.add_dependency 'yajl-ruby'
+  gem.add_dependency 'oj'
   gem.add_dependency 'eventmachine', '~> 1.0.0'
   gem.add_dependency 'hiredis'
   gem.add_dependency 'em-synchrony', '~> 1.0.2'
@@ -29,7 +28,6 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'resque', '~> 1.23.0'
   gem.add_dependency 'sinatra'
   gem.add_dependency 'rack-fiber_pool'
-  gem.add_dependency 'haml'
   gem.add_dependency 'thin'
   gem.add_dependency 'mail'
   gem.add_dependency 'blather', '~> 0.8.3'

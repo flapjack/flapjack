@@ -2,7 +2,6 @@
 
 require 'mail'
 require 'erb'
-require 'haml'
 require 'socket'
 
 require 'em-synchrony'
@@ -118,10 +117,9 @@ module Flapjack
         text_template = ERB.new(File.read(File.dirname(__FILE__) +
           '/email/alert.text.erb'))
 
-        haml_engine = Haml::Engine.new(File.read(File.dirname(__FILE__) +
-          '/email/alert.html.haml'))
+        html_template = ERB.new(File.read(File.dirname(__FILE__) +
+          '/email/alert.html.erb'))
 
-        mail_scope = self
         bnd = binding
 
         # this part is the only use of the mail gem -- maybe this can be done
@@ -138,7 +136,7 @@ module Flapjack
 
           html_part do
             content_type 'text/html; charset=UTF-8'
-            body haml_engine.render(mail_scope)
+            body html_template.result(bnd)
           end
         end
       end

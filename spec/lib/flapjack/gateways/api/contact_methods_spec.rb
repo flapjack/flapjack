@@ -234,6 +234,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   it "creates a new notification rule" do
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
+    notification_rule.should_receive(:respond_to?).with(:critical_media).and_return(true)
     notification_rule.should_receive(:to_json).and_return('"rule_1"')
 
     # symbolize the keys
@@ -282,7 +283,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     }
     notification_rule_data_sym.delete(:contact_id)
 
-    notification_rule.should_receive(:update).with(notification_rule_data_sym, :logger => @logger).and_return(true)
+    notification_rule.should_receive(:update).with(notification_rule_data_sym, :logger => @logger).and_return(nil)
 
     put "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}

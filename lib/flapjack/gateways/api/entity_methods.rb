@@ -211,12 +211,15 @@ module Flapjack
 
           # create a scheduled maintenance period for a check on an entity
           app.post %r{/scheduled_maintenances#{ENTITY_CHECK_FRAGMENT}} do
-            entity_name = params[:captures][0]
-            check       = params[:captures][1]
+
+            captures    = params[:captures] || []
+            entity_name = captures[0]
+            check       = captures[1]
 
             entities, checks = entities_and_checks(entity_name, check)
 
             start_time = validate_and_parsetime(params[:start_time])
+            halt( err(403, "start time must be provided") ) unless start_time
 
             act_proc = proc {|entity_check|
               entity_check.create_scheduled_maintenance(:start_time => start_time,
@@ -265,14 +268,12 @@ module Flapjack
             act_proc = case action
             when 'scheduled_maintenances'
               start_time = validate_and_parsetime(params[:start_time])
+              halt( err(403, "start time must be provided") ) unless start_time
               opts = {}
-              opts[:start_time] = start_time.to_i if start_time
-              proc {|entity_check| entity_check.delete_scheduled_maintenance(opts) }
+              proc {|entity_check| entity_check.end_scheduled_maintenance(start_time.to_i) }
             when 'unscheduled_maintenances'
-              end_time = validate_and_parsetime(params[:end_time])
-              opts = {}
-              opts[:end_time] = end_time.to_i if end_time
-              proc {|entity_check| entity_check.end_unscheduled_maintenance(opts) }
+              end_time = validate_and_parsetime(params[:end_time]) || Time.now
+              proc {|entity_check| entity_check.end_unscheduled_maintenance(end_time.to_i) }
             end
 
             bulk_api_check_action(entities, checks, act_proc)

@@ -1,5 +1,22 @@
 ## Flapjack Changelog
 
+# 0.7.19 - UNRELEASED
+- Removed log4r and YAJL dependencies gh-25 (@ali-graham)
+- Made jabber entity status messages more verbose gh-245 (@ali-graham)
+- Split executive pikelet into two parts (processor and notifier) gh-247 (@ali-graham)
+
+# 0.7.18 - 2013-07-05
+- Feature: delete currently active scheduled maintenance via api should truncate from Time.now gh-242 (@ali-graham)
+
+# 0.7.17 - 2013-07-04
+- Feature: split API methods into two separate files, also specs gh-215 (@ali-graham)
+- Feature: unlock ruby version, build with Ruby 2 in travis gh-237 (@ali-graham)
+- Feature: include notification rule validation error details in api add, update functions gh-184 (@ali-graham)
+- Feature: API: delete scheduled maintenance should return an error if no start_time parameter is passed gh-240 (@ali-graham)
+- Bug: entity name in bulk status api response is incorrect gh-233 (@jessereynolds)
+- Bug: non-changing checks creating state-change records gh-235 (@ali-graham)
+- Bug: posting scheduled maintenance in new api format throwing 500 gh-239 (@jessereynolds)
+
 # 0.7.16 - 2013-06-27
 - Bug: errors accessing API gh-231 (@ali-graham)
 

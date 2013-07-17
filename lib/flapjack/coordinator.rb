@@ -2,8 +2,12 @@
 
 require 'monitor'
 
+require 'syslog'
+
 require 'flapjack/configuration'
 require 'flapjack/patches'
+
+require 'flapjack/logger'
 require 'flapjack/pikelet'
 
 module Flapjack
@@ -24,18 +28,7 @@ module Flapjack
         }
       }
 
-      # TODO convert this to use flapjack-logger
-      logger_name = "flapjack-coordinator"
-      @logger = Log4r::Logger.new(logger_name)
-
-      formatter = Log4r::PatternFormatter.new(:pattern => "%d [%l] :: #{logger_name} :: %m",
-        :date_pattern => "%Y-%m-%dT%H:%M:%S%z")
-
-      [Log4r::StdoutOutputter, Log4r::SyslogOutputter].each do |outp_klass|
-        outp = outp_klass.new(logger_name)
-        outp.formatter = formatter
-        @logger.add(outp)
-      end
+      @logger = Flapjack::Logger.new("flapjack-coordinator")
     end
 
     def start(opts = {})
@@ -57,6 +50,7 @@ module Flapjack
         @shutdown_cond.wait
         @pikelets.map(&:stop)
         @pikelets.clear
+        # Syslog.close if Syslog.opened? # TODO revisit in threading branch
       }
     end
 
@@ -136,20 +130,40 @@ module Flapjack
     def create_pikelets(pikelets_data = {})
       pikelets_data.inject([]) do |memo, (type, cfg)|
         pikelets = Flapjack::Pikelet.create(type, @shutdown, :config => cfg,
-                                            :redis_config => @redis_opts)
+                                            :redis_config => @redis_opts,
+                                            :boot_time => @boot_time)
         memo += pikelets
         memo
       end
     end
 
     def pikelet_definitions(config_env)
-      return {} unless config_env
-      exec_cfg = config_env.has_key?('executive') && config_env['executive']['enabled'] ?
-        {'executive' => config_env['executive']} :
-        {}
-      return exec_cfg unless config_env && config_env['gateways'] &&
+       config = {}
+      return config unless config_env
+
+      # backwards-compatible with config file for previous 'executive' pikelet
+      exec_cfg = nil
+      if config_env.has_key?('executive') && config_env['executive']['enabled']
+        exec_cfg = config_env['executive']
+      end
+      ['processor', 'notifier'].each do |k|
+        if exec_cfg
+          if config_env.has_key?(k)
+            # need to allow for new config fields to override old settings if both present
+            merged = exec_cfg.merge(config_env[k])
+            config.update(k => merged) if merged['enabled']
+          else
+            config.update(k => exec_cfg)
+          end
+        else
+          next unless (config_env.has_key?(k) && config_env[k]['enabled'])
+          config.update(k => config_env[k])
+        end
+      end
+
+      return config unless config_env && config_env['gateways'] &&
         !config_env['gateways'].nil?
-      exec_cfg.merge( config_env['gateways'].select {|k, v|
+      config.merge( config_env['gateways'].select {|k, v|
         Flapjack::Pikelet.is_pikelet?(k) && v['enabled']
       } )
     end

@@ -44,7 +44,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
   context 'non-bulk API calls' do
 
-it "returns the status for all checks on an entity" do
+    it "returns the status for all checks on an entity" do
       status = mock('status', :to_json => 'status!'.to_json)
       result = {:entity => entity_name, :check => check, :status => status}
       entity_presenter.should_receive(:status).and_return(result)
@@ -373,7 +373,7 @@ it "returns the status for all checks on an entity" do
 
     it "deletes an unscheduled maintenance period for an entity check" do
       end_time = Time.now + (60 * 60) # an hour from now
-      entity_check.should_receive(:end_unscheduled_maintenance).with(:end_time => end_time.to_i)
+      entity_check.should_receive(:end_unscheduled_maintenance).with(end_time.to_i)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
         with(entity, check, :redis => redis).and_return(entity_check)
@@ -400,9 +400,17 @@ it "returns the status for all checks on an entity" do
       last_response.status.should == 204
     end
 
+    it "doesn't create a scheduled maintenance period if the start time isn't passed" do
+      duration = (2 * 60 * 60)     # two hours
+
+      post "/scheduled_maintenances/#{entity_name_esc}/#{check}?" +
+         "summary=test&duration=#{duration}"
+      last_response.status.should == 403
+    end
+
     it "deletes a scheduled maintenance period for an entity check" do
       start_time = Time.now + (60 * 60) # an hour from now
-      entity_check.should_receive(:delete_scheduled_maintenance).with(:start_time => start_time.to_i)
+      entity_check.should_receive(:end_scheduled_maintenance).with(start_time.to_i)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
         with(entity, check, :redis => redis).and_return(entity_check)
@@ -414,13 +422,20 @@ it "returns the status for all checks on an entity" do
       last_response.status.should == 204
     end
 
+    it "doesn't delete a scheduled maintenance period if the start time isn't passed" do
+      entity_check.should_not_receive(:end_scheduled_maintenance)
+
+      delete "/scheduled_maintenances", :check => {entity_name => check}
+      last_response.status.should == 403
+    end
+
     it "deletes scheduled maintenance periods for multiple entity checks" do
       start_time = Time.now + (60 * 60) # an hour from now
 
       entity_check_2 = mock(Flapjack::Data::EntityCheck)
 
-      entity_check.should_receive(:delete_scheduled_maintenance).with(:start_time => start_time.to_i)
-      entity_check_2.should_receive(:delete_scheduled_maintenance).with(:start_time => start_time.to_i)
+      entity_check.should_receive(:end_scheduled_maintenance).with(start_time.to_i)
+      entity_check_2.should_receive(:end_scheduled_maintenance).with(start_time.to_i)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
         with(entity, check, :redis => redis).and_return(entity_check)

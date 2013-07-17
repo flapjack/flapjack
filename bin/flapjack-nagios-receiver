@@ -7,7 +7,10 @@ end
 require 'optparse'
 require 'ostruct'
 require 'redis'
-require 'yajl/json_gem'
+
+require 'oj'
+Oj.default_options = { :indent => 0, :mode => :strict }
+
 require 'dante'
 
 require 'flapjack/configuration'

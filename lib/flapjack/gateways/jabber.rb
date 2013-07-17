@@ -3,9 +3,9 @@
 require 'socket'
 require 'monitor'
 
-require 'chronic_duration'
 require 'blather/client/dsl'
-require 'yajl/json_gem'
+require 'chronic_duration'
+require 'oj'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/utility'
@@ -61,7 +61,7 @@ module Flapjack
             @logger.debug("jabber is connected so commencing blpop on #{queue}")
             evt = @redis.blpop(queue, 0)
             events[queue] = evt
-            event         = Yajl::Parser.parse(events[queue][1])
+            event         = Oj.load(events[queue][1])
             type          = event['notification_type'] || 'unknown'
             @logger.info('jabber notification event received')
             @logger.info(event.inspect)
@@ -116,6 +116,28 @@ module Flapjack
 
         include Flapjack::Utility
 
+        log = ::Logger.new(STDOUT)
+        # log.level = ::Logger::DEBUG
+        log.level = ::Logger::INFO
+        Blather.logger = log
+
+        # TODO if we use 'xmpp4r' rather than 'blather', port this to 'rexml'
+        class TextHandler < Nokogiri::XML::SAX::Document
+          def initialize
+            @chunks = []
+          end
+
+          attr_reader :chunks
+
+          def cdata_block(string)
+            characters(string)
+          end
+
+          def characters(string)
+            @chunks << string.strip if string.strip != ""
+          end
+        end
+
         def self.pikelet_settings
           {:em_synchrony => false,
            :em_stop      => false}
@@ -124,6 +146,7 @@ module Flapjack
         def initialize(opts = {})
           @config = opts[:config]
           @redis_config = opts[:redis_config]
+          @boot_time = opts[:boot_time]
 
           @redis = Redis.new((@redis_config || {}).merge(:driver => :hiredis))
 
@@ -239,12 +262,18 @@ module Flapjack
           end
         end
 
-        def interpreter(command)
-          msg          = nil
-          action       = nil
+        def interpreter(command_raw)
+          msg = nil
+          action = nil
           entity_check = nil
-          case
-          when command =~ /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i;
+
+          th = TextHandler.new
+          parser = Nokogiri::HTML::SAX::Parser.new(th)
+          parser.parse(command_raw)
+          command = th.chunks.join(' ')
+
+          case command
+          when /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i
             ackid        = $1
             comment      = $2
             duration_str = $3
@@ -293,28 +322,26 @@ module Flapjack
                 )
               }
             end
-          when command =~ /^help$/
-            msg  = "commands: \n"
-            msg += "  ACKID <id> <comment> [duration: <time spec>] \n"
-            msg += "  find entities matching /pattern/ \n"
-            msg += "  test notifications for <entity>[:<check>] \n"
-            msg += "  identify \n"
-            msg += "  help \n"
+          when /^help$/
+            msg = "commands: \n" +
+                  "  ACKID <id> <comment> [duration: <time spec>] \n" +
+                  "  find entities matching /pattern/ \n" +
+                  "  test notifications for <entity>[:<check>] \n" +
+                  "  tell me about <entity>[:<check>] \n" +
+                  "  identify \n" +
+                  "  help \n"
 
-          when command =~ /^identify$/
-            t = Process.times
-            fqdn         = `/bin/hostname -f`.chomp
-            pid          = Process.pid
-            instance_id  = "#{@fqdn}:#{@pid}"
-            bt = @redis.hget("executive_instance:#{instance_id}", 'boot_time').to_i
-            boot_time = Time.at(bt)
-            msg  = "Flapjack #{Flapjack::VERSION} process #{pid} on #{fqdn} \n"
-            msg += "Boot time: #{boot_time}\n"
-            msg += "User CPU Time: #{t.utime}\n"
-            msg += "System CPU Time: #{t.stime}\n"
-            msg += `uname -a`.chomp + "\n"
+          when /^identify$/
+            t    = Process.times
+            fqdn = `/bin/hostname -f`.chomp
+            pid  = Process.pid
+            msg  = "Flapjack #{Flapjack::VERSION} process #{pid} on #{fqdn} \n" +
+                   "Boot time: #{@boot_time}\n" +
+                   "User CPU Time: #{t.utime}\n" +
+                   "System CPU Time: #{t.stime}\n" +
+                   `uname -a`.chomp + "\n"
 
-          when command =~ /^test notifications for\s+([a-z0-9\-\.]+)(?::(.+))?$/i
+          when /^test notifications for\s+([a-z0-9\-\.]+)(?::(.+))?$/i
             entity_name = $1
             check_name  = $2 || 'test'
 
@@ -329,7 +356,7 @@ module Flapjack
               msg = "yeah, no I can't see #{entity_name} in my systems"
             end
 
-          when command =~ /^tell me about\s+([a-z0-9\-\.]+)(?::(.+))?$+/
+          when /^tell me about\s+([a-z0-9\-\.]+)(?::(.+))?$+/
             entity_name = $1
             check_name  = $2
 
@@ -342,27 +369,38 @@ module Flapjack
               get_details = proc {|entity_check|
                 sched   = entity_check.current_maintenance(:scheduled => true)
                 unsched = entity_check.current_maintenance(:unscheduled => true)
+                out = ''
 
-                if (sched || unsched) && check_name.nil?
+                if check_name.nil?
                   check = entity_check.check
-                  msg += "---\n#{entity_name}:#{check}\n"
+                  out += "---\n#{entity_name}:#{check}\n"
                 end
 
-                unless sched.nil?
-                  start  = Time.at(sched[:start_time])
-                  finish = Time.at(sched[:start_time] + sched[:duration])
-                  remain = time_period_in_words( (finish - current_time).ceil )
-                  # TODO a simpler time format?
-                  msg += "Currently in scheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
+                if sched.nil? && unsched.nil?
+                  out += "Not in scheduled or unscheduled maintenance.\n"
+                else
+                  if sched.nil?
+                    out += "Not in scheduled maintenance.\n"
+                  else
+                    start  = Time.at(sched[:start_time])
+                    finish = Time.at(sched[:start_time] + sched[:duration])
+                    remain = time_period_in_words( (finish - current_time).ceil )
+                    # TODO a simpler time format?
+                    out += "In scheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
+                  end
+
+                  if unsched.nil?
+                    out += "Not in unscheduled maintenance.\n"
+                  else
+                    start  = Time.at(unsched[:start_time])
+                    finish = Time.at(unsched[:start_time] + unsched[:duration])
+                    remain = time_period_in_words( (finish - current_time).ceil )
+                    # TODO a simpler time format?
+                    out += "In unscheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
+                  end
                 end
 
-                unless unsched.nil?
-                  start  = Time.at(unsched[:start_time])
-                  finish = Time.at(unsched[:start_time] + unsched[:duration])
-                  remain = time_period_in_words( (finish - current_time).ceil )
-                  # TODO a simpler time format?
-                  msg += "Currently in unscheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
-                end
+                out
               }
 
               check_names = check_name.nil? ? entity.check_list.sort : [check_name]
@@ -373,14 +411,14 @@ module Flapjack
                 check_names.each do |check|
                   entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check, :redis => @redis)
                   next if entity_check.nil?
-                  get_details.call(entity_check)
+                  msg += get_details.call(entity_check)
                 end
               end
             else
               msg = "hmmm, I can't see #{entity_name} in my systems"
             end
 
-          when command =~ /^(find )?entities matching\s+\/(.*)\/.*$/i
+          when /^(find )?entities matching\s+\/(.*)\/.*$/i
             pattern = $2.chomp.strip
 
             entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern, :redis => @redis)
@@ -406,7 +444,7 @@ module Flapjack
               msg = "that doesn't seem to be a valid pattern - /#{pattern}/"
             end
 
-          when command =~ /^(.*)/
+          when /^(.*)/
             words = $1
             msg   = "what do you mean, '#{words}'? Type 'help' for a list of acceptable commands."
 

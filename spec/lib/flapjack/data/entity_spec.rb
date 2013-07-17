@@ -90,8 +90,8 @@ describe Flapjack::Data::Entity, :redis => true do
                                 'name'     => name},
                                 :redis => @redis)
 
-    @redis.hset("check:#{name}:ping", 'state', 'OK')
-    @redis.hset("check:#{name}:ssh",  'state', 'OK')
+    @redis.zadd("current_checks:#{name}", Time.now.to_i, "ping")
+    @redis.zadd("current_checks:#{name}", Time.now.to_i, "ssh")
 
     entity = Flapjack::Data::Entity.find_by_name(name, :redis => @redis)
     check_list = entity.check_list
@@ -108,8 +108,8 @@ describe Flapjack::Data::Entity, :redis => true do
                                 'contacts' => []},
                                :redis => @redis)
 
-    @redis.hset("check:#{name}:ping", 'state', 'OK')
-    @redis.hset("check:#{name}:ssh",  'state', 'OK')
+    @redis.zadd("current_checks:#{name}", Time.now.to_i, "ping")
+    @redis.zadd("current_checks:#{name}", Time.now.to_i, "ssh")
 
     entity = Flapjack::Data::Entity.find_by_id(5000, :redis => @redis)
     check_count = entity.check_count

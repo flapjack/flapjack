@@ -22,7 +22,8 @@ require 'em-resque'
 require 'em-resque/worker'
 require 'thin'
 
-require 'flapjack/executive'
+require 'flapjack/notifier'
+require 'flapjack/processor'
 require 'flapjack/gateways/api'
 require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
@@ -39,19 +40,6 @@ module Flapjack
     class Base
 
       include MonitorMixin
-
-# =======
-#     def self.create(type, opts = {})
-#       pikelet = nil
-#       [Flapjack::Pikelet::Generic,
-#        Flapjack::Pikelet::Resque,
-#        Flapjack::Pikelet::Thin].each do |kl|
-#         next unless kl::PIKELET_TYPES[type]
-#         break if pikelet = kl.create(type, opts)
-#       end
-#       pikelet
-#     end
-# >>>>>>> f51cdf46c3c738df2dff1421f0ea356163da78f7
 
       attr_accessor :siblings
       attr_reader :pikelet, :error
@@ -138,24 +126,7 @@ module Flapjack
 
     class Generic < Flapjack::Pikelet::Base
 
-      TYPES = ['executive', 'jabber', 'oobetet', 'pagerduty']
-# =======
-#      PIKELET_TYPES = {'executive'  => Flapjack::Executive,
-#                       'jabber'     => Flapjack::Gateways::Jabber,
-#                       'pagerduty'  => Flapjack::Gateways::Pagerduty,
-#                       'oobetet'    => Flapjack::Gateways::Oobetet}
-
-#       def self.create(type, opts = {})
-#         self.new(type, PIKELET_TYPES[type], :config => opts[:config],
-#           :redis_config => opts[:redis_config],
-#           :boot_time => opts[:boot_time])
-#       end
-
-#       def initialize(type, pikelet_klass, opts = {})
-#         super(type, pikelet_klass, opts)
-#         @pikelet = @klass.new(opts.merge(:logger => @logger))
-#       end
-# >>>>>>> f51cdf46c3c738df2dff1421f0ea356163da78f7
+     TYPES = ['notifier', 'processor', 'jabber', 'pagerduty', 'oobetet']
 
       def start
         super do
@@ -179,18 +150,6 @@ module Flapjack
     end
 
     class HTTP < Flapjack::Pikelet::Base
-# =======
-#     class Resque < Flapjack::Pikelet::Base
-
-#       PIKELET_TYPES = {'email' => Flapjack::Gateways::Email,
-#                        'sms'   => Flapjack::Gateways::SmsMessagenet}
-
-#       def self.create(type, opts = {})
-#         self.new(type, PIKELET_TYPES[type], :config => opts[:config],
-#           :redis_config => opts[:redis_config],
-#           :boot_time => opts[:boot_time])
-#       end
-# >>>>>>> f51cdf46c3c738df2dff1421f0ea356163da78f7
 
       TYPES = ['web', 'api']
 
@@ -241,12 +200,6 @@ module Flapjack
         @pikelet_class.instance_variable_set('@config', @config)
         @pikelet_class.instance_variable_set('@redis_config', @redis_config)
         @pikelet_class.instance_variable_set('@logger', @logger)
-      # def self.create(type, opts = {})
-      #   ::Thin::Logging.silent = true
-      #   self.new(type, PIKELET_TYPES[type], :config => opts[:config],
-      #     :redis_config => opts[:redis_config],
-      #     :boot_time => opts[:boot_time])
-      # end
 
         super do
           @pikelet_class.start if @pikelet_class.respond_to?(:start)
@@ -281,7 +234,8 @@ module Flapjack
 
     TYPES = {'api'        => [Flapjack::Gateways::API],
              'email'      => [Flapjack::Gateways::Email],
-             'executive'  => [Flapjack::Executive],
+             'notifier'   => [Flapjack::Notifier],
+             'processor'  => [Flapjack::Processor],
              'jabber'     => [Flapjack::Gateways::Jabber::Bot,
                               Flapjack::Gateways::Jabber::Notifier],
              'oobetet'    => [Flapjack::Gateways::Oobetet::Bot,

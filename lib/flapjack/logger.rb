@@ -1,28 +1,52 @@
 #!/usr/bin/env ruby
 
-require 'log4r'
-require 'log4r/formatter/patternformatter'
-require 'log4r/outputter/consoleoutputters'
-require 'log4r/outputter/syslogoutputter'
+require 'logger'
+
+begin
+  # Ruby 2.0+
+  require 'syslog/logger'
+rescue LoadError
+  # Ruby 1.9
+  require 'syslog'
+end
 
 module Flapjack
 
   class Logger
 
+    LEVELS = [:debug, :info, :warn, :error, :fatal]
+
+    # only used for 1.9
+    SYSLOG_LEVELS_MAP = {
+      :debug  => Syslog::Constants::LOG_DEBUG,
+      :info   => Syslog::Constants::LOG_INFO,
+      :warn   => Syslog::Constants::LOG_WARNING,
+      :error  => Syslog::Constants::LOG_ERR,
+      :fatal  => Syslog::Constants::LOG_CRIT
+    }
+
     def initialize(name, config = {})
       config ||= {}
 
-      # @name = name
+      @name = name
 
-      @log4r_logger = Log4r::Logger.new(name)
+      @formatter = proc do |severity, datetime, progname, msg|
+        "#{datetime.iso8601} [#{severity}] :: #{name} :: #{msg}\n"
+      end
 
-      formatter = Log4r::PatternFormatter.new(:pattern => "%d [%l] :: #{name} :: %m",
-        :date_pattern => "%Y-%m-%dT%H:%M:%S%z")
+      @logger = ::Logger.new(STDOUT)
+      @logger.formatter = @formatter
 
-      [Log4r::StdoutOutputter, Log4r::SyslogOutputter].each do |outp_klass|
-        outp = outp_klass.new(name)
-        outp.formatter = formatter
-        @log4r_logger.add(outp)
+      if Syslog.const_defined?('Logger', false)
+        # Ruby 2.0+
+        @sys_logger = Syslog.const_get('Logger', false).new('flapjack')
+        @sys_logger.formatter = @formatter
+      else
+        # Ruby 1.9
+        @syslog = Syslog.opened? ? Syslog :
+                    Syslog.open('flapjack',
+                                (Syslog::Constants::LOG_PID | Syslog::Constants::LOG_CONS),
+                                Syslog::Constants::LOG_USER)
       end
 
       configure(config)
@@ -31,25 +55,49 @@ module Flapjack
     def configure(config)
       level = config['level']
 
-      # we'll let Log4r spit the dummy on invalid level values -- but will
-      # assume ALL if nothing is provided
+      # we'll let Logger spit the dummy on invalid level values -- but will
+      # assume INFO if nothing is provided
       if level.nil? || level.empty?
-        level = 'ALL'
+        level = 'INFO'
       end
 
-      new_level = Log4r.const_get(level.upcase)
-      return if @log4r_logger.level.eql?(new_level)
+      err = nil
 
-      # puts "setting log level for '#{@name}' to '#{level.upcase}'"
-      @log4r_logger.level = new_level
+      new_level = begin
+        ::Logger.const_get(level.upcase)
+      rescue NameError
+        err = "Unknown Logger severity level '#{level.upcase}', using INFO..."
+        ::Logger::INFO
+      end
+
+      @logger.error(err) if err
+
+      @logger.level = new_level
+      if @sys_logger
+        @sys_logger.level = new_level
+      elsif @syslog
+        Syslog.mask = Syslog::LOG_UPTO(SYSLOG_LEVELS_MAP[level.downcase.to_sym])
+      end
+
     end
 
-    def method_missing(method, *args, &block)
-      @log4r_logger.send(method.to_sym, *args, &block)
+    LEVELS.each do |level|
+      define_method(level) {|*args, &block|
+        @logger.send(level.to_sym, *args, &block)
+        if @sys_logger
+          @sys_logger.send(level.to_sym, *args, &block)
+        elsif @syslog
+          t = Time.now.iso8601
+          l = level.to_s.upcase
+          @syslog.log(SYSLOG_LEVELS_MAP[level],
+                      "#{t} [#{l}] :: #{@name} :: %s",
+                      (block ? block.call : args.first))
+        end
+      }
     end
 
     def respond_to?(sym)
-      @log4r_logger.respond_to?(sym)
+      (LEVELS + [:configure]).include?(sym)
     end
 
   end

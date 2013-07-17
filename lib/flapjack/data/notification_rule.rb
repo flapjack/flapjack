@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'yajl/json_gem'
+require 'oj'
 require 'active_support/time'
 require 'ice_cube'
 require 'flapjack/utility'
@@ -37,15 +37,17 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
 
         rule_id = SecureRandom.uuid
-        self.add_or_update(rule_data.merge(:id => rule_id), options)
+        errors = self.add_or_update(rule_data.merge(:id => rule_id), options)
+        return errors unless errors.nil? || errors.empty?
         self.find_by_id(rule_id, :redis => redis)
       end
 
       def update(rule_data, opts = {})
-        return false unless self.class.add_or_update({:contact_id => @contact_id}.merge(rule_data.merge(:id => @id)),
+        errors = self.class.add_or_update({:contact_id => @contact_id}.merge(rule_data.merge(:id => @id)),
           :redis => @redis, :logger => opts[:logger])
+        return errors unless errors.nil? || errors.empty?
         refresh
-        true
+        nil
       end
 
       # NB: ice_cube doesn't have much rule data validation, and has
@@ -119,17 +121,19 @@ module Flapjack
         rule_data[:warning_blackhole]  = rule_data[:warning_blackhole] || false
         rule_data[:critical_blackhole] = rule_data[:critical_blackhole] || false
 
-        return unless self.validate_data(rule_data, options)
+        errors = self.validate_data(rule_data, options)
+
+        return errors unless errors.nil? || errors.empty?
 
         # whitelisting fields, rather than passing through submitted data directly
         json_rule_data = {
           :id                 => rule_data[:id].to_s,
           :contact_id         => rule_data[:contact_id].to_s,
-          :entities           => Yajl::Encoder.encode(rule_data[:entities]),
-          :entity_tags        => Yajl::Encoder.encode(rule_data[:entity_tags]),
-          :time_restrictions  => Yajl::Encoder.encode(rule_data[:time_restrictions]),
-          :warning_media      => Yajl::Encoder.encode(rule_data[:warning_media]),
-          :critical_media     => Yajl::Encoder.encode(rule_data[:critical_media]),
+          :entities           => Oj.dump(rule_data[:entities]),
+          :entity_tags        => Oj.dump(rule_data[:entity_tags]),
+          :time_restrictions  => Oj.dump(rule_data[:time_restrictions]),
+          :warning_media      => Oj.dump(rule_data[:warning_media]),
+          :critical_media     => Oj.dump(rule_data[:critical_media]),
           :warning_blackhole  => rule_data[:warning_blackhole],
           :critical_blackhole => rule_data[:critical_blackhole],
         }
@@ -139,7 +143,7 @@ module Flapjack
                    json_rule_data[:id])
         redis.hmset("notification_rule:#{json_rule_data[:id]}",
                     *json_rule_data.flatten)
-        true
+        nil
       end
 
       def self.prepare_time_restriction(time_restriction, timezone = nil)
@@ -266,25 +270,25 @@ module Flapjack
           ret
         }
 
-        return true if errors.empty?
+        return if errors.empty?
 
         if logger = options[:logger]
           error_str = errors.join(", ")
           logger.info "validation error: #{error_str}"
           logger.debug "rule failing validations: #{d.inspect}"
         end
-        false
+        errors
       end
 
       def refresh
         rule_data = @redis.hgetall("notification_rule:#{@id}")
 
         @contact_id         = rule_data['contact_id']
-        @entity_tags        = Yajl::Parser.parse(rule_data['entity_tags'] || '')
-        @entities           = Yajl::Parser.parse(rule_data['entities'] || '')
-        @time_restrictions  = Yajl::Parser.parse(rule_data['time_restrictions'] || '')
-        @warning_media      = Yajl::Parser.parse(rule_data['warning_media'] || '')
-        @critical_media     = Yajl::Parser.parse(rule_data['critical_media'] || '')
+        @entity_tags        = Oj.load(rule_data['entity_tags'] || '')
+        @entities           = Oj.load(rule_data['entities'] || '')
+        @time_restrictions  = Oj.load(rule_data['time_restrictions'] || '')
+        @warning_media      = Oj.load(rule_data['warning_media'] || '')
+        @critical_media     = Oj.load(rule_data['critical_media'] || '')
         @warning_blackhole  = ((rule_data['warning_blackhole'] || 'false').downcase == 'true')
         @critical_blackhole = ((rule_data['critical_blackhole'] || 'false').downcase == 'true')
       end

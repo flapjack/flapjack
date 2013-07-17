@@ -4,41 +4,23 @@ require 'flapjack/coordinator'
 
 describe Flapjack::Coordinator do
 
-  let(:fiber)  { mock(Fiber) }
   let(:config) { mock(Flapjack::Configuration) }
 
-  let(:logger)     { mock(Logger) }
-  let(:stdout_out) { mock('stdout_out') }
-  let(:syslog_out) { mock('syslog_out') }
+  let(:logger)     { mock(Flapjack::Logger) }
 
   let!(:time)   { Time.now }
 
-  def setup_logger
-    formatter = mock('Formatter')
-    Log4r::PatternFormatter.should_receive(:new).with(
-      :pattern => "%d [%l] :: flapjack-coordinator :: %m",
-      :date_pattern => "%Y-%m-%dT%H:%M:%S%z").and_return(formatter)
-
-    stdout_out.should_receive(:formatter=).with(formatter)
-    syslog_out.should_receive(:formatter=).with(formatter)
-
-    Log4r::StdoutOutputter.should_receive(:new).and_return(stdout_out)
-    Log4r::SyslogOutputter.should_receive(:new).and_return(syslog_out)
-    logger.should_receive(:add).with(stdout_out)
-    logger.should_receive(:add).with(syslog_out)
-    Log4r::Logger.should_receive(:new).and_return(logger)
-  end
-
   it "starts and stops a pikelet" do
-    setup_logger
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
-    cfg = {'executive' => {'enabled' => 'yes'}}
+    cfg = {'processor' => {'enabled' => true}}
+
     config.should_receive(:for_redis).and_return({})
     config.should_receive(:all).and_return(cfg)
 
-    executive = mock('executive')
-    executive.should_receive(:start)
-    executive.should_receive(:stop)
+    processor = mock('processor')
+    processor.should_receive(:start)
+    processor.should_receive(:stop)
 
     Thread.should_receive(:new).and_yield
 
@@ -54,16 +36,103 @@ describe Flapjack::Coordinator do
     Time.should_receive(:now).and_return(time)
 
     fc = Flapjack::Coordinator.new(config)
-    Flapjack::Pikelet.should_receive(:create).with('executive',
-      an_instance_of(Proc), :config => cfg['executive'],
-      :redis_config => {}).and_return([executive])
+    Flapjack::Pikelet.should_receive(:create).with('processor',
+        an_instance_of(Proc), :config => cfg['processor'],
+        :redis_config => {}, :boot_time => time).
+      and_return([processor])
+
+    # Syslog.should_receive(:opened?).and_return(true)
+    # Syslog.should_receive(:close)
+
+    fc.start(:signals => false)
+    fc.stop
+  end
+
+  it "loads an old executive pikelet config block with no new data" do
+    cfg = {'executive' => {'enabled' => true}}
+
+    config.should_receive(:for_redis).and_return({})
+    config.should_receive(:all).and_return(cfg)
+
+    processor = mock('processor')
+    processor.should_receive(:start)
+    processor.should_receive(:stop)
+
+    notifier = mock('notifier')
+    notifier.should_receive(:start)
+    notifier.should_receive(:stop)
+
+    Thread.should_receive(:new).and_yield
+
+    running_cond = mock(MonitorMixin::ConditionVariable)
+    running_cond.should_receive(:wait)
+    running_cond.should_receive(:signal)
+
+    monitor = mock(Monitor)
+    monitor.should_receive(:synchronize).twice.and_yield
+    monitor.should_receive(:new_cond).and_return(running_cond)
+    Monitor.should_receive(:new).and_return(monitor)
+
+    Time.should_receive(:now).and_return(time)
+
+    fc = Flapjack::Coordinator.new(config)
+    Flapjack::Pikelet.should_receive(:create).with('processor',
+        an_instance_of(Proc), :config => cfg['executive'],
+        :redis_config => {}, :boot_time => time).
+      and_return([processor])
+    Flapjack::Pikelet.should_receive(:create).with('notifier',
+        an_instance_of(Proc), :config => cfg['executive'],
+        :redis_config => {}, :boot_time => time).
+      and_return([notifier])
+
+    # Syslog.should_receive(:opened?).and_return(true)
+    # Syslog.should_receive(:close)
+
+    fc.start(:signals => false)
+    fc.stop
+  end
+
+  it "loads an old executive pikelet config block with some new data" do
+    cfg = {'executive' => {'enabled' => true},
+           'processor' => {'foo' => 'bar'},
+           'notifier'  => {'enabled' => false}
+          }
+
+    config.should_receive(:for_redis).and_return({})
+    config.should_receive(:all).and_return(cfg)
+
+    processor = mock('processor')
+    processor.should_receive(:start)
+    processor.should_receive(:stop)
+
+    Thread.should_receive(:new).and_yield
+
+    running_cond = mock(MonitorMixin::ConditionVariable)
+    running_cond.should_receive(:wait)
+    running_cond.should_receive(:signal)
+
+    monitor = mock(Monitor)
+    monitor.should_receive(:synchronize).twice.and_yield
+    monitor.should_receive(:new_cond).and_return(running_cond)
+    Monitor.should_receive(:new).and_return(monitor)
+
+    Time.should_receive(:now).and_return(time)
+
+    fc = Flapjack::Coordinator.new(config)
+    Flapjack::Pikelet.should_receive(:create).with('processor',
+        an_instance_of(Proc), :config => cfg['processor'].merge('enabled' => true),
+        :redis_config => {}, :boot_time => time).
+      and_return([processor])
+
+    # Syslog.should_receive(:opened?).and_return(true)
+    # Syslog.should_receive(:close)
 
     fc.start(:signals => false)
     fc.stop
   end
 
   it "traps system signals and shuts down" do
-    setup_logger
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
     RbConfig::CONFIG.should_receive(:[]).with('host_os').and_return('darwin12.0.0')
 
@@ -81,7 +150,7 @@ describe Flapjack::Coordinator do
   end
 
   it "only traps two system signals on Windows" do
-    setup_logger
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
     RbConfig::CONFIG.should_receive(:[]).with('host_os').and_return('mswin')
 
@@ -98,10 +167,10 @@ describe Flapjack::Coordinator do
   end
 
   it "stops one pikelet and starts another on reload" do
-    setup_logger
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
-    old_cfg = {'executive' => {'enabled' => 'yes'}}
-    new_cfg = {'gateways' => {'jabber' => {'enabled' => 'yes'}}}
+    old_cfg = {'processor' => {'enabled' => true}}
+    new_cfg = {'gateways' => {'jabber' => {'enabled' => true}}}
 
     new_config = mock('new_config')
     filename = mock('filename')
@@ -113,29 +182,31 @@ describe Flapjack::Coordinator do
     new_config.should_receive(:load).with(filename)
     new_config.should_receive(:all).and_return(new_cfg)
 
-    executive = mock('executive')
-    executive.should_receive(:type).and_return('executive')
-    executive.should_receive(:stop)
+    processor = mock('processor')
+    processor.should_receive(:type).and_return('processor')
+    processor.should_receive(:stop)
 
     jabber = mock('jabber')
-    Flapjack::Pikelet.should_receive(:create).with('jabber',
-      an_instance_of(Proc), :config => {"enabled" => "yes"},
-      :redis_config => {}).and_return([jabber])
+    Flapjack::Pikelet.should_receive(:create).
+      with('jabber', an_instance_of(Proc),
+        :config => {"enabled" => true}, :redis_config => {},
+        :boot_time => time).
+      and_return([jabber])
     jabber.should_receive(:start)
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
     fc.instance_variable_set('@boot_time', time)
-    fc.instance_variable_set('@pikelets', [executive])
+    fc.instance_variable_set('@pikelets', [processor])
     fc.reload
     fc.instance_variable_get('@pikelets').should == [jabber]
   end
 
   it "reloads a pikelet config without restarting it" do
-    setup_logger
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
-    old_cfg = {'executive' => {'enabled' => 'yes', 'foo' => 'bar'}}
-    new_cfg = {'executive' => {'enabled' => 'yes', 'foo' => 'baz'}}
+    old_cfg = {'processor' => {'enabled' => true, 'foo' => 'bar'}}
+    new_cfg = {'processor' => {'enabled' => true, 'foo' => 'baz'}}
 
     new_config = mock('new_config')
     filename = mock('filename')
@@ -147,25 +218,25 @@ describe Flapjack::Coordinator do
     new_config.should_receive(:load).with(filename)
     new_config.should_receive(:all).and_return(new_cfg)
 
-    executive = mock('executive')
-    executive.should_not_receive(:start)
-    executive.should_receive(:type).exactly(3).times.and_return('executive')
-    executive.should_receive(:reload).with(new_cfg['executive']).and_return(true)
-    executive.should_not_receive(:stop)
+    processor = mock('processor')
+    processor.should_not_receive(:start)
+    processor.should_receive(:type).exactly(3).times.and_return('processor')
+    processor.should_receive(:reload).with(new_cfg['processor']).and_return(true)
+    processor.should_not_receive(:stop)
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
     fc.instance_variable_set('@boot_time', time)
-    fc.instance_variable_set('@pikelets', [executive])
+    fc.instance_variable_set('@pikelets', [processor])
     fc.reload
-    fc.instance_variable_get('@pikelets').should == [executive]
+    fc.instance_variable_get('@pikelets').should == [processor]
   end
 
   it "reloads a pikelet config while restarting it" do
-    setup_logger
+    Flapjack::Logger.should_receive(:new).and_return(logger)
 
-    old_cfg = {'executive' => {'enabled' => 'yes', 'foo' => 'bar'}}
-    new_cfg = {'executive' => {'enabled' => 'yes', 'baz' => 'qux'}}
+    old_cfg = {'processor' => {'enabled' => true, 'foo' => 'bar'}}
+    new_cfg = {'processor' => {'enabled' => true, 'baz' => 'qux'}}
 
     new_config = mock('new_config')
     filename = mock('filename')
@@ -177,25 +248,26 @@ describe Flapjack::Coordinator do
     new_config.should_receive(:load).with(filename)
     new_config.should_receive(:all).and_return(new_cfg)
 
-    executive = mock('executive')
-    executive.should_receive(:type).exactly(5).times.and_return('executive')
-    executive.should_receive(:reload).with(new_cfg['executive']).and_return(false)
-    executive.should_receive(:stop)
+    processor = mock('processor')
+    processor.should_receive(:type).exactly(5).times.and_return('processor')
+    processor.should_receive(:reload).with(new_cfg['processor']).and_return(false)
+    processor.should_receive(:stop)
 
-    new_exec = mock('new_executive')
-    new_exec.should_receive(:start)
+    new_processor = mock('new_processor')
+    new_processor.should_receive(:start)
 
     Flapjack::Pikelet.should_receive(:create).
-      with('executive', an_instance_of(Proc), :config => new_cfg['executive'],
-           :redis_config => {}).
-      and_return([new_exec])
+      with('processor', an_instance_of(Proc),
+        :config => new_cfg['processor'], :redis_config => {},
+        :boot_time => time).
+      and_return([new_processor])
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
     fc.instance_variable_set('@boot_time', time)
-    fc.instance_variable_set('@pikelets', [executive])
+    fc.instance_variable_set('@pikelets', [processor])
     fc.reload
-    fc.instance_variable_get('@pikelets').should == [new_exec]
+    fc.instance_variable_get('@pikelets').should == [new_processor]
   end
 
 end

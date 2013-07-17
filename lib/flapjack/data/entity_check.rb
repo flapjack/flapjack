@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'yajl/json_gem'
+require 'oj'
 
 require 'flapjack/patches'
 
@@ -53,6 +53,67 @@ module Flapjack
         self.new(entity, check, :redis => redis)
       end
 
+      def self.find_all_for_entity_name(entity_name, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.zrange("current_checks:#{entity_name}", 0, -1)
+      end
+
+      def self.find_all(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        self.conflate_to_keys(self.find_all_by_entity(:redis => redis))
+      end
+
+      def self.find_all_by_entity(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        d = {}
+        redis.zrange("current_entities", 0, -1).each {|entity|
+          d[entity] = redis.zrange("current_checks:#{entity}", 0, -1)
+        }
+        d
+      end
+
+      def self.count_all(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.zrange("current_entities", 0, -1).inject(0) {|memo, entity|
+          memo + redis.zcount("current_checks:#{entity}", '-inf', '+inf')
+        }
+      end
+
+      def self.find_all_failing(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        self.conflate_to_keys(self.find_all_failing_by_entity(:redis => redis))
+      end
+
+      def self.find_all_failing_by_entity(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.zrange("failed_checks", 0, -1).inject({}) do |memo, key|
+          entity, check = key.split(':', 2)
+          if !!redis.zscore("current_checks:#{entity}", check)
+            memo[entity] ||= []
+            memo[entity] << check
+          end
+          memo  
+        end
+      end
+
+      def self.count_all_failing(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.zrange("failed_checks", 0, -1).count do |key|
+          entity, check = key.split(':', 2) 
+          !!redis.zscore("current_checks:#{entity}", check)
+        end
+      end
+
+      def self.conflate_to_keys(entity_checks_hash)
+        result = []
+        entity_checks_hash.each {|entity, checks|
+          checks.each {|check|
+            result << "#{entity}:#{check}"
+          }
+        }
+        result
+      end
+
       def entity_name
         entity.name
       end
@@ -69,7 +130,7 @@ module Flapjack
       end
 
       # return data about current maintenance (scheduled or unscheduled, as specified)
-      def current_maintenance(opts)
+      def current_maintenance(opts = {})
         sched = opts[:scheduled] ? 'scheduled' : 'unscheduled'
         ts = @redis.get("#{@key}:#{sched}_maintenance")
         return unless ts
@@ -79,14 +140,14 @@ module Flapjack
         }
       end
 
-      def create_unscheduled_maintenance(opts = {})
-        end_unscheduled_maintenance if in_unscheduled_maintenance?
+      def create_unscheduled_maintenance(start_time, duration, opts = {})
+        raise ArgumentError, 'start time must be provided as a Unix timestamp' unless start_time && start_time.is_a?(Integer)
+        raise ArgumentError, 'duration in seconds must be provided' unless duration && duration.is_a?(Integer) && (duration > 0)
 
-        start_time = opts[:start_time]  # unix timestamp
-        duration   = opts[:duration]    # seconds
         summary    = opts[:summary]
         time_remaining = (start_time + duration) - Time.now.to_i
         if time_remaining > 0
+          end_unscheduled_maintenance(start_time) if in_unscheduled_maintenance?
           @redis.setex("#{@key}:unscheduled_maintenance", time_remaining, start_time)
         end
         @redis.zadd("#{@key}:unscheduled_maintenances", duration, start_time)
@@ -96,19 +157,14 @@ module Flapjack
       end
 
       # ends any unscheduled maintenance
-      def end_unscheduled_maintenance(opts = {})
-        defaults = {
-          :end_time => Time.now.to_i
-        }
-        options  = defaults.merge(opts)
-        end_time = options[:end_time]
+      def end_unscheduled_maintenance(end_time)
+        raise ArgumentError, 'end time must be provided as a Unix timestamp' unless end_time && end_time.is_a?(Integer)
 
         if (um_start = @redis.get("#{@key}:unscheduled_maintenance"))
           duration = end_time - um_start.to_i
           @logger.debug("ending unscheduled downtime for #{@key} at #{Time.at(end_time).to_s}") if @logger
           @redis.del("#{@key}:unscheduled_maintenance")
-          @redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start)
-          @redis.zadd("#{@key}:sorted_unscheduled_maintenance_timestamps", um_start, um_start)
+          @redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start) # updates existing UM 'score'
         else
           @logger.debug("end_unscheduled_maintenance called for #{@key} but none found") if @logger
         end
@@ -118,47 +174,15 @@ module Flapjack
       # TODO: consider adding some validation to the data we're adding in here
       # eg start_time is a believable unix timestamp (not in the past and not too
       # far in the future), duration is within some bounds...
-      def create_scheduled_maintenance(opts = {})
-        start_time = opts[:start_time]  # unix timestamp
-        duration   = opts[:duration]    # seconds
-        summary    = opts[:summary]
+      def create_scheduled_maintenance(start_time, duration, opts = {})
+        raise ArgumentError, 'start time must be provided as a Unix timestamp' unless start_time && start_time.is_a?(Integer)
+        raise ArgumentError, 'duration in seconds must be provided' unless duration && duration.is_a?(Integer) && (duration > 0)
+
+        summary = opts[:summary]
         @redis.zadd("#{@key}:scheduled_maintenances", duration, start_time)
         @redis.set("#{@key}:#{start_time}:scheduled_maintenance:summary", summary)
 
         @redis.zadd("#{@key}:sorted_scheduled_maintenance_timestamps", start_time, start_time)
-
-        # scheduled maintenance periods have changed, revalidate
-        update_current_scheduled_maintenance(:revalidate => true)
-      end
-
-      # change the end time of a scheduled maintenance (including when one is current)
-      # TODO allow to update summary as well
-      def update_scheduled_maintenance(start_time, patches = {})
-
-        # check if there is such a scheduled maintenance period
-        old_duration = @redis.zscore("#{@key}:scheduled_maintenances", start_time)
-        raise ArgumentError, 'no such scheduled maintenance period can be found' unless old_duration
-        raise ArgumentError, 'no handled patches have been supplied' unless patches[:end_time]
-
-        if patches[:end_time]
-          end_time = patches[:end_time]
-          raise ArgumentError, "end time must be after start time" unless end_time > start_time
-          old_end_time = start_time + old_duration
-          duration = end_time - start_time
-          @redis.zadd("#{@key}:scheduled_maintenances", duration, start_time)
-        end
-
-        # scheduled maintenance periods have changed, revalidate
-        update_current_scheduled_maintenance(:revalidate => true)
-      end
-
-      # delete a scheduled maintenance
-      def delete_scheduled_maintenance(opts = {})
-        start_time = opts[:start_time]
-        @redis.del("#{@key}:#{start_time}:scheduled_maintenance:summary")
-        @redis.zrem("#{@key}:scheduled_maintenances", start_time)
-
-        @redis.zremrangebyscore("#{@key}:sorted_scheduled_maintenance_timestamps", start_time, start_time)
 
         # scheduled maintenance periods have changed, revalidate
         update_current_scheduled_maintenance(:revalidate => true)
@@ -174,9 +198,9 @@ module Flapjack
         end
 
         # are we within a scheduled maintenance period?
-        t = Time.now.to_i
+        current_time = Time.now.to_i
         current_sched_ms = maintenances(nil, nil, :scheduled => true).select {|sm|
-          (sm[:start_time] <= t) && (t < sm[:end_time])
+          (sm[:start_time] <= current_time) && (current_time < sm[:end_time])
         }
         return if current_sched_ms.empty?
 
@@ -186,6 +210,41 @@ module Flapjack
         start_time = most_futuristic[:start_time]
         duration   = most_futuristic[:duration]
         @redis.setex("#{@key}:scheduled_maintenance", duration.to_i, start_time)
+      end
+
+      # TODO allow summary to be changed as part of the termination
+      def end_scheduled_maintenance(start_time)
+        raise ArgumentError, 'start time must be supplied as a Unix timestamp' unless start_time && start_time.is_a?(Integer)
+
+        # don't do anything if a scheduled maintenance period with that start time isn't stored
+        duration = @redis.zscore("#{@key}:scheduled_maintenances", start_time)
+        return false if duration.nil?
+
+        current_time = Time.now.to_i
+
+        if start_time > current_time
+          # the scheduled maintenance period (if it exists) is in the future
+          @redis.del("#{@key}:#{start_time}:scheduled_maintenance:summary")
+          @redis.zrem("#{@key}:scheduled_maintenances", start_time)
+
+          @redis.zremrangebyscore("#{@key}:sorted_scheduled_maintenance_timestamps", start_time, start_time)
+
+          # scheduled maintenance periods (may) have changed, revalidate
+          update_current_scheduled_maintenance(:revalidate => true)
+
+          return true
+        elsif (start_time + duration) > current_time
+          # it spans the current time, so we'll stop it at that point
+          new_duration = current_time - start_time
+          @redis.zadd("#{@key}:scheduled_maintenances", new_duration, start_time)
+
+          # scheduled maintenance periods have changed, revalidate
+          update_current_scheduled_maintenance(:revalidate => true)
+
+          return true
+        end
+
+        false
       end
 
       # returns nil if no previous state; this must be considered as a possible
@@ -246,6 +305,22 @@ module Flapjack
 
       def last_update=(timestamp)
         @redis.hset("check:#{@key}", 'last_update', timestamp)
+        @redis.zadd("current_checks:#{entity.name}", timestamp, check)
+        @redis.zadd("current_entities", timestamp, entity.name)
+      end
+
+      # disables a check (removes currency)
+      def disable!
+        @logger.debug("disabling check [#{@key}]") if @logger
+        @redis.zrem("current_checks:#{entity.name}", check)
+        if @redis.zcount("current_checks:#{entity.name}", '-inf', '+inf') == 0
+          @redis.zrem("current_checks:#{entity.name}", check)
+          @redis.zrem("current_entities", entity.name)
+        end
+      end
+
+      def enabled?
+        !! @redis.zscore("current_checks:#{entity.name}", check)
       end
 
       def last_change

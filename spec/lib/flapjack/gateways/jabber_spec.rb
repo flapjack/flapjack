@@ -106,6 +106,41 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     fj.send(:on_groupchat, stanza)
   end
 
+  it "strips XML tags from the received message" do
+    stanza.should_receive(:body).
+      and_return('flapjack: tell me about <span style="text-decoration: underline;">' +
+                 '<a href="http://example.org/">example.org</a></span>')
+
+    from = mock('from')
+    from.should_receive(:stripped).and_return('sender')
+    stanza.should_receive(:from).and_return(from)
+
+    redis = mock('redis')
+    Redis.should_receive(:new).and_return(redis)
+
+    entity = mock(Flapjack::Data::Entity)
+    entity.should_receive(:check_list).and_return(['ping'])
+    Flapjack::Data::Entity.should_receive(:find_by_name).with('example.org',
+      :redis => redis).and_return(entity)
+
+    entity_check = mock(Flapjack::Data::EntityCheck)
+    entity_check.should_receive(:current_maintenance).with(:scheduled => true).and_return(nil)
+    entity_check.should_receive(:current_maintenance).with(:unscheduled => true).and_return(nil)
+    entity_check.should_receive(:check).and_return('ping')
+
+    Flapjack::Data::EntityCheck.should_receive(:for_entity).with(entity, 'ping',
+      :redis => redis).and_return(entity_check)
+
+    fjc = mock(Flapjack::Gateways::Jabber::BotClient)
+    fjc.should_receive(:say).with('sender', an_instance_of(String), :groupchat)
+
+    fj = Flapjack::Gateways::Jabber::Bot.new(:config => config, :logger => @logger)
+    fj.instance_variable_set('@connected', true)
+    fj.instance_variable_set('@client', fjc)
+
+    fj.send(:on_groupchat, stanza)
+  end
+
   it "receives a message it doesn't understand" do
     ::Redis.should_receive(:new)
 

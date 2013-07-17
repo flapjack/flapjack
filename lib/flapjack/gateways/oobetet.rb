@@ -3,7 +3,7 @@
 require 'socket'
 require 'eventmachine'
 require 'blather/client/dsl'
-require 'yajl/json_gem'
+require 'oj'
 
 require 'flapjack/utility'
 
@@ -109,9 +109,9 @@ module Flapjack
         end
 
         def send_pagerduty_event(event)
-          options  = { :body => Yajl::Encoder.encode(event) }
+          options  = { :body => Oj.dump(event) }
           http = EventMachine::HttpRequest.new(PAGERDUTY_EVENTS_API_URL).post(options)
-          response = Yajl::Parser.parse(http.response)
+          response = Oj.load(http.response)
           status   = http.response_header.status
           @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
           [status, response]
@@ -128,9 +128,9 @@ module Flapjack
       class Bot
         include Flapjack::Utility
 
-        log = Logger.new(STDOUT)
-        # log.level = Logger::DEBUG
-        log.level = Logger::INFO
+        log = ::Logger.new(STDOUT)
+        # log.level = ::Logger::DEBUG
+        log.level = ::Logger::INFO
         Blather.logger = log
 
         def self.pikelet_settings
