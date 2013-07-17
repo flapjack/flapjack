@@ -1,60 +1,70 @@
-%style{:type => "text/css", :media => "screen"}
-  :plain
-    #container {
-      text-transform: uppercase;
-    }
-    table {
-      border-collapse: collapse;
-    }
-    table, th, td {
-      border: 1px solid #666;
-      padding: 4px;
-    }
+<style type="text/css" media="screen">
+  #container {
+    text-transform: uppercase;
+  }
+  table {
+    border-collapse: collapse;
+  }
+  table, th, td {
+    border: 1px solid #666;
+    padding: 4px;
+  }
+</style>
 
-%p Hi #{@contact_first_name}
+<p>Hi <%= @contact_first_name%></p>
 
-%p Monitoring has detected the following:
+<p>Monitoring has detected the following:</p>
 
-%table
-  %tbody
-    %tr
-      %td
-        %strong Entity
-      %td= @entity_name
-    %tr
-      %td
-        %strong Check
-      %td= @check
-    %tr
-      %td
-        %strong State
-      %td= @state.upcase
-    %tr
-      %td
-        %strong Summary
-      %td= @summary
-    - if @details
-      %tr
-        %td
-          %strong Details
-        %td= @details
-    %tr
-      %td
-        %strong Time
-      %td
-        = Time.at(@time.to_i).to_s
-        ( #{@relative} ago)
+<table>
+  <tbody>
+    <tr>
+      <td>Entity</td>
+      <td><%= @entity_name %></td>
+    </tr>
 
-    - if @last_state
-      %tr
-        %td Previous state
-        %td= @last_state
+    <tr>
+      <td>Check</td>
+      <td><%= @check %></td>
+    </tr>
 
-    - if @last_summary
-      %tr
-        %td Previous summary
-        %td= @last_summary
+    <tr>
+      <td>State</td>
+      <td><%= @state.upcase %></td>
+    </tr>
 
-%p Cheers,
-%p Flapjack
+    <tr>
+      <td>Summary</td>
+      <td><%= @summary %></td>
+    </tr>
 
+    <% if @details %>
+      <tr>
+        <td>Details</td>
+        <td><%= @details %></td>
+      </tr>
+    <% end %>
+
+    <tr>
+      <td>Time</td>
+      <td><%= Time.at(@time.to_i).to_s %> (<%= @relative %> ago)</td>
+    </tr>
+
+    <% if @last_state %>
+      <tr>
+        <td>Previous state</td>
+        <td><%= @last_state %></td>
+      </tr>
+    <% end %>
+
+    <% if @last_summary %>
+      <tr>
+        <td>Previous summary</td>
+        <td><%= @last_summary %></td>
+      </tr>
+    <% end %>
+
+  </tbody>
+</table>
+
+<p>Cheers,</p>
+<p>Flapjack</p>
