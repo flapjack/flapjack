@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 0.7.20 - 2013-07-17
+- Bug: flapjack-nagios-receiver failing after json library change gh-257 (@jessereynolds)
+- Bug: email gateway partial conversion to erb sending haml source code gh-256 (@ali-graham)
+
 # 0.7.19 - 2013-07-17
 - Feature: Removed log4r and YAJL dependencies gh-25 (@ali-graham)
 - Feature: Made jabber entity status messages more verbose gh-245 (@ali-graham)
