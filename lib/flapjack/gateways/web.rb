@@ -340,7 +340,7 @@ module Flapjack
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
           check, :redis => redis)
         summary = entity_check.summary
-        summary = summary[0..76] + '&hellip;' unless summary.length < 81
+        summary = summary[0..76] + '...' unless summary.length < 81
         latest_notif =
           {:problem         => entity_check.last_notification_for_state(:problem)[:timestamp],
            :recovery        => entity_check.last_notification_for_state(:recovery)[:timestamp],
