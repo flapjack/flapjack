@@ -117,7 +117,11 @@ module Flapjack
       pending = Flapjack::Data::Event.pending_count(:redis => @redis)
       @logger.debug("#{pending} events waiting on the queue")
       @logger.debug("Raw event received: #{event.inspect}")
-      return if ('shutdown' == event.type)
+      if ('shutdown' == event.type)
+        @should_quit = true
+        Process.kill('INT', Process.pid)
+        return
+      end
 
       event_str = "#{event.id}, #{event.type}, #{event.state}, #{event.summary}"
       event_str << ", #{Time.at(event.time).to_s}" if event.time
