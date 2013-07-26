@@ -28,8 +28,8 @@ namespace :events do
 
   redis = Redis.new(@redis_config)
 
-  desc "nukes the redis db, generates the events, runs and shuts down flapjack"
-  task :clean_run_benchmark => [:reset_redis, :benchmark, :shutdown, :run_flapjack]
+  desc "nukes the redis db, generates the events, runs and shuts down flapjack, generates perftools reports"
+  task :clean_run_benchmark => [:reset_redis, :benchmark, :shutdown, :run_flapjack, :perftools_reports]
 
   desc "reset the redis database"
   task :reset_redis do
@@ -62,6 +62,21 @@ namespace :events do
       puts "Flapjack run completed successfully"
     else
       puts "Problem starting flapjack: #{$?}"
+    end
+  end
+
+  desc "generates perftools reports"
+  task :perftools_reports do
+    if system("pprof.rb --text tmp/profiles/flapjack_profile > tmp/profiles/flapjack_profile.txt")
+      puts "Generated perftools.rb text report at tmp/profiles/flapjack_profile.txt"
+      system("head -40 tmp/profiles/flapjack_profile.txt")
+    else
+      puts "Problem generating perftools.rb text report: #{$?}"
+    end
+    if system("pprof.rb --pdf  tmp/profiles/flapjack_profile > tmp/profiles/flapjack_profile.pdf")
+      puts "Generated perftools.rb pdf report at tmp/profiles/flapjack_profile.pdf"
+    else
+      puts "Problem generating perftools.rb pdf report: #{$?}"
     end
   end
 
