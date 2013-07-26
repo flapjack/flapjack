@@ -13,7 +13,7 @@ namespace :events do
   require 'flapjack/data/entity_check'
 
   FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'test'
-  config_file = File.join('etc', 'flapjack_config.yaml')
+  config_file = File.join('tasks', 'support', 'flapjack_config_benchmark.yaml')
 
   config = Flapjack::Configuration.new
   config.load( config_file )
