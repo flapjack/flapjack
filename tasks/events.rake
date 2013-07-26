@@ -47,8 +47,18 @@ namespace :events do
 
   desc "starts flapjack"
   task :run_flapjack do
+    puts "Discovering path to perftools"
+    perftools = `gem which perftools | tail -1`
+    if system("if [ ! -d 'tmp/profiles' ] ; then mkdir tmp/profiles ; fi")
+      puts "we have a tmp/profiles dir"
+    else
+      puts "Problem creating tmp/profiles: #{$?}"
+    end
     puts "Starting flapjack..."
-    if system({"FLAPJACK_ENV" => FLAPJACK_ENV}, "bin/flapjack start --no-daemonize")
+    if system({"FLAPJACK_ENV" => FLAPJACK_ENV,
+               "CPUPROFILE"   => "tmp/profiles/flapjack_profile",
+               "RUBYOPT"      => "-r#{perftools}"},
+              "bin/flapjack start --no-daemonize")
       puts "Flapjack run completed successfully"
     else
       puts "Problem starting flapjack: #{$?}"
