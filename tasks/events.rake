@@ -29,7 +29,11 @@ namespace :events do
   redis = Redis.new(@redis_config)
 
   desc "nukes the redis db, generates the events, runs and shuts down flapjack, generates perftools reports"
-  task :clean_run_benchmark => [:reset_redis, :benchmark, :shutdown, :run_flapjack, :perftools_reports]
+  task :clean_run_benchmark => [:reset_redis, :benchmark, :shutdown, :run_flapjack, :perftools_reports] do
+    puts "events created: #{@events_created}"
+    puts "flapjack runtime: #{@timer_flapjack}"
+    puts "processing rate: #{@events_created.to_f / @timer_flapjack} events per second"
+  end
 
   desc "reset the redis database"
   task :reset_redis do
@@ -54,6 +58,7 @@ namespace :events do
     else
       puts "Problem creating tmp/profiles: #{$?}"
     end
+    time_flapjack_start = Time.now.to_f
     puts "Starting flapjack..."
     if system({"FLAPJACK_ENV" => FLAPJACK_ENV,
                "CPUPROFILE"   => "tmp/profiles/flapjack_profile",
@@ -63,6 +68,7 @@ namespace :events do
     else
       puts "Problem starting flapjack: #{$?}"
     end
+    @timer_flapjack = Time.now.to_f - time_flapjack_start
   end
 
   desc "generates perftools reports"
@@ -188,6 +194,7 @@ namespace :events do
     puts "  OK -> CRITICAL: #{ok_to_critical}"
     puts "  CRITICAL -> OK: #{critical_to_ok}"
 
+    @events_created = events_created
   end
 
   # FIXME: add arguments, make more flexible
