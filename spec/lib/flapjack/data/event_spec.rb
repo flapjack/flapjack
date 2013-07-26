@@ -64,7 +64,7 @@ describe Flapjack::Data::Event do
 
     it "creates a notification testing event" do
       Time.should_receive(:now).and_return(time)
-      mock_redis.should_receive(:rpush).with('events', /"testing"/ )
+      mock_redis.should_receive(:lpush).with('events', /"testing"/ )
 
       Flapjack::Data::Event.test_notifications(entity_name, check,
         :summary => 'test', :details => 'testing', :redis => mock_redis)
@@ -72,7 +72,7 @@ describe Flapjack::Data::Event do
 
     it "creates an acknowledgement event" do
       Time.should_receive(:now).and_return(time)
-      mock_redis.should_receive(:rpush).with('events', /"acking"/ )
+      mock_redis.should_receive(:lpush).with('events', /"acking"/ )
 
       Flapjack::Data::Event.create_acknowledgement(entity_name, check,
         :summary => 'acking', :time => time.to_i, :redis => mock_redis)
