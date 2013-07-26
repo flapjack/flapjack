@@ -58,7 +58,7 @@ namespace :events do
     if system({"FLAPJACK_ENV" => FLAPJACK_ENV,
                "CPUPROFILE"   => "tmp/profiles/flapjack_profile",
                "RUBYOPT"      => "-r#{perftools}"},
-              "bin/flapjack start --no-daemonize")
+              "bin/flapjack start --no-daemonize --config tasks/support/flapjack_config_benchmark.yaml")
       puts "Flapjack run completed successfully"
     else
       puts "Problem starting flapjack: #{$?}"
