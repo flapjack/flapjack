@@ -1,4 +1,5 @@
 require 'redis'
+require 'oj'
 
 namespace :events do
 
@@ -11,20 +12,66 @@ namespace :events do
   require 'flapjack/data/event'
   require 'flapjack/data/entity_check'
 
-  def get_initial_state(prng, p_initial_state_ok)
-    if prng.rand < p_initial_state_ok
-      'OK'
+  FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'test'
+  config_file = File.join('etc', 'flapjack_config.yaml')
+
+  config = Flapjack::Configuration.new
+  config.load( config_file )
+
+  @config_env = config.all
+  @redis_config = config.for_redis
+
+  if @config_env.nil? || @config_env.empty?
+    puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{config_file}'"
+    exit(false)
+  end
+
+  redis = Redis.new(@redis_config)
+
+  desc "nukes the redis db, generates the events, runs and shuts down flapjack"
+  task :clean_run_benchmark => [:reset_redis, :benchmark, :shutdown, :run_flapjack]
+
+  desc "reset the redis database"
+  task :reset_redis do
+    raise "I'm not going to let you reset your production redis db, sorry about that." if FLAPJACK_ENV.downcase == "production"
+    puts "db size before: #{redis.dbsize}"
+    redis.flushdb
+    puts "db size after: #{redis.dbsize}"
+  end
+
+  desc "add a shutdown event to the events queue"
+  task :shutdown do
+    redis.lpush('events', Oj.dump('type'    => 'shutdown',
+                                  'state'   => ''))
+  end
+
+  desc "starts flapjack"
+  task :run_flapjack do
+    puts "Starting flapjack..."
+    if system({"FLAPJACK_ENV" => FLAPJACK_ENV}, "bin/flapjack start --no-daemonize")
+      puts "Flapjack run completed successfully"
     else
-      'CRITICAL'
+      puts "Problem starting flapjack: #{$?}"
     end
   end
 
-  desc "benchmark event set 1"
-  task :benchmark_set_1 do
-    num_checks_per_entity = 5
-    num_entities = 100
-    num_checks = num_checks_per_entity * num_entities
-    interval = 60
+  desc "run benchmark - simulate a stream of events from the check execution system"
+  task :benchmark do
+
+    num_checks_per_entity = (ENV['CHECKS_PER_ENTITY'] || 5).to_i
+    num_entities          = (ENV['ENTITIES'] || 100).to_i
+    interval              = (ENV['INTERVAL'] || 60).to_i
+    hours                 = (ENV['HOURS'] || 1).to_f
+    seed                  = (ENV['SEED'] || 42).to_i
+
+    puts "Behaviour can be modified by setting any combination of the following environment variables: "
+    puts "CHECKS_PER_ENTITY - #{num_checks_per_entity}"
+    puts "ENTITIES          - #{num_entities}"
+    puts "INTERVAL          - #{interval}"
+    puts "HOURS             - #{hours}"
+    puts "SEED              - #{seed}"
+    puts "FLAPJACK_ENV      - #{FLAPJACK_ENV}"
+
     cycles_per_hour    = (60 * 60) / interval
     cycles_per_day     = (60 * 60 * 24) / interval
     cycles_per_week    = (60 * 60 * 24 * 7) / interval
@@ -34,24 +81,11 @@ namespace :events do
     recovery_prob_min  = 1.0 / cycles_per_week
     recovery_prob_max  = 1.0
     p_initial_state_ok = 1
+    num_checks = num_checks_per_entity * num_entities
 
-    prng = Random.new(42)
+    prng = Random.new(seed)
 
-    FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
-    config_file = File.join('etc', 'flapjack_config.yaml')
 
-    config = Flapjack::Configuration.new
-    config.load( config_file )
-
-    @config_env = config.all
-    @redis_config = config.for_redis
-
-    if @config_env.nil? || @config_env.empty?
-      puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{config_file}'"
-      exit(false)
-    end
-
-    redis = Redis.new(@redis_config)
 
     ok = 0
     critical = 0
@@ -78,7 +112,7 @@ namespace :events do
     ok_events       = 0
     critical_events = 0
     state_changes   = 0
-    (0..(cycles_per_hour)).to_a.each {|i|
+    (0..(hours * cycles_per_hour)).to_a.each {|i|
       changes = 0
       ok = 0
       critical = 0
