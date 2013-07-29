@@ -22,9 +22,9 @@ module Flapjack
 
     def initialize(opts = {})
       @config = opts[:config]
-      @redis_config = opts[:redis_config]
+      @redis_config = opts[:redis_config] || {}
       @logger = opts[:logger]
-      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
+      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
 
       @queue = @config['queue'] || 'events'
 
@@ -105,10 +105,11 @@ module Flapjack
     # from a different fiber while the main one is blocking.
     def stop
       @should_quit = true
-      @redis.rpush('events', Oj.dump('type'    => 'shutdown',
-                                     'host'    => '',
-                                     'service' => '',
-                                     'state'   => ''))
+      shutdown_redis = Redis.new(@redis_config.merge(:driver => :hiredis))
+      shutdown_redis.rpush('events', Oj.dump('type'    => 'shutdown',
+                                             'host'    => '',
+                                             'service' => '',
+                                             'state'   => ''))
     end
 
   private
