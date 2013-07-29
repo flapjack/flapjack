@@ -56,7 +56,7 @@ namespace :events do
     if system("if [ ! -d 'tmp/profiles' ] ; then mkdir tmp/profiles ; fi")
       puts "we have a tmp/profiles dir"
     else
-      puts "Problem creating tmp/profiles: #{$?}"
+      raise "Problem creating tmp/profiles: #{$?}"
     end
     time_flapjack_start = Time.now.to_f
     puts "Starting flapjack..."
@@ -66,7 +66,7 @@ namespace :events do
               "bin/flapjack start --no-daemonize --config tasks/support/flapjack_config_benchmark.yaml")
       puts "Flapjack run completed successfully"
     else
-      puts "Problem starting flapjack: #{$?}"
+      raise "Problem starting flapjack: #{$?}"
     end
     @timer_flapjack = Time.now.to_f - time_flapjack_start
   end
@@ -77,12 +77,12 @@ namespace :events do
       puts "Generated perftools.rb text report at tmp/profiles/flapjack_profile.txt"
       system("head -40 tmp/profiles/flapjack_profile.txt")
     else
-      puts "Problem generating perftools.rb text report: #{$?}"
+      raise "Problem generating perftools.rb text report: #{$?}"
     end
     if system("pprof.rb --pdf  tmp/profiles/flapjack_profile > tmp/profiles/flapjack_profile.pdf")
       puts "Generated perftools.rb pdf report at tmp/profiles/flapjack_profile.pdf"
     else
-      puts "Problem generating perftools.rb pdf report: #{$?}"
+      raise "Problem generating perftools.rb pdf report: #{$?}"
     end
   end
 
