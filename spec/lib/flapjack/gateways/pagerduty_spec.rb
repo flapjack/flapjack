@@ -11,7 +11,9 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
   let(:redis) {  mock('redis') }
 
   it "prompts the blocking redis connection to quit" do
-    redis.should_receive(:rpush).with(config['queue'], %q{{"notification_type":"shutdown"}})
+    shutdown_redis = mock('shutdown_redis')
+    shutdown_redis.should_receive(:rpush).with(config['queue'], %q{{"notification_type":"shutdown"}})
+    Redis.should_receive(:new).and_return(shutdown_redis)
 
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fp = Flapjack::Gateways::Pagerduty.new(:config => config, :logger => @logger)

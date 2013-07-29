@@ -151,9 +151,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   end
 
   it "prompts the blocking redis connection to quit" do
-    redis = mock('redis')
-    redis.should_receive(:rpush).with('jabber_notifications', %q{{"notification_type":"shutdown"}})
+    shutdown_redis = mock('shutdown_redis')
+    shutdown_redis.should_receive(:rpush).with('jabber_notifications', %q{{"notification_type":"shutdown"}})
+    Redis.should_receive(:new).and_return(shutdown_redis)
 
+    redis = mock('redis')
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
 
