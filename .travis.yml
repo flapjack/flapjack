@@ -13,4 +13,4 @@ before_script:
 before_install:
   - git submodule update --init --recursive
   - gem install bundler
-script: bundle exec rspec spec && bundle exec cucumber features && bundle exec rake events:clean_run_benchmark
+script: bundle exec rspec spec && bundle exec cucumber features && bundle exec rake benchmarks:run
