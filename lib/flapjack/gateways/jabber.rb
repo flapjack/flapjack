@@ -49,10 +49,10 @@ module Flapjack
 
       def initialize(opts = {})
         @config = opts[:config]
-        @redis_config = opts[:redis_config]
+        @redis_config = opts[:redis_config] || {}
         @boot_time = opts[:boot_time]
 
-        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
+        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
 
         @logger = opts[:logger]
 
@@ -63,7 +63,8 @@ module Flapjack
 
       def stop
         @should_quit = true
-        @redis.rpush(@config['queue'], Oj.dump('notification_type' => 'shutdown'))
+        shutdown_redis = Redis.new(@redis_config.merge(:driver => :hiredis))
+        shutdown_redis.rpush(@config['queue'], Oj.dump('notification_type' => 'shutdown'))
       end
 
       def setup
