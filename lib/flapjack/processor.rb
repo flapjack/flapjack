@@ -24,6 +24,8 @@ module Flapjack
       @config = opts[:config]
       @redis_config = opts[:redis_config] || {}
       @logger = opts[:logger]
+      @coordinator = opts[:coordinator]
+
       @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
 
       @queue = @config['queue'] || 'events'
@@ -35,6 +37,7 @@ module Flapjack
 
       ncsm_duration_conf = @config['new_check_scheduled_maintenance_duration'] || '100 years'
       @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf)
+
 
       options = { :logger => opts[:logger], :redis => @redis }
       @filters = []
@@ -120,9 +123,9 @@ module Flapjack
       @logger.debug("Raw event received: #{event.inspect}")
       if ('shutdown' == event.type)
         @should_quit = true
-        # FIXME: this is a horrible hack (the altered behaviour if running under rspec)
-        Process.kill('INT', Process.pid) unless $0.match(/rspec/)
-        return
+        @logger.warn("Shutting it all down because a shutdown event was received")
+        @coordinator.stop
+        exit
       end
 
       event_str = "#{event.id}, #{event.type}, #{event.state}, #{event.summary}"

@@ -1,10 +1,13 @@
 require 'spec_helper'
 require 'flapjack/processor'
+require 'flapjack/coordinator'
 
 describe Flapjack::Processor, :logger => true do
 
   # NB: this is only testing the public API of the Processor class, which is pretty limited.
   # (initialize, main, stop). Most test coverage for this class comes from the cucumber features.
+
+  let(:config) { mock(Flapjack::Configuration) }
 
   # TODO this does too much -- split it up
   it "starts up, runs and shuts down" do
@@ -40,7 +43,11 @@ describe Flapjack::Processor, :logger => true do
     Flapjack::Data::Event.should_receive(:pending_count).with(:redis => redis).and_return(0)
 
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    executive = Flapjack::Processor.new(:config => {}, :logger => @logger)
+
+    fc = mock('coordinator')
+    fc.should_receive(:stop)
+
+    executive = Flapjack::Processor.new(:config => {}, :logger => @logger, :coordinator => fc)
 
     shutdown_evt = mock(Flapjack::Data::Event)
     shutdown_evt.should_receive(:inspect)
@@ -50,7 +57,10 @@ describe Flapjack::Processor, :logger => true do
       shutdown_evt
     }
 
-    executive.start
+    begin
+      executive.start
+    rescue SystemExit
+    end
   end
 
 end
