@@ -1,5 +1,6 @@
 require 'redis'
 require 'oj'
+require 'pp'
 
 namespace :benchmarks do
 
@@ -31,10 +32,7 @@ namespace :benchmarks do
 
   desc "nukes the redis db, generates the events, runs and shuts down flapjack, generates perftools reports"
   task :run => [:reset_redis, :benchmark, :shutdown, :run_flapjack, :reports] do
-    puts "events created: #{@events_created}"
-    puts "flapjack runtime: #{@timer_flapjack}"
-    puts "processing rate: #{@events_created.to_f / @timer_flapjack} events per second"
-
+    pp @benchmark_data
   end
 
   desc "reset the redis database"
@@ -75,10 +73,10 @@ namespace :benchmarks do
 
   desc "generates perftools reports"
   task :reports do
-    data = { 'events_created'   => @events_created,
-             'flapjack_runtime' => @timer_flapjack,
-             'processing_rate'  => @events_created.to_f / @timer_flapjack }.merge(@benchmark_parameters)
-    bytes_written = IO.write('artifacts/benchmark_data.json', Oj.dump(data, :indent => 2))
+    @benchmark_data = { 'events_created'   => @events_created,
+                        'flapjack_runtime' => @timer_flapjack,
+                        'processing_rate'  => @events_created.to_f / @timer_flapjack }.merge(@benchmark_parameters)
+    bytes_written = IO.write('artifacts/benchmark_data.json', Oj.dump(@benchmark_data, :indent => 2))
     puts "benchmark data written to artifacts/benchmark_data.json (#{bytes_written} bytes)"
 
     if system("pprof.rb --text artifacts/flapjack-perftools-cpuprofile > artifacts/flapjack-perftools-cpuprofile.txt")
@@ -111,15 +109,6 @@ namespace :benchmarks do
     puts "SEED              - #{seed}"
     puts "FLAPJACK_ENV      - #{FLAPJACK_ENV}"
 
-    @benchmark_parameters = { 'checks_per_entity' => num_checks_per_entity,
-                              'entities'          => num_entities,
-                              'interval'          => interval,
-                              'hours'             => hours,
-                              'seed'              => seed,
-                              'flapjack_env'      => FLAPJACK_ENV,
-                              'version'           => Flapjack::VERSION,
-                              'git_version'       => `git describe --long --dirty --abbrev=10 --tags`.chomp,
-                              'git_branch'        => `git status --porcelain -b | head -1 | cut -d ' ' -f 2`.chomp }
 
     cycles_per_hour    = (60 * 60) / interval
     cycles_per_day     = (60 * 60 * 24) / interval
@@ -211,51 +200,21 @@ namespace :benchmarks do
     puts "  CRITICAL -> OK: #{critical_to_ok}"
 
     @events_created = events_created
+    @benchmark_parameters = { 'events_created'    => events_created,
+                              'ok_to_critical'    => ok_to_critical,
+                              'critical_to_ok'    => critical_to_ok,
+                              'checks_per_entity' => num_checks_per_entity,
+                              'entities'          => num_entities,
+                              'interval'          => interval,
+                              'hours'             => hours,
+                              'seed'              => seed,
+                              'flapjack_env'      => FLAPJACK_ENV,
+                              'version'           => Flapjack::VERSION,
+                              'git_last_commit'   => `git rev-parse HEAD`.chomp,
+                              'git_version'       => `git describe --long --dirty --abbrev=10 --tags`.chomp,
+                              'git_branch'        => `git status --porcelain -b | head -1 | cut -d ' ' -f 2`.chomp,
+                              'hostname'          => `hostname -f`.chomp,
+                              'uname'             => `uname -a`.chomp }
   end
-
-  # FIXME: add arguments, make more flexible
-  desc "send events to trigger some notifications"
-  task :test_notification do
-
-    FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
-    config_file = File.join('etc', 'flapjack_config.yaml')
-
-    config = Flapjack::Configuration.new
-    config.load( config_file )
-
-    @config_env = config.all
-    @redis_config = config.for_redis
-
-    if @config_env.nil? || @config_env.empty?
-      puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{config_file}'"
-      exit(false)
-    end
-
-    redis = Redis.new(@redis_config)
-
-    Flapjack::Data::Event.add({'entity'  => 'clientx-app-01',
-                               'check'   => 'ping',
-                               'type'    => 'service',
-                               'state'   => 'ok',
-                               'summary' => 'testing'}, :redis => redis)
-
-    sleep(8)
-
-    Flapjack::Data::Event.add({'entity'  => 'clientx-app-01',
-                               'check'   => 'ping',
-                               'type'    => 'service',
-                               'state'   => 'critical',
-                               'summary' => 'testing'}, :redis => redis)
-
-    sleep(8)
-
-    Flapjack::Data::Event.add({'entity'  => 'clientx-app-01',
-                               'check'   => 'ping',
-                               'type'    => 'service',
-                               'state'   => 'ok',
-                               'summary' => 'testing'}, :redis => redis)
-
-  end
-
 
 end
