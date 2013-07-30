@@ -2,6 +2,8 @@
 
 require 'chronic_duration'
 
+require 'em-hiredis'
+
 require 'flapjack/filters/acknowledgement'
 require 'flapjack/filters/ok'
 require 'flapjack/filters/scheduled_maintenance'
@@ -24,7 +26,7 @@ module Flapjack
       @config = opts[:config]
       @redis_config = opts[:redis_config] || {}
       @logger = opts[:logger]
-      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
 
       @queue = @config['queue'] || 'events'
 
@@ -105,7 +107,9 @@ module Flapjack
     # from a different fiber while the main one is blocking.
     def stop
       @should_quit = true
-      shutdown_redis = Redis.new(@redis_config.merge(:driver => :hiredis))
+      redis_uri = @redis_config[:path] ||
+        "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
+      shutdown_redis = EM::Hiredis.connect(redis_uri)
       shutdown_redis.rpush('events', Oj.dump('type'    => 'shutdown',
                                              'host'    => '',
                                              'service' => '',
