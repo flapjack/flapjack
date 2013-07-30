@@ -6,6 +6,17 @@ unless $:.include?(File.dirname(__FILE__) + '/../lib/')
 end
 
 require 'dante'
+
+module Dante
+  class Runner
+
+    def start
+      # skip signal traps
+      @startup_command.call(self.options) if @startup_command
+    end
+  end
+end
+
 require 'optparse'
 require 'ostruct'
 

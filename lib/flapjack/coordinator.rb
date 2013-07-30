@@ -28,8 +28,8 @@ module Flapjack
       @boot_time = Time.now
 
       EM.synchrony do
-        add_pikelets(pikelets(@config.all))
         setup_signals if options[:signals]
+        add_pikelets(pikelets(@config.all))
       end
     end
 
@@ -132,7 +132,7 @@ module Flapjack
         start_piks.each {|pik| pik.start }
       rescue Exception => e
         trace = e.backtrace.join("\n")
-        @logger.fatal "#{e.message}\n#{trace}"
+        @logger.fatal "#{e.class.name}\n#{e.message}\n#{trace}"
         stop
       end
     end
