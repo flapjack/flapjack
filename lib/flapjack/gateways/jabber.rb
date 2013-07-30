@@ -1,14 +1,8 @@
 #!/usr/bin/env ruby
 
-require 'socket'
+require 'em-hiredis'
 
-require 'eventmachine'
-# the redis/synchrony gems need to be required in this particular order, see
-# the redis-rb README for details
-require 'hiredis'
-require 'em-synchrony'
-require 'redis/connection/synchrony'
-require 'redis'
+require 'socket'
 
 require 'blather/client/client'
 require 'chronic_duration'
@@ -52,7 +46,7 @@ module Flapjack
         @redis_config = opts[:redis_config] || {}
         @boot_time = opts[:boot_time]
 
-        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
 
         @logger = opts[:logger]
 
@@ -63,7 +57,9 @@ module Flapjack
 
       def stop
         @should_quit = true
-        shutdown_redis = Redis.new(@redis_config.merge(:driver => :hiredis))
+        redis_uri = @redis_config[:path] ||
+          "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
+        shutdown_redis = EM::Hiredis.connect(redis_uri)
         shutdown_redis.rpush(@config['queue'], Oj.dump('notification_type' => 'shutdown'))
       end
 

@@ -21,7 +21,7 @@ module Flapjack
         @config = opts[:config]
         @logger = opts[:logger]
         @redis_config = opts[:redis_config] || {}
-        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 1)
+        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
 
         @logger.debug("New Pagerduty pikelet with the following options: #{@config.inspect}")
 
@@ -32,7 +32,10 @@ module Flapjack
       def stop
         @logger.info("stopping")
         @should_quit = true
-        shutdown_redis = Redis.new(@redis_config.merge(:driver => :hiredis))
+
+        redis_uri = @redis_config[:path] ||
+          "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
+        shutdown_redis = EM::Hiredis.connect(redis_uri)
         shutdown_redis.rpush(@config['queue'], Oj.dump('notification_type' => 'shutdown'))
       end
 
