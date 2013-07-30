@@ -1,6 +1,5 @@
 require 'redis'
 require 'oj'
-require 'pp'
 
 namespace :benchmarks do
 
@@ -32,7 +31,7 @@ namespace :benchmarks do
 
   desc "nukes the redis db, generates the events, runs and shuts down flapjack, generates perftools reports"
   task :run => [:reset_redis, :benchmark, :shutdown, :run_flapjack, :reports] do
-    pp @benchmark_data
+    puts Oj.dump(@benchmark_data, :indent => 2)
   end
 
   desc "reset the redis database"
@@ -92,7 +91,11 @@ namespace :benchmarks do
     end
   end
 
+
   desc "run benchmark - simulate a stream of events from the check execution system"
+  # Assumptions:
+  # - time to failure varies evenly between 1 hour and 1 month
+  # - time to recovery varies evenly between 10 seconds and 1 week
   task :benchmark do
 
     num_checks_per_entity = (ENV['CHECKS_PER_ENTITY'] || 5).to_i
@@ -109,16 +112,18 @@ namespace :benchmarks do
     puts "SEED              - #{seed}"
     puts "FLAPJACK_ENV      - #{FLAPJACK_ENV}"
 
+    raise "INTERVAL must be less than (or equal to) 3600 seconds (1 hour)" unless interval <= 3600
 
-    cycles_per_hour    = (60 * 60) / interval
-    cycles_per_day     = (60 * 60 * 24) / interval
-    cycles_per_week    = (60 * 60 * 24 * 7) / interval
-    cycles_per_month   = (60 * 60 * 24 * 7 * 30) / interval
-    failure_prob_min   = 1.0 / cycles_per_month
-    failure_prob_max   = 1.0 / cycles_per_hour
-    recovery_prob_min  = 1.0 / cycles_per_week
-    recovery_prob_max  = 1.0
-    p_initial_state_ok = 1
+    cycles_per_hour   = (60.0 * 60) / interval
+    cycles_per_day    = (60.0 * 60 * 24) / interval
+    cycles_per_week   = (60.0 * 60 * 24 * 7) / interval
+    cycles_per_month  = (60.0 * 60 * 24 * 7 * 30) / interval
+    cycles            = (hours * cycles_per_hour).to_i
+    failure_prob_min  = 1.0 / cycles_per_month
+    failure_prob_max  = 1.0 / cycles_per_hour
+    recovery_prob_min = 1.0 / cycles_per_week
+    recovery_prob_max = 1.0
+    initial_ok_prob   = 1
     num_checks = num_checks_per_entity * num_entities
 
     prng = Random.new(seed)
@@ -129,7 +134,7 @@ namespace :benchmarks do
     entities = (1..num_entities).to_a.inject({}) {|memo, id|
       checks = (1..num_checks_per_entity).to_a.inject({}) {|memo_check, id_check|
         memo_check[check_id] = {:name => "Check Type #{id_check}",
-                                :state => ( prng.rand < p_initial_state_ok ? 'OK' : 'CRITICAL' ),
+                                :state => ( prng.rand < initial_ok_prob ? 'OK' : 'CRITICAL' ),
                                 :p_failure => prng.rand(failure_prob_min..failure_prob_max),
                                 :p_recovery => prng.rand(recovery_prob_min..recovery_prob_max)}
         ok       += 1 if memo_check[check_id][:state] == 'OK'
@@ -140,7 +145,7 @@ namespace :benchmarks do
       memo[id] = checks
       memo
     }
-    puts "ok: #{ok * 100.0 / num_checks}% (#{ok}), critical: #{100.0 * critical / num_checks}% (#{critical})"
+    #puts "ok: #{ok * 100.0 / num_checks}% (#{ok}), critical: #{100.0 * critical / num_checks}% (#{critical})"
 
     events_created  = 0
     ok_to_critical  = 0
@@ -148,7 +153,7 @@ namespace :benchmarks do
     ok_events       = 0
     critical_events = 0
     state_changes   = 0
-    (0..(hours * cycles_per_hour)).to_a.each {|i|
+    (0..cycles).to_a.each {|i|
       changes = 0
       ok = 0
       critical = 0
@@ -189,15 +194,15 @@ namespace :benchmarks do
       critical_events += critical
       state_changes   += changes
 
-      puts "ok: #{100.0 * ok / num_checks}% (#{ok}), critical: #{100.0 * critical / num_checks}% (#{critical}), changed: #{100.0 * changes / num_checks}% (#{changes})"
+      #puts "ok: #{100.0 * ok / num_checks}% (#{ok}), critical: #{100.0 * critical / num_checks}% (#{critical}), changed: #{100.0 * changes / num_checks}% (#{changes})"
 
     }
     puts "created #{events_created} events:"
-    puts "  OK:             #{ok_events} (#{ (100.0 * ok_events / events_created).round(2)}%)"
-    puts "  CRITICAL:       #{critical_events} (#{ (100.0 * critical_events / events_created).round(2)}%)"
-    puts "containing #{state_changes} state changes:"
-    puts "  OK -> CRITICAL: #{ok_to_critical}"
-    puts "  CRITICAL -> OK: #{critical_to_ok}"
+    puts "  OK:             #{ok_events} (#{ (100.0 * ok_events / events_created).round(1)}%)"
+    puts "  CRITICAL:       #{critical_events} (#{ (100.0 * critical_events / events_created).round(1)}%)"
+    puts "containing #{state_changes} state changes (#{ (100.0 * state_changes / events_created).round(1)}%):"
+    puts "  OK -> CRITICAL: #{ok_to_critical} (#{ (100.0 * ok_to_critical / events_created).round(1)}%)"
+    puts "  CRITICAL -> OK: #{critical_to_ok} (#{ (100.0 * critical_to_ok / events_created).round(1)}%)"
 
     @events_created = events_created
     @benchmark_parameters = { 'events_created'    => events_created,
@@ -207,12 +212,19 @@ namespace :benchmarks do
                               'entities'          => num_entities,
                               'interval'          => interval,
                               'hours'             => hours,
+                              'cycles'            => cycles,
+                              'failure_prob_min'  => failure_prob_min,
+                              'failure_prob_max'  => failure_prob_max,
+                              'recovery_prob_min' => recovery_prob_min,
+                              'recovery_prob_max' => recovery_prob_max,
+                              'initial_ok_prob'   => initial_ok_prob,
                               'seed'              => seed,
                               'flapjack_env'      => FLAPJACK_ENV,
                               'version'           => Flapjack::VERSION,
                               'git_last_commit'   => `git rev-parse HEAD`.chomp,
                               'git_version'       => `git describe --long --dirty --abbrev=10 --tags`.chomp,
                               'git_branch'        => `git status --porcelain -b | head -1 | cut -d ' ' -f 2`.chomp,
+                              'ruby_build'        => `ruby --version`.chomp,
                               'hostname'          => `hostname -f`.chomp,
                               'uname'             => `uname -a`.chomp }
   end
