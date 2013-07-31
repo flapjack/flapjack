@@ -153,7 +153,6 @@ module Flapjack
           end
 
           if piks.any? {|p| p.status == 'stopping' }
-            print "@"
             EM::Synchrony.sleep 0.25
           else
             EM.stop if opts[:shutdown]

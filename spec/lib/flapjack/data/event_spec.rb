@@ -58,7 +58,7 @@ describe Flapjack::Data::Event do
       events_len = 23
       mock_redis.should_receive(:llen).with('events').and_return(events_len)
 
-      pc = Flapjack::Data::Event.pending_count(:redis => mock_redis)
+      pc = Flapjack::Data::Event.pending_count('events', :redis => mock_redis)
       pc.should == events_len
     end
 
