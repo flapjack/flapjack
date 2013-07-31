@@ -165,7 +165,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   it "runs a blocking loop listening for notifications" do
     timer = mock('timer')
     timer.should_receive(:cancel)
-    EM::Synchrony.should_receive(:add_periodic_timer).with(60).and_return(timer)
+    EM::Synchrony.should_receive(:add_periodic_timer).with(1).and_return(timer)
 
     redis = mock('redis')
 

@@ -403,11 +403,19 @@ module Flapjack
         @logger.info("starting")
         @logger.debug("new jabber pikelet with the following options: #{@config.inspect}")
 
-        keepalive_timer = EM::Synchrony.add_periodic_timer(60) do
-          @logger.debug("calling keepalive on the jabber connection")
-          if connected?
-            EventMachine::Synchrony.next_tick do
-              write(' ')
+        # the periodic timer can't be halted early (without doing EM.stop) so
+        # keep the time short and count the iterations ... could just use
+        # EM.sleep(1) in a loop, I suppose
+        ki = 0
+        keepalive_timer = EventMachine::Synchrony.add_periodic_timer(1) do
+          ki += 1
+          if ki == 60
+            ki = 0
+            @logger.debug("calling keepalive on the jabber connection")
+            if connected?
+              EventMachine::Synchrony.next_tick do
+                write(' ')
+              end
             end
           end
         end
@@ -432,6 +440,7 @@ module Flapjack
             @logger.debug('jabber notification event received')
             @logger.debug(event.inspect)
             if 'shutdown'.eql?(type)
+              @logger.debug("@should_quit: #{@should_quit}")
               if @should_quit
                 EventMachine::Synchrony.next_tick do
                   # get delays without the next_tick
