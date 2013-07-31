@@ -109,14 +109,13 @@ module Flapjack
     # this must use a separate connection to the main Executive one, as it's running
     # from a different fiber while the main one is blocking.
     def stop
-      @should_quit = true
-      redis_uri = @redis_config[:path] ||
-        "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
-      shutdown_redis = EM::Hiredis.connect(redis_uri)
-      shutdown_redis.rpush('events', Oj.dump('type'    => 'shutdown',
-                                             'host'    => '',
-                                             'service' => '',
-                                             'state'   => ''))
+      unless @should_quit
+        @should_quit = true
+        redis_uri = @redis_config[:path] ||
+          "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
+        shutdown_redis = EM::Hiredis.connect(redis_uri)
+        shutdown_redis.rpush('events', Oj.dump('type'    => 'noop'))
+      end
     end
 
   private
@@ -126,10 +125,16 @@ module Flapjack
       @logger.debug("#{pending} events waiting on the queue")
       @logger.debug("Raw event received: #{event.inspect}")
       if ('shutdown' == event.type)
-        @should_quit = true
-        @logger.warn("Shutting it all down because a shutdown event was received")
-        @coordinator.stop
-        exit
+        unless @should_quit
+          @should_quit = true
+          @logger.warn("Shutting it all down because a shutdown event was received")
+          @coordinator.stop
+          exit
+        end
+      end
+
+      if ('noop' == event.type)
+        return
       end
 
       event_str = "#{event.id}, #{event.type}, #{event.state}, #{event.summary}"
