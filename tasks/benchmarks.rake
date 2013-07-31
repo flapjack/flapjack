@@ -30,7 +30,7 @@ namespace :benchmarks do
   redis = Redis.new(@redis_config)
 
   desc "nukes the redis db, generates the events, runs and shuts down flapjack, generates perftools reports"
-  task :run => [:reset_redis, :benchmark, :shutdown, :run_flapjack, :reports] do
+  task :run => [:reset_redis, :benchmark, :run_flapjack, :reports] do
     puts Oj.dump(@benchmark_data, :indent => 2)
   end
 
@@ -40,12 +40,6 @@ namespace :benchmarks do
     puts "db size before: #{redis.dbsize}"
     redis.flushdb
     puts "db size after: #{redis.dbsize}"
-  end
-
-  desc "add a shutdown event to the events queue"
-  task :shutdown do
-    redis.lpush('events', Oj.dump('type'    => 'shutdown',
-                                  'state'   => ''))
   end
 
   desc "starts flapjack"
