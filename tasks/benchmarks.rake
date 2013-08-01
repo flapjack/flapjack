@@ -1,5 +1,6 @@
 require 'redis'
 require 'oj'
+require 'time'
 
 namespace :benchmarks do
 
@@ -219,6 +220,7 @@ namespace :benchmarks do
                               'git_version'       => `git describe --long --dirty --abbrev=10 --tags`.chomp,
                               'git_branch'        => `git status --porcelain -b | head -1 | cut -d ' ' -f 2`.chomp,
                               'ruby_build'        => `ruby --version`.chomp,
+                              'time'              => Time.new.iso8601,
                               'hostname'          => `hostname -f`.chomp,
                               'uname'             => `uname -a`.chomp }
   end
