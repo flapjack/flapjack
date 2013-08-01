@@ -7,9 +7,9 @@ describe Flapjack::Coordinator do
   let(:fiber)  { mock(Fiber) }
   let(:config) { mock(Flapjack::Configuration) }
 
-  let(:logger)     { mock(Flapjack::Logger) }
+  let(:logger) { mock(Flapjack::Logger) }
 
-  let!(:time)   { Time.now }
+  let!(:time)  { Time.now }
 
   it "starts and stops a pikelet" do
     Flapjack::Logger.should_receive(:new).and_return(logger)
@@ -29,7 +29,7 @@ describe Flapjack::Coordinator do
 
     fc = Flapjack::Coordinator.new(config)
     Flapjack::Pikelet.should_receive(:create).with('processor',
-        :config => cfg['processor'], :redis_config => {}, :boot_time => time).
+        :config => cfg['processor'], :redis_config => {}, :boot_time => time, :coordinator => fc).
       and_return(processor)
 
     fiber.should_receive(:resume)
@@ -63,7 +63,7 @@ describe Flapjack::Coordinator do
 
     fc = Flapjack::Coordinator.new(config)
     Flapjack::Pikelet.should_receive(:create).with('processor',
-        :config => cfg['processor'], :redis_config => {}, :boot_time => time)
+        :config => cfg['processor'], :redis_config => {}, :boot_time => time, :coordinator => fc)
       .and_return(processor)
 
     fiber.should_receive(:resume)
@@ -100,10 +100,10 @@ describe Flapjack::Coordinator do
 
     fc = Flapjack::Coordinator.new(config)
     Flapjack::Pikelet.should_receive(:create).with('processor',
-        :config => cfg['executive'], :redis_config => {}, :boot_time => time).
+        :config => cfg['executive'], :redis_config => {}, :boot_time => time, :coordinator => fc).
       and_return(processor)
     Flapjack::Pikelet.should_receive(:create).with('notifier',
-        :config => cfg['executive'], :redis_config => {}, :boot_time => time).
+        :config => cfg['executive'], :redis_config => {}, :boot_time => time, :coordinator => fc).
       and_return(notifier)
 
     fiber.should_receive(:resume)
@@ -138,7 +138,7 @@ describe Flapjack::Coordinator do
     fc = Flapjack::Coordinator.new(config)
     Flapjack::Pikelet.should_receive(:create).with('processor',
         :config => cfg['executive'].merge(cfg['processor']),
-        :redis_config => {}, :boot_time => time).
+        :redis_config => {}, :boot_time => time, :coordinator => fc).
       and_return(processor)
 
     fiber.should_receive(:resume)
@@ -210,22 +210,25 @@ describe Flapjack::Coordinator do
     processor.should_receive(:update_status)
     processor.should_receive(:status).exactly(3).times.and_return('stopped')
 
+    config.should_receive(:for_redis).and_return({})
+    fc = Flapjack::Coordinator.new(config)
+
     jabber = mock('jabber')
     Flapjack::Pikelet.should_receive(:create).
       with('jabber', :config => {"enabled" => true}, :redis_config => {},
-        :boot_time => time).
+        :boot_time => time, :coordinator => fc).
       and_return(jabber)
     jabber.should_receive(:start)
 
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    config.should_receive(:for_redis).and_return({})
-    fc = Flapjack::Coordinator.new(config)
     fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [processor])
     fc.reload
     fc.instance_variable_get('@pikelets').should == [jabber]
+
+
   end
 
   it "reloads a pikelet config without restarting it" do
@@ -287,13 +290,14 @@ describe Flapjack::Coordinator do
     new_exec = mock('new_executive')
     new_exec.should_receive(:start)
 
-    Flapjack::Pikelet.should_receive(:create).
-      with('processor', :config => new_cfg['processor'], :redis_config => {},
-        :boot_time => time).
-      and_return(new_exec)
-
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
+
+    Flapjack::Pikelet.should_receive(:create).
+      with('processor', :config => new_cfg['processor'], :redis_config => {},
+        :boot_time => time, :coordinator => fc).
+      and_return(new_exec)
+
     fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [processor])
     fc.reload

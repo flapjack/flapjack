@@ -73,6 +73,7 @@ module Flapjack
         @config = opts[:config] || {}
         @redis_config = opts[:redis_config] || {}
         @boot_time = opts[:boot_time]
+        @coordinator = opts[:coordinator]
 
         @logger = Flapjack::Logger.new("flapjack-#{type}", @config['logger'])
 
@@ -104,7 +105,8 @@ module Flapjack
       def self.create(type, opts = {})
         self.new(type, PIKELET_TYPES[type], :config => opts[:config],
           :redis_config => opts[:redis_config],
-          :boot_time => opts[:boot_time])
+          :boot_time => opts[:boot_time],
+          :coordinator => opts[:coordinator])
       end
 
       def initialize(type, pikelet_klass, opts = {})

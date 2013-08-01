@@ -21,17 +21,19 @@ describe Flapjack::Pikelet do
 
     config.should_receive(:[]).with('logger').and_return(nil)
 
+    fc = mock('coordinator')
+
     processor = mock('processor')
     processor.should_receive(:start)
     Flapjack::Processor.should_receive(:new).with(:config => config,
-        :redis_config => redis_config, :boot_time => time, :logger => logger).
+        :redis_config => redis_config, :boot_time => time, :logger => logger, :coordinator => fc).
       and_return(processor)
 
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
     pik = Flapjack::Pikelet.create('processor', :config => config,
-      :redis_config => redis_config, :boot_time => time)
+      :redis_config => redis_config, :boot_time => time, :coordinator => fc)
     pik.should be_a(Flapjack::Pikelet::Generic)
     pik.start
   end

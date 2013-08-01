@@ -1,10 +1,13 @@
 require 'spec_helper'
 require 'flapjack/processor'
+require 'flapjack/coordinator'
 
 describe Flapjack::Processor, :logger => true do
 
   # NB: this is only testing the public API of the Processor class, which is pretty limited.
   # (initialize, main, stop). Most test coverage for this class comes from the cucumber features.
+
+  let(:config) { mock(Flapjack::Configuration) }
 
   # TODO this does too much -- split it up
   it "starts up, runs and shuts down" do
@@ -37,20 +40,26 @@ describe Flapjack::Processor, :logger => true do
     # redis.should_receive(:hincrby).with('event_counters', 'all', 1)
     # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
 
-    Flapjack::Data::Event.should_receive(:pending_count).with(:redis => redis).and_return(0)
+    Flapjack::Data::Event.should_receive(:pending_count).with('events', :redis => redis).and_return(0)
 
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    executive = Flapjack::Processor.new(:config => {}, :logger => @logger)
 
-    shutdown_evt = mock(Flapjack::Data::Event)
-    shutdown_evt.should_receive(:inspect)
-    shutdown_evt.should_receive(:type).and_return('shutdown')
+    fc = mock('coordinator')
+
+    executive = Flapjack::Processor.new(:config => {}, :logger => @logger, :coordinator => fc)
+
+    noop_evt = mock(Flapjack::Data::Event)
+    noop_evt.should_receive(:inspect)
+    noop_evt.should_receive(:type).and_return('noop')
     Flapjack::Data::Event.should_receive(:next) {
       executive.instance_variable_set('@should_quit', true)
-      shutdown_evt
+      noop_evt
     }
 
-    executive.start
+    begin
+      executive.start
+    rescue SystemExit
+    end
   end
 
 end

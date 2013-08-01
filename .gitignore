@@ -26,4 +26,5 @@ flapjack-*.gem
 .rbenv-version
 .ruby-version
 .rvmrc
+artifacts/*
 

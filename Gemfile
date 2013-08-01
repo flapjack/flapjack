@@ -21,4 +21,5 @@ group :test do
   gem 'fuubar-cucumber'
   gem 'simplecov', :require => false
   gem 'json_spec'
+  gem 'perftools.rb'
 end
