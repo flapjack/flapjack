@@ -95,6 +95,17 @@ module Flapjack
         }.sort
       end
 
+      def self.find_all_with_tags(tags, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        tags_prefixed = tags.collect {|tag|
+          "#{TAG_PREFIX}:#{tag}"
+        }
+        puts "tags_prefixed: #{tags_prefixed.inspect}"
+        Flapjack::Data::Tag.find_intersection(tags_prefixed, :redis => redis).collect {|entity_id|
+          Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis).name
+        }.compact
+      end
+
       def self.find_all_with_checks(options)
         raise "Redis connection not set" unless redis = options[:redis]
         redis.zrange("current_entities", 0, -1)
@@ -119,7 +130,7 @@ module Flapjack
       end
 
       def check_list
-        @redis.zrange("current_checks:#{@name}", 0, -1)        
+        @redis.zrange("current_checks:#{@name}", 0, -1)
       end
 
       def check_count
