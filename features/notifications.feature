@@ -5,21 +5,18 @@ Feature: notifications
 
   # TODO test across multiple contacts
 
-  @resque
   Scenario: Queue an SMS notification
     Given the user wants to receive SMS notifications for entity 'example.com'
     When an event notification is generated for entity 'example.com'
     Then an SMS notification for entity 'example.com' should be queued for the user
     And an email notification for entity 'example.com' should not be queued for the user
 
-  @resque
   Scenario: Queue an email notification
     Given the user wants to receive email notifications for entity 'example.com'
     When an event notification is generated for entity 'example.com'
     Then an email notification for entity 'example.com' should be queued for the user
     And an SMS notification for entity 'example.com' should not be queued for the user
 
-  @resque
   Scenario: Queue SMS and email notifications
     Given the user wants to receive SMS notifications for entity 'example.com' and email notifications for entity 'example2.com'
     When an event notification is generated for entity 'example.com'

@@ -249,6 +249,7 @@ module Flapjack
 
             act_proc = proc {|entity_check|
               Flapjack::Data::Event.create_acknowledgement(
+                config['processor_queue'] || 'events',
                 entity_check.entity_name, entity_check.check,
                 :summary => params[:summary],
                 :duration => duration,
@@ -291,6 +292,7 @@ module Flapjack
               summary = params[:summary] ||
                         "Testing notifications to all contacts interested in entity #{entity_check.entity.name}"
               Flapjack::Data::Event.test_notifications(
+                config['processor_queue'] || 'events',
                 entity_check.entity_name, entity_check.check,
                 :summary => summary,
                 :redis => redis)

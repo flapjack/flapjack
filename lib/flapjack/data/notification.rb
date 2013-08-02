@@ -1,5 +1,9 @@
 #!/usr/bin/env ruby
 
+# 'Notification' refers to the template object created when an event occurs,
+# from which individual 'Message' objects are created, one for each
+# contact+media recipient.
+
 require 'oj'
 
 require 'flapjack/data/contact'
@@ -43,7 +47,7 @@ module Flapjack
         end
       end
 
-      def self.add(queue, event, opts = {})
+      def self.push(queue, event, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
 
         last_state = opts[:last_state] || {}
@@ -60,30 +64,44 @@ module Flapjack
                  'severity'     => opts[:severity],
                  'count'        => event.counter }
 
-        redis.rpush(queue, Oj.dump(notif))
-      end
-
-      def self.next(queue, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-
-        defaults = { :block => true }
-        options  = defaults.merge(opts)
-
-        if options[:block]
-          raw = redis.blpop(queue, 0)[1]
-        else
-          raw = redis.lpop(queue)
-          return unless raw
-        end
         begin
-          parsed = ::Oj.load( raw )
+          notif_json = Oj.dump(notif)
         rescue Oj::Error => e
           if options[:logger]
-            options[:logger].warn("Error deserialising notification json: #{e}, raw json: #{raw.inspect}")
+            options[:logger].warn("Error serialising notification json: #{e}, notification: #{notif.inspect}")
           end
-          return nil
+          notif_json = nil
         end
-        self.new( parsed )
+
+        if notif_json
+          redis.multi do
+            redis.lpush(queue, notif_json)
+            redis.lpush("#{queue}_actions", "+")
+          end
+        end
+
+      end
+
+      def self.foreach_on_queue(queue, options = {})
+        raise "Redis connection not set" unless redis = opts[:redis]
+
+        while notif_json = redis.rpop(queue)
+          begin
+            notification = ::Oj.load( notif_json )
+          rescue Oj::Error => e
+            if options[:logger]
+              options[:logger].warn("Error deserialising notification json: #{e}, raw json: #{notif_json.inspect}")
+            end
+            notification = nil
+          end
+
+          yield self.new(notification) if block_given? && notification
+        end
+      end
+
+      def self.wait_for_queue(queue, options = {})
+        raise "Redis connection not set" unless redis = opts[:redis]
+        redis.brpop("#{queue}_actions")
       end
 
       def contents

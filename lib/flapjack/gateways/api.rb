@@ -6,6 +6,9 @@
 # There's a matching flapjack-diner gem at https://github.com/flpjck/flapjack-diner
 # which consumes data from this API.
 
+require 'hiredis'
+require "redis/connection/hiredis"
+
 require 'time'
 
 require 'sinatra/base'
@@ -31,11 +34,6 @@ module Flapjack
 
       class << self
 
-        def pikelet_settings
-          {:em_synchrony => false,
-           :em_stop      => false}
-        end
-
         def start
           @logger.info "starting api - class"
 
@@ -54,12 +52,10 @@ module Flapjack
         end
       end
 
-      def redis
-        self.class.instance_variable_get('@redis')
-      end
-
-      def logger
-        self.class.instance_variable_get('@logger')
+      ['redis', 'logger', 'config'].each do |class_inst_var|
+        define_method(class_inst_var.to_sym) do
+          self.class.instance_variable_get("@#{class_inst_var}")
+        end
       end
 
       before do

@@ -178,7 +178,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       with(entity, 'ping', :redis => redis).and_return(entity_check)
 
     Flapjack::Data::Event.should_receive(:create_acknowledgement).
-      with(entity_name, 'ping', :summary => "", :duration => (4 * 60 * 60),
+      with('events', entity_name, 'ping', :summary => "", :duration => (4 * 60 * 60),
            :acknowledgement_id => '1234', :redis => redis)
 
     post "/acknowledgements/#{entity_name_esc}/ping?acknowledgement_id=1234"

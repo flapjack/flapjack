@@ -10,17 +10,12 @@
 
 require 'monitor'
 
-require 'eventmachine'
-require 'em-synchrony'
-
 # the redis/synchrony gems need to be required in this particular order, see
 # the redis-rb README for details
 require 'hiredis'
-require 'redis/connection/synchrony'
 require 'redis'
-require 'em-resque'
-require 'em-resque/worker'
-require 'thin'
+
+require 'webrick'
 
 require 'flapjack/notifier'
 require 'flapjack/processor'
@@ -46,7 +41,6 @@ module Flapjack
 
       def initialize(pikelet_class, shutdown, options = {})
         @pikelet_class = pikelet_class
-        @settings      = pikelet_class.pikelet_settings
 
         @config        = options[:config]
         @redis_config  = options[:redis_config]
@@ -57,49 +51,44 @@ module Flapjack
         @siblings      = []
 
         mon_initialize
+
+        @pikelet = @pikelet_class.new(:config => @config,
+          :redis_config => @redis_config, :logger => @logger)
       end
 
       def start(&block)
+        @pikelet.siblings = @siblings.map(&:pikelet) if @pikelet.respond_to?(:siblings=)
+
         @condition = new_cond
 
         @thread = Thread.new do
           Thread.current.abort_on_exception = true
 
           synchronize do
-            EM.error_handler do |err|
-              @logger.warn err.message
-              trace = err.backtrace
-              @logger.warn trace.join("\n") if trace
-              @error = err
-              EM.stop_event_loop if EM.reactor_running?
-            end
-            action = proc {
+
+            # TODO rename this, it's only relevant in the error case
+            max_runs = @config['max_runs'] || 1
+            runs = 0
+
+            error = nil
+
+            loop do
               begin
                 yield
               rescue Exception => e
                 @logger.warn e.message
                 trace = e.backtrace
                 @logger.warn trace.join("\n") if trace
-                @error = e
-              ensure
-                EM.stop_event_loop if EM.reactor_running? && (@error || !!@settings[:em_stop])
+                error = e
               end
-            }
 
-            # TODO rename this, it's only relevant in the error case
-            max_runs = @config['max_runs'] || 1
-            runs = 0
-
-            loop do
-              @error = nil
-              EM.send(!!@settings[:em_synchrony] ? :synchrony : :run, &action)
               runs += 1
-              break unless @error && (max_runs > 0) && (runs < max_runs)
+              break unless error && (max_runs > 0) && (runs < max_runs)
             end
 
             @finished = true
 
-            if @error
+            if error
               @shutdown.call
             else
               @condition.signal
@@ -115,7 +104,7 @@ module Flapjack
 
       def stop(&block)
         return if @thread.nil?
-        yield
+        yield(@thread)
         synchronize do
           @condition.wait_until { @finished }
         end
@@ -126,13 +115,11 @@ module Flapjack
 
     class Generic < Flapjack::Pikelet::Base
 
-     TYPES = ['notifier', 'processor', 'jabber', 'pagerduty', 'oobetet']
+     TYPES = ['notifier', 'processor', 'jabber', 'pagerduty', 'oobetet',
+              'email', 'sms']
 
       def start
         super do
-          @pikelet = @pikelet_class.new(:config => @config,
-            :redis_config => @redis_config, :logger => @logger,
-            :siblings => siblings.map(&:pikelet))
           @pikelet.start
         end
       end
@@ -167,10 +154,12 @@ module Flapjack
         port = 3001 if (port.nil? || port <= 0 || port > 65535)
 
         super do
-          @server = ::Thin::Server.new('0.0.0.0', port,
-                                       @pikelet_class, :signals => false)
-          @server.timeout = timeout
           @pikelet_class.start if @pikelet_class.respond_to?(:start)
+          # TODO named accesslog for web/API
+          @server = ::WEBrick::HTTPServer.new(:Port => port, :BindAddress => '127.0.0.1',
+            :AccessLog => [])
+          @server.mount "/", Rack::Handler::WEBrick, @pikelet_class
+          yield @server  if block_given?
           @server.start
         end
       end
@@ -185,62 +174,26 @@ module Flapjack
 
       def stop
         super do
-          @server.stop!
+          @server.shutdown
           @pikelet_class.stop if @pikelet_class.respond_to?(:stop)
           @thread.run if @thread.alive?
         end
       end
     end
 
-    class Resque < Flapjack::Pikelet::Base
-
-      TYPES = ['email', 'sms']
-
-      def start
-        @pikelet_class.instance_variable_set('@config', @config)
-        @pikelet_class.instance_variable_set('@redis_config', @redis_config)
-        @pikelet_class.instance_variable_set('@logger', @logger)
-
-        super do
-          @pikelet_class.start if @pikelet_class.respond_to?(:start)
-
-          @worker = EM::Resque::Worker.new(@config['queue'])
-          # # Use these to debug the resque workers
-          # @worker.verbose = true
-          # @worker.very_verbose = true
-
-          # work only finishes when the pikelet does
-          @worker.work(0.1)
-        end
-      end
-
-      # this should only reload if all changes can be applied -- will
-      # return false to log warning otherwise
-      def reload(cfg)
-        return false unless @pikelet_class.respond_to?(:reload)
-        super(cfg) { @pikelet_class.reload(cfg) }
-      end
-
-      def stop
-        super do
-          @worker.shutdown if @worker
-          @pikelet_class.stop if @pikelet_class.respond_to?(:stop)
-        end
-      end
-    end
-
-    WRAPPERS = [Flapjack::Pikelet::Generic, Flapjack::Pikelet::Resque,
-                Flapjack::Pikelet::HTTP]
+    WRAPPERS = [Flapjack::Pikelet::Generic, Flapjack::Pikelet::HTTP]
 
     TYPES = {'api'        => [Flapjack::Gateways::API],
              'email'      => [Flapjack::Gateways::Email],
              'notifier'   => [Flapjack::Notifier],
              'processor'  => [Flapjack::Processor],
              'jabber'     => [Flapjack::Gateways::Jabber::Bot,
-                              Flapjack::Gateways::Jabber::Notifier],
+                              Flapjack::Gateways::Jabber::Notifier,
+                              Flapjack::Gateways::Jabber::Responder],
              'oobetet'    => [Flapjack::Gateways::Oobetet::Bot,
                               Flapjack::Gateways::Oobetet::Notifier],
-             'pagerduty'  => [Flapjack::Gateways::Pagerduty],
+             'pagerduty'  => [Flapjack::Gateways::Pagerduty::Notifier,
+                              Flapjack::Gateways::Pagerduty::AckFinder],
              'sms'        => [Flapjack::Gateways::SmsMessagenet],
              'web'        => [Flapjack::Gateways::Web],
             }

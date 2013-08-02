@@ -20,11 +20,6 @@ module Flapjack
 
       class << self
 
-        def pikelet_settings
-          {:em_synchrony => false,
-           :em_stop      => false}
-        end
-
         def start
           @logger.info "starting web - class"
 
@@ -58,12 +53,10 @@ module Flapjack
         end
       end
 
-      def redis
-        self.class.instance_variable_get('@redis')
-      end
-
-      def logger
-        self.class.instance_variable_get('@logger')
+      ['redis', 'logger', 'config'].each do |class_inst_var|
+        define_method(class_inst_var.to_sym) do
+          self.class.instance_variable_get("@#{class_inst_var}")
+        end
       end
 
       get '/' do
@@ -212,6 +205,7 @@ module Flapjack
         return 404 if get_entity_check(@entity, @check).nil?
 
         ack = Flapjack::Data::Event.create_acknowledgement(
+          config['processor_queue'] || 'events',
           @entity, @check,
           :summary => (@summary || ''),
           :acknowledgement_id => @acknowledgement_id,

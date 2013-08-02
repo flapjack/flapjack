@@ -161,7 +161,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
         with(entity, check, :redis => redis).and_return(entity_check)
       Flapjack::Data::Event.should_receive(:create_acknowledgement).
-        with(entity_name, check, :summary => nil, :duration => (4 * 60 * 60), :redis => redis)
+        with('events', entity_name, check, :summary => nil, :duration => (4 * 60 * 60), :redis => redis)
 
       post "/acknowledgements/#{entity_name_esc}/#{check}"
       last_response.status.should == 204
@@ -284,7 +284,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity, 'foo', :redis => redis).and_return(entity_check)
 
       Flapjack::Data::Event.should_receive(:test_notifications).
-        with(entity_name, 'foo', hash_including(:redis => redis))
+        with('events', entity_name, 'foo', hash_including(:redis => redis))
 
       post "/test_notifications/#{entity_name_esc}/foo"
       last_response.status.should == 204
@@ -365,7 +365,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check.should_receive(:check).and_return(check)
 
       Flapjack::Data::Event.should_receive(:create_acknowledgement).
-        with(entity_name, check, :summary => nil, :duration => (4 * 60 * 60), :redis => redis)
+        with('events', entity_name, check, :summary => nil, :duration => (4 * 60 * 60), :redis => redis)
 
       post '/acknowledgements',:check => {entity_name => check}
       last_response.status.should == 204
@@ -692,10 +692,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity, 'foo', :redis => redis).and_return(entity_check_2)
 
       Flapjack::Data::Event.should_receive(:test_notifications).
-        with(entity_name, check, hash_including(:redis => redis))
+        with('events', entity_name, check, hash_including(:redis => redis))
 
       Flapjack::Data::Event.should_receive(:test_notifications).
-        with(entity_name, 'foo', hash_including(:redis => redis))
+        with('events', entity_name, 'foo', hash_including(:redis => redis))
 
 
       post '/test_notifications', :entity => entity_name
@@ -713,7 +713,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity, check, :redis => redis).and_return(entity_check)
 
       Flapjack::Data::Event.should_receive(:test_notifications).
-      with(entity_name, check, hash_including(:redis => redis))
+      with('events', entity_name, check, hash_including(:redis => redis))
 
 
       post '/test_notifications', :check => {entity_name => check}

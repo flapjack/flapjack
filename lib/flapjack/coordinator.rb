@@ -15,6 +15,9 @@ module Flapjack
   class Coordinator
 
     def initialize(config)
+
+      # Thread.abort_on_exception = true
+
       @config     = config
       @redis_opts = config.for_redis
       @pikelets   = []

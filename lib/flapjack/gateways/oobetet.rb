@@ -1,8 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'socket'
-require 'eventmachine'
-require 'blather/client/dsl'
+# require 'blather/client/dsl'
 require 'oj'
 
 require 'flapjack/utility'
@@ -17,22 +16,11 @@ module Flapjack
 
         PAGERDUTY_EVENTS_API_URL = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
 
-        def self.pikelet_settings
-          {:em_synchrony => false,
-           :em_stop      => true}
-        end
-
         def initialize(options = {})
           @config = options[:config]
           @logger = options[:logger]
 
-          if options[:siblings]
-            # only works because the bot instance was initialised already (and
-            # the siblings array was transformed via map(&:pikelet))
-            # TODO clean up the sibling code so that it would work in
-            # either arrangement
-            @bot = options[:siblings].first
-          end
+          @hostname = Socket.gethostname
 
           unless @config['watched_check'] && @config['watched_entity']
             raise RuntimeError, 'Flapjack::Oobetet: watched_check and watched_entity must be defined in the config'
@@ -43,14 +31,23 @@ module Flapjack
           @last_alert = nil
         end
 
-        def stop
-          # TODO synchronize access to @should_quit
-          @should_quit = true
-          @check_timer.cancel
+        def start
+
+          loop do
+            synchronize do
+              check_timers
+            end
+
+            Kernel.sleep 10
+          end
+        rescue Flapjack::PikeletStop
+          logger.info "finishing oobetet"
         end
 
-        def start
-           @check_timer = EM.add_periodic_timer(10) { check_timers }
+        def stop(thread)
+          synchronize do
+            thread.raise Flapjack::PikeletStop.new
+          end
         end
 
         private
@@ -59,14 +56,12 @@ module Flapjack
           t = Time.now.to_i
           breach = @bot.breach?(t)
 
-          unless @flapjack_ok || breach
+          if @last_breach && !breach
             emit_jabber("Flapjack Self Monitoring is OK")
             emit_pagerduty("Flapjack Self Monitoring is OK", 'resolve')
           end
 
-          @flapjack_ok = !breach
-
-          return unless breach
+          return unless @last_breach = breach
           @logger.error("Self monitoring has detected the following breach: #{breach}")
           summary = "Flapjack Self Monitoring is Critical: #{breach} for #{@check_matcher}, " +
                     "from #{@hostname} at #{Time.now}"
@@ -109,38 +104,38 @@ module Flapjack
         end
 
         def send_pagerduty_event(event)
-          options  = { :body => Oj.dump(event) }
-          http = EventMachine::HttpRequest.new(PAGERDUTY_EVENTS_API_URL).post(options)
-          response = Oj.load(http.response)
-          status   = http.response_header.status
+          uri = URI::HTTP.build(:host => 'https://events.pagerduty.com',
+                                :path => '/generic/2010-04-15/create_event.json')
+          http = Net::HTTP.new(uri.host, uri.port)
+          request = Net::HTTP::Post.new(uri.request_uri)
+          request.body = Oj.dump(event)
+          http_response = http.request(request)
+
+          response = Oj.load(http_response.body)
+          status   = http_response_header.code
           @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
           [status, response]
         end
 
       end
 
-      class BotClient
-        include Blather::DSL
-      end
+      class TimeChecker
 
-      # TODO synchronisation, buffering text
-
-      class Bot
-        include Flapjack::Utility
-
-        log = ::Logger.new(STDOUT)
-        # log.level = ::Logger::DEBUG
-        log.level = ::Logger::INFO
-        Blather.logger = log
-
-        def self.pikelet_settings
-          {:em_synchrony => false,
-           :em_stop      => false}
-        end
+        include MonitorMixin
 
         def initialize(opts = {})
           @config = opts[:config]
           @logger = opts[:logger]
+
+          mon_initialize
+
+          @should_quit = false
+          @shutdown_cond = new_cond
+
+          @times = { :last_problem  => nil,
+                     :last_recovery => nil,
+                     :last_ack      => nil,
+                     :last_ack_sent => nil }
 
           unless @config['watched_check'] && @config['watched_entity']
             raise RuntimeError, 'Flapjack::Oobetet: watched_check and watched_entity must be defined in the config'
@@ -148,183 +143,156 @@ module Flapjack
           @check_matcher = '"' + @config['watched_check'] + '" on ' + @config['watched_entity']
           @max_latency = @config['max_latency'] || 300
 
-          @monitor = Monitor.new
-
-          @buffer = []
-          @hostname = Socket.gethostname
-          @times = { :last_problem  => nil,
-                     :last_recovery => nil,
-                     :last_ack      => nil,
-                     :last_ack_sent => nil }
+          @logger.debug("new oobetet pikelet with the following options: #{@config.inspect}")
         end
 
         def start
-          @logger.debug("New oobetet pikelet with the following options: #{@config.inspect}")
-
-          @bot_thread = Thread.current
-
-          @flapjack_jid = ::Blather::JID.new((@config['jabberid'] || 'flapjacktest') + "/#{@hostname}:#{Process.pid}")
-
-          @client = Flapjack::Gateways::Oobetet::BotClient.new
-          @client.setup(@flapjack_jid, @config['password'], @config['server'],
-                        @config['port'].to_i)
-
-          @logger.debug("Building jabber connection with jabberid: " +
-            @flapjack_jid.to_s + ", port: " + @config['port'].to_s +
-            ", server: " + @config['server'].to_s + ", password: " +
-            @config['password'].to_s)
-
-          # need direct access to the real blather client to mangle the handlers
-          blather_client = @client.send(:client)
-          blather_client.clear_handlers :error
-          blather_client.register_handler :error do |err|
-            @logger.warn(err.message)
+          synchronize do
+            t = Time.now.to_i
+            @times[:last_problem]  = t
+            @times[:last_recovery] = t
+            @times[:last_ack]      = t
+            @times[:last_ack_sent] = t
+            @shutdown_cond.wait_until { @should_quit }
           end
-
-          @client.when_ready do |stanza|
-            on_ready(stanza)
-          end
-
-          @client.message :groupchat? do |stanza|
-            on_groupchat(stanza)
-          end
-
-          @client.disconnected do |stanza|
-            on_disconnect(stanza)
-          end
-
-          t = Time.now.to_i
-          @times[:last_problem]  = t
-          @times[:last_recovery] = t
-          @times[:last_ack]      = t
-          @times[:last_ack_sent] = t
-
-          @client.run
         end
 
-        def stop
-          synced do
+        def stop(thread)
+          synchronize do
             @should_quit = true
-            @client.shutdown if @connected
+            @shutdown_cond.signal
           end
-
-          # without this eventmachine in the bot thread seems to wait for
-          # an event of some sort (network activity, or a timer firing)
-          # before it realises that it has finished.
-          # (should maybe use @bot_thread.wakeup instead)
-          @bot_thread.run if @bot_thread.alive?
         end
 
-        def synced(&block)
-          ret = nil
-          @monitor.synchronize { ret = block.call }
-          ret
+        def received_message(room, nick, time, text)
+          synchronize do
+            @logger.debug("group message received: #{room}, #{text}")
+
+            if (text =~ /^(?:problem|recovery|acknowledgement)/i) &&
+               (text =~ /^(\w+).*#{Regexp.escape(@check_matcher)}/)
+
+              # got something interesting
+              status = $1.downcase
+              t = Time.now.to_i
+              @logger.debug("found the following state for #{@check_matcher}: #{status}")
+
+              case status
+              when 'problem'
+                @logger.debug("updating @times last_problem")
+                @times[:last_problem] = t
+              when 'recovery'
+                @logger.debug("updating @times last_recovery")
+                @times[:last_recovery] = t
+              when 'acknowledgement'
+                @logger.debug("updating @times last_ack")
+                @times[:last_ack] = t
+              end
+            end
+            @logger.debug("@times: #{@times.inspect}")
+          end
         end
 
         def breach?(time)
-          @logger.debug("check_timers: inspecting @times #{@times.inspect}")
-          if @times[:last_problem] < (time - @max_latency)
-            "haven't seen a test problem notification in the last #{@max_latency} seconds"
-          elsif @times[:last_recovery] < (time - @max_latency)
-            "haven't seen a test recovery notification in the last #{@max_latency} seconds"
-          end
-        end
-
-        # Join the MUC Chat room after connecting.
-        def on_ready(stanza)
-          return if @should_quit
-          @connected_at = Time.now.to_i
-          @logger.info("Jabber Connected")
-
-          @keepalive_timer = EM.add_periodic_timer(60) do
-            @logger.debug("calling keepalive on the jabber connection")
-            if @client.connected?
-              @client.write(' ')
-            end
-          end
-
-          if @config['rooms'] && @config['rooms'].length > 0
-            @config['rooms'].each do |room|
-              @logger.info("Joining room #{room}")
-              presence = Blather::Stanza::Presence.new
-              presence.from = @flapjacktest_jid
-              presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
-              presence << "<x xmlns='http://jabber.org/protocol/muc'/>"
-              @client.write_to_stream presence
-              say(room, "flapjack self monitoring (oobetet) started at #{Time.now}, g'day!", :groupchat)
-            end
-          end
-          synced do
-            @connected = true
-          end
-          return if @buffer.empty?
-          while buffered = @buffer.shift
-            @logger.debug("Sending a buffered jabber message to: #{buffered[0]}, using: #{buffered[2]}, message: #{buffered[1]}")
-            say(*buffered)
-          end
-        end
-
-        # may return true to prevent the reactor loop from stopping
-        def on_disconnect(stanza)
-          @logger.warn("disconnect handler called")
-          @keepalive_timer.cancel unless @keepalive_timer.nil?
-          @keepalive_timer = nil
-          return false if sq = synced { @connected = false; @should_quit }
-          @logger.warn("jabbers disconnected! reconnecting after a short delay...")
-          EventMachine::Timer.new(1) do
-            @client.run
-          end
-          true
-        end
-
-        def on_groupchat(stanza)
-          return if @should_quit
-
-          stanza_body = stanza.body
-
-          @logger.debug("groupchat stanza body: #{stanza_body}")
-          @logger.debug("groupchat message received: #{stanza.inspect}")
-
-          if (stanza_body =~ /^(?:problem|recovery|acknowledgement)/i) &&
-             (stanza_body =~ /^(\w+).*#{Regexp.escape(@check_matcher)}/)
-
-            # got something interesting
-            status = $1.downcase
-            t = Time.now.to_i
-            @logger.debug("groupchat found the following state for #{@check_matcher}: #{status}")
-
-            case status
-            when 'problem'
-              @logger.debug("updating @times last_problem")
-              @times[:last_problem] = t
-            when 'recovery'
-              @logger.debug("updating @times last_recovery")
-              @times[:last_recovery] = t
-            when 'acknowledgement'
-              @logger.debug("updating @times last_ack")
-              @times[:last_ack] = t
-            end
-          end
-          @logger.debug("@times: #{@times.inspect}")
-        end
-
-        def announce(msg)
-          if @config['rooms'] && @config['rooms'].length > 0
-            @config['rooms'].each do |room|
-              @logger.debug("Sending a jabber message to: #{room}, using: :groupchat, message: #{msg}")
-              @client.write Blather::Stanza::Message.new(room, msg, :groupchat)
-              say(room, msg, :groupchat)
+          synchronize do
+            @logger.debug("check_timers: inspecting @times #{@times.inspect}")
+            if @times[:last_problem] < (time - @max_latency)
+              "haven't seen a test problem notification in the last #{@max_latency} seconds"
+            elsif @times[:last_recovery] < (time - @max_latency)
+              "haven't seen a test recovery notification in the last #{@max_latency} seconds"
             end
           end
         end
 
-        def say(to, msg, using = :chat)
-          if synced { @connected }
-            @logger.debug("Sending a jabber message to: #{to.to_s}, using: #{using.to_s}, message: #{msg}")
-            @client.say(to, msg, using)
-          else
-            @logger.debug("Buffering a jabber message to: #{to.to_s}, using: #{using.to_s}, message: #{msg}")
-            @buffer << [to, msg, using]
+      end
+
+      class Bot
+
+        include MonitorMixin
+        include Flapjack::Utility
+
+        attr_accessor :siblings
+
+        def initialize(opts = {})
+          @config = opts[:config]
+          @logger = opts[:logger]
+
+          @hostname = Socket.gethostname
+
+          mon_initialize
+
+          @should_quit = false
+          @shutdown_cond = new_cond
+
+      #     unless @config['watched_check'] && @config['watched_entity']
+      #       raise RuntimeError, 'Flapjack::Oobetet: watched_check and watched_entity must be defined in the config'
+      #     end
+      #     @check_matcher = '"' + @config['watched_check'] + '" on ' + @config['watched_entity']
+      #     @max_latency = @config['max_latency'] || 300
+
+          @logger.debug("new oobetet pikelet with the following options: #{@config.inspect}")
+        end
+
+        def start
+          synchronize do
+
+            @logger.info("starting")
+
+            # ::Jabber::debug = true
+
+            jabber_id = @config['jabberid'] || 'flapjack'
+
+            @flapjack_jid = ::Jabber::JID.new(jabber_id + '/' + @hostname)
+            @client = ::Jabber::Client.new(@flapjack_jid)
+
+            @muc_clients = @config['rooms'].inject({}) do |memo, room|
+              muc_client = ::Jabber::MUC::SimpleMUCClient.new(@client)
+              memo[room] = muc_client
+              memo
+            end
+
+            @client.connect
+            @client.auth(@config['password'])
+            @client.send(::Jabber::Presence.new.set_type(:available))
+
+            @muc_clients.each_pair do |room, muc_client|
+              muc_client.on_message do |time, nick, text|
+                next if nick == jabber_id
+
+                if @time_checker
+                  @time_checker.received_message(room, nick, time, text)
+                end
+              end
+
+              muc_client.join(room + '/' + @config['alias'])
+              muc_client.say("flapjack oobetet gateway started at #{Time.now}, hello!")
+            end
+
+            # block this thread until signalled to quit
+            @shutdown_cond.wait_until { @should_quit }
+
+            @muc_clients.each_pair do |room, muc_client|
+              muc_client.exit if muc_client.active?
+            end
+
+            @client.close
+          end
+        end
+
+        def stop
+          synchronize do
+            @should_quit = true
+            @shutdown_cond.signal
+          end
+        end
+
+        # TODO buffer if room not connected?
+        def announce(room, msg)
+          synchronize do
+            unless @muc_clients.empty?
+              if muc_client = @muc_clients[room]
+                muc_client.say(msg)
+              end
+            end
           end
         end
 

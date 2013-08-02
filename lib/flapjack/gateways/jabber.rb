@@ -1,13 +1,15 @@
 #!/usr/bin/env ruby
 
-require 'socket'
 require 'monitor'
+require 'socket'
 
-require 'blather/client/dsl'
 require 'chronic_duration'
 require 'oj'
+require 'xmpp4r'
+require 'xmpp4r/muc/helper/simplemucclient'
 
 require 'flapjack/data/entity_check'
+require 'flapjack/exceptions'
 require 'flapjack/utility'
 require 'flapjack/version'
 
@@ -19,258 +21,151 @@ module Flapjack
 
       class Notifier
 
-        def self.pikelet_settings
-          {:em_synchrony => false,
-           :em_stop      => true}
-        end
+        attr_accessor :siblings
+
+        include MonitorMixin
 
         def initialize(options = {})
           @config = options[:config]
-          @redis_config = options[:redis_config]
+          @redis_config = options[:redis_config] || {}
 
           @logger = options[:logger]
 
-          @redis = Redis.new((@redis_config || {}).merge(:driver => :hiredis))
+          @notifications_queue = @config['queue'] || 'jabber_notifications'
 
-          if options[:siblings]
-            # only works because the bot instance was initialised already (and
-            # the siblings array was transformed via map(&:pikelet))
-            # TODO clean up the sibling code so that it would work in
-            # either arrangement
-            @bot = options[:siblings].first
-          end
-        end
+          mon_initialize
 
-        def stop
-          # TODO synchronize access to @should_quit
-          @should_quit = true
-          re = Redis.new((@redis_config || {}).merge(:driver => :hiredis))
-          re.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
+          @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
         end
 
         def start
-          # simplified to use a single queue only as it makes the shutdown logic easier
-          queue = @config['queue']
-          events = {}
+          if self.siblings
+            @bot = self.siblings.detect {|sib| sib.is_a?(Flapjack::Gateways::Jabber::Bot)}
+          end
 
-          # FIXME: should also check if presence has been established in any group chat rooms that are
-          # configured before starting to process events, otherwise the first few may get lost (send
-          # before joining the group chat rooms)
-
-          until @should_quit
-            @logger.debug("jabber is connected so commencing blpop on #{queue}")
-            evt = @redis.blpop(queue, 0)
-            events[queue] = evt
-            event         = Oj.load(events[queue][1])
-            type          = event['notification_type'] || 'unknown'
-            @logger.info('jabber notification event received')
-            @logger.info(event.inspect)
-            unless 'shutdown'.eql?(type)
-              entity, check = event['event_id'].split(':')
-              state         = event['state']
-              summary       = event['summary']
-              duration      = event['duration'] ? time_period_in_words(event['duration']) : '4 hours'
-              address       = event['address']
-
-              @logger.debug("processing jabber notification address: #{address}, event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
-
-              ack_str =
-                event['event_count'] &&
-                !state.eql?('ok') &&
-                !'acknowledgement'.eql?(type) &&
-                !'test'.eql?(type) ?
-                "::: flapjack: ACKID #{event['event_count']} " : ''
-
-              type = 'unknown' unless type
-
-              maint_str = case type
-              when 'acknowledgement'
-                "has been acknowledged, unscheduled maintenance created for #{duration}"
-              when 'test'
-                ''
-              else
-                "is #{state.upcase}"
-              end
-
-              # FIXME - should probably put all the message composition stuff in one place so
-              # the logic isn't duplicated in each notification channel.
-              # TODO - templatise the messages so they can be customised without changing core code
-              headline = "test".eql?(type.downcase) ? "TEST NOTIFICATION" : type.upcase
-
-              msg = "#{headline} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
-
-              @bot.announce(msg, address) if @bot
+          loop do
+            synchronize do
+              Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {
+                handle_message(message)
+              }
             end
 
+            Flapjack::Data::Message.wait_for_queue(@notifications_queue)
           end
 
+        rescue Flapjack::PikeletStop => fps
+          @logger.info "stopping jabber notifier"
         end
 
-      end
-
-      class BotClient
-        include Blather::DSL
-      end
-
-      class Bot
-
-        include Flapjack::Utility
-
-        log = ::Logger.new(STDOUT)
-        # log.level = ::Logger::DEBUG
-        log.level = ::Logger::INFO
-        Blather.logger = log
-
-        # TODO if we use 'xmpp4r' rather than 'blather', port this to 'rexml'
-        class TextHandler < Nokogiri::XML::SAX::Document
-          def initialize
-            @chunks = []
+        def stop(thread)
+          synchronize do
+            thread.raise Flapjack::PikeletStop.new
           end
-
-          attr_reader :chunks
-
-          def cdata_block(string)
-            characters(string)
-          end
-
-          def characters(string)
-            @chunks << string.strip if string.strip != ""
-          end
-        end
-
-        def self.pikelet_settings
-          {:em_synchrony => false,
-           :em_stop      => false}
-        end
-
-        def initialize(opts = {})
-          @config = opts[:config]
-          @redis_config = opts[:redis_config]
-          @boot_time = opts[:boot_time]
-
-          @redis = Redis.new((@redis_config || {}).merge(:driver => :hiredis))
-
-          @logger = opts[:logger]
-
-          @monitor = Monitor.new
-
-          @buffer = []
-          @hostname = Socket.gethostname
-        end
-
-        def start
-          @logger.info("starting")
-          @logger.debug("new jabber pikelet with the following options: #{@config.inspect}")
-
-          @bot_thread = Thread.current
-
-          @flapjack_jid = ::Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + @hostname)
-
-          @client = Flapjack::Gateways::Jabber::BotClient.new
-          @client.setup(@flapjack_jid, @config['password'], @config['server'],
-                        @config['port'].to_i)
-
-          @logger.debug("Building jabber connection with jabberid: " +
-            @flapjack_jid.to_s + ", port: " + @config['port'].to_s +
-            ", server: " + @config['server'].to_s + ", password: " +
-            @config['password'].to_s)
-
-          # need direct access to the real blather client to mangle the handlers
-          blather_client = @client.send(:client)
-          blather_client.clear_handlers :error
-          blather_client.register_handler :error do |err|
-            @logger.warn(err.message)
-          end
-
-          @client.when_ready do |stanza|
-            on_ready(stanza)
-          end
-
-          @client.message :groupchat?, :body => /^#{@config['alias']}:\s+/ do |stanza|
-            on_groupchat(stanza)
-          end
-
-          @client.message :chat? do |stanza|
-            on_chat(stanza)
-          end
-
-          @client.disconnected do |stanza|
-            on_disconnect(stanza)
-          end
-
-          @logger.debug("attempting connection to the jabber server")
-          @client.run
-        end
-
-        def stop
-          synced do
-            @should_quit = true
-            @client.shutdown if @connected
-          end
-
-          # without this eventmachine in the bot thread seems to wait for
-          # an event of some sort (network activity, or a timer firing)
-          # before it realises that it has finished.
-          # (should maybe use @bot_thread.wakeup instead)
-          @bot_thread.run if @bot_thread.alive?
-        end
-
-        def announce(msg, address)
-          say(::Blather::JID.new(address), msg,
-            (@config['rooms'] || []).include?(address) ? :groupchat : :chat)
         end
 
         private
 
-        def synced(&block)
-          ret = nil
-          @monitor.synchronize { ret = block.call }
-          ret
+          def handle_message(event)
+            type  = event['notification_type'] || 'unknown'
+            @logger.info('jabber notification event received')
+            @logger.info(event.inspect)
+
+            entity, check = event['event_id'].split(':')
+            state         = event['state']
+            summary       = event['summary']
+            duration      = event['duration'] ? time_period_in_words(event['duration']) : '4 hours'
+            address       = event['address']
+
+            @logger.debug("processing jabber notification address: #{address}, event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
+
+            ack_str =
+              event['event_count'] &&
+              !state.eql?('ok') &&
+              !'acknowledgement'.eql?(type) &&
+              !'test'.eql?(type) ?
+              "::: flapjack: ACKID #{event['event_count']} " : ''
+
+            type = 'unknown' unless type
+
+            maint_str = case type
+            when 'acknowledgement'
+              "has been acknowledged, unscheduled maintenance created for #{duration}"
+            when 'test'
+              ''
+            else
+              "is #{state.upcase}"
+            end
+
+            # FIXME - should probably put all the message composition stuff in one place so
+            # the logic isn't duplicated in each notification channel.
+            # TODO - templatise the messages so they can be customised without changing core code
+            headline = "test".eql?(type.downcase) ? "TEST NOTIFICATION" : type.upcase
+
+            msg = "#{headline} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
+
+            # FIXME: should also check if presence has been established in any group chat rooms that are
+            # configured before starting to process events, otherwise the first few may get lost (send
+            # before joining the group chat rooms)
+
+            @bot.announce(address, msg) if @bot
+          end
+
+      end
+
+      class Responder
+
+        include MonitorMixin
+
+        attr_accessor :siblings
+
+        include Flapjack::Utility
+
+        def initialize(opts = {})
+          @config = opts[:config]
+          @redis_config = opts[:redis_config] || {}
+          @boot_time = opts[:boot_time]
+          @logger = opts[:logger]
+
+          @should_quit = false
+
+          mon_initialize
+
+          @message_cond = new_cond
+          @messages = []
         end
 
-        # Join the MUC Chat room after connecting.
-        def on_ready(stanza)
-          return if synced { @should_quit }
-          @connected_at = Time.now.to_i
-          @logger.info("Jabber Connected")
+        def start
+          @bot = self.siblings.detect {|sib| sib.is_a?(Flapjack::Gateways::Jabber::Bot)}
 
-          @keepalive_timer = EM.add_periodic_timer(60) do
-            @logger.debug("calling keepalive on the jabber connection")
-            if @client.connected?
-              @client.write(' ')
+          synchronize do
+            until @should_quit
+              while msg = @messages.pop
+                @logger.info "responder received #{msg.inspect}"
+                interpreter(msg[:room], msg[:nick], msg[:time], msg[:message])
+              end
+              @message_cond.wait_while { @messages.empty? && !@should_quit }
             end
-          end
-
-          if @config['rooms'] && @config['rooms'].length > 0
-            @config['rooms'].each do |room|
-              @logger.info("Joining room #{room}")
-              presence = ::Blather::Stanza::Presence.new
-              presence.from = @flapjack_jid
-              presence.to = ::Blather::JID.new("#{room}/#{@config['alias']}")
-              presence << "<x xmlns='http://jabber.org/protocol/muc'/>"
-              @client.write_to_stream presence
-              say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
-            end
-          end
-          synced do
-            @connected = true
-          end
-          return if @buffer.empty?
-          while buffered = @buffer.shift
-            @logger.debug("Sending a buffered jabber message to: #{buffered[0]}, using: #{buffered[2]}, message: #{buffered[1]}")
-            say(*buffered)
           end
         end
 
-        def interpreter(command_raw)
+        def stop
+          synchronize do
+            @should_quit = true
+            @message_cond.signal
+          end
+        end
+
+        def received_message(room, nick, time, msg)
+          synchronize do
+            @messages += [{:room => room, :nick => nick, :time => time, :message => msg}]
+            @message_cond.signal
+          end
+        end
+
+        def interpreter(room, nick, time, command)
           msg = nil
           action = nil
           entity_check = nil
-
-          th = TextHandler.new
-          parser = Nokogiri::HTML::SAX::Parser.new(th)
-          parser.parse(command_raw)
-          command = th.chunks.join(' ')
 
           case command
           when /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i
@@ -314,6 +209,7 @@ module Flapjack
               end
               action = Proc.new {
                 Flapjack::Data::Event.create_acknowledgement(
+                  @config['processor_queue'] || 'events',
                   entity_name, check,
                   :summary => (comment || ''),
                   :acknowledgement_id => ackid,
@@ -351,7 +247,8 @@ module Flapjack
               msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
               summary = "Testing notifications to all contacts interested in entity: #{entity_name}, check: #{check_name}"
-              Flapjack::Data::Event.test_notifications(entity_name, check_name, :summary => summary, :redis => @redis)
+              Flapjack::Data::Event.test_notifications(@config['processor_queue'] || 'events',
+                entity_name, check_name, :summary => summary, :redis => @redis)
             else
               msg = "yeah, no I can't see #{entity_name} in my systems"
             end
@@ -450,71 +347,142 @@ module Flapjack
 
           end
 
-          {:msg => msg, :action => action}
-        end
+          @logger.info("sending to room #{room}: #{msg}")
 
-        def on_groupchat(stanza)
-          return if synced { @should_quit }
-          @logger.debug("groupchat message received: #{stanza.inspect}")
-
-          if stanza.body =~ /^#{@config['alias']}:\s+(.*)/
-            command = $1
+          if @bot
+            if room
+              @bot.announce(room, msg)
+            else
+              @bot.say(nick, msg)
+            end
           end
 
-          results = interpreter(command)
-          msg     = results[:msg]
-          action  = results[:action]
+          action.call if action
+        end
 
-          if msg || action
-            @logger.info("sending to group chat: #{msg}")
-            say(stanza.from.stripped, msg, :groupchat)
-            action.call if action
+      end
+
+      class Bot
+
+        include MonitorMixin
+
+        attr_accessor :siblings
+
+        def initialize(opts = {})
+          @config = opts[:config]
+          @redis_config = opts[:redis_config] || {}
+          @boot_time = opts[:boot_time]
+
+          @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
+
+          @logger = opts[:logger]
+
+          @buffer = []
+          @hostname = Socket.gethostname
+
+          mon_initialize
+
+          @should_quit = false
+          @shutdown_cond = new_cond
+        end
+
+        # TODO reconnect on disconnect
+        def start
+          synchronize do
+            if self.siblings
+              @responder = self.siblings.detect {|sib| sib.is_a?(Flapjack::Gateways::Jabber::Responder)}
+            end
+
+            @logger.info("starting")
+            @logger.debug("new jabber pikelet with the following options: #{@config.inspect}")
+
+            # ::Jabber::debug = true
+
+            jabber_id = @config['jabberid'] || 'flapjack'
+
+            @flapjack_jid = ::Jabber::JID.new(jabber_id + '/' + @hostname)
+            @client = ::Jabber::Client.new(@flapjack_jid)
+
+            @muc_clients = @config['rooms'].inject({}) do |memo, room|
+              muc_client = ::Jabber::MUC::SimpleMUCClient.new(@client)
+              memo[room] = muc_client
+              memo
+            end
+
+            @client.connect
+            @client.auth(@config['password'])
+            @client.send(::Jabber::Presence.new.set_type(:available))
+
+            @client.add_message_callback do |m|
+              text = m.body
+              nick = m.from
+              time = nil
+              m.each_element('x') { |x|
+                if x.kind_of?(Delay::XDelay)
+                  time = x.stamp
+                end
+              }
+
+              if @responder
+                @responder.received_message(nil, nick, time, text)
+              end
+            end
+
+            @muc_clients.each_pair do |room, muc_client|
+              muc_client.on_message do |time, nick, text|
+                next if nick == jabber_id
+
+                if text =~ /^#{@config['alias']}:\s+(.*)/
+                  command = $1
+                end
+
+                if @responder
+                  @responder.received_message(room, nick, time, command)
+                end
+              end
+
+              muc_client.join(room + '/' + @config['alias'])
+              muc_client.say("flapjack jabber gateway started at #{Time.now}, hello!")
+            end
+
+            # block this thread until signalled to quit
+            @shutdown_cond.wait_until { @should_quit }
+
+            @muc_clients.each_pair do |room, muc_client|
+              muc_client.exit if muc_client.active?
+            end
+
+            @client.close
+          end
+         end
+
+        def stop
+          synchronize do
+            @should_quit = true
+            @shutdown_cond.signal
           end
         end
 
-        def on_chat(stanza)
-          return if synced { @should_quit }
-          @logger.debug("chat message received: #{stanza.inspect}")
-
-          if stanza.body =~ /^flapjack:\s+(.*)/
-            command = $1
-          else
-            command = stanza.body
-          end
-
-          results = interpreter(command)
-          msg     = results[:msg]
-          action  = results[:action]
-
-          if msg || action
-            @logger.info("Sending to #{stanza.from.stripped}: #{msg}")
-            say(stanza.from.stripped, msg, :chat)
-            action.call if action
+        # TODO buffer if room not connected?
+        def announce(room, msg)
+          synchronize do
+            unless @muc_clients.empty?
+              if muc_client = @muc_clients[room]
+                muc_client.say(msg)
+              end
+            end
           end
         end
 
-        # may return true to prevent the reactor loop from stopping
-        def on_disconnect(stanza)
-          @logger.warn("disconnect handler called")
-          @keepalive_timer.cancel unless @keepalive_timer.nil?
-          @keepalive_timer = nil
-          return false if sq = synced { @connected = false; @should_quit }
-          @logger.warn("jabbers disconnected! reconnecting after a short delay...")
-          EventMachine::Timer.new(5) { @client.run }
-          true
-        end
-
-        def say(to, msg, using = :chat)
-          if synced { @connected }
-            @logger.debug("Sending a jabber message to: #{to.to_s}, using: #{using.to_s}, message: #{msg}")
-            @client.say(to, msg, using)
-          else
-            @logger.debug("Buffering a jabber message to: #{to.to_s}, using: #{using.to_s}, message: #{msg}")
-            @buffer << [to, msg, using]
+        def say(nick, message)
+          synchronize do
+            m = ::Jabber::Message::new(nick, message)
+            @client.send(m)
           end
         end
 
       end
+
     end
   end
 end

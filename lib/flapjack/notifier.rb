@@ -8,23 +8,20 @@ require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/notification'
 require 'flapjack/data/event'
-require 'flapjack/redis_pool'
 require 'flapjack/utility'
-
-require 'flapjack/gateways/email'
-require 'flapjack/gateways/sms_messagenet'
 
 module Flapjack
 
   class Notifier
 
+    include MonitorMixin
     include Flapjack::Utility
 
     def initialize(opts = {})
       @config = opts[:config]
       @redis_config = opts[:redis_config]
       @logger = opts[:logger]
-      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
+      @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
       @notifications_queue = @config['queue'] || 'notifications'
 
@@ -53,27 +50,32 @@ module Flapjack
         exit 1
       end
       @default_contact_timezone = tz
+
+      mon_initialize
     end
 
     def start
-      @logger.info("Booting main loop.")
+      @thread = Thread.current
 
-      until @should_quit
-        @logger.debug("Waiting for notification...")
-        notification = Flapjack::Data::Notification.next(@notifications_queue,
-                                                         :redis => @redis,
-                                                         :logger => @logger)
-        process_notification(notification) unless notification.nil? || (notification.type == 'shutdown')
+      loop do
+        synchronize do
+          Notification.foreach_on_queue(@notifications_queue, :redis => @redis) {|notif|
+            process_notification(notif)
+          }
+        end
+
+        Notification.wait_for_queue(@notifications_queue)
       end
 
-      @logger.info("Exiting main loop.")
+    rescue Flapjack::PikeletStop => fps
+      @logger.info "stopping notifier"
     end
 
-    # this must use a separate connection to the main Executive one, as it's running
-    # from a different fiber while the main one is blocking.
+
     def stop
-      @should_quit = true
-      @redis.rpush(@notifications_queue, Oj.dump('type' => 'shutdown'))
+      synchronize do
+        @thread.raise Flapjack::PikeletStop.new
+      end
     end
 
   private
@@ -139,16 +141,11 @@ module Flapjack
             :state => notification.event_state)
         end
 
-        # TODO consider changing Resque jobs to use raw blpop like the others
-        case media_type.to_sym
-        when :sms
-          Resque.enqueue_to(@queues[:sms], Flapjack::Gateways::SmsMessagenet, contents)
-        when :email
-          Resque.enqueue_to(@queues[:email], Flapjack::Gateways::Email, contents)
-        when :jabber
-          @redis.rpush(@queues[:jabber], Oj.dump(contents))
-        when :pagerduty
-          @redis.rpush(@queues[:pagerduty], Oj.dump(contents))
+        # TODO changing email, sms to use raw blpop like the others
+        if [:sms, :email, :jabber, :pagerduty].include?(media_type.to_sym)
+          Flapjack::Data::Message.push(@queues[media_type.to_sym], contents, :redis => @redis)
+        else
+          # TODO log warning
         end
       end
     end

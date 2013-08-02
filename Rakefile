@@ -7,8 +7,6 @@ end
 require 'fileutils'
 require 'rake'
 
-require 'resque/tasks'
-
 Dir['tasks/**/*.rake'].each { |t| load t }
 
 require 'cucumber'

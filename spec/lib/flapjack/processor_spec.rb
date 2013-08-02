@@ -37,18 +37,11 @@ describe Flapjack::Processor, :logger => true do
     # redis.should_receive(:hincrby).with('event_counters', 'all', 1)
     # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
 
-    Flapjack::Data::Event.should_receive(:pending_count).with(:redis => redis).and_return(0)
-
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
+    ::Redis.should_receive(:new).and_return(redis)
     executive = Flapjack::Processor.new(:config => {}, :logger => @logger)
 
-    shutdown_evt = mock(Flapjack::Data::Event)
-    shutdown_evt.should_receive(:inspect)
-    shutdown_evt.should_receive(:type).and_return('shutdown')
-    Flapjack::Data::Event.should_receive(:next) {
-      executive.instance_variable_set('@should_quit', true)
-      shutdown_evt
-    }
+    Flapjack::Data::Event.should_receive(:foreach_on_queue)
+    Flapjack::Data::Event.should_receive(:wait_for_queue).and_raise(Flapjack::PikeletStop)
 
     executive.start
   end

@@ -11,28 +11,24 @@ require 'flapjack/filters/delays'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/data/event'
-require 'flapjack/redis_pool'
+require 'flapjack/exceptions'
 require 'flapjack/utility'
 
 module Flapjack
 
   class Processor
 
+    include MonitorMixin
     include Flapjack::Utility
-
-    def self.pikelet_settings
-      {:em_synchrony => true,
-       :em_stop      => true}
-    end
 
     def initialize(opts = {})
       @config = opts[:config]
-      @redis_config = opts[:redis_config]
+      @redis_config = opts[:redis_config] || {}
       @logger = opts[:logger]
 
       @boot_time    = opts[:boot_time]
 
-      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
+      @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
       @queue = @config['queue'] || 'events'
 
@@ -52,6 +48,8 @@ module Flapjack
       @filters << Flapjack::Filters::DetectMassClientFailures.new(options)
       @filters << Flapjack::Filters::Delays.new(options)
       @filters << Flapjack::Filters::Acknowledgement.new(options)
+
+      mon_initialize
     end
 
     # expire instance keys after one week
@@ -69,54 +67,55 @@ module Flapjack
     end
 
     def start
-      fqdn          = `/bin/hostname -f`.chomp
-      pid           = Process.pid
-      @instance_id  = "#{fqdn}:#{pid}"
+      synchronize do
+        fqdn          = `/bin/hostname -f`.chomp
+        pid           = Process.pid
+        @instance_id  = "#{fqdn}:#{pid}"
 
-      # FIXME: all of the below keys assume there is only ever one executive running;
-      # we could generate a fuid and save it to disk, and prepend it from that
-      # point on...
+        # FIXME: all of the below keys assume there is only ever one executive running;
+        # we could generate a fuid and save it to disk, and prepend it from that
+        # point on...
 
-      # FIXME: add an administrative function to reset all event counters
-      if @redis.hget('event_counters', 'all').nil?
-        @redis.hset('event_counters', 'all', 0)
-        @redis.hset('event_counters', 'ok', 0)
-        @redis.hset('event_counters', 'failure', 0)
-        @redis.hset('event_counters', 'action', 0)
+        # FIXME: add an administrative function to reset all event counters
+        if @redis.hget('event_counters', 'all').nil?
+          @redis.hset('event_counters', 'all', 0)
+          @redis.hset('event_counters', 'ok', 0)
+          @redis.hset('event_counters', 'failure', 0)
+          @redis.hset('event_counters', 'action', 0)
+        end
+
+        #@redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
+        @redis.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
+        @redis.hset("event_counters:#{@instance_id}", 'all', 0)
+        @redis.hset("event_counters:#{@instance_id}", 'ok', 0)
+        @redis.hset("event_counters:#{@instance_id}", 'failure', 0)
+        @redis.hset("event_counters:#{@instance_id}", 'action', 0)
+        touch_keys
+
+        @logger.info("Booting main loop.")
       end
 
-      #@redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
-      @redis.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
-      @redis.hset("event_counters:#{@instance_id}", 'all', 0)
-      @redis.hset("event_counters:#{@instance_id}", 'ok', 0)
-      @redis.hset("event_counters:#{@instance_id}", 'failure', 0)
-      @redis.hset("event_counters:#{@instance_id}", 'action', 0)
-      touch_keys
+      loop do
+        synchronize do
+          Flapjack::Data::Event.foreach_on_queue(@queue, :redis => @redis,
+                                                 :archive_events => @archive_events,
+                                                 :events_archive_maxage => @events_archive_maxage,
+                                                 :logger => @logger) do |event|
+            process_event(event)
+          end
+        end
 
-      @logger.info("Booting main loop.")
-
-      until @should_quit
-        @logger.debug("Waiting for event...")
-        event = Flapjack::Data::Event.next(@queue,
-                                           :redis => @redis,
-                                           :archive_events => @archive_events,
-                                           :events_archive_maxage => @events_archive_maxage,
-                                           :logger => @logger)
-        process_event(event) unless event.nil?
+        Flapjack::Data::Event.wait_for_queue(@queue)
       end
 
-      @logger.info("Exiting main loop.")
+    rescue Flapjack::PikeletStop => fps
+      @logger.info "stopping processor"
     end
 
-    # have to create a new connection here as it's running in a different thread
-    # (used to isolate exception handling between different pikelets)
-    def stop
-      @should_quit = true
-      shutdown_redis = Redis.new(@redis_config.merge(:driver => :hiredis))
-      shutdown_redis.rpush('events', Oj.dump('type'    => 'shutdown',
-                                             'host'    => '',
-                                             'service' => '',
-                                             'state'   => ''))
+    def stop(thread)
+      synchronize do
+        thread.raise Flapjack::PikeletStop.new
+      end
     end
 
   private
@@ -234,7 +233,7 @@ module Flapjack
       severity = Flapjack::Data::Notification.severity_for_event(event, max_notified_severity)
       last_state = entity_check.historical_state_before(timestamp)
 
-      Flapjack::Data::Notification.add(@notifier_queue, event,
+      Flapjack::Data::Notification.push(@notifier_queue, event,
         :type => notification_type, :severity => severity, :last_state => last_state,
         :redis => @redis)
     end

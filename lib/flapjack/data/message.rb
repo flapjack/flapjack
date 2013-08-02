@@ -1,9 +1,5 @@
 #!/usr/bin/env ruby
 
-# 'Notification' refers to the template object created when an event occurs,
-# from which individual 'Message' objects are created, one for each
-# contact+media recipient.
-
 require 'flapjack/data/contact'
 
 module Flapjack
@@ -11,6 +7,48 @@ module Flapjack
     class Message
 
       attr_reader :medium, :address, :duration, :contact
+
+      def self.push(queue, msg, opts = {})
+        raise "Redis connection not set" unless redis = opts[:redis]
+
+        begin
+          msg_json = Oj.dump(msg)
+        rescue Oj::Error => e
+          if options[:logger]
+            options[:logger].warn("Error serialising message json: #{e}, message: #{message.inspect}")
+          end
+          msg_json = nil
+        end
+
+        if msg_json
+          redis.multi do
+            redis.lpush(queue, msg_json)
+            redis.lpush("#{queue}_actions", "+")
+          end
+        end
+      end
+
+      def self.foreach_on_queue(queue, opts = {})
+        raise "Redis connection not set" unless redis = opts[:redis]
+
+        while msg_json = redis.rpop(queue)
+          begin
+            message = ::Oj.load( msg_json )
+          rescue Oj::Error => e
+            if options[:logger]
+              options[:logger].warn("Error deserialising message json: #{e}, raw json: #{msg_json.inspect}")
+            end
+            message = nil
+          end
+
+          yield self.new(message) if block_given? && message
+        end
+      end
+
+      def self.wait_for_queue(queue, opts = {})
+        raise "Redis connection not set" unless redis = opts[:redis]
+        redis.brpop("#{queue}_actions")
+      end
 
       def self.for_contact(contact, opts = {})
         self.new(:contact => contact,

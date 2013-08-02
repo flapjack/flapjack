@@ -10,65 +10,65 @@ module Flapjack
 
       attr_reader :check, :summary, :details, :acknowledgement_id
 
-      # Helper method for getting the next event.
-      #
-      # Has a blocking and non-blocking method signature.
-      #
-      # Calling next with :block => true, we wait indefinitely for events coming
-      # from other systems. This is the default behaviour.
-      #
-      # Calling next with :block => false, will return a nil if there are no
-      # events on the queue.
-      #
-      def self.next(queue, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-
-        options = { :block => true,
-                    :archive_events => false,
-                    :events_archive_maxage => (3 * 60 * 60) }.update(opts)
-
-        if options[:logger]
-          logger = options[:logger]
-        end
-
-        if options[:archive_events]
-          dest = "events_archive:#{Time.now.utc.strftime "%Y%m%d%H"}"
-          if options[:block]
-            raw = redis.brpoplpush(queue, dest, 0)
-          else
-            raw = redis.rpoplpush(queue, dest)
-            return unless raw
-          end
-          redis.expire(dest, options[:events_archive_maxage])
-        else
-          if options[:block]
-            raw = redis.brpop(queue, 0)[1]
-          else
-            raw = redis.rpop(queue)
-            return unless raw
-          end
-        end
-        begin
-          parsed = ::Oj.load( raw )
-        rescue Oj::Error => e
-          if options[:logger]
-            options[:logger].warn("Error deserialising event json: #{e}, raw json: #{raw.inspect}")
-          end
-          return nil
-        end
-        self.new( parsed )
-      end
-
       # creates, or modifies, an event object and adds it to the events list in redis
       #   'type'      => 'service',
       #   'state'     => state,
       #   'summary'   => check_output,
       #   'time'      => timestamp
-      def self.add(evt, opts = {})
+      def self.push(queue, event, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
 
-        evt['time'] = Time.now.to_i if evt['time'].nil?
-        redis.rpush('events', ::Oj.dump(evt))
+        event['time'] = Time.now.to_i if event['time'].nil?
+
+        begin
+          event_json = ::Oj.dump(event)
+        rescue Oj::Error => e
+          if opts[:logger]
+            opts[:logger].warn("Error serialising event json: #{e}, event: #{event.inspect}")
+          end
+          event_json = nil
+        end
+
+        if event_json
+          redis.multi do
+            redis.lpush(queue, event_json)
+            redis.lpush("#{queue}_actions", "+")
+          end
+        end
+      end
+
+      def self.foreach_on_queue(queue, opts = {})
+        raise "Redis connection not set" unless redis = opts[:redis]
+
+        parse_json_proc = Proc.new {|event_json|
+          begin
+            ::Oj.load( event_json )
+          rescue Oj::Error => e
+            if opts[:logger]
+              opts[:logger].warn("Error deserialising event json: #{e}, raw json: #{event_json.inspect}")
+            end
+            nil
+          end
+        }
+
+        if opts[:archive_events]
+          dest = "events_archive:#{Time.now.utc.strftime "%Y%m%d%H"}"
+          while event_json = redis.rpoplpush(queue, dest)
+            redis.expire(dest, opts[:events_archive_maxage])
+            event = parse_json_proc.call(event_json)
+            yield self.new(event) if block_given? && event
+          end
+        else
+          while event_json = redis.rpop(queue)
+            event = parse_json_proc.call(event_json)
+            yield self.new(event) if block_given? && event
+          end
+        end
+      end
+
+      def self.wait_for_queue(queue, opts = {})
+        raise "Redis connection not set" unless redis = opts[:redis]
+        redis.brpop("#{queue}_actions")
       end
 
       # Provide a count of the number of events on the queue to be processed.
@@ -78,7 +78,7 @@ module Flapjack
         redis.llen('events')
       end
 
-      def self.create_acknowledgement(entity_name, check, opts = {})
+      def self.create_acknowledgement(queue, entity_name, check, opts = {})
         data = { 'type'               => 'action',
                  'state'              => 'acknowledgement',
                  'entity'             => entity_name,
@@ -87,10 +87,10 @@ module Flapjack
                  'duration'           => opts[:duration],
                  'acknowledgement_id' => opts[:acknowledgement_id]
                }
-        add(data, :redis => opts[:redis])
+        self.push(queue, data, :redis => opts[:redis])
       end
 
-      def self.test_notifications(entity_name, check, opts = {})
+      def self.test_notifications(queue, entity_name, check, opts = {})
         data = { 'type'               => 'action',
                  'state'              => 'test_notifications',
                  'entity'             => entity_name,
@@ -98,7 +98,7 @@ module Flapjack
                  'summary'            => opts[:summary],
                  'details'            => opts[:details]
                }
-        add(data, :redis => opts[:redis])
+        self.push(queue, data, :redis => opts[:redis])
       end
 
       def initialize(attrs = {})

@@ -11,7 +11,6 @@ group :test do
   gem 'cucumber'
   gem 'delorean'
   gem 'rack-test'
-  gem 'resque_spec'
   gem 'webmock'
   gem 'guard'
   gem 'rb-fsevent', '~> 0.9.1'
