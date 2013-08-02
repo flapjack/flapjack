@@ -65,14 +65,14 @@ module Flapjack
         raise "Redis connection not set" unless redis = opts[:redis]
 
         evt['time'] = Time.now.to_i if evt['time'].nil?
-        redis.rpush('events', ::Oj.dump(evt))
+        redis.lpush('events', ::Oj.dump(evt))
       end
 
       # Provide a count of the number of events on the queue to be processed.
-      def self.pending_count(opts = {})
+      def self.pending_count(queue, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
 
-        redis.llen('events')
+        redis.llen(queue)
       end
 
       def self.create_acknowledgement(entity_name, check, opts = {})

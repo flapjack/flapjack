@@ -2,18 +2,18 @@ require 'redis'
 
 namespace :events do
 
+  # add lib to the default include path
+  unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+    $: << File.dirname(__FILE__) + '/../lib'
+  end
+
+  require 'flapjack/configuration'
+  require 'flapjack/data/event'
+  require 'flapjack/data/entity_check'
+
   # FIXME: add arguments, make more flexible
   desc "send events to trigger some notifications"
   task :test_notification do
-
-    # add lib to the default include path
-    unless $:.include?(File.dirname(__FILE__) + '/../lib/')
-      $: << File.dirname(__FILE__) + '/../lib'
-    end
-
-    require 'flapjack/configuration'
-    require 'flapjack/data/event'
-    require 'flapjack/data/entity_check'
 
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
     config_file = File.join('etc', 'flapjack_config.yaml')
@@ -54,5 +54,6 @@ namespace :events do
                                'summary' => 'testing'}, :redis => redis)
 
   end
+
 
 end

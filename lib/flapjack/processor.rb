@@ -26,6 +26,8 @@ module Flapjack
       @config = opts[:config]
       @redis_config = opts[:redis_config] || {}
       @logger = opts[:logger]
+      @coordinator = opts[:coordinator]
+
       @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
 
       @queue = @config['queue'] || 'events'
@@ -37,6 +39,8 @@ module Flapjack
 
       ncsm_duration_conf = @config['new_check_scheduled_maintenance_duration'] || '100 years'
       @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf)
+
+      @exit_on_queue_empty = !! @config['exit_on_queue_empty']
 
       options = { :logger => opts[:logger], :redis => @redis }
       @filters = []
@@ -96,7 +100,18 @@ module Flapjack
                                            :redis => @redis,
                                            :archive_events => @archive_events,
                                            :events_archive_maxage => @events_archive_maxage,
-                                           :logger => @logger)
+                                           :logger => @logger,
+                                           :block => ! @exit_on_queue_empty )
+        if @exit_on_queue_empty && event.nil? && Flapjack::Data::Event.pending_count(@queue, :redis => @redis)
+          # SHUT IT ALL DOWN!!!
+          @logger.warn "Shutting down as exit_on_queue_empty is true, and the queue is empty"
+          @should_quit = true
+          @coordinator.stop
+          # FIXME: seems the above call doesn't block until the remove_pikelets fiber exits...
+          EM::Synchrony.sleep(1)
+          exit
+        end
+
         process_event(event) unless event.nil?
       end
 
@@ -106,23 +121,25 @@ module Flapjack
     # this must use a separate connection to the main Executive one, as it's running
     # from a different fiber while the main one is blocking.
     def stop
-      @should_quit = true
-      redis_uri = @redis_config[:path] ||
-        "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
-      shutdown_redis = EM::Hiredis.connect(redis_uri)
-      shutdown_redis.rpush('events', Oj.dump('type'    => 'shutdown',
-                                             'host'    => '',
-                                             'service' => '',
-                                             'state'   => ''))
+      unless @should_quit
+        @should_quit = true
+        redis_uri = @redis_config[:path] ||
+          "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
+        shutdown_redis = EM::Hiredis.connect(redis_uri)
+        shutdown_redis.rpush('events', Oj.dump('type' => 'noop'))
+      end
     end
 
   private
 
     def process_event(event)
-      pending = Flapjack::Data::Event.pending_count(:redis => @redis)
+      pending = Flapjack::Data::Event.pending_count(@queue, :redis => @redis)
       @logger.debug("#{pending} events waiting on the queue")
       @logger.debug("Raw event received: #{event.inspect}")
-      return if ('shutdown' == event.type)
+
+      if ('noop' == event.type)
+        return
+      end
 
       event_str = "#{event.id}, #{event.type}, #{event.state}, #{event.summary}"
       event_str << ", #{Time.at(event.time).to_s}" if event.time
