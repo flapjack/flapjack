@@ -7,10 +7,10 @@ module Flapjack
       period_mm, period_ss  = period.divmod(60)
       period_hh, period_mm  = period_mm.divmod(60)
       period_dd, period_hh  = period_hh.divmod(24)
-      ["#{period_dd} days",
-       "#{period_hh} hours",
-       "#{period_mm} minutes",
-       "#{period_ss} seconds"].reject {|s| s =~ /^0 /}.join(', ')
+      ["#{period_dd} day#{plural_s(period_dd)}",
+       "#{period_hh} hour#{plural_s(period_hh)}",
+       "#{period_mm} minute#{plural_s(period_mm)}",
+       "#{period_ss} second#{plural_s(period_ss)}"].reject {|s| s =~ /^0 /}.join(', ')
     end
 
     # Returns relative time in words referencing the given date
@@ -40,6 +40,38 @@ module Flapjack
       sign = (q < 0) ? '-' : '+'
       tzoffset = sign + "%02d" % q.abs.to_s + ':' + r.to_f.div(60).to_s
       "#{tzname} (UTC#{tzoffset})"
+    end
+
+    def remove_utc_offset(time)
+      Time.utc(time.year, time.month, time.day, time.hour, time.min, time.sec)
+    end
+
+    def symbolize(obj)
+      return obj.inject({}){|memo,(k,v)| memo[k.to_sym] =  symbolize(v); memo} if obj.is_a? Hash
+      return obj.inject([]){|memo,v    | memo           << symbolize(v); memo} if obj.is_a? Array
+      return obj
+    end
+
+    # The passed block will be provided each value from the args
+    # and must return array pairs [key, value] representing members of
+    # the hash this method returns. Keys should be unique -- if they're
+    # not, the earlier pair for that key will be overwritten.
+    def hashify(*args, &block)
+      key_value_pairs = args.map {|a| yield(a) }
+
+      # if using Ruby 1.9,
+      #   Hash[ key_value_pairs ]
+      # is all that's needed, but for Ruby 1.8 compatability, these must
+      # be flattened and the resulting array unpacked. flatten(1) only
+      # flattens the arrays constructed in the block, it won't mess up
+      # any values (or keys) that are themselves arrays/hashes.
+      Hash[ *( key_value_pairs.flatten(1) )]
+    end
+
+    private
+
+    def plural_s(value)
+      (value == 1) ? '' : 's'
     end
 
   end

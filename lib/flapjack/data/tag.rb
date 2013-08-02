@@ -10,9 +10,10 @@ module Flapjack
 
       attr_accessor :name
 
-      def initialize(opts)
+      def initialize(opts = {})
+        raise "Redis connection not set" unless @redis = opts[:redis]
+
         @name  = opts[:name]
-        @redis = opts[:redis]
         preset = @redis.smembers(@name)
         enum = opts[:create] || []
         @redis.sadd(@name, enum) unless enum.empty?
@@ -48,6 +49,10 @@ module Flapjack
       def merge(o)
         @redis.sadd(@name, o) unless o.empty?
         super(o)
+      end
+
+      def to_json(*a)
+        self.to_a.to_json(*a)
       end
 
     end

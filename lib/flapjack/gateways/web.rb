@@ -3,10 +3,10 @@
 require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
-require 'haml'
+require 'erb'
 require 'rack/fiber_pool'
+require 'json'
 
-require 'async-rack'
 require 'flapjack/rack_logger'
 
 require 'flapjack/data/contact'
@@ -14,66 +14,63 @@ require 'flapjack/data/entity_check'
 require 'flapjack/redis_pool'
 require 'flapjack/utility'
 
-require 'flapjack/gateways/base'
-
 module Flapjack
 
   module Gateways
 
     class Web < Sinatra::Base
 
-      if defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
-        # expose test errors properly
-        set :raise_errors, true
-        set :show_exceptions, false
-      else
-        rescue_exception = Proc.new do |env, e|
-          if settings.show_exceptions?
-            # ensure the sinatra error page shows properly
-            request = Sinatra::Request.new(env)
-            printer = Sinatra::ShowExceptions.new(proc{ raise e })
-            s, h, b = printer.call(env)
-            [s, h, b]
-          else
-            logger.error e.message
-            logger.error e.backtrace.join("\n")
-            [503, {}, ""]
-          end
+      rescue_exception = Proc.new do |env, e|
+        if settings.show_exceptions?
+          # ensure the sinatra error page shows properly
+          request = Sinatra::Request.new(env)
+          printer = Sinatra::ShowExceptions.new(proc{ raise e })
+          s, h, b = printer.call(env)
+          [s, h, b]
+        else
+          @logger.error e.message
+          @logger.error e.backtrace.join("\n")
+          [503, {}, ""]
         end
-
-        # doesn't work with Rack::Test unless we wrap tests in EM.synchrony blocks
-        use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
       end
+      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+
       use Rack::MethodOverride
 
       class << self
-        include Flapjack::Gateways::Thin
+        def start
+          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
 
-        attr_accessor :redis
+          @logger.info "starting web - class"
 
-        alias_method :thin_bootstrap, :bootstrap
-        alias_method :thin_cleanup,   :cleanup
+          if accesslog = (@config && @config['access_log'])
+            if not File.directory?(File.dirname(accesslog))
+              puts "Parent directory for log file #{accesslog} doesn't exist"
+              puts "Exiting!"
+              exit
+            end
 
-        def bootstrap(opts = {})
-          thin_bootstrap(opts)
-          @redis = Flapjack::RedisPool.new(:config => opts[:redis_config], :size => 1)
-
-          if config && config['access_log']
-            access_logger = Flapjack::RackLogger.new(config['access_log'])
-            use Rack::CommonLogger, access_logger
+            access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
+            use Flapjack::CommonLogger, access_logger
           end
-        end
 
-        def cleanup
-          @redis.empty! if @redis
-          thin_cleanup
         end
-
       end
 
       include Flapjack::Utility
 
       set :views, settings.root + '/web/views'
+      set :public_folder, settings.root + '/web/public'
+
+      helpers do
+        def h(text)
+          ERB::Util.h(text)
+        end
+
+        def u(text)
+          ERB::Util.u(text)
+        end
+      end
 
       def redis
         self.class.instance_variable_get('@redis')
@@ -84,28 +81,102 @@ module Flapjack
       end
 
       get '/' do
-        self_stats
+        check_stats
+        entity_stats
 
-        # TODO (?) recast as Entity.all do |e|; e.checks.do |ec|; ...
-        @states = redis.keys('*:*:states').map { |r|
-          parts  = r.split(':')[0..1]
-          [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
-        }.compact.sort_by {|parts| parts }
-        haml :index
+        erb 'index.html'.to_sym
       end
 
-      get '/failing' do
-        self_stats
-        @states = redis.zrange('failed_checks', 0, -1).map {|key|
-          parts  = key.split(':')
-          [parts[0], parts[1]] + entity_check_state(parts[0], parts[1])
-        }.compact.sort_by {|parts| parts}
-        haml :index
+      get '/checks_all' do
+        check_stats
+        @adjective = 'all'
+
+        checks_by_entity = Flapjack::Data::EntityCheck.find_all_by_entity(:redis => redis)
+        @states = checks_by_entity.keys.inject({}) {|result, entity|
+          result[entity] = checks_by_entity[entity].sort.map {|check|
+            [check] + entity_check_state(entity, check)
+          }
+          result
+        }
+        @entities_sorted = checks_by_entity.keys.sort
+
+        erb 'checks.html'.to_sym
+      end
+
+      get '/checks_failing' do
+        check_stats
+        @adjective = 'failing'
+
+        checks_by_entity = Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => redis)
+        @states = checks_by_entity.keys.inject({}) {|result, entity|
+          result[entity] = checks_by_entity[entity].sort.map {|check|
+            [check] + entity_check_state(entity, check)
+          }
+          result
+        }
+        @entities_sorted = checks_by_entity.keys.sort
+
+        erb 'checks.html'.to_sym
       end
 
       get '/self_stats' do
         self_stats
-        haml :self_stats
+        entity_stats
+        check_stats
+
+        erb 'self_stats.html'.to_sym
+      end
+
+      get '/self_stats.json' do
+        self_stats
+        entity_stats
+        check_stats
+        {
+          'events_queued'    => @events_queued,
+          'all_entities'     => @count_all_entities,
+          'failing_entities' => @count_failing_entities,
+          'all_checks'       => @count_all_checks,
+          'failing_checks'   => @count_failing_checks,
+          'processed_events' => {
+            'all_time' => {
+              'total'   => @event_counters['all'].to_i,
+              'ok'      => @event_counters['ok'].to_i,
+              'failure' => @event_counters['failure'].to_i,
+              'action'  => @event_counters['action'].to_i,
+            }
+          },
+          'total_keys' => @dbsize,
+          'uptime'     => @uptime_string,
+          'boottime'   => @boot_time,
+          'current_time' => Time.now,
+          'executive_instances' => @executive_instances,
+        }.to_json
+      end
+
+      get '/entities_all' do
+        entity_stats
+        @adjective = 'all'
+        @entities = Flapjack::Data::Entity.find_all_with_checks(:redis => redis)
+
+        erb 'entities.html'.to_sym
+      end
+
+      get '/entities_failing' do
+        entity_stats
+        @adjective = 'failing'
+        @entities = Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis)
+
+        erb 'entities.html'.to_sym
+      end
+
+      get '/entity/:entity' do
+        @entity = params[:entity]
+        entity_stats
+        @states = Flapjack::Data::EntityCheck.find_all_for_entity_name(@entity, :redis => redis).sort.map { |check|
+          [check] + entity_check_state(@entity, check)
+        }.sort_by {|parts| parts }
+
+        erb 'entity.html'.to_sym
       end
 
       get '/check' do
@@ -115,13 +186,19 @@ module Flapjack
         entity_check = get_entity_check(@entity, @check)
         return 404 if entity_check.nil?
 
+        check_stats
+
         last_change = entity_check.last_change
 
         @check_state                = entity_check.state
+        @check_enabled              = entity_check.enabled?
         @check_last_update          = entity_check.last_update
         @check_last_change          = last_change
         @check_summary              = entity_check.summary
-        @last_notifications         = entity_check.last_notifications_of_each_type
+        @check_details              = entity_check.details
+
+        @last_notifications         = last_notification_data(entity_check)
+
         @scheduled_maintenances     = entity_check.maintenances(nil, nil, :scheduled => true)
         @acknowledgement_id         = entity_check.failed? ?
           entity_check.event_count_at(entity_check.last_change) : nil
@@ -131,7 +208,10 @@ module Flapjack
 
         @contacts                   = entity_check.contacts
 
-        haml :check
+        @state_changes = entity_check.historical_states(nil, Time.now.to_i,
+                           :order => 'desc', :limit => 20)
+
+        erb 'check.html'.to_sym
       end
 
       post '/acknowledgements/:entity/:check' do
@@ -143,11 +223,14 @@ module Flapjack
         dur = ChronicDuration.parse(params[:duration] || '')
         @duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
-        entity_check = get_entity_check(@entity, @check)
-        return 404 if entity_check.nil?
+        return 404 if get_entity_check(@entity, @check).nil?
 
-        ack = entity_check.create_acknowledgement('summary' => (@summary || ''),
-          'acknowledgement_id' => @acknowledgement_id, 'duration' => @duration)
+        ack = Flapjack::Data::Event.create_acknowledgement(
+          @entity, @check,
+          :summary => (@summary || ''),
+          :acknowledgement_id => @acknowledgement_id,
+          :duration => @duration,
+          :redis => redis)
 
         redirect back
       end
@@ -182,36 +265,29 @@ module Flapjack
         redirect back
       end
 
-      # modify scheduled maintenance
-      patch '/scheduled_maintenances/:entity/:check' do
-        entity_check = get_entity_check(params[:entity], params[:check])
-        return 404 if entity_check.nil?
-
-        end_time   = Chronic.parse(params[:end_time]).to_i
-        start_time = params[:start_time].to_i
-        raise ArgumentError, "start time parsed to zero" unless start_time > 0
-
-        patches = {}
-        patches[:end_time] = end_time if end_time && (end_time > start_time)
-
-        raise ArgumentError.new("no valid data received to patch with") if patches.empty?
-
-        entity_check.update_scheduled_maintenance(start_time, patches)
-        redirect back
-      end
-
       # delete a scheduled maintenance
       delete '/scheduled_maintenances/:entity/:check' do
         entity_check = get_entity_check(params[:entity], params[:check])
         return 404 if entity_check.nil?
 
-        entity_check.delete_scheduled_maintenance(:start_time => params[:start_time].to_i)
+        entity_check.end_scheduled_maintenance(params[:start_time].to_i)
+        redirect back
+      end
+
+      # delete a check (actually just disables it)
+      delete '/checks/:entity/:check' do
+        entity_check = get_entity_check(params[:entity], params[:check])
+        return 404 if entity_check.nil?
+
+        entity_check.disable!
         redirect back
       end
 
       get '/contacts' do
+        #self_stats
         @contacts = Flapjack::Data::Contact.all(:redis => redis)
-        haml :contacts
+
+        erb 'contacts.html'.to_sym
       end
 
       get "/contacts/:contact" do
@@ -230,11 +306,22 @@ module Flapjack
           @pagerduty_credentials = @contact.pagerduty_credentials
         end
 
-        @entities_and_checks = @contact.entities_and_checks.sort_by {|ec|
+        # FIXME: intersect with current checks, or push down to Contact.entities
+        @entities_and_checks = @contact.entities(:checks => true).sort_by {|ec|
           ec[:entity].name
         }
 
-        haml :contact
+        erb 'contact.html'.to_sym
+      end
+
+    protected
+
+      # TODO cache constructed erb object to improve performance -- check mtime
+      # to know when to refresh; would need to synchronize accesses to the cache,
+      # to lock out reads while it's being refreshed
+      def render_erb(file, bind)
+        erb = ERB.new(File.read(File.dirname(__FILE__) + '/web/views/' + file))
+        erb.result(bind)
       end
 
     private
@@ -252,18 +339,33 @@ module Flapjack
         return if entity.nil?
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
           check, :redis => redis)
+        summary = entity_check.summary
+        summary = summary[0..76] + '...' unless summary.length < 81
         latest_notif =
-          {:problem         => entity_check.last_problem_notification,
-           :recovery        => entity_check.last_recovery_notification,
-           :acknowledgement => entity_check.last_acknowledgement_notification
+          {:problem         => entity_check.last_notification_for_state(:problem)[:timestamp],
+           :recovery        => entity_check.last_notification_for_state(:recovery)[:timestamp],
+           :acknowledgement => entity_check.last_notification_for_state(:acknowledgement)[:timestamp]
           }.max_by {|n| n[1] || 0}
+
+        lc = entity_check.last_change
+        last_change   = lc ? ChronicDuration.output(Time.now.to_i - lc.to_i,
+                               :format => :short, :keep_zero => true, :units => 2) : 'never'
+
+        lu = entity_check.last_update
+        last_update   = lu ? ChronicDuration.output(Time.now.to_i - lu.to_i,
+                               :format => :short, :keep_zero => true, :units => 2) : 'never'
+
+        ln = latest_notif[1]
+        last_notified = ln ? ChronicDuration.output(Time.now.to_i - ln.to_i,
+                               :format => :short, :keep_zero => true, :units => 2) + ", #{latest_notif[0]}" : 'never'
+
         [(entity_check.state       || '-'),
-         (entity_check.last_change || '-'),
-         (entity_check.last_update || '-'),
+         (summary                  || '-'),
+         last_change,
+         last_update,
          entity_check.in_unscheduled_maintenance?,
          entity_check.in_scheduled_maintenance?,
-         latest_notif[0],
-         latest_notif[1]
+         last_notified
         ]
       end
 
@@ -272,18 +374,42 @@ module Flapjack
         @pid          = Process.pid
         @instance_id  = "#{@fqdn}:#{@pid}"
 
-        @keys = redis.keys '*'
-        @count_failing_checks    = redis.zcard 'failed_checks'
-        @count_all_checks        = redis.keys('check:*:*').length
-        @executive_instances     = redis.zrange('executive_instances', '0', '-1', :withscores => true)
+        @dbsize                  = redis.dbsize
+        @executive_instances     = redis.keys("executive_instance:*").map {|i|
+          [ i.match(/executive_instance:(.*)/)[1], redis.hget(i, 'boot_time').to_i ]
+        }.sort {|a, b| b[1] <=> a[1]}
         @event_counters          = redis.hgetall('event_counters')
         @event_counters_instance = redis.hgetall("event_counters:#{@instance_id}")
-        @boot_time               = Time.at(redis.zscore('executive_instances', @instance_id).to_i)
+        @boot_time               = Time.at(redis.hget("executive_instance:#{@instance_id}", 'boot_time').to_i)
         @uptime                  = Time.now.to_i - @boot_time.to_i
         @uptime_string           = time_period_in_words(@uptime)
         @event_rate_all          = (@uptime > 0) ?
                                    (@event_counters_instance['all'].to_f / @uptime) : 0
-        @events_queued = redis.llen('events')
+        @events_queued           = redis.llen('events')
+      end
+
+      def entity_stats
+        @count_all_entities      = Flapjack::Data::Entity.find_all_with_checks(:redis => redis).length
+        @count_failing_entities  = Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis).length
+      end
+
+      def check_stats
+        # FIXME: move this logic to Flapjack::Data::EntityCheck
+        @count_all_checks        = Flapjack::Data::EntityCheck.count_all(:redis => redis)
+        @count_failing_checks    = Flapjack::Data::EntityCheck.count_all_failing(:redis => redis)
+      end
+
+      def last_notification_data(entity_check)
+        last_notifications = entity_check.last_notifications_of_each_type
+        [:critical, :warning, :unknown, :recovery, :acknowledgement].inject({}) do |memo, type|
+          if last_notifications[type] && last_notifications[type][:timestamp]
+            t = Time.at(last_notifications[type][:timestamp])
+            memo[t] = {:time => t.to_s,
+                       :relative => relative_time_ago(t) + " ago",
+                       :summary => last_notifications[type][:summary]}
+          end
+          memo
+        end
       end
 
     end

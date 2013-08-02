@@ -1,7 +1,9 @@
 #!/usr/bin/env ruby
 
 require 'redis'
-require 'json'
+
+require 'oj'
+Oj.default_options = { :indent => 0, :mode => :strict }
 
 id = "%.2d" % (1..10).to_a[rand(9)]
 
@@ -14,7 +16,7 @@ events << {
   'state' => 'ok',
 }.to_json
 
-redis = Redis.new
+redis = Redis.new(:db => 13)
 
 4000.times do
   events.each {|event|

@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'flapjack/gateways/api/entity_check_presenter'
 
-describe 'Flapjack::Gateways::API::EntityCheck::Presenter' do
+describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
 
   let(:entity_check) { mock(Flapjack::Data::EntityCheck) }
 
@@ -53,7 +53,7 @@ describe 'Flapjack::Gateways::API::EntityCheck::Presenter' do
     # TODO check the data in those hashes
   end
 
-  it "returns the same list of outage hashes with no start and end time set" do
+  it "returns a list of outage hashes with no start and end time set" do
     entity_check.should_receive(:historical_states).
       with(nil, nil).and_return(states)
 
@@ -67,6 +67,23 @@ describe 'Flapjack::Gateways::API::EntityCheck::Presenter' do
     outages.should have(4).time_ranges
 
     # TODO check the data in those hashes
+  end
+
+  it "returns a consolidated list of outage hashes with repeated state events" do
+    states[1][:state] = 'critical'
+    states[2][:state] = 'ok'
+
+    entity_check.should_receive(:historical_states).
+      with(nil, nil).and_return(states)
+
+    entity_check.should_receive(:historical_state_before).
+      with(time - (4 * 60 * 60)).and_return(nil)
+
+    ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
+    outages = ecp.outages(nil, nil)
+    outages.should_not be_nil
+    outages.should be_an(Array)
+    outages.should have(3).time_ranges
   end
 
   it "returns a (small) outage hash for a single state change" do
@@ -90,7 +107,7 @@ describe 'Flapjack::Gateways::API::EntityCheck::Presenter' do
       with(nil, time - (12 * 60 * 60), :scheduled => false).and_return([])
 
     ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
-    unsched_maint = ecp.unscheduled_maintenance(time - (12 * 60 * 60), time)
+    unsched_maint = ecp.unscheduled_maintenances(time - (12 * 60 * 60), time)
 
     unsched_maint.should be_an(Array)
     unsched_maint.should have(4).time_ranges
@@ -106,7 +123,7 @@ describe 'Flapjack::Gateways::API::EntityCheck::Presenter' do
       with(nil, time - (12 * 60 * 60), :scheduled => true).and_return([])
 
     ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
-    sched_maint = ecp.scheduled_maintenance(time - (12 * 60 * 60), time)
+    sched_maint = ecp.scheduled_maintenances(time - (12 * 60 * 60), time)
 
     sched_maint.should be_an(Array)
     sched_maint.should have(4).time_ranges

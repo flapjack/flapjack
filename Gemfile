@@ -1,4 +1,4 @@
-source :rubygems
+source 'https://rubygems.org'
 
 gemspec :name => 'flapjack'
 
@@ -20,4 +20,6 @@ group :test do
   gem 'fuubar'
   gem 'fuubar-cucumber'
   gem 'simplecov', :require => false
+  gem 'json_spec'
+  gem 'perftools.rb'
 end

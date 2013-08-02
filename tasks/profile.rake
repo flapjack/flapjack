@@ -278,7 +278,7 @@ namespace :profile do
             contents = msg.contents
             contents['event_count'] = n
             redis.rpush(config_env['jabber_gateway']['queue'],
-              Yajl::Encoder.encode(contents))
+              Oj.dump(contents))
           end
         end
 

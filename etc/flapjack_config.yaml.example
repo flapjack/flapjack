@@ -1,26 +1,5 @@
 ---
 
-quickstart:
-  redis:
-    host: 127.0.0.1
-    port: 6379
-    db: 6
-  executive:
-    enabled: yes
-    email_queue: email_notifications
-    notification_log_file: log/flapjack-notification.log
-  gateways:
-    email:
-      enabled: yes
-      queue: email_notifications
-      smtp_config:
-        address: "localhost"
-        domain: 'localhost.localdomain'
-        port: 25
-    web:
-      enabled: yes
-      port: 5080
-
 development:
   pid_file: tmp/pids/flapjack.pid
   log_file: log/flapjack.log
@@ -29,16 +8,45 @@ development:
     host: 127.0.0.1
     port: 6379
     db: 13
+  processor:
+    enabled: no
+    queue: events
+    notifier_queue: notifications
+    archive_events: true
+    events_archive_maxage: 10800
+    new_check_scheduled_maintenance_duration: 1 month
+    logger:
+      level: INFO
+  notifier:
+    enabled: no
+    queue: notifications
+    email_queue: email_notifications
+    sms_queue: sms_notifications
+    jabber_queue: jabber_notifications
+    pagerduty_queue: pagerduty_notifications
+    notification_log_file: log/notification.log
+    default_contact_timezone: Australia/Broken_Hill
+    logger:
+      level: INFO
   executive:
     enabled: yes
     email_queue: email_notifications
     sms_queue: sms_notifications
     jabber_queue: jabber_notifications
-    notification_log_file: log/flapjack-notification.log
+    pagerduty_queue: pagerduty_notifications
+    notification_log_file: log/notification.log
+    default_contact_timezone: Australia/Broken_Hill
+    archive_events: true
+    events_archive_maxage: 10800
+    new_check_scheduled_maintenance_duration: 1 month
+    logger:
+      level: INFO
   gateways:
     email:
       enabled: yes
       queue: email_notifications
+      logger:
+        level: INFO
       smtp_config:
         port: 2525
         # address: "localhost"
@@ -53,6 +61,8 @@ development:
       queue: sms_notifications
       username: "ermahgerd"
       password: "xxxx"
+      logger:
+        level: INFO
     jabber:
       enabled: yes
       queue: jabber_notifications
@@ -64,6 +74,8 @@ development:
       rooms:
         - "gimp@conference.jabber.domain.tld"
         - "log@conference.jabber.domain.tld"
+      logger:
+        level: INFO
     oobetet:
       enabled: yes
       server: "jabber.domain.tld"
@@ -79,17 +91,27 @@ development:
         - "flapjacktest@conference.jabber.domain.tld"
         - "gimp@conference.jabber.domain.tld"
         - "log@conference.jabber.domain.tld"
+      logger:
+        level: INFO
     pagerduty:
       enabled: yes
       queue: pagerduty_notifications
+      logger:
+        level: INFO
     web:
       enabled: yes
       port: 5080
+      timeout: 300
       access_log: "log/web_access.log"
+      logger:
+        level: INFO
     api:
       enabled: yes
       port: 5081
+      timeout: 300
       access_log: "log/api_access.log"
+      logger:
+        level: INFO
 
 test:
   redis:

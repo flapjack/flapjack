@@ -2,6 +2,7 @@
 
 require 'flapjack/data/contact'
 require 'flapjack/data/tag'
+require 'flapjack/data/tag_set'
 
 module Flapjack
 
@@ -9,9 +10,9 @@ module Flapjack
 
     class Entity
 
-      attr_accessor :name, :id, :tags
+      attr_accessor :name, :id
 
-      ENTITY_TAG_PREFIX = 'entity_tag'
+      TAG_PREFIX = 'entity_tag'
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
@@ -77,29 +78,42 @@ module Flapjack
       # time
       def self.find_all_name_matching(pattern, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
+        begin
+          regex = /#{pattern}/
+        rescue => e
+          if @logger
+            @logger.info("Jabber#self.find_all_name_matching - unable to use /#{pattern}/ as a regex pattern: #{e}")
+          end
+          return nil
+        end
         redis.keys('entity_id:*').inject([]) {|memo, check|
-          a, entity_name = check.split(':')
-          if (entity_name =~ /#{pattern}/) && !memo.include?(entity_name)
+          a, entity_name = check.split(':', 2)
+          if (entity_name =~ regex) && !memo.include?(entity_name)
             memo << entity_name
           end
           memo
         }.sort
       end
 
-      def self.find_all_with_tag(tag, options = {})
-        self.find_all_with_tags([tag], options)
-      end
-
       def self.find_all_with_tags(tags, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        #tag_prefix = 'entity_tag'
         tags_prefixed = tags.collect {|tag|
-          "#{ENTITY_TAG_PREFIX}:#{tag}"
+          "#{TAG_PREFIX}:#{tag}"
         }
         puts "tags_prefixed: #{tags_prefixed.inspect}"
         Flapjack::Data::Tag.find_intersection(tags_prefixed, :redis => redis).collect {|entity_id|
           Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis).name
         }.compact
+      end
+
+      def self.find_all_with_checks(options)
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.zrange("current_entities", 0, -1)
+      end
+
+      def self.find_all_with_failing_checks(options)
+        raise "Redis connection not set" unless redis = options[:redis]
+        Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => redis).keys
       end
 
       def contacts
@@ -116,7 +130,7 @@ module Flapjack
       end
 
       def check_list
-        @redis.keys("check:#{@name}:*").map {|k| k =~ /^check:#{@name}:(.+)$/; $1}
+        @redis.zrange("current_checks:#{@name}", 0, -1)
       end
 
       def check_count
@@ -125,18 +139,27 @@ module Flapjack
         checks.length
       end
 
+      def tags
+        @tags ||= Flapjack::Data::TagSet.new( @redis.keys("#{TAG_PREFIX}:*").inject([]) {|memo, entity_tag|
+          if Flapjack::Data::Tag.find(entity_tag, :redis => @redis).include?(@id.to_s)
+            memo << entity_tag.sub(/^#{TAG_PREFIX}:/, '')
+          end
+          memo
+        } )
+      end
+
       def add_tags(*enum)
         enum.each do |t|
-          Flapjack::Data::Tag.create("#{ENTITY_TAG_PREFIX}:#{t}", [@id], :redis => @redis)
-          @tags.add(t)
+          Flapjack::Data::Tag.create("#{TAG_PREFIX}:#{t}", [@id], :redis => @redis)
+          tags.add(t)
         end
       end
 
       def delete_tags(*enum)
         enum.each do |t|
-          tag = Flapjack::Data::Tag.find("#{ENTITY_TAG_PREFIX}:#{t}", :redis => @redis)
+          tag = Flapjack::Data::Tag.find("#{TAG_PREFIX}:#{t}", :redis => @redis)
           tag.delete(@id)
-          @tags.delete(t)
+          tags.delete(t)
         end
       end
 
@@ -149,15 +172,6 @@ module Flapjack
         raise "Entity name not set" unless @name = options[:name]
         @id = options[:id]
         @logger = options[:logger]
-
-        @tags = ::Set.new
-        tag_data = @redis.keys("#{ENTITY_TAG_PREFIX}:*").inject([]) do |memo, entity_tag|
-          tag = Flapjack::Data::Tag.find(entity_tag, :redis => @redis)
-          memo << entity_tag.sub(%r(^#{ENTITY_TAG_PREFIX}:), '') if tag.include?(@id.to_s)
-          memo
-        end
-        @tags.merge(tag_data)
-
       end
 
     end

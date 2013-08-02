@@ -1,12 +1,14 @@
 #!/usr/bin/env ruby
 
-require 'yajl'
+require 'oj'
 
 module Flapjack
   module Data
     class Event
 
-      attr_accessor :previous_state
+      attr_accessor :counter, :previous_state, :previous_state_duration
+
+      attr_reader :check, :summary, :details, :acknowledgement_id
 
       # Helper method for getting the next event.
       #
@@ -18,20 +20,40 @@ module Flapjack
       # Calling next with :block => false, will return a nil if there are no
       # events on the queue.
       #
-      def self.next(opts={})
+      def self.next(queue, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
 
-        defaults = { :block => true }
+        defaults = { :block => true,
+                     :archive_events => false,
+                     :events_archive_maxage => (3 * 60 * 60) }
         options  = defaults.merge(opts)
 
-        # In production, we wait indefinitely for events coming from other systems.
-        if options[:block]
-          return self.new( ::JSON.parse( redis.blpop('events', 0).last ) )
+        if options[:archive_events]
+          dest = "events_archive:#{Time.now.utc.strftime "%Y%m%d%H"}"
+          if options[:block]
+            raw = redis.brpoplpush(queue, dest, 0)
+          else
+            raw = redis.rpoplpush(queue, dest)
+            return unless raw
+          end
+          redis.expire(dest, options[:events_archive_maxage])
+        else
+          if options[:block]
+            raw = redis.brpop(queue, 0)[1]
+          else
+            raw = redis.rpop(queue)
+            return unless raw
+          end
         end
-
-        # In testing, we take care that there are no events on the queue.
-        return unless raw = redis.lpop('events')
-        self.new( ::JSON.parse(raw) )
+        begin
+          parsed = ::Oj.load( raw )
+        rescue Oj::Error => e
+          if options[:logger]
+            options[:logger].warn("Error deserialising event json: #{e}, raw json: #{raw.inspect}")
+          end
+          return nil
+        end
+        self.new( parsed )
       end
 
       # creates, or modifies, an event object and adds it to the events list in redis
@@ -43,48 +65,65 @@ module Flapjack
         raise "Redis connection not set" unless redis = opts[:redis]
 
         evt['time'] = Time.now.to_i if evt['time'].nil?
-        redis.rpush('events', Yajl::Encoder.encode(evt))
+        redis.lpush('events', ::Oj.dump(evt))
       end
 
       # Provide a count of the number of events on the queue to be processed.
-      def self.pending_count(opts = {})
+      def self.pending_count(queue, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
 
-        redis.llen('events')
+        redis.llen(queue)
       end
 
-      def initialize(attrs={})
-        @attrs = attrs
-        @attrs['time'] = Time.now.to_i unless @attrs.has_key?('time')
+      def self.create_acknowledgement(entity_name, check, opts = {})
+        data = { 'type'               => 'action',
+                 'state'              => 'acknowledgement',
+                 'entity'             => entity_name,
+                 'check'              => check,
+                 'summary'            => opts[:summary],
+                 'duration'           => opts[:duration],
+                 'acknowledgement_id' => opts[:acknowledgement_id]
+               }
+        add(data, :redis => opts[:redis])
+      end
+
+      def self.test_notifications(entity_name, check, opts = {})
+        data = { 'type'               => 'action',
+                 'state'              => 'test_notifications',
+                 'entity'             => entity_name,
+                 'check'              => check,
+                 'summary'            => opts[:summary],
+                 'details'            => opts[:details]
+               }
+        add(data, :redis => opts[:redis])
+      end
+
+      def initialize(attrs = {})
+        ['type', 'state', 'entity', 'check', 'time', 'summary', 'details',
+         'acknowledgement_id', 'duration'].each do |key|
+          instance_variable_set("@#{key}", attrs[key])
+        end
       end
 
       def state
-        return unless @attrs['state']
-        @attrs['state'].downcase
+        return unless @state
+        @state.downcase
       end
 
       def entity
-        return unless @attrs['entity']
-        @attrs['entity'].downcase
-      end
-
-      def check
-        @attrs['check']
-      end
-
-
-      # FIXME some values are only set for certain event types --
-      # this may not be the best way to do this
-      def acknowledgement_id
-        @attrs['acknowledgement_id']
+        return unless @entity
+        @entity.downcase
       end
 
       def duration
-        return unless @attrs['duration']
-        @attrs['duration'].to_i
+        return unless @duration
+        @duration.to_i
       end
-      # end FIXME
 
+      def time
+        return unless @time
+        @time.to_i
+      end
 
       def id
         (entity || '-') + ':' + (check || '-')
@@ -97,21 +136,8 @@ module Flapjack
       end
 
       def type
-        return unless @attrs['type']
-        @attrs['type'].downcase
-      end
-
-      def summary
-        @attrs['summary']
-      end
-
-      def time
-        return unless @attrs['time']
-        @attrs['time'].to_i
-      end
-
-      def action?
-        type == 'action'
+        return unless @type
+        @type.downcase
       end
 
       def service?
@@ -119,37 +145,25 @@ module Flapjack
       end
 
       def acknowledgement?
-        action? and state == 'acknowledgement'
+        (type == 'action') && (state == 'acknowledgement')
       end
 
       def test_notifications?
-        action? and state == 'test_notifications'
+        (type == 'action') && (state == 'test_notifications')
       end
 
       def ok?
-        (state == 'ok') or (state == 'up')
-      end
-
-      def unknown?
-        state == 'unknown'
-      end
-
-      def unreachable?
-        state == 'unreachable'
-      end
-
-      def warning?
-        state == 'warning'
-      end
-
-      def critical?
-        state == 'critical'
+        (state == 'ok') || (state == 'up')
       end
 
       def failure?
-        warning? or critical?
+        ['critical', 'warning', 'unknown'].include?(state)
       end
 
+      # # Not used anywhere
+      # def unreachable?
+      #   state == 'unreachable'
+      # end
     end
   end
 end

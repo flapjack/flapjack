@@ -1,21 +1,51 @@
 #!/usr/bin/env ruby
 
-require 'optparse'
-require 'ostruct'
-
 # add lib to the default include path
 unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
 end
 
+require 'dante'
+
+module Dante
+  class Runner
+
+    def start
+      # skip signal traps
+      @startup_command.call(self.options) if @startup_command
+    end
+  end
+end
+
+require 'optparse'
+require 'ostruct'
+
+require 'oj'
+Oj.default_options = { :indent => 0, :mode => :strict }
+
 require 'flapjack/configuration'
+require 'flapjack/version'
 
 options = OpenStruct.new
 options.config    = File.join('etc', 'flapjack_config.yaml')
 options.daemonize = nil
 
-OptionParser.new do |opts|
-  opts.banner = "Usage: flapjack [options]"
+@exe = File.basename(__FILE__)
+
+optparse = OptionParser.new do |opts|
+  opts.banner = "Usage: flapjack COMMAND [OPTIONS]"
+
+  opts.separator  ""
+  opts.separator  "Commands"
+  opts.separator  "     start #{" " * 25} start flapjack"
+  opts.separator  "     stop #{" " * 26} stop flapjack"
+  opts.separator  "     restart #{" " * 23} (re)start flapjack"
+  opts.separator  "     reload #{" " * 24} reload flapjack configuration"
+  opts.separator  "     status #{" " * 24} see if flapjack is running"
+  opts.separator  "     version #{" " * 23} display flapjack version and exit"
+  opts.separator  "     help #{" " * 26} display this usage info"
+  opts.separator  ""
+  opts.separator  "Options"
 
   opts.on("-c", "--config [PATH]", String, "PATH to the config file to use") do |c|
     options.config = c
@@ -29,7 +59,17 @@ OptionParser.new do |opts|
     options.pidfile = p
   end
 
-end.parse!(ARGV)
+  opts.on("-l", "--logfile [PATH]", String, "PATH to the logfile to write to") do |l|
+    options.log_path = l
+  end
+
+  opts.on("-v", "--version", "display flapjack version") do |v|
+    options.version = v
+  end
+
+
+end
+optparse.parse!(ARGV)
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
@@ -42,25 +82,143 @@ if config_env.nil? || config_env.empty?
   exit(false)
 end
 
-if options.pidfile.nil?
-  pid_file = (config_env['pid_file'] || 'tmp/pids/flapjack.pid')
-else
-  pid_file = options.pidfile
+pidfile = options.pidfile.nil? ?
+           (config_env['pid_file'] || 'tmp/pids/flapjack.pid') :
+           options.pidfile
+
+logfile = options.logfile.nil? ?
+            (config_env['log_file'] || 'log/flapjack.log') :
+            options.logfile
+
+daemonize = options.daemonize.nil? ?
+              !!config_env['daemonize'] :
+              options.daemonize
+
+if options.version
+  puts Flapjack::VERSION
+  exit
 end
 
-# TODO Flapjack falls over when Redis restarted -- trap errors and attempt reconnect
+flapjack_coord = Proc.new {
+  require 'flapjack/coordinator'
+  coordinator = Flapjack::Coordinator.new(config)
+  coordinator.start(:signals => true)
+}
 
-require 'flapjack/coordinator'
-
-coordinator = Flapjack::Coordinator.new(config)
-coordinator.log_file = (config_env['log_file'] || 'log/flapjack.log')
-coordinator.pid_file = pid_file
-
-if options.daemonize.nil?
-  daemonize = !!config_env['daemonize']
-else
-  daemonize = options.daemonize
+@runner_opts = { :pid_path => pidfile, :log_path => logfile }
+def get_runner
+  Dante::Runner.new(@exe, @runner_opts)
 end
 
-puts "Daemonising ... " if daemonize
-coordinator.start(:daemonize => daemonize, :signals => true)
+def process_exists(pid)
+  return unless pid
+  begin
+    Process.kill(0, pid)
+    return true
+  rescue Errno::ESRCH
+    return false
+  end
+end
+
+# wait until the specified pid no longer exists, or until a timeout is reached
+def wait_pid_gone(pid, timeout = 30)
+  print "waiting for a max of #{timeout} seconds for process #{pid} to exit" if process_exists(pid)
+  started_at = Time.now.to_i
+  while process_exists(pid)
+    break unless (Time.now.to_i - started_at < timeout)
+    print '.'
+    sleep 1
+  end
+  puts ''
+  return !process_exists(pid)
+end
+
+begin
+  pid = IO.read(pidfile).chomp.to_i
+rescue StandardError
+  pid = nil
+end
+
+case ARGV[0]
+when "start"
+  runner = get_runner
+  if runner.daemon_running?
+    puts "Flapjack is already running."
+  else
+    print "Flapjack starting..."
+    runner.execute(:daemonize => daemonize) {
+      flapjack_coord.call
+    }
+    puts " done."
+  end
+
+when "stop"
+  runner = get_runner
+  if runner.daemon_running?
+    print "Flapjack stopping..."
+    runner.execute(:kill => true)
+    puts " done."
+  else
+    puts "Flapjack is not running."
+  end
+  exit 1 unless wait_pid_gone(pid)
+
+when "restart"
+  runner = get_runner
+  if runner.daemon_running?
+    print "Flapjack stopping..."
+    runner.execute(:kill => true)
+    puts " done."
+  end
+  exit 1 unless wait_pid_gone(pid)
+
+  runner = get_runner
+  print "Flapjack starting..."
+  runner.execute(:daemonize => daemonize) {
+    flapjack_coord.call
+  }
+  puts " done."
+
+when "reload"
+  runner = get_runner
+  if runner.daemon_running?
+    print "Reloading Flapjack configuration..."
+    begin
+      Process.kill('HUP', pid)
+      puts " sent HUP to pid #{pid}."
+    rescue => e
+      puts " couldn't send HUP to pid '#{pid}'."
+    end
+  else
+    puts "Flapjack is not running daemonized."
+    exit 1
+  end
+
+when "status"
+  runner = get_runner
+  uptime = (runner.daemon_running?) ? Time.now - File.stat(pidfile).ctime : 0
+  if runner.daemon_running?
+    puts "Flapjack is running: pid #{pid}, uptime #{uptime}"
+  else
+    puts "Flapjack is not running"
+    exit 3
+  end
+
+when "help"
+  puts optparse
+  exit
+
+when "version"
+  puts Flapjack::VERSION
+  exit
+
+else
+  if ARGV.nil? || ARGV.empty?
+    puts "No command provided"
+  else
+    puts "Unknown command provided: '#{ARGV[0]}'"
+  end
+  puts "\n#{optparse}"
+  exit 1
+
+end

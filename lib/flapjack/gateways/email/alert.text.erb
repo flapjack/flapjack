@@ -2,12 +2,12 @@ Hi <%= @contact_first_name %>,
 
 Monitoring has detected the following:
 
-Entity: <%= @entity %>
-Check: <%= @check %>
-State: <%= @state %>
+Entity:  <%= @entity_name %>
+Check:   <%= @check %>
+State:   <%= @state %>
 Summary: <%= @summary %>
-Time: <%= Time.at(@time.to_i).to_s %>
-Flapjack: http://127.0.0.1:9292/check?entity=<%= @entity %>&check=<%= @check %>
+Time:    <%= Time.at(@time.to_i).to_s %> (<%= @relative %> ago)
+<%= @last_state ? "\nPrevious state: #{@last_state}" : '' %><%= @last_summary ? "\nPrevious summary: #{@last_summary}" : '' %>
 
 Cheers,
 Flapjack

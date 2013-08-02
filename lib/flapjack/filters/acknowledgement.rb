@@ -16,26 +16,26 @@ module Flapjack
         result = false
         if event.type == 'action'
           if event.acknowledgement?
-            if @persistence.zscore("failed_checks", event.id)
-              ec = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @persistence)
+            if @redis.zscore("failed_checks", event.id)
+              ec = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
               if ec.nil?
-                @log.error "Filter: Acknowledgement: unknown entity for event '#{event.id}'"
+                @logger.error "Filter: Acknowledgement: unknown entity for event '#{event.id}'"
               else
-                ec.create_unscheduled_maintenance(:start_time => timestamp,
-                  :duration => (event.duration || (4 * 60 * 60)),
+                ec.create_unscheduled_maintenance(timestamp,
+                  (event.duration || (4 * 60 * 60)),
                   :summary  => event.summary)
                 message = "unscheduled maintenance created for #{event.id}"
               end
             else
               result = true
-              @log.debug("Filter: Acknowledgement: blocking because zscore of failed_checks for #{event.id} is false") unless @persistence.zscore("failed_checks", event.id)
+              @logger.debug("Filter: Acknowledgement: blocking because zscore of failed_checks for #{event.id} is false") unless @redis.zscore("failed_checks", event.id)
             end
           else
             message = "no action taken"
             result  = false
           end
         end
-        @log.debug("Filter: Acknowledgement: #{result ? "block" : "pass"} (#{message})")
+        @logger.debug("Filter: Acknowledgement: #{result ? "block" : "pass"} (#{message})")
         result
       end
     end

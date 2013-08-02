@@ -8,6 +8,7 @@ module Flapjack
 
     class Global
 
+      # TODO maybe this should be an EntityCheck class method?
       def self.unacknowledged_failing_checks(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
