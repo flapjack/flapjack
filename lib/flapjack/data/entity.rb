@@ -100,7 +100,7 @@ module Flapjack
         tags_prefixed = tags.collect {|tag|
           "#{TAG_PREFIX}:#{tag}"
         }
-        puts "tags_prefixed: #{tags_prefixed.inspect}"
+        logger.debug "tags_prefixed: #{tags_prefixed.inspect}" if logger = options[:logger]
         Flapjack::Data::Tag.find_intersection(tags_prefixed, :redis => redis).collect {|entity_id|
           Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis).name
         }.compact
