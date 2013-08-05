@@ -85,7 +85,7 @@ describe Flapjack::Pikelet do
     server.should_receive(:start)
     WEBrick::HTTPServer.should_receive(:new).
       with(:Port => 7654, :BindAddress => '127.0.0.1',
-           :AccessLog => []).
+           :AccessLog => [], :Logger => an_instance_of(::WEBrick::Log)).
       and_return(server)
 
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
@@ -131,7 +131,7 @@ describe Flapjack::Pikelet do
     server.should_receive(:start).and_raise(exc)
     WEBrick::HTTPServer.should_receive(:new).
       with(:Port => 7654, :BindAddress => '127.0.0.1',
-           :AccessLog => []).
+           :AccessLog => [], :Logger => an_instance_of(::WEBrick::Log)).
       and_return(server)
 
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).

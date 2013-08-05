@@ -2,7 +2,7 @@
 
 require 'logger'
 require 'redis'
-require 'xmpp4r'
+# require 'xmpp4r'
 
 # bugfix for webrick's assuming 1.8.7 Logger syntax
 class ::Logger; alias_method :write, :<<; end
@@ -13,13 +13,7 @@ class ::Logger; alias_method :write, :<<; end
 #
 # (One alternative would be to put other values in Futures ourselves, and
 #  evaluate everything...)
-class Redis
-  class Future
-    def class
-      ::Redis::Future
-    end
-  end
-end
+class Redis::Future; def class; ::Redis::Future; end; end
 
 # # Unfortunately we have to override/repeat the join method in order to add
 # # the directive that will disable the history being sent.

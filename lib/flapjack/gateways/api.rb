@@ -46,8 +46,7 @@ module Flapjack
               exit
             end
 
-            access_logger = Logger.new(@config['access_log'])
-            use Rack::CommonLogger, access_logger
+            use Rack::CommonLogger, ::Logger.new(@config['access_log'])
           end
         end
       end

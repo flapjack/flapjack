@@ -155,9 +155,8 @@ module Flapjack
 
         super do
           @pikelet_class.start if @pikelet_class.respond_to?(:start)
-          # TODO named accesslog for web/API
           @server = ::WEBrick::HTTPServer.new(:Port => port, :BindAddress => '127.0.0.1',
-            :AccessLog => [])
+            :AccessLog => [], :Logger => WEBrick::Log::new("/dev/null", 7))
           @server.mount "/", Rack::Handler::WEBrick, @pikelet_class
           yield @server  if block_given?
           @server.start
