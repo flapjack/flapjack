@@ -10,7 +10,7 @@ require 'flapjack/data/notification_rule'
 describe Flapjack::Data::Contact, :redis => true do
 
   let(:notification_rule_data) {
-    {:entity_tags        => ["database","physical"],
+    {:tags               => ["database","physical"],
      :entities           => ["foo-app-01.example.com"],
      :time_restrictions  => [],
      :warning_media      => ["email"],
@@ -156,7 +156,7 @@ describe Flapjack::Data::Contact, :redis => true do
     rules = contact.notification_rules
     rules.should have(1).rule
     rule = rules.first
-    [:entities, :entity_tags, :time_restrictions,
+    [:entities, :tags, :time_restrictions,
      :warning_media, :critical_media,
      :warning_blackhole, :critical_blackhole].each do |k|
       rule.send(k).should == general_notification_rule_data[k]
