@@ -179,19 +179,17 @@ module Flapjack
 
       # created from parsed JSON, so opts keys are in strings
       def initialize(opts = {})
-        @event_id       = opts['event_id']
-        @event_state    = opts['state']
-        @event_summary  = opts['summary']
-        @event_details  = opts['details']
-        @event_time     = opts['time']
-        @event_duration = opts['duration']
-        @event_count    = opts['count']
-
+        @event_id           = opts['event_id']
+        @event_state        = opts['state']
+        @event_summary      = opts['summary']
+        @event_details      = opts['details']
+        @event_time         = opts['time']
+        @event_duration     = opts['duration']
+        @event_count        = opts['count']
         @last_event_state   = opts['last_state']
         @last_event_summary = opts['last_summary']
-
-        @type           = opts['type']
-        @severity       = opts['severity']
+        @type               = opts['type']
+        @severity           = opts['severity']
       end
 
       # # time restrictions match?
