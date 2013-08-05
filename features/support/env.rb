@@ -4,8 +4,6 @@ require 'delorean'
 require 'chronic'
 require 'active_support/time'
 require 'ice_cube'
-require 'flapjack/data/entity_check'
-require 'flapjack/data/event'
 
 if ENV['COVERAGE']
   require 'simplecov'
@@ -24,11 +22,13 @@ require 'pathname'
 require 'webmock/cucumber'
 WebMock.disable_net_connect!
 
-require 'flapjack/notifier'
-require 'flapjack/processor'
 require 'flapjack/patches'
 
-require 'resque_spec'
+require 'flapjack/data/entity_check'
+require 'flapjack/data/event'
+
+require 'flapjack/notifier'
+require 'flapjack/processor'
 
 class MockLogger
   attr_accessor :messages
@@ -46,9 +46,9 @@ class MockLogger
   end
 end
 
-# poor man's stubbing
-class MockEmailer
-  include EM::Deferrable
+require 'mail'
+Mail.defaults do
+  delivery_method :test
 end
 
 class RedisDelorean
@@ -113,6 +113,19 @@ redis.flushdb
 RedisDelorean.before_all(:redis => redis)
 redis.quit
 
+# Not the most efficient of operations...
+def redis_peek(queue, start = 0, count = nil)
+  size = @redis.llen(queue)
+  start = 0 if start < 0
+  count = (size - start) if count.nil? || (count > (size - start))
+
+  (0..(size - 1)).inject([]) do |memo, n|
+    obj = @redis.rpoplpush(queue, queue)
+    memo << Oj::load(obj) if (n >= start || n < (start + count))
+    memo
+  end
+end
+
 Before do
   @logger = MockLogger.new
 end
@@ -120,7 +133,6 @@ end
 After do
   @logger.messages = []
 end
-
 
 Before('@processor') do
   @processor = Flapjack::Processor.new(:logger => @logger,
@@ -145,6 +157,10 @@ end
 After('@notifier') do
   @notifier_redis.flushdb
   @notifier_redis.quit
+end
+
+Before('@notifications') do
+  Mail::TestMailer.deliveries.clear
 end
 
 Before('@time') do

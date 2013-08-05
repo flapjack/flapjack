@@ -104,9 +104,11 @@ module Flapjack
         end
 
         def send_pagerduty_event(event)
-          uri = URI::HTTP.build(:host => 'https://events.pagerduty.com',
+          uri = URI::HTTPS.build(:host => 'events.pagerduty.com',
                                 :path => '/generic/2010-04-15/create_event.json')
           http = Net::HTTP.new(uri.host, uri.port)
+          http.use_ssl = true
+          http.verify_mode = OpenSSL::SSL::VERIFY_PEER
           request = Net::HTTP::Post.new(uri.request_uri)
           request.body = Oj.dump(event)
           http_response = http.request(request)

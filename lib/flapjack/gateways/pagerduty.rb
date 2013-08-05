@@ -4,7 +4,7 @@ require 'oj'
 
 require 'net/http'
 require 'uri'
-require 'uri/http'
+require 'uri/https'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/data/global'
@@ -109,9 +109,11 @@ module Flapjack
         end
 
         def send_pagerduty_event(event)
-          uri = URI::HTTP.build(:host => 'https://events.pagerduty.com',
+          uri = URI::HTTPS.build(:host => 'events.pagerduty.com',
                                 :path => '/generic/2010-04-15/create_event.json')
           http = Net::HTTP.new(uri.host, uri.port)
+          http.use_ssl = true
+          http.verify_mode = OpenSSL::SSL::VERIFY_PEER
           request = Net::HTTP::Post.new(uri.request_uri)
           request.body = Oj.dump(event)
           http_response = http.request(request)
@@ -234,10 +236,12 @@ module Flapjack
                    'incident_key' => check,
                    'status'       => 'acknowledged'}
 
-          uri = URI::HTTP.build(:host => 'https://' + subdomain + '.pagerduty.com',
+          uri = URI::HTTPS.build(:host => "#{subdomain}.pagerduty.com",
                                 :path => '/api/v1/incidents',
                                 :query => URI.encode_www_form(query))
           http = Net::HTTP.new(uri.host, uri.port)
+          http.use_ssl = true
+          http.verify_mode = OpenSSL::SSL::VERIFY_PEER
           request = Net::HTTP::Get.new(uri.request_uri)
           request.basic_auth(username, password)
 

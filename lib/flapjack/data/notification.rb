@@ -82,15 +82,15 @@ module Flapjack
 
       end
 
-      def self.foreach_on_queue(queue, options = {})
+      def self.foreach_on_queue(queue, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
 
         while notif_json = redis.rpop(queue)
           begin
             notification = ::Oj.load( notif_json )
           rescue Oj::Error => e
-            if options[:logger]
-              options[:logger].warn("Error deserialising notification json: #{e}, raw json: #{notif_json.inspect}")
+            if opts[:logger]
+              opts[:logger].warn("Error deserialising notification json: #{e}, raw json: #{notif_json.inspect}")
             end
             notification = nil
           end
@@ -99,7 +99,7 @@ module Flapjack
         end
       end
 
-      def self.wait_for_queue(queue, options = {})
+      def self.wait_for_queue(queue, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
         redis.brpop("#{queue}_actions")
       end

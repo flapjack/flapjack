@@ -1,9 +1,7 @@
 #!/usr/bin/env ruby
 
 def drain_events
-  loop do
-    event = Flapjack::Data::Event.next('events', :block => false, :redis => @redis)
-    break unless event
+  Flapjack::Data::Event.foreach_on_queue('events', :redis => @redis) do |event|
     @processor.send(:process_event, event)
   end
   drain_notifications
@@ -11,9 +9,7 @@ end
 
 def drain_notifications
   return unless @notifier_redis
-  loop do
-    notification = Flapjack::Data::Notification.next('notifications', :block => false, :redis => @notifier_redis)
-    break unless notification
+  Flapjack::Data::Notification.foreach_on_queue('notifications', :redis => @notifier_redis) do |notification|
     @notifier.send(:process_notification, notification)
   end
 end
@@ -373,8 +369,8 @@ Then /^(.*) email alert(?:s)? should be queued for (.*)$/ do |num_queued, addres
   when 'no'
     num_queued = 0
   end
-  queue  = Resque.peek('email_notifications', 0, 30)
-  queue.find_all {|n| n['args'].first['address'] == address }.length.should == num_queued.to_i
+  queue  = redis_peek('email_notifications', 0, 30)
+  queue.find_all {|n| n['address'] == address }.length.should == num_queued.to_i
 end
 
 Then /^(.*) sms alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
@@ -384,6 +380,6 @@ Then /^(.*) sms alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
   when 'no'
     num_queued = 0
   end
-  queue  = Resque.peek('sms_notifications', 0, 30)
-  queue.find_all {|n| n['args'].first['address'] == address }.length.should == num_queued.to_i
+  queue  = redis_peek('sms_notifications', 0, 30)
+  queue.find_all {|n| n['address'] == address }.length.should == num_queued.to_i
 end

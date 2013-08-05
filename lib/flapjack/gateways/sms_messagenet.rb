@@ -1,10 +1,16 @@
 #!/usr/bin/env ruby
 
+require 'net/http'
+require 'uri'
+require 'uri/https'
+
 module Flapjack
   module Gateways
     class SmsMessagenet
 
       include MonitorMixin
+
+      attr_reader :sent
 
       def initialize(opts = {})
         @config = opts[:config]
@@ -13,6 +19,8 @@ module Flapjack
         @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
         @notifications_queue = @config['queue'] || 'sms_notifications'
+
+        @sent = 0
 
         mon_initialize
 
@@ -40,16 +48,16 @@ module Flapjack
         end
       end
 
-      def handle_message(message)
-        @logger.debug "Woo, got a message to send out: #{message.inspect}"
+      def handle_message(msg)
+        @logger.debug "Woo, got a message to send out: #{msg.inspect}"
 
-        notification_type  = message['notification_type']
-        contact_first_name = message['contact_first_name']
-        contact_last_name  = message['contact_last_name']
-        state              = message['state']
-        summary            = message['summary']
-        time               = message['time']
-        entity, check      = message['event_id'].split(':', 2)
+        notification_type  = msg['notification_type']
+        contact_first_name = msg['contact_first_name']
+        contact_last_name  = msg['contact_last_name']
+        state              = msg['state']
+        summary            = msg['summary']
+        time               = msg['time']
+        entity, check      = msg['event_id'].split(':', 2)
 
         headline_map = {'problem'         => 'PROBLEM: ',
                         'recovery'        => 'RECOVERY: ',
@@ -65,8 +73,6 @@ module Flapjack
         message += " is #{state.upcase}" unless ['acknowledgement', 'test'].include?(notification_type)
         message += " at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
 
-        message['message'] = message
-
         # TODO log error and skip instead of raising errors
         if @config.nil? || (@config.respond_to?(:empty?) && @config.empty?)
           @logger.error "Messagenet config is missing"
@@ -77,15 +83,14 @@ module Flapjack
 
         username = @config["username"]
         password = @config["password"]
-        address  = message['address']
-        message  = message['message']
-        message_id = message['id']
+        address  = msg['address']
+        msg_id   = msg['id']
 
         [[username, "Messagenet username is missing"],
          [password, "Messagenet password is missing"],
          [address,  "SMS address is missing"],
          [message,  "SMS message is missing"],
-         [message_id, "Message id is missing"]].each do |val_err|
+         [msg_id, "Message id is missing"]].each do |val_err|
 
           next unless val_err.first.nil? || (val_err.first.respond_to?(:empty?) && val_err.first.empty?)
           errors << val_err.last
@@ -104,10 +109,12 @@ module Flapjack
         # TODO ensure we're not getting a cached response from a proxy or similar,
         # use appropriate headers etc.
 
-        uri = URI::HTTP.build(:host => 'https://www.messagenet.com.au',
+        uri = URI::HTTPS.build(:host => 'www.messagenet.com.au',
                               :path => '/dotnet/Lodge.asmx/LodgeSMSMessage',
                               :query => URI.encode_www_form(query))
         http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = true
+        http.verify_mode = OpenSSL::SSL::VERIFY_PEER
         request = Net::HTTP::Get.new(uri.request_uri)
 
         http_response = http.request(request)
@@ -115,13 +122,14 @@ module Flapjack
         @logger.debug "server response: #{http_response.inspect}"
 
         status = http_response.code
-        if (status >= 200) && (status <= 206)
+
+        if (status.to_i >= 200) && (status.to_i <= 206)
           @sent += 1
           @logger.info "Sent SMS via Messagenet, response status is #{status}, " +
-            "message_id: #{message_id}"
+            "msg_id: #{msg_id}"
         else
           @logger.error "Failed to send SMS via Messagenet, response status is #{status}, " +
-            "message_id: #{message_id}"
+            "msg_id: #{msg_id}"
         end
 
       end

@@ -16,8 +16,9 @@ module Flapjack
     class Email
 
       include MonitorMixin
-
       include Flapjack::Utility
+
+      attr_reader :sent
 
       def initialize(opts = {})
         @config = opts[:config]
@@ -32,6 +33,8 @@ module Flapjack
         @host = smtp_config ? smtp_config['host'] : 'localhost'
         @port = smtp_config ? smtp_config['port'] : 25
 
+        @sent = 0
+
         mon_initialize
       end
 
@@ -39,7 +42,6 @@ module Flapjack
         @logger.info("starting")
         @logger.debug("new email gateway pikelet with the following options: #{@config.inspect}")
 
-        @sent = 0
         msg_raw = nil
 
         loop do
@@ -115,6 +117,7 @@ module Flapjack
           mail.deliver!
 
           @logger.info "Email sending succeeded"
+          @sent += 1
 
         rescue Exception => e
           @logger.error "Error delivering email to #{m_to}: #{e.message}"
