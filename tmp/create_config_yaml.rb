@@ -11,6 +11,5 @@ config = { 'sausage' => true,
            'true_s'  => 'true',
          }
 
-
 puts config.to_yaml
 

@@ -3,7 +3,9 @@
 require 'redis'
 
 require 'oj'
+Oj.mimic_JSON
 Oj.default_options = { :indent => 0, :mode => :strict }
+require 'active_support/json'
 
 id = "%.2d" % (1..10).to_a[rand(9)]
 
