@@ -4,6 +4,7 @@ require 'oj'
 require 'active_support/time'
 require 'ice_cube'
 require 'flapjack/utility'
+require 'flapjack/data/tag_set'
 
 module Flapjack
   module Data
@@ -11,7 +12,7 @@ module Flapjack
 
       extend Flapjack::Utility
 
-      attr_accessor :id, :contact_id, :entities, :entity_tags, :time_restrictions,
+      attr_accessor :id, :contact_id, :entities, :tags, :time_restrictions,
         :warning_media, :critical_media, :warning_blackhole, :critical_blackhole
 
       def self.exists_with_id?(rule_id, options = {})
@@ -68,19 +69,26 @@ module Flapjack
       end
 
       def to_json(*args)
-        self.class.hashify(:id, :contact_id, :entity_tags, :entities,
+        self.class.hashify(:id, :contact_id, :tags, :entities,
             :time_restrictions, :warning_media, :critical_media,
             :warning_blackhole, :critical_blackhole) {|k|
           [k, self.send(k)]
         }.to_json
       end
 
-      # tags or entity names match?
-      # nil @entity_tags and nil @entities matches
+      # entity names match?
+      # nil @entities matches
       def match_entity?(event)
-        # TODO: return true if event's entity tags match entity tag list on the rule
-        ((@entity_tags.nil? || @entity_tags.empty?) && (@entities.nil? || @entities.empty?)) ||
+        (@entities.nil? || @entities.empty?) ||
          (@entities.include?(event.split(':').first))
+      end
+
+      # tags match?
+      # nil tags matches
+      # an event has a set of tags, which are just strings
+      def match_tags?(event_tags)
+        (@tags.nil? || @tags.empty?) ||
+          @tags.subset?(event_tags)
       end
 
       def blackhole?(severity)
@@ -99,7 +107,7 @@ module Flapjack
 
       def is_specific?
         (!@entities.nil? && !@entities.empty?) ||
-          (!@entity_tags.nil? && !@entity_tags.empty?)
+          (!@tags.nil? && !@tags.empty?)
       end
 
     private
@@ -130,7 +138,7 @@ module Flapjack
           :id                 => rule_data[:id].to_s,
           :contact_id         => rule_data[:contact_id].to_s,
           :entities           => Oj.dump(rule_data[:entities]),
-          :entity_tags        => Oj.dump(rule_data[:entity_tags]),
+          :tags               => Oj.dump(rule_data[:tags]),
           :time_restrictions  => Oj.dump(rule_data[:time_restrictions]),
           :warning_media      => Oj.dump(rule_data[:warning_media]),
           :critical_media     => Oj.dump(rule_data[:critical_media]),
@@ -221,19 +229,11 @@ module Flapjack
                                 d[:entities].all? {|e| e.is_a?(String)} ) } =>
                        "entities must be a list of strings",
 
-                       proc { !d.has_key?(:entity_tags) ||
-                              ( d[:entity_tags].nil? ||
-                                d[:entity_tags].is_a?(Array) &&
-                                d[:entity_tags].all? {|et| et.is_a?(String)} ) } =>
-                       "entity_tags must be a list of strings",
-
-                       #proc { (d.has_key?(:entities) &&
-                       #        d[:entities].is_a?(Array) &&
-                       #        (d[:entities].size > 0)) ||
-                       #       (d.has_key?(:entity_tags) &&
-                       #        d[:entity_tags].is_a?(Array) &&
-                       #        (d[:entity_tags].size > 0)) } =>
-                       #"entities or entity tags must have at least one value",
+                       proc { !d.has_key?(:tags) ||
+                              ( d[:tags].nil? ||
+                                d[:tags].is_a?(Array) &&
+                                d[:tags].all? {|et| et.is_a?(String)} ) } =>
+                       "tags must be a list of strings",
 
                        proc { !d.has_key?(:time_restrictions) ||
                               ( d[:time_restrictions].nil? ||
@@ -284,7 +284,8 @@ module Flapjack
         rule_data = @redis.hgetall("notification_rule:#{@id}")
 
         @contact_id         = rule_data['contact_id']
-        @entity_tags        = Oj.load(rule_data['entity_tags'] || '')
+        tags                = Oj.load(rule_data['tags'] || '')
+        @tags               = tags ? Flapjack::Data::TagSet.new(tags) : nil
         @entities           = Oj.load(rule_data['entities'] || '')
         @time_restrictions  = Oj.load(rule_data['time_restrictions'] || '')
         @warning_media      = Oj.load(rule_data['warning_media'] || '')
