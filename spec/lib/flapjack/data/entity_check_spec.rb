@@ -2,6 +2,7 @@ require 'spec_helper'
 
 require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
+require 'flapjack/data/tag_set'
 
 describe Flapjack::Data::EntityCheck, :redis => true do
 
@@ -574,4 +575,13 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     contacts.should have(1).contact
     contacts.first.name.should == 'John Johnson'
   end
+
+  it "generates ephemeral tags for itself" do
+    ec = Flapjack::Data::EntityCheck.for_entity_name('foo-app-01.example.com', 'Disk / Utilisation', :redis => @redis)
+    tags = ec.tags
+    tags.should_not be_nil
+    tags.should be_a(Flapjack::Data::TagSet)
+    ['foo-app-01', 'example.com', 'disk', '/', 'utilisation'].to_set.subset?(tags).should be_true
+  end
+
 end

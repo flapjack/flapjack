@@ -96,7 +96,8 @@ module Flapjack
                        'time'              => @event_time,
                        'duration'          => @event_duration,
                        'notification_type' => @type,
-                       'event_count'       => @event_count
+                       'event_count'       => @event_count,
+                       'tags'              => @tags
                       }
       end
 
@@ -190,6 +191,7 @@ module Flapjack
         @last_event_summary = opts['last_summary']
         @type               = opts['type']
         @severity           = opts['severity']
+        @tags               = opts['tags']
       end
 
       # # time restrictions match?

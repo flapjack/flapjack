@@ -92,14 +92,14 @@ module Flapjack
             memo[entity] ||= []
             memo[entity] << check
           end
-          memo  
+          memo
         end
       end
 
       def self.count_all_failing(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.zrange("failed_checks", 0, -1).count do |key|
-          entity, check = key.split(':', 2) 
+          entity, check = key.split(':', 2)
           !!redis.zscore("current_checks:#{entity}", check)
         end
       end
@@ -513,6 +513,13 @@ module Flapjack
         entity.contacts + contact_ids.collect {|c_id|
           Flapjack::Data::Contact.find_by_id(c_id, :redis => @redis)
         }.compact
+      end
+
+      def tags
+        entity, check = @key.split(":", 2)
+        ta = Flapjack::Data::TagSet.new([])
+        ta += entity.split('.', 2).map {|x| x.downcase}
+        ta += check.split(' ').map {|x| x.downcase}
       end
 
     private
