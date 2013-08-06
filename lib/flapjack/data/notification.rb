@@ -67,8 +67,8 @@ module Flapjack
         begin
           notif_json = Oj.dump(notif)
         rescue Oj::Error => e
-          if options[:logger]
-            options[:logger].warn("Error serialising notification json: #{e}, notification: #{notif.inspect}")
+          if opts[:logger]
+            opts[:logger].warn("Error serialising notification json: #{e}, notification: #{notif.inspect}")
           end
           notif_json = nil
         end

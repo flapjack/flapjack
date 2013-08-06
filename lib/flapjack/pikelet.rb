@@ -132,7 +132,9 @@ module Flapjack
       end
 
       def stop
-        super { @pikelet.stop }
+        super do |thread|
+          @pikelet.stop(thread)
+        end
       end
     end
 
@@ -172,10 +174,11 @@ module Flapjack
       end
 
       def stop
-        super do
+        super do |thread|
+          @logger.info "shutting down server"
           @server.shutdown
-          @pikelet_class.stop if @pikelet_class.respond_to?(:stop)
-          @thread.run if @thread.alive?
+          @logger.info "shut down server"
+          @pikelet_class.stop(thread) if @pikelet_class.respond_to?(:stop)
         end
       end
     end

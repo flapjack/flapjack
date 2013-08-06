@@ -6,8 +6,6 @@ if ENV['COVERAGE']
   end
 end
 
-$testing = true
-
 FLAPJACK_ENV = ENV["FLAPJACK_ENV"] || 'test'
 ENV['RACK_ENV'] = ENV["FLAPJACK_ENV"]
 
@@ -45,7 +43,7 @@ JsonSpec.configure do
 end
 
 require 'mail'
-Mail.defaults do
+::Mail.defaults do
   delivery_method :test
 end
 

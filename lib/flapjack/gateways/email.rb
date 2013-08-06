@@ -46,12 +46,14 @@ module Flapjack
 
         loop do
           synchronize do
-            Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {|message|
+            @logger.debug "checking messages"
+            Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis, :logger => @logger) {|message|
               handle_message(message)
             }
           end
 
-          Flapjack::Data::Message.wait_for_queue(@notifications_queue)
+          @logger.debug "blocking on messages"
+          Flapjack::Data::Message.wait_for_queue(@notifications_queue, :redis => @redis)
         end
 
       rescue Flapjack::PikeletStop => fps
@@ -107,12 +109,13 @@ module Flapjack
           @logger.debug("sending Flapjack::Notification::Email " +
             "#{message['id']} to: #{m_to} subject: #{@subject}")
 
-          mail = prepare_email(:subject  => @subject,
-                  :from => m_from, :to => m_to)
+          mail = prepare_email(:subject => @subject,
+                               :from => m_from,
+                               :to => m_to)
 
-          if mail.delivery_method.is_a?(::Mail::SMTP)
-            mail.delivery_settings = {:address => @host, :port => @port }
-          end
+          # TODO a cleaner way to not step on test delivery settings
+          # (don't want to stub in Cucumber)
+          mail.delivery_method(:smtp, :address => @host, :port => @port) unless defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
 
           mail.deliver!
 

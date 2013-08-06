@@ -14,8 +14,8 @@ module Flapjack
         begin
           msg_json = Oj.dump(msg)
         rescue Oj::Error => e
-          if options[:logger]
-            options[:logger].warn("Error serialising message json: #{e}, message: #{message.inspect}")
+          if opts[:logger]
+            opts[:logger].warn("Error serialising message json: #{e}, message: #{message.inspect}")
           end
           msg_json = nil
         end
@@ -35,13 +35,13 @@ module Flapjack
           begin
             message = ::Oj.load( msg_json )
           rescue Oj::Error => e
-            if options[:logger]
-              options[:logger].warn("Error deserialising message json: #{e}, raw json: #{msg_json.inspect}")
+            if opts[:logger]
+              opts[:logger].warn("Error deserialising message json: #{e}, raw json: #{msg_json.inspect}")
             end
             message = nil
           end
 
-          yield self.new(message) if block_given? && message
+          yield message if block_given? && message
         end
       end
 

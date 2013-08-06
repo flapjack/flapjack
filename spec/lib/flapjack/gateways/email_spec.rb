@@ -29,7 +29,7 @@ describe Flapjack::Gateways::Email, :logger => true do
     Flapjack::Data::Message.should_receive(:wait_for_queue).and_raise(Flapjack::PikeletStop)
 
     Mail::TestMailer.deliveries.should be_empty
-
+    
     email_gw = Flapjack::Gateways::Email.new(:config => {}, :logger => @logger)
     email_gw.start
 
