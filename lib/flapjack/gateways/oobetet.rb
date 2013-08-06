@@ -166,7 +166,7 @@ module Flapjack
           end
         end
 
-        def received_message(room, nick, time, text)
+        def receive_message(room, nick, time, text)
           synchronize do
             @logger.debug("group message received: #{room}, #{text}")
 
@@ -261,7 +261,7 @@ module Flapjack
                 next if nick == jabber_id
 
                 if @time_checker
-                  @time_checker.received_message(room, nick, time, text)
+                  @time_checker.receive_message(room, nick, time, text)
                 end
               end
 

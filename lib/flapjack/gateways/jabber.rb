@@ -156,7 +156,7 @@ module Flapjack
           end
         end
 
-        def received_message(room, nick, time, msg)
+        def receive_message(room, nick, time, msg)
           synchronize do
             @messages += [{:room => room, :nick => nick, :time => time, :message => msg}]
             @message_cond.signal
@@ -429,7 +429,7 @@ module Flapjack
               }
 
               if @interpreter
-                @interpreter.received_message(nil, nick, time, text)
+                @interpreter.receive_message(nil, nick, time, text)
               end
             end
 
@@ -442,7 +442,7 @@ module Flapjack
                 end
 
                 if @interpreter
-                  @interpreter.received_message(room, nick, time, command)
+                  @interpreter.receive_message(room, nick, time, command)
                 end
               end
 
