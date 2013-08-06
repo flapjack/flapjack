@@ -72,10 +72,10 @@ module Flapjack
       end
 
       # Provide a count of the number of events on the queue to be processed.
-      def self.pending_count(opts = {})
+      def self.pending_count(queue, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
 
-        redis.llen('events')
+        redis.llen(queue)
       end
 
       def self.create_acknowledgement(queue, entity_name, check, opts = {})

@@ -47,7 +47,7 @@ describe Flapjack::Data::Event do
       events_len = 23
       redis.should_receive(:llen).with('events').and_return(events_len)
 
-      pc = Flapjack::Data::Event.pending_count(:redis => redis)
+      pc = Flapjack::Data::Event.pending_count('events', :redis => redis)
       pc.should == events_len
     end
 

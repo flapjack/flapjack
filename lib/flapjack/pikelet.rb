@@ -10,8 +10,6 @@
 
 require 'monitor'
 
-# the redis/synchrony gems need to be required in this particular order, see
-# the redis-rb README for details
 require 'hiredis'
 require 'redis'
 
@@ -65,7 +63,6 @@ module Flapjack
           Thread.current.abort_on_exception = true
 
           synchronize do
-
             # TODO rename this, it's only relevant in the error case
             max_runs = @config['max_runs'] || 1
             runs = 0
@@ -191,7 +188,7 @@ module Flapjack
              'processor'  => [Flapjack::Processor],
              'jabber'     => [Flapjack::Gateways::Jabber::Bot,
                               Flapjack::Gateways::Jabber::Notifier,
-                              Flapjack::Gateways::Jabber::Responder],
+                              Flapjack::Gateways::Jabber::Interpreter],
              'oobetet'    => [Flapjack::Gateways::Oobetet::Bot,
                               Flapjack::Gateways::Oobetet::Notifier],
              'pagerduty'  => [Flapjack::Gateways::Pagerduty::Notifier,

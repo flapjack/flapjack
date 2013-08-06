@@ -19,7 +19,7 @@ module Flapjack
 
     def initialize(opts = {})
       @config = opts[:config]
-      @redis_config = opts[:redis_config]
+      @redis_config = opts[:redis_config] || {}
       @logger = opts[:logger]
       @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 

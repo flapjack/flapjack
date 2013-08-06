@@ -33,7 +33,6 @@ module Flapjack
       use Rack::JsonParamsParser
 
       class << self
-
         def start
           @logger.info "starting api - class"
 

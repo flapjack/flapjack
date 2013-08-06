@@ -39,10 +39,6 @@ module Flapjack
         end
 
         def start
-          if self.siblings
-            @bot = self.siblings.detect {|sib| sib.is_a?(Flapjack::Gateways::Jabber::Bot)}
-          end
-
           loop do
             synchronize do
               Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {
@@ -52,7 +48,6 @@ module Flapjack
 
             Flapjack::Data::Message.wait_for_queue(@notifications_queue)
           end
-
         rescue Flapjack::PikeletStop => fps
           @logger.info "stopping jabber notifier"
         end
@@ -69,6 +64,13 @@ module Flapjack
             type  = event['notification_type'] || 'unknown'
             @logger.info('jabber notification event received')
             @logger.info(event.inspect)
+
+            @bot ||= @siblings && @siblings.detect {|sib| sib.respond_to?(:announce) }
+
+            if @bot.nil?
+              @logger.warn("jabber bot not running, won't announce")
+              return
+            end
 
             entity, check = event['event_id'].split(':')
             state         = event['state']
@@ -96,7 +98,7 @@ module Flapjack
               "is #{state.upcase}"
             end
 
-            # FIXME - should probably put all the message composition stuff in one place so
+            # FIXME - should probably put all the message composition stuff in the Message class so
             # the logic isn't duplicated in each notification channel.
             # TODO - templatise the messages so they can be customised without changing core code
             headline = "test".eql?(type.downcase) ? "TEST NOTIFICATION" : type.upcase
@@ -106,13 +108,12 @@ module Flapjack
             # FIXME: should also check if presence has been established in any group chat rooms that are
             # configured before starting to process events, otherwise the first few may get lost (send
             # before joining the group chat rooms)
-
-            @bot.announce(address, msg) if @bot
+            @bot.announce(address, msg)
           end
 
       end
 
-      class Responder
+      class Interpreter
 
         include MonitorMixin
 
@@ -126,6 +127,8 @@ module Flapjack
           @boot_time = opts[:boot_time]
           @logger = opts[:logger]
 
+          @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
+
           @should_quit = false
 
           mon_initialize
@@ -135,13 +138,11 @@ module Flapjack
         end
 
         def start
-          @bot = self.siblings.detect {|sib| sib.is_a?(Flapjack::Gateways::Jabber::Bot)}
-
           synchronize do
             until @should_quit
               while msg = @messages.pop
-                @logger.info "responder received #{msg.inspect}"
-                interpreter(msg[:room], msg[:nick], msg[:time], msg[:message])
+                @logger.info "interpreter received #{msg.inspect}"
+                interpret(msg[:room], msg[:nick], msg[:time], msg[:message])
               end
               @message_cond.wait_while { @messages.empty? && !@should_quit }
             end
@@ -162,7 +163,7 @@ module Flapjack
           end
         end
 
-        def interpreter(room, nick, time, command)
+        def interpret(room, nick, time, command)
           msg = nil
           action = nil
           entity_check = nil
@@ -315,8 +316,8 @@ module Flapjack
               msg = "hmmm, I can't see #{entity_name} in my systems"
             end
 
-          when /^(find )?entities matching\s+\/(.*)\/.*$/i
-            pattern = $2.chomp.strip
+          when /^(?:find )?entities matching\s+\/(.*)\/.*$/i
+            pattern = $1.chomp.strip
 
             entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern, :redis => @redis)
 
@@ -347,14 +348,18 @@ module Flapjack
 
           end
 
-          @logger.info("sending to room #{room}: #{msg}")
+          @bot ||= @siblings && @siblings.detect {|sib| sib.respond_to?(:announce) }
 
-          if @bot
+          if @bot && (room || nick)
             if room
+              @logger.info "sending to room #{room}: #{msg}"
               @bot.announce(room, msg)
             else
+              @logger.info "sending to user #{nick}: #{msg}"
               @bot.say(nick, msg)
             end
+          else
+            @logger.warn "jabber bot not running, won't send #{msg} to #{room || nick}"
           end
 
           action.call if action
@@ -390,7 +395,7 @@ module Flapjack
         def start
           synchronize do
             if self.siblings
-              @responder = self.siblings.detect {|sib| sib.is_a?(Flapjack::Gateways::Jabber::Responder)}
+              @interpreter = self.siblings.detect {|sib| sib.is_a?(Flapjack::Gateways::Jabber::Interpreter)}
             end
 
             @logger.info("starting")
@@ -423,8 +428,8 @@ module Flapjack
                 end
               }
 
-              if @responder
-                @responder.received_message(nil, nick, time, text)
+              if @interpreter
+                @interpreter.received_message(nil, nick, time, text)
               end
             end
 
@@ -436,8 +441,8 @@ module Flapjack
                   command = $1
                 end
 
-                if @responder
-                  @responder.received_message(room, nick, time, command)
+                if @interpreter
+                  @interpreter.received_message(room, nick, time, command)
                 end
               end
 

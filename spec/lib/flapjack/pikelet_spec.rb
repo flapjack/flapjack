@@ -18,6 +18,8 @@ describe Flapjack::Pikelet do
     config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('max_runs').and_return(nil)
 
+    fc = mock('coordinator')
+
     processor = mock('processor')
     processor.should_receive(:start)
     Flapjack::Processor.should_receive(:new).with(:config => config,

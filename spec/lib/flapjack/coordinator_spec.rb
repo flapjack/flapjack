@@ -6,9 +6,9 @@ describe Flapjack::Coordinator do
 
   let(:config) { mock(Flapjack::Configuration) }
 
-  let(:logger)     { mock(Flapjack::Logger) }
+  let(:logger) { mock(Flapjack::Logger) }
 
-  let!(:time)   { Time.now }
+  let!(:time)  { Time.now }
 
   it "starts and stops a pikelet" do
     Flapjack::Logger.should_receive(:new).and_return(logger)
@@ -196,6 +196,7 @@ describe Flapjack::Coordinator do
 
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
+
     fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [processor])
     fc.reload
@@ -256,14 +257,15 @@ describe Flapjack::Coordinator do
     new_processor = mock('new_processor')
     new_processor.should_receive(:start)
 
+    config.should_receive(:for_redis).and_return({})
+    fc = Flapjack::Coordinator.new(config)
+
     Flapjack::Pikelet.should_receive(:create).
       with('processor', an_instance_of(Proc),
         :config => new_cfg['processor'], :redis_config => {},
         :boot_time => time).
       and_return([new_processor])
 
-    config.should_receive(:for_redis).and_return({})
-    fc = Flapjack::Coordinator.new(config)
     fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [processor])
     fc.reload

@@ -393,7 +393,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
         with(entity, check, :redis => redis).and_return(entity_check)
       entity_check.should_receive(:create_scheduled_maintenance).
-        with(:summary => 'test', :duration => duration, :start_time => start.getutc.to_i)
+        with(start.getutc.to_i, duration, :summary => 'test')
 
       post "/scheduled_maintenances/#{entity_name_esc}/#{check}?" +
          "start_time=#{CGI.escape(start.iso8601)}&summary=test&duration=#{duration}"

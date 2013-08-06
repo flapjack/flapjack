@@ -222,8 +222,8 @@ module Flapjack
             halt( err(403, "start time must be provided") ) unless start_time
 
             act_proc = proc {|entity_check|
-              entity_check.create_scheduled_maintenance(:start_time => start_time,
-                :duration => params[:duration].to_i, :summary => params[:summary])
+              entity_check.create_scheduled_maintenance(start_time,
+                params[:duration].to_i, :summary => params[:summary])
             }
 
             bulk_api_check_action(entities, checks, act_proc)

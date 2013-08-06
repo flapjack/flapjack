@@ -29,6 +29,7 @@ module Flapjack
       @boot_time    = opts[:boot_time]
 
       @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
+      # @coordinator = opts[:coordinator]
 
       @queue = @config['queue'] || 'events'
 
@@ -39,6 +40,8 @@ module Flapjack
 
       ncsm_duration_conf = @config['new_check_scheduled_maintenance_duration'] || '100 years'
       @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf)
+
+      @exit_on_queue_empty = !! @config['exit_on_queue_empty']
 
       options = { :logger => opts[:logger], :redis => @redis }
       @filters = []
@@ -97,6 +100,7 @@ module Flapjack
 
       loop do
         synchronize do
+          # FIXME support exit_on_queue_empty and detect this as a global exit event at the coordinator level
           Flapjack::Data::Event.foreach_on_queue(@queue, :redis => @redis,
                                                  :archive_events => @archive_events,
                                                  :events_archive_maxage => @events_archive_maxage,
@@ -121,10 +125,13 @@ module Flapjack
   private
 
     def process_event(event)
-      pending = Flapjack::Data::Event.pending_count(:redis => @redis)
+      pending = Flapjack::Data::Event.pending_count(@queue, :redis => @redis)
       @logger.debug("#{pending} events waiting on the queue")
       @logger.debug("Raw event received: #{event.inspect}")
-      return if ('shutdown' == event.type)
+
+      if ('noop' == event.type)
+        return
+      end
 
       event_str = "#{event.id}, #{event.type}, #{event.state}, #{event.summary}"
       event_str << ", #{Time.at(event.time).to_s}" if event.time

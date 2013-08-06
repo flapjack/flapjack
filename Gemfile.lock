@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    flapjack (0.7.18)
+    flapjack (0.7.20)
       activesupport (~> 3.2.13)
       chronic
       chronic_duration
@@ -75,6 +75,7 @@ GEM
     multi_json (1.5.0)
     numerizer (0.1.1)
     oj (2.1.4)
+    perftools.rb (2.0.1)
     polyglot (0.3.3)
     pry (0.9.11.4)
       coderay (~> 1.0.5)
@@ -133,6 +134,7 @@ DEPENDENCIES
   guard-cucumber
   guard-rspec
   json_spec
+  perftools.rb
   rack-test
   rake
   rb-fsevent (~> 0.9.1)
