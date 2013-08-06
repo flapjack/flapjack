@@ -6,6 +6,7 @@ require 'ice_cube'
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/notification_rule'
+require 'flapjack/data/tag_set'
 
 describe Flapjack::Data::Contact, :redis => true do
 
@@ -22,7 +23,7 @@ describe Flapjack::Data::Contact, :redis => true do
 
   let(:general_notification_rule_data) {
     {:entities           => [],
-     :entity_tags        => [],
+     :tags               => Flapjack::Data::TagSet.new([]),
      :time_restrictions  => [],
      :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'],
      :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'],
