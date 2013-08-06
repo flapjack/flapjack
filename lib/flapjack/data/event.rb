@@ -6,7 +6,7 @@ module Flapjack
   module Data
     class Event
 
-      attr_accessor :counter, :previous_state, :previous_state_duration
+      attr_accessor :counter, :previous_state, :previous_state_duration, :tags
 
       attr_reader :check, :summary, :details, :acknowledgement_id
 

@@ -175,7 +175,7 @@ module Flapjack
         if rules.all? {|r| r.is_specific? } # also true if empty
           rule = self.add_notification_rule({
               :entities           => [],
-              :entity_tags        => [],
+              :tags               => Flapjack::Data::TagSet.new([]),
               :time_restrictions  => [],
               :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'],
               :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'],
