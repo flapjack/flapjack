@@ -15,12 +15,12 @@ message = {'notification_type'  => 'problem',
            'address' => 'johns@example.com',
            'state' => 'CRITICAL',
            'summary' => '',
-       	   'last_state' => 'OK',
-       	   'last_summary' => 'TEST',
-       	   'details' => 'Testing',
-       	   'time' => Time.now.to_i,
-       	   'event_id' => 'app-02:ping'
-       	}
+            'last_state' => 'OK',
+            'last_summary' => 'TEST',
+            'details' => 'Testing',
+            'time' => Time.now.to_i,
+            'event_id' => 'app-02:ping'
+         }
 
 redis.rpush('email_notifications', Oj.dump(message))
 redis.lpush("email_notifications_actions", "+")

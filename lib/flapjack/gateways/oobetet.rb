@@ -114,7 +114,7 @@ module Flapjack
           http_response = http.request(request)
 
           response = Oj.load(http_response.body)
-          status   = http_response_header.code
+          status   = http_response.code
           @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
           [status, response]
         end

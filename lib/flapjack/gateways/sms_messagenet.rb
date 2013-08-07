@@ -30,7 +30,7 @@ module Flapjack
       def start
         loop do
           synchronize do
-            Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {
+            Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {|message|
               handle_message(message)
             }
           end
