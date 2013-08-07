@@ -8,6 +8,9 @@ require 'uri/https'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/data/global'
+require 'flapjack/data/message'
+
+require 'flapjack/exceptions'
 
 module Flapjack
 
@@ -42,7 +45,7 @@ module Flapjack
 
           loop do
             synchronize do
-              Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {
+              Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {|message|
                 handle_message(message)
               }
             end
@@ -63,6 +66,7 @@ module Flapjack
         private
 
         def handle_message(message)
+          type          = message['notification_type']
           event_id      = message['event_id']
           entity, check = event_id.split(':', 2)
           state         = message['state']
@@ -89,26 +93,29 @@ module Flapjack
 
           message = "#{type.upcase} - \"#{check}\" on #{entity} #{maint_str} - #{summary}"
 
-          pagerduty_event = { :service_key  => address,
-                              :incident_key => event_id,
-                              :event_type   => pagerduty_type,
-                              :description  => message }
-
-          send_pagerduty_event(pagerduty_event)
+          send_pagerduty_event(:service_key => address,
+                               :incident_key => event_id,
+                               :event_type => pagerduty_type,
+                               :description => message)
         end
 
         def test_pagerduty_connection
-          noop = { "service_key"  => "11111111111111111111111111111111",
-                   "incident_key" => "Flapjack is running a NOOP",
-                   "event_type"   => "nop",
-                   "description"  => "I love APIs with noops." }
-          code, results = send_pagerduty_event(noop)
-          return true if code == 200 && results['status'] =~ /success/i
+          code, results = send_pagerduty_event(:service_key => '11111111111111111111111111111111',
+                                               :incident_key => 'Flapjack is running a NOOP',
+                                               :event_type => 'nop',
+                                               :description => 'I love APIs with noops.')
+          return true if '200'.equal?(code) && results['status'] =~ /success/i
           @logger.error "Error: test_pagerduty_connection: API returned #{code.to_s} #{results.inspect}"
           false
         end
 
-        def send_pagerduty_event(event)
+        # TODO trap Oj JSON errors
+        def send_pagerduty_event(opts = {})
+          event = { 'service_key'  => opts[:service_key],
+                    'incident_key' => opts[:incident_key],
+                    'event_type'   => opts[:event_type],
+                    'description'  => opts[:description] }
+
           uri = URI::HTTPS.build(:host => 'events.pagerduty.com',
                                 :path => '/generic/2010-04-15/create_event.json')
           http = Net::HTTP.new(uri.host, uri.port)
@@ -119,8 +126,8 @@ module Flapjack
           http_response = http.request(request)
 
           response = Oj.load(http_response.body)
-          status   = http_response_header.code
-          @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
+          status   = http_response.code
+          @logger.debug "send_pagerduty_event got a return code of #{status} - #{response.inspect}"
           [status, response]
         end
 
