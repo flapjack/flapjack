@@ -48,6 +48,7 @@ module Flapjack
 
         last_state = opts[:last_state] || {}
 
+        tag_data = event.tags.is_a?(Set) ? event.tags.to_a : nil
         notif = {'event_id'     => event.id,
                  'state'        => event.state,
                  'summary'      => event.summary,
@@ -59,7 +60,7 @@ module Flapjack
                  'type'         => opts[:type] || type_for_event(event),
                  'severity'     => opts[:severity],
                  'count'        => event.counter,
-                 'tags'         => event.tags }
+                 'tags'         => tag_data }
 
         redis.rpush(queue, Oj.dump(notif))
       end

@@ -44,10 +44,19 @@
       </tr>
     <% end %>
 
-    <tr>
-      <td>Time</td>
-      <td><%= Time.at(@time.to_i).to_s %> (<%= @relative %> ago)</td>
-    </tr>
+    <% if @time %>
+      <tr>
+        <td>Time</td>
+        <td><%= Time.at(@time.to_i).to_s %></td>
+      </tr>
+    <% end %>
+
+    <% if @duration %>
+      <tr>
+        <td>Duration</td>
+        <td><%= ChronicDuration.output(@duration) %></td>
+      </tr>
+    <% end %>
 
     <% if @last_state %>
       <tr>

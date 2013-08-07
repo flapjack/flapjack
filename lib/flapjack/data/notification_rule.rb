@@ -134,11 +134,12 @@ module Flapjack
         return errors unless errors.nil? || errors.empty?
 
         # whitelisting fields, rather than passing through submitted data directly
+        tag_data = rule_data[:tags].is_a?(Set) ? rule_data[:tags].to_a : nil
         json_rule_data = {
           :id                 => rule_data[:id].to_s,
           :contact_id         => rule_data[:contact_id].to_s,
           :entities           => Oj.dump(rule_data[:entities]),
-          :tags               => Oj.dump(rule_data[:tags]),
+          :tags               => Oj.dump(tag_data),
           :time_restrictions  => Oj.dump(rule_data[:time_restrictions]),
           :warning_media      => Oj.dump(rule_data[:warning_media]),
           :critical_media     => Oj.dump(rule_data[:critical_media]),
