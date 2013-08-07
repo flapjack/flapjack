@@ -13,29 +13,45 @@ describe Flapjack::Gateways::Jabber, :logger => true do
                  }
   }
 
+  let(:redis) { mock(::Redis) }
+
   let(:now) { Time.now}
 
   context 'notifications' do
 
-    let(:bot) { mock(Flapjack::Gateways::Jabber::Bot) }
+    let(:message) { {'notification_type'  => 'problem',
+                     'contact_first_name' => 'John',
+                     'contact_last_name' => 'Smith',
+                     'address' => 'johns@example.com',
+                     'state' => 'CRITICAL',
+                     'summary' => '',
+                     'last_state' => 'OK',
+                     'last_summary' => 'TEST',
+                     'details' => 'Testing',
+                     'time' => now.to_i,
+                     'event_id' => 'app-02:ping'} 
+                  }
 
-    it "starts and is stopped from another thread"
+    # TODO use separate threads in the test instead?
+    it "starts and is stopped by an exception" do
+      Redis.should_receive(:new).and_return(redis)
+
+      fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config, :logger => @logger)      
+      fjn.should_receive(:handle_message).with(message)
+
+      Flapjack::Data::Message.should_receive(:foreach_on_queue).
+        with('jabber_notifications', :redis => redis).and_yield(message)
+
+      Flapjack::Data::Message.should_receive(:wait_for_queue).
+        with('jabber_notifications', :redis => redis).and_raise(Flapjack::PikeletStop)
+
+      fjn.start
+    end
 
     it "handles notifications received via Redis" do
+      bot = mock(Flapjack::Gateways::Jabber::Bot)
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
-      bot.should_receive(:announce) # TODO with()
-
-      message = {'notification_type'  => 'problem',
-                 'contact_first_name' => 'John',
-                 'contact_last_name' => 'Smith',
-                 'address' => 'johns@example.com',
-                 'state' => 'CRITICAL',
-                 'summary' => '',
-                 'last_state' => 'OK',
-                 'last_summary' => 'TEST',
-                 'details' => 'Testing',
-                 'time' => now.to_i,
-                 'event_id' => 'app-02:ping'}
+      bot.should_receive(:announce).with('johns@example.com', /PROBLEM ::/)
 
       fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config, :logger => @logger)
       fjn.instance_variable_set('@siblings', [bot])
@@ -51,9 +67,20 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     let(:entity) { mock(Flapjack::Data::Entity) }
     let(:entity_check) { mock(Flapjack::Data::EntityCheck) }
 
-    let(:redis) { mock(::Redis) }
+    # TODO use separate threads in the test instead?
+    it "starts and is stopped by a signal" do
+      Redis.should_receive(:new).and_return(redis)
 
-    it "starts and is stopped from another thread"
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      msg = {:room => 'room1', :nick => 'jim', :time => now.to_i, :message => 'help'}
+      fji.instance_variable_get('@messages').push(msg)
+      fji.instance_variable_get('@message_cond').should_receive(:wait_while).and_return {
+        fji.instance_variable_set('@should_quit', true)
+      }
+      fji.should_receive(:interpret).with('room1', 'jim', now.to_i, 'help')
+
+      fji.start
+    end
 
     it "receives a message and and signals a condition variable" do
       Redis.should_receive(:new).and_return(redis)
@@ -240,10 +267,49 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
   context 'XMPP' do
 
-    it "starts and is stopped from another thread"
+    let(:client)     { mock(::Jabber::Client) }
+    let(:muc_client) { mock(::Jabber::MUC::SimpleMUCClient) }
+
+    # TODO use separate threads in the test instead?
+    it "starts and is stopped by a signal" do
+      Redis.should_receive(:new).and_return(redis)
+
+      interpreter = mock(Flapjack::Gateways::Jabber::Interpreter)
+      interpreter.should_receive(:respond_to?).with(:interpret).and_return(true)
+      interpreter.should_receive(:receive_message).with(nil, 'jim', nil, 'hello!')
+      interpreter.should_receive(:receive_message).
+        with('flapjacktest@conference.example.com', 'jim', now.to_i, 'hello!')
+
+      client.should_receive(:connect)
+      client.should_receive(:auth).with('password')
+      client.should_receive(:send).with(an_instance_of(::Jabber::Presence))
+
+      msg_client = mock('msg_client')
+      msg_client.should_receive(:body).and_return('hello!')
+      msg_client.should_receive(:from).and_return('jim')
+      msg_client.should_receive(:each_element).and_yield([]) # TODO improve
+
+      client.should_receive(:add_message_callback).and_yield(msg_client)
+
+      muc_client.should_receive(:on_message).and_yield(now.to_i, 'jim', 'flapjack: hello!')
+      muc_client.should_receive(:join).with('flapjacktest@conference.example.com/flapjack')
+      muc_client.should_receive(:say).with(/^flapjack jabber gateway started/)
+
+      muc_client.should_receive(:active?).and_return(true)
+      muc_client.should_receive(:exit)
+
+      client.should_receive(:close)
+
+      ::Jabber::Client.should_receive(:new).and_return(client)
+      ::Jabber::MUC::SimpleMUCClient.should_receive(:new).and_return(muc_client)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:config => config, :logger => @logger)
+      fjb.instance_variable_set('@siblings', [interpreter])
+      fjb.instance_variable_get('@shutdown_cond').should_receive(:wait_until)
+      fjb.start
+    end
 
     it "announces a message to a chat room" do
-      muc_client = mock(::Jabber::MUC::SimpleMUCClient)
       muc_client.should_receive(:say).with('hello!')
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:config => config, :logger => @logger)
@@ -256,7 +322,6 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       ::Jabber::Message.should_receive(:new).
         with('jim', 'hello!').and_return(message)
 
-      client = mock(::Jabber::Client)
       client.should_receive(:send).with(message)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:config => config, :logger => @logger)

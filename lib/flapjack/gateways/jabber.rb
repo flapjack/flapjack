@@ -41,12 +41,12 @@ module Flapjack
         def start
           loop do
             synchronize do
-              Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {
+              Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {|message|
                 handle_message(message)
               }
             end
 
-            Flapjack::Data::Message.wait_for_queue(@notifications_queue)
+            Flapjack::Data::Message.wait_for_queue(@notifications_queue, :redis => @redis)
           end
         rescue Flapjack::PikeletStop => fps
           @logger.info "stopping jabber notifier"
@@ -139,7 +139,7 @@ module Flapjack
 
         def start
           synchronize do
-            until @should_quit
+            until @messages.empty? && @should_quit
               while msg = @messages.pop
                 @logger.info "interpreter received #{msg.inspect}"
                 interpret(msg[:room], msg[:nick], msg[:time], msg[:message])
@@ -395,7 +395,7 @@ module Flapjack
         def start
           synchronize do
             if self.siblings
-              @interpreter = self.siblings.detect {|sib| sib.is_a?(Flapjack::Gateways::Jabber::Interpreter)}
+              @interpreter = self.siblings.detect {|sib| sib.respond_to?(:interpret)}
             end
 
             @logger.info("starting")
@@ -423,7 +423,7 @@ module Flapjack
               nick = m.from
               time = nil
               m.each_element('x') { |x|
-                if x.kind_of?(Delay::XDelay)
+                if x.kind_of?(::Jabber::Delay::XDelay)
                   time = x.stamp
                 end
               }
@@ -439,11 +439,11 @@ module Flapjack
 
                 if text =~ /^#{@config['alias']}:\s+(.*)/
                   command = $1
-                end
 
-                if @interpreter
-                  @interpreter.receive_message(room, nick, time, command)
-                end
+                  if @interpreter
+                    @interpreter.receive_message(room, nick, time, command)
+                  end
+                end                
               end
 
               muc_client.join(room + '/' + @config['alias'])
