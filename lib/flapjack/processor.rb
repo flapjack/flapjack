@@ -148,9 +148,6 @@ module Flapjack
       entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
       timestamp = Time.now.to_i
 
-      event.tags ||= Flapjack::Data::TagSet.new
-      event.tags += entity_check.tags
-
       event.tags = (event.tags || Flapjack::Data::TagSet.new) + entity_check.tags
 
       should_notify = update_keys(event, entity_check, timestamp)
