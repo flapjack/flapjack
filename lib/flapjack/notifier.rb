@@ -59,12 +59,12 @@ module Flapjack
 
       loop do
         synchronize do
-          Notification.foreach_on_queue(@notifications_queue, :redis => @redis) {|notif|
+          Flapjack::Data::Notification.foreach_on_queue(@notifications_queue, :redis => @redis) {|notif|
             process_notification(notif)
           }
         end
 
-        Notification.wait_for_queue(@notifications_queue)
+        Flapjack::Data::Notification.wait_for_queue(@notifications_queue, :redis => redis)
       end
 
     rescue Flapjack::PikeletStop => fps

@@ -47,7 +47,7 @@ module Flapjack
               }
             end
 
-            Flapjack::Data::Message.wait_for_queue(@notifications_queue)
+            Flapjack::Data::Message.wait_for_queue(@notifications_queue, :redis => @redis)
           end
 
         rescue Flapjack::PikeletStop => fps
