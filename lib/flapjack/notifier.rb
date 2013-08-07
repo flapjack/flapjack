@@ -141,7 +141,6 @@ module Flapjack
             :state => notification.event_state)
         end
 
-        # TODO changing email, sms to use raw blpop like the others
         if [:sms, :email, :jabber, :pagerduty].include?(media_type.to_sym)
           Flapjack::Data::Message.push(@queues[media_type.to_sym], contents, :redis => @redis)
         else

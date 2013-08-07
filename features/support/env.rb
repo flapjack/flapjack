@@ -132,6 +132,7 @@ end
 
 After do
   @logger.messages = []
+  WebMock.reset!
 end
 
 Before('@processor') do

@@ -83,6 +83,10 @@ RSpec.configure do |config|
     Delorean.back_to_the_present
   end
 
+  config.after(:each) do
+    WebMock.reset!
+  end
+
   config.include ErbViewHelper, :erb_view => true
   config.include Rack::Test::Methods, :sinatra => true
   config.include JsonSpec::Helpers, :json => true

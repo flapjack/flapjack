@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 
 require 'socket'
-# require 'blather/client/dsl'
 require 'oj'
 
+require 'flapjack/exceptions'
 require 'flapjack/utility'
 
 module Flapjack
@@ -14,7 +14,9 @@ module Flapjack
 
       class Notifier
 
-        PAGERDUTY_EVENTS_API_URL = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
+        include MonitorMixin
+
+        attr_accessor :siblings
 
         def initialize(options = {})
           @config = options[:config]
@@ -29,6 +31,8 @@ module Flapjack
 
           @flapjack_ok = true
           @last_alert = nil
+
+          mon_initialize
         end
 
         def start
@@ -41,7 +45,7 @@ module Flapjack
             Kernel.sleep 10
           end
         rescue Flapjack::PikeletStop
-          logger.info "finishing oobetet"
+          @logger.info "finishing oobetet"
         end
 
         def stop(thread)
@@ -53,27 +57,34 @@ module Flapjack
         private
 
         def check_timers
-          t = Time.now.to_i
-          breach = @bot.breach?(t)
+          if @siblings
+            @time_checker ||= @siblings.detect {|sib| sib.respond_to?(:breach?) }
+            @bot ||= @siblings.detect {|sib| sib.respond_to?(:announce) }
+          end
+
+          t = Time.now
+          breach = @time_checker.breach?(t) if @time_checker
 
           if @last_breach && !breach
             emit_jabber("Flapjack Self Monitoring is OK")
             emit_pagerduty("Flapjack Self Monitoring is OK", 'resolve')
           end
 
-          return unless @last_breach = breach
+          @last_breach = breach
+          return unless breach
+
           @logger.error("Self monitoring has detected the following breach: #{breach}")
           summary = "Flapjack Self Monitoring is Critical: #{breach} for #{@check_matcher}, " +
-                    "from #{@hostname} at #{Time.now}"
+                    "from #{@hostname} at #{t}"
 
-          if !@last_alert || @last_alert < (t - 55)
+          if @last_alert.nil? || @last_alert < (t.to_i - 55)
 
             announced_jabber    = emit_jabber(summary)
             announced_pagerduty = emit_pagerduty(summary, 'trigger')
 
-            @last_alert = Time.now.to_i if announced_jabber || announced_pagerduty
+            @last_alert = t.to_i if announced_jabber || announced_pagerduty
 
-            if !@last_alert || @last_alert < (t - 55)
+            if @last_alert.nil? || @last_alert < (t.to_i - 55)
               msg = "NOTICE: Self monitoring has detected a failure and is unable to tell " +
                     "anyone about it. DON'T PANIC."
               @logger.error msg
@@ -82,19 +93,18 @@ module Flapjack
         end
 
         def emit_jabber(summary)
-          return false unless @bot
+          return if @bot.nil?
           @bot.announce(summary)
           true
         end
 
         def emit_pagerduty(summary, event_type = 'trigger')
-          return false if @config['pagerduty_contact']
-          pagerduty_event = { :service_key  => @config['pagerduty_contact'],
-                              :incident_key => "Flapjack Self Monitoring from #{@hostname}",
-                              :event_type   => event_type,
-                              :description  => summary }
-          status, response = send_pagerduty_event(pagerduty_event)
-          if status != 200
+          return if @config['pagerduty_contact'].nil?
+          status, response = send_pagerduty_event(:service_key  => @config['pagerduty_contact'],
+                                                  :incident_key => "Flapjack Self Monitoring from #{@hostname}",
+                                                  :event_type   => event_type,
+                                                  :description  => summary)
+          unless '200'.eql?(status)
             @logger.error("pagerduty returned #{status} #{response.inspect}")
             return false
           end
@@ -103,9 +113,16 @@ module Flapjack
           true
         end
 
-        def send_pagerduty_event(event)
+        # TODO trap Oj JSON errors
+        # FIXME common code with the pagerduty gateway, move to shared module
+        def send_pagerduty_event(opts = {})
+          event = { 'service_key'  => opts[:service_key],
+                    'incident_key' => opts[:incident_key],
+                    'event_type'   => opts[:event_type],
+                    'description'  => opts[:description] }
+
           uri = URI::HTTPS.build(:host => 'events.pagerduty.com',
-                                :path => '/generic/2010-04-15/create_event.json')
+                                 :path => '/generic/2010-04-15/create_event.json')
           http = Net::HTTP.new(uri.host, uri.port)
           http.use_ssl = true
           http.verify_mode = OpenSSL::SSL::VERIFY_PEER
@@ -115,7 +132,7 @@ module Flapjack
 
           response = Oj.load(http_response.body)
           status   = http_response.code
-          @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
+          @logger.debug "send_pagerduty_event got a return code of #{status} - #{response.inspect}"
           [status, response]
         end
 
@@ -129,23 +146,19 @@ module Flapjack
           @config = opts[:config]
           @logger = opts[:logger]
 
-          mon_initialize
-
-          @should_quit = false
-          @shutdown_cond = new_cond
+          @max_latency = @config['max_latency'] || 300
 
           @times = { :last_problem  => nil,
                      :last_recovery => nil,
                      :last_ack      => nil,
                      :last_ack_sent => nil }
 
-          unless @config['watched_check'] && @config['watched_entity']
-            raise RuntimeError, 'Flapjack::Oobetet: watched_check and watched_entity must be defined in the config'
-          end
-          @check_matcher = '"' + @config['watched_check'] + '" on ' + @config['watched_entity']
-          @max_latency = @config['max_latency'] || 300
-
           @logger.debug("new oobetet pikelet with the following options: #{@config.inspect}")
+
+          mon_initialize
+
+          @should_quit = false
+          @shutdown_cond = new_cond
         end
 
         def start
@@ -166,29 +179,18 @@ module Flapjack
           end
         end
 
-        def receive_message(room, nick, time, text)
+        def receive_status(status, time)
           synchronize do
-            @logger.debug("group message received: #{room}, #{text}")
-
-            if (text =~ /^(?:problem|recovery|acknowledgement)/i) &&
-               (text =~ /^(\w+).*#{Regexp.escape(@check_matcher)}/)
-
-              # got something interesting
-              status = $1.downcase
-              t = Time.now.to_i
-              @logger.debug("found the following state for #{@check_matcher}: #{status}")
-
-              case status
-              when 'problem'
-                @logger.debug("updating @times last_problem")
-                @times[:last_problem] = t
-              when 'recovery'
-                @logger.debug("updating @times last_recovery")
-                @times[:last_recovery] = t
-              when 'acknowledgement'
-                @logger.debug("updating @times last_ack")
-                @times[:last_ack] = t
-              end
+            case status
+            when 'problem'
+              @logger.debug("updating @times last_problem")
+              @times[:last_problem] = time
+            when 'recovery'
+              @logger.debug("updating @times last_recovery")
+              @times[:last_recovery] = time
+            when 'acknowledgement'
+              @logger.debug("updating @times last_ack")
+              @times[:last_ack] = time
             end
             @logger.debug("@times: #{@times.inspect}")
           end
@@ -220,22 +222,23 @@ module Flapjack
 
           @hostname = Socket.gethostname
 
+          unless @config['watched_check'] && @config['watched_entity']
+            raise RuntimeError, 'Flapjack::Oobetet: watched_check and watched_entity must be defined in the config'
+          end
+          @check_matcher = '"' + @config['watched_check'] + '" on ' + @config['watched_entity']
+
+          @logger.debug("new oobetet pikelet with the following options: #{@config.inspect}")
+
           mon_initialize
 
           @should_quit = false
           @shutdown_cond = new_cond
-
-      #     unless @config['watched_check'] && @config['watched_entity']
-      #       raise RuntimeError, 'Flapjack::Oobetet: watched_check and watched_entity must be defined in the config'
-      #     end
-      #     @check_matcher = '"' + @config['watched_check'] + '" on ' + @config['watched_entity']
-      #     @max_latency = @config['max_latency'] || 300
-
-          @logger.debug("new oobetet pikelet with the following options: #{@config.inspect}")
         end
 
         def start
           synchronize do
+
+            @time_checker ||= @siblings && @siblings.detect {|sib| sib.respond_to?(:receive_status) }
 
             @logger.info("starting")
 
@@ -261,7 +264,13 @@ module Flapjack
                 next if nick == jabber_id
 
                 if @time_checker
-                  @time_checker.receive_message(room, nick, time, text)
+                  @logger.debug("group message received: #{room}, #{text}")
+                  if (text =~ /^(problem|recovery|acknowledgement).*#{Regexp.escape(@check_matcher)}/)
+                    # got something interesting
+                    status = $1.downcase
+                    @logger.debug("found the following state for #{@check_matcher}: #{status}")
+                    @time_checker.receive_status(status, time.to_i)
+                  end
                 end
               end
 
@@ -287,11 +296,11 @@ module Flapjack
           end
         end
 
-        # TODO buffer if room not connected?
-        def announce(room, msg)
+        # TODO buffer if not connected?
+        def announce(msg)
           synchronize do
             unless @muc_clients.empty?
-              if muc_client = @muc_clients[room]
+              muc_clients.each_pair do |room, muc_client|
                 muc_client.say(msg)
               end
             end
