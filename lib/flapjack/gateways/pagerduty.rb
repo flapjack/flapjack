@@ -117,7 +117,7 @@ module Flapjack
                     'description'  => opts[:description] }
 
           uri = URI::HTTPS.build(:host => 'events.pagerduty.com',
-                                :path => '/generic/2010-04-15/create_event.json')
+                                 :path => '/generic/2010-04-15/create_event.json')
           http = Net::HTTP.new(uri.host, uri.port)
           http.use_ssl = true
           http.verify_mode = OpenSSL::SSL::VERIFY_PEER
@@ -135,6 +135,8 @@ module Flapjack
 
       class AckFinder
 
+        include MonitorMixin
+
         SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'
 
         def initialize(opts = {})
@@ -149,11 +151,13 @@ module Flapjack
           # TODO: only clear this if there isn't another pagerduty gateway instance running
           # or better, include an instance ID in the semaphore key name
           @redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
+
+          mon_initialize
         end
 
         def start
           loop do
-            synchronized do
+            synchronize do
               # ensure we're the only instance of the pagerduty acknowledgement check running (with a naive
               # timeout of five minutes to guard against stale locks caused by crashing code) either in this
               # process or in other processes
@@ -174,7 +178,7 @@ module Flapjack
         end
 
         def stop(thread)
-          synchronized do
+          synchronize do
             thread.raise Flapjack::PikeletStop.new
           end
         end
@@ -197,24 +201,24 @@ module Flapjack
               ret
             }
 
+            entity_name = entity_check.entity_name
             check = entity_check.check
 
             if ec_credentials.empty?
-              @logger.debug("No pagerduty credentials found for #{entity_check.entity_name}:#{check}, skipping")
+              @logger.debug("No pagerduty credentials found for #{entity_name}:#{check}, skipping")
               next
             end
 
             # FIXME: try each set of credentials until one works (may have stale contacts turning up)
-            options = ec_credentials.first.merge('check' => "#{entity_check.entity_name}:#{check}")
+            options = ec_credentials.first.merge('check' => "#{entity_name}:#{check}")
 
             acknowledged = pagerduty_acknowledged?(options)
             if acknowledged.nil?
-              @logger.debug "#{entity_check.entity_name}:#{check} is not acknowledged in pagerduty, skipping"
+              @logger.debug "#{entity_name}:#{check} is not acknowledged in pagerduty, skipping"
               next
             end
 
             pg_acknowledged_by = acknowledged[:pg_acknowledged_by]
-            entity_name = entity_check.entity_name
             @logger.info "#{entity_name}:#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
             who_text = ""
             if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
@@ -229,7 +233,7 @@ module Flapjack
 
         end
 
-        def pagerduty_acknowledged?(opts)
+        def pagerduty_acknowledged?(opts = {})
           subdomain   = opts['subdomain']
           username    = opts['username']
           password    = opts['password']
@@ -244,8 +248,9 @@ module Flapjack
                    'status'       => 'acknowledged'}
 
           uri = URI::HTTPS.build(:host => "#{subdomain}.pagerduty.com",
-                                :path => '/api/v1/incidents',
-                                :query => URI.encode_www_form(query))
+                                 :path => '/api/v1/incidents',
+                                 :query => URI.encode_www_form(query))
+
           http = Net::HTTP.new(uri.host, uri.port)
           http.use_ssl = true
           http.verify_mode = OpenSSL::SSL::VERIFY_PEER
