@@ -18,56 +18,56 @@
 <table>
   <tbody>
     <tr>
-      <td>Entity</td>
+      <td><strong>Entity</strong></td>
       <td><%= @entity_name %></td>
     </tr>
 
     <tr>
-      <td>Check</td>
+      <td><strong>Check</strong></td>
       <td><%= @check %></td>
     </tr>
 
     <tr>
-      <td>State</td>
+      <td><strong>State</strong></td>
       <td><%= @state.upcase %></td>
     </tr>
 
     <tr>
-      <td>Summary</td>
+      <td><strong>Summary</strong></td>
       <td><%= @summary %></td>
     </tr>
 
     <% if @details %>
       <tr>
-        <td>Details</td>
+        <td><strong>Details</strong></td>
         <td><%= @details %></td>
       </tr>
     <% end %>
 
     <% if @time %>
       <tr>
-        <td>Time</td>
+        <td><strong>Time</strong></td>
         <td><%= Time.at(@time.to_i).to_s %></td>
       </tr>
     <% end %>
 
     <% if @duration %>
       <tr>
-        <td>Duration</td>
+        <td><strong>Duration</strong></td>
         <td><%= ChronicDuration.output(@duration) %></td>
       </tr>
     <% end %>
 
     <% if @last_state %>
       <tr>
-        <td>Previous state</td>
+        <td><strong>Previous state</strong></td>
         <td><%= @last_state %></td>
       </tr>
     <% end %>
 
     <% if @last_summary %>
       <tr>
-        <td>Previous summary</td>
+        <td><strong>Previous summary</strong></td>
         <td><%= @last_summary %></td>
       </tr>
     <% end %>
