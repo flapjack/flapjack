@@ -112,16 +112,6 @@ module Flapjack
         end
       end
 
-      def self.conflate_to_keys(entity_checks_hash)
-        result = []
-        entity_checks_hash.each {|entity, checks|
-          checks.each {|check|
-            result << "#{entity}:#{check}"
-          }
-        }
-        result
-      end
-
       def entity_name
         entity.name
       end
@@ -530,6 +520,16 @@ module Flapjack
         raise "Invalid entity" unless @entity = entity
         raise "Invalid check" unless @check = check
         @key = "#{entity.name}:#{check}"
+      end
+
+      def self.conflate_to_keys(entity_checks_hash)
+        result = []
+        entity_checks_hash.each {|entity, checks|
+          checks.each {|check|
+            result << "#{entity}:#{check}"
+          }
+        }
+        result
       end
 
     end

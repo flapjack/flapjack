@@ -76,7 +76,28 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     }.to raise_error
   end
 
-  it "returns unacknowledged failing checks"
+  it "finds all checks"
+
+  it "returns a count of all checks"
+
+  it "finds all checks grouped by entity"
+
+  it "finds all checks for an entity name"
+
+
+  it "finds all failing checks"
+
+  it "returns a count of all failing checks"
+
+  it "finds all failing checks grouped by entity"
+
+
+  it "finds all unacknowledged failing checks"
+
+  it "returns its entity's name" do
+    ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+    ec.entity_name.should == name
+  end
 
   context "maintenance" do
 
