@@ -6,7 +6,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
   let(:config) { {'queue'    => 'pagerduty_notifications'} }
 
-  let(:now)   { Time.new }
+  let(:now)   { Time.now }
 
   let(:redis) {  mock('redis') }
 
