@@ -4,6 +4,9 @@ require 'mail'
 require 'erb'
 require 'socket'
 
+require 'hiredis'
+require 'redis'
+
 require 'flapjack/exceptions'
 require 'flapjack/utility'
 

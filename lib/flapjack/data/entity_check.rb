@@ -84,6 +84,14 @@ module Flapjack
         self.conflate_to_keys(self.find_all_failing_by_entity(:redis => redis))
       end
 
+      def self.find_all_failing_unacknowledged(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        redis.zrange('failed_checks', 0, -1).reject {|entity_check|
+          redis.exists(entity_check + ':unscheduled_maintenance')
+        }
+      end
+
       def self.find_all_failing_by_entity(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.zrange("failed_checks", 0, -1).inject({}) do |memo, key|

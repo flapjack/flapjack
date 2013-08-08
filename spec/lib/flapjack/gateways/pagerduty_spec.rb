@@ -46,7 +46,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     it "tests the pagerduty connection" do
       fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config, :logger => @logger)      
 
-      stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
+      req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
          with(:body => {'service_key'  => '11111111111111111111111111111111',
                         'incident_key' => 'Flapjack is running a NOOP',
                         'event_type'   => 'nop',
@@ -54,12 +54,13 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
          to_return(:status => 200, :body => {'status' => 'success'}.to_json)
 
       fpn.send(:test_pagerduty_connection)
+      req.should have_been_requested
     end
 
     it "handles notifications received via Redis" do
       fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config, :logger => @logger)      
 
-      stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
+      req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
          with(:body => {'service_key'  => 'pdservicekey',
                         'incident_key' => 'app-02:ping',
                         'event_type'   => 'trigger',
@@ -67,6 +68,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
          to_return(:status => 200, :body => {'status' => 'success'}.to_json)
 
       fpn.send(:handle_message, message)
+      req.should have_been_requested
     end
 
   end
@@ -114,8 +116,11 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       entity_check.should_receive(:check).and_return('PING')
       entity_check.should_receive(:entity_name).and_return('foo-app-01.bar.net')
 
-      Flapjack::Data::Global.should_receive(:unacknowledged_failing_checks).
-        with(:redis => redis).and_return([entity_check])
+      Flapjack::Data::EntityCheck.should_receive(:find_all_failing_unacknowledged).
+        with(:redis => redis).and_return(['PING:foo-app-01.bar.net'])
+
+      Flapjack::Data::EntityCheck.should_receive(:for_event_id).
+        with('PING:foo-app-01.bar.net', :redis => redis).and_return(entity_check)
 
       Flapjack::Data::Event.should_receive(:create_acknowledgement).with('events',
         'foo-app-01.bar.net', 'PING',
@@ -146,10 +151,11 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
         "offset"=>0,
         "total"=>1}
 
-      stub_request(:get, "https://flapjack:password123@flpjck.pagerduty.com/api/v1/incidents?" +
-        "fields=incident_number,status,last_status_change_by&incident_key=#{check}&" +
-        "since=#{since}&status=acknowledged&until=#{unt}").
-         to_return(:status => 200, :body => response.to_json, :headers => {})
+      req = stub_request(:get, "https://flapjack:password123@flpjck.pagerduty.com/api/v1/incidents").
+        with(:query => {:fields => 'incident_number,status,last_status_change_by',
+                        :incident_key => check, :since => since, :until => unt,
+                        :status => 'acknowledged'}).
+        to_return(:status => 200, :body => response.to_json, :headers => {})
 
       redis.should_receive(:del).with('sem_pagerduty_acks_running')
       ::Redis.should_receive(:new).and_return(redis)
@@ -163,6 +169,8 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       result[:pg_acknowledged_by].should be_a(Hash)
       result[:pg_acknowledged_by].should have_key('id')
       result[:pg_acknowledged_by]['id'].should == 'ABCDEFG'
+
+      req.should have_been_requested
     end
 
   end

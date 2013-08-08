@@ -1,7 +1,12 @@
 #!/usr/bin/env ruby
 
+require 'net/http'
 require 'socket'
+require 'uri'
+require 'uri/https'
+
 require 'oj'
+
 
 require 'flapjack/exceptions'
 require 'flapjack/utility'
@@ -122,7 +127,8 @@ module Flapjack
                     'description'  => opts[:description] }
 
           uri = URI::HTTPS.build(:host => 'events.pagerduty.com',
-                                 :path => '/generic/2010-04-15/create_event.json')
+                                 :path => '/generic/2010-04-15/create_event.json',
+                                 :port => 443)
           http = Net::HTTP.new(uri.host, uri.port)
           http.use_ssl = true
           http.verify_mode = OpenSSL::SSL::VERIFY_PEER

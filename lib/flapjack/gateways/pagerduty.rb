@@ -7,7 +7,6 @@ require 'uri'
 require 'uri/https'
 
 require 'flapjack/data/entity_check'
-require 'flapjack/data/global'
 require 'flapjack/data/message'
 
 require 'flapjack/exceptions'
@@ -117,6 +116,7 @@ module Flapjack
                     'description'  => opts[:description] }
 
           uri = URI::HTTPS.build(:host => 'events.pagerduty.com',
+                                 :port => 443,
                                  :path => '/generic/2010-04-15/create_event.json')
           http = Net::HTTP.new(uri.host, uri.port)
           http.use_ssl = true
@@ -186,11 +186,13 @@ module Flapjack
         def find_pagerduty_acknowledgements
           @logger.debug("looking for acks in pagerduty for unack'd problems")
 
-          unacknowledged_failing_checks = Flapjack::Data::Global.unacknowledged_failing_checks(:redis => @redis)
+          unacked_failing_checks = Flapjack::Data::EntityCheck.find_all_failing_unacknowledged(:redis => @redis)
 
-          @logger.debug "found unacknowledged failing checks as follows: " + unacknowledged_failing_checks.join(', ')
+          @logger.debug "found unacknowledged failing checks as follows: " + unacked_failing_checks.join(', ')
 
-          unacknowledged_failing_checks.each do |entity_check|
+          unacked_failing_checks.each do |event_id|
+
+            entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
 
             # If more than one contact for this entity_check has pagerduty
             # credentials then there'll be one hash in the array for each set of
@@ -249,8 +251,8 @@ module Flapjack
 
           uri = URI::HTTPS.build(:host => "#{subdomain}.pagerduty.com",
                                  :path => '/api/v1/incidents',
+                                 :port => 443,
                                  :query => URI.encode_www_form(query))
-
           http = Net::HTTP.new(uri.host, uri.port)
           http.use_ssl = true
           http.verify_mode = OpenSSL::SSL::VERIFY_PEER

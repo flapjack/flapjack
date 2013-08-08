@@ -25,8 +25,12 @@ describe Flapjack::Gateways::Email, :logger => true do
                'address'             => 'johnsmith@example.com',
                'event_id'            => 'example.com:ping'}
 
-    Flapjack::Data::Message.should_receive(:foreach_on_queue).and_yield(message)
-    Flapjack::Data::Message.should_receive(:wait_for_queue).and_raise(Flapjack::PikeletStop)
+    Flapjack::Data::Message.should_receive(:foreach_on_queue).
+      with('email_notifications', :redis => redis, :logger => @logger).
+      and_yield(message)
+    Flapjack::Data::Message.should_receive(:wait_for_queue).
+      with('email_notifications', :redis => redis).
+      and_raise(Flapjack::PikeletStop)
 
     Mail::TestMailer.deliveries.should be_empty
     

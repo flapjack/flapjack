@@ -45,12 +45,14 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
       bot.should_receive(:announce).with(/^Flapjack Self Monitoring is Critical/)
 
       # TODO be more specific about the request body
-      stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
+      req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
          to_return(:status => 200, :body => {'status' => 'success'}.to_json)
 
       fon = Flapjack::Gateways::Oobetet::Notifier.new(:config => config, :logger => @logger)
       fon.instance_variable_set('@siblings', [time_check, bot])
       fon.send(:check_timers)
+    
+      req.should have_been_requested      
     end
 
   end

@@ -76,6 +76,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     }.to raise_error
   end
 
+  it "returns unacknowledged failing checks"
+
   context "maintenance" do
 
     it "returns that it is in unscheduled maintenance" do

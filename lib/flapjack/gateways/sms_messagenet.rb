@@ -4,6 +4,10 @@ require 'net/http'
 require 'uri'
 require 'uri/https'
 
+require 'flapjack/data/message'
+
+require 'flapjack/exceptions'
+
 module Flapjack
   module Gateways
     class SmsMessagenet
@@ -30,7 +34,9 @@ module Flapjack
       def start
         loop do
           synchronize do
-            Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {|message|
+            Flapjack::Data::Message.foreach_on_queue(@notifications_queue,
+                                                     :redis => @redis,
+                                                     :logger => @logger) {|message|
               handle_message(message)
             }
           end
@@ -73,7 +79,6 @@ module Flapjack
         message += " is #{state.upcase}" unless ['acknowledgement', 'test'].include?(notification_type)
         message += " at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
 
-        # TODO log error and skip instead of raising errors
         if @config.nil? || (@config.respond_to?(:empty?) && @config.empty?)
           @logger.error "Messagenet config is missing"
           return
@@ -110,8 +115,10 @@ module Flapjack
         # use appropriate headers etc.
 
         uri = URI::HTTPS.build(:host => 'www.messagenet.com.au',
-                              :path => '/dotnet/Lodge.asmx/LodgeSMSMessage',
-                              :query => URI.encode_www_form(query))
+                               :path => '/dotnet/Lodge.asmx/LodgeSMSMessage',
+                               :port => 443,
+                               :query => URI.encode_www_form(query))
+
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = true
         http.verify_mode = OpenSSL::SSL::VERIFY_PEER
