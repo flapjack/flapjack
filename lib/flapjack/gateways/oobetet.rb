@@ -237,7 +237,6 @@ module Flapjack
 
         def start
           synchronize do
-
             @time_checker ||= @siblings && @siblings.detect {|sib| sib.respond_to?(:receive_status) }
 
             @logger.info("starting")
@@ -265,7 +264,7 @@ module Flapjack
 
                 if @time_checker
                   @logger.debug("group message received: #{room}, #{text}")
-                  if (text =~ /^(problem|recovery|acknowledgement).*#{Regexp.escape(@check_matcher)}/)
+                  if (text =~ /^((?i:problem|recovery|acknowledgement)).*#{Regexp.escape(@check_matcher)}/)
                     # got something interesting
                     status = $1.downcase
                     @logger.debug("found the following state for #{@check_matcher}: #{status}")
@@ -300,7 +299,7 @@ module Flapjack
         def announce(msg)
           synchronize do
             unless @muc_clients.empty?
-              muc_clients.each_pair do |room, muc_client|
+              @muc_clients.each_pair do |room, muc_client|
                 muc_client.say(msg)
               end
             end
