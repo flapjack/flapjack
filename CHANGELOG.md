@@ -1,5 +1,15 @@
 ## Flapjack Changelog
 
+# 0.7.21 - 2013-08-08
+- Feature: make entity search scopable by tags gh-89 (@jessereynolds)
+- Feature: add benchmark rake task gh-259 (@jessereynolds)
+- Feature: make tags more general in notification rules gh-269 (@jessereynolds)
+- Feature: ephemeral tag generation on events gh-268 (@jessereynolds)
+- Bug: fix syslog output levels gh-260 (@ali-graham)
+- Bug: Ruby 2 shutdown error gh-261 (@ali-graham)
+- Bug: Email and SMS problem and recovery notifications failing (@jessereynolds)
+- Bug: Links to contacts from the check detail page are broken (@jessereynolds)
+
 # 0.7.20 - 2013-07-17
 - Bug: flapjack-nagios-receiver failing after json library change gh-257 (@jessereynolds)
 - Bug: email gateway partial conversion to erb sending haml source code gh-256 (@ali-graham)
