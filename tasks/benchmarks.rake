@@ -177,11 +177,13 @@ namespace :benchmarks do
           ok       += 1 if check[:state] == 'OK'
           critical += 1 if check[:state] == 'CRITICAL'
 
-          Flapjack::Data::Event.add({'entity'  => "entity_#{entity_id}.example.com",
-                                     'check'   => check[:name],
-                                     'type'    => 'service',
-                                     'state'   => check[:state],
-                                     'summary' => summary }, :redis => redis)
+          event = { 'entity'  => "entity_#{entity_id}.example.com",
+                    'check'   => check[:name],
+                    'type'    => 'service',
+                    'state'   => check[:state],
+                    'summary' => summary }
+
+          Flapjack::Data::Event.push('events', event, :redis => redis)
           events_created += 1
         }
       }
