@@ -3,6 +3,7 @@
 require 'mail'
 require 'erb'
 require 'socket'
+require 'chronic_duration'
 
 require 'hiredis'
 require 'redis'
@@ -29,12 +30,28 @@ module Flapjack
         @logger = opts[:logger]
         @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
+        # TODO support for config reloading
         @notifications_queue = @config['queue'] || 'email_notifications'
 
-        smtp_config = @config['smtp_config']
+        if smtp_config = @config['smtp_config']
+          @host = smtp_config['host'] || 'localhost'
+          @port = smtp_config['port'] || 25
 
-        @host = smtp_config ? smtp_config['host'] : 'localhost'
-        @port = smtp_config ? smtp_config['port'] : 25
+          # NB: needs testing
+          if smtp_config['authentication'] && smtp_config['username'] &&
+            smtp_config['password']
+
+            @auth = {:authentication => smtp_config['authentication'],
+                     :username => smtp_config['username'],
+                     :password => smtp_config['password'],
+                     :enable_starttls_auto => true
+                    }
+          end 
+
+        else
+          @host = 'localhost'
+          @port = 25
+        end
 
         @sent = 0
 
@@ -90,6 +107,14 @@ module Flapjack
         @in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
         @in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
 
+        # FIXME: I can't get the entity_check.last_change to work in this context
+        # it always returns nil, despite entity_check being a good looking EntityCheck object
+        # and all ...
+        if lc = entity_check.last_change
+          duration  = (Time.now.to_i - lc)
+          @duration = (duration && duration > 40) ? duration : nil
+        end 
+
         headline_map = {'problem'         => 'Problem: ',
                         'recovery'        => 'Recovery: ',
                         'acknowledgement' => 'Acknowledgement: ',
@@ -101,6 +126,8 @@ module Flapjack
 
         @subject = "#{headline}'#{@check}' on #{@entity_name}"
         @subject += " is #{@state.upcase}" unless ['acknowledgement', 'test'].include?(@notification_type)
+
+        # TODO support for TLS email, see https://github.com/flpjck/flapjack/pull/277/files
 
         begin
           fqdn       = `/bin/hostname -f`.chomp
@@ -118,16 +145,22 @@ module Flapjack
 
           # TODO a cleaner way to not step on test delivery settings
           # (don't want to stub in Cucumber)
-          mail.delivery_method(:smtp, :address => @host, :port => @port) unless defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
+          unless defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
+            mail.delivery_method(:smtp, {:address => @host,
+                                         :port => @port,
+                                         :enable_starttls_auto => true}.merge(@auth || {}))
+          end
 
           mail.deliver!
 
           @logger.info "Email sending succeeded"
           @sent += 1
 
-        rescue Exception => e
+        rescue => e
           @logger.error "Error delivering email to #{m_to}: #{e.message}"
           @logger.error e.backtrace.join("\n")
+          # TODO stop pikelet as well? or be more selective about which errors
+          # to trap on?
         end
       end
 

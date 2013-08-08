@@ -285,6 +285,15 @@ Then /^show me the (\w+ )*log$/ do |adjective|
   puts @logger.messages.join("\n")
 end
 
+Then /^dump notification rules for user (\d+)$/ do |contact|
+  rule_ids = @redis.smembers("contact_notification_rules:#{contact}")
+  puts "There #{(rule_ids.length == 1) ? 'is' : 'are'} #{rule_ids.length} notification rule#{(rule_ids.length == 1) ? '' : 's'} for user #{contact}:"
+  rule_ids.each {|rule_id|
+    rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :redis => @redis)
+    puts rule.to_json
+  }
+end
+
 # added for notification rules:
 Given /^the following entities exist:$/ do |entities|
   entities.hashes.each do |entity|
@@ -331,7 +340,7 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
   end
   rules.hashes.each do |rule|
     entities           = rule['entities'].split(',').map { |x| x.strip }
-    entity_tags        = rule['entity_tags'].split(',').map { |x| x.strip }
+    tags               = rule['tags'].split(',').map { |x| x.strip }
     warning_media      = rule['warning_media'].split(',').map { |x| x.strip }
     critical_media     = rule['critical_media'].split(',').map { |x| x.strip }
     warning_blackhole  = (rule['warning_blackhole'].downcase == 'true')
@@ -348,13 +357,16 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
     end
     rule_data = {:contact_id         => contact_id,
                  :entities           => entities,
-                 :entity_tags        => entity_tags,
+                 :tags               => tags,
                  :warning_media      => warning_media,
                  :critical_media     => critical_media,
                  :warning_blackhole  => warning_blackhole,
                  :critical_blackhole => critical_blackhole,
                  :time_restrictions  => time_restrictions}
-    Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
+    created_rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
+    unless created_rule.is_a?(Flapjack::Data::NotificationRule)
+      raise "Error creating notification rule with data: #{rule_data}, errors: #{created_rule.join(', ')}"
+    end
   end
 end
 

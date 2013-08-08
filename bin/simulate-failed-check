@@ -15,6 +15,7 @@ Oj.default_options = { :indent => 0, :mode => :strict }
 require 'active_support/json'
 
 require 'flapjack/configuration'
+require 'flapjack/data/event'
 
 def pike(message)
   puts "piking out: #{message}"
@@ -23,7 +24,7 @@ end
 
 def send_event(event, opts)
   redis = opts[:redis]
-  redis.lpush 'events', event.to_json
+  Flapjack::Data::Event.add(event, :redis => redis)
 end
 
 def fail(opts)
@@ -34,8 +35,7 @@ def fail(opts)
   event  = {
     'entity'    => opts[:entity] || 'foo-app-01',
     'check'     => opts[:check]  || 'HTTP',
-    'type'      => 'service',
-    'timestamp' => Time.now.to_i
+    'type'      => 'service'
   }
   failure  = event.merge('state' => state, 'summary' => 'Simulated check output (test by operator)')
   recovery = event.merge('state' => 'ok',  'summary' => 'Simulated check output (test by operator)')
@@ -50,14 +50,14 @@ def fail(opts)
       puts "#{Time.now}: stopping"
       if recover
         puts "#{Time.now}: sending recovery event for #{key}"
-        send_event(recovery, :redis => redis)
+        send_event(recovery.merge('time' => Time.now.to_i), :redis => redis)
       end
       EM.stop
     end
 
     EM.add_periodic_timer(10) do
       puts "#{Time.now}: sending failure event (#{state}) for #{key}"
-      send_event(failure, :redis => redis)
+      send_event(failure.merge('time' => Time.now.to_i), :redis => redis)
     end
 
   }

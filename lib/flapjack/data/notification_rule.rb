@@ -77,18 +77,15 @@ module Flapjack
       end
 
       # entity names match?
-      # nil @entities matches
-      def match_entity?(event)
-        (@entities.nil? || @entities.empty?) ||
-         (@entities.include?(event.split(':').first))
+      def match_entity?(event_id)
+        return false unless @entities
+        @entities.include?(event_id.split(':').first)
       end
 
       # tags match?
-      # nil tags matches
-      # an event has a set of tags, which are just strings
       def match_tags?(event_tags)
-        (@tags.nil? || @tags.empty?) ||
-          @tags.subset?(event_tags)
+        return false unless @tags && @tags.length > 0
+        @tags.subset?(event_tags)
       end
 
       def blackhole?(severity)
@@ -128,17 +125,21 @@ module Flapjack
         # make some assumptions about the incoming data
         rule_data[:warning_blackhole]  = rule_data[:warning_blackhole] || false
         rule_data[:critical_blackhole] = rule_data[:critical_blackhole] || false
+        if rule_data[:tags].is_a?(Array)
+          rule_data[:tags] = Flapjack::Data::TagSet.new(rule_data[:tags])
+        end
 
         errors = self.validate_data(rule_data, options)
 
         return errors unless errors.nil? || errors.empty?
 
         # whitelisting fields, rather than passing through submitted data directly
+        tag_data = rule_data[:tags].is_a?(Set) ? rule_data[:tags].to_a : nil
         json_rule_data = {
           :id                 => rule_data[:id].to_s,
           :contact_id         => rule_data[:contact_id].to_s,
           :entities           => Oj.dump(rule_data[:entities]),
-          :tags               => Oj.dump(rule_data[:tags]),
+          :tags               => Oj.dump(tag_data),
           :time_restrictions  => Oj.dump(rule_data[:time_restrictions]),
           :warning_media      => Oj.dump(rule_data[:warning_media]),
           :critical_media     => Oj.dump(rule_data[:critical_media]),
@@ -231,9 +232,9 @@ module Flapjack
 
                        proc { !d.has_key?(:tags) ||
                               ( d[:tags].nil? ||
-                                d[:tags].is_a?(Array) &&
+                                d[:tags].is_a?(Flapjack::Data::TagSet) &&
                                 d[:tags].all? {|et| et.is_a?(String)} ) } =>
-                       "tags must be a list of strings",
+                       "tags must be a tag_set of strings",
 
                        proc { !d.has_key?(:time_restrictions) ||
                               ( d[:time_restrictions].nil? ||

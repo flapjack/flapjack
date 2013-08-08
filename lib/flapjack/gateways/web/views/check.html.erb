@@ -180,7 +180,7 @@
             </tr>
             <% @contacts.sort_by {|c| [c.first_name, c.last_name] }.each do |contact| %>
               <tr>
-                <td><a href="/contacts/<% contact.id %>" title="contact details"><%= h contact.name %></a></td>
+                <td><a href="/contacts/<%= contact.id %>" title="contact details"><%= h contact.name %></a></td>
                 <td>
                   <% if contact.media && !contact.media.empty? %>
                     <p><%= h contact.media.keys.collect(&:capitalize).join(", ") %></p>

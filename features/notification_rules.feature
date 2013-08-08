@@ -7,13 +7,15 @@ Feature: Notification rules on a per contact basis
       | 1   | Malak      | Al-Musawi | malak@example.com | +61400000001 | Asia/Baghdad     |
       | 2   | Imani      | Farooq    | imani@example.com | +61400000002 | Europe/Moscow    |
       | 3   | Vera       | Дурейко   | vera@example.com  | +61400000003 | Europe/Paris     |
+      | 4   | Lucia      | Moretti   | lucia@example.com | +61400000004 | Europe/Rome      |
 
     And the following entities exist:
-      | id  | name | contacts |
-      | 1   | foo  | 1        |
-      | 2   | bar  | 1,2,3    |
-      | 3   | baz  | 1,3      |
-      | 4   | buf  | 1,2,3    |
+      | id  | name           | contacts |
+      | 1   | foo            | 1        |
+      | 2   | bar            | 1,2,3    |
+      | 3   | baz            | 1,3      |
+      | 4   | buf            | 1,2,3    |
+      | 5   | foo-app-01.xyz | 4        |
 
     And user 1 has the following notification intervals:
       | email | sms |
@@ -27,25 +29,35 @@ Feature: Notification rules on a per contact basis
       | email | sms |
       | 15    | 60  |
 
+    And user 4 has the following notification intervals:
+      | email | sms |
+      | 15    | 60  |
+
     And user 1 has the following notification rules:
-      | entities | entity_tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          |             | email         | sms,email        | true              | true               |                   |
-      | foo      |             | email         | sms,email        |                   |                    | 8-18 weekdays     |
-      | bar      |             |               | sms,email        | true              |                    |                   |
-      | baz      |             | email         | sms,email        |                   |                    |                   |
+      | entities | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
+      |          |      | email         | sms,email        | true              | true               |                   |
+      | foo      |      | email         | sms,email        |                   |                    | 8-18 weekdays     |
+      | bar      |      |               | sms,email        | true              |                    |                   |
+      | baz      |      | email         | sms,email        |                   |                    |                   |
 
     And user 2 has the following notification rules:
-      | entities | entity_tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          |             | email         | email            |                   |                    |                   |
-      |          |             | sms           | sms              |                   |                    |                   |
-      | bar      |             | email         | email,sms        |                   |                    |                   |
+      | entities | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
+      |          |      | email         | email            |                   |                    |                   |
+      |          |      | sms           | sms              |                   |                    |                   |
+      | bar      |      | email         | email,sms        |                   |                    |                   |
 
     And user 3 has the following notification rules:
-      | entities | entity_tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          |             | email         | email            |                   |                    |                   |
-      | baz      |             | sms           | sms              |                   |                    |                   |
-      | buf      |             | email         | email            |                   |                    |                   |
-      | buf      |             | sms           | sms              |                   |                    |                   |
+      | entities | tags            | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
+      |          |                 | email         | email            |                   |                    |                   |
+      | baz      |                 | sms           | sms              |                   |                    |                   |
+      | buf      |                 | email         | email            |                   |                    |                   |
+      | buf      |                 | sms           | sms              |                   |                    |                   |
+
+    And user 4 has the following notification rules:
+      | entities | tags            | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
+      |          |                 |               |                  |                   |                    |                   |
+      |          | xyz, disk, util | sms           | sms              |                   |                    |                   |
+      |          | xyz, ping       | sms,email     | sms,email        |                   |                    | 8-18 weekdays     |
 
   @time_restrictions @time
   Scenario: Alerts only during specified time restrictions
@@ -309,4 +321,50 @@ Feature: Notification rules on a per contact basis
 
   @time
   Scenario: A blackhole rule on an entity should override another matching general rule
+
+  @time
+  Scenario: Notify when tags in a rule match the event's tags
+    Given the check is check 'Disk / Util' on entity 'foo-app-01.xyz'
+    And   the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  1 sms alert should be queued for +61400000004
+
+  @time
+  Scenario: Don't notify when tags in a rule don't match the event's tags
+    Given the check is check 'Memory Util' on entity 'foo-app-01.xyz'
+    And   the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  no sms alerts should be queued for +61400000004
+
+  @time
+  Scenario: Only notify during specified time periods in tag matched rules
+    Given the timezone is Europe/Rome
+    And   the time is February 1 2013 6:59
+    And   the check is check 'ping' on entity 'foo-app-01.xyz'
+    And   the check is in an ok state
+    And   a critical event is received
+    Then  no sms alerts should be queued for +61400000004
+    And   the time is February 1 2013 7:01
+    And   a critical event is received
+    Then  no sms alerts should be queued for +61400000004
+    And   the time is February 1 2013 8:01
+    And   a critical event is received
+    Then  1 sms alert should be queued for +61400000004
+    When  the time is February 1 2013 12:00
+    Then  all alert dropping keys for user 1 should have expired
+    When  a critical event is received
+    Then  2 sms alerts should be queued for +61400000004
+    When  the time is February 1 2013 17:59
+    Then  all alert dropping keys for user 1 should have expired
+    When  a critical event is received
+    Then  3 sms alerts should be queued for +61400000004
+    When  the time is February 1 2013 18:01
+    Then  all alert dropping keys for user 1 should have expired
+    When  a critical event is received
+    Then  3 sms alerts should be queued for +61400000004
+
 

@@ -37,7 +37,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   let(:notification_rule_data) {
     {"contact_id"         => "21",
-     "entity_tags"        => ["database","physical"],
+     "tags"               => ["database","physical"],
      "entities"           => ["foo-app-01.example.com"],
      "time_restrictions"  => nil,
      "warning_media"      => ["email"],

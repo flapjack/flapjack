@@ -7,6 +7,7 @@ describe Flapjack::Gateways::Email, :logger => true do
     entity_check = mock(Flapjack::Data::EntityCheck)
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
+    entity_check.should_receive(:last_change).and_return(Time.now.to_i)
 
     redis = mock('redis')
     ::Redis.should_receive(:new).and_return(redis)
