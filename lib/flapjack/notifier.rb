@@ -42,7 +42,7 @@ module Flapjack
       end
 
       tz = nil
-      tz_string = @config['default_contact_timezone'] || ENV['TZ'] || 'UTC'
+      tz_string = String.new(@config['default_contact_timezone'] || ENV['TZ'] || 'UTC')
       begin
         tz = ActiveSupport::TimeZone.new(tz_string)
       rescue ArgumentError
@@ -64,7 +64,7 @@ module Flapjack
           }
         end
 
-        Flapjack::Data::Notification.wait_for_queue(@notifications_queue, :redis => redis)
+        Flapjack::Data::Notification.wait_for_queue(@notifications_queue, :redis => @redis)
       end
 
     rescue Flapjack::PikeletStop => fps
@@ -72,9 +72,9 @@ module Flapjack
     end
 
 
-    def stop
+    def stop(thread)
       synchronize do
-        @thread.raise Flapjack::PikeletStop.new
+        thread.raise Flapjack::PikeletStop.new
       end
     end
 
