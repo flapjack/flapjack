@@ -29,6 +29,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'activesupport', '~> 3.2.13'
   gem.add_dependency 'ice_cube'
   gem.add_dependency 'tzinfo'
+  gem.add_dependency 'tzinfo-data'
 
   gem.add_development_dependency 'rake'
 end
