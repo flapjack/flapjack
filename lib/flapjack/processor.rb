@@ -245,7 +245,7 @@ module Flapjack
       @redis.set("#{event.id}:last_#{event.state}_notification", timestamp) if event.failure?
       @redis.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
       @redis.rpush("#{event.id}:#{event.state}_notifications", timestamp) if event.failure?
-      @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}.")
+      @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}: " + event.inspect)
 
       severity = Flapjack::Data::Notification.severity_for_event(event, max_notified_severity)
       last_state = entity_check.historical_state_before(timestamp)

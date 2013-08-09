@@ -145,6 +145,10 @@ module Flapjack
             :state => notification.event_state)
         end
 
+
+        contents_tags = contents['tags']
+        contents['tags'] = contents_tags.is_a?(Set) ? contents_tags.to_a : contents_tags
+
         # TODO consider changing Resque jobs to use raw blpop like the others
         case media_type.to_sym
         when :sms
