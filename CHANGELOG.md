@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.7.22 - 2013-08-08
+- Bug: fix potential exception in json serialisation of tags in notifications gh-281 (@jessereynolds)
+
 # 0.7.21 - 2013-08-08
 - Feature: make eneity search scopable by tags gh-89 (@jessereynolds)
 - Feature: add benchmark rake task gh-259 (@jessereynolds)
