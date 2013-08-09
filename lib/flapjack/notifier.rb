@@ -19,7 +19,7 @@ module Flapjack
 
     def initialize(opts = {})
       @config = opts[:config]
-      @redis_config = opts[:redis_config] || {}
+      @redis_config = opts[:redis_config]
       @logger = opts[:logger]
       @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
@@ -42,9 +42,9 @@ module Flapjack
       end
 
       tz = nil
-      tz_string = String.new(@config['default_contact_timezone'] || ENV['TZ'] || 'UTC')
+      tz_string = @config['default_contact_timezone'] || ENV['TZ'] || 'UTC'
       begin
-        tz = ActiveSupport::TimeZone.new(tz_string)
+        tz = ActiveSupport::TimeZone.new(tz_string.untaint)
       rescue ArgumentError
         logger.error("Invalid timezone string specified in default_contact_timezone or TZ (#{tz_string})")
         exit 1
@@ -55,8 +55,6 @@ module Flapjack
     end
 
     def start
-      @thread = Thread.current
-
       loop do
         synchronize do
           Flapjack::Data::Notification.foreach_on_queue(@notifications_queue, :redis => @redis) {|notif|
@@ -141,6 +139,7 @@ module Flapjack
             :state => notification.event_state)
         end
 
+        # TODO changing email, sms to use raw blpop like the others
         if [:sms, :email, :jabber, :pagerduty].include?(media_type.to_sym)
           Flapjack::Data::Message.push(@queues[media_type.to_sym], contents, :redis => @redis)
         else

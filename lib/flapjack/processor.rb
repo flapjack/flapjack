@@ -109,7 +109,7 @@ module Flapjack
           end
         end
 
-        Flapjack::Data::Event.wait_for_queue(@queue)
+        Flapjack::Data::Event.wait_for_queue(@queue, :redis => @redis)
       end
 
     rescue Flapjack::PikeletStop => fps
