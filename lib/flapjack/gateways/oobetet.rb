@@ -294,7 +294,7 @@ module Flapjack
           end
         end
 
-        def stop
+        def stop(thread)
           synchronize do
             @should_quit = true
             @shutdown_cond.signal

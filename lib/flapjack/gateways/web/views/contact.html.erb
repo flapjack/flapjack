@@ -90,6 +90,7 @@
               <th>Warning Media</th>
               <th>Critical Media</th>
               <th>Time Restrictions</th>
+              <th>Blackholes</th>
             </tr>
             <% rules.each do |rule| %>
               <tr>
@@ -99,6 +100,10 @@
                 <td><%= h( (rule.warning_media && !rule.warning_media.empty?) ? rule.warning_media.join(', ') : '-')%></td>
                 <td><%= h( (rule.critical_media && !rule.critical_media.empty?) ? rule.critical_media.join(', ') : '-') %></td>
                 <td><%= h(rule.time_restrictions) %></td>
+                <% blackholes = [] %>
+                <% blackholes << 'Warning' if rule.warning_blackhole %>
+                <% blackholes << 'Critical' if rule.critical_blackhole %>
+                <td><%= h(blackholes.join(', ')) %></td>
               </tr>
             <% end %>
             </table>
