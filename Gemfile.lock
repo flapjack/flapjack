@@ -13,6 +13,7 @@ PATH
       redis
       sinatra
       tzinfo
+      tzinfo-data
       xmpp4r
 
 GEM
@@ -116,6 +117,7 @@ GEM
       polyglot
       polyglot (>= 0.3.1)
     tzinfo (1.0.1)
+    tzinfo-data (1.2013.4)
     webmock (1.9.0)
       addressable (>= 2.2.7)
       crack (>= 0.1.7)

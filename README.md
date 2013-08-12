@@ -10,7 +10,7 @@ Flapjack provides a scalable method for dealing with events representing changes
 
 At its core, Flapjack processes events received from external check execution engines, such as Nagios. Nagios provides a 'perfdata' event output channel, which writes to a named pipe. `flapjack-nagios-receiver` then reads from this named pipe, converts each line to JSON and adds them to the events queue.
 
-Flapjack's `executive` component picks up the events and processes them -- deciding when and who to notifify about problems, recoveries, acknowledgements, etc.
+Flapjack's `processor` and `notifier` components pick up the events and processes them -- deciding when and who to notifify about problems, recoveries, acknowledgements, etc.
 
 Additional check engines can be supported by adding additional receiver processes similar to the nagios receiver.
 
@@ -49,5 +49,7 @@ https://github.com/flpjck/flapjack/wiki has even more goodies:
 - [Importing](https://github.com/flpjck/flapjack/wiki/IMPORTING)
 - [Debugging Flapjack](https://github.com/flpjck/flapjack/wiki/DEBUGGING)
 - [Flapjack Glossary](https://github.com/flpjck/flapjack/wiki/GLOSSARY)
+- [Releasing](https://github.com/flpjck/flapjack/wiki/Releasing)
+- [Promoting](https://github.com/flpjck/flapjack/wiki/Promoting)
 
 
