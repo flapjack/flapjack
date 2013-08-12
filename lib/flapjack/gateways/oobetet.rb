@@ -49,8 +49,6 @@ module Flapjack
 
             Kernel.sleep 10
           end
-        rescue Flapjack::PikeletStop
-          @logger.info "finishing oobetet"
         end
 
         def stop(thread)

@@ -51,9 +51,6 @@ module Flapjack
 
             Flapjack::Data::Message.wait_for_queue(@notifications_queue, :redis => @redis)
           end
-
-        rescue Flapjack::PikeletStop => fps
-          @logger.info "stopping jabber notifier"
         end
 
         def stop(thread)
@@ -172,9 +169,6 @@ module Flapjack
 
             Kernel.sleep 10
           end
-
-        rescue Flapjack::PikeletStop
-          @logger.info "ending pagerduty ackfinder"
         end
 
         def stop(thread)

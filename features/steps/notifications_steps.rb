@@ -157,17 +157,20 @@ end
 
 When /^the email notification handler fails to send an email$/ do
   module Mail
-    class Message
+    class TestMailer
       alias_method :"orig_deliver!", :"deliver!"
       def deliver!(mail); raise RuntimeError.new; end
     end
   end
 
   @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}}, :logger => @logger)
-  @email.handle_message(@email_notification)
+  begin
+    @email.handle_message(@email_notification)
+  rescue RuntimeError
+  end
 
   module Mail
-    class Message
+    class TestMailer
       alias_method :"deliver!", :"orig_deliver!"
     end
   end

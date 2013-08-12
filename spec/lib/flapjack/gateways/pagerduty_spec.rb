@@ -22,7 +22,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
                      'last_summary' => 'TEST',
                      'details' => 'Testing',
                      'time' => now.to_i,
-                     'event_id' => 'app-02:ping'} 
+                     'event_id' => 'app-02:ping'}
                   }
 
     # TODO use separate threads in the test instead?
@@ -37,14 +37,14 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       Flapjack::Data::Message.should_receive(:wait_for_queue).
         with('pagerduty_notifications', :redis => redis).and_raise(Flapjack::PikeletStop)
 
-      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config, :logger => @logger)      
+      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config, :logger => @logger)
       fpn.should_receive(:handle_message).with(message)
       fpn.should_receive(:test_pagerduty_connection).twice.and_return(false, true)
-      fpn.start
+      expect { fpn.start }.to raise_error(Flapjack::PikeletStop)
     end
 
     it "tests the pagerduty connection" do
-      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config, :logger => @logger)      
+      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config, :logger => @logger)
 
       req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
          with(:body => {'service_key'  => '11111111111111111111111111111111',
@@ -58,7 +58,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     end
 
     it "handles notifications received via Redis" do
-      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config, :logger => @logger)      
+      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config, :logger => @logger)
 
       req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
          with(:body => {'service_key'  => 'pdservicekey',
@@ -88,13 +88,13 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       redis.should_receive(:del).with('sem_pagerduty_acks_running')
 
       redis.should_receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(0)
-      
+
       Redis.should_receive(:new).and_return(redis)
 
       Kernel.should_receive(:sleep).with(10).and_raise(Flapjack::PikeletStop.new)
 
-      fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config, :logger => @logger)      
-      fpa.start
+      fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config, :logger => @logger)
+      expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
     end
 
     # TODO use separate threads in the test instead?
@@ -134,7 +134,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config, :logger => @logger)
       fpa.should_receive(:pagerduty_acknowledged?).and_return(response)
-      fpa.start
+      expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
     end
 
     # testing separately and stubbing above
@@ -159,7 +159,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       redis.should_receive(:del).with('sem_pagerduty_acks_running')
       ::Redis.should_receive(:new).and_return(redis)
-      fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config, :logger => @logger)      
+      fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config, :logger => @logger)
 
       result = fpa.send(:pagerduty_acknowledged?, 'subdomain' => 'flpjck',
         'username' => 'flapjack', 'password' => 'password123', 'check' => check)

@@ -30,7 +30,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
 
       fon = Flapjack::Gateways::Oobetet::Notifier.new(:config => config, :logger => @logger)
       fon.should_receive(:check_timers)
-      fon.start
+      expect { fon.start }.to raise_error(Flapjack::PikeletStop)
     end
 
     it "checks for a breach and emits notifications" do
@@ -51,8 +51,8 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
       fon = Flapjack::Gateways::Oobetet::Notifier.new(:config => config, :logger => @logger)
       fon.instance_variable_set('@siblings', [time_check, bot])
       fon.send(:check_timers)
-    
-      req.should have_been_requested      
+
+      req.should have_been_requested
     end
 
   end

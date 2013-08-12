@@ -46,7 +46,7 @@ module Flapjack
                      :password => smtp_config['password'],
                      :enable_starttls_auto => true
                     }
-          end 
+          end
 
         else
           @host = 'localhost'
@@ -75,9 +75,6 @@ module Flapjack
           @logger.debug "blocking on messages"
           Flapjack::Data::Message.wait_for_queue(@notifications_queue, :redis => @redis)
         end
-
-      rescue Flapjack::PikeletStop => fps
-        @logger.info "stopping email notifier"
       end
 
       def stop(thread)
@@ -113,7 +110,7 @@ module Flapjack
         if lc = entity_check.last_change
           duration  = (Time.now.to_i - lc)
           @duration = (duration && duration > 40) ? duration : nil
-        end 
+        end
 
         headline_map = {'problem'         => 'Problem: ',
                         'recovery'        => 'Recovery: ',
@@ -127,41 +124,31 @@ module Flapjack
         @subject = "#{headline}'#{@check}' on #{@entity_name}"
         @subject += " is #{@state.upcase}" unless ['acknowledgement', 'test'].include?(@notification_type)
 
-        # TODO support for TLS email, see https://github.com/flpjck/flapjack/pull/277/files
+        fqdn       = `/bin/hostname -f`.chomp
+        m_from     = "flapjack@#{fqdn}"
+        @logger.debug("flapjack_mailer: set from to #{m_from}")
+        m_reply_to = m_from
+        m_to       = message['address']
 
-        begin
-          fqdn       = `/bin/hostname -f`.chomp
-          m_from     = "flapjack@#{fqdn}"
-          @logger.debug("flapjack_mailer: set from to #{m_from}")
-          m_reply_to = m_from
-          m_to       = message['address']
+        @logger.debug("sending Flapjack::Notification::Email " +
+          "#{message['id']} to: #{m_to} subject: #{@subject}")
 
-          @logger.debug("sending Flapjack::Notification::Email " +
-            "#{message['id']} to: #{m_to} subject: #{@subject}")
+        mail = prepare_email(:subject => @subject,
+                             :from => m_from,
+                             :to => m_to)
 
-          mail = prepare_email(:subject => @subject,
-                               :from => m_from,
-                               :to => m_to)
-
-          # TODO a cleaner way to not step on test delivery settings
-          # (don't want to stub in Cucumber)
-          unless defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
-            mail.delivery_method(:smtp, {:address => @host,
-                                         :port => @port,
-                                         :enable_starttls_auto => true}.merge(@auth || {}))
-          end
-
-          mail.deliver!
-
-          @logger.info "Email sending succeeded"
-          @sent += 1
-
-        rescue => e
-          @logger.error "Error delivering email to #{m_to}: #{e.message}"
-          @logger.error e.backtrace.join("\n")
-          # TODO stop pikelet as well? or be more selective about which errors
-          # to trap on?
+        # TODO a cleaner way to not step on test delivery settings
+        # (don't want to stub in Cucumber)
+        unless defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
+          mail.delivery_method(:smtp, {:address => @host,
+                                       :port => @port}.merge(@auth || {}))
         end
+
+        # any exceptions will be propagated through to main pikelet handler
+        mail.deliver
+
+        @logger.info "Email sending succeeded"
+        @sent += 1
       end
 
       private

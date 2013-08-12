@@ -43,9 +43,6 @@ module Flapjack
 
           Flapjack::Data::Message.wait_for_queue(@notifications_queue, :redis => @redis)
         end
-
-      rescue Flapjack::PikeletStop => fps
-        @logger.info "stopping sms_messagenet notifier"
       end
 
       def stop(thread)

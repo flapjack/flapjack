@@ -68,12 +68,18 @@ module Flapjack
             runs = 0
 
             error = nil
+            stop_all = false
 
             loop do
               begin
                 yield
+              rescue Flapjack::PikeletStop
+                @logger.info "pikelet stop by #{@pikelet_class.name}"
+              rescue Flapjack::GlobalStop
+                @logger.info "global stop by #{@pikelet_class.name}"
+                stop_all = true
               rescue Exception => e
-                @logger.warn e.message
+                @logger.warn "#{e.class.name} #{e.message}"
                 trace = e.backtrace
                 @logger.warn trace.join("\n") if trace
                 error = e
@@ -85,7 +91,7 @@ module Flapjack
 
             @finished = true
 
-            if error
+            if error || stop_all
               @shutdown.call
             else
               @condition.signal

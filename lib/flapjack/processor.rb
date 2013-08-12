@@ -29,8 +29,6 @@ module Flapjack
       @boot_time    = opts[:boot_time]
 
       @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
-      # @coordinator = opts[:coordinator]
-
       @queue = @config['queue'] || 'events'
 
       @notifier_queue = @config['notifier_queue'] || 'notifications'
@@ -109,11 +107,10 @@ module Flapjack
           end
         end
 
+        raise Flapjack::GlobalStop if @config['exit_on_queue_empty']
+
         Flapjack::Data::Event.wait_for_queue(@queue, :redis => @redis)
       end
-
-    rescue Flapjack::PikeletStop => fps
-      @logger.info "stopping processor"
     end
 
     def stop(thread)

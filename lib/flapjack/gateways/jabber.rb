@@ -50,8 +50,6 @@ module Flapjack
 
             Flapjack::Data::Message.wait_for_queue(@notifications_queue, :redis => @redis)
           end
-        rescue Flapjack::PikeletStop => fps
-          @logger.info "stopping jabber notifier"
         end
 
         def stop(thread)
@@ -445,7 +443,7 @@ module Flapjack
                   if @interpreter
                     @interpreter.receive_message(room, nick, time, command)
                   end
-                end                
+                end
               end
 
               muc_client.join(room + '/' + @config['alias'])

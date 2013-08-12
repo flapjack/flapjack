@@ -40,7 +40,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
 
     sms_gw = Flapjack::Gateways::SmsMessagenet.new(:config => config,
                                                    :logger => @logger)
-    sms_gw.start
+    expect { sms_gw.start }.to raise_error(Flapjack::PikeletStop)
     req.should have_been_requested
   end
 
@@ -57,7 +57,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
 
     sms_gw = Flapjack::Gateways::SmsMessagenet.new(:config => config.reject {|k, v| k == 'password'},
                                                    :logger => @logger)
-    sms_gw.start
+    expect { sms_gw.start }.to raise_error(Flapjack::PikeletStop)
 
     WebMock.should_not have_requested(:get,
                                       "https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage")

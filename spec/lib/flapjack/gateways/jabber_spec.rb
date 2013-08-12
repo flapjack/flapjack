@@ -29,14 +29,14 @@ describe Flapjack::Gateways::Jabber, :logger => true do
                      'last_summary' => 'TEST',
                      'details' => 'Testing',
                      'time' => now.to_i,
-                     'event_id' => 'app-02:ping'} 
+                     'event_id' => 'app-02:ping'}
                   }
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by an exception" do
       Redis.should_receive(:new).and_return(redis)
 
-      fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config, :logger => @logger)      
+      fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config, :logger => @logger)
       fjn.should_receive(:handle_message).with(message)
 
       Flapjack::Data::Message.should_receive(:foreach_on_queue).
@@ -45,7 +45,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       Flapjack::Data::Message.should_receive(:wait_for_queue).
         with('jabber_notifications', :redis => redis).and_raise(Flapjack::PikeletStop)
 
-      fjn.start
+      expect { fjn.start }.to raise_error(Flapjack::PikeletStop)
     end
 
     it "handles notifications received via Redis" do
@@ -221,7 +221,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       fji.instance_variable_set('@siblings', [bot])
       fji.interpret('room1', 'jim', now.to_i, 'ACKID 1234 JJ looking duration: 1 hour')
     end
- 
+
     it "interprets a received check notification test command" do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /so you want me to test notifications/)

@@ -8,6 +8,8 @@ require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/notification'
 require 'flapjack/data/event'
+
+require 'flapjack/exceptions'
 require 'flapjack/utility'
 
 module Flapjack
@@ -18,20 +20,21 @@ module Flapjack
     include Flapjack::Utility
 
     def initialize(opts = {})
-      @config = opts[:config]
-      @redis_config = opts[:redis_config]
+      @config = opts[:config] || {}
+      @redis_config = opts[:redis_config] || {}
       @logger = opts[:logger]
       @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
       @notifications_queue = @config['queue'] || 'notifications'
 
-      @queues = {:email     => @config['email_queue'],
-                 :sms       => @config['sms_queue'],
-                 :jabber    => @config['jabber_queue'],
-                 :pagerduty => @config['pagerduty_queue']}
+      @queues = {:email     => (@config['email_queue']     || 'email_notifications'),
+                 :sms       => (@config['sms_queue']       || 'sms_notifications'),
+                 :jabber    => (@config['jabber_queue']    || 'jabber_notifications'),
+                 :pagerduty => (@config['pagerduty_queue'] || 'pagerduty_notifications')
+                }
 
       notify_logfile  = @config['notification_log_file'] || 'log/notify.log'
-      if not File.directory?(File.dirname(notify_logfile))
+      unless File.directory?(File.dirname(notify_logfile))
         puts "Parent directory for log file '#{notify_logfile}' doesn't exist"
         puts "Exiting!"
         exit
@@ -64,11 +67,7 @@ module Flapjack
 
         Flapjack::Data::Notification.wait_for_queue(@notifications_queue, :redis => @redis)
       end
-
-    rescue Flapjack::PikeletStop => fps
-      @logger.info "stopping notifier"
     end
-
 
     def stop(thread)
       synchronize do
