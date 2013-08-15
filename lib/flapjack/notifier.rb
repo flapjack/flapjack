@@ -20,6 +20,7 @@ module Flapjack
     include Flapjack::Utility
 
     def initialize(opts = {})
+      @lock = opts[:lock]
       @config = opts[:config] || {}
       @redis_config = opts[:redis_config] || {}
       @logger = opts[:logger]
@@ -59,7 +60,7 @@ module Flapjack
 
     def start
       loop do
-        synchronize do
+        @lock.synchronize do
           Flapjack::Data::Notification.foreach_on_queue(@notifications_queue, :redis => @redis) {|notif|
             process_notification(notif)
           }
@@ -69,10 +70,8 @@ module Flapjack
       end
     end
 
-    def stop(thread)
-      synchronize do
-        thread.raise Flapjack::PikeletStop.new
-      end
+    def stop_type
+      :exception
     end
 
   private

@@ -7,7 +7,7 @@ describe Flapjack::Processor, :logger => true do
   # NB: this is only testing the public API of the Processor class, which is pretty limited.
   # (initialize, main, stop). Most test coverage for this class comes from the cucumber features.
 
-  let(:config) { mock(Flapjack::Configuration) }
+  let(:lock) { mock(Monitor) }
 
   # TODO this does too much -- split it up
   it "starts up, runs and shuts down" do
@@ -41,7 +41,10 @@ describe Flapjack::Processor, :logger => true do
     # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
 
     ::Redis.should_receive(:new).and_return(redis)
-    processor = Flapjack::Processor.new(:config => {}, :logger => @logger)
+
+    lock.should_receive(:synchronize).and_yield
+
+    processor = Flapjack::Processor.new(:lock => lock, :config => {}, :logger => @logger)
 
     Flapjack::Data::Event.should_receive(:foreach_on_queue)
     Flapjack::Data::Event.should_receive(:wait_for_queue).and_raise(Flapjack::PikeletStop)
@@ -80,7 +83,11 @@ describe Flapjack::Processor, :logger => true do
     # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
 
     ::Redis.should_receive(:new).and_return(redis)
-    processor = Flapjack::Processor.new(:config => {'exit_on_queue_empty' => true}, :logger => @logger)
+
+    lock.should_receive(:synchronize).and_yield
+
+    processor = Flapjack::Processor.new(:lock => lock,
+      :config => {'exit_on_queue_empty' => true}, :logger => @logger)
 
     Flapjack::Data::Event.should_receive(:foreach_on_queue)
     Flapjack::Data::Event.should_not_receive(:wait_for_queue)

@@ -17,6 +17,9 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
   let(:now) { Time.now}
 
+  let(:lock) { mock(Monitor) }
+  let(:stop_cond) { mock(MonitorMixin::ConditionVariable) }
+
   context 'notifications' do
 
     let(:message) { {'notification_type'  => 'problem',
@@ -36,7 +39,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "starts and is stopped by an exception" do
       Redis.should_receive(:new).and_return(redis)
 
-      fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+
+      fjn = Flapjack::Gateways::Jabber::Notifier.new(:lock => lock,
+        :config => config, :logger => @logger)
       fjn.should_receive(:handle_message).with(message)
 
       Flapjack::Data::Message.should_receive(:foreach_on_queue).
@@ -71,12 +77,16 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "starts and is stopped by a signal" do
       Redis.should_receive(:new).and_return(redis)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:lock => lock, :stop_condition => stop_cond,
+        :config => config, :logger => @logger)
       msg = {:room => 'room1', :nick => 'jim', :time => now.to_i, :message => 'help'}
       fji.instance_variable_get('@messages').push(msg)
-      fji.instance_variable_get('@message_cond').should_receive(:wait_while).and_return {
+      stop_cond.should_receive(:wait_while).and_return {
         fji.instance_variable_set('@should_quit', true)
       }
+
       fji.should_receive(:interpret).with('room1', 'jim', now.to_i, 'help')
 
       fji.start
@@ -85,9 +95,12 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "receives a message and and signals a condition variable" do
       Redis.should_receive(:new).and_return(redis)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:lock => lock, :stop_condition => stop_cond,
+        :config => config, :logger => @logger)
       fji.instance_variable_get('@messages').should be_empty
-      fji.instance_variable_get('@message_cond').should_receive(:signal)
+      stop_cond.should_receive(:signal)
 
       fji.receive_message('room1', 'jim', now.to_i, 'help')
       fji.instance_variable_get('@messages').should have(1).message
@@ -303,16 +316,22 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       ::Jabber::Client.should_receive(:new).and_return(client)
       ::Jabber::MUC::SimpleMUCClient.should_receive(:new).and_return(muc_client)
 
-      fjb = Flapjack::Gateways::Jabber::Bot.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+      stop_cond = mock(MonitorMixin::ConditionVariable)
+      stop_cond.should_receive(:wait_until)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+        :stop_condition => stop_cond, :config => config, :logger => @logger)
       fjb.instance_variable_set('@siblings', [interpreter])
-      fjb.instance_variable_get('@shutdown_cond').should_receive(:wait_until)
       fjb.start
     end
 
     it "announces a message to a chat room" do
       muc_client.should_receive(:say).with('hello!')
 
-      fjb = Flapjack::Gateways::Jabber::Bot.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock, :config => config, :logger => @logger)
       fjb.instance_variable_set('@muc_clients', {'room1' => muc_client})
       fjb.announce('room1', 'hello!')
     end
@@ -324,7 +343,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       client.should_receive(:send).with(message)
 
-      fjb = Flapjack::Gateways::Jabber::Bot.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+        :config => config, :logger => @logger)
       fjb.instance_variable_set('@client', client)
       fjb.say('jim', 'hello!')
     end

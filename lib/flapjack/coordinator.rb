@@ -16,7 +16,7 @@ module Flapjack
 
     def initialize(config)
 
-      # Thread.abort_on_exception = true
+      Thread.current.abort_on_exception = true
 
       @config     = config
       @redis_opts = config.for_redis
@@ -63,6 +63,7 @@ module Flapjack
       # a new thread is required to avoid deadlock errors; signal
       # handler runs by jumping into main thread
       Thread.new do
+        Thread.current.abort_on_exception = true
         @monitor.synchronize { @shutdown_cond.signal }
       end
     end

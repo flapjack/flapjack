@@ -18,10 +18,11 @@ module Flapjack
 
   class Processor
 
-    include MonitorMixin
     include Flapjack::Utility
 
     def initialize(opts = {})
+      @lock = opts[:lock]
+
       @config = opts[:config]
       @redis_config = opts[:redis_config] || {}
       @logger = opts[:logger]
@@ -50,7 +51,29 @@ module Flapjack
       @filters << Flapjack::Filters::Delays.new(options)
       @filters << Flapjack::Filters::Acknowledgement.new(options)
 
-      mon_initialize
+      fqdn          = `/bin/hostname -f`.chomp
+      pid           = Process.pid
+      @instance_id  = "#{fqdn}:#{pid}"
+
+      # FIXME: all of the below keys assume there is only ever one executive running;
+      # we could generate a fuid and save it to disk, and prepend it from that
+      # point on...
+
+      # FIXME: add an administrative function to reset all event counters
+      if @redis.hget('event_counters', 'all').nil?
+        @redis.hset('event_counters', 'all', 0)
+        @redis.hset('event_counters', 'ok', 0)
+        @redis.hset('event_counters', 'failure', 0)
+        @redis.hset('event_counters', 'action', 0)
+      end
+
+      #@redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
+      @redis.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
+      @redis.hset("event_counters:#{@instance_id}", 'all', 0)
+      @redis.hset("event_counters:#{@instance_id}", 'ok', 0)
+      @redis.hset("event_counters:#{@instance_id}", 'failure', 0)
+      @redis.hset("event_counters:#{@instance_id}", 'action', 0)
+      touch_keys
     end
 
     # expire instance keys after one week
@@ -68,37 +91,10 @@ module Flapjack
     end
 
     def start
-      synchronize do
-        fqdn          = `/bin/hostname -f`.chomp
-        pid           = Process.pid
-        @instance_id  = "#{fqdn}:#{pid}"
-
-        # FIXME: all of the below keys assume there is only ever one executive running;
-        # we could generate a fuid and save it to disk, and prepend it from that
-        # point on...
-
-        # FIXME: add an administrative function to reset all event counters
-        if @redis.hget('event_counters', 'all').nil?
-          @redis.hset('event_counters', 'all', 0)
-          @redis.hset('event_counters', 'ok', 0)
-          @redis.hset('event_counters', 'failure', 0)
-          @redis.hset('event_counters', 'action', 0)
-        end
-
-        #@redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
-        @redis.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
-        @redis.hset("event_counters:#{@instance_id}", 'all', 0)
-        @redis.hset("event_counters:#{@instance_id}", 'ok', 0)
-        @redis.hset("event_counters:#{@instance_id}", 'failure', 0)
-        @redis.hset("event_counters:#{@instance_id}", 'action', 0)
-        touch_keys
-
-        @logger.info("Booting main loop.")
-      end
+      @logger.info("Booting main loop.")
 
       loop do
-        synchronize do
-          # FIXME support exit_on_queue_empty and detect this as a global exit event at the coordinator level
+        @lock.synchronize do
           Flapjack::Data::Event.foreach_on_queue(@queue, :redis => @redis,
                                                  :archive_events => @archive_events,
                                                  :events_archive_maxage => @events_archive_maxage,
@@ -113,10 +109,8 @@ module Flapjack
       end
     end
 
-    def stop(thread)
-      synchronize do
-        thread.raise Flapjack::PikeletStop.new
-      end
+    def stop_type
+      :exception
     end
 
   private
@@ -125,10 +119,6 @@ module Flapjack
       pending = Flapjack::Data::Event.pending_count(@queue, :redis => @redis)
       @logger.debug("#{pending} events waiting on the queue")
       @logger.debug("Raw event received: #{event.inspect}")
-
-      if ('noop' == event.type)
-        return
-      end
 
       event_str = "#{event.id}, #{event.type}, #{event.state}, #{event.summary}"
       event_str << ", #{Time.at(event.time).to_s}" if event.time

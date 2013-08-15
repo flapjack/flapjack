@@ -19,9 +19,8 @@ module Flapjack
 
       class Notifier
 
-        include MonitorMixin
-
         def initialize(opts = {})
+          @lock = opts[:lock]
           @config = opts[:config]
           @logger = opts[:logger]
           @redis_config = opts[:redis_config] || {}
@@ -29,8 +28,6 @@ module Flapjack
           @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
           @notifications_queue = @config['queue'] || 'pagerduty_notifications'
-
-          mon_initialize
 
           @logger.debug("New Pagerduty::Notifier pikelet with the following options: #{@config.inspect}")
         end
@@ -43,7 +40,7 @@ module Flapjack
           end
 
           loop do
-            synchronize do
+            @lock.synchronize do
               Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {|message|
                 handle_message(message)
               }
@@ -53,10 +50,8 @@ module Flapjack
           end
         end
 
-        def stop(thread)
-          synchronize do
-            thread.raise Flapjack::PikeletStop.new
-          end
+        def stop_type
+          :exception
         end
 
         private
@@ -100,7 +95,7 @@ module Flapjack
                                                :incident_key => 'Flapjack is running a NOOP',
                                                :event_type => 'nop',
                                                :description => 'I love APIs with noops.')
-          return true if '200'.equal?(code) && results['status'] =~ /success/i
+          return true if '200'.eql?(code) && results['status'] =~ /success/i
           @logger.error "Error: test_pagerduty_connection: API returned #{code.to_s} #{results.inspect}"
           false
         end
@@ -132,11 +127,10 @@ module Flapjack
 
       class AckFinder
 
-        include MonitorMixin
-
         SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'
 
         def initialize(opts = {})
+          @lock = opts[:lock]
           @config = opts[:config]
           @logger = opts[:logger]
           @redis_config = opts[:redis_config] || {}
@@ -148,13 +142,11 @@ module Flapjack
           # TODO: only clear this if there isn't another pagerduty gateway instance running
           # or better, include an instance ID in the semaphore key name
           @redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
-
-          mon_initialize
         end
 
         def start
           loop do
-            synchronize do
+            @lock.synchronize do
               # ensure we're the only instance of the pagerduty acknowledgement check running (with a naive
               # timeout of five minutes to guard against stale locks caused by crashing code) either in this
               # process or in other processes
@@ -171,10 +163,8 @@ module Flapjack
           end
         end
 
-        def stop(thread)
-          synchronize do
-            thread.raise Flapjack::PikeletStop.new
-          end
+        def stop_type
+          :exception
         end
 
         def find_pagerduty_acknowledgements

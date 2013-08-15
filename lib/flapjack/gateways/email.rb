@@ -19,12 +19,12 @@ module Flapjack
 
     class Email
 
-      include MonitorMixin
       include Flapjack::Utility
 
       attr_reader :sent
 
       def initialize(opts = {})
+        @lock = opts[:lock]
         @config = opts[:config]
         @redis_config = opts[:redis_config] || {}
         @logger = opts[:logger]
@@ -54,8 +54,6 @@ module Flapjack
         end
 
         @sent = 0
-
-        mon_initialize
       end
 
       def start
@@ -65,7 +63,7 @@ module Flapjack
         msg_raw = nil
 
         loop do
-          synchronize do
+          @lock.synchronize do
             @logger.debug "checking messages"
             Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis, :logger => @logger) {|message|
               handle_message(message)
@@ -77,10 +75,8 @@ module Flapjack
         end
       end
 
-      def stop(thread)
-        synchronize do
-          thread.raise Flapjack::PikeletStop.new
-        end
+      def stop_type
+        :exception
       end
 
       def handle_message(message)

@@ -12,11 +12,11 @@ module Flapjack
   module Gateways
     class SmsMessagenet
 
-      include MonitorMixin
-
       attr_reader :sent
 
       def initialize(opts = {})
+        @lock = opts[:lock]
+
         @config = opts[:config]
         @redis_config = opts[:redis_config] || {}
         @logger = opts[:logger]
@@ -26,14 +26,12 @@ module Flapjack
 
         @sent = 0
 
-        mon_initialize
-
         @logger.debug("new sms gateway pikelet with the following options: #{@config.inspect}")
       end
 
       def start
         loop do
-          synchronize do
+          @lock.synchronize do
             Flapjack::Data::Message.foreach_on_queue(@notifications_queue,
                                                      :redis => @redis,
                                                      :logger => @logger) {|message|
@@ -45,10 +43,8 @@ module Flapjack
         end
       end
 
-      def stop(thread)
-        synchronize do
-          thread.raise Flapjack::PikeletStop.new
-        end
+      def stop_type
+        :exception
       end
 
       def handle_message(msg)

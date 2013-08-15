@@ -35,7 +35,10 @@ describe Flapjack::Gateways::Email, :logger => true do
 
     Mail::TestMailer.deliveries.should be_empty
 
-    email_gw = Flapjack::Gateways::Email.new(:config => {}, :logger => @logger)
+    lock = mock(Monitor)
+    lock.should_receive(:synchronize).and_yield
+
+    email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => {}, :logger => @logger)
     expect { email_gw.start }.to raise_error(Flapjack::PikeletStop)
 
     Mail::TestMailer.deliveries.should have(1).mail

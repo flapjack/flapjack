@@ -3,24 +3,26 @@ require 'flapjack/gateways/sms_messagenet'
 
 describe Flapjack::Gateways::SmsMessagenet, :logger => true do
 
-    let(:config) { {'username'  => 'user',
-                    'password'  => 'password'
-                   }
-                 }
+  let(:lock) { mock(Monitor) }
 
-    let(:message) { {'notification_type'  => 'recovery',
-                     'contact_first_name' => 'John',
-                     'contact_last_name'  => 'Smith',
-                     'state'              => 'ok',
-                     'summary'            => 'smile',
-                     'last_state'         => 'problem',
-                     'last_summary'       => 'frown',
-                     'time'               => Time.now.to_i,
-                     'address'            => '555-555555',
-                     'event_id'           => 'example.com:ping',
-                     'id'                 => '123456789'
-                    }
+  let(:config) { {'username'  => 'user',
+                  'password'  => 'password'
+                 }
+               }
+
+  let(:message) { {'notification_type'  => 'recovery',
+                   'contact_first_name' => 'John',
+                   'contact_last_name'  => 'Smith',
+                   'state'              => 'ok',
+                   'summary'            => 'smile',
+                   'last_state'         => 'problem',
+                   'last_summary'       => 'frown',
+                   'time'               => Time.now.to_i,
+                   'address'            => '555-555555',
+                   'event_id'           => 'example.com:ping',
+                   'id'                 => '123456789'
                   }
+                }
 
   it "sends an SMS message" do
     redis = mock('redis')
@@ -38,7 +40,10 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
                                      'Username' => 'user', 'Pwd' => 'password'})).
       to_return(:status => 200)
 
-    sms_gw = Flapjack::Gateways::SmsMessagenet.new(:config => config,
+    lock.should_receive(:synchronize).and_yield
+
+    sms_gw = Flapjack::Gateways::SmsMessagenet.new(:lock => lock,
+                                                   :config => config,
                                                    :logger => @logger)
     expect { sms_gw.start }.to raise_error(Flapjack::PikeletStop)
     req.should have_been_requested
@@ -55,7 +60,10 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
       with('sms_notifications', :redis => redis).
       and_raise(Flapjack::PikeletStop)
 
-    sms_gw = Flapjack::Gateways::SmsMessagenet.new(:config => config.reject {|k, v| k == 'password'},
+    lock.should_receive(:synchronize).and_yield
+
+    sms_gw = Flapjack::Gateways::SmsMessagenet.new(:lock => lock,
+                                                   :config => config.reject {|k, v| k == 'password'},
                                                    :logger => @logger)
     expect { sms_gw.start }.to raise_error(Flapjack::PikeletStop)
 

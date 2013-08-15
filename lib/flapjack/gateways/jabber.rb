@@ -25,9 +25,8 @@ module Flapjack
 
         attr_accessor :siblings
 
-        include MonitorMixin
-
         def initialize(options = {})
+          @lock = options[:lock]
           @config = options[:config]
           @redis_config = options[:redis_config] || {}
 
@@ -35,14 +34,12 @@ module Flapjack
 
           @notifications_queue = @config['queue'] || 'jabber_notifications'
 
-          mon_initialize
-
           @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
         end
 
         def start
           loop do
-            synchronize do
+            @lock.synchronize do
               Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {|message|
                 handle_message(message)
               }
@@ -52,10 +49,8 @@ module Flapjack
           end
         end
 
-        def stop(thread)
-          synchronize do
-            thread.raise Flapjack::PikeletStop.new
-          end
+        def stop_type
+          :exception
         end
 
         private
@@ -115,13 +110,13 @@ module Flapjack
 
       class Interpreter
 
-        include MonitorMixin
-
         attr_accessor :siblings
 
         include Flapjack::Utility
 
         def initialize(opts = {})
+          @lock = opts[:lock]
+          @stop_cond = opts[:stop_condition]
           @config = opts[:config]
           @redis_config = opts[:redis_config] || {}
           @boot_time = opts[:boot_time]
@@ -131,35 +126,25 @@ module Flapjack
 
           @should_quit = false
 
-          mon_initialize
-
-          @message_cond = new_cond
           @messages = []
         end
 
         def start
-          synchronize do
+          @lock.synchronize do
             until @messages.empty? && @should_quit
               while msg = @messages.pop
                 @logger.info "interpreter received #{msg.inspect}"
                 interpret(msg[:room], msg[:nick], msg[:time], msg[:message])
               end
-              @message_cond.wait_while { @messages.empty? && !@should_quit }
+              @stop_cond.wait_while { @messages.empty? && !@should_quit }
             end
           end
         end
 
-        def stop(thread)
-          synchronize do
-            @should_quit = true
-            @message_cond.signal
-          end
-        end
-
         def receive_message(room, nick, time, msg)
-          synchronize do
+          @lock.synchronize do
             @messages += [{:room => room, :nick => nick, :time => time, :message => msg}]
-            @message_cond.signal
+            @stop_cond.signal
           end
         end
 
@@ -369,11 +354,11 @@ module Flapjack
 
       class Bot
 
-        include MonitorMixin
-
         attr_accessor :siblings
 
         def initialize(opts = {})
+          @lock = opts[:lock]
+          @stop_cond = opts[:stop_condition]
           @config = opts[:config]
           @redis_config = opts[:redis_config] || {}
           @boot_time = opts[:boot_time]
@@ -384,16 +369,11 @@ module Flapjack
 
           @buffer = []
           @hostname = Socket.gethostname
-
-          mon_initialize
-
-          @should_quit = false
-          @shutdown_cond = new_cond
         end
 
         # TODO reconnect on disconnect
         def start
-          synchronize do
+          @lock.synchronize do
             if self.siblings
               @interpreter = self.siblings.detect {|sib| sib.respond_to?(:interpret)}
             end
@@ -451,7 +431,7 @@ module Flapjack
             end
 
             # block this thread until signalled to quit
-            @shutdown_cond.wait_until { @should_quit }
+            @stop_cond.wait_until { @should_quit }
 
             @muc_clients.each_pair do |room, muc_client|
               muc_client.exit if muc_client.active?
@@ -461,16 +441,13 @@ module Flapjack
           end
          end
 
-        def stop(thread)
-          synchronize do
-            @should_quit = true
-            @shutdown_cond.signal
-          end
+        def stop_type
+          :signal
         end
 
         # TODO buffer if room not connected?
         def announce(room, msg)
-          synchronize do
+          @lock.synchronize do
             unless @muc_clients.empty?
               if muc_client = @muc_clients[room]
                 muc_client.say(msg)
@@ -480,7 +457,7 @@ module Flapjack
         end
 
         def say(nick, message)
-          synchronize do
+          @lock.synchronize do
             m = ::Jabber::Message::new(nick, message)
             @client.send(m)
           end

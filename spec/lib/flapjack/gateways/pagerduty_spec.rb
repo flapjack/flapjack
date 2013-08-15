@@ -10,6 +10,8 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
   let(:redis) {  mock('redis') }
 
+  let(:lock)  { mock(Monitor) }
+
   context 'notifications' do
 
     let(:message) { {'notification_type'  => 'problem',
@@ -37,7 +39,10 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       Flapjack::Data::Message.should_receive(:wait_for_queue).
         with('pagerduty_notifications', :redis => redis).and_raise(Flapjack::PikeletStop)
 
-      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+
+      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:lock => lock,
+        :config => config, :logger => @logger)
       fpn.should_receive(:handle_message).with(message)
       fpn.should_receive(:test_pagerduty_connection).twice.and_return(false, true)
       expect { fpn.start }.to raise_error(Flapjack::PikeletStop)
@@ -93,7 +98,10 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       Kernel.should_receive(:sleep).with(10).and_raise(Flapjack::PikeletStop.new)
 
-      fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+
+      fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:lock => lock,
+        :config => config, :logger => @logger)
       expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
     end
 
@@ -132,7 +140,10 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       response = {:pg_acknowledged_by => status_change}
 
-      fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+
+      fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:lock => lock,
+        :config => config, :logger => @logger)
       fpa.should_receive(:pagerduty_acknowledged?).and_return(response)
       expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
     end
