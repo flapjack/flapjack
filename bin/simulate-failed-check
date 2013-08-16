@@ -45,8 +45,6 @@ def fail(opts)
   stop_cond = lock.new_cond
   @finish = false
 
-  p opts
-
   failer = Thread.new do
     failer_redis = Redis.new((opts[:redis_options] || {}).merge(:driver => :hiredis))
     fin = nil
