@@ -31,7 +31,7 @@ module Flapjack
   module Pikelet
 
     class Base
-      attr_accessor :siblings
+      attr_accessor :siblings, :pikelet
 
       def initialize(pikelet_class, shutdown, opts = {})
         @pikelet_class = pikelet_class
@@ -69,12 +69,12 @@ module Flapjack
 
           loop do
             begin
-              @logger.info "pikelet start for #{@pikelet_class.name}"
+              @logger.debug "pikelet start for #{@pikelet_class.name}"
               yield
             rescue Flapjack::PikeletStop
-              @logger.info "pikelet stop for #{@pikelet_class.name}"
+              @logger.debug "pikelet exception stop for #{@pikelet_class.name}"
             rescue Flapjack::GlobalStop
-              @logger.info "global stop for #{@pikelet_class.name}"
+              @logger.debug "global exception stop for #{@pikelet_class.name}"
               stop_all = true
             rescue Exception => e
               @logger.warn "#{e.class.name} #{e.message}"
@@ -111,6 +111,7 @@ module Flapjack
           when :exception
             @lock.synchronize do
               unless @finished
+                @logger.debug "triggering pikelet exception stop for #{@pikelet_class.name}"
                 @thread.raise Flapjack::PikeletStop
                 @finished_condition.wait_until { @finished }
               end
@@ -118,6 +119,7 @@ module Flapjack
           when :signal
             @lock.synchronize do
               unless @finished
+                @logger.debug "triggering pikelet signal stop for #{@pikelet_class.name}"
                 @pikelet.instance_variable_set('@should_quit', true)
                 @stop_condition.signal
                 @finished_condition.wait_until { @finished }

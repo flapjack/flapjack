@@ -280,8 +280,9 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
   context 'XMPP' do
 
-    let(:client)     { mock(::Jabber::Client) }
-    let(:muc_client) { mock(::Jabber::MUC::SimpleMUCClient) }
+    let(:client)      { mock(::Jabber::Client) }
+    let(:muc_client)  { mock(::Jabber::MUC::SimpleMUCClient) }
+    let(:muc_clients) { {config['rooms'].first => muc_client} }
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by a signal" do
@@ -293,9 +294,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       interpreter.should_receive(:receive_message).
         with('flapjacktest@conference.example.com', 'jim', now.to_i, 'hello!')
 
-      client.should_receive(:connect)
-      client.should_receive(:auth).with('password')
-      client.should_receive(:send).with(an_instance_of(::Jabber::Presence))
+      client.should_receive(:on_exception)
 
       msg_client = mock('msg_client')
       msg_client.should_receive(:body).and_return('hello!')
@@ -305,50 +304,165 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       client.should_receive(:add_message_callback).and_yield(msg_client)
 
       muc_client.should_receive(:on_message).and_yield(now.to_i, 'jim', 'flapjack: hello!')
-      muc_client.should_receive(:join).with('flapjacktest@conference.example.com/flapjack')
-      muc_client.should_receive(:say).with(/^flapjack jabber gateway started/)
-
-      muc_client.should_receive(:active?).and_return(true)
-      muc_client.should_receive(:exit)
-
-      client.should_receive(:close)
+      client.should_receive(:is_connected?).and_return(true)
 
       ::Jabber::Client.should_receive(:new).and_return(client)
       ::Jabber::MUC::SimpleMUCClient.should_receive(:new).and_return(muc_client)
 
       lock.should_receive(:synchronize).and_yield
       stop_cond = mock(MonitorMixin::ConditionVariable)
-      stop_cond.should_receive(:wait_until)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
         :stop_condition => stop_cond, :config => config, :logger => @logger)
+      stop_cond.should_receive(:wait_until).and_return {
+        fjb.instance_variable_set('@should_quit', true)
+      }
       fjb.instance_variable_set('@siblings', [interpreter])
+
+      fjb.should_receive(:_join).with(client, muc_clients)
+      fjb.should_receive(:_leave).with(client, muc_clients)
+
       fjb.start
     end
 
-    it "announces a message to a chat room" do
-      muc_client.should_receive(:say).with('hello!')
+    it "should handle an exception and signal for leave and rejoin"
 
-      lock.should_receive(:synchronize).and_yield
+    it "strips XML from a received string"
 
-      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock, :config => config, :logger => @logger)
-      fjb.instance_variable_set('@muc_clients', {'room1' => muc_client})
-      fjb.announce('room1', 'hello!')
+    it "handles an announce state change" do
+      client.should_receive(:is_connected?).and_return(true)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+        :config => config, :logger => @logger)
+      fjb.should_receive(:_announce).with(muc_clients)
+      fjb.instance_variable_set('@state_buffer', ['announce'])
+      fjb.handle_state_change(client, muc_clients)
     end
 
-    it "says a message to an individual user" do
+    it "handles a say state change" do
+      client.should_receive(:is_connected?).and_return(true)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+        :config => config, :logger => @logger)
+      fjb.should_receive(:_say).with(client)
+      fjb.instance_variable_set('@state_buffer', ['say'])
+      fjb.handle_state_change(client, muc_clients)
+    end
+
+    it "handles a leave state change (when connected)" do
+      client.should_receive(:is_connected?).and_return(true)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+        :config => config, :logger => @logger)
+      fjb.should_receive(:_leave).with(client, muc_clients)
+      fjb.instance_variable_set('@state_buffer', ['leave'])
+      fjb.handle_state_change(client, muc_clients)
+    end
+
+    it "handles a leave state change (when not connected)" do
+      client.should_receive(:is_connected?).and_return(false)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+        :config => config, :logger => @logger)
+      fjb.should_receive(:_deactivate).with(muc_clients)
+      fjb.instance_variable_set('@state_buffer', ['leave'])
+      fjb.handle_state_change(client, muc_clients)
+    end
+
+    it "handles a rejoin state change" do
+      client.should_receive(:is_connected?).and_return(false)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+        :config => config, :logger => @logger)
+      fjb.should_receive(:_join).with(client, muc_clients, :rejoin => true)
+      fjb.instance_variable_set('@state_buffer', ['rejoin'])
+      fjb.handle_state_change(client, muc_clients)
+    end
+
+    it "joins the jabber client" do
+      client.should_receive(:connect)
+      client.should_receive(:auth).with('password')
+      client.should_receive(:send).with(an_instance_of(::Jabber::Presence))
+
+      muc_client.should_receive(:join).with('flapjacktest@conference.example.com/flapjack')
+      muc_client.should_receive(:say).with(/^flapjack jabber gateway started/)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+        :config => config, :logger => @logger)
+      fjb._join(client, muc_clients)
+    end
+
+    it "rejoins the jabber client" do
+      client.should_receive(:connect)
+      client.should_receive(:auth).with('password')
+      client.should_receive(:send).with(an_instance_of(::Jabber::Presence))
+
+      muc_client.should_receive(:join).with('flapjacktest@conference.example.com/flapjack')
+      muc_client.should_receive(:say).with(/^flapjack jabber gateway rejoining/)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+        :config => config, :logger => @logger)
+      fjb._join(client, muc_clients, :rejoin => true)
+    end
+
+    it "leaves the jabber client (connected)" do
+      muc_client.should_receive(:exit)
+      client.should_receive(:close)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+        :config => config, :logger => @logger)
+      fjb._leave(client, muc_clients)
+    end
+
+    it "deactivates the jabber client (not connected)" do
+      muc_client.should_receive(:deactivate)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+        :config => config, :logger => @logger)
+      fjb._deactivate(muc_clients)
+    end
+
+    it "speaks its announce buffer" do
+      muc_client.should_receive(:active?).and_return(true)
+      muc_client.should_receive(:say).with('hello!')
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock, :config => config, :logger => @logger)
+      fjb.instance_variable_set('@announce_buffer', [{:room => 'room1', :msg => 'hello!'}])
+      fjb._announce('room1' => muc_client)
+    end
+
+    it "speaks its say buffer" do
       message = mock(::Jabber::Message)
       ::Jabber::Message.should_receive(:new).
         with('jim', 'hello!').and_return(message)
 
       client.should_receive(:send).with(message)
 
-      lock.should_receive(:synchronize).and_yield
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock, :config => config, :logger => @logger)
+      fjb.instance_variable_set('@say_buffer', [{:nick => 'jim', :msg => 'hello!'}])
+      fjb._say(client)
+    end
 
-      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+    it "buffers an announce message and sends a signal" do
+      lock.should_receive(:synchronize).and_yield
+      stop_cond.should_receive(:signal)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock, :stop_condition => stop_cond,
         :config => config, :logger => @logger)
-      fjb.instance_variable_set('@client', client)
+      fjb.announce('room1', 'hello!')
+      fjb.instance_variable_get('@state_buffer').should == ['announce']
+      fjb.instance_variable_get('@announce_buffer').should == [{:room => 'room1', :msg => 'hello!'}]
+    end
+
+    it "buffers a say message and sends a signal" do
+      lock.should_receive(:synchronize).and_yield
+      stop_cond.should_receive(:signal)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock, :stop_condition => stop_cond,
+        :config => config, :logger => @logger)
       fjb.say('jim', 'hello!')
+      fjb.instance_variable_get('@state_buffer').should == ['say']
+      fjb.instance_variable_get('@say_buffer').should == [{:nick => 'jim', :msg => 'hello!'}]
     end
 
   end

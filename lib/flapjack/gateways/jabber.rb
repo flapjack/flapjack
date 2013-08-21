@@ -5,8 +5,8 @@ require 'socket'
 
 require 'chronic_duration'
 require 'oj'
-require 'xmpp4r'
-require 'xmpp4r/muc/helper/simplemucclient'
+require 'rexml/document'
+require 'xmpp4r/muc'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/data/message'
@@ -139,6 +139,10 @@ module Flapjack
               @stop_cond.wait_while { @messages.empty? && !@should_quit }
             end
           end
+        end
+
+        def stop_type
+          :signal
         end
 
         def receive_message(room, nick, time, msg)
@@ -367,16 +371,16 @@ module Flapjack
 
           @logger = opts[:logger]
 
-          @buffer = []
+          @say_buffer = []
+          @announce_buffer = []
           @hostname = Socket.gethostname
+
+          @state_buffer = []
         end
 
-        # TODO reconnect on disconnect
         def start
           @lock.synchronize do
-            if self.siblings
-              @interpreter = self.siblings.detect {|sib| sib.respond_to?(:interpret)}
-            end
+            interpreter = self.siblings ? self.siblings.detect {|sib| sib.respond_to?(:interpret)} : nil
 
             @logger.info("starting")
             @logger.debug("new jabber pikelet with the following options: #{@config.inspect}")
@@ -385,20 +389,48 @@ module Flapjack
 
             jabber_id = @config['jabberid'] || 'flapjack'
 
-            @flapjack_jid = ::Jabber::JID.new(jabber_id + '/' + @hostname)
-            @client = ::Jabber::Client.new(@flapjack_jid)
+            flapjack_jid = ::Jabber::JID.new(jabber_id + '/' + @hostname)
+            client = ::Jabber::Client.new(flapjack_jid)
 
-            @muc_clients = @config['rooms'].inject({}) do |memo, room|
-              muc_client = ::Jabber::MUC::SimpleMUCClient.new(@client)
-              memo[room] = muc_client
-              memo
+            client.on_exception do |exc, stream, loc|
+              # TODO move log statements back inside the 'unless @should_quit' clause
+              # -- debugging with them now
+              @logger.error exc.class.name
+              @logger.error ":#{loc.to_s}"
+              @lock.synchronize do
+                unless @should_quit
+                  @state_buffer << 'leave'
+                  @stop_cond.signal
+                end
+              end
+              sleep 3
+              @lock.synchronize do
+                unless @should_quit
+                  @state_buffer << 'rejoin'
+                  @stop_cond.signal
+                end
+              end
             end
 
-            @client.connect
-            @client.auth(@config['password'])
-            @client.send(::Jabber::Presence.new.set_type(:available))
+           check_xml = Proc.new do |data|
+              return if data.nil?
+              text = ''
+              begin
+                # FIXME this is a workaround to stop REXML throwing exceptions,
+                # there must be a better way...
+                data_enc = data.dup
+                data_enc.force_encoding( Encoding.find("ASCII-8BIT") )
+                REXML::Document.new(data_enc).each_element_with_text do |elem|
+                  text += elem.texts.join(" ")
+                end
+                text = data if text.empty? && !data.empty?
+              rescue REXML::ParseException => exc
+                text = data
+              end
+              text
+            end
 
-            @client.add_message_callback do |m|
+            client.add_message_callback do |m|
               text = m.body
               nick = m.from
               time = nil
@@ -408,58 +440,120 @@ module Flapjack
                 end
               }
 
-              if @interpreter
-                @interpreter.receive_message(nil, nick, time, text)
+              if interpreter
+                interpreter.receive_message(nil, nick, time, check_xml.call(text))
               end
             end
 
-            @muc_clients.each_pair do |room, muc_client|
+            muc_clients = @config['rooms'].inject({}) do |memo, room|
+              muc_client = ::Jabber::MUC::SimpleMUCClient.new(client)
               muc_client.on_message do |time, nick, text|
                 next if nick == jabber_id
 
-                if text =~ /^#{@config['alias']}:\s+(.*)/
+                if check_xml.call(text) =~ /^#{@config['alias']}:\s+(.*)/
                   command = $1
 
-                  if @interpreter
-                    @interpreter.receive_message(room, nick, time, command)
+                  if interpreter
+                    interpreter.receive_message(room, nick, time, command)
                   end
                 end
               end
 
-              muc_client.join(room + '/' + @config['alias'])
-              muc_client.say("flapjack jabber gateway started at #{Time.now}, hello!")
+              memo[room] = muc_client
+              memo
             end
 
-            # block this thread until signalled to quit
-            @stop_cond.wait_until { @should_quit }
+            _join(client, muc_clients)
 
-            @muc_clients.each_pair do |room, muc_client|
-              muc_client.exit if muc_client.active?
+            loop do
+              # block this thread until signalled to quit / leave / rejoin
+              @stop_cond.wait_until { @should_quit || !@state_buffer.empty? }
+              break if @should_quit
+
+              handle_state_change(client, muc_clients)
             end
 
-            @client.close
+            # main loop has finished, stop() must have been called -- disconnect
+            _leave(client, muc_clients) if client.is_connected?
           end
-         end
+        end
+
+        def announce(room, msg)
+          @lock.synchronize do
+            @announce_buffer += [{:room => room, :msg => msg}]
+            @state_buffer << 'announce'
+            @stop_cond.signal
+          end
+        end
+
+        def say(nick, msg)
+          @lock.synchronize do
+            @say_buffer += [{:nick => nick, :msg => msg}]
+            @state_buffer << 'say'
+            @stop_cond.signal
+          end
+        end
+
+        def handle_state_change(client, muc_clients)
+          connected = client.is_connected?
+          @logger.info "connected? #{connected}"
+
+          while state = @state_buffer.pop
+            case state
+            when 'announce'
+              _announce(muc_clients) if connected
+            when 'say'
+              _say(client) if connected
+            when 'leave'
+              connected ? _leave(client, muc_clients) : _deactivate(muc_clients)
+            when 'rejoin'
+              _join(client, muc_clients, :rejoin => true) unless connected
+            else
+              @logger.warn "unknown state change #{state}"
+            end
+          end
+        end
 
         def stop_type
           :signal
         end
 
-        # TODO buffer if room not connected?
-        def announce(room, msg)
-          @lock.synchronize do
-            unless @muc_clients.empty?
-              if muc_client = @muc_clients[room]
-                muc_client.say(msg)
-              end
-            end
+        def _join(client, muc_clients, opts = {})
+          client.connect
+          client.auth(@config['password'])
+          client.send(::Jabber::Presence.new.set_type(:available))
+          muc_clients.each_pair do |room, muc_client|
+            muc_client.join(room + '/' + @config['alias'])
+            msg = opts[:rejoin] ? "flapjack jabber gateway rejoining at #{Time.now}, hello again!" :
+                                  "flapjack jabber gateway started at #{Time.now}, hello!"
+            muc_client.say(msg)
           end
         end
 
-        def say(nick, message)
-          @lock.synchronize do
-            m = ::Jabber::Message::new(nick, message)
-            @client.send(m)
+        def _leave(client, muc_clients)
+          muc_clients.values.each {|muc_client| muc_client.exit }
+          client.close
+        end
+
+        def _deactivate(muc_clients)
+          # send method has been overridden in MUCClient class
+          # without this MUC clients will still think they are active
+          muc_clients.values.each {|muc_client| muc_client.__send__(:deactivate) }
+        end
+
+        def _announce(muc_clients)
+          @announce_buffer.each do |announce|
+            if (muc_client = muc_clients[announce[:room]]) && muc_client.active?
+              muc_client.say(announce[:msg])
+              announce[:sent] = true
+            end
+          end
+          @announce_buffer.delete_if {|announce| announce[:sent] }
+        end
+
+        def _say(client)
+          while speak = @say_buffer.pop
+            client.send( ::Jabber::Message::new(speak[:nick], speak[:msg]) )
           end
         end
 

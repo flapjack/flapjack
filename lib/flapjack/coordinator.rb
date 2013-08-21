@@ -16,7 +16,7 @@ module Flapjack
 
     def initialize(config)
 
-      Thread.current.abort_on_exception = true
+      Thread.abort_on_exception = true
 
       @config     = config
       @redis_opts = config.for_redis
