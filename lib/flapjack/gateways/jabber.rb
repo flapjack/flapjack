@@ -395,8 +395,17 @@ module Flapjack
             client.on_exception do |exc, stream, loc|
               # TODO move log statements back inside the 'unless @should_quit' clause
               # -- debugging with them now
-              @logger.error exc.class.name
-              @logger.error ":#{loc.to_s}"
+
+              if exc
+                @logger.error exc.class.name
+                @logger.error ":#{loc.to_s}"
+                @logger.error exc.message
+                @logger.error exc.backtrace.join("\n")
+              else
+                @logger.error "on_exception called with nil exception value"
+                @logger.error caller.join("\n")
+              end
+
               @lock.synchronize do
                 unless @should_quit
                   @state_buffer << 'leave'
