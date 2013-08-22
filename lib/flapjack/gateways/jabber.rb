@@ -6,6 +6,7 @@ require 'socket'
 require 'chronic_duration'
 require 'oj'
 require 'rexml/document'
+require 'xmpp4r/query'
 require 'xmpp4r/muc'
 
 require 'flapjack/data/entity_check'
@@ -425,11 +426,10 @@ module Flapjack
               return if data.nil?
               text = ''
               begin
-                # FIXME this is a workaround to stop REXML throwing exceptions,
-                # there must be a better way...
-                data_enc = data.dup
-                data_enc.force_encoding( Encoding.find("ASCII-8BIT") )
-                REXML::Document.new(data_enc).each_element_with_text do |elem|
+                enc_name = Encoding.default_external.name
+                REXML::Document.new("<?xml version=\"1.0\" encoding=\"#{enc_name}\"?>" + data).
+                  each_element_with_text do |elem|
+
                   text += elem.texts.join(" ")
                 end
                 text = data if text.empty? && !data.empty?
