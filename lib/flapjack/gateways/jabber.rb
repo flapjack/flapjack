@@ -472,14 +472,40 @@ module Flapjack
               memo
             end
 
-            _join(client, muc_clients)
+            attempts_allowed = 3
+            attempts_remaining = attempts_allowed
 
             loop do
-              # block this thread until signalled to quit / leave / rejoin
-              @stop_cond.wait_until { @should_quit || !@state_buffer.empty? }
-              break if @should_quit
 
-              handle_state_change(client, muc_clients)
+              if client.is_connected?
+                # block this thread until signalled to quit / leave / rejoin
+                @stop_cond.wait_until { @should_quit || !@state_buffer.empty? }
+              elsif attempts_remaining > 0
+                unless @should_quit || (attempts_remaining == attempts_allowed)
+                  # The only thing that should be interrupting this wait is
+                  # a pikelet.stop, which would set @should_quit to true;
+                  # thus we shouldn't see multiple connection attempts happening
+                  # too quickly.
+                  @stop_cond.wait(3)
+                end
+                unless @should_quit # may have changed during previous wait
+                  begin
+                    attempts_remaining -= 1
+                    _join(client, muc_clients)
+                    # reset counter, joined OK
+                    attempts_remaining = attempts_allowed
+                  rescue Errno::ECONNREFUSED, ::Jabber::JabberError => je
+                    report_error("Couldn't join Jabber server #{@hostname}", je)
+                  end
+                end
+              else
+                # TODO should we quit Flapjack entirely?
+                @logger.error "stopping jabber bot, couldn't connect in #{attempts_allowed} attempts"
+                @should_quit = true
+              end
+
+              break if @should_quit
+              handle_state_change(client, muc_clients) unless @state_buffer.empty?
             end
 
             # main loop has finished, stop() must have been called -- disconnect
@@ -527,20 +553,55 @@ module Flapjack
           :signal
         end
 
+        def report_error(error_msg, je)
+          @logger.error error_msg
+          message = je.respond_to?(:message) ? je.message : '-'
+          @logger.error "#{je.class.name} #{message}"
+          # if je.respond_to?(:backtrace) && trace = je.backtrace
+          #   @logger.error trace.join("\n")
+          # end
+        end
+
         def _join(client, muc_clients, opts = {})
           client.connect
           client.auth(@config['password'])
           client.send(::Jabber::Presence.new.set_type(:available))
           muc_clients.each_pair do |room, muc_client|
-            muc_client.join(room + '/' + @config['alias'])
-            msg = opts[:rejoin] ? "flapjack jabber gateway rejoining at #{Time.now}, hello again!" :
-                                  "flapjack jabber gateway started at #{Time.now}, hello!"
-            muc_client.say(msg)
+            attempts_allowed = 3
+            attempts_remaining = attempts_allowed
+            joined = nil
+            while !joined && (attempts_remaining > 0)
+              unless @should_quit || (attempts_remaining == attempts_allowed)
+                # The only thing that should be interrupting this wait is
+                # a pikelet.stop, which would set @should_quit to true;
+                # thus we shouldn't see multiple connection attempts happening
+                # too quickly.
+                @stop_cond.wait(1)
+              end
+              unless @should_quit # may have changed during previous wait
+                attempts_remaining -= 1
+                begin
+                  muc_client.join(room + '/' + @config['alias'])
+                  t = Time.now
+                  msg = opts[:rejoin] ? "flapjack jabber gateway rejoining at #{t}, hello again!" :
+                                        "flapjack jabber gateway started at #{t}, hello!"
+                  muc_client.say(msg)
+                  joined = true
+                rescue Errno::ECONNREFUSED, ::Jabber::JabberError => muc_je
+                  report_error("Couldn't join MUC room #{room}, #{attempts_remaining} attempts remaining", muc_je)
+                  raise if attempts_remaining = 0
+                  joined = false
+                end
+              end
+            end
           end
+        rescue ::Jabber::ClientAuthenticationFailure
+          client.close if client.is_connected?
+          raise
         end
 
         def _leave(client, muc_clients)
-          muc_clients.values.each {|muc_client| muc_client.exit }
+          muc_clients.values.each {|muc_client| muc_client.exit if muc_client.active? }
           client.close
         end
 

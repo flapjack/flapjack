@@ -304,7 +304,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       client.should_receive(:add_message_callback).and_yield(msg_client)
 
       muc_client.should_receive(:on_message).and_yield(now.to_i, 'jim', 'flapjack: hello!')
-      client.should_receive(:is_connected?).and_return(true)
+      client.should_receive(:is_connected?).exactly(3).times.and_return(false, true)
 
       ::Jabber::Client.should_receive(:new).and_return(client)
       ::Jabber::MUC::SimpleMUCClient.should_receive(:new).and_return(muc_client)
@@ -406,6 +406,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     end
 
     it "leaves the jabber client (connected)" do
+      muc_client.should_receive(:active?).and_return(true)
       muc_client.should_receive(:exit)
       client.should_receive(:close)
 
