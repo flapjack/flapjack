@@ -306,7 +306,7 @@ Feature: Notification rules on a per contact basis
 
   @time
   Scenario: Test notifications behave like a critical notification
-    Given the check is check 'ping' on entity 'foo'
+    Given the check is check 'ping' on entity 'baz'
     And   the check is in an ok state
     When  a test event is received
     Then  1 email alert should be queued for malak@example.com
@@ -328,7 +328,7 @@ Feature: Notification rules on a per contact basis
     And   2 sms alert should be queued for +61400000001
 
   Scenario: Unknown event during unscheduled maintenance
-    Given the check is check 'ping' on entity 'foo'
+    Given the check is check 'ping' on entity 'baz'
     And   the check is in an ok state
     When  an unknown event is received
     And   1 minute passes
