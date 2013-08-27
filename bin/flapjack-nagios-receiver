@@ -14,6 +14,7 @@ Oj.default_options = { :indent => 0, :mode => :strict }
 require 'dante'
 
 require 'flapjack/configuration'
+require 'flapjack/data/event'
 
 def pike(message)
   puts "piking out: #{message}"
@@ -56,7 +57,7 @@ def process_input(opts)
         'details'   => details,
         'timestamp' => timestamp,
       })
-      redis.lpush 'events', event
+      Flapjack::Data::Event.add(event, :redis => redis)
     end
   rescue Redis::CannotConnectError
     puts "Error, unable to to connect to the redis server (#{$!})"
