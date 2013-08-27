@@ -40,8 +40,6 @@ module Flapjack
           message += " is #{state.upcase}" unless ['acknowledgement', 'test'].include?(notification_type)
           message += " at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
 
-          notification['message'] = message
-
           # TODO log error and skip instead of raising errors
           if @config.nil? || (@config.respond_to?(:empty?) && @config.empty?)
             @logger.error "Messagenet config is missing"
@@ -53,13 +51,12 @@ module Flapjack
           username = @config["username"]
           password = @config["password"]
           address  = notification['address']
-          message  = notification['message']
+          safe_message = truncate(message, 159)
           notification_id = notification['id']
 
           [[username, "Messagenet username is missing"],
            [password, "Messagenet password is missing"],
            [address,  "SMS address is missing"],
-           [message,  "SMS message is missing"],
            [notification_id, "Notification id is missing"]].each do |val_err|
 
             next unless val_err.first.nil? || (val_err.first.respond_to?(:empty?) && val_err.first.empty?)
@@ -74,7 +71,7 @@ module Flapjack
           query = {'Username'     => username,
                    'Pwd'          => password,
                    'PhoneNumber'  => address,
-                   'PhoneMessage' => message}
+                   'PhoneMessage' => safe_message}
 
           http = EM::HttpRequest.new(MESSAGENET_URL).get(:query => query)
 
@@ -91,6 +88,19 @@ module Flapjack
           end
 
         end
+
+        # copied from ActiveSupport
+        def truncate(str, length, options = {})
+          text = str.dup
+          options[:omission] ||= "..."
+
+          length_with_room_for_omission = length - options[:omission].length
+          stop = options[:separator] ?
+            (text.rindex(options[:separator], length_with_room_for_omission) || length_with_room_for_omission) : length_with_room_for_omission
+
+          (text.length > length ? text[0...stop] + options[:omission] : text).to_s
+        end
+
       end
     end
   end
