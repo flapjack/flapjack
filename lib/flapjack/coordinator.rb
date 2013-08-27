@@ -31,11 +31,13 @@ module Flapjack
         setup_signals if options[:signals]
         add_pikelets(pikelets(@config.all))
       end
+
+      @exit_value
     end
 
-    def stop
-      return if @stopping
-      @stopping = true
+    def stop(value = 0)
+      return unless @exit_value.nil?
+      @exit_value = value
       remove_pikelets(@pikelets, :shutdown => true)
       # Syslog.close if Syslog.opened? # TODO revisit in threading branch
     end
@@ -111,10 +113,10 @@ module Flapjack
     # within a single coordinator instance. Coordinator is essentially
     # a singleton anyway...
     def setup_signals
-      Kernel.trap('INT')  { stop }
-      Kernel.trap('TERM') { stop }
+      Kernel.trap('INT')  { stop(Signal.list['INT']) }
+      Kernel.trap('TERM') { stop(Signal.list['TERM']) }
       unless RbConfig::CONFIG['host_os'] =~ /mswin|windows|cygwin/i
-        Kernel.trap('QUIT') { stop }
+        Kernel.trap('QUIT') { stop(Signal.list['QUIT']) }
         Kernel.trap('HUP')  { reload }
       end
     end
