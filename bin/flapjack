@@ -151,8 +151,7 @@ when "start"
       return_value = flapjack_coord.call
     }
     puts " done."
-    exit(return_value + 128) unless return_value.nil?
-  end
+    exit(return_value + 128) unless (return_value.nil? || (return_value == 0))
 
 when "stop"
   runner = get_runner
