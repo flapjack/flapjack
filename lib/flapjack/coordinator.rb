@@ -35,7 +35,7 @@ module Flapjack
       @exit_value
     end
 
-    def stop(value)
+    def stop(value = 0)
       return unless @exit_value.nil?
       @exit_value = value
       remove_pikelets(@pikelets, :shutdown => true)
