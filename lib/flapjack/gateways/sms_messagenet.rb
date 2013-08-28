@@ -81,13 +81,13 @@ module Flapjack
 
         username = @config["username"]
         password = @config["password"]
+        safe_message = truncate(message, 159)
         address  = msg['address']
         msg_id   = msg['id']
 
         [[username, "Messagenet username is missing"],
          [password, "Messagenet password is missing"],
          [address,  "SMS address is missing"],
-         [message,  "SMS message is missing"],
          [msg_id, "Message id is missing"]].each do |val_err|
 
           next unless val_err.first.nil? || (val_err.first.respond_to?(:empty?) && val_err.first.empty?)
@@ -131,7 +131,18 @@ module Flapjack
           @logger.error "Failed to send SMS via Messagenet, response status is #{status}, " +
             "msg_id: #{msg_id}"
         end
+      end
 
+      # copied from ActiveSupport
+      def truncate(str, length, options = {})
+        text = str.dup
+        options[:omission] ||= "..."
+
+        length_with_room_for_omission = length - options[:omission].length
+        stop = options[:separator] ?
+          (text.rindex(options[:separator], length_with_room_for_omission) || length_with_room_for_omission) : length_with_room_for_omission
+
+        (text.length > length ? text[0...stop] + options[:omission] : text).to_s
       end
     end
   end

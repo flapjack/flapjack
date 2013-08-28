@@ -45,6 +45,7 @@ Feature: Notification rules on a per contact basis
       |          |      | email         | email            |                   |                    |                   |
       |          |      | sms           | sms              |                   |                    |                   |
       | bar      |      | email         | email,sms        |                   |                    |                   |
+      | bar      | wags |               |                  | true              | true               |                   |
 
     And user 3 has the following notification rules:
       | entities | tags            | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
@@ -52,6 +53,7 @@ Feature: Notification rules on a per contact basis
       | baz      |                 | sms           | sms              |                   |                    |                   |
       | buf      |                 | email         | email            |                   |                    |                   |
       | buf      |                 | sms           | sms              |                   |                    |                   |
+      | bar      |                 | email         | email            | true              | true               |                   |
 
     And user 4 has the following notification rules:
       | entities | tags            | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
@@ -151,8 +153,38 @@ Feature: Notification rules on a per contact basis
     And   an ok event is received
     Then  2 email alert should be queued for malak@example.com
 
-  @blackhole
-  Scenario: Drop alerts matching a blackhole rule
+  @blackhole @time
+  Scenario: Drop alerts matching a general blackhole rule
+    Given the check is check 'ping' on entity 'buf'
+    And   the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  0 email alerts should be queued for malak@example.com
+
+  @blackhole @time
+  Scenario: Drop alerts matching a blackhole rule by entity
+    Given the check is check 'ping' on entity 'bar'
+    And   the check is in an ok state
+    When  a warning event is received
+    And   1 minute passes
+    And   a warning event is received
+    Then  0 email alerts should be queued for malak@example.com
+    And   0 email alerts should be queued for vera@example.com
+    When  an ok event is received
+    Then  0 email alerts should be queued for malak@example.com
+    And   0 email alerts should be queued for vera@example.com
+
+  @blackhole @time
+  Scenario: Drop alerts matching a blackhole rule by tags
+    Given the check is check 'wags the dog' on entity 'bar'
+    And   the check is in an ok state
+    When  a warning event is received
+    And   1 minute passes
+    And   a warning event is received
+    Then  0 email alerts should be queued for imani@example.com
+    When  an ok event is received
+    Then  0 email alerts should be queued for imani@example.com
 
   @intervals @time
   Scenario: Alerts according to custom interval
@@ -274,7 +306,7 @@ Feature: Notification rules on a per contact basis
 
   @time
   Scenario: Test notifications behave like a critical notification
-    Given the check is check 'ping' on entity 'foo'
+    Given the check is check 'ping' on entity 'baz'
     And   the check is in an ok state
     When  a test event is received
     Then  1 email alert should be queued for malak@example.com
@@ -296,7 +328,7 @@ Feature: Notification rules on a per contact basis
     And   2 sms alert should be queued for +61400000001
 
   Scenario: Unknown event during unscheduled maintenance
-    Given the check is check 'ping' on entity 'foo'
+    Given the check is check 'ping' on entity 'baz'
     And   the check is in an ok state
     When  an unknown event is received
     And   1 minute passes

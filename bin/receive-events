@@ -14,6 +14,7 @@ Oj.default_options = { :indent => 0, :mode => :strict }
 require 'active_support/json'
 
 require 'flapjack/configuration'
+require 'flapjack/data/event'
 
 def pike(message)
   puts "piking out: #{message}"
@@ -21,8 +22,7 @@ def pike(message)
 end
 
 def send_event(event, opts)
-  redis = opts[:redis]
-  redis.lpush 'events', event
+  Flapjack::Data::Event.add(event, :redis => opts[:redis])
 end
 
 def receive(opts)

@@ -150,7 +150,7 @@ module Flapjack
 
             logger.debug "#{matchers.length} matchers remain for this contact after time, entity and tags are matched:"
             matchers.each do |matcher|
-              logger.debug "matcher: #{matcher.to_json}"
+              logger.debug "  - #{matcher.to_json}"
             end
 
             # delete any general matchers if there are more specific matchers left
@@ -161,35 +161,42 @@ module Flapjack
               matchers.reject! {|matcher| !matcher.is_specific? }
 
               if num_matchers != matchers.length
-                logger.debug("notification: removal of general matchers when entity specific matchers are present: number of matchers changed from #{num_matchers} to #{matchers.length} for contact id: #{contact_id}")
+                logger.debug("removal of general matchers when entity specific matchers are present: number of matchers changed from #{num_matchers} to #{matchers.length} for contact id: #{contact_id}")
                 matchers.each do |matcher|
-                  logger.debug "matcher: #{matcher.to_json}"
+                  logger.debug "  - #{matcher.to_json}"
                 end
               end
             end
 
             # delete media based on blackholes
-            next if matchers.any? {|matcher| matcher.blackhole?(@event_state) }
-
-            logger.debug "notification: num matchers after removing blackhole matchers: #{matchers.size}"
+            blackhole_matchers = matchers.map {|matcher| matcher.blackhole?(@severity) ? matcher : nil }.compact
+            if blackhole_matchers.length > 0
+              logger.debug "dropping this media as #{blackhole_matchers.length} blackhole matchers are present:"
+              blackhole_matchers.each {|bm|
+                logger.debug "  - #{bm.to_json}"
+              }
+              next
+            else
+              logger.debug "no blackhole matchers matched"
+            end
 
             rule_media = matchers.collect{|matcher|
               matcher.media_for_severity(@severity)
             }.flatten.uniq
 
-            logger.debug "notification: collected media_for_severity(#{@severity}): #{rule_media}"
+            logger.debug "collected media_for_severity(#{@severity}): #{rule_media}"
             rule_media = rule_media.reject {|medium|
               contact.drop_notifications?(:media => medium,
                                           :check => @event_id,
                                           :state => @event_state)
             }
 
-            logger.debug "notification: media after contact_drop?: #{rule_media}"
+            logger.debug "media after contact_drop?: #{rule_media}"
 
             media.select {|medium, address| rule_media.include?(medium) }
           end
 
-          logger.debug "notification: media_to_use: #{media_to_use}"
+          logger.debug "media_to_use: #{media_to_use}"
 
           media_to_use.each_pair.inject([]) { |ret, (k, v)|
             m = Flapjack::Data::Message.for_contact(contact,

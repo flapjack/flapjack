@@ -589,7 +589,7 @@ module Flapjack
                   joined = true
                 rescue Errno::ECONNREFUSED, ::Jabber::JabberError => muc_je
                   report_error("Couldn't join MUC room #{room}, #{attempts_remaining} attempts remaining", muc_je)
-                  raise if attempts_remaining = 0
+                  raise if attempts_remaining <= 0
                   joined = false
                 end
               end

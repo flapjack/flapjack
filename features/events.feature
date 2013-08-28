@@ -123,7 +123,12 @@ Feature: events
 
   @time
   Scenario: Check critical to ok when acknowledged
-    Given the check is in a critical state
+    Given the check is in an ok state
+    When  a critical event is received
+    And   one minute passes
+    And   a critical event is received
+    Then  a notification should be generated
+    # the above all needs to be just a call to the "Check ok to critical for 1 minute" Scenario if that's possible
     When  an acknowledgement event is received
     Then  a notification should be generated
     When  1 minute passes
@@ -297,99 +302,100 @@ Feature: events
 
 # commenting out this test for now, will revive it
 # when working on gh-119
-# @time
-# Scenario: a lot of quick ok -> warning -> ok -> warning
-#     Given the check is in an ok state
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
+@time
+Scenario: a lot of quick ok -> warning -> ok -> warning
+     Given the check is in an ok state
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  20 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should be generated
+     # recovered
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
 
   Scenario: scheduled maintenance created for initial check reference
     Given the check has no state
