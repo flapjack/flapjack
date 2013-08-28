@@ -3,12 +3,6 @@ require 'flapjack/gateways/email'
 
 describe Flapjack::Gateways::Email, :logger => true do
 
-  before(:each) do
-    Flapjack::Gateways::Email.instance_variable_set('@config', {})
-    Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
-    Flapjack::Gateways::Email.start
-  end
-
   it "sends a mail with text and html parts" do
     email = mock('email')
 
@@ -18,7 +12,6 @@ describe Flapjack::Gateways::Email, :logger => true do
     entity_check.should_receive(:last_change).and_return(Time.now.to_i)
 
     redis = mock('redis')
-    ::Resque.should_receive(:redis).and_return(redis)
 
     Flapjack::Data::EntityCheck.should_receive(:for_event_id).
       with('example.com:ping', :redis => redis).and_return(entity_check)
@@ -44,6 +37,10 @@ describe Flapjack::Gateways::Email, :logger => true do
                     'time'                => Time.now.to_i,
                     'event_id'            => 'example.com:ping'}
 
+    Flapjack::Gateways::Email.instance_variable_set('@config', {})
+    Flapjack::Gateways::Email.instance_variable_set('@redis', redis)
+    Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
+    Flapjack::Gateways::Email.start
     Flapjack::Gateways::Email.perform(notification)
   end
 

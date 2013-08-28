@@ -262,7 +262,11 @@ module Flapjack
         details = options[:details]
         count = options[:count]
 
-        if self.state != new_state
+        old_state = self.state
+
+        @redis.multi
+
+        if old_state != new_state
           client = options[:client]
 
           # Note the current state (for speedy lookups)
@@ -270,7 +274,8 @@ module Flapjack
 
           # FIXME: rename to last_state_change?
           @redis.hset("check:#{@key}", 'last_change', timestamp)
-          case state
+
+          case new_state
           when STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN
             @redis.zadd('failed_checks', timestamp, @key)
             # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
@@ -291,22 +296,27 @@ module Flapjack
           @redis.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
         end
 
+        # Track when we last saw an event for a particular entity:check pair
+        last_update = timestamp
+
         # Even if this isn't a state change, we need to update the current state
         # hash summary and details (as they may have changed)
         @redis.hset("check:#{@key}", 'summary', (summary || ''))
         @redis.hset("check:#{@key}", 'details', (details || ''))
-      end
 
-      def last_update
-        lu = @redis.hget("check:#{@key}", 'last_update')
-        return unless (lu && lu =~ /^\d+$/)
-        lu.to_i
+        @redis.exec
       end
 
       def last_update=(timestamp)
         @redis.hset("check:#{@key}", 'last_update', timestamp)
         @redis.zadd("current_checks:#{entity.name}", timestamp, check)
-        @redis.zadd("current_entities", timestamp, entity.name)
+        @redis.zadd('current_entities', timestamp, entity.name)
+      end
+
+      def last_update
+        lu = @redis.hget("check:#{@key}", 'last_update')
+        return unless lu && !!(lu =~ /^\d+$/)
+        lu.to_i
       end
 
       # disables a check (removes currency)
@@ -320,12 +330,12 @@ module Flapjack
       end
 
       def enabled?
-        !! @redis.zscore("current_checks:#{entity.name}", check)
+        !!@redis.zscore("current_checks:#{entity.name}", check)
       end
 
       def last_change
         lc = @redis.hget("check:#{@key}", 'last_change')
-        return unless (lc && lc =~ /^\d+$/)
+        return unless lc && !!(lc =~ /^\d+$/)
         lc.to_i
       end
 

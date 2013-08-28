@@ -44,14 +44,15 @@ describe Flapjack::Pikelet do
     config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('queue').and_return('email_notif')
 
+    resque_redis = mock('resque_redis')
     redis = mock('redis')
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
-    Resque.should_receive(:redis=).with( redis )
+    Flapjack::RedisPool.should_receive(:new).twice.and_return(resque_redis, redis)
+    Resque.should_receive(:redis=).with(resque_redis)
 
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
       with('@config', config)
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
-      with('@redis_config', redis_config)
+      with('@redis', redis)
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
       with('@logger', logger)
 
