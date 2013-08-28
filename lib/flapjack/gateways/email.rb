@@ -28,6 +28,7 @@ module Flapjack
           @sent = 0
         end
 
+        # TODO refactor to remove complexity
         def perform(notification)
           prepare( notification )
           deliver( notification )
@@ -36,6 +37,8 @@ module Flapjack
         def prepare(notification)
           @logger.debug "Woo, got a notification to send out: #{notification.inspect}"
 
+          # The instance variables are referenced by the templates, which
+          # share the current binding context
           @notification_type   = notification['notification_type']
           @contact_first_name  = notification['contact_first_name']
           @contact_last_name   = notification['contact_last_name']
@@ -142,8 +145,6 @@ module Flapjack
 
           bnd = binding
 
-          # this part is the only use of the mail gem -- maybe this can be done
-          # using standard library calls instead?
           mail = Mail.new do
             from     opts[:from]
             to       opts[:to]

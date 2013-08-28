@@ -250,7 +250,8 @@ module Flapjack
 
       severity = Flapjack::Data::Notification.severity_for_event(event, max_notified_severity)
 
-      historical_state = if (entity_check.state == previous_state)
+      historical_state = case entity_check.state
+      when previous_state
         # current state
         curr = entity_check.historical_states(nil, nil, :order => 'desc', :limit => 1)
         (curr && (curr.size == 1)) ? curr.first : nil
