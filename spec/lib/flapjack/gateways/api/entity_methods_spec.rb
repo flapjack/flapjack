@@ -26,7 +26,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
   end
 
   before(:each) do
-    Redis.should_receive(:new).and_return(redis)
+    Flapjack.stub(:redis).and_return(redis)
     Flapjack::Gateways::API.instance_variable_set('@config', {})
     Flapjack::Gateways::API.instance_variable_set('@logger', @logger)
     Flapjack::Gateways::API.start
@@ -35,7 +35,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
   it "returns a list of checks for an entity" do
     entity.should_receive(:check_list).and_return([check])
     Flapjack::Data::Entity.should_receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
+      with(entity_name).and_return(entity)
 
     get "/checks/#{entity_name_esc}"
     last_response.should be_ok
@@ -50,10 +50,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_presenter.should_receive(:status).and_return(result)
 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
-        with(entity, :redis => redis).and_return(entity_presenter)
+        with(entity).and_return(entity_presenter)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/status/#{entity_name_esc}"
       last_response.should be_ok
@@ -62,7 +62,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "should not show the status for an entity that's not found" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
+        with(entity_name).and_return(nil)
 
       get "/status/#{entity_name_esc}"
       last_response.should be_forbidden
@@ -76,10 +76,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_check).and_return(entity_check_presenter)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/status/#{entity_name_esc}/#{check}"
       last_response.should be_ok
@@ -88,7 +88,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "should not show the status for a check on an entity that's not found" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
+        with(entity_name).and_return(nil)
 
       get "/status/#{entity_name_esc}/#{check}"
       last_response.should be_forbidden
@@ -96,10 +96,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "should not show the status for a check that's not found on an entity" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(nil)
+        with(entity, check).and_return(nil)
 
       get "/status/#{entity_name_esc}/#{check}"
       last_response.should be_forbidden
@@ -110,9 +110,9 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       result = {:entity => entity_name, :check => check, :scheduled_maintenances => sched}
       entity_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
-        with(entity, :redis => redis).and_return(entity_presenter)
+        with(entity).and_return(entity_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/scheduled_maintenances/#{entity_name_esc}"
       last_response.should be_ok
@@ -127,9 +127,9 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       result = {:entity => entity_name, :check => check, :scheduled_maintenances => sched}
       entity_presenter.should_receive(:scheduled_maintenances).with(start.to_i, finish.to_i).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
-        with(entity, :redis => redis).and_return(entity_presenter)
+        with(entity).and_return(entity_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/scheduled_maintenances/#{entity_name_esc}?" +
         "start_time=#{CGI.escape(start.iso8601)}&end_time=#{CGI.escape(finish.iso8601)}"
@@ -143,9 +143,9 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       get "/scheduled_maintenances/#{entity_name_esc}/#{check}"
       last_response.should be_ok
@@ -157,11 +157,11 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check.should_receive(:check).and_return(check)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
       Flapjack::Data::Event.should_receive(:create_acknowledgement).
-        with('events', entity_name, check, :summary => nil, :duration => (4 * 60 * 60), :redis => redis)
+        with('events', entity_name, check, :summary => nil, :duration => (4 * 60 * 60))
 
       post "/acknowledgements/#{entity_name_esc}/#{check}"
       last_response.status.should == 204
@@ -172,9 +172,9 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       result = {:entity => entity_name, :check => check, :unscheduled_maintenances => unsched}
       entity_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
-        with(entity, :redis => redis).and_return(entity_presenter)
+        with(entity).and_return(entity_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/unscheduled_maintenances/#{entity_name_esc}"
       last_response.should be_ok
@@ -187,9 +187,9 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       get "/unscheduled_maintenances/#{entity_name_esc}/#{check}"
       last_response.should be_ok
@@ -205,9 +205,9 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       get "/unscheduled_maintenances/#{entity_name_esc}/#{check}" +
         "?start_time=#{CGI.escape(start.iso8601)}&end_time=#{CGI.escape(finish.iso8601)}"
@@ -220,9 +220,9 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       result = {:entity => entity_name, :check => check, :outages => out}
       entity_presenter.should_receive(:outages).with(nil, nil).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
-        with(entity, :redis => redis).and_return(entity_presenter)
+        with(entity).and_return(entity_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/outages/#{entity_name_esc}"
       last_response.should be_ok
@@ -235,9 +235,9 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       get "/outages/#{entity_name_esc}/#{check}"
       last_response.should be_ok
@@ -249,9 +249,9 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       result = {:entity => entity_name, :check => check, :downtime => down}
       entity_presenter.should_receive(:downtime).with(nil, nil).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
-        with(entity, :redis => redis).and_return(entity_presenter)
+        with(entity).and_return(entity_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/downtime/#{entity_name_esc}"
       last_response.should be_ok
@@ -264,9 +264,9 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       get "/downtime/#{entity_name_esc}/#{check}"
       last_response.should be_ok
@@ -275,16 +275,16 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "creates a test notification event for check on an entity" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
       entity.should_receive(:name).and_return(entity_name)
       entity_check.should_receive(:entity).and_return(entity)
       entity_check.should_receive(:entity_name).and_return(entity_name)
       entity_check.should_receive(:check).and_return('foo')
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, 'foo', :redis => redis).and_return(entity_check)
+        with(entity, 'foo').and_return(entity_check)
 
       Flapjack::Data::Event.should_receive(:test_notifications).
-        with('events', entity_name, 'foo', hash_including(:redis => redis))
+        with('events', entity_name, 'foo', an_instance_of(Hash))
 
       post "/test_notifications/#{entity_name_esc}/foo"
       last_response.status.should == 204
@@ -300,10 +300,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_presenter.should_receive(:status).and_return(result)
 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
-        with(entity, :redis => redis).and_return(entity_presenter)
+        with(entity).and_return(entity_presenter)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/status", :entity => entity_name
       last_response.body.should == result.to_json
@@ -311,7 +311,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "should not show the status for an entity that's not found" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
+        with(entity_name).and_return(nil)
 
       get "/status", :entity => entity_name
       last_response.should be_forbidden
@@ -326,10 +326,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_check).and_return(entity_check_presenter)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/status", :check => {entity_name => check}
       last_response.should be_ok
@@ -338,7 +338,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "should not show the status for a check on an entity that's not found" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
+        with(entity_name).and_return(nil)
 
       get "/status", :check => {entity_name => check}
       last_response.should be_forbidden
@@ -346,10 +346,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "should not show the status for a check that's not found on an entity" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(nil)
+        with(entity, check).and_return(nil)
 
       get "/status", :check => {entity_name => check}
       last_response.should be_forbidden
@@ -357,15 +357,15 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "creates an acknowledgement for an entity check" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       entity_check.should_receive(:entity_name).and_return(entity_name)
       entity_check.should_receive(:check).and_return(check)
 
       Flapjack::Data::Event.should_receive(:create_acknowledgement).
-        with('events', entity_name, check, :summary => nil, :duration => (4 * 60 * 60), :redis => redis)
+        with('events', entity_name, check, :summary => nil, :duration => (4 * 60 * 60))
 
       post '/acknowledgements',:check => {entity_name => check}
       last_response.status.should == 204
@@ -376,10 +376,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check.should_receive(:end_unscheduled_maintenance).with(end_time.to_i)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       delete "/unscheduled_maintenances", :check => {entity_name => check}, :end_time => end_time.iso8601
       last_response.status.should == 204
@@ -389,9 +389,9 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       start = Time.now + (60 * 60) # an hour from now
       duration = (2 * 60 * 60)     # two hours
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
       entity_check.should_receive(:create_scheduled_maintenance).
         with(start.getutc.to_i, duration, :summary => 'test')
 
@@ -413,10 +413,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check.should_receive(:end_scheduled_maintenance).with(start_time.to_i)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       delete "/scheduled_maintenances", :check => {entity_name => check}, :start_time => start_time.iso8601
       last_response.status.should == 204
@@ -438,12 +438,12 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check_2.should_receive(:end_scheduled_maintenance).with(start_time.to_i)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, 'foo', :redis => redis).and_return(entity_check_2)
+        with(entity, 'foo').and_return(entity_check_2)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       delete "/scheduled_maintenances", :check => {entity_name => [check, 'foo']}, :start_time => start_time.iso8601
       last_response.status.should == 204
@@ -456,10 +456,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(result)
 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
-        with(entity, :redis => redis).and_return(entity_presenter)
+        with(entity).and_return(entity_presenter)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/scheduled_maintenances", :entity => entity_name
       last_response.should be_ok
@@ -476,10 +476,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_presenter.should_receive(:scheduled_maintenances).with(start.to_i, finish.to_i).and_return(result)
 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
-        with(entity, :redis => redis).and_return(entity_presenter)
+        with(entity).and_return(entity_presenter)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/scheduled_maintenances", :entity => entity_name,
         :start_time => start.iso8601, :end_time => finish.iso8601
@@ -497,10 +497,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_check).and_return(entity_check_presenter)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/scheduled_maintenances", :check => {entity_name => check}
       last_response.should be_ok
@@ -514,10 +514,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(result)
 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
-        with(entity, :redis => redis).and_return(entity_presenter)
+        with(entity).and_return(entity_presenter)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/unscheduled_maintenances", :entity => entity_name
       last_response.should be_ok
@@ -534,10 +534,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_check).and_return(entity_check_presenter)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/unscheduled_maintenances", :check => {entity_name => check}
       last_response.should be_ok
@@ -557,10 +557,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_check).and_return(entity_check_presenter)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/unscheduled_maintenances", :check => {entity_name => check},
         :start_time => start.iso8601, :end_time => finish.iso8601
@@ -591,7 +591,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       bar_check_presenter.should_receive(:outages).with(nil, nil).and_return(outages_3)
 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
-        with(entity, :redis => redis).and_return(entity_presenter)
+        with(entity).and_return(entity_presenter)
 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(foo_check).and_return(foo_check_presenter)
@@ -599,14 +599,14 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(bar_check).and_return(bar_check_presenter)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_2_name, :redis => redis).and_return(entity_2)
+        with(entity_2_name).and_return(entity_2)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity_2, 'foo', :redis => redis).and_return(foo_check)
+        with(entity_2, 'foo').and_return(foo_check)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity_2, 'bar', :redis => redis).and_return(bar_check)
+        with(entity_2, 'bar').and_return(bar_check)
 
       get "/outages", :entity => entity_name, :check => {entity_2_name => ['foo', 'bar']}
       last_response.should be_ok
@@ -623,10 +623,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_check).and_return(entity_check_presenter)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/outages", :check => {entity_name => check}
       last_response.should be_ok
@@ -640,10 +640,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_presenter.should_receive(:downtime).with(nil, nil).and_return(result)
 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
-        with(entity, :redis => redis).and_return(entity_presenter)
+        with(entity).and_return(entity_presenter)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/downtime", :entity => entity_name
       last_response.should be_ok
@@ -660,10 +660,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_check).and_return(entity_check_presenter)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "/downtime", :check => {entity_name => check}
       last_response.should be_ok
@@ -674,14 +674,14 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity.should_receive(:check_list).and_return([check, 'foo'])
       entity.should_receive(:name).twice.and_return(entity_name)
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       entity_check.should_receive(:entity).and_return(entity)
       entity_check.should_receive(:entity_name).and_return(entity_name)
       entity_check.should_receive(:check).and_return(check)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       entity_check_2 = mock(Flapjack::Data::EntityCheck)
       entity_check_2.should_receive(:entity).and_return(entity)
@@ -689,13 +689,13 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check_2.should_receive(:check).and_return('foo')
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, 'foo', :redis => redis).and_return(entity_check_2)
+        with(entity, 'foo').and_return(entity_check_2)
 
       Flapjack::Data::Event.should_receive(:test_notifications).
-        with('events', entity_name, check, hash_including(:redis => redis))
+        with('events', entity_name, check, an_instance_of(Hash))
 
       Flapjack::Data::Event.should_receive(:test_notifications).
-        with('events', entity_name, 'foo', hash_including(:redis => redis))
+        with('events', entity_name, 'foo', an_instance_of(Hash))
 
 
       post '/test_notifications', :entity => entity_name
@@ -704,16 +704,16 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "creates a test notification event for check on an entity" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
       entity.should_receive(:name).and_return(entity_name)
       entity_check.should_receive(:entity).and_return(entity)
       entity_check.should_receive(:entity_name).and_return(entity_name)
       entity_check.should_receive(:check).and_return(check)
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check, :redis => redis).and_return(entity_check)
+        with(entity, check).and_return(entity_check)
 
       Flapjack::Data::Event.should_receive(:test_notifications).
-      with('events', entity_name, check, hash_including(:redis => redis))
+      with('events', entity_name, check, an_instance_of(Hash))
 
 
       post '/test_notifications', :check => {entity_name => check}
@@ -773,7 +773,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity.should_receive(:add_tags).with('web')
       entity.should_receive(:tags).and_return(['web'])
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       post "entities/#{entity_name}/tags", :tag => 'web'
       last_response.should be_ok
@@ -782,7 +782,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "does not set a single tag on an entity that's not found" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
+        with(entity_name).and_return(nil)
 
       post "entities/#{entity_name}/tags", :tag => 'web'
       last_response.should be_forbidden
@@ -792,7 +792,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity.should_receive(:add_tags).with('web', 'app')
       entity.should_receive(:tags).and_return(['web', 'app'])
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       # NB submitted at a lower level as tag[]=web&tag[]=app
       post "entities/#{entity_name}/tags", :tag => ['web', 'app']
@@ -802,7 +802,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "does not set multiple tags on an entity that's not found" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
+        with(entity_name).and_return(nil)
 
       post "entities/#{entity_name}/tags", :tag => ['web', 'app']
       last_response.should be_forbidden
@@ -811,7 +811,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     it "removes a single tag from an entity" do
       entity.should_receive(:delete_tags).with('web')
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       delete "entities/#{entity_name}/tags", :tag => 'web'
       last_response.status.should == 204
@@ -819,7 +819,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "does not remove a single tag from an entity that's not found" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
+        with(entity_name).and_return(nil)
 
       delete "entities/#{entity_name}/tags", :tag => 'web'
       last_response.should be_forbidden
@@ -828,7 +828,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     it "removes multiple tags from an entity" do
       entity.should_receive(:delete_tags).with('web', 'app')
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       delete "entities/#{entity_name}/tags", :tag => ['web', 'app']
       last_response.status.should == 204
@@ -836,7 +836,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "does not remove multiple tags from an entity that's not found" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
+        with(entity_name).and_return(nil)
 
       delete "entities/#{entity_name}/tags", :tag => ['web', 'app']
       last_response.should be_forbidden
@@ -845,7 +845,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     it "gets all tags on an entity" do
       entity.should_receive(:tags).and_return(['web', 'app'])
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name).and_return(entity)
 
       get "entities/#{entity_name}/tags"
       last_response.should be_ok
@@ -854,7 +854,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "does not get all tags on an entity that's not found" do
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
+        with(entity_name).and_return(nil)
 
       get "entities/#{entity_name}/tags"
       last_response.should be_forbidden

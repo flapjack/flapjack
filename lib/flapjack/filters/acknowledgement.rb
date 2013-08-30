@@ -16,8 +16,8 @@ module Flapjack
         result = false
         if event.type == 'action'
           if event.acknowledgement?
-            if @redis.zscore("failed_checks", event.id)
-              ec = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
+            if Flapjack.redis.zscore("failed_checks", event.id)
+              ec = Flapjack::Data::EntityCheck.for_event_id(event.id)
               if ec.nil?
                 @logger.error "Filter: Acknowledgement: unknown entity for event '#{event.id}'"
               else
@@ -28,7 +28,7 @@ module Flapjack
               end
             else
               result = true
-              @logger.debug("Filter: Acknowledgement: blocking because zscore of failed_checks for #{event.id} is false") unless @redis.zscore("failed_checks", event.id)
+              @logger.debug("Filter: Acknowledgement: blocking because zscore of failed_checks for #{event.id} is false") unless Flapjack.redis.zscore("failed_checks", event.id)
             end
           else
             message = "no action taken"

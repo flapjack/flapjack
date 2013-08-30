@@ -8,6 +8,11 @@ describe Flapjack::Processor, :logger => true do
   # (initialize, main, stop). Most test coverage for this class comes from the cucumber features.
 
   let(:lock) { mock(Monitor) }
+  let(:redis) { mock(Redis) }
+
+  before(:each) do
+    Flapjack.stub(:redis).and_return(redis)
+  end
 
   # TODO this does too much -- split it up
   it "starts up, runs and shuts down" do
@@ -19,8 +24,6 @@ describe Flapjack::Processor, :logger => true do
     Flapjack::Filters::DetectMassClientFailures.should_receive(:new)
     Flapjack::Filters::Delays.should_receive(:new)
     Flapjack::Filters::Acknowledgement.should_receive(:new)
-
-    redis = mock('redis')
 
     redis.should_receive(:hset).with(/^executive_instance:/, "boot_time", anything)
     redis.should_receive(:hget).with('event_counters', 'all').and_return(nil)
@@ -39,8 +42,6 @@ describe Flapjack::Processor, :logger => true do
 
     # redis.should_receive(:hincrby).with('event_counters', 'all', 1)
     # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
-
-    ::Redis.should_receive(:new).and_return(redis)
 
     lock.should_receive(:synchronize).and_yield
 
@@ -62,8 +63,6 @@ describe Flapjack::Processor, :logger => true do
     Flapjack::Filters::Delays.should_receive(:new)
     Flapjack::Filters::Acknowledgement.should_receive(:new)
 
-    redis = mock('redis')
-
     redis.should_receive(:hset).with(/^executive_instance:/, "boot_time", anything)
     redis.should_receive(:hget).with('event_counters', 'all').and_return(nil)
     redis.should_receive(:hset).with('event_counters', 'all', 0)
@@ -81,8 +80,6 @@ describe Flapjack::Processor, :logger => true do
 
     # redis.should_receive(:hincrby).with('event_counters', 'all', 1)
     # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
-
-    ::Redis.should_receive(:new).and_return(redis)
 
     lock.should_receive(:synchronize).and_yield
 

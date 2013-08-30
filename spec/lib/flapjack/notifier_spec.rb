@@ -9,7 +9,7 @@ describe Flapjack::Notifier, :logger => true do
     # testing with tainted data
     config = {'default_contact_timezone' => 'Australia/Broken_Hill'.taint}
 
-    ::Redis.should_receive(:new).and_return(redis)
+    Flapjack.stub(:redis).and_return(redis)
 
     lock = mock(Monitor)
     lock.should_receive(:synchronize).and_yield

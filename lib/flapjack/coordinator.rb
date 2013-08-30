@@ -1,12 +1,14 @@
 #!/usr/bin/env ruby
 
 require 'monitor'
-
 require 'syslog'
+
+require 'flapjack'
 
 require 'flapjack/configuration'
 require 'flapjack/patches'
 
+require 'flapjack/connection_pool'
 require 'flapjack/logger'
 require 'flapjack/pikelet'
 
@@ -18,9 +20,8 @@ module Flapjack
 
       Thread.abort_on_exception = true
 
-      @config     = config
-      @redis_opts = config.for_redis
-      @pikelets   = []
+      @config       = config
+      @pikelets     = []
 
       @monitor = Monitor.new
       @shutdown_cond = @monitor.new_cond
@@ -42,6 +43,18 @@ module Flapjack
 
       create_pikelets(pikelet_defs).each do |pik|
         @pikelets << pik
+      end
+
+      # TODO should retrieve knowledge about how many are blocking, and allocate
+      # that + 1 connections
+      # FIXME reloading pikelet configs may need to change the size of the pool
+      num_connections = @pikelets.size
+
+      Flapjack.redis = Flapjack::ConnectionPool::Wrapper.new(:size => num_connections) {
+        Redis.new(@config.for_redis.merge(:driver => :hiredis))
+      }
+
+      @pikelets.each do |pik|
         pik.start
       end
 
@@ -135,7 +148,6 @@ module Flapjack
     def create_pikelets(pikelets_data = {})
       pikelets_data.inject([]) do |memo, (type, cfg)|
         pikelets = Flapjack::Pikelet.create(type, @shutdown, :config => cfg,
-                                            :redis_config => @redis_opts,
                                             :boot_time => @boot_time)
         memo += pikelets
         memo

@@ -15,6 +15,7 @@ require 'active_support/json'
 
 require 'dante'
 
+require 'flapjack'
 require 'flapjack/configuration'
 require 'flapjack/data/event'
 
@@ -24,7 +25,6 @@ def pike(message)
 end
 
 def process_input(opts)
-  redis = opts[:redis]
   fifo  = File.new(opts[:fifo])
   begin
     while line = fifo.gets
@@ -59,7 +59,7 @@ def process_input(opts)
         'details'   => details,
         'timestamp' => timestamp,
       })
-      Flapjack::Data::Event.add(event, :redis => redis)
+      Flapjack::Data::Event.add(event)
     end
   rescue Redis::CannotConnectError
     puts "Error, unable to to connect to the redis server (#{$!})"
@@ -68,9 +68,9 @@ end
 
 def main(opts)
   fifo = opts[:fifo]
-  redis = Redis.new(opts[:redis_options])
+  Flapjack.redis = Redis.new(opts[:redis_options])
   while true
-    process_input(:redis => redis, :fifo => fifo)
+    process_input(:fifo => fifo)
     puts "Whoops with the fifo, restarting main loop in 10 seconds"
     sleep 10
   end

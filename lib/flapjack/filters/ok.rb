@@ -16,7 +16,7 @@ module Flapjack
       def block?(event)
 
         if event.ok?
-          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
+          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id)
 
           entity_check.end_unscheduled_maintenance(Time.now.to_i)
 

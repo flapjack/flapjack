@@ -8,7 +8,7 @@ module Flapjack
       include Base
 
       def block?(event)
-        result = @redis.exists("#{event.id}:unscheduled_maintenance") &&
+        result = Flapjack.redis.exists("#{event.id}:unscheduled_maintenance") &&
           !event.acknowledgement?
         @logger.debug("Filter: Unscheduled Maintenance: #{result ? "block" : "pass"}")
         result

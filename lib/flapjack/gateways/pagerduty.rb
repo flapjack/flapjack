@@ -6,6 +6,8 @@ require 'net/http'
 require 'uri'
 require 'uri/https'
 
+require 'flapjack'
+
 require 'flapjack/data/entity_check'
 require 'flapjack/data/message'
 
@@ -23,9 +25,6 @@ module Flapjack
           @lock = opts[:lock]
           @config = opts[:config]
           @logger = opts[:logger]
-          @redis_config = opts[:redis_config] || {}
-
-          @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
           @notifications_queue = @config['queue'] || 'pagerduty_notifications'
 
@@ -41,12 +40,12 @@ module Flapjack
 
           loop do
             @lock.synchronize do
-              Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {|message|
+              Flapjack::Data::Message.foreach_on_queue(@notifications_queue) {|message|
                 handle_message(message)
               }
             end
 
-            Flapjack::Data::Message.wait_for_queue(@notifications_queue, :redis => @redis)
+            Flapjack::Data::Message.wait_for_queue(@notifications_queue)
           end
         end
 
@@ -133,15 +132,12 @@ module Flapjack
           @lock = opts[:lock]
           @config = opts[:config]
           @logger = opts[:logger]
-          @redis_config = opts[:redis_config] || {}
-
-          @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
           @logger.debug("New Pagerduty::AckFinder pikelet with the following options: #{@config.inspect}")
 
           # TODO: only clear this if there isn't another pagerduty gateway instance running
           # or better, include an instance ID in the semaphore key name
-          @redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
+          Flapjack.redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
         end
 
         def start
@@ -150,12 +146,12 @@ module Flapjack
               # ensure we're the only instance of the pagerduty acknowledgement check running (with a naive
               # timeout of five minutes to guard against stale locks caused by crashing code) either in this
               # process or in other processes
-              if @redis.setnx(SEM_PAGERDUTY_ACKS_RUNNING, 'true') == 0
+              if Flapjack.redis.setnx(SEM_PAGERDUTY_ACKS_RUNNING, 'true') == 0
                 @logger.debug("skipping looking for acks in pagerduty as this is already happening")
               else
-                @redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, 300)
+                Flapjack.redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, 300)
                 find_pagerduty_acknowledgements
-                @redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
+                Flapjack.redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
               end
             end
 
@@ -170,13 +166,13 @@ module Flapjack
         def find_pagerduty_acknowledgements
           @logger.debug("looking for acks in pagerduty for unack'd problems")
 
-          unacked_failing_checks = Flapjack::Data::EntityCheck.find_all_failing_unacknowledged(:redis => @redis)
+          unacked_failing_checks = Flapjack::Data::EntityCheck.find_all_failing_unacknowledged
 
           @logger.debug "found unacknowledged failing checks as follows: " + unacked_failing_checks.join(', ')
 
           unacked_failing_checks.each do |event_id|
 
-            entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
+            entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id)
 
             # If more than one contact for this entity_check has pagerduty
             # credentials then there'll be one hash in the array for each set of
@@ -214,7 +210,7 @@ module Flapjack
               @config['processor_queue'] || 'events',
               entity_name, check,
               :summary => "Acknowledged on PagerDuty" + who_text,
-              :redis => @redis)
+            )
           end
 
         end

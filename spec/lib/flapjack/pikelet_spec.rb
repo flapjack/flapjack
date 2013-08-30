@@ -4,7 +4,6 @@ require 'flapjack/pikelet'
 describe Flapjack::Pikelet, :logger => true do
 
   let(:config)        { mock('config') }
-  let(:redis_config)  { mock('redis_config') }
 
   let(:lock)          { mock(Monitor) }
   let(:stop_cond)     { mock(MonitorMixin::ConditionVariable) }
@@ -27,14 +26,14 @@ describe Flapjack::Pikelet, :logger => true do
     processor.should_receive(:start)
     Flapjack::Processor.should_receive(:new).with(:lock => lock,
       :stop_condition => stop_cond, :config => config,
-      :redis_config => redis_config, :logger => @logger).and_return(processor)
+      :logger => @logger).and_return(processor)
 
     Thread.should_receive(:new).and_yield.and_return(thread)
     thread.should_receive(:abort_on_exception=).with(true)
     Thread.should_receive(:current).and_return(thread)
 
     pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config,
-      :redis_config => redis_config, :logger => @logger)
+      :logger => @logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
     pikelet = pikelets.first
@@ -59,7 +58,7 @@ describe Flapjack::Pikelet, :logger => true do
     processor.should_receive(:start).twice.and_raise(exc)
     Flapjack::Processor.should_receive(:new).with(:lock => lock,
       :stop_condition => stop_cond, :config => config,
-      :redis_config => redis_config, :logger => @logger).and_return(processor)
+      :logger => @logger).and_return(processor)
 
     Thread.should_receive(:new).and_yield.and_return(thread)
     thread.should_receive(:abort_on_exception=).with(true)
@@ -68,7 +67,7 @@ describe Flapjack::Pikelet, :logger => true do
    shutdown.should_receive(:call)
 
     pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config,
-      :redis_config => redis_config, :logger => @logger)
+      :logger => @logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
     pikelet = pikelets.first
@@ -102,8 +101,6 @@ describe Flapjack::Pikelet, :logger => true do
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
       with('@config', config)
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
-      with('@redis_config', redis_config)
-    Flapjack::Gateways::Web.should_receive(:instance_variable_set).
       with('@logger', @logger)
 
     Thread.should_receive(:new).and_yield.and_return(thread)
@@ -113,7 +110,7 @@ describe Flapjack::Pikelet, :logger => true do
     Flapjack::Gateways::Web.should_receive(:start)
 
     pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config,
-      :redis_config => redis_config, :logger => @logger)
+      :logger => @logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
     pikelet = pikelets.first
@@ -148,8 +145,6 @@ describe Flapjack::Pikelet, :logger => true do
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
       with('@config', config)
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
-      with('@redis_config', redis_config)
-    Flapjack::Gateways::Web.should_receive(:instance_variable_set).
       with('@logger', @logger)
 
     Thread.should_receive(:new).and_yield.and_return(thread)
@@ -161,7 +156,7 @@ describe Flapjack::Pikelet, :logger => true do
     Flapjack::Gateways::Web.should_receive(:start)
 
     pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config,
-      :redis_config => redis_config, :logger => @logger)
+      :logger => @logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
     pikelet = pikelets.first

@@ -4,6 +4,8 @@ require 'net/http'
 require 'uri'
 require 'uri/https'
 
+require 'flapjack'
+
 require 'flapjack/data/message'
 
 require 'flapjack/exceptions'
@@ -18,9 +20,7 @@ module Flapjack
         @lock = opts[:lock]
 
         @config = opts[:config]
-        @redis_config = opts[:redis_config] || {}
         @logger = opts[:logger]
-        @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
         @notifications_queue = @config['queue'] || 'sms_notifications'
 
@@ -33,13 +33,12 @@ module Flapjack
         loop do
           @lock.synchronize do
             Flapjack::Data::Message.foreach_on_queue(@notifications_queue,
-                                                     :redis => @redis,
                                                      :logger => @logger) {|message|
               handle_message(message)
             }
           end
 
-          Flapjack::Data::Message.wait_for_queue(@notifications_queue, :redis => @redis)
+          Flapjack::Data::Message.wait_for_queue(@notifications_queue)
         end
       end
 

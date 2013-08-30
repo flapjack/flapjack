@@ -11,43 +11,37 @@ module Flapjack
       attr_accessor :name
 
       def initialize(opts = {})
-        raise "Redis connection not set" unless @redis = opts[:redis]
-
         @name  = opts[:name]
-        preset = @redis.smembers(@name)
+        preset = Flapjack.redis.smembers(@name)
         enum = opts[:create] || []
-        @redis.sadd(@name, enum) unless enum.empty?
+        Flapjack.redis.sadd(@name, enum) unless enum.empty?
         super(enum | preset)
       end
 
-      def self.find(name, opts)
-        self.new(:name => name,
-                 :redis => opts[:redis])
+      def self.find(name)
+        self.new(:name => name)
       end
 
-      def self.find_intersection(tags, opts)
-        @redis = opts[:redis]
-        @redis.sinter(tags)
+      def self.find_intersection(tags)
+        Flapjack.redis.sinter(tags)
       end
 
-      def self.create(name, enum = [], opts)
-        self.new(:name => name,
-                 :create => enum,
-                 :redis => opts[:redis])
+      def self.create(name, enum = [])
+        self.new(:name => name, :create => enum)
       end
 
       def add(o)
-        @redis.sadd(@name, o) unless o.empty?
+        Flapjack.redis.sadd(@name, o) unless o.empty?
         super(o)
       end
 
       def delete(o)
-        @redis.srem(@name, o)
+        Flapjack.redis.srem(@name, o)
         super(o)
       end
 
       def merge(o)
-        @redis.sadd(@name, o) unless o.empty?
+        Flapjack.redis.sadd(@name, o) unless o.empty?
         super(o)
       end
 

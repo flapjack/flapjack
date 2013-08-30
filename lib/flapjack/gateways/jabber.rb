@@ -9,6 +9,8 @@ require 'rexml/document'
 require 'xmpp4r/query'
 require 'xmpp4r/muc'
 
+require 'flapjack'
+
 require 'flapjack/data/entity_check'
 require 'flapjack/data/message'
 
@@ -29,24 +31,21 @@ module Flapjack
         def initialize(options = {})
           @lock = options[:lock]
           @config = options[:config]
-          @redis_config = options[:redis_config] || {}
 
           @logger = options[:logger]
 
           @notifications_queue = @config['queue'] || 'jabber_notifications'
-
-          @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
         end
 
         def start
           loop do
             @lock.synchronize do
-              Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {|message|
+              Flapjack::Data::Message.foreach_on_queue(@notifications_queue) {|message|
                 handle_message(message)
               }
             end
 
-            Flapjack::Data::Message.wait_for_queue(@notifications_queue, :redis => @redis)
+            Flapjack::Data::Message.wait_for_queue(@notifications_queue)
           end
         end
 
@@ -119,11 +118,9 @@ module Flapjack
           @lock = opts[:lock]
           @stop_cond = opts[:stop_condition]
           @config = opts[:config]
-          @redis_config = opts[:redis_config] || {}
+
           @boot_time = opts[:boot_time]
           @logger = opts[:logger]
-
-          @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
           @should_quit = false
 
@@ -177,12 +174,12 @@ module Flapjack
             four_hours = 4 * 60 * 60
             duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
 
-            event_id = @redis.hget('unacknowledged_failures', ackid)
+            event_id = Flapjack.redis.hget('unacknowledged_failures', ackid)
 
             if event_id.nil?
               error = "not found"
             else
-              entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
+              entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id)
               error = "unknown entity" if entity_check.nil?
             end
 
@@ -205,7 +202,6 @@ module Flapjack
                   :summary => (comment || ''),
                   :acknowledgement_id => ackid,
                   :duration => duration,
-                  :redis => @redis
                 )
               }
             end
@@ -234,12 +230,12 @@ module Flapjack
 
             msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
-            if entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis)
+            if entity = Flapjack::Data::Entity.find_by_name(entity_name)
               msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
               summary = "Testing notifications to all contacts interested in entity: #{entity_name}, check: #{check_name}"
               Flapjack::Data::Event.test_notifications(@config['processor_queue'] || 'events',
-                entity_name, check_name, :summary => summary, :redis => @redis)
+                entity_name, check_name, :summary => summary)
             else
               msg = "yeah, no I can't see #{entity_name} in my systems"
             end
@@ -248,7 +244,7 @@ module Flapjack
             entity_name = $1
             check_name  = $2
 
-            if entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis)
+            if entity = Flapjack::Data::Entity.find_by_name(entity_name)
               check_str = check_name.nil? ? '' : ", check: #{check_name}"
               msg = "so you'd like details on entity: #{entity_name}#{check_str} hmm? ... OK!\n"
 
@@ -297,7 +293,7 @@ module Flapjack
                 msg += "I couldn't find any checks for entity: #{entity_name}"
               else
                 check_names.each do |check|
-                  entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check, :redis => @redis)
+                  entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check)
                   next if entity_check.nil?
                   msg += get_details.call(entity_check)
                 end
@@ -309,7 +305,7 @@ module Flapjack
           when /^(?:find )?entities matching\s+\/(.*)\/.*$/i
             pattern = $1.chomp.strip
 
-            entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern, :redis => @redis)
+            entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern)
 
             if entity_list
               max_showable = 30
@@ -365,10 +361,7 @@ module Flapjack
           @lock = opts[:lock]
           @stop_cond = opts[:stop_condition]
           @config = opts[:config]
-          @redis_config = opts[:redis_config] || {}
           @boot_time = opts[:boot_time]
-
-          @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
           @logger = opts[:logger]
 

@@ -20,6 +20,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   let(:lock) { mock(Monitor) }
   let(:stop_cond) { mock(MonitorMixin::ConditionVariable) }
 
+  before(:each) do
+    Flapjack.stub(:redis).and_return(redis)
+  end
+
   context 'notifications' do
 
     let(:message) { {'notification_type'  => 'problem',
@@ -37,8 +41,6 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by an exception" do
-      Redis.should_receive(:new).and_return(redis)
-
       lock.should_receive(:synchronize).and_yield
 
       fjn = Flapjack::Gateways::Jabber::Notifier.new(:lock => lock,
@@ -46,10 +48,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       fjn.should_receive(:handle_message).with(message)
 
       Flapjack::Data::Message.should_receive(:foreach_on_queue).
-        with('jabber_notifications', :redis => redis).and_yield(message)
+        with('jabber_notifications').and_yield(message)
 
       Flapjack::Data::Message.should_receive(:wait_for_queue).
-        with('jabber_notifications', :redis => redis).and_raise(Flapjack::PikeletStop)
+        with('jabber_notifications').and_raise(Flapjack::PikeletStop)
 
       expect { fjn.start }.to raise_error(Flapjack::PikeletStop)
     end
@@ -75,8 +77,6 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by a signal" do
-      Redis.should_receive(:new).and_return(redis)
-
       lock.should_receive(:synchronize).and_yield
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:lock => lock, :stop_condition => stop_cond,
@@ -93,8 +93,6 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     end
 
     it "receives a message and and signals a condition variable" do
-      Redis.should_receive(:new).and_return(redis)
-
       lock.should_receive(:synchronize).and_yield
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:lock => lock, :stop_condition => stop_cond,
@@ -110,8 +108,6 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /^commands:/)
 
-      Redis.should_receive(:new).and_return(redis)
-
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
       fji.interpret('room1', 'jim', now.to_i, 'help')
@@ -121,8 +117,6 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:say).with('jim', /^commands:/)
 
-      Redis.should_receive(:new).and_return(redis)
-
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
       fji.interpret(nil, 'jim', now.to_i, 'help')
@@ -131,8 +125,6 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "interprets a received identify command " do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /System CPU Time/)
-
-      Redis.should_receive(:new).and_return(redis)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config,
               :logger => @logger, :boot_time => now)
@@ -144,11 +136,9 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
 
-      Redis.should_receive(:new).and_return(redis)
-
       entity.should_receive(:check_list).and_return(['ping'])
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with('example.com', :redis => redis).and_return(entity)
+        with('example.com').and_return(entity)
 
       entity_check.should_receive(:check).and_return('ping')
       entity_check.should_receive(:current_maintenance).
@@ -157,7 +147,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
         with(:unscheduled => true).and_return(nil)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, 'ping', :redis => redis).and_return(entity_check)
+        with(entity, 'ping').and_return(entity_check)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -168,10 +158,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
 
-      Redis.should_receive(:new).and_return(redis)
-
       Flapjack::Data::Entity.should_receive(:find_by_name).
-        with('example.com', :redis => redis).and_return(entity)
+        with('example.com').and_return(entity)
 
       entity_check.should_receive(:current_maintenance).
         with(:scheduled => true).and_return(nil)
@@ -179,7 +167,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
         with(:unscheduled => true).and_return(nil)
 
       Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, 'ping', :redis => redis).and_return(entity_check)
+        with(entity, 'ping').and_return(entity_check)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -190,10 +178,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', "found 1 entity matching /example/ ... \nexample.com")
 
-      Redis.should_receive(:new).and_return(redis)
-
       Flapjack::Data::Entity.should_receive(:find_all_name_matching).
-        with("example", :redis => redis).and_return(['example.com'])
+        with("example").and_return(['example.com'])
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -204,10 +190,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', 'that doesn\'t seem to be a valid pattern - /(example/')
 
-      Redis.should_receive(:new).and_return(redis)
-
       Flapjack::Data::Entity.should_receive(:find_all_name_matching).
-        with("(example", :redis => redis).and_return(nil)
+        with("(example").and_return(nil)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -221,14 +205,13 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       Flapjack::Data::Event.should_receive(:create_acknowledgement).
         with('events', 'example.com', 'ping',
              :summary => 'JJ looking', :acknowledgement_id => '1234',
-             :duration => (60 * 60), :redis => redis)
+             :duration => (60 * 60))
 
       redis.should_receive(:hget).with('unacknowledged_failures', '1234').and_return('example.com:ping')
-      Redis.should_receive(:new).and_return(redis)
 
       entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
       Flapjack::Data::EntityCheck.should_receive(:for_event_id).
-        with('example.com:ping', :redis => redis).and_return(entity_check)
+        with('example.com:ping').and_return(entity_check)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -239,12 +222,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /so you want me to test notifications/)
 
-      Redis.should_receive(:new).and_return(redis)
-
-      Flapjack::Data::Entity.should_receive(:find_by_name).with('example.com', :redis => redis).and_return(entity)
+      Flapjack::Data::Entity.should_receive(:find_by_name).with('example.com').and_return(entity)
 
       Flapjack::Data::Event.should_receive(:test_notifications).with('events', 'example.com', 'ping',
-        :summary => an_instance_of(String), :redis => redis)
+        :summary => an_instance_of(String))
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -255,9 +236,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', "yeah, no I can't see example.com in my systems")
 
-      Redis.should_receive(:new).and_return(redis)
-
-      Flapjack::Data::Entity.should_receive(:find_by_name).with('example.com', :redis => redis).and_return(nil)
+      Flapjack::Data::Entity.should_receive(:find_by_name).with('example.com').and_return(nil)
       Flapjack::Data::Event.should_not_receive(:test_notifications)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
@@ -268,8 +247,6 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "doesn't interpret an unmatched command" do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /^what do you mean/)
-
-      Redis.should_receive(:new).and_return(redis)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -286,8 +263,6 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by a signal" do
-      Redis.should_receive(:new).and_return(redis)
-
       interpreter = mock(Flapjack::Gateways::Jabber::Interpreter)
       interpreter.should_receive(:respond_to?).with(:interpret).and_return(true)
       interpreter.should_receive(:receive_message).with(nil, 'jim', nil, 'hello!')

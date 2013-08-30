@@ -71,13 +71,8 @@ class RedisDelorean
     return counter
 EXPIRE_AS_IF_AT
 
-  def self.before_all(options = {})
-    redis = options[:redis]
-    @expire_as_if_at_sha = redis.script(:load, ExpireAsIfAtScript)
-  end
-
-  def self.before_each(options = {})
-    @redis = options[:redis]
+  def self.before_all
+     @expire_as_if_at_sha = Flapjack.redis.script(:load, ExpireAsIfAtScript)
   end
 
   def self.time_travel_to(dest_time)
@@ -100,7 +95,7 @@ EXPIRE_AS_IF_AT
     real_time = Time.now_without_delorean.to_i
     # puts "delta #{delta}, expire before real time #{Time.at(real_time + delta)}"
 
-    result = @redis.evalsha(@expire_as_if_at_sha, ['*'],
+    result = Flapjack.redis.evalsha(@expire_as_if_at_sha, ['*'],
                [real_time, real_time + delta])
     # puts "Expired #{result} key#{(result == 1) ? '' : 's'}"
   end
@@ -108,19 +103,19 @@ EXPIRE_AS_IF_AT
 end
 
 redis_opts = { :db => 14, :driver => :ruby }
-redis = ::Redis.new(redis_opts)
-redis.flushdb
-RedisDelorean.before_all(:redis => redis)
-redis.quit
+Flapjack.redis = ::Redis.new(redis_opts)
+Flapjack.redis.flushdb
+RedisDelorean.before_all
+Flapjack.redis.quit
 
 # Not the most efficient of operations...
 def redis_peek(queue, start = 0, count = nil)
-  size = @redis.llen(queue)
+  size = Flapjack.redis.llen(queue)
   start = 0 if start < 0
   count = (size - start) if count.nil? || (count > (size - start))
 
   (0..(size - 1)).inject([]) do |memo, n|
-    obj = @redis.rpoplpush(queue, queue)
+    obj = Flapjack.redis.rpoplpush(queue, queue)
     memo << Oj::load(obj) if (n >= start || n < (start + count))
     memo
   end
@@ -136,36 +131,28 @@ After do
 end
 
 Before('@processor') do
-  @processor = Flapjack::Processor.new(:logger => @logger,
-    :redis_config => redis_opts, :config => {})
-  @redis = @processor.instance_variable_get('@redis')
+  @processor = Flapjack::Processor.new(:logger => @logger, :config => {})
 end
 
 After('@processor') do
-  @redis.flushdb
-  @redis.quit
+  Flapjack.redis.flushdb
+  Flapjack.redis.quit
 end
 
 Before('@notifier') do
   @notifier  = Flapjack::Notifier.new(:logger => @logger,
-    :redis_config => redis_opts,
     :config => {'email_queue' => 'email_notifications',
                 'sms_queue' => 'sms_notifications',
                 'default_contact_timezone' => 'America/New_York'})
-  @notifier_redis = @notifier.instance_variable_get('@redis')
 end
 
 After('@notifier') do
-  @notifier_redis.flushdb
-  @notifier_redis.quit
+  Flapjack.redis.flushdb
+  Flapjack.redis.quit
 end
 
 Before('@notifications') do
   Mail::TestMailer.deliveries.clear
-end
-
-Before('@time') do
-  RedisDelorean.before_each(:redis => @redis)
 end
 
 After('@time') do

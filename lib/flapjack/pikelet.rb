@@ -10,10 +10,9 @@
 
 require 'monitor'
 
-require 'hiredis'
-require 'redis'
-
 require 'webrick'
+
+require 'flapjack'
 
 require 'flapjack/notifier'
 require 'flapjack/processor'
@@ -37,7 +36,6 @@ module Flapjack
         @pikelet_class = pikelet_class
 
         @config        = opts[:config]
-        @redis_config  = opts[:redis_config]
         @logger        = opts[:logger]
         @boot_time     = opts[:boot_time]
         @shutdown      = shutdown
@@ -49,7 +47,7 @@ module Flapjack
 
         @pikelet = @pikelet_class.new(:lock => @lock,
           :stop_condition => @stop_condition, :config => @config,
-          :redis_config => @redis_config, :logger => @logger)
+          :logger => @logger)
 
         @finished_condition = @lock.new_cond
       end
@@ -161,7 +159,6 @@ module Flapjack
 
       def start
         @pikelet_class.instance_variable_set('@config', @config)
-        @pikelet_class.instance_variable_set('@redis_config', @redis_config)
         @pikelet_class.instance_variable_set('@logger', @logger)
 
         if @config
@@ -225,7 +222,6 @@ module Flapjack
 
     def self.create(type, shutdown, opts = {})
       config = opts[:config] || {}
-      redis_config = opts[:redis_config] || {}
 
       logger = Flapjack::Logger.new("flapjack-#{type}", config['logger'])
 
@@ -236,7 +232,7 @@ module Flapjack
       created = types.collect {|pikelet_class|
         wrapper = WRAPPERS.detect {|wrap| wrap::TYPES.include?(type) }
         wrapper.new(pikelet_class, shutdown, :config => config,
-                    :redis_config => redis_config, :logger => logger)
+                    :logger => logger)
       }
       created.each {|c| c.siblings = created - [c] }
       created

@@ -9,8 +9,6 @@ module Flapjack
       attr_reader :medium, :address, :duration, :contact
 
       def self.push(queue, msg, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-
         begin
           msg_json = Oj.dump(msg)
         rescue Oj::Error => e
@@ -21,17 +19,15 @@ module Flapjack
         end
 
         if msg_json
-          redis.multi do
-            redis.lpush(queue, msg_json)
-            redis.lpush("#{queue}_actions", "+")
+          Flapjack.redis.multi do
+            Flapjack.redis.lpush(queue, msg_json)
+            Flapjack.redis.lpush("#{queue}_actions", "+")
           end
         end
       end
 
       def self.foreach_on_queue(queue, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-
-        while msg_json = redis.rpop(queue)
+        while msg_json = Flapjack.redis.rpop(queue)
           begin
             message = ::Oj.load( msg_json )
           rescue Oj::Error => e
@@ -46,8 +42,7 @@ module Flapjack
       end
 
       def self.wait_for_queue(queue, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-        redis.brpop("#{queue}_actions")
+        Flapjack.redis.brpop("#{queue}_actions")
       end
 
       def self.for_contact(contact, opts = {})

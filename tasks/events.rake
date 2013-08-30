@@ -7,6 +7,7 @@ namespace :events do
     $: << File.dirname(__FILE__) + '/../lib'
   end
 
+  require 'flapjack'
   require 'flapjack/configuration'
   require 'flapjack/data/event'
   require 'flapjack/data/entity_check'
@@ -29,13 +30,13 @@ namespace :events do
       exit(false)
     end
 
-    redis = Redis.new(@redis_config)
+    Flapjack.redis = Redis.new(@redis_config)
 
     Flapjack::Data::Event.add({'entity'  => 'clientx-app-01',
                                'check'   => 'ping',
                                'type'    => 'service',
                                'state'   => 'ok',
-                               'summary' => 'testing'}, :redis => redis)
+                               'summary' => 'testing'})
 
     sleep(8)
 
@@ -43,7 +44,7 @@ namespace :events do
                                'check'   => 'ping',
                                'type'    => 'service',
                                'state'   => 'critical',
-                               'summary' => 'testing'}, :redis => redis)
+                               'summary' => 'testing'})
 
     sleep(8)
 
@@ -51,7 +52,7 @@ namespace :events do
                                'check'   => 'ping',
                                'type'    => 'service',
                                'state'   => 'ok',
-                               'summary' => 'testing'}, :redis => redis)
+                               'summary' => 'testing'})
 
   end
 

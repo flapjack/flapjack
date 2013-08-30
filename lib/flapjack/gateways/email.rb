@@ -5,8 +5,7 @@ require 'erb'
 require 'socket'
 require 'chronic_duration'
 
-require 'hiredis'
-require 'redis'
+require 'flapjack'
 
 require 'flapjack/exceptions'
 require 'flapjack/utility'
@@ -26,9 +25,8 @@ module Flapjack
       def initialize(opts = {})
         @lock = opts[:lock]
         @config = opts[:config]
-        @redis_config = opts[:redis_config] || {}
+
         @logger = opts[:logger]
-        @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
         # TODO support for config reloading
         @notifications_queue = @config['queue'] || 'email_notifications'
@@ -65,13 +63,13 @@ module Flapjack
         loop do
           @lock.synchronize do
             @logger.debug "checking messages"
-            Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis, :logger => @logger) {|message|
+            Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :logger => @logger) {|message|
               handle_message(message)
             }
           end
 
           @logger.debug "blocking on messages"
-          Flapjack::Data::Message.wait_for_queue(@notifications_queue, :redis => @redis)
+          Flapjack::Data::Message.wait_for_queue(@notifications_queue)
         end
       end
 
@@ -94,8 +92,7 @@ module Flapjack
         @relative                   = relative_time_ago(Time.at(@time))
         @entity_name, @check        = message['event_id'].split(':', 2)
 
-        entity_check = Flapjack::Data::EntityCheck.for_event_id(message['event_id'],
-          :redis => @redis)
+        entity_check = Flapjack::Data::EntityCheck.for_event_id(message['event_id'])
 
         @in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
         @in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?

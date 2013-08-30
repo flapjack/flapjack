@@ -19,19 +19,19 @@ module Flapjack
         timestamp = Time.now.to_i
 
         if event.service?
-          client_fail_count = @redis.zcount("failed_checks:#{event.client}", '-inf', '+inf')
+          client_fail_count = Flapjack.redis.zcount("failed_checks:#{event.client}", '-inf', '+inf')
 
           if client_fail_count >= client_mass_fail_threshold
             # set the flag
             # FIXME: perhaps implement this with tagging
-            @redis.add("mass_failed_client:#{event.client}", timestamp)
-            @redis.zadd("mass_failure_events_client:#{event.client}", 0, timestamp)
+            Flapjack.redis.add("mass_failed_client:#{event.client}", timestamp)
+            Flapjack.redis.zadd("mass_failure_events_client:#{event.client}", 0, timestamp)
           else
             # unset the flag
-            start_mf = @redis.get("mass_failed_client:#{event.client}")
+            start_mf = Flapjack.redis.get("mass_failed_client:#{event.client}")
             duration = Time.now.to_i - start_mf.to_i
-            @redis.del("mass_failed_client:#{event.client}")
-            @redis.zadd("mass_failure_events_client:#{event.client}", duration, start_mf)
+            Flapjack.redis.del("mass_failed_client:#{event.client}")
+            Flapjack.redis.zadd("mass_failure_events_client:#{event.client}", duration, start_mf)
           end
         end
 

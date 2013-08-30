@@ -5,7 +5,7 @@ describe Flapjack::Data::Event do
 
   let(:entity_name) { 'xyz-example.com' }
   let(:check)       { 'ping' }
-  let(:redis)  { mock('redis') }
+  let(:redis)  { mock(Redis) }
 
   let!(:time) { Time.now}
 
@@ -22,11 +22,15 @@ describe Flapjack::Data::Event do
 
   context 'class' do
 
+    before(:each) do
+      Flapjack.stub(:redis).and_return(redis)
+    end
+
     it "returns the next event (non-blocking, archiving)" do
       redis.should_receive(:rpoplpush).with('events', /^events_archive:/).and_return(event_data.to_json, nil)
       redis.should_receive(:expire)
 
-      Flapjack::Data::Event.foreach_on_queue('events', :archive_events => true, :redis => redis) {|result|
+      Flapjack::Data::Event.foreach_on_queue('events', :archive_events => true) {|result|
         result.should be_an_instance_of(Flapjack::Data::Event)
       }
     end
@@ -34,7 +38,7 @@ describe Flapjack::Data::Event do
     it "returns the next event (non-blocking, not archiving)" do
       redis.should_receive(:rpop).with('events').and_return(event_data.to_json, nil)
 
-      Flapjack::Data::Event.foreach_on_queue('events', :archive_events => false, :redis => redis) {|result|
+      Flapjack::Data::Event.foreach_on_queue('events', :archive_events => false) {|result|
         result.should be_an_instance_of(Flapjack::Data::Event)
       }
     end
@@ -47,7 +51,7 @@ describe Flapjack::Data::Event do
       events_len = 23
       redis.should_receive(:llen).with('events').and_return(events_len)
 
-      pc = Flapjack::Data::Event.pending_count('events', :redis => redis)
+      pc = Flapjack::Data::Event.pending_count('events')
       pc.should == events_len
     end
 
@@ -58,7 +62,7 @@ describe Flapjack::Data::Event do
       redis.should_receive(:lpush).with('events_actions', anything)
 
       Flapjack::Data::Event.test_notifications('events', entity_name, check,
-        :summary => 'test', :details => 'testing', :redis => redis)
+        :summary => 'test', :details => 'testing')
     end
 
     it "creates an acknowledgement event" do
@@ -68,7 +72,7 @@ describe Flapjack::Data::Event do
       redis.should_receive(:lpush).with('events_actions', anything)
 
       Flapjack::Data::Event.create_acknowledgement('events', entity_name, check,
-        :summary => 'acking', :time => time.to_i, :redis => redis)
+        :summary => 'acking', :time => time.to_i)
     end
 
   end
@@ -85,7 +89,7 @@ describe Flapjack::Data::Event do
     its(:type)     { should == 'service' }
 
     it { should be_a_service }
-    it { should_not be_a_acknowledgement }
+    it { should_not be_an_acknowledgement }
     it { should_not be_a_test_notifications }
     it { should_not be_ok }
     it { should be_a_failure }

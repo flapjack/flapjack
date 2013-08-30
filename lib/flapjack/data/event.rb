@@ -16,8 +16,6 @@ module Flapjack
       #   'summary'   => check_output,
       #   'time'      => timestamp
       def self.push(queue, event, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-
         event['time'] = Time.now.to_i if event['time'].nil?
 
         begin
@@ -30,16 +28,14 @@ module Flapjack
         end
 
         if event_json
-          redis.multi do
-            redis.lpush(queue, event_json)
-            redis.lpush("#{queue}_actions", "+")
+          Flapjack.redis.multi do
+            Flapjack.redis.lpush(queue, event_json)
+            Flapjack.redis.lpush("#{queue}_actions", "+")
           end
         end
       end
 
       def self.foreach_on_queue(queue, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-
         parse_json_proc = Proc.new {|event_json|
           begin
             ::Oj.load( event_json )
@@ -53,29 +49,26 @@ module Flapjack
 
         if opts[:archive_events]
           dest = "events_archive:#{Time.now.utc.strftime "%Y%m%d%H"}"
-          while event_json = redis.rpoplpush(queue, dest)
-            redis.expire(dest, opts[:events_archive_maxage])
+          while event_json = Flapjack.redis.rpoplpush(queue, dest)
+            Flapjack.redis.expire(dest, opts[:events_archive_maxage])
             event = parse_json_proc.call(event_json)
             yield self.new(event) if block_given? && event
           end
         else
-          while event_json = redis.rpop(queue)
+          while event_json = Flapjack.redis.rpop(queue)
             event = parse_json_proc.call(event_json)
             yield self.new(event) if block_given? && event
           end
         end
       end
 
-      def self.wait_for_queue(queue, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-        redis.brpop("#{queue}_actions")
+      def self.wait_for_queue(queue)
+        Flapjack.redis.brpop("#{queue}_actions")
       end
 
       # Provide a count of the number of events on the queue to be processed.
-      def self.pending_count(queue, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-
-        redis.llen(queue)
+      def self.pending_count(queue)
+        Flapjack.redis.llen(queue)
       end
 
       def self.create_acknowledgement(queue, entity_name, check, opts = {})
@@ -87,7 +80,7 @@ module Flapjack
                  'duration'           => opts[:duration],
                  'acknowledgement_id' => opts[:acknowledgement_id]
                }
-        self.push(queue, data, :redis => opts[:redis])
+        self.push(queue, data, opts)
       end
 
       def self.test_notifications(queue, entity_name, check, opts = {})
@@ -98,7 +91,7 @@ module Flapjack
                  'summary'            => opts[:summary],
                  'details'            => opts[:details]
                }
-        self.push(queue, data, :redis => opts[:redis])
+        self.push(queue, data, opts)
       end
 
       def initialize(attrs = {})
@@ -162,11 +155,6 @@ module Flapjack
       def failure?
         ['critical', 'warning', 'unknown'].include?(state)
       end
-
-      # # Not used anywhere
-      # def unreachable?
-      #   state == 'unreachable'
-      # end
     end
   end
 end

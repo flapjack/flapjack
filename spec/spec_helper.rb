@@ -65,10 +65,10 @@ RSpec.configure do |config|
   config.order = 'random'
 
   config.around(:each, :redis => true) do |example|
-    @redis = ::Redis.new(:db => 14, :driver => :ruby)
-    @redis.flushdb
+    Flapjack.redis = ::Redis.new(:db => 14, :driver => :ruby)
+    Flapjack.redis.flushdb
     example.run
-    @redis.quit
+    Flapjack.redis.quit
   end
 
   config.around(:each, :logger => true) do |example|

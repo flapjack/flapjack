@@ -8,9 +8,13 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
   let(:now)   { Time.now }
 
-  let(:redis) {  mock('redis') }
+  let(:redis) {  mock(Redis) }
 
   let(:lock)  { mock(Monitor) }
+
+  before(:each) do
+    Flapjack.stub(:redis).and_return(redis)
+  end
 
   context 'notifications' do
 
@@ -29,15 +33,13 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by an exception" do
-      Redis.should_receive(:new).and_return(redis)
-
       Kernel.should_receive(:sleep).with(10)
 
       Flapjack::Data::Message.should_receive(:foreach_on_queue).
-        with('pagerduty_notifications', :redis => redis).and_yield(message)
+        with('pagerduty_notifications').and_yield(message)
 
       Flapjack::Data::Message.should_receive(:wait_for_queue).
-        with('pagerduty_notifications', :redis => redis).and_raise(Flapjack::PikeletStop)
+        with('pagerduty_notifications').and_raise(Flapjack::PikeletStop)
 
       lock.should_receive(:synchronize).and_yield
 
@@ -94,8 +96,6 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       redis.should_receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(0)
 
-      Redis.should_receive(:new).and_return(redis)
-
       Kernel.should_receive(:sleep).with(10).and_raise(Flapjack::PikeletStop.new)
 
       lock.should_receive(:synchronize).and_yield
@@ -125,16 +125,14 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       entity_check.should_receive(:entity_name).and_return('foo-app-01.bar.net')
 
       Flapjack::Data::EntityCheck.should_receive(:find_all_failing_unacknowledged).
-        with(:redis => redis).and_return(['PING:foo-app-01.bar.net'])
+        and_return(['PING:foo-app-01.bar.net'])
 
       Flapjack::Data::EntityCheck.should_receive(:for_event_id).
-        with('PING:foo-app-01.bar.net', :redis => redis).and_return(entity_check)
+        with('PING:foo-app-01.bar.net').and_return(entity_check)
 
       Flapjack::Data::Event.should_receive(:create_acknowledgement).with('events',
         'foo-app-01.bar.net', 'PING',
-        :summary => 'Acknowledged on PagerDuty by John Smith', :redis => redis)
-
-      Redis.should_receive(:new).and_return(redis)
+        :summary => 'Acknowledged on PagerDuty by John Smith')
 
       Kernel.should_receive(:sleep).with(10).and_raise(Flapjack::PikeletStop.new)
 
@@ -169,7 +167,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
         to_return(:status => 200, :body => response.to_json, :headers => {})
 
       redis.should_receive(:del).with('sem_pagerduty_acks_running')
-      ::Redis.should_receive(:new).and_return(redis)
+
       fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config, :logger => @logger)
 
       result = fpa.send(:pagerduty_acknowledged?, 'subdomain' => 'flpjck',

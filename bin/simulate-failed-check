@@ -22,13 +22,11 @@ def pike(message)
   exit 1
 end
 
-def send_event(event, opts)
-  redis = opts[:redis]
-  Flapjack::Data::Event.push('events', event, :redis => redis)
+def send_event(event)
+  Flapjack::Data::Event.push('events', event)
 end
 
 def fail(opts)
-  redis = opts[:redis]
   stop_after = opts[:minutes].to_i * 60
   recover = opts[:recover]
   state = opts[:state] || 'critical'
@@ -41,19 +39,20 @@ def fail(opts)
   recovery = event.merge('state' => 'ok',  'summary' => 'Simulated check output (test by operator)')
   key = "#{event['entity']}:#{event['check']}"
 
+  Flapjack.redis = Redis.new((opts[:redis_options] || {}).merge(:driver => :hiredis))
+
   lock = Monitor.new
   stop_cond = lock.new_cond
   @finish = false
 
   failer = Thread.new do
-    failer_redis = Redis.new((opts[:redis_options] || {}).merge(:driver => :hiredis))
     fin = nil
 
     loop do
       lock.synchronize do
         unless fin = @finish
           puts "#{Time.now}: sending failure event (#{state}) for #{key}"
-          send_event(failure.merge('time' => Time.now.to_i), :redis => failer_redis)
+          send_event(failure.merge('time' => Time.now.to_i))
           stop_cond.wait(10)
         end
       end
@@ -62,13 +61,12 @@ def fail(opts)
   end
 
   stopper = Thread.new do
-    stopper_redis = Redis.new((opts[:redis_options] || {}).merge(:driver => :hiredis))
     sleep stop_after
     lock.synchronize do
       puts "#{Time.now}: stopping"
       if recover
         puts "#{Time.now}: sending recovery event for #{key}"
-        send_event(recovery.merge('time' => Time.now.to_i), :redis => stopper_redis)
+        send_event(recovery.merge('time' => Time.now.to_i))
       end
       @finish = true
       stop_cond.signal
@@ -77,8 +75,9 @@ def fail(opts)
 
   stopper.join
   failer.join
-end
 
+  Flapjack.redis.quit
+end
 
 options = OpenStruct.new
 options.config    = nil

@@ -48,8 +48,6 @@ module Flapjack
       end
 
       def self.push(queue, event, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-
         last_state = opts[:last_state] || {}
 
         tag_data = event.tags.is_a?(Set) ? event.tags.to_a : nil
@@ -76,18 +74,16 @@ module Flapjack
         end
 
         if notif_json
-          redis.multi do
-            redis.lpush(queue, notif_json)
-            redis.lpush("#{queue}_actions", "+")
+          Flapjack.redis.multi do
+            Flapjack.redis.lpush(queue, notif_json)
+            Flapjack.redis.lpush("#{queue}_actions", "+")
           end
         end
 
       end
 
-      def self.foreach_on_queue(queue, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-
-        while notif_json = redis.rpop(queue)
+      def self.foreach_on_queue(queue)
+        while notif_json = Flapjack.redis.rpop(queue)
           begin
             notification = ::Oj.load( notif_json )
           rescue Oj::Error => e
@@ -101,9 +97,8 @@ module Flapjack
         end
       end
 
-      def self.wait_for_queue(queue, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-        redis.brpop("#{queue}_actions")
+      def self.wait_for_queue(queue)
+        Flapjack.redis.brpop("#{queue}_actions")
       end
 
       def contents
