@@ -154,14 +154,15 @@ module Flapjack
       def initialize(type, pikelet_klass, opts = {})
         super(type, pikelet_klass, opts)
 
-        pikelet_klass.instance_variable_set('@config', @config)
-        pikelet_klass.instance_variable_set('@redis_config', @redis_config)
-        pikelet_klass.instance_variable_set('@logger', @logger)
-
         unless defined?(@@resque_pool) && !@@resque_pool.nil?
           @@resque_pool = Flapjack::RedisPool.new(:config => @redis_config)
           ::Resque.redis = @@resque_pool
+          @@redis_connection = Flapjack::RedisPool.new(:config => @redis_config)
         end
+
+        pikelet_klass.instance_variable_set('@config', @config)
+        pikelet_klass.instance_variable_set('@redis', @@redis_connection)
+        pikelet_klass.instance_variable_set('@logger', @logger)
 
         # TODO error if config['queue'].nil?
 
