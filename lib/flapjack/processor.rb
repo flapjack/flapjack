@@ -8,7 +8,6 @@ require 'flapjack/filters/acknowledgement'
 require 'flapjack/filters/ok'
 require 'flapjack/filters/scheduled_maintenance'
 require 'flapjack/filters/unscheduled_maintenance'
-require 'flapjack/filters/detect_mass_client_failures'
 require 'flapjack/filters/delays'
 
 require 'flapjack/data/entity_check'
@@ -47,7 +46,6 @@ module Flapjack
       @filters << Flapjack::Filters::Ok.new(options)
       @filters << Flapjack::Filters::ScheduledMaintenance.new(options)
       @filters << Flapjack::Filters::UnscheduledMaintenance.new(options)
-      @filters << Flapjack::Filters::DetectMassClientFailures.new(options)
       @filters << Flapjack::Filters::Delays.new(options)
       @filters << Flapjack::Filters::Acknowledgement.new(options)
 
@@ -213,8 +211,7 @@ module Flapjack
         end
 
         entity_check.update_state(event.state, :timestamp => timestamp,
-          :summary => event.summary, :client => event.client,
-          :count => event.counter, :details => event.details)
+          :summary => event.summary, :count => event.counter, :details => event.details)
 
         entity_check.update_current_scheduled_maintenance
 
