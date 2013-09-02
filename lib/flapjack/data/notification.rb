@@ -10,7 +10,7 @@ module Flapjack
   module Data
     class Notification
 
-      attr_reader :type, :event_id, :event_state, :event_count
+      attr_reader :type, :event_id, :state
 
       def self.type_for_event(event)
         case event.type
@@ -49,18 +49,21 @@ module Flapjack
         last_state = opts[:last_state] || {}
 
         tag_data = event.tags.is_a?(Set) ? event.tags.to_a : nil
-        notif = {'event_id'     => event.id,
-                 'state'        => event.state,
-                 'summary'      => event.summary,
-                 'last_state'   => last_state[:state],
-                 'last_summary' => last_state[:summary],
-                 'details'      => event.details,
-                 'time'         => event.time,
-                 'duration'     => event.duration || nil,
-                 'type'         => opts[:type] || type_for_event(event),
-                 'severity'     => opts[:severity],
-                 'count'        => event.counter,
-                 'tags'         => tag_data }
+        notif = {'event_id'       => event.id,
+                 'state'          => event.state,
+                 'summary'        => event.summary,
+                 'details'        => event.details,
+                 'time'           => event.time,
+                 'duration'       => event.duration,
+                 'count'          => event.counter,
+                 'last_state'     => last_state[:state],
+                 'last_summary'   => last_state[:summary],
+                 'state_duration' => opts[:state_duration],
+
+                 'type'           => opts[:type] || type_for_event(event),
+                 'severity'       => opts[:severity],
+
+                 'tags'           => tag_data }
 
         redis.rpush(queue, Oj.dump(notif))
       end
@@ -88,17 +91,22 @@ module Flapjack
         self.new( parsed )
       end
 
+      def ok?
+        ['ok', 'up'].include?(@state)
+      end
+
       def contents
         @contents ||= {'event_id'          => @event_id,
-                       'state'             => @event_state,
-                       'summary'           => @event_summary,
-                       'last_state'        => @last_event_state,
-                       'last_summary'      => @last_event_summary,
-                       'details'           => @event_details,
-                       'time'              => @event_time,
-                       'duration'          => @event_duration,
+                       'state'             => @state,
+                       'summary'           => @summary,
+                       'duration'          => @duration,
+                       'last_state'        => @last_state,
+                       'last_summary'      => @last_summary,
+                       'state_duration'    => @state_duration,
+                       'details'           => @details,
+                       'time'              => @time,
                        'notification_type' => @type,
-                       'event_count'       => @event_count,
+                       'event_count'       => @count,
                        'tags'              => @tags
                       }
       end
@@ -115,7 +123,7 @@ module Flapjack
           media = contact.media
 
           logger.debug "Notification#messages: creating messages for contact: #{contact_id} " +
-            "event_id: \"#{@event_id}\" state: #{@event_state} event_tags: #{@tags.to_json} media: #{media.inspect}"
+            "event_id: \"#{@event_id}\" state: #{@state} event_tags: #{@tags.to_json} media: #{media.inspect}"
           rlen = rules.length
           logger.debug "found #{rlen} rule#{(rlen == 1) ? '' : 's'} for contact #{contact_id}"
 
@@ -170,7 +178,7 @@ module Flapjack
             rule_media = rule_media.reject {|medium|
               contact.drop_notifications?(:media => medium,
                                           :check => @event_id,
-                                          :state => @event_state)
+                                          :state => @state)
             }
 
             logger.debug "media after contact_drop?: #{rule_media}"
@@ -193,19 +201,22 @@ module Flapjack
 
       # created from parsed JSON, so opts keys are in strings
       def initialize(opts = {})
-        @event_id           = opts['event_id']
-        @event_state        = opts['state']
-        @event_summary      = opts['summary']
-        @event_details      = opts['details']
-        @event_time         = opts['time']
-        @event_duration     = opts['duration']
-        @event_count        = opts['count']
-        @last_event_state   = opts['last_state']
-        @last_event_summary = opts['last_summary']
-        @type               = opts['type']
-        @severity           = opts['severity']
-        tags                = opts['tags']
-        @tags               = tags.is_a?(Array) ? Flapjack::Data::TagSet.new(tags) : nil
+        @event_id       = opts['event_id']
+        @state          = opts['state']
+        @summary        = opts['summary']
+        @details        = opts['details']
+        @time           = opts['time']
+        @count          = opts['count']
+
+        @last_state     = opts['last_state']
+        @last_summary   = opts['last_summary']
+        @state_duration = opts['state_duration']
+
+        @type           = opts['type']
+        @severity       = opts['severity']
+
+        tags            = opts['tags']
+        @tags           = tags.is_a?(Array) ? Flapjack::Data::TagSet.new(tags) : nil
       end
 
       # # time restrictions match?

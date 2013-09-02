@@ -14,7 +14,7 @@ module Flapjack
     class DetectMassClientFailures
       include Base
 
-      def block?(event)
+      def block?(event, entity_check, previous_state)
         client_mass_fail_threshold = 10
         timestamp = Time.now.to_i
 

@@ -19,15 +19,13 @@ module Flapjack
     class Delays
       include Base
 
-      def block?(event)
+      def block?(event, entity_check, previous_state)
         failure_delay = 30
         resend_delay  = 300
 
         result = false
 
         if event.service? && event.failure?
-
-          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
           current_time = Time.now.to_i
 
           if entity_check.failed?
@@ -39,8 +37,9 @@ module Flapjack
             last_alert_state     = last_notification[:type]
             last_alert_timestamp = last_notification[:timestamp]
 
-            current_state_duration   = current_time - last_change
-            time_since_last_alert    = current_time - last_problem_alert unless last_problem_alert.nil?
+            current_state_duration = current_time - last_change
+            time_since_last_alert  = current_time - last_problem_alert unless last_problem_alert.nil?
+
             @logger.debug("Filter: Delays: last_problem_alert: #{last_problem_alert.to_s}, " +
                        "last_change: #{last_change.inspect}, " +
                        "current_state_duration: #{current_state_duration.inspect}, " +
@@ -48,7 +47,8 @@ module Flapjack
                        "last_alert_state: [#{last_alert_state.inspect}], " +
                        "event.state: [#{event.state.inspect}], " +
                        "last_alert_state == event.state ? #{last_alert_state.to_s == event.state}")
-            if (current_state_duration < failure_delay)
+
+            if current_state_duration < failure_delay
               result = true
               @logger.debug("Filter: Delays: blocking because duration of current failure " +
                          "(#{current_state_duration}) is less than failure_delay (#{failure_delay})")
