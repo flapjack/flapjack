@@ -261,9 +261,13 @@ module Flapjack
         (curr_and_last && (curr_and_last.size == 2)) ? curr_and_last.last : nil
       end
 
+      lc = entity_check.last_change
+      state_duration = lc ? (timestamp - lc) : nil
+
       Flapjack::Data::Notification.add(@notifier_queue, event,
         :type => notification_type, :severity => severity,
-        :last_state => historical_state, :redis => @redis)
+        :last_state => historical_state, :state_duration => state_duration,
+        :redis => @redis)
     end
 
   end

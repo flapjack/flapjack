@@ -57,10 +57,6 @@ module Flapjack
           @in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
           @in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
 
-          if lc = entity_check.last_change
-            @duration  = Time.now.to_i - lc
-          end
-
           headline_map = {'problem'         => 'Problem: ',
                           'recovery'        => 'Recovery: ',
                           'acknowledgement' => 'Acknowledgement: ',

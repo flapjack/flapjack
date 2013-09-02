@@ -9,8 +9,6 @@ describe Flapjack::Gateways::Email, :logger => true do
     entity_check = mock(Flapjack::Data::EntityCheck)
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
-    entity_check.should_receive(:last_change).and_return(Time.now.to_i)
-
     redis = mock('redis')
 
     Flapjack::Data::EntityCheck.should_receive(:for_event_id).
@@ -31,6 +29,7 @@ describe Flapjack::Gateways::Email, :logger => true do
                     'contact_first_name'  => 'John',
                     'contact_last_name'   => 'Smith',
                     'state'               => 'ok',
+                    'state_duration'      => 2,
                     'summary'             => 'smile',
                     'last_state'          => 'problem',
                     'last_summary'        => 'frown',

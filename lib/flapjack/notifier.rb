@@ -121,8 +121,7 @@ module Flapjack
 
         contact = message.contact
 
-        # was event.ok?
-        if (notification.event_state == 'ok') || (notification.event_state == 'up')
+        if notification.ok?
           contact.update_sent_alert_keys(
             :media => media_type,
             :check => event_id,
@@ -142,7 +141,7 @@ module Flapjack
           contact.update_sent_alert_keys(
             :media => media_type,
             :check => event_id,
-            :state => notification.event_state)
+            :state => notification.state)
         end
 
 
