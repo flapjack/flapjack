@@ -16,7 +16,6 @@ describe Flapjack::Processor, :logger => true do
     Flapjack::Filters::Ok.should_receive(:new)
     Flapjack::Filters::ScheduledMaintenance.should_receive(:new)
     Flapjack::Filters::UnscheduledMaintenance.should_receive(:new)
-    #Flapjack::Filters::DetectMassClientFailures.should_receive(:new)
     Flapjack::Filters::Delays.should_receive(:new)
     Flapjack::Filters::Acknowledgement.should_receive(:new)
 
