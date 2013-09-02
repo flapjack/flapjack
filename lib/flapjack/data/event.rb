@@ -129,12 +129,6 @@ module Flapjack
         (entity || '-') + ':' + (check || '-')
       end
 
-      # FIXME: site specific
-      def client
-        return unless entity
-        entity.split('-').first
-      end
-
       def type
         return unless @type
         @type.downcase

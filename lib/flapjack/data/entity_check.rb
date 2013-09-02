@@ -267,7 +267,6 @@ module Flapjack
         @redis.multi
 
         if old_state != new_state
-          client = options[:client]
 
           # Note the current state (for speedy lookups)
           @redis.hset("check:#{@key}", 'state', new_state)
@@ -279,11 +278,9 @@ module Flapjack
           when STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN
             @redis.zadd('failed_checks', timestamp, @key)
             # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-            @redis.zadd("failed_checks:client:#{client}", timestamp, @key) if client
           else
             @redis.zrem("failed_checks", @key)
             # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-            @redis.zrem("failed_checks:client:#{client}", @key) if client
           end
 
           # Retain event data for entity:check pair
