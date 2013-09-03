@@ -17,6 +17,8 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
 
   let(:now) { Time.now }
 
+  let(:lock) { mock(Monitor) }
+
   context 'notifications' do
 
     it "raises an error if a required config setting is not set" do
@@ -28,9 +30,12 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     it "starts and is stopped by an exception" do
       Kernel.should_receive(:sleep).with(10).and_raise(Flapjack::PikeletStop)
 
-      fon = Flapjack::Gateways::Oobetet::Notifier.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+
+      fon = Flapjack::Gateways::Oobetet::Notifier.new(:lock => lock,
+        :config => config, :logger => @logger)
       fon.should_receive(:check_timers)
-      fon.start
+      expect { fon.start }.to raise_error(Flapjack::PikeletStop)
     end
 
     it "checks for a breach and emits notifications" do
@@ -48,11 +53,11 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
       req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
          to_return(:status => 200, :body => {'status' => 'success'}.to_json)
 
-      fon = Flapjack::Gateways::Oobetet::Notifier.new(:config => config, :logger => @logger)
+      fon = Flapjack::Gateways::Oobetet::Notifier.new(:lock => lock, :config => config, :logger => @logger)
       fon.instance_variable_set('@siblings', [time_check, bot])
       fon.send(:check_timers)
-    
-      req.should have_been_requested      
+
+      req.should have_been_requested
     end
 
   end
@@ -64,13 +69,18 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     let(:a_day_ago)    { now.to_i - (60 * 60 * 24) }
 
     it "starts and is stopped by a signal" do
-      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:config => config, :logger => @logger)
-      fot.instance_variable_get('@shutdown_cond').should_receive(:wait_until)
+      lock.should_receive(:synchronize).and_yield
+      stop_cond = mock(MonitorMixin::ConditionVariable)
+      stop_cond.should_receive(:wait_until)
+
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :stop_condition => stop_cond,
+        :config => config, :logger => @logger)
       fot.start
     end
 
     it "records times of a problem status message" do
-      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
       fot.send(:receive_status, 'problem', now.to_i)
       fot_times = fot.instance_variable_get('@times')
       fot_times.should_not be_nil
@@ -79,7 +89,8 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     end
 
     it "records times of a recovery status message" do
-      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
       fot.send(:receive_status, 'recovery', now.to_i)
       fot_times = fot.instance_variable_get('@times')
       fot_times.should_not be_nil
@@ -88,7 +99,8 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     end
 
     it "records times of an acknowledgement status message" do
-      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
       fot.send(:receive_status, 'acknowledgement', now.to_i)
       fot_times = fot.instance_variable_get('@times')
       fot_times.should_not be_nil
@@ -97,7 +109,8 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     end
 
     it "detects a time period with no test problem alerts" do
-      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
       fot_times = fot.instance_variable_get('@times')
 
       fot_times[:last_problem]  = a_day_ago
@@ -111,7 +124,8 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     end
 
     it "detects a time period with no test recovery alerts" do
-      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
       fot_times = fot.instance_variable_get('@times')
 
       fot_times[:last_problem]  = a_minute_ago
@@ -160,9 +174,13 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
       ::Jabber::Client.should_receive(:new).and_return(client)
       ::Jabber::MUC::SimpleMUCClient.should_receive(:new).and_return(muc_client)
 
-      fob = Flapjack::Gateways::Oobetet::Bot.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+      stop_cond = mock(MonitorMixin::ConditionVariable)
+      stop_cond.should_receive(:wait_until)
+
+      fob = Flapjack::Gateways::Oobetet::Bot.new(:lock => lock, :stop_condition => stop_cond,
+        :config => config, :logger => @logger)
       fob.instance_variable_set('@siblings', [time_checker])
-      fob.instance_variable_get('@shutdown_cond').should_receive(:wait_until)
       fob.start
     end
 
@@ -172,7 +190,9 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
       muc_client.should_receive(:say).with('hello!')
       muc_client2.should_receive(:say).with('hello!')
 
-      fob = Flapjack::Gateways::Oobetet::Bot.new(:config => config, :logger => @logger)
+      lock.should_receive(:synchronize).and_yield
+
+      fob = Flapjack::Gateways::Oobetet::Bot.new(:lock => lock, :config => config, :logger => @logger)
       fob.instance_variable_set('@muc_clients', {'room1' => muc_client, 'room2' => muc_client2})
       fob.announce('hello!')
     end

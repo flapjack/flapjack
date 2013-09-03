@@ -148,10 +148,12 @@ when "start"
     puts "Flapjack is already running."
   else
     print "Flapjack starting..."
+    return_value = nil
     runner.execute(:daemonize => daemonize) {
-      flapjack_coord.call
+      return_value = flapjack_coord.call
     }
     puts " done."
+    exit(return_value + 128) unless (return_value.nil? || (return_value == 0))
   end
 
 when "stop"

@@ -5,8 +5,11 @@ require 'socket'
 
 require 'chronic_duration'
 require 'oj'
-require 'xmpp4r'
-require 'xmpp4r/muc/helper/simplemucclient'
+require 'rexml/document'
+require 'xmpp4r/query'
+require 'xmpp4r/muc'
+
+require 'flapjack'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/data/message'
@@ -25,39 +28,29 @@ module Flapjack
 
         attr_accessor :siblings
 
-        include MonitorMixin
-
         def initialize(options = {})
+          @lock = options[:lock]
           @config = options[:config]
-          @redis_config = options[:redis_config] || {}
 
           @logger = options[:logger]
 
           @notifications_queue = @config['queue'] || 'jabber_notifications'
-
-          mon_initialize
-
-          @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
         end
 
         def start
           loop do
-            synchronize do
-              Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :redis => @redis) {|message|
+            @lock.synchronize do
+              Flapjack::Data::Message.foreach_on_queue(@notifications_queue) {|message|
                 handle_message(message)
               }
             end
 
-            Flapjack::Data::Message.wait_for_queue(@notifications_queue, :redis => @redis)
+            Flapjack::Data::Message.wait_for_queue(@notifications_queue)
           end
-        rescue Flapjack::PikeletStop => fps
-          @logger.info "stopping jabber notifier"
         end
 
-        def stop(thread)
-          synchronize do
-            thread.raise Flapjack::PikeletStop.new
-          end
+        def stop_type
+          :exception
         end
 
         private
@@ -117,51 +110,43 @@ module Flapjack
 
       class Interpreter
 
-        include MonitorMixin
-
         attr_accessor :siblings
 
         include Flapjack::Utility
 
         def initialize(opts = {})
+          @lock = opts[:lock]
+          @stop_cond = opts[:stop_condition]
           @config = opts[:config]
-          @redis_config = opts[:redis_config] || {}
+
           @boot_time = opts[:boot_time]
           @logger = opts[:logger]
 
-          @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
-
           @should_quit = false
 
-          mon_initialize
-
-          @message_cond = new_cond
           @messages = []
         end
 
         def start
-          synchronize do
+          @lock.synchronize do
             until @messages.empty? && @should_quit
               while msg = @messages.pop
                 @logger.info "interpreter received #{msg.inspect}"
                 interpret(msg[:room], msg[:nick], msg[:time], msg[:message])
               end
-              @message_cond.wait_while { @messages.empty? && !@should_quit }
+              @stop_cond.wait_while { @messages.empty? && !@should_quit }
             end
           end
         end
 
-        def stop(thread)
-          synchronize do
-            @should_quit = true
-            @message_cond.signal
-          end
+        def stop_type
+          :signal
         end
 
         def receive_message(room, nick, time, msg)
-          synchronize do
+          @lock.synchronize do
             @messages += [{:room => room, :nick => nick, :time => time, :message => msg}]
-            @message_cond.signal
+            @stop_cond.signal
           end
         end
 
@@ -189,12 +174,12 @@ module Flapjack
             four_hours = 4 * 60 * 60
             duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
 
-            event_id = @redis.hget('unacknowledged_failures', ackid)
+            event_id = Flapjack.redis.hget('unacknowledged_failures', ackid)
 
             if event_id.nil?
               error = "not found"
             else
-              entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
+              entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id)
               error = "unknown entity" if entity_check.nil?
             end
 
@@ -217,7 +202,6 @@ module Flapjack
                   :summary => (comment || ''),
                   :acknowledgement_id => ackid,
                   :duration => duration,
-                  :redis => @redis
                 )
               }
             end
@@ -246,12 +230,12 @@ module Flapjack
 
             msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
-            if entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis)
+            if entity = Flapjack::Data::Entity.find_by_name(entity_name)
               msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
               summary = "Testing notifications to all contacts interested in entity: #{entity_name}, check: #{check_name}"
               Flapjack::Data::Event.test_notifications(@config['processor_queue'] || 'events',
-                entity_name, check_name, :summary => summary, :redis => @redis)
+                entity_name, check_name, :summary => summary)
             else
               msg = "yeah, no I can't see #{entity_name} in my systems"
             end
@@ -260,7 +244,7 @@ module Flapjack
             entity_name = $1
             check_name  = $2
 
-            if entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis)
+            if entity = Flapjack::Data::Entity.find_by_name(entity_name)
               check_str = check_name.nil? ? '' : ", check: #{check_name}"
               msg = "so you'd like details on entity: #{entity_name}#{check_str} hmm? ... OK!\n"
 
@@ -309,7 +293,7 @@ module Flapjack
                 msg += "I couldn't find any checks for entity: #{entity_name}"
               else
                 check_names.each do |check|
-                  entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check, :redis => @redis)
+                  entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check)
                   next if entity_check.nil?
                   msg += get_details.call(entity_check)
                 end
@@ -321,7 +305,7 @@ module Flapjack
           when /^(?:find )?entities matching\s+\/(.*)\/.*$/i
             pattern = $1.chomp.strip
 
-            entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern, :redis => @redis)
+            entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern)
 
             if entity_list
               max_showable = 30
@@ -371,34 +355,26 @@ module Flapjack
 
       class Bot
 
-        include MonitorMixin
-
         attr_accessor :siblings
 
         def initialize(opts = {})
+          @lock = opts[:lock]
+          @stop_cond = opts[:stop_condition]
           @config = opts[:config]
-          @redis_config = opts[:redis_config] || {}
           @boot_time = opts[:boot_time]
-
-          @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
           @logger = opts[:logger]
 
-          @buffer = []
+          @say_buffer = []
+          @announce_buffer = []
           @hostname = Socket.gethostname
 
-          mon_initialize
-
-          @should_quit = false
-          @shutdown_cond = new_cond
+          @state_buffer = []
         end
 
-        # TODO reconnect on disconnect
         def start
-          synchronize do
-            if self.siblings
-              @interpreter = self.siblings.detect {|sib| sib.respond_to?(:interpret)}
-            end
+          @lock.synchronize do
+            interpreter = self.siblings ? self.siblings.detect {|sib| sib.respond_to?(:interpret)} : nil
 
             @logger.info("starting")
             @logger.debug("new jabber pikelet with the following options: #{@config.inspect}")
@@ -407,20 +383,56 @@ module Flapjack
 
             jabber_id = @config['jabberid'] || 'flapjack'
 
-            @flapjack_jid = ::Jabber::JID.new(jabber_id + '/' + @hostname)
-            @client = ::Jabber::Client.new(@flapjack_jid)
+            flapjack_jid = ::Jabber::JID.new(jabber_id + '/' + @hostname)
+            client = ::Jabber::Client.new(flapjack_jid)
 
-            @muc_clients = @config['rooms'].inject({}) do |memo, room|
-              muc_client = ::Jabber::MUC::SimpleMUCClient.new(@client)
-              memo[room] = muc_client
-              memo
+            client.on_exception do |exc, stream, loc|
+              # TODO move log statements back inside the 'unless @should_quit' clause
+              # -- debugging with them now
+
+              if exc
+                @logger.error exc.class.name
+                @logger.error ":#{loc.to_s}"
+                @logger.error exc.message
+                @logger.error exc.backtrace.join("\n")
+              else
+                @logger.error "on_exception called with nil exception value"
+                @logger.error caller.join("\n")
+              end
+
+              @lock.synchronize do
+                unless @should_quit
+                  @state_buffer << 'leave'
+                  @stop_cond.signal
+                end
+              end
+              sleep 3
+              @lock.synchronize do
+                unless @should_quit
+                  @state_buffer << 'rejoin'
+                  @stop_cond.signal
+                end
+              end
             end
 
-            @client.connect
-            @client.auth(@config['password'])
-            @client.send(::Jabber::Presence.new.set_type(:available))
+           check_xml = Proc.new do |data|
+              return if data.nil?
+              text = ''
+              begin
+                enc_name = Encoding.default_external.name
+                REXML::Document.new("<?xml version=\"1.0\" encoding=\"#{enc_name}\"?>" + data).
+                  each_element_with_text do |elem|
 
-            @client.add_message_callback do |m|
+                  text += elem.texts.join(" ")
+                end
+                text = data if text.empty? && !data.empty?
+              rescue REXML::ParseException => exc
+                text = data
+              end
+              text
+            end
+
+            client.add_message_callback do |m|
               text = m.body
               nick = m.from
               time = nil
@@ -430,61 +442,181 @@ module Flapjack
                 end
               }
 
-              if @interpreter
-                @interpreter.receive_message(nil, nick, time, text)
+              if interpreter
+                interpreter.receive_message(nil, nick, time, check_xml.call(text))
               end
             end
 
-            @muc_clients.each_pair do |room, muc_client|
+            muc_clients = @config['rooms'].inject({}) do |memo, room|
+              muc_client = ::Jabber::MUC::SimpleMUCClient.new(client)
               muc_client.on_message do |time, nick, text|
                 next if nick == jabber_id
 
-                if text =~ /^#{@config['alias']}:\s+(.*)/
+                if check_xml.call(text) =~ /^#{@config['alias']}:\s+(.*)/
                   command = $1
 
-                  if @interpreter
-                    @interpreter.receive_message(room, nick, time, command)
+                  if interpreter
+                    interpreter.receive_message(room, nick, time, command)
                   end
-                end                
+                end
               end
 
-              muc_client.join(room + '/' + @config['alias'])
-              muc_client.say("flapjack jabber gateway started at #{Time.now}, hello!")
+              memo[room] = muc_client
+              memo
             end
 
-            # block this thread until signalled to quit
-            @shutdown_cond.wait_until { @should_quit }
+            attempts_allowed = 3
+            attempts_remaining = attempts_allowed
 
-            @muc_clients.each_pair do |room, muc_client|
-              muc_client.exit if muc_client.active?
+            loop do
+
+              if client.is_connected?
+                # block this thread until signalled to quit / leave / rejoin
+                @stop_cond.wait_until { @should_quit || !@state_buffer.empty? }
+              elsif attempts_remaining > 0
+                unless @should_quit || (attempts_remaining == attempts_allowed)
+                  # The only thing that should be interrupting this wait is
+                  # a pikelet.stop, which would set @should_quit to true;
+                  # thus we shouldn't see multiple connection attempts happening
+                  # too quickly.
+                  @stop_cond.wait(3)
+                end
+                unless @should_quit # may have changed during previous wait
+                  begin
+                    attempts_remaining -= 1
+                    _join(client, muc_clients)
+                    # reset counter, joined OK
+                    attempts_remaining = attempts_allowed
+                  rescue Errno::ECONNREFUSED, ::Jabber::JabberError => je
+                    report_error("Couldn't join Jabber server #{@hostname}", je)
+                  end
+                end
+              else
+                # TODO should we quit Flapjack entirely?
+                @logger.error "stopping jabber bot, couldn't connect in #{attempts_allowed} attempts"
+                @should_quit = true
+              end
+
+              break if @should_quit
+              handle_state_change(client, muc_clients) unless @state_buffer.empty?
             end
 
-            @client.close
-          end
-         end
-
-        def stop(thread)
-          synchronize do
-            @should_quit = true
-            @shutdown_cond.signal
+            # main loop has finished, stop() must have been called -- disconnect
+            _leave(client, muc_clients) if client.is_connected?
           end
         end
 
-        # TODO buffer if room not connected?
         def announce(room, msg)
-          synchronize do
-            unless @muc_clients.empty?
-              if muc_client = @muc_clients[room]
-                muc_client.say(msg)
-              end
+          @lock.synchronize do
+            @announce_buffer += [{:room => room, :msg => msg}]
+            @state_buffer << 'announce'
+            @stop_cond.signal
+          end
+        end
+
+        def say(nick, msg)
+          @lock.synchronize do
+            @say_buffer += [{:nick => nick, :msg => msg}]
+            @state_buffer << 'say'
+            @stop_cond.signal
+          end
+        end
+
+        def handle_state_change(client, muc_clients)
+          connected = client.is_connected?
+          @logger.info "connected? #{connected}"
+
+          while state = @state_buffer.pop
+            case state
+            when 'announce'
+              _announce(muc_clients) if connected
+            when 'say'
+              _say(client) if connected
+            when 'leave'
+              connected ? _leave(client, muc_clients) : _deactivate(muc_clients)
+            when 'rejoin'
+              _join(client, muc_clients, :rejoin => true) unless connected
+            else
+              @logger.warn "unknown state change #{state}"
             end
           end
         end
 
-        def say(nick, message)
-          synchronize do
-            m = ::Jabber::Message::new(nick, message)
-            @client.send(m)
+        def stop_type
+          :signal
+        end
+
+        def report_error(error_msg, je)
+          @logger.error error_msg
+          message = je.respond_to?(:message) ? je.message : '-'
+          @logger.error "#{je.class.name} #{message}"
+          # if je.respond_to?(:backtrace) && trace = je.backtrace
+          #   @logger.error trace.join("\n")
+          # end
+        end
+
+        def _join(client, muc_clients, opts = {})
+          client.connect
+          client.auth(@config['password'])
+          client.send(::Jabber::Presence.new.set_type(:available))
+          muc_clients.each_pair do |room, muc_client|
+            attempts_allowed = 3
+            attempts_remaining = attempts_allowed
+            joined = nil
+            while !joined && (attempts_remaining > 0)
+              unless @should_quit || (attempts_remaining == attempts_allowed)
+                # The only thing that should be interrupting this wait is
+                # a pikelet.stop, which would set @should_quit to true;
+                # thus we shouldn't see multiple connection attempts happening
+                # too quickly.
+                @stop_cond.wait(1)
+              end
+              unless @should_quit # may have changed during previous wait
+                attempts_remaining -= 1
+                begin
+                  muc_client.join(room + '/' + @config['alias'])
+                  t = Time.now
+                  msg = opts[:rejoin] ? "flapjack jabber gateway rejoining at #{t}, hello again!" :
+                                        "flapjack jabber gateway started at #{t}, hello!"
+                  muc_client.say(msg)
+                  joined = true
+                rescue Errno::ECONNREFUSED, ::Jabber::JabberError => muc_je
+                  report_error("Couldn't join MUC room #{room}, #{attempts_remaining} attempts remaining", muc_je)
+                  raise if attempts_remaining <= 0
+                  joined = false
+                end
+              end
+            end
+          end
+        rescue ::Jabber::ClientAuthenticationFailure
+          client.close if client.is_connected?
+          raise
+        end
+
+        def _leave(client, muc_clients)
+          muc_clients.values.each {|muc_client| muc_client.exit if muc_client.active? }
+          client.close
+        end
+
+        def _deactivate(muc_clients)
+          # send method has been overridden in MUCClient class
+          # without this MUC clients will still think they are active
+          muc_clients.values.each {|muc_client| muc_client.__send__(:deactivate) }
+        end
+
+        def _announce(muc_clients)
+          @announce_buffer.each do |announce|
+            if (muc_client = muc_clients[announce[:room]]) && muc_client.active?
+              muc_client.say(announce[:msg])
+              announce[:sent] = true
+            end
+          end
+          @announce_buffer.delete_if {|announce| announce[:sent] }
+        end
+
+        def _say(client)
+          while speak = @say_buffer.pop
+            client.send( ::Jabber::Message::new(speak[:nick], speak[:msg]) )
           end
         end
 

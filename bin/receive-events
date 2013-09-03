@@ -14,19 +14,19 @@ Oj.default_options = { :indent => 0, :mode => :strict }
 require 'active_support/json'
 
 require 'flapjack/configuration'
+require 'flapjack/data/event'
 
 def pike(message)
   puts "piking out: #{message}"
   exit 1
 end
 
-def send_event(event, opts)
-  redis = opts[:redis]
-  redis.lpush 'events', event
+def send_event(event)
+  Flapjack::Data::Event.add(event)
 end
 
 def receive(opts)
-  redis = Redis.new(opts[:redis_options])
+  Flapjack.redis = Redis.new(opts[:redis_options])
   source_redis = Redis.new(:url => opts[:source])
 
   archives = get_archive_keys_stats(source_redis)
@@ -61,7 +61,7 @@ def receive(opts)
     # something to read at cursor?
     event = source_redis.lindex(archive_key, cursor)
     if event
-      send_event(event, :redis => redis)
+      send_event(event)
       events_sent += 1
       print "#{events_sent} " if events_sent % 1000 == 0
       cursor -= 1

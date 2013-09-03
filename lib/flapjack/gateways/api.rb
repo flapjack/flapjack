@@ -6,15 +6,13 @@
 # There's a matching flapjack-diner gem at https://github.com/flpjck/flapjack-diner
 # which consumes data from this API.
 
-require 'hiredis'
-require "redis/connection/hiredis"
-
 require 'time'
 
 require 'sinatra/base'
 
-require 'flapjack/gateways/api/rack/json_params_parser'
+require 'flapjack'
 
+require 'flapjack/gateways/api/rack/json_params_parser'
 require 'flapjack/gateways/api/contact_methods'
 require 'flapjack/gateways/api/entity_methods'
 
@@ -35,8 +33,6 @@ module Flapjack
       class << self
         def start
           @logger.info "starting api - class"
-
-          @redis = Redis.new((@redis_config || {}).merge(:driver => :hiredis))
 
           if accesslog = (@config && @config['access_log'])
             if not File.directory?(File.dirname(accesslog))

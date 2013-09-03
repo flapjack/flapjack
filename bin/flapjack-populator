@@ -68,42 +68,42 @@ when "import-contacts"
   contacts = Oj.load(file)
 
   if contacts && contacts.is_a?(Enumerable) && contacts.any? {|e| !e['id'].nil?}
-    @persistence = Redis.new(redis_options)
+    Flapjack.redis = Redis.new(redis_options)
     contacts.each do |contact|
       unless contact['id']
         puts "Contact not imported as it has no id: " + contact.inspect
         next
       end
-      Flapjack::Data::Contact.add(contact, :redis => @persistence)
+      Flapjack::Data::Contact.add(contact)
     end
-    @persistence.quit
+    Flapjack.redis.quit
   end
 
 when "import-entities"
   entities = Oj.load(file)
 
   if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
-    @persistence = Redis.new(redis_options)
+    Flapjack.redis = Redis.new(redis_options)
     entities.each do |entity|
       unless entity['id']
         puts "Entity not imported as it has no id: " + entity.inspect
         next
       end
-      Flapjack::Data::Entity.add(entity, :redis => @persistence)
+      Flapjack::Data::Entity.add(entity)
     end
-    @persistence.quit
+    Flapjack.redis.quit
   end
 
 when "purge-events"
-  @persistence = Redis.new(redis_options)
-  events_size = @persistence.llen('events')
+  redis = Redis.new(redis_options)
+  events_size = redis.llen('events')
   puts "purging #{events_size} events..."
   etq = "events.#{Time.now.to_i}"
   puts "renaming 'events' to '#{etq}'"
-  @persistence.rename('events', etq)
+  redis.rename('events', etq)
   puts "setting expiry of '#{etq}' to 8 hours"
-  @persistence.expire(etq, (60 * 60 * 8))
-  @persistence.quit
+  redis.expire(etq, (60 * 60 * 8))
+  redis.quit
 
 else
   puts "you need to give me something to do, eg a command like 'import-entities' or 'import-clients' etc"

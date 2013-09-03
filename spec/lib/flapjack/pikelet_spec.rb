@@ -1,85 +1,93 @@
 require 'spec_helper'
 require 'flapjack/pikelet'
 
-describe Flapjack::Pikelet do
+describe Flapjack::Pikelet, :logger => true do
 
-  let(:config) { mock('config') }
-  let(:redis_config) { mock('redis_config') }
+  let(:config)        { mock('config') }
 
-  let(:logger) { mock(Flapjack::Logger) }
-
-  let(:condition)    { mock(MonitorMixin::ConditionVariable) }
-  let(:thread)       { mock(Thread) }
-  let(:shutdown)     { mock(Proc) }
+  let(:lock)          { mock(Monitor) }
+  let(:stop_cond)     { mock(MonitorMixin::ConditionVariable) }
+  let(:finished_cond) { mock(MonitorMixin::ConditionVariable) }
+  let(:thread)        { mock(Thread) }
+  let(:shutdown)      { mock(Proc) }
 
   it "creates and starts a processor pikelet" do
-    Flapjack::Logger.should_receive(:new).and_return(logger)
+    Flapjack::Logger.should_receive(:new).and_return(@logger)
 
     config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('max_runs').and_return(nil)
 
-    fc = mock('coordinator')
+    finished_cond.should_receive(:signal)
+    lock.should_receive(:new_cond).twice.and_return(stop_cond, finished_cond)
+    lock.should_receive(:synchronize).and_yield
+    Monitor.should_receive(:new).and_return(lock)
 
     processor = mock('processor')
     processor.should_receive(:start)
-    Flapjack::Processor.should_receive(:new).with(:config => config,
-      :redis_config => redis_config, :logger => logger).and_return(processor)
+    Flapjack::Processor.should_receive(:new).with(:lock => lock,
+      :stop_condition => stop_cond, :config => config,
+      :logger => @logger).and_return(processor)
 
-    Thread.should_receive(:new).and_yield
+    Thread.should_receive(:new).and_yield.and_return(thread)
     thread.should_receive(:abort_on_exception=).with(true)
     Thread.should_receive(:current).and_return(thread)
 
-    condition.should_receive(:signal)
-
     pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config,
-      :redis_config => redis_config, :logger => logger)
+      :logger => @logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
     pikelet = pikelets.first
     pikelet.should be_a(Flapjack::Pikelet::Generic)
-    pikelet.should_receive(:new_cond).and_return(condition)
-    pikelet.should_receive(:synchronize).and_yield
+
     pikelet.start
   end
 
-  it "handles an exception from a processor pikelet, and restarts it" do
+  it "handles an exception from a processor pikelet, and restarts it, then shuts down" do
     exc = RuntimeError.new
-
-    Flapjack::Logger.should_receive(:new).and_return(logger)
-    logger.should_receive(:warn).exactly(4).times
+    Flapjack::Logger.should_receive(:new).and_return(@logger)
 
     config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('max_runs').and_return(2)
 
+    finished_cond.should_receive(:signal)
+    lock.should_receive(:new_cond).twice.and_return(stop_cond, finished_cond)
+    lock.should_receive(:synchronize).and_yield
+    Monitor.should_receive(:new).and_return(lock)
+
     processor = mock('processor')
     processor.should_receive(:start).twice.and_raise(exc)
-    Flapjack::Processor.should_receive(:new).with(:config => config,
-      :redis_config => redis_config, :logger => logger).and_return(processor)
+    Flapjack::Processor.should_receive(:new).with(:lock => lock,
+      :stop_condition => stop_cond, :config => config,
+      :logger => @logger).and_return(processor)
 
-    Thread.should_receive(:new).and_yield
+    Thread.should_receive(:new).and_yield.and_return(thread)
     thread.should_receive(:abort_on_exception=).with(true)
     Thread.should_receive(:current).and_return(thread)
 
-    shutdown.should_receive(:call)
+   shutdown.should_receive(:call)
 
-    wrappers = Flapjack::Pikelet.create('processor', shutdown, :config => config,
-      :redis_config => redis_config, :logger => logger)
-    wrappers.should_not be_nil
-    wrappers.should have(1).wrapper
-    wrapper = wrappers.first
-    wrapper.should be_a(Flapjack::Pikelet::Generic)
-    wrapper.should_receive(:new_cond).and_return(condition)
-    wrapper.should_receive(:synchronize).and_yield
-    wrapper.start
+    pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config,
+      :logger => @logger)
+    pikelets.should_not be_nil
+    pikelets.should have(1).pikelet
+    pikelet = pikelets.first
+    pikelet.should be_a(Flapjack::Pikelet::Generic)
+
+    pikelet.start
   end
 
   it "creates and starts a http server gateway" do
-    Flapjack::Logger.should_receive(:new).and_return(logger)
+    Flapjack::Logger.should_receive(:new).and_return(@logger)
 
     config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('max_runs').and_return(nil)
     config.should_receive(:[]).with('port').and_return(7654)
     config.should_receive(:[]).with('timeout').and_return(90)
+
+    finished_cond.should_receive(:signal)
+    lock.should_receive(:new_cond).twice.and_return(stop_cond, finished_cond)
+    lock.should_receive(:synchronize).and_yield
+    Monitor.should_receive(:new).and_return(lock)
 
     server = mock('server')
     server.should_receive(:mount).with('/', Rack::Handler::WEBrick,
@@ -93,39 +101,37 @@ describe Flapjack::Pikelet do
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
       with('@config', config)
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
-      with('@redis_config', redis_config)
-    Flapjack::Gateways::Web.should_receive(:instance_variable_set).
-      with('@logger', logger)
+      with('@logger', @logger)
 
-    Thread.should_receive(:new).and_yield
+    Thread.should_receive(:new).and_yield.and_return(thread)
     thread.should_receive(:abort_on_exception=).with(true)
     Thread.should_receive(:current).and_return(thread)
-
-    condition.should_receive(:signal)
 
     Flapjack::Gateways::Web.should_receive(:start)
 
     pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config,
-      :redis_config => redis_config, :logger => logger)
+      :logger => @logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
     pikelet = pikelets.first
     pikelet.should be_a(Flapjack::Pikelet::HTTP)
-    pikelet.should_receive(:new_cond).and_return(condition)
-    pikelet.should_receive(:synchronize).and_yield
     pikelet.start
   end
 
   it "handles an exception from a http server gateway" do
     exc = RuntimeError.new
 
-    Flapjack::Logger.should_receive(:new).and_return(logger)
-    logger.should_receive(:warn).twice
+    Flapjack::Logger.should_receive(:new).and_return(@logger)
 
     config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('max_runs').and_return(nil)
     config.should_receive(:[]).with('port').and_return(7654)
     config.should_receive(:[]).with('timeout').and_return(90)
+
+    finished_cond.should_receive(:signal)
+    lock.should_receive(:new_cond).twice.and_return(stop_cond, finished_cond)
+    lock.should_receive(:synchronize).and_yield
+    Monitor.should_receive(:new).and_return(lock)
 
     server = mock('server')
     server.should_receive(:mount).with('/', Rack::Handler::WEBrick,
@@ -139,11 +145,9 @@ describe Flapjack::Pikelet do
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
       with('@config', config)
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
-      with('@redis_config', redis_config)
-    Flapjack::Gateways::Web.should_receive(:instance_variable_set).
-      with('@logger', logger)
+      with('@logger', @logger)
 
-    Thread.should_receive(:new).and_yield
+    Thread.should_receive(:new).and_yield.and_return(thread)
     thread.should_receive(:abort_on_exception=).with(true)
     Thread.should_receive(:current).and_return(thread)
 
@@ -152,13 +156,11 @@ describe Flapjack::Pikelet do
     Flapjack::Gateways::Web.should_receive(:start)
 
     pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config,
-      :redis_config => redis_config, :logger => logger)
+      :logger => @logger)
     pikelets.should_not be_nil
     pikelets.should have(1).pikelet
     pikelet = pikelets.first
     pikelet.should be_a(Flapjack::Pikelet::HTTP)
-    pikelet.should_receive(:new_cond).and_return(condition)
-    pikelet.should_receive(:synchronize).and_yield
     pikelet.start
   end
 

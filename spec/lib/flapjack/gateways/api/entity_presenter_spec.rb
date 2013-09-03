@@ -20,9 +20,9 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
     entity.should_receive(:name).exactly(4).times.and_return('foo')
     entity.should_receive(:check_list).and_return(['ping', 'ssh'])
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
-      with(entity, 'ssh', anything).and_return(check_a)
+      with(entity, 'ssh').and_return(check_a)
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
-      with(entity, 'ping', anything).and_return(check_b)
+      with(entity, 'ping').and_return(check_b)
 
     Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
       with(check_a).and_return(checkpres_a)

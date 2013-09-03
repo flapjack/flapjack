@@ -48,8 +48,6 @@ module Flapjack
       end
 
       def self.push(queue, event, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-
         last_state = opts[:last_state] || {}
 
         tag_data = event.tags.is_a?(Set) ? event.tags.to_a : nil
@@ -76,18 +74,16 @@ module Flapjack
         end
 
         if notif_json
-          redis.multi do
-            redis.lpush(queue, notif_json)
-            redis.lpush("#{queue}_actions", "+")
+          Flapjack.redis.multi do
+            Flapjack.redis.lpush(queue, notif_json)
+            Flapjack.redis.lpush("#{queue}_actions", "+")
           end
         end
 
       end
 
-      def self.foreach_on_queue(queue, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-
-        while notif_json = redis.rpop(queue)
+      def self.foreach_on_queue(queue)
+        while notif_json = Flapjack.redis.rpop(queue)
           begin
             notification = ::Oj.load( notif_json )
           rescue Oj::Error => e
@@ -101,9 +97,8 @@ module Flapjack
         end
       end
 
-      def self.wait_for_queue(queue, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-        redis.brpop("#{queue}_actions")
+      def self.wait_for_queue(queue)
+        Flapjack.redis.brpop("#{queue}_actions")
       end
 
       def contents
@@ -150,7 +145,7 @@ module Flapjack
 
             logger.debug "#{matchers.length} matchers remain for this contact after time, entity and tags are matched:"
             matchers.each do |matcher|
-              logger.debug "matcher: #{matcher.to_json}"
+              logger.debug "  - #{matcher.to_json}"
             end
 
             # delete any general matchers if there are more specific matchers left
@@ -161,35 +156,42 @@ module Flapjack
               matchers.reject! {|matcher| !matcher.is_specific? }
 
               if num_matchers != matchers.length
-                logger.debug("notification: removal of general matchers when entity specific matchers are present: number of matchers changed from #{num_matchers} to #{matchers.length} for contact id: #{contact_id}")
+                logger.debug("removal of general matchers when entity specific matchers are present: number of matchers changed from #{num_matchers} to #{matchers.length} for contact id: #{contact_id}")
                 matchers.each do |matcher|
-                  logger.debug "matcher: #{matcher.to_json}"
+                  logger.debug "  - #{matcher.to_json}"
                 end
               end
             end
 
             # delete media based on blackholes
-            next if matchers.any? {|matcher| matcher.blackhole?(@event_state) }
-
-            logger.debug "notification: num matchers after removing blackhole matchers: #{matchers.size}"
+            blackhole_matchers = matchers.map {|matcher| matcher.blackhole?(@severity) ? matcher : nil }.compact
+            if blackhole_matchers.length > 0
+              logger.debug "dropping this media as #{blackhole_matchers.length} blackhole matchers are present:"
+              blackhole_matchers.each {|bm|
+                logger.debug "  - #{bm.to_json}"
+              }
+              next
+            else
+              logger.debug "no blackhole matchers matched"
+            end
 
             rule_media = matchers.collect{|matcher|
               matcher.media_for_severity(@severity)
             }.flatten.uniq
 
-            logger.debug "notification: collected media_for_severity(#{@severity}): #{rule_media}"
+            logger.debug "collected media_for_severity(#{@severity}): #{rule_media}"
             rule_media = rule_media.reject {|medium|
               contact.drop_notifications?(:media => medium,
                                           :check => @event_id,
                                           :state => @event_state)
             }
 
-            logger.debug "notification: media after contact_drop?: #{rule_media}"
+            logger.debug "media after contact_drop?: #{rule_media}"
 
             media.select {|medium, address| rule_media.include?(medium) }
           end
 
-          logger.debug "notification: media_to_use: #{media_to_use}"
+          logger.debug "media_to_use: #{media_to_use}"
 
           media_to_use.each_pair.inject([]) { |ret, (k, v)|
             m = Flapjack::Data::Message.for_contact(contact,

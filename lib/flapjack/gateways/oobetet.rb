@@ -6,7 +6,10 @@ require 'uri'
 require 'uri/https'
 
 require 'oj'
+require 'xmpp4r'
+require 'xmpp4r/muc/helper/simplemucclient'
 
+require 'flapjack'
 
 require 'flapjack/exceptions'
 require 'flapjack/utility'
@@ -19,11 +22,10 @@ module Flapjack
 
       class Notifier
 
-        include MonitorMixin
-
         attr_accessor :siblings
 
         def initialize(options = {})
+          @lock = options[:lock]
           @config = options[:config]
           @logger = options[:logger]
 
@@ -36,27 +38,20 @@ module Flapjack
 
           @flapjack_ok = true
           @last_alert = nil
-
-          mon_initialize
-        end
+       end
 
         def start
-
           loop do
-            synchronize do
+            @lock.synchronize do
               check_timers
             end
 
             Kernel.sleep 10
           end
-        rescue Flapjack::PikeletStop
-          @logger.info "finishing oobetet"
         end
 
-        def stop(thread)
-          synchronize do
-            thread.raise Flapjack::PikeletStop.new
-          end
+        def stop_type
+          :exception
         end
 
         private
@@ -146,9 +141,9 @@ module Flapjack
 
       class TimeChecker
 
-        include MonitorMixin
-
         def initialize(opts = {})
+          @lock   = opts[:lock]
+          @stop_cond = opts[:stop_condition]
           @config = opts[:config]
           @logger = opts[:logger]
 
@@ -160,33 +155,25 @@ module Flapjack
                      :last_ack_sent => nil }
 
           @logger.debug("new oobetet pikelet with the following options: #{@config.inspect}")
-
-          mon_initialize
-
-          @should_quit = false
-          @shutdown_cond = new_cond
         end
 
         def start
-          synchronize do
+          @lock.synchronize do
             t = Time.now.to_i
             @times[:last_problem]  = t
             @times[:last_recovery] = t
             @times[:last_ack]      = t
             @times[:last_ack_sent] = t
-            @shutdown_cond.wait_until { @should_quit }
+            @stop_cond.wait_until { @should_quit }
           end
         end
 
-        def stop(thread)
-          synchronize do
-            @should_quit = true
-            @shutdown_cond.signal
-          end
+        def stop_type
+          :signal
         end
 
         def receive_status(status, time)
-          synchronize do
+          @lock.synchronize do
             case status
             when 'problem'
               @logger.debug("updating @times last_problem")
@@ -203,7 +190,7 @@ module Flapjack
         end
 
         def breach?(time)
-          synchronize do
+          @lock.synchronize do
             @logger.debug("check_timers: inspecting @times #{@times.inspect}")
             if @times[:last_problem] < (time - @max_latency)
               "haven't seen a test problem notification in the last #{@max_latency} seconds"
@@ -217,12 +204,13 @@ module Flapjack
 
       class Bot
 
-        include MonitorMixin
         include Flapjack::Utility
 
         attr_accessor :siblings
 
         def initialize(opts = {})
+          @lock = opts[:lock]
+          @stop_cond = opts[:stop_condition]
           @config = opts[:config]
           @logger = opts[:logger]
 
@@ -234,15 +222,10 @@ module Flapjack
           @check_matcher = '"' + @config['watched_check'] + '" on ' + @config['watched_entity']
 
           @logger.debug("new oobetet pikelet with the following options: #{@config.inspect}")
-
-          mon_initialize
-
-          @should_quit = false
-          @shutdown_cond = new_cond
         end
 
         def start
-          synchronize do
+          @lock.synchronize do
             @time_checker ||= @siblings && @siblings.detect {|sib| sib.respond_to?(:receive_status) }
 
             @logger.info("starting")
@@ -284,7 +267,7 @@ module Flapjack
             end
 
             # block this thread until signalled to quit
-            @shutdown_cond.wait_until { @should_quit }
+            @stop_cond.wait_until { @should_quit }
 
             @muc_clients.each_pair do |room, muc_client|
               muc_client.exit if muc_client.active?
@@ -294,16 +277,13 @@ module Flapjack
           end
         end
 
-        def stop(thread)
-          synchronize do
-            @should_quit = true
-            @shutdown_cond.signal
-          end
+        def stop_type
+          :signal
         end
 
         # TODO buffer if not connected?
         def announce(msg)
-          synchronize do
+          @lock.synchronize do
             unless @muc_clients.empty?
               @muc_clients.each_pair do |room, muc_client|
                 muc_client.say(msg)

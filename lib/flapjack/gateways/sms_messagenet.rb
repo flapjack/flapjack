@@ -4,6 +4,8 @@ require 'net/http'
 require 'uri'
 require 'uri/https'
 
+require 'flapjack'
+
 require 'flapjack/data/message'
 
 require 'flapjack/exceptions'
@@ -12,46 +14,36 @@ module Flapjack
   module Gateways
     class SmsMessagenet
 
-      include MonitorMixin
-
       attr_reader :sent
 
       def initialize(opts = {})
+        @lock = opts[:lock]
+
         @config = opts[:config]
-        @redis_config = opts[:redis_config] || {}
         @logger = opts[:logger]
-        @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
         @notifications_queue = @config['queue'] || 'sms_notifications'
 
         @sent = 0
-
-        mon_initialize
 
         @logger.debug("new sms gateway pikelet with the following options: #{@config.inspect}")
       end
 
       def start
         loop do
-          synchronize do
+          @lock.synchronize do
             Flapjack::Data::Message.foreach_on_queue(@notifications_queue,
-                                                     :redis => @redis,
                                                      :logger => @logger) {|message|
               handle_message(message)
             }
           end
 
-          Flapjack::Data::Message.wait_for_queue(@notifications_queue, :redis => @redis)
+          Flapjack::Data::Message.wait_for_queue(@notifications_queue)
         end
-
-      rescue Flapjack::PikeletStop => fps
-        @logger.info "stopping sms_messagenet notifier"
       end
 
-      def stop(thread)
-        synchronize do
-          thread.raise Flapjack::PikeletStop.new
-        end
+      def stop_type
+        :exception
       end
 
       def handle_message(msg)
@@ -88,13 +80,13 @@ module Flapjack
 
         username = @config["username"]
         password = @config["password"]
+        safe_message = truncate(message, 159)
         address  = msg['address']
         msg_id   = msg['id']
 
         [[username, "Messagenet username is missing"],
          [password, "Messagenet password is missing"],
          [address,  "SMS address is missing"],
-         [message,  "SMS message is missing"],
          [msg_id, "Message id is missing"]].each do |val_err|
 
           next unless val_err.first.nil? || (val_err.first.respond_to?(:empty?) && val_err.first.empty?)
@@ -138,7 +130,18 @@ module Flapjack
           @logger.error "Failed to send SMS via Messagenet, response status is #{status}, " +
             "msg_id: #{msg_id}"
         end
+      end
 
+      # copied from ActiveSupport
+      def truncate(str, length, options = {})
+        text = str.dup
+        options[:omission] ||= "..."
+
+        length_with_room_for_omission = length - options[:omission].length
+        stop = options[:separator] ?
+          (text.rindex(options[:separator], length_with_room_for_omission) || length_with_room_for_omission) : length_with_room_for_omission
+
+        (text.length > length ? text[0...stop] + options[:omission] : text).to_s
       end
     end
   end

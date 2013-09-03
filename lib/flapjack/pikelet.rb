@@ -10,10 +10,9 @@
 
 require 'monitor'
 
-require 'hiredis'
-require 'redis'
-
 require 'webrick'
+
+require 'flapjack'
 
 require 'flapjack/notifier'
 require 'flapjack/processor'
@@ -31,65 +30,68 @@ module Flapjack
   module Pikelet
 
     class Base
+      attr_accessor :siblings, :pikelet
 
-      include MonitorMixin
-
-      attr_accessor :siblings
-      attr_reader :pikelet, :error
-
-      def initialize(pikelet_class, shutdown, options = {})
+      def initialize(pikelet_class, shutdown, opts = {})
         @pikelet_class = pikelet_class
 
-        @config        = options[:config]
-        @redis_config  = options[:redis_config]
-        @logger        = options[:logger]
-        @boot_time     = options[:boot_time]
+        @config        = opts[:config]
+        @logger        = opts[:logger]
+        @boot_time     = opts[:boot_time]
         @shutdown      = shutdown
 
         @siblings      = []
 
-        mon_initialize
+        @lock = Monitor.new
+        @stop_condition = @lock.new_cond
 
-        @pikelet = @pikelet_class.new(:config => @config,
-          :redis_config => @redis_config, :logger => @logger)
+        @pikelet = @pikelet_class.new(:lock => @lock,
+          :stop_condition => @stop_condition, :config => @config,
+          :logger => @logger)
+
+        @finished_condition = @lock.new_cond
       end
 
       def start(&block)
         @pikelet.siblings = @siblings.map(&:pikelet) if @pikelet.respond_to?(:siblings=)
 
-        @condition = new_cond
-
         @thread = Thread.new do
           Thread.current.abort_on_exception = true
 
-          synchronize do
-            # TODO rename this, it's only relevant in the error case
-            max_runs = @config['max_runs'] || 1
-            runs = 0
+          # TODO rename this, it's only relevant in the error case
+          max_runs = @config['max_runs'] || 1
+          runs = 0
 
-            error = nil
+          error = nil
+          stop_all = false
 
-            loop do
-              begin
-                yield
-              rescue Exception => e
-                @logger.warn e.message
-                trace = e.backtrace
-                @logger.warn trace.join("\n") if trace
-                error = e
-              end
-
-              runs += 1
-              break unless error && (max_runs > 0) && (runs < max_runs)
+          loop do
+            begin
+              @logger.debug "pikelet start for #{@pikelet_class.name}"
+              yield
+            rescue Flapjack::PikeletStop
+              @logger.debug "pikelet exception stop for #{@pikelet_class.name}"
+            rescue Flapjack::GlobalStop
+              @logger.debug "global exception stop for #{@pikelet_class.name}"
+              stop_all = true
+            rescue Exception => e
+              @logger.warn "#{e.class.name} #{e.message}"
+              trace = e.backtrace
+              @logger.warn trace.join("\n") if trace
+              error = e
             end
 
+            runs += 1
+            break unless error && (max_runs > 0) && (runs < max_runs)
+          end
+
+          @lock.synchronize do
             @finished = true
+            @finished_condition.signal
+          end
 
-            if error
-              @shutdown.call
-            else
-              @condition.signal
-            end
+          if error || stop_all
+            @shutdown.call
           end
         end
       end
@@ -100,11 +102,32 @@ module Flapjack
       end
 
       def stop(&block)
-        return if @thread.nil?
-        yield(@thread)
-        synchronize do
-          @condition.wait_until { @finished }
+        if block_given?
+          yield
+        else
+          case @pikelet.stop_type
+          when :exception
+            @lock.synchronize do
+              unless @finished
+                @logger.debug "triggering pikelet exception stop for #{@pikelet_class.name}"
+                @thread.raise Flapjack::PikeletStop
+                @finished_condition.wait_until { @finished }
+              end
+            end
+          when :signal
+            @lock.synchronize do
+              unless @finished
+                @logger.debug "triggering pikelet signal stop for #{@pikelet_class.name}"
+                @pikelet.instance_variable_set('@should_quit', true)
+                @stop_condition.signal
+                @finished_condition.wait_until { @finished }
+              end
+            end
+          else
+            @logger.warn "Unknown pikelet stop type #{@pikelet.stop_type}"
+          end
         end
+
         @thread.join
         @thread = nil
       end
@@ -128,11 +151,6 @@ module Flapjack
         super(cfg) { @pikelet.reload(cfg) }
       end
 
-      def stop
-        super do |thread|
-          @pikelet.stop(thread)
-        end
-      end
     end
 
     class HTTP < Flapjack::Pikelet::Base
@@ -141,7 +159,6 @@ module Flapjack
 
       def start
         @pikelet_class.instance_variable_set('@config', @config)
-        @pikelet_class.instance_variable_set('@redis_config', @redis_config)
         @pikelet_class.instance_variable_set('@logger', @logger)
 
         if @config
@@ -172,9 +189,11 @@ module Flapjack
 
       def stop
         super do |thread|
-          @logger.info "shutting down server"
-          @server.shutdown
-          @logger.info "shut down server"
+          unless @server.nil?
+            @logger.info "shutting down server"
+            @server.shutdown
+            @logger.info "shut down server"
+          end
           @pikelet_class.stop(thread) if @pikelet_class.respond_to?(:stop)
         end
       end
@@ -203,7 +222,6 @@ module Flapjack
 
     def self.create(type, shutdown, opts = {})
       config = opts[:config] || {}
-      redis_config = opts[:redis_config] || {}
 
       logger = Flapjack::Logger.new("flapjack-#{type}", config['logger'])
 
@@ -214,7 +232,7 @@ module Flapjack
       created = types.collect {|pikelet_class|
         wrapper = WRAPPERS.detect {|wrap| wrap::TYPES.include?(type) }
         wrapper.new(pikelet_class, shutdown, :config => config,
-                    :redis_config => redis_config, :logger => logger)
+                    :logger => logger)
       }
       created.each {|c| c.siblings = created - [c] }
       created

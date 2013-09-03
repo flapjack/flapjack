@@ -4,34 +4,37 @@ require 'active_support/time'
 
 require 'oj'
 
+require 'flapjack'
+
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/notification'
 require 'flapjack/data/event'
+
+require 'flapjack/exceptions'
 require 'flapjack/utility'
 
 module Flapjack
 
   class Notifier
 
-    include MonitorMixin
     include Flapjack::Utility
 
     def initialize(opts = {})
-      @config = opts[:config]
-      @redis_config = opts[:redis_config]
+      @lock = opts[:lock]
+      @config = opts[:config] || {}
       @logger = opts[:logger]
-      @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
 
       @notifications_queue = @config['queue'] || 'notifications'
 
-      @queues = {:email     => @config['email_queue'],
-                 :sms       => @config['sms_queue'],
-                 :jabber    => @config['jabber_queue'],
-                 :pagerduty => @config['pagerduty_queue']}
+      @queues = {:email     => (@config['email_queue']     || 'email_notifications'),
+                 :sms       => (@config['sms_queue']       || 'sms_notifications'),
+                 :jabber    => (@config['jabber_queue']    || 'jabber_notifications'),
+                 :pagerduty => (@config['pagerduty_queue'] || 'pagerduty_notifications')
+                }
 
       notify_logfile  = @config['notification_log_file'] || 'log/notify.log'
-      if not File.directory?(File.dirname(notify_logfile))
+      unless File.directory?(File.dirname(notify_logfile))
         puts "Parent directory for log file '#{notify_logfile}' doesn't exist"
         puts "Exiting!"
         exit
@@ -50,30 +53,22 @@ module Flapjack
         exit 1
       end
       @default_contact_timezone = tz
-
-      mon_initialize
     end
 
     def start
       loop do
-        synchronize do
-          Flapjack::Data::Notification.foreach_on_queue(@notifications_queue, :redis => @redis) {|notif|
+        @lock.synchronize do
+          Flapjack::Data::Notification.foreach_on_queue(@notifications_queue) {|notif|
             process_notification(notif)
           }
         end
 
-        Flapjack::Data::Notification.wait_for_queue(@notifications_queue, :redis => @redis)
+        Flapjack::Data::Notification.wait_for_queue(@notifications_queue)
       end
-
-    rescue Flapjack::PikeletStop => fps
-      @logger.info "stopping notifier"
     end
 
-
-    def stop(thread)
-      synchronize do
-        thread.raise Flapjack::PikeletStop.new
-      end
+    def stop_type
+      :exception
     end
 
   private
@@ -84,7 +79,7 @@ module Flapjack
     def process_notification(notification)
       timestamp = Time.now
       event_id = notification.event_id
-      entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
+      entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id)
       contacts = entity_check.contacts
 
       if contacts.empty?
@@ -143,7 +138,7 @@ module Flapjack
         contents['tags'] = contents_tags.is_a?(Set) ? contents_tags.to_a : contents_tags
 
         if [:sms, :email, :jabber, :pagerduty].include?(media_type.to_sym)
-          Flapjack::Data::Message.push(@queues[media_type.to_sym], contents, :redis => @redis)
+          Flapjack::Data::Message.push(@queues[media_type.to_sym], contents)
         else
           # TODO log warning
         end

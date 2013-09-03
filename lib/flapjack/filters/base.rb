@@ -3,9 +3,8 @@
 module Flapjack
   module Filters
     module Base
-      def initialize(opts={})
+      def initialize(opts = {})
         @logger = opts[:logger]
-        @redis  = opts[:redis]
       end
 
       def name

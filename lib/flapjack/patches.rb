@@ -2,7 +2,6 @@
 
 require 'logger'
 require 'redis'
-# require 'xmpp4r'
 
 # bugfix for webrick's assuming 1.8.7 Logger syntax
 class ::Logger; alias_method :write, :<<; end
@@ -15,67 +14,48 @@ class ::Logger; alias_method :write, :<<; end
 #  evaluate everything...)
 class Redis::Future; def class; ::Redis::Future; end; end
 
-# # Unfortunately we have to override/repeat the join method in order to add
-# # the directive that will disable the history being sent.
-# module Jabber
-#   module MUC
-#     class MUCClient
+# Pretty sure XMUC is only constructed to initialise a MUC presence,
+# so it's fine to add the extra 'no-history' stanza in any object created
+require 'xmpp4r/query'
+require 'xmpp4r/muc'
 
-#       def join(jid, password=nil)
-#         if active?
-#           raise "MUCClient already active"
-#         end
+module Jabber
+  module MUC
+    class XMUC < ::Jabber::X
 
-#         @jid = (jid.kind_of?(JID) ? jid : JID.new(jid))
-#         activate
+      def initialize(*arg)
+        super(*arg)
+        history = ::Jabber::XMPPElement.new('history')
+        history.add_attributes({'maxstanzas' => '0'})
+        self.add(history)
+      end
 
-#         # Joining
-#         pres = Presence.new
-#         pres.to = @jid
-#         pres.from = @my_jid
-#         xmuc = XMUC.new
-#         xmuc.password = password
-#         pres.add(xmuc)
+    end
+  end
+end
 
-#         # NOTE: Adding 'maxstanzas="0"' to 'history' subelement of xmuc nixes
-#         # the history being sent to us when we join.
-#         history = XMPPElement.new('history')
-#         history.add_attributes({'maxstanzas' => '0'})
-#         xmuc.add(history)
+# OpenSSL sockets have ASCII-8BIT encoding, and XMPP4R doesn't
+# cast to UTF-8 properly TODO need to test this with different
+# external encodings
+require 'openssl'
+require 'rexml/parsers/sax2parser'
 
-#         # We don't use Stream#send_with_id here as it's unknown
-#         # if the MUC component *always* uses our stanza id.
-#         error = nil
-#         @stream.send(pres) { |r|
-#           if from_room?(r.from) and r.kind_of?(Presence) and r.type == :error
-#             # Error from room
-#             error = r.error
-#             true
-#             # type='unavailable' may occur when the MUC kills our previous instance,
-#             # but all join-failures should be type='error'
-#           elsif r.from == jid and r.kind_of?(Presence) and r.type != :unavailable
-#             # Our own presence reflected back - success
-#             if r.x(XMUCUser) and (i = r.x(XMUCUser).items.first)
-#               @affiliation = i.affiliation  # we're interested in if it's :owner
-#               @role = i.role                # :moderator ?
-#             end
+module REXML
+  module Parsers
+    class SAX2Parser
 
-#             handle_presence(r, false)
-#             true
-#           else
-#             # Everything else
-#             false
-#           end
-#         }
+      alias_method :orig_initialize, :initialize
 
-#         if error
-#           deactivate
-#           raise ServerError.new(error)
-#         end
+      def initialize(source)
+        unless source.is_a?(OpenSSL::SSL::SSLSocket)
+          orig_initialize( source )
+          return
+        end
+        io_source = REXML::IOSource.new(source)
+        io_source.instance_variable_set('@force_utf8', true)
+        orig_initialize( io_source )
+      end
 
-#         self
-#       end
-
-#     end
-#   end
-# end
+    end
+  end
+end

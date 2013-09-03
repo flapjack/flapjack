@@ -18,6 +18,10 @@ describe Flapjack::Coordinator do
     config.should_receive(:for_redis).and_return({})
     config.should_receive(:all).and_return(cfg)
 
+    Redis.should_receive(:new)
+    Flapjack::ConnectionPool::Wrapper.should_receive(:new).
+        with(:size => 1).and_yield
+
     processor = mock('processor')
     processor.should_receive(:start)
     processor.should_receive(:stop)
@@ -38,7 +42,7 @@ describe Flapjack::Coordinator do
     fc = Flapjack::Coordinator.new(config)
     Flapjack::Pikelet.should_receive(:create).with('processor',
         an_instance_of(Proc), :config => cfg['processor'],
-        :redis_config => {}, :boot_time => time).
+        :boot_time => time).
       and_return([processor])
 
     # Syslog.should_receive(:opened?).and_return(true)
@@ -53,6 +57,10 @@ describe Flapjack::Coordinator do
 
     config.should_receive(:for_redis).and_return({})
     config.should_receive(:all).and_return(cfg)
+
+    Redis.should_receive(:new)
+    Flapjack::ConnectionPool::Wrapper.should_receive(:new).
+        with(:size => 2).and_yield
 
     processor = mock('processor')
     processor.should_receive(:start)
@@ -78,11 +86,11 @@ describe Flapjack::Coordinator do
     fc = Flapjack::Coordinator.new(config)
     Flapjack::Pikelet.should_receive(:create).with('processor',
         an_instance_of(Proc), :config => cfg['executive'],
-        :redis_config => {}, :boot_time => time).
+        :boot_time => time).
       and_return([processor])
     Flapjack::Pikelet.should_receive(:create).with('notifier',
         an_instance_of(Proc), :config => cfg['executive'],
-        :redis_config => {}, :boot_time => time).
+        :boot_time => time).
       and_return([notifier])
 
     # Syslog.should_receive(:opened?).and_return(true)
@@ -100,6 +108,10 @@ describe Flapjack::Coordinator do
 
     config.should_receive(:for_redis).and_return({})
     config.should_receive(:all).and_return(cfg)
+
+    Redis.should_receive(:new)
+    Flapjack::ConnectionPool::Wrapper.should_receive(:new).
+        with(:size => 1).and_yield
 
     processor = mock('processor')
     processor.should_receive(:start)
@@ -121,7 +133,7 @@ describe Flapjack::Coordinator do
     fc = Flapjack::Coordinator.new(config)
     Flapjack::Pikelet.should_receive(:create).with('processor',
         an_instance_of(Proc), :config => cfg['processor'].merge('enabled' => true),
-        :redis_config => {}, :boot_time => time).
+        :boot_time => time).
       and_return([processor])
 
     # Syslog.should_receive(:opened?).and_return(true)
@@ -141,7 +153,6 @@ describe Flapjack::Coordinator do
     Kernel.should_receive(:trap).with('QUIT').and_yield
     Kernel.should_receive(:trap).with('HUP').and_yield
 
-    config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:stop).exactly(3).times
     fc.should_receive(:reload)
@@ -159,7 +170,6 @@ describe Flapjack::Coordinator do
     Kernel.should_not_receive(:trap).with('QUIT')
     Kernel.should_not_receive(:trap).with('HUP')
 
-    config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:stop).twice
 
@@ -189,12 +199,11 @@ describe Flapjack::Coordinator do
     jabber = mock('jabber')
     Flapjack::Pikelet.should_receive(:create).
       with('jabber', an_instance_of(Proc),
-        :config => {"enabled" => true}, :redis_config => {},
+        :config => {"enabled" => true},
         :boot_time => time).
       and_return([jabber])
     jabber.should_receive(:start)
 
-    config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
 
     fc.instance_variable_set('@boot_time', time)
@@ -225,7 +234,6 @@ describe Flapjack::Coordinator do
     processor.should_receive(:reload).with(new_cfg['processor']).and_return(true)
     processor.should_not_receive(:stop)
 
-    config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
     fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [processor])
@@ -257,12 +265,11 @@ describe Flapjack::Coordinator do
     new_processor = mock('new_processor')
     new_processor.should_receive(:start)
 
-    config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
 
     Flapjack::Pikelet.should_receive(:create).
       with('processor', an_instance_of(Proc),
-        :config => new_cfg['processor'], :redis_config => {},
+        :config => new_cfg['processor'],
         :boot_time => time).
       and_return([new_processor])
 

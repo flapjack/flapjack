@@ -27,7 +27,7 @@ module Flapjack
 
         if event.service? && event.failure?
 
-          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
+          entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id)
           current_time = Time.now.to_i
 
           if entity_check.failed?

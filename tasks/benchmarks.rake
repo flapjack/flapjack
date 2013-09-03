@@ -9,6 +9,7 @@ namespace :benchmarks do
     $: << File.dirname(__FILE__) + '/../lib'
   end
 
+  require 'flapjack'
   require 'flapjack/configuration'
   require 'flapjack/data/event'
   require 'flapjack/data/entity_check'
@@ -148,6 +149,9 @@ namespace :benchmarks do
     ok_events       = 0
     critical_events = 0
     state_changes   = 0
+
+    Flapjack.redis = redis
+
     (0..cycles).to_a.each {|i|
       changes = 0
       ok = 0
@@ -183,7 +187,7 @@ namespace :benchmarks do
                     'state'   => check[:state],
                     'summary' => summary }
 
-          Flapjack::Data::Event.push('events', event, :redis => redis)
+          Flapjack::Data::Event.push('events', event)
           events_created += 1
         }
       }

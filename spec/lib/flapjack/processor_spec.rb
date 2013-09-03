@@ -7,7 +7,12 @@ describe Flapjack::Processor, :logger => true do
   # NB: this is only testing the public API of the Processor class, which is pretty limited.
   # (initialize, main, stop). Most test coverage for this class comes from the cucumber features.
 
-  let(:config) { mock(Flapjack::Configuration) }
+  let(:lock) { mock(Monitor) }
+  let(:redis) { mock(Redis) }
+
+  before(:each) do
+    Flapjack.stub(:redis).and_return(redis)
+  end
 
   # TODO this does too much -- split it up
   it "starts up, runs and shuts down" do
@@ -19,8 +24,6 @@ describe Flapjack::Processor, :logger => true do
     Flapjack::Filters::DetectMassClientFailures.should_receive(:new)
     Flapjack::Filters::Delays.should_receive(:new)
     Flapjack::Filters::Acknowledgement.should_receive(:new)
-
-    redis = mock('redis')
 
     redis.should_receive(:hset).with(/^executive_instance:/, "boot_time", anything)
     redis.should_receive(:hget).with('event_counters', 'all').and_return(nil)
@@ -40,16 +43,53 @@ describe Flapjack::Processor, :logger => true do
     # redis.should_receive(:hincrby).with('event_counters', 'all', 1)
     # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
 
-    ::Redis.should_receive(:new).and_return(redis)
-    executive = Flapjack::Processor.new(:config => {}, :logger => @logger)
+    lock.should_receive(:synchronize).and_yield
+
+    processor = Flapjack::Processor.new(:lock => lock, :config => {}, :logger => @logger)
 
     Flapjack::Data::Event.should_receive(:foreach_on_queue)
     Flapjack::Data::Event.should_receive(:wait_for_queue).and_raise(Flapjack::PikeletStop)
 
-    begin
-      executive.start
-    rescue SystemExit
-    end
+    expect { processor.start }.to raise_error(Flapjack::PikeletStop)
+  end
+
+  it "starts up, runs and shuts down everything when queue empty" do
+    t = Time.now.to_i
+
+    Flapjack::Filters::Ok.should_receive(:new)
+    Flapjack::Filters::ScheduledMaintenance.should_receive(:new)
+    Flapjack::Filters::UnscheduledMaintenance.should_receive(:new)
+    Flapjack::Filters::DetectMassClientFailures.should_receive(:new)
+    Flapjack::Filters::Delays.should_receive(:new)
+    Flapjack::Filters::Acknowledgement.should_receive(:new)
+
+    redis.should_receive(:hset).with(/^executive_instance:/, "boot_time", anything)
+    redis.should_receive(:hget).with('event_counters', 'all').and_return(nil)
+    redis.should_receive(:hset).with('event_counters', 'all', 0)
+    redis.should_receive(:hset).with('event_counters', 'ok', 0)
+    redis.should_receive(:hset).with('event_counters', 'failure', 0)
+    redis.should_receive(:hset).with('event_counters', 'action', 0)
+
+    redis.should_receive(:hset).with(/^event_counters:/, 'all', 0)
+    redis.should_receive(:hset).with(/^event_counters:/, 'ok', 0)
+    redis.should_receive(:hset).with(/^event_counters:/, 'failure', 0)
+    redis.should_receive(:hset).with(/^event_counters:/, 'action', 0)
+
+    redis.should_receive(:expire).with(/^executive_instance:/, anything)
+    redis.should_receive(:expire).with(/^event_counters:/, anything).exactly(4).times
+
+    # redis.should_receive(:hincrby).with('event_counters', 'all', 1)
+    # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
+
+    lock.should_receive(:synchronize).and_yield
+
+    processor = Flapjack::Processor.new(:lock => lock,
+      :config => {'exit_on_queue_empty' => true}, :logger => @logger)
+
+    Flapjack::Data::Event.should_receive(:foreach_on_queue)
+    Flapjack::Data::Event.should_not_receive(:wait_for_queue)
+
+    expect { processor.start }.to raise_error(Flapjack::GlobalStop)
   end
 
 end
