@@ -32,31 +32,36 @@ describe Flapjack::Data::Contact, :redis => true do
   }
 
   before(:each) do
-    Flapjack::Data::Contact.add({'id'         => '362',
-                                 'first_name' => 'John',
-                                 'last_name'  => 'Johnson',
-                                 'email'      => 'johnj@example.com',
-                                 'media' => {
-                                    'pagerduty' => {
-                                      'service_key' => '123456789012345678901234',
-                                      'subdomain'   => 'flpjck',
-                                      'username'    => 'flapjack',
-                                      'password'    => 'very_secure'
-                                    }
-                                  }},
-                                 :redis       => @redis)
+    Flapjack::Data::Contact.add( {
+        'id'         => '362',
+        'first_name' => 'John',
+        'last_name'  => 'Johnson',
+        'email'      => 'johnj@example.com',
+        'media'      => {
+          'pagerduty' => {
+            'service_key' => '123456789012345678901234',
+            'subdomain'   => 'flpjck',
+            'username'    => 'flapjack',
+            'password'    => 'very_secure'
+          },
+        },
+      },
+      :redis => @redis)
 
-    Flapjack::Data::Contact.add({'id'         => '363',
-                                 'first_name' => 'Jane',
-                                 'last_name'  => 'Janeley',
-                                 'email'      => 'janej@example.com',
-                                 'media'      => {
-                                    'email' => {
-                                      'address'  => 'janej@example.com',
-                                      'interval' => 60
-                                      }
-                                  }},
-                                 :redis       => @redis)
+    Flapjack::Data::Contact.add( {
+        'id'         => '363',
+        'first_name' => 'Jane',
+        'last_name'  => 'Janeley',
+        'email'      => 'janej@example.com',
+        'media'      => {
+          'email' => {
+            'address'          => 'janej@example.com',
+            'interval'         => 60,
+            'rollup_threshold' => 5,
+          },
+        },
+      },
+      :redis => @redis)
   end
 
   it "returns a list of all contacts" do
@@ -238,6 +243,54 @@ describe Flapjack::Data::Contact, :redis => true do
                            'subdomain'   => 'flpjck',
                            'username'    => 'flapjack',
                            'password'    => 'very_secure'}
+  end
+
+  it "sets the interval for a contact's media" do
+    contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
+    contact.set_interval_for_media('email', 42)
+    email_interval_raw = @redis.hget("contact_media_intervals:#{contact.id}", 'email')
+    email_interval_raw.should == '42'
+  end
+
+  it "returns the interval for a contact's media" do
+    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
+    email_interval = contact.interval_for_media('email')
+    email_interval.should == 60
+  end
+
+  it "returns default 15 mins for interval for a contact's media that has no set interval" do
+    contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
+    email_interval = contact.interval_for_media('email')
+    email_interval.should == 900
+  end
+
+  it "removes the interval for a contact's media" do
+    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
+    contact.set_interval_for_media('email', nil)
+    email_interval_raw = @redis.hget("contact_media_intervals:#{contact.id}", 'email')
+    email_interval_raw.should be_nil
+  end
+
+  it "sets the rollup threshold for a contact's media" do
+    contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
+    email_rollup_threshold = contact.set_rollup_threshold_for_media('email', 3)
+    email_rollup_threshold_raw = @redis.hget("contact_media_rollup_thresholds:#{contact.id}", 'email')
+    email_rollup_threshold_raw.should == '3'
+  end
+
+  it "returns the rollup threshold for a contact's media" do
+    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
+    email_rollup_threshold = contact.rollup_threshold_for_media('email')
+    email_rollup_threshold.should_not be_nil
+    email_rollup_threshold.should be_a(Integer)
+    email_rollup_threshold.should == 5
+  end
+
+  it "removes the rollup threshold for a contact's media" do
+    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
+    email_rollup_threshold = contact.set_rollup_threshold_for_media('email', nil)
+    email_rollup_threshold_raw = @redis.hget("contact_media_rollup_thresholds:#{contact.id}", 'email')
+    email_rollup_threshold_raw.should be_nil
   end
 
 end

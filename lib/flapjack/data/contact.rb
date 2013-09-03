@@ -16,7 +16,7 @@ module Flapjack
 
     class Contact
 
-      attr_accessor :id, :first_name, :last_name, :email, :media, :media_intervals, :pagerduty_credentials
+      attr_accessor :id, :first_name, :last_name, :email, :media, :media_intervals, :media_rollup_thresholds, :pagerduty_credentials
 
       TAG_PREFIX = 'contact_tag'
 
@@ -77,6 +77,7 @@ module Flapjack
           @redis.hmget("contact:#{@id}", 'first_name', 'last_name', 'email')
         self.media = @redis.hgetall("contact_media:#{@id}")
         self.media_intervals = @redis.hgetall("contact_media_intervals:#{self.id}")
+        self.media_rollup_thresholds = @redis.hgetall("contact_media_rollup_thresholds:#{self.id}")
 
         # similar to code in instance method pagerduty_credentials
         if service_key = @redis.hget("contact_media:#{@id}", 'pagerduty')
@@ -117,6 +118,7 @@ module Flapjack
 
         @redis.del("contact:#{self.id}", "contact_media:#{self.id}",
                    "contact_media_intervals:#{self.id}",
+                   "contact_media_rollup_thresholds:#{self.id}",
                    "contact_tz:#{self.id}", "contact_pagerduty:#{self.id}")
       end
 
@@ -216,6 +218,20 @@ module Flapjack
         self.media_intervals = @redis.hgetall("contact_media_intervals:#{self.id}")
       end
 
+      def rollup_threshold_for_media(media)
+        threshold = @redis.hget("contact_media_rollup_thresholds:#{self.id}", media)
+        (threshold.nil? || (threshold.to_i <= 0 )) ? nil : threshold.to_i
+      end
+
+      def set_rollup_threshold_for_media(media, threshold)
+        if threshold.nil?
+          @redis.hdel("contact_media_rollup_thresholds:#{self.id}", media)
+          return
+        end
+        @redis.hset("contact_media_rollup_thresholds:#{self.id}", media, threshold)
+        self.media_rollup_thresholds = @redis.hgetall("contact_media_rollup_thresholds:#{self.id}")
+      end
+
       def set_address_for_media(media, address)
         @redis.hset("contact_media:#{self.id}", media, address)
         if media == 'pagerduty'
@@ -229,6 +245,7 @@ module Flapjack
       def remove_media(media)
         @redis.hdel("contact_media:#{self.id}", media)
         @redis.hdel("contact_media_intervals:#{self.id}", media)
+        @redis.hdel("contact_media_rollup_thresholds:#{self.id}", media)
         if media == 'pagerduty'
           @redis.del("contact_pagerduty:#{self.id}")
         end
@@ -360,6 +377,7 @@ module Flapjack
         unless contact_data['media'].nil?
           redis.del("contact_media:#{contact_id}")
           redis.del("contact_media_intervals:#{contact_id}")
+          redis.del("contact_media_rollup_thresholds:#{contact_id}")
           redis.del("contact_pagerduty:#{contact_id}")
 
           contact_data['media'].each_pair {|medium, details|
@@ -371,6 +389,7 @@ module Flapjack
             else
               redis.hset("contact_media:#{contact_id}", medium, details['address'])
               redis.hset("contact_media_intervals:#{contact_id}", medium, details['interval']) if details['interval']
+              redis.hset("contact_media_rollup_thresholds:#{contact_id}", medium, details['rollup_threshold']) if details['rollup_threshold']
             end
           }
         end
