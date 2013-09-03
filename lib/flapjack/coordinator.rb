@@ -68,6 +68,7 @@ module Flapjack
         @pikelets.clear
         # Syslog.close if Syslog.opened? # TODO revisit in threading branch
       }
+      @exit_value
     end
 
     def stop(value = 0)
