@@ -4,10 +4,10 @@ require 'flapjack/coordinator'
 
 describe Flapjack::Coordinator do
 
-  let(:fiber)  { mock(Fiber) }
-  let(:config) { mock(Flapjack::Configuration) }
+  let(:fiber)  { double(Fiber) }
+  let(:config) { double(Flapjack::Configuration) }
 
-  let(:logger) { mock(Flapjack::Logger) }
+  let(:logger) { double(Flapjack::Logger) }
 
   let!(:time)  { Time.now }
 
@@ -19,7 +19,7 @@ describe Flapjack::Coordinator do
     config.should_receive(:for_redis).and_return({})
     config.should_receive(:all).and_return(cfg)
 
-    processor = mock('processor')
+    processor = double('processor')
     processor.should_receive(:start)
     processor.should_receive(:stop)
     processor.should_receive(:update_status)
@@ -53,7 +53,7 @@ describe Flapjack::Coordinator do
     config.should_receive(:for_redis).and_return({})
     config.should_receive(:all).and_return(cfg)
 
-    processor = mock('processor')
+    processor = double('processor')
     processor.should_receive(:start).and_raise(RuntimeError)
     processor.should_receive(:stop)
     processor.should_receive(:update_status)
@@ -84,13 +84,13 @@ describe Flapjack::Coordinator do
     config.should_receive(:for_redis).and_return({})
     config.should_receive(:all).and_return(cfg)
 
-    processor = mock('processor')
+    processor = double('processor')
     processor.should_receive(:start)
     processor.should_receive(:stop)
     processor.should_receive(:update_status)
     processor.should_receive(:status).exactly(3).times.and_return('stopped')
 
-    notifier = mock('processor')
+    notifier = double('processor')
     notifier.should_receive(:start)
     notifier.should_receive(:stop)
     notifier.should_receive(:update_status)
@@ -127,7 +127,7 @@ describe Flapjack::Coordinator do
     config.should_receive(:for_redis).and_return({})
     config.should_receive(:all).and_return(cfg)
 
-    processor = mock('processor')
+    processor = double('processor')
     processor.should_receive(:start)
     processor.should_receive(:stop)
     processor.should_receive(:update_status)
@@ -194,8 +194,8 @@ describe Flapjack::Coordinator do
     old_cfg = {'processor' => {'enabled' => true}}
     new_cfg = {'gateways' => {'jabber' => {'enabled' => true}}}
 
-    new_config = mock('new_config')
-    filename = mock('filename')
+    new_config = double('new_config')
+    filename = double('filename')
 
     config.should_receive(:all).and_return(old_cfg)
     config.should_receive(:filename).and_return(filename)
@@ -204,7 +204,7 @@ describe Flapjack::Coordinator do
     new_config.should_receive(:load).with(filename)
     new_config.should_receive(:all).and_return(new_cfg)
 
-    processor = mock('processor')
+    processor = double('processor')
     processor.should_receive(:type).twice.and_return('processor')
     processor.should_receive(:stop)
     processor.should_receive(:update_status)
@@ -213,7 +213,7 @@ describe Flapjack::Coordinator do
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
 
-    jabber = mock('jabber')
+    jabber = double('jabber')
     Flapjack::Pikelet.should_receive(:create).
       with('jabber', :config => {"enabled" => true}, :redis_config => {},
         :boot_time => time, :coordinator => fc).
@@ -237,8 +237,8 @@ describe Flapjack::Coordinator do
     old_cfg = {'processor' => {'enabled' => true, 'foo' => 'bar'}}
     new_cfg = {'processor' => {'enabled' => true, 'foo' => 'baz'}}
 
-    new_config = mock('new_config')
-    filename = mock('filename')
+    new_config = double('new_config')
+    filename = double('filename')
 
     config.should_receive(:all).and_return(old_cfg)
     config.should_receive(:filename).and_return(filename)
@@ -247,7 +247,7 @@ describe Flapjack::Coordinator do
     new_config.should_receive(:load).with(filename)
     new_config.should_receive(:all).and_return(new_cfg)
 
-    processor = mock('processor')
+    processor = double('processor')
     processor.should_not_receive(:start)
     processor.should_receive(:type).exactly(3).times.and_return('processor')
     processor.should_receive(:reload).with(new_cfg['processor']).and_return(true)
@@ -267,8 +267,8 @@ describe Flapjack::Coordinator do
     old_cfg = {'processor' => {'enabled' => true, 'foo' => 'bar'}}
     new_cfg = {'processor' => {'enabled' => true, 'baz' => 'qux'}}
 
-    new_config = mock('new_config')
-    filename = mock('filename')
+    new_config = double('new_config')
+    filename = double('filename')
 
     config.should_receive(:all).and_return(old_cfg)
     config.should_receive(:filename).and_return(filename)
@@ -277,7 +277,7 @@ describe Flapjack::Coordinator do
     new_config.should_receive(:load).with(filename)
     new_config.should_receive(:all).and_return(new_cfg)
 
-    processor = mock('processor')
+    processor = double('processor')
     processor.should_receive(:type).exactly(5).times.and_return('processor')
     processor.should_receive(:reload).with(new_cfg['processor']).and_return(false)
     processor.should_receive(:stop)
@@ -287,7 +287,7 @@ describe Flapjack::Coordinator do
     fiber.should_receive(:resume)
     Fiber.should_receive(:new).and_yield.and_return(fiber)
 
-    new_exec = mock('new_executive')
+    new_exec = double('new_executive')
     new_exec.should_receive(:start)
 
     config.should_receive(:for_redis).and_return({})

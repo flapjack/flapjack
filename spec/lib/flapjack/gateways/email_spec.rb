@@ -4,12 +4,12 @@ require 'flapjack/gateways/email'
 describe Flapjack::Gateways::Email, :logger => true do
 
   it "sends a mail with text and html parts" do
-    email = mock('email')
+    email = double('email')
 
-    entity_check = mock(Flapjack::Data::EntityCheck)
+    entity_check = double(Flapjack::Data::EntityCheck)
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
-    redis = mock('redis')
+    redis = double('redis')
 
     Flapjack::Data::EntityCheck.should_receive(:for_event_id).
       with('example.com:ping', :redis => redis).and_return(entity_check)
@@ -19,7 +19,7 @@ describe Flapjack::Gateways::Email, :logger => true do
       hash_including(:host    => 'localhost',
                      :port    => 25)).and_return(email)
 
-    response = mock(response)
+    response = double(response)
     response.should_receive(:"respond_to?").with(:code).and_return(true)
     response.should_receive(:code).and_return(250)
 

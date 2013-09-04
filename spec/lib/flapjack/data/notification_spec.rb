@@ -3,11 +3,11 @@ require 'flapjack/data/notification'
 
 describe Flapjack::Data::Notification, :redis => true, :logger => true do
 
-  let(:event)   { mock(Flapjack::Data::Event) }
+  let(:event)   { double(Flapjack::Data::Event) }
 
-  let(:contact) { mock(Flapjack::Data::Contact) }
+  let(:contact) { double(Flapjack::Data::Contact) }
 
-  let(:timezone) { mock('timezone') }
+  let(:timezone) { double('timezone') }
 
   it "generates a notification for an event" # do
   #   notification = Flapjack::Data::Notification.for_event(event, :type => 'problem',
