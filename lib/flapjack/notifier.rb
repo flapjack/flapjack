@@ -88,10 +88,10 @@ module Flapjack
     # notification, updates the notification history in redis, generates the
     # notifications
     def process_notification(notification)
-      timestamp = Time.now
-      event_id = notification.event_id
+      timestamp    = Time.now
+      event_id     = notification.event_id
       entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
-      contacts = entity_check.contacts
+      contacts     = entity_check.contacts
 
       if contacts.empty?
         @logger.debug("No contacts for #{event_id}")

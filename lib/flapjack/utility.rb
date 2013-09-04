@@ -52,6 +52,12 @@ module Flapjack
       return obj
     end
 
+    def desymbolize(obj)
+      return obj.inject({}){|memo,(k,v)| memo[k.to_s] =  desymbolize(v); memo} if obj.is_a? Hash
+      return obj.inject([]){|memo,v    | memo         << desymbolize(v); memo} if obj.is_a? Array
+      return obj
+    end
+
     # The passed block will be provided each value from the args
     # and must return array pairs [key, value] representing members of
     # the hash this method returns. Keys should be unique -- if they're
