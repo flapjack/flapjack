@@ -35,6 +35,10 @@ module Flapjack
 
       module ClassMethods
 
+        def count
+          @ids.count
+        end
+
         def ids
           @ids.members
         end
@@ -204,7 +208,7 @@ module Flapjack
       def destroy
         self.class.delete_id(@id)
         indexers = self.class.instance_variable_get('@indexers')
-        indexers.each do |key, indexer|
+        (indexers || {}).each_pair do |key, indexer|
           next unless old_index_key = @attributes[key]
           indexer.delete(old_index_key)
         end
