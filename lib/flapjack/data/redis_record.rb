@@ -73,7 +73,6 @@ module Flapjack
         def index_by(*args)
           @indexers ||= {}
           idxs = args.inject({}) do |memo, arg|
-            puts "#{class_key}:by_#{arg}"
             memo[arg.to_s] = Redis::HashKey.new("#{class_key}:by_#{arg}")
             memo
           end
@@ -81,11 +80,11 @@ module Flapjack
         end
 
         def has_many(*args)
-          associate(HasManyProxy, self, args)
+          associate(HasManyAssociation, self, args)
         end
 
         # def has_one(*args)
-        #   associate(HasOneProxy, self, args)
+        #   associate(HasOneAssociation, self, args)
         # end
 
         private
@@ -107,7 +106,7 @@ module Flapjack
           return if name.nil? || method_defined?(name)
 
           assoc = case klass.name
-          # when ::RedisRecord::HasOneProxy.name
+          # when ::Flapjack::Data::RedisRecord::HasOneAssociation.name
           #   %Q{
           #     def #{name}
           #       #{name}_proxy
@@ -117,11 +116,11 @@ module Flapjack
 
           #     def #{name}_proxy
           #       @#{name}_proxy ||=
-          #         ::RedisRecord::HasOneProxy.new(self, "#{name}",
+          #         ::Flapjack::Data::RedisRecord::HasOneAssociation.new(self, "#{name}",
           #           :class => #{options[:class] ? options[:class].name : 'nil'} )
           #     end
           #   }
-          when ::RedisRecord::HasManyProxy.name
+          when ::Flapjack::Data::RedisRecord::HasManyAssociation.name
             %Q{
               def #{name}
                 #{name}_proxy
@@ -135,7 +134,7 @@ module Flapjack
 
               def #{name}_proxy
                 @#{name}_proxy ||=
-                  ::RedisRecord::HasManyProxy.new(self, "#{name.singularize}_ids",
+                  ::Flapjack::Data::RedisRecord::HasManyAssociation.new(self, "#{name.singularize}_ids",
                     :class => #{options[:class] ? options[:class].name : 'nil'} )
               end
             }
@@ -233,7 +232,7 @@ module Flapjack
         @attributes[att.to_s]
       end
 
-      class HasManyProxy
+      class HasManyAssociation
 
         def initialize(parent, name, options = {})
           @record_ids = Redis::Set.new("#{parent.class.name.downcase}:#{parent.id}:#{name}")
@@ -254,13 +253,19 @@ module Flapjack
           @record_ids.add(record.id) if ok && !@record_ids.include?(record.id)
         end
 
+        def all
+          @record_ids.map do |id|
+            @associated_class.send(:load, id)
+          end
+        end
+
         def ids
           @record_ids.members
         end
 
       end
 
-      # class HasOneProxy
+      # class HasOneAssociation
 
       #   def initialize(parent, name, options = {})
       #     @hash = Redis::HashKey.new("#{parent.class.name.downcase}:#{parent.id}:#{name}")
