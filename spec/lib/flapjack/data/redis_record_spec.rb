@@ -53,7 +53,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     example.email.should == 'jjones@example.com'
   end
 
-  it "a record by an indexed value in redis" do
+  it "finds a record by an indexed value in redis" do
     Flapjack.redis.hmset('fdrrexample:8:attrs', {'name' => 'John Jones',
       'email' => 'jjones@example.com'}.flatten)
     Flapjack.redis.hmset('fdrrexample:by_name', {'John Jones' => '8'}.flatten)
@@ -66,7 +66,23 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     example.email.should == 'jjones@example.com'
   end
 
-  it "updates a record's attributes in redis"
+  it "updates a record's attributes in redis" do
+    Flapjack.redis.hmset('fdrrexample:8:attrs', {'name' => 'John Jones',
+      'email' => 'jjones@example.com'}.flatten)
+    Flapjack.redis.hmset('fdrrexample:by_name', {'John Jones' => '8'}.flatten)
+    Flapjack.redis.sadd('fdrrexample::ids', '8')
+
+    example = FDRRExample.find_by(:name, 'John Jones')
+    example.name = 'Jane Janes'
+    example.email = 'jjanes@example.com'
+    example.save.should be_true
+
+    Flapjack.redis.keys('*').should =~ ['fdrrexample::ids', 'fdrrexample:8:attrs', 'fdrrexample:by_name']
+    Flapjack.redis.smembers('fdrrexample::ids').should == ['8']
+    Flapjack.redis.hgetall('fdrrexample:8:attrs').should == {'name' => 'Jane Janes',
+      'email' => 'jjanes@example.com'}
+    Flapjack.redis.hgetall('fdrrexample:by_name').should == {'Jane Janes' => '8'}
+  end
 
   it "deletes a record's attributes from redis"
 

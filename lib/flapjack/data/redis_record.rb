@@ -20,6 +20,9 @@ module Flapjack
         include ActiveModel::Validations
         include Redis::Objects
 
+        attribute_method_suffix  "="  # attr_writers
+        attribute_method_suffix  ""   # attr_readers
+
         instance_eval do
           # Evaluates in the context of the class -- so this is a
           # class instance variable. TODO accesses may need to be
@@ -148,8 +151,8 @@ module Flapjack
         @id = attributes.delete(:id)
         @attributes = {}
         attributes.each_pair do |k, v|
-          send("#{k}_will_change!")
           @attributes[k.to_s] = v
+          send("#{k}_will_change!")
         end
         @attrs = Redis::HashKey.new("#{self.class.send(:class_key)}:#{@id}:attrs")
       end
@@ -160,8 +163,11 @@ module Flapjack
 
       # TODO limit to only those attribute names defined in define_attribute_methods
       def update_attributes(attributes = {})
-        attributes.each_pair do |k, v|
-          @attributes[k.to_s] = v
+        attributes.each_pair do |att, v|
+          unless value == @attributes[att.to_s]
+            @attributes[att.to_s] = v
+            send("#{att}_will_change!")
+          end
         end
         save
       end
@@ -170,18 +176,12 @@ module Flapjack
         return false unless valid?
         @id ||= SecureRandom.hex
 
-        # AM::Dirty
-        @previously_changed = changes
-
         indexers = self.class.instance_variable_get('@indexers')
         regen_index = indexers.nil? ? [] : (self.changed & indexers.keys)
 
         regen_index.each do |key|
-          old_index_key = self.changes[key].first
-          if old_index_key
-            indexer = indexers[key]
-            indexer.delete(old_index_key)
-          end
+          next unless old_index_key = self.changes[key].first
+          indexers[key].delete(old_index_key)
         end
 
         # uses hmset -- TODO limit to only those attribute names defined in
@@ -189,15 +189,16 @@ module Flapjack
         @attrs.bulk_set(attributes)
 
         regen_index.each do |key|
-          new_index_key = self.changes[key].last
-          if new_index_key
-            indexer = indexers[key]
-            indexer[new_index_key] = @id
-          end
+          next unless new_index_key = self.changes[key].last
+          indexers[key][new_index_key] = @id
         end
 
         # ids is a set, so update won't create duplicates
         self.class.add_id(@id)
+
+        # AM::Dirty
+        @previously_changed = self.changes
+        @changed_attributes.clear
         true
       end
 
@@ -212,7 +213,8 @@ module Flapjack
       #
       # Simulate attribute writers from method_missing
       def attribute=(att, value)
-        send("#{att}_will_change!") unless value == @attributes[att.to_s]
+        return if value == @attributes[att.to_s]
+        send("#{att}_will_change!")
         @attributes[att.to_s] = value
       end
 
