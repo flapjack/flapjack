@@ -21,7 +21,7 @@ module Flapjack
         include Redis::Objects
 
         attribute_method_suffix  "="  # attr_writers
-        attribute_method_suffix  ""   # attr_readers
+        # attribute_method_suffix  ""   # attr_readers # DEPRECATED
 
         instance_eval do
           # Evaluates in the context of the class -- so this is a
