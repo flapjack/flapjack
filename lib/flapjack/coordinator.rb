@@ -3,6 +3,8 @@
 require 'monitor'
 require 'syslog'
 
+require 'redis-objects'
+
 require 'flapjack'
 
 require 'flapjack/configuration'
@@ -38,6 +40,14 @@ module Flapjack
     def start(opts = {})
       @boot_time = Time.now
 
+      # FIXME at the moment, this needs to be initialised before data classes
+      # are loaded, as global-context redis-objects need their redis handle
+      # at that point. Need to clean this up, as well as handling reloads per
+      # the below
+      Redis::Objects.redis = Flapjack.redis = Flapjack::ConnectionPool::Wrapper.new(:size => 10) {
+        Redis.new(@config.for_redis.merge(:driver => :hiredis))
+      }
+
       pikelet_defs = pikelet_definitions(@config.all)
       return if pikelet_defs.empty?
 
@@ -48,11 +58,7 @@ module Flapjack
       # TODO should retrieve knowledge about how many are blocking, and allocate
       # that + 1 connections
       # FIXME reloading pikelet configs may need to change the size of the pool
-      num_connections = @pikelets.size
-
-      Flapjack.redis = Flapjack::ConnectionPool::Wrapper.new(:size => num_connections) {
-        Redis.new(@config.for_redis.merge(:driver => :hiredis))
-      }
+      # num_connections = @pikelets.size
 
       @pikelets.each do |pik|
         pik.start

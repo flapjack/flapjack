@@ -21,6 +21,8 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'oj'
   gem.add_dependency 'hiredis'
   gem.add_dependency 'redis'
+  gem.add_dependency 'redis-objects'
+  gem.add_dependency 'activemodel'
   gem.add_dependency 'sinatra'
   gem.add_dependency 'mail'
   gem.add_dependency 'xmpp4r'

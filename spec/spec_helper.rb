@@ -65,7 +65,7 @@ RSpec.configure do |config|
   config.order = 'random'
 
   config.around(:each, :redis => true) do |example|
-    Flapjack.redis = ::Redis.new(:db => 14, :driver => :ruby)
+    Redis::Objects.redis = Flapjack.redis = ::Redis.new(:db => 14, :driver => :ruby)
     Flapjack.redis.flushdb
     example.run
     Flapjack.redis.quit

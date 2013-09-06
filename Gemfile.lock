@@ -2,6 +2,7 @@ PATH
   remote: .
   specs:
     flapjack (0.7.22)
+      activemodel
       activesupport (~> 3.2.13)
       chronic
       chronic_duration
@@ -11,6 +12,7 @@ PATH
       mail
       oj
       redis
+      redis-objects
       sinatra
       tzinfo
       tzinfo-data
@@ -19,11 +21,14 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
+    activemodel (3.2.14)
+      activesupport (= 3.2.14)
+      builder (~> 3.0.0)
     activesupport (3.2.14)
       i18n (~> 0.6, >= 0.6.4)
       multi_json (~> 1.0)
     addressable (2.3.2)
-    builder (3.1.4)
+    builder (3.0.4)
     chronic (0.9.1)
     chronic_duration (0.10.2)
       numerizer (~> 0.1.1)
@@ -60,7 +65,7 @@ GEM
       guard (>= 1.1)
       rspec (~> 2.11)
     hiredis (0.4.5)
-    i18n (0.6.4)
+    i18n (0.6.5)
     ice_cube (0.11.0)
     json (1.7.6)
     json_spec (1.1.0)
@@ -72,7 +77,7 @@ GEM
       mime-types (~> 1.16)
       treetop (~> 1.4.8)
     method_source (0.8.1)
-    mime-types (1.23)
+    mime-types (1.25)
     multi_json (1.5.0)
     numerizer (0.1.1)
     oj (2.1.4)
@@ -90,6 +95,8 @@ GEM
     rake (10.0.3)
     rb-fsevent (0.9.3)
     redis (3.0.4)
+    redis-objects (0.7.0)
+      redis (>= 3.0.2)
     rspec (2.12.0)
       rspec-core (~> 2.12.0)
       rspec-expectations (~> 2.12.0)
@@ -113,7 +120,7 @@ GEM
     terminal-table (1.4.5)
     thor (0.17.0)
     tilt (1.4.1)
-    treetop (1.4.14)
+    treetop (1.4.15)
       polyglot
       polyglot (>= 0.3.1)
     tzinfo (1.0.1)

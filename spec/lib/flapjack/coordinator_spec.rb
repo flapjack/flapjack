@@ -20,7 +20,7 @@ describe Flapjack::Coordinator do
 
     Redis.should_receive(:new)
     Flapjack::ConnectionPool::Wrapper.should_receive(:new).
-        with(:size => 1).and_yield
+        with(:size => 10).and_yield
 
     processor = mock('processor')
     processor.should_receive(:start)
@@ -60,7 +60,7 @@ describe Flapjack::Coordinator do
 
     Redis.should_receive(:new)
     Flapjack::ConnectionPool::Wrapper.should_receive(:new).
-        with(:size => 2).and_yield
+        with(:size => 10).and_yield
 
     processor = mock('processor')
     processor.should_receive(:start)
@@ -111,7 +111,7 @@ describe Flapjack::Coordinator do
 
     Redis.should_receive(:new)
     Flapjack::ConnectionPool::Wrapper.should_receive(:new).
-        with(:size => 1).and_yield
+        with(:size => 10).and_yield
 
     processor = mock('processor')
     processor.should_receive(:start)
