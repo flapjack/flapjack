@@ -218,8 +218,8 @@ module Flapjack
       # Simulate attribute writers from method_missing
       def attribute=(att, value)
         return if value == @attributes[att.to_s]
-        send("#{att}_will_change!")
         @attributes[att.to_s] = value
+        send("#{att}_will_change!")
       end
 
       # Simulate attribute readers from method_missing
@@ -247,10 +247,20 @@ module Flapjack
           self  # for << 'a' << 'b'
         end
 
-        def add(record)
-          raise 'Invalid class' unless record.is_a?(@associated_class)
-          ok = record.save # TODO check if exists? && !dirty, once AM::Dirty is included
-          @record_ids.add(record.id) if ok && !@record_ids.include?(record.id)
+        def add(*records)
+          records.each do |record|
+            raise 'Invalid class' unless record.is_a?(@associated_class)
+            next unless record.save # TODO check if exists? && !dirty
+            @record_ids.add(record.id)
+          end
+        end
+
+        # TODO support dependent delete, for now just deletes the association
+        def delete(*records)
+          records.each do |record|
+            raise 'Invalid class' unless record.is_a?(@associated_class)
+            @record_ids.delete(record.id)
+          end
         end
 
         def all

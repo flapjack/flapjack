@@ -146,7 +146,21 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     child.name.should == 'Abel Tasman'
   end
 
-  it "removes a parent/child has_many relationship between two records in redis"
+  it "removes a parent/child has_many relationship between two records in redis" do
+    create_example
+    create_child
+
+    example = FdrrExample.find_by_id(8)
+    child = FdrrChild.find_by_id(3)
+
+    redis.smembers('fdrrchild::ids').should == ['3']
+    redis.smembers('fdrrexample:8:fdrr_child_ids').should == ['3']
+
+    example.fdrr_children.delete(child)
+
+    redis.smembers('fdrrchild::ids').should == ['3']            # child not deleted
+    redis.smembers('fdrrexample:8:fdrr_child_ids').should == [] # but association is
+  end
 
   # it "sets a parent/child has_one relationship between two records in redis"
 
