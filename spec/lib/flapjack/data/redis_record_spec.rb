@@ -16,6 +16,13 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
   let(:redis) { Flapjack.redis }
 
+  def create_example
+    redis.hmset('fdrrexample:8:attrs', {'name' => 'John Jones',
+      'email' => 'jjones@example.com'}.flatten)
+    redis.hmset('fdrrexample:by_name', {'John Jones' => '8'}.flatten)
+    redis.sadd('fdrrexample::ids', '8')
+  end
+
   before(:each) do
     ::FDRRExample.redis = redis
   end
@@ -43,23 +50,17 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   end
 
   it "finds a record by id in redis" do
-    redis.hmset('fdrrexample:5:attrs', {'name' => 'John Jones',
-      'email' => 'jjones@example.com'}.flatten)
-    redis.hmset('fdrrexample:by_name', {'John Jones' => '5'}.flatten)
-    redis.sadd('fdrrexample::ids', '5')
+    create_example
 
-    example = FDRRExample.find_by_id(5)
+    example = FDRRExample.find_by_id(8)
     example.should_not be_nil
-    example.id.should == '5'
+    example.id.should == '8'
     example.name.should == 'John Jones'
     example.email.should == 'jjones@example.com'
   end
 
   it "finds a record by an indexed value in redis" do
-    redis.hmset('fdrrexample:8:attrs', {'name' => 'John Jones',
-      'email' => 'jjones@example.com'}.flatten)
-    redis.hmset('fdrrexample:by_name', {'John Jones' => '8'}.flatten)
-    redis.sadd('fdrrexample::ids', '8')
+    create_example
 
     example = FDRRExample.find_by(:name, 'John Jones')
     example.should_not be_nil
@@ -69,10 +70,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   end
 
   it "updates a record's attributes in redis" do
-    redis.hmset('fdrrexample:8:attrs', {'name' => 'John Jones',
-      'email' => 'jjones@example.com'}.flatten)
-    redis.hmset('fdrrexample:by_name', {'John Jones' => '8'}.flatten)
-    redis.sadd('fdrrexample::ids', '8')
+    create_example
 
     example = FDRRExample.find_by(:name, 'John Jones')
     example.name = 'Jane Janes'
@@ -86,7 +84,14 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     redis.hgetall('fdrrexample:by_name').should == {'Jane Janes' => '8'}
   end
 
-  it "deletes a record's attributes from redis"
+  it "deletes a record's attributes from redis" do
+    create_example
+
+    example = FDRRExample.find_by_id(8)
+    example.destroy
+
+    redis.keys('*').should =~ []
+  end
 
   it "sets a parent/child has_many relationship between two records in redis"
 

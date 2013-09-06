@@ -84,9 +84,9 @@ module Flapjack
           associate(HasManyProxy, self, args)
         end
 
-        def has_one(*args)
-          associate(HasOneProxy, self, args)
-        end
+        # def has_one(*args)
+        #   associate(HasOneProxy, self, args)
+        # end
 
         private
 
@@ -107,20 +107,20 @@ module Flapjack
           return if name.nil? || method_defined?(name)
 
           assoc = case klass.name
-          when ::RedisRecord::HasOneProxy.name
-            %Q{
-              def #{name}
-                #{name}_proxy
-              end
+          # when ::RedisRecord::HasOneProxy.name
+          #   %Q{
+          #     def #{name}
+          #       #{name}_proxy
+          #     end
 
-              private
+          #     private
 
-              def #{name}_proxy
-                @#{name}_proxy ||=
-                  ::RedisRecord::HasOneProxy.new(self, "#{name}",
-                    :class => #{options[:class] ? options[:class].name : 'nil'} )
-              end
-            }
+          #     def #{name}_proxy
+          #       @#{name}_proxy ||=
+          #         ::RedisRecord::HasOneProxy.new(self, "#{name}",
+          #           :class => #{options[:class] ? options[:class].name : 'nil'} )
+          #     end
+          #   }
           when ::RedisRecord::HasManyProxy.name
             %Q{
               def #{name}
@@ -204,6 +204,11 @@ module Flapjack
 
       def destroy
         self.class.delete_id(@id)
+        indexers = self.class.instance_variable_get('@indexers')
+        indexers.each do |key, indexer|
+          next unless old_index_key = @attributes[key]
+          indexer.delete(old_index_key)
+        end
         @attrs.clear
       end
 
@@ -255,19 +260,19 @@ module Flapjack
 
       end
 
-      class HasOneProxy
+      # class HasOneProxy
 
-        def initialize(parent, name, options = {})
-          @hash = Redis::HashKey.new("#{parent.class.name.downcase}:#{parent.id}:#{name}")
+      #   def initialize(parent, name, options = {})
+      #     @hash = Redis::HashKey.new("#{parent.class.name.downcase}:#{parent.id}:#{name}")
 
-          # TODO trap possible constantize error
-          @associated_class = (options[:class] || name).classify.constantize
-          raise 'Associated class does not mixin RedisRecord' unless @associated_class.included_modules.include?(RedisRecord)
-        end
+      #     # TODO trap possible constantize error
+      #     @associated_class = (options[:class] || name).classify.constantize
+      #     raise 'Associated class does not mixin RedisRecord' unless @associated_class.included_modules.include?(RedisRecord)
+      #   end
 
-        # TODO shim to the @hash
+      #   # TODO shim to the @hash
 
-      end
+      # end
 
     end
   end
