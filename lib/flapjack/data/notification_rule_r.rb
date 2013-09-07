@@ -18,23 +18,22 @@ module Flapjack
     #   attr_accessor :id, :contact_id, :entities, :tags, :time_restrictions,
     #     :warning_media, :critical_media, :warning_blackhole, :critical_blackhole
 
+      # NB: ice_cube doesn't have much rule data validation, and has
+      # problems with infinite loops if the data can't logically match; see
+      #   https://github.com/seejohnrun/ice_cube/issues/127 &
+      #   https://github.com/seejohnrun/ice_cube/issues/137
+      # We may want to consider some sort of timeout-based check around
+      # anything that could fall into that.
+      #
+      # We don't want to replicate IceCube's from_hash behaviour here,
+      # but we do need to apply some sanity checking on the passed data.
+      def self.time_restriction_to_icecube_schedule(tr, timezone)
+        return unless !tr.nil? && tr.is_a?(Hash)
+        return if timezone.nil? && !timezone.is_a?(ActiveSupport::TimeZone)
+        return unless tr = prepare_time_restriction(tr, timezone)
 
-    #   # NB: ice_cube doesn't have much rule data validation, and has
-    #   # problems with infinite loops if the data can't logically match; see
-    #   #   https://github.com/seejohnrun/ice_cube/issues/127 &
-    #   #   https://github.com/seejohnrun/ice_cube/issues/137
-    #   # We may want to consider some sort of timeout-based check around
-    #   # anything that could fall into that.
-    #   #
-    #   # We don't want to replicate IceCube's from_hash behaviour here,
-    #   # but we do need to apply some sanity checking on the passed data.
-    #   def self.time_restriction_to_icecube_schedule(tr, timezone)
-    #     return unless !tr.nil? && tr.is_a?(Hash)
-    #     return if timezone.nil? && !timezone.is_a?(ActiveSupport::TimeZone)
-    #     return unless tr = prepare_time_restriction(tr, timezone)
-
-    #     IceCube::Schedule.from_hash(tr)
-    #   end
+        IceCube::Schedule.from_hash(tr)
+      end
 
     #   def to_json(*args)
     #     self.class.hashify(:id, :contact_id, :tags, :entities,
@@ -56,33 +55,31 @@ module Flapjack
     #     @tags.subset?(event_tags)
     #   end
 
-    #   def blackhole?(severity)
-    #     ('warning'.eql?(severity.downcase) && @warning_blackhole) ||
-    #       ('critical'.eql?(severity.downcase) && @critical_blackhole)
-    #   end
+      def blackhole?(severity)
+        case severity
+        when 'warning'
+          self.warning_blackhole
+        when 'critical'
+          self.critical_blackhole
+        end
+      end
 
-    #   def media_for_severity(severity)
-    #     case severity
-    #     when 'warning'
-    #       @warning_media
-    #     when 'critical'
-    #       @critical_media
-    #     end
-    #   end
+      def media_for_severity(severity)
+        case severity
+        when 'warning'
+          self.warning_media
+        when 'critical'
+          self.critical_media
+        end
+      end
 
-    def is_specific?
-      false
-      # (!entities.nil? && !entities.empty?) ||
-      #   (!tags.nil? && !tags.empty?)
-    end
+      def is_specific?
+        false
+        # (!entities.nil? && !entities.empty?) ||
+        #   (!tags.nil? && !tags.empty?)
+      end
 
     # private
-
-    #   def initialize(rule_data, opts = {})
-    #     @logger = opts[:logger]
-    #     @id     = rule_data[:id]
-    #     refresh
-    #   end
 
     #   def self.add_or_update(rule_data, options = {})
     #     logger = options[:logger]

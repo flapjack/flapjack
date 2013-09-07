@@ -25,8 +25,8 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   let(:redis) { Flapjack.redis }
 
   def create_example
-    redis.hmset('fdrr_example:8:attrs', {'name' => 'John Jones',
-      'email' => 'jjones@example.com'}.flatten)
+    redis.hmset('fdrr_example:8:attrs', {'name' => '"John Jones"',
+      'email' => '"jjones@example.com"'}.flatten)
     redis.hmset('fdrr_example:by_name', {'John Jones' => '8'}.flatten)
     redis.sadd('fdrr_example::ids', '8')
   end
@@ -35,7 +35,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     redis.sadd('fdrr_example:8:fdrr_child_ids', '3')
 
     redis.sadd('fdrr_child::ids', '3')
-    redis.hmset('fdrr_child:3:attrs', {'name' => 'Abel Tasman'}.flatten)
+    redis.hmset('fdrr_child:3:attrs', {'name' => '"Abel Tasman"'}.flatten)
   end
 
   before(:each) do
@@ -59,8 +59,8 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
     redis.keys('*').should =~ ['fdrr_example::ids', 'fdrr_example:1:attrs', 'fdrr_example:by_name']
     redis.smembers('fdrr_example::ids').should == ['1']
-    redis.hgetall('fdrr_example:1:attrs').should == {'name' => 'John Smith',
-      'email' => 'jsmith@example.com'}
+    redis.hgetall('fdrr_example:1:attrs').should == {'name' => '"John Smith"',
+      'email' => '"jsmith@example.com"'}
     redis.hgetall('fdrr_example:by_name').should == {'John Smith' => '1'}
   end
 
@@ -94,8 +94,8 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
     redis.keys('*').should =~ ['fdrr_example::ids', 'fdrr_example:8:attrs', 'fdrr_example:by_name']
     redis.smembers('fdrr_example::ids').should == ['8']
-    redis.hgetall('fdrr_example:8:attrs').should == {'name' => 'Jane Janes',
-      'email' => 'jjanes@example.com'}
+    redis.hgetall('fdrr_example:8:attrs').should == {'name' => '"Jane Janes"',
+      'email' => '"jjanes@example.com"'}
     redis.hgetall('fdrr_example:by_name').should == {'Jane Janes' => '8'}
   end
 
@@ -124,12 +124,12 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
     redis.smembers('fdrr_example::ids').should == ['8']
     redis.hgetall('fdrr_example:by_name').should == {'John Jones' => '8'}
-    redis.hgetall('fdrr_example:8:attrs').should == {'name' => 'John Jones',
-      'email' => 'jjones@example.com'}
+    redis.hgetall('fdrr_example:8:attrs').should == {'name' => '"John Jones"',
+      'email' => '"jjones@example.com"'}
     redis.smembers('fdrr_example:8:fdrr_child_ids').should == ['3']
 
     redis.smembers('fdrr_child::ids').should == ['3']
-    redis.hgetall('fdrr_child:3:attrs').should == {'name' => 'Abel Tasman'}
+    redis.hgetall('fdrr_child:3:attrs').should == {'name' => '"Abel Tasman"'}
   end
 
   it "loads a child from a parent's has_many relationship" do

@@ -72,8 +72,8 @@ describe Flapjack::Data::ContactR, :redis => true do
   end
 
   def create_contact
-    redis.hmset('flapjack/data/contact_r:1:attrs', {'first_name' => 'John',
-      'last_name' => 'Smith', 'email' => 'jsmith@example.com'}.flatten)
+    redis.hmset('flapjack/data/contact_r:1:attrs', {'first_name' => '"John"',
+      'last_name' => '"Smith"', 'email' => '"jsmith@example.com"'}.flatten)
     redis.sadd('flapjack/data/contact_r::ids', '1')
   end
 

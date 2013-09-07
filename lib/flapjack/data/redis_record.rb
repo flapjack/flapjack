@@ -5,6 +5,7 @@ require 'securerandom'
 
 require 'active_support/concern'
 require 'active_model'
+require 'oj'
 require 'redis-objects'
 
 module Flapjack
@@ -101,7 +102,11 @@ module Flapjack
         end
 
         def load(id)
-          attributes = redis.hgetall("#{class_key}:#{id}:attrs")
+          serialized_attributes = redis.hgetall("#{class_key}:#{id}:attrs")
+          attributes = serialized_attributes.inject({}) do |memo, (att, val)|
+            memo[att] = (val.nil? || val.empty?) ? nil : Oj.load(val)
+            memo
+          end
           self.new({:id => id.to_s}.merge(attributes))
         end
 
@@ -189,9 +194,29 @@ module Flapjack
           indexers[key].delete(old_index_key)
         end
 
+        # store each value as the serialised JSON attribute (should be
+        # the same for strings and numbers, but will handle arrays & hashes
+        # as well)
+        serialised_attributes = attributes.inject({}) do |memo, (att, val)|
+          value = case val
+          when NilClass, ''
+            nil
+          when String, Integer, TrueClass, FalseClass
+            Oj.dump(val)
+          when Array, Hash
+            # TODO capture JSON exception
+            Oj.dump(val)
+          else
+            # TODO log warning
+            nil
+          end
+          memo[att] = value
+          memo
+        end
+
         # uses hmset -- TODO limit to only those attribute names defined in
         # define_attribute_methods
-        @attrs.bulk_set(attributes)
+        @attrs.bulk_set(serialised_attributes)
 
         regen_index.each do |key|
           next unless new_index_key = self.changes[key].last
