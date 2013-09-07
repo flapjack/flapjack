@@ -25,17 +25,17 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   let(:redis) { Flapjack.redis }
 
   def create_example
-    redis.hmset('fdrrexample:8:attrs', {'name' => 'John Jones',
+    redis.hmset('fdrr_example:8:attrs', {'name' => 'John Jones',
       'email' => 'jjones@example.com'}.flatten)
-    redis.hmset('fdrrexample:by_name', {'John Jones' => '8'}.flatten)
-    redis.sadd('fdrrexample::ids', '8')
+    redis.hmset('fdrr_example:by_name', {'John Jones' => '8'}.flatten)
+    redis.sadd('fdrr_example::ids', '8')
   end
 
   def create_child
-    redis.sadd('fdrrexample:8:fdrr_child_ids', '3')
+    redis.sadd('fdrr_example:8:fdrr_child_ids', '3')
 
-    redis.sadd('fdrrchild::ids', '3')
-    redis.hmset('fdrrchild:3:attrs', {'name' => 'Abel Tasman'}.flatten)
+    redis.sadd('fdrr_child::ids', '3')
+    redis.hmset('fdrr_child:3:attrs', {'name' => 'Abel Tasman'}.flatten)
   end
 
   before(:each) do
@@ -57,11 +57,11 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     example.should be_valid
     example.save.should be_true
 
-    redis.keys('*').should =~ ['fdrrexample::ids', 'fdrrexample:1:attrs', 'fdrrexample:by_name']
-    redis.smembers('fdrrexample::ids').should == ['1']
-    redis.hgetall('fdrrexample:1:attrs').should == {'name' => 'John Smith',
+    redis.keys('*').should =~ ['fdrr_example::ids', 'fdrr_example:1:attrs', 'fdrr_example:by_name']
+    redis.smembers('fdrr_example::ids').should == ['1']
+    redis.hgetall('fdrr_example:1:attrs').should == {'name' => 'John Smith',
       'email' => 'jsmith@example.com'}
-    redis.hgetall('fdrrexample:by_name').should == {'John Smith' => '1'}
+    redis.hgetall('fdrr_example:by_name').should == {'John Smith' => '1'}
   end
 
   it "finds a record by id in redis" do
@@ -92,16 +92,16 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     example.email = 'jjanes@example.com'
     example.save.should be_true
 
-    redis.keys('*').should =~ ['fdrrexample::ids', 'fdrrexample:8:attrs', 'fdrrexample:by_name']
-    redis.smembers('fdrrexample::ids').should == ['8']
-    redis.hgetall('fdrrexample:8:attrs').should == {'name' => 'Jane Janes',
+    redis.keys('*').should =~ ['fdrr_example::ids', 'fdrr_example:8:attrs', 'fdrr_example:by_name']
+    redis.smembers('fdrr_example::ids').should == ['8']
+    redis.hgetall('fdrr_example:8:attrs').should == {'name' => 'Jane Janes',
       'email' => 'jjanes@example.com'}
-    redis.hgetall('fdrrexample:by_name').should == {'Jane Janes' => '8'}
+    redis.hgetall('fdrr_example:by_name').should == {'Jane Janes' => '8'}
   end
 
   it "deletes a record's attributes from redis" do
     create_example
-    redis.keys('*').should =~ ['fdrrexample::ids', 'fdrrexample:8:attrs', 'fdrrexample:by_name']
+    redis.keys('*').should =~ ['fdrr_example::ids', 'fdrr_example:8:attrs', 'fdrr_example:by_name']
 
     example = FdrrExample.find_by_id(8)
     example.destroy
@@ -118,18 +118,18 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     example = FdrrExample.find_by_id(8)
     example.fdrr_children << child
 
-    redis.keys('*').should =~ ['fdrrexample::ids', 'fdrrexample:by_name',
-      'fdrrexample:8:attrs', 'fdrrexample:8:fdrr_child_ids',
-      'fdrrchild::ids', 'fdrrchild:3:attrs',]
+    redis.keys('*').should =~ ['fdrr_example::ids', 'fdrr_example:by_name',
+      'fdrr_example:8:attrs', 'fdrr_example:8:fdrr_child_ids',
+      'fdrr_child::ids', 'fdrr_child:3:attrs',]
 
-    redis.smembers('fdrrexample::ids').should == ['8']
-    redis.hgetall('fdrrexample:by_name').should == {'John Jones' => '8'}
-    redis.hgetall('fdrrexample:8:attrs').should == {'name' => 'John Jones',
+    redis.smembers('fdrr_example::ids').should == ['8']
+    redis.hgetall('fdrr_example:by_name').should == {'John Jones' => '8'}
+    redis.hgetall('fdrr_example:8:attrs').should == {'name' => 'John Jones',
       'email' => 'jjones@example.com'}
-    redis.smembers('fdrrexample:8:fdrr_child_ids').should == ['3']
+    redis.smembers('fdrr_example:8:fdrr_child_ids').should == ['3']
 
-    redis.smembers('fdrrchild::ids').should == ['3']
-    redis.hgetall('fdrrchild:3:attrs').should == {'name' => 'Abel Tasman'}
+    redis.smembers('fdrr_child::ids').should == ['3']
+    redis.hgetall('fdrr_child:3:attrs').should == {'name' => 'Abel Tasman'}
   end
 
   it "loads a child from a parent's has_many relationship" do
@@ -153,13 +153,13 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     example = FdrrExample.find_by_id(8)
     child = FdrrChild.find_by_id(3)
 
-    redis.smembers('fdrrchild::ids').should == ['3']
-    redis.smembers('fdrrexample:8:fdrr_child_ids').should == ['3']
+    redis.smembers('fdrr_child::ids').should == ['3']
+    redis.smembers('fdrr_example:8:fdrr_child_ids').should == ['3']
 
     example.fdrr_children.delete(child)
 
-    redis.smembers('fdrrchild::ids').should == ['3']            # child not deleted
-    redis.smembers('fdrrexample:8:fdrr_child_ids').should == [] # but association is
+    redis.smembers('fdrr_child::ids').should == ['3']            # child not deleted
+    redis.smembers('fdrr_example:8:fdrr_child_ids').should == [] # but association is
   end
 
   # it "sets a parent/child has_one relationship between two records in redis"

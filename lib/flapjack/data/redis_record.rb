@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'forwardable'
 require 'securerandom'
 
 require 'active_support/concern'
@@ -23,6 +24,8 @@ module Flapjack
         attribute_method_suffix  "="  # attr_writers
         # attribute_method_suffix  ""   # attr_readers # DEPRECATED
 
+        attr_accessor :logger
+
         instance_eval do
           # Evaluates in the context of the class -- so this is a
           # class instance variable. TODO accesses may need to be
@@ -44,15 +47,15 @@ module Flapjack
         end
 
         def add_id(id)
-          @ids.add(id)
+          @ids.add(id.to_s)
         end
 
         def delete_id(id)
-          @ids.delete(id)
+          @ids.delete(id.to_s)
         end
 
         def exists?(id)
-          @ids.include?(id)
+          @ids.include?(id.to_s)
         end
 
         def all
@@ -64,8 +67,8 @@ module Flapjack
         end
 
         def find_by_id(id)
-          return unless id && exists?(id)
-          load(id)
+          return unless id && exists?(id.to_s)
+          load(id.to_s)
         end
 
         def find_by(key, value)
@@ -94,8 +97,7 @@ module Flapjack
         private
 
         def class_key
-          # TODO more complex logic, strip namespaces etc. -- see redis-objects #redis_prefix
-          self.name.downcase
+          self.name.underscore
         end
 
         def load(id)
@@ -238,8 +240,10 @@ module Flapjack
 
       class HasManyAssociation
 
+        extend Forwardable
+
         def initialize(parent, name, options = {})
-          @record_ids = Redis::Set.new("#{parent.class.name.downcase}:#{parent.id}:#{name}")
+          @record_ids = Redis::Set.new("#{parent.class.send(:class_key)}:#{parent.id}:#{name}")
 
           # TODO trap possible constantize error
           @associated_class = options[:class] || name.sub(/_ids$/, '').classify.constantize
@@ -267,9 +271,26 @@ module Flapjack
           end
         end
 
+        # is there a neater way to do the next four? some mix of delegation & ...
+        def count
+          @record_ids.count
+        end
+
         def all
           @record_ids.map do |id|
             @associated_class.send(:load, id)
+          end
+        end
+
+        def collect(&block)
+          @record_ids.collect do |id|
+            block.call( @associated_class.send(:load, id) )
+          end
+        end
+
+        def each(&block)
+          @record_ids.each do |id|
+            block.call( @associated_class.send(:load, id) )
           end
         end
 

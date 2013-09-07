@@ -8,7 +8,7 @@ require 'ice_cube'
 
 require 'flapjack/data/redis_record'
 require 'flapjack/data/entity'
-require 'flapjack/data/notification_rule'
+require 'flapjack/data/notification_rule_r'
 require 'flapjack/data/tag'
 require 'flapjack/data/tag_set'
 
@@ -20,12 +20,33 @@ module Flapjack
 
       include Flapjack::Data::RedisRecord
 
-      define_attribute_methods [:first_name, :last_name, :email]
+      define_attribute_methods [:first_name, :last_name, :email, :timezone]
 
-      # TODO should map contacts_for as a property of either entity or contacts,
-      # depending on which way it's most frequently queried
-
+      # TODO map contacts_for as 'entity:ID:contact_ids'
+      
       has_many :media # , :dependent => :destroy
+
+      has_many :notification_rules, :class => Flapjack::Data::NotificationRuleR
+
+      # TODO a better way to wrap this around the has_many association
+      def notification_rules_checked
+        rules = self.notification_rules
+        if rules.all.all? {|r| r.is_specific? } # also true if empty
+          rule = Flapjack::Data::NotificationRuleR.new(
+            :entities           => [].to_json,
+            :tags               => [].to_json,
+            :time_restrictions  => [].to_json,
+            :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'].to_json,
+            :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'].to_json,
+            :warning_blackhole  => false,
+            :critical_blackhole => false
+          )
+          rules << rule
+        end
+        rules
+      end
+
+      # has_many :tags
 
       # hash_key :pagerduty_credentials
 
@@ -34,8 +55,13 @@ module Flapjack
   #     TAG_PREFIX = 'contact_tag'
 
       # TODO sort usages of 'Contact.all' by [c.last_name, c.first_name] in the code,
-      # change the association to a sorted_set and provide the sort condition up front
+      # or change the association to a sorted_set and provide the sort condition up front
       # (use id if not provided)
+
+
+      # contact.media_list should be replaced by
+      # contact.media.collect {|m| m['address'] }
+
 
   #     # ensure that instance variables match redis state
   #     # TODO may want to make this protected/private, it's only
@@ -129,28 +155,14 @@ module Flapjack
         [(self.first_name || ''), (self.last_name || '')].join(" ").strip
       end
 
-  #     # return an array of the notification rules of this contact
-  #     def notification_rules(opts = {})
-  #       rules = Flapjack.redis.smembers("contact_notification_rules:#{self.id}").inject([]) do |ret, rule_id|
-  #         unless (rule_id.nil? || rule_id == '')
-  #           ret << Flapjack::Data::NotificationRule.find_by_id(rule_id)
-  #         end
-  #         ret
-  #       end
-  #       if rules.all? {|r| r.is_specific? } # also true if empty
-  #         rule = self.add_notification_rule({
-  #             :entities           => [],
-  #             :tags               => Flapjack::Data::TagSet.new([]),
-  #             :time_restrictions  => [],
-  #             :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'],
-  #             :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'],
-  #             :warning_blackhole  => false,
-  #             :critical_blackhole => false,
-  #           }, :logger => opts[:logger])
-  #         rules.unshift(rule)
-  #       end
-  #       rules
-  #     end
+      def destroy
+        # # remove entity linkages
+        # Flapjack::Data::Entity.each do |entity|
+        #   entity.contacts.delete(self)
+        # end
+        super
+      end
+
 
   #     def add_notification_rule(rule_data, opts = {})
   #       if logger = opts[:logger]
@@ -226,43 +238,30 @@ module Flapjack
   #       end
   #     end
 
-  #     # return a list of media enabled for this contact
-  #     # eg [ 'email', 'sms' ]
-  #     def media_list
-  #       Flapjack.redis.hkeys("contact_media:#{self.id}")
-  #     end
+      # return the timezone of the contact, or the system default if none is set
+      # TODO cache?
+      def time_zone
+        tz_string = self.timezone
+        tz = opts[:default] if (tz_string.nil? || tz_string.empty?)
 
-  #     # return the timezone of the contact, or the system default if none is set
-  #     # TODO cache?
-  #     def timezone(opts = {})
-  #       logger = opts[:logger]
+        if tz.nil?
+          begin
+            tz = ActiveSupport::TimeZone.new(tz_string)
+          rescue ArgumentError
+            if logger
+              logger.warn("Invalid timezone string set for contact #{self.id} or TZ (#{tz_string}), using 'UTC'!")
+            end
+            tz = ActiveSupport::TimeZone.new('UTC')
+          end
+        end
+        tz
+      end
 
-  #       tz_string = Flapjack.redis.get("contact_tz:#{self.id}")
-  #       tz = opts[:default] if (tz_string.nil? || tz_string.empty?)
-
-  #       if tz.nil?
-  #         begin
-  #           tz = ActiveSupport::TimeZone.new(tz_string)
-  #         rescue ArgumentError
-  #           if logger
-  #             logger.warn("Invalid timezone string set for contact #{self.id} or TZ (#{tz_string}), using 'UTC'!")
-  #           end
-  #           tz = ActiveSupport::TimeZone.new('UTC')
-  #         end
-  #       end
-  #       tz
-  #     end
-
-  #     # sets or removes the timezone for the contact
-  #     def timezone=(tz)
-  #       if tz.nil?
-  #         Flapjack.redis.del("contact_tz:#{self.id}")
-  #       else
-  #         # ActiveSupport::TimeZone or String
-  #         Flapjack.redis.set("contact_tz:#{self.id}",
-  #           tz.respond_to?(:name) ? tz.name : tz )
-  #       end
-  #     end
+      # sets or removes the time zone for the contact
+      # nil should delete TODO test
+      def time_zone=(tz)
+        self.timezone = tz.respond_to?(:name) ? tz.name : tz
+      end
 
   #     def to_json(*args)
   #       { "id"         => self.id,
@@ -273,10 +272,6 @@ module Flapjack
   #     end
 
   #   private
-
-  #     def initialize(options = {})
-  #       @id = options[:id]
-  #     end
 
   #     # NB: should probably be called in the context of a Redis multi block; not doing so
   #     # here as calling classes may well be adding/updating multiple records in the one
