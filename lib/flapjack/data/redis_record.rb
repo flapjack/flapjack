@@ -4,7 +4,9 @@ require 'forwardable'
 require 'securerandom'
 
 require 'active_support/concern'
+require 'active_support/core_ext/object/blank'
 require 'active_model'
+
 require 'oj'
 require 'redis-objects'
 
@@ -20,7 +22,6 @@ module Flapjack
         include ActiveModel::AttributeMethods
         include ActiveModel::Dirty
         include ActiveModel::Validations
-        include Redis::Objects
 
         attribute_method_suffix  "="  # attr_writers
         # attribute_method_suffix  ""   # attr_readers # DEPRECATED
@@ -102,12 +103,9 @@ module Flapjack
         end
 
         def load(id)
-          serialized_attributes = redis.hgetall("#{class_key}:#{id}:attrs")
-          attributes = serialized_attributes.inject({}) do |memo, (att, val)|
-            memo[att] = (val.nil? || val.empty?) ? nil : Oj.load(val)
-            memo
-          end
-          self.new({:id => id.to_s}.merge(attributes))
+          object = self.new
+          object.load(id)
+          object
         end
 
         def associate(klass, parent, args)
@@ -158,17 +156,38 @@ module Flapjack
       end
 
       def initialize(attributes = {})
-        @id = attributes.delete(:id)
+        if id = attributes.delete(:id)
+          self.id = id
+        end
+
         @attributes = {}
         attributes.each_pair do |k, v|
-          @attributes[k.to_s] = v
           send("#{k}_will_change!")
+          @attributes[k.to_s] = v
         end
-        @attrs = Redis::HashKey.new("#{self.class.send(:class_key)}:#{@id}:attrs")
+      end
+
+      def load(id)
+        self.id = id
+        refresh
       end
 
       def id
         @id
+      end
+
+      def id=(id)
+        raise "Cannot reassign id" unless @id.nil?
+        @id = id
+        @attrs = Redis::HashKey.new("#{self.class.send(:class_key)}:#{id}:attrs")
+      end
+
+      def refresh
+        # TODO reset any AM::Dirty state
+        @attributes = @attrs.inject({}) do |memo, (att, val)|
+          memo[att] = (val.nil? || val.empty?) ? nil : Oj.load(val)
+          memo
+        end
       end
 
       # TODO limit to only those attribute names defined in define_attribute_methods
@@ -184,7 +203,8 @@ module Flapjack
 
       def save
         return false unless valid?
-        @id ||= SecureRandom.hex
+
+        self.id ||= SecureRandom.hex
 
         indexers = self.class.instance_variable_get('@indexers')
         regen_index = indexers.nil? ? [] : (self.changed & indexers.keys)
@@ -197,6 +217,9 @@ module Flapjack
         # store each value as the serialised JSON attribute (should be
         # the same for strings and numbers, but will handle arrays & hashes
         # as well)
+        # TODO consider whether this is the best possible approach, or should
+        # the representation be composed of various redis types, which would
+        # mean a more complicated model to represent and store data types?
         serialised_attributes = attributes.inject({}) do |memo, (att, val)|
           value = case val
           when NilClass, ''
@@ -249,8 +272,8 @@ module Flapjack
       # Simulate attribute writers from method_missing
       def attribute=(att, value)
         return if value == @attributes[att.to_s]
-        @attributes[att.to_s] = value
         send("#{att}_will_change!")
+        @attributes[att.to_s] = value
       end
 
       # Simulate attribute readers from method_missing

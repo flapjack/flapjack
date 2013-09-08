@@ -38,10 +38,6 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     redis.hmset('fdrr_child:3:attrs', {'name' => '"Abel Tasman"'}.flatten)
   end
 
-  before(:each) do
-    ::FdrrExample.redis = redis
-  end
-
   it "is invalid without a name" do
     example = FdrrExample.new(:id => 1, :email => 'jsmith@example.com')
     example.should_not be_valid

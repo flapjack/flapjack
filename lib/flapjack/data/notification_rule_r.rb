@@ -3,6 +3,8 @@
 require 'oj'
 require 'active_support/time'
 require 'flapjack/utility'
+
+require 'flapjack/data/redis_record'
 require 'flapjack/data/tag_set'
 
 module Flapjack
@@ -13,10 +15,8 @@ module Flapjack
 
       include Flapjack::Data::RedisRecord
 
-      define_attribute_methods [:warning_blackhole, :critical_blackhole]
-
-    #   attr_accessor :id, :contact_id, :entities, :tags, :time_restrictions,
-    #     :warning_media, :critical_media, :warning_blackhole, :critical_blackhole
+      define_attribute_methods [:entities, :tags, :time_restrictions,
+        :warning_media, :critical_media, :warning_blackhole, :critical_blackhole]
 
       # NB: ice_cube doesn't have much rule data validation, and has
       # problems with infinite loops if the data can't logically match; see
@@ -35,6 +35,7 @@ module Flapjack
         IceCube::Schedule.from_hash(tr)
       end
 
+    # # TODO via AM::Serialization
     #   def to_json(*args)
     #     self.class.hashify(:id, :contact_id, :tags, :entities,
     #         :time_restrictions, :warning_media, :critical_media,
@@ -43,17 +44,15 @@ module Flapjack
     #     }.to_json
     #   end
 
-    #   # entity names match?
-    #   def match_entity?(event_id)
-    #     return false unless @entities
-    #     @entities.include?(event_id.split(':').first)
-    #   end
+      # entity names match?
+      def match_entity?(event_id)
+        entities.present? && entities.include?(event_id.split(':').first)
+      end
 
-    #   # tags match?
-    #   def match_tags?(event_tags)
-    #     return false unless @tags && @tags.length > 0
-    #     @tags.subset?(event_tags)
-    #   end
+      # tags match?
+      def match_tags?(event_tags)
+        tags.present? && tags.subset?(event_tags)
+      end
 
       def blackhole?(severity)
         case severity
@@ -74,9 +73,7 @@ module Flapjack
       end
 
       def is_specific?
-        false
-        # (!entities.nil? && !entities.empty?) ||
-        #   (!tags.nil? && !tags.empty?)
+        entities.present? || tags.present?
       end
 
     # private

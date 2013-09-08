@@ -20,9 +20,18 @@ module Flapjack
 
       include Flapjack::Data::RedisRecord
 
-      define_attribute_methods [:first_name, :last_name, :email, :timezone]
+      # define_attributes :first_name => :string,
+      #                   :last_name => :string,
+      #                   :email => :string,
+      #                   :timezone => :string,
+      #                   :pagerduty_credentials => :hash
+      #                   (also, :json_string as another type)
+      #                   TODO validate data types on variable set & save/load
 
-      # TODO map contacts_for as 'entity:ID:contact_ids'
+      define_attribute_methods [:first_name, :last_name, :email, :timezone,
+        :pagerduty_credentials]
+
+      # TODO map contacts_for as 'entity:ID:contact_ids', entity#has_many :contacts
       
       has_many :media # , :dependent => :destroy
 
@@ -33,11 +42,11 @@ module Flapjack
         rules = self.notification_rules
         if rules.all.all? {|r| r.is_specific? } # also true if empty
           rule = Flapjack::Data::NotificationRuleR.new(
-            :entities           => [].to_json,
-            :tags               => [].to_json,
-            :time_restrictions  => [].to_json,
-            :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'].to_json,
-            :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'].to_json,
+            :entities           => [],
+            :tags               => [],
+            :time_restrictions  => [],
+            :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'],
+            :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'],
             :warning_blackhole  => false,
             :critical_blackhole => false
           )
@@ -46,9 +55,7 @@ module Flapjack
         rules
       end
 
-      # has_many :tags
-
-      # hash_key :pagerduty_credentials
+      # has_many :tags, :class_name => 
 
   #     attr_accessor :id, :first_name, :last_name, :email, :media, :media_intervals, :pagerduty_credentials
 

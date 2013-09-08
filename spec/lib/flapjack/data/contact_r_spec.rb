@@ -35,8 +35,6 @@ describe Flapjack::Data::ContactR, :redis => true do
 
   before(:each) do
 
-    Flapjack::Data::ContactR.redis = redis
-
     # contact_1_data = {:id         => '362',
     #                 :first_name => 'John',
     #                 :last_name  => 'Johnson',
