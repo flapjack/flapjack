@@ -279,7 +279,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       client.should_receive(:add_message_callback).and_yield(msg_client)
 
       muc_client.should_receive(:on_message).and_yield(now.to_i, 'jim', 'flapjack: hello!')
-      client.should_receive(:is_connected?).exactly(3).times.and_return(false, true)
+      client.should_receive(:is_connected?).times.and_return(true)
 
       ::Jabber::Client.should_receive(:new).and_return(client)
       ::Jabber::MUC::SimpleMUCClient.should_receive(:new).and_return(muc_client)
@@ -359,6 +359,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       client.should_receive(:auth).with('password')
       client.should_receive(:send).with(an_instance_of(::Jabber::Presence))
 
+      lock.should_receive(:synchronize).twice.and_yield.and_yield
+
       muc_client.should_receive(:join).with('flapjacktest@conference.example.com/flapjack')
       muc_client.should_receive(:say).with(/^flapjack jabber gateway started/)
 
@@ -371,6 +373,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       client.should_receive(:connect)
       client.should_receive(:auth).with('password')
       client.should_receive(:send).with(an_instance_of(::Jabber::Presence))
+
+      lock.should_receive(:synchronize).twice.and_yield.and_yield
 
       muc_client.should_receive(:join).with('flapjacktest@conference.example.com/flapjack')
       muc_client.should_receive(:say).with(/^flapjack jabber gateway rejoining/)
@@ -387,6 +391,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
         :config => config, :logger => @logger)
+      fjb.instance_variable_set('@joined', true)
       fjb._leave(client, muc_clients)
     end
 

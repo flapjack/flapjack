@@ -387,35 +387,38 @@ module Flapjack
             client = ::Jabber::Client.new(flapjack_jid)
 
             client.on_exception do |exc, stream, loc|
-              # TODO move log statements back inside the 'unless @should_quit' clause
-              # -- debugging with them now
-
-              if exc
-                @logger.error exc.class.name
-                @logger.error ":#{loc.to_s}"
-                @logger.error exc.message
-                @logger.error exc.backtrace.join("\n")
-              else
-                @logger.error "on_exception called with nil exception value"
-                @logger.error caller.join("\n")
-              end
+              leave_and_rejoin = nil
 
               @lock.synchronize do
-                unless @should_quit
+
+                # called with a nil exception on disconnect for some reason
+                if exc
+                  @logger.error exc.class.name
+                  @logger.error ":#{loc.to_s}"
+                  @logger.error exc.message
+                  @logger.error exc.backtrace.join("\n")
+                end
+
+                leave_and_rejoin = @joined && !@should_quit
+
+                if leave_and_rejoin
                   @state_buffer << 'leave'
                   @stop_cond.signal
                 end
               end
-              sleep 3
-              @lock.synchronize do
-                unless @should_quit
-                  @state_buffer << 'rejoin'
-                  @stop_cond.signal
+
+              if leave_and_rejoin
+                sleep 3
+                @lock.synchronize do
+                  unless @should_quit
+                    @state_buffer << 'rejoin'
+                    @stop_cond.signal
+                  end
                 end
               end
             end
 
-           check_xml = Proc.new do |data|
+            check_xml = Proc.new do |data|
               return if data.nil?
               text = ''
               begin
@@ -467,10 +470,11 @@ module Flapjack
 
             attempts_allowed = 3
             attempts_remaining = attempts_allowed
+            @joined = false
 
             loop do
 
-              if client.is_connected?
+              if @joined
                 # block this thread until signalled to quit / leave / rejoin
                 @stop_cond.wait_until { @should_quit || !@state_buffer.empty? }
               elsif attempts_remaining > 0
@@ -485,8 +489,7 @@ module Flapjack
                   begin
                     attempts_remaining -= 1
                     _join(client, muc_clients)
-                    # reset counter, joined OK
-                    attempts_remaining = attempts_allowed
+                    @joined = true
                   rescue Errno::ECONNREFUSED, ::Jabber::JabberError => je
                     report_error("Couldn't join Jabber server #{@hostname}", je)
                   end
@@ -527,6 +530,7 @@ module Flapjack
           @logger.info "connected? #{connected}"
 
           while state = @state_buffer.pop
+            @logger.info "state change #{state}"
             case state
             when 'announce'
               _announce(muc_clients) if connected
@@ -564,14 +568,23 @@ module Flapjack
             attempts_remaining = attempts_allowed
             joined = nil
             while !joined && (attempts_remaining > 0)
-              unless @should_quit || (attempts_remaining == attempts_allowed)
-                # The only thing that should be interrupting this wait is
-                # a pikelet.stop, which would set @should_quit to true;
-                # thus we shouldn't see multiple connection attempts happening
-                # too quickly.
-                @stop_cond.wait(1)
+              @lock.synchronize do
+                unless @should_quit || (attempts_remaining == attempts_allowed)
+                  # The only thing that should be interrupting this wait is
+                  # a pikelet.stop, which would set @should_quit to true;
+                  # thus we shouldn't see multiple connection attempts happening
+                  # too quickly.
+                  @stop_cond.wait(3)
+                end
               end
-              unless @should_quit # may have changed during previous wait
+
+              # may have changed during previous wait
+              sq = nil
+              @lock.synchronize do
+                sq = @should_quit
+              end
+
+              unless sq
                 attempts_remaining -= 1
                 begin
                   muc_client.join(room + '/' + @config['alias'])
@@ -588,14 +601,14 @@ module Flapjack
               end
             end
           end
-        rescue ::Jabber::ClientAuthenticationFailure
-          client.close if client.is_connected?
-          raise
         end
 
         def _leave(client, muc_clients)
-          muc_clients.values.each {|muc_client| muc_client.exit if muc_client.active? }
-          client.close
+          if @joined
+            muc_clients.values.each {|muc_client| muc_client.exit if muc_client.active? }
+            client.close
+          end
+          @joined = false
         end
 
         def _deactivate(muc_clients)
