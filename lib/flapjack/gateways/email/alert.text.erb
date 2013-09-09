@@ -2,12 +2,25 @@ Hi <%= @contact_first_name %>
 
 Monitoring has detected the following:
 
-Entity:  <%= @entity_name %>
-Check:   <%= @check %>
-State:   <%= @state %>
-Summary: <%= @summary %>
-<%= @time ? "Time:    #{Time.at(@time.to_i).to_s}" : '' %>
-<%= @last_state ? "\nPrevious state: #{@last_state}" : '' %><%= @last_summary ? "\nPrevious summary: #{@last_summary}" : '' %>
+Entity:   <%= @entity_name %>
+Check:    <%= @check %>
+State:    <%= @state %>
+Summary:  <%= @summary %>
+<% if @details -%>
+Details:  <%= @details %>
+<% end -%>
+<% if @time -%>
+Time:     <%= Time.at(@time.to_i).to_s %>
+<% end -%>
+<% if @duration && @duration > 40 -%>
+Duration: <%= ChronicDuration.output(@duration) %>
+<% end -%>
+<% if @last_state -%>
+Previous state:   <%= @last_state %>
+<% end -%>
+<% if @last_summary -%>
+Previous summary: <%= @last_summary %>
+<% end -%>
 
 Cheers,
 Flapjack

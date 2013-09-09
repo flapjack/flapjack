@@ -7,8 +7,8 @@ module Flapjack
     class ScheduledMaintenance
       include Base
 
-      def block?(event)
-        result = Flapjack.redis.exists("#{event.id}:scheduled_maintenance")
+      def block?(event, entity_check, previous_state)
+        result = entity_check.in_scheduled_maintenance?
         @logger.debug("Filter: Scheduled Maintenance: #{result ? "block" : "pass"}")
         result
       end

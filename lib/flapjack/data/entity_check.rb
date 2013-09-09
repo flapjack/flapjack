@@ -246,24 +246,24 @@ module Flapjack
         details = options[:details]
         count = options[:count]
 
-        if self.state != new_state
-          client = options[:client]
+        old_state = self.state
 
+        Flapjack.redis.multi
+
+        if old_state != new_state
           # Note the current state (for speedy lookups)
           Flapjack.redis.hset("check:#{@key}", 'state', new_state)
 
           # FIXME: rename to last_state_change?
           Flapjack.redis.hset("check:#{@key}", 'last_change', timestamp)
-          case state
+          case new_state
           when STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN
             Flapjack.redis.zadd('failed_checks', timestamp, @key)
-            # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-            Flapjack.redis.zadd("failed_checks:client:#{client}", timestamp, @key) if client
           else
             Flapjack.redis.zrem("failed_checks", @key)
-            # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-            Flapjack.redis.zrem("failed_checks:client:#{client}", @key) if client
           end
+
+          # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
 
           # Retain event data for entity:check pair
           Flapjack.redis.rpush("#{@key}:states", timestamp)
@@ -275,22 +275,27 @@ module Flapjack
           Flapjack.redis.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
         end
 
+        # Track when we last saw an event for a particular entity:check pair
+        last_update = timestamp
+
         # Even if this isn't a state change, we need to update the current state
         # hash summary and details (as they may have changed)
         Flapjack.redis.hset("check:#{@key}", 'summary', (summary || ''))
         Flapjack.redis.hset("check:#{@key}", 'details', (details || ''))
-      end
 
-      def last_update
-        lu = Flapjack.redis.hget("check:#{@key}", 'last_update')
-        return unless (lu && lu =~ /^\d+$/)
-        lu.to_i
+        Flapjack.redis.exec
       end
 
       def last_update=(timestamp)
         Flapjack.redis.hset("check:#{@key}", 'last_update', timestamp)
         Flapjack.redis.zadd("current_checks:#{entity.name}", timestamp, check)
         Flapjack.redis.zadd("current_entities", timestamp, entity.name)
+      end
+
+      def last_update
+        lu = Flapjack.redis.hget("check:#{@key}", 'last_update')
+        return unless lu && !!(lu =~ /^\d+$/)
+        lu.to_i
       end
 
       # disables a check (removes currency)
@@ -304,12 +309,12 @@ module Flapjack
       end
 
       def enabled?
-        !! Flapjack.redis.zscore("current_checks:#{entity.name}", check)
+        !!Flapjack.redis.zscore("current_checks:#{entity.name}", check)
       end
 
       def last_change
         lc = Flapjack.redis.hget("check:#{@key}", 'last_change')
-        return unless (lc && lc =~ /^\d+$/)
+        return unless lc && !!(lc =~ /^\d+$/)
         lc.to_i
       end
 
