@@ -8,7 +8,6 @@ require 'flapjack/filters/acknowledgement'
 require 'flapjack/filters/ok'
 require 'flapjack/filters/scheduled_maintenance'
 require 'flapjack/filters/unscheduled_maintenance'
-require 'flapjack/filters/detect_mass_client_failures'
 require 'flapjack/filters/delays'
 
 require 'flapjack/data/entity_check'
@@ -47,7 +46,6 @@ module Flapjack
       @filters << Flapjack::Filters::Ok.new(options)
       @filters << Flapjack::Filters::ScheduledMaintenance.new(options)
       @filters << Flapjack::Filters::UnscheduledMaintenance.new(options)
-      @filters << Flapjack::Filters::DetectMassClientFailures.new(options)
       @filters << Flapjack::Filters::Delays.new(options)
       @filters << Flapjack::Filters::Acknowledgement.new(options)
 
@@ -129,18 +127,18 @@ module Flapjack
 
       event.tags = (event.tags || Flapjack::Data::TagSet.new) + entity_check.tags
 
-      should_notify = update_keys(event, entity_check, timestamp)
+      should_notify, previous_state = update_keys(event, entity_check, timestamp)
 
       if !should_notify
         @logger.debug("Not generating notification for event #{event.id} because filtering was skipped")
         return
-      elsif blocker = @filters.find {|filter| filter.block?(event) }
+      elsif blocker = @filters.find {|filter| filter.block?(event, entity_check, previous_state) }
         @logger.debug("Not generating notification for event #{event.id} because this filter blocked: #{blocker.name}")
         return
       end
 
       @logger.info("Generating notification for event #{event_str}")
-      generate_notification(event, entity_check, timestamp)
+      generate_notification(event, entity_check, timestamp, previous_state)
     end
 
     def update_keys(event, entity_check, timestamp)
@@ -148,6 +146,7 @@ module Flapjack
       touch_keys
 
       result = true
+      previous_state = nil
 
       event.counter = Flapjack.redis.hincrby('event_counters', 'all', 1)
       Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
@@ -160,9 +159,7 @@ module Flapjack
       case event.type
       # Service events represent changes in state on monitored systems
       when 'service'
-        # Track when we last saw an event for a particular entity:check pair
-        entity_check.last_update = timestamp
-
+        Flapjack.redis.multi
         if event.ok?
           Flapjack.redis.hincrby('event_counters', 'ok', 1)
           Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'ok', 1)
@@ -171,10 +168,11 @@ module Flapjack
           Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'failure', 1)
           Flapjack.redis.hset('unacknowledged_failures', event.counter, event.id)
         end
+        Flapjack.redis.exec
 
-        event.previous_state = entity_check.state
+        previous_state = entity_check.state
 
-        if event.previous_state.nil?
+        if previous_state.nil?
           @logger.info("No previous state for event #{event.id}")
 
           if @ncsm_duration >= 0
@@ -182,28 +180,24 @@ module Flapjack
             entity_check.create_scheduled_maintenance(timestamp,
               @ncsm_duration, :summary => 'Automatically created for new check')
           end
-        else
-          event.previous_state_duration = timestamp - entity_check.last_change.to_i
+
+          # If the service event's state is ok and there was no previous state, don't alert.
+          # This stops new checks from alerting as "recovery" after they have been added.
+          if event.ok?
+            @logger.debug("setting skip_filters to true because there was no previous state and event is ok")
+            result = false
+          end
         end
 
         entity_check.update_state(event.state, :timestamp => timestamp,
-          :summary => event.summary, :client => event.client,
-          :count => event.counter, :details => event.details)
-
-        # No state change, and event is ok, so no need to run through filters
-        # OR
-        # If the service event's state is ok and there was no previous state, don't alert.
-        # This stops new checks from alerting as "recovery" after they have been added.
-        if !event.previous_state && event.ok?
-          @logger.debug("setting skip_filters to true because there was no previous state and event is ok")
-          result = false
-        end
+          :summary => event.summary, :count => event.counter, :details => event.details)
 
         entity_check.update_current_scheduled_maintenance
 
       # Action events represent human or automated interaction with Flapjack
       when 'action'
         # When an action event is processed, store the event.
+        Flapjack.redis.multi
         Flapjack.redis.hset(event.id + ':actions', timestamp, event.state)
         Flapjack.redis.hincrby('event_counters', 'action', 1)
         Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'action', 1)
@@ -211,26 +205,44 @@ module Flapjack
         if event.acknowledgement? && event.acknowledgement_id
           Flapjack.redis.hdel('unacknowledged_failures', event.acknowledgement_id)
         end
+        Flapjack.redis.exec
       end
 
-      result
+      [result, previous_state]
     end
 
-    def generate_notification(event, entity_check, timestamp)
+    def generate_notification(event, entity_check, timestamp, previous_state)
       notification_type = Flapjack::Data::Notification.type_for_event(event)
       max_notified_severity = entity_check.max_notified_severity_of_current_failure
 
+      Flapjack.redis.multi
       Flapjack.redis.set("#{event.id}:last_#{notification_type}_notification", timestamp)
       Flapjack.redis.set("#{event.id}:last_#{event.state}_notification", timestamp) if event.failure?
       Flapjack.redis.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
       Flapjack.redis.rpush("#{event.id}:#{event.state}_notifications", timestamp) if event.failure?
+      Flapjack.redis.exec
+
       @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}: " + event.inspect)
 
       severity = Flapjack::Data::Notification.severity_for_event(event, max_notified_severity)
-      last_state = entity_check.historical_state_before(timestamp)
+
+      historical_state = case entity_check.state
+      when previous_state
+        # current state
+        curr = entity_check.historical_states(nil, nil, :order => 'desc', :limit => 1)
+        (curr && (curr.size == 1)) ? curr.first : nil
+      else
+        # last state
+        curr_and_last = entity_check.historical_states(nil, nil, :order => 'desc', :limit => 2)
+        (curr_and_last && (curr_and_last.size == 2)) ? curr_and_last.last : nil
+      end
+
+      lc = entity_check.last_change
+      state_duration = lc ? (timestamp - lc) : nil
 
       Flapjack::Data::Notification.push(@notifier_queue, event,
-        :type => notification_type, :severity => severity, :last_state => last_state
+        :type => notification_type, :severity => severity,
+        :last_state => historical_state, :state_duration => state_duration
       )
     end
 

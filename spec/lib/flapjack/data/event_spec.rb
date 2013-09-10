@@ -85,7 +85,6 @@ describe Flapjack::Data::Event do
     its(:duration) { should == event_data['duration'] }
     its(:time)     { should == event_data['time'] }
     its(:id)       { should == 'xyz-example.com:ping' }
-    its(:client)   { should == 'xyz' }
     its(:type)     { should == 'service' }
 
     it { should be_a_service }

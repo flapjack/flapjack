@@ -51,7 +51,7 @@
       </tr>
     <% end %>
 
-    <% if @duration %>
+    <% if @duration && @duration > 40 %>
       <tr>
         <td><strong>Duration</strong></td>
         <td><%= ChronicDuration.output(@duration) %></td>

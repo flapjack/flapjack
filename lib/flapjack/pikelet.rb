@@ -62,8 +62,8 @@ module Flapjack
           max_runs = @config['max_runs'] || 1
           runs = 0
 
-          error = nil
-          stop_all = false
+          keep_running = false
+          shutdown_all = false
 
           loop do
             begin
@@ -71,18 +71,20 @@ module Flapjack
               yield
             rescue Flapjack::PikeletStop
               @logger.debug "pikelet exception stop for #{@pikelet_class.name}"
-            rescue Flapjack::GlobalStop
+             rescue Flapjack::GlobalStop
               @logger.debug "global exception stop for #{@pikelet_class.name}"
-              stop_all = true
+              @shutdown_thread = @thread
+              shutdown_all = true
             rescue Exception => e
               @logger.warn "#{e.class.name} #{e.message}"
               trace = e.backtrace
               @logger.warn trace.join("\n") if trace
-              error = e
+              runs += 1
+              keep_running = (max_runs > 0) && (runs < max_runs)
+              shutdown_all = !keep_running
             end
 
-            runs += 1
-            break unless error && (max_runs > 0) && (runs < max_runs)
+            break unless keep_running
           end
 
           @lock.synchronize do
@@ -90,7 +92,7 @@ module Flapjack
             @finished_condition.signal
           end
 
-          if error || stop_all
+          if shutdown_all
             @shutdown.call
           end
         end
@@ -102,29 +104,28 @@ module Flapjack
       end
 
       def stop(&block)
+        fin = nil
+        @lock.synchronize do
+          fin = @finished
+        end
+        return if fin
         if block_given?
           yield
         else
           case @pikelet.stop_type
           when :exception
             @lock.synchronize do
-              unless @finished
-                @logger.debug "triggering pikelet exception stop for #{@pikelet_class.name}"
-                @thread.raise Flapjack::PikeletStop
-                @finished_condition.wait_until { @finished }
-              end
+              @logger.debug "triggering pikelet exception stop for #{@pikelet_class.name}"
+              @thread.raise Flapjack::PikeletStop
+              @finished_condition.wait_until { @finished }
             end
           when :signal
             @lock.synchronize do
-              unless @finished
-                @logger.debug "triggering pikelet signal stop for #{@pikelet_class.name}"
-                @pikelet.instance_variable_set('@should_quit', true)
-                @stop_condition.signal
-                @finished_condition.wait_until { @finished }
-              end
+              @logger.debug "triggering pikelet signal stop for #{@pikelet_class.name}"
+              @pikelet.instance_variable_set('@should_quit', true)
+              @stop_condition.signal
+              @finished_condition.wait_until { @finished }
             end
-          else
-            @logger.warn "Unknown pikelet stop type #{@pikelet.stop_type}"
           end
         end
 

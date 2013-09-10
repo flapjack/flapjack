@@ -84,26 +84,18 @@ module Flapjack
         @contact_first_name         = message['contact_first_name']
         @contact_last_name          = message['contact_last_name']
         @state                      = message['state']
+        @duration                   = message['state_duration']
         @summary                    = message['summary']
         @last_state                 = message['last_state']
         @last_summary               = message['last_summary']
         @details                    = message['details']
         @time                       = message['time']
-        @relative                   = relative_time_ago(Time.at(@time))
         @entity_name, @check        = message['event_id'].split(':', 2)
 
         entity_check = Flapjack::Data::EntityCheck.for_event_id(message['event_id'])
 
         @in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
         @in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
-
-        # FIXME: I can't get the entity_check.last_change to work in this context
-        # it always returns nil, despite entity_check being a good looking EntityCheck object
-        # and all ...
-        if lc = entity_check.last_change
-          duration  = (Time.now.to_i - lc)
-          @duration = (duration && duration > 40) ? duration : nil
-        end
 
         headline_map = {'problem'         => 'Problem: ',
                         'recovery'        => 'Recovery: ',
@@ -148,10 +140,10 @@ module Flapjack
 
       def prepare_email(opts = {})
         text_template = ERB.new(File.read(File.dirname(__FILE__) +
-          '/email/alert.text.erb'))
+          '/email/alert.text.erb'), nil, '-')
 
         html_template = ERB.new(File.read(File.dirname(__FILE__) +
-          '/email/alert.html.erb'))
+          '/email/alert.html.erb'), nil, '-')
 
         bnd = binding
 

@@ -14,6 +14,7 @@ Oj.mimic_JSON
 Oj.default_options = { :indent => 0, :mode => :strict }
 require 'active_support/json'
 
+require 'flapjack'
 require 'flapjack/configuration'
 require 'flapjack/data/event'
 
