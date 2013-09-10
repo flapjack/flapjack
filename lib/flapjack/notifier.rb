@@ -109,6 +109,11 @@ module Flapjack
         address    = message.address
         contents   = message.contents.merge(notification_contents)
 
+        if message.contact.reached_rollup_threshold_for_media?(media_type)
+          # TODO
+        end
+
+
         @notifylog.info("#{event_id} | " +
           "#{notification.type} | #{message.contact.id} | #{media_type} | #{address}")
 
