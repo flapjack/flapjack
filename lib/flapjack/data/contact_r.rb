@@ -20,19 +20,14 @@ module Flapjack
 
       include Flapjack::Data::RedisRecord
 
-      # define_attributes :first_name => :string,
-      #                   :last_name => :string,
-      #                   :email => :string,
-      #                   :timezone => :string,
-      #                   :pagerduty_credentials => :hash
-      #                   (also, :json_string as another type)
-      #                   TODO validate data types on variable set & save/load
-
-      define_attribute_methods [:first_name, :last_name, :email, :timezone,
-        :pagerduty_credentials]
+      define_attributes :first_name => :string,
+                        :last_name => :string,
+                        :email => :string,
+                        :timezone => :string,
+                        :pagerduty_credentials => :hash
 
       # TODO map contacts_for as 'entity:ID:contact_ids', entity#has_many :contacts
-      
+
       has_many :media # , :dependent => :destroy
 
       has_many :notification_rules, :class => Flapjack::Data::NotificationRuleR
@@ -55,7 +50,7 @@ module Flapjack
         rules
       end
 
-      # has_many :tags, :class_name => 
+      # has_many :tags, :class_name =>
 
   #     attr_accessor :id, :first_name, :last_name, :email, :media, :media_intervals, :pagerduty_credentials
 

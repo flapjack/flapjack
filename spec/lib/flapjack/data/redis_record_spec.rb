@@ -7,7 +7,8 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   class ::FdrrExample
     include Flapjack::Data::RedisRecord
 
-    define_attribute_methods [:name, :email]
+    define_attributes :name  => :string,
+                      :email => :string
 
     validates :name, :presence => true
 
@@ -18,7 +19,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
   class ::FdrrChild
     include Flapjack::Data::RedisRecord
-    define_attribute_methods [:name]
+    define_attributes :name => :string
     validates :name, :presence => true
   end
 

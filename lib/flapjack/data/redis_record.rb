@@ -16,6 +16,14 @@ module Flapjack
 
     module RedisRecord
 
+      ATTRIBUTE_TYPES = {:string      => [String],
+                         :integer     => [Integer],
+                         :boolean     => [TrueClass, FalseClass],
+                         :list        => [Enumerable],
+                         :set         => [Set],
+                         :hash        => [Hash],
+                         :json_string => [String, Integer, Enumerable, Set, Hash]}
+
       extend ActiveSupport::Concern
 
       included do
@@ -27,6 +35,8 @@ module Flapjack
         # attribute_method_suffix  ""   # attr_readers # DEPRECATED
 
         attr_accessor :logger
+
+        validates_with Flapjack::Data::RedisRecord::TypeValidator
 
         instance_eval do
           # Evaluates in the context of the class -- so this is a
@@ -79,6 +89,22 @@ module Flapjack
           find_by_id(id)
         end
 
+        def attribute_types
+          @attribute_types
+        end
+
+        protected
+
+        def define_attributes(options = {})
+          @attribute_types ||= {}
+          options.each_pair do |key, value|
+            raise "Unknown attribute type ':#{value}' for ':#{key}'" unless
+              ATTRIBUTE_TYPES.include?(value)
+              self.define_attribute_methods [key]
+          end
+          @attribute_types.update(options)
+        end
+
         def index_by(*args)
           @indexers ||= {}
           idxs = args.inject({}) do |memo, arg|
@@ -91,10 +117,6 @@ module Flapjack
         def has_many(*args)
           associate(HasManyAssociation, self, args)
         end
-
-        # def has_one(*args)
-        #   associate(HasOneAssociation, self, args)
-        # end
 
         private
 
@@ -115,20 +137,6 @@ module Flapjack
           return if name.nil? || method_defined?(name)
 
           assoc = case klass.name
-          # when ::Flapjack::Data::RedisRecord::HasOneAssociation.name
-          #   %Q{
-          #     def #{name}
-          #       #{name}_proxy
-          #     end
-
-          #     private
-
-          #     def #{name}_proxy
-          #       @#{name}_proxy ||=
-          #         ::Flapjack::Data::RedisRecord::HasOneAssociation.new(self, "#{name}",
-          #           :class => #{options[:class] ? options[:class].name : 'nil'} )
-          #     end
-          #   }
           when ::Flapjack::Data::RedisRecord::HasManyAssociation.name
             %Q{
               def #{name}
@@ -348,20 +356,22 @@ module Flapjack
 
       end
 
-      # class HasOneAssociation
+      class TypeValidator < ActiveModel::Validator
+        def validate(record)
+          attr_types = record.class.attribute_types
 
-      #   def initialize(parent, name, options = {})
-      #     @hash = Redis::HashKey.new("#{parent.class.name.downcase}:#{parent.id}:#{name}")
-
-      #     # TODO trap possible constantize error
-      #     @associated_class = (options[:class] || name).classify.constantize
-      #     raise 'Associated class does not mixin RedisRecord' unless @associated_class.included_modules.include?(RedisRecord)
-      #   end
-
-      #   # TODO shim to the @hash
-
-      # end
-
+          attr_types.each_pair do |name, type|
+            value = record.send(name)
+            next if value.nil?
+            valid_type = Flapjack::Data::RedisRecord::ATTRIBUTE_TYPES[type]
+            unless valid_type.any? {|type| value.is_a?(type) }
+              count = (valid_type.size > 1) ? "one of" : "a"
+              type_str = valid_type.collect {|type| type.name }.join(", ")
+              record.errors.add(name, "should be #{count} #{type_str} but is a #{value.class.name}")
+            end
+          end
+        end
+      end
     end
   end
 end

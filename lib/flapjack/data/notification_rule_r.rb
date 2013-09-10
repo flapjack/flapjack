@@ -15,8 +15,14 @@ module Flapjack
 
       include Flapjack::Data::RedisRecord
 
-      define_attribute_methods [:entities, :tags, :time_restrictions,
-        :warning_media, :critical_media, :warning_blackhole, :critical_blackhole]
+      # TODO port to Redis data-types as redis_record supports them
+      define_attributes :entities => :json_string,
+                        :tags => :json_string,
+                        :time_restrictions => :json_string,
+                        :warning_media => :json_string,
+                        :critical_media => :json_string,
+                        :warning_blackhole => :boolean,
+                        :critical_blackhole => :boolean
 
       # NB: ice_cube doesn't have much rule data validation, and has
       # problems with infinite loops if the data can't logically match; see
