@@ -244,22 +244,20 @@ Feature: Notification rules on a per contact basis
 
   @intervals @time
   Scenario: Problem directly after Recovery should alert despite notification intervals with unknown
-    Given the check is check 'ping' on entity 'baz'
+    Given the check is check 'ping' on entity 'bar'
     And   the check is in an ok state
     When  an unknown event is received
     And   1 minute passes
     And   an unknown event is received
     Then  1 email alert should be queued for malak@example.com
-    And   1 sms alert should be queued for +61400000001
     When  an ok event is received
     Then  2 email alert should be queued for malak@example.com
-    And   2 sms alerts should be queued for +61400000001
     When  1 minute passes
     And   an unknown event is received
     And   1 minute passes
     And   an unknown event is received
     Then  3 email alerts should be queued for malak@example.com
-    And   3 sms alerts should be queued for +61400000001
+    And   0 sms alerts should be queued for +61400000001
 
   @time
   Scenario: Contact with only entity specific rules should not be notified for other entities they are a contact for
@@ -332,26 +330,31 @@ Feature: Notification rules on a per contact basis
     Then  2 email alert should be queued for malak@example.com
     And   2 sms alert should be queued for +61400000001
 
+  @time
   Scenario: Unknown event during unscheduled maintenance
-    Given the check is check 'ping' on entity 'baz'
+    Given the check is check 'ping' on entity 'bar'
     And   the check is in an ok state
     When  an unknown event is received
     And   1 minute passes
     And   an unknown event is received
     Then  1 email alert should be queued for malak@example.com
-    And   1 sms alert should be queued for +61400000001
     When  6 minutes passes
     And   an acknowledgement event is received
     Then  2 email alerts should be queued for malak@example.com
-    And   2 sms alerts should be queued for +61400000001
     When  6 minutes passes
     And   an unknown event is received
     Then  2 email alerts should be queued for malak@example.com
-    And   2 sms alerts should be queued for +61400000001
     When  1 minute passes
     And   an unknown event is received
     Then  2 email alerts should be queued for malak@example.com
-    And   2 sms alerts should be queued for +61400000001
+
+  Scenario: Unknown events alert only specified media
+    Given the check is check 'ping' on entity 'baz'
+    And   the check is in an ok state
+    When  an unknown event is received
+    And   1 minute passes
+    And   an unknown event is received
+    Then  0 sms alerts should be queued for +61400000001
 
   @time
   Scenario: A blackhole rule on an entity should override another matching entity specific rule
