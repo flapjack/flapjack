@@ -35,11 +35,11 @@ Feature: Notification rules on a per contact basis
       | 15    | 60  |
 
     And user 1 has the following notification rules:
-      | entities | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          | email         | sms,email        | true              | true               |                   |
-      | foo      | email         | sms,email        |                   |                    | 8-18 weekdays     |
-      | bar      |               | sms,email        | true              |                    |                   |
-      | baz      | email         | sms,email        |                   |                    |                   |
+      | entities | unknown_media | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
+      |          |               | email         | sms,email        | true              | true               |                   |
+      | foo      |               | email         | sms,email        |                   |                    | 8-18 weekdays     |
+      | bar      | email         |               | sms,email        | true              |                    |                   |
+      | baz      |               | email         | sms,email        |                   |                    |                   |
 
     And user 2 has the following notification rules:
       | entities | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole |
