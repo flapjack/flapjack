@@ -8,6 +8,7 @@ Feature: Notification rules on a per contact basis
       | 2   | Imani      | Farooq    | imani@example.com | +61400000002 | Europe/Moscow    |
       | 3   | Vera       | Дурейко   | vera@example.com  | +61400000003 | Europe/Paris     |
       | 4   | Lucia      | Moretti   | lucia@example.com | +61400000004 | Europe/Rome      |
+      | 5   | Wang Fang  | Wong      | fang@example.com  | +61400000005 | Asia/Shanghai    |
 
     And the following entities exist:
       | id  | name           | contacts |
@@ -60,6 +61,10 @@ Feature: Notification rules on a per contact basis
       |          |                 |               |                  |                   |                    |                   |
       |          | xyz, disk, util | sms           | sms              |                   |                    |                   |
       |          | xyz, ping       | sms,email     | sms,email        |                   |                    | 8-18 weekdays     |
+
+    And user 5 has the following notification rules:
+      | unknown_media | critical_media |
+      | email         | email, sms     |
 
   @time_restrictions @time
   Scenario: Alerts only during specified time restrictions
