@@ -35,32 +35,32 @@ Feature: Notification rules on a per contact basis
       | 15    | 60  |
 
     And user 1 has the following notification rules:
-      | entities | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          |      | email         | sms,email        | true              | true               |                   |
-      | foo      |      | email         | sms,email        |                   |                    | 8-18 weekdays     |
-      | bar      |      |               | sms,email        | true              |                    |                   |
-      | baz      |      | email         | sms,email        |                   |                    |                   |
+      | entities | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
+      |          | email         | sms,email        | true              | true               |                   |
+      | foo      | email         | sms,email        |                   |                    | 8-18 weekdays     |
+      | bar      |               | sms,email        | true              |                    |                   |
+      | baz      | email         | sms,email        |                   |                    |                   |
 
     And user 2 has the following notification rules:
-      | entities | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          |      | email         | email            |                   |                    |                   |
-      |          |      | sms           | sms              |                   |                    |                   |
-      | bar      |      | email         | email,sms        |                   |                    |                   |
-      | bar      | wags |               |                  | true              | true               |                   |
+      | entities | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole |
+      |          |      | email         | email            |                   |                    |
+      |          |      | sms           | sms              |                   |                    |
+      | bar      |      | email         | email,sms        |                   |                    |
+      | bar      | wags |               |                  | true              | true               |
 
     And user 3 has the following notification rules:
-      | entities | tags            | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          |                 | email         | email            |                   |                    |                   |
-      | baz      |                 | sms           | sms              |                   |                    |                   |
-      | buf      |                 | email         | email            |                   |                    |                   |
-      | buf      |                 | sms           | sms              |                   |                    |                   |
-      | bar      |                 | email         | email            | true              | true               |                   |
+      | entities | warning_media | critical_media   | warning_blackhole | critical_blackhole |
+      |          | email         | email            |                   |                    |
+      | baz      | sms           | sms              |                   |                    |
+      | buf      | email         | email            |                   |                    |
+      | buf      | sms           | sms              |                   |                    |
+      | bar      | email         | email            | true              | true               |
 
     And user 4 has the following notification rules:
-      | tags            | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |                 |               |                  |                   |                    |                   |
-      | xyz, disk, util | sms           | sms              |                   |                    |                   |
-      | xyz, ping       | sms,email     | sms,email        |                   |                    | 8-18 weekdays     |
+      | tags            | warning_media | critical_media   | time_restrictions |
+      |                 |               |                  |                   |
+      | xyz, disk, util | sms           | sms              |                   |
+      | xyz, ping       | sms,email     | sms,email        | 8-18 weekdays     |
 
     And user 5 has the following notification rules:
       | unknown_media | critical_media |
