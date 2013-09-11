@@ -70,8 +70,8 @@ describe Flapjack::Data::ContactR, :redis => true do
   end
 
   def create_contact
-    redis.hmset('flapjack/data/contact_r:1:attrs', {'first_name' => '"John"',
-      'last_name' => '"Smith"', 'email' => '"jsmith@example.com"'}.flatten)
+    redis.hmset('flapjack/data/contact_r:1:attrs', {'first_name' => 'John',
+      'last_name' => 'Smith', 'email' => 'jsmith@example.com'}.flatten)
     redis.sadd('flapjack/data/contact_r::ids', '1')
   end
 
@@ -234,7 +234,7 @@ describe Flapjack::Data::ContactR, :redis => true do
   # end
 
 
-  it "creates a general notification rule for a pre-existing contact if the existing general one was changed" 
+  it "creates a general notification rule for a pre-existing contact if the existing general one was changed"
 
   # it "creates a general notification rule for a pre-existing contact if the existing general one was changed" do
   #   contact = Flapjack::Data::Contact.find_by_id('363')

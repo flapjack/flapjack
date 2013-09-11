@@ -37,11 +37,11 @@ module Flapjack
         rules = self.notification_rules
         if rules.all.all? {|r| r.is_specific? } # also true if empty
           rule = Flapjack::Data::NotificationRuleR.new(
-            :entities           => [],
-            :tags               => [],
+            :entities           => Set.new,
+            :tags               => Set.new,
             :time_restrictions  => [],
-            :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'],
-            :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'],
+            :warning_media      => Set.new(['email', 'sms', 'jabber', 'pagerduty']),
+            :critical_media     => Set.new(['email', 'sms', 'jabber', 'pagerduty']),
             :warning_blackhole  => false,
             :critical_blackhole => false
           )

@@ -16,11 +16,11 @@ module Flapjack
       include Flapjack::Data::RedisRecord
 
       # TODO port to Redis data-types as redis_record supports them
-      define_attributes :entities => :json_string,
-                        :tags => :json_string,
+      define_attributes :entities => :set,
+                        :tags => :set,
                         :time_restrictions => :json_string,
-                        :warning_media => :json_string,
-                        :critical_media => :json_string,
+                        :warning_media => :set,
+                        :critical_media => :set,
                         :warning_blackhole => :boolean,
                         :critical_blackhole => :boolean
 
