@@ -206,7 +206,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       with(entity, 'ping', :redis => redis).and_return(entity_check)
 
     entity_check.should_receive(:create_scheduled_maintenance).
-      with(:start_time => start_time.to_i, :duration => duration, :summary => summary)
+      with(start_time.to_i, duration, :summary => summary)
 
     post "/scheduled_maintenances/#{entity_name_esc}/ping?"+
       "start_time=1+day+ago&duration=30+minutes&summary=wow"
