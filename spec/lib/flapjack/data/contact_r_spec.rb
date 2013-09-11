@@ -11,22 +11,22 @@ require 'flapjack/data/tag_set'
 describe Flapjack::Data::ContactR, :redis => true do
 
   let(:notification_rule_data) {
-    {:tags               => ["database","physical"],
-     :entities           => ["foo-app-01.example.com"],
+    {:tags               => Set.new(["database","physical"]),
+     :entities           => Set.new(["foo-app-01.example.com"]),
      :time_restrictions  => [],
-     :warning_media      => ["email"],
-     :critical_media     => ["sms", "email"],
+     :warning_media      => Set.new(["email"]),
+     :critical_media     => Set.new(["sms", "email"]),
      :warning_blackhole  => false,
      :critical_blackhole => false
     }
   }
 
   let(:general_notification_rule_data) {
-    {:entities           => [],
-     :tags               => [],
+    {:entities           => Set.new,
+     :tags               => Set.new,
      :time_restrictions  => [],
-     :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'],
-     :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'],
+     :warning_media      => Set.new(['email', 'sms', 'jabber', 'pagerduty']),
+     :critical_media     => Set.new(['email', 'sms', 'jabber', 'pagerduty']),
      :warning_blackhole  => false,
      :critical_blackhole => false}
   }

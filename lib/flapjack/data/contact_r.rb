@@ -8,9 +8,8 @@ require 'ice_cube'
 
 require 'flapjack/data/redis_record'
 require 'flapjack/data/entity'
+require 'flapjack/data/medium_r'
 require 'flapjack/data/notification_rule_r'
-require 'flapjack/data/tag'
-require 'flapjack/data/tag_set'
 
 module Flapjack
 
@@ -24,11 +23,12 @@ module Flapjack
                         :last_name => :string,
                         :email => :string,
                         :timezone => :string,
-                        :pagerduty_credentials => :hash
+                        :pagerduty_credentials => :hash,
+                        :tags => :set
 
       # TODO map contacts_for as 'entity:ID:contact_ids', entity#has_many :contacts
 
-      has_many :media # , :dependent => :destroy
+      has_many :media, :class => Flapjack::Data::MediumR # , :dependent => :destroy
 
       has_many :notification_rules, :class => Flapjack::Data::NotificationRuleR
 
@@ -50,72 +50,9 @@ module Flapjack
         rules
       end
 
-      # has_many :tags, :class_name =>
-
-  #     attr_accessor :id, :first_name, :last_name, :email, :media, :media_intervals, :pagerduty_credentials
-
-  #     TAG_PREFIX = 'contact_tag'
-
       # TODO sort usages of 'Contact.all' by [c.last_name, c.first_name] in the code,
       # or change the association to a sorted_set and provide the sort condition up front
       # (use id if not provided)
-
-
-      # contact.media_list should be replaced by
-      # contact.media.collect {|m| m['address'] }
-
-
-  #     # ensure that instance variables match redis state
-  #     # TODO may want to make this protected/private, it's only
-  #     # used in this class
-  #     def refresh
-  #       self.first_name, self.last_name, self.email =
-  #         Flapjack.redis.hmget("contact:#{@id}", 'first_name', 'last_name', 'email')
-  #       self.media = Flapjack.redis.hgetall("contact_media:#{@id}")
-  #       self.media_intervals = Flapjack.redis.hgetall("contact_media_intervals:#{self.id}")
-
-  #       # similar to code in instance method pagerduty_credentials
-  #       if service_key = Flapjack.redis.hget("contact_media:#{@id}", 'pagerduty')
-  #         self.pagerduty_credentials =
-  #           Flapjack.redis.hgetall("contact_pagerduty:#{@id}").merge('service_key' => service_key)
-  #       end
-  #     end
-
-  #     def delete!
-  #       # remove entity & check registrations -- ugh, this will be slow.
-  #       # rather than check if the key is present we'll just request its
-  #       # deletion anyway, fewer round-trips
-  #       Flapjack.redis.keys('contacts_for:*').each do |cfk|
-  #         Flapjack.redis.srem(cfk, self.id)
-  #       end
-
-  #       Flapjack.redis.del("drop_alerts_for_contact:#{self.id}")
-  #       dafc = Flapjack.redis.keys("drop_alerts_for_contact:#{self.id}:*")
-  #       Flapjack.redis.del(*dafc) unless dafc.empty?
-
-  #       # TODO if implemented, alerts_by_contact & alerts_by_check:
-  #       # list all alerts from all matched keys, remove them from
-  #       # the main alerts sorted set, remove all alerts_by sorted sets
-  #       # for the contact
-
-  #       # remove this contact from all tags it's marked with
-  #       self.delete_tags(*self.tags.to_a)
-
-  #       # remove all associated notification rules
-  #       self.notification_rules.each do |nr|
-  #         self.delete_notification_rule(nr)
-  #       end
-
-  #       Flapjack.redis.del("contact:#{self.id}", "contact_media:#{self.id}",
-  #                  "contact_media_intervals:#{self.id}",
-  #                  "contact_tz:#{self.id}", "contact_pagerduty:#{self.id}")
-  #     end
-
-  #     def pagerduty_credentials
-  #       return unless service_key = Flapjack.redis.hget("contact_media:#{self.id}", 'pagerduty')
-  #       Flapjack.redis.hgetall("contact_pagerduty:#{self.id}").
-  #         merge('service_key' => service_key)
-  #     end
 
   #     # NB ideally contacts_for:* keys would scope the entity and check by an
   #     # input source, for namespacing purposes
@@ -165,21 +102,6 @@ module Flapjack
         super
       end
 
-
-  #     def add_notification_rule(rule_data, opts = {})
-  #       if logger = opts[:logger]
-  #         logger.debug("add_notification_rule: contact_id: #{self.id} (#{self.id.class})")
-  #       end
-  #       Flapjack::Data::NotificationRule.add(rule_data.merge(:contact_id => self.id),
-  #         :logger => opts[:logger])
-  #     end
-
-  #     def delete_notification_rule(rule)
-  #       Flapjack.redis.srem("contact_notification_rules:#{self.id}", rule.id)
-  #       Flapjack.redis.del("notification_rule:#{rule.id}")
-  #     end
-
-
   #     # drop notifications for
   #     def drop_notifications?(opts = {})
   #       media    = opts[:media]
@@ -206,37 +128,6 @@ module Flapjack
   #       else
   #         Flapjack.redis.set(key, 'd')
   #         Flapjack.redis.expire(key, self.interval_for_media(media))
-  #       end
-  #     end
-
-  #     # FIXME
-  #     # do a mixin with the following tag methods, they will be the same
-  #     # across all objects we allow tags on
-
-  #     # return the set of tags for this contact
-  #     def tags
-  #       @tags ||= Flapjack::Data::TagSet.new( Flapjack.redis.keys("#{TAG_PREFIX}:*").inject([]) {|memo, tag|
-  #         if Flapjack::Data::Tag.find(tag).include?(@id.to_s)
-  #           memo << tag.sub(/^#{TAG_PREFIX}:/, '')
-  #         end
-  #         memo
-  #       } )
-  #     end
-
-  #     # adds tags to this contact
-  #     def add_tags(*enum)
-  #       enum.each do |t|
-  #         Flapjack::Data::Tag.create("#{TAG_PREFIX}:#{t}", [@id])
-  #         tags.add(t)
-  #       end
-  #     end
-
-  #     # removes tags from this contact
-  #     def delete_tags(*enum)
-  #       enum.each do |t|
-  #         tag = Flapjack::Data::Tag.find("#{TAG_PREFIX}:#{t}")
-  #         tag.delete(@id)
-  #         tags.delete(t)
   #       end
   #     end
 
@@ -271,35 +162,6 @@ module Flapjack
   #         "last_name"  => self.last_name,
   #         "email"      => self.email,
   #         "tags"       => self.tags.to_a }.to_json
-  #     end
-
-  #   private
-
-  #     # NB: should probably be called in the context of a Redis multi block; not doing so
-  #     # here as calling classes may well be adding/updating multiple records in the one
-  #     # operation
-  #     def self.add_or_update(contact_id, contact_data, options = {})
-  #       # TODO check that the rest of this is safe for the update case
-  #       Flapjack.redis.hmset("contact:#{contact_id}",
-  #                   *['first_name', 'last_name', 'email'].collect {|f| [f, contact_data[f]]})
-
-  #       unless contact_data['media'].nil?
-  #         Flapjack.redis.del("contact_media:#{contact_id}")
-  #         Flapjack.redis.del("contact_media_intervals:#{contact_id}")
-  #         Flapjack.redis.del("contact_pagerduty:#{contact_id}")
-
-  #         contact_data['media'].each_pair {|medium, details|
-  #           case medium
-  #           when 'pagerduty'
-  #             Flapjack.redis.hset("contact_media:#{contact_id}", medium, details['service_key'])
-  #             Flapjack.redis.hmset("contact_pagerduty:#{contact_id}",
-  #                         *['subdomain', 'username', 'password'].collect {|f| [f, details[f]]})
-  #           else
-  #             Flapjack.redis.hset("contact_media:#{contact_id}", medium, details['address'])
-  #             Flapjack.redis.hset("contact_media_intervals:#{contact_id}", medium, details['interval']) if details['interval']
-  #           end
-  #         }
-  #       end
   #     end
 
     end
