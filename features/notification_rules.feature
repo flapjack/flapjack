@@ -57,10 +57,10 @@ Feature: Notification rules on a per contact basis
       | bar      |                 | email         | email            | true              | true               |                   |
 
     And user 4 has the following notification rules:
-      | entities | tags            | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          |                 |               |                  |                   |                    |                   |
-      |          | xyz, disk, util | sms           | sms              |                   |                    |                   |
-      |          | xyz, ping       | sms,email     | sms,email        |                   |                    | 8-18 weekdays     |
+      | tags            | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
+      |                 |               |                  |                   |                    |                   |
+      | xyz, disk, util | sms           | sms              |                   |                    |                   |
+      | xyz, ping       | sms,email     | sms,email        |                   |                    | 8-18 weekdays     |
 
     And user 5 has the following notification rules:
       | unknown_media | critical_media |
