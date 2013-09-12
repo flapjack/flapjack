@@ -8,7 +8,7 @@
 - Chore: Non-zero exit code after receiving SIGINT gh-266 (@ali-graham)
 - Bug: Email notifications - remove "(about a minute ago)" and fix previous state fields gh-258 (@ali-graham)
 - Chore: refactor delays filter, remove mass client failures filter gh-293 (@jessereynolds)
-- Bug: creation of scheduled maintenance fails from web UI (@ali-graham)
+- Bug: creation of scheduled maintenance fails from web UI gh-296 (@ali-graham)
 - Feature: flapjack UI needs a favicon gh-297 (@jessereynolds)
 - Chore: email notification styling gh-298 (@jessereynolds)
 
