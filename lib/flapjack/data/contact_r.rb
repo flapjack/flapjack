@@ -19,12 +19,12 @@ module Flapjack
 
       include Flapjack::Data::RedisRecord
 
-      define_attributes :first_name => :string,
-                        :last_name => :string,
-                        :email => :string,
-                        :timezone => :string,
+      define_attributes :first_name            => :string,
+                        :last_name             => :string,
+                        :email                 => :string,
+                        :timezone              => :string,
                         :pagerduty_credentials => :hash,
-                        :tags => :set
+                        :tags                  => :set
 
       # TODO map contacts_for as 'entity:ID:contact_ids', entity#has_many :contacts
 
@@ -156,13 +156,7 @@ module Flapjack
         self.timezone = tz.respond_to?(:name) ? tz.name : tz
       end
 
-  #     def to_json(*args)
-  #       { "id"         => self.id,
-  #         "first_name" => self.first_name,
-  #         "last_name"  => self.last_name,
-  #         "email"      => self.email,
-  #         "tags"       => self.tags.to_a }.to_json
-  #     end
+      # TODO usage of to_json should have :only => [:first_name, :last_name, :email, :tags]
 
     end
   end

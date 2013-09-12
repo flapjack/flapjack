@@ -7,15 +7,17 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Gateways::API
   end
 
+  let(:json_response) { '{"valid" : "json"}' }
+
   let(:contact)         { mock(Flapjack::Data::Contact, :id => '21') }
-  let(:contact_core)    {
-    {'id'         => contact.id,
-     'first_name' => "Ada",
-     'last_name'  => "Lovelace",
-     'email'      => "ada@example.com",
-     'tags'       => ["legend", "first computer programmer"]
-    }
-  }
+  # let(:contact_core)    {
+  #   {'id'         => contact.id,
+  #    'first_name' => "Ada",
+  #    'last_name'  => "Lovelace",
+  #    'email'      => "ada@example.com",
+  #    'tags'       => ["legend", "first computer programmer"]
+  #   }
+  # }
 
   let(:media) {
     {'email' => 'ada@example.com',
@@ -162,22 +164,24 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "returns all the contacts" do
-    contact.should_receive(:to_json).and_return(contact_core.to_json)
+    ActiveSupport::JSON.should_receive(:encode).with([contact], nil).
+      and_return(json_response)
+
     Flapjack::Data::Contact.should_receive(:all).and_return([contact])
 
     get '/contacts'
     last_response.should be_ok
-    last_response.body.should be_json_eql([contact_core].to_json)
+    last_response.body.should == json_response
   end
 
   it "returns the core information of a specified contact" do
-    contact.should_receive(:to_json).and_return(contact_core.to_json)
+    contact.should_receive(:to_json).and_return(json_response)
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :logger => @logger).and_return(contact)
 
     get "/contacts/#{contact.id}"
     last_response.should be_ok
-    last_response.body.should be_json_eql(contact_core.to_json)
+    last_response.body.should == json_response
   end
 
   it "does not return information for a contact that does not exist" do
@@ -190,9 +194,8 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   it "lists a contact's notification rules" do
     notification_rule_2 = mock(Flapjack::Data::NotificationRule, :id => '2', :contact_id => '21')
-    notification_rule.should_receive(:to_json).and_return('"rule_1"')
-    notification_rule_2.should_receive(:to_json).and_return('"rule_2"')
     notification_rules = [ notification_rule, notification_rule_2 ]
+    ActiveSupport::JSON.should_receive(:encode).with(notification_rules, nil).and_return('["rule_1", "rule_2"]')
 
     contact.should_receive(:notification_rules).and_return(notification_rules)
     Flapjack::Data::Contact.should_receive(:find_by_id).

@@ -4,11 +4,11 @@ require 'forwardable'
 require 'securerandom'
 require 'set'
 
+require 'oj'
 require 'active_support/concern'
 require 'active_support/core_ext/object/blank'
 require 'active_model'
 
-require 'oj'
 require 'redis-objects'
 
 # TODO port the redis-objects parts to raw redis calls, when things have
@@ -37,6 +37,7 @@ module Flapjack
       included do
         include ActiveModel::AttributeMethods
         include ActiveModel::Dirty
+        include ActiveModel::Serializers::JSON
         include ActiveModel::Validations
 
         attribute_method_suffix  "="  # attr_writers
@@ -54,6 +55,9 @@ module Flapjack
         end
 
         attr_accessor :attributes
+
+        define_attributes :id => :string
+        # validates :id, :presence => true
       end
 
       module ClassMethods
@@ -108,7 +112,7 @@ module Flapjack
           options.each_pair do |key, value|
             raise "Unknown attribute type ':#{value}' for ':#{key}'" unless
               ATTRIBUTE_TYPES.include?(value)
-              self.define_attribute_methods [key]
+              self.define_attribute_methods([key])
           end
           @attribute_types.update(options)
         end
@@ -172,14 +176,9 @@ module Flapjack
       end
 
       def initialize(attributes = {})
-        if id = attributes.delete(:id)
-          self.id = id
-        end
-
         @attributes = {}
         attributes.each_pair do |k, v|
-          send("#{k}_will_change!")
-          @attributes[k.to_s] = v
+          self.send("#{k}=".to_sym, v)
         end
       end
 
@@ -188,24 +187,8 @@ module Flapjack
         refresh
       end
 
-      def id
-        @id
-      end
-
-      def id=(id)
-        raise "Cannot reassign id" unless @id.nil?
-        @id = id
-        @simple_attributes = Redis::HashKey.new("#{record_key}:attrs")
-        @complex_attributes = self.class.attribute_types.inject({}) do |memo, (name, type)|
-          if complex_type = Flapjack::Data::RedisRecord::COMPLEX_MAPPINGS[type]
-            memo[name.to_s] = complex_type.new("#{record_key}:attrs:#{name}")
-          end
-          memo
-        end
-      end
-
       def record_key
-        "#{self.class.send(:class_key)}:#{id}"
+        "#{self.class.send(:class_key)}:#{self.id}"
       end
 
       def refresh
@@ -215,7 +198,9 @@ module Flapjack
 
         attr_types = self.class.attribute_types
 
-        @attributes = @simple_attributes.inject({}) do |memo, (name, value)|
+        @attributes = {'id' => self.id}
+
+        simple_attrs = @simple_attributes.inject({}) do |memo, (name, value)|
           if type = attr_types[name.to_sym]
             memo[name] = case type
             when :string
@@ -244,6 +229,8 @@ module Flapjack
           end
           memo
         end
+
+        @attributes.update(simple_attrs)
         @attributes.update(complex_attrs)
       end
 
@@ -276,7 +263,7 @@ module Flapjack
         simple_attrs  = {}
         complex_attrs = {}
 
-        attr_types = self.class.attribute_types
+        attr_types = self.class.attribute_types.reject {|k, v| k == :id}
 
         attr_types.each_pair do |name, type|
           value = @attributes[name.to_s]
@@ -312,11 +299,11 @@ module Flapjack
 
         regen_index.each do |key|
           next unless new_index_key = self.changes[key].last
-          indexers[key][new_index_key] = @id
+          indexers[key][new_index_key] = @attributes['id']
         end
 
         # ids is a set, so update won't create duplicates
-        self.class.add_id(@id)
+        self.class.add_id(@attributes['id'])
 
         Flapjack.redis.exec
 
@@ -328,7 +315,7 @@ module Flapjack
 
       def destroy
         Flapjack.redis.multi
-        self.class.delete_id(@id)
+        self.class.delete_id(@attributes['id'])
         indexers = self.class.instance_variable_get('@indexers')
         (indexers || {}).each_pair do |key, indexer|
           next unless old_index_key = @attributes[key]
@@ -348,8 +335,21 @@ module Flapjack
       # Simulate attribute writers from method_missing
       def attribute=(att, value)
         return if value == @attributes[att.to_s]
-        send("#{att}_will_change!")
-        @attributes[att.to_s] = value
+        if att.to_s == 'id'
+          raise "Cannot reassign id" unless @attributes['id'].nil?
+          send("id_will_change!")
+          @attributes['id'] = value.to_s
+          @simple_attributes = Redis::HashKey.new("#{record_key}:attrs")
+          @complex_attributes = self.class.attribute_types.inject({}) do |memo, (name, type)|
+            if complex_type = Flapjack::Data::RedisRecord::COMPLEX_MAPPINGS[type]
+              memo[name.to_s] = complex_type.new("#{record_key}:attrs:#{name}")
+            end
+            memo
+          end
+        else
+          send("#{att}_will_change!")
+          @attributes[att.to_s] = value
+        end
       end
 
       # Simulate attribute readers from method_missing
@@ -364,7 +364,7 @@ module Flapjack
 
       class HasManyAssociation
 
-        extend Forwardable
+        # extend Forwardable
 
         def initialize(parent, name, options = {})
           @record_ids = Redis::Set.new("#{parent.record_key}:#{name}")

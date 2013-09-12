@@ -41,7 +41,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   end
 
   it "is invalid without a name" do
-    example = Flapjack::Data::RedisRecord::Example.new(:id => 1, :email => 'jsmith@example.com')
+    example = Flapjack::Data::RedisRecord::Example.new(:id => '1', :email => 'jsmith@example.com')
     example.should_not be_valid
 
     errs = example.errors
@@ -50,7 +50,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   end
 
   it "adds a record's attributes to redis" do
-    example = Flapjack::Data::RedisRecord::Example.new(:id => 1, :name => 'John Smith',
+    example = Flapjack::Data::RedisRecord::Example.new(:id => '1', :name => 'John Smith',
       :email => 'jsmith@example.com')
     example.should be_valid
     example.save.should be_true
@@ -68,7 +68,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   it "finds a record by id in redis" do
     create_example
 
-    example = Flapjack::Data::RedisRecord::Example.find_by_id(8)
+    example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
     example.should_not be_nil
     example.id.should == '8'
     example.name.should == 'John Jones'
@@ -109,7 +109,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
                                'flapjack/data/redis_record/example:8:attrs',
                                'flapjack/data/redis_record/example:by_name']
 
-    example = Flapjack::Data::RedisRecord::Example.find_by_id(8)
+    example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
     example.destroy
 
     redis.keys('*').should == []
@@ -118,10 +118,10 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   it "sets a parent/child has_many relationship between two records in redis" do
     create_example
 
-    child = Flapjack::Data::RedisRecord::ExampleChild.new(:id => 3, :name => 'Abel Tasman')
+    child = Flapjack::Data::RedisRecord::ExampleChild.new(:id => '3', :name => 'Abel Tasman')
     child.save.should be_true
 
-    example = Flapjack::Data::RedisRecord::Example.find_by_id(8)
+    example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
     example.fdrr_children << child
 
     redis.keys('*').should =~ ['flapjack/data/redis_record/example::ids',
@@ -147,7 +147,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     create_example
     create_child
 
-    example = Flapjack::Data::RedisRecord::Example.find_by_id(8)
+    example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
     children = example.fdrr_children.all
 
     children.should be_an(Array)
@@ -161,8 +161,8 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     create_example
     create_child
 
-    example = Flapjack::Data::RedisRecord::Example.find_by_id(8)
-    child = Flapjack::Data::RedisRecord::ExampleChild.find_by_id(3)
+    example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
+    child = Flapjack::Data::RedisRecord::ExampleChild.find_by_id('3')
 
     redis.smembers('flapjack/data/redis_record/example_child::ids').should == ['3']
     redis.smembers('flapjack/data/redis_record/example:8:fdrr_child_ids').should == ['3']
@@ -179,7 +179,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
   it "resets changed state on refresh" do
     create_example
-    example = Flapjack::Data::RedisRecord::Example.find_by_id(8)
+    example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
 
     example.name = "King Henry VIII"
     example.changed.should include('name')

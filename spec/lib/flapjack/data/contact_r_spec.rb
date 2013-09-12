@@ -175,7 +175,7 @@ describe Flapjack::Data::ContactR, :redis => true do
 
     it "does not clear notification rules when updating a contact" do
       create_contact # raw redis
-      contact = Flapjack::Data::ContactR.find_by_id(1)
+      contact = Flapjack::Data::ContactR.find_by_id('1')
 
       contact.notification_rules_checked.count.should == 1
       rule_id = contact.notification_rules_checked.all.first.id
@@ -208,7 +208,7 @@ describe Flapjack::Data::ContactR, :redis => true do
 
     it "creates a general notification rule for a pre-existing contact if none exists" do
       create_contact # raw redis
-      contact = Flapjack::Data::ContactR.find_by_id(1)
+      contact = Flapjack::Data::ContactR.find_by_id('1')
 
       expect {
         contact.notification_rules_checked
@@ -256,7 +256,7 @@ describe Flapjack::Data::ContactR, :redis => true do
 
     it "sets a timezone string from a string" do
       create_contact # raw redis
-      contact = Flapjack::Data::ContactR.find_by_id(1)
+      contact = Flapjack::Data::ContactR.find_by_id('1')
       contact.timezone.should be_nil
 
       contact.time_zone = 'Australia/Adelaide'
@@ -313,5 +313,19 @@ describe Flapjack::Data::ContactR, :redis => true do
   #                          'username'    => 'flapjack',
   #                          'password'    => 'very_secure'}
   # end
+
+  it "serializes its contents as JSON" do
+    create_contact # raw redis
+    contact = Flapjack::Data::ContactR.find_by_id('1')
+
+    contact.should respond_to(:to_json)
+    contact_json = contact.to_json(:root => false,
+      :only => [:id, :first_name, :last_name, :email, :tags])
+    contact_json.should == {"email"      => "jsmith@example.com",
+                            "first_name" => "John",
+                            "id"         => '1',
+                            "last_name"  => "Smith",
+                            "tags"       => [] }.to_json
+  end
 
 end

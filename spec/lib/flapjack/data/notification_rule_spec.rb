@@ -9,7 +9,10 @@ describe Flapjack::Data::NotificationRule, :redis => true do
     wd = wd.to_hash
     wd[:start_time] = wd.delete(:start_date)
     wd[:rrules].first[:rule_type] = wd[:rrules].first[:rule_type].sub(/\AIceCube::(\w+)Rule\z/, '\1')
-    wd
+    wd.inject({}) do |memo, (k, v)|
+      memo[k.to_s] = v
+      memo
+    end
   }
 
   let(:rule_data) {

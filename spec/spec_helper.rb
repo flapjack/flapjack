@@ -37,6 +37,11 @@ class MockLogger
   end
 end
 
+require 'oj'
+Oj.mimic_JSON
+Oj.default_options = { :indent => 0, :mode => :strict }
+require 'active_support/json'
+
 JsonSpec.configure do
   # so we include id
   exclude_keys "created_at", "updated_at"
