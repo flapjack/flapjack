@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.7.24 - 2013-09-12
+- Bug: gem install of flapjack 0.7.23 fails with tzinfo-data dependency error gh-302 (@jessereynolds)
+
 # 0.7.23 - 2013-09-12
 - Bug: Quick ok -> warning -> ok -> warning triggers too many recovery notifications gh-119 (@jessereynolds)
 - Bug: Blackhole notification rule doesn't block recovery notifications gh-282 (@jessereynolds)
