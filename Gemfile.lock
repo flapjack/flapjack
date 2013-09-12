@@ -21,6 +21,7 @@ PATH
       sinatra
       thin
       tzinfo
+      tzinfo-data
 
 GEM
   remote: https://rubygems.org/
@@ -176,6 +177,8 @@ GEM
       polyglot
       polyglot (>= 0.3.1)
     tzinfo (1.0.1)
+    tzinfo-data (1.2013.4)
+      tzinfo (>= 1.0.0)
     vegas (0.1.11)
       rack (>= 1.0.0)
     webmock (1.9.0)
