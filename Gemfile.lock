@@ -20,7 +20,7 @@ PATH
       resque (~> 1.23.0)
       sinatra
       thin
-      tzinfo
+      tzinfo (~> 1.0.1)
       tzinfo-data
 
 GEM
