@@ -1,5 +1,17 @@
 ## Flapjack Changelog
 
+# 0.7.23 - 2013-09-12
+- Bug: Quick ok -> warning -> ok -> warning triggers too many recovery notifications gh-119 (@jessereynolds)
+- Bug: Blackhole notification rule doesn't block recovery notifications gh-282 (@jessereynolds)
+- Chore: Shorten SMS messages to 159 chars on the Messagenet gateway gh-278 (@ali-graham)
+- Chore: flapjack-nagios-receiver should use Event#add gh-275 (@ali-graham)
+- Chore: Non-zero exit code after receiving SIGINT gh-266 (@ali-graham)
+- Bug: Email notifications - remove "(about a minute ago)" and fix previous state fields gh-258 (@ali-graham)
+- Chore: refactor delays filter, remove mass client failures filter gh-293 (@jessereynolds)
+- Bug: creation of scheduled maintenance fails from web UI (@ali-graham)
+- Feature: flapjack UI needs a favicon gh-297 (@jessereynolds)
+- Chore: email notification styling gh-298 (@jessereynolds)
+
 # 0.7.22 - 2013-08-08
 - Bug: fix potential exception in json serialisation of tags in notifications gh-281 (@jessereynolds)
 
