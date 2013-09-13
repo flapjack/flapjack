@@ -23,8 +23,6 @@ describe Flapjack::Data::NotificationRuleR, :redis => true do
     }
   }
 
-  # let(:rule_id) { 'ABC123' }
-
   let(:timezone) { ActiveSupport::TimeZone.new("Europe/Moscow") }
 
   def create_notification_rule

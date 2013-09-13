@@ -36,11 +36,11 @@ module Flapjack
         unless value.nil?
           case value
           when Enumerable
-            record.errors.add('are invalid') if value.any? {|tr|
+            record.errors.add(att, 'are invalid') if value.any? {|tr|
               !prepare_time_restriction(tr)
             }
           else
-            record.errors.add('must be Enumerable')
+            record.errors.add(att, 'must be Enumerable')
           end
         end
       end
@@ -60,6 +60,19 @@ module Flapjack
         return unless tr = prepare_time_restriction(tr, timezone)
 
         IceCube::Schedule.from_hash(tr)
+      end
+
+      def self.create_generic
+        default_media = ['email', 'sms', 'jabber', 'pagerduty']
+        self.new(
+          :entities           => Set.new,
+          :tags               => Set.new,
+          :time_restrictions  => [],
+          :warning_media      => Set.new(default_media),
+          :critical_media     => Set.new(default_media),
+          :warning_blackhole  => false,
+          :critical_blackhole => false
+        )
       end
 
       # entity names match?

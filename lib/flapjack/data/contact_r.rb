@@ -7,7 +7,7 @@ require 'set'
 require 'ice_cube'
 
 require 'flapjack/data/redis_record'
-require 'flapjack/data/entity'
+# require 'flapjack/data/entity_r'
 require 'flapjack/data/medium_r'
 require 'flapjack/data/notification_rule_r'
 
@@ -36,15 +36,7 @@ module Flapjack
       def notification_rules_checked
         rules = self.notification_rules
         if rules.all.all? {|r| r.is_specific? } # also true if empty
-          rule = Flapjack::Data::NotificationRuleR.new(
-            :entities           => Set.new,
-            :tags               => Set.new,
-            :time_restrictions  => [],
-            :warning_media      => Set.new(['email', 'sms', 'jabber', 'pagerduty']),
-            :critical_media     => Set.new(['email', 'sms', 'jabber', 'pagerduty']),
-            :warning_blackhole  => false,
-            :critical_blackhole => false
-          )
+          rule = Flapjack::Data::NotificationRuleR.create_generic
           rules << rule
         end
         rules

@@ -47,6 +47,8 @@ module Flapjack
 
         validates_with Flapjack::Data::RedisRecord::TypeValidator
 
+        # TODO Thread-local variables for class instance variables (@ids, @indexers)
+
         instance_eval do
           # Evaluates in the context of the class -- so this is a
           # class instance variable. TODO accesses may need to be
@@ -95,10 +97,21 @@ module Flapjack
           load(id.to_s)
         end
 
-        def find_by(key, value)
-          return unless @indexers.has_key?(key.to_s)
-          id = @indexers[key.to_s][value.to_s]
-          find_by_id(id)
+        def find_by(att, value)
+          return unless indexer = indexer_for_attribute_value(att.to_s, value)
+          ids = indexer.members
+          ids.collect {|id| load(id)}
+        end
+
+        # check values for nominated key and return ones that match the regex
+        # pattern
+        def find_by_match(key, pattern)
+          raise "Not yet implemented"
+        end
+
+        # TODO validate that the key is one for a set property
+        def find_by_set_intersection(key, set)
+          raise "Not yet implemented"
         end
 
         def attribute_types
@@ -117,13 +130,52 @@ module Flapjack
           @attribute_types.update(options)
         end
 
+        # NB: key must be a string or boolean type, TODO validate this
         def index_by(*args)
           @indexers ||= {}
           idxs = args.inject({}) do |memo, arg|
-            memo[arg.to_s] = Redis::HashKey.new("#{class_key}:by_#{arg}")
+            memo[arg.to_s] = {}
             memo
           end
           @indexers.update(idxs)
+        end
+
+        # true.to_s == 'true' and false.to_s == false anyway, but if we need any
+        # other normalized value for the indexers we can add the type here
+        def indexer_for_attribute_value(att, value)
+          return if @indexers.nil? || !@indexers.has_key?(att)
+
+          index_key = case value
+          when String, Symbol
+            value.to_s
+          when TrueClass
+            'true'
+          when FalseClass
+            'false'
+          end
+
+          return if index_key.nil?
+
+          unless @indexers[att][index_key]
+            @indexers[att][index_key] = Redis::Set.new("#{class_key}::by_#{att}:#{index_key}")
+          end
+          @indexers[att][index_key]
+        end
+
+        # TODO synchronize access, called from instances
+        def delete_indexed_id(old_attrs, id)
+          old_attrs.each do |att, value|
+            next unless indexer = indexer_for_attribute_value(att, value)
+            indexer.delete(id)
+          end
+        end
+
+        # TODO synchronize access, called from instances
+        def add_indexed_id(new_attrs, id)
+          new_attrs.each do |att, value|
+            next unless indexer = indexer_for_attribute_value(att, value)
+            indexer.add(id)
+          end
         end
 
         def has_many(*args)
@@ -212,9 +264,9 @@ module Flapjack
             when :integer
               value.to_i
             when :boolean
-              (value.to_i == 1)
+              value.downcase == 'true'
             when :json_string
-              Oj.dump(value)
+              value.blank? ? nil : Oj.dump(value)
             end
           end
           memo
@@ -254,15 +306,9 @@ module Flapjack
 
         self.id ||= SecureRandom.hex
 
-        indexers = self.class.instance_variable_get('@indexers')
-        regen_index = indexers.nil? ? [] : (self.changed & indexers.keys)
-
         Flapjack.redis.multi
 
-        regen_index.each do |key|
-          next unless old_index_key = self.changes[key].first
-          indexers[key].delete(old_index_key)
-        end
+        self.class.send(:delete_indexed_id, @changed_attributes, @attributes['id'])
 
         simple_attrs  = {}
         complex_attrs = {}
@@ -275,7 +321,7 @@ module Flapjack
           when :string, :integer
             simple_attrs[name.to_s] = value.blank? ? nil : value.to_s
           when :boolean
-            simple_attrs[name.to_s] = value.blank? ? nil : (!!value ? '1' : '0')
+            simple_attrs[name.to_s] = value.blank? ? nil : (!!value ? 'true' : 'false')
           when :list, :set, :hash
             complex_attrs[name.to_s] = value
           when :json_string
@@ -301,10 +347,7 @@ module Flapjack
           end
         end
 
-        regen_index.each do |key|
-          next unless new_index_key = self.changes[key].last
-          indexers[key][new_index_key] = @attributes['id']
-        end
+        self.class.send(:add_indexed_id, @attributes, @attributes['id'])
 
         # ids is a set, so update won't create duplicates
         self.class.add_id(@attributes['id'])
@@ -320,11 +363,7 @@ module Flapjack
       def destroy
         Flapjack.redis.multi
         self.class.delete_id(@attributes['id'])
-        indexers = self.class.instance_variable_get('@indexers')
-        (indexers || {}).each_pair do |key, indexer|
-          next unless old_index_key = @attributes[key]
-          indexer.delete(old_index_key)
-        end
+        self.class.send(:delete_indexed_id, self.attributes, @attributes['id'])
         @simple_attributes.clear
         @complex_attributes.values do |redis_obj|
           Flapjack.redis.del(redis_obj.key)
