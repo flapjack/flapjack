@@ -37,7 +37,7 @@ module Flapjack
           case value
           when Enumerable
             record.errors.add('are invalid') if value.any? {|tr|
-              !prepare_time_restriction(symbolize(tr))
+              !prepare_time_restriction(tr)
             }
           else
             record.errors.add('must be Enumerable')

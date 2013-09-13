@@ -127,6 +127,7 @@ module Flapjack
 
         # whitelisting fields, rather than passing through submitted data directly
         tag_data = rule_data[:tags].is_a?(Set) ? rule_data[:tags].to_a : nil
+
         json_rule_data = {
           :id                 => rule_data[:id].to_s,
           :contact_id         => rule_data[:contact_id].to_s,
@@ -231,7 +232,7 @@ module Flapjack
                        proc { !d.has_key?(:time_restrictions) ||
                               ( d[:time_restrictions].nil? ||
                                 d[:time_restrictions].all? {|tr|
-                                  !!prepare_time_restriction(symbolize(tr))
+                                  !!prepare_time_restriction(tr)
                                 } )
                             } =>
                        "time restrictions are invalid",

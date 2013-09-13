@@ -150,7 +150,13 @@ def icecube_schedule_to_time_restriction(sched, time_zone)
     rrule[:rule_type] = /^.*\:\:(.*)Rule$/.match(rrule[:rule_type])[1]
   }
 
-  tr
+  stringify(tr)
+end
+
+def stringify(obj)
+  return obj.inject({}){|memo,(k,v)| memo[k.to_s] =  stringify(v); memo} if obj.is_a?(Hash)
+  return obj.inject([]){|memo,v    | memo         << stringify(v); memo} if obj.is_a?(Array)
+  obj
 end
 
 Given /^an entity '([\w\.\-]+)' exists$/ do |entity|

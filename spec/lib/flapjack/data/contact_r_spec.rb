@@ -114,17 +114,6 @@ describe Flapjack::Data::ContactR, :redis => true do
   #   checks.should include('PING')
   # end
 
-  # it "returns pagerduty credentials for a contact" do
-  #   contact = Flapjack::Data::Contact.find_by_id('362')
-  #   credentials = contact.pagerduty_credentials
-  #   credentials.should_not be_nil
-  #   credentials.should be_a(Hash)
-  #   credentials.should == {'service_key' => '123456789012345678901234',
-  #                          'subdomain'   => 'flpjck',
-  #                          'username'    => 'flapjack',
-  #                          'password'    => 'very_secure'}
-  # end
-
   it "deletes linked entities, tags and notification rules"
 
   # it "deletes linked entities, checks, tags and notification rules" do
@@ -184,27 +173,6 @@ describe Flapjack::Data::ContactR, :redis => true do
       contact.notification_rules_checked.count.should == 1
       contact.notification_rules_checked.all.first.id.should == rule_id
     end
-
-  # it "updates a contact, does not clear notification rules" do
-  #   contact = Flapjack::Data::Contact.find_by_id('363')
-  #   contact.should_not be_nil
-
-  #   contact.add_notification_rule(notification_rule_data)
-
-  #   nr1 = contact.notification_rules
-  #   nr1.should_not be_nil
-  #   nr1.should have(2).notification_rules
-
-  #   contact.update('first_name' => 'John',
-  #                  'last_name'  => 'Smith',
-  #                  'email'      => 'johns@example.com')
-  #   contact.name.should == 'John Smith'
-
-  #   nr2 = contact.notification_rules
-  #   nr2.should_not be_nil
-  #   nr2.should have(2).notification_rules
-  #   nr1.map(&:id).should == nr2.map(&:id)
-  # end
 
     it "creates a general notification rule for a pre-existing contact if none exists" do
       create_contact # raw redis

@@ -112,7 +112,7 @@ module Flapjack
           options.each_pair do |key, value|
             raise "Unknown attribute type ':#{value}' for ':#{key}'" unless
               ATTRIBUTE_TYPES.include?(value)
-              self.define_attribute_methods([key])
+            self.define_attribute_methods([key])
           end
           @attribute_types.update(options)
         end
@@ -180,6 +180,10 @@ module Flapjack
         attributes.each_pair do |k, v|
           self.send("#{k}=".to_sym, v)
         end
+      end
+
+      def persisted?
+        !@attributes['id'].nil? && self.class.exists?(@attributes['id'])
       end
 
       def load(id)

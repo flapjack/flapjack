@@ -7,13 +7,21 @@ describe Flapjack::Data::NotificationRule, :redis => true do
     wd = IceCube::Schedule.new(Time.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
     wd.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
     wd = wd.to_hash
-    wd[:start_time] = wd.delete(:start_date)
+    wd[:start_time] = wd.delete(:start_date).strftime "%Y-%m-%d %H:%M:%S"
+    wd[:end_time]   = wd[:end_time].strftime "%Y-%m-%d %H:%M:%S"
     wd[:rrules].first[:rule_type] = wd[:rrules].first[:rule_type].sub(/\AIceCube::(\w+)Rule\z/, '\1')
     wd.inject({}) do |memo, (k, v)|
       memo[k.to_s] = v
       memo
     end
+    stringify(wd)
   }
+
+  def stringify(obj)
+    return obj.inject({}){|memo,(k,v)| memo[k.to_s] =  stringify(v); memo} if obj.is_a?(Hash)
+    return obj.inject([]){|memo,v    | memo         << stringify(v); memo} if obj.is_a?(Array)
+    return obj
+  end
 
   let(:rule_data) {
     {:contact_id         => '23',

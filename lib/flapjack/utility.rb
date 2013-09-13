@@ -18,17 +18,17 @@ module Flapjack
     def relative_time_ago(from_time)
       distance_in_minutes = (((Time.now - from_time.to_time).abs)/60).round
       case distance_in_minutes
-        when 0..1 then 'about a minute'
-        when 2..44 then "#{distance_in_minutes} minutes"
-        when 45..89 then 'about 1 hour'
-        when 90..1439 then "about #{(distance_in_minutes.to_f / 60.0).round} hours"
-        when 1440..2439 then '1 day'
-        when 2440..2879 then 'about 2 days'
-        when 2880..43199 then "#{(distance_in_minutes / 1440).round} days"
-        when 43200..86399 then 'about 1 month'
-        when 86400..525599 then "#{(distance_in_minutes / 43200).round} months"
-        when 525600..1051199 then 'about 1 year'
-        else "over #{(distance_in_minutes / 525600).round} years"
+      when 0..1 then 'about a minute'
+      when 2..44 then "#{distance_in_minutes} minutes"
+      when 45..89 then 'about 1 hour'
+      when 90..1439 then "about #{(distance_in_minutes.to_f / 60.0).round} hours"
+      when 1440..2439 then '1 day'
+      when 2440..2879 then 'about 2 days'
+      when 2880..43199 then "#{(distance_in_minutes / 1440).round} days"
+      when 43200..86399 then 'about 1 month'
+      when 86400..525599 then "#{(distance_in_minutes / 43200).round} months"
+      when 525600..1051199 then 'about 1 year'
+      else "over #{(distance_in_minutes / 525600).round} years"
       end
     end
 
@@ -46,10 +46,16 @@ module Flapjack
       Time.utc(time.year, time.month, time.day, time.hour, time.min, time.sec)
     end
 
+    def stringify(obj)
+      return obj.inject({}){|memo,(k,v)| memo[k.to_s] =  stringify(v); memo} if obj.is_a?(Hash)
+      return obj.inject([]){|memo,v    | memo         << stringify(v); memo} if obj.is_a?(Array)
+      obj
+    end
+
     def symbolize(obj)
       return obj.inject({}){|memo,(k,v)| memo[k.to_sym] =  symbolize(v); memo} if obj.is_a? Hash
       return obj.inject([]){|memo,v    | memo           << symbolize(v); memo} if obj.is_a? Array
-      return obj
+      obj
     end
 
     # The passed block will be provided each value from the args
