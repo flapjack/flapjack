@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 0.7.25 - 2013-09-13
+- Bug: EntityCheck last_update= isn't being called for update_state since refactoring gh-303 (@ali-graham)
+- Bug: flapjack-nagios-receiver is double-escaping its JSON data gh-304 (@jessereynolds)
+
 # 0.7.24 - 2013-09-12
 - Bug: gem install of flapjack 0.7.23 fails with tzinfo-data dependency error gh-302 (@jessereynolds)
 
