@@ -373,12 +373,17 @@ describe Flapjack::Data::EntityCheck, :redis => true do
   it "updates state" do
     @redis.hset("check:#{name}:#{check}", 'state', 'ok')
 
+    old_timestamp = @redis.hget("check:#{name}:#{check}", 'last_update')
+
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
     ec.update_state('critical')
 
     state = @redis.hget("check:#{name}:#{check}", 'state')
     state.should_not be_nil
     state.should == 'critical'
+
+    new_timestamp = @redis.hget("check:#{name}:#{check}", 'last_update')
+    new_timestamp.should_not == old_timestamp
   end
 
   it "updates enabled checks" do
