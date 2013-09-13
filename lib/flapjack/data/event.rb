@@ -57,9 +57,12 @@ module Flapjack
       end
 
       # creates, or modifies, an event object and adds it to the events list in redis
+      #   'entity'    => entity,
+      #   'check'     => check,
       #   'type'      => 'service',
       #   'state'     => state,
       #   'summary'   => check_output,
+      #   'details'   => check_long_output,
       #   'time'      => timestamp
       def self.add(evt, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
