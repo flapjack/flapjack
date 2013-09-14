@@ -237,9 +237,8 @@ module Flapjack
         entity_check = get_entity_check(params[:entity], params[:check])
         return 404 if entity_check.nil?
 
-        entity_check.create_scheduled_maintenance(:start_time => start_time,
-                                                  :duration   => duration,
-                                                  :summary    => summary)
+        entity_check.create_scheduled_maintenance(start_time, duration,
+                                                  :summary => summary)
         redirect back
       end
 

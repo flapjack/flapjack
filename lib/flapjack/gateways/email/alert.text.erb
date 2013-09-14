@@ -4,7 +4,7 @@ Monitoring has detected the following:
 
 Entity:   <%= @entity_name %>
 Check:    <%= @check %>
-State:    <%= @state %>
+State:    <%= @state.upcase %>
 Summary:  <%= @summary %>
 <% if @details -%>
 Details:  <%= @details %>
@@ -16,10 +16,10 @@ Time:     <%= Time.at(@time.to_i).to_s %>
 Duration: <%= ChronicDuration.output(@duration) %>
 <% end -%>
 <% if @last_state -%>
-Previous state:   <%= @last_state %>
+Previous State:   <%= @last_state.upcase %>
 <% end -%>
 <% if @last_summary -%>
-Previous summary: <%= @last_summary %>
+Previous Summary: <%= @last_summary %>
 <% end -%>
 
 Cheers,

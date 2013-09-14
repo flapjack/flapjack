@@ -50,14 +50,14 @@ def process_input(opts)
       state = 'ok'       if state.downcase == 'up'
       state = 'critical' if state.downcase == 'down'
       details = check_long_output ? check_long_output.gsub(/\\n/, "\n") : nil
-      event = Oj.dump({
+      event = {
         'entity'    => entity,
         'check'     => check,
         'type'      => 'service',
         'state'     => state,
         'summary'   => check_output,
         'details'   => details,
-        'timestamp' => timestamp,
+        'time'      => timestamp,
       })
       Flapjack::Data::Event.add(event)
     end
