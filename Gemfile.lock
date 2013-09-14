@@ -1,9 +1,9 @@
 PATH
   remote: .
   specs:
-    flapjack (0.7.22)
+    flapjack (0.7.25)
       activemodel
-      activesupport (~> 3.2.13)
+      activesupport (~> 3.2.14)
       chronic
       chronic_duration
       dante
@@ -14,7 +14,7 @@ PATH
       redis
       redis-objects
       sinatra
-      tzinfo
+      tzinfo (~> 1.0.1)
       tzinfo-data
       xmpp4r
 

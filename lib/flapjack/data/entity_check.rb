@@ -276,7 +276,7 @@ module Flapjack
         end
 
         # Track when we last saw an event for a particular entity:check pair
-        last_update = timestamp
+        self.last_update = timestamp
 
         # Even if this isn't a state change, we need to update the current state
         # hash summary and details (as they may have changed)
