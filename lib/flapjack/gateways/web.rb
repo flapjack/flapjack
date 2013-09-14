@@ -403,9 +403,9 @@ module Flapjack
         [:critical, :warning, :unknown, :recovery, :acknowledgement].inject({}) do |memo, type|
           if last_notifications[type] && last_notifications[type][:timestamp]
             t = Time.at(last_notifications[type][:timestamp])
-            memo[t] = {:time => t.to_s,
-                       :relative => relative_time_ago(t) + " ago",
-                       :summary => last_notifications[type][:summary]}
+            memo[type] = {:time => t.to_s,
+                          :relative => relative_time_ago(t) + " ago",
+                          :summary => last_notifications[type][:summary]}
           end
           memo
         end

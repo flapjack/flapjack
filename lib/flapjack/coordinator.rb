@@ -151,7 +151,8 @@ module Flapjack
             pik.update_status
             status = pik.status
             next if old_status.eql?(status)
-            @logger.info "#{pik.type}: #{old_status} -> #{status}"
+            # # can't log on exit w/Ruby 2.0
+            # @logger.info "#{pik.type}: #{old_status} -> #{status}"
           end
 
           if piks.any? {|p| p.status == 'stopping' }
