@@ -14,7 +14,7 @@ require 'redis-objects'
 # TODO port the redis-objects parts to raw redis calls, when things have
 # stabilised
 
-# TODO escape id references -- shouldn't allow :
+# TODO escape ids and index_keys -- shouldn't allow :
 
 module Flapjack
 
@@ -105,33 +105,6 @@ module Flapjack
           ids.collect {|id| load(id)}
         end
 
-        # check values for nominated key and return ones that match the regex
-        # pattern
-        def find_by_match(key, pattern)
-          raise "Not yet implemented"
-        end
-
-    #   # NB: if we're worried about user input, https://github.com/mudge/re2
-    #   # has bindings for a non-backtracking RE engine that runs in linear
-    #   # time
-    #   def self.find_all_name_matching(pattern)
-    #     begin
-    #       regex = /#{pattern}/
-    #     rescue => e
-    #       if @logger
-    #         @logger.info("Jabber#self.find_all_name_matching - unable to use /#{pattern}/ as a regex pattern: #{e}")
-    #       end
-    #       return nil
-    #     end
-    #     Flapjack.redis.keys('entity_id:*').inject([]) {|memo, check|
-    #       a, entity_name = check.split(':', 2)
-    #       if (entity_name =~ regex) && !memo.include?(entity_name)
-    #         memo << entity_name
-    #       end
-    #       memo
-    #     }.sort
-    #   end
-
         # TODO validate that the key is one for a set property
         def find_by_set_intersection(key, *values)
           return if values.blank?
@@ -177,17 +150,34 @@ module Flapjack
         def index_by(*args)
           @indexers ||= {}
           idxs = args.inject({}) do |memo, arg|
+            associate(IndexAssociation, self, [arg])
             memo[arg.to_s] = {}
             memo
           end
           @indexers.update(idxs)
+          nil
+        end
+
+        def has_many(*args)
+          associate(HasManyAssociation, self, args)
+          nil
+        end
+
+        private
+
+        def class_key
+          self.name.underscore
+        end
+
+        def load(id)
+          object = self.new
+          object.load(id)
+          object
         end
 
         # true.to_s == 'true' and false.to_s == false anyway, but if we need any
         # other normalized value for the indexers we can add the type here
         def indexer_for_attribute_value(att, value)
-          return if @indexers.nil? || !@indexers.has_key?(att)
-
           index_key = case value
           when String, Symbol
             value.to_s
@@ -205,63 +195,53 @@ module Flapjack
           @indexers[att][index_key]
         end
 
-        # TODO synchronize access, called from instances
-        def delete_indexed_id(old_attrs, id)
-          old_attrs.each do |att, value|
-            next unless indexer = indexer_for_attribute_value(att, value)
-            indexer.delete(id)
-          end
-        end
-
-        # TODO synchronize access, called from instances
-        def add_indexed_id(new_attrs, id)
-          new_attrs.each do |att, value|
-            next unless indexer = indexer_for_attribute_value(att, value)
-            indexer.add(id)
-          end
-        end
-
-        def has_many(*args)
-          associate(HasManyAssociation, self, args)
-        end
-
-        private
-
-        def class_key
-          self.name.underscore
-        end
-
-        def load(id)
-          object = self.new
-          object.load(id)
-          object
-        end
-
+        # TODO clean up method params, it's a mish-mash
         def associate(klass, parent, args)
-          options = args.extract_options!
-          name = args.first.to_s
+          assoc = nil
+          case klass.name
+          when ::Flapjack::Data::RedisRecord::IndexAssociation.name
+            name = args.first
+            unless method_defined?("#{name}_index")
+              assoc = %Q{
+                def #{name}_index
+                  #{name}_proxy_index
+                end
 
-          return if name.nil? || method_defined?(name)
+                def #{name}_index_ids
+                  #{name}_proxy_index.ids
+                end
 
-          assoc = case klass.name
+                private
+
+                def #{name}_proxy_index
+                  @#{name}_proxy_index ||=
+                    ::Flapjack::Data::RedisRecord::IndexAssociation.new(self, "#{name}")
+                end
+              }
+            end
           when ::Flapjack::Data::RedisRecord::HasManyAssociation.name
-            %Q{
-              def #{name}
-                #{name}_proxy
-              end
+            options = args.extract_options!
+            name = args.first.to_s
 
-              def #{name}_ids
-                #{name}_proxy.ids
-              end
+            unless name.nil? || method_defined?(name)
+              assoc = %Q{
+                def #{name}
+                  #{name}_proxy
+                end
 
-              private
+                def #{name}_ids
+                  #{name}_proxy.ids
+                end
 
-              def #{name}_proxy
-                @#{name}_proxy ||=
-                  ::Flapjack::Data::RedisRecord::HasManyAssociation.new(self, "#{name.singularize}_ids",
-                    :class => #{options[:class] ? options[:class].name : 'nil'} )
-              end
-            }
+                private
+
+                def #{name}_proxy
+                  @#{name}_proxy ||=
+                    ::Flapjack::Data::RedisRecord::HasManyAssociation.new(self, "#{name.singularize}_ids",
+                      :class => #{options[:class] ? options[:class].name : 'nil'} )
+                end
+              }
+            end
           end
 
           return if assoc.nil?
@@ -349,9 +329,15 @@ module Flapjack
 
         self.id ||= SecureRandom.hex(16)
 
+        indexed = self.changed.select {|att|
+          self.class.method_defined?("#{att}_index")
+        }
+
         Flapjack.redis.multi
 
-        self.class.send(:delete_indexed_id, @changed_attributes, @attributes['id'])
+        indexed.each do |att|
+          self.send("#{att}_index").delete_id( @attributes['id'] )
+        end
 
         simple_attrs  = {}
         complex_attrs = {}
@@ -390,7 +376,9 @@ module Flapjack
           end
         end
 
-        self.class.send(:add_indexed_id, @attributes, @attributes['id'])
+        indexed.each do |att|
+          self.send("#{att}_index").add_id( @attributes['id'] )
+        end
 
         # ids is a set, so update won't create duplicates
         self.class.add_id(@attributes['id'])
@@ -406,7 +394,11 @@ module Flapjack
       def destroy
         Flapjack.redis.multi
         self.class.delete_id(@attributes['id'])
-        self.class.send(:delete_indexed_id, self.attributes, @attributes['id'])
+        self.attributes.keys.reject{|att| att == 'id'}.select {|att|
+          self.class.method_defined?("#{att}_index")
+        }.each {|att|
+          self.send("#{att}_index").delete_id( @attributes['id'])
+        }
         @simple_attributes.clear
         @complex_attributes.values do |redis_obj|
           Flapjack.redis.del(redis_obj.key)
@@ -446,6 +438,41 @@ module Flapjack
       # Used by ActiveModel to lookup attributes during validations.
       def read_attribute_for_validation(att)
         @attributes[att.to_s]
+      end
+
+      class IndexAssociation
+
+        def initialize(parent, att)
+          @parent = parent
+          @attribute = att
+        end
+
+        def count
+          return unless indexer = indexer_for_attribute_value
+          indexer.count
+        end
+
+        def ids
+          return [] unless indexer = indexer_for_attribute_value
+          indexer.members
+        end
+
+        def delete_id(id)
+          return unless indexer = indexer_for_attribute_value
+          indexer.delete(id)
+        end
+
+        def add_id(id)
+          return unless indexer = indexer_for_attribute_value
+          indexer.add(id)
+        end
+
+        private
+
+        def indexer_for_attribute_value
+          @parent.class.send(:indexer_for_attribute_value, @attribute, @parent.send(@attribute))
+        end
+
       end
 
       class HasManyAssociation
