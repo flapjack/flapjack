@@ -14,6 +14,8 @@ require 'redis-objects'
 # TODO port the redis-objects parts to raw redis calls, when things have
 # stabilised
 
+# TODO escape id references -- shouldn't allow :
+
 module Flapjack
 
   module Data
@@ -109,9 +111,50 @@ module Flapjack
           raise "Not yet implemented"
         end
 
+    #   # NB: if we're worried about user input, https://github.com/mudge/re2
+    #   # has bindings for a non-backtracking RE engine that runs in linear
+    #   # time
+    #   def self.find_all_name_matching(pattern)
+    #     begin
+    #       regex = /#{pattern}/
+    #     rescue => e
+    #       if @logger
+    #         @logger.info("Jabber#self.find_all_name_matching - unable to use /#{pattern}/ as a regex pattern: #{e}")
+    #       end
+    #       return nil
+    #     end
+    #     Flapjack.redis.keys('entity_id:*').inject([]) {|memo, check|
+    #       a, entity_name = check.split(':', 2)
+    #       if (entity_name =~ regex) && !memo.include?(entity_name)
+    #         memo << entity_name
+    #       end
+    #       memo
+    #     }.sort
+    #   end
+
         # TODO validate that the key is one for a set property
-        def find_by_set_intersection(key, set)
-          raise "Not yet implemented"
+        def find_by_set_intersection(key, *values)
+          return if values.blank?
+
+          load_from_key = proc {|k|
+            k =~ /\A#{class_key}:([^:]+):attrs:#{key.to_s}\z/
+            find_by_id($1)
+          }
+
+          temp_set = "#{class_key}::tmp:#{SecureRandom.hex(16)}"
+          Flapjack.redis.sadd(temp_set, values)
+
+          keys = Flapjack.redis.keys("#{class_key}:*:attrs:#{key}")
+
+          result = keys.inject([]) do |memo, k|
+            if Flapjack.redis.sdiff(temp_set, k).empty?
+              memo << load_from_key.call(k)
+            end
+            memo
+          end
+
+          Flapjack.redis.del(temp_set)
+          result
         end
 
         def attribute_types
@@ -304,7 +347,7 @@ module Flapjack
       def save
         return false unless valid?
 
-        self.id ||= SecureRandom.hex
+        self.id ||= SecureRandom.hex(16)
 
         Flapjack.redis.multi
 
