@@ -21,6 +21,19 @@ module Flapjack
       # TODO
       # has_many :checks, :class => Flapjack::Data::EntityCheckR
 
+      # NB: if we're worried about user input, https://github.com/mudge/re2
+      # has bindings for a non-backtracking RE engine that runs in linear
+      # time
+      # Raises RegexpError if the provided pattern is invalid
+      def self.find_all_names_matching(pattern)
+        regexp = Regexp.new(pattern)
+        prefix = "#{class_key}::by_name"
+        Flapjack.redis.keys("#{prefix}:*").inject(Set.new) {|memo, key|
+          name = key.gsub(/\A#{prefix}:/, '')
+          memo << name if (name =~ regex)
+          memo
+        }.sort
+      end
 
       # TODO change uses of Entity.all to EntityR.all.sort_by(&:name)
 

@@ -18,15 +18,13 @@ module Flapjack
 
     class EntityCheckR
 
-      # STATE_OK              = 'ok'
-      # STATE_WARNING         = 'warning'
-      # STATE_CRITICAL        = 'critical'
-      # STATE_UNKNOWN         = 'unknown'
+      STATE_OK              = 'ok'
+      STATE_WARNING         = 'warning'
+      STATE_CRITICAL        = 'critical'
+      STATE_UNKNOWN         = 'unknown'
 
-      # NOTIFICATION_STATES = [:problem, :warning, :critical, :unknown,
-      #                        :recovery, :acknowledgement]
-
-      # attr_accessor :entity, :check
+      NOTIFICATION_STATES = [:problem, :warning, :critical, :unknown,
+                             :recovery, :acknowledgement]
 
       include Flapjack::Data::RedisRecord
 
@@ -34,57 +32,56 @@ module Flapjack
                         :entity_name => :string,
                         :state       => :string
 
-      index_by :entity_name, :state
+      index_by :entity_id, :name, :state
 
       def entity
-        @entity ||= Flapjack::Data::Entity.find_by(:name, self.entity_name)
+        @entity ||= Flapjack::Data::EntityR.find_by_id(self.entity_id)
       end
 
-      # # TODO probably shouldn't always be creating on query -- work out when this should be happening
-      # def self.for_event_id(event_id)
-      #   entity_name, check = event_id.split(':', 2)
-      #   entity = Flapjack::Data::Entity.find_by_name(entity_name, :create => true)
-      #   self.new(entity, check)
-      # end
+      # TODO work out when it's valid to create the record if not found
 
-      # # TODO probably shouldn't always be creating on query -- work out when this should be happening
-      # def self.for_entity_name(entity_name, check)
-      #   entity = Flapjack::Data::Entity.find_by_name(entity_name, :create => true)
-      #   self.new(entity, check)
-      # end
+      def self.for_event_id(event_id)
+        entity_name, check_name = event_id.split(':', 2)
+        ids = self.indexed_ids(:entity_name, entity_name) & self.indexed_ids(:name, check_name)
+        raise "invalid index data" if ids.size > 1
+        return if ids.empty?
+        self.find_by_id(ids.first)
+      end
 
-      # def self.for_entity_id(entity_id, check)
-      #   entity = Flapjack::Data::Entity.find_by_id(entity_id)
-      #   self.new(entity, check)
-      # end
+      def self.for_entity_name(entity_name, check_name)
+        ids = self.indexed_ids(:entity_name, entity_name) & self.indexed_ids(:name, check_name)
+        raise "invalid index data" if ids.size > 1
+        return if ids.empty?
+        self.find_by_id(ids.first)
+      end
 
-      # def self.for_entity(entity, check)
-      #   self.new(entity, check)
-      # end
+      # TODO replace any usages of this with for_entity, and load the entity before the call
+      def self.for_entity_id(entity_id, check_name)
+        entity = Flapjack::Data::Entity.find_by_id(entity_id)
+        ids = self.indexed_ids(:entity_name, entity.name) & self.indexed_ids(:name, check_name)
+        raise "invalid index data" if ids.size > 1
+        return if ids.empty?
+        self.find_by_id(ids.first)
+      end
 
-      # def self.find_all_for_entity_name(entity_name)
-      #   Flapjack.redis.zrange("current_checks:#{entity_name}", 0, -1)
-      # end
+      def self.for_entity(entity, check)
+        ids = self.indexed_ids(:entity_name, entity.name) & self.indexed_ids(:name, check_name)
+        raise "invalid index data" if ids.size > 1
+        return if ids.empty?
+        self.find_by_id(ids.first)
+      end
 
-      # # replaced by EntityCheckR.all
-      # def self.find_all
-      #   self.conflate_to_keys(self.find_all_by_entity)
-      # end
+      # OLD self.find_all_for_entity_name(name)
+      # NEW: entity = Entity.find_by(:name, name); entity.checks
 
-      # # replaced by EntityCheckR.all.inject({}) {|memo, ec| memo[ec.entity_name] = ec; memo }
-      # def self.find_all_by_entity
-      #   Flapjack.redis.zrange("current_entities", 0, -1).inject({}) {|memo, entity|
-      #     memo[entity] = Flapjack.redis.zrange("current_checks:#{entity}", 0, -1)
-      #     memo
-      #   }
-      # end
+      # OLD: self.find_all
+      # NEW: EntityCheckR.all
 
-      # # Replaced by EntityCheckR.count
-      # def self.count_all
-      #   Flapjack.redis.zrange("current_entities", 0, -1).inject(0) {|memo, entity|
-      #     memo + Flapjack.redis.zcount("current_checks:#{entity}", '-inf', '+inf')
-      #   }
-      # end
+      # OLD: self.find_all_by_entity
+      # NEW: EntityCheckR.all.inject({}) {|memo, ec| memo[ec.entity_name] = ec; memo }
+
+      # OLD: self.count_all
+      # NEW: EntityCheckR.count
 
 
   #     def self.find_all_failing
@@ -113,10 +110,6 @@ module Flapjack
   #         entity, check = key.split(':', 2)
   #         !!Flapjack.redis.zscore("current_checks:#{entity}", check)
   #       end
-  #     end
-
-  #     def entity_name
-  #       entity.name
   #     end
 
   #     # takes a key "entity:check", returns true if the check is in unscheduled
