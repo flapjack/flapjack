@@ -88,6 +88,8 @@ module Flapjack
     # notification, updates the notification history in redis, generates the
     # notifications
     def process_notification(notification)
+      @logger.debug ("Processing notification: #{notification.inspect}")
+
       timestamp = Time.now
       event_id = notification.event_id
       entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)

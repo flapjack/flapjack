@@ -207,6 +207,7 @@ module Flapjack
         @details        = opts['details']
         @time           = opts['time']
         @count          = opts['count']
+        @duration       = opts['duration']
 
         @last_state     = opts['last_state']
         @last_summary   = opts['last_summary']
