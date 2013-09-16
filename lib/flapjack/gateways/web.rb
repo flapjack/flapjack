@@ -244,7 +244,7 @@ module Flapjack
         entity_check = get_entity_check(@entity, @check)
         return 404 if entity_check.nil?
 
-        entity_check.end_unscheduled_maintenance
+        entity_check.end_unscheduled_maintenance(Time.now.to_i)
 
         redirect back
       end
