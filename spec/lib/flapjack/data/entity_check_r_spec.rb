@@ -1,17 +1,42 @@
 require 'spec_helper'
 
 require 'flapjack/data/entity_check_r'
+require 'flapjack/data/entity_r'
 
 describe Flapjack::Data::EntityCheckR, :redis => true do
 
   let(:half_an_hour) { 30 * 60 }
 
-  def create_contact
+  # def create_contact
+  #   redis.hmset('flapjack/data/contact_r:1:attrs', {'first_name' => 'John',
+  #     'last_name' => 'Smith', 'email' => 'jsmith@example.com'}.flatten)
+  #   redis.sadd('flapjack/data/contact_r::ids', '1')
+  # end
 
-  end
+  let(:entity_name) { 'foo.example.com' }
+  let(:check_name)  { 'PING' }
+
+  let(:redis) { Flapjack.redis }
 
   def create_entity
+    redis.multi
+    redis.hmset('flapjack/data/entity_r:1:attrs', {'name' => entity_name}.flatten)
+    redis.sadd('flapjack/data/entity_r::ids', '1')
+    redis.sadd("flapjack/data/entity_r::by_name:#{entity_name}", '1')
+    redis.exec
+  end
 
+  def create_check(entity)
+    redis.multi
+    redis.hmset('flapjack/data/entity_check_r:5:attrs', {'name' => check_name,
+      'entity_name' => entity.name, 'state' => 'ok'}.flatten)
+    redis.sadd('flapjack/data/entity_check_r::ids', '5')
+    redis.sadd("flapjack/data/entity_check_r::by_name:#{check_name}", '5')
+    redis.sadd("flapjack/data/entity_check_r::by_entity_name:#{entity_name}", '5')
+    redis.sadd("flapjack/data/entity_check_r::by_state:ok", '5')
+
+    redis.sadd("flapjack/data/entity_r:#{entity.id}:check_ids", '5')
+    redis.exec
   end
 
   # before(:each) do
@@ -25,46 +50,56 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
   #                               'contacts' => ['362']})
   # end
 
-  # it "is created for an event id" do
-  #   ec = Flapjack::Data::EntityCheck.for_event_id("#{name}:ping")
-  #   ec.should_not be_nil
-  #   ec.entity.should_not be_nil
-  #   ec.entity.name.should_not be_nil
-  #   ec.entity.name.should == name
-  #   ec.check.should_not be_nil
-  #   ec.check.should == 'ping'
-  # end
 
-  # it "is created for an entity name" do
-  #   ec = Flapjack::Data::EntityCheck.for_entity_name(name, 'ping')
-  #   ec.should_not be_nil
-  #   ec.entity.should_not be_nil
-  #   ec.entity.name.should_not be_nil
-  #   ec.entity.name.should == name
-  #   ec.check.should_not be_nil
-  #   ec.check.should == 'ping'
-  # end
+  context "class-level finders" do
 
-  # it "is created for an entity id" do
-  #   ec = Flapjack::Data::EntityCheck.for_entity_id(5000, 'ping')
-  #   ec.should_not be_nil
-  #   ec.entity.should_not be_nil
-  #   ec.entity.name.should_not be_nil
-  #   ec.entity.name.should == name
-  #   ec.check.should_not be_nil
-  #   ec.check.should == 'ping'
-  # end
+    before(:each) do
+      create_entity
+      create_check(Flapjack::Data::EntityR.find_by_id(1))
+    end
 
-  # it "is created for an entity object" do
-  #   e = Flapjack::Data::Entity.find_by_name(name)
-  #   ec = Flapjack::Data::EntityCheck.for_entity(e, 'ping')
-  #   ec.should_not be_nil
-  #   ec.entity.should_not be_nil
-  #   ec.entity.name.should_not be_nil
-  #   ec.entity.name.should == name
-  #   ec.check.should_not be_nil
-  #   ec.check.should == 'ping'
-  # end
+    it "is found for an event id" do
+      ec = Flapjack::Data::EntityCheckR.find_for_event_id("#{entity_name}:#{check_name}")
+      ec.should_not be_nil
+      ec.entity.should_not be_nil
+      ec.entity.name.should_not be_nil
+      ec.entity.name.should == entity_name
+      ec.name.should_not be_nil
+      ec.name.should == check_name
+    end
+
+    it "is found for an entity name" do
+      ec = Flapjack::Data::EntityCheckR.find_for_entity_name(entity_name, check_name)
+      ec.should_not be_nil
+      ec.entity.should_not be_nil
+      ec.entity.name.should_not be_nil
+      ec.entity.name.should == entity_name
+      ec.name.should_not be_nil
+      ec.name.should == check_name
+    end
+
+    it "is found for an entity id" do
+      ec = Flapjack::Data::EntityCheckR.find_for_entity_id('1', check_name)
+      ec.should_not be_nil
+      ec.entity.should_not be_nil
+      ec.entity.name.should_not be_nil
+      ec.entity.name.should == entity_name
+      ec.name.should_not be_nil
+      ec.name.should == check_name
+    end
+
+    it "is found for an entity object" do
+      ec = Flapjack::Data::EntityCheckR.find_for_entity(Flapjack::Data::EntityR.find_by_id('1'), check_name)
+      ec.should_not be_nil
+      ec.entity.should_not be_nil
+      ec.entity.name.should_not be_nil
+      ec.entity.name.should == entity_name
+      ec.name.should_not be_nil
+      ec.name.should == check_name
+    end
+
+  end
+
 
   # it "is not created for a missing entity" do
   #   expect {

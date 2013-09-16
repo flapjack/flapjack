@@ -7,7 +7,6 @@ require 'flapjack/patches'
 require 'flapjack/data/redis_record'
 require 'flapjack/data/contact_r'
 require 'flapjack/data/event'
-require 'flapjack/data/entity_r'
 
 # TODO might want to split the class methods out to a separate class, DAO pattern
 # ( http://en.wikipedia.org/wiki/Data_access_object ).
@@ -32,41 +31,41 @@ module Flapjack
                         :entity_name => :string,
                         :state       => :string
 
-      index_by :entity_id, :name, :state
+      index_by :entity_name, :name, :state
 
       def entity
-        @entity ||= Flapjack::Data::EntityR.find_by_id(self.entity_id)
+        @entity ||= Flapjack::Data::EntityR.find_by(:name, self.entity_name).first
       end
 
       # TODO work out when it's valid to create the record if not found
 
-      def self.for_event_id(event_id)
+      def self.find_for_event_id(event_id)
         entity_name, check_name = event_id.split(':', 2)
-        ids = self.indexed_ids(:entity_name, entity_name) & self.indexed_ids(:name, check_name)
-        raise "invalid index data" if ids.size > 1
+        ids = Flapjack.redis.sinter(self.entity_name_index(entity_name).key,
+                                    self.name_index(check_name).key)
         return if ids.empty?
         self.find_by_id(ids.first)
       end
 
-      def self.for_entity_name(entity_name, check_name)
-        ids = self.indexed_ids(:entity_name, entity_name) & self.indexed_ids(:name, check_name)
-        raise "invalid index data" if ids.size > 1
+      def self.find_for_entity_name(entity_name, check_name)
+        ids = Flapjack.redis.sinter(self.entity_name_index(entity_name).key,
+                                    self.name_index(check_name).key)
         return if ids.empty?
         self.find_by_id(ids.first)
       end
 
-      # TODO replace any usages of this with for_entity, and load the entity before the call
-      def self.for_entity_id(entity_id, check_name)
-        entity = Flapjack::Data::Entity.find_by_id(entity_id)
-        ids = self.indexed_ids(:entity_name, entity.name) & self.indexed_ids(:name, check_name)
-        raise "invalid index data" if ids.size > 1
+      # TODO replace any usages of this with find_by_entity, and load the entity before the call
+      def self.find_for_entity_id(entity_id, check_name)
+        return unless entity = Flapjack::Data::EntityR.find_by_id(entity_id)
+        ids = Flapjack.redis.sinter(self.entity_name_index(entity.name).key,
+                                    self.name_index(check_name).key)
         return if ids.empty?
         self.find_by_id(ids.first)
       end
 
-      def self.for_entity(entity, check)
-        ids = self.indexed_ids(:entity_name, entity.name) & self.indexed_ids(:name, check_name)
-        raise "invalid index data" if ids.size > 1
+      def self.find_for_entity(entity, check_name)
+        ids = Flapjack.redis.sinter(self.entity_name_index(entity.name).key,
+                                    self.name_index(check_name).key)
         return if ids.empty?
         self.find_by_id(ids.first)
       end

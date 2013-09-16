@@ -100,9 +100,9 @@ module Flapjack
         end
 
         def find_by(att, value)
-          return unless indexer = indexer_for_attribute_value(att.to_s, value)
-          ids = indexer.members
-          ids.collect {|id| load(id)}
+          return unless singleton_methods(false).include?(:"#{att}_index")
+          att_index = self.send("#{att}_index", value)
+          att_index.ids.collect {|id| load(id)}
         end
 
         # TODO validate that the key is one for a set property
@@ -148,13 +148,9 @@ module Flapjack
 
         # NB: key must be a string or boolean type, TODO validate this
         def index_by(*args)
-          @indexers ||= {}
-          idxs = args.inject({}) do |memo, arg|
+          args.each do |arg|
             associate(IndexAssociation, self, [arg])
-            memo[arg.to_s] = {}
-            memo
           end
-          @indexers.update(idxs)
           nil
         end
 
@@ -177,23 +173,6 @@ module Flapjack
 
         # true.to_s == 'true' and false.to_s == false anyway, but if we need any
         # other normalized value for the indexers we can add the type here
-        def indexer_for_attribute_value(att, value)
-          index_key = case value
-          when String, Symbol
-            value.to_s
-          when TrueClass
-            'true'
-          when FalseClass
-            'false'
-          end
-
-          return if index_key.nil?
-
-          unless @indexers[att][index_key]
-            @indexers[att][index_key] = Redis::Set.new("#{class_key}::by_#{att}:#{index_key}")
-          end
-          @indexers[att][index_key]
-        end
 
         # TODO clean up method params, it's a mish-mash
         def associate(klass, parent, args)
@@ -201,29 +180,34 @@ module Flapjack
           case klass.name
           when ::Flapjack::Data::RedisRecord::IndexAssociation.name
             name = args.first
-            unless method_defined?("#{name}_index")
-              assoc = %Q{
-                def #{name}_index
-                  #{name}_proxy_index
-                end
 
-                def #{name}_index_ids
-                  #{name}_proxy_index.ids
+            # TODO check method_defined? ( which relative to instance_eval ?)
+
+            unless name.nil?
+              assoc = %Q{
+                def #{name}_index(value)
+                  ret = #{name}_proxy_index
+                  ret.value = value
+                  ret
                 end
 
                 private
 
                 def #{name}_proxy_index
                   @#{name}_proxy_index ||=
-                    ::Flapjack::Data::RedisRecord::IndexAssociation.new(self, "#{name}")
+                    ::Flapjack::Data::RedisRecord::IndexAssociation.new(self, "#{class_key}", "#{name}")
                 end
               }
+              instance_eval assoc, __FILE__, __LINE__
             end
+
           when ::Flapjack::Data::RedisRecord::HasManyAssociation.name
             options = args.extract_options!
             name = args.first.to_s
 
-            unless name.nil? || method_defined?(name)
+            # TODO check method_defined? ( which relative to class_eval ? )
+
+            unless name.nil?
               assoc = %Q{
                 def #{name}
                   #{name}_proxy
@@ -241,11 +225,10 @@ module Flapjack
                       :class => #{options[:class] ? options[:class].name : 'nil'} )
                 end
               }
+              class_eval assoc, __FILE__, __LINE__
             end
           end
 
-          return if assoc.nil?
-          class_eval assoc, __FILE__, __LINE__
         end
 
       end
@@ -329,14 +312,18 @@ module Flapjack
 
         self.id ||= SecureRandom.hex(16)
 
+        idx_methods = index_methods.map(&:to_s)
+
         indexed = self.changed.select {|att|
-          self.class.method_defined?("#{att}_index")
+          idx_methods.include?("#{att}_index")
         }
 
         Flapjack.redis.multi
 
         indexed.each do |att|
-          self.send("#{att}_index").delete_id( @attributes['id'] )
+          value = self.changes[att].first
+          next if value.nil?
+          self.class.send("#{att}_index", value).delete_id( @attributes['id'] )
         end
 
         simple_attrs  = {}
@@ -377,7 +364,9 @@ module Flapjack
         end
 
         indexed.each do |att|
-          self.send("#{att}_index").add_id( @attributes['id'] )
+          value = self.changes[att].last
+          next if value.nil?
+          self.class.send("#{att}_index", value).add_id( @attributes['id'] )
         end
 
         # ids is a set, so update won't create duplicates
@@ -394,10 +383,13 @@ module Flapjack
       def destroy
         Flapjack.redis.multi
         self.class.delete_id(@attributes['id'])
+
+        idx_methods = index_methods.map(&:to_s)
+
         self.attributes.keys.reject{|att| att == 'id'}.select {|att|
-          self.class.method_defined?("#{att}_index")
+          idx_methods.include?("#{att}_index")
         }.each {|att|
-          self.send("#{att}_index").delete_id( @attributes['id'])
+          self.class.send("#{att}_index", @attributes[att]).delete_id( @attributes['id'])
         }
         @simple_attributes.clear
         @complex_attributes.values do |redis_obj|
@@ -440,37 +432,71 @@ module Flapjack
         @attributes[att.to_s]
       end
 
+      # TODO a neater way to handle these?
+      def index_methods
+        metaclass = class << self; self; end
+        metaclass.singleton_methods(false).inject([]) do |memo, met|
+          memo << met if met.to_s =~ /_index\z/
+          memo
+        end
+      end
+
       class IndexAssociation
 
-        def initialize(parent, att)
+        def initialize(parent, class_key, att)
+          @indexers = {}
           @parent = parent
+          @class_key = class_key
           @attribute = att
         end
 
+        def value=(value)
+          @value = value
+        end
+
         def count
-          return unless indexer = indexer_for_attribute_value
+          return unless indexer = indexer_for_value
           indexer.count
         end
 
         def ids
-          return [] unless indexer = indexer_for_attribute_value
+          return [] unless indexer = indexer_for_value
           indexer.members
         end
 
         def delete_id(id)
-          return unless indexer = indexer_for_attribute_value
+          return unless indexer = indexer_for_value
           indexer.delete(id)
         end
 
         def add_id(id)
-          return unless indexer = indexer_for_attribute_value
+          return unless indexer = indexer_for_value
           indexer.add(id)
+        end
+
+        def key
+          return unless indexer = indexer_for_value
+          indexer.key
         end
 
         private
 
-        def indexer_for_attribute_value
-          @parent.class.send(:indexer_for_attribute_value, @attribute, @parent.send(@attribute))
+        def indexer_for_value
+          index_key = case @value
+          when String, Symbol
+            @value.to_s
+          when TrueClass
+            'true'
+          when FalseClass
+            'false'
+          end
+
+          return if index_key.nil?
+
+          unless @indexers[index_key]
+            @indexers[index_key] = Redis::Set.new("#{@class_key}::by_#{@attribute}:#{index_key}")
+          end
+          @indexers[index_key]
         end
 
       end
