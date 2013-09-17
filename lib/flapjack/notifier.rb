@@ -123,29 +123,20 @@ module Flapjack
 
         contact = message.contact
 
-        if notification.ok?
-          contact.update_sent_alert_keys(
-            :media => media_type,
-            :check => event_id,
-            :state => 'warning',
-            :delete => true)
-          contact.update_sent_alert_keys(
-            :media => media_type,
-            :check => event_id,
-            :state => 'critical',
-            :delete => true)
-          contact.update_sent_alert_keys(
-            :media => media_type,
-            :check => event_id,
-            :state => 'unknown',
-            :delete => true)
+        if notification.ok? || (notification.state == 'acknowledgement')
+          ['warning', 'critical', 'unknown'].each do |alert_state|
+            contact.update_sent_alert_keys(
+              :media => media_type,
+              :check => event_id,
+              :state => alert_state,
+              :delete => true)
+          end
         else
           contact.update_sent_alert_keys(
             :media => media_type,
             :check => event_id,
             :state => notification.state)
         end
-
 
         contents_tags = contents['tags']
         contents['tags'] = contents_tags.is_a?(Set) ? contents_tags.to_a : contents_tags
