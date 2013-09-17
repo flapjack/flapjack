@@ -7,6 +7,7 @@ Gem::Specification.new do |gem|
   gem.description   = "Flapjack is distributed monitoring notification system that provides a scalable method for processing streams of events from Nagios and deciding who should be notified"
   gem.summary       = "Intelligent, scalable, distributed monitoring notification system."
   gem.homepage      = "http://flapjack-project.com/"
+  gem.license       = 'MIT'
 
   # see http://yehudakatz.com/2010/12/16/clarifying-the-roles-of-the-gemspec-and-gemfile/
   # following a middle road here, not shipping it with the gem :)
