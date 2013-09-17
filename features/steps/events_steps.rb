@@ -72,6 +72,11 @@ def set_warning_state(entity, check)
     :timestamp => (Time.now.to_i - (60*60*24)))
 end
 
+def end_unscheduled_maintenance(entity, check)
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+  entity_check.end_unscheduled_maintenance(Time.now.to_i)
+end
+
 def submit_ok(entity, check)
   event = {
     'type'    => 'service',
@@ -261,6 +266,12 @@ When /^a test .*is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?
   drain_events
 end
 
+When /^the unscheduled maintenance is ended(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
+  check  ||= @check
+  entity ||= @entity
+  end_unscheduled_maintenance(entity, check)
+end
+
 # TODO logging is a side-effect, should test for notification generation itself
 Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
   check  ||= @check
@@ -278,10 +289,10 @@ Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '
   found.should be_true
 end
 
-Then /^scheduled maintenance should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
+Then /^(un)?scheduled maintenance should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |unsched, check, entity|
   check  ||= @check
   entity ||= @entity
-  @redis.get("#{entity}:#{check}:scheduled_maintenance").should_not be_nil
+  @redis.get("#{entity}:#{check}:#{unsched || ''}scheduled_maintenance").should_not be_nil
 end
 
 Then /^show me the (\w+ )*log$/ do |adjective|
