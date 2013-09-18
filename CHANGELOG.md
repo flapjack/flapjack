@@ -1,5 +1,31 @@
 ## Flapjack Changelog
 
+# 0.7.26 - 2013-09-16
+- Bug: last critical notification is empty in web UI gh-306 (@ali-graham)
+- Bug: Ending unscheduled maintenance in Web UI is broken gh-307 (@jessereynolds)
+- Bug: Acknowledgement jabber message shows incorrect duration gh-309 (@jessereynolds)
+- Bug: Details showing up in email alerts when "empty" gh-310 (@jessereynolds)
+- Bug: Only show Previous State and Summary when current state != previous unique state gh-311 (@jessereynolds)
+
+# 0.7.25 - 2013-09-13
+- Bug: EntityCheck last_update= isn't being called for update_state since refactoring gh-303 (@ali-graham)
+- Bug: flapjack-nagios-receiver is double-escaping its JSON data gh-304 (@jessereynolds)
+
+# 0.7.24 - 2013-09-12
+- Bug: gem install of flapjack 0.7.23 fails with tzinfo-data dependency error gh-302 (@jessereynolds)
+
+# 0.7.23 - 2013-09-12
+- Bug: Quick ok -> warning -> ok -> warning triggers too many recovery notifications gh-119 (@jessereynolds)
+- Bug: Blackhole notification rule doesn't block recovery notifications gh-282 (@jessereynolds)
+- Chore: Shorten SMS messages to 159 chars on the Messagenet gateway gh-278 (@ali-graham)
+- Chore: flapjack-nagios-receiver should use Event#add gh-275 (@ali-graham)
+- Chore: Non-zero exit code after receiving SIGINT gh-266 (@ali-graham)
+- Bug: Email notifications - remove "(about a minute ago)" and fix previous state fields gh-258 (@ali-graham)
+- Chore: refactor delays filter, remove mass client failures filter gh-293 (@jessereynolds)
+- Bug: creation of scheduled maintenance fails from web UI gh-296 (@ali-graham)
+- Feature: flapjack UI needs a favicon gh-297 (@jessereynolds)
+- Chore: email notification styling gh-298 (@jessereynolds)
+
 # 0.7.22 - 2013-08-08
 - Bug: fix potential exception in json serialisation of tags in notifications gh-281 (@jessereynolds)
 

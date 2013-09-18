@@ -407,4 +407,25 @@ Feature: Notification rules on a per contact basis
     When  a critical event is received
     Then  3 sms alerts should be queued for +61400000004
 
-
+  # tests that notifications are sent as acknowledgement clears the notification intervals
+  @time
+  Scenario: an second acknowledgement is created after the first is deleted (gh-308)
+    Given the check is check 'ping' on entity 'baz'
+    And the check is in an ok state
+    When a critical event is received
+    And 1 minute passes
+    And a critical event is received
+    Then 1 email alert should be queued for malak@example.com
+    When 1 minute passes
+    And an acknowledgement event is received
+    Then unscheduled maintenance should be generated
+    And 2 email alerts should be queued for malak@example.com
+    When 1 minute passes
+    And the unscheduled maintenance is ended
+    And 1 minute passes
+    And a critical event is received
+    Then 3 email alerts should be queued for malak@example.com
+    When 1 minute passes
+    And an acknowledgement event is received
+    Then unscheduled maintenance should be generated
+    And 4 email alerts should be queued for malak@example.com

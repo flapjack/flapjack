@@ -33,11 +33,10 @@ module Flapjack
           return true
         end
 
-        entity_check.create_unscheduled_maintenance(timestamp,
-          (event.duration || (4 * 60 * 60)),
-          :summary  => event.summary)
+        um_duration = event.duration || (4 * 60 * 60)
+        entity_check.create_unscheduled_maintenance(timestamp, um_duration, :summary  => event.summary)
 
-        @logger.debug("#{label} pass (unscheduled maintenance created for #{event.id})")
+        @logger.debug("#{label} pass (unscheduled maintenance created for #{event.id}, duration: #{um_duration})")
         false
       end
     end
