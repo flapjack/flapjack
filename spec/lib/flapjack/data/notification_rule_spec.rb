@@ -17,8 +17,10 @@ describe Flapjack::Data::NotificationRule, :redis => true do
      :tags               => ["database","physical"],
      :entities           => ["foo-app-01.example.com"],
      :time_restrictions  => [ weekdays_8_18 ],
+     :unknown_media      => [],
      :warning_media      => ["email"],
      :critical_media     => ["sms", "email"],
+     :unknown_blackhole  => false,
      :warning_blackhole  => false,
      :critical_blackhole => false
     }
