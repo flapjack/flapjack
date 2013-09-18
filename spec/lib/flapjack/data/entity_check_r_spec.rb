@@ -18,44 +18,34 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
 
   let(:redis) { Flapjack.redis }
 
-  def create_entity
+  def create_entity(ent_name, id)
     redis.multi
-    redis.hmset('flapjack/data/entity_r:1:attrs', {'name' => entity_name}.flatten)
-    redis.sadd('flapjack/data/entity_r::ids', '1')
-    redis.sadd("flapjack/data/entity_r::by_name:#{entity_name}", '1')
+    redis.hmset("flapjack/data/entity_r:#{id}:attrs", {'name' => ent_name}.flatten)
+    redis.sadd('flapjack/data/entity_r::ids', id.to_s)
+    redis.sadd("flapjack/data/entity_r::by_name:#{ent_name}", id.to_s)
     redis.exec
   end
 
-  def create_check(entity)
+  def create_check(ent_name, chk_name, id)
+    raise "entity not found" unless entity = Flapjack::Data::EntityR.find_by(:name, ent_name).first
     redis.multi
-    redis.hmset('flapjack/data/entity_check_r:5:attrs', {'name' => check_name,
-      'entity_name' => entity.name, 'state' => 'ok'}.flatten)
-    redis.sadd('flapjack/data/entity_check_r::ids', '5')
-    redis.sadd("flapjack/data/entity_check_r::by_name:#{check_name}", '5')
-    redis.sadd("flapjack/data/entity_check_r::by_entity_name:#{entity_name}", '5')
-    redis.sadd("flapjack/data/entity_check_r::by_state:ok", '5')
+    redis.hmset("flapjack/data/entity_check_r:#{id}:attrs", {'name' => chk_name,
+      'entity_name' => entity.name, 'state' => 'ok', 'enabled' => 'true'}.flatten)
+    redis.sadd('flapjack/data/entity_check_r::ids', id.to_s)
+    redis.sadd("flapjack/data/entity_check_r::by_name:#{chk_name}", id.to_s)
+    redis.sadd("flapjack/data/entity_check_r::by_entity_name:#{entity.name}", id.to_s)
+    redis.sadd('flapjack/data/entity_check_r::by_state:ok', id.to_s)
+    redis.sadd('flapjack/data/entity_check_r::by_enabled:true', id.to_s)
 
-    redis.sadd("flapjack/data/entity_r:#{entity.id}:check_ids", '5')
+    redis.sadd("flapjack/data/entity_r:#{entity.id}:check_ids", id.to_s)
     redis.exec
   end
-
-  # before(:each) do
-  #   Flapjack::Data::Contact.add({'id'         => '362',
-  #                                'first_name' => 'John',
-  #                                'last_name'  => 'Johnson',
-  #                                'email'      => 'johnj@example.com' })
-
-  #   Flapjack::Data::Entity.add({'id'   => '5000',
-  #                               'name' => name,
-  #                               'contacts' => ['362']})
-  # end
-
 
   context "class-level finders" do
 
     before(:each) do
-      create_entity
-      create_check(Flapjack::Data::EntityR.find_by_id(1))
+      create_entity(entity_name, 1)
+      create_check(entity_name, check_name, 1)
     end
 
     it "is found for an event id" do
@@ -100,35 +90,48 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
 
   end
 
+  it "is not created for a missing entity" do
+    expect {
+      Flapjack::Data::EntityCheck.for_entity(nil, 'ping')
+    }.to raise_error
+  end
 
-  # it "is not created for a missing entity" do
-  #   expect {
-  #     Flapjack::Data::EntityCheck.for_entity(nil, 'ping')
-  #   }.to raise_error
-  # end
+  it "finds all checks" do
+    create_entity(entity_name, 1)
+    create_entity("another", 2)
+    create_check(entity_name, check_name, 1)
+    create_check(entity_name, "SSH", 2)
+    create_check("another", "HTTP", 3)
 
-  # it "finds all checks"
+    checks = Flapjack::Data::EntityCheckR.all
+    checks.should_not be_nil
+    checks.should be_an(Array)
+    checks.should have(3).checks
+  end
 
-  # it "returns a count of all checks"
+  it "returns a count of all checks"
 
-  # it "finds all checks grouped by entity"
+  it "finds all checks grouped by entity"
 
-  # it "finds all checks for an entity name"
-
-
-  # it "finds all failing checks"
-
-  # it "returns a count of all failing checks"
-
-  # it "finds all failing checks grouped by entity"
+  it "finds all checks for an entity name"
 
 
-  # it "finds all unacknowledged failing checks"
+  it "finds all failing checks"
 
-  # it "returns its entity's name" do
-  #   ec = Flapjack::Data::EntityCheck.for_entity_name(name, check)
-  #   ec.entity_name.should == name
-  # end
+  it "returns a count of all failing checks"
+
+  it "finds all failing checks grouped by entity"
+
+  it "finds all unacknowledged failing checks"
+
+  it "returns its entity's name" do
+    create_entity(entity_name, 1)
+    create_check(entity_name, check_name, 1)
+
+    ec = Flapjack::Data::EntityCheckR.find_for_entity_name(entity_name, check_name)
+    ec.should_not be_nil
+    ec.entity_name.should == entity_name
+  end
 
   # context "maintenance" do
 

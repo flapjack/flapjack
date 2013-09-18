@@ -24,20 +24,23 @@ module Flapjack
 
       ATTRIBUTE_TYPES = {:string      => [String],
                          :integer     => [Integer],
+                         :id          => [String],
+                         :timestamp   => [Integer, DateTime],
                          :boolean     => [TrueClass, FalseClass],
                          :list        => [Enumerable],
                          :set         => [Set],
                          :hash        => [Hash],
                          :json_string => [String, Integer, Enumerable, Set, Hash]}
 
-      COMPLEX_MAPPINGS = {:list => Redis::List,
-                          :set  => Redis::Set,
-                          :hash => Redis::HashKey}
+      COMPLEX_MAPPINGS = {:list       => Redis::List,
+                          :set        => Redis::Set,
+                          :hash       => Redis::HashKey}
 
       extend ActiveSupport::Concern
 
       included do
         include ActiveModel::AttributeMethods
+        extend ActiveModel::Callbacks
         include ActiveModel::Dirty
         include ActiveModel::Serializers::JSON
         include ActiveModel::Validations
@@ -53,8 +56,7 @@ module Flapjack
 
         instance_eval do
           # Evaluates in the context of the class -- so this is a
-          # class instance variable. TODO accesses may need to be
-          # synchronised to make this threadsafe
+          # class instance variable.
           @ids = Redis::Set.new("#{class_key}::ids")
         end
 
@@ -159,6 +161,11 @@ module Flapjack
           nil
         end
 
+        def has_sorted_set(*args)
+          associate(HasSortedSetAssociation, self, args)
+          nil
+        end
+
         private
 
         def class_key
@@ -221,8 +228,8 @@ module Flapjack
 
                 def #{name}_proxy
                   @#{name}_proxy ||=
-                    ::Flapjack::Data::RedisRecord::HasManyAssociation.new(self, "#{name.singularize}_ids",
-                      :class => #{options[:class] ? options[:class].name : 'nil'} )
+                    ::Flapjack::Data::RedisRecord::HasManyAssociation.new(self, "#{name}",
+                      :class => #{options[:class] ? options[:class].name : 'nil'})
                 end
               }
               class_eval assoc, __FILE__, __LINE__
@@ -267,7 +274,7 @@ module Flapjack
             memo[name] = case type
             when :string
               value
-            when :integer
+            when :integer, :timestamp
               value.to_i
             when :boolean
               value.downcase == 'true'
@@ -501,12 +508,41 @@ module Flapjack
 
       end
 
+      class HasSortedSetAssociation
+
+        def initialize(parent, name, options = {})
+        end
+
+        def <<(record)
+          add(record)
+          self  # for << 'a' << 'b'
+        end
+
+        def add(*records)
+        end
+
+        def delete(*records)
+        end
+
+        def count
+        end
+
+        def all
+        end
+
+        def collect(&block)
+        end
+
+        def each(&block)
+        end
+      end
+
       class HasManyAssociation
 
         # extend Forwardable
 
         def initialize(parent, name, options = {})
-          @record_ids = Redis::Set.new("#{parent.record_key}:#{name}")
+          @record_ids = Redis::Set.new("#{parent.record_key}:#{name.singularize}_ids")
 
           # TODO trap possible constantize error
           @associated_class = options[:class] || name.sub(/_ids$/, '').classify.constantize

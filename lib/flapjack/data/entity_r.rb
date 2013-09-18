@@ -12,9 +12,10 @@ module Flapjack
       include Flapjack::Data::RedisRecord
 
       define_attributes :name => :string,
+                        :enabled     => :boolean,
                         :tags => :set
 
-      index_by :name
+      index_by :name, :enabled
 
       has_many :contacts, :class => Flapjack::Data::ContactR
 

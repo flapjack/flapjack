@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+# require 'flapjack/data/entity_check_r'
+
 module Flapjack
 
   module Data
@@ -10,6 +12,9 @@ module Flapjack
 
       define_attributes :address  => :string,
                         :interval => :integer
+
+      # ??
+      # has_many :checks, :class => Flapjack::Data::EntityCheckR
 
       validates :address, :presence => true
       validates :interval, :presence => true,
