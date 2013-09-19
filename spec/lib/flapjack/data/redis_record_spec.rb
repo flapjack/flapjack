@@ -5,7 +5,12 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
   class Flapjack::Data::RedisRecord::ExampleChild
     include Flapjack::Data::RedisRecord
-    define_attributes :name => :string
+
+    define_attributes :name => :string,
+                      :important => :boolean
+
+    index_by :important
+
     validates :name, :presence => true
   end
 
@@ -25,19 +30,22 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
   let(:redis) { Flapjack.redis }
 
-  def create_example
-    redis.hmset('flapjack/data/redis_record/example:8:attrs',
-      {'name' => 'John Jones', 'email' => 'jjones@example.com', 'active' => 'true'}.flatten)
-    redis.sadd('flapjack/data/redis_record/example::by_active:true', '8')
-    redis.sadd('flapjack/data/redis_record/example::ids', '8')
+  def create_example(attrs = {})
+    redis.hmset("flapjack/data/redis_record/example:#{attrs[:id]}:attrs",
+      {'name' => attrs[:name], 'email' => attrs[:email], 'active' => attrs[:active]}.flatten)
+    redis.sadd("flapjack/data/redis_record/example::by_active:#{!!attrs[:active]}", attrs[:id])
+    redis.sadd('flapjack/data/redis_record/example::ids', attrs[:id])
   end
 
-  def create_child
-    redis.sadd('flapjack/data/redis_record/example:8:fdrr_child_ids', '3')
+  def create_child(parent, attrs = {})
+    redis.sadd("flapjack/data/redis_record/example:#{parent.id}:fdrr_child_ids", attrs[:id])
 
-    redis.sadd('flapjack/data/redis_record/example_child::ids', '3')
-    redis.hmset('flapjack/data/redis_record/example_child:3:attrs',
-                {'name' => 'Abel Tasman'}.flatten)
+    redis.hmset("flapjack/data/redis_record/example_child:#{attrs[:id]}:attrs",
+                {'name' => attrs[:name], 'important' => !!attrs[:important]}.flatten)
+
+    redis.sadd("flapjack/data/redis_record/example_child::by_important:#{!!attrs[:important]}", attrs[:id])
+
+    redis.sadd('flapjack/data/redis_record/example_child::ids', attrs[:id])
   end
 
   it "is invalid without a name" do
@@ -66,7 +74,8 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   end
 
   it "finds a record by id in redis" do
-    create_example
+    create_example(:id => '8', :name => 'John Jones',
+                   :email => 'jjones@example.com', :active => 'true')
 
     example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
     example.should_not be_nil
@@ -76,7 +85,8 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   end
 
   it "finds records by an indexed value in redis" do
-    create_example
+    create_example(:id => '8', :name => 'John Jones',
+                   :email => 'jjones@example.com', :active => 'true')
 
     examples = Flapjack::Data::RedisRecord::Example.find_by(:active, true)
     examples.should_not be_nil
@@ -89,7 +99,8 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   end
 
   it "updates a record's attributes in redis" do
-    create_example
+    create_example(:id => '8', :name => 'John Jones',
+                   :email => 'jjones@example.com', :active => 'true')
 
     example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
     example.name = 'Jane Janes'
@@ -107,7 +118,9 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   end
 
   it "deletes a record's attributes from redis" do
-    create_example
+    create_example(:id => '8', :name => 'John Jones',
+                   :email => 'jjones@example.com', :active => 'true')
+
     redis.keys('*').should =~ ['flapjack/data/redis_record/example::ids',
                                'flapjack/data/redis_record/example:8:attrs',
                                'flapjack/data/redis_record/example::by_active:true']
@@ -119,7 +132,8 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   end
 
   it "sets a parent/child has_many relationship between two records in redis" do
-    create_example
+    create_example(:id => '8', :name => 'John Jones',
+                   :email => 'jjones@example.com', :active => 'true')
 
     child = Flapjack::Data::RedisRecord::ExampleChild.new(:id => '3', :name => 'Abel Tasman')
     child.save.should be_true
@@ -143,14 +157,15 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
     redis.smembers('flapjack/data/redis_record/example_child::ids').should == ['3']
     redis.hgetall('flapjack/data/redis_record/example_child:3:attrs').should ==
-      {'name' => 'Abel Tasman'}
+      {'name' => 'Abel Tasman', 'important' => 'false'}
   end
 
   it "loads a child from a parent's has_many relationship" do
-    create_example
-    create_child
-
+    create_example(:id => '8', :name => 'John Jones',
+                   :email => 'jjones@example.com', :active => 'true')
     example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
+    create_child(example, :id => '3', :name => 'Abel Tasman')
+
     children = example.fdrr_children.all
 
     children.should be_an(Array)
@@ -161,10 +176,11 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   end
 
   it "removes a parent/child has_many relationship between two records in redis" do
-    create_example
-    create_child
-
+    create_example(:id => '8', :name => 'John Jones',
+                   :email => 'jjones@example.com', :active => 'true')
     example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
+
+    create_child(example, :id => '3', :name => 'Abel Tasman')
     child = Flapjack::Data::RedisRecord::ExampleChild.find_by_id('3')
 
     redis.smembers('flapjack/data/redis_record/example_child::ids').should == ['3']
@@ -181,7 +197,8 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   # it "removes a parent/child has_one relationship between two records in redis"
 
   it "resets changed state on refresh" do
-    create_example
+    create_example(:id => '8', :name => 'John Jones',
+                   :email => 'jjones@example.com', :active => 'true')
     example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
 
     example.name = "King Henry VIII"
@@ -195,6 +212,41 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
   # TODO validate updates of the different data types for attributes
 
+  it "filters has_many records by indexed attribute values" do
+    create_example(:id => '8', :name => 'John Jones',
+                   :email => 'jjones@example.com', :active => 'true')
+    example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
+
+    create_child(example, :id => '3', :name => 'Martin Luther King', :important => true)
+    create_child(example, :id => '4', :name => 'Julius Caesar', :important => true)
+    create_child(example, :id => '5', :name => 'John Smith', :important => false)
+
+    important_kids = example.fdrr_children.filter(:important => true).all
+    important_kids.should_not be_nil
+    important_kids.should be_an(Array)
+    important_kids.should have(2).children
+    important_kids.map(&:id).should =~ ['3', '4']
+  end
+
+  it "filters all class records by indexed attribute values" do
+    create_example(:id => '8', :name => 'John Jones',
+                   :email => 'jjones@example.com', :active => 'true')
+    example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
+
+    create_example(:id => '9', :name => 'James Brown',
+                   :email => 'jbrown@example.com', :active => 'true')
+    example_2 = Flapjack::Data::RedisRecord::Example.find_by_id('9')
+
+    create_child(example, :id => '3', :name => 'Martin Luther King', :important => true)
+    create_child(example, :id => '4', :name => 'John Smith', :important => false)
+    create_child(example_2, :id => '5', :name => 'Julius Caesar', :important => true)
+
+    important_kids = Flapjack::Data::RedisRecord::ExampleChild.filter(:important => true).all
+    important_kids.should_not be_nil
+    important_kids.should be_an(Array)
+    important_kids.should have(2).children
+    important_kids.map(&:id).should =~ ['3', '5']
+  end
 
   # TODO tests for set intersection
 

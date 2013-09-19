@@ -354,7 +354,7 @@ module Flapjack
           when :string, :integer
             simple_attrs[name.to_s] = value.blank? ? nil : value.to_s
           when :boolean
-            simple_attrs[name.to_s] = value.blank? ? nil : (!!value ? 'true' : 'false')
+            simple_attrs[name.to_s] = (!!value).to_s
           when :list, :set, :hash
             complex_attrs[name.to_s] = value
           when :json_string
@@ -491,12 +491,8 @@ module Flapjack
 
         def indexer_for_value
           index_key = case @value
-          when String, Symbol
+          when String, Symbol, TrueClass, FalseClass
             @value.to_s
-          when TrueClass
-            'true'
-          when FalseClass
-            'false'
           end
 
           return if index_key.nil?
@@ -639,7 +635,7 @@ module Flapjack
           (@initial_key ? [@initial_key] : []) + (@steps.collect {|step|
             step.inject([]) do |memo, (att, value)|
               if idx_attrs.include?(att.to_s)
-                att_index = self.send("#{att}_index", value)
+                att_index = @associated_class.send("#{att}_index", value)
                 memo << att_index.key
               end
               memo
