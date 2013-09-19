@@ -96,13 +96,18 @@ module Flapjack
           @ids.each {|id| load(id).destroy }
         end
 
+        def filter(opts = {})
+          filter = Flapjack::Data::RedisRecord::Filter.new(nil, self)
+          filter.filter(opts)
+        end
+
         def find_by_id(id)
           return unless id && exists?(id.to_s)
           load(id.to_s)
         end
 
         def find_by(att, value)
-          return unless singleton_methods(false).include?(:"#{att}_index")
+          return unless indexed_attributes.include?(att.to_s)
           att_index = self.send("#{att}_index", value)
           att_index.ids.collect {|id| load(id)}
         end
@@ -148,9 +153,14 @@ module Flapjack
           @attribute_types.update(options)
         end
 
+        def indexed_attributes
+          @indexed_attributes ||= []
+        end
+
         # NB: key must be a string or boolean type, TODO validate this
         def index_by(*args)
           args.each do |arg|
+            indexed_attributes << arg.to_s
             associate(IndexAssociation, self, [arg])
           end
           nil
@@ -319,10 +329,10 @@ module Flapjack
 
         self.id ||= SecureRandom.hex(16)
 
-        idx_methods = index_methods.map(&:to_s)
+        idx_attrs = self.class.send(:indexed_attributes)
 
         indexed = self.changed.select {|att|
-          idx_methods.include?("#{att}_index")
+          idx_attrs.include?(att)
         }
 
         Flapjack.redis.multi
@@ -391,10 +401,10 @@ module Flapjack
         Flapjack.redis.multi
         self.class.delete_id(@attributes['id'])
 
-        idx_methods = index_methods.map(&:to_s)
+        idx_attrs = self.class.send(:indexed_attributes)
 
         self.attributes.keys.reject{|att| att == 'id'}.select {|att|
-          idx_methods.include?("#{att}_index")
+          idx_attrs.include?(att)
         }.each {|att|
           self.class.send("#{att}_index", @attributes[att]).delete_id( @attributes['id'])
         }
@@ -437,15 +447,6 @@ module Flapjack
       # Used by ActiveModel to lookup attributes during validations.
       def read_attribute_for_validation(att)
         @attributes[att.to_s]
-      end
-
-      # TODO a neater way to handle these?
-      def index_methods
-        metaclass = class << self; self; end
-        metaclass.singleton_methods(false).inject([]) do |memo, met|
-          memo << met if met.to_s =~ /_index\z/
-          memo
-        end
       end
 
       class IndexAssociation
@@ -549,6 +550,11 @@ module Flapjack
           raise 'Associated class does not mixin RedisRecord' unless @associated_class.included_modules.include?(RedisRecord)
         end
 
+        def filter(opts = {})
+          filter = Flapjack::Data::RedisRecord::Filter.new(@record_ids.key, @associated_class)
+          filter.filter(opts)
+        end
+
         def <<(record)
           add(record)
           self  # for << 'a' << 'b'
@@ -595,6 +601,50 @@ module Flapjack
 
         def ids
           @record_ids.members
+        end
+
+      end
+
+      class Filter
+
+        def initialize(initial_key, associated_class)
+          @initial_key = initial_key
+          @associated_class = associated_class
+          @steps = []
+        end
+
+        def filter(opts = {})
+          @steps += [opts]
+          self
+        end
+
+        # is there a faster way to do this?
+        def count
+          temp_set = "#{@associated_class.class_key}::tmp:#{SecureRandom.hex(16)}"
+          Flapjack.redis.sinterstore(temp_set, *resolve_steps)
+          Flapjack.redis.scard(temp_set)
+          Flapjack.redis.del(temp_set)
+        end
+
+        def all
+          Flapjack.redis.sinter(*resolve_steps).collect do |id|
+            @associated_class.send(:load, id)
+          end
+        end
+
+        private
+
+        def resolve_steps
+          idx_attrs = @associated_class.send(:indexed_attributes)
+          (@initial_key ? [@initial_key] : []) + (@steps.collect {|step|
+            step.inject([]) do |memo, (att, value)|
+              if idx_attrs.include?(att.to_s)
+                att_index = self.send("#{att}_index", value)
+                memo << att_index.key
+              end
+              memo
+            end
+          }.flatten)
         end
 
       end
