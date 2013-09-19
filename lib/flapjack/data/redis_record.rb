@@ -331,9 +331,7 @@ module Flapjack
 
         idx_attrs = self.class.send(:indexed_attributes)
 
-        indexed = self.changed.select {|att|
-          idx_attrs.include?(att)
-        }
+        indexed = self.changed & idx_attrs
 
         Flapjack.redis.multi
 
@@ -400,12 +398,7 @@ module Flapjack
       def destroy
         Flapjack.redis.multi
         self.class.delete_id(@attributes['id'])
-
-        idx_attrs = self.class.send(:indexed_attributes)
-
-        self.attributes.keys.reject{|att| att == 'id'}.select {|att|
-          idx_attrs.include?(att)
-        }.each {|att|
+        (self.attributes.keys & self.class.send(:indexed_attributes)).each {|att|
           self.class.send("#{att}_index", @attributes[att]).delete_id( @attributes['id'])
         }
         @simple_attributes.clear
