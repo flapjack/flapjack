@@ -1,5 +1,10 @@
 ## Flapjack Changelog
 
+# 0.7.27 - 2013-09-19
+- Feature: Treat UNKNOWN separately to CRITICAL in notification rules gh-295 (@jessereynolds)
+- Bug: License missing from gemspec gh-313 (@jessereynolds)
+- Bug: fix ack after ack deletion gh-308 (@ali-graham)
+
 # 0.7.26 - 2013-09-16
 - Bug: last critical notification is empty in web UI gh-306 (@ali-graham)
 - Bug: Ending unscheduled maintenance in Web UI is broken gh-307 (@jessereynolds)
