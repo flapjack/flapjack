@@ -7,6 +7,7 @@ Gem::Specification.new do |gem|
   gem.description   = "Flapjack is distributed monitoring notification system that provides a scalable method for processing streams of events from Nagios and deciding who should be notified"
   gem.summary       = "Intelligent, scalable, distributed monitoring notification system."
   gem.homepage      = "http://flapjack-project.com/"
+  gem.license       = 'MIT'
 
   # see http://yehudakatz.com/2010/12/16/clarifying-the-roles-of-the-gemspec-and-gemfile/
   # following a middle road here, not shipping it with the gem :)
@@ -33,9 +34,9 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'blather', '~> 0.8.3'
   gem.add_dependency 'chronic'
   gem.add_dependency 'chronic_duration'
-  gem.add_dependency 'activesupport'
+  gem.add_dependency 'activesupport', '~> 3.2.14'
   gem.add_dependency 'ice_cube'
-  gem.add_dependency 'tzinfo'
+  gem.add_dependency 'tzinfo', '~> 1.0.1'
   gem.add_dependency 'tzinfo-data'
 
   gem.add_development_dependency 'rake'

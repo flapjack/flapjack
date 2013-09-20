@@ -1,8 +1,8 @@
 PATH
   remote: .
   specs:
-    flapjack (0.7.22)
-      activesupport
+    flapjack (0.7.27)
+      activesupport (~> 3.2.14)
       blather (~> 0.8.3)
       chronic
       chronic_duration
@@ -20,7 +20,7 @@ PATH
       resque (~> 1.23.0)
       sinatra
       thin
-      tzinfo
+      tzinfo (~> 1.0.1)
       tzinfo-data
 
 GEM

@@ -2,24 +2,24 @@ Hi <%= @contact_first_name %>
 
 Monitoring has detected the following:
 
-Entity:   <%= @entity_name %>
-Check:    <%= @check %>
-State:    <%= @state %>
-Summary:  <%= @summary %>
+Entity:           <%= @entity_name %>
+Check:            <%= @check %>
+State:            <%= @state.upcase %>
+Summary:          <%= @summary %>
 <% if @details -%>
-Details:  <%= @details %>
+Details:          <%= @details %>
 <% end -%>
 <% if @time -%>
-Time:     <%= Time.at(@time.to_i).to_s %>
+Time:             <%= Time.at(@time.to_i).to_s %>
 <% end -%>
 <% if @duration && @duration > 40 -%>
-Duration: <%= ChronicDuration.output(@duration) %>
+Duration:         <%= ChronicDuration.output(@duration) %>
 <% end -%>
 <% if @last_state -%>
-Previous state:   <%= @last_state %>
+Previous State:   <%= @last_state.upcase %>
 <% end -%>
 <% if @last_summary -%>
-Previous summary: <%= @last_summary %>
+Previous Summary: <%= @last_summary %>
 <% end -%>
 
 Cheers,
