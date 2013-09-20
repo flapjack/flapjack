@@ -199,10 +199,6 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     redis.smembers('flapjack/data/redis_record/example:8:fdrr_child_ids').should == [] # but association is
   end
 
-  # it "sets a parent/child has_one relationship between two records in redis"
-
-  # it "removes a parent/child has_one relationship between two records in redis"
-
   it "resets changed state on refresh" do
     create_example(:id => '8', :name => 'John Jones',
                    :email => 'jjones@example.com', :active => 'true')
@@ -217,7 +213,16 @@ describe Flapjack::Data::RedisRecord, :redis => true do
     example.changes.should be_empty
   end
 
-  # TODO validate updates of the different data types for attributes
+  it "stores a string as an attribute value"
+  it "stores an integer as an attribute value"
+  it "stores a timestamp as an attribute value"
+  it "stores a boolean as an attribute value"
+
+  it "stores a list as an attribute value"
+  it "stores a set as an attribute value"
+  it "stores a hash as an attribute value"
+
+  it "stores a complex attribute value as JSON"
 
   context 'filters' do
 

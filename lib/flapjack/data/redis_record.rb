@@ -3,7 +3,6 @@
 require 'securerandom'
 require 'set'
 
-require 'oj'
 require 'active_support/concern'
 require 'active_support/core_ext/object/blank'
 require 'active_model'
@@ -315,7 +314,7 @@ module Flapjack
             when :boolean
               value.downcase == 'true'
             when :json_string
-              value.blank? ? nil : Oj.dump(value)
+              value.blank? ? nil : value.to_json
             end
           end
           memo
@@ -382,7 +381,7 @@ module Flapjack
           when :list, :set, :hash
             complex_attrs[name.to_s] = value
           when :json_string
-            simple_attrs[name.to_s] = value.blank? ? nil : Oj.dump(value)
+            simple_attrs[name.to_s] = value.blank? ? nil : value.to_json
           end
         end
 
