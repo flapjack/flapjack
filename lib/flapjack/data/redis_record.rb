@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'forwardable'
 require 'securerandom'
 require 'set'
 
@@ -96,20 +95,19 @@ module Flapjack
           @ids.each {|id| load(id).destroy }
         end
 
-        def filter(opts = {})
-          filter = Flapjack::Data::RedisRecord::Filter.new(nil, self)
-          filter.filter(opts)
+        def intersect(opts = {})
+          filter = Flapjack::Data::RedisRecord::Filter.new(@ids, self)
+          filter.intersect(opts)
+        end
+
+        def union(opts = {})
+          filter = Flapjack::Data::RedisRecord::Filter.new(@ids, self)
+          filter.union(opts)
         end
 
         def find_by_id(id)
           return unless id && exists?(id.to_s)
           load(id.to_s)
-        end
-
-        def find_by(att, value)
-          return unless indexed_attributes.include?(att.to_s)
-          att_index = self.send("#{att}_index", value)
-          att_index.ids.collect {|id| load(id)}
         end
 
         # TODO validate that the key is one for a set property
@@ -240,6 +238,34 @@ module Flapjack
                   @#{name}_proxy ||=
                     ::Flapjack::Data::RedisRecord::HasManyAssociation.new(self, "#{name}",
                       :class => #{options[:class] ? options[:class].name : 'nil'})
+                end
+              }
+              class_eval assoc, __FILE__, __LINE__
+            end
+          when ::Flapjack::Data::RedisRecord::HasSortedSetAssociation
+            options = args.extract_options
+            name = args.first.to_s
+            key = (options[:key] || :id).to_s
+
+            # TODO check method_defined? ( which relative to class_eval ? )
+
+            unless name.nil?
+              assoc = %Q{
+                def #{name}
+                  #{name}_proxy
+                end
+
+                def #{name}_ids
+                  #{name}_proxy.ids
+                end
+
+                private
+
+                def #{name}_proxy
+                  @#{name}_proxy ||=
+                    ::Flapjack::Data::RedisRecord::HasSortedSetAssociation.new(self, "#{name}",
+                      :class => #{options[:class] ? options[:class].name : 'nil'},
+                      :key   => "#{key}")
                 end
               }
               class_eval assoc, __FILE__, __LINE__
@@ -445,7 +471,9 @@ module Flapjack
       class IndexAssociation
 
         def initialize(parent, class_key, att)
-          @indexers = {}
+          @set_indexers = {}
+          @sorted_set_indexers = {}
+
           @parent = parent
           @class_key = class_key
           @attribute = att
@@ -455,45 +483,47 @@ module Flapjack
           @value = value
         end
 
-        def count
-          return unless indexer = indexer_for_value
-          indexer.count
-        end
-
-        def ids
-          return [] unless indexer = indexer_for_value
-          indexer.members
-        end
-
         def delete_id(id)
-          return unless indexer = indexer_for_value
-          indexer.delete(id)
+          return unless (set_indexer = indexer_for_value(:set)) &&
+            (sorted_set_indexer = indexer_for_value(:sorted_set))
+          set_indexer.delete(id)
+          sorted_set_indexer.delete(id)
         end
 
         def add_id(id)
-          return unless indexer = indexer_for_value
-          indexer.add(id)
+          return unless (set_indexer = indexer_for_value(:set)) &&
+            (sorted_set_indexer = indexer_for_value(:sorted_set))
+          set_indexer.add(id)
+          # TODO will score be relevant here? can we access timestamp?
+          sorted_set_indexer.add(id, 1)
         end
 
-        def key
-          return unless indexer = indexer_for_value
+        def key(type)
+          return unless indexer = indexer_for_value(type)
           indexer.key
         end
 
         private
 
-        def indexer_for_value
+        def indexer_for_value(type)
           index_key = case @value
           when String, Symbol, TrueClass, FalseClass
             @value.to_s
           end
-
           return if index_key.nil?
 
-          unless @indexers[index_key]
-            @indexers[index_key] = Redis::Set.new("#{@class_key}::by_#{@attribute}:#{index_key}")
+          case type
+          when :set
+            unless @set_indexers[index_key]
+              @set_indexers[index_key] = Redis::Set.new("#{@class_key}::by_#{@attribute}:set:#{index_key}")
+            end
+            @set_indexers[index_key]
+          when :sorted_set
+            unless @sorted_set_indexers[index_key]
+              @sorted_set_indexers[index_key] = Redis::SortedSet.new("#{@class_key}::by_#{@attribute}:sorted_set:#{index_key}")
+            end
+            @sorted_set_indexers[index_key]
           end
-          @indexers[index_key]
         end
 
       end
@@ -501,6 +531,8 @@ module Flapjack
       class HasSortedSetAssociation
 
         def initialize(parent, name, options = {})
+          @key = options[:key]
+          @record_keys = Redis::SortedSet.new("#{parent.record_key}:#{name.singularize}_#{options[:key].pluralize}")
         end
 
         def <<(record)
@@ -509,27 +541,48 @@ module Flapjack
         end
 
         def add(*records)
+          records.each do |record|
+            raise 'Invalid class' unless record.is_a?(@associated_class)
+            next unless record.save # TODO check if exists? && !dirty
+            # TODO check this add
+            @record_keys.add(@record.id, record.send(options[:key].to_sym))
+          end
         end
 
         def delete(*records)
+          records.each do |record|
+            raise 'Invalid class' unless record.is_a?(@associated_class)
+            @record_keys.delete(@record.id)
+          end
         end
 
         def count
+          Flapjack::Data::RedisRecord::Filter.new(@record_keys,
+            @associated_class).count
         end
 
         def all
+          Flapjack::Data::RedisRecord::Filter.new(@record_keys,
+            @associated_class).all
         end
 
         def collect(&block)
+          Flapjack::Data::RedisRecord::Filter.new(@record_keys,
+            @associated_class).collect(block)
         end
 
         def each(&block)
+          Flapjack::Data::RedisRecord::Filter.new(@record_keys,
+            @associated_class).each(block)
+        end
+
+        def ids
+          Flapjack::Data::RedisRecord::Filter.new(@record_keys,
+            @associated_class).ids
         end
       end
 
       class HasManyAssociation
-
-        # extend Forwardable
 
         def initialize(parent, name, options = {})
           @record_ids = Redis::Set.new("#{parent.record_key}:#{name.singularize}_ids")
@@ -539,9 +592,14 @@ module Flapjack
           raise 'Associated class does not mixin RedisRecord' unless @associated_class.included_modules.include?(RedisRecord)
         end
 
-        def filter(opts = {})
-          filter = Flapjack::Data::RedisRecord::Filter.new(@record_ids.key, @associated_class)
-          filter.filter(opts)
+        def intersect(opts = {})
+          filter = Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class)
+          filter.intersect(opts)
+        end
+
+        def union(opts = {})
+          filter = Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class)
+          filter.union(opts)
         end
 
         def <<(record)
@@ -565,77 +623,141 @@ module Flapjack
           end
         end
 
-        # is there a neater way to do the next four? some mix of delegation & ...
         def count
-          @record_ids.count
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
+            @associated_class).count
         end
 
         def all
-          @record_ids.map do |id|
-            @associated_class.send(:load, id)
-          end
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
+            @associated_class).all
         end
 
         def collect(&block)
-          @record_ids.collect do |id|
-            block.call( @associated_class.send(:load, id) )
-          end
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
+            @associated_class).collect(block)
         end
 
         def each(&block)
-          @record_ids.each do |id|
-            block.call( @associated_class.send(:load, id) )
-          end
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
+            @associated_class).each(block)
         end
 
         def ids
-          @record_ids.members
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
+            @associated_class).ids
         end
-
       end
 
       class Filter
+        # NB: maps a Set-ish interface itself...
 
-        def initialize(initial_key, associated_class)
-          @initial_key = initial_key
+        def initialize(initial_set, associated_class)
+          @initial_set = initial_set
           @associated_class = associated_class
           @steps = []
         end
 
-        def filter(opts = {})
-          @steps += [opts]
+        def intersect(opts = {})
+          @steps += [:intersect, opts]
           self
         end
 
-        # is there a faster way to do this?
+        def union(opts = {})
+          @steps += [:union, opts]
+          self
+        end
+
         def count
-          temp_set = "#{@associated_class.class_key}::tmp:#{SecureRandom.hex(16)}"
-          Flapjack.redis.sinterstore(temp_set, *resolve_steps)
-          Flapjack.redis.scard(temp_set)
-          Flapjack.redis.del(temp_set)
+          resolve_steps {|set| Flapjack.redis.smembers(temp_set)}
         end
 
         def all
-          Flapjack.redis.sinter(*resolve_steps).collect do |id|
-            @associated_class.send(:load, id)
+          ids.map {|id| @associated_class.send(:load, id) }
+        end
+
+        def collect(&block)
+          ids.collect do |id|
+            block.call(@associated_class.send(:load, id))
           end
+        end
+
+        def each
+          ids.each do |id|
+            block.call(@associated_class.send(:load, id))
+          end
+        end
+
+        def ids
+          resolve_steps {|set| Flapjack.redis.smembers(set) }
         end
 
         private
 
-        def resolve_steps
+        # TODO clean up to not use a temporary set if only doing one operation
+        # (or possibly for the last operation) e.g. sunion instead of sunionstore
+
+        # passes back the name of the temporary set with the ids resulting
+        # from the applied steps; calling methods need to delete this set
+        # when they have finished with it
+        def resolve_steps(&block)
+          return block.call(@initial_set.key) if @steps.empty?
+
+          temp_set = "#{@associated_class.send(:class_key)}::tmp:#{SecureRandom.hex(16)}"
+
           idx_attrs = @associated_class.send(:indexed_attributes)
-          (@initial_key ? [@initial_key] : []) + (@steps.collect {|step|
-            step.inject([]) do |memo, (att, value)|
+
+          initial = @initial_set ? @initial_set.key : nil
+
+          @steps.each_slice(2) do |step|
+
+            source_keys = []
+
+            if initial
+              source_keys << initial
+              initial = nil
+            end
+
+            source_keys += step.last.inject([]) do |memo, (att, value)|
               if idx_attrs.include?(att.to_s)
-                att_index = @associated_class.send("#{att}_index", value)
-                memo << att_index.key
+                value = [value] unless value.is_a?(Enumerable)
+                value.each do |val|
+                  att_index = @associated_class.send("#{att}_index", val)
+
+                  type = case @initial_set
+                  when Redis::SortedSet
+                    :sorted_set
+                  when Redis::Set, nil
+                    :set
+                  end
+
+                  memo << att_index.key(type)
+                end
               end
               memo
             end
-          }.flatten)
-        end
 
+            case @initial_set
+            when Redis::SortedSet
+              case step.first
+              when :union
+                Flapjack.redis.zunionstore(temp_set, source_keys)
+              when :intersect
+                Flapjack.redis.zinterstore(temp_set, source_keys)
+              end
+            when Redis::Set, nil
+              case step.first
+              when :union
+                Flapjack.redis.sunionstore(temp_set, *source_keys)
+              when :intersect
+                Flapjack.redis.sinterstore(temp_set, *source_keys)
+              end
+            end
+          end
+          ret = block.call(temp_set)
+          Flapjack.redis.del(temp_set)
+          ret
+        end
       end
 
       class TypeValidator < ActiveModel::Validator
