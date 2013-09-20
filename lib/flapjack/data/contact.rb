@@ -280,6 +280,23 @@ module Flapjack
         end
       end
 
+      def alerting_checks_for_media(media)
+        return 0
+      end
+
+      def reached_rollup_threshold_for_media?(media)
+
+        # probably requires notification.messages to pre-qualify every message
+        # ... or perhaps earlier, in update keys...
+        # perhaps we need a set to represent the failing checks for a contact, or perhaps
+        # rather failing checks for each contact's media
+        # ... perhaps a background process should update this rather than it being
+        # calculated & updated for every notification
+
+        rtfm = rollup_threshold_for_media(media)
+        !! rtfm ? alerting_checks_for_media(media) >= rtfm : false
+      end
+
       # FIXME
       # do a mixin with the following tag methods, they will be the same
       # across all objects we allow tags on
