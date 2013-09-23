@@ -23,7 +23,7 @@ module Flapjack
       ATTRIBUTE_TYPES = {:string      => [String],
                          :integer     => [Integer],
                          :id          => [String],
-                         :timestamp   => [Integer, DateTime],
+                         :timestamp   => [Integer, Time, DateTime],
                          :boolean     => [TrueClass, FalseClass],
                          :list        => [Enumerable],
                          :set         => [Set],
@@ -241,8 +241,8 @@ module Flapjack
               }
               class_eval assoc, __FILE__, __LINE__
             end
-          when ::Flapjack::Data::RedisRecord::HasSortedSetAssociation
-            options = args.extract_options
+          when ::Flapjack::Data::RedisRecord::HasSortedSetAssociation.name
+            options = args.extract_options!
             name = args.first.to_s
             key = (options[:key] || :id).to_s
 
@@ -309,8 +309,10 @@ module Flapjack
             memo[name] = case type
             when :string
               value
-            when :integer, :timestamp
+            when :integer
               value.to_i
+            when :timestamp
+              Time.at(value.to_i)
             when :boolean
               value.downcase == 'true'
             when :json_string
@@ -376,6 +378,8 @@ module Flapjack
           case type
           when :string, :integer
             simple_attrs[name.to_s] = value.blank? ? nil : value.to_s
+          when :timestamp
+            simple_attrs[name.to_s] = value.blank? ? nil : value.to_i.to_f
           when :boolean
             simple_attrs[name.to_s] = (!!value).to_s
           when :list, :set, :hash
@@ -531,7 +535,8 @@ module Flapjack
 
         def initialize(parent, name, options = {})
           @key = options[:key]
-          @record_keys = Redis::SortedSet.new("#{parent.record_key}:#{name.singularize}_#{options[:key].pluralize}")
+          @associated_class = options[:class] || name.sub(/_ids$/, '').classify.constantize
+          @record_keys = Redis::SortedSet.new("#{parent.record_key}:#{name}_ids")
         end
 
         def <<(record)
@@ -543,15 +548,14 @@ module Flapjack
           records.each do |record|
             raise 'Invalid class' unless record.is_a?(@associated_class)
             next unless record.save # TODO check if exists? && !dirty
-            # TODO check this add
-            @record_keys.add(@record.id, record.send(options[:key].to_sym))
+            @record_keys.add(record.id, record.send(@key.to_sym).to_i)
           end
         end
 
         def delete(*records)
           records.each do |record|
             raise 'Invalid class' unless record.is_a?(@associated_class)
-            @record_keys.delete(@record.id)
+            @record_keys.delete(record.id)
           end
         end
 
@@ -584,7 +588,7 @@ module Flapjack
       class HasManyAssociation
 
         def initialize(parent, name, options = {})
-          @record_ids = Redis::Set.new("#{parent.record_key}:#{name.singularize}_ids")
+          @record_ids = Redis::Set.new("#{parent.record_key}:#{name}_ids")
 
           # TODO trap possible constantize error
           @associated_class = options[:class] || name.sub(/_ids$/, '').classify.constantize
@@ -695,10 +699,11 @@ module Flapjack
 
         # TODO clean up to not use a temporary set if only doing one operation
         # (or possibly for the last operation) e.g. sunion instead of sunionstore
+        # (although sorted sets will always need to use the store version, as, e.g.,
+        # there's no zinter but there is a zinterstore)
 
-        # passes back the name of the temporary set with the ids resulting
-        # from the applied steps; calling methods need to delete this set
-        # when they have finished with it
+        # takes a block and passes the name of the temporary set to it; deletes
+        # the temporary set once done
         def resolve_steps(&block)
           return block.call(@initial_set.key) if @steps.empty?
 
