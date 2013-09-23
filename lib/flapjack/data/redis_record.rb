@@ -370,11 +370,16 @@ module Flapjack
 
         simple_attrs  = {}
         complex_attrs = {}
+        remove_attrs = []
 
         attr_types = self.class.attribute_types.reject {|k, v| k == :id}
 
         attr_types.each_pair do |name, type|
           value = @attributes[name.to_s]
+          if value.nil?
+            remove_attrs << name.to_s
+            next
+          end
           case type
           when :string, :integer
             simple_attrs[name.to_s] = value.blank? ? nil : value.to_s
@@ -383,7 +388,18 @@ module Flapjack
           when :boolean
             simple_attrs[name.to_s] = (!!value).to_s
           when :list, :set, :hash
-            complex_attrs[name.to_s] = value
+            redis_obj = @complex_attributes[name.to_s]
+            Flapjack.redis.del(redis_obj.key)
+            unless value.blank?
+              case attr_types[name.to_sym]
+              when :list
+                Flapjack.redis.rpush(redis_obj.key, *value)
+              when :set
+                redis_obj.merge(*value.to_a)
+              when :hash
+                redis_obj.bulk_set(value)
+              end
+            end
           when :json_string
             simple_attrs[name.to_s] = value.blank? ? nil : value.to_json
           end
@@ -391,21 +407,11 @@ module Flapjack
 
         # uses hmset
         # TODO check that nil value deletes relevant hash key
-        @simple_attributes.bulk_set(simple_attrs)
-
-        complex_attrs.each_pair do |name, value|
-          redis_obj = @complex_attributes[name.to_s]
-          Flapjack.redis.del(redis_obj.key)
-          next if value.blank?
-          case attr_types[name.to_sym]
-          when :list
-            Flapjack.redis.rpush(redis_obj.key, *value)
-          when :set
-            redis_obj.merge(*value.to_a)
-          when :hash
-            redis_obj.bulk_set(value)
-          end
+        remove_attrs.each do |name|
+          @simple_attributes.delete(name)
         end
+
+        @simple_attributes.bulk_set(simple_attrs)
 
         indexed.each do |att|
           value = self.changes[att].last
@@ -536,8 +542,19 @@ module Flapjack
         def initialize(parent, name, options = {})
           @key = options[:key]
           @associated_class = options[:class] || name.sub(/_ids$/, '').classify.constantize
-          @record_keys = Redis::SortedSet.new("#{parent.record_key}:#{name}_ids")
+          @record_ids = Redis::SortedSet.new("#{parent.record_key}:#{name}_ids")
         end
+
+        def intersect(opts = {})
+          filter = Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class)
+          filter.intersect(opts)
+        end
+
+        def union(opts = {})
+          filter = Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class)
+          filter.union(opts)
+        end
+
 
         def <<(record)
           add(record)
@@ -548,39 +565,39 @@ module Flapjack
           records.each do |record|
             raise 'Invalid class' unless record.is_a?(@associated_class)
             next unless record.save # TODO check if exists? && !dirty
-            @record_keys.add(record.id, record.send(@key.to_sym).to_i)
+            @record_ids.add(record.id, record.send(@key.to_sym).to_i)
           end
         end
 
         def delete(*records)
           records.each do |record|
             raise 'Invalid class' unless record.is_a?(@associated_class)
-            @record_keys.delete(record.id)
+            @record_ids.delete(record.id)
           end
         end
 
         def count
-          Flapjack::Data::RedisRecord::Filter.new(@record_keys,
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
             @associated_class).count
         end
 
         def all
-          Flapjack::Data::RedisRecord::Filter.new(@record_keys,
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
             @associated_class).all
         end
 
         def collect(&block)
-          Flapjack::Data::RedisRecord::Filter.new(@record_keys,
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
             @associated_class).collect(block)
         end
 
         def each(&block)
-          Flapjack::Data::RedisRecord::Filter.new(@record_keys,
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
             @associated_class).each(block)
         end
 
         def ids
-          Flapjack::Data::RedisRecord::Filter.new(@record_keys,
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
             @associated_class).ids
         end
       end
@@ -672,7 +689,14 @@ module Flapjack
         end
 
         def count
-          resolve_steps {|set| Flapjack.redis.smembers(temp_set)}
+          resolve_steps {|set|
+            case @initial_set
+            when Redis::SortedSet
+              Flapjack.redis.zrange(set, 0, -1)
+            when Redis::Set, nil
+              Flapjack.redis.smembers(set)
+            end
+          }
         end
 
         def all
@@ -692,7 +716,14 @@ module Flapjack
         end
 
         def ids
-          resolve_steps {|set| Flapjack.redis.smembers(set) }
+          resolve_steps {|set|
+            case @initial_set
+            when Redis::SortedSet
+              Flapjack.redis.zrange(set, 0, -1)
+            when Redis::Set, nil
+              Flapjack.redis.smembers(set)
+            end
+          }
         end
 
         private

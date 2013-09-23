@@ -139,26 +139,21 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
   context 'filters' do
 
-    # TODO use main Example class
-    it "filters all class records by indexed attribute values" # do
-    #   create_example(:id => '8', :name => 'John Jones',
-    #                  :email => 'jjones@example.com', :active => 'true')
-    #   example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
+    it "filters all class records by indexed attribute values" do
+      create_example(:id => '8', :name => 'John Jones',
+                     :email => 'jjones@example.com', :active => true)
+      example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
 
-    #   create_example(:id => '9', :name => 'James Brown',
-    #                  :email => 'jbrown@example.com', :active => 'true')
-    #   example_2 = Flapjack::Data::RedisRecord::Example.find_by_id('9')
+      create_example(:id => '9', :name => 'James Brown',
+                     :email => 'jbrown@example.com', :active => false)
+      example_2 = Flapjack::Data::RedisRecord::Example.find_by_id('9')
 
-    #   create_child(example, :id => '3', :name => 'Martin Luther King', :important => true)
-    #   create_child(example, :id => '4', :name => 'John Smith', :important => false)
-    #   create_child(example_2, :id => '5', :name => 'Julius Caesar', :important => true)
-
-    #   important_kids = Flapjack::Data::RedisRecord::ExampleChild.intersect(:important => true).all
-    #   important_kids.should_not be_nil
-    #   important_kids.should be_an(Array)
-    #   important_kids.should have(2).children
-    #   important_kids.map(&:id).should =~ ['3', '5']
-    # end
+      active = Flapjack::Data::RedisRecord::Example.intersect(:active => true).all
+      active.should_not be_nil
+      active.should be_an(Array)
+      active.should have(1).example
+      active.map(&:id).should =~ ['8']
+    end
 
     it 'supports sequential intersection and union operations'
 
@@ -208,11 +203,6 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
       example.fdrr_children << child
 
-      # true.should be_false
-
-      # indexed keys should be forced to be present... should boolean keys default
-      # to false if not found?
-
       redis.keys('*').should =~ ['flapjack/data/redis_record/example::ids',
                                  'flapjack/data/redis_record/example::by_active:set:true',
                                  'flapjack/data/redis_record/example::by_active:sorted_set:true',
@@ -230,7 +220,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
       redis.smembers('flapjack/data/redis_record/example_child::ids').should == ['3']
       redis.hgetall('flapjack/data/redis_record/example_child:3:attrs').should ==
-        {'name' => 'Abel Tasman', 'important' => 'false'}
+        {'name' => 'Abel Tasman'}
     end
 
     it "loads a child from a parent's has_many relationship" do
@@ -289,7 +279,10 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       include Flapjack::Data::RedisRecord
 
       define_attributes :timestamp => :timestamp,
-                        :summary => :string
+                        :summary => :string,
+                        :emotion => :string
+
+      index_by :emotion
 
       validates :timestamp, :presence => true
     end
@@ -303,7 +296,11 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       redis.zadd("flapjack/data/redis_record/example:#{parent.id}:fdrr_data_ids", attrs[:timestamp].to_i.to_f, attrs[:id])
 
       redis.hmset("flapjack/data/redis_record/example_datum:#{attrs[:id]}:attrs",
-                  {'summary' => attrs[:summary], 'timestamp' => attrs[:timestamp].to_i.to_f}.flatten)
+                  {'summary' => attrs[:summary], 'timestamp' => attrs[:timestamp].to_i.to_f,
+                   'emotion' => attrs[:emotion]}.flatten)
+
+      redis.sadd("flapjack/data/redis_record/example_datum::by_emotion:set:#{attrs[:emotion]}", attrs[:id])
+      redis.zadd("flapjack/data/redis_record/example_datum::by_emotion:sorted_set:#{attrs[:emotion]}", attrs[:timestamp].to_i.to_f, attrs[:id])
 
       redis.sadd('flapjack/data/redis_record/example_datum::ids', attrs[:id])
     end
@@ -337,8 +334,27 @@ describe Flapjack::Data::RedisRecord, :redis => true do
         :with_scores => true).should == [['4', time.to_i.to_f]]
     end
 
-    it "removes a parent/child has_sorted_set relationship between two records in redis" do
+    it "loads a child from a parent's has_sorted_set relationship" do
+      create_example(:id => '8', :name => 'John Jones',
+                     :email => 'jjones@example.com', :active => 'true')
+      example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
 
+      time = Time.now
+
+      create_datum(example, :id => '4', :summary => 'well then', :timestamp => time)
+      datum = Flapjack::Data::RedisRecord::ExampleDatum.find_by_id('4')
+
+      data = example.fdrr_data.all
+
+      data.should be_an(Array)
+      data.should have(1).datum
+      datum = data.first
+      datum.should be_a(Flapjack::Data::RedisRecord::ExampleDatum)
+      datum.summary.should == 'well then'
+      datum.timestamp.should be_within(1).of(time) # ignore fractional differences
+    end
+
+    it "removes a parent/child has_sorted_set relationship between two records in redis" do
       create_example(:id => '8', :name => 'John Jones',
                      :email => 'jjones@example.com', :active => 'true')
       example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
@@ -358,9 +374,26 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
     end
 
-    it "loads a child from a parent's has_sorted_set relationship"
+    it "filters has_sorted_set records by indexed attribute values" do
+      create_example(:id => '8', :name => 'John Jones',
+                     :email => 'jjones@example.com', :active => 'true')
+      example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
 
-    it "filters has_sorted_set records by indexed attribute values"
+      time = Time.now
+
+      create_datum(example, :id => '4', :summary => 'well then', :timestamp => time,
+        :emotion => 'upset')
+      create_datum(example, :id => '5', :summary => 'ok', :timestamp => time.to_i + 10,
+        :emotion => 'happy')
+      create_datum(example, :id => '6', :summary => 'aaargh', :timestamp => time.to_i + 20,
+        :emotion => 'upset')
+
+      upset_data = example.fdrr_data.intersect(:emotion => 'upset').all
+      upset_data.should_not be_nil
+      upset_data.should be_an(Array)
+      upset_data.should have(2).children
+      upset_data.map(&:id).should =~ ['4', '6']
+    end
 
   end
 
@@ -430,6 +463,5 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   #   entities.should have(1).entity
   #   entities.first.should == 'def-456'
   # end
-
 
 end
