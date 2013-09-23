@@ -13,7 +13,8 @@ module Flapjack
       extend Flapjack::Utility
 
       attr_accessor :id, :contact_id, :entities, :tags, :time_restrictions,
-        :warning_media, :critical_media, :warning_blackhole, :critical_blackhole
+        :unknown_media, :warning_media, :critical_media,
+        :unknown_blackhole, :warning_blackhole, :critical_blackhole
 
       def self.exists_with_id?(rule_id, options = {})
         raise "No id value passed" unless not (rule_id.nil? || rule_id == '')
@@ -66,8 +67,8 @@ module Flapjack
 
       def to_json(*args)
         self.class.hashify(:id, :contact_id, :tags, :entities,
-            :time_restrictions, :warning_media, :critical_media,
-            :warning_blackhole, :critical_blackhole) {|k|
+            :time_restrictions, :unknown_media, :warning_media, :critical_media,
+            :unknown_blackhole, :warning_blackhole, :critical_blackhole) {|k|
           [k, self.send(k)]
         }.to_json
       end
@@ -85,12 +86,15 @@ module Flapjack
       end
 
       def blackhole?(severity)
-        ('warning'.eql?(severity.downcase) && @warning_blackhole) ||
+        ('unknown'.eql?(severity.downcase) && @unknown_blackhole) ||
+          ('warning'.eql?(severity.downcase) && @warning_blackhole) ||
           ('critical'.eql?(severity.downcase) && @critical_blackhole)
       end
 
       def media_for_severity(severity)
         case severity
+        when 'unknown'
+          @unknown_media
         when 'warning'
           @warning_media
         when 'critical'
@@ -115,6 +119,7 @@ module Flapjack
         logger = options[:logger]
 
         # make some assumptions about the incoming data
+        rule_data[:unknown_blackhole]  = rule_data[:unknown_blackhole] || false
         rule_data[:warning_blackhole]  = rule_data[:warning_blackhole] || false
         rule_data[:critical_blackhole] = rule_data[:critical_blackhole] || false
         if rule_data[:tags].is_a?(Array)
@@ -133,8 +138,10 @@ module Flapjack
           :entities           => Oj.dump(rule_data[:entities]),
           :tags               => Oj.dump(tag_data),
           :time_restrictions  => Oj.dump(rule_data[:time_restrictions]),
+          :unknown_media      => Oj.dump(rule_data[:unknown_media]),
           :warning_media      => Oj.dump(rule_data[:warning_media]),
           :critical_media     => Oj.dump(rule_data[:critical_media]),
+          :unknown_blackhole  => rule_data[:unknown_blackhole],
           :warning_blackhole  => rule_data[:warning_blackhole],
           :critical_blackhole => rule_data[:critical_blackhole],
         }
@@ -237,6 +244,12 @@ module Flapjack
                        "time restrictions are invalid",
 
                        # TODO should the media types be checked against a whitelist?
+                       proc { !d.has_key?(:unknown_media) ||
+                              ( d[:unknown_media].nil? ||
+                                d[:unknown_media].is_a?(Array) &&
+                                d[:unknown_media].all? {|et| et.is_a?(String)} ) } =>
+                       "unknown_media must be a list of strings",
+
                        proc { !d.has_key?(:warning_media) ||
                               ( d[:warning_media].nil? ||
                                 d[:warning_media].is_a?(Array) &&
@@ -248,6 +261,10 @@ module Flapjack
                                 d[:critical_media].is_a?(Array) &&
                                 d[:critical_media].all? {|et| et.is_a?(String)} ) } =>
                        "critical_media must be a list of strings",
+
+                       proc { !d.has_key?(:unknown_blackhole) ||
+                              [TrueClass, FalseClass].include?(d[:unknown_blackhole].class) } =>
+                       "unknown_blackhole must be true or false",
 
                        proc { !d.has_key?(:warning_blackhole) ||
                               [TrueClass, FalseClass].include?(d[:warning_blackhole].class) } =>
@@ -281,8 +298,10 @@ module Flapjack
         @tags               = tags ? Flapjack::Data::TagSet.new(tags) : nil
         @entities           = Oj.load(rule_data['entities'] || '')
         @time_restrictions  = Oj.load(rule_data['time_restrictions'] || '')
+        @unknown_media      = Oj.load(rule_data['unknown_media'] || '')
         @warning_media      = Oj.load(rule_data['warning_media'] || '')
         @critical_media     = Oj.load(rule_data['critical_media'] || '')
+        @unknown_blackhole  = ((rule_data['unknown_blackhole'] || 'false').downcase == 'true')
         @warning_blackhole  = ((rule_data['warning_blackhole'] || 'false').downcase == 'true')
         @critical_blackhole = ((rule_data['critical_blackhole'] || 'false').downcase == 'true')
       end

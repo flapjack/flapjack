@@ -102,6 +102,8 @@ module Flapjack
          'acknowledgement_id', 'duration'].each do |key|
           instance_variable_set("@#{key}", attrs[key])
         end
+        # details is optional. set it to nil if it only contains whitespace
+        @details = (@details.is_a?(String) && ! @details.strip.empty?) ? @details.strip : nil
       end
 
       def state

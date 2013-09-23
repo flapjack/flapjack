@@ -40,8 +40,10 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
      "tags"               => ["database","physical"],
      "entities"           => ["foo-app-01.example.com"],
      "time_restrictions"  => nil,
+     "unknown_media"      => ["jabber"],
      "warning_media"      => ["email"],
      "critical_media"     => ["sms", "email"],
+     "unknown_blackhole"  => false,
      "warning_blackhole"  => false,
      "critical_blackhole" => false
     }
