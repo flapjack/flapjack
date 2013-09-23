@@ -38,10 +38,12 @@ module Flapjack
       end
 
       def self.severity_for_event(event, max_notified_severity)
-        if ([event.state, max_notified_severity] & ['critical', 'unknown', 'test_notifications']).any?
+        if ([event.state, max_notified_severity] & ['critical', 'test_notifications']).any?
           'critical'
         elsif [event.state, max_notified_severity].include?('warning')
           'warning'
+        elsif [event.state, max_notified_severity].include?('unknown')
+          'unknown'
         else
           'ok'
         end
@@ -220,6 +222,7 @@ module Flapjack
         @details        = opts['details']
         @time           = opts['time']
         @count          = opts['count']
+        @duration       = opts['duration']
 
         @last_state     = opts['last_state']
         @last_summary   = opts['last_summary']

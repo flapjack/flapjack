@@ -77,6 +77,8 @@ module Flapjack
     # notification, updates the notification history in redis, generates the
     # notifications
     def process_notification(notification)
+      @logger.debug ("Processing notification: #{notification.inspect}")
+
       timestamp = Time.now
       event_id = notification.event_id
       entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id)
@@ -110,22 +112,14 @@ module Flapjack
 
         contact = message.contact
 
-        if notification.ok?
-          contact.update_sent_alert_keys(
-            :media => media_type,
-            :check => event_id,
-            :state => 'warning',
-            :delete => true)
-          contact.update_sent_alert_keys(
-            :media => media_type,
-            :check => event_id,
-            :state => 'critical',
-            :delete => true)
-          contact.update_sent_alert_keys(
-            :media => media_type,
-            :check => event_id,
-            :state => 'unknown',
-            :delete => true)
+        if notification.ok? || (notification.state == 'acknowledgement')
+          ['warning', 'critical', 'unknown'].each do |alert_state|
+            contact.update_sent_alert_keys(
+              :media => media_type,
+              :check => event_id,
+              :state => alert_state,
+              :delete => true)
+          end
         else
           contact.update_sent_alert_keys(
             :media => media_type,

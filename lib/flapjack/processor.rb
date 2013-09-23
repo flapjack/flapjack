@@ -226,25 +226,21 @@ module Flapjack
 
       severity = Flapjack::Data::Notification.severity_for_event(event, max_notified_severity)
 
-      historical_state = case entity_check.state
-      when previous_state
-        # current state
-        curr = entity_check.historical_states(nil, nil, :order => 'desc', :limit => 1)
-        (curr && (curr.size == 1)) ? curr.first : nil
-      else
-        # last state
-        curr_and_last = entity_check.historical_states(nil, nil, :order => 'desc', :limit => 2)
-        (curr_and_last && (curr_and_last.size == 2)) ? curr_and_last.last : nil
-      end
-
       lc = entity_check.last_change
       state_duration = lc ? (timestamp - lc) : nil
 
       Flapjack::Data::Notification.push(@notifier_queue, event,
         :type => notification_type, :severity => severity,
-        :last_state => historical_state, :state_duration => state_duration
-      )
+        :last_state => previous_unique_state(entity_check),
+        :state_duration => state_duration)
+    end
+
+    def previous_unique_state(entity_check)
+      hs = entity_check.historical_states(nil, nil, :order => 'desc', :limit => 2)
+      return { :last_state => nil, :last_summary => nil } unless hs.length == 2
+      hs.last
     end
 
   end
 end
+

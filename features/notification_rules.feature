@@ -8,6 +8,7 @@ Feature: Notification rules on a per contact basis
       | 2   | Imani      | Farooq    | imani@example.com | +61400000002 | Europe/Moscow    |
       | 3   | Vera       | Дурейко   | vera@example.com  | +61400000003 | Europe/Paris     |
       | 4   | Lucia      | Moretti   | lucia@example.com | +61400000004 | Europe/Rome      |
+      | 5   | Wang Fang  | Wong      | fang@example.com  | +61400000005 | Asia/Shanghai    |
 
     And the following entities exist:
       | id  | name           | contacts |
@@ -34,32 +35,36 @@ Feature: Notification rules on a per contact basis
       | 15    | 60  |
 
     And user 1 has the following notification rules:
-      | entities | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          |      | email         | sms,email        | true              | true               |                   |
-      | foo      |      | email         | sms,email        |                   |                    | 8-18 weekdays     |
-      | bar      |      |               | sms,email        | true              |                    |                   |
-      | baz      |      | email         | sms,email        |                   |                    |                   |
+      | entities | unknown_media | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
+      |          |               | email         | sms,email        | true              | true               |                   |
+      | foo      |               | email         | sms,email        |                   |                    | 8-18 weekdays     |
+      | bar      | email         |               | sms,email        | true              |                    |                   |
+      | baz      |               | email         | sms,email        |                   |                    |                   |
 
     And user 2 has the following notification rules:
-      | entities | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          |      | email         | email            |                   |                    |                   |
-      |          |      | sms           | sms              |                   |                    |                   |
-      | bar      |      | email         | email,sms        |                   |                    |                   |
-      | bar      | wags |               |                  | true              | true               |                   |
+      | entities | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole |
+      |          |      | email         | email            |                   |                    |
+      |          |      | sms           | sms              |                   |                    |
+      | bar      |      | email         | email,sms        |                   |                    |
+      | bar      | wags |               |                  | true              | true               |
 
     And user 3 has the following notification rules:
-      | entities | tags            | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          |                 | email         | email            |                   |                    |                   |
-      | baz      |                 | sms           | sms              |                   |                    |                   |
-      | buf      |                 | email         | email            |                   |                    |                   |
-      | buf      |                 | sms           | sms              |                   |                    |                   |
-      | bar      |                 | email         | email            | true              | true               |                   |
+      | entities | warning_media | critical_media   | warning_blackhole | critical_blackhole |
+      |          | email         | email            |                   |                    |
+      | baz      | sms           | sms              |                   |                    |
+      | buf      | email         | email            |                   |                    |
+      | buf      | sms           | sms              |                   |                    |
+      | bar      | email         | email            | true              | true               |
 
     And user 4 has the following notification rules:
-      | entities | tags            | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          |                 |               |                  |                   |                    |                   |
-      |          | xyz, disk, util | sms           | sms              |                   |                    |                   |
-      |          | xyz, ping       | sms,email     | sms,email        |                   |                    | 8-18 weekdays     |
+      | tags            | warning_media | critical_media   | time_restrictions |
+      |                 |               |                  |                   |
+      | xyz, disk, util | sms           | sms              |                   |
+      | xyz, ping       | sms,email     | sms,email        | 8-18 weekdays     |
+
+    And user 5 has the following notification rules:
+      | unknown_media | critical_media |
+      | email         | email, sms     |
 
   @time_restrictions @time
   Scenario: Alerts only during specified time restrictions
@@ -239,22 +244,20 @@ Feature: Notification rules on a per contact basis
 
   @intervals @time
   Scenario: Problem directly after Recovery should alert despite notification intervals with unknown
-    Given the check is check 'ping' on entity 'baz'
+    Given the check is check 'ping' on entity 'bar'
     And   the check is in an ok state
     When  an unknown event is received
     And   1 minute passes
     And   an unknown event is received
     Then  1 email alert should be queued for malak@example.com
-    And   1 sms alert should be queued for +61400000001
     When  an ok event is received
     Then  2 email alert should be queued for malak@example.com
-    And   2 sms alerts should be queued for +61400000001
     When  1 minute passes
     And   an unknown event is received
     And   1 minute passes
     And   an unknown event is received
     Then  3 email alerts should be queued for malak@example.com
-    And   3 sms alerts should be queued for +61400000001
+    And   0 sms alerts should be queued for +61400000001
 
   @time
   Scenario: Contact with only entity specific rules should not be notified for other entities they are a contact for
@@ -327,26 +330,31 @@ Feature: Notification rules on a per contact basis
     Then  2 email alert should be queued for malak@example.com
     And   2 sms alert should be queued for +61400000001
 
+  @time
   Scenario: Unknown event during unscheduled maintenance
-    Given the check is check 'ping' on entity 'baz'
+    Given the check is check 'ping' on entity 'bar'
     And   the check is in an ok state
     When  an unknown event is received
     And   1 minute passes
     And   an unknown event is received
     Then  1 email alert should be queued for malak@example.com
-    And   1 sms alert should be queued for +61400000001
     When  6 minutes passes
     And   an acknowledgement event is received
     Then  2 email alerts should be queued for malak@example.com
-    And   2 sms alerts should be queued for +61400000001
     When  6 minutes passes
     And   an unknown event is received
     Then  2 email alerts should be queued for malak@example.com
-    And   2 sms alerts should be queued for +61400000001
     When  1 minute passes
     And   an unknown event is received
     Then  2 email alerts should be queued for malak@example.com
-    And   2 sms alerts should be queued for +61400000001
+
+  Scenario: Unknown events alert only specified media
+    Given the check is check 'ping' on entity 'baz'
+    And   the check is in an ok state
+    When  an unknown event is received
+    And   1 minute passes
+    And   an unknown event is received
+    Then  0 sms alerts should be queued for +61400000001
 
   @time
   Scenario: A blackhole rule on an entity should override another matching entity specific rule
@@ -399,4 +407,25 @@ Feature: Notification rules on a per contact basis
     When  a critical event is received
     Then  3 sms alerts should be queued for +61400000004
 
-
+  # tests that notifications are sent as acknowledgement clears the notification intervals
+  @time
+  Scenario: an second acknowledgement is created after the first is deleted (gh-308)
+    Given the check is check 'ping' on entity 'baz'
+    And the check is in an ok state
+    When a critical event is received
+    And 1 minute passes
+    And a critical event is received
+    Then 1 email alert should be queued for malak@example.com
+    When 1 minute passes
+    And an acknowledgement event is received
+    Then unscheduled maintenance should be generated
+    And 2 email alerts should be queued for malak@example.com
+    When 1 minute passes
+    And the unscheduled maintenance is ended
+    And 1 minute passes
+    And a critical event is received
+    Then 3 email alerts should be queued for malak@example.com
+    When 1 minute passes
+    And an acknowledgement event is received
+    Then unscheduled maintenance should be generated
+    And 4 email alerts should be queued for malak@example.com

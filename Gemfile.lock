@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    flapjack (0.7.25)
+    flapjack (0.7.27)
       activemodel
       activesupport (~> 3.2.14)
       chronic

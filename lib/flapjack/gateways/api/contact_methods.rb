@@ -143,8 +143,8 @@ module Flapjack
             contact = find_contact(params[:contact_id])
 
             rule_data = hashify(:entities, :tags,
-              :warning_media, :critical_media, :time_restrictions,
-              :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
+              :unknown_media, :warning_media, :critical_media, :time_restrictions,
+              :unknown_blackhole, :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
 
             rule_or_errors = contact.add_notification_rule(rule_data, :logger => logger)
 
@@ -166,8 +166,8 @@ module Flapjack
             contact = find_contact(rule.contact_id)
 
             rule_data = hashify(:entities, :tags,
-              :warning_media, :critical_media, :time_restrictions,
-              :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
+              :unknown_media, :warning_media, :critical_media, :time_restrictions,
+              :unknown_blackhole, :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
 
             errors = rule.update(rule_data, :logger => logger)
 
