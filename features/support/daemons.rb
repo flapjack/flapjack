@@ -4,7 +4,9 @@
  :yellow => '33',
  :green  => '32',
  :blue   => '34' }.each_pair {|colour, code|
-  define_method(colour) {|text| "\e[0;#{code};49m#{text}\e[0m" }
+  (class << self; self; end).class_eval {|text|
+    "\e[0;#{code};49m#{text}\e[0m"
+  }
 }
 
 After('@daemon') do
