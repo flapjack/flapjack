@@ -395,7 +395,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       upset_data.map(&:id).should =~ ['4', '6']
     end
 
-    it "retrives a subset of a sorted set by index" do
+    it "retrieves a subset of a sorted set by index" do
       create_example(:id => '8', :name => 'John Jones',
                      :email => 'jjones@example.com', :active => 'true')
       example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
@@ -409,14 +409,14 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       create_datum(example, :id => '6', :summary => 'aaargh', :timestamp => time.to_i + 20,
         :emotion => 'upset')
 
-      data = example.fdrr_data.range(0, 1)
+      data = example.fdrr_data.intersect_range(0, 1).all
       data.should_not be_nil
       data.should be_an(Array)
       data.should have(2).children
       data.map(&:id).should == ['4', '5']
     end
 
-    it "retrives a reversed subset of a sorted set by index" do
+    it "retrieves a reversed subset of a sorted set by index" do
       create_example(:id => '8', :name => 'John Jones',
                      :email => 'jjones@example.com', :active => 'true')
       example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
@@ -430,14 +430,14 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       create_datum(example, :id => '6', :summary => 'aaargh', :timestamp => time.to_i + 20,
         :emotion => 'upset')
 
-      data = example.fdrr_data.range(0, 1, :order => 'desc')
+      data = example.fdrr_data.intersect_range(0, 1, :order => 'desc').all
       data.should_not be_nil
       data.should be_an(Array)
       data.should have(2).children
       data.map(&:id).should == ['6', '5']
     end
 
-    it "retrives a subset of a sorted set by score" do
+    it "retrieves a subset of a sorted set by score" do
       create_example(:id => '8', :name => 'John Jones',
                      :email => 'jjones@example.com', :active => 'true')
       example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
@@ -451,14 +451,14 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       create_datum(example, :id => '6', :summary => 'aaargh', :timestamp => time.to_i + 20,
         :emotion => 'upset')
 
-      data = example.fdrr_data.range_by_score(time.to_i - 1, time.to_i + 15)
+      data = example.fdrr_data.intersect_range(time.to_i - 1, time.to_i + 15, :by_score => true).all
       data.should_not be_nil
       data.should be_an(Array)
       data.should have(2).children
       data.map(&:id).should == ['4', '5']
     end
 
-    it "retrives a reversed subset of a sorted set by score" do
+    it "retrieves a reversed subset of a sorted set by score" do
       create_example(:id => '8', :name => 'John Jones',
                      :email => 'jjones@example.com', :active => 'true')
       example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
@@ -472,7 +472,8 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       create_datum(example, :id => '6', :summary => 'aaargh', :timestamp => time.to_i + 20,
         :emotion => 'upset')
 
-      data = example.fdrr_data.range_by_score(time.to_i - 1, time.to_i + 15, :order => 'desc')
+      data = example.fdrr_data.intersect_range(time.to_i - 1, time.to_i + 15,
+              :order => 'desc', :by_score => true).all
       data.should_not be_nil
       data.should be_an(Array)
       data.should have(2).children

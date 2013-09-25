@@ -547,13 +547,25 @@ module Flapjack
         end
 
         def intersect(opts = {})
-          filter = Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class)
-          filter.intersect(opts)
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class).
+            intersect(opts)
         end
 
         def union(opts = {})
-          filter = Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class)
-          filter.union(opts)
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class).
+            union(opts)
+        end
+
+        def intersect_range(start, finish, options = {})
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class).
+            intersect_range(options.merge(:start => start, :end => finish,
+                                          :by_score => options[:by_score]))
+        end
+
+        def union_range(start, finish, options = {})
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class).
+            union_range(options.merge(:start => start, :end => finish,
+                                      :by_score => options[:by_score]))
         end
 
         def <<(record)
@@ -587,16 +599,6 @@ module Flapjack
             @associated_class).all
         end
 
-        def range(start_index, end_index, options = {})
-          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
-            @associated_class).range(start_index, end_index, options)
-        end
-
-        def range_by_score(start_score, end_score, options = {})
-          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
-            @associated_class).range(start_score, end_score, options.merge(:by_score => true))
-        end
-
         def collect(&block)
           Flapjack::Data::RedisRecord::Filter.new(@record_ids,
             @associated_class).collect(block)
@@ -624,13 +626,13 @@ module Flapjack
         end
 
         def intersect(opts = {})
-          filter = Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class)
-          filter.intersect(opts)
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class).
+            intersect(opts)
         end
 
         def union(opts = {})
-          filter = Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class)
-          filter.union(opts)
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class).
+            union(opts)
         end
 
         def <<(record)
@@ -700,8 +702,18 @@ module Flapjack
           self
         end
 
+        def intersect_range(opts = {})
+          @steps += [:intersect_range, opts]
+          self
+        end
+
+        def union_range(opts = {})
+          @steps += [:union_range, opts]
+          self
+        end
+
         def count
-          resolve_steps {|set|
+          resolve_steps {|set, desc|
             case @initial_set
             when Redis::SortedSet
               Flapjack.redis.zcard(set)
@@ -713,45 +725,6 @@ module Flapjack
 
         def all
           ids.map {|id| @associated_class.send(:load, id) }
-        end
-
-        def range(start, finish, options = {})
-          # TODO raise error unless @initial_set.is_a?(Redis::SortedSet)
-
-          if options[:by_score]
-            start = '-inf' if start <= 0
-            finish = '+inf' if finish <= 0
-          else
-            start = 0 if start.nil?
-            finish = -1 if finish.nil?
-          end
-
-          args = [start, finish]
-
-          order = options[:order]
-          if (order && 'desc'.eql?(order.downcase))
-            if options[:by_score]
-              query = :zrevrangebyscore
-              args.reverse!
-            else
-              query = :zrevrange
-            end
-          elsif options[:by_score]
-            query = :zrangebyscore
-          else
-            query = :zrange
-          end
-
-          if options[:limit]
-            args << {:limit => [0, options[:limit].to_i]}
-          end
-
-          resolve_steps{|set|
-            args.unshift(set)
-            Flapjack.redis.send(query, *args)
-          }.map {|id|
-            @associated_class.send(:load, id)
-          }
         end
 
         def collect(&block)
@@ -767,10 +740,10 @@ module Flapjack
         end
 
         def ids
-          resolve_steps {|set|
+          resolve_steps {|set, order_desc|
             case @initial_set
             when Redis::SortedSet
-              Flapjack.redis.zrange(set, 0, -1)
+              Flapjack.redis.send((order_desc ? :zrevrange : :zrange), set, 0, -1)
             when Redis::Set, nil
               Flapjack.redis.smembers(set)
             end
@@ -784,64 +757,122 @@ module Flapjack
         # (although sorted sets will always need to use the store version, as, e.g.,
         # there's no zinter but there is a zinterstore)
 
+        # TODO possible candidate for moving to a stored Lua script in the redis server?
+
         # takes a block and passes the name of the temporary set to it; deletes
         # the temporary set once done
         def resolve_steps(&block)
-          return block.call(@initial_set.key) if @steps.empty?
+          return block.call(@initial_set.key, false) if @steps.empty?
 
-          temp_set = "#{@associated_class.send(:class_key)}::tmp:#{SecureRandom.hex(16)}"
+          source_set = @initial_set.key
+          dest_set   = "#{@associated_class.send(:class_key)}::tmp:#{SecureRandom.hex(16)}"
 
           idx_attrs = @associated_class.send(:indexed_attributes)
 
-          initial = @initial_set ? @initial_set.key : nil
+          order_desc = nil
 
           @steps.each_slice(2) do |step|
 
-            source_keys = []
+            order_desc = false
 
-            if initial
-              source_keys << initial
-              initial = nil
-            end
+            source_keys = [source_set]
 
-            source_keys += step.last.inject([]) do |memo, (att, value)|
-              if idx_attrs.include?(att.to_s)
-                value = [value] unless value.is_a?(Enumerable)
-                value.each do |val|
-                  att_index = @associated_class.send("#{att}_index", val)
+            range_ids_set = nil
 
-                  type = case @initial_set
-                  when Redis::SortedSet
-                    :sorted_set
-                  when Redis::Set, nil
-                    :set
+            # TODO distinguish between att query & range
+            if [:intersect, :union].include?(step.first)
+
+              source_keys += step.last.inject([]) do |memo, (att, value)|
+                if idx_attrs.include?(att.to_s)
+                  value = [value] unless value.is_a?(Enumerable)
+                  value.each do |val|
+                    att_index = @associated_class.send("#{att}_index", val)
+
+                    type = case @initial_set
+                    when Redis::SortedSet
+                      :sorted_set
+                    when Redis::Set, nil
+                      :set
+                    end
+
+                    memo << att_index.key(type)
                   end
-
-                  memo << att_index.key(type)
                 end
+                memo
               end
-              memo
+
+            elsif [:intersect_range, :union_range].include?(step.first)
+
+              range_ids_set = "#{@associated_class.send(:class_key)}::tmp:#{SecureRandom.hex(16)}"
+
+              options = step.last
+
+              start = options[:start]
+              finish = options[:end]
+
+              if options[:by_score]
+                start = '-inf' if start.nil? || (start <= 0)
+                finish = '+inf' if finish.nil? || (finish <= 0)
+              else
+                start = 0 if start.nil?
+                finish = -1 if finish.nil?
+              end
+
+              args = [start, finish]
+
+              order_desc = options[:order] && 'desc'.eql?(options[:order].downcase)
+              if order_desc
+                if options[:by_score]
+                  query = :zrevrangebyscore
+                  args = args.map(&:to_s).reverse
+                else
+                  query = :zrevrange
+                end
+              elsif options[:by_score]
+                query = :zrangebyscore
+                args = args.map(&:to_s)
+              else
+                query = :zrange
+              end
+
+              args << {:with_scores => :true}
+
+              if options[:limit]
+                args.last.update(:limit => [0, options[:limit].to_i])
+              end
+
+              args.unshift(source_set)
+
+              range_ids_scores = Flapjack.redis.send(query, *args)
+
+              unless range_ids_scores.empty?
+                Flapjack.redis.zadd(range_ids_set, *(range_ids_scores.map(&:reverse)))
+              end
+              source_keys << range_ids_set
             end
 
             case @initial_set
             when Redis::SortedSet
               case step.first
-              when :union
-                Flapjack.redis.zunionstore(temp_set, source_keys)
-              when :intersect
-                Flapjack.redis.zinterstore(temp_set, source_keys)
+              when :union, :union_range
+                Flapjack.redis.zunionstore(dest_set, source_keys)
+              when :intersect, :intersect_range
+                Flapjack.redis.zinterstore(dest_set, source_keys)
               end
+              Flapjack.redis.del(range_ids_set) unless range_ids_set.nil?
             when Redis::Set, nil
               case step.first
               when :union
-                Flapjack.redis.sunionstore(temp_set, *source_keys)
+                Flapjack.redis.sunionstore(dest_set, *source_keys)
               when :intersect
-                Flapjack.redis.sinterstore(temp_set, *source_keys)
+                Flapjack.redis.sinterstore(dest_set, *source_keys)
               end
             end
+            source_set = dest_set
           end
-          ret = block.call(temp_set)
-          Flapjack.redis.del(temp_set)
+          ret = block.call(dest_set, order_desc)
+          Flapjack.redis.del(dest_set)
+
           ret
         end
       end
