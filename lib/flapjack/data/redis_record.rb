@@ -12,7 +12,7 @@ require 'redis-objects'
 # TODO port the redis-objects parts to raw redis calls, when things have
 # stabilised
 
-# TODO escape ids and index_keys -- shouldn't allow :
+# TODO escape ids and index_keys -- shouldn't allow bare :
 
 module Flapjack
 
@@ -38,7 +38,7 @@ module Flapjack
 
       included do
         include ActiveModel::AttributeMethods
-        extend ActiveModel::Callbacks
+        # extend ActiveModel::Callbacks
         include ActiveModel::Dirty
         include ActiveModel::Serializers::JSON
         include ActiveModel::Validations
@@ -352,6 +352,7 @@ module Flapjack
       end
 
       def save
+        return unless self.changed?
         return false unless valid?
 
         self.id ||= SecureRandom.hex(16)
@@ -555,7 +556,6 @@ module Flapjack
           filter.union(opts)
         end
 
-
         def <<(record)
           add(record)
           self  # for << 'a' << 'b'
@@ -564,7 +564,8 @@ module Flapjack
         def add(*records)
           records.each do |record|
             raise 'Invalid class' unless record.is_a?(@associated_class)
-            next unless record.save # TODO check if exists? && !dirty
+            # TODO next if already exists? in set
+            record.save
             @record_ids.add(record.id, record.send(@key.to_sym).to_i)
           end
         end
@@ -584,6 +585,16 @@ module Flapjack
         def all
           Flapjack::Data::RedisRecord::Filter.new(@record_ids,
             @associated_class).all
+        end
+
+        def range(start_index, end_index, options = {})
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
+            @associated_class).range(start_index, end_index, options)
+        end
+
+        def range_by_score(start_score, end_score, options = {})
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
+            @associated_class).range(start_score, end_score, options.merge(:by_score => true))
         end
 
         def collect(&block)
@@ -630,7 +641,8 @@ module Flapjack
         def add(*records)
           records.each do |record|
             raise 'Invalid class' unless record.is_a?(@associated_class)
-            next unless record.save # TODO check if exists? && !dirty
+            # TODO next if already exists? in set
+            record.save
             @record_ids.add(record.id)
           end
         end
@@ -692,15 +704,54 @@ module Flapjack
           resolve_steps {|set|
             case @initial_set
             when Redis::SortedSet
-              Flapjack.redis.zrange(set, 0, -1)
+              Flapjack.redis.zcard(set)
             when Redis::Set, nil
-              Flapjack.redis.smembers(set)
+              Flapjack.redis.scard(set)
             end
           }
         end
 
         def all
           ids.map {|id| @associated_class.send(:load, id) }
+        end
+
+        def range(start, finish, options = {})
+          # TODO raise error unless @initial_set.is_a?(Redis::SortedSet)
+
+          if options[:by_score]
+            start = '-inf' if start <= 0
+            finish = '+inf' if finish <= 0
+          else
+            start = 0 if start.nil?
+            finish = -1 if finish.nil?
+          end
+
+          args = [start, finish]
+
+          order = options[:order]
+          if (order && 'desc'.eql?(order.downcase))
+            if options[:by_score]
+              query = :zrevrangebyscore
+              args.reverse!
+            else
+              query = :zrevrange
+            end
+          elsif options[:by_score]
+            query = :zrangebyscore
+          else
+            query = :zrange
+          end
+
+          if options[:limit]
+            args << {:limit => [0, options[:limit].to_i]}
+          end
+
+          resolve_steps{|set|
+            args.unshift(set)
+            Flapjack.redis.send(query, *args)
+          }.map {|id|
+            @associated_class.send(:load, id)
+          }
         end
 
         def collect(&block)
