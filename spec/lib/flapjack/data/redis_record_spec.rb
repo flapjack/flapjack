@@ -482,6 +482,52 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
   end
 
+  context "has_one" do
+
+    class Flapjack::Data::RedisRecord::ExampleSpecial
+      include Flapjack::Data::RedisRecord
+
+      define_attributes :name => :string
+
+      validate :name, :presence => true
+    end
+
+    class Flapjack::Data::RedisRecord::Example
+      has_one :special, :class => Flapjack::Data::RedisRecord::ExampleSpecial
+    end
+
+    it "sets and retrives a record via a has_one association" do
+      create_example(:id => '8', :name => 'John Jones',
+                     :email => 'jjones@example.com', :active => 'true')
+
+      special = Flapjack::Data::RedisRecord::ExampleSpecial.new(:id => '22', :name => 'Bill Smith')
+      special.save.should be_true
+
+      example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
+      example.special = special
+
+      redis.keys('*').should =~ ['flapjack/data/redis_record/example::ids',
+                                 'flapjack/data/redis_record/example::by_active:set:true',
+                                 'flapjack/data/redis_record/example::by_active:sorted_set:true',
+                                 'flapjack/data/redis_record/example:8:attrs',
+                                 'flapjack/data/redis_record/example:8:special_id',
+                                 'flapjack/data/redis_record/example_special::ids',
+                                 'flapjack/data/redis_record/example_special:22:attrs']
+
+      redis.get('flapjack/data/redis_record/example:8:special_id').should == '22'
+
+      redis.smembers('flapjack/data/redis_record/example_special::ids').should == ['22']
+      redis.hgetall('flapjack/data/redis_record/example_special:22:attrs').should ==
+        {'name' => 'Bill Smith'}
+
+      example2 = Flapjack::Data::RedisRecord::Example.find_by_id('8')
+      special2 = example2.special
+      special2.should_not be_nil
+      special2.id.should == '22'
+    end
+
+  end
+
 
   # TODO tests for set intersection
 

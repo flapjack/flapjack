@@ -14,25 +14,34 @@ require 'redis-objects'
 
 # TODO escape ids and index_keys -- shouldn't allow bare :
 
+# TODO expirable attributes
+
+# TODO has_one association
+
+# TODO callbacks on before/after add/delete on association?
+
 module Flapjack
 
   module Data
 
     module RedisRecord
 
-      ATTRIBUTE_TYPES = {:string      => [String],
-                         :integer     => [Integer],
-                         :id          => [String],
-                         :timestamp   => [Integer, Time, DateTime],
-                         :boolean     => [TrueClass, FalseClass],
-                         :list        => [Enumerable],
-                         :set         => [Set],
-                         :hash        => [Hash],
-                         :json_string => [String, Integer, Enumerable, Set, Hash]}
+      # TODO rename 'expirable_' & 'complex_' as 'direct_' ?
+      ATTRIBUTE_TYPES = {:string              => [String],
+                         :integer             => [Integer],
+                         :id                  => [String],
+                         :expirable_id        => [String],
+                         :timestamp           => [Integer, Time, DateTime],
+                         :boolean             => [TrueClass, FalseClass],
+                         :list                => [Enumerable],
+                         :set                 => [Set],
+                         :hash                => [Hash],
+                         :json_string         => [String, Integer, Enumerable, Set, Hash]}
 
-      COMPLEX_MAPPINGS = {:list       => Redis::List,
-                          :set        => Redis::Set,
-                          :hash       => Redis::HashKey}
+      COMPLEX_MAPPINGS = {:expirable_id => Redis::Value,
+                          :list         => Redis::List,
+                          :set          => Redis::Set,
+                          :hash         => Redis::HashKey}
 
       extend ActiveSupport::Concern
 
@@ -168,6 +177,11 @@ module Flapjack
           nil
         end
 
+        def has_one(*args)
+          associate(HasOneAssociation, self, args)
+          nil
+        end
+
         def has_sorted_set(*args)
           associate(HasSortedSetAssociation, self, args)
           nil
@@ -241,6 +255,33 @@ module Flapjack
               }
               class_eval assoc, __FILE__, __LINE__
             end
+
+          when ::Flapjack::Data::RedisRecord::HasOneAssociation.name
+            options = args.extract_options!
+            name = args.first.to_s
+
+            # TODO check method_defined? ( which relative to class_eval ? )
+
+            unless name.nil?
+              assoc = %Q{
+                def #{name}
+                  #{name}_proxy.value
+                end
+
+                def #{name}=(obj)
+                  #{name}_proxy.value = obj
+                end
+
+                private
+
+                def #{name}_proxy
+                  @#{name}_proxy ||= ::Flapjack::Data::RedisRecord::HasOneAssociation.new(self, "#{name}",
+                      :class => #{options[:class] ? options[:class].name : 'nil'})
+                end
+              }
+              class_eval assoc, __FILE__, __LINE__
+            end
+
           when ::Flapjack::Data::RedisRecord::HasSortedSetAssociation.name
             options = args.extract_options!
             name = args.first.to_s
@@ -280,6 +321,7 @@ module Flapjack
         attributes.each_pair do |k, v|
           self.send("#{k}=".to_sym, v)
         end
+        @expiry = {}
       end
 
       def persisted?
@@ -308,7 +350,7 @@ module Flapjack
           if type = attr_types[name.to_sym]
             memo[name] = case type
             when :string
-              value
+              value.to_s
             when :integer
               value.to_i
             when :timestamp
@@ -325,6 +367,9 @@ module Flapjack
         complex_attrs = @complex_attributes.inject({}) do |memo, (name, redis_obj)|
           if type = attr_types[name.to_sym]
           memo[name] = case type
+            when :string
+              # expirable_id
+              value.to_s
             when :list
               redis_obj.values
             when :set
@@ -388,11 +433,13 @@ module Flapjack
             simple_attrs[name.to_s] = value.blank? ? nil : value.to_i.to_f
           when :boolean
             simple_attrs[name.to_s] = (!!value).to_s
-          when :list, :set, :hash
+          when :list, :set, :hash, :expirable_id
             redis_obj = @complex_attributes[name.to_s]
             Flapjack.redis.del(redis_obj.key)
             unless value.blank?
               case attr_types[name.to_sym]
+              when :expirable_id
+                Flapjack.redis.set(redis_obj.key, value)
               when :list
                 Flapjack.redis.rpush(redis_obj.key, *value)
               when :set
@@ -429,6 +476,11 @@ module Flapjack
         @previously_changed = self.changes
         @changed_attributes.clear
         true
+      end
+
+      def key(att)
+        # TODO raise error if not a 'complex' attribute
+        @complex_attributes[att.to_s].key
       end
 
       def destroy
@@ -470,6 +522,7 @@ module Flapjack
 
       # Simulate attribute readers from method_missing
       def attribute(att)
+        # TODO if att type is expirable, refresh from redis
         @attributes[att.to_s]
       end
 
@@ -683,6 +736,27 @@ module Flapjack
         end
       end
 
+      class HasOneAssociation
+
+        def initialize(parent, name, options = {})
+          @record_id = Redis::Value.new("#{parent.record_key}:#{name}_id")
+
+          # TODO trap possible constantize error
+          @associated_class = options[:class] || name.classify.constantize
+          raise 'Associated class does not mixin RedisRecord' unless @associated_class.included_modules.include?(RedisRecord)
+        end
+
+        def value=(obj)
+          # TODO validate that obj.is_a?(@associated_class)
+          @record_id.value = obj.id
+        end
+
+        def value
+          return unless id = @record_id.value
+          @associated_class.send(:load, id)
+        end
+      end
+
       class Filter
         # NB: maps a Set-ish interface itself...
 
@@ -752,11 +826,6 @@ module Flapjack
 
         private
 
-        # TODO clean up to not use a temporary set if only doing one operation
-        # (or possibly for the last operation) e.g. sunion instead of sunionstore
-        # (although sorted sets will always need to use the store version, as, e.g.,
-        # there's no zinter but there is a zinterstore)
-
         # TODO possible candidate for moving to a stored Lua script in the redis server?
 
         # takes a block and passes the name of the temporary set to it; deletes
@@ -779,7 +848,6 @@ module Flapjack
 
             range_ids_set = nil
 
-            # TODO distinguish between att query & range
             if [:intersect, :union].include?(step.first)
 
               source_keys += step.last.inject([]) do |memo, (att, value)|
