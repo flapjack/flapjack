@@ -13,8 +13,10 @@ module Flapjack
       define_attributes :address  => :string,
                         :interval => :integer
 
+      belongs_to :contact, :class_name => 'Flapjack::Data::ContactR'
+
       # ??
-      # has_many :checks, :class => Flapjack::Data::EntityCheckR
+      # has_many :checks, :class_name => 'Flapjack::Data::EntityCheckR'
 
       validates :address, :presence => true
       validates :interval, :presence => true,

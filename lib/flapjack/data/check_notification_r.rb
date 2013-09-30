@@ -9,54 +9,53 @@ module Flapjack
       NOTIFICATION_STATES = [:problem, :warning, :critical, :unknown,
                              :recovery, :acknowledgement]
 
+      define_attributes :state => :string,
+                        :summary => :string,
+                        :timestamp => :timestamp
 
-  # 'problem', 'warning', 'critical', 'recovery', 'acknowledgement'
+      belongs_to :entity_check, :class_name => 'Flapjack::Data::EntityCheckR'
 
-  #     def last_notification_for_state(state)
-  #       return unless NOTIFICATION_STATES.include?(state)
-  #       ln = Flapjack.redis.get("#{@key}:last_#{state.to_s}_notification")
-  #       return {:timestamp => nil, :summary => nil} unless (ln && ln =~ /^\d+$/)
-  #       { :timestamp => ln.to_i,
-  #         :summary => Flapjack.redis.get("#{@key}:#{ln.to_i}:summary") }
-  #     end
+      # OLD def last_notification_for_state(state)
+      # NEW entity_check.notifications.intersect(:state => state).last
 
-  #     def last_notifications_of_each_type
-  #       NOTIFICATION_STATES.inject({}) do |memo, state|
-  #         memo[state] = last_notification_for_state(state) unless (state == :problem)
-  #         memo
-  #       end
-  #     end
+      # TODO check why this skips problem
+      def self.last_notifications_of_each_type(entity_check)
+        NOTIFICATION_STATES.inject({}) do |memo, state|
+          unless state == :problem
+            memo[state] = entity_check.notifications.intersect(:state => state.to_s).last
+          end
+          memo
+        end
+      end
 
-  #     def max_notified_severity_of_current_failure
-  #       last_recovery = last_notification_for_state(:recovery)[:timestamp] || 0
+      def self.max_notified_severity_of_current_failure(entity_check)
+        notif_timestamp = proc {|notif_state|
+          last_notif = entity_check.notifications.intersect(:state => notif_state).last
+          last_notif ? last_notif.timestamp : nil
+        }
 
-  #       last_critical = last_notification_for_state(:critical)[:timestamp]
-  #       return STATE_CRITICAL if last_critical && (last_critical > last_recovery)
+        last_recovery = notif_timestamp('recovery') || 0
 
-  #       last_warning = last_notification_for_state(:warning)[:timestamp]
-  #       return STATE_WARNING if last_warning && (last_warning > last_recovery)
+        ret = nil
 
-  #       last_unknown = last_notification_for_state(:unknown)[:timestamp]
-  #       return STATE_UNKNOWN if last_unknown && (last_unknown > last_recovery)
+        # relying on 1.9+ ordered hash
+        {'critical' => STATE_CRITICAL,
+         'warning'  => STATE_WARNING,
+         'unknown'  => STATE_UNKNOWN}.each_pair do |state_name, state_result|
 
-  #       nil
-  #     end
+          if (last_ts = notif_timestamp('state_name')) && (last_ts > last_recovery)
+            ret = state_result
+            break
+          end
+        end
 
-  #     # unpredictable results if there are multiple notifications of different
-  #     # types sent at the same time
-  #     def last_notification
-  #       nils = { :type => nil, :timestamp => nil, :summary => nil }
+        ret
+      end
 
-  #       lne = last_notifications_of_each_type
-  #       ln = lne.delete_if {|type, notif| notif[:timestamp].nil? || notif[:timestamp].to_i <= 0 }
-  #       if ln.find {|type, notif| type == :warning or type == :critical}
-  #         ln = ln.delete_if {|type, notif| type == :problem }
-  #       end
-  #       return nils if ln.empty?
-  #       lns = ln.sort_by { |type, notif| notif[:timestamp] }.last
-  #       { :type => lns[0], :timestamp => lns[1][:timestamp], :summary => lns[1][:summary] }
-  #     end
-
+      # # results aren't really guaranteed if there are multiple notifications
+      # # of different types sent at the same time
+      # OLD def last_notification
+      # NEW entity_check.notifications.last
 
     end
   end

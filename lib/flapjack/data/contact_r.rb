@@ -28,9 +28,9 @@ module Flapjack
 
       # TODO map contacts_for as 'entity:ID:contact_ids', entity#has_many :contacts
 
-      has_many :media, :class => Flapjack::Data::MediumR # , :dependent => :destroy
+      has_many :media, :class_name => 'Flapjack::Data::MediumR' # , :dependent => :destroy
 
-      has_many :notification_rules, :class => Flapjack::Data::NotificationRuleR
+      has_many :notification_rules, :class_name => 'Flapjack::Data::NotificationRuleR'
 
       # TODO a better way to wrap this around the has_many association
       def notification_rules_checked

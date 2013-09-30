@@ -25,6 +25,8 @@ module Flapjack
                         :warning_blackhole  => :boolean,
                         :critical_blackhole => :boolean
 
+      belongs_to :contact, :class_name => 'Flapjack::Data::ContactR'
+
       validates_each :entities, :tags, :warning_media, :critical_media,
         :allow_blank => true do |record, att, value|
         if value.is_a?(Set) && value.any? {|vs| !vs.is_a?(String) }

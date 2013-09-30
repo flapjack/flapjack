@@ -17,10 +17,10 @@ module Flapjack
 
       index_by :name, :enabled
 
-      has_many :contacts, :class => Flapjack::Data::ContactR
+      has_many :contacts, :class_name => 'Flapjack::Data::ContactR'
 
       # NB replaces check_list, check_count
-      has_many :checks, :class => Flapjack::Data::EntityCheckR
+      has_many :checks, :class_name => 'Flapjack::Data::EntityCheckR'
 
       # NB: if we're worried about user input, https://github.com/mudge/re2
       # has bindings for a non-backtracking RE engine that runs in linear

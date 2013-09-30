@@ -48,7 +48,20 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
     redis.exec
   end
 
-  it "finds all checks grouped by entity"
+  it "finds all checks grouped by entity" do
+    create_entity(entity_name, 1)
+    create_check(entity_name, check_name, 1)
+
+    checks_by_entity = Flapjack::Data::EntityCheckR.hash_by_entity_name( Flapjack::Data::EntityCheckR.all )
+    checks_by_entity.should_not be_nil
+    checks_by_entity.should be_a(Hash)
+    checks_by_entity.should have(1).pair
+    checks_by_entity.keys.first.should == entity_name
+    checks = checks_by_entity[entity_name]
+    checks.should_not be_nil
+    checks.should have(1).check
+    checks.first.name.should == check_name
+  end
 
   it "finds all checks for an entity name"
 
