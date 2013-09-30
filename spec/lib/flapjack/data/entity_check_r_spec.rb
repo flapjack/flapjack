@@ -18,44 +18,46 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
 
   let(:redis) { Flapjack.redis }
 
-  def create_entity(ent_name, id)
+  def create_entity(attrs = {})
     redis.multi
-    redis.hmset("flapjack/data/entity_r:#{id}:attrs", {'name' => ent_name}.flatten)
-    redis.sadd('flapjack/data/entity_r::ids', id.to_s)
-    redis.sadd("flapjack/data/entity_r::by_name:set:#{ent_name}", id.to_s)
-    redis.zadd("flapjack/data/entity_r::by_name:sorted_set:#{ent_name}", 1, id.to_s)
+    redis.hmset("flapjack/data/entity_r:#{attrs[:id]}:attrs", {'name' => attrs[:name]}.flatten)
+    redis.sadd('flapjack/data/entity_r::ids', attrs[:id])
+    redis.sadd("flapjack/data/entity_r::by_name:set:#{attrs[:name]}", attrs[:id])
+    redis.zadd("flapjack/data/entity_r::by_name:sorted_set:#{attrs[:name]}", 1, attrs[:id])
     redis.exec
   end
 
-  def create_check(ent_name, chk_name, id)
+  def create_check(attrs = {})
     raise "entity not found" unless
-      entity = Flapjack::Data::EntityR.intersect(:name => ent_name).all.first
+      entity = Flapjack::Data::EntityR.intersect(:name => attrs[:entity_name]).all.first
+    attrs[:state] ||= 'ok'
     redis.multi
-    redis.hmset("flapjack/data/entity_check_r:#{id}:attrs", {'name' => chk_name,
-      'entity_name' => entity.name, 'state' => 'ok', 'enabled' => 'true'}.flatten)
-    redis.sadd('flapjack/data/entity_check_r::ids', id.to_s)
-    redis.sadd("flapjack/data/entity_check_r::by_name:set:#{chk_name}", id.to_s)
-    redis.sadd("flapjack/data/entity_check_r::by_entity_name:set:#{entity.name}", id.to_s)
-    redis.sadd('flapjack/data/entity_check_r::by_state:set:ok', id.to_s)
-    redis.sadd('flapjack/data/entity_check_r::by_enabled:set:true', id.to_s)
+    redis.hmset("flapjack/data/entity_check_r:#{attrs[:id]}:attrs", {'name' => attrs[:name],
+      'entity_name' => entity.name, 'state' => attrs[:state], 'enabled' => (!!attrs[:enabled]).to_s}.flatten)
+    redis.sadd('flapjack/data/entity_check_r::ids', attrs[:id])
+    redis.sadd("flapjack/data/entity_check_r::by_name:set:#{attrs[:name]}", attrs[:id])
+    redis.sadd("flapjack/data/entity_check_r::by_entity_name:set:#{entity.name}", attrs[:id])
+    redis.sadd("flapjack/data/entity_check_r::by_state:set:#{attrs[:state]}", attrs[:id])
+    redis.sadd("flapjack/data/entity_check_r::by_enabled:set:#{!!attrs[:enabled]}", attrs[:id])
 
-    redis.zadd("flapjack/data/entity_check_r::by_name:sorted_set:#{chk_name}", 1, id.to_s)
-    redis.zadd("flapjack/data/entity_check_r::by_entity_name:sorted_set:#{entity.name}", 1, id.to_s)
-    redis.zadd('flapjack/data/entity_check_r::by_state:sorted_set:ok', 1, id.to_s)
-    redis.zadd('flapjack/data/entity_check_r::by_enabled:sorted_set:true', 1, id.to_s)
+    redis.zadd("flapjack/data/entity_check_r::by_name:sorted_set:#{attrs[:name]}", 1, attrs[:id])
+    redis.zadd("flapjack/data/entity_check_r::by_entity_name:sorted_set:#{entity.name}", 1, attrs[:id])
+    redis.zadd("flapjack/data/entity_check_r::by_state:sorted_set:#{attrs[:state]}", 1, attrs[:id])
+    redis.zadd("flapjack/data/entity_check_r::by_enabled:sorted_set:#{!!attrs[:enabled]}", 1, attrs[:id])
 
-    redis.sadd("flapjack/data/entity_r:#{entity.id}:check_ids", id.to_s)
+    redis.sadd("flapjack/data/entity_r:#{entity.id}:check_ids", attrs[:id].to_s)
     redis.exec
   end
 
   it "finds all checks grouped by entity" do
-    create_entity(entity_name, 1)
-    create_check(entity_name, check_name, 1)
+    create_entity(:name => entity_name, :id => 1)
+    create_check(:entity_name => entity_name, :name => check_name, :id => 1,
+      :enabled => true)
 
     checks_by_entity = Flapjack::Data::EntityCheckR.hash_by_entity_name( Flapjack::Data::EntityCheckR.all )
     checks_by_entity.should_not be_nil
     checks_by_entity.should be_a(Hash)
-    checks_by_entity.should have(1).pair
+    checks_by_entity.should have(1).entity
     checks_by_entity.keys.first.should == entity_name
     checks = checks_by_entity[entity_name]
     checks.should_not be_nil
@@ -63,63 +65,97 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
     checks.first.name.should == check_name
   end
 
-  it "finds all checks for an entity name"
+  it "finds all failing checks grouped by entity" do
+    create_entity(:name => entity_name, :id => 1)
+    create_check(:entity_name => entity_name, :name => check_name, :id => 1,
+      :state => 'ok', :enabled => true)
+    create_check(:entity_name => entity_name, :name => 'HTTP', :id => 2,
+      :state => 'critical', :enabled => true)
+    create_check(:entity_name => entity_name, :name => 'FTP', :id => 3,
+      :state => 'unknown', :enabled => true)
 
+    failing_checks = Flapjack::Data::EntityCheckR.
+      union(:state => Flapjack::Data::CheckStateR.failing_states.collect).all
 
-  it "finds all failing checks"
-
-  it "returns a count of all failing checks"
-
-  it "finds all failing checks grouped by entity"
+    checks_by_entity = Flapjack::Data::EntityCheckR.hash_by_entity_name( failing_checks  )
+    checks_by_entity.should_not be_nil
+    checks_by_entity.should be_a(Hash)
+    checks_by_entity.should have(1).entity
+    checks_by_entity[entity_name].map(&:name).should =~ ['HTTP', 'FTP']
+  end
 
   it "finds all unacknowledged failing checks"
 
   it "returns its entity's name" do
-    create_entity(entity_name, 1)
-    create_check(entity_name, check_name, 1)
+    create_entity(:name => entity_name, :id => 1)
+    create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
     ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
     ec.should_not be_nil
     ec.entity_name.should == entity_name
   end
 
-  # context "maintenance" do
+  context "maintenance" do
 
-  #   it "returns that it is in unscheduled maintenance" do
-  #     Flapjack.redis.set("#{name}:#{check}:unscheduled_maintenance", Time.now.to_i.to_s)
+    it "returns that it is in unscheduled maintenance" do
+      create_entity(:name => entity_name, :id => 1)
+      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
+      Flapjack.redis.set("flapjack/data/entity_check_r:1:expiring:unscheduled_maintenance", 1)
 
-  #     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check)
-  #     ec.should be_in_unscheduled_maintenance
-  #   end
+      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).first
+      ec.should be_in_unscheduled_maintenance
+    end
 
-  #   it "returns that it is not in unscheduled maintenance" do
-  #     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check)
-  #     ec.should_not be_in_unscheduled_maintenance
-  #   end
+    it "returns that it is not in unscheduled maintenance" do
+      create_entity(:name => entity_name, :id => 1)
+      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
-  #   it "returns that it is in scheduled maintenance" do
-  #     Flapjack.redis.set("#{name}:#{check}:scheduled_maintenance", Time.now.to_i.to_s)
+      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).first
+      ec.should_not be_in_unscheduled_maintenance
+    end
 
-  #     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check)
-  #     ec.should be_in_scheduled_maintenance
-  #   end
+    it "returns that it is in scheduled maintenance" do
+      create_entity(:name => entity_name, :id => 1)
+      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
+      Flapjack.redis.set("flapjack/data/entity_check_r:1:expiring:scheduled_maintenance", 1)
 
-  #   it "returns that it is not in scheduled maintenance" do
-  #     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check)
-  #     ec.should_not be_in_scheduled_maintenance
-  #   end
+      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).first
+      ec.should be_in_scheduled_maintenance
+    end
 
-  #   it "returns its current maintenance period" do
-  #     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check)
-  #     ec.current_maintenance(:scheduled => true).should be_nil
+    it "returns that it is not in scheduled maintenance" do
+      create_entity(:name => entity_name, :id => 1)
+      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
-  #     t = Time.now.to_i
+      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).first
+      ec.should_not be_in_scheduled_maintenance
+    end
 
-  #     ec.create_unscheduled_maintenance(t, half_an_hour, :summary => 'oops')
-  #     ec.current_maintenance.should == {:start_time => t,
-  #                                       :duration => half_an_hour,
-  #                                       :summary => 'oops'}
-  #   end
+    it "returns its current scheduled maintenance period" do
+      create_entity(:name => entity_name, :id => 1)
+      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
+
+      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).first
+      ec.current_scheduled_maintenance.should be_nil
+
+      t = Time.now.to_i
+
+      sm = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => t,
+        :end_time => t + 2400, :summary => 'planned')
+      ec.scheduled_maintenances_by_start << sm
+      ec.scheduled_maintenances_by_end   << sm
+
+      lsm = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => t + 3600,
+        :end_time => t + 4800, :summary => 'later')
+      ec.scheduled_maintenances_by_start << lsm
+      ec.scheduled_maintenances_by_end   << lsm
+
+      ec.update_scheduled_maintenance(:revalidate => true)
+
+      csm = ec.current_scheduled_maintenance
+      csm.should_not be_nil
+      csm.summary.should == 'planned'
+    end
 
   #   it "creates an unscheduled maintenance period" do
   #     t = Time.now.to_i
@@ -365,7 +401,7 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
   #                       :summary    => "second"}
   #   end
 
-  # end
+  end
 
   # it "returns its state" do
   #   Flapjack.redis.hset("check:#{name}:#{check}", 'state', 'ok')

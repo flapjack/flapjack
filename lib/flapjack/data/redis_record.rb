@@ -14,8 +14,6 @@ require 'redis-objects'
 
 # TODO escape ids and index_keys -- shouldn't allow bare :
 
-# TODO expirable attributes
-
 # TODO callbacks on before/after add/delete on association?
 
 module Flapjack
@@ -24,11 +22,9 @@ module Flapjack
 
     module RedisRecord
 
-      # TODO rename 'expirable_' & 'complex_' as 'direct_' ?
       ATTRIBUTE_TYPES = {:string              => [String],
                          :integer             => [Integer],
                          :id                  => [String],
-                         :expirable_id        => [String],
                          :timestamp           => [Integer, Time, DateTime],
                          :boolean             => [TrueClass, FalseClass],
                          :list                => [Enumerable],
@@ -36,8 +32,7 @@ module Flapjack
                          :hash                => [Hash],
                          :json_string         => [String, Integer, Enumerable, Set, Hash]}
 
-      COMPLEX_MAPPINGS = {:expirable_id => Redis::Value,
-                          :list         => Redis::List,
+      COMPLEX_MAPPINGS = {:list         => Redis::List,
                           :set          => Redis::Set,
                           :hash         => Redis::HashKey}
 
@@ -384,7 +379,6 @@ module Flapjack
         attributes.each_pair do |k, v|
           self.send("#{k}=".to_sym, v)
         end
-        @expiry = {}
       end
 
       def persisted?
@@ -430,9 +424,6 @@ module Flapjack
         complex_attrs = @complex_attributes.inject({}) do |memo, (name, redis_obj)|
           if type = attr_types[name.to_sym]
           memo[name] = case type
-            when :string
-              # expirable_id
-              value.to_s
             when :list
               redis_obj.values
             when :set
@@ -496,13 +487,11 @@ module Flapjack
             simple_attrs[name.to_s] = value.blank? ? nil : value.to_i.to_f
           when :boolean
             simple_attrs[name.to_s] = (!!value).to_s
-          when :list, :set, :hash, :expirable_id
+          when :list, :set, :hash
             redis_obj = @complex_attributes[name.to_s]
             Flapjack.redis.del(redis_obj.key)
             unless value.blank?
               case attr_types[name.to_sym]
-              when :expirable_id
-                Flapjack.redis.set(redis_obj.key, value)
               when :list
                 Flapjack.redis.rpush(redis_obj.key, *value)
               when :set
@@ -585,7 +574,6 @@ module Flapjack
 
       # Simulate attribute readers from method_missing
       def attribute(att)
-        # TODO if att type is expirable, refresh from redis
         @attributes[att.to_s]
       end
 
@@ -921,6 +909,11 @@ module Flapjack
           ids.map {|id| @associated_class.send(:load, id) }
         end
 
+        def first
+          return unless first_id = ids.first
+          @associated_class.send(:load, first_id)
+        end
+
         def collect(&block)
           ids.collect do |id|
             block.call(@associated_class.send(:load, id))
@@ -939,7 +932,7 @@ module Flapjack
             when Redis::SortedSet
               Flapjack.redis.send((order_desc ? :zrevrange : :zrange), set, 0, -1)
             when Redis::Set, nil
-              Flapjack.redis.smembers(set)
+              Flapjack.redis.smembers(set).sort
             end
           }
         end
@@ -965,7 +958,8 @@ module Flapjack
 
             order_desc = false
 
-            source_keys = [source_set]
+            source_keys = []
+            source_keys << source_set if (source_set == dest_set) || [:intersect, :intersect_range].include?(step.first)
 
             range_ids_set = nil
 

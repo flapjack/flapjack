@@ -20,10 +20,7 @@ module Flapjack
                         :state       => :string,
                         :summary     => :string,
                         :details     => :string,
-                        :enabled     => :boolean,
-
-                        :current_scheduled_maintenance_id => :expirable_id,
-                        :current_unscheduled_maintenance_id => :expirable_id
+                        :enabled     => :boolean
 
       index_by :entity_name, :name, :enabled, :state
 
@@ -112,15 +109,12 @@ module Flapjack
       # NEW: self.union(:state => Flapjack::Data::CheckStateR.failing_states.collect).count
 
       def in_scheduled_maintenance?
-        !self.current_scheduled_maintenance_id.nil?
+        !!Flapjack.redis.get("#{self.record_key}:expiring:scheduled_maintenance")
       end
 
-      def in_unscheduled_mainteance?
-        !self.current_unscheduled_maintenance_id.nil?
+      def in_unscheduled_maintenance?
+        !!Flapjack.redis.get("#{self.record_key}:expiring:unscheduled_maintenance")
       end
-
-      # OLD: current_maintenance(:scheduled => 'scheduled')
-      # NEW return unless in_scheduled_maintenance; TODO
 
       # OLD: current_maintenance(:scheduled => 'unscheduled')
       # NEW: return unless in_unscheduled_maintenance?; TODO
@@ -182,40 +176,42 @@ module Flapjack
 
   #     def create_scheduled_maintenance(start_time, duration, opts = {})
   #       # scheduled maintenance periods have changed, revalidate
-  #       update_current_scheduled_maintenance(:revalidate => true)
+  #       update_scheduled_maintenance(:revalidate => true)
   #     end
 
   #     # if not in scheduled maintenance, looks in scheduled maintenance list for a check to see if
   #     # current state should be set to scheduled maintenance, and sets it as appropriate
-        def update_current_scheduled_maintenance(opts = {})
+        def update_scheduled_maintenance(opts = {})
           return if !opts[:revalidate] && self.in_scheduled_maintenance?
 
           # are we within a scheduled maintenance period?
-          current_time = Time.now.to_i
-          start_prior_ids = self.scheduled_maintenances_by_start.
-            intersect_range(nil, current_time).ids
-          end_later_ids = self.scheduled_maintenances_by_start.
-            intersect_range(current_time, nil).ids
+          current_sched_maint = current_scheduled_maintenance
 
-          current_sched_ms = (start_prior_ids & end_later_ids).map {|id|
-            Flapjack::Data::ScheduledMaintenanceR.find_by_id(id)
-          }
-
-          if current_sched_ms.empty?
+          if current_sched_maint.nil?
             if opts[:revalidate]
-              self.current_scheduled_maintenance_id = nil
-              self.save
+              Flapjack.redis.del("#{self.record_key}:expiring:scheduled_maintenance")
             end
             return
           end
 
-          # yes! so set current scheduled maintenance
+          Flapjack.redis.setex("#{self.record_key}:expiring:scheduled_maintenance",
+                               current_sched_maint.end_time.to_i.to_s,
+                               current_sched_maint.id)
+        end
+
+        def current_scheduled_maintenance
+          current_time = Time.now.to_i
+          start_prior_ids = self.scheduled_maintenances_by_start.
+            intersect_range(nil, current_time, :by_score => true).ids
+          end_later_ids = self.scheduled_maintenances_by_end.
+            intersect_range(current_time, nil, :by_score => true).ids
+
+          current_sched_ms = (start_prior_ids & end_later_ids).map {|id|
+            Flapjack::Data::ScheduledMaintenanceR.find_by_id(id)
+          }
+          return if current_sched_ms.empty?
           # if multiple scheduled maintenances found, find the end_time furthest in the future
-          most_futuristic = current_sched_ms.max {|sm| sm.end_time }
-          self.current_scheduled_maintenance_id = most_futuristic.id
-          self.save
-          Flapjack.redis.expireat(self.key(:current_scheduled_maintenance_id),
-                                  most_futuristic.end_time)
+          current_sched_ms.max {|sm| sm.end_time }
         end
 
   #     def create_unscheduled_maintenance(start_time, duration, opts = {})
