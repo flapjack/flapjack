@@ -142,15 +142,11 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
 
       sm = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => t,
         :end_time => t + 2400, :summary => 'planned')
-      ec.scheduled_maintenances_by_start << sm
-      ec.scheduled_maintenances_by_end   << sm
+      ec.add_scheduled_maintenance(sm)
 
       lsm = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => t + 3600,
         :end_time => t + 4800, :summary => 'later')
-      ec.scheduled_maintenances_by_start << lsm
-      ec.scheduled_maintenances_by_end   << lsm
-
-      ec.update_scheduled_maintenance(:revalidate => true)
+      ec.add_scheduled_maintenance(lsm)
 
       csm = ec.current_scheduled_maintenance
       csm.should_not be_nil

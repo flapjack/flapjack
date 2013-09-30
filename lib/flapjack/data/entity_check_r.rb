@@ -174,45 +174,57 @@ module Flapjack
         self.save
       end
 
-  #     def create_scheduled_maintenance(start_time, duration, opts = {})
-  #       # scheduled maintenance periods have changed, revalidate
-  #       update_scheduled_maintenance(:revalidate => true)
-  #     end
+      # OLD def create_scheduled_maintenance
+      def add_scheduled_maintenance(sched_maint)
+        self.scheduled_maintenances_by_start << sched_maint
+        self.scheduled_maintenances_by_end << sched_maint
+        update_scheduled_maintenance(:revalidate => true)
+      end
 
-  #     # if not in scheduled maintenance, looks in scheduled maintenance list for a check to see if
-  #     # current state should be set to scheduled maintenance, and sets it as appropriate
-        def update_scheduled_maintenance(opts = {})
-          return if !opts[:revalidate] && self.in_scheduled_maintenance?
+      def current_scheduled_maintenance
+        current_time = Time.now.to_i
+        start_prior_ids = self.scheduled_maintenances_by_start.
+          intersect_range(nil, current_time, :by_score => true).ids
+        end_later_ids = self.scheduled_maintenances_by_end.
+          intersect_range(current_time, nil, :by_score => true).ids
 
-          # are we within a scheduled maintenance period?
-          current_sched_maint = current_scheduled_maintenance
+        current_sched_ms = (start_prior_ids & end_later_ids).map {|id|
+          Flapjack::Data::ScheduledMaintenanceR.find_by_id(id)
+        }
+        return if current_sched_ms.empty?
+        # if multiple scheduled maintenances found, find the end_time furthest in the future
+        current_sched_ms.max {|sm| sm.end_time }
+      end
 
-          if current_sched_maint.nil?
-            if opts[:revalidate]
-              Flapjack.redis.del("#{self.record_key}:expiring:scheduled_maintenance")
-            end
-            return
+      def set_unscheduled_maintenance(unsched_maint)
+        time_remaining = unsched_maint.end_time - Time.now.to_i
+
+        if time_remaining > 0
+          end_unscheduled_maintenance
+        end
+
+      end
+
+      # OLD def end_unscheduled_maintenance(end_time)
+      def clear_unscheduled_maintenance
+        end_time = Time.now.to_i
+
+        if um_start = Flapjack.redis.get(unscheduled_maintenance_key)
+          @logger.debug("ending unscheduled downtime for #{self.entity_name}:#{self.name} at #{Time.at(end_time).to_s}") if @logger
+          Flapjack.redis.del(unscheduled_maintenance_key)
+
+          usm = self.unscheduled_maintenances_by_start.intersect(:start_time => um_start).first
+
+          if usm.nil?
+            @logger.error("no unscheduled_maintenance period found with start time #{Time.at(end_time).to_s}") if @logger
+          else
+            usm.end_time = end_time
+            usm.save
+            # should have this effect on the relevant index -- TODO test
+            # Flapjack.redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start) # updates existing UM 'score'
           end
-
-          Flapjack.redis.setex("#{self.record_key}:expiring:scheduled_maintenance",
-                               current_sched_maint.end_time.to_i.to_s,
-                               current_sched_maint.id)
         end
-
-        def current_scheduled_maintenance
-          current_time = Time.now.to_i
-          start_prior_ids = self.scheduled_maintenances_by_start.
-            intersect_range(nil, current_time, :by_score => true).ids
-          end_later_ids = self.scheduled_maintenances_by_end.
-            intersect_range(current_time, nil, :by_score => true).ids
-
-          current_sched_ms = (start_prior_ids & end_later_ids).map {|id|
-            Flapjack::Data::ScheduledMaintenanceR.find_by_id(id)
-          }
-          return if current_sched_ms.empty?
-          # if multiple scheduled maintenances found, find the end_time furthest in the future
-          current_sched_ms.max {|sm| sm.end_time }
-        end
+      end
 
   #     def create_unscheduled_maintenance(start_time, duration, opts = {})
   #       raise ArgumentError, 'start time must be provided as a Unix timestamp' unless start_time && start_time.is_a?(Integer)
@@ -230,20 +242,6 @@ module Flapjack
   #       Flapjack.redis.zadd("#{@key}:sorted_unscheduled_maintenance_timestamps", start_time, start_time)
   #     end
 
-  #     # ends any unscheduled maintenance
-  #     def end_unscheduled_maintenance(end_time)
-  #       raise ArgumentError, 'end time must be provided as a Unix timestamp' unless end_time && end_time.is_a?(Integer)
-
-  #       if (um_start = Flapjack.redis.get("#{@key}:unscheduled_maintenance"))
-  #         duration = end_time - um_start.to_i
-  #         @logger.debug("ending unscheduled downtime for #{@key} at #{Time.at(end_time).to_s}") if @logger
-  #         Flapjack.redis.del("#{@key}:unscheduled_maintenance")
-  #         Flapjack.redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start) # updates existing UM 'score'
-  #       else
-  #         @logger.debug("end_unscheduled_maintenance called for #{@key} but none found") if @logger
-  #       end
-  #     end
-
       # OLD def contacts
       # NEW (check.contacts + check.entity.contacts).uniq
       # TODO should clear entity remove from checks? probably not...
@@ -254,6 +252,36 @@ module Flapjack
   #       ta += entity.split('.', 2).map {|x| x.downcase}
   #       ta += check.split(' ').map {|x| x.downcase}
   #     end
+
+      private
+
+        def scheduled_maintenance_key
+          "#{self.record_key}:expiring:scheduled_maintenance"
+        end
+
+        def unscheduled_maintenance_key
+          "#{self.record_key}:expiring:unscheduled_maintenance"
+        end
+
+        # if not in scheduled maintenance, looks in scheduled maintenance list for a check to see if
+        # current state should be set to scheduled maintenance, and sets it as appropriate
+        def update_scheduled_maintenance(opts = {})
+          return if !opts[:revalidate] && self.in_scheduled_maintenance?
+
+          # are we within a scheduled maintenance period?
+          current_sched_maint = current_scheduled_maintenance
+
+          if current_sched_maint.nil?
+            if opts[:revalidate]
+              Flapjack.redis.del("#{self.record_key}:expiring:scheduled_maintenance")
+            end
+            return
+          end
+
+          Flapjack.redis.setex("#{self.record_key}:expiring:scheduled_maintenance",
+                               current_sched_maint.end_time.to_i.to_s,
+                               current_sched_maint.id)
+        end
 
     end
 
