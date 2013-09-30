@@ -16,8 +16,6 @@ require 'redis-objects'
 
 # TODO expirable attributes
 
-# TODO has_one association
-
 # TODO callbacks on before/after add/delete on association?
 
 module Flapjack
@@ -104,13 +102,11 @@ module Flapjack
         end
 
         def intersect(opts = {})
-          filter = Flapjack::Data::RedisRecord::Filter.new(@ids, self)
-          filter.intersect(opts)
+          Flapjack::Data::RedisRecord::Filter.new(@ids, self).intersect(opts)
         end
 
         def union(opts = {})
-          filter = Flapjack::Data::RedisRecord::Filter.new(@ids, self)
-          filter.union(opts)
+          Flapjack::Data::RedisRecord::Filter.new(@ids, self).union(opts)
         end
 
         def find_by_id(id)
@@ -187,6 +183,11 @@ module Flapjack
           nil
         end
 
+        def belongs_to(*args)
+          associate(BelongsToAssociation, self, args)
+          nil
+        end
+
         private
 
         def class_key
@@ -233,6 +234,16 @@ module Flapjack
             options = args.extract_options!
             name = args.first.to_s
 
+            assoc_args = []
+
+            if options[:class_name]
+              assoc_args << %Q{:class_name => "#{options[:class_name]}"}
+            end
+
+            if options[:inverse_of]
+              assoc_args << %Q{:inverse_of => :#{options[:inverse_of].to_s}}
+            end
+
             # TODO check method_defined? ( which relative to class_eval ? )
 
             unless name.nil?
@@ -249,8 +260,7 @@ module Flapjack
 
                 def #{name}_proxy
                   @#{name}_proxy ||=
-                    ::Flapjack::Data::RedisRecord::HasManyAssociation.new(self, "#{name}",
-                      :class => #{options[:class] ? options[:class].name : 'nil'})
+                    ::Flapjack::Data::RedisRecord::HasManyAssociation.new(self, "#{name}", #{assoc_args.join(', ')})
                 end
               }
               class_eval assoc, __FILE__, __LINE__
@@ -259,6 +269,16 @@ module Flapjack
           when ::Flapjack::Data::RedisRecord::HasOneAssociation.name
             options = args.extract_options!
             name = args.first.to_s
+
+            assoc_args = []
+
+            if options[:class_name]
+              assoc_args << %Q{:class_name => "#{options[:class_name]}"}
+            end
+
+            if options[:inverse_of]
+              assoc_args << %Q{:inverse_of => :#{options[:inverse_of].to_s}}
+            end
 
             # TODO check method_defined? ( which relative to class_eval ? )
 
@@ -275,8 +295,42 @@ module Flapjack
                 private
 
                 def #{name}_proxy
-                  @#{name}_proxy ||= ::Flapjack::Data::RedisRecord::HasOneAssociation.new(self, "#{name}",
-                      :class => #{options[:class] ? options[:class].name : 'nil'})
+                  @#{name}_proxy ||= ::Flapjack::Data::RedisRecord::HasOneAssociation.new(self, "#{name}", #{assoc_args.join(', ')})
+                end
+              }
+              class_eval assoc, __FILE__, __LINE__
+            end
+
+          when ::Flapjack::Data::RedisRecord::BelongsToAssociation.name
+            options = args.extract_options!
+            name = args.first.to_s
+
+            assoc_args = []
+
+            if options[:class_name]
+              assoc_args << %Q{:class_name => "#{options[:class_name]}"}
+            end
+
+            if options[:inverse_of]
+              assoc_args << %Q{:inverse_of => :#{options[:inverse_of].to_s}}
+            end
+
+            # TODO check method_defined? ( which relative to class_eval ? )
+
+            unless name.nil?
+              assoc = %Q{
+                def #{name}
+                  #{name}_proxy.value
+                end
+
+                def #{name}=(obj)
+                  #{name}_proxy.value = obj
+                end
+
+                private
+
+                def #{name}_proxy
+                  @#{name}_proxy ||= ::Flapjack::Data::RedisRecord::BelongsToAssociation.new(self, "#{name}", #{assoc_args.join(', ')})
                 end
               }
               class_eval assoc, __FILE__, __LINE__
@@ -285,7 +339,18 @@ module Flapjack
           when ::Flapjack::Data::RedisRecord::HasSortedSetAssociation.name
             options = args.extract_options!
             name = args.first.to_s
-            key = (options[:key] || :id).to_s
+
+            assoc_args = []
+
+            if options[:class_name]
+              assoc_args << %Q{:class_name => "#{options[:class_name]}"}
+            end
+
+            if options[:inverse_of]
+              assoc_args << %Q{:inverse_of => :#{options[:inverse_of].to_s}}
+            end
+
+            assoc_args << %Q{:key => "#{(options[:key] || :id).to_s}"}
 
             # TODO check method_defined? ( which relative to class_eval ? )
 
@@ -303,9 +368,7 @@ module Flapjack
 
                 def #{name}_proxy
                   @#{name}_proxy ||=
-                    ::Flapjack::Data::RedisRecord::HasSortedSetAssociation.new(self, "#{name}",
-                      :class => #{options[:class] ? options[:class].name : 'nil'},
-                      :key   => "#{key}")
+                    ::Flapjack::Data::RedisRecord::HasSortedSetAssociation.new(self, "#{name}", #{assoc_args.join(', ')})
                 end
               }
               class_eval assoc, __FILE__, __LINE__
@@ -595,7 +658,10 @@ module Flapjack
 
         def initialize(parent, name, options = {})
           @key = options[:key]
-          @associated_class = options[:class] || name.sub(/_ids$/, '').classify.constantize
+          @parent = parent
+          @name = name
+          @inverse = options[:inverse_of] ? options[:inverse_of].to_s : nil
+          @associated_class = (options[:class_name] || name.classify).constantize
           @record_ids = Redis::SortedSet.new("#{parent.record_key}:#{name}_ids")
         end
 
@@ -631,6 +697,12 @@ module Flapjack
             raise 'Invalid class' unless record.is_a?(@associated_class)
             # TODO next if already exists? in set
             record.save
+
+            if @inverse
+              inverse_id = Redis::HashKey.new("#{record.record_key}:belongs_to")
+              inverse_id["#{@inverse}_id"] = @parent.id
+            end
+
             @record_ids.add(record.id, record.send(@key.to_sym).to_i)
           end
         end
@@ -672,9 +744,12 @@ module Flapjack
 
         def initialize(parent, name, options = {})
           @record_ids = Redis::Set.new("#{parent.record_key}:#{name}_ids")
+          @name = name
+          @parent = parent
+          @inverse = options[:inverse_of] ? options[:inverse_of].to_s : nil
 
           # TODO trap possible constantize error
-          @associated_class = options[:class] || name.sub(/_ids$/, '').classify.constantize
+          @associated_class = (options[:class_name] || name.classify).constantize
           raise 'Associated class does not mixin RedisRecord' unless @associated_class.included_modules.include?(RedisRecord)
         end
 
@@ -698,6 +773,13 @@ module Flapjack
             raise 'Invalid class' unless record.is_a?(@associated_class)
             # TODO next if already exists? in set
             record.save
+
+            # TODO validate that record.is_a?(@associated_class)
+            if @inverse
+              inverse_id = Redis::HashKey.new("#{record.record_key}:belongs_to")
+              inverse_id["#{@inverse}_id"] = @parent.id
+            end
+
             @record_ids.add(record.id)
           end
         end
@@ -740,19 +822,57 @@ module Flapjack
 
         def initialize(parent, name, options = {})
           @record_id = Redis::Value.new("#{parent.record_key}:#{name}_id")
+          @parent = parent
+          @inverse = options[:inverse_of] ? options[:inverse_of].to_s : nil
 
           # TODO trap possible constantize error
-          @associated_class = options[:class] || name.classify.constantize
+          @associated_class = (options[:class_name] || name.classify).constantize
           raise 'Associated class does not mixin RedisRecord' unless @associated_class.included_modules.include?(RedisRecord)
         end
 
-        def value=(obj)
-          # TODO validate that obj.is_a?(@associated_class)
-          @record_id.value = obj.id
+        def value=(record)
+          # TODO validate that record.is_a?(@associated_class)
+
+          if @inverse
+            inverse_id = Redis::HashKey.new("#{record.record_key}:belongs_to")
+            inverse_id["#{@inverse}_id"] = @parent.id
+          end
+
+          @record_id.value = record.id
         end
 
         def value
           return unless id = @record_id.value
+          @associated_class.send(:load, id)
+        end
+      end
+
+      class BelongsToAssociation
+
+        def initialize(parent, name, options = {})
+          @record_ids = Redis::HashKey.new("#{parent.record_key}:belongs_to")
+          @parent = parent
+          @name = name
+
+          @inverse = options[:inverse_of] ? options[:inverse_of].to_s : nil
+
+          # TODO trap possible constantize error
+          @associated_class = (options[:class_name] || name.classify).constantize
+          raise 'Associated class does not mixin RedisRecord' unless @associated_class.included_modules.include?(RedisRecord)
+        end
+
+        def value=(record)
+          # TODO validate that record.is_a?(@associated_class)
+
+          if @inverse
+            record.send("#{@inverse}=".to_sym, @parent) if record.respond_to?("#{@inverse}=".to_sym)
+          else
+            @record_ids["#{@name}_id"] = record.id
+          end
+        end
+
+        def value
+          return unless id = @record_ids["#{@name}_id"]
           @associated_class.send(:load, id)
         end
       end
@@ -830,6 +950,7 @@ module Flapjack
 
         # takes a block and passes the name of the temporary set to it; deletes
         # the temporary set once done
+        # NB set case could use sunion/sinter for the last step, sorted set case can't
         def resolve_steps(&block)
           return block.call(@initial_set.key, false) if @steps.empty?
 

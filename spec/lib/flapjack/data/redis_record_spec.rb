@@ -174,11 +174,13 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
       index_by :important
 
+      belongs_to :example, :class_name => 'Flapjack::Data::RedisRecord::Example'
+
       validates :name, :presence => true
     end
 
     class Flapjack::Data::RedisRecord::Example
-      has_many :fdrr_children, :class => Flapjack::Data::RedisRecord::ExampleChild
+      has_many :fdrr_children, :class_name => 'Flapjack::Data::RedisRecord::ExampleChild'
     end
 
     def create_child(parent, attrs = {})
@@ -282,13 +284,15 @@ describe Flapjack::Data::RedisRecord, :redis => true do
                         :summary => :string,
                         :emotion => :string
 
+      belongs_to :example, :class_name => 'Flapjack::Data::RedisRecord::Example'
+
       index_by :emotion
 
       validates :timestamp, :presence => true
     end
 
     class Flapjack::Data::RedisRecord::Example
-      has_sorted_set :fdrr_data, :class => Flapjack::Data::RedisRecord::ExampleDatum,
+      has_sorted_set :fdrr_data, :class_name => 'Flapjack::Data::RedisRecord::ExampleDatum',
         :key => :timestamp
     end
 
@@ -489,11 +493,15 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
       define_attributes :name => :string
 
+      belongs_to :example, :class_name => 'Flapjack::Data::RedisRecord::Example',
+        :inverse_of => :special
+
       validate :name, :presence => true
     end
 
     class Flapjack::Data::RedisRecord::Example
-      has_one :special, :class => Flapjack::Data::RedisRecord::ExampleSpecial
+      has_one :special, :class_name => 'Flapjack::Data::RedisRecord::ExampleSpecial',
+        :inverse_of => :example
     end
 
     it "sets and retrives a record via a has_one association" do
@@ -512,7 +520,8 @@ describe Flapjack::Data::RedisRecord, :redis => true do
                                  'flapjack/data/redis_record/example:8:attrs',
                                  'flapjack/data/redis_record/example:8:special_id',
                                  'flapjack/data/redis_record/example_special::ids',
-                                 'flapjack/data/redis_record/example_special:22:attrs']
+                                 'flapjack/data/redis_record/example_special:22:attrs',
+                                 'flapjack/data/redis_record/example_special:22:belongs_to']
 
       redis.get('flapjack/data/redis_record/example:8:special_id').should == '22'
 
@@ -520,10 +529,14 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       redis.hgetall('flapjack/data/redis_record/example_special:22:attrs').should ==
         {'name' => 'Bill Smith'}
 
+      redis.hgetall('flapjack/data/redis_record/example_special:22:belongs_to').should ==
+        {'example_id' => '8'}
+
       example2 = Flapjack::Data::RedisRecord::Example.find_by_id('8')
       special2 = example2.special
       special2.should_not be_nil
       special2.id.should == '22'
+      special2.example.id.should == '8'
     end
 
   end
