@@ -129,6 +129,8 @@ module Flapjack
           rlen = rules.length
           logger.debug "found #{rlen} rule#{(rlen == 1) ? '' : 's'} for contact #{contact_id}"
 
+          # TODO: add rollup set updates (failing alerts per contact per media)
+
           media_to_use = if rules.empty?
             media
           else
@@ -187,6 +189,8 @@ module Flapjack
 
             media.select {|medium, address| rule_media.include?(medium) }
           end
+
+          # TODO: more rollup set updates
 
           logger.debug "media_to_use: #{media_to_use}"
 

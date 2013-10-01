@@ -345,6 +345,14 @@ Given /^user (\d+) has the following notification intervals:$/ do |contact_id, i
   end
 end
 
+Given /^user (\d+) has the following notification rollup thresholds:$/ do |contact_id, rollup_thresholds|
+  contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
+  rollup_thresholds.hashes.each do |rollup_threshold|
+    contact.set_rollup_threshold_for_media('email', rollup_threshold['email'].to_i)
+    contact.set_rollup_threshold_for_media('sms',   rollup_threshold['sms'].to_i)
+  end
+end
+
 Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules|
   contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
   timezone = contact.timezone
@@ -395,24 +403,17 @@ Then /^all alert dropping keys for user (\d+) should have expired$/ do |contact_
   @redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
 end
 
-Then /^(.*) email alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
+Then /^(\w+) (\w+) alert(?:s)? (?:of type (.*) )?should be queued for (.*)$/ do |num_queued, media, notification_type, address|
   check  = check  ? check  : @check
   entity = entity ? entity : @entity
   case num_queued
   when 'no'
     num_queued = 0
   end
-  queue  = Resque.peek('email_notifications', 0, 30)
-  queue.find_all {|n| n['args'].first['address'] == address }.length.should == num_queued.to_i
+  queue  = Resque.peek("#{media}_notifications", 0, 30)
+  queue.find_all {|n|
+    type_ok = notification_type ? ( n['args'].first['notification_type'] == notification_type ) : true
+    type_ok && ( n['args'].first['address'] == address )
+  }.length.should == num_queued.to_i
 end
 
-Then /^(.*) sms alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
-  case num_queued
-  when 'no'
-    num_queued = 0
-  end
-  queue  = Resque.peek('sms_notifications', 0, 30)
-  queue.find_all {|n| n['args'].first['address'] == address }.length.should == num_queued.to_i
-end
