@@ -36,14 +36,14 @@ module Flapjack
         module Helpers
 
           def find_entity(entity_name)
-            entity = Flapjack::Data::Entity.find_by_name(entity_name)
+            entity = Flapjack::Data::EntityR.intersect(:name => entity_name).all.first
             raise Flapjack::Gateways::API::EntityNotFound.new(entity_name) if entity.nil?
             entity
           end
 
-          def find_entity_check(entity, check)
-            entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check)
-            raise Flapjack::Gateways::API::EntityCheckNotFound.new(entity, check) if entity_check.nil?
+          def find_entity_check(entity_name, check_name)
+            entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+            raise Flapjack::Gateways::API::EntityCheckNotFound.new(entity_name, check_name) if entity_check.nil?
             entity_check
           end
 
@@ -52,11 +52,11 @@ module Flapjack
             tags
           end
 
-          def entities_and_checks(entity_name, check)
+          def entities_and_checks(entity_name, check_name)
             if entity_name
               # backwards-compatible, single entity or entity&check from route
-              entities = check ? nil : [entity_name]
-              checks   = check ? {entity_name => check} : nil
+              entities = check_name ? nil : [entity_name]
+              checks   = check_name ? {entity_name => check_name} : nil
             else
               # new and improved bulk API queries
               entities = params[:entity]
@@ -72,18 +72,17 @@ module Flapjack
               entities.each do |entity_name|
                 entity = find_entity(entity_name)
                 checks = entity.check_list.sort
-                checks.each do |check|
-                  action.call( find_entity_check(entity, check) )
+                checks.each do |check_name|
+                  action.call( find_entity_check(entity_name, check_name) )
                 end
               end
             end
 
             unless entity_checks.nil? || entity_checks.empty?
               entity_checks.each_pair do |entity_name, checks|
-                entity = find_entity(entity_name)
                 checks = [checks] unless checks.is_a?(Array)
                 checks.each do |check|
-                  action.call( find_entity_check(entity, check) )
+                  action.call( find_entity_check(entity_name, check) )
                 end
               end
             end
@@ -136,7 +135,7 @@ module Flapjack
 
           app.get '/entities' do
             content_type :json
-            ret = Flapjack::Data::Entity.all.sort_by(&:name).collect {|e|
+            ret = Flapjack::Data::EntityR.all.sort_by(&:name).collect {|e|
               presenter = Flapjack::Gateways::API::EntityPresenter.new(e)
               {'id' => e.id, 'name' => e.name, 'checks' => presenter.status }
             }
@@ -223,8 +222,15 @@ module Flapjack
             halt( err(403, "start time must be provided") ) unless start_time
 
             act_proc = proc {|entity_check|
-              entity_check.create_scheduled_maintenance(start_time,
-                params[:duration].to_i, :summary => params[:summary])
+              sched_maint = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => start_time,
+                :end_time => start_time + params[:duration].to_i,
+                :summary => params[:summary])
+
+              unless sched_maint.save
+                halt( err(403, *sched_maint.errors.full_messages) )
+              end
+
+              entity_check.add_scheduled_maintenance(sched_maint)
             }
 
             bulk_api_check_action(entities, checks, act_proc)
@@ -266,15 +272,21 @@ module Flapjack
             # no backwards-compatible mode here, it's a new method
             entities, checks = entities_and_checks(nil, nil)
 
+            end_time = Time.now.to_i
+
             act_proc = case action
             when 'scheduled_maintenances'
               start_time = validate_and_parsetime(params[:start_time])
               halt( err(403, "start time must be provided") ) unless start_time
               opts = {}
-              proc {|entity_check| entity_check.end_scheduled_maintenance(start_time.to_i) }
+              proc {|entity_check|
+                next unless sched_maint = Flapjack::Data::ScheduledMaintenanceR.
+                  intersect_range(start_time.to_i, start_time.to_i, :by_score => true).all.first
+                entity_check.end_scheduled_maintenance(sched_maint, end_time)
+              }
             when 'unscheduled_maintenances'
-              end_time = validate_and_parsetime(params[:end_time]) || Time.now
-              proc {|entity_check| entity_check.end_unscheduled_maintenance(end_time.to_i) }
+              end_time ||= validate_and_parsetime(params[:end_time])
+              proc {|entity_check| entity_check.clear_unscheduled_maintenance(end_time) }
             end
 
             bulk_api_check_action(entities, checks, act_proc)
@@ -318,14 +330,49 @@ module Flapjack
             return err(403, "The received entities object is not an Enumerable") unless entities.is_a?(Enumerable)
             return err(403, "Entity with a nil id detected") unless entities.any? {|e| !e['id'].nil?}
 
-            entities.each do |entity|
-              unless entity['id']
-                errors << "Entity not imported as it has no id: #{entity.inspect}"
+            entities_to_save = []
+            entity_contacts = {}
+            entities.each do |ent|
+              unless ent['id']
+                errors << "Entity not imported as it has no id: #{ent.inspect}"
                 next
               end
-              Flapjack::Data::Entity.add(entity)
+
+              enabled = false
+
+              if entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
+                enabled = entity.enabled
+                entity.destroy
+              end
+
+              entity = Flapjack::Data::Entity.new(:id => ent['id'], :name => ent['name'],
+                :enabled => enabled)
+              if entity.valid?
+                if errors.empty?
+                entities_to_save << entity
+                if ent['contacts'] && ent['contacts'].respond_to?(:collect)
+                  entity_contacts[entity.id] = ent['contacts'].collect {|contact_id|
+                    Flapjack::Data::ContactR.find_by_id(contact_id)
+                  }.compact
+                end
+              end
+              else
+                errors << entity.errors.full_messages.join(", ")
+              end
             end
-            errors.empty? ? 204 : err(403, *errors)
+
+            unless errors.empty?
+              halt err(403, *errors)
+            end
+
+            entities_to_save.each {|entity|
+              entity.save
+              entity_contacts[entity.id].each do |contact|
+                entity.contacts << contact
+                contact.entities << entity
+              end
+            }
+            204
           end
 
           app.post '/entities/:entity/tags' do
@@ -333,14 +380,16 @@ module Flapjack
 
             tags = find_tags(params[:tag])
             entity = find_entity(params[:entity])
-            entity.add_tags(*tags)
+            entity.tags += tags
+            entity.save
             entity.tags.to_json
           end
 
           app.delete '/entities/:entity/tags' do
             tags = find_tags(params[:tag])
             entity = find_entity(params[:entity])
-            entity.delete_tags(*tags)
+            entity.tags -= tags
+            entity.save
             status 204
           end
 

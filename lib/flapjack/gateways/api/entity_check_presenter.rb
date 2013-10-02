@@ -14,31 +14,44 @@ module Flapjack
 
       class EntityCheckPresenter
 
+        class Outage
+          attr_accessor :state, :start_time, :end_time,
+                        :duration, :summary, :details
+        end
+
         def initialize(entity_check)
           @entity_check = entity_check
         end
 
         def status
-          {'name'                              => @entity_check.check,
+          last_update   = @entity_check.last_update
+          last_problem  = @entity_check.last_notification_for_state(:problem)
+          last_recovery = @entity_check.last_notification_for_state(:recovery)
+          last_ack      = @entity_check.last_notification_for_state(:acknowledgement)
+
+          {'name'                              => @entity_check.name,
            'state'                             => @entity_check.state,
-           'enabled'                           => @entity_check.enabled?,
+           'enabled'                           => @entity_check.enabled,
            'summary'                           => @entity_check.summary,
            'details'                           => @entity_check.details,
            'in_unscheduled_maintenance'        => @entity_check.in_unscheduled_maintenance?,
            'in_scheduled_maintenance'          => @entity_check.in_scheduled_maintenance?,
-           'last_update'                       => @entity_check.last_update,
-           'last_problem_notification'         => @entity_check.last_notification_for_state(:problem)[:timestamp],
-           'last_recovery_notification'        => @entity_check.last_notification_for_state(:recovery)[:timestamp],
-           'last_acknowledgement_notification' => @entity_check.last_notification_for_state(:acknowledgement)[:timestamp]}
+           'last_update'                       => (last_update   ? last_update.timestamp   : nil),
+           'last_problem_notification'         => (last_problem  ? last_problem.timestamp  : nil),
+           'last_recovery_notification'        => (last_recovery ? last_recovery.timestamp : nil),
+           'last_acknowledgement_notification' => (last_ack      ? last_ack.timestamp      : nil),
+          }
         end
 
         def outages(start_time, end_time, options = {})
-          # hist_states is an array of hashes, with [state, timestamp, summary] keys
-          hist_states = @entity_check.historical_states(start_time, end_time)
-          return hist_states if hist_states.empty?
+          hist_states = @entity_check.states.
+            intersect_range(start_time, end_time, :by_score => true).all
+          return [] if hist_states.empty?
 
-          initial = @entity_check.historical_state_before(hist_states.first[:timestamp])
-          hist_states.unshift(initial) if initial
+          first_and_prior = @entity_check.states.
+            intersect_range(nil, start_time, :by_score => true,
+                            :limit => 2, :order => 'desc').all
+          hist_states.unshift(first_and_prior.last) if first_and_prior.size == 2
 
           # TODO the following works, but isn't the neatest
           num_states = hist_states.size
@@ -52,65 +65,65 @@ module Flapjack
             obj = hist_states[index]
             index += 1
 
-            next if obj[:state] == 'ok'
+            next if obj.state == 'ok'
 
-            if last_obj && (last_obj[:state] == obj[:state])
+            if last_obj && (last_obj.state == obj.state)
               # TODO maybe build up arrays of these instead, and leave calling
               # classes to join them together if needed?
-              result.last[:summary] << " / #{obj[:summary]}"
-              result.last[:details] << " / #{obj[:details]}"
+              result.last.summary << " / #{obj.summary}"
+              result.last.details << " / #{obj.details}"
               next
             end
 
-            ts = obj[:timestamp]
+            ts = obj.timestamp
 
-            obj_st  = (last_obj || !start_time) ? ts : [ts, start_time].max
+            next_ts_obj = hist_states[index..-1].detect {|hs| hs.state != obj.state }
+            obj_et  = next_ts_obj ? next_ts_obj.timestamp : end_time
 
-            next_ts_obj = hist_states[index..-1].detect {|hs| hs[:state] != obj[:state] }
-            obj_et  = next_ts_obj ? next_ts_obj[:timestamp] : end_time
+            outage = Outage.new
+            outage.state      = obj.state
+            outage.start_time = (last_obj || !start_time) ? ts : [ts, start_time].max
+            outage.end_time   = obj_et
+            outage.duration   = obj_et ? (obj_et - obj_st) : nil
+            outage.summary    = obj.summary || ''
+            outagedetails     = obj.details || ''
 
-            obj_dur = obj_et ? obj_et - obj_st : nil
-
-            result << {:state      => obj[:state],
-                       :start_time => obj_st,
-                       :end_time   => obj_et,
-                       :duration   => obj_dur,
-                       :summary    => obj[:summary] || '',
-                       :details    => obj[:details] || ''
-                      }
+            result << outage
           end
 
           result
         end
 
+        # TODO check that this doesn't double up if an unscheduled maintenance starts exactly
+        # on the start_time param
         def unscheduled_maintenances(start_time, end_time)
-          # unsched_maintenance is an array of hashes, with [duration, timestamp, summary] keys
-          unsched_maintenance = @entity_check.maintenances(start_time, end_time,
-            :scheduled => false)
+          unsched_maintenances = @entity_check.unscheduled_maintenances_by_start.
+            intersect_range(start_time, end_time, :by_score => true).all
 
           # to see if we start in an unscheduled maintenance period, we must check all unscheduled
           # maintenances before the period and their durations
           start_in_unsched = start_time.nil? ? [] :
-            @entity_check.maintenances(nil, start_time, :scheduled => false).select {|pu|
-              pu[:end_time] >= start_time
+            @entity_check.unscheduled_maintenances_by_start.
+              intersect_range(nil, start_time, :by_score => true).select {|pu|
+              pu.end_time >= start_time
             }
 
-          start_in_unsched + unsched_maintenance
+          start_in_unsched + unsched_maintenances
         end
 
         def scheduled_maintenances(start_time, end_time)
-          # sched_maintenance is an array of hashes, with [duration, timestamp, summary] keys
-          sched_maintenance = @entity_check.maintenances(start_time, end_time,
-            :scheduled => true)
+          sched_maintenances = @entity_check.scheduled_maintenances_by_start.
+            intersect_range(start_time, end_time, :by_score => true).all
 
-          # to see if we start in a scheduled maintenance period, we must check all scheduled
+          # to see if we start in an unscheduled maintenance period, we must check all unscheduled
           # maintenances before the period and their durations
           start_in_sched = start_time.nil? ? [] :
-            @entity_check.maintenances(nil, start_time, :scheduled => true).select {|ps|
-              ps[:end_time] >= start_time
+            @entity_check.scheduled_maintenances_by_start.
+              intersect_range(nil, start_time, :by_score => true).select {|ps|
+              ps.end_time >= start_time
             }
 
-          start_in_sched + sched_maintenance
+          start_in_sched + sched_maintenances
         end
 
         # TODO test whether the below overlapping logic is prone to off-by-one
@@ -141,58 +154,67 @@ module Flapjack
             sched_maintenances.each do |sm|
 
               split_outs = []
+              delete_outs = []
 
               outs.each { |o|
-                next unless o[:end_time] && (o[:start_time] < sm[:start_time]) &&
-                  (o[:end_time] > sm[:end_time])
-                o[:delete] = true
-                split_outs += [{:state => o[:state],
-                                :start_time => o[:start_time],
-                                :end_time => sm[:start_time],
-                                :duration => sm[:start_time] - o[:start_time],
-                                :summary => "#{o[:summary]} [split start]"},
-                               {:state => o[:state],
-                                :start_time => sm[:end_time],
-                                :end_time => o[:end_time],
-                                :duration => o[:end_time] - sm[:end_time],
-                                :summary => "#{o[:summary]} [split finish]"}]
+                next unless o.end_time && (o.start_time < sm.start_time) &&
+                  (o.end_time > sm.end_time)
+                delete_outs << o
+
+                out_split_start = Outage.new
+                out_split_start.state      = o.state
+                out_split_start.start_time = o.start_time
+                out_split_start.end_time   = sm.start_time
+                out_split_start.duration   = sm.start_time - o.start_time
+                out_split_start.summary    = "#{o.summary} [split start]"
+
+                out_split_end   = Outage.new
+                out_split_end.state        = o.state
+                out_split_end.start_time   = sm.end_time
+                out_split_end.end_time     = o.end_time
+                out_split_end.duration     = o.end_time - sm.end_time
+                out_split_end.summary      = "#{o.summary} [split finish]"
+
+                split_outs += [out_split_start, out_split_end]
               }
 
-              outs.reject! {|o| o[:delete]}
+              outs -= delete_outs
               outs += split_outs
               # not strictly necessary to keep the data sorted, but
-              # will make more sense while debgging
-              outs.sort! {|a,b| a[:start_time] <=> b[:start_time]}
+              # will make more sense when debgging
+              outs.sort! {|a,b| a.start_time <=> b.start_time}
             end
+
+            delete_outs.clear
 
             sched_maintenances.each do |sm|
 
               outs.each do |o|
-                next unless o[:end_time] && (sm[:start_time] < o[:end_time]) &&
-                  (sm[:end_time] > o[:start_time])
+                next unless o.end_time && (sm.start_time < o.end_time) &&
+                  (sm.end_time > o.start_time)
 
-                if sm[:start_time] <= o[:start_time] &&
-                  sm[:end_time] >= o[:end_time]
+                if sm.start_time <= o.start_time &&
+                  sm.end_time >= o.end_time
 
                   # outage is fully overlapped by the scheduled maintenance
-                  o[:delete] = true
+                  delete_outs << o
 
-                elsif sm[:start_time] <= o[:start_time]
+                elsif sm.start_time <= o.start_time
                   # partially overlapping on the earlier side
-                  o[:start_time] = sm[:end_time]
-                  o[:duration] = o[:end_time] - o[:start_time]
-                elsif sm[:end_time] >= o[:end_time]
+                  o.start_time = sm.end_time
+                  o.duration   = o.end_time - o.start_time
+                elsif sm.end_time >= o.end_time
                   # partially overlapping on the later side
-                  o[:end_time] = sm[:start_time]
-                  o[:duration] = o[:end_time] - o[:start_time]
+                  o.end_time   = sm.start_time
+                  o.duration   = o.end_time - o.start_time
                 end
               end
 
-              outs.reject! {|o| o[:delete]}
+              outs -= delete_outs
             end
 
             total_secs = outs.inject(total_secs) {|ret, o|
-              ret[o[:state]] += o[:duration] if o[:duration]
+              ret[o.state] += o.duration if o.duration
               ret
             }
 

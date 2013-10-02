@@ -40,10 +40,12 @@ module Flapjack
 
       included do
         include ActiveModel::AttributeMethods
-        # extend ActiveModel::Callbacks
+        extend ActiveModel::Callbacks
         include ActiveModel::Dirty
         include ActiveModel::Serializers::JSON
         include ActiveModel::Validations
+
+        define_model_callbacks :create, :update, :destroy
 
         attribute_method_suffix  "="  # attr_writers
         # attribute_method_suffix  ""   # attr_readers # DEPRECATED
@@ -454,75 +456,78 @@ module Flapjack
         return unless self.changed?
         return false unless valid?
 
-        self.id ||= SecureRandom.hex(16)
+        run_callbacks( (self.persisted? ? :update : :create) ) do
 
-        idx_attrs = self.class.send(:indexed_attributes)
+          self.id ||= SecureRandom.hex(16)
 
-        indexed = self.changed & idx_attrs
+          idx_attrs = self.class.send(:indexed_attributes)
 
-        Flapjack.redis.multi
+          indexed = self.changed & idx_attrs
 
-        indexed.each do |att|
-          value = self.changes[att].first
-          next if value.nil?
-          self.class.send("#{att}_index", value).delete_id( @attributes['id'] )
-        end
+          Flapjack.redis.multi
 
-        simple_attrs  = {}
-        complex_attrs = {}
-        remove_attrs = []
-
-        attr_types = self.class.attribute_types.reject {|k, v| k == :id}
-
-        attr_types.each_pair do |name, type|
-          value = @attributes[name.to_s]
-          if value.nil?
-            remove_attrs << name.to_s
-            next
+          indexed.each do |att|
+            value = self.changes[att].first
+            next if value.nil?
+            self.class.send("#{att}_index", value).delete_id( @attributes['id'] )
           end
-          case type
-          when :string, :integer
-            simple_attrs[name.to_s] = value.blank? ? nil : value.to_s
-          when :timestamp
-            simple_attrs[name.to_s] = value.blank? ? nil : value.to_i.to_f
-          when :boolean
-            simple_attrs[name.to_s] = (!!value).to_s
-          when :list, :set, :hash
-            redis_obj = @complex_attributes[name.to_s]
-            Flapjack.redis.del(redis_obj.key)
-            unless value.blank?
-              case attr_types[name.to_sym]
-              when :list
-                Flapjack.redis.rpush(redis_obj.key, *value)
-              when :set
-                redis_obj.merge(*value.to_a)
-              when :hash
-                redis_obj.bulk_set(value)
-              end
+
+          simple_attrs  = {}
+          complex_attrs = {}
+          remove_attrs = []
+
+          attr_types = self.class.attribute_types.reject {|k, v| k == :id}
+
+          attr_types.each_pair do |name, type|
+            value = @attributes[name.to_s]
+            if value.nil?
+              remove_attrs << name.to_s
+              next
             end
-          when :json_string
-            simple_attrs[name.to_s] = value.blank? ? nil : value.to_json
+            case type
+            when :string, :integer
+              simple_attrs[name.to_s] = value.blank? ? nil : value.to_s
+            when :timestamp
+              simple_attrs[name.to_s] = value.blank? ? nil : value.to_i.to_f
+            when :boolean
+              simple_attrs[name.to_s] = (!!value).to_s
+            when :list, :set, :hash
+              redis_obj = @complex_attributes[name.to_s]
+              Flapjack.redis.del(redis_obj.key)
+              unless value.blank?
+                case attr_types[name.to_sym]
+                when :list
+                  Flapjack.redis.rpush(redis_obj.key, *value)
+                when :set
+                  redis_obj.merge(*value.to_a)
+                when :hash
+                  redis_obj.bulk_set(value)
+                end
+              end
+            when :json_string
+              simple_attrs[name.to_s] = value.blank? ? nil : value.to_json
+            end
           end
+
+          # uses hmset
+          # TODO check that nil value deletes relevant hash key
+          remove_attrs.each do |name|
+            @simple_attributes.delete(name)
+          end
+
+          @simple_attributes.bulk_set(simple_attrs)
+
+          indexed.each do |att|
+            value = self.changes[att].last
+            next if value.nil?
+            self.class.send("#{att}_index", value).add_id( @attributes['id'] )
+          end
+
+          # ids is a set, so update won't create duplicates
+          self.class.add_id(@attributes['id'])
+
+          Flapjack.redis.exec
         end
-
-        # uses hmset
-        # TODO check that nil value deletes relevant hash key
-        remove_attrs.each do |name|
-          @simple_attributes.delete(name)
-        end
-
-        @simple_attributes.bulk_set(simple_attrs)
-
-        indexed.each do |att|
-          value = self.changes[att].last
-          next if value.nil?
-          self.class.send("#{att}_index", value).add_id( @attributes['id'] )
-        end
-
-        # ids is a set, so update won't create duplicates
-        self.class.add_id(@attributes['id'])
-
-        Flapjack.redis.exec
 
         # AM::Dirty
         @previously_changed = self.changes
@@ -536,16 +541,18 @@ module Flapjack
       end
 
       def destroy
-        Flapjack.redis.multi
-        self.class.delete_id(@attributes['id'])
-        (self.attributes.keys & self.class.send(:indexed_attributes)).each {|att|
-          self.class.send("#{att}_index", @attributes[att]).delete_id( @attributes['id'])
-        }
-        @simple_attributes.clear
-        @complex_attributes.values do |redis_obj|
-          Flapjack.redis.del(redis_obj.key)
+        run_callbacks :destroy do
+          Flapjack.redis.multi
+          self.class.delete_id(@attributes['id'])
+          (self.attributes.keys & self.class.send(:indexed_attributes)).each {|att|
+            self.class.send("#{att}_index", @attributes[att]).delete_id( @attributes['id'])
+          }
+          @simple_attributes.clear
+          @complex_attributes.values do |redis_obj|
+            Flapjack.redis.del(redis_obj.key)
+          end
+          Flapjack.redis.exec
         end
-        Flapjack.redis.exec
       end
 
       private
@@ -910,6 +917,8 @@ module Flapjack
         end
 
         def first
+          # TODO sorted_set could use resolve_steps and then a range which
+          # only picks out the first/last item...
           return unless first_id = ids.first
           @associated_class.send(:load, first_id)
         end

@@ -20,18 +20,16 @@ module Flapjack
                         :state       => :string,
                         :summary     => :string,
                         :details     => :string,
+                        :last_update => :timestamp,
                         :enabled     => :boolean
 
       index_by :entity_name, :name, :enabled, :state
 
       has_many :contacts, :class_name => 'Flapjack::Data::ContactR'
 
-      # last_update should just be 'states.last', but the last
-      # change may be an earlier state
       has_one :last_change, :class_name => 'Flapjack::Data::CheckStateR'
 
-      has_sorted_set :notifications, :class_name => 'Flapjack::Data::CheckNotificationR'
-
+      has_sorted_set :notifications, :class_name => 'Flapjack::Data::CheckNotificationR', :key => :timestamp
       has_sorted_set :states, :class_name => 'Flapjack::Data::CheckStateR', :key => :timestamp
 
       # keep two indices for each, so that we can query on their intersection
@@ -51,8 +49,10 @@ module Flapjack
         :inclusion => {:in => Flapjack::Data::CheckStateR.failing_states +
                               Flapjack::Data::CheckStateR.ok_states }
 
-      # TODO EntityCheck after_save, if !enabled and entity has no enabled checks, disable entity
-      #      EntityCheck after_save, if enabled or entity has any enabled checks, enable entity
+      around_create :handle_state_change_and_enabled
+      around_update :handle_state_change_and_enabled
+
+      attr_accessor :count
 
       def entity
         @entity ||= Flapjack::Data::EntityR.find_by(:name, self.entity_name).first
@@ -115,11 +115,12 @@ module Flapjack
         !!Flapjack.redis.get("#{self.record_key}:expiring:unscheduled_maintenance")
       end
 
-      # OLD: current_maintenance(:scheduled => 'unscheduled')
-      # NEW: return unless in_unscheduled_maintenance?; TODO
-
       # OLD event_count_at(timestamp)
-      # NEW TODO retrieve state via its timestamp; state.count
+      # NEW retrieve state via its timestamp; state.count
+
+      # OLD def contacts
+      # NEW (check.contacts + check.entity.contacts).uniq
+      # TODO should clear entity remove from checks? probably not...
 
       def failed?
         Flapjack::Data::CheckStateR.failing_states.include?( self.state )
@@ -129,52 +130,51 @@ module Flapjack
         Flapjack::Data::CheckStateR.ok_states.include?( self.state )
       end
 
-      # TODO maybe (some of) this could be in a before_save callback?
-      def update_state(new_state, options = {})
-        return unless (Flapjack::Data::CheckStateR.ok_states +
-                       Flapjack::Data::CheckStateR.failing_states).include?(new_state)
-
-        opt_timestamp = options[:timestamp] || Time.now.to_i
-        opt_summary   = options[:summary]
-        opt_details   = options[:details]
-        opt_count     = options[:count]
-
-        check_state = nil
-
-        if self.state != new_state
-          self.state = new_state
-
-          # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-
-          check_state = Flapjack::Data::CheckStateR.new(:state => new_state,
-            :timestamp => opt_timestamp)
-
-          check_state.summary = opt_summary if opt_summary
-          check_state.details = opt_details if opt_details
-          check_state.count   = opt_count if opt_count
+      # # calling code:
+      # ec.last_update = time
+      # ec.state = st
+      # ec.summary = summary
+      # ec.details = details
+      # ec.count = count
+      # ec.save
+      def handle_state_change_and_enabled
+        if self.changed.include?('last_update')
+          self.enabled = true
         end
 
-        # Track when we last saw an event for a particular entity:check pair
-        entity = self.entity
-        entity.enabled = true
-        self.enabled = true
+        yield
 
-        # Even if this isn't a state change, we need to update the current state
-        # summary and details (as they may have changed)
-        self.summary = (opt_summary || '')
-        self.details = (opt_details || '')
+        if self.changed.include?('enabled')
+          entity = self.entity
 
-        entity.save
-        unless check_state.nil?
-          check_state.save
-          self.states << check_state
-          self.last_change = check_state
+          if self.enabled
+            entity.enabled = true
+            entity.save
+          else
+            if entity.checks.intersect(:enabled => true).empty?
+              entity.enabled = false
+              entity.save
+            end
+          end
         end
-        self.save
 
-        # check whether a scheduled maintenance period has come into effect
+        # TODO validation for: if state has changed, last_update must have changed
+        return unless self.changed.include?('last_update') && self.changed.include?('state')
+
+        # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
+
+        check_state = Flapjack::Data::CheckStateR.new(:state => self.state,
+          :timestamp => self.last_update,
+          :summary => self.summary,
+          :details => self.details,
+          :count => self.count)
+        check_state.save
+        self.states << check_state
+        self.last_change = check_state
+
         update_current_scheduled_maintenance
       end
+
 
       # OLD def create_scheduled_maintenance
       def add_scheduled_maintenance(sched_maint)
@@ -236,6 +236,11 @@ module Flapjack
         self.unscheduled_maintenances_by_end << unsched_maint
       end
 
+      def current_unscheduled_maintenance
+        return unless ts = Flapjack.redis.get(unscheduled_maintenance_key)
+        self.unscheduled_maintenances_by_start.intersect_range(ts, ts, :by_score => true).first
+      end
+
       # OLD def end_unscheduled_maintenance(end_time)
       def clear_unscheduled_maintenance(end_time)
         return unless um_start = Flapjack.redis.get(unscheduled_maintenance_key)
@@ -256,46 +261,69 @@ module Flapjack
          # Flapjack.redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start) # updates existing UM 'score'
       end
 
-      # OLD def contacts
-      # NEW (check.contacts + check.entity.contacts).uniq
-      # TODO should clear entity remove from checks? probably not...
+      # TODO check why this skips problem
+      def last_notifications_of_each_type
+        Flapjack::Data::CheckNotificationR::NOTIFICATION_STATES.inject({}) do |memo, state|
+          unless state == :problem
+            memo[state] = self.notifications.intersect(:state => state.to_s).last
+          end
+          memo
+        end
+      end
 
-  #     def tags
-  #       entity, check = @key.split(":", 2)
-  #       ta = Flapjack::Data::TagSet.new([])
-  #       ta += entity.split('.', 2).map {|x| x.downcase}
-  #       ta += check.split(' ').map {|x| x.downcase}
-  #     end
+      def max_notified_severity_of_current_failure
+        notif_timestamp = proc {|notif_state|
+          last_notif = self.notifications.intersect(:state => notif_state).last
+          last_notif ? last_notif.timestamp : nil
+        }
+
+        last_recovery = notif_timestamp('recovery') || 0
+
+        ret = nil
+
+        # relying on 1.9+ ordered hash
+        {'critical' => Flapjack::Data::CheckStateR::STATE_CRITICAL,
+         'warning'  => Flapjack::Data::CheckStateR::STATE_WARNING,
+         'unknown'  => Flapjack::Data::CheckStateR::STATE_UNKNOWN}.each_pair do |state_name, state_result|
+
+          if (last_ts = notif_timestamp('state_name')) && (last_ts > last_recovery)
+            ret = state_result
+            break
+          end
+        end
+
+        ret
+      end
 
       private
 
-        def scheduled_maintenance_key
-          "#{self.record_key}:expiring:scheduled_maintenance"
-        end
+      def scheduled_maintenance_key
+        "#{self.record_key}:expiring:scheduled_maintenance"
+      end
 
-        def unscheduled_maintenance_key
-          "#{self.record_key}:expiring:unscheduled_maintenance"
-        end
+      def unscheduled_maintenance_key
+        "#{self.record_key}:expiring:unscheduled_maintenance"
+      end
 
-        # if not in scheduled maintenance, looks in scheduled maintenance list for a check to see if
-        # current state should be set to scheduled maintenance, and sets it as appropriate
-        def update_current_scheduled_maintenance(opts = {})
-          return if !opts[:revalidate] && self.in_scheduled_maintenance?
+      # if not in scheduled maintenance, looks in scheduled maintenance list for a check to see if
+      # current state should be set to scheduled maintenance, and sets it as appropriate
+      def update_current_scheduled_maintenance(opts = {})
+        return if !opts[:revalidate] && self.in_scheduled_maintenance?
 
-          # are we within a scheduled maintenance period?
-          current_sched_maint = current_scheduled_maintenance
+        # are we within a scheduled maintenance period?
+        current_sched_maint = current_scheduled_maintenance
 
-          if current_sched_maint.nil?
-            if opts[:revalidate]
-              Flapjack.redis.del("#{self.record_key}:expiring:scheduled_maintenance")
-            end
-            return
+        if current_sched_maint.nil?
+          if opts[:revalidate]
+            Flapjack.redis.del("#{self.record_key}:expiring:scheduled_maintenance")
           end
-
-          Flapjack.redis.setex("#{self.record_key}:expiring:scheduled_maintenance",
-                               current_sched_maint.end_time.to_i.to_s,
-                               current_sched_maint.id)
+          return
         end
+
+        Flapjack.redis.setex("#{self.record_key}:expiring:scheduled_maintenance",
+                             current_sched_maint.end_time.to_i.to_s,
+                             current_sched_maint.id)
+      end
 
     end
 

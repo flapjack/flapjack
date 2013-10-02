@@ -2,11 +2,10 @@
 
 require 'set'
 
-require 'oj'
 require 'active_support/time'
 require 'ice_cube'
-require 'flapjack/utility'
 
+require 'flapjack/utility'
 require 'flapjack/data/redis_record'
 
 module Flapjack

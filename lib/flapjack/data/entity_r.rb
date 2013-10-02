@@ -11,9 +11,9 @@ module Flapjack
 
       include Flapjack::Data::RedisRecord
 
-      define_attributes :name => :string,
-                        :enabled     => :boolean,
-                        :tags => :set
+      define_attributes :name    => :string,
+                        :enabled => :boolean,
+                        :tags    => :set
 
       index_by :name, :enabled
 
@@ -21,6 +21,15 @@ module Flapjack
 
       # NB replaces check_list, check_count
       has_many :checks, :class_name => 'Flapjack::Data::EntityCheckR'
+
+      validate :name, :presence => true
+
+      after_destroy :remove_contact_linkages
+      def remove_contact_linkages
+        contacts.each do |contact|
+          contact.entities.delete(self)
+        end
+      end
 
       # NB: if we're worried about user input, https://github.com/mudge/re2
       # has bindings for a non-backtracking RE engine that runs in linear
@@ -39,18 +48,6 @@ module Flapjack
       # TODO change uses of Entity.all to EntityR.all.sort_by(&:name)
 
       # TODO change uses of Entity.find_by_name(N) to EntityR.find_by(:name, N)
-
-    #   def self.find_all_with_checks
-    #     Flapjack.redis.zrange("current_entities", 0, -1)
-    #   end
-
-    # TODO seems odd to call into another class for this -- maybe reverse them?
-    # TODO once EntityCheckR is done this should be trivially retrievable by a
-    # keys('*') query
-    #   def self.find_all_with_failing_checks
-    #     Flapjack::Data::EntityCheck.find_all_failing_by_entity.keys
-    #   end
-
     end
 
   end

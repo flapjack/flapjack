@@ -56,11 +56,13 @@ module Flapjack
       private
 
         def checks
-          @check_list ||= @entity.check_list.sort
+          @check_list ||= @entity.checks.all.sort_by(&:name)
         end
 
-        def check_presenter(check)
-          entity_check = Flapjack::Data::EntityCheck.for_entity(@entity, check)
+        def check_presenter(check_name)
+          entity_check = Flapjack::Data::EntityCheckR.
+            intersect(:entity_name => @entity.name, :name => check_name).all.first
+          return if entity_check.nil?
           presenter = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
         end
 

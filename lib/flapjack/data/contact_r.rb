@@ -7,7 +7,7 @@ require 'set'
 require 'ice_cube'
 
 require 'flapjack/data/redis_record'
-# require 'flapjack/data/entity_r'
+require 'flapjack/data/entity_r'
 require 'flapjack/data/medium_r'
 require 'flapjack/data/notification_rule_r'
 
@@ -26,15 +26,27 @@ module Flapjack
                         :pagerduty_credentials => :hash,
                         :tags                  => :set
 
-      # TODO map contacts_for as 'entity:ID:contact_ids', entity#has_many :contacts
-
-      has_many :media, :class_name => 'Flapjack::Data::MediumR' # , :dependent => :destroy
-
+      has_many :entities, :class_name => 'Flapjack::Data::EntityR'
+      has_many :media, :class_name => 'Flapjack::Data::MediumR'
       has_many :notification_rules, :class_name => 'Flapjack::Data::NotificationRuleR'
 
-      # TODO a better way to wrap this around the has_many association
-      def notification_rules_checked
-        rules = self.notification_rules
+      before_destroy :remove_media_and_notification_rules
+      def remove_media_and_notification_rules
+        self.media.each {|medium| medium.destroy }
+        self.notification_rules.each {|notification_rule| notification_rule.destroy }
+      end
+
+      after_destroy :remove_entity_linkages
+      def remove_entity_linkages
+        entities.each do |entity|
+          entity.contacts.delete(self)
+        end
+      end
+
+      # wrap the has_many to create the generic rule if none exists
+      alias_method :orig_notification_rules, :notification_rules
+      def notification_rules
+        rules = orig_notification_rules
         if rules.all.all? {|r| r.is_specific? } # also true if empty
           rule = Flapjack::Data::NotificationRuleR.create_generic
           rules << rule
@@ -42,56 +54,11 @@ module Flapjack
         rules
       end
 
-      # TODO sort usages of 'Contact.all' by [c.last_name, c.first_name] in the code,
-      # or change the association to a sorted_set and provide the sort condition up front
-      # (use id if not provided)
+      # TODO sort usages of 'Contact.all' by [c.last_name, c.first_name] in the code
 
-  #     # NB ideally contacts_for:* keys would scope the entity and check by an
-  #     # input source, for namespacing purposes
-  #     def entities(options = {})
-  #       Flapjack.redis.keys('contacts_for:*').inject({}) {|ret, k|
-  #         if Flapjack.redis.sismember(k, self.id)
-  #           if k =~ /^contacts_for:([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?::(\w+))?$/
-  #             entity_id = $1
-  #             check = $2
-
-  #             entity = nil
-
-  #             if ret.has_key?(entity_id)
-  #               entity = ret[entity_id][:entity]
-  #             else
-  #               entity = Flapjack::Data::Entity.find_by_id(entity_id)
-  #               ret[entity_id] = {
-  #                 :entity => entity
-  #               }
-  #               # using a set to ensure unique check values
-  #               ret[entity_id][:checks] = Set.new if options[:checks]
-  #               ret[entity_id][:tags] = entity.tags if entity && options[:tags]
-  #             end
-
-  #             if options[:checks]
-  #               # if not registered for the check, then was registered for
-  #               # the entity, so add all checks
-  #               ret[entity_id][:checks] |= (check || (entity ? entity.check_list : []))
-  #             end
-  #           end
-  #         end
-  #         ret
-  #       }.values
-  #     end
-
-      # TODO neater way to detect errors?
       def name
         return if invalid? && !(self.errors.keys & [:first_name, :last_name]).empty?
         [(self.first_name || ''), (self.last_name || '')].join(" ").strip
-      end
-
-      def destroy
-        # # remove entity linkages
-        # Flapjack::Data::Entity.each do |entity|
-        #   entity.contacts.delete(self)
-        # end
-        super
       end
 
   #     # drop notifications for

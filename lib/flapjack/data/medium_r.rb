@@ -10,14 +10,18 @@ module Flapjack
 
       include Flapjack::Data::RedisRecord
 
-      define_attributes :address  => :string,
+      define_attributes :type => :string,
+                        :address  => :string,
                         :interval => :integer
 
       belongs_to :contact, :class_name => 'Flapjack::Data::ContactR'
 
+      index_by :type
+
       # ??
       # has_many :checks, :class_name => 'Flapjack::Data::EntityCheckR'
 
+      validates :type, :presence => true
       validates :address, :presence => true
       validates :interval, :presence => true,
         :numericality => {:greater_than => 0, :only_integer => true}
@@ -30,7 +34,6 @@ module Flapjack
 
       # contact.media_list should be replaced by
       # contact.media.collect {|m| m['address'] }
-
 
     end
 

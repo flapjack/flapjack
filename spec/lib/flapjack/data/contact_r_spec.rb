@@ -107,7 +107,7 @@ describe Flapjack::Data::ContactR, :redis => true do
 
       rules = nil
       expect {
-        rules = contact.notification_rules_checked.all
+        rules = contact.notification_rules.all
       }.to change { Flapjack::Data::NotificationRuleR.count }.by(1)
       rules.first.is_specific?.should_not be_true
     end
@@ -115,14 +115,14 @@ describe Flapjack::Data::ContactR, :redis => true do
     it "creates a general notification rule for a pre-existing contact if the existing general one was changed" do
       create_contact # raw redis
       contact = Flapjack::Data::ContactR.find_by_id('1')
-      rules = contact.notification_rules_checked.all
+      rules = contact.notification_rules.all
       rules.should have(1).notification_rule
 
       rule = rules.first
       rule.tags = Set.new(['staging'])
       rule.save
 
-      rules = contact.notification_rules_checked.all
+      rules = contact.notification_rules.all
       rules.should have(2).notification_rules
       rules.select {|r| r.is_specific? }.should have(1).rule
     end
