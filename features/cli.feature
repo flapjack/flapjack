@@ -35,45 +35,45 @@ test:
   Scenario: Starting flapjack
     Given flapjack is not running
     When I start a daemon with `flapjack start --config tmp/aruba/flapjack_cfg.yml`
-    And I wait until flapjack is running, for a maximum of 10 seconds
+    And I wait until flapjack is running, for a maximum of 45 seconds
     Then flapjack should be running
 
   @daemon
   Scenario: Stopping flapjack via SIGINT
     Given flapjack is not running
     When I start a daemon with `flapjack start --config tmp/aruba/flapjack_cfg.yml`
-    And I wait until flapjack is running, for a maximum of 10 seconds
+    And I wait until flapjack is running, for a maximum of 45 seconds
     Then flapjack should be running
     When I send a SIGINT to the flapjack process
-    And I wait until flapjack is not running, for a maximum of 10 seconds
+    And I wait until flapjack is not running, for a maximum of 45 seconds
     Then flapjack should not be running
 
   Scenario: Starting and stopping flapjack, daemonized
     Given flapjack is not running
     When I run `../../bin/flapjack start -d --config flapjack_cfg_d.yml`
-    And I wait until flapjack is running, for a maximum of 10 seconds
+    And I wait until flapjack is running, for a maximum of 45 seconds
     Then flapjack should be running
     When I run `../../bin/flapjack stop --config flapjack_cfg_d.yml`
-    And I wait until flapjack is not running, for a maximum of 10 seconds
+    And I wait until flapjack is not running, for a maximum of 45 seconds
     Then flapjack should not be running
 
   Scenario: Starting, restarting and stopping flapjack, daemonized
     Given flapjack is not running
     When I run `../../bin/flapjack start -d --config flapjack_cfg_d.yml`
-    And I wait until flapjack is running, for a maximum of 10 seconds
+    And I wait until flapjack is running, for a maximum of 45 seconds
     Then flapjack should be running
     When I run `../../bin/flapjack restart -d --config flapjack_cfg_d.yml`
-    And I wait until flapjack is running (restarted), for a maximum of 10 seconds
+    And I wait until flapjack is running (restarted), for a maximum of 45 seconds
     Then flapjack should be running (restarted)
     When I run `../../bin/flapjack stop --config flapjack_cfg_d.yml`
-    And I wait until flapjack is not running (restarted), for a maximum of 10 seconds
+    And I wait until flapjack is not running (restarted), for a maximum of 45 seconds
     Then flapjack should not be running (restarted)
 
   @daemon
   Scenario: Reloading flapjack configuration
     Given flapjack is not running
     When I start a daemon with `flapjack start --config tmp/aruba/flapjack_cfg.yml`
-    And I wait until flapjack is running, for a maximum of 10 seconds
+    And I wait until flapjack is running, for a maximum of 45 seconds
     Then flapjack should be running
     When I run `mv flapjack_cfg.yml flapjack_cfg.yml.bak` interactively
     Given a file named "flapjack_cfg.yml" with:
