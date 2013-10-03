@@ -19,6 +19,7 @@ vendor
 .bundle
 etc/*.yaml
 coverage
+tmp/aruba
 tmp/pids/*
 tmp/spec*
 tmp/profiles
