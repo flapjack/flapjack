@@ -30,6 +30,10 @@ GEM
       i18n (~> 0.6, >= 0.6.4)
       multi_json (~> 1.0)
     addressable (2.3.5)
+    aruba (0.5.3)
+      childprocess (>= 0.3.6)
+      cucumber (>= 1.1.1)
+      rspec-expectations (>= 2.7.0)
     blather (0.8.7)
       activesupport (>= 2.3.11)
       eventmachine (>= 1.0.0)
@@ -37,6 +41,8 @@ GEM
       niceogiri (~> 1.0)
       nokogiri (~> 1.5, >= 1.5.6)
     builder (3.2.2)
+    childprocess (0.3.9)
+      ffi (~> 1.0, >= 1.0.11)
     chronic (0.10.1)
     chronic_duration (0.10.2)
       numerizer (~> 0.1.1)
@@ -202,6 +208,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  aruba
   cucumber
   delorean
   flapjack!

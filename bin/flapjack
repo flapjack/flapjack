@@ -57,8 +57,8 @@ optparse = OptionParser.new do |opts|
     options.daemonize = d
   end
 
-  opts.on("-p", "--pidfile [PATH]", String, "PATH to the pidfile to write to") do |p|
-    options.pidfile = p
+  opts.on("-p", "--pidfile [PATH]", String, "PATH to the pidfile to write to") do |pid|
+    options.pidfile = pid
   end
 
   opts.on("-l", "--logfile [PATH]", String, "PATH to the logfile to write to") do |l|
