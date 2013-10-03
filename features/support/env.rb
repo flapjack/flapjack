@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 #
+
 require 'delorean'
 require 'chronic'
 require 'active_support/time'
@@ -21,6 +22,7 @@ $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
 require 'pathname'
 
+require 'aruba/cucumber'
 require 'webmock/cucumber'
 WebMock.disable_net_connect!
 
