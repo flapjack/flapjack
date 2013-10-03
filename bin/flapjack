@@ -69,9 +69,24 @@ optparse = OptionParser.new do |opts|
     options.version = v
   end
 
-
 end
 optparse.parse!(ARGV)
+
+if options.help
+  puts optparse
+  exit
+elsif options.version
+  puts Flapjack::VERSION
+  exit
+elsif !["start", "stop", "restart", "reload", "status"].include?(ARGV[0])
+  if ARGV.nil? || ARGV.empty?
+    puts "No command provided"
+  else
+    puts "Unknown command provided: '#{ARGV[0]}'"
+  end
+  puts "\n#{optparse}"
+  exit 1
+end
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
 
@@ -95,11 +110,6 @@ logfile = options.logfile.nil? ?
 daemonize = options.daemonize.nil? ?
               !!config_env['daemonize'] :
               options.daemonize
-
-if options.version
-  puts Flapjack::VERSION
-  exit
-end
 
 flapjack_coord = Proc.new {
   require 'flapjack/coordinator'
@@ -207,22 +217,4 @@ when "status"
     puts "Flapjack is not running"
     exit 3
   end
-
-when "help"
-  puts optparse
-  exit
-
-when "version"
-  puts Flapjack::VERSION
-  exit
-
-else
-  if ARGV.nil? || ARGV.empty?
-    puts "No command provided"
-  else
-    puts "Unknown command provided: '#{ARGV[0]}'"
-  end
-  puts "\n#{optparse}"
-  exit 1
-
 end

@@ -36,12 +36,8 @@ module Flapjack
         end
 
         last_problem_alert   = entity_check.last_notification_for_state(:problem)[:timestamp]
-        last_warning_alert   = entity_check.last_notification_for_state(:warning)[:timestamp]
-        last_critical_alert  = entity_check.last_notification_for_state(:critical)[:timestamp]
         last_change          = entity_check.last_change
-        last_notification    = entity_check.last_notification
-        last_alert_state     = last_notification[:type]
-        last_alert_timestamp = last_notification[:timestamp]
+        last_alert_state     = entity_check.last_notification[:type]
 
         current_time = Time.now.to_i
         current_state_duration = current_time - last_change
