@@ -124,12 +124,14 @@ module Flapjack
           rules = contact.notification_rules
           media = contact.media
 
+          #if ok?
+          #  contact.remove_alerting_check(@event_id)
+          #end
+
           logger.debug "Notification#messages: creating messages for contact: #{contact_id} " +
             "event_id: \"#{@event_id}\" state: #{@state} event_tags: #{@tags.to_json} media: #{media.inspect}"
           rlen = rules.length
           logger.debug "found #{rlen} rule#{(rlen == 1) ? '' : 's'} for contact #{contact_id}"
-
-          # TODO: add rollup set updates (failing alerts per contact per media)
 
           media_to_use = if rules.empty?
             media
@@ -190,13 +192,36 @@ module Flapjack
             media.select {|medium, address| rule_media.include?(medium) }
           end
 
-          # TODO: more rollup set updates
-
           logger.debug "media_to_use: #{media_to_use}"
 
-          media_to_use.each_pair.inject([]) { |ret, (k, v)|
+          media_to_use.each_pair.inject([]) { |ret, (media, address)|
+            rollup_type = nil
+            if ok?
+              contact.remove_alerting_check(@event_id)
+            else
+              contact.add_alerting_check_for_media(media, @event_id)
+            end
+
+            if contact.reached_rollup_threshold_for_media?(media)
+              next ret if contact.drop_rollup_notifications_for_media?(media)
+              contact.update_sent_rollup_alert_keys_for_media(media, :delete => ok?)
+              rollup_type = 'problem'
+            else
+              if ok?
+                # TODO: do it like this once #182 is implemented:
+                # last_alert = contact.last_alert_on_media(media)
+                # if last_alert[:rollup] && last_alert[:rollup] == "problem"
+                #   rollup_type = 'recovery'
+                # end
+                # FIXME: dodgy hack until gh-182 is done (subject to race conditions etc no doubt):
+                if contact.count_alerting_checks_for_media(media) + 1 == contact.rollup_threshold_for_media(media)
+                  rollup_type = 'recovery'
+                end
+              end
+            end
+
             m = Flapjack::Data::Message.for_contact(contact,
-                  :medium => k, :address => v)
+                  :medium => media, :address => address, :rollup => rollup_type)
             ret << m
             ret
           }

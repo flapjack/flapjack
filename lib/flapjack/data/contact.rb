@@ -19,6 +19,7 @@ module Flapjack
       attr_accessor :id, :first_name, :last_name, :email, :media, :media_intervals, :media_rollup_thresholds, :pagerduty_credentials
 
       TAG_PREFIX = 'contact_tag'
+      ALL_MEDIAS = ['email', 'sms', 'jabber', 'pagerduty']
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
@@ -179,8 +180,8 @@ module Flapjack
               :entities           => [],
               :tags               => Flapjack::Data::TagSet.new([]),
               :time_restrictions  => [],
-              :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'],
-              :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'],
+              :warning_media      => ALL_MEDIAS,
+              :critical_media     => ALL_MEDIAS,
               :warning_blackhole  => false,
               :critical_blackhole => false,
             }, :logger => opts[:logger])
@@ -277,11 +278,45 @@ module Flapjack
         else
           @redis.set(key, 'd')
           @redis.expire(key, self.interval_for_media(media))
+          # TODO: #182 - update the alert history keys
         end
       end
 
+      def drop_rollup_notifications_for_media?(media)
+        @redis.exists("drop_rollup_alerts_for_contact:#{self.id}:#{media}")
+      end
+
+      def update_sent_rollup_alert_keys_for_media(media, opts = {})
+        delete = !! opts[:delete]
+        key = "drop_rollup_alerts_for_contact:#{self.id}:#{media}"
+        if delete
+          @redis.del(key)
+        else
+          @redis.set(key, 'd')
+          @redis.expire(key, self.interval_for_media(media))
+        end
+      end
+
+      def add_alerting_check_for_media(media, check)
+        @redis.zadd("contact_alerting_checks:#{self.id}:media:#{media}", Time.now.to_i, check)
+      end
+
+      def remove_alerting_check_for_media(media, check)
+        @redis.zrem("contact_alerting_checks:#{self.id}:media:#{media}", check)
+      end
+
+      def remove_alerting_check(check)
+        ALL_MEDIAS.each {|media|
+          @redis.zrem("contact_alerting_checks:#{self.id}:media:#{media}", check)
+        }
+      end
+
       def alerting_checks_for_media(media)
-        return 0
+        @redis.zrange("contact_alerting_checks:#{self.id}:media:#{media}", 0, -1)
+      end
+
+      def count_alerting_checks_for_media(media)
+        @redis.zcard("contact_alerting_checks:#{self.id}:media:#{media}")
       end
 
       def reached_rollup_threshold_for_media?(media)
@@ -294,7 +329,7 @@ module Flapjack
         # calculated & updated for every notification
 
         rtfm = rollup_threshold_for_media(media)
-        !! rtfm ? alerting_checks_for_media(media) >= rtfm : false
+        !! rtfm ? count_alerting_checks_for_media(media) >= rtfm : false
       end
 
       # FIXME

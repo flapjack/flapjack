@@ -403,17 +403,25 @@ Then /^all alert dropping keys for user (\d+) should have expired$/ do |contact_
   @redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
 end
 
-Then /^(\w+) (\w+) alert(?:s)? (?:of type (.*) )?should be queued for (.*)$/ do |num_queued, media, notification_type, address|
+Then /^(\w+) (\w+) alert(?:s)?(?: of type (\w+))?(?: and)?(?: rollup (\w+))? should be queued for (.*)$/ do |num_queued, media, notification_type, rollup, address|
   check  = check  ? check  : @check
   entity = entity ? entity : @entity
   case num_queued
   when 'no'
     num_queued = 0
   end
-  queue  = Resque.peek("#{media}_notifications", 0, 30)
+  queue = Resque.peek("#{media}_notifications", 0, 30)
   queue.find_all {|n|
     type_ok = notification_type ? ( n['args'].first['notification_type'] == notification_type ) : true
-    type_ok && ( n['args'].first['address'] == address )
+    rollup_ok = true
+    if rollup
+      if rollup == 'none'
+        rollup_ok = n['args'].first['rollup'].nil?
+      else
+        rollup_ok = n['args'].first['rollup'] == rollup
+      end
+    end
+    type_ok && rollup_ok && ( n['args'].first['address'] == address )
   }.length.should == num_queued.to_i
 end
 

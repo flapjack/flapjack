@@ -1,4 +1,4 @@
-@rollup @notification_rules @resque @processor @notifier
+@rollup @notification_rules @resque @processor @notifier @events
 Feature: Rollup on a per contact, per media basis
 
   Background:
@@ -9,6 +9,7 @@ Feature: Rollup on a per contact, per media basis
     And the following entities exist:
       | id  | name           | contacts |
       | 1   | foo            | 1        |
+      | 2   | baz            | 1        |
 
     And user 1 has the following notification intervals:
       | email | sms |
@@ -30,32 +31,33 @@ Feature: Rollup on a per contact, per media basis
     Then  no email alerts should be queued for malak@example.com
     When  1 minute passes
     And   a critical event is received
-    Then  1 email alert of type rollup should be queued for malak@example.com
+    Then  1 email alert of type problem and rollup problem should be queued for malak@example.com
     When  1 minute passes
     And   an ok event is received
-    Then  1 email alert of type rollup_recovery should be queued for malak@example.com
+    Then  1 email alert of type recovery and rollup recovery should be queued for malak@example.com
 
   @time
   Scenario: Transition to rollup when threshold is met
-    And   check 'ping' for entity 'foo' is in an ok state
+    Given check 'ping' for entity 'foo' is in an ok state
+    And   check 'ping' for entity 'baz' is in an ok state
     When  a critical event is received for check 'ping' on entity 'foo'
     Then  no sms alerts should be queued for malak@example.com
     When  1 minute passes
     And   a critical event is received for check 'ping' on entity 'foo'
-    Then  1 sms alert of type problem should be queued for +61400000001
+    Then  1 sms alert of type problem and rollup none should be queued for +61400000001
     When  5 minutes passes
     And   a critical event is received for check 'ping' on entity 'baz'
     And   1 minute passes
     And   a critical event is received for check 'ping' on entity 'baz'
-    Then  1 sms alert of type problem should be queued for +61400000001
-    And   1 sms alert of type rollup_problem should be queued for +61400000001
+    Then  1 sms alert of type problem and rollup none should be queued for +61400000001
+    And   1 sms alert of type problem and rollup problem should be queued for +61400000001
     When  1 minute passes
     And   an ok event is received for check 'ping' on entity 'foo'
-    Then  no sms alerts of type recovery should be queued for +61400000001
-    And   1 sms alert of type rollup_recovery should be queued for +61400000001
+    Then  no sms alerts of type recovery and rollup none should be queued for +61400000001
+    And   1 sms alert of type recovery and rollup recovery should be queued for +61400000001
     And   3 sms alerts should be queued for +61400000001
     When  1 minute passes
     And   an ok event is received for check 'ping' on entity 'baz'
-    Then  1 sms alert of type recovery should be queued for +61400000001
-    And   1 sms alert of type rollup_recovery should be queued for +61400000001
+    Then  1 sms alert of type recovery and rollup none should be queued for +61400000001
+    And   1 sms alert of type recovery and rollup recovery should be queued for +61400000001
     And   4 sms alerts should be queued for +61400000001

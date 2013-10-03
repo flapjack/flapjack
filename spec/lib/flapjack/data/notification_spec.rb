@@ -27,6 +27,10 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
     contact.should_receive(:notification_rules).and_return([])
     contact.should_receive(:media).and_return('email' => 'example@example.com',
                                               'sms'   => '0123456789')
+    contact.should_receive(:add_alerting_check_for_media).with("email", nil)
+    contact.should_receive(:add_alerting_check_for_media).with("sms", nil)
+    contact.should_receive(:reached_rollup_threshold_for_media?).with("email").and_return(false)
+    contact.should_receive(:reached_rollup_threshold_for_media?).with("sms").and_return(false)
 
     messages = notification.messages([contact], :default_timezone => timezone,
       :logger => @logger)
