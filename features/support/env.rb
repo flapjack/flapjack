@@ -115,6 +115,10 @@ redis.flushdb
 RedisDelorean.before_all(:redis => redis)
 redis.quit
 
+Before do
+  @aruba_timeout_seconds = 45
+end
+
 # NB: this seems to execute outside the Before/After hooks
 # regardless of placement -- this is what we want, as the
 # @redis driver should be initialised in the sync block.
