@@ -15,9 +15,17 @@ module Flapjack
                         :summary   => :string,
                         :details   => :string,
                         :count     => :integer,
+                        :notified  => :boolean,
                         :timestamp => :timestamp
 
+      index_by :state, :notified, :count
+
       belongs_to :entity_check, :class_name => 'Flapjack::Data::EntityCheckR'
+
+      validate :state, :presence => true,
+        :inclusion => { :in => [STATE_OK, STATE_WARNING,
+                                STATE_CRITICAL, STATE_UNKNOWN] }
+      validate :timestamp, :presence => true
 
       def self.ok_states
         [STATE_OK]

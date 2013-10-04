@@ -25,35 +25,35 @@ module Flapjack
 
         label = 'Filter: Delays:'
 
-        unless event.service? && event.failure?
+        unless event.service? && Flapjack::Data::CheckStateR.failing_states.include?( event.state )
           @logger.debug("#{label} pass - not a service event in a failure state")
           return false
         end
 
-        unless entity_check.failed?
-          @logger.debug("#{label} entity_check.failed? returned false ...")
+        unless Flapjack::Data::CheckStateR.failing_states.include?( entity_check.state )
+          @logger.debug("#{label} entity_check is not failing...")
           return false
         end
 
-        last_problem_alert   = entity_check.last_notification_for_state(:problem)[:timestamp]
-        last_warning_alert   = entity_check.last_notification_for_state(:warning)[:timestamp]
-        last_critical_alert  = entity_check.last_notification_for_state(:critical)[:timestamp]
-        last_change          = entity_check.last_change
-        last_notification    = entity_check.last_notification
-        last_alert_state     = last_notification[:type]
-        last_alert_timestamp = last_notification[:timestamp]
+        last_problem  = entity_check.notifications.intersect(:type => 'problem').last
+        last_change   = entity_check.states.last
+        last_notif    = entity_check.notifications.last
+
+        last_problem_time  = last_problem  ? last_problem.timestamp  : nil
+        last_change_time   = last_change   ? last_change.timestamp   : nil
+        last_alert_state   = last_notif    ? last_notif.state        : nil
 
         current_time = Time.now.to_i
-        current_state_duration = current_time - last_change
-        time_since_last_alert  = current_time - last_problem_alert unless last_problem_alert.nil?
+        current_state_duration = last_change_time.nil?  ? nil : current_time - last_change_time
+        time_since_last_alert  = last_problem_time.nil? ? nil : current_time - last_problem_time
 
-        @logger.debug("#{label} last_problem_alert: #{last_problem_alert.to_s}, " +
-                      "last_change: #{last_change.inspect}, " +
-                      "current_state_duration: #{current_state_duration.inspect}, " +
-                      "time_since_last_alert: #{time_since_last_alert.inspect}, " +
-                      "last_alert_state: [#{last_alert_state.inspect}], " +
-                      "event.state: [#{event.state.inspect}], " +
-                      "last_alert_state == event.state ? #{last_alert_state.to_s == event.state}")
+        @logger.debug("#{label} last_problem_alert: #{last_problem_time || 'nil'}, " +
+                      "last_change: #{last_change_time || 'nil'}, " +
+                      "current_state_duration: #{current_state_duration || 'nil'}, " +
+                      "time_since_last_alert: #{time_since_last_alert || 'nil'}, " +
+                      "last_alert_state: [#{last_alert_state}], " +
+                      "event.state: [#{event.state}], " +
+                      "last_alert_state == event.state ? #{last_alert_state == event.state}")
 
         if current_state_duration < failure_delay
           @logger.debug("#{label} block - duration of current failure " +
@@ -61,8 +61,9 @@ module Flapjack
           return true
         end
 
-        if !last_problem_alert.nil? && (time_since_last_alert < resend_delay) &&
-          (last_alert_state.to_s == event.state)
+        if !(last_problem_time.nil? || time_since_last_alert.nil?) &&
+          (time_since_last_alert < resend_delay) &&
+          (last_alert_state == event.state)
 
           @logger.debug("#{label} block - time since last alert for " +
                         "current problem (#{time_since_last_alert}) is less than " +

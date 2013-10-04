@@ -52,7 +52,7 @@ module Flapjack
       def self.push(queue, event, opts = {})
         last_state = opts[:last_state] || {}
 
-        tag_data = event.tags.is_a?(Set) ? event.tags.to_a : nil
+        tag_data = opts[:tags].is_a?(Set) ? opts[:tags].to_a : nil
         notif = {'event_id'       => event.id,
                  'state'          => event.state,
                  'summary'        => event.summary,

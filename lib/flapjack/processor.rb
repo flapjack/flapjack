@@ -41,32 +41,25 @@ module Flapjack
 
       @exit_on_queue_empty = !! @config['exit_on_queue_empty']
 
-      options = { :logger => opts[:logger] }
-      @filters = []
-      @filters << Flapjack::Filters::Ok.new(options)
-      @filters << Flapjack::Filters::ScheduledMaintenance.new(options)
-      @filters << Flapjack::Filters::UnscheduledMaintenance.new(options)
-      @filters << Flapjack::Filters::Delays.new(options)
-      @filters << Flapjack::Filters::Acknowledgement.new(options)
+      filter_opts = {:logger => opts[:logger]}
+
+      @filters = [Flapjack::Filters::Ok.new(filter_opts),
+                  Flapjack::Filters::ScheduledMaintenance.new(filter_opts),
+                  Flapjack::Filters::UnscheduledMaintenance.new(filter_opts),
+                  Flapjack::Filters::Delays.new(filter_opts),
+                  Flapjack::Filters::Acknowledgement.new(filter_opts)]
 
       fqdn          = `/bin/hostname -f`.chomp
       pid           = Process.pid
       @instance_id  = "#{fqdn}:#{pid}"
-
-      # FIXME: all of the below keys assume there is only ever one executive running;
-      # we could generate a fuid and save it to disk, and prepend it from that
-      # point on...
     end
 
     # expire instance keys after one week
-    # TODO: set up a separate EM timer to reset key expiry every minute
+    # TODO: set up a separate timer to reset key expiry every minute
     # and reduce the expiry to, say, five minutes
     # TODO: remove these keys on process exit
     def touch_keys
       [ "executive_instance:#{@instance_id}",
-        "event_counters:#{@instance_id}",
-        "event_counters:#{@instance_id}",
-        "event_counters:#{@instance_id}",
         "event_counters:#{@instance_id}" ].each {|key|
           Flapjack.redis.expire(key, 1036800)
         }
@@ -74,20 +67,22 @@ module Flapjack
 
     def start
       # FIXME: add an administrative function to reset all event counters
-      if Flapjack.redis.hget('event_counters', 'all').nil?
-        Flapjack.redis.hset('event_counters', 'all', 0)
-        Flapjack.redis.hset('event_counters', 'ok', 0)
-        Flapjack.redis.hset('event_counters', 'failure', 0)
-        Flapjack.redis.hset('event_counters', 'action', 0)
+      counters = Flapjack.redis.hget('event_counters', 'all').nil?
+
+      Flapjack.redis.multi
+
+      if counters.nil?
+        Flapjack.redis.hmset('event_counters',
+                             'all', 0, 'ok', 0, 'failure', 0, 'action', 0)
       end
 
-      #Flapjack.redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
+      # Flapjack.redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
       Flapjack.redis.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
-      Flapjack.redis.hset("event_counters:#{@instance_id}", 'all', 0)
-      Flapjack.redis.hset("event_counters:#{@instance_id}", 'ok', 0)
-      Flapjack.redis.hset("event_counters:#{@instance_id}", 'failure', 0)
-      Flapjack.redis.hset("event_counters:#{@instance_id}", 'action', 0)
+      Flapjack.redis.hmset("event_counters:#{@instance_id}",
+                           'all', 0, 'ok', 0, 'failure', 0, 'action', 0)
       touch_keys
+
+      Flapjack.redis.exec
 
       @logger.info("Booting main loop.")
 
@@ -122,10 +117,17 @@ module Flapjack
       event_str << ", #{Time.at(event.time).to_s}" if event.time
       @logger.debug("Processing Event: #{event_str}")
 
-      entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id)
-      timestamp = Time.now.to_i
+      entity_name, check_name = event_id.split(':', 2);
+      entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name,
+        :name => check_name).first
 
-      event.tags = (event.tags || Flapjack::Data::TagSet.new) + entity_check.tags
+      if entity_check.nil?
+        entity_check.entity_name = entity_name
+        entity_check.name        = check_name
+        # not saving yet as state isn't set
+      end
+
+      timestamp = Time.now.to_i
 
       should_notify, previous_state = update_keys(event, entity_check, timestamp)
 
@@ -137,12 +139,12 @@ module Flapjack
         return
       end
 
+      # redis_record rework -- up to here
       @logger.info("Generating notification for event #{event_str}")
       generate_notification(event, entity_check, timestamp, previous_state)
     end
 
     def update_keys(event, entity_check, timestamp)
-      # TODO: run touch_keys from a separate EM timer for efficiency
       touch_keys
 
       result = true
@@ -160,17 +162,17 @@ module Flapjack
       # Service events represent changes in state on monitored systems
       when 'service'
         Flapjack.redis.multi
-        if event.ok?
+        if Flapjack::Data::CheckStateR.ok_states.include?( event.state )
           Flapjack.redis.hincrby('event_counters', 'ok', 1)
           Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'ok', 1)
-        elsif event.failure?
+        elsif Flapjack::Data::CheckStateR.failing_states.include?( event.state )
           Flapjack.redis.hincrby('event_counters', 'failure', 1)
           Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'failure', 1)
-          Flapjack.redis.hset('unacknowledged_failures', event.counter, event.id)
+          # Flapjack.redis.hset('unacknowledged_failures', event.counter, event.id)
         end
         Flapjack.redis.exec
 
-        previous_state = entity_check.state
+        previous_state = entity_check.states.last
 
         if previous_state.nil?
           @logger.info("No previous state for event #{event.id}")
@@ -183,27 +185,31 @@ module Flapjack
 
           # If the service event's state is ok and there was no previous state, don't alert.
           # This stops new checks from alerting as "recovery" after they have been added.
-          if event.ok?
+          if Flapjack::Data::CheckStateR.ok_states.include?( event.state )
             @logger.debug("setting skip_filters to true because there was no previous state and event is ok")
             result = false
           end
         end
 
-        entity_check.update_state(event.state, :timestamp => timestamp,
-          :summary => event.summary, :count => event.counter, :details => event.details)
-
-        entity_check.update_current_scheduled_maintenance
+        # NB this creates a new entry in entity_check.states, through the magic
+        # of callbacks
+        entity_check.state       = event.state
+        entity_check.summary     = event.summary
+        entity_check.details     = event.details
+        entity_check.count       = event.counter
+        entity_check.last_update = timestamp
+        entity_check.save
 
       # Action events represent human or automated interaction with Flapjack
       when 'action'
         # When an action event is processed, store the event.
         Flapjack.redis.multi
-        Flapjack.redis.hset(event.id + ':actions', timestamp, event.state)
+        # Flapjack.redis.hset(event.id + ':actions', timestamp, event.state)
         Flapjack.redis.hincrby('event_counters', 'action', 1)
         Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'action', 1)
 
         if event.acknowledgement? && event.acknowledgement_id
-          Flapjack.redis.hdel('unacknowledged_failures', event.acknowledgement_id)
+          # Flapjack.redis.hdel('unacknowledged_failures', event.acknowledgement_id)
         end
         Flapjack.redis.exec
       end
@@ -212,33 +218,30 @@ module Flapjack
     end
 
     def generate_notification(event, entity_check, timestamp, previous_state)
-      notification_type = Flapjack::Data::Notification.type_for_event(event)
       max_notified_severity = entity_check.max_notified_severity_of_current_failure
 
-      Flapjack.redis.multi
-      Flapjack.redis.set("#{event.id}:last_#{notification_type}_notification", timestamp)
-      Flapjack.redis.set("#{event.id}:last_#{event.state}_notification", timestamp) if event.failure?
-      Flapjack.redis.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
-      Flapjack.redis.rpush("#{event.id}:#{event.state}_notifications", timestamp) if event.failure?
-      Flapjack.redis.exec
+      current_state = entity_check.states.last
+      current_state.notified = true
+      current_state.save
 
-      @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}: " + event.inspect)
+      @logger.debug("Notification is being generated for #{event.id}: " + event.inspect)
 
-      severity = Flapjack::Data::Notification.severity_for_event(event, max_notified_severity)
+      severity = Flapjack::Data::NotificationR.severity_for_state(event.state,
+                   max_notified_severity)
+      tag_data = entity_check.tags
 
-      lc = entity_check.last_change
-      state_duration = lc ? (timestamp - lc) : nil
+      notification = Flapjack::Data::NotificationR.new(
+        :state_id          => current_state.id,
+        :state_duration    => (timestamp - current_state.timestamp),
+        :previous_state_id => previous_state.id,
+        :severity          => severity,
+        :time              => event.time,
+        :duration          => event.duration,
+        :tags              => (tag_data ? tag_data.to_a : nil),
+      )
 
-      Flapjack::Data::Notification.push(@notifier_queue, event,
-        :type => notification_type, :severity => severity,
-        :last_state => previous_unique_state(entity_check),
-        :state_duration => state_duration)
-    end
-
-    def previous_unique_state(entity_check)
-      hs = entity_check.historical_states(nil, nil, :order => 'desc', :limit => 2)
-      return { :last_state => nil, :last_summary => nil } unless hs.length == 2
-      hs.last
+    if notification.valid?
+      Flapjack::Data::NotificationR.push(@notifier_queue, notification)
     end
 
   end

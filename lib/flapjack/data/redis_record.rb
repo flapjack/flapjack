@@ -719,6 +719,16 @@ module Flapjack
             @associated_class).all
         end
 
+        def first
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
+            @associated_class).first
+        end
+
+        def last
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
+            @associated_class).last
+        end
+
         def collect(&block)
           Flapjack::Data::RedisRecord::Filter.new(@record_ids,
             @associated_class).collect(block)
@@ -917,10 +927,21 @@ module Flapjack
         end
 
         def first
-          # TODO sorted_set could use resolve_steps and then a range which
-          # only picks out the first/last item...
-          return unless first_id = ids.first
+          raise "Can't get first member of a non-sorted set" unless @initial_set.is_a?(Redis::SortedSet)
+          first_id = resolve_steps{|set, order_desc|
+            Flapjack.redis.send((order_desc ? :zrevrange : :zrange), set, 0, 0).first
+          }
+          return if first_id.nil?
           @associated_class.send(:load, first_id)
+        end
+
+        def last
+          raise "Can't get last member of a non-sorted set" unless @initial_set.is_a?(Redis::SortedSet)
+          last_id = resolve_steps{|set, order_desc|
+            Flapjack.redis.send((order_desc ? :zrevrange : :zrange), set, -1, -1).first
+          }
+          return if last_id.nil?
+          @associated_class.send(:load, last_id)
         end
 
         def collect(&block)

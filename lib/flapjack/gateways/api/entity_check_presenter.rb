@@ -25,9 +25,9 @@ module Flapjack
 
         def status
           last_update   = @entity_check.last_update
-          last_problem  = @entity_check.last_notification_for_state(:problem)
-          last_recovery = @entity_check.last_notification_for_state(:recovery)
-          last_ack      = @entity_check.last_notification_for_state(:acknowledgement)
+          last_problem  = @entity_check.notifications.intersect(:type => 'problem').last
+          last_recovery = @entity_check.notifications.intersect(:type => 'recovery').last
+          last_ack      = @entity_check.notifications.intersect(:type => 'acknowledgement').last
 
           {'name'                              => @entity_check.name,
            'state'                             => @entity_check.state,

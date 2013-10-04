@@ -85,7 +85,7 @@ module Flapjack
         @adjective = 'failing'
 
         failing_checks = Flapjack::Data::EntityCheckR.
-          union(:state => Flapjack::Data::CheckStateR.failing_states.collect).all
+          union(:state => Flapjack::Data::CheckStateR.failing_states).all
 
         checks_by_entity = Flapjack::Data::EntityCheckR.hash_by_entity_name( failing_checks )
         @entities_sorted = checks_by_entity.keys.sort
@@ -146,7 +146,7 @@ module Flapjack
         entity_stats
         @adjective = 'failing'
         failing_checks = Flapjack::Data::EntityCheckR.
-          union(:state => Flapjack::Data::CheckStateR.failing_states.collect).all
+          union(:state => Flapjack::Data::CheckStateR.failing_states).all
 
         checks_by_entity = Flapjack::Data::EntityCheckR.hash_by_entity_name( failing_checks )
 
@@ -382,23 +382,23 @@ module Flapjack
         @count_all_entities      = Flapjack::Data::EntityR.intersect(:enabled => true).count
         @count_failing_entities  = Flapjack::Data::EntityCheckR.hash_by_entity_name(
           Flapjack::Data::EntityCheckR.union(:state =>
-            Flapjack::Data::CheckStateR.failing_states.collect)).keys.size
+            Flapjack::Data::CheckStateR.failing_states)).keys.size
       end
 
       def check_stats
         @count_all_checks        = Flapjack::Data::EntityCheckR.count
         @count_failing_checks    = Flapjack::Data::EntityCheckR.union(:state =>
-          Flapjack::Data::CheckStateR.failing_states.collect).count
+          Flapjack::Data::CheckStateR.failing_states).count
       end
 
       def last_notification_data(entity_check)
-        last_notifications = entity_check.last_notifications_of_each_type
-        [:critical, :warning, :unknown, :recovery, :acknowledgement].inject({}) do |memo, type|
-          if last_notifications[type] && last_notifications[type].timestamp
-            t = Time.at(last_notifications[type].timestamp)
-            memo[type] = {:time => t.to_s,
-                          :relative => relative_time_ago(t) + " ago",
-                          :summary => last_notifications[type].summary}
+        ['critical', 'warning', 'unknown', 'recovery', 'acknowledgement'].inject({}) do |memo, type|
+          notif = entity_check.notifications.intersect(:type => type).last
+          if notif && notif.timestamp
+            t = Time.at(notif.timestamp)
+            memo[type.to_sym] = {:time => t.to_s,
+                                 :relative => relative_time_ago(t) + " ago",
+                                 :summary => notif.summary}
           end
           memo
         end

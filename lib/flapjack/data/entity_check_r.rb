@@ -27,8 +27,6 @@ module Flapjack
 
       has_many :contacts, :class_name => 'Flapjack::Data::ContactR'
 
-      has_one :last_change, :class_name => 'Flapjack::Data::CheckStateR'
-
       has_sorted_set :notifications, :class_name => 'Flapjack::Data::CheckNotificationR', :key => :timestamp
       has_sorted_set :states, :class_name => 'Flapjack::Data::CheckStateR', :key => :timestamp
 
@@ -62,17 +60,17 @@ module Flapjack
 
       # OLD def self.find_for_event_id(event_id)
       # NEW entity_name, check_name = event_id.split(':', 2);
-      #     EntityCheckR.filter(:entity_name => entity_name, :name => check_name).first
+      #     EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).first
 
       # OLD def self.find_for_entity_name(entity_name, check_name)
-      # NEW EntityCheckR.filter(:entity_name => entity_name, :name => check_name).first
+      # NEW EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).first
 
       # OLD def self.find_for_entity_id(entity_id, check_name)
       # NEW entity = EntityR.find_by_id(entity_id)
-      #     EntityCheckR.filter(:entity_name => entity.name, :name => check_name).first
+      #     EntityCheckR.intersect(:entity_name => entity.name, :name => check_name).first
 
       # OLD def self.find_for_entity(entity, check_name)
-      # NEW EntityCheckR.filter(:entity_name => entity.name, :name => check_name).first
+      # NEW EntityCheckR.intersect(:entity_name => entity.name, :name => check_name).first
 
       # OLD self.find_all_for_entity_name(name)
       # NEW: entity = Entity.find_by(:name, name); entity.checks
@@ -87,10 +85,10 @@ module Flapjack
       # NEW: EntityCheckR.count
 
       # OLD: self.find_all_failing
-      # NEW: self.union(:state => Flapjack::Data::CheckStateR.failing_states.collect).all
+      # NEW: self.union(:state => Flapjack::Data::CheckStateR.failing_states).all
 
       # OLD self.find_all_failing_unacknowledged
-      # NEW self.union(:state => Flapjack::Data::CheckStateR.failing_states.collect).
+      # NEW self.union(:state => Flapjack::Data::CheckStateR.failing_states).
       #        all.reject {|ec| ec.in_unscheduled_maintenance? }
 
       def self.hash_by_entity_name(entity_check_list)
@@ -102,10 +100,10 @@ module Flapjack
       end
 
       # OLD self.find_all_failing_by_entity
-      # new self.hash_by_entity( self.union(:state => Flapjack::Data::CheckStateR.failing_states.collect).all )
+      # new self.hash_by_entity( self.union(:state => Flapjack::Data::CheckStateR.failing_states).all )
 
       # OLD: self.count_all_failing
-      # NEW: self.union(:state => Flapjack::Data::CheckStateR.failing_states.collect).count
+      # NEW: self.union(:state => Flapjack::Data::CheckStateR.failing_states).count
 
       def in_scheduled_maintenance?
         !!Flapjack.redis.get("#{self.record_key}:expiring:scheduled_maintenance")
@@ -122,21 +120,6 @@ module Flapjack
       # NEW (check.contacts + check.entity.contacts).uniq
       # TODO should clear entity remove from checks? probably not...
 
-      def failed?
-        Flapjack::Data::CheckStateR.failing_states.include?( self.state )
-      end
-
-      def ok?
-        Flapjack::Data::CheckStateR.ok_states.include?( self.state )
-      end
-
-      # # calling code:
-      # ec.last_update = time
-      # ec.state = st
-      # ec.summary = summary
-      # ec.details = details
-      # ec.count = count
-      # ec.save
       def handle_state_change_and_enabled
         if self.changed.include?('last_update')
           self.enabled = true
@@ -170,7 +153,6 @@ module Flapjack
           :count => self.count)
         check_state.save
         self.states << check_state
-        self.last_change = check_state
 
         update_current_scheduled_maintenance
       end
@@ -257,42 +239,24 @@ module Flapjack
 
          usm.end_time = end_time
          usm.save
-         # should have this effect on the relevant index -- TODO test
-         # Flapjack.redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start) # updates existing UM 'score'
       end
 
-      # TODO check why this skips problem
-      def last_notifications_of_each_type
-        Flapjack::Data::CheckNotificationR::NOTIFICATION_STATES.inject({}) do |memo, state|
-          unless state == :problem
-            memo[state] = self.notifications.intersect(:state => state.to_s).last
-          end
-          memo
-        end
-      end
+      # OLD def last_notification_for_state(type)
+      # NEW entity_check.states.intersect(:state => state, :notified => true).last
+
+      # # results aren't really guaranteed if there are multiple notifications
+      # # of different types sent at the same time
+      # OLD def last_notification
+      # NEW entity_check.states.intersect(:notified => true).last
 
       def max_notified_severity_of_current_failure
-        notif_timestamp = proc {|notif_state|
-          last_notif = self.notifications.intersect(:state => notif_state).last
-          last_notif ? last_notif.timestamp : nil
-        }
+        last_recovery = self.states.intersect(:notified => true, :state => 'ok').last
+        last_recovery_time = last_recovery ? last_recovery.timestamp : 0
 
-        last_recovery = notif_timestamp('recovery') || 0
-
-        ret = nil
-
-        # relying on 1.9+ ordered hash
-        {'critical' => Flapjack::Data::CheckStateR::STATE_CRITICAL,
-         'warning'  => Flapjack::Data::CheckStateR::STATE_WARNING,
-         'unknown'  => Flapjack::Data::CheckStateR::STATE_UNKNOWN}.each_pair do |state_name, state_result|
-
-          if (last_ts = notif_timestamp('state_name')) && (last_ts > last_recovery)
-            ret = state_result
-            break
-          end
-        end
-
-        ret
+        notif = self.states.
+          union(:state => Flapjack::Data::CheckStateR.failing_states).
+          intersect(:notified => true).last
+        (!notif.nil? && (notif.timestamp > last_recovery_time)) ? notif.state : nil
       end
 
       private

@@ -75,7 +75,7 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
       :state => 'unknown', :enabled => true)
 
     failing_checks = Flapjack::Data::EntityCheckR.
-      union(:state => Flapjack::Data::CheckStateR.failing_states.collect).all
+      union(:state => Flapjack::Data::CheckStateR.failing_states).all
 
     checks_by_entity = Flapjack::Data::EntityCheckR.hash_by_entity_name( failing_checks  )
     checks_by_entity.should_not be_nil

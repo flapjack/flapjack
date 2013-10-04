@@ -93,7 +93,7 @@ module Flapjack
       messages = notification.messages(contacts, :default_timezone => @default_contact_timezone,
         :logger => @logger)
 
-      notification_contents = notification.contents
+      notification_contents = notification.as_json
 
       messages.each do |message|
         media_type = message.medium
@@ -112,7 +112,9 @@ module Flapjack
 
         contact = message.contact
 
-        if notification.ok? || (notification.state == 'acknowledgement')
+        if (Flapjack::Data::CheckStateR.ok_states + ['acknowledgement']).
+          include?(notification.state )
+
           ['warning', 'critical', 'unknown'].each do |alert_state|
             contact.update_sent_alert_keys(
               :media => media_type,

@@ -6,7 +6,7 @@ module Flapjack
   module Data
     class Event
 
-      attr_accessor :counter, :tags
+      attr_accessor :counter
 
       attr_reader :check, :summary, :details, :acknowledgement_id
 
@@ -145,14 +145,6 @@ module Flapjack
 
       def test_notifications?
         (type == 'action') && (state == 'test_notifications')
-      end
-
-      def ok?
-        (state == 'ok') || (state == 'up')
-      end
-
-      def failure?
-        ['critical', 'warning', 'unknown'].include?(state)
       end
     end
   end
