@@ -3,40 +3,79 @@ Given /^PENDING/ do
   pending
 end
 
-Given /^flapjack is( not)? running( \(restarted\))?$/ do |not_run, restart|
-  output = `ps -e -o command |grep "^ruby.*flapjack.*#{restart ? 'restart' : 'start'}.*$"`
-  if not_run
-    output.size.should == 0
-  else
-    output.size.should be > 0
-  end
+Given /^a file named "([^"]*)" with:$/ do |file_name, file_content|
+  write_file(file_name, file_content)
 end
 
-When /^I (?:re)?start a daemon with `(.+)`$/ do |cmd|
+When /^I ((?:re)?start|stop) flapjack( \(daemonised\))? with `(.+)`$/ do |start_stop_restart, daemonise, cmd|
   @root = Pathname.new(File.dirname(__FILE__)).parent.parent.expand_path
   command = "#{@root.join('bin')}/#{cmd}"
 
-  @pipe = spawn_daemon(command)
-end
-
-When /^I send a SIG(\w+) to the flapjack process$/ do |signal|
-  kill_latest_daemon(signal)
-end
-
-When /^I wait until flapjack is( not)? running( \(restarted\))?, for a maximum of (\d+) seconds$/ do |stopping, restart, seconds|
-  Timeout::timeout(exit_timeout) do
-    loop do
-      output = if restart
-        `ps -e -o command |grep "^ruby.*flapjack.*restart.*$"`
-      else
-        `ps -e -o command |grep "^ruby.*flapjack.*start.*$"`
-      end
-      break if (stopping ? (output.size == 0) : (output.size > 0))
-      sleep 0.1
-    end
+  case start_stop_restart
+  when 'start'
+    @process_h = spawn_process(command,
+                  :daemon_pidfile => (daemonise.nil? || daemonise.empty?) ? nil : 'tmp/cucumber_cli/flapjack_d.pid')
+  when 'stop', 'restart'
+    `#{command}`
   end
 end
 
-Then /^flapjack should( not)? be running( \(restarted\))?$/ do |not_run, restart|
-  step "flapjack is#{not_run ? ' not' : ''} running#{restart ? ' (restarted)' : ''}"
+When /^I send a SIG(\w+) to the flapjack process$/ do |signal|
+  process = @process_h[:process]
+  pid     = process ? process.pid : @process_h[:pid]
+  Process.kill(signal, pid)
+end
+
+Then /^flapjack should ((?:re)?start|stop) within (\d+) seconds$/ do |start_stop_restart, seconds|
+  process = @process_h[:process]
+  pid     = process ? process.pid : @process_h[:pid]
+  running = nil
+  attempts = 0
+  max_attempts = seconds.to_i * 200
+
+  case start_stop_restart
+  when 'start'
+    begin
+      Process.kill(0, pid)
+      running = true
+    rescue Errno::EINVAL, Errno::ESRCH, RangeError, Errno::EPERM => e
+      attempts += 1; sleep 0.1; retry if attempts < max_attempts
+      running = false
+    end
+    running.should be_true
+  when 'stop'
+    if process
+      # it's a child process, so we can use waitpid
+      begin
+        Timeout::timeout(seconds.to_i) do
+          Process.waitpid(pid)
+          running = false
+        end
+      rescue Timeout::Error
+        running = true
+      end
+    else
+      # started via dante, so we'll need to monitor externally
+      while (running != false) && (attempts < max_attempts)
+        begin
+          Process.kill(0, pid)
+          attempts += 1; sleep 0.1
+          running = true
+        rescue Errno::EINVAL, Errno::ESRCH, RangeError, Errno::EPERM => e
+          running = false
+        end
+      end
+    end
+    running.should be_false
+  when 'restart'
+    read_pid = nil
+    while attempts < max_attempts
+      time_and_pid = time_and_pid_from_file('tmp/cucumber_cli/flapjack_d.pid')
+      read_pid = time_and_pid.last
+      break if read_pid != pid
+      attempts += 1; sleep 0.1
+    end
+    read_pid.should_not == pid
+  end
+
 end
