@@ -22,7 +22,6 @@ $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
 require 'pathname'
 
-require 'aruba/cucumber'
 require 'webmock/cucumber'
 WebMock.disable_net_connect!
 
@@ -177,3 +176,13 @@ After('@time') do
   Delorean.back_to_the_present
 end
 
+After('@process') do
+  ['tmp/cucumber_cli/flapjack_cfg.yml',
+   'tmp/cucumber_cli/flapjack_cfg.yml.bak',
+   'tmp/cucumber_cli/flapjack_cfg_d.yml',
+   'tmp/cucumber_cli/flapjack_d.log',
+   'tmp/cucumber_cli/flapjack_d.pid'].each do |file|
+    next unless File.exists?(file)
+    File.unlink(file)
+  end
+end

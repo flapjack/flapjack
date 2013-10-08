@@ -102,7 +102,6 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     entity_check = double(Flapjack::Data::EntityCheck)
     entity_check.should_receive(:current_maintenance).with(:scheduled => true).and_return(nil)
     entity_check.should_receive(:current_maintenance).with(:unscheduled => true).and_return(nil)
-    entity_check.should_receive(:check).and_return('ping')
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).with(entity, 'ping',
       :redis => redis).and_return(entity_check)
