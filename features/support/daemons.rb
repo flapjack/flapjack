@@ -50,7 +50,7 @@ def kill_lingering_processes
       puts yellow("Killing process #{pid}") if @debug
       Process.kill("KILL", pid)
     rescue Errno::ESRCH
-      puts green("Process #{pid} has already exited.")
+      puts green("Process #{pid} has already exited.") if @debug
     end
 
     if @debug
