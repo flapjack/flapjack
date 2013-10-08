@@ -361,16 +361,22 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "deletes a scheduled maintenance period for an entity check" do
-      start_time = Time.now + (60 * 60) # an hour from now
-      entity_check.should_receive(:end_scheduled_maintenance).with(start_time.to_i)
+      start = Time.at(Time.now.to_i + (60 * 60)) # an hour from now
 
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check).and_return(entity_check)
+      sched_maint = mock(Flapjack::Data::ScheduledMaintenanceR)
+      all_sched_maints = mock('all_sched_maints', :all => [sched_maint])
 
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      sched_maints = mock('sched_maints')
+      sched_maints.should_receive(:intersect_range).
+        with(start.to_i, start.to_i, :by_score => true).
+        and_return(all_sched_maints)
+      entity_check.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints)
+      entity_check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Fixnum))
 
-      delete "/scheduled_maintenances", :check => {entity_name => check}, :start_time => start_time.iso8601
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+
+      delete "/scheduled_maintenances", :check => {entity_name => check}, :start_time => start.iso8601
       last_response.status.should == 204
     end
 
@@ -382,22 +388,39 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "deletes scheduled maintenance periods for multiple entity checks" do
-      start_time = Time.now + (60 * 60) # an hour from now
+      start = Time.at(Time.now.to_i + (60 * 60)) # an hour from now
+
+      sched_maint = mock(Flapjack::Data::ScheduledMaintenanceR)
+      all_sched_maints = mock('all_sched_maints', :all => [sched_maint])
+
+      sched_maint_2 = mock(Flapjack::Data::ScheduledMaintenanceR)
+      all_sched_maints_2 = mock('all_sched_maints', :all => [sched_maint_2])
 
       entity_check_2 = mock(Flapjack::Data::EntityCheck)
 
-      entity_check.should_receive(:end_scheduled_maintenance).with(start_time.to_i)
-      entity_check_2.should_receive(:end_scheduled_maintenance).with(start_time.to_i)
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check).and_return(entity_check)
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, 'foo').and_return(entity_check_2)
+      all_entity_checks_2 = mock('all_entity_checks_2', :all => [entity_check_2])
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => entity_name, :name => 'foo').and_return(all_entity_checks_2)
 
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      sched_maints = mock('sched_maints')
+      sched_maints.should_receive(:intersect_range).
+        with(start.to_i, start.to_i, :by_score => true).
+        and_return(all_sched_maints)
+      sched_maints_2 = mock('sched_maints_2')
+      sched_maints_2.should_receive(:intersect_range).
+        with(start.to_i, start.to_i, :by_score => true).
+        and_return(all_sched_maints_2)
 
-      delete "/scheduled_maintenances", :check => {entity_name => [check, 'foo']}, :start_time => start_time.iso8601
+      entity_check.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints)
+      entity_check_2.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints_2)
+
+      entity_check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Fixnum))
+      entity_check_2.should_receive(:end_scheduled_maintenance).with(sched_maint_2, an_instance_of(Fixnum))
+
+      delete "/scheduled_maintenances", :check => {entity_name => [check, 'foo']}, :start_time => start.iso8601
       last_response.status.should == 204
     end
 
@@ -409,8 +432,8 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
 
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(all_entities)
 
       get "/scheduled_maintenances", :entity => entity_name
       last_response.should be_ok
@@ -428,8 +451,8 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
 
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(all_entities)
 
       get "/scheduled_maintenances", :entity => entity_name,
         :start_time => start.iso8601, :end_time => finish.iso8601
@@ -445,11 +468,8 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
 
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check).and_return(entity_check)
-
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/scheduled_maintenances", :check => {entity_name => check}
       last_response.should be_ok
@@ -464,8 +484,8 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
 
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(all_entities)
 
       get "/unscheduled_maintenances", :entity => entity_name
       last_response.should be_ok
@@ -480,11 +500,8 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
 
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check).and_return(entity_check)
-
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/unscheduled_maintenances", :check => {entity_name => check}
       last_response.should be_ok
@@ -502,11 +519,8 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
 
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check).and_return(entity_check)
-
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/unscheduled_maintenances", :check => {entity_name => check},
         :start_time => start.iso8601, :end_time => finish.iso8601
@@ -526,7 +540,9 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
                 {:entity => entity_2_name, :check => 'bar', :outages => json_data_3}]
 
       foo_check = mock(Flapjack::Data::EntityCheck)
+      all_foo_checks = mock('all_foo_checks', :all => [foo_check])
       bar_check = mock(Flapjack::Data::EntityCheck)
+      all_bar_checks = mock('all_bar_checks', :all => [bar_check])
 
       foo_check_presenter = mock(Flapjack::Gateways::API::EntityCheckPresenter)
       bar_check_presenter = mock(Flapjack::Gateways::API::EntityCheckPresenter)
@@ -543,15 +559,13 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(bar_check).and_return(bar_check_presenter)
 
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_2_name).and_return(entity_2)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(all_entities)
 
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity_2, 'foo').and_return(foo_check)
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity_2, 'bar').and_return(bar_check)
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => entity_2_name, :name => 'foo').and_return(all_foo_checks)
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => entity_2_name, :name => 'bar').and_return(all_bar_checks)
 
       get "/outages", :entity => entity_name, :check => {entity_2_name => ['foo', 'bar']}
       last_response.should be_ok
@@ -566,11 +580,8 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
 
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check).and_return(entity_check)
-
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/outages", :check => {entity_name => check}
       last_response.should be_ok
@@ -585,8 +596,8 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
 
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(all_entities)
 
       get "/downtime", :entity => entity_name
       last_response.should be_ok
@@ -601,11 +612,8 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
 
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check).and_return(entity_check)
-
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/downtime", :check => {entity_name => check}
       last_response.should be_ok
@@ -615,23 +623,24 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     it "creates test notification events for all checks on an entity" do
       entity.should_receive(:check_list).and_return([check, 'foo'])
       entity.should_receive(:name).twice.and_return(entity_name)
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(all_entities)
 
       entity_check.should_receive(:entity).and_return(entity)
       entity_check.should_receive(:entity_name).and_return(entity_name)
       entity_check.should_receive(:check).and_return(check)
 
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check).and_return(entity_check)
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
-      entity_check_2 = mock(Flapjack::Data::EntityCheck)
+      entity_check_2 = mock(Flapjack::Data::EntityCheckR)
       entity_check_2.should_receive(:entity).and_return(entity)
       entity_check_2.should_receive(:entity_name).and_return(entity_name)
       entity_check_2.should_receive(:check).and_return('foo')
 
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, 'foo').and_return(entity_check_2)
+      all_entity_checks_2 = mock('all_entity_checks_2', :all => [entity_check_2])
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => entity_name, :name => 'foo').and_return(all_entity_checks_2)
 
       Flapjack::Data::Event.should_receive(:test_notifications).
         with('events', entity_name, check, an_instance_of(Hash))
@@ -639,24 +648,20 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Data::Event.should_receive(:test_notifications).
         with('events', entity_name, 'foo', an_instance_of(Hash))
 
-
       post '/test_notifications', :entity => entity_name
       last_response.status.should == 204
     end
 
     it "creates a test notification event for check on an entity" do
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
       entity.should_receive(:name).and_return(entity_name)
       entity_check.should_receive(:entity).and_return(entity)
       entity_check.should_receive(:entity_name).and_return(entity_name)
       entity_check.should_receive(:check).and_return(check)
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, check).and_return(entity_check)
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       Flapjack::Data::Event.should_receive(:test_notifications).
       with('events', entity_name, check, an_instance_of(Hash))
-
 
       post '/test_notifications', :check => {entity_name => check}
       last_response.status.should == 204
@@ -675,35 +680,37 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
          }
         ]
       }
-      Flapjack::Data::Entity.should_receive(:add).twice
+
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => 'clientx-app-01').and_return(no_entities)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => 'clientx-app-02').and_return(no_entities)
+
+      entity.should_receive(:valid?).and_return(true)
+      entity.should_receive(:save).and_return(true)
+      entity.should_receive(:id).and_return('10001')
+
+      entity_2 = mock(Flapjack::Data::EntityR)
+      entity_2.should_receive(:valid?).and_return(true)
+      entity_2.should_receive(:save).and_return(true)
+      entity_2.should_receive(:id).and_return('10002')
+
+      Flapjack::Data::EntityR.should_receive(:new).
+        with(:id => '10001', :name => 'clientx-app-01', :enabled => false).
+        and_return(entity)
+      Flapjack::Data::EntityR.should_receive(:new).
+        with(:id => '10002', :name => 'clientx-app-02', :enabled => false).
+        and_return(entity_2)
 
       post "/entities", entities.to_json, {'CONTENT_TYPE' => 'application/json'}
       last_response.status.should == 204
     end
 
     it "does not create entities if the data is improperly formatted" do
-      Flapjack::Data::Entity.should_not_receive(:add)
+      Flapjack::Data::EntityR.should_not_receive(:new)
 
       post "/entities", {'entities' => ["Hello", "there"]}.to_json,
         {'CONTENT_TYPE' => 'application/json'}
-      last_response.status.should == 403
-    end
-
-    it "does not create entities if they don't contain an id" do
-      entities = {'entities' =>
-        [
-         {"id" => "10001",
-          "name" => "clientx-app-01",
-          "contacts" => ["0362","0363","0364"]
-         },
-         {"name" => "clientx-app-02",
-          "contacts" => ["0362"]
-         }
-        ]
-      }
-      Flapjack::Data::Entity.should_receive(:add)
-
-      post "/entities", entities.to_json, {'CONTENT_TYPE' => 'application/json'}
       last_response.status.should == 403
     end
 
@@ -712,82 +719,93 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
   context "tags" do
 
     it "sets a single tag on an entity and returns current tags" do
-      entity.should_receive(:add_tags).with('web')
-      entity.should_receive(:tags).and_return(['web'])
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      tags = ['web']
+      entity.should_receive(:tags=).with(Set.new(tags))
+      entity.should_receive(:tags).twice.and_return(Set.new, Set.new(tags))
+      entity.should_receive(:save).and_return(true)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(all_entities)
 
-      post "entities/#{entity_name}/tags", :tag => 'web'
+      post "entities/#{entity_name}/tags", :tag => tags.first
       last_response.should be_ok
-      last_response.body.should be_json_eql( ['web'].to_json )
+      last_response.body.should be_json_eql( tags.to_json )
     end
 
     it "does not set a single tag on an entity that's not found" do
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(nil)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(no_entities)
 
       post "entities/#{entity_name}/tags", :tag => 'web'
       last_response.should be_forbidden
     end
 
     it "sets multiple tags on an entity and returns current tags" do
-      entity.should_receive(:add_tags).with('web', 'app')
-      entity.should_receive(:tags).and_return(['web', 'app'])
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      tags = ['web', 'app']
+      entity.should_receive(:tags=).with(Set.new(tags))
+      entity.should_receive(:tags).twice.and_return(Set.new, Set.new(tags))
+      entity.should_receive(:save).and_return(true)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(all_entities)
 
       # NB submitted at a lower level as tag[]=web&tag[]=app
-      post "entities/#{entity_name}/tags", :tag => ['web', 'app']
+      post "entities/#{entity_name}/tags", :tag => tags
       last_response.should be_ok
-      last_response.body.should be_json_eql( ['web', 'app'].to_json )
+      last_response.body.should be_json_eql( tags.to_json )
     end
 
     it "does not set multiple tags on an entity that's not found" do
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(nil)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(no_entities)
 
       post "entities/#{entity_name}/tags", :tag => ['web', 'app']
       last_response.should be_forbidden
     end
 
     it "removes a single tag from an entity" do
-      entity.should_receive(:delete_tags).with('web')
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      tags = ['web']
+      entity.should_receive(:tags=).with(Set.new)
+      entity.should_receive(:tags).and_return(Set.new(tags))
+      entity.should_receive(:save).and_return(true)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(all_entities)
 
-      delete "entities/#{entity_name}/tags", :tag => 'web'
+      delete "entities/#{entity_name}/tags", :tag => tags.first
       last_response.status.should == 204
     end
 
     it "does not remove a single tag from an entity that's not found" do
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(nil)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(no_entities)
 
       delete "entities/#{entity_name}/tags", :tag => 'web'
       last_response.should be_forbidden
     end
 
     it "removes multiple tags from an entity" do
-      entity.should_receive(:delete_tags).with('web', 'app')
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      tags = ['web', 'app']
+      entity.should_receive(:tags=).with(Set.new)
+      entity.should_receive(:tags).and_return(Set.new(tags))
+      entity.should_receive(:save).and_return(true)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(all_entities)
 
-      delete "entities/#{entity_name}/tags", :tag => ['web', 'app']
+      delete "entities/#{entity_name}/tags", :tag => tags
       last_response.status.should == 204
     end
 
     it "does not remove multiple tags from an entity that's not found" do
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(nil)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(no_entities)
 
       delete "entities/#{entity_name}/tags", :tag => ['web', 'app']
       last_response.should be_forbidden
     end
 
     it "gets all tags on an entity" do
-      entity.should_receive(:tags).and_return(['web', 'app'])
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(entity)
+      entity.should_receive(:tags).and_return(Set.new(['web', 'app']))
+
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(all_entities)
 
       get "entities/#{entity_name}/tags"
       last_response.should be_ok
@@ -795,8 +813,8 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "does not get all tags on an entity that's not found" do
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with(entity_name).and_return(nil)
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => entity_name).and_return(no_entities)
 
       get "entities/#{entity_name}/tags"
       last_response.should be_forbidden

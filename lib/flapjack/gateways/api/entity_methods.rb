@@ -47,9 +47,10 @@ module Flapjack
             entity_check
           end
 
-          def find_tags(tags)
+          def find_entity_tags(tags)
             halt err(403, "no tags") if tags.nil? || tags.empty?
-            tags
+            return tags if tags.is_a?(Array)
+            [tags]
           end
 
           def entities_and_checks(entity_name, check_name)
@@ -277,7 +278,7 @@ module Flapjack
               halt( err(403, "start time must be provided") ) unless start_time
               opts = {}
               proc {|entity_check|
-                next unless sched_maint = Flapjack::Data::ScheduledMaintenanceR.
+                next unless sched_maint = entity_check.scheduled_maintenances_by_start.
                   intersect_range(start_time.to_i, start_time.to_i, :by_score => true).all.first
                 entity_check.end_scheduled_maintenance(sched_maint, Time.now.to_i)
               }
@@ -337,22 +338,22 @@ module Flapjack
 
               enabled = false
 
-              if entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
+              if entity = Flapjack::Data::EntityR.intersect(:name => ent['name']).all.first
                 enabled = entity.enabled
                 entity.destroy
               end
 
-              entity = Flapjack::Data::Entity.new(:id => ent['id'], :name => ent['name'],
+              entity = Flapjack::Data::EntityR.new(:id => ent['id'], :name => ent['name'],
                 :enabled => enabled)
               if entity.valid?
                 if errors.empty?
-                entities_to_save << entity
-                if ent['contacts'] && ent['contacts'].respond_to?(:collect)
-                  entity_contacts[entity.id] = ent['contacts'].collect {|contact_id|
-                    Flapjack::Data::ContactR.find_by_id(contact_id)
-                  }.compact
+                  entities_to_save << entity
+                  if ent['contacts'] && ent['contacts'].respond_to?(:collect)
+                    entity_contacts[ent['id']] = ent['contacts'].collect {|contact_id|
+                      Flapjack::Data::ContactR.find_by_id(contact_id)
+                    }.compact
+                  end
                 end
-              end
               else
                 errors << entity.errors.full_messages.join(", ")
               end
@@ -375,7 +376,7 @@ module Flapjack
           app.post '/entities/:entity/tags' do
             content_type :json
 
-            tags = find_tags(params[:tag])
+            tags = find_entity_tags(params[:tag])
             entity = find_entity(params[:entity])
             entity.tags += tags
             entity.save
@@ -383,7 +384,7 @@ module Flapjack
           end
 
           app.delete '/entities/:entity/tags' do
-            tags = find_tags(params[:tag])
+            tags = find_entity_tags(params[:tag])
             entity = find_entity(params[:entity])
             entity.tags -= tags
             entity.save
