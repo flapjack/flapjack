@@ -40,6 +40,7 @@ module Flapjack
           # The instance variables are referenced by the templates, which
           # share the current binding context
           @notification_type   = notification['notification_type']
+          @rollup              = notification['rollup']
           @contact_first_name  = notification['contact_first_name']
           @contact_last_name   = notification['contact_last_name']
           @state               = notification['state']
