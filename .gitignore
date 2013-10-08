@@ -19,7 +19,7 @@ vendor
 .bundle
 etc/*.yaml
 coverage
-tmp/aruba
+tmp/cucumber_cli
 tmp/pids/*
 tmp/spec*
 tmp/profiles

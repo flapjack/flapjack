@@ -12,7 +12,7 @@ Then /^every file in the output should start with "([^\"]*)"$/ do |string|
   end
 end
 
-When /^I run "([^"]*)" from the project root$/ do |cmd|
+When /^I run `([^"]*)`$/ do |cmd|
   #bin_path = '/usr/bin'
   #command = "#{bin_path}/#{cmd}"
 
