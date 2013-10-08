@@ -228,7 +228,6 @@ module Flapjack
 
       severity = Flapjack::Data::NotificationR.severity_for_state(event.state,
                    max_notified_severity)
-      tag_data = entity_check.tags
 
       notification = Flapjack::Data::NotificationR.new(
         :state_id          => current_state.id,
@@ -237,11 +236,12 @@ module Flapjack
         :severity          => severity,
         :time              => event.time,
         :duration          => event.duration,
-        :tags              => (tag_data ? tag_data.to_a : nil),
+        :tags              => entity_check.tags,
       )
 
-    if notification.valid?
-      Flapjack::Data::NotificationR.push(@notifier_queue, notification)
+      if notification.valid?
+        Flapjack::Data::NotificationR.push(@notifier_queue, notification)
+      end
     end
 
   end

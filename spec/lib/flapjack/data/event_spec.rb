@@ -90,8 +90,6 @@ describe Flapjack::Data::Event do
     it { should be_a_service }
     it { should_not be_an_acknowledgement }
     it { should_not be_a_test_notifications }
-    it { should_not be_ok }
-    it { should be_a_failure }
   end
 
 end

@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 
 require 'flapjack/data/redis_record'
-require 'flapjack/data/check_notification_r'
 require 'flapjack/data/check_state_r'
 require 'flapjack/data/contact_r'
 require 'flapjack/data/scheduled_maintenance_r'
@@ -27,7 +26,6 @@ module Flapjack
 
       has_many :contacts, :class_name => 'Flapjack::Data::ContactR'
 
-      has_sorted_set :notifications, :class_name => 'Flapjack::Data::CheckNotificationR', :key => :timestamp
       has_sorted_set :states, :class_name => 'Flapjack::Data::CheckStateR', :key => :timestamp
 
       # keep two indices for each, so that we can query on their intersection

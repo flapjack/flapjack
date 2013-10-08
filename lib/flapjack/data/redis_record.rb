@@ -16,6 +16,8 @@ require 'redis-objects'
 
 # TODO callbacks on before/after add/delete on association?
 
+# TODO Thread-local variables for class instance variables (@ids, @indexers)
+
 module Flapjack
 
   module Data
@@ -53,8 +55,6 @@ module Flapjack
         attr_accessor :logger
 
         validates_with Flapjack::Data::RedisRecord::TypeValidator
-
-        # TODO Thread-local variables for class instance variables (@ids, @indexers)
 
         instance_eval do
           # Evaluates in the context of the class -- so this is a

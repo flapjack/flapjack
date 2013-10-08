@@ -108,6 +108,26 @@ module Flapjack
         entities.present? || tags.present?
       end
 
+      # nil time_restrictions matches
+      # times (start, end) within time restrictions will have any UTC offset removed and will be
+      # considered to be in the timezone of the contact
+      def is_occurring_now?(options = {})
+        contact = options[:contact]
+        def_tz = options[:default_timezone]
+
+        return true if self.time_restrictions.nil? or self.time_restrictions.empty?
+
+        timezone = contact.timezone(:default => def_tz)
+        usertime = timezone.now
+
+        self.time_restrictions.any? do |tr|
+          # add contact's timezone to the time restriction schedule
+          schedule = Flapjack::Data::NotificationRule.
+                       time_restriction_to_icecube_schedule(tr, timezone)
+          schedule && schedule.occurring_at?(usertime)
+        end
+      end
+
     private
 
       def self.prepare_time_restriction(time_restriction, timezone = nil)

@@ -327,9 +327,15 @@ module Flapjack
         summary = entity_check.summary
         summary = summary[0..76] + '...' unless summary.nil? || (summary.length < 81)
 
-        latest_problem  = entity_check.notifications.intersect(:state => 'problem').last
-        latest_recovery = entity_check.notifications.intersect(:state => 'recovery').last
-        latest_ack      = entity_check.notifications.intersect(:state => 'acknowledgement').last
+        latest_problem  = entity_check.states.
+          union(:state => Flapjack::Data::CheckStateR.failing_states).
+          intersect(:notified => true).last
+
+        latest_recovery = entity_check.states.
+          intersect(:state => 'ok', :notified => true).last
+
+        latest_ack      = entity_check.states.
+          intersect(:state => 'acknowledgement', :notified => true).last
 
         latest_notif =
           {:problem         => (latest_problem  ? latest_problem.timestamp  : nil),
@@ -337,12 +343,12 @@ module Flapjack
            :acknowledgement => (latest_ack      ? latest_ack.timestamp      : nil),
           }.max_by {|n| n[1] || 0}
 
-        lc = entity_check.last_change
+        lc = entity_check.states.last
         last_change   = lc ? ChronicDuration.output(Time.now.to_i - lc.timestamp.to_i,
                                :format => :short, :keep_zero => true, :units => 2) : 'never'
 
         lu = entity_check.last_update
-        last_update   = lu ? ChronicDuration.output(Time.now.to_i - lu.timestamp.to_i,
+        last_update   = lu ? ChronicDuration.output(Time.now.to_i - lu.to_i,
                                :format => :short, :keep_zero => true, :units => 2) : 'never'
 
         ln = latest_notif[1]

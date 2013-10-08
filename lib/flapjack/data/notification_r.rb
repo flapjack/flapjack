@@ -40,30 +40,6 @@ module Flapjack
       # any query for 'problem', 'critical', 'warning', 'unknown' notification should be
       # for union of 'critical', 'warning', 'unknown' states, intersect notified == true
 
-      # # in data popped off the queue
-      # removed: type (determine behaviour from event state)
-
-      # def self.type_for_event(event)
-      #   case event.type
-      #   when 'service'
-      #     case event.state
-      #     when 'ok'
-      #       'recovery'
-      #     when 'warning', 'critical', 'unknown'
-      #       'problem'
-      #     end
-      #   when 'action'
-      #     case event.state
-      #     when 'acknowledgement'
-      #       'acknowledgement'
-      #     when 'test_notifications'
-      #       'test'
-      #     end
-      #   else
-      #     'unknown'
-      #   end
-      # end
-
       def self.severity_for_state(state, max_notified_severity)
         if ([state, max_notified_severity] & ['critical', 'test_notifications']).any?
           'critical'
@@ -94,7 +70,6 @@ module Flapjack
             Flapjack.redis.lpush("#{queue}_actions", "+")
           end
         end
-
       end
 
       def self.foreach_on_queue(queue)
@@ -102,13 +77,17 @@ module Flapjack
           begin
             notification = ::Oj.load( notif_json )
           rescue Oj::Error => e
-            if opts[:logger]
-              opts[:logger].warn("Error deserialising notification json: #{e}, raw json: #{notif_json.inspect}")
-            end
+            # if opts[:logger]
+            #   opts[:logger].warn("Error deserialising notification json: #{e}, raw json: #{notif_json.inspect}")
+            # end
             notification = nil
           end
 
-          yield self.new(notification) if block_given? && notification
+          next unless notification
+
+          # TODO tags must be a Set -- convert, or ease that restriction
+          symbolized_notificiation = notification.inject({}) {|m,(k,v)| m[k.to_sym] = v; m}
+          yield self.new(symbolized_notificiation) if block_given?
         end
       end
 
@@ -116,11 +95,26 @@ module Flapjack
         Flapjack.redis.brpop("#{queue}_actions")
       end
 
-    # previous contents:
-
-    # 'notification_type'    ( determine from state )
-
       def contents
+        notification_type = case event.type
+        when 'service'
+          case event.state
+          when 'ok'
+            'recovery'
+          when 'warning', 'critical', 'unknown'
+            'problem'
+          end
+        when 'action'
+          case event.state
+          when 'acknowledgement'
+            'acknowledgement'
+          when 'test_notifications'
+            'test'
+          end
+        else
+          'unknown'
+        end
+
         prev_state = self.previous_state_id ? Flapjack::Data::CheckStateR.load(previous_state_id) : nil
         state      = self.state_id ? Flapjack::Data::CheckStateR.load(state_id) : nil
 
@@ -136,7 +130,7 @@ module Flapjack
          'state_duration'    => self.state_duration,
          'time'              => self.time,
          'tags'              => self.tags,
-         'notification_type'
+         'notification_type' => notification_type
         }
       end
 
@@ -164,7 +158,7 @@ module Flapjack
             matchers = rules.select do |rule|
               logger.debug("considering rule with entities: #{rule.entities} and tags: #{rule.tags.to_json}")
               (rule.match_entity?(@event_id) || rule.match_tags?(@tags) || ! rule.is_specific?) &&
-                rule_occurring_now?(rule, :contact => contact, :default_timezone => default_timezone)
+                rule.is_occurring_now?(:contact => contact, :default_timezone => default_timezone)
             end
 
             logger.debug "#{matchers.length} matchers remain for this contact after time, entity and tags are matched:"
@@ -225,50 +219,6 @@ module Flapjack
           }
         }.compact.flatten
       end
-
-    # private
-
-    #   # created from parsed JSON, so opts keys are in strings
-    #   def initialize(opts = {})
-    #     @event_id       = opts['event_id']
-    #     @state          = opts['state']
-    #     @summary        = opts['summary']
-    #     @details        = opts['details']
-    #     @time           = opts['time']
-    #     @count          = opts['count']
-    #     @duration       = opts['duration']
-
-    #     @last_state     = opts['last_state']
-    #     @last_summary   = opts['last_summary']
-    #     @state_duration = opts['state_duration']
-
-    #     @type           = opts['type']
-    #     @severity       = opts['severity']
-
-    #     tags            = opts['tags']
-    #     @tags           = tags.is_a?(Array) ? Flapjack::Data::TagSet.new(tags) : nil
-    #   end
-
-    #   # # time restrictions match?
-    #   # nil rule.time_restrictions matches
-    #   # times (start, end) within time restrictions will have any UTC offset removed and will be
-    #   # considered to be in the timezone of the contact
-    #   def rule_occurring_now?(rule, options = {})
-    #     contact = options[:contact]
-    #     def_tz = options[:default_timezone]
-
-    #     return true if rule.time_restrictions.nil? or rule.time_restrictions.empty?
-
-    #     timezone = contact.timezone(:default => def_tz)
-    #     usertime = timezone.now
-
-    #     rule.time_restrictions.any? do |tr|
-    #       # add contact's timezone to the time restriction schedule
-    #       schedule = Flapjack::Data::NotificationRule.
-    #                    time_restriction_to_icecube_schedule(tr, timezone)
-    #       schedule && schedule.occurring_at?(usertime)
-    #     end
-    #   end
 
     end
   end

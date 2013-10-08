@@ -4,8 +4,8 @@ require 'sinatra/base'
 
 require 'flapjack'
 
-require 'flapjack/data/entity'
-require 'flapjack/data/entity_check'
+require 'flapjack/data/entity_r'
+require 'flapjack/data/entity_check_r'
 
 require 'flapjack/gateways/api/entity_presenter'
 require 'flapjack/gateways/api/entity_check_presenter'
@@ -101,9 +101,8 @@ module Flapjack
             unless entity_checks.nil? || entity_checks.empty?
               result += entity_checks.inject([]) {|memo, (entity_name, checks)|
                 checks = [checks] unless checks.is_a?(Array)
-                entity = find_entity(entity_name)
                 memo += checks.collect {|check|
-                  entity_check = find_entity_check(entity, check)
+                  entity_check = find_entity_check(entity_name, check)
                   {:entity => entity_name,
                    :check => check,
                    result_type.to_sym => yield(Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check))
@@ -272,8 +271,6 @@ module Flapjack
             # no backwards-compatible mode here, it's a new method
             entities, checks = entities_and_checks(nil, nil)
 
-            end_time = Time.now.to_i
-
             act_proc = case action
             when 'scheduled_maintenances'
               start_time = validate_and_parsetime(params[:start_time])
@@ -282,10 +279,10 @@ module Flapjack
               proc {|entity_check|
                 next unless sched_maint = Flapjack::Data::ScheduledMaintenanceR.
                   intersect_range(start_time.to_i, start_time.to_i, :by_score => true).all.first
-                entity_check.end_scheduled_maintenance(sched_maint, end_time)
+                entity_check.end_scheduled_maintenance(sched_maint, Time.now.to_i)
               }
             when 'unscheduled_maintenances'
-              end_time ||= validate_and_parsetime(params[:end_time])
+              end_time = validate_and_parsetime(params[:end_time])
               proc {|entity_check| entity_check.clear_unscheduled_maintenance(end_time) }
             end
 
