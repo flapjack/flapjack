@@ -22,7 +22,6 @@ $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
 require 'pathname'
 
-require 'aruba/cucumber'
 require 'webmock/cucumber'
 WebMock.disable_net_connect!
 
@@ -115,10 +114,6 @@ redis.flushdb
 RedisDelorean.before_all(:redis => redis)
 redis.quit
 
-Before do
-  @aruba_timeout_seconds = 45
-end
-
 # NB: this seems to execute outside the Before/After hooks
 # regardless of placement -- this is what we want, as the
 # @redis driver should be initialised in the sync block.
@@ -176,3 +171,13 @@ After('@time') do
   Delorean.back_to_the_present
 end
 
+After('@process') do
+  ['tmp/cucumber_cli/flapjack_cfg.yml',
+   'tmp/cucumber_cli/flapjack_cfg.yml.bak',
+   'tmp/cucumber_cli/flapjack_cfg_d.yml',
+   'tmp/cucumber_cli/flapjack_d.log',
+   'tmp/cucumber_cli/flapjack_d.pid'].each do |file|
+    next unless File.exists?(file)
+    File.unlink(file)
+  end
+end

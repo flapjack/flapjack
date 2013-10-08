@@ -1,11 +1,8 @@
+@process
 Feature: command line utility
   As a systems administrator
   I should be able to manage Flapjack
   From the command line
-
-  # NB aruba instructions have a working dir of tmp/aruba, while others have
-  # the flapjack root directory (and daemons.rb appends bin/ before calling
-  # commands)
 
   Background:
     Given a file named "flapjack_cfg.yml" with:
@@ -21,8 +18,8 @@ test:
     And a file named "flapjack_cfg_d.yml" with:
 """
 test:
-  pid_file: flapjack_d.pid
-  log_file: flapjack_d.log
+  pid_file: tmp/cucumber_cli/flapjack_d.pid
+  log_file: tmp/cucumber_cli/flapjack_d.log
   redis:
     db: 14
   processor:
@@ -31,51 +28,33 @@ test:
       level: warn
 """
 
-  @daemon
   Scenario: Starting flapjack
-    Given flapjack is not running
-    When I start a daemon with `flapjack start --config tmp/aruba/flapjack_cfg.yml`
-    And I wait until flapjack is running, for a maximum of 45 seconds
-    Then flapjack should be running
+    When I start flapjack with `flapjack start --config tmp/cucumber_cli/flapjack_cfg.yml`
+    Then flapjack should start within 15 seconds
 
-  @daemon
   Scenario: Stopping flapjack via SIGINT
-    Given flapjack is not running
-    When I start a daemon with `flapjack start --config tmp/aruba/flapjack_cfg.yml`
-    And I wait until flapjack is running, for a maximum of 45 seconds
-    Then flapjack should be running
+    When I start flapjack with `flapjack start --config tmp/cucumber_cli/flapjack_cfg.yml`
+    Then flapjack should start within 15 seconds
     When I send a SIGINT to the flapjack process
-    And I wait until flapjack is not running, for a maximum of 45 seconds
-    Then flapjack should not be running
+    Then flapjack should stop within 15 seconds
 
   Scenario: Starting and stopping flapjack, daemonized
-    Given flapjack is not running
-    When I run `../../bin/flapjack start -d --config flapjack_cfg_d.yml`
-    And I wait until flapjack is running, for a maximum of 45 seconds
-    Then flapjack should be running
-    When I run `../../bin/flapjack stop --config flapjack_cfg_d.yml`
-    And I wait until flapjack is not running, for a maximum of 45 seconds
-    Then flapjack should not be running
+    When I start flapjack (daemonised) with `flapjack start -d --config tmp/cucumber_cli/flapjack_cfg_d.yml`
+    Then flapjack should start within 15 seconds
+    When I stop flapjack with `flapjack stop --config tmp/cucumber_cli/flapjack_cfg_d.yml`
+    Then flapjack should stop within 15 seconds
 
   Scenario: Starting, restarting and stopping flapjack, daemonized
-    Given flapjack is not running
-    When I run `../../bin/flapjack start -d --config flapjack_cfg_d.yml`
-    And I wait until flapjack is running, for a maximum of 45 seconds
-    Then flapjack should be running
-    When I run `../../bin/flapjack restart -d --config flapjack_cfg_d.yml`
-    And I wait until flapjack is running (restarted), for a maximum of 45 seconds
-    Then flapjack should be running (restarted)
-    When I run `../../bin/flapjack stop --config flapjack_cfg_d.yml`
-    And I wait until flapjack is not running (restarted), for a maximum of 45 seconds
-    Then flapjack should not be running (restarted)
+    When I start flapjack (daemonised) with `flapjack start -d --config tmp/cucumber_cli/flapjack_cfg_d.yml`
+    Then flapjack should start within 15 seconds
+    When I restart flapjack with `flapjack restart -d --config tmp/cucumber_cli/flapjack_cfg_d.yml`
+    Then flapjack should restart within 15 seconds
+    When I stop flapjack with `flapjack stop --config tmp/cucumber_cli/flapjack_cfg_d.yml`
+    Then flapjack should stop within 15 seconds
 
-  @daemon
   Scenario: Reloading flapjack configuration
-    Given flapjack is not running
-    When I start a daemon with `flapjack start --config tmp/aruba/flapjack_cfg.yml`
-    And I wait until flapjack is running, for a maximum of 45 seconds
-    Then flapjack should be running
-    When I run `mv flapjack_cfg.yml flapjack_cfg.yml.bak` interactively
+    When I start flapjack with `flapjack start --config tmp/cucumber_cli/flapjack_cfg.yml`
+    When I run `mv tmp/cucumber_cli/flapjack_cfg.yml tmp/cucumber_cli/flapjack_cfg.yml.bak`
     Given a file named "flapjack_cfg.yml" with:
 """
 test:
@@ -86,4 +65,5 @@ test:
 """
     When I send a SIGHUP to the flapjack process
     # TODO how to test for config file change?
-    Then flapjack should be running
+    When I send a SIGINT to the flapjack process
+    Then flapjack should stop within 15 seconds
