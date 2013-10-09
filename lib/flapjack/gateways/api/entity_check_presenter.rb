@@ -4,7 +4,7 @@
 
 require 'sinatra/base'
 
-require 'flapjack/data/entity_check'
+require 'flapjack/data/entity_check_r'
 
 module Flapjack
 
@@ -25,9 +25,10 @@ module Flapjack
 
         def status
           last_update   = @entity_check.last_update
-          last_problem  = @entity_check.notifications.intersect(:type => 'problem').last
-          last_recovery = @entity_check.notifications.intersect(:type => 'recovery').last
-          last_ack      = @entity_check.notifications.intersect(:type => 'acknowledgement').last
+          last_problem  = @entity_check.states.union(:state => Flapjack::Data::CheckStateR.failing_states).
+                            intersect(:notified => true).last
+          last_recovery = @entity_check.states.intersect(:state => 'ok', :notified => true).last
+          last_ack      = @entity_check.states.intersect(:state => 'acknowledgement', :notified => true).last
 
           {'name'                              => @entity_check.name,
            'state'                             => @entity_check.state,
@@ -48,10 +49,12 @@ module Flapjack
             intersect_range(start_time, end_time, :by_score => true).all
           return [] if hist_states.empty?
 
-          first_and_prior = @entity_check.states.
-            intersect_range(nil, start_time, :by_score => true,
-                            :limit => 2, :order => 'desc').all
-          hist_states.unshift(first_and_prior.last) if first_and_prior.size == 2
+          unless start_time.nil?
+            first_and_prior = @entity_check.states.
+              intersect_range(nil, start_time, :by_score => true,
+                              :limit => 2, :order => 'desc').all
+            hist_states.unshift(first_and_prior.last) if first_and_prior.size == 2
+          end
 
           # TODO the following works, but isn't the neatest
           num_states = hist_states.size
@@ -70,8 +73,8 @@ module Flapjack
             if last_obj && (last_obj.state == obj.state)
               # TODO maybe build up arrays of these instead, and leave calling
               # classes to join them together if needed?
-              result.last.summary << " / #{obj.summary}"
-              result.last.details << " / #{obj.details}"
+              result.last.summary << " / #{obj.summary}" if obj.summary
+              result.last.details << " / #{obj.details}" if obj.details
               next
             end
 
@@ -84,9 +87,9 @@ module Flapjack
             outage.state      = obj.state
             outage.start_time = (last_obj || !start_time) ? ts : [ts, start_time].max
             outage.end_time   = obj_et
-            outage.duration   = obj_et ? (obj_et - obj_st) : nil
+            outage.duration   = obj_et ? (obj_et - outage.start_time) : nil
             outage.summary    = obj.summary || ''
-            outagedetails     = obj.details || ''
+            outage.details    = obj.details || ''
 
             result << outage
           end
@@ -104,7 +107,7 @@ module Flapjack
           # maintenances before the period and their durations
           start_in_unsched = start_time.nil? ? [] :
             @entity_check.unscheduled_maintenances_by_start.
-              intersect_range(nil, start_time, :by_score => true).select {|pu|
+              intersect_range(nil, start_time, :by_score => true).all.select {|pu|
               pu.end_time >= start_time
             }
 
@@ -119,7 +122,7 @@ module Flapjack
           # maintenances before the period and their durations
           start_in_sched = start_time.nil? ? [] :
             @entity_check.scheduled_maintenances_by_start.
-              intersect_range(nil, start_time, :by_score => true).select {|ps|
+              intersect_range(nil, start_time, :by_score => true).all.select {|ps|
               ps.end_time >= start_time
             }
 
@@ -139,7 +142,7 @@ module Flapjack
           total_secs  = {}
           percentages = {}
 
-          outs.collect {|obj| obj[:state]}.uniq.each do |st|
+          outs.collect {|obj| obj.state}.uniq.each do |st|
             total_secs[st]  = 0
             percentages[st] = (start_time.nil? || end_time.nil?) ? nil : 0
           end
@@ -151,10 +154,11 @@ module Flapjack
             # We then create two new outage periods to cover the time around
             # the scheduled maintenance period, and remove the original.
 
+            delete_outs = []
+
             sched_maintenances.each do |sm|
 
               split_outs = []
-              delete_outs = []
 
               outs.each { |o|
                 next unless o.end_time && (o.start_time < sm.start_time) &&
