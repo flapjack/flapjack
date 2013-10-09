@@ -2,7 +2,7 @@
 
 require 'sinatra/base'
 
-require 'flapjack/data/contact'
+require 'flapjack/data/contact_r'
 require 'flapjack/data/notification_rule'
 
 module Flapjack
@@ -41,9 +41,10 @@ module Flapjack
             rule
           end
 
-          def find_tags(tags)
+          def find_contact_tags(tags)
             halt err(403, "no tags") if tags.nil? || tags.empty?
-            tags
+            return tags if tags.is_a?(Array)
+            [tags]
           end
 
           def check_errors_on_save(record)
@@ -75,20 +76,21 @@ module Flapjack
               if contacts_data_ids.empty?
                 errors << "No contacts with IDs were submitted"
               else
-                contacts = Flapjack::Data::Contact.all
+                contacts = Flapjack::Data::ContactR.all
                 contacts_h = hashify(*contacts) {|c| [c.id, c] }
                 contacts_ids = contacts_h.keys
 
                 # delete contacts not found in the bulk list
                 (contacts_ids - contacts_data_ids).each do |contact_to_delete_id|
                   contact_to_delete = contacts.detect {|c| c.id == contact_to_delete_id }
-                  contact_to_delete.delete!
+                  contact_to_delete.destroy
                 end
 
                 # add or update contacts found in the bulk list
                 contacts_data.reject {|cd| cd['id'].nil? }.each do |contact_data|
 
-                  contact = contacts_h[contact_data['id'].to_s] || Flapjack::Data::ContactR.new
+                  contact = contacts_h[contact_data['id'].to_s] ||
+                            Flapjack::Data::ContactR.new(:id => contact_data['id'].to_s)
                   contact.first_name = contact_data['first_name']
                   contact.last_name  = contact_data['last_name']
                   contact.email      = contact_data['email']
@@ -96,11 +98,13 @@ module Flapjack
 
                   unless contact_data['media'].nil?
                     contact.pagerduty_credentials.clear
-                    contact.media.each {|medium| medium.destroy}
+                    contact.media.each {|medium|
+                      contact.media.delete(medium)
+                      medium.destroy
+                    }
 
                     contact_data['media'].each_pair do |type, details|
-                      medium = Flapjack::Data::MediumR.new(:type => type,
-                        :interval => details['interval'])
+                      medium = Flapjack::Data::MediumR.new(:type => type)
                       case type
                       when 'pagerduty'
                         medium.address  = details['service_key']
@@ -111,7 +115,7 @@ module Flapjack
                         }
                         contact.save
                       else
-                        medium.address = details['address']
+                        medium.address = details
                       end
                       medium.save
                       contact.media << medium
@@ -128,7 +132,7 @@ module Flapjack
           app.get '/contacts' do
             content_type :json
 
-            Flapjack::Data::Contact.all.collect {|c|
+            Flapjack::Data::ContactR.all.collect {|c|
               c.as_json(:only => [:first_name, :last_name, :email, :tags])
             }.to_json
           end
@@ -139,7 +143,7 @@ module Flapjack
             content_type :json
 
             contact = find_contact(params[:contact_id])
-            c.as_json(:only => [:first_name, :last_name, :email, :tags]).to_json
+            contact.as_json(:only => [:first_name, :last_name, :email, :tags]).to_json
           end
 
           # Lists this contact's notification rules
@@ -176,26 +180,25 @@ module Flapjack
 
             contact = find_contact(params[:contact_id])
 
-            tag_data = case rule_data['tags']
-            when Set
-              rule_data['tags']
-            when Enumerable
-              Set.new(rule_data['tags'])
+            tag_data = case params[:tags]
+            when Array
+              Set.new(params[:tags])
+            when String
+              Set.new([params[:tags]])
             else
               Set.new
             end
 
             notification_rule = Flapjack::Data::NotificationRuleR.new(
-              :id                 => rule_data['id'],
-              :entities           => rule_data['entities'],
+              :entities           => params[:entities],
               :tags               => tag_data,
-              :time_restrictions  => rule_data['time_restrictions'],
-              :unknown_media      => rule_data['unknown_media'],
-              :warning_media      => rule_data['warning_media'],
-              :critical_media     => rule_data['critical_media'],
-              :unknown_blackhole  => !!rule_data['unknown_blackhole'],
-              :warning_blackhole  => !!rule_data['warning_blackhole'],
-              :critical_blackhole => !!rule_data['critical_blackhole'],
+              :time_restrictions  => params[:time_restrictions],
+              :unknown_media      => params[:unknown_media],
+              :warning_media      => params[:warning_media],
+              :critical_media     => params[:critical_media],
+              :unknown_blackhole  => !!params[:unknown_blackhole],
+              :warning_blackhole  => !!params[:warning_blackhole],
+              :critical_blackhole => !!params[:critical_blackhole],
             )
 
             check_errors_on_save(notification_rule)
@@ -214,26 +217,26 @@ module Flapjack
 
             notification_rule = find_rule(params[:id])
 
-            tag_data = case rule_data['tags']
-            when Set
-              rule_data['tags']
-            when Enumerable
-              Set.new(rule_data['tags'])
+            tag_data = case params[:tags]
+            when Array
+              Set.new(params[:tags])
+            when String
+              Set.new([params[:tags]])
             else
               Set.new
             end
 
-            {:entities           => rule_data['entities'],
+            {:entities           => params[:entities],
              :tags               => tag_data,
-             :time_restrictions  => rule_data['time_restrictions'],
-             :unknown_media      => rule_data['unknown_media'],
-             :warning_media      => rule_data['warning_media'],
-             :critical_media     => rule_data['critical_media'],
-             :unknown_blackhole  => !!rule_data['unknown_blackhole'],
-             :warning_blackhole  => !!rule_data['warning_blackhole'],
-             :critical_blackhole => !!rule_data['critical_blackhole']}.each_pair do |att, value|
+             :time_restrictions  => params[:time_restrictions],
+             :unknown_media      => params[:unknown_media],
+             :warning_media      => params[:warning_media],
+             :critical_media     => params[:critical_media],
+             :unknown_blackhole  => !!params[:unknown_blackhole],
+             :warning_blackhole  => !!params[:warning_blackhole],
+             :critical_blackhole => !!params[:critical_blackhole]}.each_pair do |att, value|
 
-              notification_rule.send(att, value)
+              notification_rule.send("#{att}=".to_sym, value)
             end
 
             check_errors_on_save(notification_rule)
@@ -247,7 +250,8 @@ module Flapjack
             logger.debug("delete /notification_rules/#{params[:id]}")
             rule = find_rule(params[:id])
             contact = rule.contact
-            logger.debug("rule to delete: #{rule.inspect}, contact_id: #{rule.contact.id}")
+            halt err(403, "no contact") if contact.nil?
+            logger.debug("rule to delete: #{rule.inspect}, contact: #{contact.inspect}")
             contact.notification_rules.delete(rule)
             rule.destroy
             status 204
@@ -280,12 +284,18 @@ module Flapjack
 
             contact = find_contact(params[:contact_id])
 
-            medium = contact.media.intersect(:type => params[:id]).all.first ||
-                     Flapjack::Data::MediumR.new(:type => params[:id])
+            media = contact.media
+
+            medium = media.intersect(:type => params[:id]).all.first
+            is_new = false
+            if medium.nil?
+              medium = Flapjack::Data::MediumR.new(:type => params[:id])
+              is_new = true
+            end
             medium.address = params[:address]
-            medium.interval = params[:interval]
+            medium.interval = params[:interval].to_i if params[:interval]
             check_errors_on_save(medium)
-            contact.media << medium
+            media << medium if is_new
 
             medium.as_json.to_json
           end
@@ -294,11 +304,13 @@ module Flapjack
           app.delete('/contacts/:contact_id/media/:id') do
             contact = find_contact(params[:contact_id])
 
-            unless medium = contact.media.intersect(:type => params[:id]).all.first
+            media = contact.media
+
+            unless medium = media.intersect(:type => params[:id]).all.first
               halt err(404, ["No media found with type '#{params[:id]}' for contact '#{params[:contact_id]}'"])
             end
 
-            contact.media.delete(medium)
+            media.delete(medium)
             medium.destroy
             status 204
           end
@@ -336,7 +348,7 @@ module Flapjack
           app.post '/contacts/:contact_id/tags' do
             content_type :json
 
-            tags = find_tags(params[:tag])
+            tags = find_contact_tags(params[:tag])
             contact = find_contact(params[:contact_id])
             contact.tags += tags
             contact.save
@@ -346,13 +358,14 @@ module Flapjack
           app.post '/contacts/:contact_id/entity_tags' do
             content_type :json
             contact = find_contact(params[:contact_id])
+            entities = contact.entities
 
-            contact.entities.each do |entity|
+            entities.each do |entity|
               next unless ent_tags = params[:entity][entity.name]
               entity.tags += ent_tags
             end
 
-            contact_ent_tag = hashify(*contact.entities.all) {|entity|
+            contact_ent_tag = hashify(*entities.all) {|entity|
               [entity.name, entity.tags]
             }
 
@@ -360,7 +373,7 @@ module Flapjack
           end
 
           app.delete '/contacts/:contact_id/tags' do
-            tags = find_tags(params[:tag])
+            tags = find_contact_tags(params[:tag])
             contact = find_contact(params[:contact_id])
             contact.tags -= tags
             contact.save
