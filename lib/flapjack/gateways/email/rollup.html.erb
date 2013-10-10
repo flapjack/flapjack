@@ -20,16 +20,20 @@
     <tr>
       <th>Check</th>
       <th>Entity</th>
-      <th>For how long</th>
+      <th>State</th>
+      <th>Duration</th>
     </tr>
-    <% @rollup_alerts.sort_by {|entity_check, duration| duration }.each do |rollup_alert| %>
-    <% r_entity, r_check = rollup_alert[0].split(':', 2) %>
+<%  @rollup_alerts.sort_by {|entity_check, details| details['duration'] }.each do |rollup_alert| -%>
+<%    r_entity, r_check = rollup_alert[0].split(':', 2) -%>
+<%    state    = rollup_alert[1]['state'].upcase -%>
+<%    duration = ChronicDuration.output(rollup_alert[1]['duration']) -%>
       <tr>
         <td><%= r_check %></td>
         <td><%= r_entity %></td>
-        <td><%= ChronicDuration.output(rollup_alert[1]) %></td>
+        <td><%= state %></td>
+        <td><%= duration %></td>
       </tr>
-    <% end %>
+<%    end %>
   </tbody>
 </table>
 

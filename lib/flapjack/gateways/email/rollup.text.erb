@@ -2,9 +2,11 @@ Hi <%= @contact_first_name %>
 
 You have <%= @rollup_alerts.length %> alerting check<%= @rollup_alerts.length == 1 ? '' : 's' %> as follows:
 
-<% @rollup_alerts.sort_by {|entity_check, duration| duration }.each do |rollup_alert| -%>
-  <% r_entity, r_check = rollup_alert[0].split(':', 2) -%>
- * <%= r_check %> on <%= r_entity %> (<%= ChronicDuration.output(rollup_alert[1]) %>)
+<% @rollup_alerts.sort_by {|entity_check, details| details['duration'] }.each do |rollup_alert| -%>
+<%   r_entity, r_check = rollup_alert[0].split(':', 2) -%>
+<%   state    = rollup_alert[1]['state'].upcase -%>
+<%   duration = ChronicDuration.output(rollup_alert[1]['duration']) -%>
+  * <%= r_check %> on <%= r_entity %> is <%= state %> (<%= duration %>)
 <% end -%>
 
 <% if @rollup.downcase == 'recovery' -%>
