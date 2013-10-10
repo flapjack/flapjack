@@ -1,0 +1,44 @@
+<style type="text/css" media="screen">
+  #container {
+    text-transform: uppercase;
+  }
+  table {
+    border-collapse: collapse;
+  }
+  table, th, td {
+    border: 1px solid #666;
+    padding: 4px;
+  }
+</style>
+
+<p>Hi <%= @contact_first_name %></p>
+
+<p>You have <%= @rollup_alerts.length %> alerting check<%= @rollup_alerts.length == 1 ? '' : 's' %> as follows:</p>
+
+<table>
+  <tbody>
+    <tr>
+      <th>Check</th>
+      <th>Entity</th>
+      <th>For how long</th>
+    </tr>
+    <% @rollup_alerts.sort_by {|entity_check, duration| duration }.each do |rollup_alert| %>
+    <% r_entity, r_check = rollup_alert[0].split(':', 2) %>
+      <tr>
+        <td><%= r_check %></td>
+        <td><%= r_entity %></td>
+        <td><%= ChronicDuration.output(rollup_alert[1]) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<% if @rollup.downcase == 'recovery' %>
+  <p>As your email rollup threshold is <%= @rollup_threshold %>, we're taking your email alerts out of rollup mode now. You'll now be emailed individually for each alerting check.</p>
+<% else %>
+  <p>Your email alerts are being rolled up as your email rollup threshold is set to <%= @rollup_threshold %>. You'll receive summary "rollup" emails like this one until your number of alerting checks falls below <%= @rollup_threshold %>.</p>
+<% end %>
+
+<p>Cheers,</p>
+<p>Flapjack</p>
+

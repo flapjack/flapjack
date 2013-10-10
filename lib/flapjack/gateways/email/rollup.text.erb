@@ -1,0 +1,18 @@
+Hi <%= @contact_first_name %>
+
+You have <%= @rollup_alerts.length %> alerting check<%= @rollup_alerts.length == 1 ? '' : 's' %> as follows:
+
+<% @rollup_alerts.sort_by {|entity_check, duration| duration }.each do |rollup_alert| -%>
+  <% r_entity, r_check = rollup_alert[0].split(':', 2) -%>
+ * <%= r_check %> on <%= r_entity %> (<%= ChronicDuration.output(rollup_alert[1]) %>)
+<% end -%>
+
+<% if @rollup.downcase == 'recovery' -%>
+As your email rollup threshold is <%= @rollup_threshold %>, we're taking your email alerts out of rollup mode now. You'll now be emailed individually for each alerting check.
+<% else -%>
+Your email alerts are being rolled up as your email rollup threshold is set to <%= @rollup_threshold %>. You'll receive summary "rollup" emails like this one until your number of alerting checks falls below <%= @rollup_threshold %>.
+<% end -%>
+
+Cheers,
+Flapjack
+
