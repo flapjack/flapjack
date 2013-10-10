@@ -76,7 +76,7 @@
           <% @executive_instances.each do |i| %>
             <%
               hostname, pid = i[0].split(':')
-              started = "#{relative_time_ago(Time.at(i[1].to_i))} ago"
+              started = "#{relative_time_ago(@current_time, Time.at(i[1].to_i))} ago"
              %>
             <tr>
               <td><%= h hostname %></td>

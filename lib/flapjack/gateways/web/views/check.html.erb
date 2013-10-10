@@ -5,7 +5,6 @@
     <% head = render_erb('_head.html.erb', binding) %>
     <% foot = render_erb('_foot.html.erb', binding) %>
     <% check_path_escaped = u(@entity) << '/' << u(@check) %>
-    <% current_time = Time.now %>
     <title>Flapjack - Check: <%= h @entity %>:<%= h @check %></title>
     <%= head %>
   </head>
@@ -53,13 +52,13 @@
         <table class="table table-hover table-condensed">
           <tr>
             <td>Last state change:</td>
-            <td><%= h relative_time_ago(Time.at(@check_last_change.to_i)) %> ago</td>
+            <td><%= h relative_time_ago(@current_time, Time.at(@check_last_change.to_i)) %> ago</td>
             <td><%= h Time.at(@check_last_change.to_i).to_s %></td>
             <td>&nbsp;</td>
           </tr>
           <tr>
             <td>Last update:</td>
-            <td><%= h relative_time_ago(Time.at(@check_last_update.to_i)) %> ago</td>
+            <td><%= h relative_time_ago(@current_time, Time.at(@check_last_update.to_i)) %> ago</td>
             <td><%= h Time.at(@check_last_update.to_i).to_s %></td>
             <td>&nbsp;</td>
           </tr>
@@ -164,9 +163,9 @@
             </tr>
             <% @state_changes.each do |state_change| %>
             <tr>
-            <td><%= h Time.at(state_change[:timestamp]).to_s %></td>
-            <td><%= h state_change[:state] %></td>
-            <td><%= h state_change[:summary] %></td>
+            <td><%= h Time.at(state_change.timestamp).to_s %></td>
+            <td><%= h state_change.state %></td>
+            <td><%= h state_change.summary %></td>
             </tr>
             <% end %>
           </table>

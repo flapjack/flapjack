@@ -32,7 +32,7 @@ module Flapjack
       end
 
       def self.failing_states
-        [STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN]
+        [STATE_CRITICAL, STATE_WARNING, STATE_UNKNOWN]
       end
 
     end

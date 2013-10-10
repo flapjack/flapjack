@@ -7,6 +7,8 @@ describe 'web/views/check.html.erb', :erb_view => true do
     @check  = 'Disk / Utilisation'
     @last_notifications = {}
 
+    @current_time = Time.now
+
     page = render_erb('check.html.erb', binding)
     page.should match(%r{/abc-xyz-01/Disk%20%2F%20Utilisation})
   end

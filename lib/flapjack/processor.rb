@@ -59,15 +59,13 @@ module Flapjack
     # and reduce the expiry to, say, five minutes
     # TODO: remove these keys on process exit
     def touch_keys
-      [ "executive_instance:#{@instance_id}",
-        "event_counters:#{@instance_id}" ].each {|key|
-          Flapjack.redis.expire(key, 1036800)
-        }
+      Flapjack.redis.expire("executive_instance:#{@instance_id}", 1036800)
+      Flapjack.redis.expire("event_counters:#{@instance_id}", 1036800)
     end
 
     def start
       # FIXME: add an administrative function to reset all event counters
-      counters = Flapjack.redis.hget('event_counters', 'all').nil?
+      counters = Flapjack.redis.hget('event_counters', 'all')
 
       Flapjack.redis.multi
 

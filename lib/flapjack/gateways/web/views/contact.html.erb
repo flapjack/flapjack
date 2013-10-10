@@ -16,7 +16,7 @@
         </div>
 
         <h3>Contact Media</h3>
-        <% if !@contact.media || @contact.media.empty? %>
+        <% if !@contact_media || @contact_media.empty? %>
           <p>No media</p>
         <% else %>
           <table class="table table-bordered table-hover table-condensed">
@@ -25,9 +25,9 @@
               <th>Address</th>
               <th>Interval</th>
             </tr>
-            <% @contact.media.each_pair do |mk, mv| %>
+            <% @contact_media.each do |med| %>
               <tr>
-                <% if 'pagerduty'.eql?(mk) %>
+                <% if 'pagerduty'.eql?(med.type) %>
                   <td>PagerDuty</td>
                   <td>
                     <% @pagerduty_credentials.each_pair do |pk, pv| %>
@@ -36,11 +36,11 @@
                   </td>
                   <td>-</td>
                 <% else %>
-                  <td><%= h mk.capitalize %></td>
-                  <td><%= h mv %></td>
+                  <td><%= h med.type.capitalize %></td>
+                  <td><%= h med.address %></td>
                   <td>
-                    <% if @contact.media_intervals[mk] %>
-                      <%= h @contact.media_intervals[mk] %> seconds
+                    <% if interval = med.interval %>
+                      <%= h interval %> seconds
                     <% else %>
                       no custom interval
                     <% end %>
@@ -76,7 +76,7 @@
         <% end %>
 
         <h3>Notification Rules</h3>
-        <% rules = @contact.notification_rules %>
+        <% rules = @contact.notification_rules.all %>
         <% if !rules || rules.empty? %>
           <p>No notification rules</p>
         <% else %>
