@@ -48,14 +48,14 @@ development:
       logger:
         level: INFO
       smtp_config:
-        port: 2525
-        # address: "localhost"
-        # port: 25
-        # domain: 'localhost.localdomain'
-        # user_name: nil
-        # password: nil
-        # authentication: nil
-        # enable_starttls_auto: true
+        # port 1025 is the default port for http://mailcatcher.me
+        host: 127.0.0.1
+        port: 1025
+        starttls: false
+        #auth:
+        #  type:
+        #  username:
+        #  password:
     sms:
       enabled: yes
       queue: sms_notifications

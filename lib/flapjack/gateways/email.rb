@@ -41,6 +41,8 @@ module Flapjack
           # share the current binding context
           @notification_type   = notification['notification_type']
           @rollup              = notification['rollup']
+          @rollup_alerts       = notification['rollup_alerts']
+          @rollup_threshold    = notification['rollup_threshold']
           @contact_first_name  = notification['contact_first_name']
           @contact_last_name   = notification['contact_last_name']
           @state               = notification['state']
@@ -134,11 +136,18 @@ module Flapjack
 
         def prepare_email(opts = {})
 
+          message_type = case
+          when @rollup
+            'rollup'
+          else
+            'alert'
+          end
+
           text_template = ERB.new(File.read(File.dirname(__FILE__) +
-            '/email/alert.text.erb'), nil, '-')
+            "/email/#{message_type}.text.erb"), nil, '-')
 
           html_template = ERB.new(File.read(File.dirname(__FILE__) +
-            '/email/alert.html.erb'), nil, '-')
+            "/email/#{message_type}.html.erb"), nil, '-')
 
           bnd = binding
 

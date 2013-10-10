@@ -111,10 +111,14 @@ module Flapjack
         address    = message.address
         contents   = message.contents.merge(notification_contents)
 
-        if message.contact.reached_rollup_threshold_for_media?(media_type)
-          # TODO
+        if message.rollup
+          contents['rollup_alerts'] = message.contact.alerting_checks_for_media(media_type).inject({}) do |memo, alert|
+            last_change = Flapjack::Data::EntityCheck.for_event_id(alert, :redis => @redis).last_change
+            memo[alert] = last_change ? (Time.now.to_i - last_change) : nil
+            memo
+          end
+          contents['rollup_threshold'] = message.contact.rollup_threshold_for_media(media_type)
         end
-
 
         @notifylog.info("#{event_id} | " +
           "#{notification.type} | #{message.contact.id} | #{media_type} | #{address}")
