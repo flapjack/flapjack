@@ -91,6 +91,21 @@ Feature: events
     Then  a notification should not be generated
 
   @time
+  Scenario: Alert when coming out of scheduled maintenance
+    Given the check is in an ok state
+    And   the check is in scheduled maintenance for 3 hours
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  a notification should not be generated
+    And   2 hours passes
+    And   a critical event is received
+    Then  a notification should not be generated
+    When  1 hours passes
+    And   a critical event is received
+    Then  a notification should be generated
+
+  @time
   Scenario: Check ok to critical for 1 minute when in unscheduled maintenance
     Given the check is in an ok state
     And   the check is in unscheduled maintenance
