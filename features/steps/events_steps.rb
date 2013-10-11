@@ -22,7 +22,7 @@ def submit_event(event)
   @redis.rpush 'events', event.to_json
 end
 
-def set_scheduled_maintenance(entity, check, duration = 60*60*2)
+def set_scheduled_maintenance(entity, check, duration)
   entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
   t = Time.now.to_i
   entity_check.create_scheduled_maintenance(t, duration, :summary => "upgrading everything")
@@ -200,11 +200,12 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in a criti
   set_critical_state(entity, check)
 end
 
-Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in scheduled maintenance$/ do |check, entity|
+Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in scheduled maintenance(?: for (.+))?$/ do |check, entity, duration|
   check  ||= @check
   entity ||= @entity
+  durn = duration ? ChronicDuration.parse(duration) : 60*60*2
   remove_unscheduled_maintenance(entity, check)
-  set_scheduled_maintenance(entity, check)
+  set_scheduled_maintenance(entity, check, durn)
 end
 
 # TODO set the state directly rather than submit & drain
