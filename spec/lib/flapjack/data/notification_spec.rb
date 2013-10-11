@@ -29,8 +29,12 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
                                               'sms'   => '0123456789')
     contact.should_receive(:add_alerting_check_for_media).with("email", nil)
     contact.should_receive(:add_alerting_check_for_media).with("sms", nil)
-    contact.should_receive(:reached_rollup_threshold_for_media?).with("email").and_return(false)
-    contact.should_receive(:reached_rollup_threshold_for_media?).with("sms").and_return(false)
+    contact.should_receive(:clean_alerting_checks_for_media).with("email").and_return(0)
+    contact.should_receive(:clean_alerting_checks_for_media).with("sms").and_return(0)
+    contact.should_receive(:count_alerting_checks_for_media).with("email").and_return(0)
+    contact.should_receive(:count_alerting_checks_for_media).with("sms").and_return(0)
+    contact.should_receive(:rollup_threshold_for_media).with("email").and_return(nil)
+    contact.should_receive(:rollup_threshold_for_media).with("sms").and_return(nil)
 
     messages = notification.messages([contact], :default_timezone => timezone,
       :logger => @logger)

@@ -134,7 +134,6 @@ Feature: Rollup on a per contact, per media basis
     When  check 'ping' for entity 'foo' is in scheduled maintenance for 1 day
     And   30 minutes passes
     And   a critical event is received for check 'ping' on entity 'baz'
-    And show me the lovely log
     Then  1 sms alert of rollup recovery should be queued for +61400000001
 
   @time
@@ -177,3 +176,7 @@ Feature: Rollup on a per contact, per media basis
     And   a critical event is received for check 'ping' on entity 'foo'
     Then  1 sms alert of type problem and rollup problem should be queued for +61400000001
     And   2 sms alerts should be queued for +61400000001
+
+  @time
+  Scenario: Contact ceases to be a contact on an entity that they were being alerted for
+

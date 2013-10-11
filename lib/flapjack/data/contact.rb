@@ -41,7 +41,7 @@ module Flapjack
         # sanity check
         return unless redis.hexists("contact:#{contact_id}", 'first_name')
 
-        contact = self.new(:id => contact_id, :redis => redis)
+        contact = self.new(:id => contact_id, :redis => redis, :logger => logger)
         contact.refresh
         contact
       end
@@ -311,6 +311,24 @@ module Flapjack
         }
       end
 
+      # removes any checks that are in ok, scheduled or unscheduled maintenance
+      # from the alerting checks set for the given media
+      # returns the number of checks removed
+      def clean_alerting_checks_for_media(media)
+        key = "contact_alerting_checks:#{self.id}:media:#{media}"
+        cleaned = 0
+        alerting_checks_for_media(media).each do |check|
+          next unless Flapjack::Data::EntityCheck.state_for_event_id?(check, :redis => @redis) == 'ok' ||
+            Flapjack::Data::EntityCheck.in_unscheduled_maintenance_for_event_id?(check, :redis => @redis) ||
+            Flapjack::Data::EntityCheck.in_scheduled_maintenance_for_event_id?(check, :redis => @redis)
+
+          @logger.debug("removing from alerting checks for #{self.id}/#{media}: #{check}") if @logger
+          remove_alerting_check_for_media(media, check)
+          cleaned += 1
+        end
+        cleaned
+      end
+
       def alerting_checks_for_media(media)
         @redis.zrange("contact_alerting_checks:#{self.id}:media:#{media}", 0, -1)
       end
@@ -413,7 +431,8 @@ module Flapjack
 
       def initialize(options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
-        @id = options[:id]
+        @id     = options[:id]
+        @logger = options[:logger]
       end
 
       # NB: should probably be called in the context of a Redis multi block; not doing so
