@@ -94,7 +94,11 @@ module Flapjack
       end
 
       def ok?
-        ['ok', 'up'].include?(@state)
+        @state && ['ok', 'up'].include?(@state.downcase)
+      end
+
+      def acknowledgement?
+        @state && ['acknowledgement'].include?(@state.downcase)
       end
 
       def contents
@@ -123,10 +127,6 @@ module Flapjack
           contact_id = contact.id
           rules = contact.notification_rules
           media = contact.media
-
-          #if ok?
-          #  contact.remove_alerting_check(@event_id)
-          #end
 
           logger.debug "Notification#messages: creating messages for contact: #{contact_id} " +
             "event_id: \"#{@event_id}\" state: #{@state} event_tags: #{@tags.to_json} media: #{media.inspect}"
@@ -196,7 +196,7 @@ module Flapjack
 
           media_to_use.each_pair.inject([]) { |ret, (media, address)|
             rollup_type = nil
-            if ok?
+            if ok? || acknowledgement?
               contact.remove_alerting_check(@event_id)
             else
               contact.add_alerting_check_for_media(media, @event_id)
@@ -207,7 +207,7 @@ module Flapjack
               contact.update_sent_rollup_alert_keys_for_media(media, :delete => ok?)
               rollup_type = 'problem'
             else
-              if ok?
+              if ok? || acknowledgement?
                 # TODO: do it like this once #182 is implemented:
                 # last_alert = contact.last_alert_on_media(media)
                 # if last_alert[:rollup] && last_alert[:rollup] == "problem"
@@ -219,6 +219,7 @@ module Flapjack
                 end
               end
             end
+            logger.debug "rollup decisions: #{@event_id} #{@state} #{media} #{address} rollup_type: #{rollup_type}"
 
             m = Flapjack::Data::Message.for_contact(contact,
                   :medium => media, :address => address, :rollup => rollup_type)

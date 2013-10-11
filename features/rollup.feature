@@ -37,11 +37,25 @@ Feature: Rollup on a per contact, per media basis
     Then  1 email alert of type recovery and rollup recovery should be queued for malak@example.com
 
   @time
+  Scenario: Acknowledgement ending rollup generates rollup recovery message ignoring interval
+    Given the check is check 'ping' on entity 'foo'
+    And   the check is in an ok state
+    When  a critical event is received
+    Then  no email alerts should be queued for malak@example.com
+    When  1 minute passes
+    And   a critical event is received
+    Then  1 email alert of type problem and rollup problem should be queued for malak@example.com
+    When  10 minutes passes
+    And   an acknowledgement event is received
+    Then  1 email alert of rollup recovery should be queued for malak@example.com
+    And   2 email alerts should be queued for malak@example.com
+
+  @time
   Scenario: Transition to rollup when threshold is met
     Given check 'ping' for entity 'foo' is in an ok state
     And   check 'ping' for entity 'baz' is in an ok state
     When  a critical event is received for check 'ping' on entity 'foo'
-    Then  no sms alerts should be queued for malak@example.com
+    Then  no sms alerts should be queued for +61400000001
     When  1 minute passes
     And   a critical event is received for check 'ping' on entity 'foo'
     Then  1 sms alert of type problem and rollup none should be queued for +61400000001
@@ -61,3 +75,23 @@ Feature: Rollup on a per contact, per media basis
     Then  1 sms alert of type recovery and rollup none should be queued for +61400000001
     And   1 sms alert of type recovery and rollup recovery should be queued for +61400000001
     And   4 sms alerts should be queued for +61400000001
+
+  @time
+  Scenario: Acknowledgement delays rollup kick-in
+    Given check 'ping' for entity 'foo' is in an ok state
+    And   check 'ping' for entity 'baz' is in an ok state
+    When  a critical event is received for check 'ping' on entity 'foo'
+    Then  no sms alerts should be queued for +61400000001
+    When  1 minute passes
+    And   a critical event is received for check 'ping' on entity 'foo'
+    Then  1 sms alert of type problem and rollup none should be queued for +61400000001
+    When  5 minutes passes
+    And   an acknowledgement event is received for check 'ping' on entity 'foo'
+    Then  1 sms alert of type acknowledgement and rollup none should be queued for +61400000001
+    And   2 sms alerts should be queued for +61400000001
+    When  a critical event is received for check 'ping' on entity 'baz'
+    And   1 minute passes
+    And   a critical event is received for check 'ping' on entity 'baz'
+    Then  2 sms alerts of type problem and rollup none should be queued for +61400000001
+    And   3 sms alerts should be queued for +61400000001
+

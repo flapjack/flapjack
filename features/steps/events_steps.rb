@@ -403,7 +403,7 @@ Then /^all alert dropping keys for user (\d+) should have expired$/ do |contact_
   @redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
 end
 
-Then /^(\w+) (\w+) alert(?:s)?(?: of type (\w+))?(?: and)?(?: rollup (\w+))? should be queued for (.*)$/ do |num_queued, media, notification_type, rollup, address|
+Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))? should be queued for (.*)$/ do |num_queued, media, notification_type, rollup, address|
   check  = check  ? check  : @check
   entity = entity ? entity : @entity
   case num_queued

@@ -132,7 +132,7 @@ module Flapjack
           return
         end
 
-        @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{address}")
+        @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{address} type: #{notification.type} rollup: #{message.rollup || '-'}")
 
         contact = message.contact
 
