@@ -10,7 +10,8 @@ require 'flapjack/filters/scheduled_maintenance'
 require 'flapjack/filters/unscheduled_maintenance'
 require 'flapjack/filters/delays'
 
-require 'flapjack/data/entity_check'
+require 'flapjack/data/entity_check_r'
+require 'flapjack/data/notification_r'
 require 'flapjack/data/event'
 require 'flapjack/exceptions'
 require 'flapjack/utility'
@@ -115,19 +116,35 @@ module Flapjack
       event_str << ", #{Time.at(event.time).to_s}" if event.time
       @logger.debug("Processing Event: #{event_str}")
 
-      entity_name, check_name = event_id.split(':', 2);
-      entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name,
-        :name => check_name).first
-
-      if entity_check.nil?
-        entity_check.entity_name = entity_name
-        entity_check.name        = check_name
-        # not saving yet as state isn't set
-      end
-
       timestamp = Time.now.to_i
 
+      entity_name, check_name = event.id.split(':', 2);
+      entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name,
+        :name => check_name).all.first
+
+      entity = nil
+
+      if entity_check.nil?
+        entity = Flapjack::Data::EntityR.intersect(:name => entity_name).all.first
+        # TODO raise error if entity.nil?
+        entity_check = Flapjack::Data::EntityCheckR.new(:entity_name => entity_name,
+          :name => check_name)
+        # not saving yet as check state isn't set
+      end
+
       should_notify, previous_state = update_keys(event, entity_check, timestamp)
+
+      entity_check.save
+
+      if @ncsm_sched_maint
+        entity_check.add_scheduled_maintenance(@ncsm_sched_maint)
+        @ncsm_sched_maint = nil
+      end
+
+      unless entity.nil?
+        # created a new check, so add it to the entity's check list
+        entity.checks << entity_check
+      end
 
       if !should_notify
         @logger.debug("Not generating notification for event #{event.id} because filtering was skipped")
@@ -177,8 +194,10 @@ module Flapjack
 
           if @ncsm_duration >= 0
             @logger.info("Setting scheduled maintenance for #{time_period_in_words(@ncsm_duration)}")
-            entity_check.create_scheduled_maintenance(timestamp,
-              @ncsm_duration, :summary => 'Automatically created for new check')
+
+            @ncsm_sched_maint = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => timestamp,
+              :end_time => timestamp + @ncsm_duration,
+              :summary => 'Automatically created for new check')
           end
 
           # If the service event's state is ok and there was no previous state, don't alert.
@@ -196,7 +215,6 @@ module Flapjack
         entity_check.details     = event.details
         entity_check.count       = event.counter
         entity_check.last_update = timestamp
-        entity_check.save
 
       # Action events represent human or automated interaction with Flapjack
       when 'action'
@@ -219,8 +237,21 @@ module Flapjack
       max_notified_severity = entity_check.max_notified_severity_of_current_failure
 
       current_state = entity_check.states.last
-      current_state.notified = true
-      current_state.save
+
+      # TODO should probably look these up by 'timestamp', last may not be safe...
+      case event.type
+      when 'service'
+        current_state.notified = true
+        current_state.notification_times += [timestamp.to_i.to_s]
+        current_state.save
+      when 'action'
+        if event.state == 'acknowledgement'
+          unsched_maint = entity_check.unscheduled_maintenances_by_start.last
+          unsched_maint.notified = true
+          unsched_maint.notification_times += [timestamp.to_i.to_s]
+          unsched_maint.save
+        end
+      end
 
       @logger.debug("Notification is being generated for #{event.id}: " + event.inspect)
 
@@ -229,8 +260,8 @@ module Flapjack
 
       notification = Flapjack::Data::NotificationR.new(
         :state_id          => current_state.id,
-        :state_duration    => (timestamp - current_state.timestamp),
-        :previous_state_id => previous_state.id,
+        :state_duration    => (timestamp - current_state.timestamp.to_i),
+        :previous_state_id => (previous_state ? previous_state.id : nil),
         :severity          => severity,
         :time              => event.time,
         :duration          => event.duration,

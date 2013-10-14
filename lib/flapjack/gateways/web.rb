@@ -185,13 +185,13 @@ module Flapjack
         check_stats
         states = entity_check.states
 
-        last_change = entity_check.last_change
-        last_update = states.last
+        last_change = states.last
+        last_update = entity_check.last_update
 
         @check_state                = entity_check.state
         @check_enabled              = !!entity_check.enabled
-        @check_last_update          = last_update ? last_update.timestamp : nil
-        @check_last_change          = last_change
+        @check_last_update          = last_update
+        @check_last_change          = last_change ? last_change.timestamp : nil
         @check_summary              = entity_check.summary
         @check_details              = entity_check.details
 

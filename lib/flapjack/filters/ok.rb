@@ -21,25 +21,27 @@ module Flapjack
 
         entity_check.clear_unscheduled_maintenance(Time.now.to_i)
 
-        if Flapjack::Data::CheckStateR.ok_states.include?( previous_state )
+        if !previous_state.nil? && Flapjack::Data::CheckStateR.ok_states.include?( previous_state.state )
           @logger.debug("Filter: Ok: block - previous state was ok, so blocking")
           return true
         end
 
-        last_notification = entity_check.states.intersect(:notified => true).last
+        last_notification = entity_check.last_notification
         @logger.debug("Filter: Ok: last notification: #{last_notification.inspect}")
 
-        if last_notification.nil? || last_notification.state.nil?
-          @logger.debug("Filter: Ok: block - last notification type is nil (never notified)")
+        if last_notification.nil?
+          @logger.debug("Filter: Ok: block - last notification is nil (never notified)")
           return true
         end
 
-        if Flapjack::Data::CheckStateR.ok_states.include?(last_notification.state)
+        if last_notification.respond_to?(:state) &&
+           Flapjack::Data::CheckStateR.ok_states.include?(last_notification.state)
+
           @logger.debug("Filter: Ok: block - last notification was a recovery")
           return true
         end
 
-        @logger.debug("Filter: Ok: previous_state: #{previous_state}")
+        @logger.debug("Filter: Ok: previous_state: #{previous_state.inspect}")
         @logger.debug("Filter: Ok: pass")
         false
       end

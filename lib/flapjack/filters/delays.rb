@@ -35,19 +35,22 @@ module Flapjack
           return false
         end
 
-        last_problem  = entity_check.notifications.intersect(:type => 'problem').last
-        last_change   = entity_check.states.last
-        last_notif    = entity_check.notifications.last
+        last_change        = entity_check.states.last
+        last_problem       = entity_check.states.
+          union(:state => Flapjack::Data::CheckStateR.failing_states).
+          intersect(:notified => true).last
+        last_notif         = entity_check.last_notification
 
-        last_problem_time  = last_problem  ? last_problem.timestamp  : nil
-        last_change_time   = last_change   ? last_change.timestamp   : nil
-        last_alert_state   = last_notif    ? last_notif.state        : nil
+        last_change_time   = last_change  ? last_change.timestamp.to_i  : nil
+        last_problem_alert = last_problem ? last_problem.notification_times.to_a.sort.last.to_i : nil
+        last_alert_state   = last_notif.nil? ? nil :
+          (last_notif.respond_to?(:state) ? last_notif.state : 'acknowledgement')
 
         current_time = Time.now.to_i
-        current_state_duration = last_change_time.nil?  ? nil : current_time - last_change_time
-        time_since_last_alert  = last_problem_time.nil? ? nil : current_time - last_problem_time
+        current_state_duration = last_change_time.nil?   ? nil : (current_time - last_change_time)
+        time_since_last_alert  = last_problem_alert.nil? ? nil : (current_time - last_problem_alert)
 
-        @logger.debug("#{label} last_problem_alert: #{last_problem_time || 'nil'}, " +
+        @logger.debug("#{label} last_problem_alert: #{last_problem_alert || 'nil'}, " +
                       "last_change: #{last_change_time || 'nil'}, " +
                       "current_state_duration: #{current_state_duration || 'nil'}, " +
                       "time_since_last_alert: #{time_since_last_alert || 'nil'}, " +
@@ -61,7 +64,7 @@ module Flapjack
           return true
         end
 
-        if !(last_problem_time.nil? || time_since_last_alert.nil?) &&
+        if !(last_problem_alert.nil? || time_since_last_alert.nil?) &&
           (time_since_last_alert < resend_delay) &&
           (last_alert_state == event.state)
 

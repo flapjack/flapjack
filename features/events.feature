@@ -53,6 +53,7 @@ Feature: events
     And   1 minute passes
     And   a warning event is received
     Then  a notification should be generated
+    And   1 minute passes
     When  a critical event is received
     Then  a notification should not be generated
     When  1 minute passes
@@ -151,7 +152,7 @@ Feature: events
     Then  a notification should be generated
 
   @time
-  Scenario: Osciliating state, period of two minutes
+  Scenario: Oscillating state, period of two minutes
     Given the check is in an ok state
     When  a critical event is received
     Then  a notification should not be generated

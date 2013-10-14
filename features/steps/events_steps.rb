@@ -19,58 +19,43 @@ def submit_event(event)
 end
 
 def set_scheduled_maintenance(entity, check, duration = 60*60*2)
-  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check)
+  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+
   t = Time.now.to_i
-  entity_check.create_scheduled_maintenance(t, duration, :summary => "upgrading everything")
-  Flapjack.redis.setex("#{entity}:#{check}:scheduled_maintenance", duration, t)
+  sched_maint = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => t,
+    :end_time => t + duration, :summary => 'upgrading everything')
+  sched_maint.save.should be_true
+  entity_check.add_scheduled_maintenance(sched_maint)
 end
 
 def remove_scheduled_maintenance(entity, check)
-  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check)
-  sm = entity_check.maintenances(nil, nil, :scheduled => true)
-  sm.each do |m|
-    entity_check.end_scheduled_maintenance(m[:start_time])
+  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+
+  t = Time.now.to_i
+  sched_maints = entity_check.scheduled_maintenances_by_start.all
+  sched_maints.each do |sm|
+    entity_check.end_scheduled_maintenance(sm, t)
+    sched_maint.destroy
   end
 end
 
-def remove_unscheduled_maintenance(entity, check)
-  # end any unscheduled downtime
-  event_id = entity + ":" + check
-  if (um_start = Flapjack.redis.get("#{event_id}:unscheduled_maintenance"))
-    Flapjack.redis.del("#{event_id}:unscheduled_maintenance")
-    duration = Time.now.to_i - um_start.to_i
-    Flapjack.redis.zadd("#{event_id}:unscheduled_maintenances", duration, um_start)
-  end
+def clear_unscheduled_maintenance(entity, check)
+  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+  entity_check.clear_unscheduled_maintenance(Time.now.to_i)
 end
 
-def remove_notifications(entity, check)
-  event_id = entity + ":" + check
-  Flapjack.redis.del("#{event_id}:last_problem_notification")
-  Flapjack.redis.del("#{event_id}:last_recovery_notification")
-  Flapjack.redis.del("#{event_id}:last_acknowledgement_notification")
-end
+# def remove_notifications(entity, check)
+#   event_id = entity + ":" + check
+#   Flapjack.redis.del("#{event_id}:last_problem_notification")
+#   Flapjack.redis.del("#{event_id}:last_recovery_notification")
+#   Flapjack.redis.del("#{event_id}:last_acknowledgement_notification")
+# end
 
-def set_ok_state(entity, check)
-  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check)
-  entity_check.update_state(Flapjack::Data::EntityCheck::STATE_OK,
-    :timestamp => (Time.now.to_i - (60*60*24)))
-end
-
-def set_critical_state(entity, check)
-  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check)
-  entity_check.update_state(Flapjack::Data::EntityCheck::STATE_CRITICAL,
-    :timestamp => (Time.now.to_i - (60*60*24)))
-end
-
-def set_warning_state(entity, check)
-  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check)
-  entity_check.update_state(Flapjack::Data::EntityCheck::STATE_WARNING,
-    :timestamp => (Time.now.to_i - (60*60*24)))
-end
-
-def end_unscheduled_maintenance(entity, check)
-  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check)
-  entity_check.end_unscheduled_maintenance(Time.now.to_i)
+def set_state(entity, check, state, last_update)
+  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+  entity_check.state = state
+  entity_check.last_update = last_update
+  entity_check.save
 end
 
 def submit_ok(entity, check)
@@ -80,7 +65,6 @@ def submit_ok(entity, check)
     'summary' => '0% packet loss',
     'entity'  => entity,
     'check'   => check,
-    'client'  => 'clientx'
   }
   submit_event(event)
 end
@@ -92,7 +76,6 @@ def submit_warning(entity, check)
     'summary' => '25% packet loss',
     'entity'  => entity,
     'check'   => check,
-    'client'  => 'clientx'
   }
   submit_event(event)
 end
@@ -104,7 +87,6 @@ def submit_critical(entity, check)
     'summary' => '100% packet loss',
     'entity'  => entity,
     'check'   => check,
-    'client'  => 'clientx'
   }
   submit_event(event)
 end
@@ -116,7 +98,6 @@ def submit_unknown(entity, check)
     'summary' => 'check execution error',
     'entity'  => entity,
     'check'   => check,
-    'client'  => 'clientx'
   }
   submit_event(event)
 end
@@ -128,7 +109,6 @@ def submit_acknowledgement(entity, check)
     'summary'            => "I'll have this fixed in a jiffy, saw the same thing yesterday",
     'entity'             => entity,
     'check'              => check,
-    'client'             => 'clientx',
   }
   submit_event(event)
 end
@@ -140,7 +120,6 @@ def submit_test(entity, check)
     'summary'            => "test notification for all contacts interested in #{entity}",
     'entity'             => entity,
     'check'              => check,
-    'client'             => 'clientx',
   }
   submit_event(event)
 end
@@ -164,47 +143,52 @@ def stringify(obj)
   obj
 end
 
-Given /^an entity '([\w\.\-]+)' exists$/ do |entity|
-  Flapjack::Data::Entity.add({'id'       => '5000',
-                              'name'     => entity})
+Given /^an entity '([\w\.\-]+)' exists$/ do |entity_name|
+  entity = Flapjack::Data::EntityR.intersect(:name => entity_name).all.first
+  if entity.nil?
+    entity = Flapjack::Data::EntityR.new(:id   => '5000',
+                                         :name => entity_name)
+    entity.save
+  end
 end
 
-Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check, entity|
-  @check  = check
-  @entity = entity
+Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check_name, entity_name|
+  entity = Flapjack::Data::EntityR.intersect(:name => entity_name).all.first
+  entity.should_not be_nil
+
+  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+  if entity_check.nil?
+    entity_check = Flapjack::Data::EntityCheckR.new(:entity_name => entity_name, :name => check_name)
+    entity_check.save.should_not be_false
+  end
+  entity.checks << entity_check
+
+  @check  = check_name
+  @entity = entity_name
 end
 
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') has no state$/ do |check, entity|
   check  ||= @check
   entity ||= @entity
-  remove_unscheduled_maintenance(entity, check)
+  clear_unscheduled_maintenance(entity, check)
   remove_scheduled_maintenance(entity, check)
-  remove_notifications(entity, check)
-  Flapjack.redis.hdel("check:#{@key}", 'state')
+  # remove_notifications(entity, check)
+  # Flapjack.redis.hdel("check:#{@key}", 'state')
 end
 
-Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in an ok state$/ do |check, entity|
+Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in an? (ok|critical) state$/ do |check, entity, state|
   check  ||= @check
   entity ||= @entity
-  remove_unscheduled_maintenance(entity, check)
+  clear_unscheduled_maintenance(entity, check)
   remove_scheduled_maintenance(entity, check)
-  remove_notifications(entity, check)
-  set_ok_state(entity, check)
-end
-
-Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in a critical state$/ do |check, entity|
-  check  ||= @check
-  entity ||= @entity
-  remove_unscheduled_maintenance(entity, check)
-  remove_scheduled_maintenance(entity, check)
-  remove_notifications(entity, check)
-  set_critical_state(entity, check)
+  # remove_notifications(entity, check)
+  set_state(entity, check, state, Time.now.to_i - (6 * 60 *60))
 end
 
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in scheduled maintenance$/ do |check, entity|
   check  ||= @check
   entity ||= @entity
-  remove_unscheduled_maintenance(entity, check)
+  clear_unscheduled_maintenance(entity, check)
   set_scheduled_maintenance(entity, check)
 end
 
@@ -213,7 +197,7 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unsched
   check  ||= @check
   entity ||= @entity
   remove_scheduled_maintenance(entity, check)
-  set_critical_state(entity, check)
+  set_state(entity, check, 'critical', Time.now.to_i - (6 * 60 *60))
   submit_acknowledgement(entity, check)
   drain_events  # TODO these should only be in When clauses
 end
@@ -270,30 +254,50 @@ end
 When /^the unscheduled maintenance is ended(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
   check  ||= @check
   entity ||= @entity
-  end_unscheduled_maintenance(entity, check)
+  clear_unscheduled_maintenance(entity, check)
 end
 
-# TODO logging is a side-effect, should test for notification generation itself
 Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
   check  ||= @check
   entity ||= @entity
-  message = @logger.messages.find_all {|m| m =~ /enerating notification for event #{entity}:#{check}/ }.last
-  found = message ? message.match(/Not generating notification/) : false
-  found.should be_true
+
+  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+  entity_check.should_not be_nil
+
+  last_notification = entity_check.last_notification
+
+  unless last_notification.nil?
+    if last_notification.notification_times.include?(entity_check.last_update.to_i.to_s)
+      puts @logger.messages.join("\n\n")
+    end
+    last_notification.notification_times.should_not include(entity_check.last_update.to_i.to_s)
+  end
 end
 
 Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
   check  ||= @check
   entity ||= @entity
-  message = @logger.messages.find_all {|m| m =~ /enerating notification for event #{entity}:#{check}/ }.last
-  found = message ? message.match(/Generating notification/) : false
-  found.should be_true
+
+  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+  entity_check.should_not be_nil
+  last_notification = entity_check.last_notification
+
+  if last_notification.nil? || !last_notification.notification_times.include?(entity_check.last_update.to_i.to_s)
+    puts @logger.messages.join("\n\n")
+  end
+
+  last_notification.should_not be_nil
+  last_notification.notification_times.should include(entity_check.last_update.to_i.to_s)
 end
 
 Then /^(un)?scheduled maintenance should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |unsched, check, entity|
   check  ||= @check
   entity ||= @entity
-  Flapjack.redis.get("#{entity}:#{check}:#{unsched || ''}scheduled_maintenance").should_not be_nil
+
+  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+  entity_check.should_not be_nil
+
+  entity_check.should be_in_scheduled_maintenance
 end
 
 Then /^show me the (\w+ )*log$/ do |adjective|

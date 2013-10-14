@@ -8,7 +8,9 @@ module Flapjack
 
       define_attributes :start_time => :timestamp,
                         :end_time   => :timestamp,
-                        :summary    => :string
+                        :summary    => :string,
+                        :notified  => :boolean,
+                        :notification_times => :set
 
       validates :start_time, :presence => true
       validates :end_time, :presence => true

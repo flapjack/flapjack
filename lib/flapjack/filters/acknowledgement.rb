@@ -28,14 +28,8 @@ module Flapjack
           return false
         end
 
-        entity_name, check_name = event_id.split(':', 2);
-
-        check_is_failing = EntityCheckR.
-          union(:state => Flapjack::Data::CheckStateR.failing_states).
-          intersect(:entity_name => entity_name, :name => check_name).count > 0
-
-        unless check_is_failing
-          @logger.debug("#{label} blocking because zscore of failed_checks for #{event.id} is false")
+        unless Flapjack::Data::CheckStateR.failing_states.include?(entity_check.state)
+          @logger.debug("#{label} blocking because check '#{entity_check.name}' on entity '#{entity_check.entity_name}' is not failing")
           return true
         end
 
@@ -47,7 +41,7 @@ module Flapjack
 
         entity_check.set_unscheduled_maintenance(unsched_maint)
 
-        @logger.debug("#{label} pass (unscheduled maintenance created for #{event.id}, duration: #{um_duration})")
+        @logger.debug("#{label} pass (unscheduled maintenance created for #{event.id}, duration: #{end_time - timestamp})")
         false
       end
     end

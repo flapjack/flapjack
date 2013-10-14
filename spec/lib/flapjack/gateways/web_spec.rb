@@ -143,7 +143,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     expect_check_stats
 
     entity_check.should_receive(:state).and_return('ok')
-    entity_check.should_receive(:last_change).and_return(time.to_i - (3 * 60 * 60))
+    entity_check.should_receive(:last_update).and_return(time.to_i - (3 * 60 * 60))
     entity_check.should_receive(:summary).and_return('all good')
     entity_check.should_receive(:details).and_return('seriously, all very wonderful')
 

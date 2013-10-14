@@ -375,7 +375,6 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
       redis.smembers('flapjack/data/redis_record/example_datum::ids').should == ['4']        # child not deleted
       redis.zrange('flapjack/data/redis_record/example:8:fdrr_data_ids', 0, -1).should == [] # but association is
-
     end
 
     it "filters has_sorted_set records by indexed attribute values" do
@@ -396,7 +395,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       upset_data.should_not be_nil
       upset_data.should be_an(Array)
       upset_data.should have(2).children
-      upset_data.map(&:id).should =~ ['4', '6']
+      upset_data.map(&:id).should == ['4', '6']
     end
 
     it "retrieves a subset of a sorted set by index" do

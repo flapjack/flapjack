@@ -12,7 +12,7 @@ require 'redis-objects'
 # TODO port the redis-objects parts to raw redis calls, when things have
 # stabilised
 
-# TODO escape ids and index_keys -- shouldn't allow bare :
+# TODO escape ids and index_keys -- shouldn't allow bare : or space
 
 # TODO callbacks on before/after add/delete on association?
 
@@ -629,7 +629,7 @@ module Flapjack
         def indexer_for_value(type)
           index_key = case @value
           when String, Symbol, TrueClass, FalseClass
-            @value.to_s
+            @value.to_s.gsub(/ /, '%20').gsub(/:/, '%3A')
           end
           return if index_key.nil?
 
@@ -929,7 +929,7 @@ module Flapjack
         def first
           raise "Can't get first member of a non-sorted set" unless @initial_set.is_a?(Redis::SortedSet)
           first_id = resolve_steps{|set, order_desc|
-            Flapjack.redis.send((order_desc ? :zrevrange : :zrange), set, 0, 0).first
+            Flapjack.redis.send(:zrange, set, 0, 0).first
           }
           return if first_id.nil?
           @associated_class.send(:load, first_id)
@@ -938,7 +938,7 @@ module Flapjack
         def last
           raise "Can't get last member of a non-sorted set" unless @initial_set.is_a?(Redis::SortedSet)
           last_id = resolve_steps{|set, order_desc|
-            Flapjack.redis.send((order_desc ? :zrevrange : :zrange), set, -1, -1).first
+            Flapjack.redis.send(:zrevrange, set, 0, 0).first
           }
           return if last_id.nil?
           @associated_class.send(:load, last_id)
@@ -984,12 +984,19 @@ module Flapjack
 
           order_desc = nil
 
+          # hack hack hack
+          intersect_initial_with_union = false
+
           @steps.each_slice(2) do |step|
 
             order_desc = false
 
             source_keys = []
-            source_keys << source_set if (source_set == dest_set) || [:intersect, :intersect_range].include?(step.first)
+            if (source_set == dest_set) || [:intersect, :intersect_range].include?(step.first)
+              source_keys << source_set
+            else
+              intersect_initial_with_union = true
+            end
 
             range_ids_set = nil
 
@@ -1066,11 +1073,17 @@ module Flapjack
 
             case @initial_set
             when Redis::SortedSet
+              weights = [1.0] + ([0.0] * (source_keys.length - 1))
               case step.first
               when :union, :union_range
-                Flapjack.redis.zunionstore(dest_set, source_keys)
+                Flapjack.redis.zunionstore(dest_set, source_keys, :weights => weights, :aggregate => 'max')
+                if intersect_initial_with_union
+                  # FIXME -- this is a hack, there should be a cleaner way to do this
+                  Flapjack.redis.zinterstore(dest_set, [source_set, dest_set], :weights => [1.0, 0.0], :aggregate => 'max')
+                  intersect_initial_with_union = false
+                end
               when :intersect, :intersect_range
-                Flapjack.redis.zinterstore(dest_set, source_keys)
+                Flapjack.redis.zinterstore(dest_set, source_keys, :weights => weights, :aggregate => 'max')
               end
               Flapjack.redis.del(range_ids_set) unless range_ids_set.nil?
             when Redis::Set, nil

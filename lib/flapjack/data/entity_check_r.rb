@@ -41,9 +41,9 @@ module Flapjack
 
       validates :name, :presence => true
       validates :entity_name, :presence => true
-      validates :state, :presence => true,
+      validates :state,
         :inclusion => {:in => Flapjack::Data::CheckStateR.failing_states +
-                              Flapjack::Data::CheckStateR.ok_states }
+                              Flapjack::Data::CheckStateR.ok_states, :allow_blank => true }
 
       around_create :handle_state_change_and_enabled
       around_update :handle_state_change_and_enabled
@@ -51,7 +51,7 @@ module Flapjack
       attr_accessor :count
 
       def entity
-        @entity ||= Flapjack::Data::EntityR.find_by(:name, self.entity_name).first
+        @entity ||= Flapjack::Data::EntityR.intersect(:name => self.entity_name).all.first
       end
 
       # TODO work out when it's valid to create the record if not found
@@ -205,7 +205,8 @@ module Flapjack
       end
 
       def set_unscheduled_maintenance(unsched_maint)
-        time_remaining = unsched_maint.end_time - Time.now.to_i
+        current_time = Time.now.to_i
+        time_remaining = unsched_maint.end_time - current_time
 
         if time_remaining > 0
           self.clear_unscheduled_maintenance(unsched_maint.start_time)
@@ -214,6 +215,8 @@ module Flapjack
 
         self.unscheduled_maintenances_by_start << unsched_maint
         self.unscheduled_maintenances_by_end << unsched_maint
+        self.last_update = current_time.to_i # ack is treated as changing state in this case TODO check
+        self.save
       end
 
       def current_unscheduled_maintenance
@@ -241,20 +244,41 @@ module Flapjack
 
       # OLD def last_notification_for_state(type)
       # NEW entity_check.states.intersect(:state => state, :notified => true).last
+      # TODO ack needs self.unscheduled_maintenances_by_start.intersect(:notified => true).last
 
       # # results aren't really guaranteed if there are multiple notifications
       # # of different types sent at the same time
       # OLD def last_notification
       # NEW entity_check.states.intersect(:notified => true).last
 
+      def last_notification
+        events = [self.unscheduled_maintenances_by_start.intersect(:notified => true).last,
+                  self.states.intersect(:notified => true).last].compact
+
+        notifying_event = case events.size
+        when 2
+          events.max {|a, b| (a.notified ? a.notification_times.to_a.sort.last.to_i : 0) <=>
+                             (b.notified ? b.notification_times.to_a.sort.last.to_i : 0) }
+        when 1
+          events.first
+        else
+          nil
+        end
+      end
+
       def max_notified_severity_of_current_failure
         last_recovery = self.states.intersect(:notified => true, :state => 'ok').last
-        last_recovery_time = last_recovery ? last_recovery.timestamp : 0
+        last_recovery_time = last_recovery ? last_recovery.timestamp.to_i : 0
 
         notif = self.states.
           union(:state => Flapjack::Data::CheckStateR.failing_states).
           intersect(:notified => true).last
-        (!notif.nil? && (notif.timestamp > last_recovery_time)) ? notif.state : nil
+        (!notif.nil? && (notif.timestamp.to_i > last_recovery_time)) ? notif.state : nil
+      end
+
+      def tags
+        @tags ||= Set.new(self.entity_name.split('.', 2).map(&:downcase) +
+                          self.name.split(' ').map(&:downcase))
       end
 
       private

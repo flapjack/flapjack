@@ -15,8 +15,9 @@ module Flapjack
                         :summary   => :string,
                         :details   => :string,
                         :count     => :integer,
+                        :timestamp => :timestamp,
                         :notified  => :boolean,
-                        :timestamp => :timestamp
+                        :notification_times => :set
 
       index_by :state, :notified, :count
 

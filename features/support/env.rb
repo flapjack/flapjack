@@ -103,7 +103,7 @@ EXPIRE_AS_IF_AT
 end
 
 redis_opts = { :db => 14, :driver => :ruby }
-Flapjack.redis = ::Redis.new(redis_opts)
+Redis::Objects.redis = Flapjack.redis = ::Redis.new(redis_opts)
 Flapjack.redis.flushdb
 RedisDelorean.before_all
 Flapjack.redis.quit

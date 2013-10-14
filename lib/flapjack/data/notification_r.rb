@@ -66,7 +66,7 @@ module Flapjack
 
         if notif_json
           Flapjack.redis.multi do
-            Flapjack.redis.lpush(queue, )
+            Flapjack.redis.lpush(queue, notif_json)
             Flapjack.redis.lpush("#{queue}_actions", "+")
           end
         end
