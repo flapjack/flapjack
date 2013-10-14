@@ -1,0 +1,4 @@
+<%= @headline %>'<%= @check %>' on <%= @entity_name -%>
+<% if ! ['acknowledgement', 'test'].include?(@notification_type) -%>
+ is <%= @state.upcase -%>
+<% end -%>

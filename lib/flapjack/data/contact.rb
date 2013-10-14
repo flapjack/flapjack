@@ -305,12 +305,6 @@ module Flapjack
         @redis.zrem("contact_alerting_checks:#{self.id}:media:#{media}", check)
       end
 
-      def remove_alerting_check(check)
-        ALL_MEDIAS.each {|media|
-          @redis.zrem("contact_alerting_checks:#{self.id}:media:#{media}", check)
-        }
-      end
-
       # removes any checks that are in ok, scheduled or unscheduled maintenance
       # from the alerting checks set for the given media
       # returns the number of checks removed
@@ -335,19 +329,6 @@ module Flapjack
 
       def count_alerting_checks_for_media(media)
         @redis.zcard("contact_alerting_checks:#{self.id}:media:#{media}")
-      end
-
-      def reached_rollup_threshold_for_media?(media)
-
-        # probably requires notification.messages to pre-qualify every message
-        # ... or perhaps earlier, in update keys...
-        # perhaps we need a set to represent the failing checks for a contact, or perhaps
-        # rather failing checks for each contact's media
-        # ... perhaps a background process should update this rather than it being
-        # calculated & updated for every notification
-
-        rtfm = rollup_threshold_for_media(media)
-        !! rtfm ? count_alerting_checks_for_media(media) >= rtfm : false
       end
 
       # FIXME

@@ -1,0 +1,19 @@
+<%
+  state_counts = @rollup_alerts.inject({}) do |memo, alert|
+    puts "alert: #{alert.inspect}"
+    memo[alert[1]['state']] = (memo[alert[1]['state']] || 0) + 1
+    memo
+  end
+  states_summary = ['critical', 'warning', 'unknown'].inject([]) do |memo, state|
+    next memo unless state_counts[state]
+    memo << "#{state.upcase}: #{state_counts[state]}"
+    memo
+  end.join(', ')
+-%>
+<% case @rollup -%>
+<% when "problem" -%>
+<%=  "Problem Rollup: " -%>
+<% when "recovery" -%>
+<%=  "End Problem Rollup: " -%>
+<% end -%>
+<%= states_summary -%>

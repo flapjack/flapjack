@@ -14,8 +14,10 @@ describe Flapjack::Data::Contact, :redis => true do
     {:tags               => ["database","physical"],
      :entities           => ["foo-app-01.example.com"],
      :time_restrictions  => [],
+     :unknown_media      => [],
      :warning_media      => ["email"],
      :critical_media     => ["sms", "email"],
+     :unknown_blackhole  => false,
      :warning_blackhole  => false,
      :critical_blackhole => false
     }
@@ -25,8 +27,10 @@ describe Flapjack::Data::Contact, :redis => true do
     {:entities           => [],
      :tags               => Flapjack::Data::TagSet.new([]),
      :time_restrictions  => [],
+     :unknown_media      => [],
      :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'],
      :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'],
+     :unknown_blackhole  => false,
      :warning_blackhole  => false,
      :critical_blackhole => false}
   }
@@ -291,6 +295,24 @@ describe Flapjack::Data::Contact, :redis => true do
     email_rollup_threshold = contact.set_rollup_threshold_for_media('email', nil)
     email_rollup_threshold_raw = @redis.hget("contact_media_rollup_thresholds:#{contact.id}", 'email')
     email_rollup_threshold_raw.should be_nil
+  end
+
+  it "sets the address for a contact's media" do
+    contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
+    contact.set_address_for_media('email', 'spongebob@example.com')
+    email_address_raw = @redis.hget("contact_media:#{contact.id}", 'email')
+    email_address_raw.should == 'spongebob@example.com'
+  end
+
+  it "removes a contact's media" do
+    contact = Flapjack::Data::Contact.find_by_id('363', :redis => @redis)
+    contact.remove_media('email')
+    email_address_raw = @redis.hget("contac_media:#{contact.id}", 'email')
+    email_address_raw.should be_nil
+    email_rollup_threshold_raw = @redis.hget("contact_media_rollup_thresholds:#{contact.id}", 'email')
+    email_rollup_threshold_raw.should be_nil
+    email_interval_raw = @redis.hget("contact_media_intervals:#{contact.id}", 'email')
+    email_interval_raw.should be_nil
   end
 
 end

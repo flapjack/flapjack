@@ -26,6 +26,7 @@ module Flapjack
           @logger.debug("new email gateway pikelet with the following options: #{@config.inspect}")
           @smtp_config = @config.delete('smtp_config')
           @sent = 0
+          @fqdn = `/bin/hostname -f`.chomp
         end
 
         # TODO refactor to remove complexity
@@ -34,12 +35,14 @@ module Flapjack
           deliver( notification )
         end
 
+        # sets a bunch of class instance variables for each email
         def prepare(notification)
           @logger.debug "Woo, got a notification to send out: #{notification.inspect}"
 
           # The instance variables are referenced by the templates, which
           # share the current binding context
           @notification_type   = notification['notification_type']
+          @notification_id     = notification['id'] || SecureRandom.uuid
           @rollup              = notification['rollup']
           @rollup_alerts       = notification['rollup_alerts']
           @rollup_threshold    = notification['rollup_threshold']
@@ -67,10 +70,8 @@ module Flapjack
                           'unknown'         => ''
                          }
 
-          headline = headline_map[@notification_type] || ''
+          @headline = headline_map[@notification_type] || ''
 
-          @subject = "#{headline}'#{@check}' on #{@entity_name}"
-          @subject += " is #{@state.upcase}" unless ['acknowledgement', 'test'].include?(@notification_type)
         rescue => e
           @logger.error "Error preparing email to #{m_to}: #{e.class}: #{e.message}"
           @logger.error e.backtrace.join("\n")
@@ -90,23 +91,19 @@ module Flapjack
             end
           end
 
-          fqdn = `/bin/hostname -f`.chomp
-          m_from = "flapjack@#{fqdn}"
+          m_from = "flapjack@#{@fqdn}"
           @logger.debug("flapjack_mailer: set from to #{m_from}")
           m_reply_to = m_from
           m_to       = notification['address']
 
-          @logger.debug("sending Flapjack::Notification::Email " +
-            "#{notification['id']} to: #{m_to} subject: #{@subject}")
 
-          mail = prepare_email(:subject => @subject,
-                               :from    => m_from,
-                               :to => m_to)
+          mail = prepare_email(:from => m_from,
+                               :to   => m_to)
 
           smtp_args = {:from     => m_from,
                        :to       => m_to,
                        :content  => "#{mail.to_s}\r\n.\r\n",
-                       :domain   => fqdn,
+                       :domain   => @fqdn,
                        :host     => host || 'localhost',
                        :port     => port || 25,
                        :starttls => starttls}
@@ -135,6 +132,9 @@ module Flapjack
         private
 
         def prepare_email(opts = {})
+          from       = opts[:from]
+          to         = opts[:to]
+          message_id = "<#{@notification_id}@#{@fqdn}>"
 
           message_type = case
           when @rollup
@@ -143,19 +143,26 @@ module Flapjack
             'alert'
           end
 
+          subject_template = ERB.new(File.read(File.dirname(__FILE__) +
+            "/email/#{message_type}.subject.erb"), nil, '-')
+
           text_template = ERB.new(File.read(File.dirname(__FILE__) +
             "/email/#{message_type}.text.erb"), nil, '-')
 
           html_template = ERB.new(File.read(File.dirname(__FILE__) +
             "/email/#{message_type}.html.erb"), nil, '-')
 
-          bnd = binding
+          bnd        = binding
+          subject    = subject_template.result(bnd).chomp
+
+          @logger.debug("preparing email to: #{to}, subject: #{subject}, message-id: #{message_id}")
 
           mail = Mail.new do
-            from     opts[:from]
-            to       opts[:to]
-            subject  opts[:subject]
-            reply_to opts[:from]
+            from       from
+            to         to
+            subject    subject
+            reply_to   from
+            message_id message_id
 
             text_part do
               body text_template.result(bnd)
