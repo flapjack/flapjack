@@ -7,7 +7,7 @@ module Flapjack
   module Gateways
     class SmsMessagenet
 
-      MESSAGENET_URL = 'https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage'
+      MESSAGENET_DEFAULT_URL = 'https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage'
 
       class << self
 
@@ -48,6 +48,7 @@ module Flapjack
 
           errors = []
 
+          endpoint = @config["endpoint"] || MESSAGENET_DEFAULT_URL
           username = @config["username"]
           password = @config["password"]
           address  = notification['address']
@@ -73,7 +74,7 @@ module Flapjack
                    'PhoneNumber'  => address,
                    'PhoneMessage' => safe_message}
 
-          http = EM::HttpRequest.new(MESSAGENET_URL).get(:query => query)
+          http = EM::HttpRequest.new(endpoint).get(:query => query)
 
           @logger.debug "server response: #{http.response}"
 
