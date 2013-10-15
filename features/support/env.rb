@@ -13,6 +13,10 @@ if ENV['COVERAGE']
   SimpleCov.start do
     add_filter '/features/'
   end
+  SimpleCov.at_exit do
+    Oj.default_options = { :mode => :compat }
+    SimpleCov.result.format!
+  end
 end
 
 ENV["FLAPJACK_ENV"] = 'test'
@@ -186,3 +190,5 @@ After('@process') do
     File.unlink(file)
   end
 end
+
+
