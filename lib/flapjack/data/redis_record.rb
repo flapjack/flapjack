@@ -47,6 +47,8 @@ module Flapjack
         include ActiveModel::Serializers::JSON
         include ActiveModel::Validations
 
+        self.include_root_in_json = false
+
         define_model_callbacks :create, :update, :destroy
 
         attribute_method_suffix  "="  # attr_writers
@@ -714,6 +716,11 @@ module Flapjack
             @associated_class).count
         end
 
+        def empty?
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
+            @associated_class).empty?
+        end
+
         def all
           Flapjack::Data::RedisRecord::Filter.new(@record_ids,
             @associated_class).all
@@ -800,6 +807,11 @@ module Flapjack
         def count
           Flapjack::Data::RedisRecord::Filter.new(@record_ids,
             @associated_class).count
+        end
+
+        def empty?
+          Flapjack::Data::RedisRecord::Filter.new(@record_ids,
+            @associated_class).empty?
         end
 
         def all
@@ -920,6 +932,10 @@ module Flapjack
               Flapjack.redis.scard(set)
             end
           }
+        end
+
+        def empty?
+          count == 0
         end
 
         def all

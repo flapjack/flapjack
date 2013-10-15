@@ -9,7 +9,7 @@ end
 
 def drain_notifications
   return unless @notifier
-  Flapjack::Data::Notification.foreach_on_queue('notifications') do |notification|
+  Flapjack::Data::NotificationR.foreach_on_queue('notifications') do |notification|
     @notifier.send(:process_notification, notification)
   end
 end

@@ -6,9 +6,9 @@ require 'oj'
 
 require 'flapjack'
 
-require 'flapjack/data/contact'
-require 'flapjack/data/entity_check'
-require 'flapjack/data/notification'
+require 'flapjack/data/contact_r'
+require 'flapjack/data/entity_check_r'
+require 'flapjack/data/notification_r'
 require 'flapjack/data/event'
 
 require 'flapjack/exceptions'
@@ -58,12 +58,12 @@ module Flapjack
     def start
       loop do
         @lock.synchronize do
-          Flapjack::Data::Notification.foreach_on_queue(@notifications_queue) {|notif|
+          Flapjack::Data::NotificationR.foreach_on_queue(@notifications_queue) {|notif|
             process_notification(notif)
           }
         end
 
-        Flapjack::Data::Notification.wait_for_queue(@notifications_queue)
+        Flapjack::Data::NotificationR.wait_for_queue(@notifications_queue)
       end
     end
 
@@ -80,27 +80,29 @@ module Flapjack
       @logger.debug ("Processing notification: #{notification.inspect}")
 
       timestamp = Time.now
-      event_id = notification.event_id
-      entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id)
-      contacts = entity_check.contacts
+      entity_check_id = notification.entity_check_id
+      entity_check = Flapjack::Data::EntityCheckR.find_by_id(entity_check_id)
+
+      contacts = entity_check.contacts.all + entity_check.entity.contacts.all
 
       if contacts.empty?
-        @logger.debug("No contacts for #{event_id}")
-        @notifylog.info("#{event_id} | #{notification.type} | NO CONTACTS")
+        @logger.debug("No contacts for '#{entity_check.entity_name}:#{entity_check.name}'")
+        @notifylog.info("#{entity_check.entity_name}:#{entity_check.name} | #{notification.type} | NO CONTACTS")
         return
       end
 
-      messages = notification.messages(contacts, :default_timezone => @default_contact_timezone,
+      messages = notification.messages(contacts,
+        :default_timezone => @default_contact_timezone,
         :logger => @logger)
 
-      notification_contents = notification.as_json
+      notification_contents = notification.contents
 
       messages.each do |message|
         media_type = message.medium
         address    = message.address
         contents   = message.contents.merge(notification_contents)
 
-        @notifylog.info("#{event_id} | " +
+        @notifylog.info("#{entity_check.entity_name}:#{entity_check.name} | " +
           "#{notification.type} | #{message.contact.id} | #{media_type} | #{address}")
 
         unless @queues[media_type.to_sym]
@@ -108,24 +110,24 @@ module Flapjack
           return
         end
 
-        @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{address}")
+        @logger.info("Enqueueing #{media_type} alert for #{entity_check.entity_name}:#{entity_check.name} to #{address}")
 
         contact = message.contact
 
         if (Flapjack::Data::CheckStateR.ok_states + ['acknowledgement']).
-          include?(notification.state )
+          include?(notification.state.state)
 
           ['warning', 'critical', 'unknown'].each do |alert_state|
             contact.update_sent_alert_keys(
               :media => media_type,
-              :check => event_id,
+              :entity_check => entity_check,
               :state => alert_state,
               :delete => true)
           end
         else
           contact.update_sent_alert_keys(
             :media => media_type,
-            :check => event_id,
+            :entity_check => entity_check,
             :state => notification.state)
         end
 

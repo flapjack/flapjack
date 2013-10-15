@@ -18,19 +18,21 @@ module Flapjack
 
       # NB can't use has_one associations for the states, as the redis persistence
       # is only transitory (used to trigger a queue pop)
-      define_attributes :event_id          => :string,
+      define_attributes :entity_check_id   => :id,
                         :state_id          => :id,
                         :state_duration    => :integer,
                         :previous_state_id => :id,
                         :severity          => :string,
+                        :type              => :string,
                         :time              => :timestamp,
                         :duration          => :integer,
                         :tags              => :set
 
-      validate :event_id, :presence => true
+      validate :entity_check_id, :presence => true
       validate :state_id, :presence => true
       validate :state_duration, :presence => true
       validate :severity, :presence => true
+      validate :type, :presence => true
       validate :time, :presence => true
 
       # TODO ensure 'unacknowledged_failures' behaviour is covered
@@ -54,6 +56,8 @@ module Flapjack
 
       def self.push(queue, notification)
         notif_json = nil
+
+        # TODO validate passed notification
 
         begin
           notif_json = notification.as_json.to_json
@@ -86,8 +90,8 @@ module Flapjack
           next unless notification
 
           # TODO tags must be a Set -- convert, or ease that restriction
-          symbolized_notificiation = notification.inject({}) {|m,(k,v)| m[k.to_sym] = v; m}
-          yield self.new(symbolized_notificiation) if block_given?
+          symbolized_notification = notification.inject({}) {|m,(k,v)| m[k.to_sym] = v; m}
+          yield self.new(symbolized_notification) if block_given?
         end
       end
 
@@ -96,27 +100,8 @@ module Flapjack
       end
 
       def contents
-        notification_type = case event.type
-        when 'service'
-          case event.state
-          when 'ok'
-            'recovery'
-          when 'warning', 'critical', 'unknown'
-            'problem'
-          end
-        when 'action'
-          case event.state
-          when 'acknowledgement'
-            'acknowledgement'
-          when 'test_notifications'
-            'test'
-          end
-        else
-          'unknown'
-        end
-
-        prev_state = self.previous_state_id ? Flapjack::Data::CheckStateR.load(previous_state_id) : nil
-        state      = self.state_id ? Flapjack::Data::CheckStateR.load(state_id) : nil
+        prev_state = self.previous_state_id ? Flapjack::Data::CheckStateR.find_by_id(previous_state_id) : nil
+        check = self.entity_check
 
         {'state'             => (state ? state.state : nil),
          'summary'           => (state ? state.summary : nil),
@@ -124,14 +109,23 @@ module Flapjack
          'count'             => (state ? state.count : nil),
          'last_state'        => (prev_state ? prev_state.state : nil),
          'last_summary'      => (prev_state ? prev_state.summary : nil),
-         'event_id'          => self.event_id,
+         'entity'            => (check ? check.entity_name : nil),
+         'check'             => (check ? check.name : nil),
          'severity'          => self.severity,
          'duration'          => self.duration,
          'state_duration'    => self.state_duration,
          'time'              => self.time,
          'tags'              => self.tags,
-         'notification_type' => notification_type
+         'notification_type' => self.type
         }
+      end
+
+      def entity_check
+        @entity_check ||= self.entity_check_id ? Flapjack::Data::EntityCheckR.find_by_id(self.entity_check_id) : nil
+      end
+
+      def state
+        @state ||= self.state_id ? Flapjack::Data::CheckStateR.find_by_id(state_id) : nil
       end
 
       def messages(contacts, opts = {})
@@ -146,8 +140,8 @@ module Flapjack
           media = contact.media
 
           logger.debug "Notification#messages: creating messages for contact: #{contact_id} " +
-            "event_id: \"#{@event_id}\" state: #{@state} event_tags: #{@tags.to_json} media: #{media.inspect}"
-          rlen = rules.length
+            "entity: \"#{entity_check.entity_name}\" check: \"#{entity_check.name}\" state: #{@state} event_tags: #{@tags.to_json} media: #{media.inspect}"
+          rlen = rules.count
           logger.debug "found #{rlen} rule#{(rlen == 1) ? '' : 's'} for contact #{contact_id}"
 
           media_to_use = if rules.empty?
@@ -155,9 +149,9 @@ module Flapjack
           else
             # matchers are rules of the contact that have matched the current event
             # for time, entity and tags
-            matchers = rules.select do |rule|
+            matchers = rules.all.select do |rule|
               logger.debug("considering rule with entities: #{rule.entities} and tags: #{rule.tags.to_json}")
-              (rule.match_entity?(@event_id) || rule.match_tags?(@tags) || ! rule.is_specific?) &&
+              (rule.match_entity?(entity_check.entity_name) || rule.match_tags?(@tags) || ! rule.is_specific?) &&
                 rule.is_occurring_now?(:contact => contact, :default_timezone => default_timezone)
             end
 
@@ -193,30 +187,28 @@ module Flapjack
               logger.debug "no blackhole matchers matched"
             end
 
-            rule_media = matchers.collect{|matcher|
-              matcher.media_for_severity(@severity)
-            }.flatten.uniq
+            rule_media = matchers.inject(Set.new) {|memo, matcher|
+              memo += matcher.media_for_severity(self.severity)
+            }
 
             logger.debug "collected media_for_severity(#{@severity}): #{rule_media}"
             rule_media = rule_media.reject {|medium|
               contact.drop_notifications?(:media => medium,
-                                          :check => @event_id,
-                                          :state => @state)
+                                          :check => entity_check,
+                                          :state => state)
             }
 
             logger.debug "media after contact_drop?: #{rule_media}"
 
-            media.select {|medium, address| rule_media.include?(medium) }
+            media.all.select {|medium| rule_media.include?(medium.type) }
           end
 
-          logger.debug "media_to_use: #{media_to_use}"
+          logger.debug "media_to_use: #{media_to_use.inspect}"
 
-          media_to_use.each_pair.inject([]) { |ret, (k, v)|
-            m = Flapjack::Data::Message.for_contact(contact,
-                  :medium => k, :address => v)
-            ret << m
-            ret
-          }
+          media_to_use.collect do |medium|
+            Flapjack::Data::Message.for_contact(contact,
+              :medium => medium.type, :address => medium.address)
+          end
         }.compact.flatten
       end
 

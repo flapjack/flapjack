@@ -4,15 +4,17 @@ require 'flapjack/gateways/email'
 describe Flapjack::Gateways::Email, :logger => true do
 
   it "sends a mail with text and html parts" do
-    entity_check = mock(Flapjack::Data::EntityCheck)
+    entity_check = mock(Flapjack::Data::EntityCheckR)
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
+
+    all_entity_checks = mock('all_entity_checks', :all => [entity_check])
 
     redis = mock(Redis)
     Flapjack.stub(:redis).and_return(redis)
 
-    Flapjack::Data::EntityCheck.should_receive(:for_event_id).
-      with('example.com:ping').and_return(entity_check)
+    Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      with(:entity_name => 'example.com', :name => 'ping').and_return(all_entity_checks)
 
     message = {'notification_type'   => 'recovery',
                'contact_first_name'  => 'John',
@@ -24,7 +26,8 @@ describe Flapjack::Gateways::Email, :logger => true do
                'last_summary'        => 'frown',
                'time'                => Time.now.to_i,
                'address'             => 'johnsmith@example.com',
-               'event_id'            => 'example.com:ping'}
+               'entity'              => 'example.com',
+               'check'               => 'ping'}
 
     Flapjack::Data::Message.should_receive(:foreach_on_queue).
       with('email_notifications', :logger => @logger).

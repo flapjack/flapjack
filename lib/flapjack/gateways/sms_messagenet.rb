@@ -55,7 +55,8 @@ module Flapjack
         state              = msg['state']
         summary            = msg['summary']
         time               = msg['time']
-        entity, check      = msg['event_id'].split(':', 2)
+        entity             = msg['entity']
+        check              = msg['check']
 
         headline_map = {'problem'         => 'PROBLEM: ',
                         'recovery'        => 'RECOVERY: ',

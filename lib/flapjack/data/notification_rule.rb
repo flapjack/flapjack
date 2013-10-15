@@ -74,9 +74,9 @@ module Flapjack
       end
 
       # entity names match?
-      def match_entity?(event_id)
+      def match_entity?(entity_name)
         return false unless @entities
-        @entities.include?(event_id.split(':').first)
+        @entities.include?(entity_name)
       end
 
       # tags match?

@@ -61,34 +61,36 @@ module Flapjack
         [(self.first_name || ''), (self.last_name || '')].join(" ").strip
       end
 
-  #     # drop notifications for
-  #     def drop_notifications?(opts = {})
-  #       media    = opts[:media]
-  #       check    = opts[:check]
-  #       state    = opts[:state]
+      # drop notifications for
+      def drop_notifications?(opts = {})
+        return false
 
-  #       # build it and they will come
-  #       Flapjack.redis.exists("drop_alerts_for_contact:#{self.id}") ||
-  #         (media && Flapjack.redis.exists("drop_alerts_for_contact:#{self.id}:#{media}")) ||
-  #         (media && check &&
-  #           Flapjack.redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{check}")) ||
-  #         (media && check && state &&
-  #           Flapjack.redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}"))
-  #     end
+        # media    = opts[:media]
+        # entity_check  = opts[:entity_check]
+        # state    = opts[:state]
 
-  #     def update_sent_alert_keys(opts = {})
-  #       media  = opts[:media]
-  #       check  = opts[:check]
-  #       state  = opts[:state]
-  #       delete = !! opts[:delete]
-  #       key = "drop_alerts_for_contact:#{self.id}:#{media}:#{check}:#{state}"
-  #       if delete
-  #         Flapjack.redis.del(key)
-  #       else
-  #         Flapjack.redis.set(key, 'd')
-  #         Flapjack.redis.expire(key, self.interval_for_media(media))
-  #       end
-  #     end
+        # # build it and they will come
+        # Flapjack.redis.exists("drop_alerts_for_contact:#{self.id}") ||
+        #   (media && Flapjack.redis.exists("drop_alerts_for_contact:#{self.id}:#{media}")) ||
+        #   (media && entity_check &&
+        #     Flapjack.redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{entity_check.entity_name}:#{entity_check.name}")) ||
+        #   (media && entity_check && state &&
+        #     Flapjack.redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{entity_check.entity_name}:#{entity_check.name}:#{state}"))
+      end
+
+      def update_sent_alert_keys(opts = {})
+        # media  = opts[:media]
+        # entity_check  = opts[:entity_check]
+        # state  = opts[:state]
+        # delete = !! opts[:delete]
+        # key = "drop_alerts_for_contact:#{self.id}:#{media}:#{entity_check.entity_name}:#{entity_check.name}:#{state}"
+        # if delete
+        #   Flapjack.redis.del(key)
+        # else
+        #   Flapjack.redis.set(key, 'd')
+        #   Flapjack.redis.expire(key, self.interval_for_media(media))
+        # end
+      end
 
       # return the timezone of the contact, or the system default if none is set
       # TODO cache?

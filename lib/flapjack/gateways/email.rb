@@ -80,19 +80,20 @@ module Flapjack
       def handle_message(message)
         @logger.debug "Woo, got a message to send out: #{message.inspect}"
 
-        @notification_type          = message['notification_type']
-        @contact_first_name         = message['contact_first_name']
-        @contact_last_name          = message['contact_last_name']
-        @state                      = message['state']
-        @duration                   = message['state_duration']
-        @summary                    = message['summary']
-        @last_state                 = message['last_state']
-        @last_summary               = message['last_summary']
-        @details                    = message['details']
-        @time                       = message['time']
-        @entity_name, @check        = message['event_id'].split(':', 2)
+        @notification_type  = message['notification_type']
+        @contact_first_name = message['contact_first_name']
+        @contact_last_name  = message['contact_last_name']
+        @state              = message['state']
+        @duration           = message['state_duration']
+        @summary            = message['summary']
+        @last_state         = message['last_state']
+        @last_summary       = message['last_summary']
+        @details            = message['details']
+        @time               = message['time']
+        @entity_name        = message['entity']
+        @check              = message['check']
 
-        entity_check = Flapjack::Data::EntityCheck.for_event_id(message['event_id'])
+        entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => @entity_name, :name => @check).all.first
 
         @in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
         @in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?

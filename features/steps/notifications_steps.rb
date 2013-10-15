@@ -2,129 +2,158 @@
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 
-# copied from flapjack-populator
-# TODO use Flapjack::Data::Contact.add
-def add_contact(contact = {})
-  Flapjack.redis.multi
-  Flapjack.redis.del("contact:#{contact['id']}")
-  Flapjack.redis.del("contact_media:#{contact['id']}")
-  Flapjack.redis.hset("contact:#{contact['id']}", 'first_name', contact['first_name'])
-  Flapjack.redis.hset("contact:#{contact['id']}", 'last_name',  contact['last_name'])
-  Flapjack.redis.hset("contact:#{contact['id']}", 'email',      contact['email'])
-  contact['media'].each_pair {|medium, address|
-    Flapjack.redis.hset("contact_media:#{contact['id']}", medium, address)
+def find_or_create_contact(contact_data)
+  contact = Flapjack::Data::ContactR.find_by_id(contact_data['id'])
+  if contact.nil?
+    contact = Flapjack::Data::ContactR.new(:id => contact_data['id'],
+      :first_name => contact_data['first_name'],
+      :last_name => contact_data['last_name'],
+      :email => contact_data['email'])
+    contact.save.should be_true
+  end
+
+  contact_data['media'].each_pair {|type, address|
+    medium = Flapjack::Data::MediumR.new(:type => type, :address => address, :interval => 60)
+    medium.save.should be_true
+    contact.media << medium
   }
-  Flapjack.redis.exec
+
+  contact
 end
 
-Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ do |entity|
-  add_contact( 'id'         => '0999',
-               'first_name' => 'John',
-               'last_name'  => 'Smith',
-               'email'      => 'johns@example.dom',
-               'media'      => {'sms' => '+61888888888'} )
-  Flapjack::Data::Entity.add({'id'       => '5000',
-                              'name'     => entity,
-                              'contacts' => ["0999"]})
+def find_or_create_entity(entity_data)
+  entity = Flapjack::Data::EntityR.find_by_id(entity_data['id'])
+  if entity.nil?
+    entity = Flapjack::Data::EntityR.new(:id => entity_data['id'],
+      :name => entity_data['name'])
+    entity.save.should be_true
+
+    entity_check = Flapjack::Data::EntityCheckR.new(:entity_name => entity.name, :name => 'ping')
+    entity_check.save.should be_true
+
+    entity.checks << entity_check
+  end
+
+  entity
 end
 
-Given /^the user wants to receive email notifications for entity '([\w\.\-]+)'$/ do |entity|
-  add_contact( 'id'         => '0999',
-               'first_name' => 'John',
-               'last_name'  => 'Smith',
-               'email'      => 'johns@example.dom',
-               'media'      => {'email' => 'johns@example.dom'} )
-  Flapjack::Data::Entity.add({'id'       => '5000',
-                              'name'     => entity,
-                              'contacts' => ["0999"]})
+Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ do |entity_name|
+  contact = find_or_create_contact( 'id'         => '0999',
+                                    'first_name' => 'John',
+                                    'last_name'  => 'Smith',
+                                    'email'      => 'johns@example.dom',
+                                    'media'      => {'sms' => '+61888888888'} )
+  entity = find_or_create_entity('id'       => '5000',
+                                 'name'     => entity_name)
+  entity.contacts << contact
 end
 
-Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)' and email notifications for entity '([\w\.\-]+)'$/ do |entity1, entity2|
-  add_contact( 'id'         => '0998',
-               'first_name' => 'John',
-               'last_name'  => 'Smith',
-               'email'      => 'johns@example.dom',
-               'media'      => {'sms' => '+61888888888'} )
-  add_contact( 'id'         => '0999',
-               'first_name' => 'John',
-               'last_name'  => 'Smith',
-               'email'      => 'johns@example.dom',
-               'media'      => {'email'      => 'johns@example.dom'} )
-  Flapjack::Data::Entity.add({'id'       => '5000',
-                              'name'     => entity1,
-                              'contacts' => ["0998"]})
-  Flapjack::Data::Entity.add({'id'       => '5001',
-                              'name'     => entity2,
-                              'contacts' => ["0999"]})
+Given /^the user wants to receive email notifications for entity '([\w\.\-]+)'$/ do |entity_name|
+  contact = find_or_create_contact( 'id'         => '1000',
+                                    'first_name' => 'John',
+                                    'last_name'  => 'Smith',
+                                    'email'      => 'johns@example.dom',
+                                    'media'      => {'email' => 'johns@example.dom'} )
+
+  entity = find_or_create_entity('id'       => '5001',
+                                 'name'     => entity_name)
+  entity.contacts << contact
 end
 
 # TODO create the notification object in redis, flag the relevant operation as
 # only needing that part running, split up the before block that covers these
-When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity|
+When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_name|
+  timestamp = Time.now.to_i
+
   event = Flapjack::Data::Event.new('type'    => 'service',
                                     'state'   => 'critical',
                                     'summary' => '100% packet loss',
-                                    'entity'  => entity,
-                                    'check'   => 'ping')
+                                    'entity'  => entity_name,
+                                    'check'   => 'ping',
+                                    'time'    => timestamp)
 
-  notification_type = Flapjack::Data::Notification.type_for_event(event)
+  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name,
+    :name => 'ping').all.first
+  entity_check.should_not be_nil
+  entity_check.state = 'critical'
+  entity_check.last_update = timestamp
+  entity_check.save.should be_true
 
-  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, 'ping')
   max_notified_severity = entity_check.max_notified_severity_of_current_failure
+  severity = Flapjack::Data::NotificationR.severity_for_state(event.state,
+               max_notified_severity)
 
-  severity = Flapjack::Data::Notification.severity_for_event(event, max_notified_severity)
-  last_state = entity_check.historical_state_before(event.time)
+  current_state = entity_check.states.last
+  previous_state = entity_check.states.intersect_range(-2, -1).first
 
-  Flapjack::Data::Notification.push('notifications', event,
-    :type => notification_type, :severity => severity,
-    :last_state => last_state)
+  notification = Flapjack::Data::NotificationR.new(
+    :entity_check_id   => entity_check.id,
+    :state_id          => current_state.id,
+    :state_duration    => 0,
+    :previous_state_id => (previous_state ? previous_state.id : nil),
+    :severity          => severity,
+    :type              => event.notification_type,
+    :time              => event.time,
+    :duration          => event.duration,
+    :tags              => entity_check.tags,
+  )
+
+  Flapjack::Data::NotificationR.push('notifications', notification)
   drain_notifications
 end
 
-Then /^an SMS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
+Then /^an SMS notification for entity '([\w\.\-]+)' should be queued$/ do |entity_name|
   queue = redis_peek('sms_notifications')
-  queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }.should_not be_empty
+  queue.select {|n| n['entity'] =~ /#{entity_name}/ }.should_not be_empty
 end
 
-Then /^an email notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
+Then /^an email notification for entity '([\w\.\-]+)' should be queued$/ do |entity_name|
   queue = redis_peek('email_notifications')
-  queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }.should_not be_empty
+  queue.select {|n| n['entity'] =~ /#{entity_name}/ }.should_not be_empty
 end
 
-Then /^an SMS notification for entity '([\w\.\-]+)' should not be queued for the user$/ do |entity|
+Then /^an SMS notification for entity '([\w\.\-]+)' should not be queued$/ do |entity_name|
   queue = redis_peek('sms_notifications')
-  queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }.should be_empty
+  queue.select {|n| n['entity'] =~ /#{entity_name}/ }.should be_empty
 end
 
-Then /^an email notification for entity '([\w\.\-]+)' should not be queued for the user$/ do |entity|
+Then /^an email notification for entity '([\w\.\-]+)' should not be queued$/ do |entity_name|
   queue = redis_peek('email_notifications')
-  queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }.should be_empty
+  queue.select {|n| n['entity'] =~ /#{entity_name}/ }.should be_empty
 end
 
-Given /^a user SMS notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
-  Flapjack::Data::Entity.add({'id'   => '5000',
-                              'name' => entity})
+Given /^an SMS notification has been queued for entity '([\w\.\-]+)'$/ do |entity_name|
+  entity = find_or_create_entity('id'       => '5001',
+                                 'name'     => entity_name)
+
   @sms_notification = {'notification_type'  => 'problem',
                        'contact_first_name' => 'John',
                        'contact_last_name'  => 'Smith',
                        'state'              => 'CRITICAL',
                        'summary'            => 'Socket timeout after 10 seconds',
                        'time'               => Time.now.to_i,
-                       'event_id'           => "#{entity}:ping",
+                       'entity'             => entity_name,
+                       'check'              => "ping",
                        'address'            => '+61412345678',
                        'id'                 => 1}
 end
 
-Given /^a user email notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
-  Flapjack::Data::Entity.add({'id'   => '5001',
-                              'name' => entity})
+Given /^an email notification has been queued for entity '([\w\.\-]+)'$/ do |entity_name|
+  entity = find_or_create_entity('id'       => '5001',
+                                 'name'     => entity_name)
+
+  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name,
+    :name => 'ping').all.first
+  entity_check.should_not be_nil
+
   @email_notification = {'notification_type'  => 'problem',
                          'contact_first_name' => 'John',
                          'contact_last_name'  => 'Smith',
                          'state'              => 'CRITICAL',
                          'summary'            => 'Socket timeout after 10 seconds',
                          'time'               => Time.now.to_i,
-                         'event_id'           => "#{entity}:ping",
+                         'entity'             => entity_name,
+                         'check'              => "ping",
                          'address'            => 'johns@example.dom',
                          'id'                 => 2}
 end

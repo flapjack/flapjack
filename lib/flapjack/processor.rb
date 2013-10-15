@@ -259,18 +259,18 @@ module Flapjack
                    max_notified_severity)
 
       notification = Flapjack::Data::NotificationR.new(
+        :entity_check_id   => entity_check.id,
         :state_id          => current_state.id,
         :state_duration    => (timestamp - current_state.timestamp.to_i),
         :previous_state_id => (previous_state ? previous_state.id : nil),
         :severity          => severity,
+        :type              => event.notification_type,
         :time              => event.time,
         :duration          => event.duration,
         :tags              => entity_check.tags,
       )
 
-      if notification.valid?
-        Flapjack::Data::NotificationR.push(@notifier_queue, notification)
-      end
+      Flapjack::Data::NotificationR.push(@notifier_queue, notification)
     end
 
   end

@@ -70,6 +70,7 @@ Feature: Notification rules on a per contact basis
   Scenario: Alerts only during specified time restrictions
     Given the timezone is Asia/Baghdad
     And   the time is February 1 2013 6:59
+    And   an entity 'foo' exists
     And   the check is check 'ping' on entity 'foo'
     And   the check is in an ok state
     And   a critical event is received
@@ -79,6 +80,7 @@ Feature: Notification rules on a per contact basis
     Then  no email alerts should be queued for malak@example.com
     And   the time is February 1 2013 8:01
     And   a critical event is received
+    Then  show me the amazing log
     Then  1 email alert should be queued for malak@example.com
     When  the time is February 1 2013 12:00
     Then  all alert dropping keys for user 1 should have expired
@@ -97,7 +99,8 @@ Feature: Notification rules on a per contact basis
 
   @severity @time
   Scenario: Don't alert when media,severity does not match any matching rule's severity's media
-    Given the check is check 'ping' on entity 'bar'
+    Given an entity 'bar' exists
+    And   the check is check 'ping' on entity 'bar'
     And   the check is in an ok state
     When  a warning event is received
     And   60 minutes passes

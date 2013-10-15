@@ -135,6 +135,27 @@ module Flapjack
         @type.downcase
       end
 
+      def notification_type
+        case type
+        when 'service'
+          case state
+          when 'ok'
+            'recovery'
+          when 'warning', 'critical', 'unknown'
+            'problem'
+          end
+        when 'action'
+          case state
+          when 'acknowledgement'
+            'acknowledgement'
+          when 'test_notifications'
+            'test'
+          end
+        else
+          'unknown'
+        end
+      end
+
       def service?
         type == 'service'
       end
