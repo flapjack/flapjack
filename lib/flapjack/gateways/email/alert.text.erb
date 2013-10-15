@@ -4,7 +4,7 @@ Monitoring has detected the following:
 
 Entity:           <%= @entity_name %>
 Check:            <%= @check %>
-State:            <%= @state.upcase %>
+State:            <%= ['ok'].include?(@state) ? @state.upcase : @state.titleize %>
 Summary:          <%= @summary %>
 <% if @details -%>
 Details:          <%= @details %>
@@ -16,7 +16,7 @@ Time:             <%= Time.at(@time.to_i).to_s %>
 Duration:         <%= ChronicDuration.output(@duration) %>
 <% end -%>
 <% if @last_state -%>
-Previous State:   <%= @last_state.upcase %>
+Previous State:   <%= ['ok'].include?(@last_state) ? @last_state.upcase : @last_state.titleize %>
 <% end -%>
 <% if @last_summary -%>
 Previous Summary: <%= @last_summary %>

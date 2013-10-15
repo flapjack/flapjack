@@ -4,6 +4,7 @@ require 'mail'
 require 'erb'
 require 'socket'
 require 'chronic_duration'
+require 'active_support/inflector'
 
 require 'em-synchrony'
 require 'em/protocols/smtpclient'
@@ -62,15 +63,6 @@ module Flapjack
 
           @in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
           @in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
-
-          headline_map = {'problem'         => 'Problem: ',
-                          'recovery'        => 'Recovery: ',
-                          'acknowledgement' => 'Acknowledgement: ',
-                          'test'            => 'Test Notification: ',
-                          'unknown'         => ''
-                         }
-
-          @headline = headline_map[@notification_type] || ''
 
         rescue => e
           @logger.error "Error preparing email to #{m_to}: #{e.class}: #{e.message}"

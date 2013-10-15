@@ -6,14 +6,14 @@
   end
   states_summary = ['critical', 'warning', 'unknown'].inject([]) do |memo, state|
     next memo unless state_counts[state]
-    memo << "#{state.upcase}: #{state_counts[state]}"
+    memo << "#{state.titleize}: #{state_counts[state]}"
     memo
   end.join(', ')
 -%>
 <% case @rollup -%>
 <% when "problem" -%>
-<%=  "Problem Rollup: " -%>
+<%=  "Problem summary: " -%>
 <% when "recovery" -%>
-<%=  "End Problem Rollup: " -%>
+<%=  "Problem summaries finishing: " -%>
 <% end -%>
 <%= states_summary -%>

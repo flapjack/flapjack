@@ -1,0 +1,32 @@
+<%
+  state_counts = @rollup_alerts.inject({}) do |memo, alert|
+    memo[alert[1]['state']] = (memo[alert[1]['state']] || 0) + 1
+    memo
+  end
+  states_summary = ['critical', 'warning', 'unknown'].inject([]) do |memo, state|
+    next memo unless state_counts[state]
+    memo << "#{state.titleize}: #{state_counts[state]}"
+    memo
+  end.join(', ')
+  # FIXME: I'm coding like a tired person here...
+  states_detail = ['critical', 'warning', 'unknown'].inject([]) do |memo, state|
+    next memo unless @rollup_alerts.inject([]) do |memo2, alert|
+      memo2 << 'i am going to hell' if alert[1]['state'] == state
+      memo2
+    end.length > 0
+    memo << "#{state.titleize}: " + @rollup_alerts.inject([]) do |memo3, alert|
+      next memo3 unless alert[1]['state'] == state
+      entity, check = alert[0].split(':', 2)
+      memo3 << "'#{check}' on #{entity}"
+      memo3
+    end.join(', ')
+    memo
+  end.join('; ')
+-%>
+<% case @rollup -%>
+<% when "problem" -%>
+<%=  "Problem summary: " -%>
+<% when "recovery" -%>
+<%=  "Problem summaries finishing: " -%>
+<% end -%>
+<%= states_summary %> (<%= states_detail -%>)

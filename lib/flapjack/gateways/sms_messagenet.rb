@@ -2,6 +2,7 @@
 
 require 'em-synchrony'
 require 'em-synchrony/em-http'
+require 'active_support/inflector'
 
 module Flapjack
   module Gateways
@@ -18,27 +19,32 @@ module Flapjack
         def perform(notification)
           @logger.debug "Woo, got a notification to send out: #{notification.inspect}"
 
-          notification_type  = notification['notification_type']
-          contact_first_name = notification['contact_first_name']
-          contact_last_name  = notification['contact_last_name']
-          state              = notification['state']
-          summary            = notification['summary']
-          time               = notification['time']
-          entity, check      = notification['event_id'].split(':', 2)
+          endpoint = @config["endpoint"] || MESSAGENET_DEFAULT_URL
+          username = @config["username"]
+          password = @config["password"]
 
-          headline_map = {'problem'         => 'PROBLEM: ',
-                          'recovery'        => 'RECOVERY: ',
-                          'acknowledgement' => 'ACK: ',
-                          'test'            => 'TEST NOTIFICATION: ',
-                          'unknown'         => '',
-                          ''                => '',
-                         }
+          @notification_type   = notification['notification_type']
+          @rollup              = notification['rollup']
+          @rollup_alerts       = notification['rollup_alerts']
+          @state               = notification['state']
+          @summary             = notification['summary']
+          @time                = notification['time']
+          @entity_name, @check = notification['event_id'].split(':', 2)
+          address              = notification['address']
+          notification_id      = notification['id']
 
-          headline = headline_map[notification_type] || ''
+          message_type = case
+          when @rollup
+            'rollup'
+          else
+            'alert'
+          end
 
-          message = "#{headline}'#{check}' on #{entity}"
-          message += " is #{state.upcase}" unless ['acknowledgement', 'test'].include?(notification_type)
-          message += " at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
+          sms_template = ERB.new(File.read(File.dirname(__FILE__) +
+            "/sms_messagenet/#{message_type}.erb"), nil, '-')
+
+          bnd     = binding
+          message = sms_template.result(bnd).chomp
 
           # TODO log error and skip instead of raising errors
           if @config.nil? || (@config.respond_to?(:empty?) && @config.empty?)
@@ -48,12 +54,7 @@ module Flapjack
 
           errors = []
 
-          endpoint = @config["endpoint"] || MESSAGENET_DEFAULT_URL
-          username = @config["username"]
-          password = @config["password"]
-          address  = notification['address']
           safe_message = truncate(message, 159)
-          notification_id = notification['id']
 
           [[username, "Messagenet username is missing"],
            [password, "Messagenet password is missing"],

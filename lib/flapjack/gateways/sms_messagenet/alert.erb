@@ -4,7 +4,7 @@
 <% when "recovery" -%>
 <%=  "Recovery: " -%>
 <% when "acknowledgement" -%>
-<%=  "Acknowledgement: " -%>
+<%=  "Ack: " -%>
 <% when "test" -%>
 <%=  "Test notification: " -%>
 <% end -%>
@@ -12,3 +12,4 @@
 <% if ! ['acknowledgement', 'test'].include?(@notification_type) -%>
  is <%= ['ok'].include?(@state) ? @state.upcase : @state.titleize -%>
 <% end -%>
+ at <%= Time.at(@time).strftime('%-d %b %H:%M') %>, <%= @summary -%>
