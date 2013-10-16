@@ -41,7 +41,7 @@ module Flapjack
           end
 
           sms_template = ERB.new(File.read(File.dirname(__FILE__) +
-            "/sms_messagenet/#{message_type}.erb"), nil, '-')
+            "/sms_messagenet/#{message_type}.text.erb"), nil, '-')
 
           bnd     = binding
           message = sms_template.result(bnd).chomp

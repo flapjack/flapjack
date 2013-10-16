@@ -19,7 +19,7 @@ module Flapjack
       attr_accessor :id, :first_name, :last_name, :email, :media, :media_intervals, :media_rollup_thresholds, :pagerduty_credentials
 
       TAG_PREFIX = 'contact_tag'
-      ALL_MEDIAS = ['email', 'sms', 'jabber', 'pagerduty']
+      ALL_MEDIA  = ['email', 'sms', 'jabber', 'pagerduty']
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
@@ -180,8 +180,8 @@ module Flapjack
               :entities           => [],
               :tags               => Flapjack::Data::TagSet.new([]),
               :time_restrictions  => [],
-              :warning_media      => ALL_MEDIAS,
-              :critical_media     => ALL_MEDIAS,
+              :warning_media      => ALL_MEDIA,
+              :critical_media     => ALL_MEDIA,
               :warning_blackhole  => false,
               :critical_blackhole => false,
             }, :logger => opts[:logger])

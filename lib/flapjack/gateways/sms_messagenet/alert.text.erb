@@ -9,7 +9,7 @@
 <%=  "Test notification: " -%>
 <% end -%>
 '<%= @check %>' on <%= @entity_name -%>
-<% if ! ['acknowledgement', 'test'].include?(@notification_type) -%>
+<% unless ['acknowledgement', 'test'].include?(@notification_type) -%>
  is <%= ['ok'].include?(@state) ? @state.upcase : @state.titleize -%>
 <% end -%>
  at <%= Time.at(@time).strftime('%-d %b %H:%M') %>, <%= @summary -%>

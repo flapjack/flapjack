@@ -136,7 +136,7 @@ module Flapjack
           end
 
           subject_template = ERB.new(File.read(File.dirname(__FILE__) +
-            "/email/#{message_type}.subject.erb"), nil, '-')
+            "/email/#{message_type}_subject.text.erb"), nil, '-')
 
           text_template = ERB.new(File.read(File.dirname(__FILE__) +
             "/email/#{message_type}.text.erb"), nil, '-')
