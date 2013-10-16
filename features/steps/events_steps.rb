@@ -22,7 +22,7 @@ def submit_event(event)
   @redis.rpush 'events', event.to_json
 end
 
-def set_scheduled_maintenance(entity, check, duration = 60*60*2)
+def set_scheduled_maintenance(entity, check, duration)
   entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
   t = Time.now.to_i
   entity_check.create_scheduled_maintenance(t, duration, :summary => "upgrading everything")
@@ -200,11 +200,12 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in a criti
   set_critical_state(entity, check)
 end
 
-Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in scheduled maintenance$/ do |check, entity|
+Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in scheduled maintenance(?: for (.+))?$/ do |check, entity, duration|
   check  ||= @check
   entity ||= @entity
+  durn = duration ? ChronicDuration.parse(duration) : 60*60*2
   remove_unscheduled_maintenance(entity, check)
-  set_scheduled_maintenance(entity, check)
+  set_scheduled_maintenance(entity, check, durn)
 end
 
 # TODO set the state directly rather than submit & drain
@@ -345,6 +346,14 @@ Given /^user (\d+) has the following notification intervals:$/ do |contact_id, i
   end
 end
 
+Given /^user (\d+) has the following notification rollup thresholds:$/ do |contact_id, rollup_thresholds|
+  contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
+  rollup_thresholds.hashes.each do |rollup_threshold|
+    contact.set_rollup_threshold_for_media('email', rollup_threshold['email'].to_i)
+    contact.set_rollup_threshold_for_media('sms',   rollup_threshold['sms'].to_i)
+  end
+end
+
 Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules|
   contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
   timezone = contact.timezone
@@ -395,24 +404,25 @@ Then /^all alert dropping keys for user (\d+) should have expired$/ do |contact_
   @redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
 end
 
-Then /^(.*) email alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
+Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))? should be queued for (.*)$/ do |num_queued, media, notification_type, rollup, address|
   check  = check  ? check  : @check
   entity = entity ? entity : @entity
   case num_queued
   when 'no'
     num_queued = 0
   end
-  queue  = Resque.peek('email_notifications', 0, 30)
-  queue.find_all {|n| n['args'].first['address'] == address }.length.should == num_queued.to_i
+  queue = Resque.peek("#{media}_notifications", 0, 30)
+  queue.find_all {|n|
+    type_ok = notification_type ? ( n['args'].first['notification_type'] == notification_type ) : true
+    rollup_ok = true
+    if rollup
+      if rollup == 'none'
+        rollup_ok = n['args'].first['rollup'].nil?
+      else
+        rollup_ok = n['args'].first['rollup'] == rollup
+      end
+    end
+    type_ok && rollup_ok && ( n['args'].first['address'] == address )
+  }.length.should == num_queued.to_i
 end
 
-Then /^(.*) sms alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
-  case num_queued
-  when 'no'
-    num_queued = 0
-  end
-  queue  = Resque.peek('sms_notifications', 0, 30)
-  queue.find_all {|n| n['args'].first['address'] == address }.length.should == num_queued.to_i
-end

@@ -90,10 +90,10 @@ module Flapjack
     def process_notification(notification)
       @logger.debug ("Processing notification: #{notification.inspect}")
 
-      timestamp = Time.now
-      event_id = notification.event_id
+      timestamp    = Time.now
+      event_id     = notification.event_id
       entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
-      contacts = entity_check.contacts
+      contacts     = entity_check.contacts
 
       if contacts.empty?
         @logger.debug("No contacts for #{event_id}")
@@ -111,6 +111,19 @@ module Flapjack
         address    = message.address
         contents   = message.contents.merge(notification_contents)
 
+        if message.rollup
+          contents['rollup_alerts'] = message.contact.alerting_checks_for_media(media_type).inject({}) do |memo, alert|
+            ec = Flapjack::Data::EntityCheck.for_event_id(alert, :redis => @redis)
+            last_change = ec.last_change
+            memo[alert] = {
+              'duration' => last_change ? (Time.now.to_i - last_change) : nil,
+              'state'    => ec.state
+            }
+            memo
+          end
+          contents['rollup_threshold'] = message.contact.rollup_threshold_for_media(media_type)
+        end
+
         @notifylog.info("#{event_id} | " +
           "#{notification.type} | #{message.contact.id} | #{media_type} | #{address}")
 
@@ -119,7 +132,7 @@ module Flapjack
           return
         end
 
-        @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{address}")
+        @logger.info("Enqueueing #{media_type} alert for #{event_id} to #{address} type: #{notification.type} rollup: #{message.rollup || '-'}")
 
         contact = message.contact
 

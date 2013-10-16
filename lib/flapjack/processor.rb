@@ -178,7 +178,7 @@ module Flapjack
       # FIXME: create an event if there is dodgy data
 
       case event.type
-      # Service events represent changes in state on monitored systems
+      # Service events represent current state of checks on monitored systems
       when 'service'
         @redis.multi
         if event.ok?

@@ -7,7 +7,7 @@ describe Flapjack::Processor, :logger => true do
   # NB: this is only testing the public API of the Processor class, which is pretty limited.
   # (initialize, main, stop). Most test coverage for this class comes from the cucumber features.
 
-  let(:config) { mock(Flapjack::Configuration) }
+  let(:config) { double(Flapjack::Configuration) }
 
   # TODO this does too much -- split it up
   it "starts up, runs and shuts down" do
@@ -19,7 +19,7 @@ describe Flapjack::Processor, :logger => true do
     Flapjack::Filters::Delays.should_receive(:new)
     Flapjack::Filters::Acknowledgement.should_receive(:new)
 
-    redis = mock('redis')
+    redis = double('redis')
 
     redis.should_receive(:hset).with(/^executive_instance:/, "boot_time", anything)
     redis.should_receive(:hget).with('event_counters', 'all').and_return(nil)
@@ -43,11 +43,11 @@ describe Flapjack::Processor, :logger => true do
 
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
 
-    fc = mock('coordinator')
+    fc = double('coordinator')
 
     executive = Flapjack::Processor.new(:config => {}, :logger => @logger, :coordinator => fc)
 
-    noop_evt = mock(Flapjack::Data::Event)
+    noop_evt = double(Flapjack::Data::Event)
     noop_evt.should_receive(:inspect)
     noop_evt.should_receive(:type).and_return('noop')
     Flapjack::Data::Event.should_receive(:next) {

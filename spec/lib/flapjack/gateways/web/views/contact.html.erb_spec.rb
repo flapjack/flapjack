@@ -3,12 +3,12 @@ require 'spec_helper'
 describe 'web/views/contact.html.erb', :erb_view => true do
 
   it "should escape unsafe check characters in URI parameters" do
-    @contact = mock('contact')
+    @contact = double('contact')
     @contact.should_receive(:media)
     @contact.should_receive(:name).twice.and_return('Aeschylus')
     @contact.should_receive(:notification_rules)
 
-    entity = mock('entity')
+    entity = double('entity')
     entity.should_receive(:name).exactly(3).times.and_return('abc-xyz-01')
 
     checks = ['Disk / Utilisation']

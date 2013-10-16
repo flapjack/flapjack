@@ -13,6 +13,10 @@ if ENV['COVERAGE']
   SimpleCov.start do
     add_filter '/features/'
   end
+  SimpleCov.at_exit do
+    Oj.default_options = { :mode => :compat }
+    SimpleCov.result.format!
+  end
 end
 
 ENV["FLAPJACK_ENV"] = 'test'
@@ -24,6 +28,11 @@ require 'pathname'
 
 require 'webmock/cucumber'
 WebMock.disable_net_connect!
+
+require 'oj'
+Oj.mimic_JSON
+Oj.default_options = { :indent => 0, :mode => :strict }
+require 'active_support/json'
 
 require 'flapjack/notifier'
 require 'flapjack/processor'
@@ -82,11 +91,11 @@ EXPIRE_AS_IF_AT
   end
 
   def self.time_travel_to(dest_time)
-    # puts "travelling to #{Time.now.in_time_zone}, real time is #{Time.now_without_delorean.in_time_zone}"
+    #puts "travelling to #{Time.now.in_time_zone}, real time is #{Time.now_without_delorean.in_time_zone}"
     old_maybe_fake_time = Time.now.in_time_zone
 
     Delorean.time_travel_to(dest_time)
-    # puts "travelled to #{Time.now.in_time_zone}, real time is #{Time.now_without_delorean.in_time_zone}"
+    #puts "travelled to #{Time.now.in_time_zone}, real time is #{Time.now_without_delorean.in_time_zone}"
     return if dest_time < old_maybe_fake_time
 
     # dumps the first offset -- we're not interested in time difference from
@@ -99,11 +108,11 @@ EXPIRE_AS_IF_AT
     delta = -offsets.inject(0){ |sum, val| sum + val }.floor
 
     real_time = Time.now_without_delorean.to_i
-    # puts "delta #{delta}, expire before real time #{Time.at(real_time + delta)}"
+    #puts "delta #{delta}, expire before real time #{Time.at(real_time + delta)}"
 
     result = @redis.evalsha(@expire_as_if_at_sha, ['*'],
                [real_time, real_time + delta])
-    # puts "Expired #{result} key#{(result == 1) ? '' : 's'}"
+    #puts "Expired #{result} key#{(result == 1) ? '' : 's'}"
   end
 
 end
@@ -181,3 +190,5 @@ After('@process') do
     File.unlink(file)
   end
 end
+
+

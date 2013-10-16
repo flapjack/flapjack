@@ -3,12 +3,12 @@ require 'flapjack/pikelet'
 
 describe Flapjack::Pikelet do
 
-  let(:config) { mock('config') }
-  let(:redis_config) { mock('redis_config') }
+  let(:config) { double('config') }
+  let(:redis_config) { double('redis_config') }
 
-  let(:logger) { mock(Flapjack::Logger) }
+  let(:logger) { double(Flapjack::Logger) }
 
-  let(:fiber) { mock(Fiber) }
+  let(:fiber) { double(Fiber) }
 
   let(:time) { Time.now }
 
@@ -21,9 +21,9 @@ describe Flapjack::Pikelet do
 
     config.should_receive(:[]).with('logger').and_return(nil)
 
-    fc = mock('coordinator')
+    fc = double('coordinator')
 
-    processor = mock('processor')
+    processor = double('processor')
     processor.should_receive(:start)
     Flapjack::Processor.should_receive(:new).with(:config => config,
         :redis_config => redis_config, :boot_time => time, :logger => logger, :coordinator => fc).
@@ -44,8 +44,8 @@ describe Flapjack::Pikelet do
     config.should_receive(:[]).with('logger').and_return(nil)
     config.should_receive(:[]).with('queue').and_return('email_notif')
 
-    resque_redis = mock('resque_redis')
-    redis = mock('redis')
+    resque_redis = double('resque_redis')
+    redis = double('redis')
     Flapjack::RedisPool.should_receive(:new).twice.and_return(resque_redis, redis)
     Resque.should_receive(:redis=).with(resque_redis)
 
@@ -56,7 +56,7 @@ describe Flapjack::Pikelet do
     Flapjack::Gateways::Email.should_receive(:instance_variable_set).
       with('@logger', logger)
 
-    worker = mock('worker')
+    worker = double('worker')
     worker.should_receive(:work).with(0.1)
     Flapjack::Gateways::Email.should_receive(:start)
     EM::Resque::Worker.should_receive(:new).with('email_notif').and_return(worker)
@@ -77,7 +77,7 @@ describe Flapjack::Pikelet do
     config.should_receive(:[]).with('port').and_return(7654)
     config.should_receive(:[]).with('timeout').and_return(90)
 
-    server = mock('server')
+    server = double('server')
     server.should_receive(:timeout=).with(90)
     server.should_receive(:start)
     Thin::Server.should_receive(:new).

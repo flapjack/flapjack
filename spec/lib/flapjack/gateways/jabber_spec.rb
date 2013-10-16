@@ -13,7 +13,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
                  }
   }
 
-  let(:stanza) { mock('stanza') }
+  let(:stanza) { double('stanza') }
 
   it "hooks up event handlers to the appropriate methods" do
     Socket.should_receive(:gethostname).and_return('thismachine')
@@ -53,15 +53,15 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
   it "receives an acknowledgement message" do
     stanza.should_receive(:body).and_return('flapjack: ACKID 876 fixing now duration: 90m')
-    from = mock('from')
+    from = double('from')
     from.should_receive(:stripped).and_return('sender')
     stanza.should_receive(:from).and_return(from)
 
-    redis = mock('redis')
+    redis = double('redis')
     redis.should_receive(:hget).with('unacknowledged_failures', '876').
       and_return('main-example.com:ping')
 
-    entity_check = mock(Flapjack::Data::EntityCheck)
+    entity_check = double(Flapjack::Data::EntityCheck)
     entity_check.should_receive(:in_unscheduled_maintenance?)
 
     Flapjack::Data::Event.should_receive(:create_acknowledgement).
@@ -88,18 +88,18 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       and_return('flapjack: tell me about <span style="text-decoration: underline;">' +
                  '<a href="http://example.org/">example.org</a></span>')
 
-    from = mock('from')
+    from = double('from')
     from.should_receive(:stripped).and_return('sender')
     stanza.should_receive(:from).and_return(from)
 
-    redis = mock('redis')
-    entity = mock(Flapjack::Data::Entity)
+    redis = double('redis')
+    entity = double(Flapjack::Data::Entity)
     entity.should_receive(:check_list).and_return(['ping'])
 
     Flapjack::Data::Entity.should_receive(:find_by_name).with('example.org',
       :redis => redis).and_return(entity)
 
-    entity_check = mock(Flapjack::Data::EntityCheck)
+    entity_check = double(Flapjack::Data::EntityCheck)
     entity_check.should_receive(:current_maintenance).with(:scheduled => true).and_return(nil)
     entity_check.should_receive(:current_maintenance).with(:unscheduled => true).and_return(nil)
 
@@ -118,7 +118,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
   it "receives a message it doesn't understand" do
     stanza.should_receive(:body).once.and_return('flapjack: hello!')
-    from = mock('from')
+    from = double('from')
     from.should_receive(:stripped).and_return('sender')
     stanza.should_receive(:from).and_return(from)
 
@@ -150,11 +150,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   end
 
   it "prompts the blocking redis connection to quit" do
-    shutdown_redis = mock('shutdown_redis')
+    shutdown_redis = double('shutdown_redis')
     shutdown_redis.should_receive(:rpush).with('jabber_notifications', %q{{"notification_type":"shutdown"}})
     EM::Hiredis.should_receive(:connect).and_return(shutdown_redis)
 
-    redis = mock('redis')
+    redis = double('redis')
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)
 
@@ -162,11 +162,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   end
 
   it "runs a blocking loop listening for notifications" do
-    timer = mock('timer')
+    timer = double('timer')
     timer.should_receive(:cancel)
     EM::Synchrony.should_receive(:add_periodic_timer).with(1).and_return(timer)
 
-    redis = mock('redis')
+    redis = double('redis')
 
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fj = Flapjack::Gateways::Jabber.new(:config => config, :logger => @logger)

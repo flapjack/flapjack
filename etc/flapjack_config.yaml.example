@@ -14,7 +14,7 @@ development:
     notifier_queue: notifications
     archive_events: true
     events_archive_maxage: 10800
-    new_check_scheduled_maintenance_duration: 1 month
+    new_check_scheduled_maintenance_duration: 100 years
     logger:
       level: INFO
   notifier:
@@ -28,19 +28,6 @@ development:
     default_contact_timezone: Australia/Broken_Hill
     logger:
       level: INFO
-  executive:
-    enabled: yes
-    email_queue: email_notifications
-    sms_queue: sms_notifications
-    jabber_queue: jabber_notifications
-    pagerduty_queue: pagerduty_notifications
-    notification_log_file: log/notification.log
-    default_contact_timezone: Australia/Broken_Hill
-    archive_events: true
-    events_archive_maxage: 10800
-    new_check_scheduled_maintenance_duration: 1 month
-    logger:
-      level: INFO
   gateways:
     email:
       enabled: yes
@@ -48,17 +35,18 @@ development:
       logger:
         level: INFO
       smtp_config:
-        port: 2525
-        # address: "localhost"
-        # port: 25
-        # domain: 'localhost.localdomain'
-        # user_name: nil
-        # password: nil
-        # authentication: nil
-        # enable_starttls_auto: true
+        # port 1025 is the default port for http://mailcatcher.me
+        host: 127.0.0.1
+        port: 1025
+        starttls: false
+        #auth:
+        #  type:
+        #  username:
+        #  password:
     sms:
-      enabled: yes
+      enabled: no
       queue: sms_notifications
+      endpoint: 'https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage'
       username: "ermahgerd"
       password: "xxxx"
       logger:
@@ -94,7 +82,7 @@ development:
       logger:
         level: INFO
     pagerduty:
-      enabled: yes
+      enabled: no
       queue: pagerduty_notifications
       logger:
         level: INFO

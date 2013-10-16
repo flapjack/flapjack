@@ -3,11 +3,11 @@ require 'flapjack/data/notification'
 
 describe Flapjack::Data::Notification, :redis => true, :logger => true do
 
-  let(:event)   { mock(Flapjack::Data::Event) }
+  let(:event)   { double(Flapjack::Data::Event) }
 
-  let(:contact) { mock(Flapjack::Data::Contact) }
+  let(:contact) { double(Flapjack::Data::Contact) }
 
-  let(:timezone) { mock('timezone') }
+  let(:timezone) { double('timezone') }
 
   it "generates a notification for an event" # do
   #   notification = Flapjack::Data::Notification.for_event(event, :type => 'problem',
@@ -27,6 +27,14 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
     contact.should_receive(:notification_rules).and_return([])
     contact.should_receive(:media).and_return('email' => 'example@example.com',
                                               'sms'   => '0123456789')
+    contact.should_receive(:add_alerting_check_for_media).with("email", nil)
+    contact.should_receive(:add_alerting_check_for_media).with("sms", nil)
+    contact.should_receive(:clean_alerting_checks_for_media).with("email").and_return(0)
+    contact.should_receive(:clean_alerting_checks_for_media).with("sms").and_return(0)
+    contact.should_receive(:count_alerting_checks_for_media).with("email").and_return(0)
+    contact.should_receive(:count_alerting_checks_for_media).with("sms").and_return(0)
+    contact.should_receive(:rollup_threshold_for_media).with("email").and_return(nil)
+    contact.should_receive(:rollup_threshold_for_media).with("sms").and_return(nil)
 
     messages = notification.messages([contact], :default_timezone => timezone,
       :logger => @logger)

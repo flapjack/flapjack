@@ -8,7 +8,7 @@ describe Flapjack::RedisPool do
       redis_count = 3
 
       redis_conns = redis_count.times.collect {
-        redis = mock('redis')
+        redis = double('redis')
         redis
       }
       ::Redis.should_receive(:new).exactly(redis_count).times.and_return(*redis_conns)

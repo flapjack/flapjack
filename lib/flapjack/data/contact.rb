@@ -16,9 +16,10 @@ module Flapjack
 
     class Contact
 
-      attr_accessor :id, :first_name, :last_name, :email, :media, :media_intervals, :pagerduty_credentials
+      attr_accessor :id, :first_name, :last_name, :email, :media, :media_intervals, :media_rollup_thresholds, :pagerduty_credentials
 
       TAG_PREFIX = 'contact_tag'
+      ALL_MEDIA  = ['email', 'sms', 'jabber', 'pagerduty']
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
@@ -40,7 +41,7 @@ module Flapjack
         # sanity check
         return unless redis.hexists("contact:#{contact_id}", 'first_name')
 
-        contact = self.new(:id => contact_id, :redis => redis)
+        contact = self.new(:id => contact_id, :redis => redis, :logger => logger)
         contact.refresh
         contact
       end
@@ -77,6 +78,7 @@ module Flapjack
           @redis.hmget("contact:#{@id}", 'first_name', 'last_name', 'email')
         self.media = @redis.hgetall("contact_media:#{@id}")
         self.media_intervals = @redis.hgetall("contact_media_intervals:#{self.id}")
+        self.media_rollup_thresholds = @redis.hgetall("contact_media_rollup_thresholds:#{self.id}")
 
         # similar to code in instance method pagerduty_credentials
         if service_key = @redis.hget("contact_media:#{@id}", 'pagerduty')
@@ -117,6 +119,7 @@ module Flapjack
 
         @redis.del("contact:#{self.id}", "contact_media:#{self.id}",
                    "contact_media_intervals:#{self.id}",
+                   "contact_media_rollup_thresholds:#{self.id}",
                    "contact_tz:#{self.id}", "contact_pagerduty:#{self.id}")
       end
 
@@ -177,8 +180,8 @@ module Flapjack
               :entities           => [],
               :tags               => Flapjack::Data::TagSet.new([]),
               :time_restrictions  => [],
-              :warning_media      => ['email', 'sms', 'jabber', 'pagerduty'],
-              :critical_media     => ['email', 'sms', 'jabber', 'pagerduty'],
+              :warning_media      => ALL_MEDIA,
+              :critical_media     => ALL_MEDIA,
               :warning_blackhole  => false,
               :critical_blackhole => false,
             }, :logger => opts[:logger])
@@ -216,6 +219,20 @@ module Flapjack
         self.media_intervals = @redis.hgetall("contact_media_intervals:#{self.id}")
       end
 
+      def rollup_threshold_for_media(media)
+        threshold = @redis.hget("contact_media_rollup_thresholds:#{self.id}", media)
+        (threshold.nil? || (threshold.to_i <= 0 )) ? nil : threshold.to_i
+      end
+
+      def set_rollup_threshold_for_media(media, threshold)
+        if threshold.nil?
+          @redis.hdel("contact_media_rollup_thresholds:#{self.id}", media)
+          return
+        end
+        @redis.hset("contact_media_rollup_thresholds:#{self.id}", media, threshold)
+        self.media_rollup_thresholds = @redis.hgetall("contact_media_rollup_thresholds:#{self.id}")
+      end
+
       def set_address_for_media(media, address)
         @redis.hset("contact_media:#{self.id}", media, address)
         if media == 'pagerduty'
@@ -229,6 +246,7 @@ module Flapjack
       def remove_media(media)
         @redis.hdel("contact_media:#{self.id}", media)
         @redis.hdel("contact_media_intervals:#{self.id}", media)
+        @redis.hdel("contact_media_rollup_thresholds:#{self.id}", media)
         if media == 'pagerduty'
           @redis.del("contact_pagerduty:#{self.id}")
         end
@@ -260,7 +278,57 @@ module Flapjack
         else
           @redis.set(key, 'd')
           @redis.expire(key, self.interval_for_media(media))
+          # TODO: #182 - update the alert history keys
         end
+      end
+
+      def drop_rollup_notifications_for_media?(media)
+        @redis.exists("drop_rollup_alerts_for_contact:#{self.id}:#{media}")
+      end
+
+      def update_sent_rollup_alert_keys_for_media(media, opts = {})
+        delete = !! opts[:delete]
+        key = "drop_rollup_alerts_for_contact:#{self.id}:#{media}"
+        if delete
+          @redis.del(key)
+        else
+          @redis.set(key, 'd')
+          @redis.expire(key, self.interval_for_media(media))
+        end
+      end
+
+      def add_alerting_check_for_media(media, check)
+        @redis.zadd("contact_alerting_checks:#{self.id}:media:#{media}", Time.now.to_i, check)
+      end
+
+      def remove_alerting_check_for_media(media, check)
+        @redis.zrem("contact_alerting_checks:#{self.id}:media:#{media}", check)
+      end
+
+      # removes any checks that are in ok, scheduled or unscheduled maintenance
+      # from the alerting checks set for the given media
+      # returns the number of checks removed
+      def clean_alerting_checks_for_media(media)
+        key = "contact_alerting_checks:#{self.id}:media:#{media}"
+        cleaned = 0
+        alerting_checks_for_media(media).each do |check|
+          next unless Flapjack::Data::EntityCheck.state_for_event_id?(check, :redis => @redis) == 'ok' ||
+            Flapjack::Data::EntityCheck.in_unscheduled_maintenance_for_event_id?(check, :redis => @redis) ||
+            Flapjack::Data::EntityCheck.in_scheduled_maintenance_for_event_id?(check, :redis => @redis)
+
+          @logger.debug("removing from alerting checks for #{self.id}/#{media}: #{check}") if @logger
+          remove_alerting_check_for_media(media, check)
+          cleaned += 1
+        end
+        cleaned
+      end
+
+      def alerting_checks_for_media(media)
+        @redis.zrange("contact_alerting_checks:#{self.id}:media:#{media}", 0, -1)
+      end
+
+      def count_alerting_checks_for_media(media)
+        @redis.zcard("contact_alerting_checks:#{self.id}:media:#{media}")
       end
 
       # FIXME
@@ -344,7 +412,8 @@ module Flapjack
 
       def initialize(options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
-        @id = options[:id]
+        @id     = options[:id]
+        @logger = options[:logger]
       end
 
       # NB: should probably be called in the context of a Redis multi block; not doing so
@@ -360,6 +429,7 @@ module Flapjack
         unless contact_data['media'].nil?
           redis.del("contact_media:#{contact_id}")
           redis.del("contact_media_intervals:#{contact_id}")
+          redis.del("contact_media_rollup_thresholds:#{contact_id}")
           redis.del("contact_pagerduty:#{contact_id}")
 
           contact_data['media'].each_pair {|medium, details|
@@ -371,6 +441,7 @@ module Flapjack
             else
               redis.hset("contact_media:#{contact_id}", medium, details['address'])
               redis.hset("contact_media_intervals:#{contact_id}", medium, details['interval']) if details['interval']
+              redis.hset("contact_media_rollup_thresholds:#{contact_id}", medium, details['rollup_threshold']) if details['rollup_threshold']
             end
           }
         end
