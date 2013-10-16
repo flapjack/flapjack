@@ -419,7 +419,7 @@ module Flapjack
             when :boolean
               value.downcase == 'true'
             when :json_string
-              value.blank? ? nil : value.to_json
+              value.blank? ? nil : Oj.load(value)
             end
           end
           memo
@@ -577,7 +577,11 @@ module Flapjack
           end
         else
           send("#{att}_will_change!")
-          @attributes[att.to_s] = value
+          if (self.class.attribute_types[att.to_sym] == :set) && !value.is_a?(Set)
+            @attributes[att.to_s] = Set.new(value)
+          else
+            @attributes[att.to_s] = value
+          end
         end
       end
 
@@ -594,8 +598,7 @@ module Flapjack
       class IndexAssociation
 
         def initialize(parent, class_key, att)
-          @set_indexers = {}
-          @sorted_set_indexers = {}
+          @indexers = {}
 
           @parent = parent
           @class_key = class_key
@@ -607,46 +610,30 @@ module Flapjack
         end
 
         def delete_id(id)
-          return unless (set_indexer = indexer_for_value(:set)) &&
-            (sorted_set_indexer = indexer_for_value(:sorted_set))
-          set_indexer.delete(id)
-          sorted_set_indexer.delete(id)
+          return unless indexer = indexer_for_value
+          indexer.delete(id)
         end
 
         def add_id(id)
-          return unless (set_indexer = indexer_for_value(:set)) &&
-            (sorted_set_indexer = indexer_for_value(:sorted_set))
-          set_indexer.add(id)
-          # TODO will score be relevant here? can we access timestamp?
-          sorted_set_indexer.add(id, 1)
+          return unless indexer = indexer_for_value
+          indexer.add(id)
         end
 
-        def key(type)
-          return unless indexer = indexer_for_value(type)
+        def key
+          return unless indexer = indexer_for_value
           indexer.key
         end
 
         private
 
-        def indexer_for_value(type)
+        def indexer_for_value
           index_key = case @value
           when String, Symbol, TrueClass, FalseClass
             @value.to_s.gsub(/ /, '%20').gsub(/:/, '%3A')
           end
           return if index_key.nil?
 
-          case type
-          when :set
-            unless @set_indexers[index_key]
-              @set_indexers[index_key] = Redis::Set.new("#{@class_key}::by_#{@attribute}:set:#{index_key}")
-            end
-            @set_indexers[index_key]
-          when :sorted_set
-            unless @sorted_set_indexers[index_key]
-              @sorted_set_indexers[index_key] = Redis::SortedSet.new("#{@class_key}::by_#{@attribute}:sorted_set:#{index_key}")
-            end
-            @sorted_set_indexers[index_key]
-          end
+          @indexers[index_key] ||= Redis::Set.new("#{@class_key}::by_#{@attribute}:#{index_key}")
         end
 
       end
@@ -738,12 +725,12 @@ module Flapjack
 
         def collect(&block)
           Flapjack::Data::RedisRecord::Filter.new(@record_ids,
-            @associated_class).collect(block)
+            @associated_class).collect(&block)
         end
 
         def each(&block)
           Flapjack::Data::RedisRecord::Filter.new(@record_ids,
-            @associated_class).each(block)
+            @associated_class).each(&block)
         end
 
         def ids
@@ -821,12 +808,12 @@ module Flapjack
 
         def collect(&block)
           Flapjack::Data::RedisRecord::Filter.new(@record_ids,
-            @associated_class).collect(block)
+            @associated_class).collect(&block)
         end
 
         def each(&block)
           Flapjack::Data::RedisRecord::Filter.new(@record_ids,
-            @associated_class).each(block)
+            @associated_class).each(&block)
         end
 
         def ids
@@ -961,15 +948,11 @@ module Flapjack
         end
 
         def collect(&block)
-          ids.collect do |id|
-            block.call(@associated_class.send(:load, id))
-          end
+          ids.collect {|id| block.call(@associated_class.send(:load, id))}
         end
 
-        def each
-          ids.each do |id|
-            block.call(@associated_class.send(:load, id))
-          end
+        def each(&block)
+          ids.each {|id| block.call(@associated_class.send(:load, id))}
         end
 
         def ids
@@ -1023,15 +1006,7 @@ module Flapjack
                   value = [value] unless value.is_a?(Enumerable)
                   value.each do |val|
                     att_index = @associated_class.send("#{att}_index", val)
-
-                    type = case @initial_set
-                    when Redis::SortedSet
-                      :sorted_set
-                    when Redis::Set, nil
-                      :set
-                    end
-
-                    memo << att_index.key(type)
+                    memo << att_index.key
                   end
                 end
                 memo

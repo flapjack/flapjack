@@ -20,8 +20,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
   def create_example(attrs = {})
     redis.hmset("flapjack/data/redis_record/example:#{attrs[:id]}:attrs",
       {'name' => attrs[:name], 'email' => attrs[:email], 'active' => attrs[:active]}.flatten)
-    redis.sadd("flapjack/data/redis_record/example::by_active:set:#{!!attrs[:active]}", attrs[:id])
-    redis.zadd("flapjack/data/redis_record/example::by_active:sorted_set:#{!!attrs[:active]}", 1, attrs[:id])
+    redis.sadd("flapjack/data/redis_record/example::by_active:#{!!attrs[:active]}", attrs[:id])
     redis.sadd('flapjack/data/redis_record/example::ids', attrs[:id])
   end
 
@@ -42,14 +41,12 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
     redis.keys('*').should =~ ['flapjack/data/redis_record/example::ids',
                                'flapjack/data/redis_record/example:1:attrs',
-                               'flapjack/data/redis_record/example::by_active:set:true',
-                               'flapjack/data/redis_record/example::by_active:sorted_set:true']
+                               'flapjack/data/redis_record/example::by_active:true']
     redis.smembers('flapjack/data/redis_record/example::ids').should == ['1']
     redis.hgetall('flapjack/data/redis_record/example:1:attrs').should ==
       {'name' => 'John Smith', 'email' => 'jsmith@example.com', 'active' => 'true'}
-    redis.smembers('flapjack/data/redis_record/example::by_active:set:true').should ==
+    redis.smembers('flapjack/data/redis_record/example::by_active:true').should ==
       ['1']
-    redis.zrange('flapjack/data/redis_record/example::by_active:sorted_set:true', 0, -1).should == ['1']
   end
 
   it "finds a record by id in redis" do
@@ -88,12 +85,11 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
     redis.keys('*').should =~ ['flapjack/data/redis_record/example::ids',
                                'flapjack/data/redis_record/example:8:attrs',
-                               'flapjack/data/redis_record/example::by_active:set:true',
-                               'flapjack/data/redis_record/example::by_active:sorted_set:true']
+                               'flapjack/data/redis_record/example::by_active:true']
     redis.smembers('flapjack/data/redis_record/example::ids').should == ['8']
     redis.hgetall('flapjack/data/redis_record/example:8:attrs').should ==
       {'name' => 'Jane Janes', 'email' => 'jjanes@example.com', 'active' => 'true'}
-    redis.smembers('flapjack/data/redis_record/example::by_active:set:true').should ==
+    redis.smembers('flapjack/data/redis_record/example::by_active:true').should ==
       ['8']
   end
 
@@ -103,8 +99,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
     redis.keys('*').should =~ ['flapjack/data/redis_record/example::ids',
                                'flapjack/data/redis_record/example:8:attrs',
-                               'flapjack/data/redis_record/example::by_active:set:true',
-                               'flapjack/data/redis_record/example::by_active:sorted_set:true']
+                               'flapjack/data/redis_record/example::by_active:true']
 
     example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
     example.destroy
@@ -189,8 +184,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       redis.hmset("flapjack/data/redis_record/example_child:#{attrs[:id]}:attrs",
                   {'name' => attrs[:name], 'important' => !!attrs[:important]}.flatten)
 
-      redis.sadd("flapjack/data/redis_record/example_child::by_important:set:#{!!attrs[:important]}", attrs[:id])
-      redis.zadd("flapjack/data/redis_record/example_child::by_important:sorted_set:#{!!attrs[:important]}", 1, attrs[:id])
+      redis.sadd("flapjack/data/redis_record/example_child::by_important:#{!!attrs[:important]}", attrs[:id])
 
       redis.sadd('flapjack/data/redis_record/example_child::ids', attrs[:id])
     end
@@ -206,15 +200,14 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       example.fdrr_children << child
 
       redis.keys('*').should =~ ['flapjack/data/redis_record/example::ids',
-                                 'flapjack/data/redis_record/example::by_active:set:true',
-                                 'flapjack/data/redis_record/example::by_active:sorted_set:true',
+                                 'flapjack/data/redis_record/example::by_active:true',
                                  'flapjack/data/redis_record/example:8:attrs',
                                  'flapjack/data/redis_record/example:8:fdrr_children_ids',
                                  'flapjack/data/redis_record/example_child::ids',
                                  'flapjack/data/redis_record/example_child:3:attrs']
 
       redis.smembers('flapjack/data/redis_record/example::ids').should == ['8']
-      redis.smembers('flapjack/data/redis_record/example::by_active:set:true').should ==
+      redis.smembers('flapjack/data/redis_record/example::by_active:true').should ==
         ['8']
       redis.hgetall('flapjack/data/redis_record/example:8:attrs').should ==
         {'name' => 'John Jones', 'email' => 'jjones@example.com', 'active' => 'true'}
@@ -303,8 +296,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
                   {'summary' => attrs[:summary], 'timestamp' => attrs[:timestamp].to_i.to_f,
                    'emotion' => attrs[:emotion]}.flatten)
 
-      redis.sadd("flapjack/data/redis_record/example_datum::by_emotion:set:#{attrs[:emotion]}", attrs[:id])
-      redis.zadd("flapjack/data/redis_record/example_datum::by_emotion:sorted_set:#{attrs[:emotion]}", attrs[:timestamp].to_i.to_f, attrs[:id])
+      redis.sadd("flapjack/data/redis_record/example_datum::by_emotion:#{attrs[:emotion]}", attrs[:id])
 
       redis.sadd('flapjack/data/redis_record/example_datum::ids', attrs[:id])
     end
@@ -323,8 +315,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       example.fdrr_data << data
 
       redis.keys('*').should =~ ['flapjack/data/redis_record/example::ids',
-                                 'flapjack/data/redis_record/example::by_active:set:true',
-                                 'flapjack/data/redis_record/example::by_active:sorted_set:true',
+                                 'flapjack/data/redis_record/example::by_active:true',
                                  'flapjack/data/redis_record/example:8:attrs',
                                  'flapjack/data/redis_record/example:8:fdrr_data_ids',
                                  'flapjack/data/redis_record/example_datum::ids',
@@ -514,8 +505,7 @@ describe Flapjack::Data::RedisRecord, :redis => true do
       example.special = special
 
       redis.keys('*').should =~ ['flapjack/data/redis_record/example::ids',
-                                 'flapjack/data/redis_record/example::by_active:set:true',
-                                 'flapjack/data/redis_record/example::by_active:sorted_set:true',
+                                 'flapjack/data/redis_record/example::by_active:true',
                                  'flapjack/data/redis_record/example:8:attrs',
                                  'flapjack/data/redis_record/example:8:special_id',
                                  'flapjack/data/redis_record/example_special::ids',
