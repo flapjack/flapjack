@@ -24,6 +24,7 @@
               <th>Media</th>
               <th>Address</th>
               <th>Interval</th>
+              <th>Rollup Threshold</th>
             </tr>
             <% @contact.media.each_pair do |mk, mv| %>
               <tr>
@@ -34,18 +35,25 @@
                       <p><%= 'password'.eql?(pk) ? h("#{pk}: ...") : h("#{pk}: #{pv}") %></p>
                     <% end %>
                   </td>
-                  <td>-</td>
                 <% else %>
                   <td><%= h mk.capitalize %></td>
                   <td><%= h mv %></td>
-                  <td>
-                    <% if @contact.media_intervals[mk] %>
-                      <%= h @contact.media_intervals[mk] %> seconds
-                    <% else %>
-                      no custom interval
-                    <% end %>
-                  </td>
                 <% end %>
+
+                <td>
+                  <% if @contact.media_intervals[mk] %>
+                    <%= h @contact.media_intervals[mk] %> seconds
+                  <% else %>
+                    no custom interval
+                  <% end %>
+                </td>
+                <td>
+                  <% if @contact.media_rollup_thresholds[mk] %>
+                    <%= h @contact.media_rollup_thresholds[mk] %> failing checks
+                  <% else %>
+                    -
+                  <% end %>
+                </td>
               </tr>
             <% end %>
           </table>

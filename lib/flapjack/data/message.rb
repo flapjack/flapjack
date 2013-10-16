@@ -10,13 +10,14 @@ module Flapjack
   module Data
     class Message
 
-      attr_reader :medium, :address, :duration, :contact
+      attr_reader :medium, :address, :duration, :contact, :rollup
 
       def self.for_contact(contact, opts = {})
-        self.new(:contact => contact,
-                 :medium => opts[:medium],
-                 :address => opts[:address],
-                 :duration => opts[:duration])
+        self.new(:contact  => contact,
+                 :medium   => opts[:medium],
+                 :address  => opts[:address],
+                 :duration => opts[:duration],
+                 :rollup   => opts[:rollup])
       end
 
       def id
@@ -31,6 +32,7 @@ module Flapjack
         c = {'media'              => medium,
              'address'            => address,
              'id'                 => id,
+             'rollup'             => rollup,
              'contact_id'         => contact.id,
              'contact_first_name' => contact.first_name,
              'contact_last_name'  => contact.last_name}
@@ -41,10 +43,11 @@ module Flapjack
     private
 
       def initialize(opts = {})
-        @contact = opts[:contact]
-        @medium = opts[:medium]
-        @address = opts[:address]
+        @contact  = opts[:contact]
+        @medium   = opts[:medium]
+        @address  = opts[:address]
         @duration = opts[:duration]
+        @rollup   = opts[:rollup]
       end
 
     end

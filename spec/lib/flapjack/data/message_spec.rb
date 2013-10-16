@@ -3,7 +3,7 @@ require 'flapjack/data/message'
 
 describe Flapjack::Data::Message do
 
-  let(:contact) { mock(Flapjack::Data::Contact) }
+  let(:contact) { double(Flapjack::Data::Contact) }
 
   it "assigns itself an ID" do
     message = Flapjack::Data::Message.for_contact(contact)

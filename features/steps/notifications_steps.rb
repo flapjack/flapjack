@@ -136,7 +136,7 @@ end
 
 # TODO may need to get more complex, depending which SMS provider is used
 When /^the SMS notification handler runs successfully$/ do
-  @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_URL)}/)
+  @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_DEFAULT_URL)}/)
 
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@redis', @redis)
@@ -147,7 +147,7 @@ When /^the SMS notification handler runs successfully$/ do
 end
 
 When /^the SMS notification handler fails to send an SMS$/ do
-  @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_URL)}/).to_return(:status => [500, "Internal Server Error"])
+  @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_DEFAULT_URL)}/).to_return(:status => [500, "Internal Server Error"])
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@redis', @redis)
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@logger', @logger)

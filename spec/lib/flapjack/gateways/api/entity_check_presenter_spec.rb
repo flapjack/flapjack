@@ -3,7 +3,7 @@ require 'flapjack/gateways/api/entity_check_presenter'
 
 describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
 
-  let(:entity_check) { mock(Flapjack::Data::EntityCheck) }
+  let(:entity_check) { double(Flapjack::Data::EntityCheck) }
 
   let(:time) { Time.now.to_i }
 

@@ -14,7 +14,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
                  }
   }
 
-  let(:stanza) { mock('stanza') }
+  let(:stanza) { double('stanza') }
 
   it "raises an error if a required config setting is not set" do
     Socket.should_receive(:gethostname).and_return('thismachine')
@@ -111,7 +111,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
   end
 
   it "runs a loop checking for recorded problems" do
-    timer = mock('timer')
+    timer = double('timer')
     timer.should_receive(:cancel)
     EM::Synchrony.should_receive(:add_periodic_timer).with(60).and_return(timer)
 

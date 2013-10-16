@@ -2,10 +2,10 @@ require 'spec_helper'
 
 describe Flapjack::Logger do
 
-  let(:logger)     { mock(::Logger) }
+  let(:logger)     { double(::Logger) }
 
-  let(:sys_logger) { mock(::Logger) }
-  let(:syslog)     { mock(Syslog) }
+  let(:sys_logger) { double(::Logger) }
+  let(:syslog)     { double(Syslog) }
 
   it "creates a logger logging to STDOUT and syslog" do
     logger.should_receive(:formatter=).with(an_instance_of(Proc))
