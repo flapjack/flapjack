@@ -100,17 +100,14 @@ module Flapjack
       end
 
       def contents
-        prev_state = self.previous_state_id ? Flapjack::Data::CheckStateR.find_by_id(previous_state_id) : nil
-        check = self.entity_check
-
-        {'state'             => (state ? state.state : nil),
-         'summary'           => (state ? state.summary : nil),
-         'details'           => (state ? state.details : nil),
-         'count'             => (state ? state.count : nil),
-         'last_state'        => (prev_state ? prev_state.state : nil),
-         'last_summary'      => (prev_state ? prev_state.summary : nil),
-         'entity'            => (check ? check.entity_name : nil),
-         'check'             => (check ? check.name : nil),
+        {'state'             => (self.state ? state.state : nil),
+         'summary'           => (self.state ? state.summary : nil),
+         'details'           => (self.state ? state.details : nil),
+         'count'             => (self.state ? state.count : nil),
+         'last_state'        => (self.previous_state ? self.previous_state.state : nil),
+         'last_summary'      => (self.previous_state ? self.previous_state.summary : nil),
+         'entity'            => (self.entity_check ? self.entity_check.entity_name : nil),
+         'check'             => (self.entity_check ? self.entity_check.name : nil),
          'severity'          => self.severity,
          'duration'          => self.duration,
          'state_duration'    => self.state_duration,
@@ -121,11 +118,15 @@ module Flapjack
       end
 
       def entity_check
-        @entity_check ||= self.entity_check_id ? Flapjack::Data::EntityCheckR.find_by_id(self.entity_check_id) : nil
+        @entity_check ||= (self.entity_check_id ? Flapjack::Data::EntityCheckR.find_by_id(self.entity_check_id) : nil)
       end
 
       def state
-        @state ||= self.state_id ? Flapjack::Data::CheckStateR.find_by_id(state_id) : nil
+        @state ||= (self.state_id ? Flapjack::Data::CheckStateR.find_by_id(self.state_id) : nil)
+      end
+
+      def previous_state
+        @previous_state ||= (self.previous_state_id ? Flapjack::Data::CheckStateR.find_by_id(self.previous_state_id) : nil)
       end
 
       def messages(contacts, opts = {})
@@ -140,7 +141,7 @@ module Flapjack
           media = contact.media
 
           logger.debug "Notification#messages: creating messages for contact: #{contact_id} " +
-            "entity: \"#{entity_check.entity_name}\" check: \"#{entity_check.name}\" state: #{@state} event_tags: #{@tags.to_json} media: #{media.inspect}"
+            "entity: \"#{entity_check.entity_name}\" check: \"#{entity_check.name}\" state: #{self.state.state} event_tags: #{self.tags.inspect} media: #{media.all.inspect}"
           rlen = rules.count
           logger.debug "found #{rlen} rule#{(rlen == 1) ? '' : 's'} for contact #{contact_id}"
 
@@ -150,8 +151,9 @@ module Flapjack
             # matchers are rules of the contact that have matched the current event
             # for time, entity and tags
             matchers = rules.all.select do |rule|
-              logger.debug("considering rule with entities: #{rule.entities} and tags: #{rule.tags.to_json}")
-              (rule.match_entity?(entity_check.entity_name) || rule.match_tags?(@tags) || ! rule.is_specific?) &&
+              logger.debug("considering rule with entities: #{rule.entities.inspect} and tags: #{rule.tags.inspect}")
+
+              (rule.match_entity?(entity_check.entity_name) || rule.match_tags?(self.tags) || !rule.is_specific?) &&
                 rule.is_occurring_now?(:contact => contact, :default_timezone => default_timezone)
             end
 
@@ -176,7 +178,7 @@ module Flapjack
             end
 
             # delete media based on blackholes
-            blackhole_matchers = matchers.map {|matcher| matcher.blackhole?(@severity) ? matcher : nil }.compact
+            blackhole_matchers = matchers.map {|matcher| matcher.blackhole?(self.severity) ? matcher : nil }.compact
             if blackhole_matchers.length > 0
               logger.debug "dropping this media as #{blackhole_matchers.length} blackhole matchers are present:"
               blackhole_matchers.each {|bm|
@@ -188,14 +190,19 @@ module Flapjack
             end
 
             rule_media = matchers.inject(Set.new) {|memo, matcher|
-              memo += matcher.media_for_severity(self.severity)
+              med_sev = matcher.media_for_severity(self.severity)
+              next memo if med_sev.nil?
+              memo += med_sev
             }
 
-            logger.debug "collected media_for_severity(#{@severity}): #{rule_media}"
+            logger.debug "collected media_for_severity(#{self.severity}): #{rule_media.inspect}"
+
+            state_for_drop_notif = (self.type == 'acknowledgement') ? 'acknowledgement' : self.state.state
+
             rule_media = rule_media.reject {|medium|
               contact.drop_notifications?(:media => medium,
-                                          :check => entity_check,
-                                          :state => state)
+                                          :entity_check => entity_check,
+                                          :state => state_for_drop_notif)
             }
 
             logger.debug "media after contact_drop?: #{rule_media}"

@@ -36,6 +36,10 @@ module Flapjack
         [STATE_CRITICAL, STATE_WARNING, STATE_UNKNOWN]
       end
 
+      def self.all_states
+        self.failing_states + self.ok_states
+      end
+
     end
   end
 end

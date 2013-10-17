@@ -22,8 +22,7 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
     redis.multi
     redis.hmset("flapjack/data/entity_r:#{attrs[:id]}:attrs", {'name' => attrs[:name]}.flatten)
     redis.sadd('flapjack/data/entity_r::ids', attrs[:id])
-    redis.sadd("flapjack/data/entity_r::by_name:set:#{attrs[:name]}", attrs[:id])
-    redis.zadd("flapjack/data/entity_r::by_name:sorted_set:#{attrs[:name]}", 1, attrs[:id])
+    redis.sadd("flapjack/data/entity_r::by_name:#{attrs[:name]}", attrs[:id])
     redis.exec
   end
 
@@ -35,15 +34,10 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
     redis.hmset("flapjack/data/entity_check_r:#{attrs[:id]}:attrs", {'name' => attrs[:name],
       'entity_name' => entity.name, 'state' => attrs[:state], 'enabled' => (!!attrs[:enabled]).to_s}.flatten)
     redis.sadd('flapjack/data/entity_check_r::ids', attrs[:id])
-    redis.sadd("flapjack/data/entity_check_r::by_name:set:#{attrs[:name]}", attrs[:id])
-    redis.sadd("flapjack/data/entity_check_r::by_entity_name:set:#{entity.name}", attrs[:id])
-    redis.sadd("flapjack/data/entity_check_r::by_state:set:#{attrs[:state]}", attrs[:id])
-    redis.sadd("flapjack/data/entity_check_r::by_enabled:set:#{!!attrs[:enabled]}", attrs[:id])
-
-    redis.zadd("flapjack/data/entity_check_r::by_name:sorted_set:#{attrs[:name]}", 1, attrs[:id])
-    redis.zadd("flapjack/data/entity_check_r::by_entity_name:sorted_set:#{entity.name}", 1, attrs[:id])
-    redis.zadd("flapjack/data/entity_check_r::by_state:sorted_set:#{attrs[:state]}", 1, attrs[:id])
-    redis.zadd("flapjack/data/entity_check_r::by_enabled:sorted_set:#{!!attrs[:enabled]}", 1, attrs[:id])
+    redis.sadd("flapjack/data/entity_check_r::by_name:#{attrs[:name]}", attrs[:id])
+    redis.sadd("flapjack/data/entity_check_r::by_entity_name:#{entity.name}", attrs[:id])
+    redis.sadd("flapjack/data/entity_check_r::by_state:#{attrs[:state]}", attrs[:id])
+    redis.sadd("flapjack/data/entity_check_r::by_enabled:#{!!attrs[:enabled]}", attrs[:id])
 
     redis.sadd("flapjack/data/entity_r:#{entity.id}:check_ids", attrs[:id].to_s)
     redis.exec

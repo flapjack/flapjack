@@ -80,7 +80,6 @@ Feature: Notification rules on a per contact basis
     Then  no email alerts should be queued for malak@example.com
     And   the time is February 1 2013 8:01
     And   a critical event is received
-    Then  show me the amazing log
     Then  1 email alert should be queued for malak@example.com
     When  the time is February 1 2013 12:00
     Then  all alert dropping keys for user 1 should have expired
@@ -227,7 +226,7 @@ Feature: Notification rules on a per contact basis
     Then  2 email alerts should be queued for malak@example.com
 
   @intervals @time
-  Scenario: Problem directly after Recovery should alert despite notification intervals
+  Scenario: Problem directly after recovery should alert despite notification intervals
     Given the check is check 'ping' on entity 'baz'
     And   the check is in an ok state
     When  a critical event is received

@@ -114,8 +114,7 @@ module Flapjack
 
         contact = message.contact
 
-        if (Flapjack::Data::CheckStateR.ok_states + ['acknowledgement']).
-          include?(notification.state.state)
+        if ['recovery', 'acknowledgement'].include?(notification.type)
 
           ['warning', 'critical', 'unknown'].each do |alert_state|
             contact.update_sent_alert_keys(
@@ -128,7 +127,7 @@ module Flapjack
           contact.update_sent_alert_keys(
             :media => media_type,
             :entity_check => entity_check,
-            :state => notification.state)
+            :state => notification.state.state)
         end
 
         contents_tags = contents['tags']

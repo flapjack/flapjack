@@ -12,11 +12,13 @@ def find_or_create_contact(contact_data)
     contact.save.should be_true
   end
 
-  contact_data['media'].each_pair {|type, address|
-    medium = Flapjack::Data::MediumR.new(:type => type, :address => address, :interval => 60)
-    medium.save.should be_true
-    contact.media << medium
-  }
+  if contact_data['media']
+    contact_data['media'].each_pair {|type, address|
+      medium = Flapjack::Data::MediumR.new(:type => type, :address => address, :interval => 600)
+      medium.save.should be_true
+      contact.media << medium
+    }
+  end
 
   contact
 end

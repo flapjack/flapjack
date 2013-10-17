@@ -9,6 +9,7 @@ require 'ice_cube'
 require 'flapjack/data/redis_record'
 require 'flapjack/data/entity_r'
 require 'flapjack/data/medium_r'
+require 'flapjack/data/notification_block_r'
 require 'flapjack/data/notification_rule_r'
 
 module Flapjack
@@ -30,10 +31,14 @@ module Flapjack
       has_many :media, :class_name => 'Flapjack::Data::MediumR'
       has_many :notification_rules, :class_name => 'Flapjack::Data::NotificationRuleR'
 
-      before_destroy :remove_media_and_notification_rules
-      def remove_media_and_notification_rules
-        self.media.each {|medium| medium.destroy }
-        self.notification_rules.each {|notification_rule| notification_rule.destroy }
+      has_sorted_set :notification_blocks, :class_name => 'Flapjack::Data::NotificationBlockR',
+        :key => :expire_at
+
+      before_destroy :remove_child_records
+      def remove_child_records
+        self.media.each               {|medium|             medium.destroy }
+        self.notification_rules.each  {|notification_rule|  notification_rule.destroy }
+        self.notification_blocks.each {|notification_block| notification_block.destroy }
       end
 
       after_destroy :remove_entity_linkages
@@ -61,40 +66,74 @@ module Flapjack
         [(self.first_name || ''), (self.last_name || '')].join(" ").strip
       end
 
-      # drop notifications for
+      def expire_notification_blocks(time = Time.now)
+        self.notification_blocks.intersect_range(nil, time.to_i, :by_score => true).each do |block|
+          self.notification_blocks.delete(block)
+          block.destroy
+        end
+      end
+
       def drop_notifications?(opts = {})
-        return false
+        media_type   = opts[:media]
+        entity_check = opts[:entity_check]
+        state        = opts[:state]
 
-        # media    = opts[:media]
-        # entity_check  = opts[:entity_check]
-        # state    = opts[:state]
+        # drop any expired blocks
+        expire_notification_blocks(Time.now)
 
-        # # build it and they will come
-        # Flapjack.redis.exists("drop_alerts_for_contact:#{self.id}") ||
-        #   (media && Flapjack.redis.exists("drop_alerts_for_contact:#{self.id}:#{media}")) ||
-        #   (media && entity_check &&
-        #     Flapjack.redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{entity_check.entity_name}:#{entity_check.name}")) ||
-        #   (media && entity_check && state &&
-        #     Flapjack.redis.exists("drop_alerts_for_contact:#{self.id}:#{media}:#{entity_check.entity_name}:#{entity_check.name}:#{state}"))
+        # # NB: not sure if the partial checks are used yet, disabling
+        # # this isn't ideal, maybe more sophisticated intersects are the answer?
+        # self.notification_blocks.all.any? {|block|
+        #   block.media_type.nil? && block.entity_check_id.nil? && block.state.nil?
+        # } ||
+        # self.notification_blocks.intersect(:media_type => media_type).all.any? {|block|
+        #   block.entity_check_id.nil? && block.state.nil?
+        # } ||
+        # self.notification_blocks.intersect(:media_type => media_type, :entity_check_id => entity_check.id).all.any? {|block|
+        #   block.state.nil?
+        # } ||
+        !self.notification_blocks.intersect(:media_type => media_type,
+          :entity_check_id => entity_check.id, :state => state).empty?
       end
 
       def update_sent_alert_keys(opts = {})
-        # media  = opts[:media]
-        # entity_check  = opts[:entity_check]
-        # state  = opts[:state]
-        # delete = !! opts[:delete]
-        # key = "drop_alerts_for_contact:#{self.id}:#{media}:#{entity_check.entity_name}:#{entity_check.name}:#{state}"
-        # if delete
-        #   Flapjack.redis.del(key)
-        # else
-        #   Flapjack.redis.set(key, 'd')
-        #   Flapjack.redis.expire(key, self.interval_for_media(media))
-        # end
+        media_type   = opts[:media]
+        entity_check = opts[:entity_check]
+        state        = opts[:state]
+        delete       = !!opts[:delete]
+
+        attrs = {:media_type => media_type,
+          :entity_check_id => entity_check.id, :state => state}
+
+        if delete
+          self.notification_blocks.intersect(attrs).all.each do |block|
+            self.notification_blocks.delete(block)
+            block.destroy
+          end
+        else
+          media = self.media.intersect(:type => media_type).all.first
+          unless media.nil?
+            expire_at = Time.now + (media.interval * 60)
+
+            new_block = false
+            block = Flapjack::Data::NotificationBlockR.intersect(attrs).all.first
+
+            if block.nil?
+              block = Flapjack::Data::NotificationBlockR.new(attrs)
+              new_block = true
+            end
+            block.expire_at = expire_at
+            block.save
+            if new_block
+              self.notification_blocks << block
+            end
+          end
+        end
       end
 
       # return the timezone of the contact, or the system default if none is set
       # TODO cache?
-      def time_zone
+      def time_zone(opts = {})
         tz_string = self.timezone
         tz = opts[:default] if (tz_string.nil? || tz_string.empty?)
 

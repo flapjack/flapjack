@@ -253,10 +253,10 @@ module Flapjack
         end
       end
 
-      @logger.debug("Notification is being generated for #{event.id}: " + event.inspect)
-
       severity = Flapjack::Data::NotificationR.severity_for_state(event.state,
                    max_notified_severity)
+
+      @logger.debug("Notification is being generated for #{event.id}: " + event.inspect)
 
       notification = Flapjack::Data::NotificationR.new(
         :entity_check_id   => entity_check.id,

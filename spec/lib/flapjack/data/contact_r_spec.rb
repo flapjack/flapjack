@@ -165,4 +165,27 @@ describe Flapjack::Data::ContactR, :redis => true do
                             "tags"       => [] }.to_json
   end
 
+  it "clears expired notification blocks" do
+    t = Time.now
+
+    create_contact # raw redis
+    contact = Flapjack::Data::ContactR.find_by_id('1')
+
+    old_notification_block = Flapjack::Data::NotificationBlockR.new(
+      :expire_at => t.to_i - (60 * 60), :media_type => 'sms')
+    old_notification_block.save.should be_true
+
+    new_notification_block = Flapjack::Data::NotificationBlockR.new(
+      :expire_at => t.to_i + (60 * 60), :media_type => 'sms')
+    new_notification_block.save.should be_true
+
+    contact.notification_blocks << old_notification_block <<
+      new_notification_block
+
+    contact.notification_blocks.count.should == 2
+    contact.expire_notification_blocks
+    contact.notification_blocks.count.should == 1
+    contact.notification_blocks.first.id.should == new_notification_block.id
+  end
+
 end

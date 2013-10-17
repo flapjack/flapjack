@@ -19,14 +19,16 @@ module Flapjack
       define_attributes :entities           => :set,
                         :tags               => :set,
                         :time_restrictions  => :json_string,
+                        :unknown_media      => :set,
                         :warning_media      => :set,
                         :critical_media     => :set,
+                        :unknown_blackhole  => :boolean,
                         :warning_blackhole  => :boolean,
                         :critical_blackhole => :boolean
 
       belongs_to :contact, :class_name => 'Flapjack::Data::ContactR'
 
-      validates_each :entities, :tags, :warning_media, :critical_media,
+      validates_each :entities, :tags, :unknown_media, :warning_media, :critical_media,
         :allow_blank => true do |record, att, value|
         if value.is_a?(Set) && value.any? {|vs| !vs.is_a?(String) }
           record.errors.add(att, 'must only contain strings')
@@ -88,6 +90,8 @@ module Flapjack
 
       def blackhole?(severity)
         case severity
+        when 'unknown'
+          self.unknown_blackhole
         when 'warning'
           self.warning_blackhole
         when 'critical'
@@ -97,6 +101,8 @@ module Flapjack
 
       def media_for_severity(severity)
         case severity
+        when 'unknown'
+          self.unknown_media
         when 'warning'
           self.warning_media
         when 'critical'
@@ -115,9 +121,9 @@ module Flapjack
         contact = options[:contact]
         def_tz = options[:default_timezone]
 
-        return true if self.time_restrictions.nil? or self.time_restrictions.empty?
+        return true if self.time_restrictions.nil? || self.time_restrictions.empty?
 
-        timezone = contact.timezone(:default => def_tz)
+        timezone = contact.time_zone(:default => def_tz)
         usertime = timezone.now
 
         self.time_restrictions.any? do |tr|

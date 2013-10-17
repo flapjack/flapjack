@@ -42,8 +42,7 @@ module Flapjack
       validates :name, :presence => true
       validates :entity_name, :presence => true
       validates :state,
-        :inclusion => {:in => Flapjack::Data::CheckStateR.failing_states +
-                              Flapjack::Data::CheckStateR.ok_states, :allow_blank => true }
+        :inclusion => {:in => Flapjack::Data::CheckStateR.all_states, :allow_blank => true }
 
       around_create :handle_state_change_and_enabled
       around_update :handle_state_change_and_enabled
@@ -270,10 +269,13 @@ module Flapjack
         last_recovery = self.states.intersect(:notified => true, :state => 'ok').last
         last_recovery_time = last_recovery ? last_recovery.timestamp.to_i : 0
 
-        notif = self.states.
-          union(:state => Flapjack::Data::CheckStateR.failing_states).
-          intersect(:notified => true).last
-        (!notif.nil? && (notif.timestamp.to_i > last_recovery_time)) ? notif.state : nil
+        # puts "max_severity recovery #{last_recovery.inspect} // #{last_recovery_time}"
+
+        states_since_last_recovery =
+          self.states.intersect_range(last_recovery_time, nil, :by_score => true).
+            collect(&:state).uniq
+
+        ['critical', 'warning', 'unknown'].detect {|st| states_since_last_recovery.include?(st) }
       end
 
       def tags
