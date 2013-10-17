@@ -108,6 +108,10 @@ module Flapjack
           Flapjack::Data::RedisRecord::Filter.new(@ids, self).union(opts)
         end
 
+        def diff(opts = {})
+          Flapjack::Data::RedisRecord::Filter.new(@ids, self).diff(opts)
+        end
+
         def find_by_id(id)
           return unless id && exists?(id.to_s)
           load(id.to_s)
@@ -665,11 +669,6 @@ module Flapjack
             union(opts)
         end
 
-        def diff(opts = {})
-          Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class).
-            diff(opts)
-        end
-
         def intersect_range(start, finish, options = {})
           Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class).
             intersect_range(options.merge(:start => start, :end => finish,
@@ -679,12 +678,6 @@ module Flapjack
         def union_range(start, finish, options = {})
           Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class).
             union_range(options.merge(:start => start, :end => finish,
-                                      :by_score => options[:by_score]))
-        end
-
-        def diff_range(start, finish, options = {})
-          Flapjack::Data::RedisRecord::Filter.new(@record_ids, @associated_class).
-            diff_range(options.merge(:start => start, :end => finish,
                                       :by_score => options[:by_score]))
         end
 
@@ -937,11 +930,6 @@ module Flapjack
           self
         end
 
-        def diff_range(opts = {})
-          @steps += [:diff_range, opts]
-          self
-        end
-
         def count
           resolve_steps {|set, desc|
             case @initial_set
@@ -1025,7 +1013,7 @@ module Flapjack
             order_desc = false
 
             source_keys = []
-            if (source_set == dest_set) || [:intersect, :intersect_range].include?(step.first)
+            if (source_set == dest_set) || [:intersect, :intersect_range, :diff].include?(step.first)
               source_keys << source_set
             else
               intersect_initial_with_union = true
@@ -1046,7 +1034,7 @@ module Flapjack
                 memo
               end
 
-            elsif [:intersect_range, :union_range, :diff_range].include?(step.first)
+            elsif [:intersect_range, :union_range].include?(step.first)
 
               range_ids_set = "#{@associated_class.send(:class_key)}::tmp:#{SecureRandom.hex(16)}"
 
@@ -1109,8 +1097,6 @@ module Flapjack
                 end
               when :intersect, :intersect_range
                 Flapjack.redis.zinterstore(dest_set, source_keys, :weights => weights, :aggregate => 'max')
-              when :diff, :diff_range
-                # TODO
               end
               Flapjack.redis.del(range_ids_set) unless range_ids_set.nil?
             when Redis::Set, nil
@@ -1120,7 +1106,7 @@ module Flapjack
               when :intersect
                 Flapjack.redis.sinterstore(dest_set, *source_keys)
               when :diff
-                # TODO
+                Flapjack.redis.sdiffstore(dest_set, *source_keys)
               end
             end
             source_set = dest_set

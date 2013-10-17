@@ -134,27 +134,47 @@ describe Flapjack::Data::RedisRecord, :redis => true do
 
   context 'filters' do
 
-    it "filters all class records by indexed attribute values" do
+    let(:active) {
       create_example(:id => '8', :name => 'John Jones',
                      :email => 'jjones@example.com', :active => true)
-      example = Flapjack::Data::RedisRecord::Example.find_by_id('8')
+    }
 
+    let(:inactive) {
       create_example(:id => '9', :name => 'James Brown',
                      :email => 'jbrown@example.com', :active => false)
-      example_2 = Flapjack::Data::RedisRecord::Example.find_by_id('9')
+    }
 
-      active = Flapjack::Data::RedisRecord::Example.intersect(:active => true).all
-      active.should_not be_nil
-      active.should be_an(Array)
-      active.should have(1).example
-      active.map(&:id).should =~ ['8']
+    before do
+      active; inactive
     end
 
-    it 'supports sequential intersection and union operations'
+    it "filters all class records by indexed attribute values" do
+      example = Flapjack::Data::RedisRecord::Example.intersect(:active => true).all
+      example.should_not be_nil
+      example.should be_an(Array)
+      example.should have(1).example
+      example.map(&:id).should == ['8']
+    end
+
+    it 'supports sequential intersection and union operations' do
+      example = Flapjack::Data::RedisRecord::Example.intersect(:active => true).union(:active => false).all
+      example.should_not be_nil
+      example.should be_an(Array)
+      example.should have(2).examples
+      example.map(&:id).should =~ ['8', '9']
+    end
 
     it 'allows intersection operations across multiple values for an attribute'
 
     it 'allows union operations across multiple values for an attribute'
+
+    it 'excludes particular records' do
+      example = Flapjack::Data::RedisRecord::Example.diff(:active => true).all
+      example.should_not be_nil
+      example.should be_an(Array)
+      example.should have(1).example
+      example.map(&:id).should == ['9']
+    end
 
   end
 
