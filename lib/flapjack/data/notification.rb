@@ -51,21 +51,19 @@ module Flapjack
         last_state = opts[:last_state] || {}
 
         tag_data = event.tags.is_a?(Set) ? event.tags.to_a : nil
-        notif = {'event_id'       => event.id,
-                 'state'          => event.state,
-                 'summary'        => event.summary,
-                 'details'        => event.details,
-                 'time'           => event.time,
-                 'duration'       => event.duration,
-                 'count'          => event.counter,
-                 'last_state'     => last_state[:state],
-                 'last_summary'   => last_state[:summary],
-                 'state_duration' => opts[:state_duration],
-
-                 'type'           => opts[:type] || type_for_event(event),
-                 'severity'       => opts[:severity],
-
-                 'tags'           => tag_data }
+        notif = {'event_id'                 => event.id,
+                 'state'                    => event.state,
+                 'summary'                  => event.summary,
+                 'details'                  => event.details,
+                 'time'                     => event.time,
+                 'acknowledgement_duration' => event.duration,
+                 'count'                    => event.counter,
+                 'last_state'               => last_state[:state],
+                 'last_summary'             => last_state[:summary],
+                 'state_duration'           => opts[:state_duration],
+                 'type'                     => opts[:type] || type_for_event(event),
+                 'severity'                 => opts[:severity],
+                 'tags'                     => tag_data }
 
         redis.rpush(queue, Oj.dump(notif))
       end
@@ -102,18 +100,18 @@ module Flapjack
       end
 
       def contents
-        @contents ||= {'event_id'          => @event_id,
-                       'state'             => @state,
-                       'summary'           => @summary,
-                       'duration'          => @duration,
-                       'last_state'        => @last_state,
-                       'last_summary'      => @last_summary,
-                       'state_duration'    => @state_duration,
-                       'details'           => @details,
-                       'time'              => @time,
-                       'notification_type' => @type,
-                       'event_count'       => @count,
-                       'tags'              => @tags
+        @contents ||= {'event_id'                 => @event_id,
+                       'state'                    => @state,
+                       'summary'                  => @summary,
+                       'acknowledgement_duration' => @acknowledgement_duration,
+                       'last_state'               => @last_state,
+                       'last_summary'             => @last_summary,
+                       'state_duration'           => @state_duration,
+                       'details'                  => @details,
+                       'time'                     => @time,
+                       'notification_type'        => @type,
+                       'event_count'              => @count,
+                       'tags'                     => @tags
                       }
       end
 
@@ -231,22 +229,22 @@ module Flapjack
 
       # created from parsed JSON, so opts keys are in strings
       def initialize(opts = {})
-        @event_id       = opts['event_id']
-        @state          = opts['state']
-        @summary        = opts['summary']
-        @details        = opts['details']
-        @time           = opts['time']
-        @count          = opts['count']
-        @duration       = opts['duration']
+        @event_id                 = opts['event_id']
+        @state                    = opts['state']
+        @summary                  = opts['summary']
+        @details                  = opts['details']
+        @time                     = opts['time']
+        @count                    = opts['count']
+        @acknowledgement_duration = opts['duration']
 
-        @last_state     = opts['last_state']
-        @last_summary   = opts['last_summary']
-        @state_duration = opts['state_duration']
+        @last_state               = opts['last_state']
+        @last_summary             = opts['last_summary']
+        @state_duration           = opts['state_duration']
 
-        @type           = opts['type']
-        @severity       = opts['severity']
+        @type                     = opts['type']
+        @severity                 = opts['severity']
 
-        tags            = opts['tags']
+        tags                      = opts['tags']
         @tags           = tags.is_a?(Array) ? Flapjack::Data::TagSet.new(tags) : nil
       end
 

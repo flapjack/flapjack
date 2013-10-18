@@ -504,7 +504,7 @@ module Flapjack
               duration      = event['duration'] ? time_period_in_words(event['duration']) : '4 hours'
               address       = event['address']
 
-              @logger.debug("processing jabber notification address: #{address}, event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
+              @logger.debug("processing jabber notification address: #{address}, entity: #{entity}, check: '#{check}', state: #{state}, summary: #{summary}")
 
               ack_str =
                 event['event_count'] &&

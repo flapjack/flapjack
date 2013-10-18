@@ -11,7 +11,7 @@
   }
 </style>
 
-<p>Hi <%= @contact_first_name%></p>
+<p>Hi <%= @alert.contact_first_name%></p>
 
 <p>Monitoring has detected the following:</p>
 
@@ -19,56 +19,56 @@
   <tbody>
     <tr>
       <td><strong>Entity</strong></td>
-      <td><%= @entity_name %></td>
+      <td><%= @alert.entity %></td>
     </tr>
 
     <tr>
       <td><strong>Check</strong></td>
-      <td><%= @check %></td>
+      <td><%= @alert.check %></td>
     </tr>
 
     <tr>
       <td><strong>State</strong></td>
-      <td><%= ['ok'].include?(@state) ? @state.upcase : @state.titleize %></td>
+      <td><%= @alert.state_title_case %></td>
     </tr>
 
     <tr>
       <td><strong>Summary</strong></td>
-      <td><%= @summary %></td>
+      <td><%= @alert.summary %></td>
     </tr>
 
-    <% if @details %>
+    <% if @alert.details %>
       <tr>
         <td><strong>Details</strong></td>
-        <td><%= @details %></td>
+        <td><%= @alert.details %></td>
       </tr>
     <% end %>
 
-    <% if @time %>
+    <% if @alert.time %>
       <tr>
         <td><strong>Time</strong></td>
-        <td><%= Time.at(@time.to_i).to_s %></td>
+        <td><%= Time.at(@alert.time.to_i).to_s %></td>
       </tr>
     <% end %>
 
-    <% if @duration && @duration > 40 %>
+    <% if @alert.state_duration && @alert.state_duration > 40 %>
       <tr>
         <td><strong>Duration</strong></td>
-        <td><%= ChronicDuration.output(@duration) %></td>
+        <td><%= ChronicDuration.output(@alert.state_duration) %></td>
       </tr>
     <% end %>
 
-    <% if @last_state %>
+    <% if @alert.last_state %>
       <tr>
         <td><strong>Previous State</strong></td>
-        <td><%= ['ok'].include?(@last_state) ? @last_state.upcase : @last_state.titleize %></td>
+        <td><%= @alert.last_state_title_case %></td>
       </tr>
     <% end %>
 
-    <% if @last_summary %>
+    <% if @alert.last_summary %>
       <tr>
         <td><strong>Previous Summary</strong></td>
-        <td><%= @last_summary %></td>
+        <td><%= @alert.last_summary %></td>
       </tr>
     <% end %>
 

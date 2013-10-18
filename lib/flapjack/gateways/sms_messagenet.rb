@@ -4,6 +4,9 @@ require 'em-synchrony'
 require 'em-synchrony/em-http'
 require 'active_support/inflector'
 
+require 'flapjack/data/alert'
+require 'flapjack/utility'
+
 module Flapjack
   module Gateways
     class SmsMessagenet
@@ -12,26 +15,22 @@ module Flapjack
 
       class << self
 
+        include Flapjack::Utility
+
         def start
           @sent = 0
         end
 
-        def perform(notification)
-          @logger.debug "Woo, got a notification to send out: #{notification.inspect}"
+        def perform(contents)
+          @logger.debug "Woo, got a notification to send out: #{contents.inspect}"
+          alert = Flapjack::Data::Alert.new(contents)
 
           endpoint = @config["endpoint"] || MESSAGENET_DEFAULT_URL
           username = @config["username"]
           password = @config["password"]
 
-          @notification_type   = notification['notification_type']
-          @rollup              = notification['rollup']
-          @rollup_alerts       = notification['rollup_alerts']
-          @state               = notification['state']
-          @summary             = notification['summary']
-          @time                = notification['time']
-          @entity_name, @check = notification['event_id'].split(':', 2)
-          address              = notification['address']
-          notification_id      = notification['id']
+          address         = alert.address
+          notification_id = alert.notification_id
 
           message_type = case
           when @rollup
@@ -43,10 +42,10 @@ module Flapjack
           sms_template = ERB.new(File.read(File.dirname(__FILE__) +
             "/sms_messagenet/#{message_type}.text.erb"), nil, '-')
 
+          @alert  = alert
           bnd     = binding
           message = sms_template.result(bnd).chomp
 
-          # TODO log error and skip instead of raising errors
           if @config.nil? || (@config.respond_to?(:empty?) && @config.empty?)
             @logger.error "Messagenet config is missing"
             return
@@ -88,19 +87,10 @@ module Flapjack
             @logger.error "Failed to send SMS via Messagenet, response status is #{status}, " +
               "notification_id: #{notification_id}"
           end
-
-        end
-
-        # copied from ActiveSupport
-        def truncate(str, length, options = {})
-          text = str.dup
-          options[:omission] ||= "..."
-
-          length_with_room_for_omission = length - options[:omission].length
-          stop = options[:separator] ?
-            (text.rindex(options[:separator], length_with_room_for_omission) || length_with_room_for_omission) : length_with_room_for_omission
-
-          (text.length > length ? text[0...stop] + options[:omission] : text).to_s
+        rescue => e
+          @logger.error "Error delivering sms to #{alert.address}: #{e.class}: #{e.message}"
+          @logger.error e.backtrace.join("\n")
+          raise
         end
 
       end
