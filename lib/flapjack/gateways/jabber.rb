@@ -420,6 +420,7 @@ module Flapjack
 
             check_xml = Proc.new do |data|
               return if data.nil?
+              @logger.debug "xml_data: #{data}"
               text = ''
               begin
                 enc_name = Encoding.default_external.name
@@ -430,7 +431,8 @@ module Flapjack
                 end
                 text = data if text.empty? && !data.empty?
               rescue REXML::ParseException => exc
-                text = data
+                # invalid XML, so we'll just clear everything inside angled brackets
+                text = data.gsub(/<[^>]+>/, '').strip
               end
               text
             end

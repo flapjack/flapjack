@@ -25,29 +25,3 @@ module Jabber
     end
   end
 end
-
-# OpenSSL sockets have ASCII-8BIT encoding, and XMPP4R doesn't
-# cast to UTF-8 properly TODO need to test this with different
-# external encodings
-require 'openssl'
-require 'rexml/parsers/sax2parser'
-
-module REXML
-  module Parsers
-    class SAX2Parser
-
-      alias_method :orig_initialize, :initialize
-
-      def initialize(source)
-        unless source.is_a?(OpenSSL::SSL::SSLSocket)
-          orig_initialize( source )
-          return
-        end
-        io_source = REXML::IOSource.new(source)
-        io_source.instance_variable_set('@force_utf8', true)
-        orig_initialize( io_source )
-      end
-
-    end
-  end
-end
