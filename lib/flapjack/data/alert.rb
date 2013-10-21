@@ -2,8 +2,8 @@
 
 require 'active_support/inflector'
 
-# Alert is the the object ready to send to someone, complete with an address and all
-# the data with which to simply render the text of the alert in the appropriate gateway
+# Alert is the object ready to send to someone, complete with an address and all
+# the data with which to render the text of the alert in the appropriate gateway
 
 module Flapjack
   module Data
