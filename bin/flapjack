@@ -29,7 +29,7 @@ require 'flapjack/configuration'
 require 'flapjack/version'
 
 options = OpenStruct.new
-options.config    = File.join('etc', 'flapjack_config.yaml')
+options.config    = Flapjack::Configuration::DEFAULT_CONFIG_PATH
 options.daemonize = nil
 
 @exe = File.basename(__FILE__)
@@ -88,7 +88,7 @@ elsif !["start", "stop", "restart", "reload", "status"].include?(ARGV[0])
   exit 1
 end
 
-FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
 
 config = Flapjack::Configuration.new
 config.load(options.config)
