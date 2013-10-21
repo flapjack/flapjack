@@ -19,7 +19,7 @@ require 'flapjack/data/entity'
 require 'flapjack/data/event'
 
 options = OpenStruct.new
-options.config    = File.join('etc', 'flapjack_config.yaml')
+options.config    = Flapjack::Configuration::DEFAULT_CONFIG_PATH
 options.daemonize = nil
 
 command = ARGV.shift
@@ -44,7 +44,7 @@ OptionParser.new do |opts|
 
 end.parse!(ARGV)
 
-FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
 
 config = Flapjack::Configuration.new
 config.load(options.config)
