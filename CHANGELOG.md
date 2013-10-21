@@ -1,5 +1,14 @@
 ## Flapjack Changelog
 
+# 0.7.28 - 2013-10-21
+- Feature: Per contact media rollup (summary) notifications - foundation (data, api, web UI etc) gh-291 (@jessereynolds)
+- Feature: flapper takes an IP to bind to gh-98 (@ali-graham)
+- Feature: tests for bin scripts gh-289 (@ali-graham)
+- Feature: Entity / check query function via jabber gh-77 (@ali-graham)
+- Chore: Make production the default environment gh-331 (@jessereynolds)
+- Chore: Look in /etc/flapjack/flapjack_config.yaml for config by default gh-332 (@jessereynolds)
+- Bug: --version should not depend on a config file being found gh-316 (@ali-graham)
+
 # 0.7.27 - 2013-09-19
 - Feature: Treat UNKNOWN separately to CRITICAL in notification rules gh-295 (@jessereynolds)
 - Bug: License missing from gemspec gh-313 (@jessereynolds)
