@@ -8,16 +8,16 @@ require 'ice_cube'
 
 require 'sandstorm/record'
 
-require 'flapjack/data/entity_r'
-require 'flapjack/data/medium_r'
-require 'flapjack/data/notification_block_r'
-require 'flapjack/data/notification_rule_r'
+require 'flapjack/data/entity'
+require 'flapjack/data/medium'
+require 'flapjack/data/notification_block'
+require 'flapjack/data/notification_rule'
 
 module Flapjack
 
   module Data
 
-    class ContactR
+    class Contact
 
       include Sandstorm::Record
 
@@ -31,11 +31,11 @@ module Flapjack
                         :pagerduty_credentials => :hash,
                         :tags                  => :set
 
-      has_many :entities, :class_name => 'Flapjack::Data::EntityR'
-      has_many :media, :class_name => 'Flapjack::Data::MediumR'
-      has_many :notification_rules, :class_name => 'Flapjack::Data::NotificationRuleR'
+      has_many :entities, :class_name => 'Flapjack::Data::Entity'
+      has_many :media, :class_name => 'Flapjack::Data::Medium'
+      has_many :notification_rules, :class_name => 'Flapjack::Data::NotificationRule'
 
-      has_sorted_set :notification_blocks, :class_name => 'Flapjack::Data::NotificationBlockR',
+      has_sorted_set :notification_blocks, :class_name => 'Flapjack::Data::NotificationBlock',
         :key => :expire_at
 
       before_destroy :remove_child_records
@@ -57,7 +57,7 @@ module Flapjack
       def notification_rules
         rules = orig_notification_rules
         if rules.all.all? {|r| r.is_specific? } # also true if empty
-          rule = Flapjack::Data::NotificationRuleR.create_generic
+          rule = Flapjack::Data::NotificationRule.create_generic
           rules << rule
         end
         rules
@@ -120,10 +120,10 @@ module Flapjack
             expire_at = Time.now + (media.interval * 60)
 
             new_block = false
-            block = Flapjack::Data::NotificationBlockR.intersect(attrs).all.first
+            block = Flapjack::Data::NotificationBlock.intersect(attrs).all.first
 
             if block.nil?
-              block = Flapjack::Data::NotificationBlockR.new(attrs)
+              block = Flapjack::Data::NotificationBlock.new(attrs)
               new_block = true
             end
             block.expire_at = expire_at

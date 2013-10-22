@@ -4,7 +4,7 @@
 
 require 'sinatra/base'
 
-require 'flapjack/data/entity_check_r'
+require 'flapjack/data/check'
 
 module Flapjack
 
@@ -25,7 +25,7 @@ module Flapjack
 
         def status
           last_update   = @entity_check.last_update
-          last_problem  = @entity_check.states.union(:state => Flapjack::Data::CheckStateR.failing_states).
+          last_problem  = @entity_check.states.union(:state => Flapjack::Data::CheckState.failing_states).
                             intersect(:notified => true).last
           last_recovery = @entity_check.states.intersect(:state => 'ok', :notified => true).last
           last_ack      = @entity_check.states.intersect(:state => 'acknowledgement', :notified => true).last

@@ -1,14 +1,14 @@
 require 'spec_helper'
-require 'flapjack/data/notification_r'
+require 'flapjack/data/notification'
 
-describe Flapjack::Data::NotificationR, :redis => true, :logger => true do
+describe Flapjack::Data::Notification, :redis => true, :logger => true do
 
   let(:event)   { mock(Flapjack::Data::Event) }
 
-  let(:entity_check) { mock(Flapjack::Data::EntityCheckR) }
-  let(:check_state) { mock(Flapjack::Data::CheckStateR) }
+  let(:entity_check) { mock(Flapjack::Data::Check) }
+  let(:check_state) { mock(Flapjack::Data::CheckState) }
 
-  let(:contact) { mock(Flapjack::Data::ContactR) }
+  let(:contact) { mock(Flapjack::Data::Contact) }
 
   let(:timezone) { mock('timezone') }
 
@@ -24,7 +24,7 @@ describe Flapjack::Data::NotificationR, :redis => true, :logger => true do
   it "generates messages for contacts" do
     # TODO sensible default values for notification, check that they're passed
     # in message.notification_contents
-    notification = Flapjack::Data::NotificationR.new(
+    notification = Flapjack::Data::Notification.new(
       :entity_check_id   => 'abcde',
       :state_id          => 'fghij',
       :state_duration    => 16,
@@ -39,17 +39,17 @@ describe Flapjack::Data::NotificationR, :redis => true, :logger => true do
     entity_check.should_receive(:entity_name).and_return('example.com')
     entity_check.should_receive(:name).and_return('ping')
 
-    Flapjack::Data::EntityCheckR.should_receive(:find_by_id).with('abcde').and_return(entity_check)
+    Flapjack::Data::Check.should_receive(:find_by_id).with('abcde').and_return(entity_check)
 
     check_state.should_receive(:state).and_return('critical')
 
-    Flapjack::Data::CheckStateR.should_receive(:find_by_id).with('fghij').and_return(check_state)
+    Flapjack::Data::CheckState.should_receive(:find_by_id).with('fghij').and_return(check_state)
 
-    medium_1 = mock(Flapjack::Data::MediumR)
+    medium_1 = mock(Flapjack::Data::Medium)
     medium_1.should_receive(:type).and_return('email')
     medium_1.should_receive(:address).and_return('example@example.com')
 
-    medium_2 = mock(Flapjack::Data::MediumR)
+    medium_2 = mock(Flapjack::Data::Medium)
     medium_2.should_receive(:type).and_return('sms')
     medium_2.should_receive(:address).and_return('0123456789')
 

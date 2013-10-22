@@ -16,8 +16,8 @@ describe Flapjack::Notifier, :logger => true do
 
     notifier = Flapjack::Notifier.new(:lock => lock, :config => config, :logger => @logger)
 
-    Flapjack::Data::NotificationR.should_receive(:foreach_on_queue)
-    Flapjack::Data::NotificationR.should_receive(:wait_for_queue).and_raise(Flapjack::PikeletStop)
+    Flapjack::Data::Notification.should_receive(:foreach_on_queue)
+    Flapjack::Data::Notification.should_receive(:wait_for_queue).and_raise(Flapjack::PikeletStop)
 
     expect { notifier.start }.to raise_error(Flapjack::PikeletStop)
   end

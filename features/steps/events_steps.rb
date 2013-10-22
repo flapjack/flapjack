@@ -9,7 +9,7 @@ end
 
 def drain_notifications
   return unless @notifier
-  Flapjack::Data::NotificationR.foreach_on_queue('notifications') do |notification|
+  Flapjack::Data::Notification.foreach_on_queue('notifications') do |notification|
     @notifier.send(:process_notification, notification)
   end
 end
@@ -19,17 +19,17 @@ def submit_event(event)
 end
 
 def set_scheduled_maintenance(entity, check, duration = 60*60*2)
-  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+  entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
 
   t = Time.now.to_i
-  sched_maint = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => t,
+  sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => t,
     :end_time => t + duration, :summary => 'upgrading everything')
   sched_maint.save.should be_true
   entity_check.add_scheduled_maintenance(sched_maint)
 end
 
 def remove_scheduled_maintenance(entity, check)
-  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+  entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
 
   t = Time.now.to_i
   sched_maints = entity_check.scheduled_maintenances_by_start.all
@@ -40,7 +40,7 @@ def remove_scheduled_maintenance(entity, check)
 end
 
 def clear_unscheduled_maintenance(entity, check)
-  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+  entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
   entity_check.clear_unscheduled_maintenance(Time.now.to_i)
 end
 
@@ -52,7 +52,7 @@ end
 # end
 
 def set_state(entity, check, state, last_update)
-  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+  entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
   entity_check.state = state
   entity_check.last_update = last_update
   entity_check.save
@@ -144,21 +144,21 @@ def stringify(obj)
 end
 
 Given /^an entity '([\w\.\-]+)' exists$/ do |entity_name|
-  entity = Flapjack::Data::EntityR.intersect(:name => entity_name).all.first
+  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
   if entity.nil?
-    entity = Flapjack::Data::EntityR.new(:id   => '5000',
+    entity = Flapjack::Data::Entity.new(:id   => '5000',
                                          :name => entity_name)
     entity.save
   end
 end
 
 Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check_name, entity_name|
-  entity = Flapjack::Data::EntityR.intersect(:name => entity_name).all.first
+  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
   entity.should_not be_nil
 
-  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+  entity_check = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
   if entity_check.nil?
-    entity_check = Flapjack::Data::EntityCheckR.new(:entity_name => entity_name, :name => check_name)
+    entity_check = Flapjack::Data::Check.new(:entity_name => entity_name, :name => check_name)
     entity_check.save.should_not be_false
   end
   entity.checks << entity_check
@@ -261,7 +261,7 @@ Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on enti
   check  ||= @check
   entity ||= @entity
 
-  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+  entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
   entity_check.should_not be_nil
 
   last_notification = entity_check.last_notification
@@ -278,7 +278,7 @@ Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '
   check  ||= @check
   entity ||= @entity
 
-  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+  entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
   entity_check.should_not be_nil
   last_notification = entity_check.last_notification
 
@@ -294,7 +294,7 @@ Then /^(un)?scheduled maintenance should be generated(?: for check '([\w\.\-]+)'
   check  ||= @check
   entity ||= @entity
 
-  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity, :name => check).all.first
+  entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
   entity_check.should_not be_nil
 
   entity_check.should (unsched ? be_in_unscheduled_maintenance : be_in_scheduled_maintenance)
@@ -309,7 +309,7 @@ Then /^dump notification rules for user (\d+)$/ do |contact|
   rule_ids = Flapjack.redis.smembers("contact_notification_rules:#{contact}")
   puts "There #{(rule_ids.length == 1) ? 'is' : 'are'} #{rule_ids.length} notification rule#{(rule_ids.length == 1) ? '' : 's'} for user #{contact}:"
   rule_ids.each {|rule_id|
-    rule = Flapjack::Data::NotificationRule.find_by_id(rule_id)
+    rule = Flapjack::Data::Notificationule.find_by_id(rule_id)
     puts rule.to_json
   }
 end
@@ -321,7 +321,7 @@ Given /^the following entities exist:$/ do |entities|
 
     next if entity_data['contacts'].nil?
     entity_data['contacts'].split(',').map(&:strip).each do |contact_id|
-      contact = Flapjack::Data::ContactR.find_by_id(contact_id)
+      contact = Flapjack::Data::Contact.find_by_id(contact_id)
       contact.should_not be_nil
       entity.contacts << contact
     end
@@ -336,7 +336,7 @@ Given /^the following users exist:$/ do |contacts|
     contact.save.should be_true
 
     ['email', 'sms'].each do |type|
-      medium = Flapjack::Data::MediumR.new(:type => type,
+      medium = Flapjack::Data::Medium.new(:type => type,
         :address => contact_data[type], :interval => 600)
       medium.save.should be_true
       contact.media << medium
@@ -345,7 +345,7 @@ Given /^the following users exist:$/ do |contacts|
 end
 
 Given /^user (\d+) has the following notification intervals:$/ do |contact_id, intervals|
-  contact = Flapjack::Data::ContactR.find_by_id(contact_id)
+  contact = Flapjack::Data::Contact.find_by_id(contact_id)
   intervals.hashes.each do |interval|
     @logger.info interval
     ['email', 'sms'].each do |type|
@@ -359,7 +359,7 @@ Given /^user (\d+) has the following notification intervals:$/ do |contact_id, i
 end
 
 Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules|
-  contact = Flapjack::Data::ContactR.find_by_id(contact_id)
+  contact = Flapjack::Data::Contact.find_by_id(contact_id)
   timezone = contact.time_zone
 
   # delete any autogenerated rules (evading autogeneration wrapper)
@@ -398,7 +398,7 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
                  :warning_blackhole  => warning_blackhole,
                  :critical_blackhole => critical_blackhole,
                  :time_restrictions  => time_restrictions}
-    new_rule = Flapjack::Data::NotificationRuleR.new(rule_data)
+    new_rule = Flapjack::Data::NotificationRule.new(rule_data)
     new_rule.save.should be_true
     notification_rules << new_rule
   end

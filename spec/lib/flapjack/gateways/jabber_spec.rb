@@ -72,8 +72,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     let(:bot) { mock(Flapjack::Gateways::Jabber::Bot) }
 
-    let(:entity) { mock(Flapjack::Data::EntityR) }
-    let(:entity_check) { mock(Flapjack::Data::EntityCheckR) }
+    let(:entity) { mock(Flapjack::Data::Entity) }
+    let(:entity_check) { mock(Flapjack::Data::Check) }
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by a signal" do
@@ -139,7 +139,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       all_checks = mock('all_checks', :all => [entity_check])
       entity.should_receive(:checks).and_return(all_checks)
       all_entities = mock('all_entities', :all => [entity])
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => 'example.com').and_return(all_entities)
 
       entity_check.should_receive(:name).twice.and_return('ping')
@@ -163,11 +163,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
         with(:unscheduled => true).and_return(nil)
 
       all_checks = mock('all_checks', :all => [entity_check])
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => 'example.com', :name => 'ping').and_return(all_checks)
 
       all_entities = mock('all_entities', :all => [entity])
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => 'example.com').and_return(all_entities)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
@@ -179,7 +179,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', "found 1 entity matching /example/ ... \nexample.com")
 
-      Flapjack::Data::EntityR.should_receive(:find_all_name_matching).
+      Flapjack::Data::Entity.should_receive(:find_all_name_matching).
         with("example").and_return(['example.com'])
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
@@ -191,7 +191,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', 'that doesn\'t seem to be a valid pattern - /(example/')
 
-      Flapjack::Data::EntityR.should_receive(:find_all_name_matching).
+      Flapjack::Data::Entity.should_receive(:find_all_name_matching).
         with("(example").and_return(nil)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
@@ -207,11 +207,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       entity_check.should_receive(:name).and_return('ping')
       entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
 
-      state = mock(Flapjack::Data::CheckStateR)
+      state = mock(Flapjack::Data::CheckState)
       state.should_receive(:entity_check).and_return(entity_check)
 
       all_states = mock('all_states', :all => [state])
-      Flapjack::Data::CheckStateR.should_receive(:intersect).
+      Flapjack::Data::CheckState.should_receive(:intersect).
         with(:count => '1234').and_return(all_states)
 
       Flapjack::Data::Event.should_receive(:create_acknowledgement).
@@ -229,7 +229,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:announce).with('room1', /so you want me to test notifications/)
 
       all_entities = mock('all_entities', :all => [entity])
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => 'example.com').and_return(all_entities)
 
       Flapjack::Data::Event.should_receive(:test_notifications).with('events', 'example.com', 'ping',
@@ -245,7 +245,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:announce).with('room1', "yeah, no I can't see example.com in my systems")
 
       no_entities = mock('no_entities', :all => [])
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => 'example.com').and_return(no_entities)
 
       Flapjack::Data::Event.should_not_receive(:test_notifications)

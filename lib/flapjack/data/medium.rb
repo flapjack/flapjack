@@ -6,7 +6,7 @@ module Flapjack
 
   module Data
 
-    class MediumR
+    class Medium
 
       include Sandstorm::Record
 
@@ -14,7 +14,7 @@ module Flapjack
                         :address  => :string,
                         :interval => :integer
 
-      belongs_to :contact, :class_name => 'Flapjack::Data::ContactR'
+      belongs_to :contact, :class_name => 'Flapjack::Data::Contact'
 
       index_by :type
 

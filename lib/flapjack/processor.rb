@@ -10,8 +10,8 @@ require 'flapjack/filters/scheduled_maintenance'
 require 'flapjack/filters/unscheduled_maintenance'
 require 'flapjack/filters/delays'
 
-require 'flapjack/data/entity_check_r'
-require 'flapjack/data/notification_r'
+require 'flapjack/data/check'
+require 'flapjack/data/notification'
 require 'flapjack/data/event'
 require 'flapjack/exceptions'
 require 'flapjack/utility'
@@ -119,15 +119,15 @@ module Flapjack
       timestamp = Time.now.to_i
 
       entity_name, check_name = event.id.split(':', 2);
-      entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name,
+      entity_check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
         :name => check_name).all.first
 
       entity = nil
 
       if entity_check.nil?
-        entity = Flapjack::Data::EntityR.intersect(:name => entity_name).all.first
+        entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
         # TODO raise error if entity.nil?
-        entity_check = Flapjack::Data::EntityCheckR.new(:entity_name => entity_name,
+        entity_check = Flapjack::Data::Check.new(:entity_name => entity_name,
           :name => check_name)
         # not saving yet as check state isn't set
       end
@@ -177,10 +177,10 @@ module Flapjack
       # Service events represent changes in state on monitored systems
       when 'service'
         Flapjack.redis.multi
-        if Flapjack::Data::CheckStateR.ok_states.include?( event.state )
+        if Flapjack::Data::CheckState.ok_states.include?( event.state )
           Flapjack.redis.hincrby('event_counters', 'ok', 1)
           Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'ok', 1)
-        elsif Flapjack::Data::CheckStateR.failing_states.include?( event.state )
+        elsif Flapjack::Data::CheckState.failing_states.include?( event.state )
           Flapjack.redis.hincrby('event_counters', 'failure', 1)
           Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'failure', 1)
           # Flapjack.redis.hset('unacknowledged_failures', event.counter, event.id)
@@ -195,14 +195,14 @@ module Flapjack
           if @ncsm_duration >= 0
             @logger.info("Setting scheduled maintenance for #{time_period_in_words(@ncsm_duration)}")
 
-            @ncsm_sched_maint = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => timestamp,
+            @ncsm_sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => timestamp,
               :end_time => timestamp + @ncsm_duration,
               :summary => 'Automatically created for new check')
           end
 
           # If the service event's state is ok and there was no previous state, don't alert.
           # This stops new checks from alerting as "recovery" after they have been added.
-          if Flapjack::Data::CheckStateR.ok_states.include?( event.state )
+          if Flapjack::Data::CheckState.ok_states.include?( event.state )
             @logger.debug("setting skip_filters to true because there was no previous state and event is ok")
             result = false
           end
@@ -253,12 +253,12 @@ module Flapjack
         end
       end
 
-      severity = Flapjack::Data::NotificationR.severity_for_state(event.state,
+      severity = Flapjack::Data::Notification.severity_for_state(event.state,
                    max_notified_severity)
 
       @logger.debug("Notification is being generated for #{event.id}: " + event.inspect)
 
-      notification = Flapjack::Data::NotificationR.new(
+      notification = Flapjack::Data::Notification.new(
         :entity_check_id   => entity_check.id,
         :state_id          => current_state.id,
         :state_duration    => (timestamp - current_state.timestamp.to_i),
@@ -270,7 +270,7 @@ module Flapjack
         :tags              => entity_check.tags,
       )
 
-      Flapjack::Data::NotificationR.push(@notifier_queue, notification)
+      Flapjack::Data::Notification.push(@notifier_queue, notification)
     end
 
   end

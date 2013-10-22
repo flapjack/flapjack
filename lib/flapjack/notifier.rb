@@ -6,9 +6,9 @@ require 'oj'
 
 require 'flapjack'
 
-require 'flapjack/data/contact_r'
-require 'flapjack/data/entity_check_r'
-require 'flapjack/data/notification_r'
+require 'flapjack/data/contact'
+require 'flapjack/data/check'
+require 'flapjack/data/notification'
 require 'flapjack/data/event'
 
 require 'flapjack/exceptions'
@@ -58,12 +58,12 @@ module Flapjack
     def start
       loop do
         @lock.synchronize do
-          Flapjack::Data::NotificationR.foreach_on_queue(@notifications_queue) {|notif|
+          Flapjack::Data::Notification.foreach_on_queue(@notifications_queue) {|notif|
             process_notification(notif)
           }
         end
 
-        Flapjack::Data::NotificationR.wait_for_queue(@notifications_queue)
+        Flapjack::Data::Notification.wait_for_queue(@notifications_queue)
       end
     end
 
@@ -81,7 +81,7 @@ module Flapjack
 
       timestamp = Time.now
       entity_check_id = notification.entity_check_id
-      entity_check = Flapjack::Data::EntityCheckR.find_by_id(entity_check_id)
+      entity_check = Flapjack::Data::Check.find_by_id(entity_check_id)
 
       contacts = entity_check.contacts.all + entity_check.entity.contacts.all
 

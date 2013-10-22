@@ -2,8 +2,8 @@
 
 require 'sinatra/base'
 
-require 'flapjack/data/contact_r'
-require 'flapjack/data/notification_rule_r'
+require 'flapjack/data/contact'
+require 'flapjack/data/notification_rule'
 
 module Flapjack
 
@@ -18,7 +18,7 @@ module Flapjack
         end
       end
 
-      class NotificationRuleNotFound < RuntimeError
+      class NotificationuleNotFound < RuntimeError
         attr_reader :rule_id
         def initialize(rule_id)
           @rule_id = rule_id
@@ -30,14 +30,14 @@ module Flapjack
         module Helpers
 
           def find_contact(contact_id)
-            contact = Flapjack::Data::ContactR.find_by_id(contact_id)
+            contact = Flapjack::Data::Contact.find_by_id(contact_id)
             raise Flapjack::Gateways::API::ContactNotFound.new(contact_id) if contact.nil?
             contact
           end
 
           def find_rule(rule_id)
-            rule = Flapjack::Data::NotificationRuleR.find_by_id(rule_id)
-            raise Flapjack::Gateways::API::NotificationRuleNotFound.new(rule_id) if rule.nil?
+            rule = Flapjack::Data::NotificationRule.find_by_id(rule_id)
+            raise Flapjack::Gateways::API::NotificationuleNotFound.new(rule_id) if rule.nil?
             rule
           end
 
@@ -76,7 +76,7 @@ module Flapjack
               if contacts_data_ids.empty?
                 errors << "No contacts with IDs were submitted"
               else
-                contacts = Flapjack::Data::ContactR.all
+                contacts = Flapjack::Data::Contact.all
                 contacts_h = hashify(*contacts) {|c| [c.id, c] }
                 contacts_ids = contacts_h.keys
 
@@ -90,7 +90,7 @@ module Flapjack
                 contacts_data.reject {|cd| cd['id'].nil? }.each do |contact_data|
 
                   contact = contacts_h[contact_data['id'].to_s] ||
-                            Flapjack::Data::ContactR.new(:id => contact_data['id'].to_s)
+                            Flapjack::Data::Contact.new(:id => contact_data['id'].to_s)
                   contact.first_name = contact_data['first_name']
                   contact.last_name  = contact_data['last_name']
                   contact.email      = contact_data['email']
@@ -104,7 +104,7 @@ module Flapjack
                     }
 
                     contact_data['media'].each_pair do |type, details|
-                      medium = Flapjack::Data::MediumR.new(:type => type)
+                      medium = Flapjack::Data::Medium.new(:type => type)
                       case type
                       when 'pagerduty'
                         medium.address  = details['service_key']
@@ -132,7 +132,7 @@ module Flapjack
           app.get '/contacts' do
             content_type :json
 
-            Flapjack::Data::ContactR.all.collect {|c|
+            Flapjack::Data::Contact.all.collect {|c|
               c.as_json(:only => [:first_name, :last_name, :email, :tags])
             }.to_json
           end
@@ -189,7 +189,7 @@ module Flapjack
               Set.new
             end
 
-            notification_rule = Flapjack::Data::NotificationRuleR.new(
+            notification_rule = Flapjack::Data::NotificationRule.new(
               :entities           => params[:entities],
               :tags               => tag_data,
               :time_restrictions  => params[:time_restrictions],
@@ -289,7 +289,7 @@ module Flapjack
             medium = media.intersect(:type => params[:id]).all.first
             is_new = false
             if medium.nil?
-              medium = Flapjack::Data::MediumR.new(:type => params[:id])
+              medium = Flapjack::Data::Medium.new(:type => params[:id])
               is_new = true
             end
             medium.address = params[:address]

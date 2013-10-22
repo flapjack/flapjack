@@ -2,11 +2,11 @@
 
 require 'sandstorm/record'
 
-require 'flapjack/data/check_state_r'
+require 'flapjack/data/check_state'
 
 module Flapjack
   module Data
-    class NotificationBlockR
+    class NotificationBlock
 
       include Sandstorm::Record
 
@@ -17,11 +17,11 @@ module Flapjack
 
       index_by :media_type, :entity_check_id, :state
 
-      belongs_to :contact, :class_name => 'Flapjack::Data::ContactR'
+      belongs_to :contact, :class_name => 'Flapjack::Data::Contact'
 
       validate :expire_at, :presence => true
       validate :state,
-        :inclusion => { :in => Flapjack::Data::CheckStateR.all_states, :allow_blank => true }
+        :inclusion => { :in => Flapjack::Data::CheckState.all_states, :allow_blank => true }
 
     end
   end

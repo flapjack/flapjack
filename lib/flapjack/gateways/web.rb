@@ -7,8 +7,8 @@ require 'erb'
 
 require 'flapjack'
 
-require 'flapjack/data/contact_r'
-require 'flapjack/data/entity_check_r'
+require 'flapjack/data/contact'
+require 'flapjack/data/check'
 require 'flapjack/data/event'
 require 'flapjack/utility'
 
@@ -70,7 +70,7 @@ module Flapjack
         @adjective = 'all'
         time = Time.now
 
-        checks_by_entity = Flapjack::Data::EntityCheckR.hash_by_entity_name( Flapjack::Data::EntityCheckR.all )
+        checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( Flapjack::Data::Check.all )
         @entities_sorted = checks_by_entity.keys.sort
         @states = checks_by_entity.inject({}) {|result, (entity_name, checks)|
           result[entity_name] = checks.sort_by(&:name).map {|entity_check|
@@ -87,7 +87,7 @@ module Flapjack
         @adjective = 'failing'
         time = Time.now
 
-        checks_by_entity = Flapjack::Data::EntityCheckR.hash_by_entity_name( failing_checks.all )
+        checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( failing_checks.all )
         @entities_sorted = checks_by_entity.keys.sort
         @states = checks_by_entity.inject({}) {|result, (entity_name, checks)|
           result[entity_name] = checks.sort_by(&:name).map {|entity_check|
@@ -140,7 +140,7 @@ module Flapjack
       get '/entities_all' do
         entity_stats
         @adjective = 'all'
-        @entities = Flapjack::Data::EntityR.intersect(:enabled => true).all.
+        @entities = Flapjack::Data::Entity.intersect(:enabled => true).all.
           map(&:name).sort
 
         erb 'entities.html'.to_sym
@@ -149,10 +149,10 @@ module Flapjack
       get '/entities_failing' do
         entity_stats
         @adjective = 'failing'
-        failing_checks = Flapjack::Data::EntityCheckR.
-          union(:state => Flapjack::Data::CheckStateR.failing_states).all
+        failing_checks = Flapjack::Data::Check.
+          union(:state => Flapjack::Data::CheckState.failing_states).all
 
-        checks_by_entity = Flapjack::Data::EntityCheckR.hash_by_entity_name( failing_checks )
+        checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( failing_checks )
 
         @entities = checks_by_entity.keys.sort
 
@@ -164,7 +164,7 @@ module Flapjack
         entity_stats
         time = Time.now
 
-        @states = Flapjack::Data::EntityCheckR.
+        @states = Flapjack::Data::Check.
           intersect(:entity_name => @entity).all.sort_by(&:name).map { |entity_check|
           [entity_check.name] + entity_check_state(entity_check, time)
         }.sort_by {|parts| parts }
@@ -178,7 +178,7 @@ module Flapjack
 
         @current_time = Time.now
 
-        entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => @entity,
+        entity_check = Flapjack::Data::Check.intersect(:entity_name => @entity,
           :name => @check).all.first
         return 404 if entity_check.nil?
 
@@ -220,7 +220,7 @@ module Flapjack
         dur = ChronicDuration.parse(params[:duration] || '')
         @duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
-        entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => @entity,
+        entity_check = Flapjack::Data::Check.intersect(:entity_name => @entity,
           :name => @check).all.first
         return 404 if entity_check.nil?
 
@@ -241,7 +241,7 @@ module Flapjack
         @entity = params[:entity]
         @check  = params[:check]
 
-        entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => @entity,
+        entity_check = Flapjack::Data::Check.intersect(:entity_name => @entity,
           :name => @check).all.first
         return 404 if entity_check.nil?
 
@@ -260,11 +260,11 @@ module Flapjack
         duration   = ChronicDuration.parse(params[:duration])
         summary    = params[:summary]
 
-        entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => @entity,
+        entity_check = Flapjack::Data::Check.intersect(:entity_name => @entity,
           :name => @check).all.first
         return 404 if entity_check.nil?
 
-        sched_maint = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => start_time,
+        sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => start_time,
           :end_time => start_time + duration, :summary => summary)
         sched_maint.save
         entity_check.add_scheduled_maintenance(sched_maint)
@@ -277,7 +277,7 @@ module Flapjack
         @entity = params[:entity]
         @check  = params[:check]
 
-        entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => @entity,
+        entity_check = Flapjack::Data::Check.intersect(:entity_name => @entity,
           :name => @check).all.first
         return 404 if entity_check.nil?
 
@@ -294,7 +294,7 @@ module Flapjack
 
       # delete a check (actually just disables it)
       delete '/checks/:entity/:check' do
-        entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => @entity,
+        entity_check = Flapjack::Data::Check.intersect(:entity_name => @entity,
           :name => @check).all.first
         return 404 if entity_check.nil?
 
@@ -305,14 +305,14 @@ module Flapjack
       end
 
       get '/contacts' do
-        @contacts = Flapjack::Data::ContactR.all
+        @contacts = Flapjack::Data::Contact.all
 
         erb 'contacts.html'.to_sym
       end
 
       get "/contacts/:contact" do
         if contact_id = params[:contact]
-          @contact = Flapjack::Data::ContactR.find_by_id(contact_id)
+          @contact = Flapjack::Data::Contact.find_by_id(contact_id)
         end
         return 404 if @contact.nil?
 
@@ -342,7 +342,7 @@ module Flapjack
         summary = summary[0..76] + '...' unless summary.nil? || (summary.length < 81)
 
         latest_problem  = entity_check.states.
-          union(:state => Flapjack::Data::CheckStateR.failing_states).
+          union(:state => Flapjack::Data::CheckState.failing_states).
           intersect(:notified => true).last
 
         latest_recovery = entity_check.states.
@@ -399,19 +399,19 @@ module Flapjack
       end
 
       def failing_checks
-        @failing_checks ||= Flapjack::Data::EntityCheckR.union(:state =>
-                              Flapjack::Data::CheckStateR.failing_states)
+        @failing_checks ||= Flapjack::Data::Check.union(:state =>
+                              Flapjack::Data::CheckState.failing_states)
       end
 
       def entity_stats
-        @count_all_entities      = Flapjack::Data::EntityR.intersect(:enabled => true).count
+        @count_all_entities      = Flapjack::Data::Entity.intersect(:enabled => true).count
         failing_enabled_checks   = failing_checks.intersect(:enabled => true).all
-        @count_failing_entities  = Flapjack::Data::EntityCheckR.hash_by_entity_name(
+        @count_failing_entities  = Flapjack::Data::Check.hash_by_entity_name(
           failing_enabled_checks).keys.size
       end
 
       def check_stats
-        @count_all_checks        = Flapjack::Data::EntityCheckR.count
+        @count_all_checks        = Flapjack::Data::Check.count
         @count_failing_checks    = failing_checks.count
       end
 

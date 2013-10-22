@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'flapjack/data/check_state_r'
+require 'flapjack/data/check_state'
 
 require 'flapjack/filters/base'
 
@@ -16,14 +16,14 @@ module Flapjack
       include Base
 
       def block?(event, entity_check, previous_state)
-        unless Flapjack::Data::CheckStateR.ok_states.include?( event.state )
+        unless Flapjack::Data::CheckState.ok_states.include?( event.state )
           @logger.debug("Filter: Ok: pass")
           return false
         end
 
         entity_check.clear_unscheduled_maintenance(Time.now.to_i)
 
-        if !previous_state.nil? && Flapjack::Data::CheckStateR.ok_states.include?( previous_state.state )
+        if !previous_state.nil? && Flapjack::Data::CheckState.ok_states.include?( previous_state.state )
           @logger.debug("Filter: Ok: block - previous state was ok, so blocking")
           return true
         end
@@ -37,7 +37,7 @@ module Flapjack
         end
 
         if last_notification.respond_to?(:state) &&
-           Flapjack::Data::CheckStateR.ok_states.include?(last_notification.state)
+           Flapjack::Data::CheckState.ok_states.include?(last_notification.state)
 
           @logger.debug("Filter: Ok: block - last notification was a recovery")
           return true

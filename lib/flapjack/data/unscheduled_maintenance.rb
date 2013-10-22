@@ -4,7 +4,7 @@ require 'sandstorm/record'
 
 module Flapjack
   module Data
-    class UnscheduledMaintenanceR
+    class UnscheduledMaintenance
 
       include Sandstorm::Record
 
@@ -17,7 +17,7 @@ module Flapjack
       validates :start_time, :presence => true
       validates :end_time, :presence => true
 
-      belongs_to :entity_check, :class_name => 'Flapjack::Data::EntityCheckR'
+      belongs_to :entity_check, :class_name => 'Flapjack::Data::Check'
 
       def duration
         self.end_time - self.start_time

@@ -2,14 +2,14 @@
 
 require 'sandstorm/record'
 
-require 'flapjack/data/contact_r'
-require 'flapjack/data/entity_check_r'
+require 'flapjack/data/contact'
+require 'flapjack/data/check'
 
 module Flapjack
 
   module Data
 
-    class EntityR
+    class Entity
 
       include Sandstorm::Record
 
@@ -22,10 +22,10 @@ module Flapjack
 
       index_by :name, :enabled
 
-      has_many :contacts, :class_name => 'Flapjack::Data::ContactR'
+      has_many :contacts, :class_name => 'Flapjack::Data::Contact'
 
       # NB replaces check_list, check_count
-      has_many :checks, :class_name => 'Flapjack::Data::EntityCheckR'
+      has_many :checks, :class_name => 'Flapjack::Data::Check'
 
       validate :name, :presence => true
 
@@ -73,9 +73,9 @@ module Flapjack
         result
       end
 
-      # TODO change uses of Entity.all to EntityR.all.sort_by(&:name)
+      # TODO change uses of Entity.all to Entity.all.sort_by(&:name)
 
-      # TODO change uses of Entity.find_by_name(N) to EntityR.find_by(:name, N)
+      # TODO change uses of Entity.find_by_name(N) to Entity.find_by(:name, N)
     end
 
   end

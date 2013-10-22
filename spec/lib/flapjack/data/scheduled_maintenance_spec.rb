@@ -1,7 +1,7 @@
 require 'spec_helper'
-require 'flapjack/data/scheduled_maintenance_r'
+require 'flapjack/data/scheduled_maintenance'
 
-describe Flapjack::Data::ScheduledMaintenanceR, :redis => true do
+describe Flapjack::Data::ScheduledMaintenance, :redis => true do
 
 
   #   it "creates a scheduled maintenance period for a future time" do

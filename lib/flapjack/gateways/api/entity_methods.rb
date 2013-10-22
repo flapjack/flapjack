@@ -4,8 +4,8 @@ require 'sinatra/base'
 
 require 'flapjack'
 
-require 'flapjack/data/entity_r'
-require 'flapjack/data/entity_check_r'
+require 'flapjack/data/entity'
+require 'flapjack/data/check'
 require 'flapjack/data/event'
 
 require 'flapjack/gateways/api/entity_presenter'
@@ -37,13 +37,13 @@ module Flapjack
         module Helpers
 
           def find_entity(entity_name)
-            entity = Flapjack::Data::EntityR.intersect(:name => entity_name).all.first
+            entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
             raise Flapjack::Gateways::API::EntityNotFound.new(entity_name) if entity.nil?
             entity
           end
 
           def find_entity_check(entity_name, check_name)
-            entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+            entity_check = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
             raise Flapjack::Gateways::API::EntityCheckNotFound.new(entity_name, check_name) if entity_check.nil?
             entity_check
           end
@@ -136,7 +136,7 @@ module Flapjack
 
           app.get '/entities' do
             content_type :json
-            ret = Flapjack::Data::EntityR.all.sort_by(&:name).collect {|e|
+            ret = Flapjack::Data::Entity.all.sort_by(&:name).collect {|e|
               presenter = Flapjack::Gateways::API::EntityPresenter.new(e)
               {'id' => e.id, 'name' => e.name, 'checks' => presenter.status }
             }
@@ -223,7 +223,7 @@ module Flapjack
             halt( err(403, "start time must be provided") ) unless start_time
 
             act_proc = proc {|entity_check|
-              sched_maint = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => start_time,
+              sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => start_time,
                 :end_time => start_time + params[:duration].to_i,
                 :summary => params[:summary])
 
@@ -339,19 +339,19 @@ module Flapjack
 
               enabled = false
 
-              if entity = Flapjack::Data::EntityR.intersect(:name => ent['name']).all.first
+              if entity = Flapjack::Data::Entity.intersect(:name => ent['name']).all.first
                 enabled = entity.enabled
                 entity.destroy
               end
 
-              entity = Flapjack::Data::EntityR.new(:id => ent['id'], :name => ent['name'],
+              entity = Flapjack::Data::Entity.new(:id => ent['id'], :name => ent['name'],
                 :enabled => enabled)
               if entity.valid?
                 if errors.empty?
                   entities_to_save << entity
                   if ent['contacts'] && ent['contacts'].respond_to?(:collect)
                     entity_contacts[ent['id']] = ent['contacts'].collect {|contact_id|
-                      Flapjack::Data::ContactR.find_by_id(contact_id)
+                      Flapjack::Data::Contact.find_by_id(contact_id)
                     }.compact
                   end
                 end

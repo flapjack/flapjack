@@ -10,11 +10,11 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
   let(:json_data)       { {'valid' => 'json'} }
   # let(:json_response)   { '{"valid" : "json"}' }
 
-  let(:entity)          { mock(Flapjack::Data::EntityR) }
+  let(:entity)          { mock(Flapjack::Data::Entity) }
   let(:all_entities)    { mock('all_entities', :all => [entity]) }
   let(:no_entities)     { mock('no_entities', :all => []) }
 
-  let(:entity_check)      { mock(Flapjack::Data::EntityCheckR) }
+  let(:entity_check)      { mock(Flapjack::Data::Check) }
   let(:all_entity_checks) { mock('all_entity_checks', :all => [entity_check]) }
   let(:no_entity_checks)  { mock('no_entity_checks', :all => []) }
 
@@ -42,7 +42,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
   it "returns a list of checks for an entity" do
     entity.should_receive(:check_list).and_return([check])
-    Flapjack::Data::EntityR.should_receive(:intersect).
+    Flapjack::Data::Entity.should_receive(:intersect).
       with(:name => entity_name).and_return(all_entities)
 
     get "/checks/#{entity_name_esc}"
@@ -59,7 +59,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
 
-     Flapjack::Data::EntityR.should_receive(:intersect).
+     Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       get "/status/#{entity_name_esc}"
@@ -68,7 +68,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "should not show the status for an entity that's not found" do
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(no_entities)
 
       get "/status/#{entity_name_esc}"
@@ -81,7 +81,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
 
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/status/#{entity_name_esc}/#{check}"
@@ -90,7 +90,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "should not show the status for a check that's not found on an entity" do
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(no_entity_checks)
 
       get "/status/#{entity_name_esc}/#{check}"
@@ -102,7 +102,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       get "/scheduled_maintenances/#{entity_name_esc}"
@@ -118,7 +118,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_presenter.should_receive(:scheduled_maintenances).with(start.to_i, finish.to_i).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       get "/scheduled_maintenances/#{entity_name_esc}?" +
@@ -131,7 +131,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(json_data)
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/scheduled_maintenances/#{entity_name_esc}/#{check}"
@@ -143,7 +143,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check.should_receive(:entity_name).and_return(entity_name)
       entity_check.should_receive(:check).and_return(check)
 
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
       Flapjack::Data::Event.should_receive(:create_acknowledgement).
         with('events', entity_name, check, :summary => nil, :duration => (4 * 60 * 60))
@@ -157,7 +157,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       get "/unscheduled_maintenances/#{entity_name_esc}"
@@ -169,7 +169,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(json_data)
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/unscheduled_maintenances/#{entity_name_esc}/#{check}"
@@ -184,7 +184,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check_presenter.should_receive(:unscheduled_maintenances).with(start.to_i, finish.to_i).and_return(json_data)
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/unscheduled_maintenances/#{entity_name_esc}/#{check}" +
@@ -198,7 +198,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_presenter.should_receive(:outages).with(nil, nil).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       get "/outages/#{entity_name_esc}"
@@ -210,7 +210,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check_presenter.should_receive(:outages).with(nil, nil).and_return(json_data)
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/outages/#{entity_name_esc}/#{check}"
@@ -223,7 +223,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_presenter.should_receive(:downtime).with(nil, nil).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       get "/downtime/#{entity_name_esc}"
@@ -235,7 +235,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check_presenter.should_receive(:downtime).with(nil, nil).and_return(json_data)
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/downtime/#{entity_name_esc}/#{check}"
@@ -248,7 +248,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check.should_receive(:entity).and_return(entity)
       entity_check.should_receive(:entity_name).and_return(entity_name)
       entity_check.should_receive(:check).and_return('foo')
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => 'foo').and_return(all_entity_checks)
 
       Flapjack::Data::Event.should_receive(:test_notifications).
@@ -269,7 +269,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
 
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       get "/status", :entity => entity_name
@@ -277,7 +277,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "should not show the status for an entity that's not found" do
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(no_entities)
 
       get "/status", :entity => entity_name
@@ -291,7 +291,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
 
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/status", :check => {entity_name => check}
@@ -300,7 +300,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "should not show the status for a check that's not found on an entity" do
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(no_entity_checks)
 
       get "/status", :check => {entity_name => check}
@@ -308,7 +308,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "creates an acknowledgement for an entity check" do
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       entity_check.should_receive(:entity_name).and_return(entity_name)
@@ -325,7 +325,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       end_time = Time.now + (60 * 60) # an hour from now
       entity_check.should_receive(:clear_unscheduled_maintenance).with(end_time.to_i)
 
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       delete "/unscheduled_maintenances", :check => {entity_name => check}, :end_time => end_time.iso8601
@@ -335,11 +335,11 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     it "creates a scheduled maintenance period for an entity check" do
       start = Time.at(Time.now.to_i + (60 * 60)) # an hour from now
       duration = (2 * 60 * 60)     # two hours
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
-      sched_maint = mock(Flapjack::Data::ScheduledMaintenanceR)
-      Flapjack::Data::ScheduledMaintenanceR.should_receive(:new).
+      sched_maint = mock(Flapjack::Data::ScheduledMaintenance)
+      Flapjack::Data::ScheduledMaintenance.should_receive(:new).
         with(:start_time => start.to_i, :end_time => start.to_i + duration,
              :summary => 'test').and_return(sched_maint)
       sched_maint.should_receive(:save).and_return(true)
@@ -363,7 +363,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     it "deletes a scheduled maintenance period for an entity check" do
       start = Time.at(Time.now.to_i + (60 * 60)) # an hour from now
 
-      sched_maint = mock(Flapjack::Data::ScheduledMaintenanceR)
+      sched_maint = mock(Flapjack::Data::ScheduledMaintenance)
       all_sched_maints = mock('all_sched_maints', :all => [sched_maint])
 
       sched_maints = mock('sched_maints')
@@ -373,7 +373,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints)
       entity_check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Fixnum))
 
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       delete "/scheduled_maintenances", :check => {entity_name => check}, :start_time => start.iso8601
@@ -390,19 +390,19 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     it "deletes scheduled maintenance periods for multiple entity checks" do
       start = Time.at(Time.now.to_i + (60 * 60)) # an hour from now
 
-      sched_maint = mock(Flapjack::Data::ScheduledMaintenanceR)
+      sched_maint = mock(Flapjack::Data::ScheduledMaintenance)
       all_sched_maints = mock('all_sched_maints', :all => [sched_maint])
 
-      sched_maint_2 = mock(Flapjack::Data::ScheduledMaintenanceR)
+      sched_maint_2 = mock(Flapjack::Data::ScheduledMaintenance)
       all_sched_maints_2 = mock('all_sched_maints', :all => [sched_maint_2])
 
-      entity_check_2 = mock(Flapjack::Data::EntityCheckR)
+      entity_check_2 = mock(Flapjack::Data::Check)
 
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       all_entity_checks_2 = mock('all_entity_checks_2', :all => [entity_check_2])
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => 'foo').and_return(all_entity_checks_2)
 
       sched_maints = mock('sched_maints')
@@ -432,7 +432,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
 
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       get "/scheduled_maintenances", :entity => entity_name
@@ -451,7 +451,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
 
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       get "/scheduled_maintenances", :entity => entity_name,
@@ -468,7 +468,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
 
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/scheduled_maintenances", :check => {entity_name => check}
@@ -484,7 +484,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
 
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       get "/unscheduled_maintenances", :entity => entity_name
@@ -500,7 +500,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
 
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/unscheduled_maintenances", :check => {entity_name => check}
@@ -519,7 +519,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
 
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/unscheduled_maintenances", :check => {entity_name => check},
@@ -533,15 +533,15 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       json_data_3 = {'more' => 'data'}
 
       entity_2_name = 'entity_2'
-      entity_2 = mock(Flapjack::Data::EntityR)
+      entity_2 = mock(Flapjack::Data::Entity)
 
       result = [{:entity => entity_name,   :check => check, :outages => json_data},
                 {:entity => entity_2_name, :check => 'foo', :outages => json_data_2},
                 {:entity => entity_2_name, :check => 'bar', :outages => json_data_3}]
 
-      foo_check = mock(Flapjack::Data::EntityCheckR)
+      foo_check = mock(Flapjack::Data::Check)
       all_foo_checks = mock('all_foo_checks', :all => [foo_check])
-      bar_check = mock(Flapjack::Data::EntityCheckR)
+      bar_check = mock(Flapjack::Data::Check)
       all_bar_checks = mock('all_bar_checks', :all => [bar_check])
 
       foo_check_presenter = mock(Flapjack::Gateways::API::EntityCheckPresenter)
@@ -559,12 +559,12 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(bar_check).and_return(bar_check_presenter)
 
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_2_name, :name => 'foo').and_return(all_foo_checks)
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_2_name, :name => 'bar').and_return(all_bar_checks)
 
       get "/outages", :entity => entity_name, :check => {entity_2_name => ['foo', 'bar']}
@@ -580,7 +580,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
 
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/outages", :check => {entity_name => check}
@@ -596,7 +596,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
 
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       get "/downtime", :entity => entity_name
@@ -612,7 +612,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
         with(entity_check).and_return(entity_check_presenter)
 
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       get "/downtime", :check => {entity_name => check}
@@ -623,23 +623,23 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     it "creates test notification events for all checks on an entity" do
       entity.should_receive(:check_list).and_return([check, 'foo'])
       entity.should_receive(:name).twice.and_return(entity_name)
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       entity_check.should_receive(:entity).and_return(entity)
       entity_check.should_receive(:entity_name).and_return(entity_name)
       entity_check.should_receive(:check).and_return(check)
 
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
-      entity_check_2 = mock(Flapjack::Data::EntityCheckR)
+      entity_check_2 = mock(Flapjack::Data::Check)
       entity_check_2.should_receive(:entity).and_return(entity)
       entity_check_2.should_receive(:entity_name).and_return(entity_name)
       entity_check_2.should_receive(:check).and_return('foo')
 
       all_entity_checks_2 = mock('all_entity_checks_2', :all => [entity_check_2])
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => 'foo').and_return(all_entity_checks_2)
 
       Flapjack::Data::Event.should_receive(:test_notifications).
@@ -657,7 +657,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check.should_receive(:entity).and_return(entity)
       entity_check.should_receive(:entity_name).and_return(entity_name)
       entity_check.should_receive(:check).and_return(check)
-      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+      Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
       Flapjack::Data::Event.should_receive(:test_notifications).
@@ -681,26 +681,26 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         ]
       }
 
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => 'clientx-app-01').and_return(no_entities)
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => 'clientx-app-02').and_return(no_entities)
 
-      Flapjack::Data::ContactR.should_receive(:find_by_id).exactly(4).times.and_return(nil)
+      Flapjack::Data::Contact.should_receive(:find_by_id).exactly(4).times.and_return(nil)
 
       entity.should_receive(:valid?).and_return(true)
       entity.should_receive(:save).and_return(true)
       entity.should_receive(:id).and_return('10001')
 
-      entity_2 = mock(Flapjack::Data::EntityR)
+      entity_2 = mock(Flapjack::Data::Entity)
       entity_2.should_receive(:valid?).and_return(true)
       entity_2.should_receive(:save).and_return(true)
       entity_2.should_receive(:id).and_return('10002')
 
-      Flapjack::Data::EntityR.should_receive(:new).
+      Flapjack::Data::Entity.should_receive(:new).
         with(:id => '10001', :name => 'clientx-app-01', :enabled => false).
         and_return(entity)
-      Flapjack::Data::EntityR.should_receive(:new).
+      Flapjack::Data::Entity.should_receive(:new).
         with(:id => '10002', :name => 'clientx-app-02', :enabled => false).
         and_return(entity_2)
 
@@ -709,7 +709,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "does not create entities if the data is improperly formatted" do
-      Flapjack::Data::EntityR.should_not_receive(:new)
+      Flapjack::Data::Entity.should_not_receive(:new)
 
       post "/entities", {'entities' => ["Hello", "there"]}.to_json,
         {'CONTENT_TYPE' => 'application/json'}
@@ -725,7 +725,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity.should_receive(:tags=).with(Set.new(tags))
       entity.should_receive(:tags).twice.and_return(Set.new, Set.new(tags))
       entity.should_receive(:save).and_return(true)
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       post "entities/#{entity_name}/tags", :tag => tags.first
@@ -734,7 +734,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "does not set a single tag on an entity that's not found" do
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(no_entities)
 
       post "entities/#{entity_name}/tags", :tag => 'web'
@@ -746,7 +746,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity.should_receive(:tags=).with(Set.new(tags))
       entity.should_receive(:tags).twice.and_return(Set.new, Set.new(tags))
       entity.should_receive(:save).and_return(true)
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       # NB submitted at a lower level as tag[]=web&tag[]=app
@@ -756,7 +756,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "does not set multiple tags on an entity that's not found" do
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(no_entities)
 
       post "entities/#{entity_name}/tags", :tag => ['web', 'app']
@@ -768,7 +768,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity.should_receive(:tags=).with(Set.new)
       entity.should_receive(:tags).and_return(Set.new(tags))
       entity.should_receive(:save).and_return(true)
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       delete "entities/#{entity_name}/tags", :tag => tags.first
@@ -776,7 +776,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "does not remove a single tag from an entity that's not found" do
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(no_entities)
 
       delete "entities/#{entity_name}/tags", :tag => 'web'
@@ -788,7 +788,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity.should_receive(:tags=).with(Set.new)
       entity.should_receive(:tags).and_return(Set.new(tags))
       entity.should_receive(:save).and_return(true)
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       delete "entities/#{entity_name}/tags", :tag => tags
@@ -796,7 +796,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "does not remove multiple tags from an entity that's not found" do
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(no_entities)
 
       delete "entities/#{entity_name}/tags", :tag => ['web', 'app']
@@ -806,7 +806,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     it "gets all tags on an entity" do
       entity.should_receive(:tags).and_return(Set.new(['web', 'app']))
 
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
       get "entities/#{entity_name}/tags"
@@ -815,7 +815,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "does not get all tags on an entity that's not found" do
-      Flapjack::Data::EntityR.should_receive(:intersect).
+      Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(no_entities)
 
       get "entities/#{entity_name}/tags"

@@ -82,7 +82,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
   context 'acknowledgements' do
 
-    let(:entity_check) { mock(Flapjack::Data::EntityCheckR) }
+    let(:entity_check) { mock(Flapjack::Data::Check) }
 
     let(:status_change) { {'id'        => 'ABCDEFG',
                            'name'      => 'John Smith',
@@ -112,7 +112,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       redis.should_receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(1)
       redis.should_receive(:expire).with('sem_pagerduty_acks_running', 300)
 
-      contact = mock(Flapjack::Data::ContactR)
+      contact = mock(Flapjack::Data::Contact)
       contact.should_receive(:pagerduty_credentials).and_return({
         'service_key' => '12345678',
         'subdomain"'  => 'flpjck',
@@ -127,13 +127,13 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
 
       failing_checks = mock('failing_checks', :all => [entity_check])
-      Flapjack::Data::EntityCheckR.should_receive(:union).with(:state =>
+      Flapjack::Data::Check.should_receive(:union).with(:state =>
         ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
-      # Flapjack::Data::EntityCheckR.should_receive(:find_all_failing_unacknowledged).
+      # Flapjack::Data::Check.should_receive(:find_all_failing_unacknowledged).
       #   and_return(['PING:foo-app-01.bar.net'])
 
-      # Flapjack::Data::EntityCheckR.should_receive(:for_event_id).
+      # Flapjack::Data::Check.should_receive(:for_event_id).
       #   with('PING:foo-app-01.bar.net').and_return(entity_check)
 
       Flapjack::Data::Event.should_receive(:create_acknowledgement).with('events',

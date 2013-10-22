@@ -11,7 +11,7 @@ require 'sandstorm/record'
 
 module Flapjack
   module Data
-    class NotificationRuleR
+    class NotificationRule
 
       extend Flapjack::Utility
 
@@ -27,7 +27,7 @@ module Flapjack
                         :warning_blackhole       => :boolean,
                         :critical_blackhole      => :boolean
 
-      belongs_to :contact, :class_name => 'Flapjack::Data::ContactR'
+      belongs_to :contact, :class_name => 'Flapjack::Data::Contact'
 
       validates_each :entities, :tags, :unknown_media, :warning_media, :critical_media,
         :allow_blank => true do |record, att, value|
@@ -144,7 +144,7 @@ module Flapjack
 
         self.time_restrictions.any? do |tr|
           # add contact's timezone to the time restriction schedule
-          schedule = Flapjack::Data::NotificationRuleR.
+          schedule = Flapjack::Data::NotificationRule.
                        time_restriction_to_icecube_schedule(tr, timezone)
           schedule && schedule.occurring_at?(usertime)
         end

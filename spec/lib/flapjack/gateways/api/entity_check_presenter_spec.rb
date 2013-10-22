@@ -3,26 +3,26 @@ require 'flapjack/gateways/api/entity_check_presenter'
 
 describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
 
-  let(:entity_check) { mock(Flapjack::Data::EntityCheckR) }
+  let(:entity_check) { mock(Flapjack::Data::Check) }
 
   let(:time) { Time.now.to_i }
 
   let(:states) {
-    [mock(Flapjack::Data::CheckStateR, :state => 'critical',
+    [mock(Flapjack::Data::CheckState, :state => 'critical',
             :timestamp => time - (4 * 60 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckStateR, :state => 'ok',
+     mock(Flapjack::Data::CheckState, :state => 'ok',
             :timestamp => time - (4 * 60 * 60) + (5 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckStateR, :state => 'critical',
+     mock(Flapjack::Data::CheckState, :state => 'critical',
             :timestamp => time - (3 * 60 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckStateR, :state => 'ok',
+     mock(Flapjack::Data::CheckState, :state => 'ok',
             :timestamp => time - (3 * 60 * 60) + (10 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckStateR, :state => 'critical',
+     mock(Flapjack::Data::CheckState, :state => 'critical',
             :timestamp => time - (2 * 60 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckStateR, :state => 'ok',
+     mock(Flapjack::Data::CheckState, :state => 'ok',
             :timestamp => time - (2 * 60 * 60) + (15 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckStateR, :state => 'critical',
+     mock(Flapjack::Data::CheckState, :state => 'critical',
             :timestamp => time - (1 * 60 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckStateR, :state => 'ok',
+     mock(Flapjack::Data::CheckState, :state => 'ok',
             :timestamp => time - (1 * 60 * 60) + (20 * 60), :summary => '', :details => '')
     ]
   }
@@ -30,19 +30,19 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   # one overlap at start, one overlap at end, one wholly overlapping,
   # one wholly contained
   let(:unscheduled_maintenances) {
-    [mock(Flapjack::Data::UnscheduledMaintenanceR,
+    [mock(Flapjack::Data::UnscheduledMaintenance,
             :start_time => time - ((4 * 60 * 60) + (1 * 60)), # 1 minute before outage starts
             :end_time   => time - (4 * 60 * 60) + (2 * 60),   # 2 minutes after outage starts
             :duration => (3 * 60)),
-     mock(Flapjack::Data::UnscheduledMaintenanceR,
+     mock(Flapjack::Data::UnscheduledMaintenance,
             :start_time => time - (3 * 60 * 60) + (8 * 60),   # 2 minutes before outage ends
             :end_time   => time - (3 * 60 * 60) + (11 * 60),  # 1 minute after outage ends
             :duration => (3 * 60)),
-     mock(Flapjack::Data::UnscheduledMaintenanceR,
+     mock(Flapjack::Data::UnscheduledMaintenance,
             :start_time => time - ((2 * 60 * 60) + (1 * 60)), # 1 minute before outage starts
             :end_time   => time - (2 * 60 * 60) + (17 * 60),  # 2 minutes after outage ends
             :duration => (3 * 60)),
-     mock(Flapjack::Data::UnscheduledMaintenanceR,
+     mock(Flapjack::Data::UnscheduledMaintenance,
             :start_time => time - (1 * 60 * 60) + (1 * 60),   # 1 minute after outage starts
             :end_time   => time - (1 * 60 * 60) + (10 * 60),  # 10 minutes before outage ends
             :duration => (9 * 60))
@@ -50,19 +50,19 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   }
 
   let(:scheduled_maintenances) {
-    [mock(Flapjack::Data::ScheduledMaintenanceR,
+    [mock(Flapjack::Data::ScheduledMaintenance,
             :start_time => time - ((4 * 60 * 60) + (1 * 60)), # 1 minute before outage starts
             :end_time   => time - (4 * 60 * 60) + (2 * 60),   # 2 minutes after outage starts
             :duration => (3 * 60)),
-     mock(Flapjack::Data::ScheduledMaintenanceR,
+     mock(Flapjack::Data::ScheduledMaintenance,
             :start_time => time - (3 * 60 * 60) + (8 * 60),   # 2 minutes before outage ends
             :end_time   => time - (3 * 60 * 60) + (11 * 60),  # 1 minute after outage ends
             :duration => (3 * 60)),
-     mock(Flapjack::Data::ScheduledMaintenanceR,
+     mock(Flapjack::Data::ScheduledMaintenance,
             :start_time => time - ((2 * 60 * 60) + (1 * 60)), # 1 minute before outage starts
             :end_time   => time - (2 * 60 * 60) + (17 * 60),  # 2 minutes after outage ends
             :duration => (3 * 60)),
-     mock(Flapjack::Data::ScheduledMaintenanceR,
+     mock(Flapjack::Data::ScheduledMaintenance,
             :start_time => time - (1 * 60 * 60) + (1 * 60),   # 1 minute after outage starts
             :end_time   => time - (1 * 60 * 60) + (10 * 60),  # 10 minutes before outage ends
             :duration => (9 * 60))
@@ -110,10 +110,10 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   end
 
   it "returns a consolidated list of outage hashes with repeated state events" do
-    states[1] = mock(Flapjack::Data::CheckStateR, :state => 'critical',
+    states[1] = mock(Flapjack::Data::CheckState, :state => 'critical',
                        :timestamp => time - (4 * 60 * 60) + (5 * 60),
                        :summary => '', :details => '')
-    states[2] = mock(Flapjack::Data::CheckStateR, :state => 'ok',
+    states[2] = mock(Flapjack::Data::CheckState, :state => 'ok',
                        :timestamp => time - (3 * 60 * 60),
                        :summary => '', :details => '')
 
@@ -134,7 +134,7 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
 
   it "returns a (small) outage hash for a single state change" do
     all_states = mock('all_states',
-      :all => [mock(Flapjack::Data::CheckStateR, :state => 'critical',
+      :all => [mock(Flapjack::Data::CheckState, :state => 'critical',
                       :timestamp => time - (4 * 60 * 60) ,
                       :summary => '', :details => '')])
 
@@ -263,13 +263,13 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   end
 
   it "returns downtime and handles an unfinished problem state" do
-    current = [mock(Flapjack::Data::CheckStateR, :state => 'critical',
+    current = [mock(Flapjack::Data::CheckState, :state => 'critical',
                       :timestamp => time - (4 * 60 * 60),
                       :summary => '', :details => ''),
-               mock(Flapjack::Data::CheckStateR, :state => 'ok',
+               mock(Flapjack::Data::CheckState, :state => 'ok',
                       :timestamp => time - (4 * 60 * 60) + (5 * 60),
                       :summary => '', :details => ''),
-               mock(Flapjack::Data::CheckStateR, :state => 'critical',
+               mock(Flapjack::Data::CheckState, :state => 'critical',
                       :timestamp => time - (3 * 60 * 60),
                       :summary => '', :details => '')]
 

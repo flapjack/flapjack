@@ -1,16 +1,16 @@
 require 'spec_helper'
 
-require 'flapjack/data/entity_check_r'
-require 'flapjack/data/entity_r'
+require 'flapjack/data/check'
+require 'flapjack/data/entity'
 
-describe Flapjack::Data::EntityCheckR, :redis => true do
+describe Flapjack::Data::Check, :redis => true do
 
   let(:half_an_hour) { 30 * 60 }
 
   # def create_contact
-  #   redis.hmset('contact_r:1:attrs', {'first_name' => 'John',
+  #   redis.hmset('contact:1:attrs', {'first_name' => 'John',
   #     'last_name' => 'Smith', 'email' => 'jsmith@example.com'}.flatten)
-  #   redis.sadd('contact_r::ids', '1')
+  #   redis.sadd('contact::ids', '1')
   # end
 
   let(:entity_name) { 'foo.example.com' }
@@ -20,26 +20,26 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
 
   def create_entity(attrs = {})
     redis.multi
-    redis.hmset("entity_r:#{attrs[:id]}:attrs", {'name' => attrs[:name]}.flatten)
-    redis.sadd('entity_r::ids', attrs[:id])
-    redis.sadd("entity_r::by_name:#{attrs[:name]}", attrs[:id])
+    redis.hmset("entity:#{attrs[:id]}:attrs", {'name' => attrs[:name]}.flatten)
+    redis.sadd('entity::ids', attrs[:id])
+    redis.sadd("entity::by_name:#{attrs[:name]}", attrs[:id])
     redis.exec
   end
 
   def create_check(attrs = {})
     raise "entity not found" unless
-      entity = Flapjack::Data::EntityR.intersect(:name => attrs[:entity_name]).all.first
+      entity = Flapjack::Data::Entity.intersect(:name => attrs[:entity_name]).all.first
     attrs[:state] ||= 'ok'
     redis.multi
-    redis.hmset("entity_check_r:#{attrs[:id]}:attrs", {'name' => attrs[:name],
+    redis.hmset("check:#{attrs[:id]}:attrs", {'name' => attrs[:name],
       'entity_name' => entity.name, 'state' => attrs[:state], 'enabled' => (!!attrs[:enabled]).to_s}.flatten)
-    redis.sadd('entity_check_r::ids', attrs[:id])
-    redis.sadd("entity_check_r::by_name:#{attrs[:name]}", attrs[:id])
-    redis.sadd("entity_check_r::by_entity_name:#{entity.name}", attrs[:id])
-    redis.sadd("entity_check_r::by_state:#{attrs[:state]}", attrs[:id])
-    redis.sadd("entity_check_r::by_enabled:#{!!attrs[:enabled]}", attrs[:id])
+    redis.sadd('check::ids', attrs[:id])
+    redis.sadd("check::by_name:#{attrs[:name]}", attrs[:id])
+    redis.sadd("check::by_entity_name:#{entity.name}", attrs[:id])
+    redis.sadd("check::by_state:#{attrs[:state]}", attrs[:id])
+    redis.sadd("check::by_enabled:#{!!attrs[:enabled]}", attrs[:id])
 
-    redis.sadd("entity_r:#{entity.id}:check_ids", attrs[:id].to_s)
+    redis.sadd("entity:#{entity.id}:check_ids", attrs[:id].to_s)
     redis.exec
   end
 
@@ -48,7 +48,7 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
     create_check(:entity_name => entity_name, :name => check_name, :id => 1,
       :enabled => true)
 
-    checks_by_entity = Flapjack::Data::EntityCheckR.hash_by_entity_name( Flapjack::Data::EntityCheckR.all )
+    checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( Flapjack::Data::Check.all )
     checks_by_entity.should_not be_nil
     checks_by_entity.should be_a(Hash)
     checks_by_entity.should have(1).entity
@@ -68,10 +68,10 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
     create_check(:entity_name => entity_name, :name => 'FTP', :id => 3,
       :state => 'unknown', :enabled => true)
 
-    failing_checks = Flapjack::Data::EntityCheckR.
-      union(:state => Flapjack::Data::CheckStateR.failing_states).all
+    failing_checks = Flapjack::Data::Check.
+      union(:state => Flapjack::Data::CheckState.failing_states).all
 
-    checks_by_entity = Flapjack::Data::EntityCheckR.hash_by_entity_name( failing_checks  )
+    checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( failing_checks  )
     checks_by_entity.should_not be_nil
     checks_by_entity.should be_a(Hash)
     checks_by_entity.should have(1).entity
@@ -84,7 +84,7 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
     create_entity(:name => entity_name, :id => 1)
     create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
-    ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+    ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
     ec.should_not be_nil
     ec.entity_name.should == entity_name
   end
@@ -94,9 +94,9 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
     it "returns that it is in unscheduled maintenance" do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
-      Flapjack.redis.set("entity_check_r:1:expiring:unscheduled_maintenance", 1)
+      Flapjack.redis.set("check:1:expiring:unscheduled_maintenance", 1)
 
-      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
       ec.should be_in_unscheduled_maintenance
     end
 
@@ -104,16 +104,16 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
-      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
       ec.should_not be_in_unscheduled_maintenance
     end
 
     it "returns that it is in scheduled maintenance" do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
-      Flapjack.redis.set("entity_check_r:1:expiring:scheduled_maintenance", 1)
+      Flapjack.redis.set("check:1:expiring:scheduled_maintenance", 1)
 
-      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
       ec.should be_in_scheduled_maintenance
     end
 
@@ -121,7 +121,7 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
-      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
       ec.should_not be_in_scheduled_maintenance
     end
 
@@ -129,16 +129,16 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
-      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
       ec.current_scheduled_maintenance.should be_nil
 
       t = Time.now.to_i
 
-      sm = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => t,
+      sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t,
         :end_time => t + 2400, :summary => 'planned')
       ec.add_scheduled_maintenance(sm)
 
-      lsm = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => t + 3600,
+      lsm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t + 3600,
         :end_time => t + 4800, :summary => 'later')
       ec.add_scheduled_maintenance(lsm)
 
@@ -151,11 +151,11 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
-      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
       t = Time.now.to_i
 
-      usm = Flapjack::Data::UnscheduledMaintenanceR.new(:start_time => t,
+      usm = Flapjack::Data::UnscheduledMaintenance.new(:start_time => t,
         :end_time => t + 2400, :summary => 'impromptu')
       ec.set_unscheduled_maintenance(usm)
 
@@ -173,17 +173,17 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
-      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
       t = Time.now.to_i
       later_t = t + (15 * 60)
-      usm_a = Flapjack::Data::UnscheduledMaintenanceR.new(:start_time => t,
+      usm_a = Flapjack::Data::UnscheduledMaintenance.new(:start_time => t,
         :end_time => t + half_an_hour, :summary => 'scooby')
       ec.set_unscheduled_maintenance(usm_a)
 
       Delorean.time_travel_to( Time.at(later_t) )
 
-      usm_b = Flapjack::Data::UnscheduledMaintenanceR.new(:start_time => later_t,
+      usm_b = Flapjack::Data::UnscheduledMaintenance.new(:start_time => later_t,
         :end_time => later_t + half_an_hour, :summary => 'shaggy')
       ec.set_unscheduled_maintenance(usm_b)
 
@@ -202,11 +202,11 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
-      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
       t = Time.now.to_i
       later_t = t + (15 * 60)
-      usm_a = Flapjack::Data::UnscheduledMaintenanceR.new(:start_time => t,
+      usm_a = Flapjack::Data::UnscheduledMaintenance.new(:start_time => t,
         :end_time => t + half_an_hour, :summary => 'scooby')
       ec.set_unscheduled_maintenance(usm_a)
 
@@ -225,11 +225,11 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
-      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
       t = Time.now.to_i
 
-      sm = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => t + (60 * 60),
+      sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t + (60 * 60),
         :end_time => t + (3 * 60 * 60), :summary => '2 hours')
       ec.add_scheduled_maintenance(sm)
 
@@ -250,10 +250,10 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
-      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
       t = Time.now.to_i
-      sm = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => t + (60 * 60),
+      sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t + (60 * 60),
         :end_time => t + (3 * 60 * 60), :summary => '1 hour')
       ec.add_scheduled_maintenance(sm)
 
@@ -271,10 +271,10 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
-      ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
+      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
       t = Time.now.to_i
-      sm = Flapjack::Data::ScheduledMaintenanceR.new(:start_time => t + (60 * 60),
+      sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t + (60 * 60),
         :end_time => t + (3 * 60 * 60), :summary => '1 hour')
       ec.add_scheduled_maintenance(sm)
 

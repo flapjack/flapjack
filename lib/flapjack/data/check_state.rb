@@ -4,7 +4,7 @@ require 'sandstorm/record'
 
 module Flapjack
   module Data
-    class CheckStateR
+    class CheckState
 
       include Sandstorm::Record
 
@@ -23,7 +23,7 @@ module Flapjack
 
       index_by :state, :notified, :count
 
-      belongs_to :entity_check, :class_name => 'Flapjack::Data::EntityCheckR'
+      belongs_to :entity_check, :class_name => 'Flapjack::Data::Check'
 
       validate :state, :presence => true,
         :inclusion => { :in => [STATE_OK, STATE_WARNING,

@@ -3,9 +3,9 @@ require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 
 def find_or_create_contact(contact_data)
-  contact = Flapjack::Data::ContactR.find_by_id(contact_data['id'])
+  contact = Flapjack::Data::Contact.find_by_id(contact_data['id'])
   if contact.nil?
-    contact = Flapjack::Data::ContactR.new(:id => contact_data['id'],
+    contact = Flapjack::Data::Contact.new(:id => contact_data['id'],
       :first_name => contact_data['first_name'],
       :last_name => contact_data['last_name'],
       :email => contact_data['email'])
@@ -14,7 +14,7 @@ def find_or_create_contact(contact_data)
 
   if contact_data['media']
     contact_data['media'].each_pair {|type, address|
-      medium = Flapjack::Data::MediumR.new(:type => type, :address => address, :interval => 600)
+      medium = Flapjack::Data::Medium.new(:type => type, :address => address, :interval => 600)
       medium.save.should be_true
       contact.media << medium
     }
@@ -24,13 +24,13 @@ def find_or_create_contact(contact_data)
 end
 
 def find_or_create_entity(entity_data)
-  entity = Flapjack::Data::EntityR.find_by_id(entity_data['id'])
+  entity = Flapjack::Data::Entity.find_by_id(entity_data['id'])
   if entity.nil?
-    entity = Flapjack::Data::EntityR.new(:id => entity_data['id'],
+    entity = Flapjack::Data::Entity.new(:id => entity_data['id'],
       :name => entity_data['name'])
     entity.save.should be_true
 
-    entity_check = Flapjack::Data::EntityCheckR.new(:entity_name => entity.name, :name => 'ping')
+    entity_check = Flapjack::Data::Check.new(:entity_name => entity.name, :name => 'ping')
     entity_check.save.should be_true
 
     entity.checks << entity_check
@@ -74,7 +74,7 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_
                                     'check'   => 'ping',
                                     'time'    => timestamp)
 
-  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name,
+  entity_check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
     :name => 'ping').all.first
   entity_check.should_not be_nil
   entity_check.state = 'critical'
@@ -82,13 +82,13 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_
   entity_check.save.should be_true
 
   max_notified_severity = entity_check.max_notified_severity_of_current_failure
-  severity = Flapjack::Data::NotificationR.severity_for_state(event.state,
+  severity = Flapjack::Data::Notification.severity_for_state(event.state,
                max_notified_severity)
 
   current_state = entity_check.states.last
   previous_state = entity_check.states.intersect_range(-2, -1).first
 
-  notification = Flapjack::Data::NotificationR.new(
+  notification = Flapjack::Data::Notification.new(
     :entity_check_id   => entity_check.id,
     :state_id          => current_state.id,
     :state_duration    => 0,
@@ -100,7 +100,7 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_
     :tags              => entity_check.tags,
   )
 
-  Flapjack::Data::NotificationR.push('notifications', notification)
+  Flapjack::Data::Notification.push('notifications', notification)
   drain_notifications
 end
 
@@ -130,7 +130,7 @@ Given /^an email notification has been queued for entity '([\w\.\-]+)'$/ do |ent
   entity = find_or_create_entity('id'       => '5001',
                                  'name'     => entity_name)
 
-  entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name,
+  entity_check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
     :name => 'ping').all.first
   entity_check.should_not be_nil
 

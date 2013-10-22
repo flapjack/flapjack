@@ -1,7 +1,7 @@
 require 'spec_helper'
-require 'flapjack/data/unscheduled_maintenance_r'
+require 'flapjack/data/unscheduled_maintenance'
 
-describe Flapjack::Data::UnscheduledMaintenanceR, :redis => true do
+describe Flapjack::Data::UnscheduledMaintenance, :redis => true do
 
   #   it "creates an unscheduled maintenance period" do
   #     t = Time.now.to_i

@@ -9,7 +9,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   let(:json_data)       { {'valid' => 'json'} }
 
-  let(:contact)      { mock(Flapjack::Data::ContactR) }
+  let(:contact)      { mock(Flapjack::Data::Contact) }
   let(:all_contacts) { mock('all_contacts', :all => [contact]) }
   let(:no_contacts)  { mock('no_contacts', :all => []) }
 
@@ -28,7 +28,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   let(:redis)           { mock(::Redis) }
 
   let(:notification_rule) {
-    mock(Flapjack::Data::NotificationRuleR, :id => '1', :contact_id => '21')
+    mock(Flapjack::Data::NotificationRule, :id => '1', :contact_id => '21')
   }
 
   let(:notification_rule_data) {
@@ -77,9 +77,9 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     media = mock('media')
     media_2 = mock('media_2')
 
-    medium = mock(Flapjack::Data::MediumR)
-    medium_2 = mock(Flapjack::Data::MediumR)
-    medium_3 = mock(Flapjack::Data::MediumR)
+    medium = mock(Flapjack::Data::Medium)
+    medium_2 = mock(Flapjack::Data::Medium)
+    medium_3 = mock(Flapjack::Data::Medium)
 
     medium.should_receive(:address=).with('johns@example.dom')
     medium_2.should_receive(:address=).with('johns@conference.localhost')
@@ -96,11 +96,11 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     media.should_receive(:<<).with(medium_2)
     media_2.should_receive(:<<).with(medium_3)
 
-    Flapjack::Data::MediumR.should_receive(:new).with(:type => 'email').and_return(medium)
-    Flapjack::Data::MediumR.should_receive(:new).with(:type => 'jabber').and_return(medium_2)
-    Flapjack::Data::MediumR.should_receive(:new).with(:type => 'email').and_return(medium_3)
+    Flapjack::Data::Medium.should_receive(:new).with(:type => 'email').and_return(medium)
+    Flapjack::Data::Medium.should_receive(:new).with(:type => 'jabber').and_return(medium_2)
+    Flapjack::Data::Medium.should_receive(:new).with(:type => 'email').and_return(medium_3)
 
-    contact_2 = mock(Flapjack::Data::ContactR)
+    contact_2 = mock(Flapjack::Data::Contact)
     pd_cred = mock('pagerduty_credentials')
     pd_cred.should_receive(:clear)
     pd_cred_2 = mock('pagerduty_credentials_2')
@@ -122,16 +122,16 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     contact.should_receive(:save).and_return(true)
     contact_2.should_receive(:save).and_return(true)
 
-    Flapjack::Data::ContactR.should_receive(:all).and_return([])
-    Flapjack::Data::ContactR.should_receive(:new).with(:id => "0362").and_return(contact)
-    Flapjack::Data::ContactR.should_receive(:new).with(:id => "0363").and_return(contact_2)
+    Flapjack::Data::Contact.should_receive(:all).and_return([])
+    Flapjack::Data::Contact.should_receive(:new).with(:id => "0362").and_return(contact)
+    Flapjack::Data::Contact.should_receive(:new).with(:id => "0363").and_return(contact_2)
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 204
   end
 
   it "does not create contacts if the data is improperly formatted" do
-    Flapjack::Data::ContactR.should_not_receive(:add)
+    Flapjack::Data::Contact.should_not_receive(:add)
 
     post "/contacts", {'contacts' => ["Hello", "again"]}.to_json,
       {'CONTENT_TYPE' => 'application/json'}
@@ -150,16 +150,16 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     media = mock('media')
 
-    medium = mock(Flapjack::Data::MediumR)
+    medium = mock(Flapjack::Data::Medium)
     medium.should_receive(:address=).with('jane@example.dom')
     medium.should_receive(:save).and_return(true)
-    Flapjack::Data::MediumR.should_receive(:new).with(:type => 'email').and_return(medium)
+    Flapjack::Data::Medium.should_receive(:new).with(:type => 'email').and_return(medium)
 
     media.should_receive(:each)
 
     media.should_receive(:<<).with(medium)
 
-    existing = mock(Flapjack::Data::ContactR)
+    existing = mock(Flapjack::Data::Contact)
     existing.should_receive(:id).and_return("0363")
 
     pd_cred = mock('pagerduty_credentials')
@@ -174,7 +174,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     existing.should_receive(:save).and_return(true)
 
-    Flapjack::Data::ContactR.should_receive(:all).and_return([existing])
+    Flapjack::Data::Contact.should_receive(:all).and_return([existing])
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 204
@@ -190,16 +190,16 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       ]
     }
 
-    existing = mock(Flapjack::Data::ContactR)
+    existing = mock(Flapjack::Data::Contact)
     existing.should_receive(:id).twice.and_return("0362")
     existing.should_receive(:destroy)
 
-    Flapjack::Data::ContactR.should_receive(:all).and_return([existing])
+    Flapjack::Data::Contact.should_receive(:all).and_return([existing])
 
-    medium = mock(Flapjack::Data::MediumR)
+    medium = mock(Flapjack::Data::Medium)
     medium.should_receive(:address=).with('jane@example.dom')
     medium.should_receive(:save).and_return(true)
-    Flapjack::Data::MediumR.should_receive(:new).with(:type => 'email').and_return(medium)
+    Flapjack::Data::Medium.should_receive(:new).with(:type => 'email').and_return(medium)
 
     media = mock('media')
     media.should_receive(:each)
@@ -215,7 +215,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     contact.should_receive(:media).twice.and_return(media)
     contact.should_receive(:save).and_return(true)
 
-    Flapjack::Data::ContactR.should_receive(:new).with(:id => "0363").and_return(contact)
+    Flapjack::Data::Contact.should_receive(:new).with(:id => "0363").and_return(contact)
 
     post "/contacts", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 204
@@ -223,7 +223,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   it "returns all the contacts" do
     contact.should_receive(:as_json).and_return(json_data)
-    Flapjack::Data::ContactR.should_receive(:all).and_return([contact])
+    Flapjack::Data::Contact.should_receive(:all).and_return([contact])
 
     get '/contacts'
     last_response.should be_ok
@@ -232,7 +232,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   it "returns the core information of a specified contact" do
     contact.should_receive(:as_json).and_return(json_data)
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     get "/contacts/0362"
@@ -241,7 +241,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not return information for a contact that does not exist" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     get "/contacts/0362"
@@ -249,7 +249,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "lists a contact's notification rules" do
-    notification_rule_2 = mock(Flapjack::Data::NotificationRuleR)
+    notification_rule_2 = mock(Flapjack::Data::NotificationRule)
     notification_rule.should_receive(:as_json).and_return(json_data)
     notification_rule_2.should_receive(:as_json).and_return(json_data)
 
@@ -257,7 +257,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       :all =>  [ notification_rule, notification_rule_2 ])
 
     contact.should_receive(:notification_rules).and_return(all_notification_rules)
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     get "/contacts/0362/notification_rules"
@@ -266,7 +266,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not list notification rules for a contact that does not exist" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     get "/contacts/0362/notification_rules"
@@ -275,7 +275,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   it "returns a specified notification rule" do
     notification_rule.should_receive(:as_json).and_return(json_data)
-    Flapjack::Data::NotificationRuleR.should_receive(:find_by_id).
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with('abcdef').and_return(notification_rule)
 
     get "/notification_rules/abcdef"
@@ -284,7 +284,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not return a notification rule that does not exist" do
-    Flapjack::Data::NotificationRuleR.should_receive(:find_by_id).
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with('abcdef').and_return(nil)
 
     get "/notification_rules/abcdef"
@@ -293,7 +293,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   # POST /notification_rules
   it "creates a new notification rule" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with(notification_rule_data['contact_id']).and_return(contact)
 
     # symbolize the keys
@@ -304,7 +304,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     notification_rule_data_sym[:tags] = Set.new(notification_rule_data['tags'])
     notification_rule.should_receive(:as_json).and_return(json_data)
     notification_rule.should_receive(:save).and_return(true)
-    Flapjack::Data::NotificationRuleR.should_receive(:new).
+    Flapjack::Data::NotificationRule.should_receive(:new).
       with(notification_rule_data_sym).and_return(notification_rule)
 
     notification_rules = mock('notification_rules')
@@ -318,7 +318,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not create a notification_rule for a contact that's not present" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with(notification_rule_data['contact_id']).and_return(nil)
 
     post "/notification_rules", notification_rule_data.to_json,
@@ -334,7 +334,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   # PUT /notification_rules/RULE_ID
   it "updates a notification rule" do
-    Flapjack::Data::NotificationRuleR.should_receive(:find_by_id).
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id).and_return(notification_rule)
 
     # symbolize the keys
@@ -356,7 +356,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not update a notification rule that's not present" do
-    Flapjack::Data::NotificationRuleR.should_receive(:find_by_id).
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id).and_return(nil)
 
     put "/notification_rules/#{notification_rule.id}", notification_rule_data
@@ -365,7 +365,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   # DELETE /notification_rules/RULE_ID
   it "deletes a notification rule" do
-    Flapjack::Data::NotificationRuleR.should_receive(:find_by_id).
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id).and_return(notification_rule)
 
     notification_rule.should_receive(:contact).and_return(contact)
@@ -380,7 +380,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not delete a notification rule that's not present" do
-    Flapjack::Data::NotificationRuleR.should_receive(:find_by_id).
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id).and_return(nil)
 
     delete "/notification_rules/#{notification_rule.id}"
@@ -388,7 +388,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not delete a notification rule if the contact is not present" do
-    Flapjack::Data::NotificationRuleR.should_receive(:find_by_id).
+    Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id).and_return(notification_rule)
 
     notification_rule.should_receive(:contact).and_return(nil)
@@ -400,7 +400,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   # GET /contacts/CONTACT_ID/media
   it "returns the media of a contact" do
     contact.should_receive(:media).and_return([json_data])
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     get "/contacts/0362/media"
@@ -409,7 +409,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not return the media of a contact if the contact is not present" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     get "/contacts/0362/media"
@@ -418,14 +418,14 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   # GET /contacts/CONTACT_ID/media/MEDIA
   it "returns the specified media of a contact" do
-    medium = mock(Flapjack::Data::MediumR)
+    medium = mock(Flapjack::Data::Medium)
     medium.should_receive(:as_json).and_return(json_data)
     all_media = mock('all_media', :all => [medium])
     media = mock('media')
     media.should_receive(:intersect).with(:type => 'sms').and_return(all_media)
     contact.should_receive(:media).and_return(media)
 
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     get "/contacts/0362/media/sms"
@@ -434,7 +434,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not return the media of a contact if the contact is not present" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     get "/contacts/0362/media/sms"
@@ -447,7 +447,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     media.should_receive(:intersect).with(:type => 'telepathy').and_return(all_media)
     contact.should_receive(:media).and_return(media)
 
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     get "/contacts/0362/media/telepathy"
@@ -456,7 +456,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   # PUT, DELETE /contacts/CONTACT_ID/media/MEDIA
   it "creates/updates a media of a contact" do
-    medium = mock(Flapjack::Data::MediumR)
+    medium = mock(Flapjack::Data::Medium)
     medium.should_receive(:address=).with('04987654321')
     medium.should_receive(:interval=).with(200)
     medium.should_receive(:save).and_return(true)
@@ -468,7 +468,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     media.should_receive(:intersect).with(:type => 'sms').and_return(all_media)
     contact.should_receive(:media).and_return(media)
 
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     put "/contacts/0362/media/sms", {:address => '04987654321', :interval => '200'}
@@ -477,7 +477,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not create a media of a contact that's not present" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     put "/contacts/0362/media/sms", {:address => '04987654321', :interval => '200'}
@@ -485,7 +485,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not create a media of a contact if no address is provided" do
-    medium = mock(Flapjack::Data::MediumR)
+    medium = mock(Flapjack::Data::Medium)
     medium.should_receive(:address=).with(nil)
     medium.should_receive(:interval=).with(200)
     medium.should_receive(:save).and_return(false)
@@ -498,7 +498,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     media.should_receive(:intersect).with(:type => 'sms').and_return(all_media)
     contact.should_receive(:media).and_return(media)
 
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     put "/contacts/0362/media/sms", {:interval => '200'}
@@ -506,11 +506,11 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "creates a media of a contact even if no interval is provided" do
-    medium = mock(Flapjack::Data::MediumR)
+    medium = mock(Flapjack::Data::Medium)
     medium.should_receive(:address=).with('04987654321')
     medium.should_receive(:save).and_return(true)
     medium.should_receive(:as_json).and_return(json_data)
-    Flapjack::Data::MediumR.should_receive(:new).and_return(medium)
+    Flapjack::Data::Medium.should_receive(:new).and_return(medium)
 
     no_media = mock('no_media', :all => [])
 
@@ -519,7 +519,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     media.should_receive(:<<).with(medium)
     contact.should_receive(:media).and_return(media)
 
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     put "/contacts/0362/media/sms", {:address => '04987654321'}
@@ -527,7 +527,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "deletes a media of a contact" do
-    medium = mock(Flapjack::Data::MediumR)
+    medium = mock(Flapjack::Data::Medium)
     medium.should_receive(:destroy)
 
     all_media = mock('all_media', :all => [medium])
@@ -537,7 +537,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     media.should_receive(:delete).with(medium)
 
     contact.should_receive(:media).and_return(media)
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     delete "/contacts/0362/media/sms"
@@ -545,7 +545,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not delete a media of a contact that's not present" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     delete "/contacts/0362/media/sms"
@@ -555,7 +555,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   # GET /contacts/CONTACT_ID/timezone
   it "returns the timezone of a contact" do
     contact.should_receive(:timezone).and_return(::ActiveSupport::TimeZone.new('Australia/Sydney'))
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     get "/contacts/0362/timezone"
@@ -564,7 +564,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "doesn't get the timezone of a contact that doesn't exist" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     get "/contacts/0362/timezone"
@@ -576,7 +576,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     contact.should_receive(:timezone=).with('Australia/Perth')
     contact.should_receive(:save).and_return(true)
     contact.should_receive(:timezone).and_return(ActiveSupport::TimeZone.new('Australia/Perth'))
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     put "/contacts/0362/timezone", {:timezone => 'Australia/Perth'}
@@ -584,7 +584,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "doesn't set the timezone of a contact who can't be found" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     put "/contacts/0362/timezone", {:timezone => 'Australia/Perth'}
@@ -595,7 +595,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   it "deletes the timezone of a contact" do
     contact.should_receive(:timezone=).with(nil)
     contact.should_receive(:save).and_return(true)
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     delete "/contacts/0362/timezone"
@@ -603,7 +603,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not delete the timezone of a contact that's not present" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     delete "/contacts/0362/timezone"
@@ -615,7 +615,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     contact.should_receive(:tags=).with(Set.new(tags))
     contact.should_receive(:tags).twice.and_return(Set.new, Set.new(tags))
     contact.should_receive(:save).and_return(true)
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     post "contacts/0362/tags", :tag => tags.first
@@ -624,7 +624,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not set a single tag on a contact that's not found" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     post "contacts/0362/tags", :tag => 'web'
@@ -636,7 +636,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     contact.should_receive(:tags=).with(Set.new(tags))
     contact.should_receive(:tags).twice.and_return(Set.new, Set.new(tags))
     contact.should_receive(:save).and_return(true)
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     # NB submitted at a lower level as tag[]=web&tag[]=app
@@ -646,7 +646,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not set multiple tags on a contact that's not found" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     post "contacts/0362/tags", :tag => ['web', 'app']
@@ -658,7 +658,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     contact.should_receive(:tags=).with(Set.new)
     contact.should_receive(:tags).and_return(Set.new(tags))
     contact.should_receive(:save).and_return(true)
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     delete "contacts/0362/tags", :tag => tags.first
@@ -666,7 +666,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not remove a single tag from a contact that's not found" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     delete "contacts/0362/tags", :tag => 'web'
@@ -678,7 +678,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     contact.should_receive(:tags=).with(Set.new)
     contact.should_receive(:tags).and_return(Set.new(tags))
     contact.should_receive(:save).and_return(true)
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     delete "contacts/0362/tags", :tag => tags
@@ -686,7 +686,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not remove multiple tags from a contact that's not found" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     delete "contacts/0362/tags", :tag => ['web', 'app']
@@ -695,7 +695,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   it "gets all tags on a contact" do
     contact.should_receive(:tags).and_return(Set.new(['web', 'app']))
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     get "contacts/0362/tags"
@@ -704,7 +704,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not get all tags on a contact that's not found" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     get "contacts/0362/tags"
@@ -712,17 +712,17 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "gets all entity tags for a contact" do
-    entity_1 = mock(Flapjack::Data::EntityR)
+    entity_1 = mock(Flapjack::Data::Entity)
     entity_1.should_receive(:name).and_return('entity_1')
     entity_1.should_receive(:tags).and_return(Set.new(['web']))
-    entity_2 = mock(Flapjack::Data::EntityR)
+    entity_2 = mock(Flapjack::Data::Entity)
     entity_2.should_receive(:name).and_return('entity_2')
     entity_2.should_receive(:tags).and_return(Set.new(['app']))
 
     all_entities = mock('all_entities', :all => [entity_1, entity_2])
     contact.should_receive(:entities).and_return(all_entities)
 
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     get "contacts/0362/entity_tags"
@@ -733,7 +733,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not get all entity tags for a contact that's not found" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     get "contacts/0362/entity_tags"
@@ -744,11 +744,11 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     tags_1 = Set.new
     tags_2 = Set.new
 
-    entity_1 = mock(Flapjack::Data::EntityR)
+    entity_1 = mock(Flapjack::Data::Entity)
     entity_1.should_receive(:name).twice.and_return('entity_1')
     entity_1.should_receive(:tags).twice.and_return(tags_1, tags_1 + ['web'])
     entity_1.should_receive(:tags=).with(tags_1 + ['web'])
-    entity_2 = mock(Flapjack::Data::EntityR)
+    entity_2 = mock(Flapjack::Data::Entity)
     entity_2.should_receive(:name).twice.and_return('entity_2')
     entity_2.should_receive(:tags).twice.and_return(tags_2, tags_2 + ['app'])
     entity_2.should_receive(:tags=).with(tags_2 + ['app'])
@@ -759,7 +759,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     contact.should_receive(:entities).and_return(all_entities)
 
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     post "contacts/0362/entity_tags",
@@ -771,7 +771,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not add tags to multiple entities for a contact that's not found" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     post "contacts/0362/entity_tags",
@@ -783,11 +783,11 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     tags_1 = Set.new(['web'])
     tags_2 = Set.new(['app'])
 
-    entity_1 = mock(Flapjack::Data::EntityR)
+    entity_1 = mock(Flapjack::Data::Entity)
     entity_1.should_receive(:name).and_return('entity_1')
     entity_1.should_receive(:tags).and_return(tags_1)
     entity_1.should_receive(:tags=).with(tags_1 - ['web'])
-    entity_2 = mock(Flapjack::Data::EntityR)
+    entity_2 = mock(Flapjack::Data::Entity)
     entity_2.should_receive(:name).and_return('entity_2')
     entity_2.should_receive(:tags).and_return(tags_2)
     entity_2.should_receive(:tags=).with(tags_2 - ['app'])
@@ -797,7 +797,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     contact.should_receive(:entities).and_return(all_entities)
 
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)
 
     delete "contacts/0362/entity_tags",
@@ -806,7 +806,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not delete tags from multiple entities for a contact that's not found" do
-    Flapjack::Data::ContactR.should_receive(:find_by_id).
+    Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(nil)
 
     delete "contacts/0362/entity_tags",

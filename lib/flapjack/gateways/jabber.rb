@@ -11,8 +11,8 @@ require 'xmpp4r/muc'
 
 require 'flapjack'
 
-require 'flapjack/data/check_state_r'
-require 'flapjack/data/entity_check_r'
+require 'flapjack/data/check_state'
+require 'flapjack/data/check'
 require 'flapjack/data/event'
 require 'flapjack/data/message'
 
@@ -176,7 +176,7 @@ module Flapjack
             four_hours = 4 * 60 * 60
             duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
 
-            check_state = Flapjack::Data::CheckStateR.intersect(:count => ackid).all.first
+            check_state = Flapjack::Data::CheckState.intersect(:count => ackid).all.first
 
             if check_state.nil?
               error = "not found"
@@ -234,7 +234,7 @@ module Flapjack
 
             msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
-            if entity = Flapjack::Data::EntityR.intersect(:name => entity_name).all.first
+            if entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
               msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
               summary = "Testing notifications to all contacts interested in entity: #{entity_name}, check: #{check_name}"
@@ -248,7 +248,7 @@ module Flapjack
             entity_name = $1
             check_name  = $2
 
-            if entity = Flapjack::Data::EntityR.intersect(:name => entity_name).all.first
+            if entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
               check_str = check_name.nil? ? '' : ", check: #{check_name}"
               msg = "so you'd like details on entity: #{entity_name}#{check_str} hmm? ... OK!\n"
 
@@ -293,7 +293,7 @@ module Flapjack
               checks = if check_name.nil?
                 entity.checks.all.sort_by(&:name)
               else
-                [Flapjack::Data::EntityCheckR.
+                [Flapjack::Data::Check.
                   intersect(:entity_name => entity_name, :name => check_name).
                     all.first].compact
               end
@@ -312,7 +312,7 @@ module Flapjack
           when /^(?:find )?entities matching\s+\/(.*)\/.*$/i
             pattern = $1.chomp.strip
 
-            entity_list = Flapjack::Data::EntityR.find_all_name_matching(pattern)
+            entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern)
 
             if entity_list
               max_showable = 30

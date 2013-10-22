@@ -1,7 +1,7 @@
 require 'spec_helper'
 
-require 'flapjack/data/medium_r'
+require 'flapjack/data/medium'
 
-describe Flapjack::Data::MediumR, :redis => true do
+describe Flapjack::Data::Medium, :redis => true do
 
 end

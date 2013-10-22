@@ -8,13 +8,13 @@ require 'oj'
 
 require 'sandstorm/record'
 
-require 'flapjack/data/contact_r'
+require 'flapjack/data/contact'
 require 'flapjack/data/event'
 require 'flapjack/data/message'
 
 module Flapjack
   module Data
-    class NotificationR
+    class Notification
 
       include Sandstorm::Record
 
@@ -123,15 +123,15 @@ module Flapjack
       end
 
       def entity_check
-        @entity_check ||= (self.entity_check_id ? Flapjack::Data::EntityCheckR.find_by_id(self.entity_check_id) : nil)
+        @entity_check ||= (self.entity_check_id ? Flapjack::Data::Check.find_by_id(self.entity_check_id) : nil)
       end
 
       def state
-        @state ||= (self.state_id ? Flapjack::Data::CheckStateR.find_by_id(self.state_id) : nil)
+        @state ||= (self.state_id ? Flapjack::Data::CheckState.find_by_id(self.state_id) : nil)
       end
 
       def previous_state
-        @previous_state ||= (self.previous_state_id ? Flapjack::Data::CheckStateR.find_by_id(self.previous_state_id) : nil)
+        @previous_state ||= (self.previous_state_id ? Flapjack::Data::CheckState.find_by_id(self.previous_state_id) : nil)
       end
 
       def messages(contacts, opts = {})

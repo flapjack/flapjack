@@ -24,7 +24,7 @@ WebMock.disable_net_connect!
 
 require 'flapjack/patches'
 
-require 'flapjack/data/entity_check_r'
+require 'flapjack/data/check'
 require 'flapjack/data/event'
 
 require 'flapjack/notifier'

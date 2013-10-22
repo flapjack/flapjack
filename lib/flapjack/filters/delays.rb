@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'flapjack/data/check_state_r'
+require 'flapjack/data/check_state'
 require 'flapjack/filters/base'
 
 module Flapjack
@@ -25,19 +25,19 @@ module Flapjack
 
         label = 'Filter: Delays:'
 
-        unless event.service? && Flapjack::Data::CheckStateR.failing_states.include?( event.state )
+        unless event.service? && Flapjack::Data::CheckState.failing_states.include?( event.state )
           @logger.debug("#{label} pass - not a service event in a failure state")
           return false
         end
 
-        unless Flapjack::Data::CheckStateR.failing_states.include?( entity_check.state )
+        unless Flapjack::Data::CheckState.failing_states.include?( entity_check.state )
           @logger.debug("#{label} entity_check is not failing...")
           return false
         end
 
         last_change        = entity_check.states.last
         last_problem       = entity_check.states.
-          union(:state => Flapjack::Data::CheckStateR.failing_states).
+          union(:state => Flapjack::Data::CheckState.failing_states).
           intersect(:notified => true).last
         last_notif         = entity_check.last_notification
 

@@ -3,10 +3,10 @@ require 'flapjack/gateways/api/entity_presenter'
 
 describe 'Flapjack::Gateways::API::EntityPresenter' do
 
-  let(:entity) { mock(Flapjack::Data::EntityR) }
+  let(:entity) { mock(Flapjack::Data::Entity) }
 
-  let(:check_a) { mock(Flapjack::Data::EntityCheckR) }
-  let(:check_b) { mock(Flapjack::Data::EntityCheckR) }
+  let(:check_a) { mock(Flapjack::Data::Check) }
+  let(:check_b) { mock(Flapjack::Data::Check) }
 
   let(:checkpres_a) { mock(Flapjack::Gateways::API::EntityCheckPresenter) }
   let(:checkpres_b) { mock(Flapjack::Gateways::API::EntityCheckPresenter) }

@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
-require 'flapjack/data/check_state_r'
-require 'flapjack/data/unscheduled_maintenance_r'
+require 'flapjack/data/check_state'
+require 'flapjack/data/unscheduled_maintenance'
 
 require 'flapjack/filters/base'
 
@@ -31,14 +31,14 @@ module Flapjack
           return false
         end
 
-        unless Flapjack::Data::CheckStateR.failing_states.include?(entity_check.state)
+        unless Flapjack::Data::CheckState.failing_states.include?(entity_check.state)
           @logger.debug("#{label} blocking because check '#{entity_check.name}' on entity '#{entity_check.entity_name}' is not failing")
           return true
         end
 
         end_time = timestamp + (event.duration || (4 * 60 * 60))
 
-        unsched_maint = Flapjack::Data::UnscheduledMaintenanceR.new(:start_time => timestamp,
+        unsched_maint = Flapjack::Data::UnscheduledMaintenance.new(:start_time => timestamp,
           :end_time => end_time, :summary => event.summary)
         unsched_maint.save
 

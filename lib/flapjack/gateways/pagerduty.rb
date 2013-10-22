@@ -8,7 +8,7 @@ require 'uri/https'
 
 require 'flapjack'
 
-require 'flapjack/data/entity_check_r'
+require 'flapjack/data/check'
 require 'flapjack/data/event'
 require 'flapjack/data/message'
 
@@ -168,8 +168,8 @@ module Flapjack
           @logger.debug("looking for acks in pagerduty for unack'd problems")
 
           # TODO union to be replaced by intersect when Sandstorm issue fixed
-          unacked_failing_checks = Flapjack::Data::EntityCheckR.
-            union(:state => Flapjack::Data::CheckStateR.failing_states).
+          unacked_failing_checks = Flapjack::Data::Check.
+            union(:state => Flapjack::Data::CheckState.failing_states).
             all.reject {|ec| ec.in_unscheduled_maintenance? }
 
           @logger.debug "found unacknowledged failing checks as follows: " +

@@ -78,7 +78,7 @@ module Flapjack
         err(403, "could not find contact '#{e.contact_id}'")
       end
 
-      error Flapjack::Gateways::API::NotificationRuleNotFound do
+      error Flapjack::Gateways::API::NotificationuleNotFound do
         e = env['sinatra.error']
         err(403, "could not find notification rule '#{e.rule_id}'")
       end
