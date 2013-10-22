@@ -75,7 +75,7 @@ def main(opts)
 end
 
 options = OpenStruct.new
-options.config    = nil
+options.config    = Flapjack::Configuration::DEFAULT_CONFIG_PATH
 options.daemonize = nil
 
 exe = File.basename(__FILE__)
@@ -115,32 +115,10 @@ optparse = OptionParser.new do |opts|
 end
 optparse.parse!(ARGV)
 
-FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
-
-#runner = Dante::Runner.new('flapjack-nagios-receiver',
-#                           :pid_path   => '/var/run/flapjack/flapjack-nagios-receiver.pid',
-#                           :log_path   => '/var/log/flapjack/flapjack-nagios-receiver.log')
-
-
-if options.config
-  config_file = options.config
-  pike "specified config file cannot be read" unless File.readable?(config_file)
-else
-  [ 'etc/flapjack_config.yaml',
-    File.dirname(__FILE__) + 'etc/flapjack_config.yaml',
-    '/etc/flapjack/flapjack_config.yaml' ].each do |candidate|
-    if File.readable?(candidate)
-      config_file = candidate
-      break
-    else
-      puts "not found and/or not readable: #{candidate}"
-    end
-  end
-  pike "no config file specified and none found in default locations" unless config_file
-end
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
 
 config = Flapjack::Configuration.new
-config.load(config_file)
+config.load(options.config)
 config_env = config.all
 redis_options = config.for_redis
 
