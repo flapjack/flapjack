@@ -20,7 +20,8 @@ module Flapjack
                         :enabled => :boolean,
                         :tags    => :set
 
-      index_by :name, :enabled
+      unique_index_by :name
+      index_by :enabled
 
       has_many :contacts, :class_name => 'Flapjack::Data::Contact'
 

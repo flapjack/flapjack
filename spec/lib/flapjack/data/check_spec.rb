@@ -22,7 +22,7 @@ describe Flapjack::Data::Check, :redis => true do
     redis.multi
     redis.hmset("entity:#{attrs[:id]}:attrs", {'name' => attrs[:name]}.flatten)
     redis.sadd('entity::ids', attrs[:id])
-    redis.sadd("entity::by_name:#{attrs[:name]}", attrs[:id])
+    redis.hset("entity::by_name", attrs[:name], attrs[:id])
     redis.exec
   end
 
@@ -77,8 +77,6 @@ describe Flapjack::Data::Check, :redis => true do
     checks_by_entity.should have(1).entity
     checks_by_entity[entity_name].map(&:name).should =~ ['HTTP', 'FTP']
   end
-
-  it "finds all unacknowledged failing checks"
 
   it "returns its entity's name" do
     create_entity(:name => entity_name, :id => 1)

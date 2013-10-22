@@ -21,7 +21,8 @@ module Flapjack
                         :notified  => :boolean,
                         :notification_times => :set
 
-      index_by :state, :notified, :count
+      unique_index_by :count
+      index_by :state, :notified
 
       belongs_to :entity_check, :class_name => 'Flapjack::Data::Check'
 
