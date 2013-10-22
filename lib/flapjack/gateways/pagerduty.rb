@@ -167,9 +167,8 @@ module Flapjack
         def find_pagerduty_acknowledgements
           @logger.debug("looking for acks in pagerduty for unack'd problems")
 
-          # TODO union to be replaced by intersect when Sandstorm issue fixed
           unacked_failing_checks = Flapjack::Data::Check.
-            union(:state => Flapjack::Data::CheckState.failing_states).
+            intersect(:state => Flapjack::Data::CheckState.failing_states).
             all.reject {|ec| ec.in_unscheduled_maintenance? }
 
           @logger.debug "found unacknowledged failing checks as follows: " +

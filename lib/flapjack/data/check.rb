@@ -83,10 +83,10 @@ module Flapjack
       # NEW: Check.count
 
       # OLD: self.find_all_failing
-      # NEW: self.union(:state => Flapjack::Data::CheckState.failing_states).all
+      # NEW: self.intersect(:state => Flapjack::Data::CheckState.failing_states).all
 
       # OLD self.find_all_failing_unacknowledged
-      # NEW self.union(:state => Flapjack::Data::CheckState.failing_states).
+      # NEW self.intersect(:state => Flapjack::Data::CheckState.failing_states).
       #        all.reject {|ec| ec.in_unscheduled_maintenance? }
 
       def self.hash_by_entity_name(entity_check_list)
@@ -98,10 +98,10 @@ module Flapjack
       end
 
       # OLD self.find_all_failing_by_entity
-      # new self.hash_by_entity( self.union(:state => Flapjack::Data::CheckState.failing_states).all )
+      # new self.hash_by_entity( self.intersect(:state => Flapjack::Data::CheckState.failing_states).all )
 
       # OLD: self.count_all_failing
-      # NEW: self.union(:state => Flapjack::Data::CheckState.failing_states).count
+      # NEW: self.intersect(:state => Flapjack::Data::CheckState.failing_states).count
 
       def in_scheduled_maintenance?
         !!Flapjack.redis.get("#{self.record_key}:expiring:scheduled_maintenance")

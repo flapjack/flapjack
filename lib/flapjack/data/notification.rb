@@ -140,13 +140,16 @@ module Flapjack
         default_timezone = opts[:default_timezone]
         logger = opts[:logger]
 
+        entity_name = entity_check.entity_name
+        check_name  = entity_check.name
+
         @messages ||= contacts.collect {|contact|
           contact_id = contact.id
           rules = contact.notification_rules
           media = contact.media
 
           logger.debug "Notification#messages: creating messages for contact: #{contact_id} " +
-            "entity: \"#{entity_check.entity_name}\" check: \"#{entity_check.name}\" state: #{self.state.state} event_tags: #{self.tags.inspect} media: #{media.all.inspect}"
+            "entity: \"#{entity_name}\" check: \"#{check_name}\" state: #{self.state.state} event_tags: #{self.tags.inspect} media: #{media.all.inspect}"
           rlen = rules.count
           logger.debug "found #{rlen} rule#{(rlen == 1) ? '' : 's'} for contact #{contact_id}"
 
@@ -212,8 +215,8 @@ module Flapjack
 
             logger.debug "media after contact_drop?: #{rule_media}"
 
-            # TODO should use media.intersect, when sandstorm bug fixed
-            media.all.select {|medium| rule_media.include?(medium.type) }
+            next if rule_media.empty?
+            media.intersect(:type => rule_media).all
           end
 
           media_to_use.collect do |medium|

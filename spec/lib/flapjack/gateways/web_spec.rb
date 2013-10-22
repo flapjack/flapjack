@@ -70,11 +70,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     ok_state = mock(Flapjack::Data::CheckState, :timestamp => time - ((3 * 60 * 60)))
     last_ok = mock('last_ok', :last => ok_state)
     no_last_ack = mock('no_last_ack', :last => nil)
-    failing_checks.should_receive(:intersect).with(:notified => true).and_return(last_failing)
 
     states = mock('states')
-    states.should_receive(:union).with(:state => ['critical', 'warning', 'unknown']).
-      and_return(failing_checks)
+    states.should_receive(:intersect).with(:state => ['critical', 'warning', 'unknown'], :notified => true).
+      and_return(last_failing)
     states.should_receive(:intersect).with(:state => 'ok', :notified => true).
       and_return(last_ok)
     states.should_receive(:intersect).with(:state => 'acknowledgement', :notified => true).
@@ -95,12 +94,13 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     expect_entity_check_status(entity_check)
 
-    Flapjack::Data::Check.should_receive(:union).with(:state =>
-      ['critical', 'warning', 'unknown']).and_return(failing_checks)
-
     entity_check.should_receive(:entity_name).exactly(3).times.and_return('foo')
     entity_check.should_receive(:name).twice.and_return('ping')
     Flapjack::Data::Check.should_receive(:all).and_return([entity_check])
+
+    Flapjack::Data::Check.should_receive(:intersect).
+      with(:state => ['critical', 'warning', 'unknown']).
+      and_return(failing_checks)
 
     get '/checks_all'
     last_response.should be_ok
@@ -115,7 +115,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     entity_check.should_receive(:name).twice.and_return('ping')
 
     failing_checks.should_receive(:all).and_return([entity_check])
-    Flapjack::Data::Check.should_receive(:union).with(:state =>
+    Flapjack::Data::Check.should_receive(:intersect).with(:state =>
       ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
     get '/checks_failing'
@@ -127,7 +127,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     expect_check_stats
     expect_entity_stats
 
-    Flapjack::Data::Check.should_receive(:union).with(:state =>
+    Flapjack::Data::Check.should_receive(:intersect).with(:state =>
       ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
     entity_check.should_receive(:entity_name).exactly(3).times.and_return('foo')
@@ -186,7 +186,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     entity_check.should_receive(:enabled).and_return(true)
 
-    Flapjack::Data::Check.should_receive(:union).with(:state =>
+    Flapjack::Data::Check.should_receive(:intersect).with(:state =>
       ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
     all_checks = mock('no_checks', :all => [entity_check])

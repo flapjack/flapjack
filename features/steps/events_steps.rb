@@ -408,24 +408,13 @@ Then /^all alert dropping keys for user (\d+) should have expired$/ do |contact_
   Flapjack.redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
 end
 
-Then /^(.*) email alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
+Then /^(.*) (email|sms) alert(?:s)? should be queued for (.*)$/ do |num_queued, medium, address|
   check  = check  ? check  : @check
   entity = entity ? entity : @entity
   case num_queued
   when 'no'
     num_queued = 0
   end
-  queue  = redis_peek('email_notifications', 0, 30)
-  queue.find_all {|n| n['address'] == address }.length.should == num_queued.to_i
-end
-
-Then /^(.*) sms alert(?:s)? should be queued for (.*)$/ do |num_queued, address|
-  check  = check  ? check  : @check
-  entity = entity ? entity : @entity
-  case num_queued
-  when 'no'
-    num_queued = 0
-  end
-  queue  = redis_peek('sms_notifications', 0, 30)
+  queue  = redis_peek("#{medium.downcase}_notifications", 0, 30)
   queue.find_all {|n| n['address'] == address }.length.should == num_queued.to_i
 end

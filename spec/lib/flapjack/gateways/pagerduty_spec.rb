@@ -127,7 +127,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
 
       failing_checks = mock('failing_checks', :all => [entity_check])
-      Flapjack::Data::Check.should_receive(:union).with(:state =>
+      Flapjack::Data::Check.should_receive(:intersect).with(:state =>
         ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
       # Flapjack::Data::Check.should_receive(:find_all_failing_unacknowledged).

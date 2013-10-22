@@ -37,8 +37,8 @@ module Flapjack
 
         last_change        = entity_check.states.last
         last_problem       = entity_check.states.
-          union(:state => Flapjack::Data::CheckState.failing_states).
-          intersect(:notified => true).last
+          intersect(:state => Flapjack::Data::CheckState.failing_states,
+                    :notified => true).last
         last_notif         = entity_check.last_notification
 
         last_change_time   = last_change  ? last_change.timestamp.to_i  : nil

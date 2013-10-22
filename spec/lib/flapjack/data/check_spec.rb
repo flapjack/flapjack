@@ -69,7 +69,7 @@ describe Flapjack::Data::Check, :redis => true do
       :state => 'unknown', :enabled => true)
 
     failing_checks = Flapjack::Data::Check.
-      union(:state => Flapjack::Data::CheckState.failing_states).all
+      intersect(:state => Flapjack::Data::CheckState.failing_states).all
 
     checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( failing_checks  )
     checks_by_entity.should_not be_nil

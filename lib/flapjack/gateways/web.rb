@@ -150,7 +150,7 @@ module Flapjack
         entity_stats
         @adjective = 'failing'
         failing_checks = Flapjack::Data::Check.
-          union(:state => Flapjack::Data::CheckState.failing_states).all
+          intersect(:state => Flapjack::Data::CheckState.failing_states).all
 
         checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( failing_checks )
 
@@ -342,8 +342,7 @@ module Flapjack
         summary = summary[0..76] + '...' unless summary.nil? || (summary.length < 81)
 
         latest_problem  = entity_check.states.
-          union(:state => Flapjack::Data::CheckState.failing_states).
-          intersect(:notified => true).last
+          intersect(:state => Flapjack::Data::CheckState.failing_states, :notified => true).last
 
         latest_recovery = entity_check.states.
           intersect(:state => 'ok', :notified => true).last
@@ -399,7 +398,7 @@ module Flapjack
       end
 
       def failing_checks
-        @failing_checks ||= Flapjack::Data::Check.union(:state =>
+        @failing_checks ||= Flapjack::Data::Check.intersect(:state =>
                               Flapjack::Data::CheckState.failing_states)
       end
 
