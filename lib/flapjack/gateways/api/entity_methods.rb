@@ -6,6 +6,7 @@ require 'flapjack'
 
 require 'flapjack/data/entity_r'
 require 'flapjack/data/entity_check_r'
+require 'flapjack/data/event'
 
 require 'flapjack/gateways/api/entity_presenter'
 require 'flapjack/gateways/api/entity_check_presenter'

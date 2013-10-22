@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-# require 'flapjack/data/entity_check_r'
+require 'sandstorm/record'
 
 module Flapjack
 
@@ -8,7 +8,7 @@ module Flapjack
 
     class MediumR
 
-      include Flapjack::Data::RedisRecord
+      include Sandstorm::Record
 
       define_attributes :type => :string,
                         :address  => :string,
@@ -17,9 +17,6 @@ module Flapjack
       belongs_to :contact, :class_name => 'Flapjack::Data::ContactR'
 
       index_by :type
-
-      # ??
-      # has_many :checks, :class_name => 'Flapjack::Data::EntityCheckR'
 
       validates :type, :presence => true
       validates :address, :presence => true

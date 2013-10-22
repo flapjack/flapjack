@@ -8,7 +8,8 @@ require 'uri/https'
 
 require 'flapjack'
 
-require 'flapjack/data/entity_check'
+require 'flapjack/data/entity_check_r'
+require 'flapjack/data/event'
 require 'flapjack/data/message'
 
 require 'flapjack/exceptions'
@@ -166,49 +167,55 @@ module Flapjack
         def find_pagerduty_acknowledgements
           @logger.debug("looking for acks in pagerduty for unack'd problems")
 
-          unacked_failing_checks = Flapjack::Data::EntityCheck.find_all_failing_unacknowledged
+          # TODO union to be replaced by intersect when Sandstorm issue fixed
+          unacked_failing_checks = Flapjack::Data::EntityCheckR.
+            union(:state => Flapjack::Data::CheckStateR.failing_states).
+            all.reject {|ec| ec.in_unscheduled_maintenance? }
 
-          @logger.debug "found unacknowledged failing checks as follows: " + unacked_failing_checks.join(', ')
+          @logger.debug "found unacknowledged failing checks as follows: " +
+            unacked_failing_checks.collect {|ec|
+              ec.entity_name + ":" + ec.name
+            }.join(', ')
 
-          unacked_failing_checks.each do |event_id|
-
-            entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id)
+          unacked_failing_checks.each do |entity_check|
 
             # If more than one contact for this entity_check has pagerduty
             # credentials then there'll be one hash in the array for each set of
             # credentials.
-            ec_credentials = entity_check.contacts.inject([]) {|ret, contact|
+            ec_credentials = entity_check.contacts.all.inject([]) {|ret, contact|
               cred = contact.pagerduty_credentials
               ret << cred if cred
               ret
             }
 
             entity_name = entity_check.entity_name
-            check = entity_check.check
+            check_name = entity_check.name
+
+            event_id = "#{entity_name}:#{check_name}"
 
             if ec_credentials.empty?
-              @logger.debug("No pagerduty credentials found for #{entity_name}:#{check}, skipping")
+              @logger.debug("No pagerduty credentials found for #{event_id}, skipping")
               next
             end
 
             # FIXME: try each set of credentials until one works (may have stale contacts turning up)
-            options = ec_credentials.first.merge('check' => "#{entity_name}:#{check}")
+            options = ec_credentials.first.merge('check' => event_id)
 
             acknowledged = pagerduty_acknowledged?(options)
             if acknowledged.nil?
-              @logger.debug "#{entity_name}:#{check} is not acknowledged in pagerduty, skipping"
+              @logger.debug "#{event_id} is not acknowledged in pagerduty, skipping"
               next
             end
 
             pg_acknowledged_by = acknowledged[:pg_acknowledged_by]
-            @logger.info "#{entity_name}:#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
+            @logger.info "#{event_id} is acknowledged in pagerduty, creating flapjack acknowledgement... "
             who_text = ""
             if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
               who_text = " by #{pg_acknowledged_by['name']}"
             end
             Flapjack::Data::Event.create_acknowledgement(
               @config['processor_queue'] || 'events',
-              entity_name, check,
+              entity_name, check_name,
               :summary => "Acknowledged on PagerDuty" + who_text,
             )
           end

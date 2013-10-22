@@ -205,7 +205,7 @@ Feature: Notification rules on a per contact basis
     When  10 minutes passes
     And   a critical event is received
     Then  1 email alert should be queued for malak@example.com
-    When  5 minutes passes
+    When  6 minutes passes
     And   a critical event is received
     Then  2 email alerts should be queued for malak@example.com
 
@@ -221,7 +221,7 @@ Feature: Notification rules on a per contact basis
     When  10 minutes passes
     And   an unknown event is received
     Then  1 email alert should be queued for malak@example.com
-    When  5 minutes passes
+    When  6 minutes passes
     And   an unknown event is received
     Then  2 email alerts should be queued for malak@example.com
 

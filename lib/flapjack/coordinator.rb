@@ -3,7 +3,9 @@
 require 'monitor'
 require 'syslog'
 
-require 'redis-objects'
+require 'hiredis'
+require 'redis'
+require 'sandstorm'
 
 require 'flapjack'
 
@@ -41,10 +43,10 @@ module Flapjack
       @boot_time = Time.now
 
       # FIXME at the moment, this needs to be initialised before data classes
-      # are loaded, as global-context redis-objects need their redis handle
+      # are loaded, as global-context Sandstorm objects need their redis handle
       # at that point. Need to clean this up, as well as handling reloads per
       # the below
-      Redis::Objects.redis = Flapjack.redis = Flapjack::ConnectionPool::Wrapper.new(:size => 10) {
+      Sandstorm.redis = Flapjack.redis = Flapjack::ConnectionPool::Wrapper.new(:size => 10) {
         Redis.new(@config.for_redis.merge(:driver => :hiredis))
       }
 

@@ -72,8 +72,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     let(:bot) { mock(Flapjack::Gateways::Jabber::Bot) }
 
-    let(:entity) { mock(Flapjack::Data::Entity) }
-    let(:entity_check) { mock(Flapjack::Data::EntityCheck) }
+    let(:entity) { mock(Flapjack::Data::EntityR) }
+    let(:entity_check) { mock(Flapjack::Data::EntityCheckR) }
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by a signal" do
@@ -136,18 +136,17 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
 
-      entity.should_receive(:check_list).and_return(['ping'])
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with('example.com').and_return(entity)
+      all_checks = mock('all_checks', :all => [entity_check])
+      entity.should_receive(:checks).and_return(all_checks)
+      all_entities = mock('all_entities', :all => [entity])
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => 'example.com').and_return(all_entities)
 
-      entity_check.should_receive(:check).and_return('ping')
+      entity_check.should_receive(:name).twice.and_return('ping')
       entity_check.should_receive(:current_maintenance).
         with(:scheduled => true).and_return(nil)
       entity_check.should_receive(:current_maintenance).
         with(:unscheduled => true).and_return(nil)
-
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, 'ping').and_return(entity_check)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -158,16 +157,18 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
 
-      Flapjack::Data::Entity.should_receive(:find_by_name).
-        with('example.com').and_return(entity)
-
       entity_check.should_receive(:current_maintenance).
         with(:scheduled => true).and_return(nil)
       entity_check.should_receive(:current_maintenance).
         with(:unscheduled => true).and_return(nil)
 
-      Flapjack::Data::EntityCheck.should_receive(:for_entity).
-        with(entity, 'ping').and_return(entity_check)
+      all_checks = mock('all_checks', :all => [entity_check])
+      Flapjack::Data::EntityCheckR.should_receive(:intersect).
+        with(:entity_name => 'example.com', :name => 'ping').and_return(all_checks)
+
+      all_entities = mock('all_entities', :all => [entity])
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => 'example.com').and_return(all_entities)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -178,7 +179,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', "found 1 entity matching /example/ ... \nexample.com")
 
-      Flapjack::Data::Entity.should_receive(:find_all_name_matching).
+      Flapjack::Data::EntityR.should_receive(:find_all_name_matching).
         with("example").and_return(['example.com'])
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
@@ -190,7 +191,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', 'that doesn\'t seem to be a valid pattern - /(example/')
 
-      Flapjack::Data::Entity.should_receive(:find_all_name_matching).
+      Flapjack::Data::EntityR.should_receive(:find_all_name_matching).
         with("(example").and_return(nil)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
@@ -202,16 +203,21 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', 'ACKing ping on example.com (1234)')
 
+      entity_check.should_receive(:entity_name).and_return('example.com')
+      entity_check.should_receive(:name).and_return('ping')
+      entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
+
+      state = mock(Flapjack::Data::CheckStateR)
+      state.should_receive(:entity_check).and_return(entity_check)
+
+      all_states = mock('all_states', :all => [state])
+      Flapjack::Data::CheckStateR.should_receive(:intersect).
+        with(:count => '1234').and_return(all_states)
+
       Flapjack::Data::Event.should_receive(:create_acknowledgement).
         with('events', 'example.com', 'ping',
              :summary => 'JJ looking', :acknowledgement_id => '1234',
              :duration => (60 * 60))
-
-      redis.should_receive(:hget).with('unacknowledged_failures', '1234').and_return('example.com:ping')
-
-      entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
-      Flapjack::Data::EntityCheck.should_receive(:for_event_id).
-        with('example.com:ping').and_return(entity_check)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -222,7 +228,9 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /so you want me to test notifications/)
 
-      Flapjack::Data::Entity.should_receive(:find_by_name).with('example.com').and_return(entity)
+      all_entities = mock('all_entities', :all => [entity])
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => 'example.com').and_return(all_entities)
 
       Flapjack::Data::Event.should_receive(:test_notifications).with('events', 'example.com', 'ping',
         :summary => an_instance_of(String))
@@ -236,7 +244,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', "yeah, no I can't see example.com in my systems")
 
-      Flapjack::Data::Entity.should_receive(:find_by_name).with('example.com').and_return(nil)
+      no_entities = mock('no_entities', :all => [])
+      Flapjack::Data::EntityR.should_receive(:intersect).
+        with(:name => 'example.com').and_return(no_entities)
+
       Flapjack::Data::Event.should_not_receive(:test_notifications)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)

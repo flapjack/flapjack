@@ -10,7 +10,6 @@ namespace :events do
   require 'flapjack'
   require 'flapjack/configuration'
   require 'flapjack/data/event'
-  require 'flapjack/data/entity_check'
 
   # FIXME: add arguments, make more flexible
   desc "send events to trigger some notifications"

@@ -39,7 +39,7 @@ def find_or_create_entity(entity_data)
   entity
 end
 
-Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ do |entity_name|
+Given /^(?:a|the) user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ do |entity_name|
   contact = find_or_create_contact( 'id'         => '0999',
                                     'first_name' => 'John',
                                     'last_name'  => 'Smith',
@@ -50,12 +50,12 @@ Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ d
   entity.contacts << contact
 end
 
-Given /^the user wants to receive email notifications for entity '([\w\.\-]+)'$/ do |entity_name|
+Given /^(?:a|the) user wants to receive email notifications for entity '([\w\.\-]+)'$/ do |entity_name|
   contact = find_or_create_contact( 'id'         => '1000',
-                                    'first_name' => 'John',
+                                    'first_name' => 'Jane',
                                     'last_name'  => 'Smith',
-                                    'email'      => 'johns@example.dom',
-                                    'media'      => {'email' => 'johns@example.dom'} )
+                                    'email'      => 'janes@example.dom',
+                                    'media'      => {'email' => 'janes@example.dom'} )
 
   entity = find_or_create_entity('id'       => '5001',
                                  'name'     => entity_name)
@@ -104,24 +104,10 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_
   drain_notifications
 end
 
-Then /^an SMS notification for entity '([\w\.\-]+)' should be queued$/ do |entity_name|
-  queue = redis_peek('sms_notifications')
-  queue.select {|n| n['entity'] =~ /#{entity_name}/ }.should_not be_empty
-end
-
-Then /^an email notification for entity '([\w\.\-]+)' should be queued$/ do |entity_name|
-  queue = redis_peek('email_notifications')
-  queue.select {|n| n['entity'] =~ /#{entity_name}/ }.should_not be_empty
-end
-
-Then /^an SMS notification for entity '([\w\.\-]+)' should not be queued$/ do |entity_name|
-  queue = redis_peek('sms_notifications')
-  queue.select {|n| n['entity'] =~ /#{entity_name}/ }.should be_empty
-end
-
-Then /^an email notification for entity '([\w\.\-]+)' should not be queued$/ do |entity_name|
-  queue = redis_peek('email_notifications')
-  queue.select {|n| n['entity'] =~ /#{entity_name}/ }.should be_empty
+Then /^an (SMS|email) notification for entity '([\w\.\-]+)' should( not)? be queued$/ do |medium, entity_name, neg|
+  queue = redis_peek("#{medium.downcase}_notifications")
+  queue.select {|n| n['entity'] =~ /#{entity_name}/ }.
+        send((neg ? :should : :should_not), be_empty)
 end
 
 Given /^an SMS notification has been queued for entity '([\w\.\-]+)'$/ do |entity_name|

@@ -6,7 +6,9 @@
 
 require 'oj'
 
-require 'flapjack/data/contact'
+require 'sandstorm/record'
+
+require 'flapjack/data/contact_r'
 require 'flapjack/data/event'
 require 'flapjack/data/message'
 
@@ -14,7 +16,10 @@ module Flapjack
   module Data
     class NotificationR
 
-      include Flapjack::Data::RedisRecord
+      include Sandstorm::Record
+
+      include ActiveModel::Serializers::JSON
+      self.include_root_in_json = false
 
       # NB can't use has_one associations for the states, as the redis persistence
       # is only transitory (used to trigger a queue pop)
@@ -60,7 +65,7 @@ module Flapjack
         # TODO validate passed notification
 
         begin
-          notif_json = notification.as_json.to_json
+          notif_json = notification.to_json
         rescue Oj::Error => e
           # if opts[:logger]
           #   opts[:logger].warn("Error serialising notification json: #{e}, notification: #{notif.inspect}")
@@ -207,10 +212,9 @@ module Flapjack
 
             logger.debug "media after contact_drop?: #{rule_media}"
 
+            # TODO should use media.intersect, when sandstorm bug fixed
             media.all.select {|medium| rule_media.include?(medium.type) }
           end
-
-          logger.debug "media_to_use: #{media_to_use.inspect}"
 
           media_to_use.collect do |medium|
             Flapjack::Data::Message.for_contact(contact,

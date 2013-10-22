@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
-require 'flapjack/data/redis_record'
+require 'sandstorm/record'
+
 require 'flapjack/data/check_state_r'
 require 'flapjack/data/contact_r'
 require 'flapjack/data/scheduled_maintenance_r'
@@ -12,7 +13,7 @@ module Flapjack
 
     class EntityCheckR
 
-      include Flapjack::Data::RedisRecord
+      include Sandstorm::Record
 
       define_attributes :name        => :string,
                         :entity_name => :string,

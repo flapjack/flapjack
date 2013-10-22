@@ -24,7 +24,7 @@ WebMock.disable_net_connect!
 
 require 'flapjack/patches'
 
-require 'flapjack/data/entity_check'
+require 'flapjack/data/entity_check_r'
 require 'flapjack/data/event'
 
 require 'flapjack/notifier'
@@ -103,7 +103,7 @@ EXPIRE_AS_IF_AT
 end
 
 redis_opts = { :db => 14, :driver => :ruby }
-Redis::Objects.redis = Flapjack.redis = ::Redis.new(redis_opts)
+Sandstorm.redis = Flapjack.redis = ::Redis.new(redis_opts)
 Flapjack.redis.flushdb
 RedisDelorean.before_all
 Flapjack.redis.quit

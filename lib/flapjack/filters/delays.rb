@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'flapjack/data/entity_check'
+require 'flapjack/data/check_state_r'
 require 'flapjack/filters/base'
 
 module Flapjack

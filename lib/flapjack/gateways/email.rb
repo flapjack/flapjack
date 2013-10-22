@@ -10,7 +10,7 @@ require 'flapjack'
 require 'flapjack/exceptions'
 require 'flapjack/utility'
 
-require 'flapjack/data/entity_check'
+require 'flapjack/data/entity_check_r'
 require 'flapjack/data/message'
 
 module Flapjack
@@ -95,8 +95,8 @@ module Flapjack
 
         entity_check = Flapjack::Data::EntityCheckR.intersect(:entity_name => @entity_name, :name => @check).all.first
 
-        @in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
-        @in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
+        @in_unscheduled_maintenance = entity_check.in_unscheduled_maintenance?
+        @in_scheduled_maintenance   = entity_check.in_scheduled_maintenance?
 
         headline_map = {'problem'         => 'Problem: ',
                         'recovery'        => 'Recovery: ',

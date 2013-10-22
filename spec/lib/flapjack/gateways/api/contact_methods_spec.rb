@@ -28,7 +28,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   let(:redis)           { mock(::Redis) }
 
   let(:notification_rule) {
-    mock(Flapjack::Data::NotificationRule, :id => '1', :contact_id => '21')
+    mock(Flapjack::Data::NotificationRuleR, :id => '1', :contact_id => '21')
   }
 
   let(:notification_rule_data) {
@@ -131,7 +131,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not create contacts if the data is improperly formatted" do
-    Flapjack::Data::Contact.should_not_receive(:add)
+    Flapjack::Data::ContactR.should_not_receive(:add)
 
     post "/contacts", {'contacts' => ["Hello", "again"]}.to_json,
       {'CONTENT_TYPE' => 'application/json'}

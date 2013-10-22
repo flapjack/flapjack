@@ -12,7 +12,6 @@ namespace :benchmarks do
   require 'flapjack'
   require 'flapjack/configuration'
   require 'flapjack/data/event'
-  require 'flapjack/data/entity_check'
   require 'flapjack/version'
 
   FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'test'

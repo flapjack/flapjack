@@ -11,7 +11,9 @@ require 'xmpp4r/muc'
 
 require 'flapjack'
 
-require 'flapjack/data/entity_check'
+require 'flapjack/data/check_state_r'
+require 'flapjack/data/entity_check_r'
+require 'flapjack/data/event'
 require 'flapjack/data/message'
 
 require 'flapjack/exceptions'
@@ -174,31 +176,33 @@ module Flapjack
             four_hours = 4 * 60 * 60
             duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
 
-            event_id = Flapjack.redis.hget('unacknowledged_failures', ackid)
+            check_state = Flapjack::Data::CheckStateR.intersect(:count => ackid).all.first
 
-            if event_id.nil?
+            if check_state.nil?
               error = "not found"
             else
-              entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id)
+              entity_check = check_state.entity_check
               error = "unknown entity" if entity_check.nil?
             end
 
             if error
               msg = "ERROR - couldn't ACK #{ackid} - #{error}"
             else
-              entity_name, check = event_id.split(':', 2)
 
+              entity_name = entity_check.entity_name
+              check_name = entity_check.name
+
+              details = "#{check_name} on #{entity_name} (#{ackid})"
               if entity_check.in_unscheduled_maintenance?
-                # ack = entity_check.current_maintenance(:unscheduled => true)
-                # FIXME details from current?
-                msg = "Changing ACK for #{check} on #{entity_name} (#{ackid})"
+                msg = "Changing ACK for #{details}"
               else
-                msg = "ACKing #{check} on #{entity_name} (#{ackid})"
+                msg = "ACKing #{details}"
               end
+
               action = Proc.new {
                 Flapjack::Data::Event.create_acknowledgement(
                   @config['processor_queue'] || 'events',
-                  entity_name, check,
+                  entity_name, check_name,
                   :summary => (comment || ''),
                   :acknowledgement_id => ackid,
                   :duration => duration,
@@ -230,7 +234,7 @@ module Flapjack
 
             msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
-            if entity = Flapjack::Data::Entity.find_by_name(entity_name)
+            if entity = Flapjack::Data::EntityR.intersect(:name => entity_name).all.first
               msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
               summary = "Testing notifications to all contacts interested in entity: #{entity_name}, check: #{check_name}"
@@ -244,7 +248,7 @@ module Flapjack
             entity_name = $1
             check_name  = $2
 
-            if entity = Flapjack::Data::Entity.find_by_name(entity_name)
+            if entity = Flapjack::Data::EntityR.intersect(:name => entity_name).all.first
               check_str = check_name.nil? ? '' : ", check: #{check_name}"
               msg = "so you'd like details on entity: #{entity_name}#{check_str} hmm? ... OK!\n"
 
@@ -256,8 +260,7 @@ module Flapjack
                 out = ''
 
                 if check_name.nil?
-                  check = entity_check.check
-                  out += "---\n#{entity_name}:#{check}\n"
+                  out += "---\n#{entity_name}:#{entity_check.name}\n"
                 end
 
                 if sched.nil? && unsched.nil?
@@ -287,14 +290,18 @@ module Flapjack
                 out
               }
 
-              check_names = check_name.nil? ? entity.check_list.sort : [check_name]
+              checks = if check_name.nil?
+                entity.checks.all.sort_by(&:name)
+              else
+                [Flapjack::Data::EntityCheckR.
+                  intersect(:entity_name => entity_name, :name => check_name).
+                    all.first].compact
+              end
 
-              if check_names.empty?
+              if checks.empty?
                 msg += "I couldn't find any checks for entity: #{entity_name}"
               else
-                check_names.each do |check|
-                  entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check)
-                  next if entity_check.nil?
+                checks.each do |entity_check|
                   msg += get_details.call(entity_check)
                 end
               end
@@ -305,7 +312,7 @@ module Flapjack
           when /^(?:find )?entities matching\s+\/(.*)\/.*$/i
             pattern = $1.chomp.strip
 
-            entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern)
+            entity_list = Flapjack::Data::EntityR.find_all_name_matching(pattern)
 
             if entity_list
               max_showable = 30

@@ -1,10 +1,12 @@
 #!/usr/bin/env ruby
 
+require 'sandstorm/record'
+
 module Flapjack
   module Data
     class CheckStateR
 
-      include Flapjack::Data::RedisRecord
+      include Sandstorm::Record
 
       STATE_OK       = 'ok'
       STATE_WARNING  = 'warning'

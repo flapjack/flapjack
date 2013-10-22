@@ -4,9 +4,8 @@ require 'active_support/time_with_zone'
 require 'ice_cube'
 
 require 'flapjack/data/contact_r'
-require 'flapjack/data/entity_check'
-require 'flapjack/data/notification_rule'
-require 'flapjack/data/tag_set'
+require 'flapjack/data/entity_check_r'
+require 'flapjack/data/notification_rule_r'
 
 describe Flapjack::Data::ContactR, :redis => true do
 
@@ -34,9 +33,9 @@ describe Flapjack::Data::ContactR, :redis => true do
   let(:redis) { Flapjack.redis }
 
   def create_contact
-    redis.hmset('flapjack/data/contact_r:1:attrs', {'first_name' => 'John',
+    redis.hmset('contact_r:1:attrs', {'first_name' => 'John',
       'last_name' => 'Smith', 'email' => 'jsmith@example.com'}.flatten)
-    redis.sadd('flapjack/data/contact_r::ids', '1')
+    redis.sadd('contact_r::ids', '1')
   end
 
   it "returns a contact's name" do

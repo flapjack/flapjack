@@ -8,9 +8,9 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
   let(:half_an_hour) { 30 * 60 }
 
   # def create_contact
-  #   redis.hmset('flapjack/data/contact_r:1:attrs', {'first_name' => 'John',
+  #   redis.hmset('contact_r:1:attrs', {'first_name' => 'John',
   #     'last_name' => 'Smith', 'email' => 'jsmith@example.com'}.flatten)
-  #   redis.sadd('flapjack/data/contact_r::ids', '1')
+  #   redis.sadd('contact_r::ids', '1')
   # end
 
   let(:entity_name) { 'foo.example.com' }
@@ -20,9 +20,9 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
 
   def create_entity(attrs = {})
     redis.multi
-    redis.hmset("flapjack/data/entity_r:#{attrs[:id]}:attrs", {'name' => attrs[:name]}.flatten)
-    redis.sadd('flapjack/data/entity_r::ids', attrs[:id])
-    redis.sadd("flapjack/data/entity_r::by_name:#{attrs[:name]}", attrs[:id])
+    redis.hmset("entity_r:#{attrs[:id]}:attrs", {'name' => attrs[:name]}.flatten)
+    redis.sadd('entity_r::ids', attrs[:id])
+    redis.sadd("entity_r::by_name:#{attrs[:name]}", attrs[:id])
     redis.exec
   end
 
@@ -31,15 +31,15 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
       entity = Flapjack::Data::EntityR.intersect(:name => attrs[:entity_name]).all.first
     attrs[:state] ||= 'ok'
     redis.multi
-    redis.hmset("flapjack/data/entity_check_r:#{attrs[:id]}:attrs", {'name' => attrs[:name],
+    redis.hmset("entity_check_r:#{attrs[:id]}:attrs", {'name' => attrs[:name],
       'entity_name' => entity.name, 'state' => attrs[:state], 'enabled' => (!!attrs[:enabled]).to_s}.flatten)
-    redis.sadd('flapjack/data/entity_check_r::ids', attrs[:id])
-    redis.sadd("flapjack/data/entity_check_r::by_name:#{attrs[:name]}", attrs[:id])
-    redis.sadd("flapjack/data/entity_check_r::by_entity_name:#{entity.name}", attrs[:id])
-    redis.sadd("flapjack/data/entity_check_r::by_state:#{attrs[:state]}", attrs[:id])
-    redis.sadd("flapjack/data/entity_check_r::by_enabled:#{!!attrs[:enabled]}", attrs[:id])
+    redis.sadd('entity_check_r::ids', attrs[:id])
+    redis.sadd("entity_check_r::by_name:#{attrs[:name]}", attrs[:id])
+    redis.sadd("entity_check_r::by_entity_name:#{entity.name}", attrs[:id])
+    redis.sadd("entity_check_r::by_state:#{attrs[:state]}", attrs[:id])
+    redis.sadd("entity_check_r::by_enabled:#{!!attrs[:enabled]}", attrs[:id])
 
-    redis.sadd("flapjack/data/entity_r:#{entity.id}:check_ids", attrs[:id].to_s)
+    redis.sadd("entity_r:#{entity.id}:check_ids", attrs[:id].to_s)
     redis.exec
   end
 
@@ -94,7 +94,7 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
     it "returns that it is in unscheduled maintenance" do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
-      Flapjack.redis.set("flapjack/data/entity_check_r:1:expiring:unscheduled_maintenance", 1)
+      Flapjack.redis.set("entity_check_r:1:expiring:unscheduled_maintenance", 1)
 
       ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
       ec.should be_in_unscheduled_maintenance
@@ -111,7 +111,7 @@ describe Flapjack::Data::EntityCheckR, :redis => true do
     it "returns that it is in scheduled maintenance" do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
-      Flapjack.redis.set("flapjack/data/entity_check_r:1:expiring:scheduled_maintenance", 1)
+      Flapjack.redis.set("entity_check_r:1:expiring:scheduled_maintenance", 1)
 
       ec = Flapjack::Data::EntityCheckR.intersect(:entity_name => entity_name, :name => check_name).all.first
       ec.should be_in_scheduled_maintenance

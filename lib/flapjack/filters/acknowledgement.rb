@@ -1,5 +1,8 @@
 #!/usr/bin/env ruby
 
+require 'flapjack/data/check_state_r'
+require 'flapjack/data/unscheduled_maintenance_r'
+
 require 'flapjack/filters/base'
 
 module Flapjack

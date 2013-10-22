@@ -6,7 +6,8 @@ require 'active_support/time'
 require 'ice_cube'
 
 require 'flapjack/utility'
-require 'flapjack/data/redis_record'
+
+require 'sandstorm/record'
 
 module Flapjack
   module Data
@@ -14,17 +15,17 @@ module Flapjack
 
       extend Flapjack::Utility
 
-      include Flapjack::Data::RedisRecord
+      include Sandstorm::Record
 
-      define_attributes :entities           => :set,
-                        :tags               => :set,
-                        :time_restrictions  => :json_string,
-                        :unknown_media      => :set,
-                        :warning_media      => :set,
-                        :critical_media     => :set,
-                        :unknown_blackhole  => :boolean,
-                        :warning_blackhole  => :boolean,
-                        :critical_blackhole => :boolean
+      define_attributes :entities                => :set,
+                        :tags                    => :set,
+                        :time_restrictions_json  => :string,
+                        :unknown_media           => :set,
+                        :warning_media           => :set,
+                        :critical_media          => :set,
+                        :unknown_blackhole       => :boolean,
+                        :warning_blackhole       => :boolean,
+                        :critical_blackhole      => :boolean
 
       belongs_to :contact, :class_name => 'Flapjack::Data::ContactR'
 
@@ -35,17 +36,32 @@ module Flapjack
         end
       end
 
-      validates_each :time_restrictions do |record, att, value|
+      validates_each :time_restrictions_json do |record, att, value|
         unless value.nil?
-          case value
+          restrictions = JSON.parse(value)
+          case restrictions
           when Enumerable
-            record.errors.add(att, 'are invalid') if value.any? {|tr|
+            record.errors.add(att, 'are invalid') if restrictions.any? {|tr|
               !prepare_time_restriction(tr)
             }
           else
-            record.errors.add(att, 'must be Enumerable')
+            record.errors.add(att, 'must contain a serialized Enumerable')
           end
         end
+      end
+
+      # TODO handle JSON exception
+      def time_restrictions
+        if self.time_restrictions_json.nil?
+          @time_restrictions = nil
+          return
+        end
+        @time_restrictions = JSON.parse(self.time_restrictions_json)
+      end
+
+      def time_restrictions=(restrictions)
+        @time_restrictions = restrictions
+        self.time_restrictions_json = restrictions.nil? ? nil : restrictions.to_json
       end
 
       # NB: ice_cube doesn't have much rule data validation, and has
@@ -128,7 +144,7 @@ module Flapjack
 
         self.time_restrictions.any? do |tr|
           # add contact's timezone to the time restriction schedule
-          schedule = Flapjack::Data::NotificationRule.
+          schedule = Flapjack::Data::NotificationRuleR.
                        time_restriction_to_icecube_schedule(tr, timezone)
           schedule && schedule.occurring_at?(usertime)
         end

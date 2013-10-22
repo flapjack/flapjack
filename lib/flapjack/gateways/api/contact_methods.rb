@@ -3,7 +3,7 @@
 require 'sinatra/base'
 
 require 'flapjack/data/contact_r'
-require 'flapjack/data/notification_rule'
+require 'flapjack/data/notification_rule_r'
 
 module Flapjack
 

@@ -1,8 +1,15 @@
+GIT
+  remote: git://github.com/ali-graham/sandstorm.git
+  revision: 35c40ab8a314d366685a3859d2e71b9375a9fd39
+  specs:
+    sandstorm (0.0.1)
+      activemodel
+      redis
+
 PATH
   remote: .
   specs:
     flapjack (0.7.27)
-      activemodel
       activesupport (~> 3.2.14)
       chronic
       chronic_duration
@@ -12,7 +19,6 @@ PATH
       mail
       oj
       redis
-      redis-objects
       sinatra
       tzinfo (~> 1.0.1)
       tzinfo-data
@@ -21,10 +27,10 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    activemodel (3.2.14)
-      activesupport (= 3.2.14)
+    activemodel (3.2.15)
+      activesupport (= 3.2.15)
       builder (~> 3.0.0)
-    activesupport (3.2.14)
+    activesupport (3.2.15)
       i18n (~> 0.6, >= 0.6.4)
       multi_json (~> 1.0)
     addressable (2.3.2)
@@ -78,9 +84,9 @@ GEM
       treetop (~> 1.4.8)
     method_source (0.8.1)
     mime-types (1.25)
-    multi_json (1.5.0)
+    multi_json (1.8.2)
     numerizer (0.1.1)
-    oj (2.1.4)
+    oj (2.1.7)
     perftools.rb (2.0.1)
     polyglot (0.3.3)
     pry (0.9.11.4)
@@ -94,9 +100,7 @@ GEM
       rack (>= 1.0)
     rake (10.0.3)
     rb-fsevent (0.9.3)
-    redis (3.0.4)
-    redis-objects (0.7.0)
-      redis (>= 3.0.2)
+    redis (3.0.5)
     rspec (2.12.0)
       rspec-core (~> 2.12.0)
       rspec-expectations (~> 2.12.0)
@@ -124,8 +128,7 @@ GEM
       polyglot
       polyglot (>= 0.3.1)
     tzinfo (1.0.1)
-    tzinfo-data (1.2013.4)
-      tzinfo (>= 1.0.0)
+    tzinfo-data (1.2013.7)
     webmock (1.9.0)
       addressable (>= 2.2.7)
       crack (>= 0.1.7)
@@ -150,5 +153,6 @@ DEPENDENCIES
   rb-fsevent (~> 0.9.1)
   rspec
   ruby-prof
+  sandstorm!
   simplecov
   webmock

@@ -18,8 +18,8 @@ Feature: notifications
     And an SMS notification for entity 'example.com' should not be queued
 
   Scenario: Queue SMS and email notifications
-    Given the user wants to receive SMS notifications for entity 'example.com'
-    And the user wants to receive email notifications for entity 'example2.com'
+    Given a user wants to receive SMS notifications for entity 'example.com'
+    And a user wants to receive email notifications for entity 'example2.com'
     When an event notification is generated for entity 'example.com'
     And an event notification is generated for entity 'example2.com'
     Then an SMS notification for entity 'example.com' should be queued

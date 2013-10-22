@@ -2,6 +2,8 @@ source 'https://rubygems.org'
 
 gemspec :name => 'flapjack'
 
+gem 'sandstorm', :github => 'ali-graham/sandstorm'
+
 group :development do
   gem 'ruby-prof'
 end

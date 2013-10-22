@@ -1,10 +1,12 @@
 #!/usr/bin/env ruby
 
+require 'sandstorm/record'
+
 module Flapjack
   module Data
     class UnscheduledMaintenanceR
 
-      include Flapjack::Data::RedisRecord
+      include Sandstorm::Record
 
       define_attributes :start_time => :timestamp,
                         :end_time   => :timestamp,

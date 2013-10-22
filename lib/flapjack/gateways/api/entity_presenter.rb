@@ -6,8 +6,9 @@
 
 require 'sinatra/base'
 
-require 'flapjack/gateways/api/entity_check_presenter'
 require 'flapjack/data/entity_check_r'
+
+require 'flapjack/gateways/api/entity_check_presenter'
 
 module Flapjack
 

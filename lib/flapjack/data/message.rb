@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'flapjack/data/contact'
+# require 'flapjack/data/contact_r'
 
 module Flapjack
   module Data
