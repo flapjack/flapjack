@@ -44,7 +44,7 @@
 - Bug: fix potential exception in json serialisation of tags in notifications gh-281 (@jessereynolds)
 
 # 0.7.21 - 2013-08-08
-- Feature: make eneity search scopable by tags gh-89 (@jessereynolds)
+- Feature: make entity search scopable by tags gh-89 (@jessereynolds)
 - Feature: add benchmark rake task gh-259 (@jessereynolds)
 - Feature: make tags more general in notification rules gh-269 (@jessereynolds)
 - Feature: ephemeral tag generation on events gh-268 (@jessereynolds)

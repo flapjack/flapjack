@@ -6,11 +6,15 @@ end
 
 require 'optparse'
 require 'ostruct'
+require 'hiredis'
 require 'redis'
-require 'eventmachine'
 
-require 'json'
+require 'oj'
+Oj.mimic_JSON
+Oj.default_options = { :indent => 0, :mode => :strict }
+require 'active_support/json'
 
+require 'flapjack'
 require 'flapjack/configuration'
 require 'flapjack/data/event'
 
@@ -19,13 +23,11 @@ def pike(message)
   exit 1
 end
 
-def send_event(event, opts)
-  redis = opts[:redis]
-  Flapjack::Data::Event.add(event, :redis => redis)
+def send_event(event)
+  Flapjack::Data::Event.push('events', event)
 end
 
 def fail(opts)
-  redis = Redis.new(opts[:redis_options])
   stop_after = opts[:minutes].to_i * 60
   recover = opts[:recover]
   state = opts[:state] || 'critical'
@@ -38,29 +40,45 @@ def fail(opts)
   recovery = event.merge('state' => 'ok',  'summary' => 'Simulated check output (test by operator)')
   key = "#{event['entity']}:#{event['check']}"
 
-  puts "#{Time.now}: sending failure event (#{state}) for #{key}"
-  send_event(failure, :redis => redis)
+  Flapjack.redis = Redis.new((opts[:redis_options] || {}).merge(:driver => :hiredis))
 
-  EM.run {
+  lock = Monitor.new
+  stop_cond = lock.new_cond
+  @finish = false
 
-    EM.add_timer(stop_after) do
+  failer = Thread.new do
+    fin = nil
+
+    loop do
+      lock.synchronize do
+        unless fin = @finish
+          puts "#{Time.now}: sending failure event (#{state}) for #{key}"
+          send_event(failure.merge('time' => Time.now.to_i))
+          stop_cond.wait(10)
+        end
+      end
+      break if fin
+    end
+  end
+
+  stopper = Thread.new do
+    sleep stop_after
+    lock.synchronize do
       puts "#{Time.now}: stopping"
       if recover
         puts "#{Time.now}: sending recovery event for #{key}"
-        send_event(recovery.merge('time' => Time.now.to_i), :redis => redis)
+        send_event(recovery.merge('time' => Time.now.to_i))
       end
-      EM.stop
+      @finish = true
+      stop_cond.signal
     end
+  end
 
-    EM.add_periodic_timer(10) do
-      puts "#{Time.now}: sending failure event (#{state}) for #{key}"
-      send_event(failure.merge('time' => Time.now.to_i), :redis => redis)
-    end
+  stopper.join
+  failer.join
 
-  }
-
+  Flapjack.redis.quit
 end
-
 
 options = OpenStruct.new
 options.config    = Flapjack::Configuration::DEFAULT_CONFIG_PATH

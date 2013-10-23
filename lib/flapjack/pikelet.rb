@@ -8,14 +8,11 @@
 # with butter, at afternoon tea, but can also be served at morning tea."
 #    from http://en.wikipedia.org/wiki/Pancake
 
-# the redis/synchrony gems need to be required in this particular order, see
-# the redis-rb README for details
-require 'hiredis'
-require 'redis/connection/synchrony'
-require 'redis'
-require 'em-resque'
-require 'em-resque/worker'
-require 'thin'
+require 'monitor'
+
+require 'webrick'
+
+require 'flapjack'
 
 require 'flapjack/notifier'
 require 'flapjack/processor'
@@ -27,235 +24,219 @@ require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/web'
 require 'flapjack/logger'
-require 'thin/version'
-
-module Thin
-  # disable Thin's loading of daemons
-  # workaround for https://github.com/flpjck/flapjack/issues/133
-  def self.win?
-    true
-  end
-end
 
 module Flapjack
 
   module Pikelet
 
-    # TODO find a better way of expressing these two methods
-    def self.is_pikelet?(type)
-      type_klass = [Flapjack::Pikelet::Generic, Flapjack::Pikelet::Resque,
-        Flapjack::Pikelet::Thin].detect do |kl|
-
-        kl::PIKELET_TYPES[type]
-
-      end
-      !type_klass.nil?
-    end
-
-    def self.create(type, opts = {})
-      pikelet = nil
-      [Flapjack::Pikelet::Generic,
-       Flapjack::Pikelet::Resque,
-       Flapjack::Pikelet::Thin].each do |kl|
-        next unless kl::PIKELET_TYPES[type]
-        break if pikelet = kl.create(type, opts)
-      end
-      pikelet
-    end
-
     class Base
-      attr_reader :type, :status
+      attr_accessor :siblings, :pikelet
 
-      def initialize(type, pikelet_class, opts = {})
-        @type = type
-        @klass = pikelet_class
+      def initialize(pikelet_class, shutdown, opts = {})
+        @pikelet_class = pikelet_class
 
-        @config = opts[:config] || {}
-        @redis_config = opts[:redis_config] || {}
-        @boot_time = opts[:boot_time]
-        @coordinator = opts[:coordinator]
+        @config        = opts[:config]
+        @logger        = opts[:logger]
+        @boot_time     = opts[:boot_time]
+        @shutdown      = shutdown
 
-        @logger = Flapjack::Logger.new("flapjack-#{type}", @config['logger'])
+        @siblings      = []
 
-        @status = 'initialized'
+        @lock = Monitor.new
+        @stop_condition = @lock.new_cond
+
+        @pikelet = @pikelet_class.new(:lock => @lock,
+          :stop_condition => @stop_condition, :config => @config,
+          :logger => @logger)
+
+        @finished_condition = @lock.new_cond
       end
 
-      def start
-        @status = 'started'
+      def start(&block)
+        @pikelet.siblings = @siblings.map(&:pikelet) if @pikelet.respond_to?(:siblings=)
+
+        @thread = Thread.new do
+          Thread.current.abort_on_exception = true
+
+          # TODO rename this, it's only relevant in the error case
+          max_runs = @config['max_runs'] || 1
+          runs = 0
+
+          keep_running = false
+          shutdown_all = false
+
+          loop do
+            begin
+              @logger.debug "pikelet start for #{@pikelet_class.name}"
+              yield
+            rescue Flapjack::PikeletStop
+              @logger.debug "pikelet exception stop for #{@pikelet_class.name}"
+             rescue Flapjack::GlobalStop
+              @logger.debug "global exception stop for #{@pikelet_class.name}"
+              @shutdown_thread = @thread
+              shutdown_all = true
+            rescue Exception => e
+              @logger.warn "#{e.class.name} #{e.message}"
+              trace = e.backtrace
+              @logger.warn trace.join("\n") if trace
+              runs += 1
+              keep_running = (max_runs > 0) && (runs < max_runs)
+              shutdown_all = !keep_running
+            end
+
+            break unless keep_running
+          end
+
+          @lock.synchronize do
+            @finished = true
+            @finished_condition.signal
+          end
+
+          if shutdown_all
+            @shutdown.call
+          end
+        end
       end
 
-      def reload(cfg)
+      def reload(cfg, &block)
         @logger.configure(cfg['logger'])
-        true
+        yield
       end
 
-      def stop
-        @status = 'stopping'
+      def stop(&block)
+        fin = nil
+        @lock.synchronize do
+          fin = @finished
+        end
+        return if fin
+        if block_given?
+          yield
+        else
+          case @pikelet.stop_type
+          when :exception
+            @lock.synchronize do
+              @logger.debug "triggering pikelet exception stop for #{@pikelet_class.name}"
+              @thread.raise Flapjack::PikeletStop
+              @finished_condition.wait_until { @finished }
+            end
+          when :signal
+            @lock.synchronize do
+              @logger.debug "triggering pikelet signal stop for #{@pikelet_class.name}"
+              @pikelet.instance_variable_set('@should_quit', true)
+              @stop_condition.signal
+              @finished_condition.wait_until { @finished }
+            end
+          end
+        end
+
+        @thread.join
+        @thread = nil
       end
     end
 
     class Generic < Flapjack::Pikelet::Base
 
-     PIKELET_TYPES = {'notifier'   => Flapjack::Notifier,
-                      'processor'  => Flapjack::Processor,
-                      'jabber'     => Flapjack::Gateways::Jabber,
-                      'pagerduty'  => Flapjack::Gateways::Pagerduty,
-                      'oobetet'    => Flapjack::Gateways::Oobetet}
-
-      def self.create(type, opts = {})
-        self.new(type, PIKELET_TYPES[type], :config => opts[:config],
-          :redis_config => opts[:redis_config],
-          :boot_time => opts[:boot_time],
-          :coordinator => opts[:coordinator])
-      end
-
-      def initialize(type, pikelet_klass, opts = {})
-        super(type, pikelet_klass, opts)
-        @pikelet = @klass.new(opts.merge(:logger => @logger))
-      end
+     TYPES = ['notifier', 'processor', 'jabber', 'pagerduty', 'oobetet',
+              'email', 'sms']
 
       def start
-        @fiber = Fiber.new {
+        super do
           @pikelet.start
-        }
-        super
-        @fiber.resume
+        end
       end
 
       # this should only reload if all changes can be applied -- will
       # return false to log warning otherwise
       def reload(cfg)
-        @pikelet.respond_to?(:reload) ?
-          (@pikelet.reload(cfg) && super(cfg)) : super(cfg)
+        return false unless @pikelet.respond_to?(:reload)
+        super(cfg) { @pikelet.reload(cfg) }
       end
 
-      def stop
-        @pikelet.stop
-        super
-      end
-
-      def update_status
-        return @status unless 'stopping'.eql?(@status)
-        @status = 'stopped' if @fiber && !@fiber.alive?
-      end
     end
 
-    class Resque < Flapjack::Pikelet::Base
+    class HTTP < Flapjack::Pikelet::Base
 
-      PIKELET_TYPES = {'email' => Flapjack::Gateways::Email,
-                       'sms'   => Flapjack::Gateways::SmsMessagenet}
-
-      def self.create(type, opts = {})
-        self.new(type, PIKELET_TYPES[type], :config => opts[:config],
-          :redis_config => opts[:redis_config],
-          :boot_time => opts[:boot_time])
-      end
-
-      def initialize(type, pikelet_klass, opts = {})
-        super(type, pikelet_klass, opts)
-
-        unless defined?(@@resque_pool) && !@@resque_pool.nil?
-          @@resque_pool = Flapjack::RedisPool.new(:config => @redis_config)
-          ::Resque.redis = @@resque_pool
-          @@redis_connection = Flapjack::RedisPool.new(:config => @redis_config)
-        end
-
-        pikelet_klass.instance_variable_set('@config', @config)
-        pikelet_klass.instance_variable_set('@redis', @@redis_connection)
-        pikelet_klass.instance_variable_set('@logger', @logger)
-
-        # TODO error if config['queue'].nil?
-
-        @worker = EM::Resque::Worker.new(@config['queue'])
-        # # Use these to debug the resque workers
-        # worker.verbose = true
-        # worker.very_verbose = true
-      end
+      TYPES = ['web', 'api']
 
       def start
-        @fiber = Fiber.new {
-          @worker.work(0.1)
-        }
-        super
-        @klass.start if @klass.respond_to?(:start)
-        @fiber.resume
-      end
-
-      # this should only reload if all changes can be applied -- will
-      # return false to log warning otherwise
-      def reload(cfg)
-        @klass.respond_to?(:reload) ?
-          (@klass.reload(cfg) && super(cfg)) : super(cfg)
-      end
-
-      def stop
-        @worker.shutdown if @worker && @fiber && @fiber.alive?
-        @klass.stop if @klass.respond_to?(:stop)
-        super
-      end
-
-      def update_status
-        return @status unless 'stopping'.eql?(@status)
-        @status = 'stopped' if @fiber && !@fiber.alive?
-      end
-    end
-
-    class Thin < Flapjack::Pikelet::Base
-
-      PIKELET_TYPES = {'web'  => Flapjack::Gateways::Web,
-                       'api'  => Flapjack::Gateways::API}
-
-      def self.create(type, opts = {})
-        ::Thin::Logging.silent = true
-        self.new(type, PIKELET_TYPES[type], :config => opts[:config],
-          :redis_config => opts[:redis_config],
-          :boot_time => opts[:boot_time])
-      end
-
-      def initialize(type, pikelet_klass, opts = {})
-        super(type, pikelet_klass, opts)
-
-        pikelet_klass.instance_variable_set('@config', @config)
-        pikelet_klass.instance_variable_set('@redis_config', @redis_config)
-        pikelet_klass.instance_variable_set('@logger', @logger)
+        @pikelet_class.instance_variable_set('@config', @config)
+        @pikelet_class.instance_variable_set('@logger', @logger)
 
         if @config
-          @port = @config['port']
-          @port = @port.nil? ? nil : @port.to_i
-          @timeout = @config['timeout']
-          @timeout = @timeout.nil? ? 300 : @timeout.to_i
+          port = @config['port']
+          port = port.nil? ? nil : port.to_i
+          timeout = @config['timeout']
+          timeout = timeout.nil? ? 300 : timeout.to_i
         end
-        @port = 3001 if (@port.nil? || @port <= 0 || @port > 65535)
+        port = 3001 if (port.nil? || port <= 0 || port > 65535)
 
-        @server = ::Thin::Server.new('0.0.0.0', @port,
-                    @klass, :signals => false)
-        @server.timeout = @timeout
-      end
-
-      def start
-        super
-        @klass.start if @klass.respond_to?(:start)
-        @server.start
+        super do
+          @pikelet_class.start if @pikelet_class.respond_to?(:start)
+          @server = ::WEBrick::HTTPServer.new(:Port => port, :BindAddress => '127.0.0.1',
+            :AccessLog => [], :Logger => WEBrick::Log::new("/dev/null", 7))
+          @server.mount "/", Rack::Handler::WEBrick, @pikelet_class
+          yield @server  if block_given?
+          @server.start
+        end
       end
 
       # this should only reload if all changes can be applied -- will
       # return false to log warning otherwise
       def reload(cfg)
-        # TODO fail if port changes
-        @klass.respond_to?(:reload) ?
-          (@klass.reload(cfg) && super(cfg)) : super(cfg)
+         # TODO fail if port changes
+        return false unless @pikelet_class.respond_to?(:reload)
+        super(cfg) { @pikelet_class.reload(cfg) }
       end
 
       def stop
-        @server.stop!
-        @klass.stop if @klass.respond_to?(:stop)
-        super
+        super do |thread|
+          unless @server.nil?
+            @logger.info "shutting down server"
+            @server.shutdown
+            @logger.info "shut down server"
+          end
+          @pikelet_class.stop(thread) if @pikelet_class.respond_to?(:stop)
+        end
       end
+    end
 
-      def update_status
-        return @status unless 'stopping'.eql?(@status)
-        @status = 'stopped' if (@server.backend.size <= 0)
-      end
+    WRAPPERS = [Flapjack::Pikelet::Generic, Flapjack::Pikelet::HTTP]
+
+    TYPES = {'api'        => [Flapjack::Gateways::API],
+             'email'      => [Flapjack::Gateways::Email],
+             'notifier'   => [Flapjack::Notifier],
+             'processor'  => [Flapjack::Processor],
+             'jabber'     => [Flapjack::Gateways::Jabber::Bot,
+                              Flapjack::Gateways::Jabber::Notifier,
+                              Flapjack::Gateways::Jabber::Interpreter],
+             'oobetet'    => [Flapjack::Gateways::Oobetet::Bot,
+                              Flapjack::Gateways::Oobetet::Notifier],
+             'pagerduty'  => [Flapjack::Gateways::Pagerduty::Notifier,
+                              Flapjack::Gateways::Pagerduty::AckFinder],
+             'sms'        => [Flapjack::Gateways::SmsMessagenet],
+             'web'        => [Flapjack::Gateways::Web],
+            }
+
+    def self.is_pikelet?(type)
+      TYPES.has_key?(type)
+    end
+
+    def self.create(type, shutdown, opts = {})
+      config = opts[:config] || {}
+
+      logger = Flapjack::Logger.new("flapjack-#{type}", config['logger'])
+
+      types = TYPES[type]
+
+      return [] if types.nil?
+
+      created = types.collect {|pikelet_class|
+        wrapper = WRAPPERS.detect {|wrap| wrap::TYPES.include?(type) }
+        wrapper.new(pikelet_class, shutdown, :config => config,
+                    :logger => logger)
+      }
+      created.each {|c| c.siblings = created - [c] }
+      created
     end
 
   end

@@ -28,7 +28,7 @@ module Flapjack
           return false
         end
 
-        unless @redis.zscore("failed_checks", event.id)
+        unless Flapjack.redis.zscore("failed_checks", event.id)
           @logger.debug("#{label} blocking because zscore of failed_checks for #{event.id} is false")
           return true
         end

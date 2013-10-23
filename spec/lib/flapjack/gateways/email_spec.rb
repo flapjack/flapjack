@@ -4,43 +4,44 @@ require 'flapjack/gateways/email'
 describe Flapjack::Gateways::Email, :logger => true do
 
   it "sends a mail with text and html parts" do
-    email = double('email')
-
     entity_check = double(Flapjack::Data::EntityCheck)
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
-    redis = double('redis')
+
+    redis = double(Redis)
+    Flapjack.stub(:redis).and_return(redis)
 
     Flapjack::Data::EntityCheck.should_receive(:for_event_id).
-      with('example.com:ping', :redis => redis).and_return(entity_check)
+      with('example.com:ping').and_return(entity_check)
 
-    # TODO better checking of what gets passed here
-    EM::P::SmtpClient.should_receive(:send).with(
-      hash_including(:host    => 'localhost',
-                     :port    => 25)).and_return(email)
+    message = {'notification_type'   => 'recovery',
+               'contact_first_name'  => 'John',
+               'contact_last_name'   => 'Smith',
+               'state'               => 'ok',
+               'state_duration'      => 2,
+               'summary'             => 'smile',
+               'last_state'          => 'problem',
+               'last_summary'        => 'frown',
+               'time'                => Time.now.to_i,
+               'address'             => 'johnsmith@example.com',
+               'event_id'            => 'example.com:ping'}
 
-    response = double(response)
-    response.should_receive(:"respond_to?").with(:code).and_return(true)
-    response.should_receive(:code).and_return(250)
+    Flapjack::Data::Message.should_receive(:foreach_on_queue).
+      with('email_notifications', :logger => @logger).
+      and_yield(message)
+    Flapjack::Data::Message.should_receive(:wait_for_queue).
+      with('email_notifications').
+      and_raise(Flapjack::PikeletStop)
 
-    EM::Synchrony.should_receive(:sync).with(email).and_return(response)
+    Mail::TestMailer.deliveries.should be_empty
 
-    notification = {'notification_type'   => 'recovery',
-                    'contact_first_name'  => 'John',
-                    'contact_last_name'   => 'Smith',
-                    'state'               => 'ok',
-                    'state_duration'      => 2,
-                    'summary'             => 'smile',
-                    'last_state'          => 'problem',
-                    'last_summary'        => 'frown',
-                    'time'                => Time.now.to_i,
-                    'event_id'            => 'example.com:ping'}
+    lock = double(Monitor)
+    lock.should_receive(:synchronize).and_yield
 
-    Flapjack::Gateways::Email.instance_variable_set('@config', {})
-    Flapjack::Gateways::Email.instance_variable_set('@redis', redis)
-    Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
-    Flapjack::Gateways::Email.start
-    Flapjack::Gateways::Email.perform(notification)
+    email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => {}, :logger => @logger)
+    expect { email_gw.start }.to raise_error(Flapjack::PikeletStop)
+
+    Mail::TestMailer.deliveries.should have(1).mail
   end
 
 end

@@ -3,7 +3,9 @@
 require 'httparty'
 
 require 'oj'
+Oj.mimic_JSON
 Oj.default_options = { :indent => 0, :mode => :strict }
+require 'active_support/json'
 
 class Foo
 

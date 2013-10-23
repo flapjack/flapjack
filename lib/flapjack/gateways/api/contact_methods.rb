@@ -30,13 +30,13 @@ module Flapjack
         module Helpers
 
           def find_contact(contact_id)
-            contact = Flapjack::Data::Contact.find_by_id(contact_id, :logger => logger, :redis => redis)
+            contact = Flapjack::Data::Contact.find_by_id(contact_id, :logger => logger)
             raise Flapjack::Gateways::API::ContactNotFound.new(contact_id) if contact.nil?
             contact
           end
 
           def find_rule(rule_id)
-            rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :logger => logger, :redis => redis)
+            rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :logger => logger)
             raise Flapjack::Gateways::API::NotificationRuleNotFound.new(rule_id) if rule.nil?
             rule
           end
@@ -70,7 +70,7 @@ module Flapjack
               if contacts_data_ids.empty?
                 errors << "No contacts with IDs were submitted"
               else
-                contacts = Flapjack::Data::Contact.all(:redis => redis)
+                contacts = Flapjack::Data::Contact.all
                 contacts_h = hashify(*contacts) {|c| [c.id, c] }
                 contacts_ids = contacts_h.keys
 
@@ -85,7 +85,7 @@ module Flapjack
                   if contacts_ids.include?(contact_data['id'].to_s)
                     contacts_h[contact_data['id'].to_s].update(contact_data)
                   else
-                    Flapjack::Data::Contact.add(contact_data, :redis => redis)
+                    Flapjack::Data::Contact.add(contact_data)
                   end
                 end
               end
@@ -98,7 +98,7 @@ module Flapjack
           app.get '/contacts' do
             content_type :json
 
-            Flapjack::Data::Contact.all(:redis => redis).to_json
+            Flapjack::Data::Contact.all.to_json
           end
 
           # Returns the core information about the specified contact

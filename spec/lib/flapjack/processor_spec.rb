@@ -7,7 +7,12 @@ describe Flapjack::Processor, :logger => true do
   # NB: this is only testing the public API of the Processor class, which is pretty limited.
   # (initialize, main, stop). Most test coverage for this class comes from the cucumber features.
 
-  let(:config) { double(Flapjack::Configuration) }
+  let(:lock) { double(Monitor) }
+  let(:redis) { double(Redis) }
+
+  before(:each) do
+    Flapjack.stub(:redis).and_return(redis)
+  end
 
   # TODO this does too much -- split it up
   it "starts up, runs and shuts down" do
@@ -18,8 +23,6 @@ describe Flapjack::Processor, :logger => true do
     Flapjack::Filters::UnscheduledMaintenance.should_receive(:new)
     Flapjack::Filters::Delays.should_receive(:new)
     Flapjack::Filters::Acknowledgement.should_receive(:new)
-
-    redis = double('redis')
 
     redis.should_receive(:hset).with(/^executive_instance:/, "boot_time", anything)
     redis.should_receive(:hget).with('event_counters', 'all').and_return(nil)
@@ -39,26 +42,52 @@ describe Flapjack::Processor, :logger => true do
     # redis.should_receive(:hincrby).with('event_counters', 'all', 1)
     # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
 
-    Flapjack::Data::Event.should_receive(:pending_count).with('events', :redis => redis).and_return(0)
+    lock.should_receive(:synchronize).and_yield
 
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
+    processor = Flapjack::Processor.new(:lock => lock, :config => {}, :logger => @logger)
 
-    fc = double('coordinator')
+    Flapjack::Data::Event.should_receive(:foreach_on_queue)
+    Flapjack::Data::Event.should_receive(:wait_for_queue).and_raise(Flapjack::PikeletStop)
 
-    executive = Flapjack::Processor.new(:config => {}, :logger => @logger, :coordinator => fc)
+    expect { processor.start }.to raise_error(Flapjack::PikeletStop)
+  end
 
-    noop_evt = double(Flapjack::Data::Event)
-    noop_evt.should_receive(:inspect)
-    noop_evt.should_receive(:type).and_return('noop')
-    Flapjack::Data::Event.should_receive(:next) {
-      executive.instance_variable_set('@should_quit', true)
-      noop_evt
-    }
+  it "starts up, runs and shuts down everything when queue empty" do
+    t = Time.now.to_i
 
-    begin
-      executive.start
-    rescue SystemExit
-    end
+    Flapjack::Filters::Ok.should_receive(:new)
+    Flapjack::Filters::ScheduledMaintenance.should_receive(:new)
+    Flapjack::Filters::UnscheduledMaintenance.should_receive(:new)
+    Flapjack::Filters::Delays.should_receive(:new)
+    Flapjack::Filters::Acknowledgement.should_receive(:new)
+
+    redis.should_receive(:hset).with(/^executive_instance:/, "boot_time", anything)
+    redis.should_receive(:hget).with('event_counters', 'all').and_return(nil)
+    redis.should_receive(:hset).with('event_counters', 'all', 0)
+    redis.should_receive(:hset).with('event_counters', 'ok', 0)
+    redis.should_receive(:hset).with('event_counters', 'failure', 0)
+    redis.should_receive(:hset).with('event_counters', 'action', 0)
+
+    redis.should_receive(:hset).with(/^event_counters:/, 'all', 0)
+    redis.should_receive(:hset).with(/^event_counters:/, 'ok', 0)
+    redis.should_receive(:hset).with(/^event_counters:/, 'failure', 0)
+    redis.should_receive(:hset).with(/^event_counters:/, 'action', 0)
+
+    redis.should_receive(:expire).with(/^executive_instance:/, anything)
+    redis.should_receive(:expire).with(/^event_counters:/, anything).exactly(4).times
+
+    # redis.should_receive(:hincrby).with('event_counters', 'all', 1)
+    # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
+
+    lock.should_receive(:synchronize).and_yield
+
+    processor = Flapjack::Processor.new(:lock => lock,
+      :config => {'exit_on_queue_empty' => true}, :logger => @logger)
+
+    Flapjack::Data::Event.should_receive(:foreach_on_queue)
+    Flapjack::Data::Event.should_not_receive(:wait_for_queue)
+
+    expect { processor.start }.to raise_error(Flapjack::GlobalStop)
   end
 
 end

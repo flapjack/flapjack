@@ -2,6 +2,8 @@
 
 require 'sinatra/base'
 
+require 'flapjack'
+
 require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
 
@@ -34,14 +36,13 @@ module Flapjack
         module Helpers
 
           def find_entity(entity_name)
-            entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
+            entity = Flapjack::Data::Entity.find_by_name(entity_name)
             raise Flapjack::Gateways::API::EntityNotFound.new(entity_name) if entity.nil?
             entity
           end
 
           def find_entity_check(entity, check)
-            entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-              check, :redis => redis)
+            entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check)
             raise Flapjack::Gateways::API::EntityCheckNotFound.new(entity, check) if entity_check.nil?
             entity_check
           end
@@ -94,7 +95,7 @@ module Flapjack
             unless entities.nil? || entities.empty?
               result += entities.collect {|entity_name|
                 entity = find_entity(entity_name)
-                yield(Flapjack::Gateways::API::EntityPresenter.new(entity, :redis => redis))
+                yield(Flapjack::Gateways::API::EntityPresenter.new(entity))
               }.flatten(1)
             end
 
@@ -135,8 +136,8 @@ module Flapjack
 
           app.get '/entities' do
             content_type :json
-            ret = Flapjack::Data::Entity.all(:redis => redis).sort_by(&:name).collect {|e|
-              presenter = Flapjack::Gateways::API::EntityPresenter.new(e, :redis => redis)
+            ret = Flapjack::Data::Entity.all.sort_by(&:name).collect {|e|
+              presenter = Flapjack::Gateways::API::EntityPresenter.new(e)
               {'id' => e.id, 'name' => e.name, 'checks' => presenter.status }
             }
             ret.to_json
@@ -249,10 +250,10 @@ module Flapjack
 
             act_proc = proc {|entity_check|
               Flapjack::Data::Event.create_acknowledgement(
+                config['processor_queue'] || 'events',
                 entity_check.entity_name, entity_check.check,
                 :summary => params[:summary],
-                :duration => duration,
-                :redis => redis)
+                :duration => duration)
             }
 
             bulk_api_check_action(entities, checks, act_proc)
@@ -291,9 +292,9 @@ module Flapjack
               summary = params[:summary] ||
                         "Testing notifications to all contacts interested in entity #{entity_check.entity.name}"
               Flapjack::Data::Event.test_notifications(
+                config['processor_queue'] || 'events',
                 entity_check.entity_name, entity_check.check,
-                :summary => summary,
-                :redis => redis)
+                :summary => summary)
             }
 
             bulk_api_check_action(entities, checks, act_proc)
@@ -322,7 +323,7 @@ module Flapjack
                 errors << "Entity not imported as it has no id: #{entity.inspect}"
                 next
               end
-              Flapjack::Data::Entity.add(entity, :redis => redis)
+              Flapjack::Data::Entity.add(entity)
             end
             errors.empty? ? 204 : err(403, *errors)
           end

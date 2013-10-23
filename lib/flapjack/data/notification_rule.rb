@@ -17,36 +17,32 @@ module Flapjack
         :unknown_blackhole, :warning_blackhole, :critical_blackhole
 
       def self.exists_with_id?(rule_id, options = {})
-        raise "Redis connection not set" unless redis = options[:redis]
         raise "No id value passed" unless not (rule_id.nil? || rule_id == '')
-        logger   = options[:logger]
-        redis.exists("notification_rule:#{rule_id}")
+        logger = options[:logger]
+        Flapjack.redis.exists("notification_rule:#{rule_id}")
       end
 
       def self.find_by_id(rule_id, options = {})
-        raise "Redis connection not set" unless redis = options[:redis]
         raise "No id value passed" unless not (rule_id.nil? || rule_id == '')
-        logger   = options[:logger]
+        logger = options[:logger]
 
         # sanity check
-        return unless redis.exists("notification_rule:#{rule_id}")
+        return unless Flapjack.redis.exists("notification_rule:#{rule_id}")
 
-        self.new({:id => rule_id.to_s}, {:redis => redis})
+        self.new(:id => rule_id.to_s)
       end
 
       # replacing save! etc
       def self.add(rule_data, options = {})
-        raise "Redis connection not set" unless redis = options[:redis]
-
         rule_id = SecureRandom.uuid
-        errors = self.add_or_update(rule_data.merge(:id => rule_id), options)
+        errors = self.add_or_update(rule_data.merge(:id => rule_id), :logger => options[:logger])
         return errors unless errors.nil? || errors.empty?
-        self.find_by_id(rule_id, :redis => redis)
+        self.find_by_id(rule_id)
       end
 
       def update(rule_data, opts = {})
         errors = self.class.add_or_update({:contact_id => @contact_id}.merge(rule_data.merge(:id => @id)),
-          :redis => @redis, :logger => opts[:logger])
+          :logger => opts[:logger])
         return errors unless errors.nil? || errors.empty?
         refresh
         nil
@@ -114,16 +110,12 @@ module Flapjack
     private
 
       def initialize(rule_data, opts = {})
-        @redis  ||= opts[:redis]
-        raise "a redis connection must be supplied" unless @redis
-        @logger   = opts[:logger]
-        @id       = rule_data[:id]
+        @logger = opts[:logger]
+        @id     = rule_data[:id]
         refresh
       end
 
       def self.add_or_update(rule_data, options = {})
-        redis = options[:redis]
-        raise "a redis connection must be supplied" unless redis
         logger = options[:logger]
 
         # make some assumptions about the incoming data
@@ -134,7 +126,7 @@ module Flapjack
           rule_data[:tags] = Flapjack::Data::TagSet.new(rule_data[:tags])
         end
 
-        errors = self.validate_data(rule_data, options)
+        errors = self.validate_data(rule_data, :logger => options[:logger])
 
         return errors unless errors.nil? || errors.empty?
 
@@ -155,10 +147,10 @@ module Flapjack
         }
         logger.debug("NotificationRule#add_or_update json_rule_data: #{json_rule_data.inspect}") if logger
 
-        redis.sadd("contact_notification_rules:#{json_rule_data[:contact_id]}",
-                   json_rule_data[:id])
-        redis.hmset("notification_rule:#{json_rule_data[:id]}",
-                    *json_rule_data.flatten)
+        Flapjack.redis.sadd("contact_notification_rules:#{json_rule_data[:contact_id]}",
+                            json_rule_data[:id])
+        Flapjack.redis.hmset("notification_rule:#{json_rule_data[:id]}",
+                             *json_rule_data.flatten)
         nil
       end
 
@@ -299,7 +291,7 @@ module Flapjack
       end
 
       def refresh
-        rule_data = @redis.hgetall("notification_rule:#{@id}")
+        rule_data = Flapjack.redis.hgetall("notification_rule:#{@id}")
 
         @contact_id         = rule_data['contact_id']
         tags                = Oj.load(rule_data['tags'] || '')

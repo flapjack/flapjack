@@ -8,14 +8,11 @@
 
 require 'time'
 
-require 'rack/fiber_pool'
 require 'sinatra/base'
 
-require 'flapjack/rack_logger'
-require 'flapjack/redis_pool'
+require 'flapjack'
 
 require 'flapjack/gateways/api/rack/json_params_parser'
-
 require 'flapjack/gateways/api/contact_methods'
 require 'flapjack/gateways/api/entity_methods'
 
@@ -27,41 +24,32 @@ module Flapjack
 
       include Flapjack::Utility
 
+      set :raise_errors, true
       set :show_exceptions, false
-
-      #rescue_exception = Proc.new { |env, exception|
-      #  @logger.error exception.message
-      #  @logger.error exception.backtrace.join("\n")
-      #  [503, {}, {:errors => [exception.message]}.to_json]
-      #}
-      #use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
-      #
-      # FIXME: not sure why the above isn't working, had to add a general
-      # error handler later in this file
-      use Rack::FiberPool, :size => 25
 
       use Rack::MethodOverride
       use Rack::JsonParamsParser
 
       class << self
         def start
-          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
-
           @logger.info "starting api - class"
 
-          if @config && @config['access_log']
-            access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
-            use Flapjack::CommonLogger, access_logger
+          if accesslog = (@config && @config['access_log'])
+            if not File.directory?(File.dirname(accesslog))
+              puts "Parent directory for log file #{accesslog} doesn't exist"
+              puts "Exiting!"
+              exit
+            end
+
+            use Rack::CommonLogger, ::Logger.new(@config['access_log'])
           end
         end
       end
 
-      def redis
-        self.class.instance_variable_get('@redis')
-      end
-
-      def logger
-        self.class.instance_variable_get('@logger')
+      ['redis', 'logger', 'config'].each do |class_inst_var|
+        define_method(class_inst_var.to_sym) do
+          self.class.instance_variable_get("@#{class_inst_var}")
+        end
       end
 
       before do

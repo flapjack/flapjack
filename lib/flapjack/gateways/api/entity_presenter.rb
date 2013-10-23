@@ -19,7 +19,6 @@ module Flapjack
 
         def initialize(entity, options = {})
           @entity = entity
-          @redis = options[:redis]
         end
 
         def status
@@ -61,8 +60,7 @@ module Flapjack
         end
 
         def check_presenter(check)
-          entity_check = Flapjack::Data::EntityCheck.for_entity(@entity, check,
-            :redis => @redis)
+          entity_check = Flapjack::Data::EntityCheck.for_entity(@entity, check)
           presenter = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
         end
 

@@ -6,170 +6,177 @@ require 'socket'
 require 'chronic_duration'
 require 'active_support/inflector'
 
-require 'em-synchrony'
-require 'em/protocols/smtpclient'
+require 'flapjack'
 
+require 'flapjack/exceptions'
 require 'flapjack/utility'
 
 require 'flapjack/data/entity_check'
+require 'flapjack/data/message'
 
 module Flapjack
   module Gateways
 
     class Email
 
-      class << self
+      include Flapjack::Utility
 
-        include Flapjack::Utility
+      attr_reader :sent
 
-        def start
-          @logger.info("starting")
-          @logger.debug("new email gateway pikelet with the following options: #{@config.inspect}")
-          @smtp_config = @config.delete('smtp_config')
-          @sent = 0
-          @fqdn = `/bin/hostname -f`.chomp
-        end
+      def initialize(opts = {})
+        @lock = opts[:lock]
+        @config = opts[:config]
+        @logger = opts[:logger]
 
-        # TODO refactor to remove complexity
-        def perform(notification)
-          prepare( notification )
-          deliver( notification )
-        end
+        # TODO support for config reloading
+        @notifications_queue = @config['queue'] || 'email_notifications'
 
-        # sets a bunch of class instance variables for each email
-        def prepare(notification)
-          @logger.debug "Woo, got a notification to send out: #{notification.inspect}"
+        if smtp_config = @config['smtp_config']
+          @host = smtp_config['host'] || 'localhost'
+          @port = smtp_config['port'] || 25
 
-          # The instance variables are referenced by the templates, which
-          # share the current binding context
-          @notification_type   = notification['notification_type']
-          @notification_id     = notification['id'] || SecureRandom.uuid
-          @rollup              = notification['rollup']
-          @rollup_alerts       = notification['rollup_alerts']
-          @rollup_threshold    = notification['rollup_threshold']
-          @contact_first_name  = notification['contact_first_name']
-          @contact_last_name   = notification['contact_last_name']
-          @state               = notification['state']
-          @duration            = notification['state_duration']
-          @summary             = notification['summary']
-          @last_state          = notification['last_state']
-          @last_summary        = notification['last_summary']
-          @details             = notification['details']
-          @time                = notification['time']
-          @entity_name, @check = notification['event_id'].split(':', 2)
+          # NB: needs testing
+          if smtp_config['authentication'] && smtp_config['username'] &&
+            smtp_config['password']
 
-          entity_check = Flapjack::Data::EntityCheck.for_event_id(notification['event_id'],
-            :redis => @redis)
-
-          @in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
-          @in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
-
-        rescue => e
-          @logger.error "Error preparing email to #{m_to}: #{e.class}: #{e.message}"
-          @logger.error e.backtrace.join("\n")
-          raise
-        end
-
-        def deliver(notification)
-          host = @smtp_config ? @smtp_config['host'] : nil
-          port = @smtp_config ? @smtp_config['port'] : nil
-          starttls = @smtp_config ? !! @smtp_config['starttls'] : nil
-          if @smtp_config
-            if auth_config = @smtp_config['auth']
-              auth = {}
-              auth[:type]     = auth_config['type'].to_sym || :plain
-              auth[:username] = auth_config['username']
-              auth[:password] = auth_config['password']
-            end
+            @auth = {:authentication => smtp_config['authentication'],
+                     :username => smtp_config['username'],
+                     :password => smtp_config['password'],
+                     :enable_starttls_auto => true
+                    }
           end
 
-          m_from = "flapjack@#{@fqdn}"
-          @logger.debug("flapjack_mailer: set from to #{m_from}")
-          m_reply_to = m_from
-          m_to       = notification['address']
-
-
-          mail = prepare_email(:from => m_from,
-                               :to   => m_to)
-
-          smtp_args = {:from     => m_from,
-                       :to       => m_to,
-                       :content  => "#{mail.to_s}\r\n.\r\n",
-                       :domain   => @fqdn,
-                       :host     => host || 'localhost',
-                       :port     => port || 25,
-                       :starttls => starttls}
-          smtp_args.merge!(:auth => auth) if auth
-          email = EM::P::SmtpClient.send(smtp_args)
-
-          response = EM::Synchrony.sync(email)
-
-          # http://tools.ietf.org/html/rfc821#page-36 SMTP response codes
-          if response && response.respond_to?(:code) &&
-            ((response.code == 250) || (response.code == 251))
-            @logger.info "Email sending succeeded"
-            @sent += 1
-          else
-            @logger.error "Email sending failed"
-          end
-
-          @logger.info "Email response: #{response.inspect}"
-
-        rescue => e
-          @logger.error "Error delivering email to #{m_to}: #{e.class}: #{e.message}"
-          @logger.error e.backtrace.join("\n")
-          raise
+        else
+          @host = 'localhost'
+          @port = 25
         end
 
-        private
+        @sent = 0
+      end
 
-        def prepare_email(opts = {})
-          from       = opts[:from]
-          to         = opts[:to]
-          message_id = "<#{@notification_id}@#{@fqdn}>"
+      def start
+        @logger.info("starting")
+        @logger.debug("new email gateway pikelet with the following options: #{@config.inspect}")
 
-          message_type = case
-          when @rollup
-            'rollup'
-          else
-            'alert'
+        msg_raw = nil
+
+        loop do
+          @lock.synchronize do
+            @logger.debug "checking messages"
+            Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :logger => @logger) {|message|
+              handle_message(message)
+            }
           end
 
-          subject_template = ERB.new(File.read(File.dirname(__FILE__) +
-            "/email/#{message_type}_subject.text.erb"), nil, '-')
-
-          text_template = ERB.new(File.read(File.dirname(__FILE__) +
-            "/email/#{message_type}.text.erb"), nil, '-')
-
-          html_template = ERB.new(File.read(File.dirname(__FILE__) +
-            "/email/#{message_type}.html.erb"), nil, '-')
-
-          bnd        = binding
-          subject    = subject_template.result(bnd).chomp
-
-          @logger.debug("preparing email to: #{to}, subject: #{subject}, message-id: #{message_id}")
-
-          mail = Mail.new do
-            from       from
-            to         to
-            subject    subject
-            reply_to   from
-            message_id message_id
-
-            text_part do
-              body text_template.result(bnd)
-            end
-
-            html_part do
-              content_type 'text/html; charset=UTF-8'
-              body html_template.result(bnd)
-            end
-          end
-
+          @logger.debug "blocking on messages"
+          Flapjack::Data::Message.wait_for_queue(@notifications_queue)
         end
       end
 
+      def stop_type
+        :exception
+      end
+
+      def handle_message(message)
+        @logger.debug "Woo, got a message to send out: #{message.inspect}"
+
+        # The instance variables are referenced by the templates, which
+        # share the current binding context
+        @notification_type   = message['notification_type']
+        @notification_id     = message['id'] || SecureRandom.uuid
+        @rollup              = message['rollup']
+        @rollup_alerts       = message['rollup_alerts']
+        @rollup_threshold    = message['rollup_threshold']
+        @contact_first_name  = message['contact_first_name']
+        @contact_last_name   = message['contact_last_name']
+        @state               = message['state']
+        @duration            = message['state_duration']
+        @summary             = message['summary']
+        @last_state          = message['last_state']
+        @last_summary        = message['last_summary']
+        @details             = message['details']
+        @time                = message['time']
+        @entity_name, @check = message['event_id'].split(':', 2)
+
+        entity_check = Flapjack::Data::EntityCheck.for_event_id(message['event_id'])
+
+        @in_unscheduled_maintenance = entity_check.in_unscheduled_maintenance?
+        @in_scheduled_maintenance   = entity_check.in_scheduled_maintenance?
+
+        fqdn       = `/bin/hostname -f`.chomp
+        m_from     = "flapjack@#{fqdn}"
+        @logger.debug("flapjack_mailer: set from to #{m_from}")
+        m_reply_to = m_from
+        m_to       = message['address']
+
+        @logger.debug("sending Flapjack::Notification::Email " +
+          "#{message['id']} to: #{m_to} subject: #{@subject}")
+
+        mail = prepare_email(:subject => @subject,
+                             :from => m_from,
+                             :to => m_to)
+
+        # TODO a cleaner way to not step on test delivery settings
+        # (don't want to stub in Cucumber)
+        unless defined?(FLAPJACK_ENV) && 'test'.eql?(FLAPJACK_ENV)
+          mail.delivery_method(:smtp, {:address => @host,
+                                       :port => @port}.merge(@auth || {}))
+        end
+
+        # any exceptions will be propagated through to main pikelet handler
+        mail.deliver
+
+        @logger.info "Email sending succeeded"
+        @sent += 1
+      end
+
+      private
+
+      def prepare_email(opts = {})
+        from       = opts[:from]
+        to         = opts[:to]
+        message_id = "<#{@notification_id}@#{@fqdn}>"
+
+        message_type = case
+        when @rollup
+          'rollup'
+        else
+          'alert'
+        end
+
+        subject_template = ERB.new(File.read(File.dirname(__FILE__) +
+          "/email/#{message_type}_subject.text.erb"), nil, '-')
+
+        text_template = ERB.new(File.read(File.dirname(__FILE__) +
+          "/email/#{message_type}.text.erb"), nil, '-')
+
+        html_template = ERB.new(File.read(File.dirname(__FILE__) +
+          "/email/#{message_type}.html.erb"), nil, '-')
+
+        bnd = binding
+        subject    = subject_template.result(bnd).chomp
+
+        @logger.debug("preparing email to: #{to}, subject: #{subject}, message-id: #{message_id}")
+
+        Mail.new do
+          from       from
+          to         to
+          subject    subject
+          reply_to   from
+          message_id message_id
+
+          text_part do
+            body text_template.result(bnd)
+          end
+
+          html_part do
+            content_type 'text/html; charset=UTF-8'
+            body html_template.result(bnd)
+          end
+        end
+      end
     end
+
   end
 end
 

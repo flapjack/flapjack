@@ -1,5 +1,9 @@
 #!/usr/bin/env ruby
 
+# 'Notification' refers to the template object created when an event occurs,
+# from which individual 'Message' objects are created, one for each
+# contact+media recipient.
+
 require 'oj'
 
 require 'flapjack/data/contact'
@@ -45,9 +49,7 @@ module Flapjack
         end
       end
 
-      def self.add(queue, event, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-
+      def self.push(queue, event, opts = {})
         last_state = opts[:last_state] || {}
 
         tag_data = event.tags.is_a?(Set) ? event.tags.to_a : nil
@@ -67,30 +69,41 @@ module Flapjack
 
                  'tags'           => tag_data }
 
-        redis.rpush(queue, Oj.dump(notif))
+        begin
+          notif_json = Oj.dump(notif)
+        rescue Oj::Error => e
+          if opts[:logger]
+            opts[:logger].warn("Error serialising notification json: #{e}, notification: #{notif.inspect}")
+          end
+          notif_json = nil
+        end
+
+        if notif_json
+          Flapjack.redis.multi do
+            Flapjack.redis.lpush(queue, notif_json)
+            Flapjack.redis.lpush("#{queue}_actions", "+")
+          end
+        end
+
       end
 
-      def self.next(queue, opts = {})
-        raise "Redis connection not set" unless redis = opts[:redis]
-
-        defaults = { :block => true }
-        options  = defaults.merge(opts)
-
-        if options[:block]
-          raw = redis.blpop(queue, 0)[1]
-        else
-          raw = redis.lpop(queue)
-          return unless raw
-        end
-        begin
-          parsed = ::Oj.load( raw )
-        rescue Oj::Error => e
-          if options[:logger]
-            options[:logger].warn("Error deserialising notification json: #{e}, raw json: #{raw.inspect}")
+      def self.foreach_on_queue(queue)
+        while notif_json = Flapjack.redis.rpop(queue)
+          begin
+            notification = ::Oj.load( notif_json )
+          rescue Oj::Error => e
+            if opts[:logger]
+              opts[:logger].warn("Error deserialising notification json: #{e}, raw json: #{notif_json.inspect}")
+            end
+            notification = nil
           end
-          return nil
+
+          yield self.new(notification) if block_given? && notification
         end
-        self.new( parsed )
+      end
+
+      def self.wait_for_queue(queue)
+        Flapjack.redis.brpop("#{queue}_actions")
       end
 
       def ok?

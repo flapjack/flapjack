@@ -5,8 +5,6 @@ require 'delorean'
 require 'chronic'
 require 'active_support/time'
 require 'ice_cube'
-require 'flapjack/data/entity_check'
-require 'flapjack/data/event'
 
 if ENV['COVERAGE']
   require 'simplecov'
@@ -34,11 +32,13 @@ Oj.mimic_JSON
 Oj.default_options = { :indent => 0, :mode => :strict }
 require 'active_support/json'
 
-require 'flapjack/notifier'
-require 'flapjack/processor'
 require 'flapjack/patches'
 
-require 'resque_spec'
+require 'flapjack/data/entity_check'
+require 'flapjack/data/event'
+
+require 'flapjack/notifier'
+require 'flapjack/processor'
 
 class MockLogger
   attr_accessor :messages
@@ -56,9 +56,9 @@ class MockLogger
   end
 end
 
-# poor man's stubbing
-class MockEmailer
-  include EM::Deferrable
+require 'mail'
+Mail.defaults do
+  delivery_method :test
 end
 
 class RedisDelorean
@@ -81,13 +81,8 @@ class RedisDelorean
     return counter
 EXPIRE_AS_IF_AT
 
-  def self.before_all(options = {})
-    redis = options[:redis]
-    @expire_as_if_at_sha = redis.script(:load, ExpireAsIfAtScript)
-  end
-
-  def self.before_each(options = {})
-    @redis = options[:redis]
+  def self.before_all
+     @expire_as_if_at_sha = Flapjack.redis.script(:load, ExpireAsIfAtScript)
   end
 
   def self.time_travel_to(dest_time)
@@ -110,7 +105,7 @@ EXPIRE_AS_IF_AT
     real_time = Time.now_without_delorean.to_i
     #puts "delta #{delta}, expire before real time #{Time.at(real_time + delta)}"
 
-    result = @redis.evalsha(@expire_as_if_at_sha, ['*'],
+    result = Flapjack.redis.evalsha(@expire_as_if_at_sha, ['*'],
                [real_time, real_time + delta])
     #puts "Expired #{result} key#{(result == 1) ? '' : 's'}"
   end
@@ -118,18 +113,21 @@ EXPIRE_AS_IF_AT
 end
 
 redis_opts = { :db => 14, :driver => :ruby }
-redis = ::Redis.new(redis_opts)
-redis.flushdb
-RedisDelorean.before_all(:redis => redis)
-redis.quit
+Flapjack.redis = ::Redis.new(redis_opts)
+Flapjack.redis.flushdb
+RedisDelorean.before_all
+Flapjack.redis.quit
 
-# NB: this seems to execute outside the Before/After hooks
-# regardless of placement -- this is what we want, as the
-# @redis driver should be initialised in the sync block.
-Around do |scenario, blk|
-  EM.synchrony do
-    blk.call
-    EM.stop
+# Not the most efficient of operations...
+def redis_peek(queue, start = 0, count = nil)
+  size = Flapjack.redis.llen(queue)
+  start = 0 if start < 0
+  count = (size - start) if count.nil? || (count > (size - start))
+
+  (0..(size - 1)).inject([]) do |memo, n|
+    obj = Flapjack.redis.rpoplpush(queue, queue)
+    memo << Oj::load(obj) if (n >= start || n < (start + count))
+    memo
   end
 end
 
@@ -139,41 +137,32 @@ end
 
 After do
   @logger.messages = []
+  WebMock.reset!
 end
 
-
 Before('@processor') do
-  @processor = Flapjack::Processor.new(:logger => @logger,
-    :redis_config => redis_opts, :config => {})
-  @redis = @processor.instance_variable_get('@redis')
+  @processor = Flapjack::Processor.new(:logger => @logger, :config => {})
 end
 
 After('@processor') do
-  @redis.flushdb
-  @redis.quit
+  Flapjack.redis.flushdb
+  Flapjack.redis.quit
 end
 
 Before('@notifier') do
   @notifier  = Flapjack::Notifier.new(:logger => @logger,
-    :redis_config => redis_opts,
     :config => {'email_queue' => 'email_notifications',
                 'sms_queue' => 'sms_notifications',
                 'default_contact_timezone' => 'America/New_York'})
-  @notifier_redis = @notifier.instance_variable_get('@redis')
 end
 
 After('@notifier') do
-  @notifier_redis.flushdb
-  @notifier_redis.quit
+  Flapjack.redis.flushdb
+  Flapjack.redis.quit
 end
 
-Before('@resque') do
-  ResqueSpec.reset!
-  @queues = {:email => 'email_queue'}
-end
-
-Before('@time') do
-  RedisDelorean.before_each(:redis => @redis)
+Before('@notifications') do
+  Mail::TestMailer.deliveries.clear
 end
 
 After('@time') do

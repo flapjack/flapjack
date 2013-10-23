@@ -2,19 +2,17 @@
 
 require 'active_support/time'
 
-require 'em-hiredis'
-
 require 'oj'
+
+require 'flapjack'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/notification'
 require 'flapjack/data/event'
-require 'flapjack/redis_pool'
-require 'flapjack/utility'
 
-require 'flapjack/gateways/email'
-require 'flapjack/gateways/sms_messagenet'
+require 'flapjack/exceptions'
+require 'flapjack/utility'
 
 module Flapjack
 
@@ -23,20 +21,20 @@ module Flapjack
     include Flapjack::Utility
 
     def initialize(opts = {})
-      @config = opts[:config]
-      @redis_config = opts[:redis_config] || {}
+      @lock = opts[:lock]
+      @config = opts[:config] || {}
       @logger = opts[:logger]
-      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
 
       @notifications_queue = @config['queue'] || 'notifications'
 
-      @queues = {:email     => @config['email_queue'],
-                 :sms       => @config['sms_queue'],
-                 :jabber    => @config['jabber_queue'],
-                 :pagerduty => @config['pagerduty_queue']}
+      @queues = {:email     => (@config['email_queue']     || 'email_notifications'),
+                 :sms       => (@config['sms_queue']       || 'sms_notifications'),
+                 :jabber    => (@config['jabber_queue']    || 'jabber_notifications'),
+                 :pagerduty => (@config['pagerduty_queue'] || 'pagerduty_notifications')
+                }
 
       notify_logfile  = @config['notification_log_file'] || 'log/notify.log'
-      if not File.directory?(File.dirname(notify_logfile))
+      unless File.directory?(File.dirname(notify_logfile))
         puts "Parent directory for log file '#{notify_logfile}' doesn't exist"
         puts "Exiting!"
         exit
@@ -49,7 +47,7 @@ module Flapjack
       tz = nil
       tz_string = @config['default_contact_timezone'] || ENV['TZ'] || 'UTC'
       begin
-        tz = ActiveSupport::TimeZone.new(tz_string)
+        tz = ActiveSupport::TimeZone.new(tz_string.untaint)
       rescue ArgumentError
         logger.error("Invalid timezone string specified in default_contact_timezone or TZ (#{tz_string})")
         exit 1
@@ -58,28 +56,19 @@ module Flapjack
     end
 
     def start
-      @logger.info("Booting main loop.")
+      loop do
+        @lock.synchronize do
+          Flapjack::Data::Notification.foreach_on_queue(@notifications_queue) {|notif|
+            process_notification(notif)
+          }
+        end
 
-      until @should_quit
-        @logger.debug("Waiting for notification...")
-        notification = Flapjack::Data::Notification.next(@notifications_queue,
-                                                         :redis => @redis,
-                                                         :logger => @logger)
-        process_notification(notification) unless notification.nil? || (notification.type == 'shutdown')
+        Flapjack::Data::Notification.wait_for_queue(@notifications_queue)
       end
-
-      @logger.info("Exiting main loop.")
     end
 
-    # this must use a separate connection to the main Executive one, as it's running
-    # from a different fiber while the main one is blocking.
-    def stop
-      @should_quit = true
-
-      redis_uri = @redis_config[:path] ||
-        "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
-      shutdown_redis = EM::Hiredis.connect(redis_uri)
-      shutdown_redis.rpush(@notifications_queue, Oj.dump('type' => 'shutdown'))
+    def stop_type
+      :exception
     end
 
   private
@@ -92,7 +81,7 @@ module Flapjack
 
       timestamp    = Time.now
       event_id     = notification.event_id
-      entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
+      entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id)
       contacts     = entity_check.contacts
 
       if contacts.empty?
@@ -113,7 +102,7 @@ module Flapjack
 
         if message.rollup
           contents['rollup_alerts'] = message.contact.alerting_checks_for_media(media_type).inject({}) do |memo, alert|
-            ec = Flapjack::Data::EntityCheck.for_event_id(alert, :redis => @redis)
+            ec = Flapjack::Data::EntityCheck.for_event_id(alert)
             last_change = ec.last_change
             memo[alert] = {
               'duration' => last_change ? (Time.now.to_i - last_change) : nil,
@@ -154,16 +143,10 @@ module Flapjack
         contents_tags = contents['tags']
         contents['tags'] = contents_tags.is_a?(Set) ? contents_tags.to_a : contents_tags
 
-        # TODO consider changing Resque jobs to use raw blpop like the others
-        case media_type.to_sym
-        when :sms
-          Resque.enqueue_to(@queues[:sms], Flapjack::Gateways::SmsMessagenet, contents)
-        when :email
-          Resque.enqueue_to(@queues[:email], Flapjack::Gateways::Email, contents)
-        when :jabber
-          @redis.rpush(@queues[:jabber], Oj.dump(contents))
-        when :pagerduty
-          @redis.rpush(@queues[:pagerduty], Oj.dump(contents))
+        if [:sms, :email, :jabber, :pagerduty].include?(media_type.to_sym)
+          Flapjack::Data::Message.push(@queues[media_type.to_sym], contents)
+        else
+          # TODO log warning
         end
       end
     end

@@ -1,9 +1,5 @@
 #!/usr/bin/env ruby
 
-# 'Notification' refers to the template object created when an event occurs,
-# from which individual 'Message' objects are created, one for each
-# contact+media recipient.
-
 require 'flapjack/data/contact'
 
 module Flapjack
@@ -11,6 +7,43 @@ module Flapjack
     class Message
 
       attr_reader :medium, :address, :duration, :contact, :rollup
+
+      def self.push(queue, msg, opts = {})
+        begin
+          msg_json = Oj.dump(msg)
+        rescue Oj::Error => e
+          if opts[:logger]
+            opts[:logger].warn("Error serialising message json: #{e}, message: #{message.inspect}")
+          end
+          msg_json = nil
+        end
+
+        if msg_json
+          Flapjack.redis.multi do
+            Flapjack.redis.lpush(queue, msg_json)
+            Flapjack.redis.lpush("#{queue}_actions", "+")
+          end
+        end
+      end
+
+      def self.foreach_on_queue(queue, opts = {})
+        while msg_json = Flapjack.redis.rpop(queue)
+          begin
+            message = ::Oj.load( msg_json )
+          rescue Oj::Error => e
+            if opts[:logger]
+              opts[:logger].warn("Error deserialising message json: #{e}, raw json: #{msg_json.inspect}")
+            end
+            message = nil
+          end
+
+          yield message if block_given? && message
+        end
+      end
+
+      def self.wait_for_queue(queue, opts = {})
+        Flapjack.redis.brpop("#{queue}_actions")
+      end
 
       def self.for_contact(contact, opts = {})
         self.new(:contact  => contact,

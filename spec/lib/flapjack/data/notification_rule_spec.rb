@@ -31,21 +31,21 @@ describe Flapjack::Data::NotificationRule, :redis => true do
   let(:timezone) { ActiveSupport::TimeZone.new("Europe/Moscow") }
 
   let(:existing_rule) {
-    Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
+    Flapjack::Data::NotificationRule.add(rule_data)
   }
 
   it "checks that a notification rule exists" do
-    Flapjack::Data::NotificationRule.exists_with_id?(existing_rule.id, :redis => @redis).should be_true
-    Flapjack::Data::NotificationRule.exists_with_id?('not_there', :redis => @redis).should be_false
+    Flapjack::Data::NotificationRule.exists_with_id?(existing_rule.id).should be_true
+    Flapjack::Data::NotificationRule.exists_with_id?('not_there').should be_false
   end
 
   it "returns a notification rule if it exists" do
-    rule = Flapjack::Data::NotificationRule.find_by_id(existing_rule.id, :redis => @redis)
+    rule = Flapjack::Data::NotificationRule.find_by_id(existing_rule.id)
     rule.should_not be_nil
   end
 
   it "does not return a notification rule if it does not exist" do
-    rule = Flapjack::Data::NotificationRule.find_by_id('not_there', :redis => @redis)
+    rule = Flapjack::Data::NotificationRule.find_by_id('not_there')
     rule.should be_nil
   end
 
@@ -89,7 +89,7 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
   it "checks if blackhole settings for a rule match a severity level" do
     rule_data[:warning_blackhole] = true
-    rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
+    rule = Flapjack::Data::NotificationRule.add(rule_data)
 
     rule.blackhole?('warning').should be_true
     rule.blackhole?('critical').should be_false
@@ -105,7 +105,7 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
     it "fails to add a notification rule with invalid data" do
       rule_data[:entities] = [1, {}]
-      rule_or_errors = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
+      rule_or_errors = Flapjack::Data::NotificationRule.add(rule_data)
       rule_or_errors.should_not be_nil
       rule_or_errors.should be_an(Array)
       rule_or_errors.should have(1).error
@@ -113,7 +113,7 @@ describe Flapjack::Data::NotificationRule, :redis => true do
     end
 
     it "fails to update a notification rule with invalid data" do
-      rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
+      rule = Flapjack::Data::NotificationRule.add(rule_data)
       expect {
         rule_data[:entities] = [57]
         errors = rule.update(rule_data)

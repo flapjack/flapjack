@@ -10,121 +10,193 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
                   'alias'    => 'flapjack',
                   'watched_check'  => 'PING',
                   'watched_entity' => 'foo.bar.net',
+                  'pagerduty_contact' => 'pdservicekey',
                   'rooms'    => ['flapjacktest@conference.example.com']
                  }
   }
 
-  let(:stanza) { double('stanza') }
+  let(:now) { Time.now }
 
-  it "raises an error if a required config setting is not set" do
-    Socket.should_receive(:gethostname).and_return('thismachine')
+  let(:lock) { double(Monitor) }
 
-    fo = Flapjack::Gateways::Oobetet.new(:config => config.delete('watched_check'), :logger => @logger)
+  context 'notifications' do
 
-    lambda {
-      fo.setup
-    }.should raise_error
+    it "raises an error if a required config setting is not set" do
+      lambda {
+        Flapjack::Gateways::Oobetet::Notifier.new(:config => config.delete('watched_check'), :logger => @logger)
+      }.should raise_error
+    end
+
+    it "starts and is stopped by an exception" do
+      Kernel.should_receive(:sleep).with(10).and_raise(Flapjack::PikeletStop)
+
+      lock.should_receive(:synchronize).and_yield
+
+      fon = Flapjack::Gateways::Oobetet::Notifier.new(:lock => lock,
+        :config => config, :logger => @logger)
+      fon.should_receive(:check_timers)
+      expect { fon.start }.to raise_error(Flapjack::PikeletStop)
+    end
+
+    it "checks for a breach and emits notifications" do
+      time_check = double(Flapjack::Gateways::Oobetet::TimeChecker)
+      time_check.should_receive(:respond_to?).with(:announce).and_return(false)
+      time_check.should_receive(:respond_to?).with(:breach?).and_return(true)
+      time_check.should_receive(:breach?).
+        and_return("haven't seen a test problem notification in the last 300 seconds")
+
+      bot = double(Flapjack::Gateways::Oobetet::Bot)
+      bot.should_receive(:respond_to?).with(:announce).and_return(true)
+      bot.should_receive(:announce).with(/^Flapjack Self Monitoring is Critical/)
+
+      # TODO be more specific about the request body
+      req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
+         to_return(:status => 200, :body => {'status' => 'success'}.to_json)
+
+      fon = Flapjack::Gateways::Oobetet::Notifier.new(:lock => lock, :config => config, :logger => @logger)
+      fon.instance_variable_set('@siblings', [time_check, bot])
+      fon.send(:check_timers)
+
+      req.should have_been_requested
+    end
+
   end
 
-  it "hooks up event handlers to the appropriate methods" do
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
+  context 'time checking' do
 
-    EventMachine::Synchrony.should_receive(:next_tick).exactly(3).times.and_yield
+    let(:now)          { Time.now }
+    let(:a_minute_ago) { now.to_i - 60 }
+    let(:a_day_ago)    { now.to_i - (60 * 60 * 24) }
 
-    fo.should_receive(:register_handler).with(:ready).and_yield(stanza)
-    fo.should_receive(:on_ready).with(stanza)
+    it "starts and is stopped by a signal" do
+      lock.should_receive(:synchronize).and_yield
+      stop_cond = double(MonitorMixin::ConditionVariable)
+      stop_cond.should_receive(:wait_until)
 
-    fo.should_receive(:register_handler).with(:message, :groupchat?).and_yield(stanza)
-    fo.should_receive(:on_groupchat).with(stanza)
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :stop_condition => stop_cond,
+        :config => config, :logger => @logger)
+      fot.start
+    end
 
-    fo.should_receive(:register_handler).with(:disconnected).and_yield(stanza)
-    fo.should_receive(:on_disconnect).with(stanza).and_return(true)
+    it "records times of a problem status message" do
+      lock.should_receive(:synchronize).and_yield
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
+      fot.send(:receive_status, 'problem', now.to_i)
+      fot_times = fot.instance_variable_get('@times')
+      fot_times.should_not be_nil
+      fot_times.should have_key(:last_problem)
+      fot_times[:last_problem].should == now.to_i
+    end
 
-    fo.register_handlers
+    it "records times of a recovery status message" do
+      lock.should_receive(:synchronize).and_yield
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
+      fot.send(:receive_status, 'recovery', now.to_i)
+      fot_times = fot.instance_variable_get('@times')
+      fot_times.should_not be_nil
+      fot_times.should have_key(:last_recovery)
+      fot_times[:last_recovery].should == now.to_i
+    end
+
+    it "records times of an acknowledgement status message" do
+      lock.should_receive(:synchronize).and_yield
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
+      fot.send(:receive_status, 'acknowledgement', now.to_i)
+      fot_times = fot.instance_variable_get('@times')
+      fot_times.should_not be_nil
+      fot_times.should have_key(:last_ack)
+      fot_times[:last_ack].should == now.to_i
+    end
+
+    it "detects a time period with no test problem alerts" do
+      lock.should_receive(:synchronize).and_yield
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
+      fot_times = fot.instance_variable_get('@times')
+
+      fot_times[:last_problem]  = a_day_ago
+      fot_times[:last_recovery] = a_minute_ago
+      fot_times[:last_ack]      = a_minute_ago
+      fot_times[:last_ack_sent] = a_minute_ago
+
+      breach = fot.breach?(now.to_i)
+      breach.should_not be_nil
+      breach.should == "haven't seen a test problem notification in the last 300 seconds"
+    end
+
+    it "detects a time period with no test recovery alerts" do
+      lock.should_receive(:synchronize).and_yield
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
+      fot_times = fot.instance_variable_get('@times')
+
+      fot_times[:last_problem]  = a_minute_ago
+      fot_times[:last_recovery] = a_day_ago
+      fot_times[:last_ack]      = a_minute_ago
+      fot_times[:last_ack_sent] = a_minute_ago
+
+      breach = fot.breach?(now.to_i)
+      breach.should_not be_nil
+      breach.should == "haven't seen a test recovery notification in the last 300 seconds"
+    end
+
   end
 
-  it "joins a chat room after connecting" do
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
+  context 'XMPP' do
 
-    fo.should_receive(:write).with(an_instance_of(Blather::Stanza::Presence))
-    fo.should_receive(:write).with(an_instance_of(Blather::Stanza::Message))
+    let(:muc_client) { double(::Jabber::MUC::SimpleMUCClient) }
 
-    fo.on_ready(stanza)
-  end
+    it "raises an error if a required config setting is not set" do
+      lambda {
+        Flapjack::Gateways::Oobetet::Bot.new(:config => config.delete('watched_check'), :logger => @logger)
+      }.should raise_error
+    end
 
-  it "reconnects when disconnected (if not quitting)" do
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
+    it "starts and is stopped by a signal" do
+      t = now.to_i
 
-    EventMachine::Timer.should_receive(:new).with(1).and_yield
-    fo.should_receive(:connect)
+      time_checker = double(Flapjack::Gateways::Oobetet::TimeChecker)
+      time_checker.should_receive(:respond_to?).with(:receive_status).and_return(true)
+      time_checker.should_receive(:receive_status).with('recovery', t)
 
-    ret = fo.on_disconnect(stanza)
-    ret.should be_true
-  end
+      client = double(::Jabber::Client)
+      client.should_receive(:connect)
+      client.should_receive(:auth).with('password')
+      client.should_receive(:send).with(an_instance_of(::Jabber::Presence))
 
-  it "records times of a problem status messages" do
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
-    fo.setup
+      muc_client.should_receive(:on_message).and_yield(t, 'test', 'Recovery "PING" on foo.bar.net')
+      muc_client.should_receive(:join).with('flapjacktest@conference.example.com/flapjack')
+      muc_client.should_receive(:say).with(/^flapjack oobetet gateway started/)
 
-    t = Time.now
+      muc_client.should_receive(:active?).and_return(true)
+      muc_client.should_receive(:exit)
 
-    stanza.should_receive(:body).and_return( %q{PROBLEM: "PING" on foo.bar.net} )
-    Time.should_receive(:now).and_return(t)
+      client.should_receive(:close)
 
-    fo.on_groupchat(stanza)
-    fo_times = fo.instance_variable_get('@times')
-    fo_times.should_not be_nil
-    fo_times.should have_key(:last_problem)
-    fo_times[:last_problem].should == t.to_i
-  end
+      ::Jabber::Client.should_receive(:new).and_return(client)
+      ::Jabber::MUC::SimpleMUCClient.should_receive(:new).and_return(muc_client)
 
-  it "records times of a recovery status messages" do
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
-    fo.setup
+      lock.should_receive(:synchronize).and_yield
+      stop_cond = double(MonitorMixin::ConditionVariable)
+      stop_cond.should_receive(:wait_until)
 
-    t = Time.now
+      fob = Flapjack::Gateways::Oobetet::Bot.new(:lock => lock, :stop_condition => stop_cond,
+        :config => config, :logger => @logger)
+      fob.instance_variable_set('@siblings', [time_checker])
+      fob.start
+    end
 
-    stanza.should_receive(:body).and_return( %q{RECOVERY: "PING" on foo.bar.net} )
-    Time.should_receive(:now).and_return(t)
+    it "announces to jabber rooms" do
+      muc_client2 = double(::Jabber::MUC::SimpleMUCClient)
 
-    fo.on_groupchat(stanza)
-    fo_times = fo.instance_variable_get('@times')
-    fo_times.should_not be_nil
-    fo_times.should have_key(:last_recovery)
-    fo_times[:last_recovery].should == t.to_i
-  end
+      muc_client.should_receive(:say).with('hello!')
+      muc_client2.should_receive(:say).with('hello!')
 
-  it "records times of an acknowledgement status messages" do
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
-    fo.setup
+      lock.should_receive(:synchronize).and_yield
 
-    t = Time.now
+      fob = Flapjack::Gateways::Oobetet::Bot.new(:lock => lock, :config => config, :logger => @logger)
+      fob.instance_variable_set('@muc_clients', {'room1' => muc_client, 'room2' => muc_client2})
+      fob.announce('hello!')
+    end
 
-    stanza.should_receive(:body).and_return( %q{ACKNOWLEDGEMENT: "PING" on foo.bar.net} )
-    Time.should_receive(:now).and_return(t)
-
-    fo.on_groupchat(stanza)
-    fo_times = fo.instance_variable_get('@times')
-    fo_times.should_not be_nil
-    fo_times.should have_key(:last_ack)
-    fo_times[:last_ack].should == t.to_i
-  end
-
-  it "runs a loop checking for recorded problems" do
-    timer = double('timer')
-    timer.should_receive(:cancel)
-    EM::Synchrony.should_receive(:add_periodic_timer).with(60).and_return(timer)
-
-    fo = Flapjack::Gateways::Oobetet.new(:config => config, :logger => @logger)
-    fo.should_receive(:register_handler).exactly(3).times
-    fo.should_receive(:connect)
-
-    EM::Synchrony.should_receive(:sleep).with(10) {
-      fo.instance_variable_set('@should_quit', true)
-      nil
-    }
-
-    fo.start
   end
 
 end

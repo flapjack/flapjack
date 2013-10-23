@@ -1,103 +1,167 @@
 require 'spec_helper'
 require 'flapjack/pikelet'
 
-describe Flapjack::Pikelet do
+describe Flapjack::Pikelet, :logger => true do
 
-  let(:config) { double('config') }
-  let(:redis_config) { double('redis_config') }
+  let(:config)        { double('config') }
 
-  let(:logger) { double(Flapjack::Logger) }
-
-  let(:fiber) { double(Fiber) }
-
-  let(:time) { Time.now }
-
-  before do
-    Flapjack::Pikelet::Resque.class_variable_set(:@@resque_pool, nil)
-  end
+  let(:lock)          { double(Monitor) }
+  let(:stop_cond)     { double(MonitorMixin::ConditionVariable) }
+  let(:finished_cond) { double(MonitorMixin::ConditionVariable) }
+  let(:thread)        { double(Thread) }
+  let(:shutdown)      { double(Proc) }
 
   it "creates and starts a processor pikelet" do
-    Flapjack::Logger.should_receive(:new).and_return(logger)
+    Flapjack::Logger.should_receive(:new).and_return(@logger)
 
     config.should_receive(:[]).with('logger').and_return(nil)
+    config.should_receive(:[]).with('max_runs').and_return(nil)
 
-    fc = double('coordinator')
+    finished_cond.should_receive(:signal)
+    lock.should_receive(:new_cond).twice.and_return(stop_cond, finished_cond)
+    lock.should_receive(:synchronize).and_yield
+    Monitor.should_receive(:new).and_return(lock)
 
     processor = double('processor')
     processor.should_receive(:start)
-    Flapjack::Processor.should_receive(:new).with(:config => config,
-        :redis_config => redis_config, :boot_time => time, :logger => logger, :coordinator => fc).
-      and_return(processor)
+    Flapjack::Processor.should_receive(:new).with(:lock => lock,
+      :stop_condition => stop_cond, :config => config,
+      :logger => @logger).and_return(processor)
 
-    fiber.should_receive(:resume)
-    Fiber.should_receive(:new).and_yield.and_return(fiber)
+    Thread.should_receive(:new).and_yield.and_return(thread)
+    thread.should_receive(:abort_on_exception=).with(true)
+    Thread.should_receive(:current).and_return(thread)
 
-    pik = Flapjack::Pikelet.create('processor', :config => config,
-      :redis_config => redis_config, :boot_time => time, :coordinator => fc)
-    pik.should be_a(Flapjack::Pikelet::Generic)
-    pik.start
+    pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config,
+      :logger => @logger)
+    pikelets.should_not be_nil
+    pikelets.should have(1).pikelet
+    pikelet = pikelets.first
+    pikelet.should be_a(Flapjack::Pikelet::Generic)
+
+    pikelet.start
   end
 
-  it "creates and starts a resque worker gateway" do
-    Flapjack::Logger.should_receive(:new).and_return(logger)
+  it "handles an exception from a processor pikelet, and restarts it, then shuts down" do
+    exc = RuntimeError.new
+    Flapjack::Logger.should_receive(:new).and_return(@logger)
 
     config.should_receive(:[]).with('logger').and_return(nil)
-    config.should_receive(:[]).with('queue').and_return('email_notif')
+    config.should_receive(:[]).with('max_runs').and_return(2)
 
-    resque_redis = double('resque_redis')
-    redis = double('redis')
-    Flapjack::RedisPool.should_receive(:new).twice.and_return(resque_redis, redis)
-    Resque.should_receive(:redis=).with(resque_redis)
+    finished_cond.should_receive(:signal)
+    lock.should_receive(:new_cond).twice.and_return(stop_cond, finished_cond)
+    lock.should_receive(:synchronize).and_yield
+    Monitor.should_receive(:new).and_return(lock)
 
-    Flapjack::Gateways::Email.should_receive(:instance_variable_set).
-      with('@config', config)
-    Flapjack::Gateways::Email.should_receive(:instance_variable_set).
-      with('@redis', redis)
-    Flapjack::Gateways::Email.should_receive(:instance_variable_set).
-      with('@logger', logger)
+    processor = double('processor')
+    processor.should_receive(:start).twice.and_raise(exc)
+    Flapjack::Processor.should_receive(:new).with(:lock => lock,
+      :stop_condition => stop_cond, :config => config,
+      :logger => @logger).and_return(processor)
 
-    worker = double('worker')
-    worker.should_receive(:work).with(0.1)
-    Flapjack::Gateways::Email.should_receive(:start)
-    EM::Resque::Worker.should_receive(:new).with('email_notif').and_return(worker)
+    Thread.should_receive(:new).and_yield.and_return(thread)
+    thread.should_receive(:abort_on_exception=).with(true)
+    Thread.should_receive(:current).and_return(thread)
 
-    fiber.should_receive(:resume)
-    Fiber.should_receive(:new).and_yield.and_return(fiber)
+   shutdown.should_receive(:call)
 
-    pik = Flapjack::Pikelet.create('email', :config => config,
-      :redis_config => redis_config)
-    pik.should be_a(Flapjack::Pikelet::Resque)
-    pik.start
+    pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config,
+      :logger => @logger)
+    pikelets.should_not be_nil
+    pikelets.should have(1).pikelet
+    pikelet = pikelets.first
+    pikelet.should be_a(Flapjack::Pikelet::Generic)
+
+    pikelet.start
   end
 
-  it "creates a thin server gateway" do
-    Flapjack::Logger.should_receive(:new).and_return(logger)
+  it "creates and starts a http server gateway" do
+    Flapjack::Logger.should_receive(:new).and_return(@logger)
 
     config.should_receive(:[]).with('logger').and_return(nil)
+    config.should_receive(:[]).with('max_runs').and_return(nil)
     config.should_receive(:[]).with('port').and_return(7654)
     config.should_receive(:[]).with('timeout').and_return(90)
 
+    finished_cond.should_receive(:signal)
+    lock.should_receive(:new_cond).twice.and_return(stop_cond, finished_cond)
+    lock.should_receive(:synchronize).and_yield
+    Monitor.should_receive(:new).and_return(lock)
+
     server = double('server')
-    server.should_receive(:timeout=).with(90)
+    server.should_receive(:mount).with('/', Rack::Handler::WEBrick,
+      Flapjack::Gateways::Web)
     server.should_receive(:start)
-    Thin::Server.should_receive(:new).
-      with(/^(?:\d{1,3}\.){3}\d{1,3}$/, 7654,
-        Flapjack::Gateways::Web, :signals => false).
+    WEBrick::HTTPServer.should_receive(:new).
+      with(:Port => 7654, :BindAddress => '127.0.0.1',
+           :AccessLog => [], :Logger => an_instance_of(::WEBrick::Log)).
       and_return(server)
 
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
       with('@config', config)
     Flapjack::Gateways::Web.should_receive(:instance_variable_set).
-      with('@redis_config', redis_config)
-    Flapjack::Gateways::Web.should_receive(:instance_variable_set).
-      with('@logger', logger)
+      with('@logger', @logger)
+
+    Thread.should_receive(:new).and_yield.and_return(thread)
+    thread.should_receive(:abort_on_exception=).with(true)
+    Thread.should_receive(:current).and_return(thread)
 
     Flapjack::Gateways::Web.should_receive(:start)
 
-    pik = Flapjack::Pikelet.create('web', :config => config,
-      :redis_config => redis_config)
-    pik.should be_a(Flapjack::Pikelet::Thin)
-    pik.start
+    pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config,
+      :logger => @logger)
+    pikelets.should_not be_nil
+    pikelets.should have(1).pikelet
+    pikelet = pikelets.first
+    pikelet.should be_a(Flapjack::Pikelet::HTTP)
+    pikelet.start
+  end
+
+  it "handles an exception from a http server gateway" do
+    exc = RuntimeError.new
+
+    Flapjack::Logger.should_receive(:new).and_return(@logger)
+
+    config.should_receive(:[]).with('logger').and_return(nil)
+    config.should_receive(:[]).with('max_runs').and_return(nil)
+    config.should_receive(:[]).with('port').and_return(7654)
+    config.should_receive(:[]).with('timeout').and_return(90)
+
+    finished_cond.should_receive(:signal)
+    lock.should_receive(:new_cond).twice.and_return(stop_cond, finished_cond)
+    lock.should_receive(:synchronize).and_yield
+    Monitor.should_receive(:new).and_return(lock)
+
+    server = double('server')
+    server.should_receive(:mount).with('/', Rack::Handler::WEBrick,
+      Flapjack::Gateways::Web)
+    server.should_receive(:start).and_raise(exc)
+    WEBrick::HTTPServer.should_receive(:new).
+      with(:Port => 7654, :BindAddress => '127.0.0.1',
+           :AccessLog => [], :Logger => an_instance_of(::WEBrick::Log)).
+      and_return(server)
+
+    Flapjack::Gateways::Web.should_receive(:instance_variable_set).
+      with('@config', config)
+    Flapjack::Gateways::Web.should_receive(:instance_variable_set).
+      with('@logger', @logger)
+
+    Thread.should_receive(:new).and_yield.and_return(thread)
+    thread.should_receive(:abort_on_exception=).with(true)
+    Thread.should_receive(:current).and_return(thread)
+
+    shutdown.should_receive(:call)
+
+    Flapjack::Gateways::Web.should_receive(:start)
+
+    pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config,
+      :logger => @logger)
+    pikelets.should_not be_nil
+    pikelets.should have(1).pikelet
+    pikelet = pikelets.first
+    pikelet.should be_a(Flapjack::Pikelet::HTTP)
+    pikelet.start
   end
 
 end

@@ -1,36 +1,32 @@
 #!/usr/bin/env ruby
 
 def drain_events
-  loop do
-    event = Flapjack::Data::Event.next('events', :block => false, :redis => @redis)
-    break unless event
+  Flapjack::Data::Event.foreach_on_queue('events') do |event|
     @processor.send(:process_event, event)
   end
   drain_notifications
 end
 
 def drain_notifications
-  return unless @notifier_redis
-  loop do
-    notification = Flapjack::Data::Notification.next('notifications', :block => false, :redis => @notifier_redis)
-    break unless notification
+  return unless @notifier
+  Flapjack::Data::Notification.foreach_on_queue('notifications') do |notification|
     @notifier.send(:process_notification, notification)
   end
 end
 
 def submit_event(event)
-  @redis.rpush 'events', event.to_json
+  Flapjack.redis.rpush 'events', event.to_json
 end
 
-def set_scheduled_maintenance(entity, check, duration)
-  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+def set_scheduled_maintenance(entity, check, duration = 60*60*2)
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check)
   t = Time.now.to_i
   entity_check.create_scheduled_maintenance(t, duration, :summary => "upgrading everything")
-  @redis.setex("#{entity}:#{check}:scheduled_maintenance", duration, t)
+  Flapjack.redis.setex("#{entity}:#{check}:scheduled_maintenance", duration, t)
 end
 
 def remove_scheduled_maintenance(entity, check)
-  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check)
   sm = entity_check.maintenances(nil, nil, :scheduled => true)
   sm.each do |m|
     entity_check.end_scheduled_maintenance(m[:start_time])
@@ -40,40 +36,40 @@ end
 def remove_unscheduled_maintenance(entity, check)
   # end any unscheduled downtime
   event_id = entity + ":" + check
-  if (um_start = @redis.get("#{event_id}:unscheduled_maintenance"))
-    @redis.del("#{event_id}:unscheduled_maintenance")
+  if (um_start = Flapjack.redis.get("#{event_id}:unscheduled_maintenance"))
+    Flapjack.redis.del("#{event_id}:unscheduled_maintenance")
     duration = Time.now.to_i - um_start.to_i
-    @redis.zadd("#{event_id}:unscheduled_maintenances", duration, um_start)
+    Flapjack.redis.zadd("#{event_id}:unscheduled_maintenances", duration, um_start)
   end
 end
 
 def remove_notifications(entity, check)
   event_id = entity + ":" + check
-  @redis.del("#{event_id}:last_problem_notification")
-  @redis.del("#{event_id}:last_recovery_notification")
-  @redis.del("#{event_id}:last_acknowledgement_notification")
+  Flapjack.redis.del("#{event_id}:last_problem_notification")
+  Flapjack.redis.del("#{event_id}:last_recovery_notification")
+  Flapjack.redis.del("#{event_id}:last_acknowledgement_notification")
 end
 
 def set_ok_state(entity, check)
-  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check)
   entity_check.update_state(Flapjack::Data::EntityCheck::STATE_OK,
     :timestamp => (Time.now.to_i - (60*60*24)))
 end
 
 def set_critical_state(entity, check)
-  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check)
   entity_check.update_state(Flapjack::Data::EntityCheck::STATE_CRITICAL,
     :timestamp => (Time.now.to_i - (60*60*24)))
 end
 
 def set_warning_state(entity, check)
-  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check)
   entity_check.update_state(Flapjack::Data::EntityCheck::STATE_WARNING,
     :timestamp => (Time.now.to_i - (60*60*24)))
 end
 
 def end_unscheduled_maintenance(entity, check)
-  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check)
   entity_check.end_unscheduled_maintenance(Time.now.to_i)
 end
 
@@ -164,8 +160,7 @@ end
 
 Given /^an entity '([\w\.\-]+)' exists$/ do |entity|
   Flapjack::Data::Entity.add({'id'       => '5000',
-                              'name'     => entity},
-                             :redis => @redis )
+                              'name'     => entity})
 end
 
 Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check, entity|
@@ -179,7 +174,7 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') has no state$
   remove_unscheduled_maintenance(entity, check)
   remove_scheduled_maintenance(entity, check)
   remove_notifications(entity, check)
-  @redis.hdel("check:#{@key}", 'state')
+  Flapjack.redis.hdel("check:#{@key}", 'state')
 end
 
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in an ok state$/ do |check, entity|
@@ -293,7 +288,7 @@ end
 Then /^(un)?scheduled maintenance should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |unsched, check, entity|
   check  ||= @check
   entity ||= @entity
-  @redis.get("#{entity}:#{check}:#{unsched || ''}scheduled_maintenance").should_not be_nil
+  Flapjack.redis.get("#{entity}:#{check}:#{unsched || ''}scheduled_maintenance").should_not be_nil
 end
 
 Then /^show me the (\w+ )*log$/ do |adjective|
@@ -302,10 +297,10 @@ Then /^show me the (\w+ )*log$/ do |adjective|
 end
 
 Then /^dump notification rules for user (\d+)$/ do |contact|
-  rule_ids = @redis.smembers("contact_notification_rules:#{contact}")
+  rule_ids = Flapjack.redis.smembers("contact_notification_rules:#{contact}")
   puts "There #{(rule_ids.length == 1) ? 'is' : 'are'} #{rule_ids.length} notification rule#{(rule_ids.length == 1) ? '' : 's'} for user #{contact}:"
   rule_ids.each {|rule_id|
-    rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :redis => @redis)
+    rule = Flapjack::Data::NotificationRule.find_by_id(rule_id)
     puts rule.to_json
   }
 end
@@ -319,8 +314,7 @@ Given /^the following entities exist:$/ do |entities|
     end
     Flapjack::Data::Entity.add({'id'       => entity['id'],
                                 'name'     => entity['name'],
-                                'contacts' => contacts},
-                               :redis => @redis )
+                                'contacts' => contacts})
   end
 end
 
@@ -333,13 +327,12 @@ Given /^the following users exist:$/ do |contacts|
                                  'first_name' => contact['first_name'],
                                  'last_name'  => contact['last_name'],
                                  'email'      => contact['email'],
-                                 'media'      => media},
-                                :redis => @redis ).timezone = contact['timezone']
+                                 'media'      => media}).timezone = contact['timezone']
   end
 end
 
 Given /^user (\d+) has the following notification intervals:$/ do |contact_id, intervals|
-  contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
+  contact = Flapjack::Data::Contact.find_by_id(contact_id)
   intervals.hashes.each do |interval|
     contact.set_interval_for_media('email', interval['email'].to_i * 60)
     contact.set_interval_for_media('sms',   interval['sms'].to_i * 60)
@@ -347,7 +340,7 @@ Given /^user (\d+) has the following notification intervals:$/ do |contact_id, i
 end
 
 Given /^user (\d+) has the following notification rollup thresholds:$/ do |contact_id, rollup_thresholds|
-  contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
+  contact = Flapjack::Data::Contact.find_by_id(contact_id)
   rollup_thresholds.hashes.each do |rollup_threshold|
     contact.set_rollup_threshold_for_media('email', rollup_threshold['email'].to_i)
     contact.set_rollup_threshold_for_media('sms',   rollup_threshold['sms'].to_i)
@@ -355,14 +348,14 @@ Given /^user (\d+) has the following notification rollup thresholds:$/ do |conta
 end
 
 Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules|
-  contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
+  contact = Flapjack::Data::Contact.find_by_id(contact_id)
   timezone = contact.timezone
 
   # delete any autogenerated rules, and do it using redis directly so no new
   # ones will be created
   contact.notification_rules.each do |nr|
-    @redis.srem("contact_notification_rules:#{contact_id}", nr.id)
-    @redis.del("notification_rule:#{nr.id}")
+    Flapjack.redis.srem("contact_notification_rules:#{contact_id}", nr.id)
+    Flapjack.redis.del("notification_rule:#{nr.id}")
   end
   rules.hashes.each do |rule|
     entities           = rule['entities']           ? rule['entities'].split(',').map       { |x| x.strip } : []
@@ -393,7 +386,7 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
                  :warning_blackhole  => warning_blackhole,
                  :critical_blackhole => critical_blackhole,
                  :time_restrictions  => time_restrictions}
-    created_rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
+    created_rule = Flapjack::Data::NotificationRule.add(rule_data)
     unless created_rule.is_a?(Flapjack::Data::NotificationRule)
       raise "Error creating notification rule with data: #{rule_data}, errors: #{created_rule.join(', ')}"
     end
@@ -401,7 +394,7 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
 end
 
 Then /^all alert dropping keys for user (\d+) should have expired$/ do |contact_id|
-  @redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
+  Flapjack.redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
 end
 
 Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))? should be queued for (.*)$/ do |num_queued, media, notification_type, rollup, address|
@@ -411,18 +404,17 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
   when 'no'
     num_queued = 0
   end
-  queue = Resque.peek("#{media}_notifications", 0, 30)
+  queue = redis_peek("#{media}_notifications", 0, 30)
   queue.find_all {|n|
-    type_ok = notification_type ? ( n['args'].first['notification_type'] == notification_type ) : true
+    type_ok = notification_type ? ( n['notification_type'] == notification_type ) : true
     rollup_ok = true
     if rollup
       if rollup == 'none'
-        rollup_ok = n['args'].first['rollup'].nil?
+        rollup_ok = n['rollup'].nil?
       else
-        rollup_ok = n['args'].first['rollup'] == rollup
+        rollup_ok = n['rollup'] == rollup
       end
     end
-    type_ok && rollup_ok && ( n['args'].first['address'] == address )
+    type_ok && rollup_ok && ( n['address'] == address )
   }.length.should == num_queued.to_i
 end
-

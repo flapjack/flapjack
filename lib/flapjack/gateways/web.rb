@@ -4,14 +4,11 @@ require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
 require 'erb'
-require 'rack/fiber_pool'
-require 'json'
 
-require 'flapjack/rack_logger'
+require 'flapjack'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
-require 'flapjack/redis_pool'
 require 'flapjack/utility'
 
 module Flapjack
@@ -19,28 +16,12 @@ module Flapjack
   module Gateways
 
     class Web < Sinatra::Base
-
-      rescue_exception = Proc.new do |env, e|
-        if settings.show_exceptions?
-          # ensure the sinatra error page shows properly
-          request = Sinatra::Request.new(env)
-          printer = Sinatra::ShowExceptions.new(proc{ raise e })
-          s, h, b = printer.call(env)
-          [s, h, b]
-        else
-          @logger.error e.message
-          @logger.error e.backtrace.join("\n")
-          [503, {}, ""]
-        end
-      end
-      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+      set :raise_errors, true
 
       use Rack::MethodOverride
 
       class << self
         def start
-          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
-
           @logger.info "starting web - class"
 
           if accesslog = (@config && @config['access_log'])
@@ -50,10 +31,8 @@ module Flapjack
               exit
             end
 
-            access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
-            use Flapjack::CommonLogger, access_logger
+            use Rack::CommonLogger, ::Logger.new(@config['access_log'])
           end
-
         end
       end
 
@@ -72,12 +51,10 @@ module Flapjack
         end
       end
 
-      def redis
-        self.class.instance_variable_get('@redis')
-      end
-
-      def logger
-        self.class.instance_variable_get('@logger')
+      ['logger', 'config'].each do |class_inst_var|
+        define_method(class_inst_var.to_sym) do
+          self.class.instance_variable_get("@#{class_inst_var}")
+        end
       end
 
       get '/' do
@@ -91,7 +68,7 @@ module Flapjack
         check_stats
         @adjective = 'all'
 
-        checks_by_entity = Flapjack::Data::EntityCheck.find_all_by_entity(:redis => redis)
+        checks_by_entity = Flapjack::Data::EntityCheck.find_all_by_entity
         @states = checks_by_entity.keys.inject({}) {|result, entity|
           result[entity] = checks_by_entity[entity].sort.map {|check|
             [check] + entity_check_state(entity, check)
@@ -107,7 +84,7 @@ module Flapjack
         check_stats
         @adjective = 'failing'
 
-        checks_by_entity = Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => redis)
+        checks_by_entity = Flapjack::Data::EntityCheck.find_all_failing_by_entity
         @states = checks_by_entity.keys.inject({}) {|result, entity|
           result[entity] = checks_by_entity[entity].sort.map {|check|
             [check] + entity_check_state(entity, check)
@@ -156,7 +133,7 @@ module Flapjack
       get '/entities_all' do
         entity_stats
         @adjective = 'all'
-        @entities = Flapjack::Data::Entity.find_all_with_checks(:redis => redis)
+        @entities = Flapjack::Data::Entity.find_all_with_checks
 
         erb 'entities.html'.to_sym
       end
@@ -164,7 +141,7 @@ module Flapjack
       get '/entities_failing' do
         entity_stats
         @adjective = 'failing'
-        @entities = Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis)
+        @entities = Flapjack::Data::Entity.find_all_with_failing_checks
 
         erb 'entities.html'.to_sym
       end
@@ -172,7 +149,7 @@ module Flapjack
       get '/entity/:entity' do
         @entity = params[:entity]
         entity_stats
-        @states = Flapjack::Data::EntityCheck.find_all_for_entity_name(@entity, :redis => redis).sort.map { |check|
+        @states = Flapjack::Data::EntityCheck.find_all_for_entity_name(@entity).sort.map { |check|
           [check] + entity_check_state(@entity, check)
         }.sort_by {|parts| parts }
 
@@ -226,11 +203,12 @@ module Flapjack
         return 404 if get_entity_check(@entity, @check).nil?
 
         ack = Flapjack::Data::Event.create_acknowledgement(
+          config['processor_queue'] || 'events',
           @entity, @check,
           :summary => (@summary || ''),
           :acknowledgement_id => @acknowledgement_id,
           :duration => @duration,
-          :redis => redis)
+        )
 
         redirect back
       end
@@ -284,7 +262,7 @@ module Flapjack
 
       get '/contacts' do
         #self_stats
-        @contacts = Flapjack::Data::Contact.all(:redis => redis)
+        @contacts = Flapjack::Data::Contact.all
 
         erb 'contacts.html'.to_sym
       end
@@ -293,7 +271,7 @@ module Flapjack
         contact_id = params[:contact]
 
         if contact_id
-          @contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => redis)
+          @contact = Flapjack::Data::Contact.find_by_id(contact_id)
         end
 
         unless @contact
@@ -327,19 +305,18 @@ module Flapjack
 
       def get_entity_check(entity, check)
         entity_obj = (entity && entity.length > 0) ?
-          Flapjack::Data::Entity.find_by_name(entity, :redis => redis) : nil
+          Flapjack::Data::Entity.find_by_name(entity) : nil
         return if entity_obj.nil? || (check.nil? || check.length == 0)
-        Flapjack::Data::EntityCheck.for_entity(entity_obj, check, :redis => redis)
+        Flapjack::Data::EntityCheck.for_entity(entity_obj, check)
       end
 
       def entity_check_state(entity_name, check)
-        entity = Flapjack::Data::Entity.find_by_name(entity_name,
-          :redis => redis)
+        entity = Flapjack::Data::Entity.find_by_name(entity_name)
         return if entity.nil?
-        entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-          check, :redis => redis)
+        entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check)
         summary = entity_check.summary
-        summary = summary[0..76] + '...' unless (summary.nil? || (summary.length < 81))
+        summary = summary[0..76] + '...' unless summary.nil? || (summary.length < 81)
+
         latest_notif =
           {:problem         => entity_check.last_notification_for_state(:problem)[:timestamp],
            :recovery        => entity_check.last_notification_for_state(:recovery)[:timestamp],
@@ -373,29 +350,28 @@ module Flapjack
         @pid          = Process.pid
         @instance_id  = "#{@fqdn}:#{@pid}"
 
-        @dbsize                  = redis.dbsize
-        @executive_instances     = redis.keys("executive_instance:*").map {|i|
-          [ i.match(/executive_instance:(.*)/)[1], redis.hget(i, 'boot_time').to_i ]
+        @dbsize                  = Flapjack.redis.dbsize
+        @executive_instances     = Flapjack.redis.keys("executive_instance:*").map {|i|
+          [ i.match(/executive_instance:(.*)/)[1], Flapjack.redis.hget(i, 'boot_time').to_i ]
         }.sort {|a, b| b[1] <=> a[1]}
-        @event_counters          = redis.hgetall('event_counters')
-        @event_counters_instance = redis.hgetall("event_counters:#{@instance_id}")
-        @boot_time               = Time.at(redis.hget("executive_instance:#{@instance_id}", 'boot_time').to_i)
+        @event_counters          = Flapjack.redis.hgetall('event_counters')
+        @event_counters_instance = Flapjack.redis.hgetall("event_counters:#{@instance_id}")
+        @boot_time               = Time.at(Flapjack.redis.hget("executive_instance:#{@instance_id}", 'boot_time').to_i)
         @uptime                  = Time.now.to_i - @boot_time.to_i
         @uptime_string           = time_period_in_words(@uptime)
         @event_rate_all          = (@uptime > 0) ?
                                    (@event_counters_instance['all'].to_f / @uptime) : 0
-        @events_queued           = redis.llen('events')
+        @events_queued           = Flapjack.redis.llen('events')
       end
 
       def entity_stats
-        @count_all_entities      = Flapjack::Data::Entity.find_all_with_checks(:redis => redis).length
-        @count_failing_entities  = Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis).length
+        @count_all_entities      = Flapjack::Data::Entity.find_all_with_checks.length
+        @count_failing_entities  = Flapjack::Data::Entity.find_all_with_failing_checks.length
       end
 
       def check_stats
-        # FIXME: move this logic to Flapjack::Data::EntityCheck
-        @count_all_checks        = Flapjack::Data::EntityCheck.count_all(:redis => redis)
-        @count_failing_checks    = Flapjack::Data::EntityCheck.count_all_failing(:redis => redis)
+        @count_all_checks        = Flapjack::Data::EntityCheck.count_all
+        @count_failing_checks    = Flapjack::Data::EntityCheck.count_all_failing
       end
 
       def last_notification_data(entity_check)
