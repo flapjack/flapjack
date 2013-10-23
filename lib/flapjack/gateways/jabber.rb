@@ -507,11 +507,14 @@ module Flapjack
           end
 
           alert = Flapjack::Data::Alert.new(event, :logger => @logger)
-          entity, check = event['event_id'].split(':', 2)
-          state         = event['state']
-          summary       = event['summary']
-          duration      = event['duration'] ? time_period_in_words(event['duration']) : '4 hours'
-          address       = event['address']
+          type = alert.type
+
+          entity   = alert.entity
+          check    = alert.check
+          state    = alert.state
+          summary  = alert.summary
+          duration = time_period_in_words(alert.acknowledgement_duration)
+          address  = alert.address
 
           @logger.debug("processing jabber notification address: #{address}, entity: #{entity}, check: '#{check}', state: #{state}, summary: #{summary}")
 

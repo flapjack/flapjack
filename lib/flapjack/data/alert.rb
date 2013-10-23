@@ -15,7 +15,7 @@ module Flapjack
                  #:event_id,
       attr_reader :state,
                   :summary,
-                  :duration,
+                  :acknowledgement_duration,
                   :last_state,
                   :last_summary,
                   :state_duration,
@@ -53,7 +53,7 @@ module Flapjack
         @state                    = contents['state']
         @summary                  = contents['summary']
         @state_duration           = contents['state_duration']
-        @acknowledgement_duration = contents['acknowledgement_duration']
+        @acknowledgement_duration = contents['duration'] # SMELLY
         @last_state               = contents['last_state']
         @last_summary             = contents['last_summary']
 
@@ -67,7 +67,6 @@ module Flapjack
         @contact_id               = contents['contact_id']
         @contact_first_name       = contents['contact_first_name']
         @contact_last_name        = contents['contact_last_name']
-
 
         @details                  = contents['details']
         @time                     = contents['time']

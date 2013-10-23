@@ -4,6 +4,7 @@ module Flapjack
   module Utility
 
     def time_period_in_words(period)
+      return "0 seconds" unless period.is_a?(Integer) && period > 0
       period_mm, period_ss  = period.divmod(60)
       period_hh, period_mm  = period_mm.divmod(60)
       period_dd, period_hh  = period_hh.divmod(24)
