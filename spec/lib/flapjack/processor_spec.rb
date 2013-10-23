@@ -7,8 +7,8 @@ describe Flapjack::Processor, :logger => true do
   # NB: this is only testing the public API of the Processor class, which is pretty limited.
   # (initialize, main, stop). Most test coverage for this class comes from the cucumber features.
 
-  let(:lock) { mock(Monitor) }
-  let(:redis) { mock(Redis) }
+  let(:lock) { double(Monitor) }
+  let(:redis) { double(Redis) }
 
   before(:each) do
     Flapjack.stub(:redis).and_return(redis)

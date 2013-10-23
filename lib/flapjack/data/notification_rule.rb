@@ -137,7 +137,7 @@ module Flapjack
           :contact_id         => rule_data[:contact_id].to_s,
           :entities           => Oj.dump(rule_data[:entities]),
           :tags               => Oj.dump(tag_data),
-          :time_restrictions  => Oj.dump(rule_data[:time_restrictions]),
+          :time_restrictions  => Oj.dump(rule_data[:time_restrictions], :mode => :compat),
           :unknown_media      => Oj.dump(rule_data[:unknown_media]),
           :warning_media      => Oj.dump(rule_data[:warning_media]),
           :critical_media     => Oj.dump(rule_data[:critical_media]),

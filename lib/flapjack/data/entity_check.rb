@@ -98,6 +98,18 @@ module Flapjack
         end
       end
 
+      def self.in_unscheduled_maintenance_for_event_id?(event_id)
+        Flapjack.redis.exists("#{event_id}:unscheduled_maintenance")
+      end
+
+      def self.in_scheduled_maintenance_for_event_id?(event_id)
+        Flapjack.redis.exists("#{event_id}:scheduled_maintenance")
+      end
+
+      def self.state_for_event_id?(event_id)
+        Flapjack.redis.hget("check:#{event_id}", 'state')
+      end
+
       def entity_name
         entity.name
       end
@@ -517,6 +529,7 @@ module Flapjack
         raise "Invalid entity" unless @entity = entity
         raise "Invalid check" unless @check = check
         @key = "#{entity.name}:#{check}"
+        @logger = options[:logger]
       end
 
       def self.conflate_to_keys(entity_checks_hash)

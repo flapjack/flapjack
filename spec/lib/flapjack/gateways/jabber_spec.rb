@@ -13,12 +13,13 @@ describe Flapjack::Gateways::Jabber, :logger => true do
                  }
   }
 
-  let(:redis) { mock(::Redis) }
+  let(:redis) { double(::Redis) }
+  let(:stanza) { double('stanza') }
 
   let(:now) { Time.now}
 
-  let(:lock) { mock(Monitor) }
-  let(:stop_cond) { mock(MonitorMixin::ConditionVariable) }
+  let(:lock) { double(Monitor) }
+  let(:stop_cond) { double(MonitorMixin::ConditionVariable) }
 
   before(:each) do
     Flapjack.stub(:redis).and_return(redis)
@@ -57,7 +58,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     end
 
     it "handles notifications received via Redis" do
-      bot = mock(Flapjack::Gateways::Jabber::Bot)
+      bot = double(Flapjack::Gateways::Jabber::Bot)
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('johns@example.com', /PROBLEM ::/)
 
@@ -70,10 +71,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
   context 'commands' do
 
-    let(:bot) { mock(Flapjack::Gateways::Jabber::Bot) }
+    let(:bot) { double(Flapjack::Gateways::Jabber::Bot) }
 
-    let(:entity) { mock(Flapjack::Data::Entity) }
-    let(:entity_check) { mock(Flapjack::Data::EntityCheck) }
+    let(:entity) { double(Flapjack::Data::Entity) }
+    let(:entity_check) { double(Flapjack::Data::EntityCheck) }
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by a signal" do
@@ -140,7 +141,6 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       Flapjack::Data::Entity.should_receive(:find_by_name).
         with('example.com').and_return(entity)
 
-      entity_check.should_receive(:check).and_return('ping')
       entity_check.should_receive(:current_maintenance).
         with(:scheduled => true).and_return(nil)
       entity_check.should_receive(:current_maintenance).
@@ -257,13 +257,13 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
   context 'XMPP' do
 
-    let(:client)      { mock(::Jabber::Client) }
-    let(:muc_client)  { mock(::Jabber::MUC::SimpleMUCClient) }
+    let(:client)      { double(::Jabber::Client) }
+    let(:muc_client)  { double(::Jabber::MUC::SimpleMUCClient) }
     let(:muc_clients) { {config['rooms'].first => muc_client} }
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by a signal" do
-      interpreter = mock(Flapjack::Gateways::Jabber::Interpreter)
+      interpreter = double(Flapjack::Gateways::Jabber::Interpreter)
       interpreter.should_receive(:respond_to?).with(:interpret).and_return(true)
       interpreter.should_receive(:receive_message).with(nil, 'jim', nil, 'hello!')
       interpreter.should_receive(:receive_message).
@@ -271,7 +271,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       client.should_receive(:on_exception)
 
-      msg_client = mock('msg_client')
+      msg_client = double('msg_client')
       msg_client.should_receive(:body).and_return('hello!')
       msg_client.should_receive(:from).and_return('jim')
       msg_client.should_receive(:each_element).and_yield([]) # TODO improve
@@ -285,7 +285,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       ::Jabber::MUC::SimpleMUCClient.should_receive(:new).and_return(muc_client)
 
       lock.should_receive(:synchronize).and_yield
-      stop_cond = mock(MonitorMixin::ConditionVariable)
+      stop_cond = double(MonitorMixin::ConditionVariable)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
         :stop_condition => stop_cond, :config => config, :logger => @logger)
@@ -413,7 +413,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     end
 
     it "speaks its say buffer" do
-      message = mock(::Jabber::Message)
+      message = double(::Jabber::Message)
       ::Jabber::Message.should_receive(:new).
         with('jim', 'hello!').and_return(message)
 

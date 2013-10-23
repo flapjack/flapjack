@@ -197,9 +197,11 @@ module Flapjack
 
             media = contact.media
             media_intervals = contact.media_intervals
+            media_rollup_thresholds = contact.media_rollup_thresholds
             media_addr_int = hashify(*media.keys) {|k|
-              [k, {'address'  => media[k],
-                   'interval' => media_intervals[k] }]
+              [k, {'address'          => media[k],
+                   'interval'         => media_intervals[k],
+                   'rollup_threshold' => media_rollup_thresholds[k] }]
             }
             media_addr_int.to_json
           end
@@ -218,8 +220,10 @@ module Flapjack
             if interval.nil?
               halt err(403, "no #{params[:id]} interval for contact '#{params[:contact_id]}'")
             end
-            {'address'  => media,
-             'interval' => interval}.to_json
+            rollup_threshold = contact.media_rollup_thresholds[params[:id]]
+            {'address'          => media,
+             'interval'         => interval,
+             'rollup_threshold' => rollup_threshold }.to_json
           end
 
           # Creates or updates a media of a contact
@@ -237,9 +241,11 @@ module Flapjack
 
             contact.set_address_for_media(params[:id], params[:address])
             contact.set_interval_for_media(params[:id], params[:interval])
+            contact.set_rollup_threshold_for_media(params[:id], params[:rollup_threshold])
 
-            {'address'  => contact.media[params[:id]],
-             'interval' => contact.media_intervals[params[:id]]}.to_json
+            {'address'          => contact.media[params[:id]],
+             'interval'         => contact.media_intervals[params[:id]],
+             'rollup_threshold' => contact.media_rollup_thresholds[params[:id]]}.to_json
           end
 
           # delete a media of a contact

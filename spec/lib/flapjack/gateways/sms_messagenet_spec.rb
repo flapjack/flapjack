@@ -3,9 +3,9 @@ require 'flapjack/gateways/sms_messagenet'
 
 describe Flapjack::Gateways::SmsMessagenet, :logger => true do
 
-  let(:lock) { mock(Monitor) }
+  let(:lock) { double(Monitor) }
 
-  let(:redis) { mock(Redis)}
+  let(:redis) { double(Redis)}
 
   let(:config) { {'username'  => 'user',
                   'password'  => 'password'

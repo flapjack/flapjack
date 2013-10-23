@@ -1,0 +1,14 @@
+<% case @notification_type -%>
+<% when "problem" -%>
+<%=  "Problem: " -%>
+<% when "recovery" -%>
+<%=  "Recovery: " -%>
+<% when "acknowledgement" -%>
+<%=  "Acknowledgement: " -%>
+<% when "test" -%>
+<%=  "Test notification: " -%>
+<% end -%>
+'<%= @check %>' on <%= @entity_name -%>
+<% if ! ['acknowledgement', 'test'].include?(@notification_type) -%>
+ is <%= ['ok'].include?(@state) ? @state.upcase : @state.titleize -%>
+<% end -%>

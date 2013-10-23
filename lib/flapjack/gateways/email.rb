@@ -4,6 +4,7 @@ require 'mail'
 require 'erb'
 require 'socket'
 require 'chronic_duration'
+require 'active_support/inflector'
 
 require 'flapjack'
 
@@ -25,7 +26,6 @@ module Flapjack
       def initialize(opts = {})
         @lock = opts[:lock]
         @config = opts[:config]
-
         @logger = opts[:logger]
 
         # TODO support for config reloading
@@ -80,34 +80,28 @@ module Flapjack
       def handle_message(message)
         @logger.debug "Woo, got a message to send out: #{message.inspect}"
 
-        @notification_type          = message['notification_type']
-        @contact_first_name         = message['contact_first_name']
-        @contact_last_name          = message['contact_last_name']
-        @state                      = message['state']
-        @duration                   = message['state_duration']
-        @summary                    = message['summary']
-        @last_state                 = message['last_state']
-        @last_summary               = message['last_summary']
-        @details                    = message['details']
-        @time                       = message['time']
-        @entity_name, @check        = message['event_id'].split(':', 2)
+        # The instance variables are referenced by the templates, which
+        # share the current binding context
+        @notification_type   = message['notification_type']
+        @notification_id     = message['id'] || SecureRandom.uuid
+        @rollup              = message['rollup']
+        @rollup_alerts       = message['rollup_alerts']
+        @rollup_threshold    = message['rollup_threshold']
+        @contact_first_name  = message['contact_first_name']
+        @contact_last_name   = message['contact_last_name']
+        @state               = message['state']
+        @duration            = message['state_duration']
+        @summary             = message['summary']
+        @last_state          = message['last_state']
+        @last_summary        = message['last_summary']
+        @details             = message['details']
+        @time                = message['time']
+        @entity_name, @check = message['event_id'].split(':', 2)
 
         entity_check = Flapjack::Data::EntityCheck.for_event_id(message['event_id'])
 
-        @in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
-        @in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
-
-        headline_map = {'problem'         => 'Problem: ',
-                        'recovery'        => 'Recovery: ',
-                        'acknowledgement' => 'Acknowledgement: ',
-                        'test'            => 'Test Notification: ',
-                        'unknown'         => ''
-                       }
-
-        headline = headline_map[@notification_type] || ''
-
-        @subject = "#{headline}'#{@check}' on #{@entity_name}"
-        @subject += " is #{@state.upcase}" unless ['acknowledgement', 'test'].include?(@notification_type)
+        @in_unscheduled_maintenance = entity_check.in_unscheduled_maintenance?
+        @in_scheduled_maintenance   = entity_check.in_scheduled_maintenance?
 
         fqdn       = `/bin/hostname -f`.chomp
         m_from     = "flapjack@#{fqdn}"
@@ -139,19 +133,37 @@ module Flapjack
       private
 
       def prepare_email(opts = {})
+        from       = opts[:from]
+        to         = opts[:to]
+        message_id = "<#{@notification_id}@#{@fqdn}>"
+
+        message_type = case
+        when @rollup
+          'rollup'
+        else
+          'alert'
+        end
+
+        subject_template = ERB.new(File.read(File.dirname(__FILE__) +
+          "/email/#{message_type}_subject.text.erb"), nil, '-')
+
         text_template = ERB.new(File.read(File.dirname(__FILE__) +
-          '/email/alert.text.erb'), nil, '-')
+          "/email/#{message_type}.text.erb"), nil, '-')
 
         html_template = ERB.new(File.read(File.dirname(__FILE__) +
-          '/email/alert.html.erb'), nil, '-')
+          "/email/#{message_type}.html.erb"), nil, '-')
 
         bnd = binding
+        subject    = subject_template.result(bnd).chomp
+
+        @logger.debug("preparing email to: #{to}, subject: #{subject}, message-id: #{message_id}")
 
         Mail.new do
-          from     opts[:from]
-          to       opts[:to]
-          subject  opts[:subject]
-          reply_to opts[:from]
+          from       from
+          to         to
+          subject    subject
+          reply_to   from
+          message_id message_id
 
           text_part do
             body text_template.result(bnd)

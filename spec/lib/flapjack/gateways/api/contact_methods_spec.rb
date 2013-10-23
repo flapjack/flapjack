@@ -7,7 +7,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Gateways::API
   end
 
-  let(:contact)         { mock(Flapjack::Data::Contact, :id => '21') }
+  let(:contact)         { double(Flapjack::Data::Contact, :id => '21') }
   let(:contact_core)    {
     {'id'         => contact.id,
      'first_name' => "Ada",
@@ -29,10 +29,14 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     }
   }
 
-  let(:redis)           { mock(::Redis) }
+  let(:media_rollup_thresholds) {
+    {'email' => 5}
+  }
+
+  let(:redis)           { double(::Redis) }
 
   let(:notification_rule) {
-    mock(Flapjack::Data::NotificationRule, :id => '1', :contact_id => '21')
+    double(Flapjack::Data::NotificationRule, :id => '1', :contact_id => '21')
   }
 
   let(:notification_rule_data) {
@@ -131,7 +135,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       ]
     }
 
-    existing = mock(Flapjack::Data::Contact)
+    existing = double(Flapjack::Data::Contact)
     existing.should_receive(:id).and_return("0363")
     existing.should_receive(:update).with(contacts['contacts'][1])
 
@@ -152,7 +156,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       ]
     }
 
-    existing = mock(Flapjack::Data::Contact)
+    existing = double(Flapjack::Data::Contact)
     existing.should_receive(:id).twice.and_return("0362")
     existing.should_receive(:delete!)
 
@@ -191,7 +195,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "lists a contact's notification rules" do
-    notification_rule_2 = mock(Flapjack::Data::NotificationRule, :id => '2', :contact_id => '21')
+    notification_rule_2 = double(Flapjack::Data::NotificationRule, :id => '2', :contact_id => '21')
     notification_rule.should_receive(:to_json).and_return('"rule_1"')
     notification_rule_2.should_receive(:to_json).and_return('"rule_2"')
     notification_rules = [ notification_rule, notification_rule_2 ]
@@ -347,11 +351,13 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   it "returns the media of a contact" do
     contact.should_receive(:media).and_return(media)
     contact.should_receive(:media_intervals).and_return(media_intervals)
+    contact.should_receive(:media_rollup_thresholds).and_return(media_rollup_thresholds)
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :logger => @logger).and_return(contact)
     result = Hash[ *(media.keys.collect {|m|
-      [m, {'address'  => media[m],
-           'interval' => media_intervals[m] }]
+      [m, {'address'          => media[m],
+           'interval'         => media_intervals[m],
+           'rollup_threshold' => media_rollup_thresholds[m] }]
       }).flatten(1)].to_json
 
     get "/contacts/#{contact.id}/media"
@@ -371,10 +377,15 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   it "returns the specified media of a contact" do
     contact.should_receive(:media).and_return(media)
     contact.should_receive(:media_intervals).and_return(media_intervals)
+    contact.should_receive(:media_rollup_thresholds).and_return(media_rollup_thresholds)
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :logger => @logger).and_return(contact)
 
-    result = {'address' => media['sms'], 'interval' => media_intervals['sms']}
+    result = {
+      'address'          => media['sms'],
+      'interval'         => media_intervals['sms'],
+      'rollup_threshold' => media_rollup_thresholds['sms'],
+    }
 
     get "/contacts/#{contact.id}/media/sms"
     last_response.should be_ok
@@ -404,17 +415,22 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     # may distinguish between them
     alt_media = media.merge('sms' => '04987654321')
     alt_media_intervals = media_intervals.merge('sms' => '200')
+    alt_media_rollup_thresholds = media_rollup_thresholds.merge('sms' => '5')
 
     contact.should_receive(:set_address_for_media).with('sms', '04987654321')
     contact.should_receive(:set_interval_for_media).with('sms', '200')
+    contact.should_receive(:set_rollup_threshold_for_media).with('sms', '5')
     contact.should_receive(:media).and_return(alt_media)
     contact.should_receive(:media_intervals).and_return(alt_media_intervals)
+    contact.should_receive(:media_rollup_thresholds).and_return(alt_media_rollup_thresholds)
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :logger => @logger).and_return(contact)
 
-    result = {'address' => alt_media['sms'], 'interval' => alt_media_intervals['sms']}
+    result = {'address'          => alt_media['sms'],
+              'interval'         => alt_media_intervals['sms'],
+              'rollup_threshold' => alt_media_rollup_thresholds['sms']}
 
-    put "/contacts/#{contact.id}/media/sms", {:address => '04987654321', :interval => '200'}
+    put "/contacts/#{contact.id}/media/sms", {:address => '04987654321', :interval => '200', :rollup_threshold => '5'}
     last_response.should be_ok
     last_response.body.should be_json_eql(result.to_json)
   end
@@ -438,11 +454,14 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   it "creates a media of a contact even if no interval is provided" do
     alt_media = media.merge('sms' => '04987654321')
     alt_media_intervals = media_intervals.merge('sms' => nil)
+    alt_media_rollup_thresholds = media_rollup_thresholds.merge('sms' => nil)
 
     contact.should_receive(:set_address_for_media).with('sms', '04987654321')
     contact.should_receive(:set_interval_for_media).with('sms', nil)
+    contact.should_receive(:set_rollup_threshold_for_media).with("sms", nil)
     contact.should_receive(:media).and_return(alt_media)
     contact.should_receive(:media_intervals).and_return(alt_media_intervals)
+    contact.should_receive(:media_rollup_thresholds).and_return(alt_media_rollup_thresholds)
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, :logger => @logger).and_return(contact)
 
@@ -614,9 +633,9 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "gets all entity tags for a contact" do
-    entity_1 = mock(Flapjack::Data::Entity)
+    entity_1 = double(Flapjack::Data::Entity)
     entity_1.should_receive(:name).and_return('entity_1')
-    entity_2 = mock(Flapjack::Data::Entity)
+    entity_2 = double(Flapjack::Data::Entity)
     entity_2.should_receive(:name).and_return('entity_2')
     tag_data = [{:entity => entity_1, :tags => ['web']},
                 {:entity => entity_2, :tags => ['app']}]
@@ -642,10 +661,10 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "adds tags to multiple entities for a contact" do
-    entity_1 = mock(Flapjack::Data::Entity)
+    entity_1 = double(Flapjack::Data::Entity)
     entity_1.should_receive(:name).twice.and_return('entity_1')
     entity_1.should_receive(:add_tags).with('web')
-    entity_2 = mock(Flapjack::Data::Entity)
+    entity_2 = double(Flapjack::Data::Entity)
     entity_2.should_receive(:name).twice.and_return('entity_2')
     entity_2.should_receive(:add_tags).with('app')
 
@@ -676,10 +695,10 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "deletes tags from multiple entities for a contact" do
-    entity_1 = mock(Flapjack::Data::Entity)
+    entity_1 = double(Flapjack::Data::Entity)
     entity_1.should_receive(:name).and_return('entity_1')
     entity_1.should_receive(:delete_tags).with('web')
-    entity_2 = mock(Flapjack::Data::Entity)
+    entity_2 = double(Flapjack::Data::Entity)
     entity_2.should_receive(:name).and_return('entity_2')
     entity_2.should_receive(:delete_tags).with('app')
 

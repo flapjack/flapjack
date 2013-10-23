@@ -5,7 +5,7 @@ describe Flapjack::Data::Event do
 
   let(:entity_name) { 'xyz-example.com' }
   let(:check)       { 'ping' }
-  let(:redis)  { mock(Redis) }
+  let(:redis)  { double(Redis) }
 
   let!(:time) { Time.now}
 

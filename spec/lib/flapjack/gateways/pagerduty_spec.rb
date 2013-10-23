@@ -8,9 +8,9 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
   let(:now)   { Time.now }
 
-  let(:redis) {  mock(Redis) }
+  let(:redis) {  double(Redis) }
 
-  let(:lock)  { mock(Monitor) }
+  let(:lock)  { double(Monitor) }
 
   before(:each) do
     Flapjack.stub(:redis).and_return(redis)
@@ -82,7 +82,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
   context 'acknowledgements' do
 
-    let(:entity_check) { mock(Flapjack::Data::EntityCheck) }
+    let(:entity_check) { double(Flapjack::Data::EntityCheck) }
 
     let(:status_change) { {'id'        => 'ABCDEFG',
                            'name'      => 'John Smith',
@@ -112,7 +112,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       redis.should_receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(1)
       redis.should_receive(:expire).with('sem_pagerduty_acks_running', 300)
 
-      contact = mock(Flapjack::Data::Contact)
+      contact = double(Flapjack::Data::Contact)
       contact.should_receive(:pagerduty_credentials).and_return({
         'service_key' => '12345678',
         'subdomain"'  => 'flpjck',

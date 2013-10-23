@@ -25,10 +25,9 @@ ensure
   Socket.do_not_reverse_lookup = orig
 end
 
-def main
+def main(bind_ip)
   start_every = 120
   stop_after  = 60
-  bind_ip     = local_ip
   bind_port   = 12345
   EM.run {
 
@@ -71,24 +70,24 @@ OptionParser.new do |opts|
     options.daemonize = d
   end
 
-  opts.on("-p", "--pidfile [PATH]", String, "PATH to the pidfile to write to") do |p|
-    options.pidfile = p
+  opts.on("-p", "--pidfile [PATH]", String, "PATH to the pidfile to write to") do |pid|
+    options.pidfile = pid
   end
 
   opts.on("-l", "--logfile [PATH]", String, "PATH to the logfile to write to") do |l|
     options.log_path = l
   end
+
+  opts.on("-b", "--bind-ip [ADDRESS]", String, "ADDRESS (IPv4 or IPv6) for flapper to bind to") do |b|
+    options.bind_ip = b
+  end
+
 end.parse!(ARGV)
 
-pidfile = options.pidfile.nil? ?
-            "/var/run/flapjack/#{exe}.pid" :
-            options.pidfile
-
-logfile = options.logfile.nil? ?
-            "/var/log/flapjack/#{exe}.log" :
-            options.logfile
-
+pidfile = options.pidfile  || "/var/run/flapjack/#{exe}.pid"
+logfile = options.log_path || "/var/log/flapjack/#{exe}.log"
 daemonize = options.daemonize.nil? ? true : options.daemonize
+bind_ip = options.bind_ip  || local_ip
 
 runner = Dante::Runner.new(exe, :pid_path => pidfile, :log_path => logfile)
 
@@ -100,7 +99,7 @@ when "start"
   else
     print "#{exe} starting..."
     runner.execute(:daemonize => daemonize) {
-      main
+      main(bind_ip)
     }
     puts " done."
   end
@@ -118,12 +117,12 @@ when "stop"
 when "restart"
   print "#{exe} restarting..."
   runner.execute(:daemonize => true, :restart => true) {
-    main
+    main(bind_ip)
   }
   puts " done."
 
 when "status"
-  uptime = (runner.daemon_running?) ? Time.now - File.stat(pidfile).ctime : 0
+  uptime = (runner.daemon_running?) ? (Time.now - File.stat(pidfile).ctime) : 0
   if runner.daemon_running?
     puts "#{exe} is running: #{uptime}"
   else

@@ -3,13 +3,13 @@ require 'flapjack/gateways/api/entity_presenter'
 
 describe 'Flapjack::Gateways::API::EntityPresenter' do
 
-  let(:entity) { mock(Flapjack::Data::Entity) }
+  let(:entity) { double(Flapjack::Data::Entity) }
 
-  let(:check_a) { mock(Flapjack::Data::EntityCheck) }
-  let(:check_b) { mock(Flapjack::Data::EntityCheck) }
+  let(:check_a) { double(Flapjack::Data::EntityCheck) }
+  let(:check_b) { double(Flapjack::Data::EntityCheck) }
 
-  let(:checkpres_a) { mock(Flapjack::Gateways::API::EntityCheckPresenter) }
-  let(:checkpres_b) { mock(Flapjack::Gateways::API::EntityCheckPresenter) }
+  let(:checkpres_a) { double(Flapjack::Gateways::API::EntityCheckPresenter) }
+  let(:checkpres_b) { double(Flapjack::Gateways::API::EntityCheckPresenter) }
 
   let(:time) { Time.now.to_i }
 
@@ -33,8 +33,8 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
   it 'returns a list of status hashes for each check on an entity' do
     expect_check_presenters
 
-    status_a = mock('status_a')
-    status_b = mock('status_b')
+    status_a = double('status_a')
+    status_b = double('status_b')
     checkpres_a.should_receive(:status).and_return(status_a)
     checkpres_b.should_receive(:status).and_return(status_b)
 
@@ -47,8 +47,8 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
 
   it "returns a list of outage hashes for each check on an entity" do
     expect_check_presenters
-    outages_a = mock('outages_a')
-    outages_b = mock('outages_b')
+    outages_a = double('outages_a')
+    outages_b = double('outages_b')
     checkpres_a.should_receive(:outages).with(start_time, end_time).
       and_return(outages_a)
     checkpres_b.should_receive(:outages).with(start_time, end_time).
@@ -62,8 +62,8 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
 
   it "returns a list of unscheduled maintenance periods for each check on an entity" do
     expect_check_presenters
-    unsched_maint_a = mock('unsched_maint_a')
-    unsched_maint_b = mock('unsched_maint_b')
+    unsched_maint_a = double('unsched_maint_a')
+    unsched_maint_b = double('unsched_maint_b')
     checkpres_a.should_receive(:unscheduled_maintenances).with(start_time, end_time).
       and_return(unsched_maint_a)
     checkpres_b.should_receive(:unscheduled_maintenances).with(start_time, end_time).
@@ -77,8 +77,8 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
 
   it "returns a list of scheduled maintenance periods for each check on an entity" do
     expect_check_presenters
-    sched_maint_a = mock('sched_maint_a')
-    sched_maint_b = mock('sched_maint_b')
+    sched_maint_a = double('sched_maint_a')
+    sched_maint_b = double('sched_maint_b')
     checkpres_a.should_receive(:scheduled_maintenances).with(start_time, end_time).
       and_return(sched_maint_a)
     checkpres_b.should_receive(:scheduled_maintenances).with(start_time, end_time).
@@ -92,8 +92,8 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
 
   it "returns a list of downtime for each check on an entity" do
     expect_check_presenters
-    downtime_a = mock('downtime_a')
-    downtime_b = mock('downtime_b')
+    downtime_a = double('downtime_a')
+    downtime_b = double('downtime_b')
     checkpres_a.should_receive(:downtime).with(start_time, end_time).
       and_return(downtime_a)
     checkpres_b.should_receive(:downtime).with(start_time, end_time).

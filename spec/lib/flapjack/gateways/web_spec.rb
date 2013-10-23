@@ -11,10 +11,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   let(:entity_name_esc) { CGI.escape(entity_name) }
   let(:check)           { 'ping' }
 
-  let(:entity)          { mock(Flapjack::Data::Entity) }
-  let(:entity_check)    { mock(Flapjack::Data::EntityCheck) }
+  let(:entity)          { double(Flapjack::Data::Entity) }
+  let(:entity_check)    { double(Flapjack::Data::EntityCheck) }
 
-  let(:redis) { mock(Redis) }
+  let(:redis) { double(Redis) }
 
   before(:all) do
     Flapjack::Gateways::Web.class_eval {
@@ -235,7 +235,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   it "shows details of an individual contact found by id" do
-    contact = mock('contact')
+    contact = double('contact')
     contact.should_receive(:name).twice.and_return("Smithson Smith")
     contact.should_receive(:media).exactly(3).times.and_return({})
     contact.should_receive(:entities).with(:checks => true).and_return([])

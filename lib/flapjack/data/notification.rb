@@ -107,7 +107,11 @@ module Flapjack
       end
 
       def ok?
-        ['ok', 'up'].include?(@state)
+        @state && ['ok', 'up'].include?(@state.downcase)
+      end
+
+      def acknowledgement?
+        @state && ['acknowledgement'].include?(@state.downcase)
       end
 
       def contents
@@ -203,9 +207,33 @@ module Flapjack
 
           logger.debug "media_to_use: #{media_to_use}"
 
-          media_to_use.each_pair.inject([]) { |ret, (k, v)|
+          # here begins rollup madness
+          media_to_use.each_pair.inject([]) { |ret, (media, address)|
+            rollup_type = nil
+
+            contact.add_alerting_check_for_media(media, @event_id) unless ok? || acknowledgement?
+
+            # expunge checks in (un)scheduled maintenance from the alerting set
+            cleaned = contact.clean_alerting_checks_for_media(media)
+            logger.debug("cleaned alerting checks for #{media}: #{cleaned}")
+
+            alerting_checks  = contact.count_alerting_checks_for_media(media)
+            rollup_threshold = contact.rollup_threshold_for_media(media)
+            case
+            when rollup_threshold.nil?
+              # back away slowly
+            when alerting_checks >= rollup_threshold
+              next ret if contact.drop_rollup_notifications_for_media?(media)
+              contact.update_sent_rollup_alert_keys_for_media(media, :delete => ok?)
+              rollup_type = 'problem'
+            when (alerting_checks + cleaned >= rollup_threshold)
+              # alerting checks was just cleaned such that it is now below the rollup threshold
+              rollup_type = 'recovery'
+            end
+            logger.debug "rollup decisions: #{@event_id} #{@state} #{media} #{address} rollup_type: #{rollup_type}"
+
             m = Flapjack::Data::Message.for_contact(contact,
-                  :medium => k, :address => v)
+                  :medium => media, :address => address, :rollup => rollup_type)
             ret << m
             ret
           }
