@@ -23,7 +23,7 @@ module Flapjack
 
         def perform(contents)
           @logger.debug "Woo, got a notification to send out: #{contents.inspect}"
-          alert = Flapjack::Data::Alert.new(contents)
+          alert = Flapjack::Data::Alert.new(contents, :logger => @logger)
 
           endpoint = @config["endpoint"] || MESSAGENET_DEFAULT_URL
           username = @config["username"]
@@ -33,18 +33,26 @@ module Flapjack
           notification_id = alert.notification_id
 
           message_type = case
-          when @rollup
+          when alert.rollup
             'rollup'
           else
             'alert'
           end
 
-          sms_template = ERB.new(File.read(File.dirname(__FILE__) +
-            "/sms_messagenet/#{message_type}.text.erb"), nil, '-')
+          my_dir = File.dirname(__FILE__)
+          sms_template_path = my_dir + "/sms_messagenet/#{message_type}.text.erb"
+          sms_template = ERB.new(File.read(sms_template_path), nil, '-')
 
           @alert  = alert
           bnd     = binding
-          message = sms_template.result(bnd).chomp
+
+          begin
+            message = sms_template.result(bnd).chomp
+          rescue => e
+            @logger.error "Error while excuting the ERB for an sms: " +
+              "ERB being executed: #{sms_template_path}"
+            raise
+          end
 
           if @config.nil? || (@config.respond_to?(:empty?) && @config.empty?)
             @logger.error "Messagenet config is missing"
@@ -88,7 +96,7 @@ module Flapjack
               "notification_id: #{notification_id}"
           end
         rescue => e
-          @logger.error "Error delivering sms to #{alert.address}: #{e.class}: #{e.message}"
+          @logger.error "Error generating or delivering sms to #{contents['address']}: #{e.class}: #{e.message}"
           @logger.error e.backtrace.join("\n")
           raise
         end

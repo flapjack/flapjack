@@ -40,7 +40,7 @@ module Flapjack
 
         # sets a bunch of class instance variables for each email
         def prepare(contents)
-          Flapjack::Data::Alert.new(contents)
+          Flapjack::Data::Alert.new(contents, :logger => @logger)
         rescue => e
           @logger.error "Error preparing email to #{contents['address']}: #{e.class}: #{e.message}"
           @logger.error e.backtrace.join("\n")
@@ -92,7 +92,7 @@ module Flapjack
           @logger.info "Email response: #{response.inspect}"
 
         rescue => e
-          @logger.error "Error delivering email to #{alert.address}: #{e.class}: #{e.message}"
+          @logger.error "Error generating or delivering email to #{alert.address}: #{e.class}: #{e.message}"
           @logger.error e.backtrace.join("\n")
           raise
         end
@@ -107,24 +107,40 @@ module Flapjack
           alert      = opts[:alert]
 
           message_type = case
-          when @rollup
+          when alert.rollup
             'rollup'
           else
             'alert'
           end
 
-          subject_template = ERB.new(File.read(File.dirname(__FILE__) +
-            "/email/#{message_type}_subject.text.erb"), nil, '-')
+          mydir = File.dirname(__FILE__)
 
-          text_template = ERB.new(File.read(File.dirname(__FILE__) +
-            "/email/#{message_type}.text.erb"), nil, '-')
+          subject_template_path = mydir + "/email/#{message_type}_subject.text.erb"
+          text_template_path    = mydir + "/email/#{message_type}.text.erb"
+          html_template_path    = mydir + "/email/#{message_type}.html.erb"
 
-          html_template = ERB.new(File.read(File.dirname(__FILE__) +
-            "/email/#{message_type}.html.erb"), nil, '-')
+          subject_template = ERB.new(File.read(subject_template_path), nil, '-')
+          text_template    = ERB.new(File.read(text_template_path), nil, '-')
+          html_template    = ERB.new(File.read(html_template_path), nil, '-')
 
-          @alert     = alert
-          bnd        = binding
-          subject    = subject_template.result(bnd).chomp
+          @alert  = alert
+          bnd     = binding
+
+          # do some intelligence gathering in case an ERB execution blows up
+          begin
+            erb_to_be_executed = subject_template_path
+            subject = subject_template.result(bnd).chomp
+
+            erb_to_be_executed = text_template_path
+            body_text = text_template.result(bnd)
+
+            erb_to_be_executed = html_template_path
+            body_html = html_template.result(bnd)
+          rescue => e
+            @logger.error "Error while excuting ERBs for an email: " +
+              "ERB being executed: #{erb_to_be_executed}"
+            raise
+          end
 
           @logger.debug("preparing email to: #{to}, subject: #{subject}, message-id: #{message_id}")
 
@@ -136,12 +152,12 @@ module Flapjack
             message_id message_id
 
             text_part do
-              body text_template.result(bnd)
+              body body_text
             end
 
             html_part do
               content_type 'text/html; charset=UTF-8'
-              body html_template.result(bnd)
+              body body_html
             end
           end
 

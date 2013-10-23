@@ -4,6 +4,8 @@ require 'active_support/inflector'
 
 # Alert is the object ready to send to someone, complete with an address and all
 # the data with which to render the text of the alert in the appropriate gateway
+#
+# It should possibly be renamed AlertPresenter
 
 module Flapjack
   module Data
@@ -45,7 +47,9 @@ module Flapjack
                   :check,
                   :notification_id
 
-      def initialize(contents)
+      def initialize(contents, opts)
+        raise "no logger supplied" unless @logger = opts[:logger]
+
         @state                    = contents['state']
         @summary                  = contents['summary']
         @state_duration           = contents['state_duration']
@@ -110,13 +114,13 @@ module Flapjack
 
       def rollup_state_counts
         rollup_alerts.inject({}) do |memo, alert|
-          puts "alert: #{alert.inspect}"
           memo[alert[1]['state']] = (memo[alert[1]['state']] || 0) + 1
           memo
         end
       end
 
       def rollup_states_summary
+        state_counts = rollup_state_counts
         ['critical', 'warning', 'unknown'].inject([]) do |memo, state|
           next memo unless rollup_state_counts[state]
           memo << "#{state.titleize}: #{state_counts[state]}"
@@ -130,9 +134,12 @@ module Flapjack
       def rollup_states_detail_text(opts)
         max_checks = opts[:max_checks_per_state]
         rollup_alerts_by_state.inject([]) do |memo, state|
-          checks = max_checks && max_checks > 0 ? state.keys[0..(max_checks - 1)] : state.keys
-          checks << '...' if checks.length < max_checks
-          memo << "#{state.titleize}: #{checks.join(', ')}"
+          state_titleized = state[0].titleize
+          alerts = max_checks && max_checks > 0 ? state[1][0..(max_checks - 1)] : state[1]
+          next memo if alerts.empty?
+          checks = alerts.map {|alert| alert[0]}
+          checks << '...' if checks.length < rollup_state_counts[state[0]]
+          memo << "#{state[0].titleize}: #{checks.join(', ')}"
           memo
         end.join('; ')
       end
