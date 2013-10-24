@@ -226,8 +226,8 @@ module Flapjack
           media_to_use.collect {|medium|
             rollup_type = nil
 
-            if !(['ok', 'acknowledgement'].include?(state_or_ack)) &&
-              medium.alerting_checks.find_by_id(entity_check.id).nil?
+            unless (['ok', 'acknowledgement'].include?(state_or_ack)) ||
+              medium.alerting_checks.exists?(entity_check.id)
 
               medium.alerting_checks << entity_check
             end

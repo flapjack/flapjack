@@ -10,6 +10,9 @@ module Flapjack
 
       include Sandstorm::Record
 
+      # TODO make notification logic smarter about checking these -- belong_to
+      # medium and entity check
+
       # TODO with rollup == true, replaces drop_rollup_alerts_for_contact
       # existing NotificationBlock usage will need to be have 'rollup == false' added
 

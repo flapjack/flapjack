@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/ali-graham/sandstorm.git
-  revision: 874eef5c8e879b702d7eab9c8201e223f59628b6
+  revision: f2569790ea5a7b0dd735ebeaf8915fc656e73f25
   specs:
     sandstorm (0.0.1)
       activemodel

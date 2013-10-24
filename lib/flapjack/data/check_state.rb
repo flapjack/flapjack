@@ -8,11 +8,6 @@ module Flapjack
 
       include Sandstorm::Record
 
-      STATE_OK       = 'ok'
-      STATE_WARNING  = 'warning'
-      STATE_CRITICAL = 'critical'
-      STATE_UNKNOWN  = 'unknown'
-
       define_attributes :state     => :string,
                         :summary   => :string,
                         :details   => :string,
@@ -26,22 +21,20 @@ module Flapjack
 
       belongs_to :entity_check, :class_name => 'Flapjack::Data::Check'
 
-      validate :state, :presence => true,
-        :inclusion => { :in => [STATE_OK, STATE_WARNING,
-                                STATE_CRITICAL, STATE_UNKNOWN] }
-      validate :timestamp, :presence => true
-
       def self.ok_states
-        [STATE_OK]
+        ['ok']
       end
 
       def self.failing_states
-        [STATE_CRITICAL, STATE_WARNING, STATE_UNKNOWN]
+        ['critical', 'warning', 'unknown']
       end
 
       def self.all_states
         self.failing_states + self.ok_states
       end
+
+      validate :state, :presence => true, :inclusion => { :in => self.all_states }
+      validate :timestamp, :presence => true
 
     end
   end

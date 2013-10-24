@@ -43,11 +43,8 @@ module Flapjack
       # Raises RegexpError if the provided pattern is invalid
       def self.find_all_name_matching(pattern)
         regexp = Regexp.new(pattern)
-        prefix = "#{class_key}::by_name"
-        Flapjack.redis.keys("#{prefix}:*").inject(Set.new) {|memo, key|
-          name = key.gsub(/\A#{prefix}:/, '')
-          memo << name if (name =~ regex)
-          memo
+        Flapjack.redis.hkeys(self.name_index(nil).key).select {|name|
+          name =~ regexp
         }.sort
       end
 

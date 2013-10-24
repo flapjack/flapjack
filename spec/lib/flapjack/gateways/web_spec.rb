@@ -181,7 +181,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     all_states = double('all_states', :all => [ok_state, failing_state])
     states.should_receive(:intersect_range).
-      with(nil, time.to_i, :order => 'desc', :limit => 20).
+      with(nil, time.to_i, :order => 'desc', :limit => 20, :by_score => true).
       and_return(all_states)
 
     entity_check.should_receive(:enabled).and_return(true)

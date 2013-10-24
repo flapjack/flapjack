@@ -35,9 +35,9 @@ module Flapjack
           check.in_unscheduled_maintenance? ||
           check.in_scheduled_maintenance?
         end
+        return 0 if checks_to_remove.empty?
 
-        alerting_checks.delete(*checks_to_remove) unless checks_to_remove.empty?
-
+        alerting_checks.delete(*checks_to_remove)
         checks_to_remove.size
       end
 

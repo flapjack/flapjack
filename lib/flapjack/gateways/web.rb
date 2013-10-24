@@ -206,7 +206,7 @@ module Flapjack
         @contacts                   = entity_check.contacts.all
 
         @state_changes = states.intersect_range(nil, @current_time.to_i,
-                           :order => 'desc', :limit => 20).all
+                           :order => 'desc', :limit => 20, :by_score => true).all
 
         erb 'check.html'.to_sym
       end

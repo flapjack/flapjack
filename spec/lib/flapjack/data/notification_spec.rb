@@ -47,12 +47,12 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
     Flapjack::Data::CheckState.should_receive(:find_by_id).with('fghij').and_return(check_state)
 
     alerting_checks_1 = double('alerting_checks_1')
-    alerting_checks_1.should_receive(:find_by_id).with('abcde').and_return(nil)
+    alerting_checks_1.should_receive(:exists?).with('abcde').and_return(false)
     alerting_checks_1.should_receive(:<<).with(entity_check)
     alerting_checks_1.should_receive(:count).and_return(1)
 
     alerting_checks_2 = double('alerting_checks_1')
-    alerting_checks_2.should_receive(:find_by_id).with('abcde').and_return(nil)
+    alerting_checks_2.should_receive(:exists?).with('abcde').and_return(false)
     alerting_checks_2.should_receive(:<<).with(entity_check)
     alerting_checks_2.should_receive(:count).and_return(1)
 
@@ -87,15 +87,6 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
     all_media.should_receive(:collect).and_yield(medium_1).
                                          and_yield(medium_2).and_return([message_1, message_2])
     contact.should_receive(:media).and_return(all_media)
-
-    # contact.should_receive(:add_alerting_check_for_media).with("email", nil)
-    # contact.should_receive(:add_alerting_check_for_media).with("sms", nil)
-    # contact.should_receive(:clean_alerting_checks_for_media).with("email").and_return(0)
-    # contact.should_receive(:clean_alerting_checks_for_media).with("sms").and_return(0)
-    # contact.should_receive(:count_alerting_checks_for_media).with("email").and_return(0)
-    # contact.should_receive(:count_alerting_checks_for_media).with("sms").and_return(0)
-    # contact.should_receive(:rollup_threshold_for_media).with("email").and_return(nil)
-    # contact.should_receive(:rollup_threshold_for_media).with("sms").and_return(nil)
 
     messages = notification.messages([contact], :default_timezone => timezone,
       :logger => @logger)
