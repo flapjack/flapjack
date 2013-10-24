@@ -92,11 +92,15 @@ module Flapjack
       end
 
       def ok?
-        @state && ['ok', 'up'].include?(@state.downcase)
+        @state && ['ok', 'up'].include?(@state)
       end
 
       def acknowledgement?
-        @state && ['acknowledgement'].include?(@state.downcase)
+        @state && ['acknowledgement'].include?(@state)
+      end
+
+      def test?
+        @state && ['test_notifications'].include?(@state)
       end
 
       def contents
@@ -121,7 +125,7 @@ module Flapjack
         default_timezone = opts[:default_timezone]
         logger = opts[:logger]
 
-        @messages ||= contacts.collect {|contact|
+        @messages ||= contacts.collect do |contact|
           contact_id = contact.id
           rules = contact.notification_rules
           media = contact.media
@@ -193,10 +197,10 @@ module Flapjack
           logger.debug "media_to_use: #{media_to_use}"
 
           # here begins rollup madness
-          media_to_use.each_pair.inject([]) { |ret, (media, address)|
+          media_to_use.each_pair.inject([]) do |ret, (media, address)|
             rollup_type = nil
 
-            contact.add_alerting_check_for_media(media, @event_id) unless ok? || acknowledgement?
+            contact.add_alerting_check_for_media(media, @event_id) unless ok? || acknowledgement? || test?
 
             # expunge checks in (un)scheduled maintenance from the alerting set
             cleaned = contact.clean_alerting_checks_for_media(media)
@@ -221,8 +225,8 @@ module Flapjack
                   :medium => media, :address => address, :rollup => rollup_type)
             ret << m
             ret
-          }
-        }.compact.flatten
+          end
+        end.compact.flatten # @messages ||= contacts.collect do ...
       end
 
     private

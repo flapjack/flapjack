@@ -24,7 +24,9 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
                    'time'               => time.to_i,
                    'address'            => '555-555555',
                    'event_id'           => 'example.com:ping',
-                   'id'                 => '123456789'
+                   'id'                 => '123456789',
+                   'duration'           => 55,
+                   'state_duration'     => 23
                   }
                 }
 

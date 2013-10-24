@@ -426,3 +426,8 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
   }.length.should == num_queued.to_i
 end
 
+When(/^user (\d+) ceases to be a contact of entity '(.*)'$/) do |contact_id, entity|
+  entity = Flapjack::Data::Entity.find_by_name(entity, :redis => @redis)
+  @redis.srem("contacts_for:#{entity.id}", contact_id)
+end
+

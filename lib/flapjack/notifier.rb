@@ -92,7 +92,7 @@ module Flapjack
 
       timestamp    = Time.now
       event_id     = notification.event_id
-      entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
+      entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis, :logger => @logger)
       contacts     = entity_check.contacts
 
       if contacts.empty?

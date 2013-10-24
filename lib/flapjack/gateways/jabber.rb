@@ -491,62 +491,63 @@ module Flapjack
 
           @logger.debug("jabber is connected so commencing blpop on #{queue}")
           events[queue] = @redis.blpop(queue, 0)
-          event         = Oj.load(events[queue][1])
+          event_json = events[queue][1]
+          begin
+            event = Oj.load(event_json)
 
-          @logger.debug('jabber notification event received: ' + event.inspect)
+            @logger.debug('jabber notification event received: ' + event.inspect)
 
-          if 'shutdown'.eql?(event['notification_type'])
-            @logger.debug("@should_quit: #{@should_quit}")
-            if @should_quit
-              EventMachine::Synchrony.next_tick do
-                # get delays without the next_tick
-                close # Blather::Client.close
+            if 'shutdown'.eql?(event['notification_type'])
+              @logger.debug("@should_quit: #{@should_quit}")
+              if @should_quit
+                EventMachine::Synchrony.next_tick do
+                  # get delays without the next_tick
+                  close # Blather::Client.close
+                end
               end
+              next
             end
-            next
-          end
 
-          alert = Flapjack::Data::Alert.new(event, :logger => @logger)
-          type = alert.type
+            alert = Flapjack::Data::Alert.new(event, :logger => @logger)
 
-          entity   = alert.entity
-          check    = alert.check
-          state    = alert.state
-          summary  = alert.summary
-          duration = time_period_in_words(alert.acknowledgement_duration)
-          address  = alert.address
+            @logger.debug("processing jabber notification address: #{alert.address}, entity: #{alert.entity}, " +
+                          "check: '#{alert.check}', state: #{alert.state}, summary: #{alert.summary}")
 
-          @logger.debug("processing jabber notification address: #{address}, entity: #{entity}, check: '#{check}', state: #{state}, summary: #{summary}")
+            @ack_str =
+              alert.event_count &&
+              !alert.state.eql?('ok') &&
+              !'acknowledgement'.eql?(alert.type) &&
+              !'test'.eql?(alert.type) ?
+              "#{@config['alias']}: ACKID #{event['event_count']}" : nil
 
-          ack_str =
-            event['event_count'] &&
-            !state.eql?('ok') &&
-            !'acknowledgement'.eql?(type) &&
-            !'test'.eql?(type) ?
-            "::: #{@config['alias']}: ACKID #{event['event_count']} " : ''
+            message_type = alert.rollup ? 'rollup' : 'alert'
 
-          type = 'unknown' unless type
+            mydir = File.dirname(__FILE__)
+            message_template_path = mydir + "/jabber/#{message_type}.text.erb"
+            message_template = ERB.new(File.read(message_template_path), nil, '-')
 
-          maint_str = case type
-          when 'acknowledgement'
-            "has been acknowledged, unscheduled maintenance created for #{duration}"
-          when 'test'
-            ''
-          else
-            "is #{state.upcase}"
-          end
+            @alert = alert
+            bnd    = binding
 
-          # FIXME - should probably put all the message composition stuff in one place so
-          # the logic isn't duplicated in each notification channel.
-          # TODO - templatise the messages so they can be customised without changing core code
-          headline = "test".eql?(type.downcase) ? "TEST NOTIFICATION" : type.upcase
+            begin
+              message = message_template.result(bnd).chomp
+            rescue => e
+              @logger.error "Error while excuting the ERB for a jabber message, " +
+                "ERB being executed: #{message_template_path}"
+              raise
+            end
 
-          msg = "#{headline} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
-
-          chat_type = :chat
-          chat_type = :groupchat if @config['rooms'] && @config['rooms'].include?(address)
-          EventMachine::Synchrony.next_tick do
-            say(Blather::JID.new(address), msg, chat_type)
+            chat_type = :chat
+            chat_type = :groupchat if @config['rooms'] && @config['rooms'].include?(alert.address)
+            EventMachine::Synchrony.next_tick do
+              say(Blather::JID.new(alert.address), message, chat_type)
+            end
+          rescue => e
+            @logger.error "Error generating or dispatching jabber message: #{e.class}: #{e.message}\n" +
+              e.backtrace.join("\n")
+            @logger.debug "Message that could not be processed: \n" + event.inspect
+            # FIXME: remove the raise and surface the exception in a less fatal manner and keep going
+            raise
           end
         end
 

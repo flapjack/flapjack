@@ -31,13 +31,7 @@ module Flapjack
 
           address         = alert.address
           notification_id = alert.notification_id
-
-          message_type = case
-          when alert.rollup
-            'rollup'
-          else
-            'alert'
-          end
+          message_type    = alert.rollup ? 'rollup' : 'alert'
 
           my_dir = File.dirname(__FILE__)
           sms_template_path = my_dir + "/sms_messagenet/#{message_type}.text.erb"

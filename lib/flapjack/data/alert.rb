@@ -32,13 +32,11 @@ module Flapjack
                   :rollup,
                   :contact_id,
                   :contact_first_name,
-                  :contact_last_name,
-                  :duration
+                  :contact_last_name
 
       # from Flapjack::Notifier
       attr_reader :rollup_threshold,
                   :rollup_alerts,
-                  :rollup_alerts_by_state,
                   :in_scheduled_maintenance,
                   :in_unscheduled_maintenance
 
@@ -50,27 +48,51 @@ module Flapjack
       def initialize(contents, opts)
         raise "no logger supplied" unless @logger = opts[:logger]
 
-        @state                    = contents['state']
-        @summary                  = contents['summary']
-        @state_duration           = contents['state_duration']
-        @acknowledgement_duration = contents['duration'] # SMELLY
-        @last_state               = contents['last_state']
-        @last_summary             = contents['last_summary']
+        @state                      = contents['state']
+        @summary                    = contents['summary']
+        @acknowledgement_duration   = contents['duration'] # SMELLY
+        @last_state                 = contents['last_state']
+        @last_summary               = contents['last_summary']
+        @state_duration             = contents['state_duration']
+        @details                    = contents['details']
+        @time                       = contents['time']
+        @notification_type          = contents['notification_type']
+        @event_count                = contents['event_count']
+        @tags                       = contents['tags']
 
-        @notification_type        = contents['notification_type']
-        @notification_id          = contents['id'] || SecureRandom.uuid
-        @media                    = contents['media']
-        @address                  = contents['address']
-        @rollup                   = contents['rollup']
-        @rollup_alerts            = contents['rollup_alerts']
-        @rollup_threshold         = contents['rollup_threshold']
-        @contact_id               = contents['contact_id']
-        @contact_first_name       = contents['contact_first_name']
-        @contact_last_name        = contents['contact_last_name']
+        @media                      = contents['media']
+        @address                    = contents['address']
+        @rollup                     = contents['rollup']
+        @contact_id                 = contents['contact_id']
+        @contact_first_name         = contents['contact_first_name']
+        @contact_last_name          = contents['contact_last_name']
 
-        @details                  = contents['details']
-        @time                     = contents['time']
-        @entity, @check           = contents['event_id'].split(':', 2)
+        @rollup_threshold           = contents['rollup_threshold']
+        @rollup_alerts              = contents['rollup_alerts']
+        @in_scheduled_maintenance   = contents['in_scheduled_maintenance']
+        @in_unscheduled_maintenance = contents['in_unscheduled_maintenance']
+
+        @entity, @check             = contents['event_id'].split(':', 2)
+        @notification_id            = contents['id'] || SecureRandom.uuid
+
+        allowed_states        = ['ok', 'critical', 'warning', 'unknown', 'test_notifications', 'acknowledgement']
+        allowed_rollup_states = ['critical', 'warning', 'unknown']
+        raise "state #{@state.inspect} is invalid" unless
+          allowed_states.include?(@state)
+
+        raise "state_duration #{@state_duration.inspect} is invalid" unless
+          @state_duration && @state_duration.is_a?(Integer) && @state_duration >= 0
+
+        if @rollup_alerts
+          raise "rollup_alerts should be nil or a hash" unless @rollup_alerts.is_a?(Hash)
+          @rollup_alerts.each_pair do |check, details|
+            raise "duration of rollup_alerts['#{check}'] must be an integer" unless
+              details['duration'] && details['duration'].is_a?(Integer)
+            raise "state of rollup_alerts['#{check}'] is invalid" unless
+              details['state'] && allowed_rollup_states.include?(details['state'])
+          end
+        end
+
       end
 
       def type
