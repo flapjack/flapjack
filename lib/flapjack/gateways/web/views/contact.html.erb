@@ -24,6 +24,7 @@
               <th>Media</th>
               <th>Address</th>
               <th>Interval</th>
+              <th>Rollup Threshold</th>
             </tr>
             <% @contact_media.each do |med| %>
               <tr>
@@ -34,7 +35,6 @@
                       <p><%= 'password'.eql?(pk) ? h("#{pk}: ...") : h("#{pk}: #{pv}") %></p>
                     <% end %>
                   </td>
-                  <td>-</td>
                 <% else %>
                   <td><%= h med.type.capitalize %></td>
                   <td><%= h med.address %></td>
@@ -46,6 +46,13 @@
                     <% end %>
                   </td>
                 <% end %>
+                <td>
+                  <% if rollup_threshold = med.rollup_threshold %>
+                    <%= h rollup_threshold %> failing checks
+                  <% else %>
+                    -
+                  <% end %>
+                </td>
               </tr>
             <% end %>
           </table>

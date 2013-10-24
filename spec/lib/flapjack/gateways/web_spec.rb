@@ -11,10 +11,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   let(:entity_name_esc) { CGI.escape(entity_name) }
   let(:check)           { 'ping' }
 
-  let(:entity)          { mock(Flapjack::Data::Entity) }
-  let(:entity_check)    { mock(Flapjack::Data::Check) }
+  let(:entity)          { double(Flapjack::Data::Entity) }
+  let(:entity_check)    { double(Flapjack::Data::Check) }
 
-  let(:redis) { mock(Redis) }
+  let(:redis) { double(Redis) }
 
   before(:all) do
     Flapjack::Gateways::Web.class_eval {
@@ -38,7 +38,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     redis.should_receive(:llen).with('events')
   end
 
-  let(:failing_checks) { mock('failing_checks') }
+  let(:failing_checks) { double('failing_checks') }
 
   def expect_check_stats
     Flapjack::Data::Check.should_receive(:count).and_return(1)
@@ -47,13 +47,13 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   def expect_entity_stats
-    enabled_count = mock('enabled_count', :count => 1)
+    enabled_count = double('enabled_count', :count => 1)
     Flapjack::Data::Entity.should_receive(:intersect).with(:enabled =>
       true).and_return(enabled_count)
 
     # entity.should_receive(:name).and_return('foo.example.com')
 
-    failing_enabled = mock('failing_enabled', :all => [entity_check])
+    failing_enabled = double('failing_enabled', :all => [entity_check])
     failing_checks.should_receive(:intersect).with(:enabled => true).
       and_return(failing_enabled)
   end
@@ -65,13 +65,13 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     ec.should_receive(:summary).and_return('happy results are returned')
     ec.should_receive(:last_update).and_return(time - (3 * 60 * 60))
 
-    last_failing = mock('last_failing',
-      :last => mock(Flapjack::Data::CheckState, :timestamp => time - ((3 * 60 * 60) + (5 * 60))))
-    ok_state = mock(Flapjack::Data::CheckState, :timestamp => time - ((3 * 60 * 60)))
-    last_ok = mock('last_ok', :last => ok_state)
-    no_last_ack = mock('no_last_ack', :last => nil)
+    last_failing = double('last_failing',
+      :last => double(Flapjack::Data::CheckState, :timestamp => time - ((3 * 60 * 60) + (5 * 60))))
+    ok_state = double(Flapjack::Data::CheckState, :timestamp => time - ((3 * 60 * 60)))
+    last_ok = double('last_ok', :last => ok_state)
+    no_last_ack = double('no_last_ack', :last => nil)
 
-    states = mock('states')
+    states = double('states')
     states.should_receive(:intersect).with(:state => ['critical', 'warning', 'unknown'], :notified => true).
       and_return(last_failing)
     states.should_receive(:intersect).with(:state => 'ok', :notified => true).
@@ -147,13 +147,13 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     entity_check.should_receive(:summary).and_return('all good')
     entity_check.should_receive(:details).and_return('seriously, all very wonderful')
 
-    failing_state = mock(Flapjack::Data::CheckState, :state => 'critical', :timestamp => time - ((3 * 60 * 60) + (5 * 60)), :summary => 'N')
-    last_failing = mock('last_failing', :last => failing_state)
-    ok_state = mock(Flapjack::Data::CheckState, :state => 'ok', :timestamp => time - ((3 * 60 * 60)), :summary => 'Y')
-    last_ok = mock('last_ok', :last => ok_state)
-    no_last = mock('no_last', :last => nil)
+    failing_state = double(Flapjack::Data::CheckState, :state => 'critical', :timestamp => time - ((3 * 60 * 60) + (5 * 60)), :summary => 'N')
+    last_failing = double('last_failing', :last => failing_state)
+    ok_state = double(Flapjack::Data::CheckState, :state => 'ok', :timestamp => time - ((3 * 60 * 60)), :summary => 'Y')
+    last_ok = double('last_ok', :last => ok_state)
+    no_last = double('no_last', :last => nil)
 
-    states = mock('states')
+    states = double('states')
     states.should_receive(:intersect).with(:state => 'ok', :notified => true).
       and_return(last_ok)
     states.should_receive(:intersect).with(:state => 'critical', :notified => true).
@@ -168,7 +168,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     entity_check.should_receive(:states).twice.and_return(states)
 
-    no_sched_maint = mock('no_sched_maint', :all => [])
+    no_sched_maint = double('no_sched_maint', :all => [])
     entity_check.should_receive(:scheduled_maintenances_by_start).and_return(no_sched_maint)
 
     entity_check.should_receive(:failed?).and_return(false)
@@ -176,10 +176,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     entity_check.should_receive(:current_scheduled_maintenance).and_return(nil)
     entity_check.should_receive(:current_unscheduled_maintenance).and_return(nil)
 
-    no_contacts = mock('no_contacts', :all => [])
+    no_contacts = double('no_contacts', :all => [])
     entity_check.should_receive(:contacts).and_return(no_contacts)
 
-    all_states = mock('all_states', :all => [ok_state, failing_state])
+    all_states = double('all_states', :all => [ok_state, failing_state])
     states.should_receive(:intersect_range).
       with(nil, time.to_i, :order => 'desc', :limit => 20).
       and_return(all_states)
@@ -189,7 +189,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Flapjack::Data::Check.should_receive(:intersect).with(:state =>
       ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
-    all_checks = mock('no_checks', :all => [entity_check])
+    all_checks = double('no_checks', :all => [entity_check])
     Flapjack::Data::Check.should_receive(:intersect).
       with(:entity_name => entity_name_esc, :name => 'ping').and_return(all_checks)
 
@@ -199,7 +199,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   it "returns 404 if an unknown entity/check is requested" do
-    no_checks = mock('no_checks', :all => [])
+    no_checks = double('no_checks', :all => [])
     Flapjack::Data::Check.should_receive(:intersect).
       with(:entity_name => entity_name_esc, :name => 'ping').and_return(no_checks)
 
@@ -208,7 +208,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   it "creates an acknowledgement for an entity check" do
-    all_entity_checks = mock('all_entity_checks', :all => [entity_check])
+    all_entity_checks = double('all_entity_checks', :all => [entity_check])
     Flapjack::Data::Check.should_receive(:intersect).
       with(:entity_name => entity_name, :name => 'ping').and_return(all_entity_checks)
 
@@ -230,11 +230,11 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Chronic.should_receive(:parse).with('1 day ago').and_return(start_time)
     ChronicDuration.should_receive(:parse).with('30 minutes').and_return(duration)
 
-    all_entity_checks = mock('all_entity_checks', :all => [entity_check])
+    all_entity_checks = double('all_entity_checks', :all => [entity_check])
     Flapjack::Data::Check.should_receive(:intersect).
       with(:entity_name => entity_name_esc, :name => 'ping').and_return(all_entity_checks)
 
-    sched_maint = mock(Flapjack::Data::ScheduledMaintenance)
+    sched_maint = double(Flapjack::Data::ScheduledMaintenance)
     sched_maint.should_receive(:save).and_return(true)
     Flapjack::Data::ScheduledMaintenance.should_receive(:new).
       with(:start_time => start_time.to_i,
@@ -255,13 +255,13 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     start_time = t - (24 * 60 * 60)
 
-    all_entity_checks = mock('all_entity_checks', :all => [entity_check])
+    all_entity_checks = double('all_entity_checks', :all => [entity_check])
     Flapjack::Data::Check.should_receive(:intersect).
       with(:entity_name => entity_name_esc, :name => 'ping').and_return(all_entity_checks)
 
-    sched_maint = mock(Flapjack::Data::ScheduledMaintenance)
-    first_sched_maint = mock('first_sched_maint', :first => sched_maint)
-    sched_maints = mock('sched_maints')
+    sched_maint = double(Flapjack::Data::ScheduledMaintenance)
+    first_sched_maint = double('first_sched_maint', :first => sched_maint)
+    sched_maints = double('sched_maints')
     sched_maints.should_receive(:intersect_range).with(start_time, start_time,
       :by_score => true).and_return(first_sched_maint)
     entity_check.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints)
@@ -279,22 +279,22 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   it "shows details of an individual contact found by id" do
-    contact = mock('contact')
-
+    contact = double('contact')
     contact.should_receive(:name).twice.and_return("Smithson Smith")
 
-    medium = mock(Flapjack::Data::Medium)
+    medium = double(Flapjack::Data::Medium)
     medium.should_receive(:type).exactly(3).times.and_return('sms')
     medium.should_receive(:address).and_return('0123456789')
-    medium.should_receive(:interval).and_return('60')
+    medium.should_receive(:interval).and_return(60)
+    medium.should_receive(:rollup_threshold).and_return(10)
 
-    all_media = mock('all_media', :all => [medium])
+    all_media = double('all_media', :all => [medium])
     contact.should_receive(:media).and_return(all_media)
 
-    no_entities = mock('no_entities', :all => [])
+    no_entities = double('no_entities', :all => [])
     contact.should_receive(:entities).and_return(no_entities)
 
-    no_notification_rules = mock('no_notification_rules', :all => [])
+    no_notification_rules = double('no_notification_rules', :all => [])
     contact.should_receive(:notification_rules).and_return(no_notification_rules)
 
     Flapjack::Data::Contact.should_receive(:find_by_id).

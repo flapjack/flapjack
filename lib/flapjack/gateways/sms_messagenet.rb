@@ -14,6 +14,9 @@ module Flapjack
   module Gateways
     class SmsMessagenet
 
+      MESSAGENET_DEFAULT_HOST = 'www.messagenet.com.au'
+      MESSAGENET_DEFAULT_PATH = '/dotnet/Lodge.asmx/LodgeSMSMessage'
+
       attr_reader :sent
 
       def initialize(opts = {})
@@ -49,28 +52,34 @@ module Flapjack
       def handle_message(msg)
         @logger.debug "Woo, got a message to send out: #{msg.inspect}"
 
-        notification_type  = msg['notification_type']
-        contact_first_name = msg['contact_first_name']
-        contact_last_name  = msg['contact_last_name']
-        state              = msg['state']
-        summary            = msg['summary']
-        time               = msg['time']
-        entity             = msg['entity']
-        check              = msg['check']
+        endpoint_host = @config["endpoint_host"] || MESSAGENET_DEFAULT_HOST
+        endpoint_path = @config["endpoint_path"] || MESSAGENET_DEFAULT_PATH
+        username = @config["username"]
+        password = @config["password"]
 
-        headline_map = {'problem'         => 'PROBLEM: ',
-                        'recovery'        => 'RECOVERY: ',
-                        'acknowledgement' => 'ACK: ',
-                        'test'            => 'TEST NOTIFICATION: ',
-                        'unknown'         => '',
-                        ''                => '',
-                       }
+        @notification_type   = msg['notification_type']
+        @rollup              = msg['rollup']
+        @rollup_alerts       = msg['rollup_alerts']
+        @state               = msg['state']
+        @summary             = msg['summary']
+        @time                = msg['time']
+        @entity_name         = msg['entity']
+        @check               = msg['check']
+        address              = msg['address']
+        msg_id               = msg['id']
 
-        headline = headline_map[notification_type] || ''
+        message_type = case
+        when @rollup
+          'rollup'
+        else
+          'alert'
+        end
 
-        message = "#{headline}'#{check}' on #{entity}"
-        message += " is #{state.upcase}" unless ['acknowledgement', 'test'].include?(notification_type)
-        message += " at #{Time.at(time).strftime('%-d %b %H:%M')}, #{summary}"
+        sms_template = ERB.new(File.read(File.dirname(__FILE__) +
+        "/sms_messagenet/#{message_type}.text.erb"), nil, '-')
+
+        bnd     = binding
+        message = sms_template.result(bnd).chomp
 
         if @config.nil? || (@config.respond_to?(:empty?) && @config.empty?)
           @logger.error "Messagenet config is missing"
@@ -79,11 +88,7 @@ module Flapjack
 
         errors = []
 
-        username = @config["username"]
-        password = @config["password"]
         safe_message = truncate(message, 159)
-        address  = msg['address']
-        msg_id   = msg['id']
 
         [[username, "Messagenet username is missing"],
          [password, "Messagenet password is missing"],
@@ -107,8 +112,8 @@ module Flapjack
         # TODO ensure we're not getting a cached response from a proxy or similar,
         # use appropriate headers etc.
 
-        uri = URI::HTTPS.build(:host => 'www.messagenet.com.au',
-                               :path => '/dotnet/Lodge.asmx/LodgeSMSMessage',
+        uri = URI::HTTPS.build(:host => endpoint_host,
+                               :path => endpoint_path,
                                :port => 443,
                                :query => URI.encode_www_form(query))
 

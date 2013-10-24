@@ -3,26 +3,26 @@ require 'flapjack/gateways/api/entity_check_presenter'
 
 describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
 
-  let(:entity_check) { mock(Flapjack::Data::Check) }
+  let(:entity_check) { double(Flapjack::Data::Check) }
 
   let(:time) { Time.now.to_i }
 
   let(:states) {
-    [mock(Flapjack::Data::CheckState, :state => 'critical',
+    [double(Flapjack::Data::CheckState, :state => 'critical',
             :timestamp => time - (4 * 60 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckState, :state => 'ok',
+     double(Flapjack::Data::CheckState, :state => 'ok',
             :timestamp => time - (4 * 60 * 60) + (5 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckState, :state => 'critical',
+     double(Flapjack::Data::CheckState, :state => 'critical',
             :timestamp => time - (3 * 60 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckState, :state => 'ok',
+     double(Flapjack::Data::CheckState, :state => 'ok',
             :timestamp => time - (3 * 60 * 60) + (10 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckState, :state => 'critical',
+     double(Flapjack::Data::CheckState, :state => 'critical',
             :timestamp => time - (2 * 60 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckState, :state => 'ok',
+     double(Flapjack::Data::CheckState, :state => 'ok',
             :timestamp => time - (2 * 60 * 60) + (15 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckState, :state => 'critical',
+     double(Flapjack::Data::CheckState, :state => 'critical',
             :timestamp => time - (1 * 60 * 60), :summary => '', :details => ''),
-     mock(Flapjack::Data::CheckState, :state => 'ok',
+     double(Flapjack::Data::CheckState, :state => 'ok',
             :timestamp => time - (1 * 60 * 60) + (20 * 60), :summary => '', :details => '')
     ]
   }
@@ -30,19 +30,19 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   # one overlap at start, one overlap at end, one wholly overlapping,
   # one wholly contained
   let(:unscheduled_maintenances) {
-    [mock(Flapjack::Data::UnscheduledMaintenance,
+    [double(Flapjack::Data::UnscheduledMaintenance,
             :start_time => time - ((4 * 60 * 60) + (1 * 60)), # 1 minute before outage starts
             :end_time   => time - (4 * 60 * 60) + (2 * 60),   # 2 minutes after outage starts
             :duration => (3 * 60)),
-     mock(Flapjack::Data::UnscheduledMaintenance,
+     double(Flapjack::Data::UnscheduledMaintenance,
             :start_time => time - (3 * 60 * 60) + (8 * 60),   # 2 minutes before outage ends
             :end_time   => time - (3 * 60 * 60) + (11 * 60),  # 1 minute after outage ends
             :duration => (3 * 60)),
-     mock(Flapjack::Data::UnscheduledMaintenance,
+     double(Flapjack::Data::UnscheduledMaintenance,
             :start_time => time - ((2 * 60 * 60) + (1 * 60)), # 1 minute before outage starts
             :end_time   => time - (2 * 60 * 60) + (17 * 60),  # 2 minutes after outage ends
             :duration => (3 * 60)),
-     mock(Flapjack::Data::UnscheduledMaintenance,
+     double(Flapjack::Data::UnscheduledMaintenance,
             :start_time => time - (1 * 60 * 60) + (1 * 60),   # 1 minute after outage starts
             :end_time   => time - (1 * 60 * 60) + (10 * 60),  # 10 minutes before outage ends
             :duration => (9 * 60))
@@ -50,19 +50,19 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   }
 
   let(:scheduled_maintenances) {
-    [mock(Flapjack::Data::ScheduledMaintenance,
+    [double(Flapjack::Data::ScheduledMaintenance,
             :start_time => time - ((4 * 60 * 60) + (1 * 60)), # 1 minute before outage starts
             :end_time   => time - (4 * 60 * 60) + (2 * 60),   # 2 minutes after outage starts
             :duration => (3 * 60)),
-     mock(Flapjack::Data::ScheduledMaintenance,
+     double(Flapjack::Data::ScheduledMaintenance,
             :start_time => time - (3 * 60 * 60) + (8 * 60),   # 2 minutes before outage ends
             :end_time   => time - (3 * 60 * 60) + (11 * 60),  # 1 minute after outage ends
             :duration => (3 * 60)),
-     mock(Flapjack::Data::ScheduledMaintenance,
+     double(Flapjack::Data::ScheduledMaintenance,
             :start_time => time - ((2 * 60 * 60) + (1 * 60)), # 1 minute before outage starts
             :end_time   => time - (2 * 60 * 60) + (17 * 60),  # 2 minutes after outage ends
             :duration => (3 * 60)),
-     mock(Flapjack::Data::ScheduledMaintenance,
+     double(Flapjack::Data::ScheduledMaintenance,
             :start_time => time - (1 * 60 * 60) + (1 * 60),   # 1 minute after outage starts
             :end_time   => time - (1 * 60 * 60) + (10 * 60),  # 10 minutes before outage ends
             :duration => (9 * 60))
@@ -70,10 +70,10 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   }
 
   it "returns a list of outage hashes for an entity check" do
-    all_states = mock('all_states', :all => states)
-    no_states = mock('no_states', :all => [])
+    all_states = double('all_states', :all => states)
+    no_states = double('no_states', :all => [])
 
-    states_assoc = mock('states_assoc')
+    states_assoc = double('states_assoc')
     states_assoc.should_receive(:intersect_range).
       with(time - (5 * 60 * 60), time - (2 * 60 * 60), :by_score => true).
       and_return(all_states)
@@ -92,9 +92,9 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   end
 
   it "returns a list of outage hashes with no start and end time set" do
-    all_states = mock('all_states', :all => states)
+    all_states = double('all_states', :all => states)
 
-    states_assoc = mock('states_assoc')
+    states_assoc = double('states_assoc')
     states_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_states)
@@ -110,16 +110,16 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   end
 
   it "returns a consolidated list of outage hashes with repeated state events" do
-    states[1] = mock(Flapjack::Data::CheckState, :state => 'critical',
+    states[1] = double(Flapjack::Data::CheckState, :state => 'critical',
                        :timestamp => time - (4 * 60 * 60) + (5 * 60),
                        :summary => '', :details => '')
-    states[2] = mock(Flapjack::Data::CheckState, :state => 'ok',
+    states[2] = double(Flapjack::Data::CheckState, :state => 'ok',
                        :timestamp => time - (3 * 60 * 60),
                        :summary => '', :details => '')
 
-    all_states = mock('all_states', :all => states)
+    all_states = double('all_states', :all => states)
 
-    states_assoc = mock('states_assoc')
+    states_assoc = double('states_assoc')
     states_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_states)
@@ -133,12 +133,12 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   end
 
   it "returns a (small) outage hash for a single state change" do
-    all_states = mock('all_states',
-      :all => [mock(Flapjack::Data::CheckState, :state => 'critical',
+    all_states = double('all_states',
+      :all => [double(Flapjack::Data::CheckState, :state => 'critical',
                       :timestamp => time - (4 * 60 * 60) ,
                       :summary => '', :details => '')])
 
-    states_assoc = mock('states_assoc')
+    states_assoc = double('states_assoc')
     states_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_states)
@@ -152,10 +152,10 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   end
 
   it "a list of unscheduled maintenances for an entity check" do
-    all_unsched = mock('all_unsched', :all => unscheduled_maintenances)
-    no_unsched = mock('no_unsched', :all => [])
+    all_unsched = double('all_unsched', :all => unscheduled_maintenances)
+    no_unsched = double('no_unsched', :all => [])
 
-    unsched_assoc = mock('unsched_assoc')
+    unsched_assoc = double('unsched_assoc')
     unsched_assoc.should_receive(:intersect_range).
       with(time - (12 * 60 * 60), time, :by_score => true).
       and_return(all_unsched)
@@ -173,10 +173,10 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   end
 
   it "a list of scheduled maintenances for an entity check" do
-    all_sched = mock('all_sched', :all => scheduled_maintenances)
-    no_sched = mock('no_sched', :all => [])
+    all_sched = double('all_sched', :all => scheduled_maintenances)
+    no_sched = double('no_sched', :all => [])
 
-    sched_assoc = mock('sched_assoc')
+    sched_assoc = double('sched_assoc')
     sched_assoc.should_receive(:intersect_range).
       with(time - (12 * 60 * 60), time, :by_score => true).
       and_return(all_sched)
@@ -194,10 +194,10 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   end
 
   it "returns downtime and percentage for a downtime check" do
-    all_states = mock('all_states', :all => states)
-    no_states = mock('no_states', :all => [])
+    all_states = double('all_states', :all => states)
+    no_states = double('no_states', :all => [])
 
-    states_assoc = mock('states_assoc')
+    states_assoc = double('states_assoc')
     states_assoc.should_receive(:intersect_range).
       with(time - (12 * 60 * 60), time, :by_score => true).
       and_return(all_states)
@@ -206,10 +206,10 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
            :order => "desc").and_return(no_states)
     entity_check.should_receive(:states).twice.and_return(states_assoc)
 
-    all_sched = mock('all_sched', :all => scheduled_maintenances)
-    no_sched = mock('no_sched', :all => [])
+    all_sched = double('all_sched', :all => scheduled_maintenances)
+    no_sched = double('no_sched', :all => [])
 
-    sched_assoc = mock('sched_assoc')
+    sched_assoc = double('sched_assoc')
     sched_assoc.should_receive(:intersect_range).
       with(time - (12 * 60 * 60), time, :by_score => true).
       and_return(all_sched)
@@ -233,17 +233,17 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   end
 
   it "returns downtime (but no percentage) for an unbounded downtime check" do
-    all_states = mock('all_states', :all => states)
+    all_states = double('all_states', :all => states)
 
-    states_assoc = mock('states_assoc')
+    states_assoc = double('states_assoc')
     states_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_states)
     entity_check.should_receive(:states).and_return(states_assoc)
 
-    all_sched = mock('all_sched', :all => scheduled_maintenances)
+    all_sched = double('all_sched', :all => scheduled_maintenances)
 
-    sched_assoc = mock('sched_assoc')
+    sched_assoc = double('sched_assoc')
     sched_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_sched)
@@ -263,27 +263,27 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   end
 
   it "returns downtime and handles an unfinished problem state" do
-    current = [mock(Flapjack::Data::CheckState, :state => 'critical',
+    current = [double(Flapjack::Data::CheckState, :state => 'critical',
                       :timestamp => time - (4 * 60 * 60),
                       :summary => '', :details => ''),
-               mock(Flapjack::Data::CheckState, :state => 'ok',
+               double(Flapjack::Data::CheckState, :state => 'ok',
                       :timestamp => time - (4 * 60 * 60) + (5 * 60),
                       :summary => '', :details => ''),
-               mock(Flapjack::Data::CheckState, :state => 'critical',
+               double(Flapjack::Data::CheckState, :state => 'critical',
                       :timestamp => time - (3 * 60 * 60),
                       :summary => '', :details => '')]
 
-    all_states = mock('all_states', :all => current)
+    all_states = double('all_states', :all => current)
 
-    states_assoc = mock('states_assoc')
+    states_assoc = double('states_assoc')
     states_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_states)
     entity_check.should_receive(:states).and_return(states_assoc)
 
-    all_sched = mock('all_sched', :all => scheduled_maintenances)
+    all_sched = double('all_sched', :all => scheduled_maintenances)
 
-    sched_assoc = mock('sched_assoc')
+    sched_assoc = double('sched_assoc')
     sched_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_sched)

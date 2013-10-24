@@ -302,7 +302,10 @@ module Flapjack
         # are we within a scheduled maintenance period?
         current_sched_maint = current_scheduled_maintenance
 
-        if current_sched_maint.nil?
+        remaining_time = current_sched_maint.nil? ? 0 :
+                           (current_sched_maint.end_time.to_i - Time.now.to_i)
+
+        if remaining_time <= 0
           if opts[:revalidate]
             Flapjack.redis.del("#{self.record_key}:expiring:scheduled_maintenance")
           end
@@ -310,8 +313,7 @@ module Flapjack
         end
 
         Flapjack.redis.setex("#{self.record_key}:expiring:scheduled_maintenance",
-                             current_sched_maint.end_time.to_i.to_s,
-                             current_sched_maint.id)
+                             remaining_time, current_sched_maint.id)
       end
 
     end

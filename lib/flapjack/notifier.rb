@@ -79,11 +79,10 @@ module Flapjack
     def process_notification(notification)
       @logger.debug ("Processing notification: #{notification.inspect}")
 
-      timestamp = Time.now
+      timestamp       = Time.now
       entity_check_id = notification.entity_check_id
-      entity_check = Flapjack::Data::Check.find_by_id(entity_check_id)
-
-      contacts = entity_check.contacts.all + entity_check.entity.contacts.all
+      entity_check    = Flapjack::Data::Check.find_by_id(entity_check_id)
+      contacts        = entity_check.contacts.all + entity_check.entity.contacts.all
 
       if contacts.empty?
         @logger.debug("No contacts for '#{entity_check.entity_name}:#{entity_check.name}'")
@@ -101,6 +100,20 @@ module Flapjack
         media_type = message.medium
         address    = message.address
         contents   = message.contents.merge(notification_contents)
+        medium     = message.contact.media.intersect(:type => media_type).all.first
+
+        if medium
+          contents['rollup_alerts'] = medium.alerting_checks.all.inject({}) do |memo, entity_check|
+            last_state  = entity_check.states.last
+            last_change = last_state.nil? ? nil : last_state.timestamp.to_i
+            memo["#{entity_check.entity_name}:#{entity_check.name}"] = {
+              'duration' => (last_change ? (Time.now.to_i - last_change) : nil),
+              'state'    => last_state.state,
+            }
+            memo
+          end
+          contents['rollup_threshold'] = medium.rollup_threshold
+        end
 
         @notifylog.info("#{entity_check.entity_name}:#{entity_check.name} | " +
           "#{notification.type} | #{message.contact.id} | #{media_type} | #{address}")
@@ -110,7 +123,9 @@ module Flapjack
           return
         end
 
-        @logger.info("Enqueueing #{media_type} alert for #{entity_check.entity_name}:#{entity_check.name} to #{address}")
+        @logger.info("Enqueueing #{media_type} alert for " +
+          "#{entity_check.entity_name}:#{entity_check.name} to #{address} " +
+          " type: #{notification.type} rollup: #{message.rollup || '-'}")
 
         contact = message.contact
 

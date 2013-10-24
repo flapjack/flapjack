@@ -13,12 +13,13 @@ describe Flapjack::Gateways::Jabber, :logger => true do
                  }
   }
 
-  let(:redis) { mock(::Redis) }
+  let(:redis) { double(::Redis) }
+  let(:stanza) { double('stanza') }
 
   let(:now) { Time.now}
 
-  let(:lock) { mock(Monitor) }
-  let(:stop_cond) { mock(MonitorMixin::ConditionVariable) }
+  let(:lock) { double(Monitor) }
+  let(:stop_cond) { double(MonitorMixin::ConditionVariable) }
 
   before(:each) do
     Flapjack.stub(:redis).and_return(redis)
@@ -57,7 +58,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     end
 
     it "handles notifications received via Redis" do
-      bot = mock(Flapjack::Gateways::Jabber::Bot)
+      bot = double(Flapjack::Gateways::Jabber::Bot)
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('johns@example.com', /PROBLEM ::/)
 
@@ -70,10 +71,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
   context 'commands' do
 
-    let(:bot) { mock(Flapjack::Gateways::Jabber::Bot) }
+    let(:bot) { double(Flapjack::Gateways::Jabber::Bot) }
 
-    let(:entity) { mock(Flapjack::Data::Entity) }
-    let(:entity_check) { mock(Flapjack::Data::Check) }
+    let(:entity) { double(Flapjack::Data::Entity) }
+    let(:entity_check) { double(Flapjack::Data::Check) }
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by a signal" do
@@ -136,17 +137,15 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
 
-      all_checks = mock('all_checks', :all => [entity_check])
+      all_checks = double('all_checks', :all => [entity_check])
       entity.should_receive(:checks).and_return(all_checks)
-      all_entities = mock('all_entities', :all => [entity])
+      all_entities = double('all_entities', :all => [entity])
       Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => 'example.com').and_return(all_entities)
 
       entity_check.should_receive(:name).twice.and_return('ping')
-      entity_check.should_receive(:current_maintenance).
-        with(:scheduled => true).and_return(nil)
-      entity_check.should_receive(:current_maintenance).
-        with(:unscheduled => true).and_return(nil)
+      entity_check.should_receive(:current_scheduled_maintenance).and_return(nil)
+      entity_check.should_receive(:current_unscheduled_maintenance).and_return(nil)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -157,16 +156,14 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
 
-      entity_check.should_receive(:current_maintenance).
-        with(:scheduled => true).and_return(nil)
-      entity_check.should_receive(:current_maintenance).
-        with(:unscheduled => true).and_return(nil)
+      entity_check.should_receive(:current_scheduled_maintenance).and_return(nil)
+      entity_check.should_receive(:current_unscheduled_maintenance).and_return(nil)
 
-      all_checks = mock('all_checks', :all => [entity_check])
+      all_checks = double('all_checks', :all => [entity_check])
       Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => 'example.com', :name => 'ping').and_return(all_checks)
 
-      all_entities = mock('all_entities', :all => [entity])
+      all_entities = double('all_entities', :all => [entity])
       Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => 'example.com').and_return(all_entities)
 
@@ -207,10 +204,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       entity_check.should_receive(:name).and_return('ping')
       entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
 
-      state = mock(Flapjack::Data::CheckState)
+      state = double(Flapjack::Data::CheckState)
       state.should_receive(:entity_check).and_return(entity_check)
 
-      all_states = mock('all_states', :all => [state])
+      all_states = double('all_states', :all => [state])
       Flapjack::Data::CheckState.should_receive(:intersect).
         with(:count => '1234').and_return(all_states)
 
@@ -228,7 +225,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /so you want me to test notifications/)
 
-      all_entities = mock('all_entities', :all => [entity])
+      all_entities = double('all_entities', :all => [entity])
       Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => 'example.com').and_return(all_entities)
 
@@ -244,7 +241,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', "yeah, no I can't see example.com in my systems")
 
-      no_entities = mock('no_entities', :all => [])
+      no_entities = double('no_entities', :all => [])
       Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => 'example.com').and_return(no_entities)
 
@@ -268,13 +265,13 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
   context 'XMPP' do
 
-    let(:client)      { mock(::Jabber::Client) }
-    let(:muc_client)  { mock(::Jabber::MUC::SimpleMUCClient) }
+    let(:client)      { double(::Jabber::Client) }
+    let(:muc_client)  { double(::Jabber::MUC::SimpleMUCClient) }
     let(:muc_clients) { {config['rooms'].first => muc_client} }
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by a signal" do
-      interpreter = mock(Flapjack::Gateways::Jabber::Interpreter)
+      interpreter = double(Flapjack::Gateways::Jabber::Interpreter)
       interpreter.should_receive(:respond_to?).with(:interpret).and_return(true)
       interpreter.should_receive(:receive_message).with(nil, 'jim', nil, 'hello!')
       interpreter.should_receive(:receive_message).
@@ -282,7 +279,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       client.should_receive(:on_exception)
 
-      msg_client = mock('msg_client')
+      msg_client = double('msg_client')
       msg_client.should_receive(:body).and_return('hello!')
       msg_client.should_receive(:from).and_return('jim')
       msg_client.should_receive(:each_element).and_yield([]) # TODO improve
@@ -296,7 +293,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       ::Jabber::MUC::SimpleMUCClient.should_receive(:new).and_return(muc_client)
 
       lock.should_receive(:synchronize).and_yield
-      stop_cond = mock(MonitorMixin::ConditionVariable)
+      stop_cond = double(MonitorMixin::ConditionVariable)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
         :stop_condition => stop_cond, :config => config, :logger => @logger)
@@ -424,7 +421,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     end
 
     it "speaks its say buffer" do
-      message = mock(::Jabber::Message)
+      message = double(::Jabber::Message)
       ::Jabber::Message.should_receive(:new).
         with('jim', 'hello!').and_return(message)
 

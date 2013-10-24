@@ -17,7 +17,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
 
   let(:now) { Time.now }
 
-  let(:lock) { mock(Monitor) }
+  let(:lock) { double(Monitor) }
 
   context 'notifications' do
 
@@ -39,13 +39,13 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     end
 
     it "checks for a breach and emits notifications" do
-      time_check = mock(Flapjack::Gateways::Oobetet::TimeChecker)
+      time_check = double(Flapjack::Gateways::Oobetet::TimeChecker)
       time_check.should_receive(:respond_to?).with(:announce).and_return(false)
       time_check.should_receive(:respond_to?).with(:breach?).and_return(true)
       time_check.should_receive(:breach?).
         and_return("haven't seen a test problem notification in the last 300 seconds")
 
-      bot = mock(Flapjack::Gateways::Oobetet::Bot)
+      bot = double(Flapjack::Gateways::Oobetet::Bot)
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with(/^Flapjack Self Monitoring is Critical/)
 
@@ -70,7 +70,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
 
     it "starts and is stopped by a signal" do
       lock.should_receive(:synchronize).and_yield
-      stop_cond = mock(MonitorMixin::ConditionVariable)
+      stop_cond = double(MonitorMixin::ConditionVariable)
       stop_cond.should_receive(:wait_until)
 
       fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :stop_condition => stop_cond,
@@ -142,7 +142,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
 
   context 'XMPP' do
 
-    let(:muc_client) { mock(::Jabber::MUC::SimpleMUCClient) }
+    let(:muc_client) { double(::Jabber::MUC::SimpleMUCClient) }
 
     it "raises an error if a required config setting is not set" do
       lambda {
@@ -153,11 +153,11 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     it "starts and is stopped by a signal" do
       t = now.to_i
 
-      time_checker = mock(Flapjack::Gateways::Oobetet::TimeChecker)
+      time_checker = double(Flapjack::Gateways::Oobetet::TimeChecker)
       time_checker.should_receive(:respond_to?).with(:receive_status).and_return(true)
       time_checker.should_receive(:receive_status).with('recovery', t)
 
-      client = mock(::Jabber::Client)
+      client = double(::Jabber::Client)
       client.should_receive(:connect)
       client.should_receive(:auth).with('password')
       client.should_receive(:send).with(an_instance_of(::Jabber::Presence))
@@ -175,7 +175,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
       ::Jabber::MUC::SimpleMUCClient.should_receive(:new).and_return(muc_client)
 
       lock.should_receive(:synchronize).and_yield
-      stop_cond = mock(MonitorMixin::ConditionVariable)
+      stop_cond = double(MonitorMixin::ConditionVariable)
       stop_cond.should_receive(:wait_until)
 
       fob = Flapjack::Gateways::Oobetet::Bot.new(:lock => lock, :stop_condition => stop_cond,
@@ -185,7 +185,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     end
 
     it "announces to jabber rooms" do
-      muc_client2 = mock(::Jabber::MUC::SimpleMUCClient)
+      muc_client2 = double(::Jabber::MUC::SimpleMUCClient)
 
       muc_client.should_receive(:say).with('hello!')
       muc_client2.should_receive(:say).with('hello!')

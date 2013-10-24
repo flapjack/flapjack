@@ -10,22 +10,22 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
   let(:json_data)       { {'valid' => 'json'} }
   # let(:json_response)   { '{"valid" : "json"}' }
 
-  let(:entity)          { mock(Flapjack::Data::Entity) }
-  let(:all_entities)    { mock('all_entities', :all => [entity]) }
-  let(:no_entities)     { mock('no_entities', :all => []) }
+  let(:entity)          { double(Flapjack::Data::Entity) }
+  let(:all_entities)    { double('all_entities', :all => [entity]) }
+  let(:no_entities)     { double('no_entities', :all => []) }
 
-  let(:entity_check)      { mock(Flapjack::Data::Check) }
-  let(:all_entity_checks) { mock('all_entity_checks', :all => [entity_check]) }
-  let(:no_entity_checks)  { mock('no_entity_checks', :all => []) }
+  let(:entity_check)      { double(Flapjack::Data::Check) }
+  let(:all_entity_checks) { double('all_entity_checks', :all => [entity_check]) }
+  let(:no_entity_checks)  { double('no_entity_checks', :all => []) }
 
   let(:entity_name)     { 'www.example.net'}
   let(:entity_name_esc) { URI.escape(entity_name) }
   let(:check)           { 'ping' }
 
-  let(:entity_presenter)       { mock(Flapjack::Gateways::API::EntityPresenter) }
-  let(:entity_check_presenter) { mock(Flapjack::Gateways::API::EntityCheckPresenter) }
+  let(:entity_presenter)       { double(Flapjack::Gateways::API::EntityPresenter) }
+  let(:entity_check_presenter) { double(Flapjack::Gateways::API::EntityCheckPresenter) }
 
-  let(:redis)           { mock(::Redis) }
+  let(:redis)           { double(::Redis) }
 
   before(:all) do
     Flapjack::Gateways::API.class_eval {
@@ -338,7 +338,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
-      sched_maint = mock(Flapjack::Data::ScheduledMaintenance)
+      sched_maint = double(Flapjack::Data::ScheduledMaintenance)
       Flapjack::Data::ScheduledMaintenance.should_receive(:new).
         with(:start_time => start.to_i, :end_time => start.to_i + duration,
              :summary => 'test').and_return(sched_maint)
@@ -363,10 +363,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     it "deletes a scheduled maintenance period for an entity check" do
       start = Time.at(Time.now.to_i + (60 * 60)) # an hour from now
 
-      sched_maint = mock(Flapjack::Data::ScheduledMaintenance)
-      all_sched_maints = mock('all_sched_maints', :all => [sched_maint])
+      sched_maint = double(Flapjack::Data::ScheduledMaintenance)
+      all_sched_maints = double('all_sched_maints', :all => [sched_maint])
 
-      sched_maints = mock('sched_maints')
+      sched_maints = double('sched_maints')
       sched_maints.should_receive(:intersect_range).
         with(start.to_i, start.to_i, :by_score => true).
         and_return(all_sched_maints)
@@ -390,26 +390,26 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     it "deletes scheduled maintenance periods for multiple entity checks" do
       start = Time.at(Time.now.to_i + (60 * 60)) # an hour from now
 
-      sched_maint = mock(Flapjack::Data::ScheduledMaintenance)
-      all_sched_maints = mock('all_sched_maints', :all => [sched_maint])
+      sched_maint = double(Flapjack::Data::ScheduledMaintenance)
+      all_sched_maints = double('all_sched_maints', :all => [sched_maint])
 
-      sched_maint_2 = mock(Flapjack::Data::ScheduledMaintenance)
-      all_sched_maints_2 = mock('all_sched_maints', :all => [sched_maint_2])
+      sched_maint_2 = double(Flapjack::Data::ScheduledMaintenance)
+      all_sched_maints_2 = double('all_sched_maints', :all => [sched_maint_2])
 
-      entity_check_2 = mock(Flapjack::Data::Check)
+      entity_check_2 = double(Flapjack::Data::Check)
 
       Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
-      all_entity_checks_2 = mock('all_entity_checks_2', :all => [entity_check_2])
+      all_entity_checks_2 = double('all_entity_checks_2', :all => [entity_check_2])
       Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => 'foo').and_return(all_entity_checks_2)
 
-      sched_maints = mock('sched_maints')
+      sched_maints = double('sched_maints')
       sched_maints.should_receive(:intersect_range).
         with(start.to_i, start.to_i, :by_score => true).
         and_return(all_sched_maints)
-      sched_maints_2 = mock('sched_maints_2')
+      sched_maints_2 = double('sched_maints_2')
       sched_maints_2.should_receive(:intersect_range).
         with(start.to_i, start.to_i, :by_score => true).
         and_return(all_sched_maints_2)
@@ -533,19 +533,19 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       json_data_3 = {'more' => 'data'}
 
       entity_2_name = 'entity_2'
-      entity_2 = mock(Flapjack::Data::Entity)
+      entity_2 = double(Flapjack::Data::Entity)
 
       result = [{:entity => entity_name,   :check => check, :outages => json_data},
                 {:entity => entity_2_name, :check => 'foo', :outages => json_data_2},
                 {:entity => entity_2_name, :check => 'bar', :outages => json_data_3}]
 
-      foo_check = mock(Flapjack::Data::Check)
-      all_foo_checks = mock('all_foo_checks', :all => [foo_check])
-      bar_check = mock(Flapjack::Data::Check)
-      all_bar_checks = mock('all_bar_checks', :all => [bar_check])
+      foo_check = double(Flapjack::Data::Check)
+      all_foo_checks = double('all_foo_checks', :all => [foo_check])
+      bar_check = double(Flapjack::Data::Check)
+      all_bar_checks = double('all_bar_checks', :all => [bar_check])
 
-      foo_check_presenter = mock(Flapjack::Gateways::API::EntityCheckPresenter)
-      bar_check_presenter = mock(Flapjack::Gateways::API::EntityCheckPresenter)
+      foo_check_presenter = double(Flapjack::Gateways::API::EntityCheckPresenter)
+      bar_check_presenter = double(Flapjack::Gateways::API::EntityCheckPresenter)
 
       entity_presenter.should_receive(:outages).with(nil, nil).and_return(result[0])
       foo_check_presenter.should_receive(:outages).with(nil, nil).and_return(json_data_2)
@@ -633,12 +633,12 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
 
-      entity_check_2 = mock(Flapjack::Data::Check)
+      entity_check_2 = double(Flapjack::Data::Check)
       entity_check_2.should_receive(:entity).and_return(entity)
       entity_check_2.should_receive(:entity_name).and_return(entity_name)
       entity_check_2.should_receive(:check).and_return('foo')
 
-      all_entity_checks_2 = mock('all_entity_checks_2', :all => [entity_check_2])
+      all_entity_checks_2 = double('all_entity_checks_2', :all => [entity_check_2])
       Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => 'foo').and_return(all_entity_checks_2)
 
@@ -692,7 +692,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity.should_receive(:save).and_return(true)
       entity.should_receive(:id).and_return('10001')
 
-      entity_2 = mock(Flapjack::Data::Entity)
+      entity_2 = double(Flapjack::Data::Entity)
       entity_2.should_receive(:valid?).and_return(true)
       entity_2.should_receive(:save).and_return(true)
       entity_2.should_receive(:id).and_return('10002')

@@ -3,13 +3,13 @@ require 'flapjack/pikelet'
 
 describe Flapjack::Pikelet, :logger => true do
 
-  let(:config)        { mock('config') }
+  let(:config)        { double('config') }
 
-  let(:lock)          { mock(Monitor) }
-  let(:stop_cond)     { mock(MonitorMixin::ConditionVariable) }
-  let(:finished_cond) { mock(MonitorMixin::ConditionVariable) }
-  let(:thread)        { mock(Thread) }
-  let(:shutdown)      { mock(Proc) }
+  let(:lock)          { double(Monitor) }
+  let(:stop_cond)     { double(MonitorMixin::ConditionVariable) }
+  let(:finished_cond) { double(MonitorMixin::ConditionVariable) }
+  let(:thread)        { double(Thread) }
+  let(:shutdown)      { double(Proc) }
 
   it "creates and starts a processor pikelet" do
     Flapjack::Logger.should_receive(:new).and_return(@logger)
@@ -22,7 +22,7 @@ describe Flapjack::Pikelet, :logger => true do
     lock.should_receive(:synchronize).and_yield
     Monitor.should_receive(:new).and_return(lock)
 
-    processor = mock('processor')
+    processor = double('processor')
     processor.should_receive(:start)
     Flapjack::Processor.should_receive(:new).with(:lock => lock,
       :stop_condition => stop_cond, :config => config,
@@ -54,7 +54,7 @@ describe Flapjack::Pikelet, :logger => true do
     lock.should_receive(:synchronize).and_yield
     Monitor.should_receive(:new).and_return(lock)
 
-    processor = mock('processor')
+    processor = double('processor')
     processor.should_receive(:start).twice.and_raise(exc)
     Flapjack::Processor.should_receive(:new).with(:lock => lock,
       :stop_condition => stop_cond, :config => config,
@@ -89,7 +89,7 @@ describe Flapjack::Pikelet, :logger => true do
     lock.should_receive(:synchronize).and_yield
     Monitor.should_receive(:new).and_return(lock)
 
-    server = mock('server')
+    server = double('server')
     server.should_receive(:mount).with('/', Rack::Handler::WEBrick,
       Flapjack::Gateways::Web)
     server.should_receive(:start)
@@ -133,7 +133,7 @@ describe Flapjack::Pikelet, :logger => true do
     lock.should_receive(:synchronize).and_yield
     Monitor.should_receive(:new).and_return(lock)
 
-    server = mock('server')
+    server = double('server')
     server.should_receive(:mount).with('/', Rack::Handler::WEBrick,
       Flapjack::Gateways::Web)
     server.should_receive(:start).and_raise(exc)

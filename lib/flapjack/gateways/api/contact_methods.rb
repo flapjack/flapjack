@@ -163,7 +163,7 @@ module Flapjack
             content_type :json
 
             rule = find_rule(params[:id])
-            rule.as_json.to_json
+            rule.to_json
           end
 
           # Creates a notification rule for a contact
@@ -204,7 +204,7 @@ module Flapjack
             check_errors_on_save(notification_rule)
             contact.notification_rules << notification_rule
 
-            notification_rule.as_json.to_json
+            notification_rule.to_json
           end
 
           # Updates a notification rule
@@ -241,7 +241,7 @@ module Flapjack
 
             check_errors_on_save(notification_rule)
 
-            notification_rule.as_json.to_json
+            notification_rule.to_json
           end
 
           # Deletes a notification rule
@@ -262,7 +262,7 @@ module Flapjack
           app.get '/contacts/:contact_id/media' do
             content_type :json
 
-            find_contact(params[:contact_id]).media.collect {|m| m.as_json }.to_json
+            find_contact(params[:contact_id]).media.to_json
           end
 
           # Returns the specified media of a contact
@@ -274,7 +274,7 @@ module Flapjack
             if medium.nil?
               halt err(403, "no #{params[:id]} for contact '#{params[:contact_id]}'")
             end
-            medium.as_json.to_json
+            medium.to_json
           end
 
           # Creates or updates a media of a contact
@@ -293,11 +293,14 @@ module Flapjack
               is_new = true
             end
             medium.address = params[:address]
-            medium.interval = params[:interval].to_i if params[:interval]
+            [:interval, :rollup_threshold].each do |att|
+              next unless params[att]
+              medium.send("#{att}=".to_sym, params[att].to_i)
+            end
             check_errors_on_save(medium)
             media << medium if is_new
 
-            medium.as_json.to_json
+            medium.to_json
           end
 
           # delete a media of a contact

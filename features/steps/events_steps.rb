@@ -18,7 +18,7 @@ def submit_event(event)
   Flapjack.redis.rpush 'events', event.to_json
 end
 
-def set_scheduled_maintenance(entity, check, duration = 60*60*2)
+def set_scheduled_maintenance(entity, check, duration)
   entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
 
   t = Time.now.to_i
@@ -37,6 +37,16 @@ def remove_scheduled_maintenance(entity, check)
     entity_check.end_scheduled_maintenance(sm, t)
     sched_maint.destroy
   end
+end
+
+def set_unscheduled_maintenance(entity, check, duration)
+  entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
+
+  t = Time.now.to_i
+  unsched_maint = Flapjack::Data::UnscheduledMaintenance.new(:start_time => t,
+    :end_time => t + duration, :summary => 'fixing now')
+  unsched_maint.save.should be_true
+  entity_check.set_unscheduled_maintenance(unsched_maint)
 end
 
 def clear_unscheduled_maintenance(entity, check)
@@ -180,26 +190,24 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in an? (ok
   check  ||= @check
   entity ||= @entity
   clear_unscheduled_maintenance(entity, check)
-  remove_scheduled_maintenance(entity, check)
-  # remove_notifications(entity, check)
   set_state(entity, check, state, Time.now.to_i - (6 * 60 *60))
+  remove_scheduled_maintenance(entity, check)
 end
 
-Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in scheduled maintenance$/ do |check, entity|
+Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in scheduled maintenance(?: for (.+))?$/ do |check, entity, duration|
   check  ||= @check
   entity ||= @entity
+  durn = duration ? ChronicDuration.parse(duration) : (6 * 60 *60)
   clear_unscheduled_maintenance(entity, check)
-  set_scheduled_maintenance(entity, check)
+  set_scheduled_maintenance(entity, check, durn)
 end
 
-# TODO set the state directly rather than submit & drain
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unscheduled maintenance$/ do |check, entity|
   check  ||= @check
   entity ||= @entity
-  remove_scheduled_maintenance(entity, check)
+  set_unscheduled_maintenance(entity, check, 60*60*2)
   set_state(entity, check, 'critical', Time.now.to_i - (6 * 60 *60))
-  submit_acknowledgement(entity, check)
-  drain_events  # TODO these should only be in When clauses
+  remove_scheduled_maintenance(entity, check)
 end
 
 When /^an ok event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
@@ -358,6 +366,18 @@ Given /^user (\d+) has the following notification intervals:$/ do |contact_id, i
   end
 end
 
+Given /^user (\d+) has the following notification rollup thresholds:$/ do |contact_id, rollup_thresholds|
+  contact = Flapjack::Data::Contact.find_by_id(contact_id)
+  rollup_thresholds.hashes.each do |rollup_threshold|
+    ['email', 'sms'].each do |type|
+      if medium = contact.media.intersect(:type => type).all.first
+        medium.rollup_threshold = rollup_threshold[type].to_i
+        medium.save
+      end
+    end
+  end
+end
+
 Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules|
   contact = Flapjack::Data::Contact.find_by_id(contact_id)
   timezone = contact.time_zone
@@ -408,13 +428,24 @@ Then /^all alert dropping keys for user (\d+) should have expired$/ do |contact_
   Flapjack.redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
 end
 
-Then /^(.*) (email|sms) alert(?:s)? should be queued for (.*)$/ do |num_queued, medium, address|
+Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))? should be queued for (.*)$/ do |num_queued, media, notification_type, rollup, address|
   check  = check  ? check  : @check
   entity = entity ? entity : @entity
   case num_queued
   when 'no'
     num_queued = 0
   end
-  queue  = redis_peek("#{medium.downcase}_notifications", 0, 30)
-  queue.find_all {|n| n['address'] == address }.length.should == num_queued.to_i
+  queue = redis_peek("#{media}_notifications", 0, 30)
+  queue.find_all {|n|
+    type_ok = notification_type ? ( n['notification_type'] == notification_type ) : true
+    rollup_ok = true
+    if rollup
+      if rollup == 'none'
+        rollup_ok = n['rollup'].nil?
+      else
+        rollup_ok = n['rollup'] == rollup
+      end
+    end
+    type_ok && rollup_ok && ( n['address'] == address )
+  }.length.should == num_queued.to_i
 end

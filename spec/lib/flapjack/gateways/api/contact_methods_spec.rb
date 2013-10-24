@@ -9,9 +9,9 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   let(:json_data)       { {'valid' => 'json'} }
 
-  let(:contact)      { mock(Flapjack::Data::Contact) }
-  let(:all_contacts) { mock('all_contacts', :all => [contact]) }
-  let(:no_contacts)  { mock('no_contacts', :all => []) }
+  let(:contact)      { double(Flapjack::Data::Contact) }
+  let(:all_contacts) { double('all_contacts', :all => [contact]) }
+  let(:no_contacts)  { double('no_contacts', :all => []) }
 
   let(:media) {
     {'email' => 'ada@example.com',
@@ -25,10 +25,10 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     }
   }
 
-  let(:redis)           { mock(::Redis) }
+  let(:redis)           { double(::Redis) }
 
   let(:notification_rule) {
-    mock(Flapjack::Data::NotificationRule, :id => '1', :contact_id => '21')
+    double(Flapjack::Data::NotificationRule, :id => '1', :contact_id => '21')
   }
 
   let(:notification_rule_data) {
@@ -74,12 +74,12 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       ]
     }
 
-    media = mock('media')
-    media_2 = mock('media_2')
+    media = double('media')
+    media_2 = double('media_2')
 
-    medium = mock(Flapjack::Data::Medium)
-    medium_2 = mock(Flapjack::Data::Medium)
-    medium_3 = mock(Flapjack::Data::Medium)
+    medium = double(Flapjack::Data::Medium)
+    medium_2 = double(Flapjack::Data::Medium)
+    medium_3 = double(Flapjack::Data::Medium)
 
     medium.should_receive(:address=).with('johns@example.dom')
     medium_2.should_receive(:address=).with('johns@conference.localhost')
@@ -100,10 +100,10 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Medium.should_receive(:new).with(:type => 'jabber').and_return(medium_2)
     Flapjack::Data::Medium.should_receive(:new).with(:type => 'email').and_return(medium_3)
 
-    contact_2 = mock(Flapjack::Data::Contact)
-    pd_cred = mock('pagerduty_credentials')
+    contact_2 = double(Flapjack::Data::Contact)
+    pd_cred = double('pagerduty_credentials')
     pd_cred.should_receive(:clear)
-    pd_cred_2 = mock('pagerduty_credentials_2')
+    pd_cred_2 = double('pagerduty_credentials_2')
     pd_cred_2.should_receive(:clear)
 
     contact.should_receive(:pagerduty_credentials).and_return(pd_cred)
@@ -148,9 +148,9 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       ]
     }
 
-    media = mock('media')
+    media = double('media')
 
-    medium = mock(Flapjack::Data::Medium)
+    medium = double(Flapjack::Data::Medium)
     medium.should_receive(:address=).with('jane@example.dom')
     medium.should_receive(:save).and_return(true)
     Flapjack::Data::Medium.should_receive(:new).with(:type => 'email').and_return(medium)
@@ -159,10 +159,10 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     media.should_receive(:<<).with(medium)
 
-    existing = mock(Flapjack::Data::Contact)
+    existing = double(Flapjack::Data::Contact)
     existing.should_receive(:id).and_return("0363")
 
-    pd_cred = mock('pagerduty_credentials')
+    pd_cred = double('pagerduty_credentials')
     pd_cred.should_receive(:clear)
 
     existing.should_receive(:pagerduty_credentials).and_return(pd_cred)
@@ -190,22 +190,22 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       ]
     }
 
-    existing = mock(Flapjack::Data::Contact)
+    existing = double(Flapjack::Data::Contact)
     existing.should_receive(:id).twice.and_return("0362")
     existing.should_receive(:destroy)
 
     Flapjack::Data::Contact.should_receive(:all).and_return([existing])
 
-    medium = mock(Flapjack::Data::Medium)
+    medium = double(Flapjack::Data::Medium)
     medium.should_receive(:address=).with('jane@example.dom')
     medium.should_receive(:save).and_return(true)
     Flapjack::Data::Medium.should_receive(:new).with(:type => 'email').and_return(medium)
 
-    media = mock('media')
+    media = double('media')
     media.should_receive(:each)
     media.should_receive(:<<).with(medium)
 
-    pd_cred = mock('pagerduty_credentials')
+    pd_cred = double('pagerduty_credentials')
     pd_cred.should_receive(:clear)
 
     contact.should_receive(:pagerduty_credentials).and_return(pd_cred)
@@ -249,11 +249,11 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "lists a contact's notification rules" do
-    notification_rule_2 = mock(Flapjack::Data::NotificationRule)
+    notification_rule_2 = double(Flapjack::Data::NotificationRule)
     notification_rule.should_receive(:as_json).and_return(json_data)
     notification_rule_2.should_receive(:as_json).and_return(json_data)
 
-    all_notification_rules = mock('all_notification_rules',
+    all_notification_rules = double('all_notification_rules',
       :all =>  [ notification_rule, notification_rule_2 ])
 
     contact.should_receive(:notification_rules).and_return(all_notification_rules)
@@ -307,7 +307,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::NotificationRule.should_receive(:new).
       with(notification_rule_data_sym).and_return(notification_rule)
 
-    notification_rules = mock('notification_rules')
+    notification_rules = double('notification_rules')
     notification_rules.should_receive(:<<).with(notification_rule)
     contact.should_receive(:notification_rules).and_return(notification_rules)
 
@@ -371,7 +371,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     notification_rule.should_receive(:contact).and_return(contact)
 
     notification_rule.should_receive(:destroy)
-    notification_rules = mock('notification_rules')
+    notification_rules = double('notification_rules')
     notification_rules.should_receive(:delete).with(notification_rule)
     contact.should_receive(:notification_rules).and_return(notification_rules)
 
@@ -418,10 +418,10 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   # GET /contacts/CONTACT_ID/media/MEDIA
   it "returns the specified media of a contact" do
-    medium = mock(Flapjack::Data::Medium)
+    medium = double(Flapjack::Data::Medium)
     medium.should_receive(:as_json).and_return(json_data)
-    all_media = mock('all_media', :all => [medium])
-    media = mock('media')
+    all_media = double('all_media', :all => [medium])
+    media = double('media')
     media.should_receive(:intersect).with(:type => 'sms').and_return(all_media)
     contact.should_receive(:media).and_return(media)
 
@@ -442,8 +442,8 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not return the media of a contact if the media is not present" do
-    all_media = mock('all_media', :all => [])
-    media = mock('media')
+    all_media = double('all_media', :all => [])
+    media = double('media')
     media.should_receive(:intersect).with(:type => 'telepathy').and_return(all_media)
     contact.should_receive(:media).and_return(media)
 
@@ -456,15 +456,15 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   # PUT, DELETE /contacts/CONTACT_ID/media/MEDIA
   it "creates/updates a media of a contact" do
-    medium = mock(Flapjack::Data::Medium)
+    medium = double(Flapjack::Data::Medium)
     medium.should_receive(:address=).with('04987654321')
     medium.should_receive(:interval=).with(200)
     medium.should_receive(:save).and_return(true)
     medium.should_receive(:as_json).and_return(json_data)
 
-    all_media = mock('all_media', :all => [medium])
+    all_media = double('all_media', :all => [medium])
 
-    media = mock('media')
+    media = double('media')
     media.should_receive(:intersect).with(:type => 'sms').and_return(all_media)
     contact.should_receive(:media).and_return(media)
 
@@ -485,16 +485,16 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not create a media of a contact if no address is provided" do
-    medium = mock(Flapjack::Data::Medium)
+    medium = double(Flapjack::Data::Medium)
     medium.should_receive(:address=).with(nil)
     medium.should_receive(:interval=).with(200)
     medium.should_receive(:save).and_return(false)
-    errors = mock('errors', :full_messages => ['Address cannot be blank'])
+    errors = double('errors', :full_messages => ['Address cannot be blank'])
     medium.should_receive(:errors).and_return(errors)
 
-    all_media = mock('all_media', :all => [medium])
+    all_media = double('all_media', :all => [medium])
 
-    media = mock('media')
+    media = double('media')
     media.should_receive(:intersect).with(:type => 'sms').and_return(all_media)
     contact.should_receive(:media).and_return(media)
 
@@ -506,15 +506,15 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "creates a media of a contact even if no interval is provided" do
-    medium = mock(Flapjack::Data::Medium)
+    medium = double(Flapjack::Data::Medium)
     medium.should_receive(:address=).with('04987654321')
     medium.should_receive(:save).and_return(true)
     medium.should_receive(:as_json).and_return(json_data)
     Flapjack::Data::Medium.should_receive(:new).and_return(medium)
 
-    no_media = mock('no_media', :all => [])
+    no_media = double('no_media', :all => [])
 
-    media = mock('media')
+    media = double('media')
     media.should_receive(:intersect).with(:type => 'sms').and_return(no_media)
     media.should_receive(:<<).with(medium)
     contact.should_receive(:media).and_return(media)
@@ -527,12 +527,12 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "deletes a media of a contact" do
-    medium = mock(Flapjack::Data::Medium)
+    medium = double(Flapjack::Data::Medium)
     medium.should_receive(:destroy)
 
-    all_media = mock('all_media', :all => [medium])
+    all_media = double('all_media', :all => [medium])
 
-    media = mock('media')
+    media = double('media')
     media.should_receive(:intersect).with(:type => 'sms').and_return(all_media)
     media.should_receive(:delete).with(medium)
 
@@ -712,14 +712,14 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "gets all entity tags for a contact" do
-    entity_1 = mock(Flapjack::Data::Entity)
+    entity_1 = double(Flapjack::Data::Entity)
     entity_1.should_receive(:name).and_return('entity_1')
     entity_1.should_receive(:tags).and_return(Set.new(['web']))
-    entity_2 = mock(Flapjack::Data::Entity)
+    entity_2 = double(Flapjack::Data::Entity)
     entity_2.should_receive(:name).and_return('entity_2')
     entity_2.should_receive(:tags).and_return(Set.new(['app']))
 
-    all_entities = mock('all_entities', :all => [entity_1, entity_2])
+    all_entities = double('all_entities', :all => [entity_1, entity_2])
     contact.should_receive(:entities).and_return(all_entities)
 
     Flapjack::Data::Contact.should_receive(:find_by_id).
@@ -744,16 +744,16 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     tags_1 = Set.new
     tags_2 = Set.new
 
-    entity_1 = mock(Flapjack::Data::Entity)
+    entity_1 = double(Flapjack::Data::Entity)
     entity_1.should_receive(:name).twice.and_return('entity_1')
     entity_1.should_receive(:tags).twice.and_return(tags_1, tags_1 + ['web'])
     entity_1.should_receive(:tags=).with(tags_1 + ['web'])
-    entity_2 = mock(Flapjack::Data::Entity)
+    entity_2 = double(Flapjack::Data::Entity)
     entity_2.should_receive(:name).twice.and_return('entity_2')
     entity_2.should_receive(:tags).twice.and_return(tags_2, tags_2 + ['app'])
     entity_2.should_receive(:tags=).with(tags_2 + ['app'])
 
-    all_entities = mock('all_entities')
+    all_entities = double('all_entities')
     all_entities.should_receive(:all).and_return([entity_1, entity_2])
     all_entities.should_receive(:each).and_yield(entity_1).and_yield(entity_2)
 
@@ -783,16 +783,16 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     tags_1 = Set.new(['web'])
     tags_2 = Set.new(['app'])
 
-    entity_1 = mock(Flapjack::Data::Entity)
+    entity_1 = double(Flapjack::Data::Entity)
     entity_1.should_receive(:name).and_return('entity_1')
     entity_1.should_receive(:tags).and_return(tags_1)
     entity_1.should_receive(:tags=).with(tags_1 - ['web'])
-    entity_2 = mock(Flapjack::Data::Entity)
+    entity_2 = double(Flapjack::Data::Entity)
     entity_2.should_receive(:name).and_return('entity_2')
     entity_2.should_receive(:tags).and_return(tags_2)
     entity_2.should_receive(:tags=).with(tags_2 - ['app'])
 
-    all_entities = mock('all_entities')
+    all_entities = double('all_entities')
     all_entities.should_receive(:each).and_yield(entity_1).and_yield(entity_2)
 
     contact.should_receive(:entities).and_return(all_entities)

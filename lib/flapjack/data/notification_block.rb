@@ -10,7 +10,11 @@ module Flapjack
 
       include Sandstorm::Record
 
+      # TODO with rollup == true, replaces drop_rollup_alerts_for_contact
+      # existing NotificationBlock usage will need to be have 'rollup == false' added
+
       define_attributes :expire_at        => :timestamp,
+                        :rollup           => :boolean,
                         :media_type       => :string,     # may be nil
                         :entity_check_id  => :id,         # may be nil
                         :state            => :string      # may be nil
@@ -18,6 +22,9 @@ module Flapjack
       index_by :media_type, :entity_check_id, :state
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact'
+
+      # TODO validations -- if rollup == true, media_type must be set, entity_check_id and state not set
+      #                     if rollup == false, media_type, entity_check_id and string must be set
 
       validate :expire_at, :presence => true
       validate :state,

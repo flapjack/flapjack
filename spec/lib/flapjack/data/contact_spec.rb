@@ -13,8 +13,10 @@ describe Flapjack::Data::Contact, :redis => true do
     {:tags               => Set.new(["database","physical"]),
      :entities           => Set.new(["foo-app-01.example.com"]),
      :time_restrictions  => [],
+     :unknown_media      => Set.new,
      :warning_media      => Set.new(["email"]),
      :critical_media     => Set.new(["sms", "email"]),
+     :unknown_blackhole  => false,
      :warning_blackhole  => false,
      :critical_blackhole => false
     }
@@ -24,8 +26,10 @@ describe Flapjack::Data::Contact, :redis => true do
     {:entities           => Set.new,
      :tags               => Set.new,
      :time_restrictions  => [],
+     :unknown_media      => Set.new,
      :warning_media      => Set.new(['email', 'sms', 'jabber', 'pagerduty']),
      :critical_media     => Set.new(['email', 'sms', 'jabber', 'pagerduty']),
+     :unknown_blackhole  => false,
      :warning_blackhole  => false,
      :critical_blackhole => false}
   }
@@ -182,7 +186,7 @@ describe Flapjack::Data::Contact, :redis => true do
       new_notification_block
 
     contact.notification_blocks.count.should == 2
-    contact.expire_notification_blocks
+    contact.send(:expire_notification_blocks)
     contact.notification_blocks.count.should == 1
     contact.notification_blocks.first.id.should == new_notification_block.id
   end

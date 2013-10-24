@@ -134,6 +134,7 @@ module Flapjack
         @previous_state ||= (self.previous_state_id ? Flapjack::Data::CheckState.find_by_id(self.previous_state_id) : nil)
       end
 
+      # TODO refactor the block-from-hell below into multiple methods
       def messages(contacts, opts = {})
         return [] if contacts.nil? || contacts.empty?
 
@@ -143,13 +144,15 @@ module Flapjack
         entity_name = entity_check.entity_name
         check_name  = entity_check.name
 
+        state_or_ack = (self.type == 'acknowledgement') ? 'acknowledgement' : self.state.state
+
         @messages ||= contacts.collect {|contact|
           contact_id = contact.id
           rules = contact.notification_rules
           media = contact.media
 
           logger.debug "Notification#messages: creating messages for contact: #{contact_id} " +
-            "entity: \"#{entity_name}\" check: \"#{check_name}\" state: #{self.state.state} event_tags: #{self.tags.inspect} media: #{media.all.inspect}"
+            "entity: \"#{entity_name}\" check: \"#{check_name}\" state: #{state_or_ack} event_tags: #{self.tags.inspect} media: #{media.all.inspect}"
           rlen = rules.count
           logger.debug "found #{rlen} rule#{(rlen == 1) ? '' : 's'} for contact #{contact_id}"
 
@@ -205,12 +208,10 @@ module Flapjack
 
             logger.debug "collected media_for_severity(#{self.severity}): #{rule_media.inspect}"
 
-            state_for_drop_notif = (self.type == 'acknowledgement') ? 'acknowledgement' : self.state.state
-
             rule_media = rule_media.reject {|medium|
               contact.drop_notifications?(:media => medium,
                                           :entity_check => entity_check,
-                                          :state => state_for_drop_notif)
+                                          :state => state_or_ack)
             }
 
             logger.debug "media after contact_drop?: #{rule_media}"
@@ -219,10 +220,48 @@ module Flapjack
             media.intersect(:type => rule_media).all
           end
 
-          media_to_use.collect do |medium|
+          logger.debug "media_to_use: #{media_to_use}"
+
+          # here begins (revised) rollup madness
+          media_to_use.collect {|medium|
+            rollup_type = nil
+
+            if !(['ok', 'acknowledgement'].include?(state_or_ack)) &&
+              medium.alerting_checks.find_by_id(entity_check.id).nil?
+
+              medium.alerting_checks << entity_check
+            end
+
+            # expunge checks in (un)scheduled maintenance from the alerting set
+            cleaned = medium.clean_alerting_checks
+            logger.debug("cleaned alerting checks for #{media}: #{cleaned}")
+
+            alerting_checks_count = medium.alerting_checks.count
+
+            logger.debug medium.inspect
+
+            if medium.rollup_threshold.nil?
+              # back away slowly
+            elsif alerting_checks_count >= medium.rollup_threshold
+              next if contact.drop_notifications?(media => medium.type, :rollup => true)
+              contact.update_sent_alert_keys(:media => medium.type, :rollup => true,
+                :delete => (['ok', 'acknowledgement'].include?(state_or_ack)))
+
+              rollup_type = 'problem'
+            elsif (alerting_checks_count + cleaned) >= medium.rollup_threshold
+              # alerting checks was just cleaned such that it is now below the rollup threshold
+              rollup_type = 'recovery'
+            end
+            logger.debug "rollup decisions: #{entity_name}:#{check_name} " +
+              "#{state_or_ack} #{medium.type} #{medium.address} " +
+              "rollup_type: #{rollup_type}"
+
             Flapjack::Data::Message.for_contact(contact,
-              :medium => medium.type, :address => medium.address)
-          end
+              :medium => medium.type, :address => medium.address,
+              :rollup => rollup_type)
+
+          }.compact
+
         }.compact.flatten
       end
 

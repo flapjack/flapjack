@@ -4,13 +4,13 @@ require 'flapjack/gateways/email'
 describe Flapjack::Gateways::Email, :logger => true do
 
   it "sends a mail with text and html parts" do
-    entity_check = mock(Flapjack::Data::Check)
+    entity_check = double(Flapjack::Data::Check)
     entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
     entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
 
-    all_entity_checks = mock('all_entity_checks', :all => [entity_check])
+    all_entity_checks = double('all_entity_checks', :all => [entity_check])
 
-    redis = mock(Redis)
+    redis = double(Redis)
     Flapjack.stub(:redis).and_return(redis)
 
     Flapjack::Data::Check.should_receive(:intersect).
@@ -38,7 +38,7 @@ describe Flapjack::Gateways::Email, :logger => true do
 
     Mail::TestMailer.deliveries.should be_empty
 
-    lock = mock(Monitor)
+    lock = double(Monitor)
     lock.should_receive(:synchronize).and_yield
 
     email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => {}, :logger => @logger)

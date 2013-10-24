@@ -152,6 +152,38 @@ module Flapjack
           end
         end
 
+        def get_check_details(entity_check)
+          sched   = entity_check.current_scheduled_maintenance
+          unsched = entity_check.current_unscheduled_maintenance
+          out = ''
+
+          if sched.nil? && unsched.nil?
+            out += "Not in scheduled or unscheduled maintenance.\n"
+          else
+            if sched.nil?
+              out += "Not in scheduled maintenance.\n"
+            else
+              start  = Time.at(sched[:start_time])
+              finish = Time.at(sched[:start_time] + sched[:duration])
+              remain = time_period_in_words( (finish - current_time).ceil )
+              # TODO a simpler time format?
+              out += "In scheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
+            end
+
+            if unsched.nil?
+              out += "Not in unscheduled maintenance.\n"
+            else
+              start  = Time.at(unsched[:start_time])
+              finish = Time.at(unsched[:start_time] + unsched[:duration])
+              remain = time_period_in_words( (finish - current_time).ceil )
+              # TODO a simpler time format?
+              out += "In unscheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
+            end
+          end
+
+          out
+        end
+
         def interpret(room, nick, time, command)
           msg = nil
           action = nil
@@ -211,13 +243,13 @@ module Flapjack
             end
           when /^help$/
             msg = "commands: \n" +
-                  "  ACKID <id> <comment> [duration: <time spec>] \n" +
-                  "  find entities matching /pattern/ \n" +
-                  "  test notifications for <entity>[:<check>] \n" +
-                  "  tell me about <entity>[:<check>] \n" +
-                  "  identify \n" +
-                  "  help \n"
-
+                  "  ACKID <id> <comment> [duration: <time spec>]\n" +
+                  "  find entities matching /pattern/\n" +
+                  "  find checks[ matching /pattern/] on (<entity>|entities matching /pattern/)\n" +
+                  "  test notifications for <entity>[:<check>]\n" +
+                  "  tell me about <entity>[:<check>]\n" +
+                  "  identify\n" +
+                  "  help\n"
           when /^identify$/
             t    = Process.times
             fqdn = `/bin/hostname -f`.chomp
@@ -254,42 +286,6 @@ module Flapjack
 
               current_time = Time.now
 
-              get_details = proc {|entity_check|
-                sched   = entity_check.current_maintenance(:scheduled => true)
-                unsched = entity_check.current_maintenance(:unscheduled => true)
-                out = ''
-
-                if check_name.nil?
-                  out += "---\n#{entity_name}:#{entity_check.name}\n"
-                end
-
-                if sched.nil? && unsched.nil?
-                  out += "Not in scheduled or unscheduled maintenance.\n"
-                else
-                  if sched.nil?
-                    out += "Not in scheduled maintenance.\n"
-                  else
-                    start  = Time.at(sched[:start_time])
-                    finish = Time.at(sched[:start_time] + sched[:duration])
-                    remain = time_period_in_words( (finish - current_time).ceil )
-                    # TODO a simpler time format?
-                    out += "In scheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
-                  end
-
-                  if unsched.nil?
-                    out += "Not in unscheduled maintenance.\n"
-                  else
-                    start  = Time.at(unsched[:start_time])
-                    finish = Time.at(unsched[:start_time] + unsched[:duration])
-                    remain = time_period_in_words( (finish - current_time).ceil )
-                    # TODO a simpler time format?
-                    out += "In unscheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
-                  end
-                end
-
-                out
-              }
-
               checks = if check_name.nil?
                 entity.checks.all.sort_by(&:name)
               else
@@ -301,12 +297,66 @@ module Flapjack
               if checks.empty?
                 msg += "I couldn't find any checks for entity: #{entity_name}"
               else
-                checks.each do |entity_check|
-                  msg += get_details.call(entity_check)
+                checks.each do |check|
+                  msg += "---\n#{entity_name}:#{check.name}\n" if check_name.nil?
+                  msg += get_check_details(check)
                 end
               end
             else
               msg = "hmmm, I can't see #{entity_name} in my systems"
+            end
+
+          when /^(?:find )?checks(?:\s+matching\s+\/(.+)\/)?\s+on\s+(?:entities matching\s+\/(.+)\/|([a-z0-9\-\.]+))/i
+            check_pattern = $1 ? $1.chomp.strip : nil
+            entity_pattern = $2 ? $2.chomp.strip : nil
+            entity_name = $3
+
+            entity_names = if entity_name
+              [entity_name]
+            elsif entity_pattern
+              Flapjack::Data::Entity.find_all_name_matching(entity_pattern)
+            else
+              []
+            end
+
+            msg = ""
+
+            # hash with entity => check_list, filtered by pattern if required
+            entities = entity_names.map {|name|
+              Flapjack::Data::Entity.find_by_name(name)
+            }.compact.inject({}) {|memo, entity|
+              memo[entity] = entity.check_list.select {|check_name|
+                !check_pattern || (check_name =~ /#{check_pattern}/i)
+              }
+              memo
+            }
+
+            report_entities = proc {|ents|
+              ents.inject('') do |memo, (entity, check_list)|
+                if check_list.empty?
+                  memo += "Entity: #{entity.name} has no checks\n"
+                else
+                  memo += "Entity: #{entity.name}\nChecks: #{check_list.join(', ')}\n"
+                end
+                memo += "----\n"
+                memo
+              end
+            }
+
+            case
+            when entity_pattern
+              if entities.empty?
+                msg = "found no entities matching /#{entity_pattern}/"
+              else
+                msg = "found #{entities.size} entities matching /#{entity_pattern}/ ... \n" +
+                      report_entities.call(entities)
+              end
+            when entity_name
+              if entities.empty?
+                msg = "found no entity for '#{entity_name}'"
+              else
+                msg = report_entities.call(entities)
+              end
             end
 
           when /^(?:find )?entities matching\s+\/(.*)\/.*$/i
@@ -323,7 +373,7 @@ module Flapjack
               when number_found == 0
                 msg = "found no entities matching /#{pattern}/"
               when number_found == 1
-                msg = "found #{number_found} entity matching /#{pattern}/ ... \n"
+                msg = "found 1 entity matching /#{pattern}/ ... \n"
               when number_found > max_showable
                 msg = "showing first #{max_showable} of #{number_found} entities found matching /#{pattern}/\n"
               else

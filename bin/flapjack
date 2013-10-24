@@ -29,7 +29,7 @@ require 'flapjack/configuration'
 require 'flapjack/version'
 
 options = OpenStruct.new
-options.config    = File.join('etc', 'flapjack_config.yaml')
+options.config    = Flapjack::Configuration::DEFAULT_CONFIG_PATH
 options.daemonize = nil
 
 @exe = File.basename(__FILE__)
@@ -57,8 +57,8 @@ optparse = OptionParser.new do |opts|
     options.daemonize = d
   end
 
-  opts.on("-p", "--pidfile [PATH]", String, "PATH to the pidfile to write to") do |p|
-    options.pidfile = p
+  opts.on("-p", "--pidfile [PATH]", String, "PATH to the pidfile to write to") do |pid|
+    options.pidfile = pid
   end
 
   opts.on("-l", "--logfile [PATH]", String, "PATH to the logfile to write to") do |l|
@@ -69,11 +69,26 @@ optparse = OptionParser.new do |opts|
     options.version = v
   end
 
-
 end
 optparse.parse!(ARGV)
 
-FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+if options.help
+  puts optparse
+  exit
+elsif options.version
+  puts Flapjack::VERSION
+  exit
+elsif !["start", "stop", "restart", "reload", "status"].include?(ARGV[0])
+  if ARGV.nil? || ARGV.empty?
+    puts "No command provided"
+  else
+    puts "Unknown command provided: '#{ARGV[0]}'"
+  end
+  puts "\n#{optparse}"
+  exit 1
+end
+
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
 
 config = Flapjack::Configuration.new
 config.load(options.config)
@@ -95,11 +110,6 @@ logfile = options.logfile.nil? ?
 daemonize = options.daemonize.nil? ?
               !!config_env['daemonize'] :
               options.daemonize
-
-if options.version
-  puts Flapjack::VERSION
-  exit
-end
 
 flapjack_coord = Proc.new {
   require 'flapjack/coordinator'
@@ -207,22 +217,4 @@ when "status"
     puts "Flapjack is not running"
     exit 3
   end
-
-when "help"
-  puts optparse
-  exit
-
-when "version"
-  puts Flapjack::VERSION
-  exit
-
-else
-  if ARGV.nil? || ARGV.empty?
-    puts "No command provided"
-  else
-    puts "Unknown command provided: '#{ARGV[0]}'"
-  end
-  puts "\n#{optparse}"
-  exit 1
-
 end

@@ -29,7 +29,7 @@
 
     <tr>
       <td><strong>State</strong></td>
-      <td><%= @state.upcase %></td>
+      <td><%= ['ok'].include?(@state) ? @state.upcase : @state.titleize %></td>
     </tr>
 
     <tr>
@@ -61,7 +61,7 @@
     <% if @last_state %>
       <tr>
         <td><strong>Previous State</strong></td>
-        <td><%= @last_state.upcase %></td>
+        <td><%= ['ok'].include?(@last_state) ? @last_state.upcase : @last_state.titleize %></td>
       </tr>
     <% end %>
 
@@ -75,5 +75,5 @@
   </tbody>
 </table>
 
-<p>Cheers,</p>
-<p>Flapjack</p>
+<p>Cheers,<br/>
+Flapjack</p>

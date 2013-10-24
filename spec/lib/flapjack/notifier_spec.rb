@@ -3,7 +3,7 @@ require 'flapjack/notifier'
 
 describe Flapjack::Notifier, :logger => true do
 
-  let(:redis) { mock(::Redis) }
+  let(:redis) { double(::Redis) }
 
   it "starts up, runs and shuts down" do
     # testing with tainted data
@@ -11,7 +11,7 @@ describe Flapjack::Notifier, :logger => true do
 
     Flapjack.stub(:redis).and_return(redis)
 
-    lock = mock(Monitor)
+    lock = double(Monitor)
     lock.should_receive(:synchronize).and_yield
 
     notifier = Flapjack::Notifier.new(:lock => lock, :config => config, :logger => @logger)

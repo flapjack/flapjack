@@ -10,27 +10,36 @@ module Flapjack
 
       include Sandstorm::Record
 
+      TYPES = ['email', 'sms', 'jabber', 'pagerduty']
+
       define_attributes :type => :string,
                         :address  => :string,
-                        :interval => :integer
+                        :interval => :integer,
+                        :rollup_threshold => :integer
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact'
 
+      has_many :alerting_checks, :class_name => 'Flapjack::Data::Check'
+
       index_by :type
 
-      validates :type, :presence => true
+      validates :type, :presence => true,
+        :inclusion => {:in => Flapjack::Data::Medium::TYPES }
       validates :address, :presence => true
       validates :interval, :presence => true,
         :numericality => {:greater_than => 0, :only_integer => true}
 
-      # # replaces the following methods from contact.rb
-      # def interval_for_media(media)
-      # def set_interval_for_media(media, interval)
-      # def set_address_for_media(media, address)
-      # def remove_media(media)
+      def clean_alerting_checks
+        checks_to_remove = alerting_checks.select do |check|
+          Flapjack::Data::CheckState.ok_states.include?(check.state) ||
+          check.in_unscheduled_maintenance? ||
+          check.in_scheduled_maintenance?
+        end
 
-      # contact.media_list should be replaced by
-      # contact.media.collect {|m| m['address'] }
+        alerting_checks.delete(*checks_to_remove) unless checks_to_remove.empty?
+
+        checks_to_remove.size
+      end
 
     end
 

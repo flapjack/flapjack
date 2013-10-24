@@ -12,7 +12,7 @@ Then /^every file in the output should start with "([^\"]*)"$/ do |string|
   end
 end
 
-When /^I run "([^"]*)"$/ do |cmd|
+When /^I run `([^"]*)`$/ do |cmd|
   #bin_path = '/usr/bin'
   #command = "#{bin_path}/#{cmd}"
 
@@ -21,7 +21,7 @@ When /^I run "([^"]*)"$/ do |cmd|
   @exit_status = $?.exitstatus
 end
 
-Then /^the exit status should be (\d+)$/ do |number|
+Then /^the exit value should be (\d+)$/ do |number|
   @exit_status.should == number.to_i
 end
 
