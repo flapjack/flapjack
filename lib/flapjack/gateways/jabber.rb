@@ -152,9 +152,9 @@ module Flapjack
           end
         end
 
-        def get_check_details(entity_check)
-          sched   = entity_check.current_scheduled_maintenance
-          unsched = entity_check.current_unscheduled_maintenance
+        def get_check_details(entity_check, at_time)
+          sched   = entity_check.scheduled_maintenance_at(at_time)
+          unsched = entity_check.unscheduled_maintenance_at(at_time)
           out = ''
 
           if sched.nil? && unsched.nil?
@@ -163,21 +163,17 @@ module Flapjack
             if sched.nil?
               out += "Not in scheduled maintenance.\n"
             else
-              start  = Time.at(sched[:start_time])
-              finish = Time.at(sched[:start_time] + sched[:duration])
-              remain = time_period_in_words( (finish - current_time).ceil )
+              remain = time_period_in_words( (sched.end_time - at_time).ceil )
               # TODO a simpler time format?
-              out += "In scheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
+              out += "In scheduled maintenance: #{sched.start_time} -> #{sched.end_time} (#{remain} remaining)\n"
             end
 
             if unsched.nil?
               out += "Not in unscheduled maintenance.\n"
             else
-              start  = Time.at(unsched[:start_time])
-              finish = Time.at(unsched[:start_time] + unsched[:duration])
-              remain = time_period_in_words( (finish - current_time).ceil )
+              remain = time_period_in_words( (unsched.end_time - at_time).ceil )
               # TODO a simpler time format?
-              out += "In unscheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
+              out += "In unscheduled maintenance: #{unsched.start_time} -> #{unsched.end_time} (#{remain} remaining)\n"
             end
           end
 
@@ -299,7 +295,7 @@ module Flapjack
               else
                 checks.each do |check|
                   msg += "---\n#{entity_name}:#{check.name}\n" if check_name.nil?
-                  msg += get_check_details(check)
+                  msg += get_check_details(check, current_time)
                 end
               end
             else

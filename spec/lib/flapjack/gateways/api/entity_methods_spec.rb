@@ -371,7 +371,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(start.to_i, start.to_i, :by_score => true).
         and_return(all_sched_maints)
       entity_check.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints)
-      entity_check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Fixnum))
+      entity_check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Time))
 
       Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
@@ -417,8 +417,8 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_check.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints)
       entity_check_2.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints_2)
 
-      entity_check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Fixnum))
-      entity_check_2.should_receive(:end_scheduled_maintenance).with(sched_maint_2, an_instance_of(Fixnum))
+      entity_check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Time))
+      entity_check_2.should_receive(:end_scheduled_maintenance).with(sched_maint_2, an_instance_of(Time))
 
       delete "/scheduled_maintenances", :check => {entity_name => [check, 'foo']}, :start_time => start.iso8601
       last_response.status.should == 204

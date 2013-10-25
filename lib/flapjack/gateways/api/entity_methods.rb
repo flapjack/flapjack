@@ -281,7 +281,7 @@ module Flapjack
               proc {|entity_check|
                 next unless sched_maint = entity_check.scheduled_maintenances_by_start.
                   intersect_range(start_time.to_i, start_time.to_i, :by_score => true).all.first
-                entity_check.end_scheduled_maintenance(sched_maint, Time.now.to_i)
+                entity_check.end_scheduled_maintenance(sched_maint, Time.now)
               }
             when 'unscheduled_maintenances'
               end_time = validate_and_parsetime(params[:end_time])

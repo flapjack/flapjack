@@ -3,6 +3,7 @@
 def drain_events
   Flapjack::Data::Event.foreach_on_queue('events') do |event|
     @processor.send(:process_event, event)
+    @last_event_count = event.counter
   end
   drain_notifications
 end
@@ -21,9 +22,9 @@ end
 def set_scheduled_maintenance(entity, check, duration)
   entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
 
-  t = Time.now.to_i
+  t = Time.now
   sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => t,
-    :end_time => t + duration, :summary => 'upgrading everything')
+    :end_time => Time.at(t.to_i + duration), :summary => 'upgrading everything')
   sched_maint.save.should be_true
   entity_check.add_scheduled_maintenance(sched_maint)
 end
@@ -31,7 +32,7 @@ end
 def remove_scheduled_maintenance(entity, check)
   entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
 
-  t = Time.now.to_i
+  t = Time.now
   sched_maints = entity_check.scheduled_maintenances_by_start.all
   sched_maints.each do |sm|
     entity_check.end_scheduled_maintenance(sm, t)
@@ -42,16 +43,16 @@ end
 def set_unscheduled_maintenance(entity, check, duration)
   entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
 
-  t = Time.now.to_i
+  t = Time.now
   unsched_maint = Flapjack::Data::UnscheduledMaintenance.new(:start_time => t,
-    :end_time => t + duration, :summary => 'fixing now')
+    :end_time => Time.at(t.to_i + duration), :summary => 'fixing now')
   unsched_maint.save.should be_true
   entity_check.set_unscheduled_maintenance(unsched_maint)
 end
 
 def clear_unscheduled_maintenance(entity, check)
   entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
-  entity_check.clear_unscheduled_maintenance(Time.now.to_i)
+  entity_check.clear_unscheduled_maintenance(Time.now)
 end
 
 # def remove_notifications(entity, check)
@@ -272,13 +273,9 @@ Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on enti
   entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
   entity_check.should_not be_nil
 
-  last_notification = entity_check.last_notification
-
-  unless last_notification.nil?
-    if last_notification.notification_times.include?(entity_check.last_update.to_i.to_s)
-      puts @logger.messages.join("\n\n")
-    end
-    last_notification.notification_times.should_not include(entity_check.last_update.to_i.to_s)
+  if last_notification = entity_check.last_notification
+    puts @logger.messages.join("\n\n") if last_notification.last_notification_count == @last_event_count
+    last_notification.last_notification_count.should_not == @last_event_count
   end
 end
 
@@ -288,14 +285,11 @@ Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '
 
   entity_check = Flapjack::Data::Check.intersect(:entity_name => entity, :name => check).all.first
   entity_check.should_not be_nil
+
   last_notification = entity_check.last_notification
-
-  if last_notification.nil? || !last_notification.notification_times.include?(entity_check.last_update.to_i.to_s)
-    puts @logger.messages.join("\n\n")
-  end
-
   last_notification.should_not be_nil
-  last_notification.notification_times.should include(entity_check.last_update.to_i.to_s)
+  puts @logger.messages.join("\n\n") if last_notification.last_notification_count != @last_event_count
+  last_notification.last_notification_count.should == @last_event_count
 end
 
 Then /^(un)?scheduled maintenance should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |unsched, check, entity|

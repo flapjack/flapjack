@@ -200,8 +200,8 @@ module Flapjack
         @scheduled_maintenances     = entity_check.scheduled_maintenances_by_start.all
         @acknowledgement_id         = entity_check.failed? ? entity_check.count : nil
 
-        @current_scheduled_maintenance   = entity_check.current_scheduled_maintenance
-        @current_unscheduled_maintenance = entity_check.current_unscheduled_maintenance
+        @current_scheduled_maintenance   = entity_check.scheduled_maintenance_at(@current_time)
+        @current_unscheduled_maintenance = entity_check.unscheduled_maintenance_at(@current_time)
 
         @contacts                   = entity_check.contacts.all
 
@@ -288,7 +288,7 @@ module Flapjack
           intersect_range(start_time, start_time, :by_score => true).first
         return 404 if sched_maint.nil?
 
-        entity_check.end_scheduled_maintenance(sched_maint, Time.now.to_i)
+        entity_check.end_scheduled_maintenance(sched_maint, Time.now)
         redirect back
       end
 

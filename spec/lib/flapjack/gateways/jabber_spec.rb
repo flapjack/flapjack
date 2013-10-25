@@ -144,8 +144,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
         with(:name => 'example.com').and_return(all_entities)
 
       entity_check.should_receive(:name).twice.and_return('ping')
-      entity_check.should_receive(:current_scheduled_maintenance).and_return(nil)
-      entity_check.should_receive(:current_unscheduled_maintenance).and_return(nil)
+      entity_check.should_receive(:scheduled_maintenance_at).and_return(nil)
+      entity_check.should_receive(:unscheduled_maintenance_at).and_return(nil)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -156,8 +156,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
 
-      entity_check.should_receive(:current_scheduled_maintenance).and_return(nil)
-      entity_check.should_receive(:current_unscheduled_maintenance).and_return(nil)
+      entity_check.should_receive(:scheduled_maintenance_at).and_return(nil)
+      entity_check.should_receive(:unscheduled_maintenance_at).and_return(nil)
 
       all_checks = double('all_checks', :all => [entity_check])
       Flapjack::Data::Check.should_receive(:intersect).

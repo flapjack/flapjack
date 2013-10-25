@@ -173,8 +173,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     entity_check.should_receive(:failed?).and_return(false)
 
-    entity_check.should_receive(:current_scheduled_maintenance).and_return(nil)
-    entity_check.should_receive(:current_unscheduled_maintenance).and_return(nil)
+    entity_check.should_receive(:scheduled_maintenance_at).with(time).and_return(nil)
+    entity_check.should_receive(:unscheduled_maintenance_at).with(time).and_return(nil)
 
     no_contacts = double('no_contacts', :all => [])
     entity_check.should_receive(:contacts).and_return(no_contacts)
@@ -265,7 +265,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     sched_maints.should_receive(:intersect_range).with(start_time, start_time,
       :by_score => true).and_return(first_sched_maint)
     entity_check.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints)
-    entity_check.should_receive(:end_scheduled_maintenance).with(sched_maint, anything)
+    entity_check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Time))
 
     delete "/scheduled_maintenances/#{entity_name_esc}/ping?start_time=#{start_time}"
     last_response.status.should == 302

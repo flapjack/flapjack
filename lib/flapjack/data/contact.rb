@@ -128,12 +128,16 @@ module Flapjack
               block = Flapjack::Data::NotificationBlock.intersect(attrs).all.first
 
               if block.nil?
-                block = Flapjack::Data::NotificationBlock.new(attrs)
-                new_block = true
-              end
-              block.expire_at = expire_at
-              block.save
-              if new_block
+                block = Flapjack::Data::NotificationBlock.new(attrs.merge(:expire_at => expire_at))
+                block.save
+                self.notification_blocks << block
+              else
+                # need to remove it from the sorted_set that uses expire_at as a key,
+                # change and re-add -- see https://github.com/ali-graham/sandstorm/issues/1
+                # TODO should this be in a multi/exec block?
+                self.notification_blocks.delete(block)
+                block.expire_at = expire_at
+                block.save
                 self.notification_blocks << block
               end
             end

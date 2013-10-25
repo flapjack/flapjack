@@ -140,7 +140,8 @@ Feature: Rollup on a per contact, per media basis
   Scenario: Unscheduled maintenance ending promotes rollup
     Given check 'ping' for entity 'foo' is in unscheduled maintenance
     And   check 'ping' for entity 'baz' is in an ok state
-    When  a critical event is received for check 'ping' on entity 'foo'
+    When  1 minute passes
+    And   a critical event is received for check 'ping' on entity 'foo'
     And   1 minute passes
     And   a critical event is received for check 'ping' on entity 'foo'
     Then  0 sms alerts should be queued for +61400000001

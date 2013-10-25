@@ -15,13 +15,14 @@ module Flapjack
 
       include Sandstorm::Record
 
-      define_attributes :name        => :string,
-                        :entity_name => :string,
-                        :state       => :string,
-                        :summary     => :string,
-                        :details     => :string,
-                        :last_update => :timestamp,
-                        :enabled     => :boolean
+      define_attributes :name               => :string,
+                        :entity_name        => :string,
+                        :state              => :string,
+                        :summary            => :string,
+                        :details            => :string,
+                        :last_update        => :timestamp,
+                        :last_problem_alert => :timestamp,
+                        :enabled            => :boolean
 
       index_by :entity_name, :name, :enabled, :state
 
@@ -54,41 +55,6 @@ module Flapjack
         @entity ||= Flapjack::Data::Entity.intersect(:name => self.entity_name).all.first
       end
 
-      # TODO work out when it's valid to create the record if not found
-
-      # OLD def self.find_for_event_id(event_id)
-      # NEW entity_name, check_name = event_id.split(':', 2);
-      #     Check.intersect(:entity_name => entity_name, :name => check_name).first
-
-      # OLD def self.find_for_entity_name(entity_name, check_name)
-      # NEW Check.intersect(:entity_name => entity_name, :name => check_name).first
-
-      # OLD def self.find_for_entity_id(entity_id, check_name)
-      # NEW entity = Entity.find_by_id(entity_id)
-      #     Check.intersect(:entity_name => entity.name, :name => check_name).first
-
-      # OLD def self.find_for_entity(entity, check_name)
-      # NEW Check.intersect(:entity_name => entity.name, :name => check_name).first
-
-      # OLD self.find_all_for_entity_name(name)
-      # NEW: entity = Entity.find_by(:name, name); entity.checks
-
-      # OLD: self.find_all
-      # NEW: Check.all
-
-      # OLD: self.find_all_by_entity
-      # NEW: Check.hash_by_entity_name( Check.all )
-
-      # OLD: self.count_all
-      # NEW: Check.count
-
-      # OLD: self.find_all_failing
-      # NEW: self.intersect(:state => Flapjack::Data::CheckState.failing_states).all
-
-      # OLD self.find_all_failing_unacknowledged
-      # NEW self.intersect(:state => Flapjack::Data::CheckState.failing_states).
-      #        all.reject {|ec| ec.in_unscheduled_maintenance? }
-
       def self.hash_by_entity_name(entity_check_list)
         entity_check_list.inject({}) {|memo, ec|
           memo[ec.entity_name] = [] unless memo.has_key?(ec.entity_name)
@@ -97,26 +63,13 @@ module Flapjack
         }
       end
 
-      # OLD self.find_all_failing_by_entity
-      # new self.hash_by_entity( self.intersect(:state => Flapjack::Data::CheckState.failing_states).all )
-
-      # OLD: self.count_all_failing
-      # NEW: self.intersect(:state => Flapjack::Data::CheckState.failing_states).count
-
       def in_scheduled_maintenance?
-        !!Flapjack.redis.get("#{self.record_key}:expiring:scheduled_maintenance")
+        !scheduled_maintenance_ids_at(Time.now).empty?
       end
 
       def in_unscheduled_maintenance?
-        !!Flapjack.redis.get("#{self.record_key}:expiring:unscheduled_maintenance")
+        !unscheduled_maintenance_ids_at(Time.now).empty?
       end
-
-      # OLD event_count_at(timestamp)
-      # NEW retrieve state via its timestamp; state.count
-
-      # OLD def contacts
-      # NEW (check.contacts + check.entity.contacts).uniq
-      # TODO should clear entity remove from checks? probably not...
 
       def handle_state_change_and_enabled
         if self.changed.include?('last_update')
@@ -151,52 +104,44 @@ module Flapjack
           :count => self.count)
         check_state.save
         self.states << check_state
-
-        update_current_scheduled_maintenance
       end
 
 
-      # OLD def create_scheduled_maintenance
       def add_scheduled_maintenance(sched_maint)
         self.scheduled_maintenances_by_start << sched_maint
         self.scheduled_maintenances_by_end << sched_maint
-        update_current_scheduled_maintenance(:revalidate => true)
       end
 
       # TODO allow summary to be changed as part of the termination
-      def end_scheduled_maintenance(sched_maint, time_to_end_at)
-        if sched_maint.start_time >= time_to_end_at
+      def end_scheduled_maintenance(sched_maint, at_time)
+        at_time = Time.at(at_time) unless at_time.is_a?(Time)
 
+        if sched_maint.start_time >= at_time
           # the scheduled maintenance period is in the future
           self.scheduled_maintenances_by_start.delete(sched_maint)
           self.scheduled_maintenances_by_end.delete(sched_maint)
           sched_maint.destroy
-
-          # scheduled maintenance periods have changed, revalidate
-          # TODO don't think this is necessary for the future case
-          update_current_scheduled_maintenance(:revalidate => true)
           return true
-        elsif sched_maint.end_time >= time_to_end_at
-          # it spans the current time, so we'll stop it at that point
-          sched_maint.end_time = time_to_end_at
-          sched_maint.save
+        end
 
-          # scheduled maintenance periods have changed, revalidate
-          update_current_scheduled_maintenance(:revalidate => true)
+        if sched_maint.end_time >= at_time
+          # it spans the current time, so we'll stop it at that point
+          # need to remove it from the sorted_set that uses the end_time as a key,
+          # change and re-add -- see https://github.com/ali-graham/sandstorm/issues/1
+          # TODO should this be in a multi/exec block?
+          self.scheduled_maintenances_by_end.delete(sched_maint)
+          sched_maint.end_time = at_time
+          sched_maint.save
+          self.scheduled_maintenances_by_end.add(sched_maint)
           return true
         end
 
         false
       end
 
-      def current_scheduled_maintenance
-        current_time = Time.now.to_i
-        start_prior_ids = self.scheduled_maintenances_by_start.
-          intersect_range(nil, current_time, :by_score => true).ids
-        end_later_ids = self.scheduled_maintenances_by_end.
-          intersect_range(current_time, nil, :by_score => true).ids
-
-        current_sched_ms = (start_prior_ids & end_later_ids).map {|id|
+      # def current_scheduled_maintenance
+      def scheduled_maintenance_at(at_time)
+        current_sched_ms = scheduled_maintenance_ids_at(at_time).map {|id|
           Flapjack::Data::ScheduledMaintenance.find_by_id(id)
         }
         return if current_sched_ms.empty?
@@ -204,61 +149,47 @@ module Flapjack
         current_sched_ms.max {|sm| sm.end_time }
       end
 
-      def set_unscheduled_maintenance(unsched_maint)
-        current_time = Time.now.to_i
-        time_remaining = unsched_maint.end_time - current_time
+      def unscheduled_maintenance_at(at_time)
+        current_unsched_ms = unscheduled_maintenance_ids_at(at_time).map {|id|
+          Flapjack::Data::UnscheduledMaintenance.find_by_id(id)
+        }
+        return if current_unsched_ms.empty?
+        # if multiple unscheduled maintenances found, find the end_time furthest in the future
+        current_unsched_ms.max {|um| um.end_time }
+      end
 
-        if time_remaining > 0
+      def set_unscheduled_maintenance(unsched_maint)
+        current_time = Time.now
+
+        # time_remaining
+        if (unsched_maint.end_time - current_time) > 0
           self.clear_unscheduled_maintenance(unsched_maint.start_time)
-          Flapjack.redis.setex(unscheduled_maintenance_key, time_remaining, unsched_maint.start_time)
         end
 
         self.unscheduled_maintenances_by_start << unsched_maint
         self.unscheduled_maintenances_by_end << unsched_maint
-        self.last_update = current_time.to_i # ack is treated as changing state in this case TODO check
+        self.last_update = current_time.to_i # ack is treated as changing state in this case
         self.save
       end
 
-      def current_unscheduled_maintenance
-        return unless ts = Flapjack.redis.get(unscheduled_maintenance_key)
-        self.unscheduled_maintenances_by_start.intersect_range(ts, ts, :by_score => true).first
-      end
-
-      # OLD def end_unscheduled_maintenance(end_time)
       def clear_unscheduled_maintenance(end_time)
-        return unless um_start = Flapjack.redis.get(unscheduled_maintenance_key)
-
-        @logger.debug("ending unscheduled downtime for #{self.entity_name}:#{self.name} at #{Time.at(end_time).to_s}") if @logger
-        Flapjack.redis.del(unscheduled_maintenance_key)
-
-        usm = self.unscheduled_maintenances_by_start.intersect(:start_time => um_start).first
-
-        if usm.nil?
-          @logger.error("no unscheduled_maintenance period found with start time #{Time.at(end_time).to_s}") if @logger
-          return
-        end
-
-         usm.end_time = end_time
-         usm.save
+        return unless unsched_maint = unscheduled_maintenance_at(Time.now)
+        # need to remove it from the sorted_set that uses the end_time as a key,
+        # change and re-add -- see https://github.com/ali-graham/sandstorm/issues/1
+        # TODO should this be in a multi/exec block?
+        self.unscheduled_maintenances_by_end.delete(unsched_maint)
+        unsched_maint.end_time = end_time
+        unsched_maint.save
+        self.unscheduled_maintenances_by_end.add(unsched_maint)
       end
-
-      # OLD def last_notification_for_state(type)
-      # NEW entity_check.states.intersect(:state => state, :notified => true).last
-      # TODO ack needs self.unscheduled_maintenances_by_start.intersect(:notified => true).last
-
-      # # results aren't really guaranteed if there are multiple notifications
-      # # of different types sent at the same time
-      # OLD def last_notification
-      # NEW entity_check.states.intersect(:notified => true).last
 
       def last_notification
         events = [self.unscheduled_maintenances_by_start.intersect(:notified => true).last,
                   self.states.intersect(:notified => true).last].compact
 
-        notifying_event = case events.size
+        case events.size
         when 2
-          events.max {|a, b| (a.notified ? a.notification_times.to_a.sort.last.to_i : 0) <=>
-                             (b.notified ? b.notification_times.to_a.sort.last.to_i : 0) }
+          events.max_by {|e| e.last_notification_count }
         when 1
           events.first
         else
@@ -269,8 +200,6 @@ module Flapjack
       def max_notified_severity_of_current_failure
         last_recovery = self.states.intersect(:notified => true, :state => 'ok').last
         last_recovery_time = last_recovery ? last_recovery.timestamp.to_i : 0
-
-        # puts "max_severity recovery #{last_recovery.inspect} // #{last_recovery_time}"
 
         states_since_last_recovery =
           self.states.intersect_range(last_recovery_time, nil, :by_score => true).
@@ -286,34 +215,26 @@ module Flapjack
 
       private
 
-      def scheduled_maintenance_key
-        "#{self.record_key}:expiring:scheduled_maintenance"
+      def scheduled_maintenance_ids_at(at_time)
+        at_time = Time.at(at_time) unless at_time.is_a?(Time)
+
+        start_prior_ids = self.scheduled_maintenances_by_start.
+          intersect_range(nil, at_time.to_i, :by_score => true).ids
+        end_later_ids = self.scheduled_maintenances_by_end.
+          intersect_range(at_time.to_i + 1, nil, :by_score => true).ids
+
+        start_prior_ids & end_later_ids
       end
 
-      def unscheduled_maintenance_key
-        "#{self.record_key}:expiring:unscheduled_maintenance"
-      end
+      def unscheduled_maintenance_ids_at(at_time)
+        at_time = Time.at(at_time) unless at_time.is_a?(Time)
 
-      # if not in scheduled maintenance, looks in scheduled maintenance list for a check to see if
-      # current state should be set to scheduled maintenance, and sets it as appropriate
-      def update_current_scheduled_maintenance(opts = {})
-        return if !opts[:revalidate] && self.in_scheduled_maintenance?
+        start_prior_ids = self.unscheduled_maintenances_by_start.
+          intersect_range(nil, at_time.to_i, :by_score => true).ids
+        end_later_ids = self.unscheduled_maintenances_by_end.
+          intersect_range(at_time.to_i + 1, nil, :by_score => true).ids
 
-        # are we within a scheduled maintenance period?
-        current_sched_maint = current_scheduled_maintenance
-
-        remaining_time = current_sched_maint.nil? ? 0 :
-                           (current_sched_maint.end_time.to_i - Time.now.to_i)
-
-        if remaining_time <= 0
-          if opts[:revalidate]
-            Flapjack.redis.del("#{self.record_key}:expiring:scheduled_maintenance")
-          end
-          return
-        end
-
-        Flapjack.redis.setex("#{self.record_key}:expiring:scheduled_maintenance",
-                             remaining_time, current_sched_maint.id)
+        start_prior_ids & end_later_ids
       end
 
     end

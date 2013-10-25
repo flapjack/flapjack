@@ -21,7 +21,7 @@ module Flapjack
           return false
         end
 
-        entity_check.clear_unscheduled_maintenance(Time.now.to_i)
+        entity_check.clear_unscheduled_maintenance(Time.now)
 
         if !previous_state.nil? && Flapjack::Data::CheckState.ok_states.include?( previous_state.state )
           @logger.debug("Filter: Ok: block - previous state was ok, so blocking")

@@ -24,8 +24,6 @@ module Flapjack
       index_by :enabled
 
       has_many :contacts, :class_name => 'Flapjack::Data::Contact'
-
-      # NB replaces check_list, check_count
       has_many :checks, :class_name => 'Flapjack::Data::Check'
 
       validate :name, :presence => true

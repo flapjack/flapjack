@@ -89,30 +89,12 @@ describe Flapjack::Data::Check, :redis => true do
 
   context "maintenance" do
 
-    it "returns that it is in unscheduled maintenance" do
-      create_entity(:name => entity_name, :id => 1)
-      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
-      Flapjack.redis.set("check:1:expiring:unscheduled_maintenance", 1)
-
-      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
-      ec.should be_in_unscheduled_maintenance
-    end
-
     it "returns that it is not in unscheduled maintenance" do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
       ec.should_not be_in_unscheduled_maintenance
-    end
-
-    it "returns that it is in scheduled maintenance" do
-      create_entity(:name => entity_name, :id => 1)
-      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
-      Flapjack.redis.set("check:1:expiring:scheduled_maintenance", 1)
-
-      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
-      ec.should be_in_scheduled_maintenance
     end
 
     it "returns that it is not in scheduled maintenance" do
@@ -127,20 +109,26 @@ describe Flapjack::Data::Check, :redis => true do
       create_entity(:name => entity_name, :id => 1)
       create_check(:entity_name => entity_name, :name => check_name, :id => 1)
 
-      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
-      ec.current_scheduled_maintenance.should be_nil
+      t = Time.now
 
-      t = Time.now.to_i
+      ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
+      ec.scheduled_maintenance_at(t).should be_nil
 
       sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t,
-        :end_time => t + 2400, :summary => 'planned')
+        :end_time => Time.at(t.to_i + 2400), :summary => 'planned')
       ec.add_scheduled_maintenance(sm)
 
-      lsm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t + 3600,
-        :end_time => t + 4800, :summary => 'later')
+      lsm = Flapjack::Data::ScheduledMaintenance.new(:start_time => Time.at(t.to_i + 3600),
+        :end_time => Time.at(t.to_i + 4800), :summary => 'later')
       ec.add_scheduled_maintenance(lsm)
 
-      csm = ec.current_scheduled_maintenance
+      future = Time.at(t.to_i + 30)
+
+      Delorean.time_travel_to(future)
+
+      ec.should be_in_scheduled_maintenance
+
+      csm = ec.scheduled_maintenance_at(future)
       csm.should_not be_nil
       csm.summary.should == 'planned'
     end
@@ -151,11 +139,15 @@ describe Flapjack::Data::Check, :redis => true do
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
-      t = Time.now.to_i
+      t = Time.now
 
       usm = Flapjack::Data::UnscheduledMaintenance.new(:start_time => t,
         :end_time => t + 2400, :summary => 'impromptu')
       ec.set_unscheduled_maintenance(usm)
+
+      Delorean.time_travel_to( Time.at(t.to_i + 15) )
+
+      ec.should be_in_unscheduled_maintenance
 
       usms = ec.unscheduled_maintenances_by_start.all
       usms.should be_an(Array)
@@ -173,10 +165,10 @@ describe Flapjack::Data::Check, :redis => true do
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
-      t = Time.now.to_i
-      later_t = t + (15 * 60)
+      t = Time.now
+      later_t = t.to_i + (15 * 60)
       usm_a = Flapjack::Data::UnscheduledMaintenance.new(:start_time => t,
-        :end_time => t + half_an_hour, :summary => 'scooby')
+        :end_time => t.to_i + half_an_hour, :summary => 'scooby')
       ec.set_unscheduled_maintenance(usm_a)
 
       Delorean.time_travel_to( Time.at(later_t) )
@@ -202,21 +194,24 @@ describe Flapjack::Data::Check, :redis => true do
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
-      t = Time.now.to_i
-      later_t = t + (15 * 60)
+      t = Time.now
+      later_t = Time.at(t.to_i + (15 * 60))
       usm_a = Flapjack::Data::UnscheduledMaintenance.new(:start_time => t,
-        :end_time => t + half_an_hour, :summary => 'scooby')
+        :end_time => Time.at(t.to_i + half_an_hour), :summary => 'scooby')
       ec.set_unscheduled_maintenance(usm_a)
 
-      Delorean.time_travel_to( Time.at(later_t) )
+      Delorean.time_travel_to( later_t )
       ec.should be_in_unscheduled_maintenance
       ec.clear_unscheduled_maintenance(later_t)
+
+      Delorean.time_travel_to( Time.at(later_t.to_i + 10) )
+
       ec.should_not be_in_unscheduled_maintenance
 
       usms = ec.unscheduled_maintenances_by_start.all
       usms.should be_an(Array)
       usms.should have(1).unscheduled_maintenance_period
-      usms.first.end_time.to_i.should == later_t
+      usms.first.end_time.to_i.should == later_t.to_i
     end
 
     it "ends a scheduled maintenance period for a future time" do
@@ -225,10 +220,10 @@ describe Flapjack::Data::Check, :redis => true do
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
-      t = Time.now.to_i
+      t = Time.now
 
-      sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t + (60 * 60),
-        :end_time => t + (3 * 60 * 60), :summary => '2 hours')
+      sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t.to_i + (60 * 60),
+        :end_time => t.to_i + (3 * 60 * 60), :summary => '2 hours')
       ec.add_scheduled_maintenance(sm)
 
       sms = ec.scheduled_maintenances_by_start.all
@@ -250,19 +245,21 @@ describe Flapjack::Data::Check, :redis => true do
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
-      t = Time.now.to_i
-      sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t + (60 * 60),
-        :end_time => t + (3 * 60 * 60), :summary => '1 hour')
+      t = Time.now
+      sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t.to_i + (60 * 60),
+        :end_time => t.to_i + (3 * 60 * 60), :summary => '1 hour')
       ec.add_scheduled_maintenance(sm)
 
-      Delorean.time_travel_to( Time.at(t + (90 * 60)) )
+      future = Time.at(t.to_i + (90 * 60))
 
-      ec.end_scheduled_maintenance(sm, t + (90 * 60))
+      Delorean.time_travel_to(future)
+
+      ec.end_scheduled_maintenance(sm, future)
 
       sms = ec.scheduled_maintenances_by_start.all
       sms.should be_an(Array)
       sms.should have(1).scheduled_maintenance_period
-      sms.first.end_time.to_i.should == t + (90 * 60)
+      sms.first.end_time.to_i.should == future.to_i
     end
 
     it "does not alter or remove a scheduled maintenance period covering a past time", :time => true do
@@ -271,19 +268,21 @@ describe Flapjack::Data::Check, :redis => true do
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
-      t = Time.now.to_i
-      sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t + (60 * 60),
-        :end_time => t + (3 * 60 * 60), :summary => '1 hour')
+      t = Time.now
+      sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t.to_i + (60 * 60),
+        :end_time => t.to_i + (3 * 60 * 60), :summary => '1 hour')
       ec.add_scheduled_maintenance(sm)
 
-      Delorean.time_travel_to( Time.at(t + (6 * (60 * 60)) ))
+      future = Time.at(t.to_i + (6 * (60 * 60)) )
 
-      ec.end_scheduled_maintenance(sm, t + (6 * (60 * 60)))
+      Delorean.time_travel_to(future)
+
+      ec.end_scheduled_maintenance(sm, future)
 
       sms = ec.scheduled_maintenances_by_start.all
       sms.should be_an(Array)
       sms.should have(1).scheduled_maintenance_period
-      sms.first.end_time.to_i.should == t + (3 * 60 * 60)
+      sms.first.end_time.to_i.should == t.to_i + (3 * 60 * 60)
     end
 
   end

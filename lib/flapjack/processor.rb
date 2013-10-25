@@ -241,14 +241,19 @@ module Flapjack
       # TODO should probably look these up by 'timestamp', last may not be safe...
       case event.type
       when 'service'
+        if Flapjack::Data::CheckState.failing_states.include?( event.state )
+          entity_check.last_problem_alert = timestamp
+          entity_check.save
+        end
+
         current_state.notified = true
-        current_state.notification_times += [timestamp.to_i.to_s]
+        current_state.last_notification_count = event.counter
         current_state.save
       when 'action'
         if event.state == 'acknowledgement'
           unsched_maint = entity_check.unscheduled_maintenances_by_start.last
           unsched_maint.notified = true
-          unsched_maint.notification_times += [timestamp.to_i.to_s]
+          unsched_maint.last_notification_count = event.counter
           unsched_maint.save
         end
       end

@@ -14,7 +14,7 @@ module Flapjack
                         :count     => :integer,
                         :timestamp => :timestamp,
                         :notified  => :boolean,
-                        :notification_times => :set
+                        :last_notification_count => :integer
 
       unique_index_by :count
       index_by :state, :notified

@@ -12,7 +12,9 @@ module Flapjack
                         :end_time   => :timestamp,
                         :summary    => :string,
                         :notified  => :boolean,
-                        :notification_times => :set
+                        :last_notification_count => :integer
+
+      index_by :notified
 
       validates :start_time, :presence => true
       validates :end_time, :presence => true
