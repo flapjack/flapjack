@@ -194,6 +194,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     fj.should_receive(:close)
 
     fj.start
+
+    @logger.errors.should be_empty
   end
 
 end

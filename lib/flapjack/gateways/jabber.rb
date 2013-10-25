@@ -542,12 +542,13 @@ module Flapjack
             EventMachine::Synchrony.next_tick do
               say(Blather::JID.new(alert.address), message, chat_type)
             end
+
           rescue => e
+            # TODO: have non-fatal errors generate messages (eg via flapjack events or straight to
+            # rollbar or similar)
             @logger.error "Error generating or dispatching jabber message: #{e.class}: #{e.message}\n" +
               e.backtrace.join("\n")
             @logger.debug "Message that could not be processed: \n" + event.inspect
-            # FIXME: remove the raise and surface the exception in a less fatal manner and keep going
-            raise
           end
         end
 
