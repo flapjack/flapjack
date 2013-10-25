@@ -548,7 +548,7 @@ module Flapjack
             # rollbar or similar)
             @logger.error "Error generating or dispatching jabber message: #{e.class}: #{e.message}\n" +
               e.backtrace.join("\n")
-            @logger.debug "Message that could not be processed: \n" + event.inspect
+            @logger.debug "Message that could not be processed: \n" + event_json
           end
         end
 

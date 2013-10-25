@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'em-hiredis'
 require 'em-synchrony'
 require 'em-synchrony/em-http'
 
@@ -7,6 +8,7 @@ require 'oj'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/data/global'
+require 'flapjack/data/alert'
 require 'flapjack/redis_pool'
 
 module Flapjack
@@ -60,42 +62,58 @@ module Flapjack
         until @should_quit
           @logger.debug("pagerduty gateway is going into blpop mode on #{queue}")
           events[queue] = @redis.blpop(queue, 0)
-          event         = Oj.load(events[queue][1])
-          type          = event['notification_type']
-          @logger.debug("pagerduty notification event popped off the queue: " + event.inspect)
-          unless 'shutdown'.eql?(type)
-            event_id      = event['event_id']
-            entity, check = event_id.split(':', 2)
-            state         = event['state']
-            summary       = event['summary']
-            address       = event['address']
+          event_json    = events[queue][1]
 
-            headline = type.upcase
+          begin
+            event = Oj.load(event_json)
+            @logger.debug('jabber notification event received: ' + event.inspect)
+            @logger.debug("pagerduty notification event received: " + event.inspect)
 
-            case type.downcase
-            when 'acknowledgement'
-              maint_str      = "has been acknowledged"
-              pagerduty_type = 'acknowledge'
-            when 'problem'
-              maint_str      = "is #{state.upcase}"
-              pagerduty_type = "trigger"
-            when 'recovery'
-              maint_str      = "is #{state.upcase}"
-              pagerduty_type = "resolve"
-            when 'test'
-              maint_str      = ""
-              pagerduty_type = "trigger"
-              headline       = "TEST NOTIFICATION"
+            if 'shutdown'.eql?(event['notification_type'])
+              @logger.debug("@should_quit: #{@should_quit}")
+              next
             end
 
-            message = "#{type.upcase} - \"#{check}\" on #{entity} #{maint_str} - #{summary}"
+            alert = Flapjack::Data::Alert.new(event, :logger => @logger)
+            @logger.debug("processing pagerduty notification address: #{alert.address}, entity: #{alert.entity}, " +
+                          "check: '#{alert.check}', state: #{alert.state}, summary: #{alert.summary}")
 
-            pagerduty_event = { :service_key  => address,
-                                :incident_key => event_id,
+            mydir = File.dirname(__FILE__)
+            message_template_path = mydir + "/pagerduty/alert.text.erb"
+            message_template = ERB.new(File.read(message_template_path), nil, '-')
+
+            @alert = alert
+            bnd    = binding
+
+            begin
+              message = message_template.result(bnd).chomp
+            rescue => e
+              @logger.error "Error while excuting the ERB for a pagerduty message, " +
+                "ERB being executed: #{message_template_path}"
+              raise
+            end
+
+            pagerduty_type = case alert.type
+            when 'acknowledgement'
+              'acknowledge'
+            when 'problem'
+              'trigger'
+            when 'recovery'
+              'resolve'
+            when 'test'
+              'trigger'
+            end
+
+            pagerduty_event = { :service_key  => alert.address,
+                                :incident_key => alert.event_id,
                                 :event_type   => pagerduty_type,
                                 :description  => message }
 
             send_pagerduty_event(pagerduty_event)
+          rescue => e
+            @logger.error "Error generating or dispatching pagerduty message: #{e.class}: #{e.message}\n" +
+              e.backtrace.join("\n")
+            @logger.debug "Message that could not be processed: \n" + event_json
           end
         end
 

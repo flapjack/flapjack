@@ -12,8 +12,8 @@ module Flapjack
     class Alert
 
       # from Flapjack::Data::Notification
-                 #:event_id,
-      attr_reader :state,
+      attr_reader :event_id,
+                  :state,
                   :summary,
                   :acknowledgement_duration,
                   :last_state,
@@ -48,6 +48,7 @@ module Flapjack
       def initialize(contents, opts)
         raise "no logger supplied" unless @logger = opts[:logger]
 
+        @event_id                   = contents['event_id']
         @state                      = contents['state']
         @summary                    = contents['summary']
         @acknowledgement_duration   = contents['duration'] # SMELLY
@@ -72,7 +73,7 @@ module Flapjack
         @in_scheduled_maintenance   = contents['in_scheduled_maintenance']
         @in_unscheduled_maintenance = contents['in_unscheduled_maintenance']
 
-        @entity, @check             = contents['event_id'].split(':', 2)
+        @entity, @check             = @event_id.split(':', 2)
         @notification_id            = contents['id'] || SecureRandom.uuid
 
         allowed_states        = ['ok', 'critical', 'warning', 'unknown', 'test_notifications', 'acknowledgement']

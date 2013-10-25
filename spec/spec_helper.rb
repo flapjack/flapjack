@@ -86,8 +86,8 @@ RSpec.configure do |config|
     #messages = @logger.messages.compact
     #p "logger: " + messages.join(", ") unless messages.empty?
 
-    #errors = @logger.errors.compact
-    #p "logger: " + errors.join(", ") unless errors.empty?
+    errors = @logger.errors.compact
+    p "logger: " + errors.join(", ") unless errors.empty?
 
     @logger.errors.clear
   end
