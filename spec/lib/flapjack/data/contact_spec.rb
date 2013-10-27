@@ -249,6 +249,21 @@ describe Flapjack::Data::Contact, :redis => true do
                            'password'    => 'very_secure'}
   end
 
+  it "sets pagerduty credentials for a contact" do
+    contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
+    contact.set_pagerduty_credentials('service_key' => '567890123456789012345678',
+                                      'subdomain'   => 'eggs',
+                                      'username'    => 'flapjack',
+                                      'password'    => 'tomato')
+
+    @redis.hget('contact_media:362', 'pagerduty').should == '567890123456789012345678'
+    @redis.hgetall('contact_pagerduty:362').should == {
+      'subdomain'   => 'eggs',
+      'username'    => 'flapjack',
+      'password'    => 'tomato'
+    }
+  end
+
   it "sets the interval for a contact's media" do
     contact = Flapjack::Data::Contact.find_by_id('362', :redis => @redis)
     contact.set_interval_for_media('email', 42)

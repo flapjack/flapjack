@@ -233,19 +233,40 @@ module Flapjack
 
             contact = find_contact(params[:contact_id])
             errors = []
-            if params[:address].nil?
-              errors << "no address for '#{params[:id]}' media"
+
+            if 'pagerduty'.eql?(params[:id])
+              if params[:service_key].nil?
+                errors << "no service_key for 'pagerduty' media"
+              end
+
+              errors = [:service_key, :subdomain, :username, :password].inject([]) do |memo, pdp|
+                memo << "no #{pdp.to_s} for 'pagerduty' media" if params[pdp].nil?
+                memo
+              end
+
+              halt err(403, *errors) unless errors.empty?
+
+              contact.set_pagerduty_credentials('service_key'  => params[:service_key],
+                                                'subdomain'    => params[:subdomain],
+                                                'username'     => params[:username],
+                                                'password'     => params[:password])
+
+              contact.pagerduty_credentials.to_json
+            else
+              if params[:address].nil?
+                errors << "no address for '#{params[:id]}' media"
+              end
+
+              halt err(403, *errors) unless errors.empty?
+
+              contact.set_address_for_media(params[:id], params[:address])
+              contact.set_interval_for_media(params[:id], params[:interval])
+              contact.set_rollup_threshold_for_media(params[:id], params[:rollup_threshold])
+
+              {'address'          => contact.media[params[:id]],
+               'interval'         => contact.media_intervals[params[:id]],
+               'rollup_threshold' => contact.media_rollup_thresholds[params[:id]]}.to_json
             end
-
-            halt err(403, *errors) unless errors.empty?
-
-            contact.set_address_for_media(params[:id], params[:address])
-            contact.set_interval_for_media(params[:id], params[:interval])
-            contact.set_rollup_threshold_for_media(params[:id], params[:rollup_threshold])
-
-            {'address'          => contact.media[params[:id]],
-             'interval'         => contact.media_intervals[params[:id]],
-             'rollup_threshold' => contact.media_rollup_thresholds[params[:id]]}.to_json
           end
 
           # delete a media of a contact

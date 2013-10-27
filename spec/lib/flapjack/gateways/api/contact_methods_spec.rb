@@ -434,7 +434,27 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
               'interval'         => alt_media_intervals['sms'],
               'rollup_threshold' => alt_media_rollup_thresholds['sms']}
 
-    put "/contacts/#{contact.id}/media/sms", {:address => '04987654321', :interval => '200', :rollup_threshold => '5'}
+    put "/contacts/#{contact.id}/media/sms", :address => '04987654321',
+      :interval => '200', :rollup_threshold => '5'
+    last_response.should be_ok
+    last_response.body.should be_json_eql(result.to_json)
+  end
+
+  it "updates a contact's pagerduty media credentials" do
+    result = {'service_key' => "flapjacktest@conference.jabber.sausage.net",
+              'subdomain'   => "sausage.pagerduty.com",
+              'username'    => "sausage@example.com",
+              'password'    => "sausage"}
+
+    contact.should_receive(:set_pagerduty_credentials).with(result)
+    contact.should_receive(:pagerduty_credentials).and_return(result)
+    Flapjack::Data::Contact.should_receive(:find_by_id).
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
+
+    put "/contacts/#{contact.id}/media/pagerduty", :service_key => result['service_key'],
+      :subdomain => result['subdomain'], :username => result['username'],
+      :password => result['password']
+
     last_response.should be_ok
     last_response.body.should be_json_eql(result.to_json)
   end
@@ -443,7 +463,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    put "/contacts/#{contact.id}/media/sms", {:address => '04987654321', :interval => '200'}
+    put "/contacts/#{contact.id}/media/sms", :address => '04987654321', :interval => '200'
     last_response.should be_forbidden
   end
 
@@ -451,7 +471,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    put "/contacts/#{contact.id}/media/sms", {:interval => '200'}
+    put "/contacts/#{contact.id}/media/sms", :interval => '200'
     last_response.should be_forbidden
   end
 
@@ -469,7 +489,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    put "/contacts/#{contact.id}/media/sms", {:address => '04987654321'}
+    put "/contacts/#{contact.id}/media/sms", :address => '04987654321'
     last_response.should be_ok
   end
 
