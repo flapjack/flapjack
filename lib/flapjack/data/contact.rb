@@ -129,6 +129,12 @@ module Flapjack
           merge('service_key' => service_key)
       end
 
+      def set_pagerduty_credentials(details)
+        @redis.hset("contact_media:#{self.id}", 'pagerduty', details['service_key'])
+        @redis.hmset("contact_pagerduty:#{self.id}",
+                     *['subdomain', 'username', 'password'].collect {|f| [f, details[f]]})
+      end
+
       # NB ideally contacts_for:* keys would scope the entity and check by an
       # input source, for namespacing purposes
       def entities(options = {})
@@ -211,6 +217,7 @@ module Flapjack
       end
 
       def set_interval_for_media(media, interval)
+        return if 'pagerduty'.eql?(media)
         if interval.nil?
           @redis.hdel("contact_media_intervals:#{self.id}", media)
           return
@@ -225,6 +232,7 @@ module Flapjack
       end
 
       def set_rollup_threshold_for_media(media, threshold)
+        return if 'pagerduty'.eql?(media)
         if threshold.nil?
           @redis.hdel("contact_media_rollup_thresholds:#{self.id}", media)
           return
@@ -234,12 +242,8 @@ module Flapjack
       end
 
       def set_address_for_media(media, address)
+        return if 'pagerduty'.eql?(media)
         @redis.hset("contact_media:#{self.id}", media, address)
-        if media == 'pagerduty'
-          # FIXME - work out what to do when changing the pagerduty service key (address)
-          # probably best solution is to remove the need to have the username and password
-          # and subdomain as pagerduty's updated api's mean we don't them anymore I think...
-        end
         self.media = @redis.hgetall("contact_media:#{@id}")
       end
 
