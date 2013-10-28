@@ -235,10 +235,6 @@ module Flapjack
             errors = []
 
             if 'pagerduty'.eql?(params[:id])
-              if params[:service_key].nil?
-                errors << "no service_key for 'pagerduty' media"
-              end
-
               errors = [:service_key, :subdomain, :username, :password].inject([]) do |memo, pdp|
                 memo << "no #{pdp.to_s} for 'pagerduty' media" if params[pdp].nil?
                 memo
