@@ -15,6 +15,8 @@
           <h2><%= h @contact.name %></h2>
         </div>
 
+        <% alerting = {} %>
+
         <h3>Contact Media</h3>
         <% if !@contact.media || @contact.media.empty? %>
           <p>No media</p>
@@ -24,9 +26,11 @@
               <th>Media</th>
               <th>Address</th>
               <th>Interval</th>
-              <th>Rollup Threshold</th>
+              <th>Summary Mode</th>
+              <th>Summary Threshold</th>
             </tr>
             <% @contact.media.each_pair do |mk, mv| %>
+              <% alerting[mk] = @contact.alerting_checks_for_media(mk) %>
               <tr>
                 <% if 'pagerduty'.eql?(mk) %>
                   <td>PagerDuty</td>
@@ -35,31 +39,68 @@
                       <p><%= 'password'.eql?(pk) ? h("#{pk}: ...") : h("#{pk}: #{pv}") %></p>
                     <% end %>
                   </td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
                 <% else %>
                   <td><%= h mk.capitalize %></td>
                   <td><%= h mv %></td>
+                  <td>
+                    <% if @contact.media_intervals[mk] %>
+                      <%= h @contact.media_intervals[mk] %> seconds
+                    <% else %>
+                      no custom interval
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if alerting[mk].length >= @contact.media_rollup_thresholds[mk].to_i %>
+                      Yes -
+                    <% else %>
+                      No -
+                    <% end %>
+                    <%= alerting[mk].length %> alerting
+                  </td>
+                  <td>
+                    <% if @contact.media_rollup_thresholds[mk] %>
+                      <%= h @contact.media_rollup_thresholds[mk] %>
+                    <% else %>
+                      -
+                    <% end %>
+                  </td>
                 <% end %>
-
-                <td>
-                  <% if @contact.media_intervals[mk] %>
-                    <%= h @contact.media_intervals[mk] %> seconds
-                  <% else %>
-                    no custom interval
-                  <% end %>
-                </td>
-                <td>
-                  <% if @contact.media_rollup_thresholds[mk] %>
-                    <%= h @contact.media_rollup_thresholds[mk] %> failing checks
-                  <% else %>
-                    -
-                  <% end %>
-                </td>
               </tr>
             <% end %>
           </table>
         <% end %>
 
-        <h3>Entities and Checks</h3>
+        <h3>Alerting Checks</h3>
+        <p>These failing checks are currently alerting because they are not acknowledged, not in scheduled maintenance, and currently allowed by this contact's notification rules.</p>
+
+        <table class="table table-bordered table-hover table-condensed">
+          <tr>
+            <th>Media</th>
+            <th>Alerting Checks</th>
+          </tr>
+          <% alerting.each_pair do |media, checks| %>
+            <% if checks.length > 0 %>
+              <tr>
+                <td><%= h media.capitalize %></td>
+                <td>
+                  <ul>
+                    <% checks.each do |entity_check| %>
+                      <% entity, check = entity_check.split(':', 2) %>
+                      <li>"<%= check %>" on <%= entity %></li>
+                    <% end %>
+                  </ul>
+                </td>
+              </tr>
+            <% else %>
+              <tr><td colspan="2">No alerting checks, yay!</td></tr>
+            <% end %>
+          <% end %>
+        </table>
+
+        <h3>All Entities and Checks</h3>
         <% if !@entities_and_checks || @entities_and_checks.empty? %>
           <p>No entities</p>
         <% else %>
@@ -71,14 +112,15 @@
             <% @entities_and_checks.each do |ec| %>
               <%
                 entity = ec[:entity]
-                checks = ec[:checks]
+                sausages = ec[:checks]
                %>
               <tr>
                 <td><a href="/entity/<%= u(entity.name) %>" title="entity status"><%= h entity.name %></a></td>
                 <td>
-                  <% checks.each do |check| %>
-                    <a href="/check?entity=<%= u(entity.name) %>&amp;check=<%= u(check) %>" title="check status"><%= h check %></a>
-                  <% end %>
+                  <% sausage_html = sausages.map do |sausage| %>
+                  <%   "<a href=\"/check?entity=#{u(entity.name)}&amp;check=#{u(sausage)}\" title=\"check status\">#{ h sausage }</a>" %>
+                  <% end.join(', ') %>
+                  sausage: <%= sausage_html %>
                 </td>
               </tr>
             <% end %>
