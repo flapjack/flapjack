@@ -541,6 +541,7 @@ module Flapjack
             chat_type = :groupchat if @config['rooms'] && @config['rooms'].include?(alert.address)
             EventMachine::Synchrony.next_tick do
               say(Blather::JID.new(alert.address), message, chat_type)
+              alert.record_send_success!
             end
 
           rescue => e

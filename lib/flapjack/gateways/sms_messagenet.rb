@@ -83,7 +83,8 @@ module Flapjack
           status = (http.nil? || http.response_header.nil?) ? nil : http.response_header.status
           if (status >= 200) && (status <= 206)
             @sent += 1
-            @logger.info "Sent SMS via Messagenet, response status is #{status}, " +
+            alert.record_send_success!
+            @logger.debug "Sent SMS via Messagenet, response status is #{status}, " +
               "notification_id: #{notification_id}"
           else
             @logger.error "Failed to send SMS via Messagenet, response status is #{status}, " +

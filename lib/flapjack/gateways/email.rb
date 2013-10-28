@@ -76,6 +76,7 @@ module Flapjack
                        :port     => port || 25,
                        :starttls => starttls}
           smtp_args.merge!(:auth => auth) if auth
+
           email = EM::P::SmtpClient.send(smtp_args)
 
           response = EM::Synchrony.sync(email)
@@ -83,13 +84,13 @@ module Flapjack
           # http://tools.ietf.org/html/rfc821#page-36 SMTP response codes
           if response && response.respond_to?(:code) &&
             ((response.code == 250) || (response.code == 251))
-            @logger.info "Email sending succeeded"
+            alert.record_send_success!
             @sent += 1
           else
             @logger.error "Email sending failed"
           end
 
-          @logger.info "Email response: #{response.inspect}"
+          @logger.debug "Email response: #{response.inspect}"
 
         rescue => e
           @logger.error "Error generating or delivering email to #{alert.address}: #{e.class}: #{e.message}"
