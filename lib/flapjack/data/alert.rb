@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'active_support/inflector'
+require 'flapjack/utility'
 
 # Alert is the object ready to send to someone, complete with an address and all
 # the data with which to render the text of the alert in the appropriate gateway
@@ -44,6 +45,8 @@ module Flapjack
       attr_reader :entity,
                   :check,
                   :notification_id
+
+      include Flapjack::Utility
 
       def initialize(contents, opts)
         raise "no logger supplied" unless @logger = opts[:logger]
@@ -165,6 +168,39 @@ module Flapjack
           memo
         end.join('; ')
       end
+
+      def to_s
+        msg = "Alert via #{media}:#{address} to contact #{contact_id} (#{contact_first_name} #{contact_last_name}): "
+        msg += type_sentence_case
+        if rollup
+          msg += " - #{rollup_states_summary} (#{rollup_states_detail_text(:max_checks_per_state => 3)})"
+        else
+          msg += " - '#{check}' on #{entity}"
+          unless ['acknowledgement', 'test'].include?(type)
+            msg += " is #{state_title_case}"
+          end
+          if ['acknowledgement'].include?(type)
+            msg += " has been acknowledged, unscheduled maintenance created for "
+            msg += time_period_in_words(acknowledgement_duration)
+          end
+          if summary && summary.length > 0
+            msg += " - #{summary}"
+          end
+        end
+      end
+
+      def record_send_success!
+        @logger.info "Sent alert successfully: #{to_s}"
+      end
+
+      # TODO: perhaps move message send failure porting to this method
+      # to avoid duplication in the gateways, and to more easily allow
+      # better error reporting on message generation / send failure
+      #def record_send_failure!(opts)
+      #  exception = opts[:exception]
+      #  message   = opts[:message]
+      #  @logger.error "Error sending an alert! #{alert}"
+      #end
 
     end
   end
