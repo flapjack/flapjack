@@ -107,7 +107,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     entity_check.should_receive(:contacts).and_return([contact])
     entity_check.should_receive(:entity_name).exactly(2).times.and_return('foo-app-01.bar.net')
     Flapjack::Data::Event.should_receive(:create_acknowledgement).with('foo-app-01.bar.net', 'PING',
-      :summary => 'Acknowledged on PagerDuty', :redis => redis)
+      :summary => 'Acknowledged on PagerDuty', :duration => 14400, :redis => redis)
 
     Flapjack::Data::Global.should_receive(:unacknowledged_failing_checks).and_return([entity_check])
 
@@ -131,7 +131,8 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     redis.should_receive(:blpop).twice {
       blpop_count += 1
       if blpop_count == 1
-        ["pagerduty_notifications", %q{{"notification_type":"problem","event_id":"main-example.com:ping","state":"critical","summary":"!!!"}}]
+        ["pagerduty_notifications", '{"notification_type":"problem","event_id":"main-example.com:ping",' +
+          '"state":"critical","summary":"!!!","state_duration":120,"duration":30}']
       else
         fp.instance_variable_set('@should_quit', true)
         ["pagerduty_notifications", %q{{"notification_type":"shutdown"}}]
@@ -142,6 +143,8 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     fp.should_receive(:send_pagerduty_event)
 
     fp.start
+
+    @logger.errors.should be_empty
   end
 
   it "tests the pagerduty connection" do

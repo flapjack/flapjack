@@ -30,9 +30,10 @@ module Flapjack
       # TODO probably shouldn't always be creating on query -- work out when this should be happening
       def self.for_event_id(event_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
+        logger = options[:logger]
         entity_name, check = event_id.split(':', 2)
-        self.new(Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis, :create => true), check,
-          :redis => redis)
+        self.new(Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis, :create => true, :logger => true), check,
+          :redis => redis, :logger => logger)
       end
 
       # TODO probably shouldn't always be creating on query -- work out when this should be happening
@@ -533,7 +534,7 @@ module Flapjack
         end
 
         entity.contacts + contact_ids.collect {|c_id|
-          Flapjack::Data::Contact.find_by_id(c_id, :redis => @redis)
+          Flapjack::Data::Contact.find_by_id(c_id, :redis => @redis, :logger => @logger)
         }.compact
       end
 

@@ -7,12 +7,7 @@ describe Flapjack::Gateways::Email, :logger => true do
     email = double('email')
 
     entity_check = double(Flapjack::Data::EntityCheck)
-    entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
-    entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
     redis = double('redis')
-
-    Flapjack::Data::EntityCheck.should_receive(:for_event_id).
-      with('example.com:ping', :redis => redis).and_return(entity_check)
 
     # TODO better checking of what gets passed here
     EM::P::SmtpClient.should_receive(:send).with(

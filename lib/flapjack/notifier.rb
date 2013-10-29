@@ -92,7 +92,7 @@ module Flapjack
 
       timestamp    = Time.now
       event_id     = notification.event_id
-      entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis)
+      entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis, :logger => @logger)
       contacts     = entity_check.contacts
 
       if contacts.empty?
@@ -106,13 +106,16 @@ module Flapjack
 
       notification_contents = notification.contents
 
+      in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
+      in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
+
       messages.each do |message|
         media_type = message.medium
         address    = message.address
         contents   = message.contents.merge(notification_contents)
 
         if message.rollup
-          contents['rollup_alerts'] = message.contact.alerting_checks_for_media(media_type).inject({}) do |memo, alert|
+          rollup_alerts = message.contact.alerting_checks_for_media(media_type).inject({}) do |memo, alert|
             ec = Flapjack::Data::EntityCheck.for_event_id(alert, :redis => @redis)
             last_change = ec.last_change
             memo[alert] = {
@@ -121,7 +124,10 @@ module Flapjack
             }
             memo
           end
+          contents['rollup_alerts'] = rollup_alerts
+
           contents['rollup_threshold'] = message.contact.rollup_threshold_for_media(media_type)
+
         end
 
         @notifylog.info("#{event_id} | " +

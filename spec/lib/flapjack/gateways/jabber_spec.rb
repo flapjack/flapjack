@@ -177,10 +177,12 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     blpop_count = 0
 
+    event_json = '{"notification_type":"problem","event_id":"main-example.com:ping",' +
+      '"state":"critical","summary":"!!!","duration":43,"state_duration":76}'
     redis.should_receive(:blpop).twice {
       blpop_count += 1
       if blpop_count == 1
-        ["jabber_notifications", %q{{"notification_type":"problem","event_id":"main-example.com:ping","state":"critical","summary":"!!!"}}]
+        ["jabber_notifications", event_json]
       else
         fj.instance_variable_set('@should_quit', true)
         ["jabber_notifications", %q{{"notification_type":"shutdown"}}]
@@ -192,6 +194,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     fj.should_receive(:close)
 
     fj.start
+
+    @logger.errors.should be_empty
   end
 
 end

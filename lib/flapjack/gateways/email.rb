@@ -12,6 +12,7 @@ require 'em/protocols/smtpclient'
 require 'flapjack/utility'
 
 require 'flapjack/data/entity_check'
+require 'flapjack/data/alert'
 
 module Flapjack
   module Gateways
@@ -31,46 +32,22 @@ module Flapjack
         end
 
         # TODO refactor to remove complexity
-        def perform(notification)
-          prepare( notification )
-          deliver( notification )
+        def perform(contents)
+          @logger.debug "Woo, got an alert to send out: #{contents.inspect}"
+          alert = prepare(contents)
+          deliver(alert)
         end
 
         # sets a bunch of class instance variables for each email
-        def prepare(notification)
-          @logger.debug "Woo, got a notification to send out: #{notification.inspect}"
-
-          # The instance variables are referenced by the templates, which
-          # share the current binding context
-          @notification_type   = notification['notification_type']
-          @notification_id     = notification['id'] || SecureRandom.uuid
-          @rollup              = notification['rollup']
-          @rollup_alerts       = notification['rollup_alerts']
-          @rollup_threshold    = notification['rollup_threshold']
-          @contact_first_name  = notification['contact_first_name']
-          @contact_last_name   = notification['contact_last_name']
-          @state               = notification['state']
-          @duration            = notification['state_duration']
-          @summary             = notification['summary']
-          @last_state          = notification['last_state']
-          @last_summary        = notification['last_summary']
-          @details             = notification['details']
-          @time                = notification['time']
-          @entity_name, @check = notification['event_id'].split(':', 2)
-
-          entity_check = Flapjack::Data::EntityCheck.for_event_id(notification['event_id'],
-            :redis => @redis)
-
-          @in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
-          @in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
-
+        def prepare(contents)
+          Flapjack::Data::Alert.new(contents, :logger => @logger)
         rescue => e
-          @logger.error "Error preparing email to #{m_to}: #{e.class}: #{e.message}"
+          @logger.error "Error preparing email to #{contents['address']}: #{e.class}: #{e.message}"
           @logger.error e.backtrace.join("\n")
           raise
         end
 
-        def deliver(notification)
+        def deliver(alert)
           host = @smtp_config ? @smtp_config['host'] : nil
           port = @smtp_config ? @smtp_config['port'] : nil
           starttls = @smtp_config ? !! @smtp_config['starttls'] : nil
@@ -85,21 +62,21 @@ module Flapjack
 
           m_from = "flapjack@#{@fqdn}"
           @logger.debug("flapjack_mailer: set from to #{m_from}")
-          m_reply_to = m_from
-          m_to       = notification['address']
 
-
-          mail = prepare_email(:from => m_from,
-                               :to   => m_to)
+          mail = prepare_email(:from       => m_from,
+                               :to         => alert.address,
+                               :message_id => "<#{alert.notification_id}@#{@fqdn}>",
+                               :alert      => alert)
 
           smtp_args = {:from     => m_from,
-                       :to       => m_to,
+                       :to       => alert.address,
                        :content  => "#{mail.to_s}\r\n.\r\n",
                        :domain   => @fqdn,
                        :host     => host || 'localhost',
                        :port     => port || 25,
                        :starttls => starttls}
           smtp_args.merge!(:auth => auth) if auth
+
           email = EM::P::SmtpClient.send(smtp_args)
 
           response = EM::Synchrony.sync(email)
@@ -107,45 +84,64 @@ module Flapjack
           # http://tools.ietf.org/html/rfc821#page-36 SMTP response codes
           if response && response.respond_to?(:code) &&
             ((response.code == 250) || (response.code == 251))
-            @logger.info "Email sending succeeded"
+            alert.record_send_success!
             @sent += 1
           else
             @logger.error "Email sending failed"
           end
 
-          @logger.info "Email response: #{response.inspect}"
+          @logger.debug "Email response: #{response.inspect}"
 
         rescue => e
-          @logger.error "Error delivering email to #{m_to}: #{e.class}: #{e.message}"
+          @logger.error "Error generating or delivering email to #{alert.address}: #{e.class}: #{e.message}"
           @logger.error e.backtrace.join("\n")
           raise
         end
 
         private
 
+        # returns a Mail object
         def prepare_email(opts = {})
           from       = opts[:from]
           to         = opts[:to]
-          message_id = "<#{@notification_id}@#{@fqdn}>"
+          message_id = opts[:message_id]
+          alert      = opts[:alert]
 
           message_type = case
-          when @rollup
+          when alert.rollup
             'rollup'
           else
             'alert'
           end
 
-          subject_template = ERB.new(File.read(File.dirname(__FILE__) +
-            "/email/#{message_type}_subject.text.erb"), nil, '-')
+          mydir = File.dirname(__FILE__)
 
-          text_template = ERB.new(File.read(File.dirname(__FILE__) +
-            "/email/#{message_type}.text.erb"), nil, '-')
+          subject_template_path = mydir + "/email/#{message_type}_subject.text.erb"
+          text_template_path    = mydir + "/email/#{message_type}.text.erb"
+          html_template_path    = mydir + "/email/#{message_type}.html.erb"
 
-          html_template = ERB.new(File.read(File.dirname(__FILE__) +
-            "/email/#{message_type}.html.erb"), nil, '-')
+          subject_template = ERB.new(File.read(subject_template_path), nil, '-')
+          text_template    = ERB.new(File.read(text_template_path), nil, '-')
+          html_template    = ERB.new(File.read(html_template_path), nil, '-')
 
-          bnd        = binding
-          subject    = subject_template.result(bnd).chomp
+          @alert  = alert
+          bnd     = binding
+
+          # do some intelligence gathering in case an ERB execution blows up
+          begin
+            erb_to_be_executed = subject_template_path
+            subject = subject_template.result(bnd).chomp
+
+            erb_to_be_executed = text_template_path
+            body_text = text_template.result(bnd)
+
+            erb_to_be_executed = html_template_path
+            body_html = html_template.result(bnd)
+          rescue => e
+            @logger.error "Error while excuting ERBs for an email: " +
+              "ERB being executed: #{erb_to_be_executed}"
+            raise
+          end
 
           @logger.debug("preparing email to: #{to}, subject: #{subject}, message-id: #{message_id}")
 
@@ -157,12 +153,12 @@ module Flapjack
             message_id message_id
 
             text_part do
-              body text_template.result(bnd)
+              body body_text
             end
 
             html_part do
               content_type 'text/html; charset=UTF-8'
-              body html_template.result(bnd)
+              body body_html
             end
           end
 

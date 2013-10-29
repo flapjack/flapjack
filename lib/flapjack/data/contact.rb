@@ -316,10 +316,13 @@ module Flapjack
         key = "contact_alerting_checks:#{self.id}:media:#{media}"
         cleaned = 0
         alerting_checks_for_media(media).each do |check|
+          entity_check = Flapjack::Data::EntityCheck.for_event_id(check, :redis => @redis)
           next unless Flapjack::Data::EntityCheck.state_for_event_id?(check, :redis => @redis) == 'ok' ||
             Flapjack::Data::EntityCheck.in_unscheduled_maintenance_for_event_id?(check, :redis => @redis) ||
-            Flapjack::Data::EntityCheck.in_scheduled_maintenance_for_event_id?(check, :redis => @redis)
+            Flapjack::Data::EntityCheck.in_scheduled_maintenance_for_event_id?(check, :redis => @redis) ||
+            !entity_check.contacts.map {|c| c.id}.include?(self.id)
 
+          # FIXME: why can't i get this logging when called from notifier (notification.rb)?
           @logger.debug("removing from alerting checks for #{self.id}/#{media}: #{check}") if @logger
           remove_alerting_check_for_media(media, check)
           cleaned += 1
