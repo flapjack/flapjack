@@ -97,8 +97,11 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
           app.get '/contacts' do
             content_type :json
-
-            Flapjack::Data::Contact.all(:redis => redis).to_json
+            "[" +
+              Flapjack::Data::Contact.all(:redis => redis).map do |contact|
+                contact.to_json
+              end.join(',') +
+              "]"
           end
 
           # Returns the core information about the specified contact
