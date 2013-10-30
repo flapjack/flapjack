@@ -66,7 +66,6 @@ module Flapjack
         @redis.hset('event_counters', 'action', 0)
       end
 
-      #@redis.zadd('executive_instances', boot_time.to_i, @instance_id)
       @redis.hset("executive_instance:#{@instance_id}", 'boot_time', boot_time.to_i)
       @redis.hset("event_counters:#{@instance_id}", 'all', 0)
       @redis.hset("event_counters:#{@instance_id}", 'ok', 0)

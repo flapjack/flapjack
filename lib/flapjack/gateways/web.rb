@@ -371,20 +371,29 @@ module Flapjack
       def self_stats
         @fqdn         = `/bin/hostname -f`.chomp
         @pid          = Process.pid
-        @instance_id  = "#{@fqdn}:#{@pid}"
 
-        @dbsize                  = redis.dbsize
-        @executive_instances     = redis.keys("executive_instance:*").map {|i|
-          [ i.match(/executive_instance:(.*)/)[1], redis.hget(i, 'boot_time').to_i ]
-        }.sort {|a, b| b[1] <=> a[1]}
-        @event_counters          = redis.hgetall('event_counters')
-        @event_counters_instance = redis.hgetall("event_counters:#{@instance_id}")
-        @boot_time               = Time.at(redis.hget("executive_instance:#{@instance_id}", 'boot_time').to_i)
-        @uptime                  = Time.now.to_i - @boot_time.to_i
-        @uptime_string           = time_period_in_words(@uptime)
-        @event_rate_all          = (@uptime > 0) ?
-                                   (@event_counters_instance['all'].to_f / @uptime) : 0
-        @events_queued           = redis.llen('events')
+        @dbsize              = redis.dbsize
+        @executive_instances = redis.keys("executive_instance:*").inject({}) do |memo, i|
+          instance_id    = i.match(/executive_instance:(.*)/)[1]
+          boot_time      = redis.hget(i, 'boot_time').to_i
+          uptime         = Time.now.to_i - boot_time
+          uptime_string  = ChronicDuration.output(uptime, :format => :short, :keep_zero => true, :units => 2)
+          event_counters = redis.hgetall("event_counters:#{instance_id}")
+          event_rates    = event_counters.inject({}) do |er, ec|
+            er[ec[0]] = uptime && uptime > 0 ? (ec[1].to_f / uptime).round : nil
+            er
+          end
+          memo[instance_id] = {
+            'boot_time'      => boot_time,
+            'uptime'         => uptime,
+            'uptime_string'  => uptime_string,
+            'event_counters' => event_counters,
+            'event_rates'    => event_rates
+          }
+          memo
+        end
+        @event_counters = redis.hgetall('event_counters')
+        @events_queued  = redis.llen('events')
       end
 
       def entity_stats
