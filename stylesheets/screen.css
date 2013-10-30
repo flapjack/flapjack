@@ -1,180 +1,27 @@
-* {
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-size: 62.5%;
-}
-
-body {
-  font-family: Georgia, serif;
-  font-size: 1.2em;
-  background-color: #040000;
-  margin-bottom: 2em;
-}
-
-div#content {
-  width: 800px;
-  margin: auto;
-  color: #F8F4F0;
-  line-height: 1.4em;
-}
-
-div#logo {
-  float: right;
-}
-
-div#menu {
-  width: 800px;
-  color: white;
-  margin: auto;
-  padding: 0.5em 0;
+div.jumbotron.intro {
   text-align: center;
-  border-bottom: 1px solid #888a85;
+  background-color: white;
 }
 
-div#nav {
-  margin: 0.6em 0 0;
+img.jumbo.logo {
+  width: 300px;
 }
 
-div#nav a {
+div.row.intro h3 {
+  text-align: center;
+}
+
+.callout {
+  margin: 20px 0;
+  padding: 20px;
+  background-color: gray;
+  border-color: #eed3d7;
   color: white;
-  background-color: #2b2c2a;
-  padding: 3px;
-  font-size: 1.1em;
-  margin: 0 0.15em;
+  font-size: 24px;
+  text-align: center;
 }
 
-p {
-  margin: 0.7em 0;
+.callout p:last-child {
+  margin-bottom: 0;
 }
 
-li {
-  margin: 0.2em 0 0.2em 1em;
-}
-
-ul {
-  list-style-type: circle;
-  margin-left: 1em;
-}
-
-ol {
-  list-style-type: decimal;
-  margin-left: 1em;
-}
-
-h1, h2, h3, h4 {
-  margin: 1.3em 0 4px;
-}
-
-
-blockquote {
-  margin: 0 1.3em;
-}
-
-pre {
-  font-size: 0.9em;
-}
-
-a {
-  color: #a9c6e8;
-  text-decoration: none;
-}
-
-/*
-body {
-  background-image: url(/images/flapjack.png);
-  background-repeat: no-repeat;
-  background-position: top right;
-}
-*/
-
-div#friends ul {
-  margin-top: 1em;
-}
-
-blockquote.commands pre {
-  background-color: #fffeff;
-  color: #040000;
-  padding: 0.8em;
-}
-
-code {
-  font-size: 94%;
-  background-color: #201f1e;
-  padding: 3px 0;
-}
-
-div#running li {
-  margin: 1.5em 0.5em;
-  list-style-type: square;
-  padding-left: 0.33em;
-}
-
-img.architecture {
-  margin: auto;
-  display: block;
-  margin-bottom: -1em;
-}
-
-div#what, div#usage {
-  padding-top: 1em;
-}
-
-p.notice {
-  background-color: #F6FFA6;
-  color: black;
-  padding: 1em;
-  width: 550px;
-  clear: both;
-  margin: auto;
-}
-
-p.notice a {
-  color: #32567D;
-}
-
-img.important {
-  display: block;
-  float: left;
-  margin-right: 1em;
-}
-
-div#slides {
-  margin: auto;
-  width: 425px;
-}
-
-/* usage page */
-h2.component span {
-  background-color: #2b2c2a;
-}
-
-h2.flapjack-worker {
-  color: #fedbaa;
-}
-
-h2.flapjack-notifier {
-  color: #c8d0ff;
-}
-
-h2.flapjack-admin {
-  color: #f3c8ff;
-}
-
-h2.beanstalkd, h2.distributing {
-  color: #d7ffc8;
-}
-
-div.generated pre {
-  background-color: #fffeff;
-  color: #040000;
-  padding: 0.8em;
-  margin: 0 1.3em;
-}
-
-div.generated pre code {
-  background-color: #fffeff;
-  overflow: auto;
-}

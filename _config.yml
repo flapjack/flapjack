@@ -2,7 +2,7 @@
 permalink: pretty
 title: Flapjack
 paginate: 15
-url: http://flapjack-project.com
+url: http://localhost:8000
 markdown: rdiscount
 pygments: true
 port: 9000

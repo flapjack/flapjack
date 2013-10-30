@@ -1,18 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <title>{{ page.title }}</title>
     {% include externals.html %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    <div id="wrapper">
-      {% include header.html %}
+    <nav class="navbar navbar-default" role="navigation">
+      <a class="navbar-brand" href="http://{{ site.url }}">Flapjack</a>
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href='/quickstart'>Quickstart</a></li>
+        <li><a href='http://github.com/flpjck/flapjack/wiki'>Documentation</a></li>
+        <li><a href='/support'>Support</a></li>
+      </ul>
+    </nav>
 
-      <div id="content">
-        {{ content }}
-      </div> <!-- content -->
-
-    </div> <!-- wrapper -->
+    <div class="container">
+      {{ content }}
+    </div> <!-- container -->
     {% include google-analytics.html %}
   </body>
 </html>

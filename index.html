@@ -1,25 +1,43 @@
 ---
-title: Flapjack, a scalable and distributed monitoring system
+title: Flapjack, monitoring notification routing + event processing
 layout: default
 ---
 
-<div id='logo'>
-  <img alt='http://www.flickr.com/photos/ewedistrict/23110406/' src='/images/flapjack-website.jpg' />
+<div class='jumbotron intro'>
+  <img class='jumbo logo' src='/images/flapjack-31.png'/>
 </div>
-<div id='what'>
-  <p>
-    <em>Flapjack</em>
-    is a highly scalable and distributed monitoring notification system. It sits on top of existing
-    monitoring engines like Nagios and Sensu, and does event processing &amp; notifications.
-  </p>
-  <p>
-  <em>Flapjack</em> provides
-  <a href="https://github.com/flpjck/flapjack/wiki/API">an API</a>
-    for configuration,
-  <a href='https://github.com/flpjck/flapjack/wiki/GLOSSARY'>scheduling maintenance</a>,
-  acknowledging failures, and querying entity history (conveniently wrapped in a <a
-    href='https://github.com/flpjck/flapjack-diner'>client library</a>).
-  </p>
+
+<div class='row intro'>
+  <div class='col-md-4'>
+    <h3>Composable</h3>
+    <p>
+      <em>Flapjack</em> sits atop existing monitoring engines like Nagios and
+      Sensu, processing events &amp; detecting failures.
+    </p>
+  </div>
+  <div class='col-md-4'>
+    <h3>Routing + Rollup</h3>
+    <p>
+      <em>Flapjack</em> provides a powerful system for routing alerts to
+      people, and rolling alerts up when mass failures are detected.
+    </p>
+  </div>
+  <div class='col-md-4'>
+    <h3>API Driven</h3>
+    <p>
+      <em>Flapjack</em> is configurable via
+      <a href="https://github.com/flpjck/flapjack/wiki/API">well defined APIs</a>,
+      to make integrating with your existing automation simpler.
+    </p>
+  </div>
+</div>
+
+<div class="callout">
+  Get going with the quickstart guide.
+  <button type="button" class="btn btn-success">Start now!</button>
+</div>
+
+<!--
   <p>
     <em>Flapjack</em> can notify via <a href="http://pagerduty.com">PagerDuty</a>, XMPP,
     and email, and also supports receiving acknowledgements from PagerDuty +
@@ -84,5 +102,4 @@ layout: default
     licenced.
   </p>
 </div>
-
-
+-->
