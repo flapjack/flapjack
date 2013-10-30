@@ -301,7 +301,7 @@ Then /^show me the (\w+ )*log$/ do |adjective|
   puts @logger.messages.join("\n")
 end
 
-Then /^dump notification rules for user (\d+)$/ do |contact|
+Then /^dump notification rules for user (\S+)$/ do |contact|
   rule_ids = @redis.smembers("contact_notification_rules:#{contact}")
   puts "There #{(rule_ids.length == 1) ? 'is' : 'are'} #{rule_ids.length} notification rule#{(rule_ids.length == 1) ? '' : 's'} for user #{contact}:"
   rule_ids.each {|rule_id|
@@ -338,7 +338,7 @@ Given /^the following users exist:$/ do |contacts|
   end
 end
 
-Given /^user (\d+) has the following notification intervals:$/ do |contact_id, intervals|
+Given /^user (\S+) has the following notification intervals:$/ do |contact_id, intervals|
   contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
   intervals.hashes.each do |interval|
     contact.set_interval_for_media('email', interval['email'].to_i * 60)
@@ -346,7 +346,7 @@ Given /^user (\d+) has the following notification intervals:$/ do |contact_id, i
   end
 end
 
-Given /^user (\d+) has the following notification rollup thresholds:$/ do |contact_id, rollup_thresholds|
+Given /^user (\S+) has the following notification rollup thresholds:$/ do |contact_id, rollup_thresholds|
   contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
   rollup_thresholds.hashes.each do |rollup_threshold|
     contact.set_rollup_threshold_for_media('email', rollup_threshold['email'].to_i)
@@ -354,7 +354,7 @@ Given /^user (\d+) has the following notification rollup thresholds:$/ do |conta
   end
 end
 
-Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules|
+Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules|
   contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => @redis)
   timezone = contact.timezone
 
@@ -400,7 +400,7 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
   end
 end
 
-Then /^all alert dropping keys for user (\d+) should have expired$/ do |contact_id|
+Then /^all alert dropping keys for user (\S+) should have expired$/ do |contact_id|
   @redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
 end
 
@@ -426,7 +426,7 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
   }.length.should == num_queued.to_i
 end
 
-When(/^user (\d+) ceases to be a contact of entity '(.*)'$/) do |contact_id, entity|
+When(/^user (\S+) ceases to be a contact of entity '(.*)'$/) do |contact_id, entity|
   entity = Flapjack::Data::Entity.find_by_name(entity, :redis => @redis)
   @redis.srem("contacts_for:#{entity.id}", contact_id)
 end

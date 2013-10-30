@@ -25,7 +25,7 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
 
         redis.keys('contact:*').inject([]) {|ret, k|
-          k =~ /^contact:(\d+)$/
+          k =~ /^contact:(.*)$/
           id = $1
           contact = self.find_by_id(id, :redis => redis)
           ret << contact if contact
