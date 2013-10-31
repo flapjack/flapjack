@@ -83,11 +83,13 @@ RSpec.configure do |config|
     @logger = MockLogger.new
     example.run
 
+    # uncomment the following two lines to reveal all logger messages
     #messages = @logger.messages.compact
     #p "logger: " + messages.join(", ") unless messages.empty?
 
-    errors = @logger.errors.compact
-    p "logger: " + errors.join(", ") unless errors.empty?
+    # uncomment the following two lines to reveal ERROR and FATAL logger messages
+    #errors = @logger.errors.compact
+    #p "logger: " + errors.join(", ") unless errors.empty?
 
     @logger.errors.clear
   end
