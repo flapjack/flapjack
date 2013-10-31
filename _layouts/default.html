@@ -8,7 +8,7 @@
   <body>
     <nav class="navbar navbar-default navbar-inverse" role="navigation">
       <div class="navbar-header">
-        <a class="navbar-brand" href="http://{{ site.url }}">Flapjack</a>
+        <a class="navbar-brand" href="{{ site.url }}">Flapjack</a>
       </div>
       <div class="collapse navbar-collapse navbar-ex1-collapse">
         <ul class="nav navbar-nav navbar-right">
@@ -23,17 +23,26 @@
       {{ content }}
     </div> <!-- container -->
 
-    <div id="footer" class="row">
-      <div class="col-md-4 col-md-offset-4">
-        <a href="http://bulletproof.net.au">
-          <img class="bulletproof" src='/images/bulletproof-logo.png'/>
-        </a>
-        <span class="bulletproof subtext">
-          Development sponsored by
-          <a href="http://bulletproof.net.au">Bulletproof</a>.
-        </span>
+    <footer>
+      <div class="row">
+        <div class="col-md-4 col-md-offset-2">
+          Flapjack was conceptualised by
+          <a href="https://twitter.com/auxesis">Lindsay Holmwood</a>.
+          <a href="https://twitter.com/jessereynolds">Jesse Reynolds</a> and
+          <a href="https://github.com/ali-graham">Ali Graham</a>
+          are the primary developers.
+        </div>
+        <div class="col-md-4 sponsor">
+          <a href="http://bulletproof.net.au">
+            <img class="bulletproof" src='/images/bulletproof-logo.png'/>
+          </a>
+          <span class="bulletproof subtext">
+            Development sponsored by
+            <a href="http://bulletproof.net.au">Bulletproof</a>.
+          </span>
+        </div>
       </div>
-    </div>
+    </footer>
 
     {% include google-analytics.html %}
   </body>

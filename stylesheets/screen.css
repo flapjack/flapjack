@@ -1,3 +1,13 @@
+/* sticky footer per http://mystrd.at/modern-clean-css-sticky-footer/ */
+html {
+  position: relative;
+  min-height: 100%;
+}
+body {
+  margin: 0 0 140px;
+}
+/* end sticky footer */
+
 div.jumbotron.intro {
   text-align: center;
   background-color: white;
@@ -29,17 +39,29 @@ nav.navbar-inverse {
   border-radius: 0px;
 }
 
-div#footer {
+footer {
+  margin-top: 20px;
+  padding: 20px 0px;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 140px;
+  width: 100%;
+  background-color: #222;
+  color: gray;
+}
+
+footer div.sponsor {
   text-align: center;
 }
 
-div#footer img.bulletproof {
+footer img.bulletproof {
   width: 180px;
   display: block;
   margin: auto;
 }
 
-div#footer span.bulletproof.subtext {
+footer span.bulletproof.subtext {
   color: gray;
   font-size: 80%;
 }
