@@ -12,7 +12,7 @@ div.row.intro h3 {
 }
 
 .callout {
-  margin: 20px 0;
+  margin: 40px 0;
   padding: 20px;
   background-color: gray;
   border-color: #eed3d7;
@@ -25,3 +25,17 @@ div.row.intro h3 {
   margin-bottom: 0;
 }
 
+nav.navbar-inverse {
+  border-radius: 0px;
+}
+
+
+@media print, screen and (max-width: 384px) {
+  div.jumbotron.intro {
+    margin-bottom: 0px;
+  }
+
+  img.jumbo.logo {
+    width: 150px;
+  }
+}
