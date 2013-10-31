@@ -29,6 +29,21 @@ nav.navbar-inverse {
   border-radius: 0px;
 }
 
+div#footer {
+  text-align: center;
+}
+
+div#footer img.bulletproof {
+  width: 180px;
+  display: block;
+  margin: auto;
+}
+
+div#footer span.bulletproof.subtext {
+  color: gray;
+  font-size: 80%;
+}
+
 
 @media print, screen and (max-width: 384px) {
   div.jumbotron.intro {
