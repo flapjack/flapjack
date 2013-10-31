@@ -92,6 +92,15 @@ module Flapjack
       def stop
         @status = 'stopping'
       end
+
+      def configure_resque
+        unless ::Resque.instance_variable_defined?('@flapjack_pool') && !::Resque.instance_variable_get('@flapjack_pool').nil?
+          resque_pool = Flapjack::RedisPool.new(:config => @redis_config)
+          ::Resque.instance_variable_set('@flapjack_pool', resque_pool)
+          ::Resque.redis = resque_pool
+        end
+      end
+
     end
 
     class Generic < Flapjack::Pikelet::Base
@@ -111,6 +120,11 @@ module Flapjack
 
       def initialize(type, pikelet_klass, opts = {})
         super(type, pikelet_klass, opts)
+
+        if type == 'notifier'
+          configure_resque
+        end
+
         @pikelet = @klass.new(opts.merge(:logger => @logger))
       end
 
@@ -138,6 +152,7 @@ module Flapjack
         return @status unless 'stopping'.eql?(@status)
         @status = 'stopped' if @fiber && !@fiber.alive?
       end
+
     end
 
     class Resque < Flapjack::Pikelet::Base
@@ -154,9 +169,10 @@ module Flapjack
       def initialize(type, pikelet_klass, opts = {})
         super(type, pikelet_klass, opts)
 
-        unless defined?(@@resque_pool) && !@@resque_pool.nil?
-          @@resque_pool = Flapjack::RedisPool.new(:config => @redis_config)
-          ::Resque.redis = @@resque_pool
+        configure_resque
+
+        # guard against another Resque pikelet having created the pool already
+        unless defined?(@@redis_connection) && !@@redis_connection.nil?
           @@redis_connection = Flapjack::RedisPool.new(:config => @redis_config)
         end
 
