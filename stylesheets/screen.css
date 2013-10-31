@@ -41,7 +41,7 @@ nav.navbar-inverse {
 
 footer {
   margin-top: 20px;
-  padding: 20px 0px;
+  padding: 20px 10px;
   position: absolute;
   left: 0;
   bottom: 0;
@@ -53,6 +53,7 @@ footer {
 
 footer div.sponsor {
   text-align: center;
+  background-color: #222;
 }
 
 footer img.bulletproof {
@@ -74,5 +75,9 @@ footer span.bulletproof.subtext {
 
   img.jumbo.logo {
     width: 150px;
+  }
+
+  footer img.bulletproof {
+    margin: 10px auto 0px;
   }
 }
