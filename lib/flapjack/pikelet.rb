@@ -121,9 +121,7 @@ module Flapjack
       def initialize(type, pikelet_klass, opts = {})
         super(type, pikelet_klass, opts)
 
-        if type == 'notifier'
-          configure_resque
-        end
+        configure_resque if type == 'notifier'
 
         @pikelet = @klass.new(opts.merge(:logger => @logger))
       end
