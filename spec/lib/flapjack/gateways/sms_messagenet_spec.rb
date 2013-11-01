@@ -35,7 +35,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
       with(:query => {'PhoneNumber'  => '555-555555',
                       'Username'     => 'user',
                       'Pwd'          => 'password',
-                      'PhoneMessage' => "Recovery: 'ping' on example.com is OK at #{time_str}, smile, frood"}).
+                      'PhoneMessage' => "Recovery: 'ping' on example.com is OK at #{time_str}, smile"}).
       to_return(:status => 200)
 
     EM.synchrony do
