@@ -172,10 +172,8 @@ Feature: Rollup on a per contact, per media basis
     And   1 sms alerts should be queued for +61400000001
     When  4 hours passes
     And   a critical event is received for check 'ping' on entity 'foo'
-    And   1 minute passes
-    And   a critical event is received for check 'ping' on entity 'foo'
-    Then  1 sms alert of type problem and rollup problem should be queued for +61400000001
-    And   2 sms alerts should be queued for +61400000001
+    Then  2 sms alerts should be queued for +61400000001
+    And   1 sms alert of type problem and rollup problem should be queued for +61400000001
 
   @time
   Scenario: Contact ceases to be a contact on an entity that they were being alerted for
