@@ -72,6 +72,10 @@ RSpec.configure do |config|
   #     --seed 1234
   config.order = 'random'
 
+  if !(ENV.keys & ['SHOW_LOGGER_ALL', 'SHOW_LOGGER_ERRORS']).empty?
+    config.formatter = :documentation
+  end
+
   config.around(:each, :redis => true) do |example|
     @redis = ::Redis.new(:db => 14, :driver => :ruby)
     @redis.flushdb
@@ -84,13 +88,11 @@ RSpec.configure do |config|
     example.run
 
     if ENV['SHOW_LOGGER_ALL']
-      messages = @logger.messages.compact
-      p "logger: " + messages.join(", ") unless messages.empty?
+      puts @logger.messages.compact.join("\n")
     end
 
     if ENV['SHOW_LOGGER_ERRORS']
-      errors = @logger.errors.compact
-      p "logger: " + errors.join(", ") unless errors.empty?
+      puts @logger.errors.compact.join("\n")
     end
 
     @logger.errors.clear
