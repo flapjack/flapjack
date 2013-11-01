@@ -10,7 +10,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
                  }
                }
 
-  let(:time) { Time.now }
+  let(:time) { Time.new(2013, 10, 31, 13, 45) }
 
   let(:time_str) { Time.at(time).strftime('%-d %b %H:%M') }
 
@@ -32,9 +32,10 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
 
   it "sends an SMS message" do
     req = stub_request(:get, "https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage").
-      with(:query => {'PhoneNumber' => '555-555555',
-                      'Username' => 'user', 'Pwd' => 'password',
-                      'PhoneMessage' => "Recovery: 'ping' on example.com is OK at #{time_str}, smile"}).
+      with(:query => {'PhoneNumber'  => '555-555555',
+                      'Username'     => 'user',
+                      'Pwd'          => 'password',
+                      'PhoneMessage' => "Recovery: 'ping' on example.com is OK at #{time_str}, smile, frood"}).
       to_return(:status => 200)
 
     EM.synchrony do
@@ -53,12 +54,13 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
       'Liberty, and dedicated to the proposition that all men are created equal.')
 
     req = stub_request(:get, "https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage").
-      with(:query => {'PhoneNumber' => '555-555555',
-                      'Username' => 'user', 'Pwd' => 'password',
+      with(:query => {'PhoneNumber'  => '555-555555',
+                      'Username'     => 'user',
+                      'Pwd'          => 'password',
                       'PhoneMessage' => "Recovery: 'ping' on example.com is " +
-                      "OK at #{time_str}, Four score and seven years ago " +
-                      'our fathers brought forth on this continent, a new ' +
-                      'nation, conceived i...'}).
+                        "OK at #{time_str}, Four score and seven years ago " +
+                        'our fathers brought forth on this continent, a new ' +
+                        'nation, conceived i...'}).
       to_return(:status => 200)
 
     EM.synchrony do
