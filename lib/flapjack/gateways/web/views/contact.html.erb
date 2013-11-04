@@ -30,7 +30,8 @@
               <th>Summary Threshold</th>
             </tr>
             <% @contact.media.each_pair do |mk, mv| %>
-              <% alerting[mk] = @contact.alerting_checks_for_media(mk) %>
+              <% alerting_checks = @contact.alerting_checks_for_media(mk) %>
+              <% alerting[mk] = alerting_checks unless (alerting_checks.nil? || alerting_checks.empty?) %>
               <tr>
                 <% if 'pagerduty'.eql?(mk) %>
                   <td>PagerDuty</td>
@@ -53,18 +54,20 @@
                     <% end %>
                   </td>
                   <td>
-                    <% if alerting[mk].length >= @contact.media_rollup_thresholds[mk].to_i %>
-                      Yes -
-                    <% else %>
+                    <% rollup_threshold = @contact.media_rollup_thresholds[mk] %>
+                    <% num_alerting = alerting[mk].nil? ? 0 : alerting[mk].length %>
+                    <% if rollup_threshold.nil? || (num_alerting < rollup_threshold.to_i) %>
                       No -
+                    <% else %>
+                      Yes -
                     <% end %>
-                    <%= alerting[mk].length %> alerting
+                    <%= num_alerting %> alerting
                   </td>
                   <td>
-                    <% if @contact.media_rollup_thresholds[mk] %>
-                      <%= h @contact.media_rollup_thresholds[mk] %>
-                    <% else %>
+                    <% if rollup_threshold.nil? %>
                       -
+                    <% else %>
+                      <%= h rollup_threshold %>
                     <% end %>
                   </td>
                 <% end %>
@@ -74,32 +77,34 @@
         <% end %>
 
         <h3>Alerting Checks</h3>
-        <p>These failing checks are currently alerting because they are not acknowledged, not in scheduled maintenance, and currently allowed by this contact's notification rules.</p>
+        <p>Failing checks are those which are alerting because they are not acknowledged, not in scheduled maintenance, and currently allowed by this contact's notification rules.</p>
 
-        <table class="table table-bordered table-hover table-condensed">
-          <tr>
-            <th>Media</th>
-            <th>Alerting Checks</th>
-          </tr>
-          <% alerting.each_pair do |media, checks| %>
-            <% if checks.length > 0 %>
-              <tr>
-                <td><%= h media.capitalize %></td>
-                <td>
-                  <% checks.each do |entity_check| %>
-                    <% entity, check = entity_check.split(':', 2) %>
-                    <% check_link = "<a href=\"/check?entity=#{u(entity)}&amp;check=#{u(check)}\" title=\"check status\">" +
-                       h(check) + "</a>"%>
-                    <a href="/entity/<%= u(entity) %>" title="entity status"><%= h entity %></a> ::
-                    <%= check_link %> <br />
-                  <% end %>
-                </td>
-              </tr>
-            <% else %>
-              <tr><td colspan="2">No alerting checks, yay!</td></tr>
+        <% if alerting.empty? %>
+          <p><em>There are no currently alerting checks.</em></p>
+        <% else %>
+          <table class="table table-bordered table-hover table-condensed">
+            <tr>
+              <th>Media</th>
+              <th>Alerting Checks</th>
+            </tr>
+            <% alerting.each_pair do |media, checks| %>
+              <% if checks.length > 0 %>
+                <tr>
+                  <td><%= h media.capitalize %></td>
+                  <td>
+                    <% checks.each do |entity_check| %>
+                      <% entity, check = entity_check.split(':', 2) %>
+                      <% check_link = "<a href=\"/check?entity=#{u(entity)}&amp;check=#{u(check)}\" title=\"check status\">" +
+                         h(check) + "</a>"%>
+                      <a href="/entity/<%= u(entity) %>" title="entity status"><%= h entity %></a> ::
+                      <%= check_link %> <br />
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
             <% end %>
-          <% end %>
-        </table>
+          </table>
+        <% end %>
 
         <h3>All Entities and Checks</h3>
         <% if !@entities_and_checks || @entities_and_checks.empty? %>
