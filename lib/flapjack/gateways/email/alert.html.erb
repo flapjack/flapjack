@@ -54,7 +54,7 @@
     <% if @alert.state_duration && @alert.state_duration > 40 %>
       <tr>
         <td><strong>Duration</strong></td>
-        <td><%= ChronicDuration.output(@alert.state_duration) %></td>
+        <td><%= ChronicDuration.output(@alert.state_duration, :keep_zero => true) || '0 secs' %></td>
       </tr>
     <% end %>
 
