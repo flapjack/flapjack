@@ -17,6 +17,7 @@ production:
     new_check_scheduled_maintenance_duration: 100 years
     logger:
       level: INFO
+      syslog_errors: yes
   notifier:
     enabled: yes
     queue: notifications
@@ -28,6 +29,7 @@ production:
     default_contact_timezone: UTC
     logger:
       level: INFO
+      syslog_errors: yes
   gateways:
     email:
       enabled: no
