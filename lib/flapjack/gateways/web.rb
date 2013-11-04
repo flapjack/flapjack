@@ -347,16 +347,16 @@ module Flapjack
           }.max_by {|n| n[1] || 0}
 
         lc = entity_check.last_change
-        last_change   = lc ? ChronicDuration.output(Time.now.to_i - lc.to_i,
-                               :format => :short, :keep_zero => true, :units => 2) : 'never'
+        last_change   = lc ? (ChronicDuration.output(Time.now.to_i - lc.to_i,
+                               :format => :short, :keep_zero => true, :units => 2) || '0s') : 'never'
 
         lu = entity_check.last_update
-        last_update   = lu ? ChronicDuration.output(Time.now.to_i - lu.to_i,
-                               :format => :short, :keep_zero => true, :units => 2) : 'never'
+        last_update   = lu ? (ChronicDuration.output(Time.now.to_i - lu.to_i,
+                               :format => :short, :keep_zero => true, :units => 2) || '0s') : 'never'
 
         ln = latest_notif[1]
-        last_notified = ln ? ChronicDuration.output(Time.now.to_i - ln.to_i,
-                               :format => :short, :keep_zero => true, :units => 2) + ", #{latest_notif[0]}" : 'never'
+        last_notified = ln ? (ChronicDuration.output(Time.now.to_i - ln.to_i,
+                               :format => :short, :keep_zero => true, :units => 2) || '0s') + ", #{latest_notif[0]}" : 'never'
 
         [(entity_check.state       || '-'),
          (summary                  || '-'),
@@ -377,7 +377,7 @@ module Flapjack
           instance_id    = i.match(/executive_instance:(.*)/)[1]
           boot_time      = redis.hget(i, 'boot_time').to_i
           uptime         = Time.now.to_i - boot_time
-          uptime_string  = ChronicDuration.output(uptime, :format => :short, :keep_zero => true, :units => 2)
+          uptime_string  = (ChronicDuration.output(uptime, :format => :short, :keep_zero => true, :units => 2) || '0s')
           event_counters = redis.hgetall("event_counters:#{instance_id}")
           event_rates    = event_counters.inject({}) do |er, ec|
             er[ec[0]] = uptime && uptime > 0 ? (ec[1].to_f / uptime).round : nil
