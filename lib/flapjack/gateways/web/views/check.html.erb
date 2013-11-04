@@ -109,7 +109,7 @@
                 <tr>
                 <td><%= h Time.at(start_time).to_s %></td>
                 <td><%= h Time.at(end_time).to_s %></td>
-                <td><%= h ChronicDuration.output(duration) %></td>
+                <td><%= h(ChronicDuration.output(duration, :keep_zero => true) || '0 secs') %></td>
                 <td><%= h summary %></td>
                 <td>
                   <% if end_time > current_time.to_i %>

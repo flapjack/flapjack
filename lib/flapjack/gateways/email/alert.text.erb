@@ -13,7 +13,7 @@ Details:          <%= @alert.details %>
 Time:             <%= Time.at(@alert.time.to_i).to_s %>
 <% end -%>
 <% if @alert.state_duration && @alert.state_duration > 40 -%>
-Duration:         <%= ChronicDuration.output(@alert.state_duration) %>
+Duration:         <%= ChronicDuration.output(@alert.state_duration, :keep_zero => true) || '0 secs' %>
 <% end -%>
 <% if @alert.last_state -%>
 Previous State:   <%= @alert.last_state_title_case %>
