@@ -77,7 +77,7 @@
         <% end %>
 
         <h3>Alerting Checks</h3>
-        <p>Failing checks are those which are alerting because they are not acknowledged, not in scheduled maintenance, and currently allowed by this contact's notification rules.</p>
+        <p>Checks are alerted upon when they are failing, not acknowledged, not in scheduled maintenance, and currently allowed by this contact's notification rules.</p>
 
         <% if alerting.empty? %>
           <p><em>There are no currently alerting checks.</em></p>
