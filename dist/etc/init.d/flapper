@@ -5,11 +5,6 @@
 
 PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin
 
-# load global rbenv environment if present
-if [ -x /etc/profile.d/rbenv.sh ] ; then
-  source /etc/profile.d/rbenv.sh
-fi
-
 # Default return value
 RETVAL=0
 
@@ -20,8 +15,8 @@ if [ ! $(which flapper) ]; then
 fi
 
 # Evaluate command
-rbenv shell 1.9.3-p125 && flapper $1
-RETVAL=$?
+flapper $1
 
+RETVAL=$?
 exit $RETVAL
 
