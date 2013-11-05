@@ -36,14 +36,9 @@ describe Flapjack::Data::Contact, :redis => true do
 
   let(:redis) { Flapjack.redis }
 
-  def create_contact
-    redis.hmset('contact:1:attrs', {'first_name' => 'John',
-      'last_name' => 'Smith', 'email' => 'jsmith@example.com'}.flatten)
-    redis.sadd('contact::ids', '1')
-  end
-
   it "returns a contact's name" do
-    create_contact # raw redis
+    Factory.contact(:id => '1', :first_name => 'John', :last_name => 'Smith',
+      :email => 'jsmith@example.com') # raw redis
     contact = Flapjack::Data::Contact.find_by_id('1')
 
     contact.should_not be_nil
@@ -105,7 +100,8 @@ describe Flapjack::Data::Contact, :redis => true do
   context 'notification rules' do
 
     it "creates a general notification rule for a pre-existing contact if none exists" do
-      create_contact # raw redis
+      Factory.contact(:id => '1', :first_name => 'John', :last_name => 'Smith',
+        :email => 'jsmith@example.com') # raw redis
       contact = Flapjack::Data::Contact.find_by_id('1')
 
       rules = nil
@@ -116,7 +112,8 @@ describe Flapjack::Data::Contact, :redis => true do
     end
 
     it "creates a general notification rule for a pre-existing contact if the existing general one was changed" do
-      create_contact # raw redis
+      Factory.contact(:id => '1', :first_name => 'John', :last_name => 'Smith',
+        :email => 'jsmith@example.com') # raw redis
       contact = Flapjack::Data::Contact.find_by_id('1')
       rules = contact.notification_rules.all
       rules.should have(1).notification_rule
@@ -135,7 +132,8 @@ describe Flapjack::Data::Contact, :redis => true do
   context 'timezone' do
 
     it "sets a timezone string from a string" do
-      create_contact # raw redis
+      Factory.contact(:id => '1', :first_name => 'John', :last_name => 'Smith',
+        :email => 'jsmith@example.com') # raw redis
       contact = Flapjack::Data::Contact.find_by_id('1')
       contact.timezone.should be_nil
 
@@ -155,7 +153,8 @@ describe Flapjack::Data::Contact, :redis => true do
   end
 
   it "serializes its contents as JSON" do
-    create_contact # raw redis
+    Factory.contact(:id => '1', :first_name => 'John', :last_name => 'Smith',
+      :email => 'jsmith@example.com') # raw redis
     contact = Flapjack::Data::Contact.find_by_id('1')
 
     contact.should respond_to(:to_json)
@@ -166,29 +165,6 @@ describe Flapjack::Data::Contact, :redis => true do
                             "id"         => '1',
                             "last_name"  => "Smith",
                             "tags"       => [] }.to_json
-  end
-
-  it "clears expired notification blocks" do
-    t = Time.now
-
-    create_contact # raw redis
-    contact = Flapjack::Data::Contact.find_by_id('1')
-
-    old_notification_block = Flapjack::Data::NotificationBlock.new(
-      :expire_at => t.to_i - (60 * 60), :media_type => 'sms')
-    old_notification_block.save.should be_true
-
-    new_notification_block = Flapjack::Data::NotificationBlock.new(
-      :expire_at => t.to_i + (60 * 60), :media_type => 'sms')
-    new_notification_block.save.should be_true
-
-    contact.notification_blocks << old_notification_block <<
-      new_notification_block
-
-    contact.notification_blocks.count.should == 2
-    contact.send(:expire_notification_blocks)
-    contact.notification_blocks.count.should == 1
-    contact.notification_blocks.first.id.should == new_notification_block.id
   end
 
 end

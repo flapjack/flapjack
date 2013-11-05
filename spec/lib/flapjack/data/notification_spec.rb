@@ -57,14 +57,14 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
     alerting_checks_2.should_receive(:count).and_return(1)
 
     medium_1 = double(Flapjack::Data::Medium)
-    medium_1.should_receive(:type).twice.and_return('email')
+    medium_1.should_receive(:type).and_return('email')
     medium_1.should_receive(:address).twice.and_return('example@example.com')
     medium_1.should_receive(:alerting_checks).exactly(3).times.and_return(alerting_checks_1)
     medium_1.should_receive(:clean_alerting_checks).and_return(0)
     medium_1.should_receive(:rollup_threshold).exactly(3).times.and_return(10)
 
     medium_2 = double(Flapjack::Data::Medium)
-    medium_2.should_receive(:type).twice.and_return('sms')
+    medium_2.should_receive(:type).and_return('sms')
     medium_2.should_receive(:address).twice.and_return('0123456789')
     medium_2.should_receive(:alerting_checks).exactly(3).times.and_return(alerting_checks_2)
     medium_2.should_receive(:clean_alerting_checks).and_return(0)

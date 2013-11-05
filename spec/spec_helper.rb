@@ -1,8 +1,11 @@
 if ENV['COVERAGE']
   require 'simplecov'
-
   SimpleCov.start do
     add_filter '/spec/'
+  end
+  SimpleCov.at_exit do
+    Oj.default_options = { :mode => :compat }
+    SimpleCov.result.format!
   end
 end
 
@@ -96,6 +99,7 @@ RSpec.configure do |config|
     WebMock.reset!
   end
 
+  config.include Factory, :redis => true
   config.include ErbViewHelper, :erb_view => true
   config.include Rack::Test::Methods, :sinatra => true
   config.include JsonSpec::Helpers, :json => true

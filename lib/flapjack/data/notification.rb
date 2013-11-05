@@ -208,23 +208,28 @@ module Flapjack
 
             logger.debug "collected media_for_severity(#{self.severity}): #{rule_media.inspect}"
 
-            rule_media = rule_media.reject {|medium|
-              contact.drop_notifications?(:media => medium,
-                                          :entity_check => entity_check,
-                                          :state => state_or_ack)
+            final_media = rule_media.inject([]) {|memo, media_type|
+              medium = media.intersect(:type => media_type).all.first
+              next memo if medium.nil? ||
+                medium.drop_notifications?(:entity_check => entity_check,
+                                           :state => state_or_ack)
+
+              memo << medium
+              memo
             }
 
-            logger.debug "media after contact_drop?: #{rule_media}"
+            logger.debug "media after contact_drop?: #{final_media.collect(&:type)}"
 
-            next if rule_media.empty?
-            media.intersect(:type => rule_media).all
+            next if final_media.empty?
+            final_media
           end
-
-          logger.debug "media_to_use: #{media_to_use}"
 
           # here begins (revised) rollup madness
           media_to_use.collect {|medium|
             rollup_type = nil
+            media_type = medium.type
+
+            logger.debug("using media #{media_type}")
 
             unless (['ok', 'acknowledgement'].include?(state_or_ack)) ||
               medium.alerting_checks.exists?(entity_check.id)
@@ -234,17 +239,20 @@ module Flapjack
 
             # expunge checks in (un)scheduled maintenance from the alerting set
             cleaned = medium.clean_alerting_checks
-            logger.debug("cleaned alerting checks for #{media}: #{cleaned}")
+            logger.debug("cleaned alerting checks for #{media_type}: #{cleaned}")
 
             alerting_checks_count = medium.alerting_checks.count
-
-            logger.debug medium.inspect
+            logger.debug("current alerting checks for #{media_type}: #{alerting_checks_count}")
 
             if medium.rollup_threshold.nil?
               # back away slowly
             elsif alerting_checks_count >= medium.rollup_threshold
-              next if contact.drop_notifications?(media => medium.type, :rollup => true)
-              contact.update_sent_alert_keys(:media => medium.type, :rollup => true,
+              if medium.drop_notifications?(:rollup => true)
+                logger.debug("dropping notifications as medium blocked")
+                next
+              end
+
+              medium.update_sent_alert_keys(:rollup => true,
                 :delete => (['ok', 'acknowledgement'].include?(state_or_ack)))
 
               rollup_type = 'problem'
@@ -253,11 +261,11 @@ module Flapjack
               rollup_type = 'recovery'
             end
             logger.debug "rollup decisions: #{entity_name}:#{check_name} " +
-              "#{state_or_ack} #{medium.type} #{medium.address} " +
+              "#{state_or_ack} #{media_type} #{medium.address} " +
               "rollup_type: #{rollup_type}"
 
             Flapjack::Data::Message.for_contact(contact,
-              :medium => medium.type, :address => medium.address,
+              :medium => media_type, :address => medium.address,
               :rollup => rollup_type)
 
           }.compact

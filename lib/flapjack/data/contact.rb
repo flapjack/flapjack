@@ -35,14 +35,10 @@ module Flapjack
       has_many :media, :class_name => 'Flapjack::Data::Medium'
       has_many :notification_rules, :class_name => 'Flapjack::Data::NotificationRule'
 
-      has_sorted_set :notification_blocks, :class_name => 'Flapjack::Data::NotificationBlock',
-        :key => :expire_at
-
       before_destroy :remove_child_records
       def remove_child_records
         self.media.each               {|medium|             medium.destroy }
         self.notification_rules.each  {|notification_rule|  notification_rule.destroy }
-        self.notification_blocks.each {|notification_block| notification_block.destroy }
       end
 
       after_destroy :remove_entity_linkages
@@ -68,81 +64,6 @@ module Flapjack
       def name
         return if invalid? && !(self.errors.keys & [:first_name, :last_name]).empty?
         [(self.first_name || ''), (self.last_name || '')].join(" ").strip
-      end
-
-      def drop_notifications?(opts = {})
-        media_type   = opts[:media]
-        entity_check = opts[:entity_check]
-        state        = opts[:state]
-        rollup       = opts[:rollup]
-
-        # drop any expired blocks
-        expire_notification_blocks(Time.now, :rollup => opts[:rollup])
-
-        if opts[:rollup]
-          !self.notification_blocks.intersect(:media_type => media_type,
-            :rollup => true).empty?
-        else
-
-          # # NB: not sure if the partial checks are used yet, disabling
-          # # this isn't ideal, maybe more sophisticated intersects are the answer?
-          # self.notification_blocks.all.any? {|block|
-          #   block.media_type.nil? && block.entity_check_id.nil? && block.state.nil?
-          # } ||
-          # self.notification_blocks.intersect(:media_type => media_type).all.any? {|block|
-          #   block.entity_check_id.nil? && block.state.nil?
-          # } ||
-          # self.notification_blocks.intersect(:media_type => media_type, :entity_check_id => entity_check.id).all.any? {|block|
-          #   block.state.nil?
-          # } ||
-
-          !self.notification_blocks.intersect(:media_type => media_type,
-            :entity_check_id => entity_check.id, :state => state).empty?
-        end
-      end
-
-      def update_sent_alert_keys(opts = {})
-        media_type   = opts[:media]
-        entity_check = opts[:entity_check]
-        state        = opts[:state]
-        rollup       = opts[:rollup]
-        delete       = !!opts[:delete]
-
-        if rollup
-
-        else
-          attrs = {:media_type => media_type,
-            :entity_check_id => entity_check.id, :state => state}
-
-          if delete
-            self.notification_blocks.intersect(attrs).all.each do |block|
-              self.notification_blocks.delete(block)
-              block.destroy
-            end
-          else
-            media = self.media.intersect(:type => media_type).all.first
-            unless media.nil?
-              expire_at = Time.now + (media.interval * 60)
-
-              new_block = false
-              block = Flapjack::Data::NotificationBlock.intersect(attrs).all.first
-
-              if block.nil?
-                block = Flapjack::Data::NotificationBlock.new(attrs.merge(:expire_at => expire_at))
-                block.save
-                self.notification_blocks << block
-              else
-                # need to remove it from the sorted_set that uses expire_at as a key,
-                # change and re-add -- see https://github.com/ali-graham/sandstorm/issues/1
-                # TODO should this be in a multi/exec block?
-                self.notification_blocks.delete(block)
-                block.expire_at = expire_at
-                block.save
-                self.notification_blocks << block
-              end
-            end
-          end
-        end
       end
 
       # return the timezone of the contact, or the system default if none is set
@@ -171,18 +92,6 @@ module Flapjack
       end
 
       # TODO usage of to_json should have :only => [:first_name, :last_name, :email, :tags]
-
-      private
-
-      def expire_notification_blocks(time = Time.now, opts ={})
-        self.notification_blocks.
-          intersect_range(nil, time.to_i, :by_score => true).
-          intersect(:rollup => opts[:rollup]).each do |block|
-
-          self.notification_blocks.delete(block)
-          block.destroy
-        end
-      end
 
     end
   end

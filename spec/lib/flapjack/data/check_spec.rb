@@ -7,45 +7,15 @@ describe Flapjack::Data::Check, :redis => true do
 
   let(:half_an_hour) { 30 * 60 }
 
-  # def create_contact
-  #   redis.hmset('contact:1:attrs', {'first_name' => 'John',
-  #     'last_name' => 'Smith', 'email' => 'jsmith@example.com'}.flatten)
-  #   redis.sadd('contact::ids', '1')
-  # end
-
   let(:entity_name) { 'foo.example.com' }
   let(:check_name)  { 'PING' }
 
   let(:redis) { Flapjack.redis }
 
-  def create_entity(attrs = {})
-    redis.multi
-    redis.hmset("entity:#{attrs[:id]}:attrs", {'name' => attrs[:name]}.flatten)
-    redis.sadd('entity::ids', attrs[:id])
-    redis.hset("entity::by_name", attrs[:name], attrs[:id])
-    redis.exec
-  end
-
-  def create_check(attrs = {})
-    raise "entity not found" unless
-      entity = Flapjack::Data::Entity.intersect(:name => attrs[:entity_name]).all.first
-    attrs[:state] ||= 'ok'
-    redis.multi
-    redis.hmset("check:#{attrs[:id]}:attrs", {'name' => attrs[:name],
-      'entity_name' => entity.name, 'state' => attrs[:state], 'enabled' => (!!attrs[:enabled]).to_s}.flatten)
-    redis.sadd('check::ids', attrs[:id])
-    redis.sadd("check::by_name:#{attrs[:name]}", attrs[:id])
-    redis.sadd("check::by_entity_name:#{entity.name}", attrs[:id])
-    redis.sadd("check::by_state:#{attrs[:state]}", attrs[:id])
-    redis.sadd("check::by_enabled:#{!!attrs[:enabled]}", attrs[:id])
-
-    redis.sadd("entity:#{entity.id}:check_ids", attrs[:id].to_s)
-    redis.exec
-  end
-
-  it "finds all checks grouped by entity" do
-    create_entity(:name => entity_name, :id => 1)
-    create_check(:entity_name => entity_name, :name => check_name, :id => 1,
+   it "finds all checks grouped by entity" do
+    Factory.entity(:name => entity_name, :id => 1)
+    entity = Flapjack::Data::Entity.find_by_id(1)
+    Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1,
       :enabled => true)
 
     checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( Flapjack::Data::Check.all )
@@ -60,12 +30,13 @@ describe Flapjack::Data::Check, :redis => true do
   end
 
   it "finds all failing checks grouped by entity" do
-    create_entity(:name => entity_name, :id => 1)
-    create_check(:entity_name => entity_name, :name => check_name, :id => 1,
+    Factory.entity(:name => entity_name, :id => 1)
+    entity = Flapjack::Data::Entity.find_by_id(1)
+    Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1,
       :state => 'ok', :enabled => true)
-    create_check(:entity_name => entity_name, :name => 'HTTP', :id => 2,
+    Factory.check(entity, :entity_name => entity_name, :name => 'HTTP', :id => 2,
       :state => 'critical', :enabled => true)
-    create_check(:entity_name => entity_name, :name => 'FTP', :id => 3,
+    Factory.check(entity, :entity_name => entity_name, :name => 'FTP', :id => 3,
       :state => 'unknown', :enabled => true)
 
     failing_checks = Flapjack::Data::Check.
@@ -79,8 +50,9 @@ describe Flapjack::Data::Check, :redis => true do
   end
 
   it "returns its entity's name" do
-    create_entity(:name => entity_name, :id => 1)
-    create_check(:entity_name => entity_name, :name => check_name, :id => 1)
+    Factory.entity(:name => entity_name, :id => 1)
+    entity = Flapjack::Data::Entity.find_by_id(1)
+    Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1)
 
     ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
     ec.should_not be_nil
@@ -90,24 +62,27 @@ describe Flapjack::Data::Check, :redis => true do
   context "maintenance" do
 
     it "returns that it is not in unscheduled maintenance" do
-      create_entity(:name => entity_name, :id => 1)
-      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
+      Factory.entity(:name => entity_name, :id => 1)
+      entity = Flapjack::Data::Entity.find_by_id(1)
+      Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1)
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
       ec.should_not be_in_unscheduled_maintenance
     end
 
     it "returns that it is not in scheduled maintenance" do
-      create_entity(:name => entity_name, :id => 1)
-      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
+      Factory.entity(:name => entity_name, :id => 1)
+      entity = Flapjack::Data::Entity.find_by_id(1)
+      Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1)
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
       ec.should_not be_in_scheduled_maintenance
     end
 
     it "returns its current scheduled maintenance period" do
-      create_entity(:name => entity_name, :id => 1)
-      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
+      Factory.entity(:name => entity_name, :id => 1)
+      entity = Flapjack::Data::Entity.find_by_id(1)
+      Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1)
 
       t = Time.now
 
@@ -134,8 +109,9 @@ describe Flapjack::Data::Check, :redis => true do
     end
 
     it "adds an unscheduled maintenance period" do
-      create_entity(:name => entity_name, :id => 1)
-      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
+      Factory.entity(:name => entity_name, :id => 1)
+      entity = Flapjack::Data::Entity.find_by_id(1)
+      Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1)
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
@@ -160,8 +136,9 @@ describe Flapjack::Data::Check, :redis => true do
     end
 
     it "adds an unscheduled maintenance period and ends the current one early", :time => true do
-      create_entity(:name => entity_name, :id => 1)
-      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
+      Factory.entity(:name => entity_name, :id => 1)
+      entity = Flapjack::Data::Entity.find_by_id(1)
+      Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1)
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
@@ -189,8 +166,9 @@ describe Flapjack::Data::Check, :redis => true do
     end
 
     it "ends an unscheduled maintenance period", :time => true do
-      create_entity(:name => entity_name, :id => 1)
-      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
+      Factory.entity(:name => entity_name, :id => 1)
+      entity = Flapjack::Data::Entity.find_by_id(1)
+      Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1)
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
@@ -215,8 +193,9 @@ describe Flapjack::Data::Check, :redis => true do
     end
 
     it "ends a scheduled maintenance period for a future time" do
-      create_entity(:name => entity_name, :id => 1)
-      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
+      Factory.entity(:name => entity_name, :id => 1)
+      entity = Flapjack::Data::Entity.find_by_id(1)
+      Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1)
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
@@ -240,8 +219,9 @@ describe Flapjack::Data::Check, :redis => true do
     # maint period starts an hour from now, goes for two hours -- at 30 minutes into
     # it we stop it, and its duration should be 30 minutes
     it "shortens a scheduled maintenance period covering a current time", :time => true do
-      create_entity(:name => entity_name, :id => 1)
-      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
+      Factory.entity(:name => entity_name, :id => 1)
+      entity = Flapjack::Data::Entity.find_by_id(1)
+      Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1)
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 
@@ -263,8 +243,9 @@ describe Flapjack::Data::Check, :redis => true do
     end
 
     it "does not alter or remove a scheduled maintenance period covering a past time", :time => true do
-      create_entity(:name => entity_name, :id => 1)
-      create_check(:entity_name => entity_name, :name => check_name, :id => 1)
+      Factory.entity(:name => entity_name, :id => 1)
+      entity = Flapjack::Data::Entity.find_by_id(1)
+      Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1)
 
       ec = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
 

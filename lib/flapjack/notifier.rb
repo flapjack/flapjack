@@ -98,61 +98,56 @@ module Flapjack
 
       messages.each do |message|
         media_type = message.medium
-        address    = message.address
-        contents   = message.contents.merge(notification_contents)
-        medium     = message.contact.media.intersect(:type => media_type).all.first
-
-        if medium
-          contents['rollup_alerts'] = medium.alerting_checks.all.inject({}) do |memo, entity_check|
-            last_state  = entity_check.states.last
-            last_change = last_state.nil? ? nil : last_state.timestamp.to_i
-            memo["#{entity_check.entity_name}:#{entity_check.name}"] = {
-              'duration' => (last_change ? (Time.now.to_i - last_change) : nil),
-              'state'    => last_state.state,
-            }
-            memo
-          end
-          contents['rollup_threshold'] = medium.rollup_threshold
+        unless @queues.keys.include?(media_type.to_sym)
+          @logger.error("no queue for media type: #{media_type}")
+          next
         end
+
+        medium = message.contact.media.intersect(:type => media_type).all.first
+        if medium.nil?
+          @logger.warning("contact has no media for type: #{media_type}")
+          next
+        end
+
+        address = message.address
 
         @notifylog.info("#{entity_check.entity_name}:#{entity_check.name} | " +
           "#{notification.type} | #{message.contact.id} | #{media_type} | #{address}")
-
-        unless @queues[media_type.to_sym]
-          @logger.error("no queue for media type: #{media_type}")
-          return
-        end
 
         @logger.info("Enqueueing #{media_type} alert for " +
           "#{entity_check.entity_name}:#{entity_check.name} to #{address} " +
           " type: #{notification.type} rollup: #{message.rollup || '-'}")
 
-        contact = message.contact
+        contents   = message.contents.merge(notification_contents)
+        contents['rollup_alerts'] = medium.alerting_checks.all.inject({}) do |memo, entity_check|
+          last_state  = entity_check.states.last
+          last_change = last_state.nil? ? nil : last_state.timestamp.to_i
+          memo["#{entity_check.entity_name}:#{entity_check.name}"] = {
+            'duration' => (last_change ? (Time.now.to_i - last_change) : nil),
+            'state'    => last_state.state,
+          }
+          memo
+        end
+        contents['rollup_threshold'] = medium.rollup_threshold
+
+        contents_tags = contents['tags']
+        contents['tags'] = contents_tags.is_a?(Set) ? contents_tags.to_a : contents_tags
 
         if ['recovery', 'acknowledgement'].include?(notification.type)
 
           ['warning', 'critical', 'unknown'].each do |alert_state|
-            contact.update_sent_alert_keys(
-              :media => media_type,
+            medium.update_sent_alert_keys(
               :entity_check => entity_check,
               :state => alert_state,
               :delete => true)
           end
         else
-          contact.update_sent_alert_keys(
-            :media => media_type,
+          medium.update_sent_alert_keys(
             :entity_check => entity_check,
             :state => notification.state.state)
         end
 
-        contents_tags = contents['tags']
-        contents['tags'] = contents_tags.is_a?(Set) ? contents_tags.to_a : contents_tags
-
-        if [:sms, :email, :jabber, :pagerduty].include?(media_type.to_sym)
-          Flapjack::Data::Message.push(@queues[media_type.to_sym], contents)
-        else
-          # TODO log warning
-        end
+        Flapjack::Data::Message.push(@queues[media_type.to_sym], contents)
       end
     end
 
