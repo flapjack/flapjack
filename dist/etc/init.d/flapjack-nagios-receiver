@@ -21,4 +21,3 @@ flapjack-nagios-receiver $1 --config /etc/flapjack/flapjack-config.yaml --fifo $
 
 RETVAL=$?
 exit $RETVAL
-

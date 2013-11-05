@@ -16,4 +16,3 @@ flapper $1
 
 RETVAL=$?
 exit $RETVAL
-
