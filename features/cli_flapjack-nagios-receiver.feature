@@ -59,7 +59,7 @@ test:
     Then flapjack-nagios-receiver should stop within 15 seconds
 
   Scenario: Getting status when stopped
-    When I run `bin/flapjack-nagios-receiver status -p tmp/cucumber_cli/flapjack-nagios-receiver_d.pid`
+    When I run `bin/flapjack-nagios-receiver status --config tmp/cucumber_cli/flapjack-nagios-receiver_d.yaml`
     Then the exit status should not be 0
     And  the output should contain "flapjack-nagios-receiver is not running"
 
