@@ -141,7 +141,8 @@ redis_options = config.for_redis
 
 if config_env.nil? || config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
-  exit(false)
+  puts "\n#{optparse}"
+  exit 1
 end
 
 case ARGV[0]
