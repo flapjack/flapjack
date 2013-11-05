@@ -8,9 +8,6 @@
 
 PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin
 
-# Default return value
-RETVAL=0
-
 NAGIOS_PERFDATA_FIFO="/var/cache/nagios3/event_stream.fifo"
 
 if [ ! $(which flapjack-nagios-receiver) ]; then
