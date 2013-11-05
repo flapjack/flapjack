@@ -144,16 +144,6 @@ if config_env.nil? || config_env.empty?
   exit(false)
 end
 
-unless options.source
-  puts "--source URL is required"
-  exit 1
-end
-
-unless options.follow || options.all
-  puts "one or both of --follow or --all is required"
-  exit 1
-end
-
 case ARGV[0]
 when "help"
   puts optparse
@@ -164,6 +154,18 @@ else
     puts "\n#{optparse}"
     exit 1
   end
+end
+
+unless options.source
+  puts "--source URL is required"
+  puts "\n#{optparse}"
+  exit 1
+end
+
+unless options.follow || options.all
+  puts "one or both of --follow or --all is required"
+  puts "\n#{optparse}"
+  exit 1
 end
 
 receive(:follow => options.follow,

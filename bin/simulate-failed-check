@@ -52,7 +52,7 @@ def fail(opts)
       EM.stop
     end
 
-    EM.add_periodic_timer(10) do
+    EM.add_periodic_timer(opts[:interval]) do
       puts "#{Time.now}: sending failure event (#{state}) for #{key}"
       send_event(failure.merge('time' => Time.now.to_i), :redis => redis)
     end
@@ -86,6 +86,10 @@ optparse = OptionParser.new do |opts|
     options.minutes = t
   end
 
+  opts.on("-i", "--interval SECONDS", String, "SECONDS between events, can be decimal eg 0.1 (10)") do |i|
+    options.interval = i.to_f
+  end
+
   opts.on("-e", "--entity ENTITY", String, "ENTITY to generate failure events for ('foo-app-01')") do |e|
     options.entity = e
   end
@@ -101,6 +105,10 @@ optparse = OptionParser.new do |opts|
 end
 optparse.parse!(ARGV)
 
+unless options.interval.to_f > 0
+  options.interval = 10.0
+end
+
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
 
 config = Flapjack::Configuration.new
@@ -114,7 +122,8 @@ if config_env.nil? || config_env.empty?
 end
 
 options = {:redis_options => redis_options, :minutes => options.minutes,
-           :entity => options.entity, :check => options.check, :state => options.state}
+           :entity => options.entity, :check => options.check, :state => options.state,
+           :interval => options.interval}
 case ARGV[0]
 when "fail-and-recover"
   fail(options.merge(:recover => true))
