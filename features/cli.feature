@@ -53,7 +53,7 @@ test:
   Scenario: Starting, status and stopping flapjack, daemonized
     When I start flapjack (daemonised) with `flapjack start -d --config tmp/cucumber_cli/flapjack_cfg_d.yaml`
     Then flapjack should start within 15 seconds
-    When I run `bin/flapjack status -p tmp/cucumber_cli/flapjack_d.pid`
+    When I run `bin/flapjack status --config tmp/cucumber_cli/flapjack_cfg_d.yaml`
     Then the exit status should be 0
     And  the output should contain "Flapjack is running"
     When I stop flapjack with `flapjack stop --config tmp/cucumber_cli/flapjack_cfg_d.yaml`
