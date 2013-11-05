@@ -19,6 +19,8 @@ if ENV['COVERAGE']
   end
 end
 
+@debug = false
+
 ENV["FLAPJACK_ENV"] = 'test'
 FLAPJACK_ENV = 'test'
 
@@ -193,6 +195,8 @@ After('@process') do
    'tmp/cucumber_cli/flapjack-nagios-receiver.yaml',
    'tmp/cucumber_cli/flapper_d.pid',
    'tmp/cucumber_cli/flapper_d.log',
+   'tmp/cucumber_cli/flapjack-populator.yaml',
+   'tmp/cucumber_cli/flapjack-populator-contacts.json',
   ].each do |file|
     next unless File.exists?(file)
     File.unlink(file)

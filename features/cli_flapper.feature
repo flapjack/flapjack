@@ -39,7 +39,7 @@ Feature: Flapper command line
 
   Scenario: Getting status when stopped
     When I run `bin/flapper status -p tmp/cucumber_cli/flapper_d.pid`
-    Then the exit status should be 3
+    Then the exit status should not be 0
     And  the output should contain "flapper is not running"
 
 

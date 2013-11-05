@@ -37,7 +37,7 @@ test:
 
   Scenario: Getting status when stopped
     When I run `bin/flapjack status -p tmp/cucumber_cli/flapjack_d.pid`
-    Then the exit status should be 3
+    Then the exit status should not be 0
     And  the output should contain "Flapjack is not running"
 
   Scenario: Starting flapjack

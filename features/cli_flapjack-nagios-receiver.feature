@@ -60,7 +60,7 @@ test:
 
   Scenario: Getting status when stopped
     When I run `bin/flapjack-nagios-receiver status -p tmp/cucumber_cli/flapjack-nagios-receiver_d.pid`
-    Then the exit status should be 3
+    Then the exit status should not be 0
     And  the output should contain "flapjack-nagios-receiver is not running"
 
 

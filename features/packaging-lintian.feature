@@ -4,7 +4,7 @@ Feature: Packagability
 
   Scenario: No rubygems references
     When I run `grep require lib/* bin/* -R |grep rubygems`
-    Then the exit status should be 1
+    Then the exit status should not be 0
     And I should see 0 lines of output
 
   Scenario: A shebang that works everywhere
