@@ -17,6 +17,7 @@ production:
     new_check_scheduled_maintenance_duration: 100 years
     logger:
       level: INFO
+      syslog_errors: yes
   notifier:
     enabled: yes
     queue: notifications
@@ -28,6 +29,7 @@ production:
     default_contact_timezone: UTC
     logger:
       level: INFO
+      syslog_errors: yes
   nagios-receiver:
     fifo: "/var/cache/nagios3/event_stream.fifo"
     pid_file: "/var/run/flapjack/flapjack-nagios-receiver.pid"
@@ -38,6 +40,7 @@ production:
       queue: email_notifications
       logger:
         level: INFO
+        syslog_errors: yes
       smtp_config:
         # port 1025 is the default port for http://mailcatcher.me
         host: 127.0.0.1
@@ -55,6 +58,7 @@ production:
       password: "xxxx"
       logger:
         level: INFO
+        syslog_errors: yes
     jabber:
       enabled: no
       queue: jabber_notifications
@@ -68,6 +72,7 @@ production:
         - "log@conference.jabber.domain.tld"
       logger:
         level: INFO
+        syslog_errors: yes
     oobetet:
       enabled: no
       server: "jabber.domain.tld"
@@ -85,11 +90,13 @@ production:
         - "log@conference.jabber.domain.tld"
       logger:
         level: INFO
+        syslog_errors: yes
     pagerduty:
       enabled: no
       queue: pagerduty_notifications
       logger:
         level: INFO
+        syslog_errors: yes
     web:
       enabled: yes
       port: 3080
@@ -97,6 +104,7 @@ production:
       access_log: "/var/log/flapjack/web_access.log"
       logger:
         level: INFO
+        syslog_errors: yes
     api:
       enabled: yes
       port: 3081
@@ -104,6 +112,7 @@ production:
       access_log: "/var/log/flapjack/api_access.log"
       logger:
         level: INFO
+        syslog_errors: yes
 
 development:
   pid_file: tmp/pids/flapjack.pid
@@ -122,6 +131,7 @@ development:
     new_check_scheduled_maintenance_duration: 100 years
     logger:
       level: DEBUG
+      syslog_errors: yes
   notifier:
     enabled: yes
     queue: notifications
@@ -133,12 +143,14 @@ development:
     default_contact_timezone: UTC
     logger:
       level: DEBUG
+      syslog_errors: yes
   gateways:
     email:
       enabled: no
       queue: email_notifications
       logger:
         level: INFO
+        syslog_errors: yes
       smtp_config:
         # port 1025 is the default port for http://mailcatcher.me
         host: 127.0.0.1
@@ -156,6 +168,7 @@ development:
       password: "xxxx"
       logger:
         level: INFO
+        syslog_errors: yes
     jabber:
       enabled: no
       queue: jabber_notifications
@@ -169,6 +182,7 @@ development:
         - "log@conference.jabber.domain.tld"
       logger:
         level: INFO
+        syslog_errors: yes
     oobetet:
       enabled: no
       server: "jabber.domain.tld"
@@ -186,11 +200,13 @@ development:
         - "log@conference.jabber.domain.tld"
       logger:
         level: INFO
+        syslog_errors: yes
     pagerduty:
       enabled: no
       queue: pagerduty_notifications
       logger:
         level: INFO
+        syslog_errors: yes
     web:
       enabled: yes
       port: 4080
@@ -198,6 +214,7 @@ development:
       access_log: "log/web_access.log"
       logger:
         level: INFO
+        syslog_errors: yes
     api:
       enabled: yes
       port: 4081
@@ -205,6 +222,7 @@ development:
       access_log: "log/api_access.log"
       logger:
         level: INFO
+        syslog_errors: yes
 
 
 test:
