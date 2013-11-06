@@ -6,7 +6,7 @@
 # Boots flapjack (coordinator, processor, notifier, gateways...)
 #
 
-PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin
+PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin:/opt/flapjack/bin
 
 if [ ! $(which flapjack) ]; then
   echo "Error: flapjack isn't in PATH."

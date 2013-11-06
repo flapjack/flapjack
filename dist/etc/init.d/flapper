@@ -3,7 +3,7 @@
 # flapper
 #
 
-PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin
+PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin:/opt/flapjack/bin
 
 if [ ! $(which flapper) ]; then
   echo "Error: flapper isn't in PATH."
