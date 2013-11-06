@@ -36,7 +36,7 @@ test:
     And  the output should contain "-c, --config"
 
   Scenario: Getting status when stopped
-    When I run `bin/flapjack status --config tmp/cucumber_cli/flapjack_cfg.yaml`
+    When I run `bin/flapjack status --config tmp/cucumber_cli/flapjack_cfg_d.yaml`
     Then the exit status should not be 0
     And  the output should contain "Flapjack is not running"
 
