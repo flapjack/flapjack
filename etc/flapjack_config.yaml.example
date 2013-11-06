@@ -62,32 +62,14 @@ production:
     jabber:
       enabled: no
       queue: jabber_notifications
-      server: "jabber.domain.tld"
+      server: "jabber.example.com"
       port: 5222
-      jabberid: "flapjack@jabber.domain.tld"
+      jabberid: "flapjack@jabber.example.com"
       password: "good-password"
       alias: "flapjack"
       rooms:
-        - "gimp@conference.jabber.domain.tld"
-        - "log@conference.jabber.domain.tld"
-      logger:
-        level: INFO
-        syslog_errors: yes
-    oobetet:
-      enabled: no
-      server: "jabber.domain.tld"
-      port: 5222
-      jabberid: "flapjacktest@jabber.domain.tld"
-      password: "nuther-good-password"
-      alias: "flapjacktest"
-      watched_check: "PING"
-      watched_entity: "foo.bar.net"
-      max_latency: 300
-      pagerduty_contact: "11111111111111111111111111111111"
-      rooms:
-        - "flapjacktest@conference.jabber.domain.tld"
-        - "gimp@conference.jabber.domain.tld"
-        - "log@conference.jabber.domain.tld"
+        - "gimp@conference.jabber.example.com"
+        - "log@conference.jabber.example.com"
       logger:
         level: INFO
         syslog_errors: yes
@@ -110,6 +92,24 @@ production:
       port: 3081
       timeout: 300
       access_log: "/var/log/flapjack/api_access.log"
+      logger:
+        level: INFO
+        syslog_errors: yes
+    oobetet:
+      enabled: no
+      server: "jabber.example.com"
+      port: 5222
+      jabberid: "flapjacktest@jabber.example.com"
+      password: "nuther-good-password"
+      alias: "flapjacktest"
+      watched_check: "PING"
+      watched_entity: "foo.example.com"
+      max_latency: 300
+      pagerduty_contact: "11111111111111111111111111111111"
+      rooms:
+        - "flapjacktest@conference.jabber.example.com"
+        - "gimp@conference.jabber.example.com"
+        - "log@conference.jabber.example.com"
       logger:
         level: INFO
         syslog_errors: yes
@@ -144,9 +144,13 @@ development:
     logger:
       level: DEBUG
       syslog_errors: yes
+  nagios-receiver:
+    fifo: "/usr/local/var/lib/nagios/event_stream.fifo"
+    pid_file: "tmp/pids/flapjack-nagios-receiver.pid"
+    log_file: "log/flapjack-nagios-receiver.log"
   gateways:
     email:
-      enabled: no
+      enabled: yes
       queue: email_notifications
       logger:
         level: INFO
@@ -161,9 +165,11 @@ development:
         #  username:
         #  password:
     sms:
-      enabled: no
+      enabled: yes
       queue: sms_notifications
-      endpoint: 'https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage'
+      # if you run up something like 200ok locally you can then view the
+      # sms messages being emitted
+      endpoint: 'http://localhost:9292/FakeMessagenetAPI.aspx'
       username: "ermahgerd"
       password: "xxxx"
       logger:
@@ -172,32 +178,14 @@ development:
     jabber:
       enabled: no
       queue: jabber_notifications
-      server: "jabber.domain.tld"
+      server: "jabber.example.com"
       port: 5222
-      jabberid: "flapjack@jabber.domain.tld"
+      jabberid: "flapjack@jabber.example.com"
       password: "good-password"
       alias: "flapjack"
       rooms:
-        - "gimp@conference.jabber.domain.tld"
-        - "log@conference.jabber.domain.tld"
-      logger:
-        level: INFO
-        syslog_errors: yes
-    oobetet:
-      enabled: no
-      server: "jabber.domain.tld"
-      port: 5222
-      jabberid: "flapjacktest@jabber.domain.tld"
-      password: "nuther-good-password"
-      alias: "flapjacktest"
-      watched_check: "PING"
-      watched_entity: "foo.bar.net"
-      max_latency: 300
-      pagerduty_contact: "11111111111111111111111111111111"
-      rooms:
-        - "flapjacktest@conference.jabber.domain.tld"
-        - "gimp@conference.jabber.domain.tld"
-        - "log@conference.jabber.domain.tld"
+        - "gimp@conference.jabber.example.com"
+        - "log@conference.jabber.example.com"
       logger:
         level: INFO
         syslog_errors: yes
@@ -208,7 +196,7 @@ development:
         level: INFO
         syslog_errors: yes
     web:
-      enabled: yes
+      enabled: no
       port: 4080
       timeout: 300
       access_log: "log/web_access.log"
@@ -216,10 +204,28 @@ development:
         level: INFO
         syslog_errors: yes
     api:
-      enabled: yes
+      enabled: no
       port: 4081
       timeout: 300
       access_log: "log/api_access.log"
+      logger:
+        level: INFO
+        syslog_errors: yes
+    oobetet:
+      enabled: no
+      server: "jabber.example.com"
+      port: 5222
+      jabberid: "flapjacktest@jabber.example.com"
+      password: "nuther-good-password"
+      alias: "flapjacktest"
+      watched_check: "PING"
+      watched_entity: "foo.example.com"
+      max_latency: 300
+      pagerduty_contact: "11111111111111111111111111111111"
+      rooms:
+        - "flapjacktest@conference.jabber.example.com"
+        - "gimp@conference.jabber.example.com"
+        - "log@conference.jabber.example.com"
       logger:
         level: INFO
         syslog_errors: yes
