@@ -126,7 +126,7 @@ when "status"
   if runner.daemon_running?
     puts "#{exe} is running: #{uptime}"
   else
-    puts "#{exe} is not runninng"
+    puts "#{exe} is not running"
     exit 3
   end
 
