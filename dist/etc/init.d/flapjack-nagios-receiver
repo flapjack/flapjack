@@ -8,8 +8,6 @@
 
 PATH=/opt/flapjack/bin:$PATH
 
-NAGIOS_PERFDATA_FIFO="/var/cache/nagios3/event_stream.fifo"
-
 if [ ! $(which flapjack-nagios-receiver) ]; then
   echo "Error: flapjack-nagios-receiver isn't in PATH."
   echo "Refusing to do anything!"
@@ -17,7 +15,7 @@ if [ ! $(which flapjack-nagios-receiver) ]; then
 fi
 
 # Evaluate command
-flapjack-nagios-receiver $1 --fifo ${NAGIOS_PERFDATA_FIFO} --daemonize
+flapjack-nagios-receiver $1
 
 RETVAL=$?
 exit $RETVAL
