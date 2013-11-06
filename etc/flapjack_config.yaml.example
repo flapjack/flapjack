@@ -3,6 +3,9 @@
 production:
   pid_file: /var/run/flapjack/flapjack.pid
   log_file: /var/log/flapjack/flapjack.log
+  logger:
+    level: INFO
+    syslog_errors: yes
   daemonize: yes
   redis:
     host: 127.0.0.1
