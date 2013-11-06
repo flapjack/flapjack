@@ -21,7 +21,7 @@ module Flapjack
       @redis_options = config.for_redis
       @pikelets = []
 
-      @logger = Flapjack::Logger.new("flapjack-coordinator")
+      @logger = Flapjack::Logger.new("flapjack-coordinator", @config.all['logger'])
     end
 
     def start(options = {})

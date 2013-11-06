@@ -17,7 +17,7 @@ describe Flapjack::Coordinator do
     cfg = {'processor' => {'enabled' => true}}
     EM.should_receive(:synchrony).and_yield
     config.should_receive(:for_redis).and_return({})
-    config.should_receive(:all).and_return(cfg)
+    config.should_receive(:all).twice.and_return(cfg)
 
     processor = double('processor')
     processor.should_receive(:start)
@@ -51,7 +51,7 @@ describe Flapjack::Coordinator do
     cfg = {'processor' => {'enabled' => true}}
     EM.should_receive(:synchrony).and_yield
     config.should_receive(:for_redis).and_return({})
-    config.should_receive(:all).and_return(cfg)
+    config.should_receive(:all).twice.and_return(cfg)
 
     processor = double('processor')
     processor.should_receive(:start).and_raise(RuntimeError)
@@ -82,7 +82,7 @@ describe Flapjack::Coordinator do
     cfg = {'executive' => {'enabled' => true}}
     EM.should_receive(:synchrony).and_yield
     config.should_receive(:for_redis).and_return({})
-    config.should_receive(:all).and_return(cfg)
+    config.should_receive(:all).twice.and_return(cfg)
 
     processor = double('processor')
     processor.should_receive(:start)
@@ -125,7 +125,7 @@ describe Flapjack::Coordinator do
           }
     EM.should_receive(:synchrony).and_yield
     config.should_receive(:for_redis).and_return({})
-    config.should_receive(:all).and_return(cfg)
+    config.should_receive(:all).twice.and_return(cfg)
 
     processor = double('processor')
     processor.should_receive(:start)
@@ -163,6 +163,7 @@ describe Flapjack::Coordinator do
     Kernel.should_receive(:trap).with('QUIT').and_yield
     Kernel.should_receive(:trap).with('HUP').and_yield
 
+    config.should_receive(:all).and_return({})
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:stop).exactly(3).times
@@ -181,6 +182,7 @@ describe Flapjack::Coordinator do
     Kernel.should_not_receive(:trap).with('QUIT')
     Kernel.should_not_receive(:trap).with('HUP')
 
+    config.should_receive(:all).and_return({})
     config.should_receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
     fc.should_receive(:stop).twice
@@ -197,7 +199,7 @@ describe Flapjack::Coordinator do
     new_config = double('new_config')
     filename = double('filename')
 
-    config.should_receive(:all).and_return(old_cfg)
+    config.should_receive(:all).twice.and_return(old_cfg)
     config.should_receive(:filename).and_return(filename)
 
     Flapjack::Configuration.should_receive(:new).and_return(new_config)
@@ -240,7 +242,7 @@ describe Flapjack::Coordinator do
     new_config = double('new_config')
     filename = double('filename')
 
-    config.should_receive(:all).and_return(old_cfg)
+    config.should_receive(:all).twice.and_return(old_cfg)
     config.should_receive(:filename).and_return(filename)
 
     Flapjack::Configuration.should_receive(:new).and_return(new_config)
@@ -270,7 +272,7 @@ describe Flapjack::Coordinator do
     new_config = double('new_config')
     filename = double('filename')
 
-    config.should_receive(:all).and_return(old_cfg)
+    config.should_receive(:all).twice.and_return(old_cfg)
     config.should_receive(:filename).and_return(filename)
 
     Flapjack::Configuration.should_receive(:new).and_return(new_config)
