@@ -1,5 +1,13 @@
 ## Flapjack Changelog
 
+# 0.7.30 - 2013-11-06
+- Feature: Make logging more configurable gh-27 (@ali-graham)
+- Bug: 5 min default notification interval interferes with granularity of user set notification interval gh-156 (@jessereynolds)
+- Bug: NoMethodError at /checks_all gh-330 (@ali-graham)
+- Bug: Web UI assumes nil means 0 for rollup threshold gh-357 (@ali-graham)
+- Chore: Update init scripts gh-350 (@ali-graham)
+- Chore: Scripts in bin/ need to be better tested gh-305 (@jessereynolds)
+
 # 0.7.29 - 2013-11-01
 - Feature: Per contact media rollup complete gh-291 (@jessereynolds)
 - Feature: Rollup - show alerting checks and rollup status for each media on contact page gh-326 (@jessereynolds)
