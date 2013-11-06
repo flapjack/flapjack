@@ -6,7 +6,7 @@
 # reads from a nagios perfdata named-pipe and submits each event to the events queue in redis
 #
 
-PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin:/opt/flapjack/bin
+PATH=/opt/flapjack/bin:$PATH
 
 NAGIOS_PERFDATA_FIFO="/var/cache/nagios3/event_stream.fifo"
 
