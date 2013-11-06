@@ -3,10 +3,10 @@
 production:
   pid_file: /var/run/flapjack/flapjack.pid
   log_file: /var/log/flapjack/flapjack.log
+  daemonize: yes
   logger:
     level: INFO
     syslog_errors: yes
-  daemonize: yes
   redis:
     host: 127.0.0.1
     port: 6379
@@ -121,6 +121,9 @@ development:
   pid_file: tmp/pids/flapjack.pid
   log_file: log/flapjack.log
   daemonize: yes
+  logger:
+    level: INFO
+    syslog_errors: yes
   redis:
     host: 127.0.0.1
     port: 6379
@@ -173,7 +176,7 @@ development:
       # if you run up something like 200ok locally you can then view the
       # sms messages being emitted
       endpoint: 'http://localhost:9292/FakeMessagenetAPI.aspx'
-      username: "ermahgerd"
+      username: "gretta"
       password: "xxxx"
       logger:
         level: INFO
@@ -184,7 +187,7 @@ development:
       server: "jabber.example.com"
       port: 5222
       jabberid: "flapjack@jabber.example.com"
-      password: "good-password"
+      password: "xxxx"
       alias: "flapjack"
       rooms:
         - "gimp@conference.jabber.example.com"
@@ -199,7 +202,7 @@ development:
         level: INFO
         syslog_errors: yes
     web:
-      enabled: no
+      enabled: yes
       port: 4080
       timeout: 300
       access_log: "log/web_access.log"
@@ -207,7 +210,7 @@ development:
         level: INFO
         syslog_errors: yes
     api:
-      enabled: no
+      enabled: yes
       port: 4081
       timeout: 300
       access_log: "log/api_access.log"
@@ -233,12 +236,7 @@ development:
         level: INFO
         syslog_errors: yes
 
-
 test:
   redis:
     database: 14
-
-staging:
-  redis:
-    database: 15
 
