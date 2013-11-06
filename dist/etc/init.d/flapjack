@@ -1,22 +1,12 @@
 #!/bin/bash
 #
-# Copyright (c) 2009-2012 Lindsay Holmwood <lindsay@holmwood.id.au>
+# Copyright (c) 2009-2013 Lindsay Holmwood <lindsay@holmwood.id.au>
 #
 # flapjack
-# Boots flapjack (coordinator, flapjack-executive, notification workers, ...)
+# Boots flapjack (coordinator, processor, notifier, gateways...)
 #
 
-PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local:/usr/local/sbin:/usr/local/bin:/usr/lib/flapjack/bin
-
-# load global rbenv environment if present
-if [ -x /etc/profile.d/rbenv.sh ] ; then
-  source /etc/profile.d/rbenv.sh
-fi
-
-# Default return value
-RETVAL=0
-
-export FLAPJACK_ENV="production"
+PATH=/opt/flapjack/bin:$PATH
 
 if [ ! $(which flapjack) ]; then
   echo "Error: flapjack isn't in PATH."
@@ -24,35 +14,8 @@ if [ ! $(which flapjack) ]; then
   exit 1
 fi
 
-rbenv shell 1.9.3-p125
-
 # Evaluate command
-case "$1" in
-  start)
-    flapjack start --config /etc/flapjack/flapjack-config.yaml --daemonize
-    RETVAL=$?
-  ;;
-  stop)
-    flapjack stop --config /etc/flapjack/flapjack-config.yaml
-    RETVAL=$?
-  ;;
-  restart)
-    flapjack restart --config /etc/flapjack/flapjack-config.yaml
-    RETVAL=$?
-  ;;
-  reload)
-    flapjack reload --config /etc/flapjack/flapjack-config.yaml
-    RETVAL=$?
-  ;;
-  status)
-    flapjack status --config /etc/flapjack/flapjack-config.yaml
-    RETVAL=$?
-  ;;
-  *)
-    echo "Usage: flapjack {start|stop|restart|reload|status}"
-    RETVAL=1
-  ;;
-esac
+flapjack $1
 
+RETVAL=$?
 exit $RETVAL
-
