@@ -335,7 +335,7 @@ module Flapjack
       def entity_check_state(entity_name, check)
         entity = Flapjack::Data::Entity.find_by_name(entity_name,
           :redis => redis)
-        return if entity.nil?
+        return ['-', '-', 'never', 'never', false, false, 'never'] if entity.nil?
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
           check, :redis => redis)
         summary = entity_check.summary
