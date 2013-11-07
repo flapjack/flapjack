@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.7.31 - 2013-11-06
+- Bug: TypeError at /checks_all gh-363 (@jessereynolds)
+
 # 0.7.30 - 2013-11-06
 - Feature: Make logging more configurable gh-27 (@ali-graham)
 - Bug: 5 min default notification interval interferes with granularity of user set notification interval gh-156 (@jessereynolds)
