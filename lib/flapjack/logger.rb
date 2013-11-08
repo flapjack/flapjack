@@ -2,12 +2,7 @@
 
 require 'logger'
 require 'syslog'
-
-begin
-  # Ruby 2.0+
-  require 'syslog/logger'
-rescue LoadError
-end
+require 'monitor'
 
 module Flapjack
 
@@ -34,20 +29,8 @@ module Flapjack
         "#{t} [#{severity}] :: #{name} :: #{msg}\n"
       end
 
-      @syslog_formatter = proc do |severity, datetime, progname, msg|
-        t = datetime.iso8601
-        l = SEVERITY_LABELS[severity]
-        "#{t} [#{l}] :: #{name} :: #{msg}\n"
-      end
-
       @logger = ::Logger.new(STDOUT)
       @logger.formatter = @formatter
-
-      if Syslog.const_defined?('Logger', false)
-        # Ruby 2.0+
-        @sys_logger = Syslog.const_get('Logger', false).new('flapjack')
-        @sys_logger.formatter = @syslog_formatter
-      end
 
       configure(config)
     end
@@ -75,51 +58,48 @@ module Flapjack
       @logger.error(err) if err
 
       @logger.level = @level
-      if @sys_logger
-        @sys_logger.level = @level
-      end
+      @use_syslog = config.has_key?('syslog_errors') && config['syslog_errors']
     end
 
     def close
       raise "Already closed" if @logger.nil?
       @logger.close
       @logger = nil
-      if @sys_logger
-        @sys_logger.close
-        @sys_logger = nil
-      end
     end
 
-    def add(severity, message = nil, progname = nil, &block)
-      raise "Cannot log with a closed logger" if @logger.nil?
-      @logger.add(severity, message, progname, &block)
-      return if severity < @level
-
-      progname ||= 'flapjack'
-      if message.nil?
-        if block_given?
-          message = yield
-        else
-          message = progname
-          progname = 'flapjack'
-        end
-      end
-
-      if @sys_logger
-        @sys_logger.add(severity, message, progname, &block)
-      else
+    def self.syslog_add(severity, message, name)
+      @lock ||= Monitor.new
+      @lock.synchronize do
         level = SYSLOG_LEVELS[severity]
         t = Time.now.iso8601
         l = SEVERITY_LABELS[severity]
         begin
           Syslog.open('flapjack', (Syslog::Constants::LOG_PID | Syslog::Constants::LOG_CONS),
                                    Syslog::Constants::LOG_USER)
-          Syslog.mask = Syslog::LOG_UPTO(level)
-          Syslog.log(level, "#{t} [#{l}] :: #{@name} :: %s", message)
+          Syslog.mask = Syslog::LOG_UPTO(::Syslog::Constants::LOG_ERR)
+          Syslog.log(level, "#{t} [#{l}] :: #{name} :: %s", message)
         ensure
           Syslog.close
         end
       end
+    end
+
+    def add(severity, message = nil, progname = nil, &block)
+      raise "Cannot log with a closed logger" if @logger.nil?
+      @logger.add(severity, message, progname, &block)
+      if severity >= @level
+        progname ||= 'flapjack'
+        if message.nil?
+          if block_given?
+            message = yield
+          else
+            message = progname
+            progname = 'flapjack'
+          end
+        end
+      end
+
+      Flapjack::Logger.syslog_add(severity, message, @name) if @use_syslog
     end
 
     LEVELS.each do |level|

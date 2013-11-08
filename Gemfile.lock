@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    flapjack (0.7.28)
+    flapjack (0.7.31)
       activesupport (~> 3.2.14)
       chronic
       chronic_duration

@@ -32,7 +32,7 @@ module Flapjack
         }
       }
 
-      @logger = Flapjack::Logger.new("flapjack-coordinator")
+      @logger = Flapjack::Logger.new("flapjack-coordinator", @config.all['logger'])
     end
 
     def start(opts = {})

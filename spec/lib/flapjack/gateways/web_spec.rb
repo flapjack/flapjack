@@ -32,7 +32,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   def expect_stats
     redis.should_receive(:dbsize).and_return(3)
     redis.should_receive(:keys).with('executive_instance:*').and_return(["executive_instance:foo-app-01"])
-    redis.should_receive(:hget).twice.and_return(Time.now.to_i - 60)
+    redis.should_receive(:hget).once.and_return(Time.now.to_i - 60)
     redis.should_receive(:hgetall).twice.and_return({'all' => '8001', 'ok' => '8002'},
       {'all' => '9001', 'ok' => '9002'})
     redis.should_receive(:llen).with('events')

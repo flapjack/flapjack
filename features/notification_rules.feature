@@ -4,51 +4,51 @@ Feature: Notification rules on a per contact basis
   Background:
     Given the following users exist:
       | id  | first_name | last_name | email             | sms          | timezone         |
-      | 1   | Malak      | Al-Musawi | malak@example.com | +61400000001 | Asia/Baghdad     |
-      | 2   | Imani      | Farooq    | imani@example.com | +61400000002 | Europe/Moscow    |
-      | 3   | Vera       | Дурейко   | vera@example.com  | +61400000003 | Europe/Paris     |
-      | 4   | Lucia      | Moretti   | lucia@example.com | +61400000004 | Europe/Rome      |
-      | 5   | Wang Fang  | Wong      | fang@example.com  | +61400000005 | Asia/Shanghai    |
+      | c1  | Malak      | Al-Musawi | malak@example.com | +61400000001 | Asia/Baghdad     |
+      | c2  | Imani      | Farooq    | imani@example.com | +61400000002 | Europe/Moscow    |
+      | c3  | Vera       | Дурейко   | vera@example.com  | +61400000003 | Europe/Paris     |
+      | c4  | Lucia      | Moretti   | lucia@example.com | +61400000004 | Europe/Rome      |
+      | c5  | Wang Fang  | Wong      | fang@example.com  | +61400000005 | Asia/Shanghai    |
 
     And the following entities exist:
       | id  | name           | contacts |
-      | 1   | foo            | 1        |
-      | 2   | bar            | 1,2,3    |
-      | 3   | baz            | 1,3      |
-      | 4   | buf            | 1,2,3    |
-      | 5   | foo-app-01.xyz | 4        |
+      | 1   | foo            | c1       |
+      | 2   | bar            | c1,c2,c3 |
+      | 3   | baz            | c1,c3    |
+      | 4   | buf            | c1,c2,c3 |
+      | 5   | foo-app-01.xyz | c4       |
 
-    And user 1 has the following notification intervals:
+    And user c1 has the following notification intervals:
       | email | sms |
       | 15    | 60  |
 
-    And user 2 has the following notification intervals:
+    And user c2 has the following notification intervals:
       | email | sms |
       | 15    | 60  |
 
-    And user 3 has the following notification intervals:
+    And user c3 has the following notification intervals:
       | email | sms |
       | 15    | 60  |
 
-    And user 4 has the following notification intervals:
+    And user c4 has the following notification intervals:
       | email | sms |
       | 15    | 60  |
 
-    And user 1 has the following notification rules:
+    And user c1 has the following notification rules:
       | entities | unknown_media | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
       |          |               | email         | sms,email        | true              | true               |                   |
       | foo      |               | email         | sms,email        |                   |                    | 8-18 weekdays     |
       | bar      | email         |               | sms,email        | true              |                    |                   |
       | baz      |               | email         | sms,email        |                   |                    |                   |
 
-    And user 2 has the following notification rules:
+    And user c2 has the following notification rules:
       | entities | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole |
       |          |      | email         | email            |                   |                    |
       |          |      | sms           | sms              |                   |                    |
       | bar      |      | email         | email,sms        |                   |                    |
       | bar      | wags |               |                  | true              | true               |
 
-    And user 3 has the following notification rules:
+    And user c3 has the following notification rules:
       | entities | warning_media | critical_media   | warning_blackhole | critical_blackhole |
       |          | email         | email            |                   |                    |
       | baz      | sms           | sms              |                   |                    |
@@ -56,13 +56,13 @@ Feature: Notification rules on a per contact basis
       | buf      | sms           | sms              |                   |                    |
       | bar      | email         | email            | true              | true               |
 
-    And user 4 has the following notification rules:
+    And user c4 has the following notification rules:
       | tags            | warning_media | critical_media   | time_restrictions |
       |                 |               |                  |                   |
       | xyz, disk, util | sms           | sms              |                   |
       | xyz, ping       | sms,email     | sms,email        | 8-18 weekdays     |
 
-    And user 5 has the following notification rules:
+    And user c5 has the following notification rules:
       | unknown_media | critical_media |
       | email         | email, sms     |
 
@@ -81,15 +81,15 @@ Feature: Notification rules on a per contact basis
     And   a critical event is received
     Then  1 email alert should be queued for malak@example.com
     When  the time is February 1 2013 12:00
-    Then  all alert dropping keys for user 1 should have expired
+    Then  all alert dropping keys for user c1 should have expired
     When  a critical event is received
     Then  2 email alerts should be queued for malak@example.com
     When  the time is February 1 2013 17:59
-    Then  all alert dropping keys for user 1 should have expired
+    Then  all alert dropping keys for user c1 should have expired
     When  a critical event is received
     Then  3 email alerts should be queued for malak@example.com
     When  the time is February 1 2013 18:01
-    Then  all alert dropping keys for user 1 should have expired
+    Then  all alert dropping keys for user c1 should have expired
     When  a critical event is received
     Then  3 email alerts should be queued for malak@example.com
 
@@ -395,15 +395,15 @@ Feature: Notification rules on a per contact basis
     And   a critical event is received
     Then  1 sms alert should be queued for +61400000004
     When  the time is February 1 2013 12:00
-    Then  all alert dropping keys for user 1 should have expired
+    Then  all alert dropping keys for user c1 should have expired
     When  a critical event is received
     Then  2 sms alerts should be queued for +61400000004
     When  the time is February 1 2013 17:59
-    Then  all alert dropping keys for user 1 should have expired
+    Then  all alert dropping keys for user c1 should have expired
     When  a critical event is received
     Then  3 sms alerts should be queued for +61400000004
     When  the time is February 1 2013 18:01
-    Then  all alert dropping keys for user 1 should have expired
+    Then  all alert dropping keys for user c1 should have expired
     When  a critical event is received
     Then  3 sms alerts should be queued for +61400000004
 

@@ -31,10 +31,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
                      'contact_first_name' => 'John',
                      'contact_last_name' => 'Smith',
                      'address' => 'johns@example.com',
-                     'state' => 'CRITICAL',
+                     'state' => 'critical',
+                     'state_duration' => 23,
                      'summary' => '',
-                     'last_state' => 'OK',
-                     'last_summary' => 'TEST',
+                     'last_state' => 'ok',
+                     'last_summary' => 'test',
                      'details' => 'Testing',
                      'time' => now.to_i,
                      'event_id' => 'app-02:ping'}
@@ -60,7 +61,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "handles notifications received via Redis" do
       bot = double(Flapjack::Gateways::Jabber::Bot)
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
-      bot.should_receive(:announce).with('johns@example.com', /PROBLEM ::/)
+      bot.should_receive(:announce).with('johns@example.com', /Problem: /)
 
       fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config, :logger => @logger)
       fjn.instance_variable_set('@siblings', [bot])

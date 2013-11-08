@@ -312,7 +312,7 @@ module Flapjack
 
       def entity_check_state(entity_name, check)
         entity = Flapjack::Data::Entity.find_by_name(entity_name)
-        return if entity.nil?
+        return ['-', '-', 'never', 'never', false, false, 'never'] if entity.nil?
         entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check)
         summary = entity_check.summary
         summary = summary[0..76] + '...' unless summary.nil? || (summary.length < 81)
@@ -324,16 +324,16 @@ module Flapjack
           }.max_by {|n| n[1] || 0}
 
         lc = entity_check.last_change
-        last_change   = lc ? ChronicDuration.output(Time.now.to_i - lc.to_i,
-                               :format => :short, :keep_zero => true, :units => 2) : 'never'
+        last_change   = lc ? (ChronicDuration.output(Time.now.to_i - lc.to_i,
+                               :format => :short, :keep_zero => true, :units => 2) || '0s') : 'never'
 
         lu = entity_check.last_update
-        last_update   = lu ? ChronicDuration.output(Time.now.to_i - lu.to_i,
-                               :format => :short, :keep_zero => true, :units => 2) : 'never'
+        last_update   = lu ? (ChronicDuration.output(Time.now.to_i - lu.to_i,
+                               :format => :short, :keep_zero => true, :units => 2) || '0s') : 'never'
 
         ln = latest_notif[1]
-        last_notified = ln ? ChronicDuration.output(Time.now.to_i - ln.to_i,
-                               :format => :short, :keep_zero => true, :units => 2) + ", #{latest_notif[0]}" : 'never'
+        last_notified = ln ? (ChronicDuration.output(Time.now.to_i - ln.to_i,
+                               :format => :short, :keep_zero => true, :units => 2) || '0s') + ", #{latest_notif[0]}" : 'never'
 
         [(entity_check.state       || '-'),
          (summary                  || '-'),
@@ -348,20 +348,28 @@ module Flapjack
       def self_stats
         @fqdn         = `/bin/hostname -f`.chomp
         @pid          = Process.pid
-        @instance_id  = "#{@fqdn}:#{@pid}"
-
-        @dbsize                  = Flapjack.redis.dbsize
-        @executive_instances     = Flapjack.redis.keys("executive_instance:*").map {|i|
-          [ i.match(/executive_instance:(.*)/)[1], Flapjack.redis.hget(i, 'boot_time').to_i ]
-        }.sort {|a, b| b[1] <=> a[1]}
-        @event_counters          = Flapjack.redis.hgetall('event_counters')
-        @event_counters_instance = Flapjack.redis.hgetall("event_counters:#{@instance_id}")
-        @boot_time               = Time.at(Flapjack.redis.hget("executive_instance:#{@instance_id}", 'boot_time').to_i)
-        @uptime                  = Time.now.to_i - @boot_time.to_i
-        @uptime_string           = time_period_in_words(@uptime)
-        @event_rate_all          = (@uptime > 0) ?
-                                   (@event_counters_instance['all'].to_f / @uptime) : 0
-        @events_queued           = Flapjack.redis.llen('events')
+        @dbsize              = Flapjack.redis.dbsize
+        @executive_instances = Flapjack.redis.keys("executive_instance:*").inject({}) do |memo, i|
+          instance_id    = i.match(/executive_instance:(.*)/)[1]
+          boot_time      = Flapjack.redis.hget(i, 'boot_time').to_i
+          uptime         = Time.now.to_i - boot_time
+          uptime_string  = (ChronicDuration.output(uptime, :format => :short, :keep_zero => true, :units => 2) || '0s')
+          event_counters = Flapjack.redis.hgetall("event_counters:#{instance_id}")
+          event_rates    = event_counters.inject({}) do |er, ec|
+            er[ec[0]] = uptime && uptime > 0 ? (ec[1].to_f / uptime).round : nil
+            er
+          end
+          memo[instance_id] = {
+            'boot_time'      => boot_time,
+            'uptime'         => uptime,
+            'uptime_string'  => uptime_string,
+            'event_counters' => event_counters,
+            'event_rates'    => event_rates
+          }
+          memo
+        end
+        @event_counters = Flapjack.redis.hgetall('event_counters')
+        @events_queued  = Flapjack.redis.llen('events')
       end
 
       def entity_stats

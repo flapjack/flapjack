@@ -81,7 +81,7 @@ module Flapjack
 
       timestamp    = Time.now
       event_id     = notification.event_id
-      entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id)
+      entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :logger => @logger)
       contacts     = entity_check.contacts
 
       if contacts.empty?
@@ -94,6 +94,9 @@ module Flapjack
         :logger => @logger)
 
       notification_contents = notification.contents
+
+      in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
+      in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
 
       messages.each do |message|
         media_type = message.medium

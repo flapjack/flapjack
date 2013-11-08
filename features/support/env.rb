@@ -17,6 +17,8 @@ if ENV['COVERAGE']
   end
 end
 
+@debug = false
+
 ENV["FLAPJACK_ENV"] = 'test'
 FLAPJACK_ENV = 'test'
 
@@ -170,11 +172,21 @@ After('@time') do
 end
 
 After('@process') do
-  ['tmp/cucumber_cli/flapjack_cfg.yml',
-   'tmp/cucumber_cli/flapjack_cfg.yml.bak',
-   'tmp/cucumber_cli/flapjack_cfg_d.yml',
+  ['tmp/cucumber_cli/flapjack_cfg.yaml',
+   'tmp/cucumber_cli/flapjack_cfg.yaml.bak',
+   'tmp/cucumber_cli/flapjack_cfg_d.yaml',
    'tmp/cucumber_cli/flapjack_d.log',
-   'tmp/cucumber_cli/flapjack_d.pid'].each do |file|
+   'tmp/cucumber_cli/flapjack_d.pid',
+   'tmp/cucumber_cli/nagios_perfdata.fifo',
+   'tmp/cucumber_cli/flapjack-nagios-receiver_d.pid',
+   'tmp/cucumber_cli/flapjack-nagios-receiver_d.log',
+   'tmp/cucumber_cli/flapjack-nagios-receiver_d.yaml',
+   'tmp/cucumber_cli/flapjack-nagios-receiver.yaml',
+   'tmp/cucumber_cli/flapper_d.pid',
+   'tmp/cucumber_cli/flapper_d.log',
+   'tmp/cucumber_cli/flapjack-populator.yaml',
+   'tmp/cucumber_cli/flapjack-populator-contacts.json',
+  ].each do |file|
     next unless File.exists?(file)
     File.unlink(file)
   end

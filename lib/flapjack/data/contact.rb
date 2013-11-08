@@ -23,7 +23,7 @@ module Flapjack
 
       def self.all
         Flapjack.redis.keys('contact:*').inject([]) {|ret, k|
-          k =~ /^contact:(\d+)$/
+          k =~ /^contact:(.*)$/
           id = $1
           contact = self.find_by_id(id)
           ret << contact if contact
@@ -123,6 +123,12 @@ module Flapjack
           merge('service_key' => service_key)
       end
 
+      def set_pagerduty_credentials(details)
+        @redis.hset("contact_media:#{self.id}", 'pagerduty', details['service_key'])
+        @redis.hmset("contact_pagerduty:#{self.id}",
+                     *['subdomain', 'username', 'password'].collect {|f| [f, details[f]]})
+      end
+
       # NB ideally contacts_for:* keys would scope the entity and check by an
       # input source, for namespacing purposes
       def entities(options = {})
@@ -205,6 +211,7 @@ module Flapjack
       end
 
       def set_interval_for_media(media, interval)
+        return if 'pagerduty'.eql?(media)
         if interval.nil?
           Flapjack.redis.hdel("contact_media_intervals:#{self.id}", media)
           return
@@ -219,6 +226,7 @@ module Flapjack
       end
 
       def set_rollup_threshold_for_media(media, threshold)
+        return if 'pagerduty'.eql?(media)
         if threshold.nil?
           Flapjack.redis.hdel("contact_media_rollup_thresholds:#{self.id}", media)
           return
@@ -228,12 +236,8 @@ module Flapjack
       end
 
       def set_address_for_media(media, address)
+        return if 'pagerduty'.eql?(media)
         Flapjack.redis.hset("contact_media:#{self.id}", media, address)
-        if media == 'pagerduty'
-          # FIXME - work out what to do when changing the pagerduty service key (address)
-          # probably best solution is to remove the need to have the username and password
-          # and subdomain as pagerduty's updated api's mean we don't them anymore I think...
-        end
         self.media = Flapjack.redis.hgetall("contact_media:#{@id}")
       end
 
@@ -306,10 +310,14 @@ module Flapjack
         key = "contact_alerting_checks:#{self.id}:media:#{media}"
         cleaned = 0
         alerting_checks_for_media(media).each do |check|
-          next unless Flapjack::Data::EntityCheck.state_for_event_id?(check) == 'ok' ||
-            Flapjack::Data::EntityCheck.in_unscheduled_maintenance_for_event_id?(check) ||
-            Flapjack::Data::EntityCheck.in_scheduled_maintenance_for_event_id?(check)
 
+          entity_check = Flapjack::Data::EntityCheck.for_event_id(check)
+          next unless Flapjack::Data::EntityCheck.state_for_event_id?(check) == 'ok' ||
+            Flapjack::Data::EntityCheck.in_unscheduled_maintenance_for_event_id?(check,) ||
+            Flapjack::Data::EntityCheck.in_scheduled_maintenance_for_event_id?(check) ||
+            !entity_check.contacts.map {|c| c.id}.include?(self.id)
+
+          # FIXME: why can't i get this logging when called from notifier (notification.rb)?
           @logger.debug("removing from alerting checks for #{self.id}/#{media}: #{check}") if @logger
           remove_alerting_check_for_media(media, check)
           cleaned += 1

@@ -13,15 +13,21 @@ Then /^every file in the output should start with "([^\"]*)"$/ do |string|
 end
 
 When /^I run `([^"]*)`$/ do |cmd|
-  #bin_path = '/usr/bin'
-  #command = "#{bin_path}/#{cmd}"
-
-  #@output = `#{command}`
+  @cmd = cmd
   @output = `#{cmd} 2>&1`
   @exit_status = $?.exitstatus
+  puts "output: #{@output}" if @debug
+  puts "exit_status: #{@exit_status}" if @debug
 end
 
-Then /^the exit value should be (\d+)$/ do |number|
-  @exit_status.should == number.to_i
+Then /^the exit status should( not)? be (\d+)$/ do |negativity, number|
+  if negativity
+    @exit_status.should_not == number.to_i
+  else
+    @exit_status.should == number.to_i
+  end
 end
 
+Then /^the output should contain "([^"]*)"$/ do |matcher|
+  @output.should include(matcher)
+end

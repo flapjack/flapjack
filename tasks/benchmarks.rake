@@ -15,7 +15,7 @@ namespace :benchmarks do
   require 'flapjack/data/entity_check'
   require 'flapjack/version'
 
-  FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'test'
+  FLAPJACK_ENV = 'test'
   config_file = File.join('tasks', 'support', 'flapjack_config_benchmark.yaml')
 
   config = Flapjack::Configuration.new

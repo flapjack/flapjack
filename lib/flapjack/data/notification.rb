@@ -63,10 +63,8 @@ module Flapjack
                  'last_state'     => last_state[:state],
                  'last_summary'   => last_state[:summary],
                  'state_duration' => opts[:state_duration],
-
                  'type'           => opts[:type] || type_for_event(event),
                  'severity'       => opts[:severity],
-
                  'tags'           => tag_data }
 
         begin
@@ -107,11 +105,15 @@ module Flapjack
       end
 
       def ok?
-        @state && ['ok', 'up'].include?(@state.downcase)
+        @state && ['ok', 'up'].include?(@state)
       end
 
       def acknowledgement?
-        @state && ['acknowledgement'].include?(@state.downcase)
+        @state && ['acknowledgement'].include?(@state)
+      end
+
+      def test?
+        @state && ['test_notifications'].include?(@state)
       end
 
       def contents
@@ -136,7 +138,7 @@ module Flapjack
         default_timezone = opts[:default_timezone]
         logger = opts[:logger]
 
-        @messages ||= contacts.collect {|contact|
+        @messages ||= contacts.collect do |contact|
           contact_id = contact.id
           rules = contact.notification_rules
           media = contact.media
@@ -208,36 +210,39 @@ module Flapjack
           logger.debug "media_to_use: #{media_to_use}"
 
           # here begins rollup madness
-          media_to_use.each_pair.inject([]) { |ret, (media, address)|
+          media_to_use.each_pair.inject([]) do |ret, (media, address)|
             rollup_type = nil
 
-            contact.add_alerting_check_for_media(media, @event_id) unless ok? || acknowledgement?
+            contact.add_alerting_check_for_media(media, @event_id) unless ok? || acknowledgement? || test?
 
             # expunge checks in (un)scheduled maintenance from the alerting set
             cleaned = contact.clean_alerting_checks_for_media(media)
             logger.debug("cleaned alerting checks for #{media}: #{cleaned}")
 
-            alerting_checks  = contact.count_alerting_checks_for_media(media)
-            rollup_threshold = contact.rollup_threshold_for_media(media)
-            case
-            when rollup_threshold.nil?
-              # back away slowly
-            when alerting_checks >= rollup_threshold
-              next ret if contact.drop_rollup_notifications_for_media?(media)
-              contact.update_sent_rollup_alert_keys_for_media(media, :delete => ok?)
-              rollup_type = 'problem'
-            when (alerting_checks + cleaned >= rollup_threshold)
-              # alerting checks was just cleaned such that it is now below the rollup threshold
-              rollup_type = 'recovery'
+            # pagerduty is an example of a medium which should never be rolled up
+            unless ['pagerduty'].include?(media)
+              alerting_checks  = contact.count_alerting_checks_for_media(media)
+              rollup_threshold = contact.rollup_threshold_for_media(media)
+              case
+              when rollup_threshold.nil?
+                # back away slowly
+              when alerting_checks >= rollup_threshold
+                next ret if contact.drop_rollup_notifications_for_media?(media)
+                contact.update_sent_rollup_alert_keys_for_media(media, :delete => ok?)
+                rollup_type = 'problem'
+              when (alerting_checks + cleaned >= rollup_threshold)
+                # alerting checks was just cleaned such that it is now below the rollup threshold
+                rollup_type = 'recovery'
+              end
+              logger.debug "rollup decisions: #{@event_id} #{@state} #{media} #{address} rollup_type: #{rollup_type}"
             end
-            logger.debug "rollup decisions: #{@event_id} #{@state} #{media} #{address} rollup_type: #{rollup_type}"
 
             m = Flapjack::Data::Message.for_contact(contact,
                   :medium => media, :address => address, :rollup => rollup_type)
             ret << m
             ret
-          }
-        }.compact.flatten
+          end
+        end.compact.flatten # @messages ||= contacts.collect do ...
       end
 
     private
@@ -251,16 +256,12 @@ module Flapjack
         @time           = opts['time']
         @count          = opts['count']
         @duration       = opts['duration']
-
         @last_state     = opts['last_state']
         @last_summary   = opts['last_summary']
         @state_duration = opts['state_duration']
-
         @type           = opts['type']
         @severity       = opts['severity']
-
-        tags            = opts['tags']
-        @tags           = tags.is_a?(Array) ? Flapjack::Data::TagSet.new(tags) : nil
+        @tags           = opts['tags'].is_a?(Array) ? Flapjack::Data::TagSet.new(opts['tags']) : nil
       end
 
       # # time restrictions match?

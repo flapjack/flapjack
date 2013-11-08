@@ -19,6 +19,18 @@
         </div>
         <% state_qualifier = @check_enabled ? '' : "DISABLED. Last " %>
         <h3><%= state_qualifier %>State: <%= @check_state ? h(@check_state.upcase) : '' %></h3>
+        <% if @current_unscheduled_maintenance %>
+          <% ack_msg = "#{@current_unscheduled_maintenance[:summary]}" %>
+          <% ack_msg = ack_msg.length > 0 ? ack_msg : 'no summary given' %>
+          <h4>Acknowledged (<%= h ack_msg %>)</h4>
+          <% start  = Time.at(@current_unscheduled_maintenance[:start_time]) %>
+          <% finish = Time.at(@current_unscheduled_maintenance[:start_time] + @current_unscheduled_maintenance[:duration]) %>
+          <% remain = time_period_in_words( (finish - current_time).ceil ) %>
+          <p><%= h start.to_s %> -&gt; <%= h finish.to_s %> (<%= h remain %> remaining)</p>
+          <form action="/end_unscheduled_maintenance/<%= check_path_escaped %>" method="post">
+            <input type="submit" value="End Unscheduled Maintenance (Unacknowledge)" class="button">
+          </form>
+        <% end %>
         <% if (['warning', 'critical', 'unknown'].include?(@check_state) and !@current_scheduled_maintenance) %>
           <form action="/acknowledgements/<%= check_path_escaped %>" method="post" class="form-inline">
             <input type="hidden" name="acknowledgement_id" value="<%= @acknowledgement_id %>">
@@ -31,18 +43,10 @@
             e.g. "5 hours"
           </form>
         <% end %>
-        <% if @current_unscheduled_maintenance %>
-          <h3>(Acknowledged - <%= h @current_unscheduled_maintenance[:summary] %>)</h3>
-          <% start  = Time.at(@current_unscheduled_maintenance[:start_time]) %>
-          <% finish = Time.at(@current_unscheduled_maintenance[:start_time] + @current_unscheduled_maintenance[:duration]) %>
-          <% remain = time_period_in_words( (finish - current_time).ceil ) %>
-          <p><%= h start.to_s %> -&gt; <%= h finish.to_s %> (<%= h remain %> remaining)</p>
-          <form action="/end_unscheduled_maintenance/<%= check_path_escaped %>" method="post">
-            <input type="submit" value="End Unscheduled Maintenance (Unacknowledge)" class="button">
-          </form>
-        <% end %>
         <% if @current_scheduled_maintenance %>
-          <h4>(Scheduled Maintenance - <%= h @current_scheduled_maintenance[:summary] %></h4>
+          <% maint_msg = "#{@current_scheduled_maintenance[:summary]}" %>
+          <% maint_msg = maint_msg.length > 0 ? maint_msg : 'no summary given' %>
+          <h4>In <a href="#scheduled_maintenance_periods">Scheduled Maintenance</a> (<%= h maint_msg %>)</h4>
           <% start  = Time.at(@current_scheduled_maintenance[:start_time]) %>
           <% finish = Time.at(@current_scheduled_maintenance[:start_time] + @current_scheduled_maintenance[:duration]) %>
           <% remain = time_period_in_words( (finish - current_time).ceil ) %>
@@ -84,6 +88,7 @@
             Disabled
           <% end %>
 
+        <a name="scheduled_maintenance_periods"></a>
         <h3>Scheduled Maintenance Periods</h3>
           <% if @scheduled_maintenances && !@scheduled_maintenances.empty? %>
             <table class="table table-bordered table-hover table-condensed">
@@ -104,7 +109,7 @@
                 <tr>
                 <td><%= h Time.at(start_time).to_s %></td>
                 <td><%= h Time.at(end_time).to_s %></td>
-                <td><%= h ChronicDuration.output(duration) %></td>
+                <td><%= h(ChronicDuration.output(duration, :keep_zero => true) || '0 secs') %></td>
                 <td><%= h summary %></td>
                 <td>
                   <% if end_time > current_time.to_i %>

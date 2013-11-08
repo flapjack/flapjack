@@ -1,5 +1,26 @@
 ## Flapjack Changelog
 
+# 0.7.31 - 2013-11-06
+- Bug: TypeError at /checks_all gh-363 (@jessereynolds)
+
+# 0.7.30 - 2013-11-06
+- Feature: Make logging more configurable gh-27 (@ali-graham)
+- Bug: 5 min default notification interval interferes with granularity of user set notification interval gh-156 (@jessereynolds)
+- Bug: NoMethodError at /checks_all gh-330 (@ali-graham)
+- Bug: Web UI assumes nil means 0 for rollup threshold gh-357 (@ali-graham)
+- Chore: Update init scripts gh-350 (@ali-graham)
+- Chore: Scripts in bin/ need to be better tested gh-305 (@jessereynolds)
+
+# 0.7.29 - 2013-11-01
+- Feature: Per contact media rollup complete gh-291 (@jessereynolds)
+- Feature: Rollup - show alerting checks and rollup status for each media on contact page gh-326 (@jessereynolds)
+- Feature: Make message templating more flexible and consistent gh-329 (@jessereynolds)
+- Feature: Remove misleading internal metrics gh-344 (@jessereynolds)
+- Bug: clear up pagerduty details API code gh-338 (@ali-graham)
+- Bug: non-numeric contact ID not properly supported - thanks @avishai-ish-shalom gh-338 (@jessereynolds)
+- Bug: GET /contacts gives you more than you bargained for gh-339 (@jessereynolds)
+- Bug: SMS alerts being sent from separate environment gh-135 (@jessereynolds)
+
 # 0.7.28 - 2013-10-21
 - Feature: Per contact media rollup (summary) notifications - foundation (data, api, web UI etc) gh-291 (@jessereynolds)
 - Feature: flapper takes an IP to bind to gh-98 (@ali-graham)

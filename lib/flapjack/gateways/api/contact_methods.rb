@@ -97,8 +97,7 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
           app.get '/contacts' do
             content_type :json
-
-            Flapjack::Data::Contact.all.to_json
+            "[" + Flapjack::Data::Contact.all.map {|c| c.to_json }.join(',') + "]"
           end
 
           # Returns the core information about the specified contact
@@ -106,8 +105,7 @@ module Flapjack
           app.get '/contacts/:contact_id' do
             content_type :json
 
-            contact = find_contact(params[:contact_id])
-            contact.to_json
+            find_contact(params[:contact_id]).to_json
           end
 
           # Lists this contact's notification rules
@@ -115,8 +113,7 @@ module Flapjack
           app.get '/contacts/:contact_id/notification_rules' do
             content_type :json
 
-            contact = find_contact(params[:contact_id])
-            contact.notification_rules.to_json
+            find_contact(params[:contact_id]).notification_rules.to_json
           end
 
           # Get the specified notification rule for this user
@@ -124,8 +121,7 @@ module Flapjack
           app.get '/notification_rules/:id' do
             content_type :json
 
-            rule = find_rule(params[:id])
-            rule.to_json
+            find_rule(params[:id]).to_json
           end
 
           # Creates a notification rule for a contact
@@ -233,19 +229,36 @@ module Flapjack
 
             contact = find_contact(params[:contact_id])
             errors = []
-            if params[:address].nil?
-              errors << "no address for '#{params[:id]}' media"
+
+            if 'pagerduty'.eql?(params[:id])
+              errors = [:service_key, :subdomain, :username, :password].inject([]) do |memo, pdp|
+                memo << "no #{pdp.to_s} for 'pagerduty' media" if params[pdp].nil?
+                memo
+              end
+
+              halt err(403, *errors) unless errors.empty?
+
+              contact.set_pagerduty_credentials('service_key'  => params[:service_key],
+                                                'subdomain'    => params[:subdomain],
+                                                'username'     => params[:username],
+                                                'password'     => params[:password])
+
+              contact.pagerduty_credentials.to_json
+            else
+              if params[:address].nil?
+                errors << "no address for '#{params[:id]}' media"
+              end
+
+              halt err(403, *errors) unless errors.empty?
+
+              contact.set_address_for_media(params[:id], params[:address])
+              contact.set_interval_for_media(params[:id], params[:interval])
+              contact.set_rollup_threshold_for_media(params[:id], params[:rollup_threshold])
+
+              {'address'          => contact.media[params[:id]],
+               'interval'         => contact.media_intervals[params[:id]],
+               'rollup_threshold' => contact.media_rollup_thresholds[params[:id]]}.to_json
             end
-
-            halt err(403, *errors) unless errors.empty?
-
-            contact.set_address_for_media(params[:id], params[:address])
-            contact.set_interval_for_media(params[:id], params[:interval])
-            contact.set_rollup_threshold_for_media(params[:id], params[:rollup_threshold])
-
-            {'address'          => contact.media[params[:id]],
-             'interval'         => contact.media_intervals[params[:id]],
-             'rollup_threshold' => contact.media_rollup_thresholds[params[:id]]}.to_json
           end
 
           # delete a media of a contact

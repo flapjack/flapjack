@@ -2,16 +2,9 @@
 
 require 'optparse'
 require 'ostruct'
-require 'eventmachine'
 require 'socket'
+require 'timeout'
 require 'dante'
-
-module Flapper
-  def receive_data data
-    send_data ">>>you sent: #{data}"
-    close_connection if data =~ /quit/i
-  end
-end
 
 def local_ip
   # turn off reverse DNS resolution temporarily
@@ -28,25 +21,64 @@ end
 def main(bind_ip)
   start_every = 120
   stop_after  = 60
+
   bind_port   = 12345
-  EM.run {
 
-    puts "#{Time.now}: starting server"
-    server_init = EM.start_server bind_ip, bind_port, Flapper
-    EM.add_timer(stop_after) do
-      puts "#{Time.now}: stopping server"
-      EM.stop_server(server_init)
-    end
+  begin
+    loop do
+      begin
+        fds = []
+        Timeout::timeout(stop_after) do
+          puts "#{Time.now}: starting server"
 
-    EM.add_periodic_timer(start_every) do
-      puts "#{Time.now}: starting server"
-      server = EM.start_server bind_ip, bind_port, Flapper
-      EM.add_timer(stop_after) do
+          acceptor = TCPServer.open(bind_ip, bind_port)
+          fds = [acceptor]
+
+          while true
+            puts 'loop'
+            if ios = select(fds, [], [], 10)
+              reads = ios.first
+              p reads
+              reads.each do |client|
+                if client == acceptor
+                  puts 'Someone connected to server. Adding socket to fds.'
+                  client, sockaddr = acceptor.accept
+                  fds << client
+                elsif client.eof?
+                  puts "Client disconnected"
+                  fds.delete(client)
+                  client.close
+                else
+                  # # Perform a blocking-read until new-line is encountered.
+                  # # We know the client is writing, so as long as it adheres to the
+                  # # new-line protocol, we shouldn't block for very long.
+                  puts "Reading..."
+                  data = client.gets("\n")
+                  client.puts(">>you sent: #{data}")
+                  if data =~ /quit/i
+                    fds.delete(client)
+                    client.close
+                  end
+                end
+              end
+            end
+          end
+        end
+      rescue Timeout::Error
         puts "#{Time.now}: stopping server"
-        EM.stop_server(server)
+      ensure
+        # should trigger even for an Interrupt
+        puts "Cleaning up"
+        fds.each {|c| c.close}
       end
+
+      sleep_for = start_every - stop_after
+      puts "sleeping for #{sleep_for}"
+      sleep(sleep_for)
     end
-  }
+  rescue Interrupt
+    puts "interrupted"
+  end
 end
 
 options = OpenStruct.new
@@ -126,7 +158,7 @@ when "status"
   if runner.daemon_running?
     puts "#{exe} is running: #{uptime}"
   else
-    puts "#{exe} is not runninng"
+    puts "#{exe} is not running"
     exit 3
   end
 

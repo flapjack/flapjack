@@ -4,15 +4,8 @@ require 'flapjack/gateways/email'
 describe Flapjack::Gateways::Email, :logger => true do
 
   it "sends a mail with text and html parts" do
-    entity_check = double(Flapjack::Data::EntityCheck)
-    entity_check.should_receive(:in_scheduled_maintenance?).and_return(false)
-    entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
-
     redis = double(Redis)
     Flapjack.stub(:redis).and_return(redis)
-
-    Flapjack::Data::EntityCheck.should_receive(:for_event_id).
-      with('example.com:ping').and_return(entity_check)
 
     message = {'notification_type'   => 'recovery',
                'contact_first_name'  => 'John',
