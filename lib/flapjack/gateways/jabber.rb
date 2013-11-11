@@ -128,7 +128,7 @@ module Flapjack
         end
       end
 
-      def get_check_details(entity_check)
+      def get_check_details(entity_check, current_time)
         sched   = entity_check.current_maintenance(:scheduled => true)
         unsched = entity_check.current_maintenance(:unscheduled => true)
         out = ''
@@ -273,7 +273,7 @@ module Flapjack
                 entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check, :redis => @redis)
                 next if entity_check.nil?
                 msg += "---\n#{entity_name}:#{check}\n" if check_name.nil?
-                msg += get_check_details(entity_check)
+                msg += get_check_details(entity_check, current_time)
               end
             end
           else
