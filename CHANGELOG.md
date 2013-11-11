@@ -1,6 +1,7 @@
 ## Flapjack Changelog
 
 # 0.7.32 - 2013-11-12
+- Feature: Improve flapjack-nagios-receiver --help to output example Nagios config gh-317 (@jessereynolds)
 - Bug: Crash with jabber query 'tell me about ENTITY' gh-367 (@ali-graham)
 
 # 0.7.31 - 2013-11-06
