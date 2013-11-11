@@ -30,6 +30,7 @@ test:
     Then the exit status should be 0
     And  the output should contain "Usage: flapjack-nagios-receiver"
     And  the output should contain "-f, --fifo FIFO"
+    And  the output should contain "Required Nagios Configuration Changes"
 
   Scenario: Starting flapjack-nagios-receiver
     When I start flapjack-nagios-receiver with `flapjack-nagios-receiver start --no-daemonize --config tmp/cucumber_cli/flapjack-nagios-receiver.yaml`
