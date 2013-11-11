@@ -1,5 +1,14 @@
 #!/usr/bin/env ruby
 
+# nagios.cfg must contain the following perfdata templates for host and service data (modified from the default
+# to include hoststate / servicestate, and a fake service 'HOST' for hostperfdata, so that the
+# fields match up:
+#
+#   host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
+#
+#   service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
+#
+
 unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
 end
@@ -18,11 +27,6 @@ require 'dante'
 require 'flapjack'
 require 'flapjack/configuration'
 require 'flapjack/data/event'
-
-def pike(message)
-  puts "piking out: #{message}"
-  exit 1
-end
 
 def process_input(opts)
   fifo  = File.new(opts[:fifo])
@@ -58,7 +62,7 @@ def process_input(opts)
         'summary'   => check_output,
         'details'   => details,
         'time'      => timestamp,
-      })
+      }
       Flapjack::Data::Event.add(event)
     end
   rescue Redis::CannotConnectError
@@ -111,7 +115,7 @@ optparse = OptionParser.new do |opts|
   end
 
   opts.on("-l", "--logfile [PATH]", String, "PATH to the logfile to write to") do |l|
-    options.log_path = l
+    options.logfile = l
   end
 
 end
@@ -148,17 +152,18 @@ daemonize = options.daemonize.nil? ?
               options.daemonize
 
 
-  # nagios.cfg contains the following templates for host and service data (modified from the default
-  # to include hoststate / servicestate, and a fake service 'HOST' for hostperfdata, so that the
-  # fields match up
-  # host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
-  # service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
-
-
 runner = Dante::Runner.new(exe, :pid_path => pidfile, :log_path => logfile)
 case ARGV[0]
 when "start", "restart"
-  pike "You must specify a path to the nagios perfdata named pipe using the --fifo option" unless fifo
+  unless File.exist?(fifo)
+    raise "No fifo (named pipe) file found at #{fifo}"
+  end
+  unless File.pipe?(fifo)
+    raise "The file at #{fifo} is not a named pipe, try using mkfifo to make one"
+  end
+  unless File.readable?(fifo)
+    raise "The fifo (named pipe) at #{fifo} is unreadable"
+  end
 end
 
 case ARGV[0]
@@ -196,7 +201,7 @@ when "status"
   if runner.daemon_running?
     puts "#{exe} is running: #{uptime}"
   else
-    puts "#{exe} is not runninng"
+    puts "#{exe} is not running"
     exit 3
   end
 

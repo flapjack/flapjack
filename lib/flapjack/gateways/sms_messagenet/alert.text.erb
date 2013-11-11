@@ -1,15 +1,5 @@
-<% case @notification_type -%>
-<% when "problem" -%>
-<%=  "Problem: " -%>
-<% when "recovery" -%>
-<%=  "Recovery: " -%>
-<% when "acknowledgement" -%>
-<%=  "Ack: " -%>
-<% when "test" -%>
-<%=  "Test notification: " -%>
+<%= @alert.type_sentence_case %>: '<%= @alert.check %>' on <%= @alert.entity -%>
+<% unless ['acknowledgement', 'test'].include?(@alert.notification_type) -%>
+ is <%= @alert.state_title_case -%>
 <% end -%>
-'<%= @check %>' on <%= @entity_name -%>
-<% unless ['acknowledgement', 'test'].include?(@notification_type) -%>
- is <%= ['ok'].include?(@state) ? @state.upcase : @state.titleize -%>
-<% end -%>
- at <%= Time.at(@time).strftime('%-d %b %H:%M') %>, <%= @summary -%>
+ at <%= Time.at(@alert.time).strftime('%-d %b %H:%M') %>, <%= @alert.summary -%>

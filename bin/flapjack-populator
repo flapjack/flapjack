@@ -15,26 +15,27 @@ unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
 end
 
+require 'flapjack'
 require 'flapjack/configuration'
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
 require 'flapjack/data/event'
 
 options = OpenStruct.new
-options.config    = Flapjack::Configuration::DEFAULT_CONFIG_PATH
-options.daemonize = nil
+options.config = Flapjack::Configuration::DEFAULT_CONFIG_PATH
 
-command = ARGV.shift
+exe = File.basename(__FILE__)
 
-banner  = "Usage: flapjack-populator command [options]\n"
-banner += "\n"
-banner += "  commands:\n"
-banner += "    - import-entities\n"
-banner += "    - import-contacts\n"
-banner += "    - purge-events (purge queued monitoring events)\n"
+optparse = OptionParser.new do |opts|
+  opts.banner = "Usage: #{exe} COMMAND [OPTIONS]"
 
-OptionParser.new do |opts|
-  opts.banner = "Usage: flapjack-populator command [options]"
+  opts.separator  ""
+  opts.separator  "Commands:"
+  opts.separator  "     import-entities"
+  opts.separator  "     import-contacts"
+  opts.separator  "     purge-events    purge queued monitoring events"
+  opts.separator  ""
+  opts.separator  "Options"
 
   opts.on("-c", "--config [PATH]", String, "PATH to the config file to use") do |c|
     options.config = c
@@ -44,7 +45,24 @@ OptionParser.new do |opts|
     options.from = f
   end
 
-end.parse!(ARGV)
+end
+optparse.parse!(ARGV)
+
+if options.help
+  puts optparse
+  exit
+elsif options.version
+  puts Flapjack::VERSION
+  exit
+elsif !["import-contacts", "import-entities", "purge-events"].include?(ARGV[0])
+  if ARGV.nil? || ARGV.empty?
+    puts "No command provided"
+  else
+    puts "Unknown command provided: '#{ARGV[0]}'"
+  end
+  puts "\n#{optparse}"
+  exit 1
+end
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
 
@@ -63,18 +81,39 @@ if options.from
   file     = File.new(filename)
 end
 
-case command
+case ARGV[0]
 when "import-contacts"
   contacts = Oj.load(file)
 
   if contacts && contacts.is_a?(Enumerable) && contacts.any? {|e| !e['id'].nil?}
-    Flapjack.redis = Redis.new(redis_options)
-    contacts.each do |contact|
-      unless contact['id']
-        puts "Contact not imported as it has no id: " + contact.inspect
+    Sandstorm.redis = Flapjack.redis = Redis.new(redis_options)
+    contacts.each do |contact_data|
+      unless contact_data['id']
+        puts "Contact not imported as it has no id: " + contact_data.inspect
         next
       end
-      Flapjack::Data::Contact.add(contact)
+
+      media = contact_data.delete('media')
+
+      contact = Flapjack::Data::Contact.new(contact_data)
+      unless contact.valid?
+        errs = contact.errors.full_messages.join(', ')
+        puts "Contact not saved: #{errs}"
+        next
+      end
+      contact.save
+
+      media.each_pair do |type, medium_data|
+        medium = Flapjack::Data::Medium.new(medium_data.merge('type' => type))
+        unless medium.valid?
+          errs = medium.errors.full_messages.join(', ')
+          puts "Medium not saved: #{errs}"
+          next
+        end
+        medium.save
+        contact.media << medium
+      end
+
     end
     Flapjack.redis.quit
   end
@@ -83,13 +122,32 @@ when "import-entities"
   entities = Oj.load(file)
 
   if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
-    Flapjack.redis = Redis.new(redis_options)
-    entities.each do |entity|
-      unless entity['id']
-        puts "Entity not imported as it has no id: " + entity.inspect
+    Sandstorm.redis = Flapjack.redis = Redis.new(redis_options)
+    entities.each do |entity_data|
+      unless entity_data['id']
+        puts "Entity not imported as it has no id: " + entity_data.inspect
         next
       end
-      Flapjack::Data::Entity.add(entity)
+
+      contacts = entity_data.delete('contacts')
+
+      entity = Flapjack::Data::Entity.new(entity_data)
+      unless entity.valid?
+        errs = entity.errors.full_messages.join(', ')
+        puts "Entity not saved: #{errs}"
+        next
+      end
+      entity.save
+
+      contacts.each do |contact_id|
+        contact = Flapjack::Data::Contact.find_by_id(contact_id)
+        if contact.nil?
+          puts "Contact '#{contact_id}' not added to entity #{entity.id} (not found)"
+          next
+        end
+        entity.contacts << contact
+      end
+
     end
     Flapjack.redis.quit
   end

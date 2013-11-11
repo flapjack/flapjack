@@ -158,8 +158,8 @@ Given /^an entity '([\w\.\-]+)' exists$/ do |entity_name|
   entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
   if entity.nil?
     entity = Flapjack::Data::Entity.new(:id   => '5000',
-                                         :name => entity_name)
-    entity.save
+                                        :name => entity_name)
+    entity.save.should be_true
   end
 end
 
@@ -170,7 +170,7 @@ Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check_name, enti
   entity_check = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
   if entity_check.nil?
     entity_check = Flapjack::Data::Check.new(:entity_name => entity_name, :name => check_name)
-    entity_check.save.should_not be_false
+    entity_check.save.should be_true
   end
   entity.checks << entity_check
 
@@ -307,7 +307,7 @@ Then /^show me the (\w+ )*log$/ do |adjective|
   puts @logger.messages.join("\n")
 end
 
-Then /^dump notification rules for user (\d+)$/ do |contact|
+Then /^dump notification rules for user (\S+)$/ do |contact|
   rule_ids = Flapjack.redis.smembers("contact_notification_rules:#{contact}")
   puts "There #{(rule_ids.length == 1) ? 'is' : 'are'} #{rule_ids.length} notification rule#{(rule_ids.length == 1) ? '' : 's'} for user #{contact}:"
   rule_ids.each {|rule_id|
@@ -346,7 +346,7 @@ Given /^the following users exist:$/ do |contacts|
   end
 end
 
-Given /^user (\d+) has the following notification intervals:$/ do |contact_id, intervals|
+Given /^user (\S+) has the following notification intervals:$/ do |contact_id, intervals|
   contact = Flapjack::Data::Contact.find_by_id(contact_id)
   intervals.hashes.each do |interval|
     @logger.info interval
@@ -360,7 +360,7 @@ Given /^user (\d+) has the following notification intervals:$/ do |contact_id, i
   end
 end
 
-Given /^user (\d+) has the following notification rollup thresholds:$/ do |contact_id, rollup_thresholds|
+Given /^user (\S+) has the following notification rollup thresholds:$/ do |contact_id, rollup_thresholds|
   contact = Flapjack::Data::Contact.find_by_id(contact_id)
   rollup_thresholds.hashes.each do |rollup_threshold|
     ['email', 'sms'].each do |type|
@@ -372,7 +372,7 @@ Given /^user (\d+) has the following notification rollup thresholds:$/ do |conta
   end
 end
 
-Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules|
+Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules|
   contact = Flapjack::Data::Contact.find_by_id(contact_id)
   timezone = contact.time_zone
 
@@ -418,7 +418,7 @@ Given /^user (\d+) has the following notification rules:$/ do |contact_id, rules
   end
 end
 
-Then /^all alert dropping keys for user (\d+) should have expired$/ do |contact_id|
+Then /^all alert dropping keys for user (\S+) should have expired$/ do |contact_id|
   Flapjack.redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
 end
 
@@ -442,4 +442,13 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
     end
     type_ok && rollup_ok && ( n['address'] == address )
   }.length.should == num_queued.to_i
+end
+
+When(/^user (\S+) ceases to be a contact of entity '(.*)'$/) do |contact_id, entity_name|
+  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
+  entity.should_not be_nil
+  contact = Flapjack::Data::Contact.find_by_id(contact_id)
+  contact.should_not be_nil
+
+  entity.contacts.delete(contact)
 end

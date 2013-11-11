@@ -265,8 +265,8 @@ module Flapjack
 
       notification = Flapjack::Data::Notification.new(
         :entity_check_id   => entity_check.id,
-        :state_id          => current_state.id,
-        :state_duration    => (timestamp - current_state.timestamp.to_i),
+        :state_id          => (current_state ? current_state.id : nil),
+        :state_duration    => (current_state ? (timestamp - current_state.timestamp.to_i) : nil),
         :previous_state_id => (previous_state ? previous_state.id : nil),
         :severity          => severity,
         :type              => event.notification_type,

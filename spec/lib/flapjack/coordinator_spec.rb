@@ -16,7 +16,7 @@ describe Flapjack::Coordinator do
     cfg = {'processor' => {'enabled' => true}}
 
     config.should_receive(:for_redis).and_return({})
-    config.should_receive(:all).and_return(cfg)
+    config.should_receive(:all).twice.and_return(cfg)
 
     Redis.should_receive(:new)
     Flapjack::ConnectionPool::Wrapper.should_receive(:new).
@@ -56,7 +56,7 @@ describe Flapjack::Coordinator do
     cfg = {'executive' => {'enabled' => true}}
 
     config.should_receive(:for_redis).and_return({})
-    config.should_receive(:all).and_return(cfg)
+    config.should_receive(:all).twice.and_return(cfg)
 
     Redis.should_receive(:new)
     Flapjack::ConnectionPool::Wrapper.should_receive(:new).
@@ -107,7 +107,7 @@ describe Flapjack::Coordinator do
           }
 
     config.should_receive(:for_redis).and_return({})
-    config.should_receive(:all).and_return(cfg)
+    config.should_receive(:all).twice.and_return(cfg)
 
     Redis.should_receive(:new)
     Flapjack::ConnectionPool::Wrapper.should_receive(:new).
@@ -146,6 +146,7 @@ describe Flapjack::Coordinator do
   it "traps system signals and shuts down" do
     Flapjack::Logger.should_receive(:new).and_return(logger)
 
+    config.should_receive(:all).and_return({})
     RbConfig::CONFIG.should_receive(:[]).with('host_os').and_return('darwin12.0.0')
 
     Kernel.should_receive(:trap).with('INT').and_yield
@@ -163,6 +164,7 @@ describe Flapjack::Coordinator do
   it "only traps two system signals on Windows" do
     Flapjack::Logger.should_receive(:new).and_return(logger)
 
+    config.should_receive(:all).and_return({})
     RbConfig::CONFIG.should_receive(:[]).with('host_os').and_return('mswin')
 
     Kernel.should_receive(:trap).with('INT').and_yield
@@ -185,7 +187,7 @@ describe Flapjack::Coordinator do
     new_config = double('new_config')
     filename = double('filename')
 
-    config.should_receive(:all).and_return(old_cfg)
+    config.should_receive(:all).twice.and_return(old_cfg)
     config.should_receive(:filename).and_return(filename)
 
     Flapjack::Configuration.should_receive(:new).and_return(new_config)
@@ -221,7 +223,7 @@ describe Flapjack::Coordinator do
     new_config = double('new_config')
     filename = double('filename')
 
-    config.should_receive(:all).and_return(old_cfg)
+    config.should_receive(:all).twice.and_return(old_cfg)
     config.should_receive(:filename).and_return(filename)
 
     Flapjack::Configuration.should_receive(:new).and_return(new_config)
@@ -250,7 +252,7 @@ describe Flapjack::Coordinator do
     new_config = double('new_config')
     filename = double('filename')
 
-    config.should_receive(:all).and_return(old_cfg)
+    config.should_receive(:all).twice.and_return(old_cfg)
     config.should_receive(:filename).and_return(filename)
 
     Flapjack::Configuration.should_receive(:new).and_return(new_config)

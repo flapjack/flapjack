@@ -21,7 +21,7 @@ module Flapjack
 
       def block?(event, entity_check, previous_state)
         failure_delay = 30
-        resend_delay  = 300
+        resend_delay  = 60
 
         label = 'Filter: Delays:'
 

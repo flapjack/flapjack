@@ -32,7 +32,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   def expect_stats
     redis.should_receive(:dbsize).and_return(3)
     redis.should_receive(:keys).with('executive_instance:*').and_return(["executive_instance:foo-app-01"])
-    redis.should_receive(:hget).twice.and_return(Time.now.to_i - 60)
+    redis.should_receive(:hget).once.and_return(Time.now.to_i - 60)
     redis.should_receive(:hgetall).twice.and_return({'all' => '8001', 'ok' => '8002'},
       {'all' => '9001', 'ok' => '9002'})
     redis.should_receive(:llen).with('events')
@@ -282,20 +282,23 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     contact = double('contact')
     contact.should_receive(:name).twice.and_return("Smithson Smith")
 
+    no_checks = double('no_checks', :all => [])
+
     medium = double(Flapjack::Data::Medium)
-    medium.should_receive(:type).exactly(3).times.and_return('sms')
+    medium.should_receive(:alerting_checks).and_return(no_checks)
+    medium.should_receive(:type).twice.and_return('sms')
     medium.should_receive(:address).and_return('0123456789')
-    medium.should_receive(:interval).and_return(60)
+    medium.should_receive(:interval).twice.and_return(60)
     medium.should_receive(:rollup_threshold).and_return(10)
 
     all_media = double('all_media', :all => [medium])
     contact.should_receive(:media).and_return(all_media)
 
-    no_entities = double('no_entities', :all => [])
-    contact.should_receive(:entities).and_return(no_entities)
-
     no_notification_rules = double('no_notification_rules', :all => [])
     contact.should_receive(:notification_rules).and_return(no_notification_rules)
+
+    no_entities = double('no_entities', :all => [])
+    contact.should_receive(:entities).and_return(no_entities)
 
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362').and_return(contact)

@@ -131,7 +131,6 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
           app.get '/contacts' do
             content_type :json
-
             Flapjack::Data::Contact.all.collect {|c|
               c.as_json(:only => [:first_name, :last_name, :email, :tags])
             }.to_json
@@ -162,8 +161,7 @@ module Flapjack
           app.get '/notification_rules/:id' do
             content_type :json
 
-            rule = find_rule(params[:id])
-            rule.to_json
+            find_rule(params[:id]).to_json
           end
 
           # Creates a notification rule for a contact
@@ -283,7 +281,6 @@ module Flapjack
             content_type :json
 
             contact = find_contact(params[:contact_id])
-
             media = contact.media
 
             medium = media.intersect(:type => params[:id]).all.first

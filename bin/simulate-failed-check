@@ -28,7 +28,7 @@ def send_event(event)
 end
 
 def fail(opts)
-  stop_after = opts[:minutes].to_i * 60
+  stop_after = (opts[:minutes].to_i * 60) + opts[:interval]
   recover = opts[:recover]
   state = opts[:state] || 'critical'
   event  = {
@@ -54,7 +54,7 @@ def fail(opts)
         unless fin = @finish
           puts "#{Time.now}: sending failure event (#{state}) for #{key}"
           send_event(failure.merge('time' => Time.now.to_i))
-          stop_cond.wait(10)
+          stop_cond.wait(opts[:interval])
         end
       end
       break if fin
@@ -104,6 +104,10 @@ optparse = OptionParser.new do |opts|
     options.minutes = t
   end
 
+  opts.on("-i", "--interval SECONDS", String, "SECONDS between events, can be decimal eg 0.1 (10)") do |i|
+    options.interval = i.to_f
+  end
+
   opts.on("-e", "--entity ENTITY", String, "ENTITY to generate failure events for ('foo-app-01')") do |e|
     options.entity = e
   end
@@ -119,6 +123,10 @@ optparse = OptionParser.new do |opts|
 end
 optparse.parse!(ARGV)
 
+unless options.interval.to_f > 0
+  options.interval = 10.0
+end
+
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
 
 config = Flapjack::Configuration.new
@@ -128,11 +136,13 @@ redis_options = config.for_redis
 
 if config_env.nil? || config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
-  exit(false)
+  puts "\n#{optparse}"
+  exit 1
 end
 
 options = {:redis_options => redis_options, :minutes => options.minutes,
-           :entity => options.entity, :check => options.check, :state => options.state}
+           :entity => options.entity, :check => options.check, :state => options.state,
+           :interval => options.interval}
 case ARGV[0]
 when "fail-and-recover"
   fail(options.merge(:recover => true))

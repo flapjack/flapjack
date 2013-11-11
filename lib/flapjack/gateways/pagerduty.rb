@@ -8,6 +8,7 @@ require 'uri/https'
 
 require 'flapjack'
 
+require 'flapjack/data/alert'
 require 'flapjack/data/check'
 require 'flapjack/data/event'
 require 'flapjack/data/message'
@@ -57,37 +58,48 @@ module Flapjack
         private
 
         def handle_message(message)
-          type          = message['notification_type']
-          event_id      = message['event_id']
-          entity, check = event_id.split(':', 2)
-          state         = message['state']
-          summary       = message['summary']
-          address       = message['address']
+          @logger.debug("pagerduty notification event received: " + message.inspect)
 
-          headline = type.upcase
+          alert = Flapjack::Data::Alert.new(message, :logger => @logger)
+          @logger.debug("processing pagerduty notification service_key: #{alert.address}, entity: #{alert.entity}, " +
+                        "check: '#{alert.check}', state: #{alert.state}, summary: #{alert.summary}")
 
-          case type.downcase
-          when 'acknowledgement'
-            maint_str      = "has been acknowledged"
-            pagerduty_type = 'acknowledge'
-          when 'problem'
-            maint_str      = "is #{state.upcase}"
-            pagerduty_type = "trigger"
-          when 'recovery'
-            maint_str      = "is #{state.upcase}"
-            pagerduty_type = "resolve"
-          when 'test'
-            maint_str      = ""
-            pagerduty_type = "trigger"
-            headline       = "TEST NOTIFICATION"
+          mydir = File.dirname(__FILE__)
+          message_template_path = mydir + "/pagerduty/alert.text.erb"
+          message_template = ERB.new(File.read(message_template_path), nil, '-')
+
+          @alert = alert
+          bnd = binding
+
+          msg = nil
+          begin
+            msg = message_template.result(bnd).chomp
+          rescue => e
+            @logger.error "Error while executing the ERB for a pagerduty message, " +
+              "ERB being executed: #{message_template_path}"
+            raise
           end
 
-          message = "#{type.upcase} - \"#{check}\" on #{entity} #{maint_str} - #{summary}"
+          pagerduty_type = case alert.type
+          when 'acknowledgement'
+            'acknowledge'
+          when 'problem'
+            'trigger'
+          when 'recovery'
+            'resolve'
+          when 'test'
+            'trigger'
+          end
 
-          send_pagerduty_event(:service_key => address,
-                               :incident_key => event_id,
-                               :event_type => pagerduty_type,
-                               :description => message)
+          send_pagerduty_event(:service_key  => alert.address,
+                               :incident_key => "#{alert.entity}:#{alert.check}",
+                               :event_type   => pagerduty_type,
+                               :description  => msg)
+          alert.record_send_success!
+        rescue => e
+          @logger.error "Error generating or dispatching pagerduty message: #{e.class}: #{e.message}\n" +
+            e.backtrace.join("\n")
+          @logger.debug "Message that could not be processed: \n" + message.inspect
         end
 
         def test_pagerduty_connection
@@ -120,6 +132,10 @@ module Flapjack
           response = Oj.load(http_response.body)
           status   = http_response.code
           @logger.debug "send_pagerduty_event got a return code of #{status} - #{response.inspect}"
+          unless status.to_i == 200
+            raise "Error sending event to pagerduty: status: #{status.to_s} - #{response.inspect}" +
+                  " posted data: #{options[:body]}"
+          end
           [status, response]
         end
 
@@ -212,11 +228,15 @@ module Flapjack
             if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
               who_text = " by #{pg_acknowledged_by['name']}"
             end
+
+            # FIXME: decide where the default acknowledgement period should reside and use it
+            # everywhere ... a case for moving configuration into redis (from config file) perhaps?
+            four_hours = 4 * 60 * 60
             Flapjack::Data::Event.create_acknowledgement(
               @config['processor_queue'] || 'events',
               entity_name, check_name,
-              :summary => "Acknowledged on PagerDuty" + who_text,
-            )
+              :summary  => "Acknowledged on PagerDuty" + who_text,
+              :duration => four_hours)
           end
 
         end

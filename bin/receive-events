@@ -143,16 +143,7 @@ redis_options = config.for_redis
 
 if config_env.nil? || config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
-  exit(false)
-end
-
-unless options.source
-  puts "--source URL is required"
-  exit 1
-end
-
-unless options.follow || options.all
-  puts "one or both of --follow or --all is required"
+  puts "\n#{optparse}"
   exit 1
 end
 
@@ -166,6 +157,18 @@ else
     puts "\n#{optparse}"
     exit 1
   end
+end
+
+unless options.source
+  puts "--source URL is required"
+  puts "\n#{optparse}"
+  exit 1
+end
+
+unless options.follow || options.all
+  puts "one or both of --follow or --all is required"
+  puts "\n#{optparse}"
+  exit 1
 end
 
 receive(:follow => options.follow,

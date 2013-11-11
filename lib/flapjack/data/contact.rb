@@ -20,7 +20,6 @@ module Flapjack
     class Contact
 
       include Sandstorm::Record
-
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
 
@@ -60,7 +59,6 @@ module Flapjack
       end
 
       # TODO sort usages of 'Contact.all' by [c.last_name, c.first_name] in the code
-
       def name
         return if invalid? && !(self.errors.keys & [:first_name, :last_name]).empty?
         [(self.first_name || ''), (self.last_name || '')].join(" ").strip

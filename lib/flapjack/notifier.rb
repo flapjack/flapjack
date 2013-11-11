@@ -96,6 +96,9 @@ module Flapjack
 
       notification_contents = notification.contents
 
+      in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
+      in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
+
       messages.each do |message|
         media_type = message.medium
         unless @queues.keys.include?(media_type.to_sym)
@@ -124,7 +127,7 @@ module Flapjack
           last_change = last_state.nil? ? nil : last_state.timestamp.to_i
           memo["#{entity_check.entity_name}:#{entity_check.name}"] = {
             'duration' => (last_change ? (Time.now.to_i - last_change) : nil),
-            'state'    => last_state.state,
+            'state'    => (last_state ? last_state.state : nil),
           }
           memo
         end
@@ -141,7 +144,7 @@ module Flapjack
               :state => alert_state,
               :delete => true)
           end
-        else
+        elsif notification.state
           medium.update_sent_alert_keys(
             :entity_check => entity_check,
             :state => notification.state.state)

@@ -4,10 +4,12 @@ require 'net/http'
 require 'uri'
 require 'uri/https'
 
-require 'flapjack'
+require 'active_support/inflector'
 
 require 'flapjack/data/message'
+require 'flapjack/data/alert'
 
+require 'flapjack/utility'
 require 'flapjack/exceptions'
 
 module Flapjack
@@ -18,6 +20,8 @@ module Flapjack
       MESSAGENET_DEFAULT_PATH = '/dotnet/Lodge.asmx/LodgeSMSMessage'
 
       attr_reader :sent
+
+      include Flapjack::Utility
 
       def initialize(opts = {})
         @lock = opts[:lock]
@@ -50,36 +54,32 @@ module Flapjack
       end
 
       def handle_message(msg)
-        @logger.debug "Woo, got a message to send out: #{msg.inspect}"
+        @logger.debug "Woo, got a notification to send out: #{msg.inspect}"
+        alert = Flapjack::Data::Alert.new(msg, :logger => @logger)
 
         endpoint_host = @config["endpoint_host"] || MESSAGENET_DEFAULT_HOST
         endpoint_path = @config["endpoint_path"] || MESSAGENET_DEFAULT_PATH
         username = @config["username"]
         password = @config["password"]
 
-        @notification_type   = msg['notification_type']
-        @rollup              = msg['rollup']
-        @rollup_alerts       = msg['rollup_alerts']
-        @state               = msg['state']
-        @summary             = msg['summary']
-        @time                = msg['time']
-        @entity_name         = msg['entity']
-        @check               = msg['check']
-        address              = msg['address']
-        msg_id               = msg['id']
+        address = alert.address
+        notification_id = alert.notification_id
+        message_type = alert.rollup ? 'rollup' : 'alert'
 
-        message_type = case
-        when @rollup
-          'rollup'
-        else
-          'alert'
+        my_dir = File.dirname(__FILE__)
+        sms_template_path = my_dir + "/sms_messagenet/#{message_type}.text.erb"
+        sms_template = ERB.new(File.read(sms_template_path), nil, '-')
+
+        @alert = alert
+        bnd = binding
+
+        begin
+          message = sms_template.result(bnd).chomp
+        rescue => e
+          @logger.error "Error while executing the ERB for an sms: " +
+            "ERB being executed: #{sms_template_path}"
+          raise
         end
-
-        sms_template = ERB.new(File.read(File.dirname(__FILE__) +
-        "/sms_messagenet/#{message_type}.text.erb"), nil, '-')
-
-        bnd     = binding
-        message = sms_template.result(bnd).chomp
 
         if @config.nil? || (@config.respond_to?(:empty?) && @config.empty?)
           @logger.error "Messagenet config is missing"
@@ -92,8 +92,8 @@ module Flapjack
 
         [[username, "Messagenet username is missing"],
          [password, "Messagenet password is missing"],
-         [address,  "SMS address is missing"],
-         [msg_id, "Message id is missing"]].each do |val_err|
+         [address, "SMS address is missing"],
+         [notification_id, "Notification id is missing"]].each do |val_err|
 
           next unless val_err.first.nil? || (val_err.first.respond_to?(:empty?) && val_err.first.empty?)
           errors << val_err.last
@@ -104,14 +104,13 @@ module Flapjack
           return
         end
 
-        query = {'Username'     => username,
-                 'Pwd'          => password,
-                 'PhoneNumber'  => address,
-                 'PhoneMessage' => message}
+        query = {'Username' => username,
+                 'Pwd' => password,
+                 'PhoneNumber' => address,
+                 'PhoneMessage' => safe_message}
 
         # TODO ensure we're not getting a cached response from a proxy or similar,
         # use appropriate headers etc.
-
         uri = URI::HTTPS.build(:host => endpoint_host,
                                :path => endpoint_path,
                                :port => 443,
@@ -130,25 +129,19 @@ module Flapjack
 
         if (status.to_i >= 200) && (status.to_i <= 206)
           @sent += 1
+          alert.record_send_success!
           @logger.info "Sent SMS via Messagenet, response status is #{status}, " +
-            "msg_id: #{msg_id}"
+            "msg_id: #{msg['id']}"
         else
           @logger.error "Failed to send SMS via Messagenet, response status is #{status}, " +
-            "msg_id: #{msg_id}"
+            "msg_id: #{msg['id']}"
         end
+      rescue => e
+        @logger.error "Error generating or delivering sms to #{msg['address']}: #{e.class}: #{e.message}"
+        @logger.error e.backtrace.join("\n")
+        raise
       end
 
-      # copied from ActiveSupport
-      def truncate(str, length, options = {})
-        text = str.dup
-        options[:omission] ||= "..."
-
-        length_with_room_for_omission = length - options[:omission].length
-        stop = options[:separator] ?
-          (text.rindex(options[:separator], length_with_room_for_omission) || length_with_room_for_omission) : length_with_room_for_omission
-
-        (text.length > length ? text[0...stop] + options[:omission] : text).to_s
-      end
     end
   end
 end

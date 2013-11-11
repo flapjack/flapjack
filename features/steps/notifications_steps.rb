@@ -117,13 +117,15 @@ Given /^an SMS notification has been queued for entity '([\w\.\-]+)'$/ do |entit
   @sms_notification = {'notification_type'  => 'problem',
                        'contact_first_name' => 'John',
                        'contact_last_name'  => 'Smith',
-                       'state'              => 'CRITICAL',
+                       'state'              => 'critical',
                        'summary'            => 'Socket timeout after 10 seconds',
                        'time'               => Time.now.to_i,
                        'entity'             => entity_name,
                        'check'              => "ping",
                        'address'            => '+61412345678',
-                       'id'                 => 1}
+                       'id'                 => 1,
+                       'state_duration'     => 30,
+                       'duration'           => 45}
 end
 
 Given /^an email notification has been queued for entity '([\w\.\-]+)'$/ do |entity_name|
@@ -137,13 +139,15 @@ Given /^an email notification has been queued for entity '([\w\.\-]+)'$/ do |ent
   @email_notification = {'notification_type'  => 'problem',
                          'contact_first_name' => 'John',
                          'contact_last_name'  => 'Smith',
-                         'state'              => 'CRITICAL',
+                         'state'              => 'critical',
                          'summary'            => 'Socket timeout after 10 seconds',
                          'time'               => Time.now.to_i,
                          'entity'             => entity_name,
                          'check'              => "ping",
                          'address'            => 'johns@example.dom',
-                         'id'                 => 2}
+                         'id'                 => 2,
+                         'state_duration'     => 30,
+                         'duration'           => 3600}
 end
 
 # TODO may need to get more complex, depending which SMS provider is used

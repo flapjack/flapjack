@@ -61,13 +61,13 @@ Feature: events
     Then  a notification should be generated
 
   @time
-  Scenario: Check critical and alerted to critical for 1 minute
+  Scenario: Check critical and alerted to critical for 40 seconds
     Given the check is in an ok state
     When  a critical event is received
     And   1 minute passes
     And   a critical event is received
     Then  a notification should be generated
-    When  1 minute passes
+    When  40 seconds passes
     And   a critical event is received
     Then  a notification should not be generated
 
@@ -235,10 +235,7 @@ Feature: events
     When  10 seconds passes
     And   an unknown event is received
     Then  a notification should not be generated
-    When  10 seconds passes
-    And   an unknown event is received
-    Then  a notification should not be generated
-    When  5 minutes passes
+    When  1 minutes passes
     And   an unknown event is received
     Then  a notification should be generated
     When  10 seconds passes

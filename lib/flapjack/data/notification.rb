@@ -63,7 +63,6 @@ module Flapjack
         notif_json = nil
 
         # TODO validate passed notification
-
         begin
           notif_json = notification.to_json
         rescue Oj::Error => e
@@ -144,7 +143,12 @@ module Flapjack
         entity_name = entity_check.entity_name
         check_name  = entity_check.name
 
-        state_or_ack = (self.type == 'acknowledgement') ? 'acknowledgement' : self.state.state
+        state_or_ack = case self.type
+        when 'acknowledgement', 'test'
+          self.type
+        else
+          self.state ? self.state.state : nil
+        end
 
         @messages ||= contacts.collect {|contact|
           contact_id = contact.id
@@ -225,13 +229,14 @@ module Flapjack
           end
 
           # here begins (revised) rollup madness
+          # TODO ensure rollup is always skipped for pagerduty
           media_to_use.collect {|medium|
             rollup_type = nil
             media_type = medium.type
 
             logger.debug("using media #{media_type}")
 
-            unless (['ok', 'acknowledgement'].include?(state_or_ack)) ||
+            unless (['ok', 'acknowledgement', 'test'].include?(state_or_ack)) ||
               medium.alerting_checks.exists?(entity_check.id)
 
               medium.alerting_checks << entity_check
@@ -254,7 +259,6 @@ module Flapjack
 
               medium.update_sent_alert_keys(:rollup => true,
                 :delete => (['ok', 'acknowledgement'].include?(state_or_ack)))
-
               rollup_type = 'problem'
             elsif (alerting_checks_count + cleaned) >= medium.rollup_threshold
               # alerting checks was just cleaned such that it is now below the rollup threshold

@@ -11,7 +11,7 @@ require 'flapjack'
 require 'flapjack/exceptions'
 require 'flapjack/utility'
 
-require 'flapjack/data/check'
+require 'flapjack/data/alert'
 require 'flapjack/data/message'
 
 module Flapjack
@@ -51,6 +51,7 @@ module Flapjack
           @port = 25
         end
 
+        @fqdn = `/bin/hostname -f`.chomp
         @sent = 0
       end
 
@@ -77,45 +78,42 @@ module Flapjack
         :exception
       end
 
+      # TODO refactor to remove complexity
       def handle_message(message)
-        @logger.debug "Woo, got a message to send out: #{message.inspect}"
+        @logger.debug "Woo, got an alert to send out: #{message.inspect}"
+        alert = prepare(message)
+        deliver(alert)
+      end
 
-        # The instance variables are referenced by the templates, which
-        # share the current binding context
-        @notification_type   = message['notification_type']
-        @notification_id     = message['id'] || SecureRandom.uuid
-        @rollup              = message['rollup']
-        @rollup_alerts       = message['rollup_alerts']
-        @rollup_threshold    = message['rollup_threshold']
-        @contact_first_name  = message['contact_first_name']
-        @contact_last_name   = message['contact_last_name']
-        @state               = message['state']
-        @duration            = message['state_duration']
-        @summary             = message['summary']
-        @last_state          = message['last_state']
-        @last_summary        = message['last_summary']
-        @details             = message['details']
-        @time                = message['time']
-        @entity_name         = message['entity']
-        @check               = message['check']
+      # sets a bunch of class instance variables for each email
+      def prepare(contents)
+        Flapjack::Data::Alert.new(contents, :logger => @logger)
+      rescue => e
+        @logger.error "Error preparing email to #{contents['address']}: #{e.class}: #{e.message}"
+        @logger.error e.backtrace.join("\n")
+        raise
+      end
 
-        entity_check = Flapjack::Data::Check.intersect(:entity_name => @entity_name, :name => @check).all.first
+      def deliver(alert)
+        host = @smtp_config ? @smtp_config['host'] : nil
+        port = @smtp_config ? @smtp_config['port'] : nil
+        starttls = @smtp_config ? !! @smtp_config['starttls'] : nil
+        if @smtp_config
+          if auth_config = @smtp_config['auth']
+            auth = {}
+            auth[:type] = auth_config['type'].to_sym || :plain
+            auth[:username] = auth_config['username']
+            auth[:password] = auth_config['password']
+          end
+        end
 
-        @in_unscheduled_maintenance = entity_check.in_unscheduled_maintenance?
-        @in_scheduled_maintenance   = entity_check.in_scheduled_maintenance?
-
-        fqdn       = `/bin/hostname -f`.chomp
-        m_from     = "flapjack@#{fqdn}"
+        m_from = "flapjack@#{@fqdn}"
         @logger.debug("flapjack_mailer: set from to #{m_from}")
-        m_reply_to = m_from
-        m_to       = message['address']
 
-        @logger.debug("sending Flapjack::Notification::Email " +
-          "#{message['id']} to: #{m_to} subject: #{@subject}")
-
-        mail = prepare_email(:subject => @subject,
-                             :from => m_from,
-                             :to => m_to)
+        mail = prepare_email(:from => m_from,
+                             :to => alert.address,
+                             :message_id => "<#{alert.notification_id}@#{@fqdn}>",
+                             :alert => alert)
 
         # TODO a cleaner way to not step on test delivery settings
         # (don't want to stub in Cucumber)
@@ -129,55 +127,79 @@ module Flapjack
 
         @logger.info "Email sending succeeded"
         @sent += 1
+      rescue => e
+        @logger.error "Error generating or delivering email to #{alert.address}: #{e.class}: #{e.message}"
+        @logger.error e.backtrace.join("\n")
+        raise
       end
 
       private
 
+      # returns a Mail object
       def prepare_email(opts = {})
-        from       = opts[:from]
-        to         = opts[:to]
-        message_id = "<#{@notification_id}@#{@fqdn}>"
+        from = opts[:from]
+        to = opts[:to]
+        message_id = opts[:message_id]
+        alert = opts[:alert]
 
         message_type = case
-        when @rollup
+        when alert.rollup
           'rollup'
         else
           'alert'
         end
 
-        subject_template = ERB.new(File.read(File.dirname(__FILE__) +
-          "/email/#{message_type}_subject.text.erb"), nil, '-')
+        mydir = File.dirname(__FILE__)
 
-        text_template = ERB.new(File.read(File.dirname(__FILE__) +
-          "/email/#{message_type}.text.erb"), nil, '-')
+        subject_template_path = mydir + "/email/#{message_type}_subject.text.erb"
+        text_template_path = mydir + "/email/#{message_type}.text.erb"
+        html_template_path = mydir + "/email/#{message_type}.html.erb"
 
-        html_template = ERB.new(File.read(File.dirname(__FILE__) +
-          "/email/#{message_type}.html.erb"), nil, '-')
+        subject_template = ERB.new(File.read(subject_template_path), nil, '-')
+        text_template = ERB.new(File.read(text_template_path), nil, '-')
+        html_template = ERB.new(File.read(html_template_path), nil, '-')
 
+        @alert = alert
         bnd = binding
-        subject    = subject_template.result(bnd).chomp
+
+        # do some intelligence gathering in case an ERB execution blows up
+        begin
+          erb_to_be_executed = subject_template_path
+          subject = subject_template.result(bnd).chomp
+
+          erb_to_be_executed = text_template_path
+          body_text = text_template.result(bnd)
+
+          erb_to_be_executed = html_template_path
+          body_html = html_template.result(bnd)
+        rescue => e
+          @logger.error "Error while executing ERBs for an email: " +
+            "ERB being executed: #{erb_to_be_executed}"
+          raise
+        end
 
         @logger.debug("preparing email to: #{to}, subject: #{subject}, message-id: #{message_id}")
 
-        Mail.new do
-          from       from
-          to         to
-          subject    subject
-          reply_to   from
+        mail = Mail.new do
+          from from
+          to to
+          subject subject
+          reply_to from
           message_id message_id
 
           text_part do
-            body text_template.result(bnd)
+            body body_text
           end
 
           html_part do
             content_type 'text/html; charset=UTF-8'
-            body html_template.result(bnd)
+            body body_html
           end
         end
-      end
-    end
 
+      end
+
+    end
   end
 end
 

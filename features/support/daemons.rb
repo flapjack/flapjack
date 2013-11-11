@@ -23,6 +23,12 @@ def write_file(file_name, file_content)
   _create_file(file_name, file_content, false)
 end
 
+def create_fifo(fifo_name)
+  unless File.pipe?(fifo_name)
+    system("mkfifo #{fifo_name}")
+  end
+end
+
 def _create_file(file_name, file_content, check_presence)
   in_current_dir do
     raise "expected #{file_name} to be present" if check_presence && !File.file?(file_name)
@@ -74,6 +80,9 @@ def time_and_pid_from_file(pid_file, cutoff_time = nil)
 end
 
 def spawn_process(command, opts={})
+  @daemons_output ||= []
+  @daemons_exit_status ||= []
+
   puts yellow("Running: #{command}") if @debug
 
   process_h = nil
@@ -84,7 +93,8 @@ def spawn_process(command, opts={})
     time = Time.now
     attempts = 0
 
-    `#{command}`
+    @daemons_output << `#{command}`
+    @daemons_exit_status << $?
 
     while attempts < 50
       time_and_pid = time_and_pid_from_file(file, time)

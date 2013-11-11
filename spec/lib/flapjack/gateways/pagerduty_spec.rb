@@ -21,13 +21,15 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
                      'contact_first_name' => 'John',
                      'contact_last_name' => 'Smith',
                      'address' => 'pdservicekey',
-                     'state' => 'CRITICAL',
+                     'state' => 'critical',
+                     'state_duration' => 23,
                      'summary' => '',
                      'last_state' => 'OK',
                      'last_summary' => 'TEST',
                      'details' => 'Testing',
                      'time' => now.to_i,
-                     'event_id' => 'app-02:ping'}
+                     'entity' => 'app-02',
+                     'check' => 'ping'}
                   }
 
     # TODO use separate threads in the test instead?
@@ -70,7 +72,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
          with(:body => {'service_key'  => 'pdservicekey',
                         'incident_key' => 'app-02:ping',
                         'event_type'   => 'trigger',
-                        'description'  => 'PROBLEM - "ping" on app-02 is CRITICAL - '}.to_json).
+                        'description'  => 'Problem: "ping" on app-02 is Critical'}.to_json).
          to_return(:status => 200, :body => {'status' => 'success'}.to_json)
 
       fpn.send(:handle_message, message)
@@ -131,7 +133,8 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       Flapjack::Data::Event.should_receive(:create_acknowledgement).with('events',
         'foo-app-01.bar.net', 'PING',
-        :summary => 'Acknowledged on PagerDuty by John Smith')
+        :summary => 'Acknowledged on PagerDuty by John Smith',
+        :duration => 14400)
 
       Kernel.should_receive(:sleep).with(10).and_raise(Flapjack::PikeletStop.new)
 
