@@ -375,9 +375,14 @@ module Flapjack
           command = $1
         end
 
-        results = interpreter(command)
-        msg     = results[:msg]
-        action  = results[:action]
+        begin
+          results = interpreter(command)
+          msg     = results[:msg]
+          action  = results[:action]
+        rescue => e
+          @logger.error("Exception when interpreting command '#{command}' - #{e.class}, #{e.message}")
+          msg = "Oops, something went wrong processing that command (#{e.class}, #{e.message})"
+        end
 
         if msg || action
           EventMachine::Synchrony.next_tick do
@@ -398,9 +403,14 @@ module Flapjack
           command = stanza.body
         end
 
-        results = interpreter(command)
-        msg     = results[:msg]
-        action  = results[:action]
+        begin
+          results = interpreter(command)
+          msg     = results[:msg]
+          action  = results[:action]
+        rescue => e
+          @logger.error("Exception when interpreting command '#{command}' - #{e.class}, #{e.message}")
+          msg = "Oops, something went wrong processing that command (#{e.class}, #{e.message})"
+        end
 
         if msg || action
           EventMachine::Synchrony.next_tick do
