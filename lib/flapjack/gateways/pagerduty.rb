@@ -32,6 +32,10 @@ module Flapjack
           @logger.debug("New Pagerduty::Notifier pikelet with the following options: #{@config.inspect}")
         end
 
+        def redis_connections_required
+          1
+        end
+
         def start
           @logger.info("starting")
           until test_pagerduty_connection

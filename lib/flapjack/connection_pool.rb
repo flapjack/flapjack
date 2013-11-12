@@ -76,7 +76,7 @@ module Flapjack
     DEFAULTS = {:size => 5, :timeout => nil}
 
     def self.wrap(options, &block)
-      Wrapper.new(options, &block)
+      Flapjack::ConnectionPool::Wrapper.new(options, &block)
     end
 
     def initialize(options = {}, &block)
@@ -87,7 +87,7 @@ module Flapjack
       @size = options.fetch(:size)
       @timeout = options.fetch(:timeout)
 
-      @available = ConnectionStack.new(@size, &block)
+      @available = Flapjack::ConnectionPool::ConnectionStack.new(@size, &block)
       @key = :"current-#{@available.object_id}"
     end
 

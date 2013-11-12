@@ -36,6 +36,10 @@ module Flapjack
         @logger.debug("new sms gateway pikelet with the following options: #{@config.inspect}")
       end
 
+      def redis_connections_required
+        1
+      end
+
       def start
         loop do
           @lock.synchronize do

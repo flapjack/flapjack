@@ -15,16 +15,24 @@ describe Flapjack::Coordinator do
 
     cfg = {'processor' => {'enabled' => true}}
 
-    config.should_receive(:for_redis).and_return({})
+    config.should_receive(:for_redis).twice.and_return({})
     config.should_receive(:all).twice.and_return(cfg)
 
-    Redis.should_receive(:new)
+    redis_1 = double(Redis)
+    redis_1.should_receive(:quit)
+    redis_2 = double(Redis)
+    redis_2.should_receive(:quit)
+    Redis.should_receive(:new).twice.and_return(redis_1, redis_2)
+
+    wrapper = double(Flapjack::ConnectionPool::Wrapper)
+    wrapper.should_receive(:pool_shutdown).and_yield(redis_1).and_yield(redis_2)
     Flapjack::ConnectionPool::Wrapper.should_receive(:new).
-        with(:size => 1).and_yield
+        with(:size => 2).and_yield.and_yield.and_return(wrapper)
 
     processor = double('processor')
     processor.should_receive(:start)
     processor.should_receive(:stop)
+    processor.should_receive(:redis_connections_required).and_return(1)
 
     Thread.should_receive(:new).and_yield
 
@@ -45,9 +53,6 @@ describe Flapjack::Coordinator do
         :boot_time => time).
       and_return([processor])
 
-    # Syslog.should_receive(:opened?).and_return(true)
-    # Syslog.should_receive(:close)
-
     fc.start(:signals => false)
     fc.stop
   end
@@ -55,20 +60,31 @@ describe Flapjack::Coordinator do
   it "loads an old executive pikelet config block with no new data" do
     cfg = {'executive' => {'enabled' => true}}
 
-    config.should_receive(:for_redis).and_return({})
+    config.should_receive(:for_redis).exactly(3).times.and_return({})
     config.should_receive(:all).twice.and_return(cfg)
 
-    Redis.should_receive(:new)
+    redis_1 = double(Redis)
+    redis_1.should_receive(:quit)
+    redis_2 = double(Redis)
+    redis_2.should_receive(:quit)
+    redis_3 = double(Redis)
+    redis_3.should_receive(:quit)
+    Redis.should_receive(:new).exactly(3).times.and_return(redis_1, redis_2, redis_3)
+
+    wrapper = double(Flapjack::ConnectionPool::Wrapper)
+    wrapper.should_receive(:pool_shutdown).and_yield(redis_1).and_yield(redis_2).and_yield(redis_3)
     Flapjack::ConnectionPool::Wrapper.should_receive(:new).
-        with(:size => 2).and_yield
+        with(:size => 3).and_yield.and_yield.and_yield.and_return(wrapper)
 
     processor = double('processor')
     processor.should_receive(:start)
     processor.should_receive(:stop)
+    processor.should_receive(:redis_connections_required).and_return(1)
 
     notifier = double('notifier')
     notifier.should_receive(:start)
     notifier.should_receive(:stop)
+    notifier.should_receive(:redis_connections_required).and_return(1)
 
     Thread.should_receive(:new).and_yield
 
@@ -93,9 +109,6 @@ describe Flapjack::Coordinator do
         :boot_time => time).
       and_return([notifier])
 
-    # Syslog.should_receive(:opened?).and_return(true)
-    # Syslog.should_receive(:close)
-
     fc.start(:signals => false)
     fc.stop
   end
@@ -106,16 +119,24 @@ describe Flapjack::Coordinator do
            'notifier'  => {'enabled' => false}
           }
 
-    config.should_receive(:for_redis).and_return({})
+    config.should_receive(:for_redis).twice.and_return({})
     config.should_receive(:all).twice.and_return(cfg)
 
-    Redis.should_receive(:new)
+    redis_1 = double(Redis)
+    redis_1.should_receive(:quit)
+    redis_2 = double(Redis)
+    redis_2.should_receive(:quit)
+    Redis.should_receive(:new).twice.and_return(redis_1, redis_2)
+
+    wrapper = double(Flapjack::ConnectionPool::Wrapper)
+    wrapper.should_receive(:pool_shutdown).and_yield(redis_1).and_yield(redis_2)
     Flapjack::ConnectionPool::Wrapper.should_receive(:new).
-        with(:size => 1).and_yield
+        with(:size => 2).and_yield.and_yield.and_return(wrapper)
 
     processor = double('processor')
     processor.should_receive(:start)
     processor.should_receive(:stop)
+    processor.should_receive(:redis_connections_required).and_return(1)
 
     Thread.should_receive(:new).and_yield
 

@@ -28,7 +28,7 @@ def send_event(event)
 end
 
 def fail(opts)
-  stop_after = opts[:minutes].to_i * 60
+  stop_after = (opts[:minutes].to_i * 60) + opts[:interval]
   recover = opts[:recover]
   state = opts[:state] || 'critical'
   event  = {

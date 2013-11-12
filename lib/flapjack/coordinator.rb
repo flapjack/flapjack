@@ -45,12 +45,12 @@ module Flapjack
         @pikelets << pik
       end
 
-      # TODO should retrieve knowledge about how many are blocking, and allocate
-      # that + 1 connections
-      # FIXME reloading pikelet configs may need to change the size of the pool
-      num_connections = @pikelets.size
+      num_connections = @pikelets.inject(0) do |memo, pik|
+        memo += pik.redis_connections_required
+        memo
+      end
 
-      Flapjack.redis = Flapjack::ConnectionPool::Wrapper.new(:size => num_connections) {
+      Flapjack.redis = Flapjack::ConnectionPool::Wrapper.new(:size => num_connections + 1) {
         Redis.new(@config.for_redis.merge(:driver => :hiredis))
       }
 
@@ -66,8 +66,12 @@ module Flapjack
         @shutdown_cond.wait
         @pikelets.map(&:stop)
         @pikelets.clear
-        # Syslog.close if Syslog.opened? # TODO revisit in threading branch
       }
+
+      Flapjack.redis.pool_shutdown {|conn|
+        conn.quit
+      }
+
       @exit_value
     end
 
