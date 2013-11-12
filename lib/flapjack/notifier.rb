@@ -55,6 +55,10 @@ module Flapjack
       @default_contact_timezone = tz
     end
 
+    def redis_connections_required
+      1
+    end
+
     def start
       loop do
         @lock.synchronize do

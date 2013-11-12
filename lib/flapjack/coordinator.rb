@@ -15,6 +15,7 @@ require 'flapjack/patches'
 require 'flapjack/connection_pool'
 require 'flapjack/logger'
 require 'flapjack/pikelet'
+require 'flapjack/redis_proxy'
 
 module Flapjack
 
@@ -42,14 +43,6 @@ module Flapjack
     def start(opts = {})
       @boot_time = Time.now
 
-      # FIXME at the moment, this needs to be initialised before data classes
-      # are loaded, as global-context Sandstorm objects need their redis handle
-      # at that point. Need to clean this up, as well as handling reloads per
-      # the below
-      Sandstorm.redis = Flapjack.redis = Flapjack::ConnectionPool::Wrapper.new(:size => 10) {
-        Redis.new(@config.for_redis.merge(:driver => :hiredis))
-      }
-
       pikelet_defs = pikelet_definitions(@config.all)
       return if pikelet_defs.empty?
 
@@ -57,10 +50,14 @@ module Flapjack
         @pikelets << pik
       end
 
-      # TODO should retrieve knowledge about how many are blocking, and allocate
-      # that + 1 connections
-      # FIXME reloading pikelet configs may need to change the size of the pool
-      # num_connections = @pikelets.size
+      num_connections = @pikelets.inject(0) do |memo, pik|
+        memo += pik.redis_connections_required
+        memo
+      end
+
+      Sandstorm.redis = Flapjack.redis = Flapjack::ConnectionPool::Wrapper.new(:size => num_connections + 1,
+        :init     => proc { Flapjack::RedisProxy.new(@config.for_redis.merge(:driver => :hiredis)) },
+        :shutdown => proc {|conn| conn.quit })
 
       @pikelets.each do |pik|
         pik.start
@@ -74,8 +71,12 @@ module Flapjack
         @shutdown_cond.wait
         @pikelets.map(&:stop)
         @pikelets.clear
-        # Syslog.close if Syslog.opened? # TODO revisit in threading branch
       }
+
+      Flapjack.redis.pool_shutdown {|conn|
+        conn.quit
+      }
+
       @exit_value
     end
 
@@ -136,6 +137,13 @@ module Flapjack
         @pikelets << pik
         pik.start
       end
+
+      num_connections = @pikelets.inject(0) do |memo, pik|
+        memo += pik.redis_connections_required
+        memo
+      end
+
+      Flapjack.redis.pool_adjust_size(num_connections)
     end
 
   private

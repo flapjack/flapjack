@@ -1,8 +1,10 @@
 #!/usr/bin/env ruby
 
-# Copied from the connection_pool gem ( https://github.com/mperham/connection_pool/ )
-# and altered to allow non-timeout connections, needed for the blocking Redis
-# connections.
+# Copied from the connection_pool gem ( https://github.com/mperham/connection_pool/ ),
+# with some further changes:
+#
+# * allows non-timeout connections, needed for Redis blpop etc.
+# * adjusts size dynamically
 
 module Flapjack
 
@@ -76,71 +78,73 @@ module Flapjack
     DEFAULTS = {:size => 5, :timeout => nil}
 
     def self.wrap(options, &block)
-      Wrapper.new(options, &block)
+      Flapjack::ConnectionPool::Wrapper.new(options, &block)
     end
 
-    def initialize(options = {}, &block)
-      raise ArgumentError, 'Connection pool requires a block' unless block
+    def initialize(options = {})
+      raise ArgumentError, 'Connection pool requires init and shutdown blocks' unless
+        options[:init] && options[:shutdown]
 
       options = DEFAULTS.merge(options)
 
-      @size = options.fetch(:size)
-      @timeout = options.fetch(:timeout)
+      @init_block     = options[:init]
+      @shutdown_block = options[:shutdown]
+      @size           = options[:size]
+      @timeout        = options[:timeout]
 
-      @available = ConnectionStack.new(@size, &block)
+      @available = Flapjack::ConnectionPool::ConnectionStack.new(@size, &@init_block)
       @key = :"current-#{@available.object_id}"
     end
 
     def with
       conn = checkout
-      begin
-        yield conn
-      ensure
-        checkin
-      end
+      yield conn
+    ensure
+      checkin(conn)
     end
 
     def checkout
-      stack = ::Thread.current[@key] ||= []
-
-      if stack.empty?
-        conn = @available.pop(@timeout)
-      else
-        conn = stack.last
-      end
-
-      stack.push conn
-      conn
+      @available.pop(@timeout)
     end
 
-    def checkin
-      stack = ::Thread.current[@key]
-      conn = stack.pop
-      if stack.empty?
-        @available << conn
-      end
-      nil
+    def checkin(conn)
+      @available << conn
     end
 
-    def shutdown(&block)
-      @available.shutdown(&block)
+    def adjust_size(new_size)
+      diff = new_size - @available.length
+      return if diff == 0
+      if diff > 0
+        diff.times {|i| @available << @init_block.call }
+        return
+      end
+      diff.abs.times {|i| @shutdown_block.call(checkout) }
+    end
+
+    def shutdown
+      @available.shutdown(&@shutdown_block)
     end
 
     class Wrapper < ::BasicObject
       METHODS = [:with, :pool_shutdown]
 
-      def initialize(options = {}, &block)
-        @pool = ::Flapjack::ConnectionPool.new(options, &block)
+      def initialize(options = {})
+        @pool = ::Flapjack::ConnectionPool.new(options)
       end
 
       def with
-        yield @pool.checkout
+        conn = @pool.checkout
+        yield(conn)
       ensure
-        @pool.checkin
+        @pool.checkin(conn)
       end
 
-      def pool_shutdown(&block)
-        @pool.shutdown(&block)
+      def pool_shutdown
+        @pool.shutdown
+      end
+
+      def pool_adjust_size(new_size)
+        @pool.adjust_size(new_size)
       end
 
       def respond_to?(id, *args)

@@ -55,6 +55,10 @@ module Flapjack
       @instance_id  = "#{fqdn}:#{pid}"
     end
 
+    def redis_connections_required
+      1
+    end
+
     # expire instance keys after one week
     # TODO: set up a separate timer to reset key expiry every minute
     # and reduce the expiry to, say, five minutes
