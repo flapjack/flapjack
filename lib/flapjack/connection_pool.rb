@@ -89,8 +89,8 @@ module Flapjack
 
       @init_block     = options[:init]
       @shutdown_block = options[:shutdown]
-      @size           = options(:size)
-      @timeout        = options(:timeout)
+      @size           = options[:size]
+      @timeout        = options[:timeout]
 
       @available = Flapjack::ConnectionPool::ConnectionStack.new(@size, &@init_block)
       @key = :"current-#{@available.object_id}"
