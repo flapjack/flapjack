@@ -10,6 +10,11 @@ module Flapjack
       @options = options
     end
 
+    def quit
+      return if @proxied_connection.nil?
+      @proxied_connection.quit
+    end
+
     def method_missing(name, *args, &block)
       proxied_connection.send(name, *args, &block)
     end

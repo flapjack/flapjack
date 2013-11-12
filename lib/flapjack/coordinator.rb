@@ -51,9 +51,9 @@ module Flapjack
         memo
       end
 
-      Flapjack.redis = Flapjack::ConnectionPool::Wrapper.new(:size => num_connections + 1) {
-        Flapjack::RedisProxy.new(@config.for_redis.merge(:driver => :hiredis))
-      }
+      Flapjack.redis = Flapjack::ConnectionPool::Wrapper.new(:size => num_connections + 1,
+        :init_block     => proc { Flapjack::RedisProxy.new(@config.for_redis.merge(:driver => :hiredis)) },
+        :shutdown_block => proc {|conn| conn.quit })
 
       @pikelets.each do |pik|
         pik.start
@@ -133,6 +133,13 @@ module Flapjack
         @pikelets << pik
         pik.start
       end
+
+      num_connections = @pikelets.inject(0) do |memo, pik|
+        memo += pik.redis_connections_required
+        memo
+      end
+
+      Flapjack.redis.pool_adjust_size(num_connections)
     end
 
   private
