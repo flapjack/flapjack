@@ -18,11 +18,11 @@ describe Flapjack::Coordinator do
     config.should_receive(:for_redis).twice.and_return({})
     config.should_receive(:all).twice.and_return(cfg)
 
-    redis_1 = double(Redis)
+    redis_1 = double(Flapjack::RedisProxy)
     redis_1.should_receive(:quit)
-    redis_2 = double(Redis)
+    redis_2 = double(Flapjack::RedisProxy)
     redis_2.should_receive(:quit)
-    Redis.should_receive(:new).twice.and_return(redis_1, redis_2)
+    Flapjack::RedisProxy.should_receive(:new).twice.and_return(redis_1, redis_2)
 
     wrapper = double(Flapjack::ConnectionPool::Wrapper)
     wrapper.should_receive(:pool_shutdown).and_yield(redis_1).and_yield(redis_2)
@@ -63,13 +63,13 @@ describe Flapjack::Coordinator do
     config.should_receive(:for_redis).exactly(3).times.and_return({})
     config.should_receive(:all).twice.and_return(cfg)
 
-    redis_1 = double(Redis)
+    redis_1 = double(Flapjack::RedisProxy)
     redis_1.should_receive(:quit)
-    redis_2 = double(Redis)
+    redis_2 = double(Flapjack::RedisProxy)
     redis_2.should_receive(:quit)
-    redis_3 = double(Redis)
+    redis_3 = double(Flapjack::RedisProxy)
     redis_3.should_receive(:quit)
-    Redis.should_receive(:new).exactly(3).times.and_return(redis_1, redis_2, redis_3)
+    Flapjack::RedisProxy.should_receive(:new).exactly(3).times.and_return(redis_1, redis_2, redis_3)
 
     wrapper = double(Flapjack::ConnectionPool::Wrapper)
     wrapper.should_receive(:pool_shutdown).and_yield(redis_1).and_yield(redis_2).and_yield(redis_3)
@@ -122,11 +122,11 @@ describe Flapjack::Coordinator do
     config.should_receive(:for_redis).twice.and_return({})
     config.should_receive(:all).twice.and_return(cfg)
 
-    redis_1 = double(Redis)
+    redis_1 = double(Flapjack::RedisProxy)
     redis_1.should_receive(:quit)
-    redis_2 = double(Redis)
+    redis_2 = double(Flapjack::RedisProxy)
     redis_2.should_receive(:quit)
-    Redis.should_receive(:new).twice.and_return(redis_1, redis_2)
+    Flapjack::RedisProxy.should_receive(:new).twice.and_return(redis_1, redis_2)
 
     wrapper = double(Flapjack::ConnectionPool::Wrapper)
     wrapper.should_receive(:pool_shutdown).and_yield(redis_1).and_yield(redis_2)

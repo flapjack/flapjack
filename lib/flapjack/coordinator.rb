@@ -11,6 +11,7 @@ require 'flapjack/patches'
 require 'flapjack/connection_pool'
 require 'flapjack/logger'
 require 'flapjack/pikelet'
+require 'flapjack/redis_proxy'
 
 module Flapjack
 
@@ -51,7 +52,7 @@ module Flapjack
       end
 
       Flapjack.redis = Flapjack::ConnectionPool::Wrapper.new(:size => num_connections + 1) {
-        Redis.new(@config.for_redis.merge(:driver => :hiredis))
+        Flapjack::RedisProxy.new(@config.for_redis.merge(:driver => :hiredis))
       }
 
       @pikelets.each do |pik|
