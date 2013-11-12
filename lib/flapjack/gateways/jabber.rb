@@ -152,7 +152,7 @@ module Flapjack
           end
         end
 
-        def get_check_details(entity_check)
+        def get_check_details(entity_check, current_time)
           sched   = entity_check.current_maintenance(:scheduled => true)
           unsched = entity_check.current_maintenance(:unscheduled => true)
           out = ''
@@ -189,200 +189,205 @@ module Flapjack
           action = nil
           entity_check = nil
 
-          case command
-          when /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i
-            ackid        = $1
-            comment      = $2
-            duration_str = $3
+          begin
+            case command
+            when /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i
+              ackid        = $1
+              comment      = $2
+              duration_str = $3
 
-            error = nil
-            dur   = nil
+              error = nil
+              dur   = nil
 
-            if comment.nil? || (comment.length == 0)
-              error = "please provide a comment, eg \"#{@config['alias']}: ACKID #{$1} AL looking\""
-            elsif duration_str
-              # a fairly liberal match above, we'll let chronic_duration do the heavy lifting
-              dur = ChronicDuration.parse(duration_str)
-            end
-
-            four_hours = 4 * 60 * 60
-            duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
-
-            event_id = Flapjack.redis.hget('unacknowledged_failures', ackid)
-
-            if event_id.nil?
-              error = "not found"
-            else
-              entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id)
-              error = "unknown entity" if entity_check.nil?
-            end
-
-            if error
-              msg = "ERROR - couldn't ACK #{ackid} - #{error}"
-            else
-              entity_name, check = event_id.split(':', 2)
-
-              if entity_check.in_unscheduled_maintenance?
-                # ack = entity_check.current_maintenance(:unscheduled => true)
-                # FIXME details from current?
-                msg = "Changing ACK for #{check} on #{entity_name} (#{ackid})"
-              else
-                msg = "ACKing #{check} on #{entity_name} (#{ackid})"
+              if comment.nil? || (comment.length == 0)
+                error = "please provide a comment, eg \"#{@config['alias']}: ACKID #{$1} AL looking\""
+              elsif duration_str
+                # a fairly liberal match above, we'll let chronic_duration do the heavy lifting
+                dur = ChronicDuration.parse(duration_str)
               end
-              action = Proc.new {
-                Flapjack::Data::Event.create_acknowledgement(
-                  @config['processor_queue'] || 'events',
-                  entity_name, check,
-                  :summary => (comment || ''),
-                  :acknowledgement_id => ackid,
-                  :duration => duration,
-                )
-              }
-            end
-          when /^help$/
-            msg = "commands: \n" +
-                  "  ACKID <id> <comment> [duration: <time spec>]\n" +
-                  "  find entities matching /pattern/\n" +
-                  "  find checks[ matching /pattern/] on (<entity>|entities matching /pattern/)\n" +
-                  "  test notifications for <entity>[:<check>]\n" +
-                  "  tell me about <entity>[:<check>]\n" +
-                  "  identify\n" +
-                  "  help\n"
-          when /^identify$/
-            t    = Process.times
-            fqdn = `/bin/hostname -f`.chomp
-            pid  = Process.pid
-            msg  = "Flapjack #{Flapjack::VERSION} process #{pid} on #{fqdn} \n" +
-                   "Boot time: #{@boot_time}\n" +
-                   "User CPU Time: #{t.utime}\n" +
-                   "System CPU Time: #{t.stime}\n" +
-                   `uname -a`.chomp + "\n"
 
-          when /^test notifications for\s+([a-z0-9\-\.]+)(?::(.+))?$/i
-            entity_name = $1
-            check_name  = $2 || 'test'
+              four_hours = 4 * 60 * 60
+              duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
 
-            msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
+              event_id = Flapjack.redis.hget('unacknowledged_failures', ackid)
 
-            if entity = Flapjack::Data::Entity.find_by_name(entity_name)
+              if event_id.nil?
+                error = "not found"
+              else
+                entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id)
+                error = "unknown entity" if entity_check.nil?
+              end
+
+              if error
+                msg = "ERROR - couldn't ACK #{ackid} - #{error}"
+              else
+                entity_name, check = event_id.split(':', 2)
+
+                if entity_check.in_unscheduled_maintenance?
+                  # ack = entity_check.current_maintenance(:unscheduled => true)
+                  # FIXME details from current?
+                  msg = "Changing ACK for #{check} on #{entity_name} (#{ackid})"
+                else
+                  msg = "ACKing #{check} on #{entity_name} (#{ackid})"
+                end
+                action = Proc.new {
+                  Flapjack::Data::Event.create_acknowledgement(
+                    @config['processor_queue'] || 'events',
+                    entity_name, check,
+                    :summary => (comment || ''),
+                    :acknowledgement_id => ackid,
+                    :duration => duration,
+                  )
+                }
+              end
+            when /^help$/
+              msg = "commands: \n" +
+                    "  ACKID <id> <comment> [duration: <time spec>]\n" +
+                    "  find entities matching /pattern/\n" +
+                    "  find checks[ matching /pattern/] on (<entity>|entities matching /pattern/)\n" +
+                    "  test notifications for <entity>[:<check>]\n" +
+                    "  tell me about <entity>[:<check>]\n" +
+                    "  identify\n" +
+                    "  help\n"
+            when /^identify$/
+              t    = Process.times
+              fqdn = `/bin/hostname -f`.chomp
+              pid  = Process.pid
+              msg  = "Flapjack #{Flapjack::VERSION} process #{pid} on #{fqdn} \n" +
+                     "Boot time: #{@boot_time}\n" +
+                     "User CPU Time: #{t.utime}\n" +
+                     "System CPU Time: #{t.stime}\n" +
+                     `uname -a`.chomp + "\n"
+
+            when /^test notifications for\s+([a-z0-9\-\.]+)(?::(.+))?$/i
+              entity_name = $1
+              check_name  = $2 || 'test'
+
               msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
-              summary = "Testing notifications to all contacts interested in entity: #{entity_name}, check: #{check_name}"
-              Flapjack::Data::Event.test_notifications(@config['processor_queue'] || 'events',
-                entity_name, check_name, :summary => summary)
-            else
-              msg = "yeah, no I can't see #{entity_name} in my systems"
-            end
+              if entity = Flapjack::Data::Entity.find_by_name(entity_name)
+                msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
-          when /^tell me about\s+([a-z0-9\-\.]+)(?::(.+))?$+/
-            entity_name = $1
-            check_name  = $2
-
-            if entity = Flapjack::Data::Entity.find_by_name(entity_name)
-              check_str = check_name.nil? ? '' : ", check: #{check_name}"
-              msg = "so you'd like details on entity: #{entity_name}#{check_str} hmm? ... OK!\n"
-
-              current_time = Time.now
-
-              check_names = check_name.nil? ? entity.check_list.sort : [check_name]
-
-              if check_names.empty?
-                msg += "I couldn't find any checks for entity: #{entity_name}"
+                summary = "Testing notifications to all contacts interested in entity: #{entity_name}, check: #{check_name}"
+                Flapjack::Data::Event.test_notifications(@config['processor_queue'] || 'events',
+                  entity_name, check_name, :summary => summary)
               else
-                check_names.each do |check|
-                  entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check)
-                  next if entity_check.nil?
-                  msg += "---\n#{entity_name}:#{check}\n" if check_name.nil?
-                  msg += get_check_details(entity_check)
-                end
+                msg = "yeah, no I can't see #{entity_name} in my systems"
               end
-            else
-              msg = "hmmm, I can't see #{entity_name} in my systems"
-            end
 
-          when /^(?:find )?checks(?:\s+matching\s+\/(.+)\/)?\s+on\s+(?:entities matching\s+\/(.+)\/|([a-z0-9\-\.]+))/i
-            check_pattern = $1 ? $1.chomp.strip : nil
-            entity_pattern = $2 ? $2.chomp.strip : nil
-            entity_name = $3
+            when /^tell me about\s+([a-z0-9\-\.]+)(?::(.+))?$+/
+              entity_name = $1
+              check_name  = $2
 
-            entity_names = if entity_name
-              [entity_name]
-            elsif entity_pattern
-              Flapjack::Data::Entity.find_all_name_matching(entity_pattern)
-            else
-              []
-            end
+              if entity = Flapjack::Data::Entity.find_by_name(entity_name)
+                check_str = check_name.nil? ? '' : ", check: #{check_name}"
+                msg = "so you'd like details on entity: #{entity_name}#{check_str} hmm? ... OK!\n"
 
-            msg = ""
+                current_time = Time.now
 
-            # hash with entity => check_list, filtered by pattern if required
-            entities = entity_names.map {|name|
-              Flapjack::Data::Entity.find_by_name(name)
-            }.compact.inject({}) {|memo, entity|
-              memo[entity] = entity.check_list.select {|check_name|
-                !check_pattern || (check_name =~ /#{check_pattern}/i)
-              }
-              memo
-            }
+                check_names = check_name.nil? ? entity.check_list.sort : [check_name]
 
-            report_entities = proc {|ents|
-              ents.inject('') do |memo, (entity, check_list)|
-                if check_list.empty?
-                  memo += "Entity: #{entity.name} has no checks\n"
+                if check_names.empty?
+                  msg += "I couldn't find any checks for entity: #{entity_name}"
                 else
-                  memo += "Entity: #{entity.name}\nChecks: #{check_list.join(', ')}\n"
+                  check_names.each do |check|
+                    entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check)
+                    next if entity_check.nil?
+                    msg += "---\n#{entity_name}:#{check}\n" if check_name.nil?
+                    msg += get_check_details(entity_check, current_time)
+                  end
                 end
-                memo += "----\n"
+              else
+                msg = "hmmm, I can't see #{entity_name} in my systems"
+              end
+
+            when /^(?:find )?checks(?:\s+matching\s+\/(.+)\/)?\s+on\s+(?:entities matching\s+\/(.+)\/|([a-z0-9\-\.]+))/i
+              check_pattern = $1 ? $1.chomp.strip : nil
+              entity_pattern = $2 ? $2.chomp.strip : nil
+              entity_name = $3
+
+              entity_names = if entity_name
+                [entity_name]
+              elsif entity_pattern
+                Flapjack::Data::Entity.find_all_name_matching(entity_pattern)
+              else
+                []
+              end
+
+              msg = ""
+
+              # hash with entity => check_list, filtered by pattern if required
+              entities = entity_names.map {|name|
+                Flapjack::Data::Entity.find_by_name(name)
+              }.compact.inject({}) {|memo, entity|
+                memo[entity] = entity.check_list.select {|check_name|
+                  !check_pattern || (check_name =~ /#{check_pattern}/i)
+                }
                 memo
-              end
-            }
+              }
 
-            case
-            when entity_pattern
-              if entities.empty?
-                msg = "found no entities matching /#{entity_pattern}/"
-              else
-                msg = "found #{entities.size} entities matching /#{entity_pattern}/ ... \n" +
-                      report_entities.call(entities)
-              end
-            when entity_name
-              if entities.empty?
-                msg = "found no entity for '#{entity_name}'"
-              else
-                msg = report_entities.call(entities)
-              end
-            end
-
-          when /^(?:find )?entities matching\s+\/(.*)\/.*$/i
-            pattern = $1.chomp.strip
-
-            entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern)
-
-            if entity_list
-              max_showable = 30
-              number_found = entity_list.length
-              entity_list = entity_list[0..(max_showable - 1)] if number_found > max_showable
+              report_entities = proc {|ents|
+                ents.inject('') do |memo, (entity, check_list)|
+                  if check_list.empty?
+                    memo += "Entity: #{entity.name} has no checks\n"
+                  else
+                    memo += "Entity: #{entity.name}\nChecks: #{check_list.join(', ')}\n"
+                  end
+                  memo += "----\n"
+                  memo
+                end
+              }
 
               case
-              when number_found == 0
-                msg = "found no entities matching /#{pattern}/"
-              when number_found == 1
-                msg = "found 1 entity matching /#{pattern}/ ... \n"
-              when number_found > max_showable
-                msg = "showing first #{max_showable} of #{number_found} entities found matching /#{pattern}/\n"
-              else
-                msg = "found #{number_found} entities matching /#{pattern}/ ... \n"
+              when entity_pattern
+                if entities.empty?
+                  msg = "found no entities matching /#{entity_pattern}/"
+                else
+                  msg = "found #{entities.size} entities matching /#{entity_pattern}/ ... \n" +
+                        report_entities.call(entities)
+                end
+              when entity_name
+                if entities.empty?
+                  msg = "found no entity for '#{entity_name}'"
+                else
+                  msg = report_entities.call(entities)
+                end
               end
-              msg += entity_list.join(', ') unless entity_list.empty?
 
-            else
-              msg = "that doesn't seem to be a valid pattern - /#{pattern}/"
+            when /^(?:find )?entities matching\s+\/(.*)\/.*$/i
+              pattern = $1.chomp.strip
+
+              entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern)
+
+              if entity_list
+                max_showable = 30
+                number_found = entity_list.length
+                entity_list = entity_list[0..(max_showable - 1)] if number_found > max_showable
+
+                case
+                when number_found == 0
+                  msg = "found no entities matching /#{pattern}/"
+                when number_found == 1
+                  msg = "found 1 entity matching /#{pattern}/ ... \n"
+                when number_found > max_showable
+                  msg = "showing first #{max_showable} of #{number_found} entities found matching /#{pattern}/\n"
+                else
+                  msg = "found #{number_found} entities matching /#{pattern}/ ... \n"
+                end
+                msg += entity_list.join(', ') unless entity_list.empty?
+
+              else
+                msg = "that doesn't seem to be a valid pattern - /#{pattern}/"
+              end
+
+            when /^(.*)/
+              words = $1
+              msg   = "what do you mean, '#{words}'? Type 'help' for a list of acceptable commands."
+
             end
-
-          when /^(.*)/
-            words = $1
-            msg   = "what do you mean, '#{words}'? Type 'help' for a list of acceptable commands."
-
+          rescue => e
+            @logger.error("Exception when interpreting command '#{command}' - #{e.class}, #{e.message}")
+            msg = "Oops, something went wrong processing that command (#{e.class}, #{e.message})"
           end
 
           @bot ||= @siblings && @siblings.detect {|sib| sib.respond_to?(:announce) }

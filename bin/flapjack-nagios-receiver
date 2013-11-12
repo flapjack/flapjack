@@ -118,6 +118,35 @@ optparse = OptionParser.new do |opts|
     options.logfile = l
   end
 
+  opts.on_tail("-h", "--help", "Show this usage message") do
+    puts opts
+    puts '
+Required Nagios Configuration Changes
+-------------------------------------
+
+flapjack-nagios-receiver reads events from a named pipe written to by Nagios. The named pipe needs creating, and Nagios needs to be told to write performance data output to it.
+
+To create the named pipe:
+
+  mkfifo -m 0666 /var/cache/nagios3/event_stream.fifo
+
+nagios.cfg changes:
+
+  # modified lines:
+  enable_notifications=0
+  host_perfdata_file=/var/cache/nagios3/event_stream.fifo
+  service_perfdata_file=/var/cache/nagios3/event_stream.fifo
+  host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
+  service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
+  host_perfdata_file_mode=p
+  service_perfdata_file_mode=p
+
+Details on the wiki: https://github.com/flpjck/flapjack/wiki/USING#configuring-nagios
+'
+
+    exit
+  end
+
 end
 optparse.parse!(ARGV)
 
@@ -130,7 +159,8 @@ redis_options = config.for_redis
 
 if config_env.nil? || config_env.empty?
   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
-  exit(false)
+  puts optparse
+  exit 1
 end
 
 config_nr = config_env['nagios-receiver'] || {}
