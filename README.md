@@ -16,9 +16,9 @@ Additional check engines can be supported by adding additional receiver processe
 
 ## Installing
 
-**Ubuntu Precise (12.04):**
+**Ubuntu Precise 64 (12.04):**
 
-As root (eg with sudo) add the flapjack deb repository to your apt sources:
+Add the flapjack deb repository to your apt sources:
 
 ```text
 echo 'deb http://packages.flapjack.io/deb precise main' > /tmp/flapjack.list
@@ -45,7 +45,8 @@ And consume the REST API at:
 [http://localhost:3081/](http://localhost:3081)
 
 **Other OSes:**
-Currently we only make a package for Ubuntu Precise. If you feel comfortable getting a ruby 1.9 or 2.0 environment going then you can also just install flapjack from rubygems.org:
+
+Currently we only make a package for Ubuntu Precise (amd64). If you feel comfortable getting a ruby 1.9 or 2.0 environment going on your preferred OS, then you can also just install flapjack from rubygems.org:
 
 ```text
 gem install flapjack
@@ -69,7 +70,7 @@ sudo /etc/init.d/flapjack reload
 
 ## Running
 
-**Ubuntu Precise:**
+**Ubuntu Precise 64:**
 
 After installing the flapjack package, redis and flapjack should be automatically started.
 
