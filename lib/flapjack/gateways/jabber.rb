@@ -112,7 +112,7 @@ module Flapjack
             presence = Blather::Stanza::Presence.new
             presence.from = @flapjack_jid
             presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
-            presence << "<x xmlns='http://jabber.org/protocol/muc'/>"
+            presence << "<x xmlns='http://jabber.org/protocol/muc'><history maxstanzas='0'></x>"
             EventMachine::Synchrony.next_tick do
               write presence
               say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
@@ -171,7 +171,7 @@ module Flapjack
         command = th.chunks.join(' ')
 
         case command
-        when /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i
+        when /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
           ackid        = $1
           comment      = $2
           duration_str = $3
@@ -241,7 +241,7 @@ module Flapjack
                  "System CPU Time: #{t.stime}\n" +
                  `uname -a`.chomp + "\n"
 
-        when /^test notifications for\s+([a-z0-9\-\.]+)(?::(.+))?$/i
+        when /^test notifications for\s+([a-z0-9\-\.]+)(?::(.+))?$/im
           entity_name = $1
           check_name  = $2 || 'test'
 
@@ -254,7 +254,7 @@ module Flapjack
             msg = "yeah, no I can't see #{entity_name} in my systems"
           end
 
-        when /^tell me about\s+([a-z0-9\-\.]+)(?::(.+))?$+/i
+        when /^tell me about\s+([a-z0-9\-\.]+)(?::(.+))?$+/im
           entity_name = $1
           check_name  = $2
 
@@ -280,7 +280,7 @@ module Flapjack
             msg = "hmmm, I can't see #{entity_name} in my systems"
           end
 
-        when /^(?:find )?checks(?:\s+matching\s+\/(.+)\/)?\s+on\s+(?:entities matching\s+\/(.+)\/|([a-z0-9\-\.]+))/i
+        when /^(?:find )?checks(?:\s+matching\s+\/(.+)\/)?\s+on\s+(?:entities matching\s+\/(.+)\/|([a-z0-9\-\.]+))/im
           check_pattern = $1 ? $1.chomp.strip : nil
           entity_pattern = $2 ? $2.chomp.strip : nil
           entity_name = $3
@@ -333,7 +333,7 @@ module Flapjack
             end
           end
 
-        when /^(?:find )?entities matching\s+\/(.+)\//i
+        when /^(?:find )?entities matching\s+\/(.+)\//im
           pattern = $1.chomp.strip
           entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern, :redis => @redis)
 
@@ -371,7 +371,7 @@ module Flapjack
         return if @should_quit
         @logger.debug("groupchat message received: #{stanza.inspect}")
 
-        if stanza.body =~ /^#{@config['alias']}:\s+(.*)/
+        if stanza.body =~ /^#{@config['alias']}:\s+(.*)/m
           command = $1
         end
 
@@ -397,7 +397,7 @@ module Flapjack
         return if @should_quit
         @logger.debug("chat message received: #{stanza.inspect}")
 
-        if stanza.body =~ /^flapjack:\s+(.*)/
+        if stanza.body =~ /^flapjack:\s+(.*)/m
           command = $1
         else
           command = stanza.body
