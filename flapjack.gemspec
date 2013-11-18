@@ -24,7 +24,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'redis'
   gem.add_dependency 'sinatra'
   gem.add_dependency 'mail'
-  gem.add_dependency 'xmpp4r'
+  gem.add_dependency 'xmpp4r', '>= 0.5.5'
   gem.add_dependency 'chronic'
   gem.add_dependency 'chronic_duration'
   gem.add_dependency 'activesupport', '~> 3.2.14'
