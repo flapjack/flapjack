@@ -155,6 +155,28 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       fji.interpret('room1', 'jim', now.to_i, 'tell me about example.com')
     end
 
+
+    it "handles a message with a newline in it" do
+      bot.should_receive(:respond_to?).with(:announce).and_return(true)
+      bot.should_receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
+
+      entity.should_receive(:check_list).and_return(['ping'])
+      Flapjack::Data::Entity.should_receive(:find_by_name).
+        with('example.com').and_return(entity)
+
+      entity_check.should_receive(:current_maintenance).
+        with(:scheduled => true).and_return(nil)
+      entity_check.should_receive(:current_maintenance).
+        with(:unscheduled => true).and_return(nil)
+
+      Flapjack::Data::EntityCheck.should_receive(:for_entity).
+        with(entity, 'ping').and_return(entity_check)
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji.instance_variable_set('@siblings', [bot])
+      fji.interpret('room1', 'jim', now.to_i, "tell me \nabout example.com")
+    end
+
     it "interprets a received check information command" do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)

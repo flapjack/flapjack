@@ -191,7 +191,7 @@ module Flapjack
 
           begin
             case command
-            when /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i
+            when /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
               ackid        = $1
               comment      = $2
               duration_str = $3
@@ -259,7 +259,7 @@ module Flapjack
                      "System CPU Time: #{t.stime}\n" +
                      `uname -a`.chomp + "\n"
 
-            when /^test notifications for\s+([a-z0-9\-\.]+)(?::(.+))?$/i
+            when /^test\s+notifications\s+for\s+([a-z0-9\-\.]+)(?::(.+))?$/im
               entity_name = $1
               check_name  = $2 || 'test'
 
@@ -275,7 +275,7 @@ module Flapjack
                 msg = "yeah, no I can't see #{entity_name} in my systems"
               end
 
-            when /^tell me about\s+([a-z0-9\-\.]+)(?::(.+))?$+/
+            when /^tell\s+me\s+about\s+([a-z0-9\-\.]+)(?::(.+))?$+/im
               entity_name = $1
               check_name  = $2
 
@@ -301,7 +301,7 @@ module Flapjack
                 msg = "hmmm, I can't see #{entity_name} in my systems"
               end
 
-            when /^(?:find )?checks(?:\s+matching\s+\/(.+)\/)?\s+on\s+(?:entities matching\s+\/(.+)\/|([a-z0-9\-\.]+))/i
+            when /^(?:find )?checks(?:\s+matching\s+\/(.+)\/)?\s+on\s+(?:entities matching\s+\/(.+)\/|([a-z0-9\-\.]+))/im
               check_pattern = $1 ? $1.chomp.strip : nil
               entity_pattern = $2 ? $2.chomp.strip : nil
               entity_name = $3
@@ -354,7 +354,7 @@ module Flapjack
                 end
               end
 
-            when /^(?:find )?entities matching\s+\/(.*)\/.*$/i
+            when /^(?:find\s+)?entities\s+matching\s+\/(.*)\/.*$/im
               pattern = $1.chomp.strip
 
               entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern)
@@ -513,7 +513,7 @@ module Flapjack
               muc_client.on_message do |time, nick, text|
                 next if nick == jabber_id
 
-                if check_xml.call(text) =~ /^#{@config['alias']}:\s+(.*)/
+                if check_xml.call(text) =~ /^#{@config['alias']}:\s+(.*)/m
                   command = $1
 
                   if interpreter
