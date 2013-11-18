@@ -1,5 +1,10 @@
 ## Flapjack Changelog
 
+# 0.7.33 - 2013-11-15
+- Feature: Ignore XMPP transcript history replay on connect gh-23 (@ali-graham)
+- Feature: Allow newlines in Jabber comments and commands gh-34 (@ali-graham)
+- Docs: Add quickstarts to README gh-352 (@jessereynolds)
+
 # 0.7.32 - 2013-11-12
 - Feature: Improve flapjack-nagios-receiver --help to output example Nagios config gh-317 (@jessereynolds)
 - Bug: Crash with jabber query 'tell me about ENTITY' gh-367 (@ali-graham)
