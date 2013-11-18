@@ -38,12 +38,9 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
   end
 
   it "sends an SMS message" do
-    Flapjack::Data::Message.should_receive(:foreach_on_queue).
-      with('sms_notifications', :logger => @logger).
-      and_yield(message)
-    Flapjack::Data::Message.should_receive(:wait_for_queue).
-      with('sms_notifications').
-      and_raise(Flapjack::PikeletStop)
+    redis.should_receive(:rpop).with('sms_notifications').and_return(message.to_json, nil)
+    redis.should_receive(:quit)
+    redis.should_receive(:brpop).with('sms_notifications_actions').and_raise(Flapjack::PikeletStop)
 
     req = stub_request(:get, "https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage").
       with(:query => {'PhoneNumber' => '555-555555',
@@ -61,17 +58,14 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
     req.should have_been_requested
   end
 
-  it "truncates a long message a" do
+  it "truncates a long message" do
     long_msg = message.merge('summary' => 'Four score and seven years ago our ' +
       'fathers brought forth on this continent, a new nation, conceived in ' +
       'Liberty, and dedicated to the proposition that all men are created equal.')
 
-    Flapjack::Data::Message.should_receive(:foreach_on_queue).
-      with('sms_notifications', :logger => @logger).
-      and_yield(long_msg)
-    Flapjack::Data::Message.should_receive(:wait_for_queue).
-      with('sms_notifications').
-      and_raise(Flapjack::PikeletStop)
+    redis.should_receive(:rpop).with('sms_notifications').and_return(long_msg.to_json, nil)
+    redis.should_receive(:quit)
+    redis.should_receive(:brpop).with('sms_notifications_actions').and_raise(Flapjack::PikeletStop)
 
     req = stub_request(:get, "https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage").
       with(:query => {'PhoneNumber' => '555-555555',
@@ -93,12 +87,9 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
   end
 
   it "does not send an SMS message with an invalid config" do
-    Flapjack::Data::Message.should_receive(:foreach_on_queue).
-      with('sms_notifications', :logger => @logger).
-      and_yield(message)
-    Flapjack::Data::Message.should_receive(:wait_for_queue).
-      with('sms_notifications').
-      and_raise(Flapjack::PikeletStop)
+    redis.should_receive(:rpop).with('sms_notifications').and_return(message.to_json, nil)
+    redis.should_receive(:quit)
+    redis.should_receive(:brpop).with('sms_notifications_actions').and_raise(Flapjack::PikeletStop)
 
     lock.should_receive(:synchronize).and_yield
 

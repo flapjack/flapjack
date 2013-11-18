@@ -1,4 +1,4 @@
-require 'redis'
+require 'flapjack/redis_proxy'
 require 'oj'
 require 'time'
 
@@ -28,7 +28,7 @@ namespace :benchmarks do
     exit(false)
   end
 
-  redis = Redis.new(@redis_config)
+  Flapjack::RedisProxy.config = @redis_config
 
   desc "nukes the redis db, generates the events, runs and shuts down flapjack, generates perftools reports"
   task :run => [:reset_redis, :benchmark, :run_flapjack, :reports] do
@@ -38,9 +38,9 @@ namespace :benchmarks do
   desc "reset the redis database"
   task :reset_redis do
     raise "I'm not going to let you reset your production redis db, sorry about that." if FLAPJACK_ENV.downcase == "production"
-    puts "db size before: #{redis.dbsize}"
-    redis.flushdb
-    puts "db size after: #{redis.dbsize}"
+    puts "db size before: #{Flapjack.redis.dbsize}"
+    Flapjack.redis.flushdb
+    puts "db size after: #{Flapjack.redis.dbsize}"
   end
 
   desc "starts flapjack"
@@ -148,8 +148,6 @@ namespace :benchmarks do
     ok_events       = 0
     critical_events = 0
     state_changes   = 0
-
-    Flapjack.redis = redis
 
     (0..cycles).to_a.each {|i|
       changes = 0

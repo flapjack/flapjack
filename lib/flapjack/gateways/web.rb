@@ -5,7 +5,7 @@ require 'chronic_duration'
 require 'sinatra/base'
 require 'erb'
 
-require 'flapjack'
+require 'flapjack/redis_proxy'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/check'

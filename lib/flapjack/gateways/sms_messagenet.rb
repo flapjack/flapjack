@@ -6,6 +6,8 @@ require 'uri/https'
 
 require 'active_support/inflector'
 
+require 'flapjack/redis_proxy'
+
 require 'flapjack/data/message'
 require 'flapjack/data/alert'
 
@@ -19,7 +21,7 @@ module Flapjack
       MESSAGENET_DEFAULT_HOST = 'www.messagenet.com.au'
       MESSAGENET_DEFAULT_PATH = '/dotnet/Lodge.asmx/LodgeSMSMessage'
 
-      attr_reader :sent
+      attr_accessor :sent
 
       include Flapjack::Utility
 
@@ -36,25 +38,41 @@ module Flapjack
         @logger.debug("new sms gateway pikelet with the following options: #{@config.inspect}")
       end
 
-      def redis_connections_required
-        1
-      end
-
       def start
-        loop do
-          @lock.synchronize do
-            Flapjack::Data::Message.foreach_on_queue(@notifications_queue,
-                                                     :logger => @logger) {|message|
-              handle_message(message)
-            }
-          end
+        begin
+          loop do
+            @lock.synchronize do
+              foreach_on_queue {|message| handle_message(message) }
+            end
 
-          Flapjack::Data::Message.wait_for_queue(@notifications_queue)
+            wait_for_queue
+          end
+        ensure
+          Flapjack.redis.quit
         end
       end
 
       def stop_type
         :exception
+      end
+
+      private
+
+      def foreach_on_queue
+        while msg_json = Flapjack.redis.rpop(@notifications_queue)
+          begin
+            message = ::Oj.load( msg_json )
+          rescue Oj::Error => e
+            @logger.warn("Error deserialising message json: #{e}, raw json: #{msg_json.inspect}")
+            message = nil
+          end
+
+          yield message if block_given? && message
+        end
+      end
+
+      def wait_for_queue
+        Flapjack.redis.brpop("#{@notifications_queue}_actions")
       end
 
       def handle_message(msg)

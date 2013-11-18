@@ -304,7 +304,6 @@ namespace :profile do
   #   require 'em-resque/worker'
 
   #   require 'flapjack/patches'
-  #   require 'flapjack/redis_pool'
   #   require 'flapjack/notification/email'
 
   #   require 'flapjack/data/contact'

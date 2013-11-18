@@ -38,37 +38,6 @@ module Flapjack
         end
       end
 
-      def self.foreach_on_queue(queue, opts = {})
-        parse_json_proc = Proc.new {|event_json|
-          begin
-            ::Oj.load( event_json )
-          rescue Oj::Error => e
-            if opts[:logger]
-              opts[:logger].warn("Error deserialising event json: #{e}, raw json: #{event_json.inspect}")
-            end
-            nil
-          end
-        }
-
-        if opts[:archive_events]
-          dest = "events_archive:#{Time.now.utc.strftime "%Y%m%d%H"}"
-          while event_json = Flapjack.redis.rpoplpush(queue, dest)
-            Flapjack.redis.expire(dest, opts[:events_archive_maxage])
-            event = parse_json_proc.call(event_json)
-            yield self.new(event) if block_given? && event
-          end
-        else
-          while event_json = Flapjack.redis.rpop(queue)
-            event = parse_json_proc.call(event_json)
-            yield self.new(event) if block_given? && event
-          end
-        end
-      end
-
-      def self.wait_for_queue(queue)
-        Flapjack.redis.brpop("#{queue}_actions")
-      end
-
       # Provide a count of the number of events on the queue to be processed.
       def self.pending_count(queue)
         Flapjack.redis.llen(queue)

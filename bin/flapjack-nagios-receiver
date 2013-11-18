@@ -15,7 +15,6 @@ end
 
 require 'optparse'
 require 'ostruct'
-require 'redis'
 
 require 'oj'
 Oj.mimic_JSON
@@ -25,6 +24,7 @@ require 'active_support/json'
 require 'dante'
 
 require 'flapjack'
+require 'flapjack/redis_proxy'
 require 'flapjack/configuration'
 require 'flapjack/data/event'
 
@@ -72,7 +72,7 @@ end
 
 def main(opts)
   fifo = opts[:fifo]
-  Flapjack.redis = Redis.new(opts[:redis_options])
+  Flapjack::RedisProxy.config = opts[:redis_options]
   while true
     process_input(:fifo => fifo)
     puts "Whoops with the fifo, restarting main loop in 10 seconds"

@@ -154,18 +154,18 @@ end
 When /^the SMS notification handler runs successfully$/ do
   @request = stub_request(:get, /^#{Regexp.escape('https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage')}/)
   @sms = Flapjack::Gateways::SmsMessagenet.new(:config => {'username' => 'abcd', 'password' => 'efgh'}, :logger => @logger )
-  @sms.handle_message(@sms_notification)
+  @sms.send(:handle_message, @sms_notification)
 end
 
 When /^the SMS notification handler fails to send an SMS$/ do
   @request = stub_request(:get, /^#{Regexp.escape('https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage')}/).to_return(:status => [500, "Internal Server Error"])
   @sms = Flapjack::Gateways::SmsMessagenet.new(:config => {'username' => 'abcd', 'password' => 'efgh'}, :logger => @logger )
-  @sms.handle_message(@sms_notification)
+  @sms.send(:handle_message, @sms_notification)
 end
 
 When /^the email notification handler runs successfully$/ do
   @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}}, :logger => @logger)
-  @email.handle_message(@email_notification)
+  @email.send(:handle_message, @email_notification)
 end
 
 When /^the email notification handler fails to send an email$/ do
@@ -178,7 +178,7 @@ When /^the email notification handler fails to send an email$/ do
 
   @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}}, :logger => @logger)
   begin
-    @email.handle_message(@email_notification)
+    @email.send(:handle_message, @email_notification)
   rescue RuntimeError
   end
 

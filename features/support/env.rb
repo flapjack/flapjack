@@ -35,6 +35,7 @@ Oj.default_options = { :indent => 0, :mode => :strict }
 require 'active_support/json'
 
 require 'flapjack/patches'
+require 'flapjack/redis_proxy'
 
 require 'flapjack/data/check'
 require 'flapjack/data/event'
@@ -114,8 +115,7 @@ EXPIRE_AS_IF_AT
 
 end
 
-redis_opts = { :db => 14, :driver => :ruby }
-Sandstorm.redis = Flapjack.redis = ::Redis.new(redis_opts)
+Flapjack::RedisProxy.config = {:db => 14, :driver => :hiredis}
 Flapjack.redis.flushdb
 RedisDelorean.before_all
 Flapjack.redis.quit

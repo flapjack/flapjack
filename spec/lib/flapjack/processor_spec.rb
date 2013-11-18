@@ -29,7 +29,6 @@ describe Flapjack::Processor, :logger => true do
     redis.should_receive(:exec)
   end
 
-  # TODO this does too much -- split it up
   it "starts up, runs and shuts down" do
     t = Time.now.to_i
 
@@ -46,8 +45,10 @@ describe Flapjack::Processor, :logger => true do
     processor = Flapjack::Processor.new(:lock => lock, :config => {},
       :logger => @logger)
 
-    Flapjack::Data::Event.should_receive(:foreach_on_queue)
-    Flapjack::Data::Event.should_receive(:wait_for_queue).and_raise(Flapjack::PikeletStop)
+    # bad json, skips processing -- TODO rspec coverage of actual data
+    redis.should_receive(:rpop).with('events').and_return("}", nil)
+    redis.should_receive(:quit)
+    redis.should_receive(:brpop).with('events_actions').and_raise(Flapjack::PikeletStop)
 
     expect { processor.start }.to raise_error(Flapjack::PikeletStop)
   end
@@ -65,13 +66,17 @@ describe Flapjack::Processor, :logger => true do
 
     lock.should_receive(:synchronize).and_yield
 
+    # bad json, skips processing -- TODO rspec coverage of actual data
+    redis.should_receive(:rpop).with('events').and_return("}", nil)
+    redis.should_receive(:quit)
+    redis.should_not_receive(:brpop)
+
     processor = Flapjack::Processor.new(:lock => lock,
       :config => {'exit_on_queue_empty' => true}, :logger => @logger)
 
-    Flapjack::Data::Event.should_receive(:foreach_on_queue)
-    Flapjack::Data::Event.should_not_receive(:wait_for_queue)
-
     expect { processor.start }.to raise_error(Flapjack::GlobalStop)
   end
+
+  it "archives events when configured to"
 
 end

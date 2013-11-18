@@ -4,7 +4,7 @@ require 'active_support/time'
 
 require 'oj'
 
-require 'flapjack'
+require 'flapjack/redis_proxy'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/check'
@@ -55,19 +55,17 @@ module Flapjack
       @default_contact_timezone = tz
     end
 
-    def redis_connections_required
-      1
-    end
-
     def start
-      loop do
-        @lock.synchronize do
-          Flapjack::Data::Notification.foreach_on_queue(@notifications_queue) {|notif|
-            process_notification(notif)
-          }
-        end
+      begin
+        loop do
+          @lock.synchronize do
+            foreach_on_queue {|notif| process_notification(notif) }
+          end
 
-        Flapjack::Data::Notification.wait_for_queue(@notifications_queue)
+          wait_for_queue
+        end
+      ensure
+        Flapjack.redis.quit
       end
     end
 
@@ -76,6 +74,27 @@ module Flapjack
     end
 
   private
+
+    def foreach_on_queue
+      while notif_json = Flapjack.redis.rpop(@notifications_queue)
+        begin
+          notification = ::Oj.load( notif_json )
+        rescue Oj::Error => e
+          @logger.warn("Error deserialising notification json: #{e}, raw json: #{notif_json.inspect}")
+          notification = nil
+        end
+
+        next unless notification
+
+        # TODO tags must be a Set -- convert, or ease that restriction
+        symbolized_notification = notification.inject({}) {|m,(k,v)| m[k.to_sym] = v; m}
+        yield Flapjack::Data::Notification.new(symbolized_notification) if block_given?
+      end
+    end
+
+    def wait_for_queue
+      Flapjack.redis.brpop("#{@notifications_queue}_actions")
+    end
 
     # takes an event for which messages should be generated, works out the type of
     # notification, updates the notification history in redis, generates the

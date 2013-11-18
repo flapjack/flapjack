@@ -6,16 +6,14 @@ end
 
 require 'optparse'
 require 'ostruct'
-require 'hiredis'
-require 'redis'
 
 require 'oj'
 Oj.mimic_JSON
 Oj.default_options = { :indent => 0, :mode => :strict }
 require 'active_support/json'
 
-require 'flapjack'
 require 'flapjack/configuration'
+require 'flapjack/redis_proxy'
 require 'flapjack/data/event'
 
 def pike(message)
@@ -40,7 +38,7 @@ def fail(opts)
   recovery = event.merge('state' => 'ok',  'summary' => 'Simulated check output (test by operator)')
   key = "#{event['entity']}:#{event['check']}"
 
-  Flapjack.redis = Redis.new((opts[:redis_options] || {}).merge(:driver => :hiredis))
+  Flapjack::RedisProxy.config = opts[:redis_options]
 
   lock = Monitor.new
   stop_cond = lock.new_cond

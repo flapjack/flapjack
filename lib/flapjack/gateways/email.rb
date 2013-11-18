@@ -6,7 +6,7 @@ require 'socket'
 require 'chronic_duration'
 require 'active_support/inflector'
 
-require 'flapjack'
+require 'flapjack/redis_proxy'
 
 require 'flapjack/exceptions'
 require 'flapjack/utility'
@@ -21,7 +21,7 @@ module Flapjack
 
       include Flapjack::Utility
 
-      attr_reader :sent
+      attr_accessor :sent
 
       def initialize(opts = {})
         @lock = opts[:lock]
@@ -55,26 +55,22 @@ module Flapjack
         @sent = 0
       end
 
-      def redis_connections_required
-        1
-      end
-
       def start
         @logger.info("starting")
         @logger.debug("new email gateway pikelet with the following options: #{@config.inspect}")
 
-        msg_raw = nil
+        begin
+          loop do
+            @lock.synchronize do
+              @logger.debug "checking messages"
+              foreach_on_queue {|message| handle_message(message) }
+            end
 
-        loop do
-          @lock.synchronize do
-            @logger.debug "checking messages"
-            Flapjack::Data::Message.foreach_on_queue(@notifications_queue, :logger => @logger) {|message|
-              handle_message(message)
-            }
+            @logger.debug "blocking on messages"
+            wait_for_queue
           end
-
-          @logger.debug "blocking on messages"
-          Flapjack::Data::Message.wait_for_queue(@notifications_queue)
+        ensure
+          Flapjack.redis.quit
         end
       end
 
@@ -138,6 +134,23 @@ module Flapjack
       end
 
       private
+
+      def foreach_on_queue
+        while msg_json = Flapjack.redis.rpop(@notifications_queue)
+          begin
+            message = ::Oj.load( msg_json )
+          rescue Oj::Error => e
+            @logger.warn("Error deserialising message json: #{e}, raw json: #{msg_json.inspect}")
+            message = nil
+          end
+
+          yield message if block_given? && message
+        end
+      end
+
+      def wait_for_queue(opts = {})
+        Flapjack.redis.brpop("#{@notifications_queue}_actions")
+      end
 
       # returns a Mail object
       def prepare_email(opts = {})

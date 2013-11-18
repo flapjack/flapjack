@@ -20,12 +20,9 @@ describe Flapjack::Gateways::Email, :logger => true do
                'entity'              => 'example.com',
                'check'               => 'ping'}
 
-    Flapjack::Data::Message.should_receive(:foreach_on_queue).
-      with('email_notifications', :logger => @logger).
-      and_yield(message)
-    Flapjack::Data::Message.should_receive(:wait_for_queue).
-      with('email_notifications').
-      and_raise(Flapjack::PikeletStop)
+    redis.should_receive(:rpop).with('email_notifications').and_return(message.to_json, nil)
+    redis.should_receive(:quit)
+    redis.should_receive(:brpop).with('email_notifications_actions').and_raise(Flapjack::PikeletStop)
 
     Mail::TestMailer.deliveries.should be_empty
 

@@ -80,29 +80,6 @@ module Flapjack
         end
       end
 
-      def self.foreach_on_queue(queue)
-        while notif_json = Flapjack.redis.rpop(queue)
-          begin
-            notification = ::Oj.load( notif_json )
-          rescue Oj::Error => e
-            # if opts[:logger]
-            #   opts[:logger].warn("Error deserialising notification json: #{e}, raw json: #{notif_json.inspect}")
-            # end
-            notification = nil
-          end
-
-          next unless notification
-
-          # TODO tags must be a Set -- convert, or ease that restriction
-          symbolized_notification = notification.inject({}) {|m,(k,v)| m[k.to_sym] = v; m}
-          yield self.new(symbolized_notification) if block_given?
-        end
-      end
-
-      def self.wait_for_queue(queue)
-        Flapjack.redis.brpop("#{queue}_actions")
-      end
-
       def contents
         {'state'             => (self.state ? state.state : nil),
          'summary'           => (self.state ? state.summary : nil),

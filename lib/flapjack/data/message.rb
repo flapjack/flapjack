@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-# require 'flapjack/data/contact'
-
 module Flapjack
   module Data
     class Message

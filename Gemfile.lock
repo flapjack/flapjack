@@ -1,6 +1,7 @@
 GIT
   remote: git://github.com/ali-graham/sandstorm.git
-  revision: a43e3bd44501d3655cbd75b97fb180c1a67a5a18
+  revision: 3c8d4df023dabdb505320809b546c8d4de0a4493
+  branch: master
   specs:
     sandstorm (0.0.1)
       activemodel
@@ -111,7 +112,7 @@ GEM
       ffi (>= 0.5.0)
     rb-kqueue (0.2.0)
       ffi (>= 0.5.0)
-    redis (3.0.5)
+    redis (3.0.6)
     rspec (2.14.1)
       rspec-core (~> 2.14.0)
       rspec-expectations (~> 2.14.0)

@@ -30,7 +30,7 @@ module Flapjack
   module Pikelet
 
     class Base
-      attr_accessor :siblings, :pikelet
+      attr_accessor :siblings, :pikelet, :redis
 
       def initialize(pikelet_class, shutdown, opts = {})
         @pikelet_class = pikelet_class
@@ -145,11 +145,6 @@ module Flapjack
         end
       end
 
-      def redis_connections_required
-        return 0 unless @pikelet.respond_to?(:redis_connections_required)
-        @pikelet.redis_connections_required
-      end
-
       # this should only reload if all changes can be applied -- will
       # return false to log warning otherwise
       def reload(cfg)
@@ -183,11 +178,6 @@ module Flapjack
           yield @server  if block_given?
           @server.start
         end
-      end
-
-      def redis_connections_required
-        return 0 unless @pikelet_class.respond_to?(:redis_connections_required)
-        @pikelet_class.redis_connections_required
       end
 
       # this should only reload if all changes can be applied -- will

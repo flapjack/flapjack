@@ -9,15 +9,15 @@ describe Flapjack::Notifier, :logger => true do
     # testing with tainted data
     config = {'default_contact_timezone' => 'Australia/Broken_Hill'.taint}
 
-    Flapjack.stub(:redis).and_return(redis)
-
     lock = double(Monitor)
     lock.should_receive(:synchronize).and_yield
 
     notifier = Flapjack::Notifier.new(:lock => lock, :config => config, :logger => @logger)
 
-    Flapjack::Data::Notification.should_receive(:foreach_on_queue)
-    Flapjack::Data::Notification.should_receive(:wait_for_queue).and_raise(Flapjack::PikeletStop)
+    redis.should_receive(:rpop).with('notifications').and_return("}", nil)
+    redis.should_receive(:quit)
+    redis.should_receive(:brpop).with('notifications_actions').and_raise(Flapjack::PikeletStop)
+    Flapjack.stub(:redis).and_return(redis)
 
     expect { notifier.start }.to raise_error(Flapjack::PikeletStop)
   end

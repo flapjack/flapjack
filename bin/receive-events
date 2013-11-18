@@ -6,14 +6,16 @@ end
 
 require 'optparse'
 require 'ostruct'
-require 'redis'
 
 require 'oj'
 Oj.mimic_JSON
 Oj.default_options = { :indent => 0, :mode => :strict }
 require 'active_support/json'
 
+require 'redis'
+
 require 'flapjack/configuration'
+require 'flapjack/redis_proxy'
 require 'flapjack/data/event'
 
 def pike(message)
@@ -26,7 +28,7 @@ def send_event(event)
 end
 
 def receive(opts)
-  Flapjack.redis = Redis.new(opts[:redis_options])
+  Flapjack::RedisProxy.config = opts[:redis_options]
   source_redis = Redis.new(:url => opts[:source])
 
   archives = get_archive_keys_stats(source_redis)

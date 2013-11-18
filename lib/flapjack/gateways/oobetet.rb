@@ -9,8 +9,6 @@ require 'oj'
 require 'xmpp4r'
 require 'xmpp4r/muc/helper/simplemucclient'
 
-require 'flapjack'
-
 require 'flapjack/exceptions'
 require 'flapjack/utility'
 

@@ -10,7 +10,7 @@ require 'time'
 
 require 'sinatra/base'
 
-require 'flapjack'
+require 'flapjack/redis_proxy'
 
 require 'flapjack/gateways/api/rack/json_params_parser'
 require 'flapjack/gateways/api/contact_methods'
@@ -46,7 +46,7 @@ module Flapjack
         end
       end
 
-      ['redis', 'logger', 'config'].each do |class_inst_var|
+      ['logger', 'config'].each do |class_inst_var|
         define_method(class_inst_var.to_sym) do
           self.class.instance_variable_get("@#{class_inst_var}")
         end

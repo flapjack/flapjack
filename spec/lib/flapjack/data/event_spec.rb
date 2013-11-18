@@ -26,23 +26,6 @@ describe Flapjack::Data::Event do
       Flapjack.stub(:redis).and_return(redis)
     end
 
-    it "returns the next event (non-blocking, archiving)" do
-      redis.should_receive(:rpoplpush).with('events', /^events_archive:/).and_return(event_data.to_json, nil)
-      redis.should_receive(:expire)
-
-      Flapjack::Data::Event.foreach_on_queue('events', :archive_events => true) {|result|
-        result.should be_an_instance_of(Flapjack::Data::Event)
-      }
-    end
-
-    it "returns the next event (non-blocking, not archiving)" do
-      redis.should_receive(:rpop).with('events').and_return(event_data.to_json, nil)
-
-      Flapjack::Data::Event.foreach_on_queue('events', :archive_events => false) {|result|
-        result.should be_an_instance_of(Flapjack::Data::Event)
-      }
-    end
-
     it "blocks waiting for an event wakeup"
 
     it "handles invalid event JSON"

@@ -49,11 +49,9 @@ describe Flapjack::Gateways::Jabber, :logger => true do
         :config => config, :logger => @logger)
       fjn.should_receive(:handle_message).with(message)
 
-      Flapjack::Data::Message.should_receive(:foreach_on_queue).
-        with('jabber_notifications').and_yield(message)
-
-      Flapjack::Data::Message.should_receive(:wait_for_queue).
-        with('jabber_notifications').and_raise(Flapjack::PikeletStop)
+      redis.should_receive(:rpop).with('jabber_notifications').and_return(message.to_json, nil)
+      redis.should_receive(:quit)
+      redis.should_receive(:brpop).with('jabber_notifications_actions').and_raise(Flapjack::PikeletStop)
 
       expect { fjn.start }.to raise_error(Flapjack::PikeletStop)
     end
@@ -91,6 +89,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       fji.should_receive(:interpret).with('room1', 'jim', now.to_i, 'help')
 
+      redis.should_receive(:quit)
       fji.start
     end
 

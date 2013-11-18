@@ -36,11 +36,9 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     it "starts and is stopped by an exception" do
       Kernel.should_receive(:sleep).with(10)
 
-      Flapjack::Data::Message.should_receive(:foreach_on_queue).
-        with('pagerduty_notifications').and_yield(message)
-
-      Flapjack::Data::Message.should_receive(:wait_for_queue).
-        with('pagerduty_notifications').and_raise(Flapjack::PikeletStop)
+      redis.should_receive(:rpop).with('pagerduty_notifications').and_return(message.to_json, nil)
+      redis.should_receive(:quit)
+      redis.should_receive(:brpop).with('pagerduty_notifications_actions').and_raise(Flapjack::PikeletStop)
 
       lock.should_receive(:synchronize).and_yield
 

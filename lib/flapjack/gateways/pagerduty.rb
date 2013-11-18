@@ -6,7 +6,7 @@ require 'net/http'
 require 'uri'
 require 'uri/https'
 
-require 'flapjack'
+require 'flapjack/redis_proxy'
 
 require 'flapjack/data/alert'
 require 'flapjack/data/check'
@@ -33,10 +33,6 @@ module Flapjack
           @logger.debug("New Pagerduty::Notifier pikelet with the following options: #{@config.inspect}")
         end
 
-        def redis_connections_required
-          1
-        end
-
         def start
           @logger.info("starting")
           until test_pagerduty_connection
@@ -44,14 +40,16 @@ module Flapjack
             Kernel.sleep(10)
           end
 
-          loop do
-            @lock.synchronize do
-              Flapjack::Data::Message.foreach_on_queue(@notifications_queue) {|message|
-                handle_message(message)
-              }
-            end
+          begin
+            loop do
+              @lock.synchronize do
+                foreach_on_queue {|message| handle_message(message) }
+              end
 
-            Flapjack::Data::Message.wait_for_queue(@notifications_queue)
+              wait_for_queue
+            end
+          ensure
+            Flapjack.redis.quit
           end
         end
 
@@ -60,6 +58,23 @@ module Flapjack
         end
 
         private
+
+        def foreach_on_queue
+          while msg_json = Flapjack.redis.rpop(@notifications_queue)
+            begin
+              message = ::Oj.load( msg_json )
+            rescue Oj::Error => e
+              @logger.warn("Error deserialising message json: #{e}, raw json: #{msg_json.inspect}")
+              message = nil
+            end
+
+            yield message if block_given? && message
+          end
+        end
+
+        def wait_for_queue(opts = {})
+          Flapjack.redis.brpop("#{@notifications_queue}_actions")
+        end
 
         def handle_message(message)
           @logger.debug("pagerduty notification event received: " + message.inspect)

@@ -9,7 +9,7 @@ require 'rexml/document'
 require 'xmpp4r/query'
 require 'xmpp4r/muc'
 
-require 'flapjack'
+require 'flapjack/redis_proxy'
 
 require 'flapjack/data/check_state'
 require 'flapjack/data/check'
@@ -41,14 +41,16 @@ module Flapjack
         end
 
         def start
-          loop do
-            @lock.synchronize do
-              Flapjack::Data::Message.foreach_on_queue(@notifications_queue) {|message|
-                handle_message(message)
-              }
-            end
+          begin
+            loop do
+              @lock.synchronize do
+                foreach_on_queue {|message| handle_message(message) }
+              end
 
-            Flapjack::Data::Message.wait_for_queue(@notifications_queue)
+              wait_for_queue
+            end
+          ensure
+            Flapjack.redis.quit
           end
         end
 
@@ -58,53 +60,72 @@ module Flapjack
 
         private
 
-          def handle_message(event)
-            type  = event['notification_type'] || 'unknown'
-            @logger.info('jabber notification event received')
-            @logger.info(event.inspect)
-
-            @bot ||= @siblings && @siblings.detect {|sib| sib.respond_to?(:announce) }
-
-            if @bot.nil?
-              @logger.warn("jabber bot not running, won't announce")
-              return
-            end
-
-            alert = Flapjack::Data::Alert.new(event, :logger => @logger)
-
-            @logger.debug("processing jabber notification address: #{alert.address}, entity: #{alert.entity}, " +
-                          "check: '#{alert.check}', state: #{alert.state}, summary: #{alert.summary}")
-
-            @ack_str =
-              alert.event_count &&
-              !alert.state.eql?('ok') &&
-              !'acknowledgement'.eql?(alert.type) &&
-              !'test'.eql?(alert.type) ?
-              "#{@config['alias']}: ACKID #{event['event_count']}" : nil
-
-            message_type = alert.rollup ? 'rollup' : 'alert'
-
-            mydir = File.dirname(__FILE__)
-            message_template_path = mydir + "/jabber/#{message_type}.text.erb"
-            message_template = ERB.new(File.read(message_template_path), nil, '-')
-
-            @alert = alert
-            bnd = binding
-
-            message = nil
+        def foreach_on_queue
+          while msg_json = Flapjack.redis.rpop(@notifications_queue)
             begin
-              message = message_template.result(bnd).chomp
-            rescue => e
-              @logger.error "Error while executing the ERB for a jabber message, " +
-                "ERB being executed: #{message_template_path}"
-              raise
+              message = ::Oj.load( msg_json )
+            rescue Oj::Error => e
+              if opts[:logger]
+                opts[:logger].warn("Error deserialising message json: #{e}, raw json: #{msg_json.inspect}")
+              end
+              message = nil
             end
 
-            # FIXME: should also check if presence has been established in any group chat rooms that are
-            # configured before starting to process events, otherwise the first few may get lost (send
-            # before joining the group chat rooms)
-            @bot.announce(alert.address, message)
+            yield message if block_given? && message
           end
+        end
+
+        def wait_for_queue
+          Flapjack.redis.brpop("#{@notifications_queue}_actions")
+        end
+
+        def handle_message(event)
+          type  = event['notification_type'] || 'unknown'
+          @logger.info('jabber notification event received')
+          @logger.info(event.inspect)
+
+          @bot ||= @siblings && @siblings.detect {|sib| sib.respond_to?(:announce) }
+
+          if @bot.nil?
+            @logger.warn("jabber bot not running, won't announce")
+            return
+          end
+
+          alert = Flapjack::Data::Alert.new(event, :logger => @logger)
+
+          @logger.debug("processing jabber notification address: #{alert.address}, entity: #{alert.entity}, " +
+                        "check: '#{alert.check}', state: #{alert.state}, summary: #{alert.summary}")
+
+          @ack_str =
+            alert.event_count &&
+            !alert.state.eql?('ok') &&
+            !'acknowledgement'.eql?(alert.type) &&
+            !'test'.eql?(alert.type) ?
+            "#{@config['alias']}: ACKID #{event['event_count']}" : nil
+
+          message_type = alert.rollup ? 'rollup' : 'alert'
+
+          mydir = File.dirname(__FILE__)
+          message_template_path = mydir + "/jabber/#{message_type}.text.erb"
+          message_template = ERB.new(File.read(message_template_path), nil, '-')
+
+          @alert = alert
+          bnd = binding
+
+          message = nil
+          begin
+            message = message_template.result(bnd).chomp
+          rescue => e
+            @logger.error "Error while executing the ERB for a jabber message, " +
+              "ERB being executed: #{message_template_path}"
+            raise
+          end
+
+          # FIXME: should also check if presence has been established in any group chat rooms that are
+          # configured before starting to process events, otherwise the first few may get lost (send
+          # before joining the group chat rooms)
+          @bot.announce(alert.address, message)
+        end
 
       end
 
@@ -137,6 +158,7 @@ module Flapjack
               @stop_cond.wait_while { @messages.empty? && !@should_quit }
             end
           end
+          Flapjack.redis.quit
         end
 
         def stop_type

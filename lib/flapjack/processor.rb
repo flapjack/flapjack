@@ -2,7 +2,7 @@
 
 require 'chronic_duration'
 
-require 'flapjack'
+require 'flapjack/redis_proxy'
 
 require 'flapjack/filters/acknowledgement'
 require 'flapjack/filters/ok'
@@ -55,10 +55,6 @@ module Flapjack
       @instance_id  = "#{fqdn}:#{pid}"
     end
 
-    def redis_connections_required
-      1
-    end
-
     # expire instance keys after one week
     # TODO: set up a separate timer to reset key expiry every minute
     # and reduce the expiry to, say, five minutes
@@ -69,39 +65,52 @@ module Flapjack
     end
 
     def start
-      # FIXME: add an administrative function to reset all event counters
-      counters = Flapjack.redis.hget('event_counters', 'all')
-
-      Flapjack.redis.multi
-
-      if counters.nil?
-        Flapjack.redis.hmset('event_counters',
-                             'all', 0, 'ok', 0, 'failure', 0, 'action', 0)
-      end
-
-      # Flapjack.redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
-      Flapjack.redis.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
-      Flapjack.redis.hmset("event_counters:#{@instance_id}",
-                           'all', 0, 'ok', 0, 'failure', 0, 'action', 0)
-      touch_keys
-
-      Flapjack.redis.exec
-
       @logger.info("Booting main loop.")
 
-      loop do
-        @lock.synchronize do
-          Flapjack::Data::Event.foreach_on_queue(@queue,
-                                                 :archive_events => @archive_events,
-                                                 :events_archive_maxage => @events_archive_maxage,
-                                                 :logger => @logger) do |event|
-            process_event(event)
-          end
+      begin
+        # FIXME: add an administrative function to reset all event counters
+        counters = Flapjack.redis.hget('event_counters', 'all')
+
+        Flapjack.redis.multi
+
+        if counters.nil?
+          Flapjack.redis.hmset('event_counters',
+                       'all', 0, 'ok', 0, 'failure', 0, 'action', 0)
         end
 
-        raise Flapjack::GlobalStop if @config['exit_on_queue_empty']
+        # Flapjack.redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
+        Flapjack.redis.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
+        Flapjack.redis.hmset("event_counters:#{@instance_id}",
+                             'all', 0, 'ok', 0, 'failure', 0, 'action', 0)
+        touch_keys
 
-        Flapjack::Data::Event.wait_for_queue(@queue)
+        Flapjack.redis.exec
+
+        parse_json_proc = Proc.new {|event_json|
+          begin
+            Flapjack::Data::Event.new( ::Oj.load( event_json ) )
+          rescue Oj::Error => e
+            @logger.warn("Error deserialising event json: #{e}, raw json: #{event_json.inspect}")
+            nil
+          end
+        }
+
+        loop do
+          @lock.synchronize do
+            foreach_on_queue(:archive_events => @archive_events,
+                             :events_archive_maxage => @events_archive_maxage) do |event_json|
+              event = parse_json_proc.call(event_json)
+              process_event(event) if event
+            end
+          end
+
+          raise Flapjack::GlobalStop if @config['exit_on_queue_empty']
+
+          wait_for_queue
+        end
+
+      ensure
+        Flapjack.redis.quit
       end
     end
 
@@ -110,6 +119,24 @@ module Flapjack
     end
 
   private
+
+    def foreach_on_queue(opts = {})
+      if opts[:archive_events]
+        dest = "events_archive:#{Time.now.utc.strftime "%Y%m%d%H"}"
+        while event_json = Flapjack.redis.rpoplpush(@queue, dest)
+          Flapjack.redis.expire(dest, opts[:events_archive_maxage])
+          yield event_json
+        end
+      else
+        while event_json = Flapjack.redis.rpop(@queue)
+          yield event_json
+        end
+      end
+    end
+
+    def wait_for_queue
+      Flapjack.redis.brpop("#{@queue}_actions")
+    end
 
     def process_event(event)
       pending = Flapjack::Data::Event.pending_count(@queue)
