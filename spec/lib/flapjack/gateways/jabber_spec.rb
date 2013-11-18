@@ -362,7 +362,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       lock.should_receive(:synchronize).twice.and_yield.and_yield
 
-      muc_client.should_receive(:join).with('flapjacktest@conference.example.com/flapjack')
+      muc_client.should_receive(:join).with('flapjacktest@conference.example.com/flapjack', nil, :history => false)
       muc_client.should_receive(:say).with(/^flapjack jabber gateway started/)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
@@ -377,7 +377,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       lock.should_receive(:synchronize).twice.and_yield.and_yield
 
-      muc_client.should_receive(:join).with('flapjacktest@conference.example.com/flapjack')
+      muc_client.should_receive(:join).with('flapjacktest@conference.example.com/flapjack', nil, :history => false)
       muc_client.should_receive(:say).with(/^flapjack jabber gateway rejoining/)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,

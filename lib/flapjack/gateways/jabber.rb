@@ -645,7 +645,7 @@ module Flapjack
               unless sq
                 attempts_remaining -= 1
                 begin
-                  muc_client.join(room + '/' + @config['alias'])
+                  muc_client.join(room + '/' + @config['alias'], nil, :history => false)
                   t = Time.now
                   msg = opts[:rejoin] ? "flapjack jabber gateway rejoining at #{t}, hello again!" :
                                         "flapjack jabber gateway started at #{t}, hello!"

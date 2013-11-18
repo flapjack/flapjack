@@ -14,12 +14,12 @@ PATH
       sinatra
       tzinfo (~> 1.0.1)
       tzinfo-data
-      xmpp4r
+      xmpp4r (>= 0.5.5)
 
 GEM
   remote: https://rubygems.org/
   specs:
-    activesupport (3.2.14)
+    activesupport (3.2.15)
       i18n (~> 0.6, >= 0.6.4)
       multi_json (~> 1.0)
     addressable (2.3.5)
@@ -82,7 +82,7 @@ GEM
     multi_json (1.7.9)
     multi_test (0.0.2)
     numerizer (0.1.1)
-    oj (2.1.4)
+    oj (2.1.7)
     perftools.rb (2.0.1)
     polyglot (0.3.3)
     pry (0.9.12.2)
@@ -90,7 +90,7 @@ GEM
       method_source (~> 0.8)
       slop (~> 3.4)
     rack (1.5.2)
-    rack-protection (1.5.0)
+    rack-protection (1.5.1)
       rack
     rack-test (0.6.2)
       rack (>= 1.0)
@@ -128,7 +128,7 @@ GEM
       polyglot
       polyglot (>= 0.3.1)
     tzinfo (1.0.1)
-    tzinfo-data (1.2013.4)
+    tzinfo-data (1.2013.7)
       tzinfo (>= 1.0.0)
     webmock (1.13.0)
       addressable (>= 2.2.7)
