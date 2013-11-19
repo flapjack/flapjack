@@ -14,10 +14,17 @@
           <%= nav %>
           <h2>Summary</h2>
         </div>
+
         <h4><a href="/entities_failing" title="failing entities"><%= h @count_failing_entities %></a> out of <a href="/entities_all" title="all entities"><%= h @count_all_entities %></a> entities have failing checks</h4>
         <h4><a href="/checks_failing" title="failing checks"><%= h @count_failing_checks %></a> out of <a href="/checks_all" title="all checks"><%= h @count_all_checks %></a> checks are failing</h4>
-        <img src="/img/flapjack-transparent-350-400.png" height="350" width="400">
+
+        <div class="span12 pagination-centered">
+          <br><br><br><br><br><!-- did i really just do that? -->
+          <img src="/img/flapjack-2013-vertical-transparent-300-386.png" alt="flapjack" width="300" height="386">
+        </div>
+
       </div>
+
       <div id="push"></div>
     </div>
     <div id="footer">
