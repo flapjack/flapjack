@@ -6,13 +6,13 @@ end
 
 require 'optparse'
 require 'ostruct'
-require 'redis'
 
 require 'oj'
 Oj.mimic_JSON
 Oj.default_options = { :indent => 0, :mode => :strict }
 require 'active_support/json'
 
+require 'flapjack/redis_proxy'
 require 'flapjack/configuration'
 require 'flapjack/data/event'
 

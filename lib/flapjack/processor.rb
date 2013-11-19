@@ -58,10 +58,6 @@ module Flapjack
       # point on...
     end
 
-    def redis_connections_required
-      1
-    end
-
     # expire instance keys after one week
     # TODO: set up a separate EM timer to reset key expiry every minute
     # and reduce the expiry to, say, five minutes

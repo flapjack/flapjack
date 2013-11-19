@@ -80,7 +80,7 @@ RSpec.configure do |config|
   end
 
   config.around(:each, :redis => true) do |example|
-    Flapjack.redis = ::Redis.new(:db => 14, :driver => :ruby)
+    Flapjack::RedisProxy.config = {:db => 14, :driver => :hiredis}
     Flapjack.redis.flushdb
     example.run
     Flapjack.redis.quit

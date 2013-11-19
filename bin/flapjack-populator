@@ -8,14 +8,12 @@ Oj.mimic_JSON
 Oj.default_options = { :indent => 0, :mode => :strict }
 require 'active_support/json'
 
-require 'redis'
-
 # add lib to the default include path
 unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
 end
 
-require 'flapjack'
+require 'flapjack/redis_proxy'
 require 'flapjack/configuration'
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
@@ -86,7 +84,8 @@ when "import-contacts"
   contacts = Oj.load(file)
 
   if contacts && contacts.is_a?(Enumerable) && contacts.any? {|e| !e['id'].nil?}
-    Flapjack.redis = Redis.new(redis_options)
+    Flapjack::RedisProxy.config = redis_options
+
     contacts.each do |contact|
       unless contact['id']
         puts "Contact not imported as it has no id: " + contact.inspect
@@ -101,7 +100,8 @@ when "import-entities"
   entities = Oj.load(file)
 
   if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
-    Flapjack.redis = Redis.new(redis_options)
+    Flapjack::RedisProxy.config = redis_options
+
     entities.each do |entity|
       unless entity['id']
         puts "Entity not imported as it has no id: " + entity.inspect
@@ -113,15 +113,16 @@ when "import-entities"
   end
 
 when "purge-events"
-  redis = Redis.new(redis_options)
-  events_size = redis.llen('events')
+  Flapjack::RedisProxy.config = redis_options
+
+  events_size = Flapjack.redis.llen('events')
   puts "purging #{events_size} events..."
   etq = "events.#{Time.now.to_i}"
   puts "renaming 'events' to '#{etq}'"
-  redis.rename('events', etq)
+  Flapjack.redis.rename('events', etq)
   puts "setting expiry of '#{etq}' to 8 hours"
-  redis.expire(etq, (60 * 60 * 8))
-  redis.quit
+  Flapjack.redis.expire(etq, (60 * 60 * 8))
+  Flapjack.redis.quit
 
 else
   puts "you need to give me something to do, eg a command like 'import-entities' or 'import-clients' etc"

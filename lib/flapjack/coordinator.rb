@@ -8,10 +8,10 @@ require 'flapjack'
 require 'flapjack/configuration'
 require 'flapjack/patches'
 
-require 'flapjack/connection_pool'
+require 'flapjack/redis_proxy'
+
 require 'flapjack/logger'
 require 'flapjack/pikelet'
-require 'flapjack/redis_proxy'
 
 module Flapjack
 
@@ -39,21 +39,14 @@ module Flapjack
     def start(opts = {})
       @boot_time = Time.now
 
+      Flapjack::RedisProxy.config = @config.for_redis
+
       pikelet_defs = pikelet_definitions(@config.all)
       return if pikelet_defs.empty?
 
       create_pikelets(pikelet_defs).each do |pik|
         @pikelets << pik
       end
-
-      num_connections = @pikelets.inject(0) do |memo, pik|
-        memo += pik.redis_connections_required
-        memo
-      end
-
-      Flapjack.redis = Flapjack::ConnectionPool::Wrapper.new(:size => num_connections + 1,
-        :init     => proc { Flapjack::RedisProxy.new(@config.for_redis.merge(:driver => :hiredis)) },
-        :shutdown => proc {|conn| conn.quit })
 
       @pikelets.each do |pik|
         pik.start
@@ -67,10 +60,6 @@ module Flapjack
         @shutdown_cond.wait
         @pikelets.map(&:stop)
         @pikelets.clear
-      }
-
-      Flapjack.redis.pool_shutdown {|conn|
-        conn.quit
       }
 
       @exit_value
@@ -133,13 +122,6 @@ module Flapjack
         @pikelets << pik
         pik.start
       end
-
-      num_connections = @pikelets.inject(0) do |memo, pik|
-        memo += pik.redis_connections_required
-        memo
-      end
-
-      Flapjack.redis.pool_adjust_size(num_connections)
     end
 
   private

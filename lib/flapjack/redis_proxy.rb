@@ -1,13 +1,24 @@
 #!/usr/bin/env ruby
 
 # defer initialisation for Redis connections until they're used.
+require 'redis'
+require 'redis/connection/hiredis'
 
 module Flapjack
 
+  class << self
+    # Thread and fiber-local
+    def redis
+      redis_cxn = Thread.current[:flapjack_redis]
+      return redis_cxn unless redis_cxn.nil?
+      Thread.current[:flapjack_redis] = Flapjack::RedisProxy.new
+    end
+  end
+
   class RedisProxy
 
-    def initialize(options = {})
-      @options = options
+    class << self
+      attr_accessor :config
     end
 
     def quit
@@ -22,9 +33,10 @@ module Flapjack
     private
 
     def proxied_connection
-      @proxied_connection ||= Redis.new(@options)
+      @proxied_connection ||= ::Redis.new(self.class.config)
     end
 
   end
 
 end
+

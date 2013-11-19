@@ -38,10 +38,6 @@ module Flapjack
           @notifications_queue = @config['queue'] || 'jabber_notifications'
         end
 
-        def redis_connections_required
-          1
-        end
-
         def start
           loop do
             @lock.synchronize do

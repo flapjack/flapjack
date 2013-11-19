@@ -55,10 +55,6 @@ module Flapjack
         @sent = 0
       end
 
-      def redis_connections_required
-        1
-      end
-
       def start
         @logger.info("starting")
         @logger.debug("new email gateway pikelet with the following options: #{@config.inspect}")

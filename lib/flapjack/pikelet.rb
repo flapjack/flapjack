@@ -145,18 +145,12 @@ module Flapjack
         end
       end
 
-      def redis_connections_required
-        return 0 unless @pikelet.respond_to?(:redis_connections_required)
-        @pikelet.redis_connections_required
-      end
-
       # this should only reload if all changes can be applied -- will
       # return false to log warning otherwise
       def reload(cfg)
         return false unless @pikelet.respond_to?(:reload)
         super(cfg) { @pikelet.reload(cfg) }
       end
-
     end
 
     class HTTP < Flapjack::Pikelet::Base
@@ -180,14 +174,9 @@ module Flapjack
           @server = ::WEBrick::HTTPServer.new(:Port => port, :BindAddress => '127.0.0.1',
             :AccessLog => [], :Logger => WEBrick::Log::new("/dev/null", 7))
           @server.mount "/", Rack::Handler::WEBrick, @pikelet_class
-          yield @server  if block_given?
+          yield @server if block_given?
           @server.start
         end
-      end
-
-      def redis_connections_required
-        return 0 unless @pikelet_class.respond_to?(:redis_connections_required)
-        @pikelet_class.redis_connections_required
       end
 
       # this should only reload if all changes can be applied -- will
