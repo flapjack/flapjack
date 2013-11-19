@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 0.7.34 - 2013-11-20
+- Feature: update logoage (@jessereynolds)
+- Bug: flapjack-nagios-receiver to start daemonized from init script (@jessereynolds)
+
 # 0.7.33 - 2013-11-15
 - Feature: Ignore XMPP transcript history replay on connect gh-23 (@ali-graham)
 - Feature: Allow newlines in Jabber comments and commands gh-34 (@ali-graham)
