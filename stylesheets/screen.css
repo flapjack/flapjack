@@ -80,4 +80,8 @@ footer span.bulletproof.subtext {
   footer img.bulletproof {
     margin: 10px auto 0px;
   }
+
+  footer span.bulletproof.subtext {
+    margin-bottom: 10px;
+  }
 }
