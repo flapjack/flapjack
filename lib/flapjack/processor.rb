@@ -153,14 +153,21 @@ module Flapjack
       entity_check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
         :name => check_name).all.first
 
-      entity = nil
+      entity_for_check = nil
 
       if entity_check.nil?
-        entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-        # TODO raise error if entity.nil?
+        unless entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
+          entity = Flapjack::Data::Entity.new(:name => entity_name, :enabled => true)
+          entity.save
+        end
+
+        entity_for_check = entity
         entity_check = Flapjack::Data::Check.new(:entity_name => entity_name,
           :name => check_name)
-        # not saving yet as check state isn't set
+
+        # not saving yet as check state isn't set, requires that for validation
+        # TODO maybe change that?
+
       end
 
       should_notify, previous_state = update_keys(event, entity_check, timestamp)
@@ -172,9 +179,9 @@ module Flapjack
         @ncsm_sched_maint = nil
       end
 
-      unless entity.nil?
+      unless entity_for_check.nil?
         # created a new check, so add it to the entity's check list
-        entity.checks << entity_check
+        entity_for_check.checks << entity_check
       end
 
       if !should_notify
@@ -218,7 +225,10 @@ module Flapjack
         end
         Flapjack.redis.exec
 
-        previous_state = entity_check.states.last
+        # not available from an unsaved check
+        unless entity_check.id.nil?
+          previous_state = entity_check.states.last
+        end
 
         if previous_state.nil?
           @logger.info("No previous state for event #{event.id}")

@@ -157,6 +157,7 @@ when "import-entities"
 
 when "purge-events"
   Flapjack::RedisProxy.config = redis_options
+
   events_size = Flapjack.redis.llen('events')
   puts "purging #{events_size} events..."
   etq = "events.#{Time.now.to_i}"

@@ -23,7 +23,6 @@ require 'active_support/json'
 
 require 'dante'
 
-require 'flapjack'
 require 'flapjack/redis_proxy'
 require 'flapjack/configuration'
 require 'flapjack/data/event'

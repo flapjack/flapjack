@@ -40,3 +40,4 @@ module Flapjack
   end
 
 end
+

@@ -1,4 +1,3 @@
-require 'flapjack/redis_proxy'
 require 'oj'
 require 'time'
 
@@ -9,26 +8,43 @@ namespace :benchmarks do
     $: << File.dirname(__FILE__) + '/../lib'
   end
 
-  require 'flapjack'
   require 'flapjack/configuration'
-  require 'flapjack/data/event'
   require 'flapjack/version'
 
-  FLAPJACK_ENV = 'test'
-  config_file = File.join('tasks', 'support', 'flapjack_config_benchmark.yaml')
+  def prepare_env
+    config_file = File.join('tasks', 'support', 'flapjack_config_benchmark.yaml')
 
-  config = Flapjack::Configuration.new
-  config.load( config_file )
+    config = Flapjack::Configuration.new
+    config.load( config_file )
 
-  @config_env = config.all
-  @redis_config = config.for_redis
+    @config_env = config.all
+    @redis = Redis.new(config.for_redis)
 
-  if @config_env.nil? || @config_env.empty?
-    puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{config_file}'"
-    exit(false)
+    if @config_env.nil? || @config_env.empty?
+      puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{config_file}'"
+      exit(false)
+    end
   end
 
-  Flapjack::RedisProxy.config = @redis_config
+  def push_event(queue, event)
+    event['time'] = Time.now.to_i if event['time'].nil?
+
+    begin
+      event_json = ::Oj.dump(event)
+    rescue Oj::Error => e
+      if opts[:logger]
+        opts[:logger].warn("Error serialising event json: #{e}, event: #{event.inspect}")
+      end
+      event_json = nil
+    end
+
+    if event_json
+      @redis.multi do
+        @redis.lpush(queue, event_json)
+        @redis.lpush("#{queue}_actions", "+")
+      end
+    end
+  end
 
   desc "nukes the redis db, generates the events, runs and shuts down flapjack, generates perftools reports"
   task :run => [:reset_redis, :benchmark, :run_flapjack, :reports] do
@@ -37,10 +53,12 @@ namespace :benchmarks do
 
   desc "reset the redis database"
   task :reset_redis do
+    FLAPJACK_ENV = 'test'
+    prepare_env
     raise "I'm not going to let you reset your production redis db, sorry about that." if FLAPJACK_ENV.downcase == "production"
-    puts "db size before: #{Flapjack.redis.dbsize}"
-    Flapjack.redis.flushdb
-    puts "db size after: #{Flapjack.redis.dbsize}"
+    puts "db size before: #{@redis.dbsize}"
+    @redis.flushdb
+    puts "db size after: #{@redis.dbsize}"
   end
 
   desc "starts flapjack"
@@ -57,7 +75,7 @@ namespace :benchmarks do
     if system({"FLAPJACK_ENV" => FLAPJACK_ENV,
                "CPUPROFILE"   => "artifacts/flapjack-perftools-cpuprofile",
                "RUBYOPT"      => "-r#{perftools}"},
-              "bin/flapjack start --no-daemonize --config tasks/support/flapjack_config_benchmark.yaml")
+              "bin/flapjack start --no-daemonize --config tasks/support/flapjack_config_benchmark.yaml --logfile log/benchmark_test.log")
       puts "Flapjack run completed successfully"
     else
       raise "Problem starting flapjack: #{$?}"
@@ -184,7 +202,7 @@ namespace :benchmarks do
                     'state'   => check[:state],
                     'summary' => summary }
 
-          Flapjack::Data::Event.push('events', event)
+          push_event('events', event)
           events_created += 1
         }
       }
