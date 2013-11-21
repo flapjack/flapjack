@@ -21,14 +21,16 @@ module Flapjack
 
       Thread.abort_on_exception = true
 
-      @config       = config
-      @pikelets     = []
+      @config   = config
+      @pikelets = []
+      @stopping = false
 
       @monitor = Monitor.new
       @shutdown_cond = @monitor.new_cond
 
       @shutdown = proc {
         @monitor.synchronize {
+          @stopping = true
           @shutdown_cond.signal
         }
       }
@@ -57,7 +59,7 @@ module Flapjack
       # block this thread until 'stop' has been called, and
       # all pikelets have been stopped
       @monitor.synchronize {
-        @shutdown_cond.wait
+        @shutdown_cond.wait_until { @stopping }
         @pikelets.map(&:stop)
         @pikelets.clear
       }
@@ -72,7 +74,10 @@ module Flapjack
       # handler runs by jumping into main thread
       Thread.new do
         Thread.current.abort_on_exception = true
-        @monitor.synchronize { @shutdown_cond.signal }
+        @monitor.synchronize do
+          @stopping = true
+          @shutdown_cond.signal
+        end
       end
       @exit_value
     end

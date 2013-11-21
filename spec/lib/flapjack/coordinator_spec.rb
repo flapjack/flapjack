@@ -27,7 +27,7 @@ describe Flapjack::Coordinator do
     Thread.should_receive(:new).and_yield
 
     running_cond = double(MonitorMixin::ConditionVariable)
-    running_cond.should_receive(:wait)
+    running_cond.should_receive(:wait_until).and_yield
     running_cond.should_receive(:signal)
 
     monitor = double(Monitor)
@@ -66,7 +66,7 @@ describe Flapjack::Coordinator do
     Thread.should_receive(:new).and_yield
 
     running_cond = double(MonitorMixin::ConditionVariable)
-    running_cond.should_receive(:wait)
+    running_cond.should_receive(:wait_until).and_yield
     running_cond.should_receive(:signal)
 
     monitor = double(Monitor)
@@ -108,7 +108,7 @@ describe Flapjack::Coordinator do
     Thread.should_receive(:new).and_yield
 
     running_cond = double(MonitorMixin::ConditionVariable)
-    running_cond.should_receive(:wait)
+    running_cond.should_receive(:wait_until).and_yield
     running_cond.should_receive(:signal)
 
     monitor = double(Monitor)
