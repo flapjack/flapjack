@@ -84,8 +84,10 @@ module Flapjack
         raise "state #{@state.inspect} is invalid" unless
           allowed_states.include?(@state)
 
-        raise "state_duration #{@state_duration.inspect} is invalid" unless
-          @state_duration && @state_duration.is_a?(Integer) && @state_duration >= 0
+        if @state_duration
+          raise "state_duration (#{@state_duration.inspect}) is invalid" unless
+            @state_duration.is_a?(Integer) && @state_duration >= 0
+        end
 
         if @rollup_alerts
           raise "rollup_alerts should be nil or a hash" unless @rollup_alerts.is_a?(Hash)
