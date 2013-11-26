@@ -1,111 +1,66 @@
 #!/usr/bin/env ruby
 
 require 'active_support/inflector'
+
+require 'sandstorm/record'
+
 require 'flapjack/utility'
 
 # Alert is the object ready to send to someone, complete with an address and all
 # the data with which to render the text of the alert in the appropriate gateway
-#
-# It should possibly be renamed AlertPresenter
 
 module Flapjack
   module Data
     class Alert
 
-      # from Flapjack::Data::Notification
-      attr_reader :state,
-                  :summary,
-                  :acknowledgement_duration,
-                  :last_state,
-                  :last_summary,
-                  :state_duration,
-                  :details,
-                  :time,
-                  :notification_type,
-                  :event_count,
-                  :tags
-
-      # from Flapjack::Data::Message
-                # :id,
-      attr_reader :media,
-                  :address,
-                  :rollup,
-                  :contact_id,
-                  :contact_first_name,
-                  :contact_last_name
-
-      # from Flapjack::Notifier
-      attr_reader :rollup_threshold,
-                  :rollup_alerts,
-                  :in_scheduled_maintenance,
-                  :in_unscheduled_maintenance
-
-      # from self
-      attr_reader :entity,
-                  :check,
-                  :notification_id
-
       include Flapjack::Utility
+      include Sandstorm::Record
 
-      def initialize(contents, opts)
-        raise "no logger supplied" unless @logger = opts[:logger]
+      define_attributes :state        => :string,
+                        :summary      => :string,
+                        :details      => :string,
 
-        @state                      = contents['state']
-        @summary                    = contents['summary']
-        @acknowledgement_duration   = contents['duration'] # SMELLY
-        @last_state                 = contents['last_state']
-        @last_summary               = contents['last_summary']
-        @state_duration             = contents['state_duration']
-        @details                    = contents['details']
-        @time                       = contents['time']
-        @notification_type          = contents['notification_type']
-        @event_count                = contents['event_count']
-        @tags                       = contents['tags']
+                        :last_state   => :string,
+                        :last_summary => :string,
 
-        @media                      = contents['media']
-        @address                    = contents['address']
-        @rollup                     = contents['rollup']
-        @contact_id                 = contents['contact_id']
-        @contact_first_name         = contents['contact_first_name']
-        @contact_last_name          = contents['contact_last_name']
+                        :event_count  => :integer,
+                        :time         => :timestamp,
 
-        @rollup_threshold           = contents['rollup_threshold']
-        @rollup_alerts              = contents['rollup_alerts']
-        @in_scheduled_maintenance   = contents['in_scheduled_maintenance']
-        @in_unscheduled_maintenance = contents['in_unscheduled_maintenance']
+                        # shouldn't need this, can calculate from state & last_state
+                        :notification_type => :string,
 
-        @entity                     = contents['entity']
-        @check                      = contents['check']
-        @notification_id            = contents['id'] || SecureRandom.uuid
+                        :acknowledgement_duration => :integer, # SMELL -- passed in as duration in other code
+                        :state_duration => :integer,
 
-        allowed_states        = ['ok', 'critical', 'warning', 'unknown', 'test_notifications', 'acknowledgement']
-        allowed_rollup_states = ['critical', 'warning', 'unknown']
-        raise "state #{@state.inspect} is invalid" unless
-          allowed_states.include?(@state)
+                        :tags           => :set,
+                        :rollup         => :string
 
-        raise "state_duration #{@state_duration.inspect} is invalid" unless
-          @state_duration && @state_duration.is_a?(Integer) && @state_duration >= 0
+      belongs_to :medium, :class_name => 'Flapjack::Data::Medium', :inverse_of => :alerts
+        # media_type, address, :rollup_threshold retrieved from medium
+        # contact_id, first_name, last_name retrieved from medium.contact
 
-        if @rollup_alerts
-          raise "rollup_alerts should be nil or a hash" unless @rollup_alerts.is_a?(Hash)
-          @rollup_alerts.each_pair do |check, details|
-            raise "duration of rollup_alerts['#{check}'] must be an integer" unless
-              details['duration'] && details['duration'].is_a?(Integer)
-            raise "state of rollup_alerts['#{check}'] is invalid" unless
-              details['state'] && allowed_rollup_states.include?(details['state'])
-          end
-        end
+      belongs_to :check, :class_name => 'Flapjack::Data::Check', :inverse_of => :alerts
+        # entity, in_scheduled_maintenance, in_unscheduled_maintenance retrieved from check
 
+      has_many :rollup_alerts, :class_name => 'Flapjack::Data::RollupAlert'
+
+      def self.states
+        ['ok', 'critical', 'warning', 'unknown', 'test_notifications', 'acknowledgement']
       end
 
+      validates :state, :presence => true, :inclusion => {:in => self.states },
+        :unless => proc {|n| n.type == 'test'}
+      validates :state_duration, :presence => true,
+        :numericality => {:minimum => 0}, :unless => proc {|n| n.type == 'test'}
+
       def type
-        case @rollup
+        case self.rollup
         when "problem"
           "rollup_problem"
         when "recovery"
           "rollup_recovery"
         else
-          @notification_type
+          self.notification_type
         end
       end
 
@@ -121,33 +76,18 @@ module Flapjack
       end
 
       def state_title_case
-        ['ok'].include?(@state) ? @state.upcase : @state.titleize
+        ['ok'].include?(self.state) ? self.state.upcase : self.state.titleize
       end
 
       def last_state_title_case
-        ['ok'].include?(@last_state) ? @last_state.upcase : @last_state.titleize
-      end
-
-      def rollup_alerts_by_state
-        ['critical', 'warning', 'unknown'].inject({}) do |memo, state|
-          alerts = rollup_alerts.find_all {|alert| alert[1]['state'] == state}
-          memo[state] = alerts
-          memo
-        end
-      end
-
-      def rollup_state_counts
-        rollup_alerts.inject({}) do |memo, alert|
-          memo[alert[1]['state']] = (memo[alert[1]['state']] || 0) + 1
-          memo
-        end
+        ['ok'].include?(self.last_state) ? self.last_state.upcase : self.last_state.titleize
       end
 
       def rollup_states_summary
         state_counts = rollup_state_counts
-        ['critical', 'warning', 'unknown'].inject([]) do |memo, state|
-          next memo unless rollup_state_counts[state]
-          memo << "#{state.titleize}: #{state_counts[state]}"
+        Flapjack::Data::RollupAlert.states.inject([]) do |memo, alert_state|
+          next memo unless state_counts[state]
+          memo << "#{alert_state.titleize}: #{state_counts[alert_state]}"
           memo
         end.join(', ')
       end
@@ -155,26 +95,27 @@ module Flapjack
       # produces a textual list of checks that are failing broken down by state, eg:
       # Critical: 'PING' on 'foo-app-01.example.com', 'SSH' on 'foo-app-01.example.com';
       #   Warning: 'Disk / Utilisation' on 'foo-app-02.example.com'
-      def rollup_states_detail_text(opts)
+      def rollup_states_detail_text(opts = {})
+        state_counts = rollup_state_counts
         max_checks = opts[:max_checks_per_state]
-        rollup_alerts_by_state.inject([]) do |memo, state|
-          state_titleized = state[0].titleize
-          alerts = max_checks && max_checks > 0 ? state[1][0..(max_checks - 1)] : state[1]
+        rollup_alerts_by_state.inject([]) do |memo, (alert_state, rollup_alerts)|
+          alerts = (max_checks && max_checks > 0) ? rollup_alerts[0..(max_checks - 1)] : rollup_alerts
           next memo if alerts.empty?
-          checks = alerts.map {|alert| alert[0]}
-          checks << '...' if checks.length < rollup_state_counts[state[0]]
-          memo << "#{state[0].titleize}: #{checks.join(', ')}"
+          checks = alerts.collect {|alert| alert.check.name}
+          checks << '...' if checks.length < state_counts[alert_state]
+          memo << "#{alert_state.titleize}: #{checks.join(', ')}"
           memo
         end.join('; ')
       end
 
       def to_s
-        msg = "Alert via #{media}:#{address} to contact #{contact_id} (#{contact_first_name} #{contact_last_name}): "
+        contact = medium.contact
+        msg = "Alert via #{medium.type}:#{medium.address} to contact #{contact.id} (#{contact.first_name} #{contact.last_name}): "
         msg += type_sentence_case
         if rollup
           msg += " - #{rollup_states_summary} (#{rollup_states_detail_text(:max_checks_per_state => 3)})"
         else
-          msg += " - '#{check}' on #{entity}"
+          msg += " - '#{self.check.name}' on #{self.check.entity_name}"
           unless ['acknowledgement', 'test'].include?(type)
             msg += " is #{state_title_case}"
           end
@@ -188,9 +129,9 @@ module Flapjack
         end
       end
 
-      def record_send_success!
-        @logger.info "Sent alert successfully: #{to_s}"
-      end
+      # def record_send_success!
+      #   @logger.info "Sent alert successfully: #{to_s}"
+      # end
 
       # TODO: perhaps move message send failure porting to this method
       # to avoid duplication in the gateways, and to more easily allow
@@ -200,6 +141,22 @@ module Flapjack
       #  message   = opts[:message]
       #  @logger.error "Error sending an alert! #{alert}"
       #end
+
+      private
+
+      def rollup_alerts_by_state
+        Flapjack::Data::RollupAlert.states.inject({}) do |memo, alert_state|
+          memo[alert_state] = self.rollup_alerts.intersect(:state => alert_state).all
+          memo
+        end
+      end
+
+      def rollup_state_counts
+        Flapjack::Data::RollupAlert.states.inject({}) do |memo, alert_state|
+          memo[alert_state] = self.rollup_alerts.intersect(:state => alert_state).count
+          memo
+        end
+      end
 
     end
   end

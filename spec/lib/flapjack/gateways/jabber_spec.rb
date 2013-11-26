@@ -27,31 +27,23 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
   context 'notifications' do
 
-    let(:message) { {'notification_type'  => 'problem',
-                     'contact_first_name' => 'John',
-                     'contact_last_name' => 'Smith',
-                     'address' => 'johns@example.com',
-                     'state' => 'critical',
-                     'state_duration' => 23,
-                     'summary' => '',
-                     'last_state' => 'ok',
-                     'last_summary' => 'test',
-                     'details' => 'Testing',
-                     'time' => now.to_i,
-                     'event_id' => 'app-02:ping'}
-                  }
+    let(:queue) { double(Flapjack::RecordQueue) }
 
-    # TODO use separate threads in the test instead?
+    let(:alert) { double(Flapjack::Data::Alert) }
+
     it "starts and is stopped by an exception" do
+      Flapjack::RecordQueue.should_receive(:new).with('jabber_notifications',
+        Flapjack::Data::Alert).and_return(queue)
+
       lock.should_receive(:synchronize).and_yield
+      queue.should_receive(:foreach).and_yield(alert)
+      queue.should_receive(:wait).and_raise(Flapjack::PikeletStop)
+
+      redis.should_receive(:quit)
 
       fjn = Flapjack::Gateways::Jabber::Notifier.new(:lock => lock,
         :config => config, :logger => @logger)
-      fjn.should_receive(:handle_message).with(message)
-
-      redis.should_receive(:rpop).with('jabber_notifications').and_return(message.to_json, nil)
-      redis.should_receive(:quit)
-      redis.should_receive(:brpop).with('jabber_notifications_actions').and_raise(Flapjack::PikeletStop)
+      fjn.should_receive(:handle_alert).with(alert)
 
       expect { fjn.start }.to raise_error(Flapjack::PikeletStop)
     end
@@ -61,9 +53,23 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('johns@example.com', /Problem: /)
 
+      check = double(Flapjack::Data::Check)
+      check.should_receive(:entity_name).twice.and_return('app-02')
+      check.should_receive(:name).twice.and_return('ping')
+
+      alert.should_receive(:address).and_return('johns@example.com')
+      alert.should_receive(:check).twice.and_return(check)
+      alert.should_receive(:state).and_return('critical')
+      alert.should_receive(:state_title_case).and_return('Critical')
+      alert.should_receive(:summary).twice.and_return('')
+      alert.should_receive(:event_count).and_return(33)
+      alert.should_receive(:type).twice.and_return('problem')
+      alert.should_receive(:type_sentence_case).and_return('Problem')
+      alert.should_receive(:rollup).and_return(nil)
+
       fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config, :logger => @logger)
       fjn.instance_variable_set('@siblings', [bot])
-      fjn.send(:handle_message, message)
+      fjn.send(:handle_alert, alert)
     end
 
   end

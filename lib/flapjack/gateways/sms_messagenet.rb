@@ -7,12 +7,12 @@ require 'uri/https'
 require 'active_support/inflector'
 
 require 'flapjack/redis_proxy'
-
-require 'flapjack/data/message'
-require 'flapjack/data/alert'
-
+require 'flapjack/record_queue'
 require 'flapjack/utility'
 require 'flapjack/exceptions'
+
+require 'flapjack/data/alert'
+require 'flapjack/data/check'
 
 module Flapjack
   module Gateways
@@ -33,6 +33,10 @@ module Flapjack
 
         @notifications_queue = @config['queue'] || 'sms_notifications'
 
+        # TODO support for config reloading
+        @queue = Flapjack::RecordQueue.new(@config['queue'] || 'sms_notifications',
+                   Flapjack::Data::Alert)
+
         @sent = 0
 
         @logger.debug("new sms gateway pikelet with the following options: #{@config.inspect}")
@@ -42,10 +46,10 @@ module Flapjack
         begin
           loop do
             @lock.synchronize do
-              foreach_on_queue {|message| handle_message(message) }
+              @queue.foreach {|alert| handle_alert(alert) }
             end
 
-            wait_for_queue
+            @queue.wait
           end
         ensure
           Flapjack.redis.quit
@@ -58,34 +62,14 @@ module Flapjack
 
       private
 
-      def foreach_on_queue
-        while msg_json = Flapjack.redis.rpop(@notifications_queue)
-          begin
-            message = ::Oj.load( msg_json )
-          rescue Oj::Error => e
-            @logger.warn("Error deserialising message json: #{e}, raw json: #{msg_json.inspect}")
-            message = nil
-          end
-
-          yield message if block_given? && message
-        end
-      end
-
-      def wait_for_queue
-        Flapjack.redis.brpop("#{@notifications_queue}_actions")
-      end
-
-      def handle_message(msg)
-        @logger.debug "Woo, got a notification to send out: #{msg.inspect}"
-        alert = Flapjack::Data::Alert.new(msg, :logger => @logger)
-
+      def handle_alert(alert)
         endpoint_host = @config["endpoint_host"] || MESSAGENET_DEFAULT_HOST
         endpoint_path = @config["endpoint_path"] || MESSAGENET_DEFAULT_PATH
         username = @config["username"]
         password = @config["password"]
 
-        address = alert.address
-        notification_id = alert.notification_id
+        address = alert.medium.address
+        notification_id = alert.id
         message_type = alert.rollup ? 'rollup' : 'alert'
 
         my_dir = File.dirname(__FILE__)
@@ -151,15 +135,14 @@ module Flapjack
 
         if (status.to_i >= 200) && (status.to_i <= 206)
           @sent += 1
-          alert.record_send_success!
           @logger.info "Sent SMS via Messagenet, response status is #{status}, " +
-            "msg_id: #{msg['id']}"
+            "alert id: #{alert.id}"
         else
           @logger.error "Failed to send SMS via Messagenet, response status is #{status}, " +
-            "msg_id: #{msg['id']}"
+            "alert id: #{alert.id}"
         end
       rescue => e
-        @logger.error "Error generating or delivering sms to #{msg['address']}: #{e.class}: #{e.message}"
+        @logger.error "Error generating or delivering sms to #{alert.medium.address}: #{e.class}: #{e.message}"
         @logger.error e.backtrace.join("\n")
         raise
       end

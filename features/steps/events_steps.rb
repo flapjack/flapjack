@@ -12,7 +12,7 @@ end
 
 def drain_notifications
   return unless @notifier
-  @notifier.send(:foreach_on_queue) do |notification|
+  @notifier.instance_variable_get('@queue').send(:foreach) do |notification|
     @notifier.send(:process_notification, notification)
   end
 end
@@ -431,18 +431,18 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
   when 'no'
     num_queued = 0
   end
-  queue = redis_peek("#{media}_notifications", 0, 30)
-  queue.find_all {|n|
-    type_ok = notification_type ? ( n['notification_type'] == notification_type ) : true
+  queued = redis_peek("#{media}_notifications", Flapjack::Data::Alert, 0, 30)
+  queued.find_all {|alert|
+    type_ok = notification_type ? ( alert.notification_type == notification_type ) : true
     rollup_ok = true
     if rollup
       if rollup == 'none'
-        rollup_ok = n['rollup'].nil?
+        rollup_ok = alert.rollup.nil?
       else
-        rollup_ok = n['rollup'] == rollup
+        rollup_ok = (alert.rollup == rollup)
       end
     end
-    type_ok && rollup_ok && ( n['address'] == address )
+    type_ok && rollup_ok && (alert.medium.address == address)
   }.length.should == num_queued.to_i
 end
 

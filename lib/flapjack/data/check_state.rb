@@ -19,7 +19,10 @@ module Flapjack
       unique_index_by :count
       index_by :state, :notified
 
-      belongs_to :entity_check, :class_name => 'Flapjack::Data::Check'
+      belongs_to :entity_check, :class_name => 'Flapjack::Data::Check', :inverse_of => :states
+
+      has_many :current_notifications, :class_name => 'Flapjack::Data::Notification'
+      has_many :previous_notifications, :class_name => 'Flapjack::Data::Notification'
 
       def self.ok_states
         ['ok']

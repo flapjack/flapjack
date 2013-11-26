@@ -11,20 +11,21 @@
   }
 </style>
 
-<p>Hi <%= @alert.contact_first_name%></p>
+<p>Hi <%= @alert.medium.contact.first_name%></p>
 
 <p>Monitoring has detected the following:</p>
 
+<% check = @alert.check -%>
 <table>
   <tbody>
     <tr>
       <td><strong>Entity</strong></td>
-      <td><%= @alert.entity %></td>
+      <td><%= check.entity_name %></td>
     </tr>
 
     <tr>
       <td><strong>Check</strong></td>
-      <td><%= @alert.check %></td>
+      <td><%= check.name %></td>
     </tr>
 
     <tr>
@@ -37,38 +38,39 @@
       <td><%= @alert.summary %></td>
     </tr>
 
-    <% if @alert.details %>
+    <% details = @alert.details; if details -%>
       <tr>
         <td><strong>Details</strong></td>
-        <td><%= @alert.details %></td>
+        <td><%= details %></td>
       </tr>
     <% end %>
 
-    <% if @alert.time %>
+    <% time = @alert.time; if time -%>
       <tr>
         <td><strong>Time</strong></td>
-        <td><%= Time.at(@alert.time.to_i).to_s %></td>
+        <td><%= Time.at(time.to_i).to_s %></td>
       </tr>
     <% end %>
 
-    <% if @alert.state_duration && @alert.state_duration > 40 %>
+    <% state_duration = @alert.state_duration -%>
+    <% if state_duration && (state_duration > 40) %>
       <tr>
         <td><strong>Duration</strong></td>
-        <td><%= ChronicDuration.output(@alert.state_duration, :keep_zero => true) || '0 secs' %></td>
+        <td><%= ChronicDuration.output(state_duration, :keep_zero => true) || '0 secs' %></td>
       </tr>
     <% end %>
 
-    <% if @alert.last_state %>
+    <% if @alert.last_state -%>
       <tr>
         <td><strong>Previous State</strong></td>
         <td><%= @alert.last_state_title_case %></td>
       </tr>
     <% end %>
 
-    <% if @alert.last_summary %>
+    <% last_summary = @alert.last_summary; if last_summary -%>
       <tr>
         <td><strong>Previous Summary</strong></td>
-        <td><%= @alert.last_summary %></td>
+        <td><%= last_summary %></td>
       </tr>
     <% end %>
 

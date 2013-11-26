@@ -4,13 +4,10 @@
 # from which individual 'Message' objects are created, one for each
 # contact+media recipient.
 
-require 'oj'
-
 require 'sandstorm/record'
 
+require 'flapjack/data/alert'
 require 'flapjack/data/contact'
-require 'flapjack/data/event'
-require 'flapjack/data/message'
 
 module Flapjack
   module Data
@@ -18,23 +15,26 @@ module Flapjack
 
       include Sandstorm::Record
 
-      include ActiveModel::Serializers::JSON
-      self.include_root_in_json = false
+      attr_accessor :logger
 
       # NB can't use has_one associations for the states, as the redis persistence
       # is only transitory (used to trigger a queue pop)
-      define_attributes :entity_check_id   => :id,
-                        :state_id          => :id,
-                        :state_duration    => :integer,
-                        :previous_state_id => :id,
+      define_attributes :state_duration    => :integer,
                         :severity          => :string,
                         :type              => :string,
                         :time              => :timestamp,
                         :duration          => :integer,
                         :tags              => :set
 
-      validate :entity_check_id, :presence => true
-      validate :state_id, :presence => true
+      belongs_to :entity_check, :class_name => 'Flapjack::Data::Check',
+        :inverse_of => :notifications
+
+      # state association will not be set for notification tests
+      belongs_to :state, :class_name => 'Flapjack::Data::CheckState',
+        :inverse_of => :current_notifications
+      belongs_to :previous_state, :class_name => 'Flapjack::Data::CheckState',
+        :inverse_of => :previous_notifications
+
       validate :state_duration, :presence => true
       validate :severity, :presence => true
       validate :type, :presence => true
@@ -59,199 +59,179 @@ module Flapjack
         end
       end
 
-      def self.push(queue, notification)
-        notif_json = nil
-
-        # TODO validate passed notification
-        begin
-          notif_json = notification.to_json
-        rescue Oj::Error => e
-          # if opts[:logger]
-          #   opts[:logger].warn("Error serialising notification json: #{e}, notification: #{notif.inspect}")
-          # end
-          notif_json = nil
-        end
-
-        if notif_json
-          Flapjack.redis.multi do
-            Flapjack.redis.lpush(queue, notif_json)
-            Flapjack.redis.lpush("#{queue}_actions", "+")
-          end
-        end
-      end
-
-      def contents
-        {'state'             => (self.state ? state.state : nil),
-         'summary'           => (self.state ? state.summary : nil),
-         'details'           => (self.state ? state.details : nil),
-         'count'             => (self.state ? state.count : nil),
-         'last_state'        => (self.previous_state ? self.previous_state.state : nil),
-         'last_summary'      => (self.previous_state ? self.previous_state.summary : nil),
-         'entity'            => (self.entity_check ? self.entity_check.entity_name : nil),
-         'check'             => (self.entity_check ? self.entity_check.name : nil),
-         'severity'          => self.severity,
-         'duration'          => self.duration,
-         'state_duration'    => self.state_duration,
-         'time'              => self.time,
-         'tags'              => self.tags,
-         'notification_type' => self.type
-        }
-      end
-
-      def entity_check
-        @entity_check ||= (self.entity_check_id ? Flapjack::Data::Check.find_by_id(self.entity_check_id) : nil)
-      end
-
-      def state
-        @state ||= (self.state_id ? Flapjack::Data::CheckState.find_by_id(self.state_id) : nil)
-      end
-
-      def previous_state
-        @previous_state ||= (self.previous_state_id ? Flapjack::Data::CheckState.find_by_id(self.previous_state_id) : nil)
-      end
-
-      # TODO refactor the block-from-hell below into multiple methods
-      def messages(contacts, opts = {})
-        return [] if contacts.nil? || contacts.empty?
-
-        default_timezone = opts[:default_timezone]
-        logger = opts[:logger]
-
-        entity_name = entity_check.entity_name
-        check_name  = entity_check.name
-
-        state_or_ack = case self.type
+      def state_or_ack
+        case self.type
         when 'acknowledgement', 'test'
           self.type
         else
           self.state ? self.state.state : nil
         end
+      end
 
-        @messages ||= contacts.collect {|contact|
-          contact_id = contact.id
-          rules = contact.notification_rules
-          media = contact.media
+      def alerts(contacts, opts = {})
+        return [] if contacts.nil? || contacts.empty?
 
-          logger.debug "Notification#messages: creating messages for contact: #{contact_id} " +
-            "entity: \"#{entity_name}\" check: \"#{check_name}\" state: #{state_or_ack} event_tags: #{self.tags.inspect} media: #{media.all.inspect}"
-          rlen = rules.count
-          logger.debug "found #{rlen} rule#{(rlen == 1) ? '' : 's'} for contact #{contact_id}"
+        default_timezone = opts[:default_timezone]
+        check = self.entity_check
 
-          media_to_use = if rules.empty?
-            media
-          else
-            # matchers are rules of the contact that have matched the current event
-            # for time, entity and tags
-            matchers = rules.all.select do |rule|
-              logger.debug("considering rule with entities: #{rule.entities.inspect} and tags: #{rule.tags.inspect}")
+        alerts_for_contacts = []
 
-              (rule.match_entity?(entity_check.entity_name) || rule.match_tags?(self.tags) || !rule.is_specific?) &&
-                rule.is_occurring_now?(:contact => contact, :default_timezone => default_timezone)
-            end
+        contacts.each do |contact|
+          media_to_use = media_for_contact(contact, :entity_check => check,
+            :default_timezone => default_timezone)
+          next if media_to_use.nil? || media_to_use.empty?
 
-            logger.debug "#{matchers.length} matchers remain for this contact after time, entity and tags are matched:"
-            matchers.each do |matcher|
-              logger.debug "  - #{matcher.to_json}"
-            end
-
-            # delete any general matchers if there are more specific matchers left
-            if matchers.any? {|matcher| matcher.is_specific? }
-
-              num_matchers = matchers.length
-
-              matchers.reject! {|matcher| !matcher.is_specific? }
-
-              if num_matchers != matchers.length
-                logger.debug("removal of general matchers when entity specific matchers are present: number of matchers changed from #{num_matchers} to #{matchers.length} for contact id: #{contact_id}")
-                matchers.each do |matcher|
-                  logger.debug "  - #{matcher.to_json}"
-                end
-              end
-            end
-
-            # delete media based on blackholes
-            blackhole_matchers = matchers.map {|matcher| matcher.blackhole?(self.severity) ? matcher : nil }.compact
-            if blackhole_matchers.length > 0
-              logger.debug "dropping this media as #{blackhole_matchers.length} blackhole matchers are present:"
-              blackhole_matchers.each {|bm|
-                logger.debug "  - #{bm.to_json}"
-              }
-              next
-            else
-              logger.debug "no blackhole matchers matched"
-            end
-
-            rule_media = matchers.inject(Set.new) {|memo, matcher|
-              med_sev = matcher.media_for_severity(self.severity)
-              next memo if med_sev.nil?
-              memo += med_sev
-            }
-
-            logger.debug "collected media_for_severity(#{self.severity}): #{rule_media.inspect}"
-
-            final_media = rule_media.inject([]) {|memo, media_type|
-              medium = media.intersect(:type => media_type).all.first
-              next memo if medium.nil? ||
-                medium.drop_notifications?(:entity_check => entity_check,
-                                           :state => state_or_ack)
-
-              memo << medium
-              memo
-            }
-
-            logger.debug "media after contact_drop?: #{final_media.collect(&:type)}"
-
-            next if final_media.empty?
-            final_media
+          media_to_use.each do |medium|
+            alert = alert_for_medium(medium, :entity_check => check)
+            next if alert.nil?
+            alerts_for_contacts << alert
           end
+        end
 
-          # here begins (revised) rollup madness
-          # TODO ensure rollup is always skipped for pagerduty
-          media_to_use.collect {|medium|
-            rollup_type = nil
-            media_type = medium.type
+        alerts_for_contacts
+      end
 
-            logger.debug("using media #{media_type}")
+      def log_rules(rules, description)
+        return if logger.nil?
+        logger.debug "#{rules.length} matching rules remain after #{description}:"
+          rules.each do |rules|
+          logger.debug "  - #{rule.to_json}"
+        end
+      end
 
-            unless (['ok', 'acknowledgement', 'test'].include?(state_or_ack)) ||
-              medium.alerting_checks.exists?(entity_check.id)
+      # return value may or may not be a Sandstorm association; i.e. collect,
+      # each, etc. methods may be used on its contained values. if nil is
+      # returned that value will be compacted away.
+      def media_for_contact(contact, opts = {})
+        contact_id = contact.id
+        rules = contact.notification_rules
+        media = contact.media
 
-              medium.alerting_checks << entity_check
-            end
+        return media if rules.empty?
 
-            # expunge checks in (un)scheduled maintenance from the alerting set
-            cleaned = medium.clean_alerting_checks
-            logger.debug("cleaned alerting checks for #{media_type}: #{cleaned}")
+        entity_check = opts[:entity_check]
+        entity_name = entity_check.entity_name
+        check_name  = entity_check.name
 
-            alerting_checks_count = medium.alerting_checks.count
-            logger.debug("current alerting checks for #{media_type}: #{alerting_checks_count}")
+        log_rules(rules, "initial")
 
-            if medium.rollup_threshold.nil?
-              # back away slowly
-            elsif alerting_checks_count >= medium.rollup_threshold
-              if medium.drop_notifications?(:rollup => true)
+        matchers = rules.select do |rule|
+          (rule.match_entity?(entity_check.entity_name) ||
+           rule.match_tags?(self.tags) || !rule.is_specific?) &&
+          rule.is_occurring_now?(:contact => contact,
+            :default_timezone => opts[:default_timezone])
+        end
+
+        log_rules(matchers, "after time, entity and tags") if matchers.count != rules.count
+
+        # delete any general matchers if there are more specific matchers left
+        if matchers.any? {|matcher| matcher.is_specific? }
+          num_matchers = matchers.count
+          matchers.reject! {|matcher| !matcher.is_specific? }
+
+          log_rules(matchers, "after remove general if specific exist") if matchers.count != rules.count
+        end
+
+        # delete media based on blackholes
+        blackhole_matchers = matchers.map {|matcher| matcher.blackhole?(self.severity) ? matcher : nil }.compact
+        if blackhole_matchers.length > 0
+          log_rules(blackhole_matchers, "#{blackhole_matchers.count} blackhole matchers found - skipping")
+          return
+        elsif !logger.nil?
+          logger.debug "no blackhole matchers matched"
+        end
+
+        rule_media = matchers.inject(Set.new) {|memo, matcher|
+          med_sev = matcher.media_for_severity(self.severity)
+          next memo if med_sev.nil?
+          memo += med_sev
+        }
+
+        unless logger.nil?
+          logger.debug "collected media_for_severity(#{self.severity}): #{rule_media.inspect}"
+        end
+
+        final_media = rule_media.inject([]) {|memo, media_type|
+          medium = media.intersect(:type => media_type).all.first
+          next memo if medium.nil? ||
+            medium.drop_notifications?(:entity_check => entity_check,
+                                       :state => state_or_ack)
+
+          memo << medium
+          memo
+        }
+
+        unless logger.nil?
+          logger.debug "media after contact_drop?: #{final_media.collect(&:type)}"
+        end
+
+        return if final_media.empty?
+        final_media
+      end
+
+      def alert_for_medium(medium, opts = {})
+        rollup_type = nil
+        media_type  = medium.type
+
+        unless logger.nil?
+          logger.debug("using media #{media_type}")
+        end
+
+        entity_check = opts[:entity_check]
+
+        unless (['ok', 'acknowledgement', 'test'].include?(state_or_ack)) ||
+          medium.alerting_checks.exists?(entity_check.id)
+
+          medium.alerting_checks << entity_check
+        end
+
+        # expunge checks in (un)scheduled maintenance from the alerting set
+        cleaned = medium.clean_alerting_checks
+        unless logger.nil?
+          logger.debug("cleaned alerting checks for #{media_type}: #{cleaned}")
+        end
+
+        alerting_checks_count = medium.alerting_checks.count
+        unless logger.nil?
+          logger.debug("current alerting checks for #{media_type}: #{alerting_checks_count}")
+        end
+
+        unless medium.rollup_threshold.nil?
+          if alerting_checks_count >= medium.rollup_threshold
+            if medium.drop_notifications?(:rollup => true)
+              unless logger.nil?
                 logger.debug("dropping notifications as medium blocked")
-                next
               end
-
-              medium.update_sent_alert_keys(:rollup => true,
-                :delete => (['ok', 'acknowledgement'].include?(state_or_ack)))
-              rollup_type = 'problem'
-            elsif (alerting_checks_count + cleaned) >= medium.rollup_threshold
-              # alerting checks was just cleaned such that it is now below the rollup threshold
-              rollup_type = 'recovery'
+              return
             end
-            logger.debug "rollup decisions: #{entity_name}:#{check_name} " +
-              "#{state_or_ack} #{media_type} #{medium.address} " +
-              "rollup_type: #{rollup_type}"
 
-            Flapjack::Data::Message.for_contact(contact,
-              :medium => media_type, :address => medium.address,
-              :rollup => rollup_type)
+            medium.update_sent_alert_keys(:rollup => true,
+              :delete => (['ok', 'acknowledgement'].include?(state_or_ack)))
+            rollup_type = 'problem'
+          elsif (alerting_checks_count + cleaned) >= medium.rollup_threshold
+            # alerting checks was just cleaned such that it is now below the rollup threshold
+            rollup_type = 'recovery'
+          end
+        end
 
-          }.compact
+        unless logger.nil?
+          logger.debug "rollup decisions: #{entity_name}:#{check_name} " +
+            "#{state_or_ack} #{media_type} #{medium.address} " +
+            "rollup_type: #{rollup_type}"
+        end
 
-        }.compact.flatten
+        alert = Flapjack::Data::Alert.new(:state => self.state_or_ack,
+          :rollup => rollup_type, :state_duration => self.state_duration,
+          :acknowledgement_duration => duration,
+          :notification_type => self.type)
+        unless alert.save
+          raise "Couldn't save alert: #{alert.errors.full_messages.inspect}"
+        end
+
+        medium.alerts << alert
+        entity_check.alerts << alert
+
+        alert
       end
 
     end

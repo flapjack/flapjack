@@ -1,25 +1,28 @@
-Hi <%= @alert.contact_first_name %>
+Hi <%= @alert.medium.contact.first_name %>
 
 Monitoring has detected the following:
 
-Entity:           <%= @alert.entity %>
-Check:            <%= @alert.check %>
+<% check = @alert.check -%>
+
+Entity:           <%= check.entity_name %>
+Check:            <%= check.name %>
 State:            <%= @alert.state_title_case %>
 Summary:          <%= @alert.summary %>
-<% if @alert.details -%>
-Details:          <%= @alert.details %>
+<% details = @alert.details; if details -%>
+Details:          <%= details %>
 <% end -%>
-<% if @alert.time -%>
-Time:             <%= Time.at(@alert.time.to_i).to_s %>
+<% time = @alert.time; if time -%>
+Time:             <%= Time.at(time.to_i).to_s %>
 <% end -%>
-<% if @alert.state_duration && @alert.state_duration > 40 -%>
-Duration:         <%= ChronicDuration.output(@alert.state_duration, :keep_zero => true) || '0 secs' %>
+<% state_duration = @alert.state_duration -%>
+<% if state_duration && (state_duration > 40) -%>
+Duration:         <%= ChronicDuration.output(state_duration, :keep_zero => true) || '0 secs' %>
 <% end -%>
 <% if @alert.last_state -%>
 Previous State:   <%= @alert.last_state_title_case %>
 <% end -%>
-<% if @alert.last_summary -%>
-Previous Summary: <%= @alert.last_summary %>
+<% last_summary = @alert.last_summary; if last_summary -%>
+Previous Summary: <%= last_summary %>
 <% end -%>
 
 Cheers,

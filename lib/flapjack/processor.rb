@@ -32,7 +32,8 @@ module Flapjack
 
       @queue = @config['queue'] || 'events'
 
-      @notifier_queue = @config['notifier_queue'] || 'notifications'
+      @notifier_queue = Flapjack::RecordQueue.new(@config['notifier_queue'] || 'notifications',
+                 Flapjack::Data::Notification)
 
       @archive_events        = @config['archive_events'] || false
       @events_archive_maxage = @config['events_archive_maxage']
@@ -305,10 +306,7 @@ module Flapjack
       @logger.debug("Notification is being generated for #{event.id}: " + event.inspect)
 
       notification = Flapjack::Data::Notification.new(
-        :entity_check_id   => entity_check.id,
-        :state_id          => (current_state ? current_state.id : nil),
         :state_duration    => (current_state ? (timestamp - current_state.timestamp.to_i) : nil),
-        :previous_state_id => (previous_state ? previous_state.id : nil),
         :severity          => severity,
         :type              => event.notification_type,
         :time              => event.time,
@@ -316,7 +314,13 @@ module Flapjack
         :tags              => entity_check.tags,
       )
 
-      Flapjack::Data::Notification.push(@notifier_queue, notification)
+      notification.save
+
+      entity_check.notifications << notification
+      current_state.current_notifications << notification unless current_state.nil?
+      previous_state.previous_notifications << notification unless previous_state.nil?
+
+      @notifier_queue.push(notification)
     end
 
   end

@@ -12,12 +12,14 @@ module Flapjack
 
       TYPES = ['email', 'sms', 'jabber', 'pagerduty']
 
-      define_attributes :type => :string,
-                        :address  => :string,
-                        :interval => :integer,
+      define_attributes :type             => :string,
+                        :address          => :string,
+                        :interval         => :integer,
                         :rollup_threshold => :integer
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact', :inverse_of => :media
+
+      has_many :alerts, :class_name => 'Flapjack::Data::Alert'
 
       has_and_belongs_to_many :alerting_checks, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :alerting_media

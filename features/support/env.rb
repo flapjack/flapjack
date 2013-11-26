@@ -120,14 +120,16 @@ RedisDelorean.before_all
 Flapjack.redis.quit
 
 # Not the most efficient of operations...
-def redis_peek(queue, start = 0, count = nil)
+def redis_peek(queue, klass, start = 0, count = nil)
   size = Flapjack.redis.llen(queue)
   start = 0 if start < 0
   count = (size - start) if count.nil? || (count > (size - start))
 
   (0..(size - 1)).inject([]) do |memo, n|
-    obj = Flapjack.redis.rpoplpush(queue, queue)
-    memo << Oj::load(obj) if (n >= start || n < (start + count))
+    obj_id = Flapjack.redis.rpoplpush(queue, queue)
+    next memo unless (n >= start || n < (start + count)) &&
+      (object = klass.find_by_id(obj_id))
+    memo << object
     memo
   end
 end

@@ -17,34 +17,24 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
   context 'notifications' do
 
-    let(:message) { {'notification_type'  => 'problem',
-                     'contact_first_name' => 'John',
-                     'contact_last_name' => 'Smith',
-                     'address' => 'pdservicekey',
-                     'state' => 'critical',
-                     'state_duration' => 23,
-                     'summary' => '',
-                     'last_state' => 'OK',
-                     'last_summary' => 'TEST',
-                     'details' => 'Testing',
-                     'time' => now.to_i,
-                     'entity' => 'app-02',
-                     'check' => 'ping'}
-                  }
+    let(:queue) { double(Flapjack::RecordQueue) }
+    let(:alert) { double(Flapjack::Data::Alert) }
 
-    # TODO use separate threads in the test instead?
     it "starts and is stopped by an exception" do
       Kernel.should_receive(:sleep).with(10)
 
-      redis.should_receive(:rpop).with('pagerduty_notifications').and_return(message.to_json, nil)
-      redis.should_receive(:quit)
-      redis.should_receive(:brpop).with('pagerduty_notifications_actions').and_raise(Flapjack::PikeletStop)
+      Flapjack::RecordQueue.should_receive(:new).with('pagerduty_notifications',
+        Flapjack::Data::Alert).and_return(queue)
 
       lock.should_receive(:synchronize).and_yield
+      queue.should_receive(:foreach).and_yield(alert)
+      queue.should_receive(:wait).and_raise(Flapjack::PikeletStop)
+
+      redis.should_receive(:quit)
 
       fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:lock => lock,
         :config => config, :logger => @logger)
-      fpn.should_receive(:handle_message).with(message)
+      fpn.should_receive(:handle_alert).with(alert)
       fpn.should_receive(:test_pagerduty_connection).twice.and_return(false, true)
       expect { fpn.start }.to raise_error(Flapjack::PikeletStop)
     end
@@ -73,7 +63,20 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
                         'description'  => 'Problem: "ping" on app-02 is Critical'}.to_json).
          to_return(:status => 200, :body => {'status' => 'success'}.to_json)
 
-      fpn.send(:handle_message, message)
+      check = double(Flapjack::Data::Check)
+      check.should_receive(:entity_name).twice.and_return('app-02')
+      check.should_receive(:name).twice.and_return('ping')
+
+      alert.should_receive(:address).and_return('pdservicekey')
+      alert.should_receive(:check).twice.and_return(check)
+      alert.should_receive(:state).and_return('critical')
+      alert.should_receive(:state_title_case).and_return('Critical')
+      alert.should_receive(:summary).twice.and_return('')
+      alert.should_receive(:type).twice.and_return('problem')
+      alert.should_receive(:notification_type).and_return('problem')
+      alert.should_receive(:type_sentence_case).and_return('Problem')
+
+      fpn.send(:handle_alert, alert)
       req.should have_been_requested
     end
 
@@ -89,7 +92,6 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
                            'html_url'  => 'http://flpjck.pagerduty.com/users/ABCDEFG'}
                         }
 
-    # TODO use separate threads in the test instead?
     it "doesn't look for acknowledgements if this search is already running" do
       redis.should_receive(:del).with('sem_pagerduty_acks_running')
 
@@ -104,7 +106,6 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
     end
 
-    # TODO use separate threads in the test instead?
     it "looks for and creates acknowledgements if the search is not already running" do
       redis.should_receive(:del).with('sem_pagerduty_acks_running').twice
 

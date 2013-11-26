@@ -47,6 +47,11 @@ module Flapjack
       has_and_belongs_to_many :alerting_media, :class_name => 'Flapjack::Data::Medium',
         :inverse_of => :alerting_checks
 
+      # the following 3 associations are used internally, for the notification
+      # and alert queue inter-pikelet workflow
+      has_many :notifications, :class_name => 'Flapjack::Data::Notification'
+      has_many :alerts, :class_name => 'Flapjack::Data::Alert'
+      has_many :rollup_alerts, :class_name => 'Flapjack::Data::RollupAlert'
 
       validates :name, :presence => true
       validates :entity_name, :presence => true

@@ -7,12 +7,12 @@ require 'chronic_duration'
 require 'active_support/inflector'
 
 require 'flapjack/redis_proxy'
-
-require 'flapjack/exceptions'
+require 'flapjack/record_queue'
 require 'flapjack/utility'
+require 'flapjack/exceptions'
 
 require 'flapjack/data/alert'
-require 'flapjack/data/message'
+require 'flapjack/data/check'
 
 module Flapjack
   module Gateways
@@ -29,7 +29,8 @@ module Flapjack
         @logger = opts[:logger]
 
         # TODO support for config reloading
-        @notifications_queue = @config['queue'] || 'email_notifications'
+        @queue = Flapjack::RecordQueue.new(@config['queue'] || 'email_notifications',
+                   Flapjack::Data::Alert)
 
         if smtp_config = @config['smtp_config']
           @host = smtp_config['host'] || 'localhost'
@@ -56,18 +57,15 @@ module Flapjack
       end
 
       def start
-        @logger.info("starting")
         @logger.debug("new email gateway pikelet with the following options: #{@config.inspect}")
 
         begin
           loop do
             @lock.synchronize do
-              @logger.debug "checking messages"
-              foreach_on_queue {|message| handle_message(message) }
+              @queue.foreach {|alert| handle_alert(alert) }
             end
 
-            @logger.debug "blocking on messages"
-            wait_for_queue
+            @queue.wait
           end
         ensure
           Flapjack.redis.quit
@@ -78,23 +76,10 @@ module Flapjack
         :exception
       end
 
-      # TODO refactor to remove complexity
-      def handle_message(message)
-        @logger.debug "Woo, got an alert to send out: #{message.inspect}"
-        alert = prepare(message)
-        deliver(alert)
-      end
+      private
 
-      # sets a bunch of class instance variables for each email
-      def prepare(contents)
-        Flapjack::Data::Alert.new(contents, :logger => @logger)
-      rescue => e
-        @logger.error "Error preparing email to #{contents['address']}: #{e.class}: #{e.message}"
-        @logger.error e.backtrace.join("\n")
-        raise
-      end
-
-      def deliver(alert)
+      def handle_alert(alert)
+        @logger.debug "Woo, got an alert to send out: #{alert.inspect}"
         host = @smtp_config ? @smtp_config['host'] : nil
         port = @smtp_config ? @smtp_config['port'] : nil
         starttls = @smtp_config ? !! @smtp_config['starttls'] : nil
@@ -111,8 +96,8 @@ module Flapjack
         @logger.debug("flapjack_mailer: set from to #{m_from}")
 
         mail = prepare_email(:from => m_from,
-                             :to => alert.address,
-                             :message_id => "<#{alert.notification_id}@#{@fqdn}>",
+                             :to => alert.medium.address,
+                             :message_id => "<#{alert.id}@#{@fqdn}>",
                              :alert => alert)
 
         # TODO a cleaner way to not step on test delivery settings
@@ -128,28 +113,9 @@ module Flapjack
         @logger.info "Email sending succeeded"
         @sent += 1
       rescue => e
-        @logger.error "Error generating or delivering email to #{alert.address}: #{e.class}: #{e.message}"
+        @logger.error "Error generating or delivering email to #{alert.medium.address}: #{e.class}: #{e.message}"
         @logger.error e.backtrace.join("\n")
         raise
-      end
-
-      private
-
-      def foreach_on_queue
-        while msg_json = Flapjack.redis.rpop(@notifications_queue)
-          begin
-            message = ::Oj.load( msg_json )
-          rescue Oj::Error => e
-            @logger.warn("Error deserialising message json: #{e}, raw json: #{msg_json.inspect}")
-            message = nil
-          end
-
-          yield message if block_given? && message
-        end
-      end
-
-      def wait_for_queue(opts = {})
-        Flapjack.redis.brpop("#{@notifications_queue}_actions")
       end
 
       # returns a Mail object

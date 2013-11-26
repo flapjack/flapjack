@@ -28,21 +28,25 @@ Feature: notifications
     And an email notification for entity 'example2.com' should be queued
 
   Scenario: Send a queued SMS notification
-    Given an SMS notification has been queued for entity 'example.com'
+    Given a user wants to receive SMS notifications for entity 'example.com'
+    And an SMS notification has been queued for entity 'example.com'
     When the SMS notification handler runs successfully
     Then the user should receive an SMS notification
 
   Scenario: Handle a failure to send a queued SMS notification
-    Given an SMS notification has been queued for entity 'example.com'
+    Given a user wants to receive SMS notifications for entity 'example.com'
+    And an SMS notification has been queued for entity 'example.com'
     When the SMS notification handler fails to send an SMS
     Then the user should not receive an SMS notification
 
   Scenario: Send a queued email notification
-    Given an email notification has been queued for entity 'example.com'
+    Given a user wants to receive email notifications for entity 'example.com'
+    And an email notification has been queued for entity 'example.com'
     When the email notification handler runs successfully
     Then the user should receive an email notification
 
   Scenario: Handle a failure to send a queued email notification
-    Given an email notification has been queued for entity 'example.com'
+    Given a user wants to receive email notifications for entity 'example.com'
+    And an email notification has been queued for entity 'example.com'
     When the email notification handler fails to send an email
     Then the user should not receive an email notification

@@ -1,10 +1,11 @@
-<%= @alert.type_sentence_case %>: "<%= @alert.check %>" on <%= @alert.entity -%>
+<% check = @alert.check -%>
+<%= @alert.type_sentence_case %>: "<%= check.name %>" on <%= check.entity_name -%>
 <% unless ['acknowledgement', 'test'].include?(@alert.notification_type) -%>
  is <%= @alert.state_title_case -%>
 <% end -%>
 <% if ['acknowledgement'].include?(@alert.type) -%>
  has been acknowledged, unscheduled maintenance created for <%= time_period_in_words(@alert.acknowledgement_duration) -%>
 <% end -%>
-<% if @alert.summary && @alert.summary.length > 0 -%>
-, <%= @alert.summary -%>
+<% summary = @alert.summary; unless summary.nil? || summary.empty? -%>
+, <%= summary -%>
 <% end -%>

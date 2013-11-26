@@ -89,10 +89,7 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_
   previous_state = entity_check.states.intersect_range(-2, -1).first
 
   notification = Flapjack::Data::Notification.new(
-    :entity_check_id   => entity_check.id,
-    :state_id          => current_state.id,
     :state_duration    => 0,
-    :previous_state_id => (previous_state ? previous_state.id : nil),
     :severity          => severity,
     :type              => event.notification_type,
     :time              => event.time,
@@ -100,72 +97,70 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_
     :tags              => entity_check.tags,
   )
 
-  Flapjack::Data::Notification.push('notifications', notification)
+  unless notification.save
+    raise "Couldn't save notification: #{@notification.errors.full_messages.inspect}"
+  end
+
+  entity_check.notifications << notification
+  current_state.current_notifications << notification # unless current_state.nil?
+  previous_state.previous_notifications << notification # unless previous_state.nil?
+
+  @notifier.instance_variable_get('@queue').push(notification)
   drain_notifications
 end
 
 Then /^an (SMS|email) notification for entity '([\w\.\-]+)' should( not)? be queued$/ do |medium, entity_name, neg|
-  queue = redis_peek("#{medium.downcase}_notifications")
-  queue.select {|n| n['entity'] =~ /#{entity_name}/ }.
+  queue = redis_peek("#{medium.downcase}_notifications", Flapjack::Data::Alert)
+  queue.select {|n| n.check.entity_name =~ /#{entity_name}/ }.
         send((neg ? :should : :should_not), be_empty)
 end
 
-Given /^an SMS notification has been queued for entity '([\w\.\-]+)'$/ do |entity_name|
-  entity = find_or_create_entity('id'       => '5001',
-                                 'name'     => entity_name)
-
-  @sms_notification = {'notification_type'  => 'problem',
-                       'contact_first_name' => 'John',
-                       'contact_last_name'  => 'Smith',
-                       'state'              => 'critical',
-                       'summary'            => 'Socket timeout after 10 seconds',
-                       'time'               => Time.now.to_i,
-                       'entity'             => entity_name,
-                       'check'              => "ping",
-                       'address'            => '+61412345678',
-                       'id'                 => 1,
-                       'state_duration'     => 30,
-                       'duration'           => 45}
-end
-
-Given /^an email notification has been queued for entity '([\w\.\-]+)'$/ do |entity_name|
-  entity = find_or_create_entity('id'       => '5001',
-                                 'name'     => entity_name)
-
+Given /^an (SMS|email) notification has been queued for entity '([\w\.\-]+)'$/ do |media_type, entity_name|
   entity_check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
     :name => 'ping').all.first
   entity_check.should_not be_nil
 
-  @email_notification = {'notification_type'  => 'problem',
-                         'contact_first_name' => 'John',
-                         'contact_last_name'  => 'Smith',
-                         'state'              => 'critical',
-                         'summary'            => 'Socket timeout after 10 seconds',
-                         'time'               => Time.now.to_i,
-                         'entity'             => entity_name,
-                         'check'              => "ping",
-                         'address'            => 'johns@example.dom',
-                         'id'                 => 2,
-                         'state_duration'     => 30,
-                         'duration'           => 3600}
+  entity_check.state = 'critical'
+  entity_check.last_update = Time.now.to_i
+  entity_check.save.should be_true
+
+  @alert = Flapjack::Data::Alert.new(
+    :state => entity_check.states.all.last.state,
+    :rollup => nil,
+    :state_duration => 15,
+    :notification_type => 'problem',
+    :time => Time.now)
+
+  unless @alert.save
+    raise "Couldn't save alert: #{@alert.errors.full_messages.inspect}"
+  end
+
+  contact = entity_check.entity.contacts.all.first
+  contact.should_not be_nil
+
+  medium = contact.media.intersect(:type => media_type.downcase).all.first
+  medium.should_not be_nil
+
+  medium.alerts << @alert
+  entity_check.alerts << @alert
 end
 
 # TODO may need to get more complex, depending which SMS provider is used
 When /^the SMS notification handler runs successfully$/ do
   @request = stub_request(:get, /^#{Regexp.escape('https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage')}/)
   @sms = Flapjack::Gateways::SmsMessagenet.new(:config => {'username' => 'abcd', 'password' => 'efgh'}, :logger => @logger )
-  @sms.send(:handle_message, @sms_notification)
+  @sms.send(:handle_alert, @alert)
 end
 
 When /^the SMS notification handler fails to send an SMS$/ do
   @request = stub_request(:get, /^#{Regexp.escape('https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage')}/).to_return(:status => [500, "Internal Server Error"])
   @sms = Flapjack::Gateways::SmsMessagenet.new(:config => {'username' => 'abcd', 'password' => 'efgh'}, :logger => @logger )
-  @sms.send(:handle_message, @sms_notification)
+  @sms.send(:handle_alert, @alert)
 end
 
 When /^the email notification handler runs successfully$/ do
   @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}}, :logger => @logger)
-  @email.send(:handle_message, @email_notification)
+  @email.send(:handle_alert, @alert)
 end
 
 When /^the email notification handler fails to send an email$/ do
@@ -178,7 +173,7 @@ When /^the email notification handler fails to send an email$/ do
 
   @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}}, :logger => @logger)
   begin
-    @email.send(:handle_message, @email_notification)
+    @email.send(:handle_alert, @alert)
   rescue RuntimeError
   end
 

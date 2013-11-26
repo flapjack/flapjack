@@ -7,13 +7,12 @@ require 'uri'
 require 'uri/https'
 
 require 'flapjack/redis_proxy'
+require 'flapjack/record_queue'
+require 'flapjack/exceptions'
 
 require 'flapjack/data/alert'
 require 'flapjack/data/check'
 require 'flapjack/data/event'
-require 'flapjack/data/message'
-
-require 'flapjack/exceptions'
 
 module Flapjack
 
@@ -28,13 +27,14 @@ module Flapjack
           @config = opts[:config]
           @logger = opts[:logger]
 
-          @notifications_queue = @config['queue'] || 'pagerduty_notifications'
+          # TODO support for config reloading
+          @queue = Flapjack::RecordQueue.new(@config['queue'] || 'pagerduty_notifications',
+                     Flapjack::Data::Alert)
 
           @logger.debug("New Pagerduty::Notifier pikelet with the following options: #{@config.inspect}")
         end
 
         def start
-          @logger.info("starting")
           until test_pagerduty_connection
             @logger.error("Can't connect to the pagerduty API, retrying after 10 seconds")
             Kernel.sleep(10)
@@ -43,10 +43,10 @@ module Flapjack
           begin
             loop do
               @lock.synchronize do
-                foreach_on_queue {|message| handle_message(message) }
+                @queue.foreach {|alert| handle_alert(alert) }
               end
 
-              wait_for_queue
+              @queue.wait
             end
           ensure
             Flapjack.redis.quit
@@ -59,29 +59,15 @@ module Flapjack
 
         private
 
-        def foreach_on_queue
-          while msg_json = Flapjack.redis.rpop(@notifications_queue)
-            begin
-              message = ::Oj.load( msg_json )
-            rescue Oj::Error => e
-              @logger.warn("Error deserialising message json: #{e}, raw json: #{msg_json.inspect}")
-              message = nil
-            end
+        def handle_alert(alert)
+          check = alert.check
+          entity_name = check.entity_name
+          check_name  = check.name
 
-            yield message if block_given? && message
-          end
-        end
+          address = alert.address
 
-        def wait_for_queue(opts = {})
-          Flapjack.redis.brpop("#{@notifications_queue}_actions")
-        end
-
-        def handle_message(message)
-          @logger.debug("pagerduty notification event received: " + message.inspect)
-
-          alert = Flapjack::Data::Alert.new(message, :logger => @logger)
-          @logger.debug("processing pagerduty notification service_key: #{alert.address}, entity: #{alert.entity}, " +
-                        "check: '#{alert.check}', state: #{alert.state}, summary: #{alert.summary}")
+          @logger.debug("processing pagerduty notification service_key: #{address}, entity: #{entity_name}, " +
+                        "check: '#{check_name}', state: #{alert.state}, summary: #{alert.summary}")
 
           mydir = File.dirname(__FILE__)
           message_template_path = mydir + "/pagerduty/alert.text.erb"
@@ -110,15 +96,16 @@ module Flapjack
             'trigger'
           end
 
-          send_pagerduty_event(:service_key  => alert.address,
-                               :incident_key => "#{alert.entity}:#{alert.check}",
+          send_pagerduty_event(:service_key  => address,
+                               :incident_key => "#{entity_name}:#{check_name}",
                                :event_type   => pagerduty_type,
                                :description  => msg)
-          alert.record_send_success!
+
+          @logger.info "Sent alert successfully: #{alert.to_s}"
         rescue => e
           @logger.error "Error generating or dispatching pagerduty message: #{e.class}: #{e.message}\n" +
             e.backtrace.join("\n")
-          @logger.debug "Message that could not be processed: \n" + message.inspect
+          @logger.debug "Alert that could not be processed: \n" + alert.inspect
         end
 
         def test_pagerduty_connection
