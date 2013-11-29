@@ -9,6 +9,10 @@ GEM
     colorator (0.1)
     commander (4.1.5)
       highline (~> 1.6.11)
+    em-websocket (0.5.0)
+      eventmachine (>= 0.12.9)
+      http_parser.rb (~> 0.5.3)
+    eventmachine (1.0.3)
     fast-stemmer (1.0.2)
     ffi (1.9.3)
     formatador (0.2.4)
@@ -21,7 +25,12 @@ GEM
     guard-jekyll-plus (1.4.10)
       guard (~> 1.8.3)
       jekyll (>= 1.0.0)
+    guard-livereload (1.4.0)
+      em-websocket (>= 0.5.0)
+      guard (>= 1.8.0)
+      multi_json (~> 1.7)
     highline (1.6.20)
+    http_parser.rb (0.5.3)
     jekyll (1.3.0)
       classifier (~> 1.3)
       colorator (~> 0.1)
@@ -41,6 +50,7 @@ GEM
     maruku (0.6.1)
       syntax (>= 1.0.0)
     method_source (0.8.2)
+    multi_json (1.8.2)
     posix-spawn (0.3.6)
     pry (0.9.12.4)
       coderay (~> 1.0)
@@ -69,6 +79,7 @@ DEPENDENCIES
   albino (~> 1.3)
   guard
   guard-jekyll-plus
+  guard-livereload
   jekyll
   rake
   redcarpet (~> 2.3)
