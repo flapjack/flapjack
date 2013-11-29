@@ -6,3 +6,9 @@ url: ""
 markdown: redcarpet
 pygments: true
 port: 9000
+exclude:
+ - Gemfile
+ - Gemfile.lock
+ - Guardfile
+ - Rakefile
+ - README.md
