@@ -53,10 +53,32 @@ You should see the Flapjack Web UI:
 You should also find Icinga and Nagios UIs running at:
 
 
-| URL                                                     | Username      | Password |
-| :------------------------------------------------------ | :------------ | :------- |
-| [localhost:3083/nagios3](http://localhost:3083/nagios3) | `nagiosadmin` | `nagios` |
-| [localhost:3083/icinga](http://localhost:3083/icinga)   | `icingaadmin` | `icinga` |
+<table class="table table-striped table-hover">
+  <tr>
+    <th>URL</th>
+    <th>Username</th>
+    <th>Password</th>
+  </tr>
+  <tr>
+    <td>
+      <a href="http://localhost:3083/nagios3">
+      http://localhost:3083/nagios3
+      </a>
+    </td>
+    <td>nagiosadmin</td>
+    <td>nagios</td>
+  </tr>
+  <tr>
+    <td>
+      <a href="http://localhost:3083/icinga">
+      http://localhost:3083/icinga
+      </a>
+    </td>
+    <td>icingaadmin</td>
+    <td>icinga</td>
+  </tr>
+</table>
+
 
 ## Get comfortable with the Flapjack CLI
 
