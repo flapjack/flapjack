@@ -166,5 +166,5 @@ Stay tuned for more info on how to:
 - Import contacts and entities.
 - Configure notification rules, intervals, and summary thresholds.
 
-
+In the mean time, **check out the [API documentation](https://github.com/flpjck/flapjack/wiki/IMPORTING) on how to import contacts and entities**.
 
