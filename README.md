@@ -16,10 +16,10 @@ View your changes at [http://localhost:9000/](http://localhost:9000/).
 To manually trigger a Jekyll rebuild:
 
 ```
-rake bulid
+rake build
 ```
 
-### Livereload
+### LiveReload
 
 If you are using the LiveReload browser extension, Guard will reload the site in your browser when you make changes.
 
