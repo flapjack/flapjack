@@ -1,18 +1,53 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <title>{{ page.title }}</title>
     {% include externals.html %}
+    <link rel="shortcut icon" href="{{ site.url }}/images/flapjack-2013-favicon-64-32-24-16.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    <div id="wrapper">
-      {% include header.html %}
+    <nav class="navbar navbar-default navbar-inverse" role="navigation">
+      <div class="navbar-header">
+        <a class="navbar-brand" href="{{ site.url }}/">
+          <img class="logo" src="{{ site.url }}/images/flapjack-2013-notext-transparent-300-300.png"/>
+          <span class="name">Flapjack</span>
+        </a>
+      </div>
+      <div class="collapse navbar-collapse navbar-ex1-collapse">
+        <ul class="nav navbar-nav navbar-right">
+          <li><a href="{{ site.url }}/quickstart">Quickstart</a></li>
+          <li><a href="http://github.com/flpjck/flapjack/wiki">Documentation</a></li>
+          <li><a href="{{ site.url }}/support">Support</a></li>
+        </ul>
+      </div>
+    </nav>
 
-      <div id="content">
-        {{ content }}
-      </div> <!-- content -->
+    <div class="container content">
+      {{ content }}
+    </div> <!-- container -->
 
-    </div> <!-- wrapper -->
+    <footer>
+      <div class="row">
+        <div class="col-md-4 col-md-offset-2">
+          Flapjack was conceptualised by
+          <a href="https://twitter.com/auxesis">Lindsay Holmwood</a>.
+          <a href="https://twitter.com/jessereynolds">Jesse Reynolds</a> and
+          <a href="https://github.com/ali-graham">Ali Graham</a>
+          are the primary developers.
+        </div>
+        <div class="col-md-4 sponsor">
+          <a href="http://bulletproof.net.au">
+            <img class="bulletproof" src='/images/bulletproof-logo.png'/>
+          </a>
+          <span class="bulletproof subtext">
+            Development sponsored by
+            <a href="http://bulletproof.net.au">Bulletproof</a>.
+          </span>
+        </div>
+      </div>
+    </footer>
+
     {% include google-analytics.html %}
   </body>
 </html>
