@@ -79,7 +79,6 @@ You should also find Icinga and Nagios UIs running at:
   </tr>
 </table>
 
-
 ## Get comfortable with the Flapjack CLI
 
 SSH into the VM:
@@ -88,7 +87,7 @@ SSH into the VM:
 vagrant ssh
 ```
 
-Have a look at the commands:
+Have a look at the commands under `/opt/flapjack/bin`:
 
 ```text
 export PATH=$PATH:/opt/flapjack/bin
@@ -99,11 +98,11 @@ simulate-failed-check --help
 # ...
 ```
 
-Have a look at the commands under `/opt/flapjack/bin`.
-
 <div class="alert alert-info">
 Details of these commands are available <a class="alert-link" href="https://github.com/flpjck/flapjack/wiki/USING#running">on the Flapjack wiki</a>.
 </div>
+
+![CLI](/images/quickstart/term-flapjack-help.png)
 
 ## Simulate a check failure
 
@@ -152,6 +151,139 @@ Reload the Flapjack web interface and you should now see the checks from Icinga 
 
 ![Checks](/images/quickstart/checks-from-nagios.png)
 
+## Create some contacts and Entities
+
+Currently Flapjack does not include a friendly web interface for managing contacts and entities, so for now we use json, curl, and the [Flapjack API](https://github.com/flpjck/flapjack/wiki/API).
+
+The vagrant-flapjack project ships with [example json files](https://github.com/flpjck/vagrant-flapjack/tree/master/examples) that you can use in this tutorial, or you can copy and paste the longform curl commands below that include the json.
+
+### Create Contacts Ada and Charles
+
+We'll be using the [POST /contacts](https://github.com/flpjck/flapjack/wiki/API#wiki-post_contacts) API call to create two contacts.
+
+Run the following from your workstation, cd'd into the vagrant-flapjack directory:
+
+```
+curl -w 'response: %{http_code} \n' -X POST -H "Content-type: application/json" \
+  -d @examples/contacts_ada_and_charles.json \
+  http://localhost:3081/contacts
+```
+
+Or alternatively, copy and paste the following. This does the same thing, but includes the json data inline.
+
+```
+curl -w 'response: %{http_code} \n' -X POST -H "Content-type: application/json" -d \
+ '{
+    "contacts": [
+      {
+        "id": "21",
+        "first_name": "Ada",
+        "last_name": "Lovelace",
+        "email": "ada@example.com",
+        "media": {
+          "sms": {
+            "address": "+61412345678",
+            "interval": "3600",
+            "rollup_threshold": "5"
+          },
+          "email": {
+            "address": "ada@example.com",
+            "interval": "7200",
+            "rollup_threshold": null
+          }
+        },
+        "tags": [
+          "legend",
+          "first computer programmer"
+        ]
+      },
+      {
+        "id": "22",
+        "first_name": "Charles",
+        "last_name": "Babbage",
+        "email": "charles@example.com",
+        "media": {
+          "sms": {
+            "address": "+61412345679",
+            "interval": "3600",
+            "rollup_threshold": "5"
+          },
+          "email": {
+            "address": "charles@example.com",
+            "interval": "7200",
+            "rollup_threshold": null
+          }
+        },
+        "tags": [
+          "legend",
+          "polymath"
+        ]
+      }
+    ]
+  }' \
+ http://localhost:3081/contacts
+```
+
+Navigate to [Contacts](http://localhost:3080/contacts) in the Flapjack web UI and you should see Ada Lovelace and Charles Babbage listed:
+
+![Contacts - List](/images/quickstart/contacts-ada-and-charles.png)
+
+Selecting [Ada](http://localhost:3080/contacts/21) should give you something like:
+
+![Contact - Ada Lovelace](/images/quickstart/contact-ada.png)
+
+### Create entities foo-app-01 and foo-db-01 (.example.com)
+
+We'll be using the [POST /entities](https://github.com/flpjck/flapjack/wiki/API#wiki-post_entities) api call to create two entities.
+
+We're going to assign both Ada and Charles to foo-app-01, and just Ada to foo-db-01.
+
+```
+curl -w 'response: %{http_code} \n' -X POST -H "Content-type: application/json" \
+  -d @examples/entities_foo-app-01_and_foo-db-01.json \
+  http://localhost:3081/entities
+```
+
+Or with json inline if you prefer:
+
+```
+curl -w 'response: %{http_code} \n' -X POST -H "Content-type: application/json" -d \
+ '{
+    "entities": [
+      {
+        "id": "801",
+        "name": "foo-app-01.example.com",
+        "contacts": [
+          "21",
+          "22"
+        ],
+        "tags": [
+          "foo",
+          "app"
+        ]
+      },
+      {
+        "id": "802",
+        "name": "foo-app-02.example.com",
+        "contacts": [
+          "21"
+        ],
+        "tags": [
+          "foo",
+          "db"
+        ]
+      }
+
+    ]
+  }' \
+ http://localhost:3081/entities
+```
+
+#### Verify
+
+Visit [foo-app-01](http://localhost:3080/entity/foo-app-01.example.com) in the web UI and you should see something like:
+
+![Entity - foo-app-01.example.com](/images/quickstart/entity-foo-app-01-no-checks.png)
 
 ## Coming soon
 
@@ -161,10 +293,11 @@ Reload the Flapjack web interface and you should now see the checks from Icinga 
 </p>
 </div>
 
-Stay tuned for more info on how to:
+Stay tuned for more info on how to configure:
 
-- Import contacts and entities.
-- Configure notification rules, intervals, and summary thresholds.
+- notification rules
+- intervals
+- summary thresholds
 
 In the mean time, **check out the [API documentation](https://github.com/flpjck/flapjack/wiki/IMPORTING) on how to import contacts and entities**.
 
