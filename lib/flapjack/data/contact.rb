@@ -53,6 +53,7 @@ module Flapjack
         rules = orig_notification_rules
         if rules.all.all? {|r| r.is_specific? } # also true if empty
           rule = Flapjack::Data::NotificationRule.create_generic
+          rule.save
           rules << rule
         end
         rules

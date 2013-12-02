@@ -91,10 +91,12 @@ describe Flapjack::Data::Check, :redis => true do
 
       sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t,
         :end_time => Time.at(t.to_i + 2400), :summary => 'planned')
+      sm.save
       ec.add_scheduled_maintenance(sm)
 
       lsm = Flapjack::Data::ScheduledMaintenance.new(:start_time => Time.at(t.to_i + 3600),
         :end_time => Time.at(t.to_i + 4800), :summary => 'later')
+      lsm.save
       ec.add_scheduled_maintenance(lsm)
 
       future = Time.at(t.to_i + 30)
@@ -119,6 +121,7 @@ describe Flapjack::Data::Check, :redis => true do
 
       usm = Flapjack::Data::UnscheduledMaintenance.new(:start_time => t,
         :end_time => t + 2400, :summary => 'impromptu')
+      usm.save
       ec.set_unscheduled_maintenance(usm)
 
       Delorean.time_travel_to( Time.at(t.to_i + 15) )
@@ -146,12 +149,14 @@ describe Flapjack::Data::Check, :redis => true do
       later_t = t.to_i + (15 * 60)
       usm_a = Flapjack::Data::UnscheduledMaintenance.new(:start_time => t,
         :end_time => t.to_i + half_an_hour, :summary => 'scooby')
+      usm_a.save
       ec.set_unscheduled_maintenance(usm_a)
 
       Delorean.time_travel_to( Time.at(later_t) )
 
       usm_b = Flapjack::Data::UnscheduledMaintenance.new(:start_time => later_t,
         :end_time => later_t + half_an_hour, :summary => 'shaggy')
+      usm_b.save
       ec.set_unscheduled_maintenance(usm_b)
 
       ec.should be_in_unscheduled_maintenance
@@ -176,6 +181,7 @@ describe Flapjack::Data::Check, :redis => true do
       later_t = Time.at(t.to_i + (15 * 60))
       usm_a = Flapjack::Data::UnscheduledMaintenance.new(:start_time => t,
         :end_time => Time.at(t.to_i + half_an_hour), :summary => 'scooby')
+      usm_a.save
       ec.set_unscheduled_maintenance(usm_a)
 
       Delorean.time_travel_to( later_t )
@@ -203,6 +209,7 @@ describe Flapjack::Data::Check, :redis => true do
 
       sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t.to_i + (60 * 60),
         :end_time => t.to_i + (3 * 60 * 60), :summary => '2 hours')
+      sm.save
       ec.add_scheduled_maintenance(sm)
 
       sms = ec.scheduled_maintenances_by_start.all
@@ -228,6 +235,7 @@ describe Flapjack::Data::Check, :redis => true do
       t = Time.now
       sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t.to_i + (60 * 60),
         :end_time => t.to_i + (3 * 60 * 60), :summary => '1 hour')
+      sm.save
       ec.add_scheduled_maintenance(sm)
 
       future = Time.at(t.to_i + (90 * 60))
@@ -252,6 +260,7 @@ describe Flapjack::Data::Check, :redis => true do
       t = Time.now
       sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t.to_i + (60 * 60),
         :end_time => t.to_i + (3 * 60 * 60), :summary => '1 hour')
+      sm.save
       ec.add_scheduled_maintenance(sm)
 
       future = Time.at(t.to_i + (6 * (60 * 60)) )

@@ -123,16 +123,21 @@ module Flapjack
           "#{entity_check.entity_name}:#{entity_check.name} to #{medium.address} " +
           " type: #{notification.type} rollup: #{alert.rollup || '-'}")
 
-        medium.alerting_checks.each do |entity_check|
-          last_state  = entity_check.states.last
-          last_change = last_state.nil? ? nil : last_state.timestamp.to_i
+        Flapjack::Data::Check.send(:lock, Flapjack::Data::CheckState,
+          Flapjack::Data::Alert, Flapjack::Data::RollupAlert) do
 
-          rollup_alert = Flapjack::Data::RollupAlert.new(
-            :state    => (last_state ? last_state.state : nil),
-            :duration => (last_change ? (Time.now.to_i - last_change) : nil))
-          rollup_alert.save
-          alert.rollup_alerts << rollup_alert
-          entity_check.rollup_alerts << rollup_alert
+          medium.alerting_checks.each do |entity_check|
+            last_state  = entity_check.states.last
+            last_change = last_state.nil? ? nil : last_state.timestamp.to_i
+
+            rollup_alert = Flapjack::Data::RollupAlert.new(
+              :state    => (last_state ? last_state.state : nil),
+              :duration => (last_change ? (Time.now.to_i - last_change) : nil))
+            rollup_alert.save
+            alert.rollup_alerts << rollup_alert
+            entity_check.rollup_alerts << rollup_alert
+          end
+
         end
 
         if ['recovery', 'acknowledgement'].include?(notification.type)

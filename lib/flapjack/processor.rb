@@ -176,6 +176,7 @@ module Flapjack
       entity_check.save
 
       if @ncsm_sched_maint
+        @ncsm_sched_maint.save
         entity_check.add_scheduled_maintenance(@ncsm_sched_maint)
         @ncsm_sched_maint = nil
       end

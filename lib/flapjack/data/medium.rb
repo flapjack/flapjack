@@ -52,11 +52,7 @@ module Flapjack
         # drop any expired blocks for this medium
         self.notification_blocks.
           intersect_range(nil, Time.now.to_i, :by_score => true).
-          intersect(attrs).each do |block|
-
-          self.notification_blocks.delete(block)
-          block.destroy
-        end
+          intersect(attrs).destroy_all
 
         if opts[:rollup]
           self.notification_blocks.intersect(attrs).count > 0
@@ -124,16 +120,26 @@ module Flapjack
       end
 
       def clean_alerting_checks
-        checks_to_remove = alerting_checks.select do |check|
-          Flapjack::Data::CheckState.ok_states.include?(check.state) ||
-          check.in_unscheduled_maintenance? ||
-          check.in_scheduled_maintenance? ||
-          !check.entity.contacts.ids.include?(self.contact.id)
-        end
-        return 0 if checks_to_remove.empty?
+        self.class.send(:lock, Flapjack::Data::Check,
+          Flapjack::Data::ScheduledMaintenance,
+          Flapjack::Data::UnscheduledMaintenance,
+          Flapjack::Data::Entity,
+          Flapjack::Data::Contact) do
 
-        alerting_checks.delete(*checks_to_remove)
-        checks_to_remove.size
+          checks_to_remove = alerting_checks.select do |check|
+            Flapjack::Data::CheckState.ok_states.include?(check.state) ||
+            check.in_unscheduled_maintenance? ||
+            check.in_scheduled_maintenance? ||
+            !check.entity.contacts.ids.include?(self.contact.id)
+          end
+
+          if checks_to_remove.empty?
+            0
+          else
+            alerting_checks.delete(*checks_to_remove)
+            checks_to_remove.size
+          end
+        end
       end
 
     end
