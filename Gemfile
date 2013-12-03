@@ -11,6 +11,7 @@ group :test do
   gem 'cucumber'
   gem 'delorean'
   gem 'rack-test'
+  gem 'async_rack_test'
   gem 'resque_spec'
   gem 'webmock'
   gem 'guard'
