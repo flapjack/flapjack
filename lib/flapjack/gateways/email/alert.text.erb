@@ -1,12 +1,26 @@
-Hi <%= @contact_first_name %>,
+Hi <%= @alert.contact_first_name %>
 
 Monitoring has detected the following:
 
-Entity: <%= @entity %>
-Check: <%= @check %>
-State: <%= @state %>
-Summary: <%= @summary %>
-Time: <%= Time.at(@time.to_i).to_s %>
+Entity:           <%= @alert.entity %>
+Check:            <%= @alert.check %>
+State:            <%= @alert.state_title_case %>
+Summary:          <%= @alert.summary %>
+<% if @alert.details -%>
+Details:          <%= @alert.details %>
+<% end -%>
+<% if @alert.time -%>
+Time:             <%= Time.at(@alert.time.to_i).to_s %>
+<% end -%>
+<% if @alert.state_duration && @alert.state_duration > 40 -%>
+Duration:         <%= ChronicDuration.output(@alert.state_duration, :keep_zero => true) || '0 secs' %>
+<% end -%>
+<% if @alert.last_state -%>
+Previous State:   <%= @alert.last_state_title_case %>
+<% end -%>
+<% if @alert.last_summary -%>
+Previous Summary: <%= @alert.last_summary %>
+<% end -%>
 
 Cheers,
 Flapjack

@@ -11,32 +11,33 @@ module Flapjack
     class Acknowledgement
       include Base
 
-      def block?(event)
+      def block?(event, entity_check, previous_state)
         timestamp = Time.now.to_i
-        result = false
-        if event.type == 'action'
-          if event.acknowledgement?
-            if @persistence.zscore("failed_checks", event.id)
-              ec = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @persistence)
-              if ec.nil?
-                @log.error "Filter: Acknowledgement: unknown entity for event '#{event.id}'"
-              else
-                ec.create_unscheduled_maintenance(:start_time => timestamp,
-                  :duration => (event.duration || (4 * 60 * 60)),
-                  :summary  => event.summary)
-                message = "unscheduled maintenance created for #{event.id}"
-              end
-            else
-              result = true
-              @log.debug("Filter: Acknowledgement: blocking because zscore of failed_checks for #{event.id} is false") unless @persistence.zscore("failed_checks", event.id)
-            end
-          else
-            message = "no action taken"
-            result  = false
-          end
+
+        label = 'Filter: Acknowledgement:'
+
+        return false unless event.type == 'action'
+
+        unless event.acknowledgement?
+          @logger.debug("#{label} pass (not an ack)")
+          return false
         end
-        @log.debug("Filter: Acknowledgement: #{result ? "block" : "pass"} (#{message})")
-        result
+
+        if entity_check.nil?
+          @logger.error "#{label} unknown entity for event '#{event.id}'"
+          return false
+        end
+
+        unless @redis.zscore("failed_checks", event.id)
+          @logger.debug("#{label} blocking because zscore of failed_checks for #{event.id} is false")
+          return true
+        end
+
+        um_duration = event.duration || (4 * 60 * 60)
+        entity_check.create_unscheduled_maintenance(timestamp, um_duration, :summary  => event.summary)
+
+        @logger.debug("#{label} pass (unscheduled maintenance created for #{event.id}, duration: #{um_duration})")
+        false
       end
     end
   end

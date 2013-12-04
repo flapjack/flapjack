@@ -1,7 +1,5 @@
 require 'spec_helper'
 
-require 'yajl/json_gem'
-
 require 'flapjack/gateways/pagerduty'
 
 describe Flapjack::Gateways::Pagerduty, :logger => true do
@@ -10,10 +8,12 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
   let(:time)   { Time.new }
 
-  let(:redis) {  mock('redis') }
+  let(:redis) {  double('redis') }
 
   it "prompts the blocking redis connection to quit" do
-    redis.should_receive(:rpush).with(config['queue'], %q{{"notification_type":"shutdown"}})
+    shutdown_redis = double('shutdown_redis')
+    shutdown_redis.should_receive(:rpush).with(config['queue'], %q{{"notification_type":"shutdown"}})
+    EM::Hiredis.should_receive(:connect).and_return(shutdown_redis)
 
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fp = Flapjack::Gateways::Pagerduty.new(:config => config, :logger => @logger)
@@ -94,7 +94,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     Flapjack::RedisPool.should_receive(:new).and_return(redis)
     fp = Flapjack::Gateways::Pagerduty.new(:config => config, :logger => @logger)
 
-    contact = mock('contact')
+    contact = double('contact')
     contact.should_receive(:pagerduty_credentials).and_return({
       'service_key' => '12345678',
       'subdomain"'  => 'flpjck',
@@ -102,11 +102,12 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       'password'    => 'password123'
     })
 
-    entity_check = mock('entity_check')
+    entity_check = double('entity_check')
     entity_check.should_receive(:check).and_return('PING')
     entity_check.should_receive(:contacts).and_return([contact])
-    entity_check.should_receive(:entity_name).exactly(2).times.and_return('foo-app-01.bar.net:PING')
-    entity_check.should_receive(:create_acknowledgement).with('summary' => 'Acknowledged on PagerDuty')
+    entity_check.should_receive(:entity_name).exactly(2).times.and_return('foo-app-01.bar.net')
+    Flapjack::Data::Event.should_receive(:create_acknowledgement).with('foo-app-01.bar.net', 'PING',
+      :summary => 'Acknowledged on PagerDuty', :duration => 14400, :redis => redis)
 
     Flapjack::Data::Global.should_receive(:unacknowledged_failing_checks).and_return([entity_check])
 
@@ -116,7 +117,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
   end
 
   it "runs a blocking loop listening for notifications" do
-    timer = mock('timer')
+    timer = double('timer')
     timer.should_receive(:cancel)
     EM::Synchrony.should_receive(:add_periodic_timer).with(10).and_return(timer)
 
@@ -130,7 +131,8 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     redis.should_receive(:blpop).twice {
       blpop_count += 1
       if blpop_count == 1
-        ["pagerduty_notifications", %q{{"notification_type":"problem","event_id":"main-example.com:ping","state":"critical","summary":"!!!"}}]
+        ["pagerduty_notifications", '{"notification_type":"problem","event_id":"main-example.com:ping",' +
+          '"state":"critical","summary":"!!!","state_duration":120,"duration":30}']
       else
         fp.instance_variable_set('@should_quit', true)
         ["pagerduty_notifications", %q{{"notification_type":"shutdown"}}]
@@ -141,6 +143,8 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     fp.should_receive(:send_pagerduty_event)
 
     fp.start
+
+    @logger.errors.should be_empty
   end
 
   it "tests the pagerduty connection" do

@@ -59,14 +59,27 @@ Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)' and
                              :redis => @redis )
 end
 
+# TODO create the notification object in redis, flag the relevant operation as
+# only needing that part running, split up the before block that covers these
 When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity|
   event = Flapjack::Data::Event.new('type'    => 'service',
                                     'state'   => 'critical',
                                     'summary' => '100% packet loss',
                                     'entity'  => entity,
                                     'check'   => 'ping')
+
+  notification_type = Flapjack::Data::Notification.type_for_event(event)
+
   entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, 'ping', :redis => @redis)
-  @app.send(:generate_notification_messages, event, entity_check)
+  max_notified_severity = entity_check.max_notified_severity_of_current_failure
+
+  severity = Flapjack::Data::Notification.severity_for_event(event, max_notified_severity)
+  last_state = entity_check.historical_state_before(event.time)
+
+  Flapjack::Data::Notification.add('notifications', event,
+    :type => notification_type, :severity => severity, :last_state => last_state,
+    :redis => @redis)
+  drain_notifications
 end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
@@ -96,12 +109,14 @@ Given /^a user SMS notification has been queued for entity '([\w\.\-]+)'$/ do |e
   @sms_notification = {'notification_type'  => 'problem',
                        'contact_first_name' => 'John',
                        'contact_last_name'  => 'Smith',
-                       'state'              => 'CRITICAL',
+                       'state'              => 'critical',
                        'summary'            => 'Socket timeout after 10 seconds',
                        'time'               => Time.now.to_i,
                        'event_id'           => "#{entity}:ping",
                        'address'            => '+61412345678',
-                       'id'                 => 1}
+                       'id'                 => 1,
+                       'state_duration'     => 30,
+                       'duration'           => 45}
 end
 
 Given /^a user email notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
@@ -111,21 +126,24 @@ Given /^a user email notification has been queued for entity '([\w\.\-]+)'$/ do 
   @email_notification = {'notification_type'  => 'problem',
                          'contact_first_name' => 'John',
                          'contact_last_name'  => 'Smith',
-                         'state'              => 'CRITICAL',
+                         'state'              => 'critical',
                          'summary'            => 'Socket timeout after 10 seconds',
                          'time'               => Time.now.to_i,
                          'event_id'           => "#{entity}:ping",
                          'address'            => 'johns@example.dom',
-                         'id'                 => 2}
+                         'id'                 => 2,
+                         'state_duration'     => 30,
+                         'duration'           => 3600}
 end
 
 # NB using perform, the notifiers were accessing the wrong Redis DB number
 
 # TODO may need to get more complex, depending which SMS provider is used
 When /^the SMS notification handler runs successfully$/ do
-  @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_URL)}/)
+  @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_DEFAULT_URL)}/)
 
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
+  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@redis', @redis)
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@logger', @logger)
   Flapjack::Gateways::SmsMessagenet.start
 
@@ -133,8 +151,9 @@ When /^the SMS notification handler runs successfully$/ do
 end
 
 When /^the SMS notification handler fails to send an SMS$/ do
-  @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_URL)}/).to_return(:status => [500, "Internal Server Error"])
+  @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_DEFAULT_URL)}/).to_return(:status => [500, "Internal Server Error"])
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
+  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@redis', @redis)
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@logger', @logger)
   Flapjack::Gateways::SmsMessagenet.start
 
@@ -144,6 +163,7 @@ end
 When /^the email notification handler runs successfully$/ do
   Resque.redis = @redis
   Flapjack::Gateways::Email.instance_variable_set('@config', {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}})
+  Flapjack::Gateways::Email.instance_variable_set('@redis', @redis)
   Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
   Flapjack::Gateways::Email.start
 
@@ -162,6 +182,7 @@ end
 When /^the email notification handler fails to send an email$/ do
   Resque.redis = @redis
   Flapjack::Gateways::Email.instance_variable_set('@config', {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}})
+  Flapjack::Gateways::Email.instance_variable_set('@redis', @redis)
   Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
   Flapjack::Gateways::Email.start
 

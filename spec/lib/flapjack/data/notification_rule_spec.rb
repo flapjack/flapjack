@@ -14,11 +14,13 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
   let(:rule_data) {
     {:contact_id         => '23',
-     :entity_tags        => ["database","physical"],
+     :tags               => ["database","physical"],
      :entities           => ["foo-app-01.example.com"],
      :time_restrictions  => [ weekdays_8_18 ],
+     :unknown_media      => [],
      :warning_media      => ["email"],
      :critical_media     => ["sms", "email"],
+     :unknown_blackhole  => false,
      :warning_blackhole  => false,
      :critical_blackhole => false
     }
@@ -52,8 +54,8 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
     expect {
       rule_data[:warning_blackhole] = true
-      success = rule.update(rule_data)
-      success.should be_true
+      errors = rule.update(rule_data)
+      errors.should be_nil
     }.to change { rule.warning_blackhole }.from(false).to(true)
   end
 
@@ -76,7 +78,14 @@ describe Flapjack::Data::NotificationRule, :redis => true do
     rule.match_entity?('foo-app-02.example.com').should be_false
   end
 
-  pending "check whether entity tags match"
+  it "checks whether entity tags match" do
+    rule = existing_rule
+
+    rule.match_tags?(['database', 'physical'].to_set).should be_true
+    rule.match_tags?(['database', 'physical', 'beetroot'].to_set).should be_true
+    rule.match_tags?(['database'].to_set).should be_false
+    rule.match_tags?(['virtual'].to_set).should be_false
+  end
 
   it "checks if blackhole settings for a rule match a severity level" do
     rule_data[:warning_blackhole] = true
@@ -95,18 +104,22 @@ describe Flapjack::Data::NotificationRule, :redis => true do
   context 'validation' do
 
     it "fails to add a notification rule with invalid data" do
-      rule_data[:entities] = []
-      rule_data[:entity_tags] = []
-      rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
-      rule.should be_nil
+      rule_data[:entities] = [1, {}]
+      rule_or_errors = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
+      rule_or_errors.should_not be_nil
+      rule_or_errors.should be_an(Array)
+      rule_or_errors.should have(1).error
+      rule_or_errors.should == ["Rule entities must be a list of strings"]
     end
 
     it "fails to update a notification rule with invalid data" do
       rule = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
       expect {
         rule_data[:entities] = [57]
-        success = rule.update(rule_data)
-        success.should be_false
+        errors = rule.update(rule_data)
+        errors.should_not be_nil
+        errors.should have(1).error
+        errors.should == ["Rule entities must be a list of strings"]
       }.not_to change { rule.entities }
     end
 

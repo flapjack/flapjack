@@ -4,13 +4,14 @@ module Flapjack
   module Utility
 
     def time_period_in_words(period)
+      return "0 seconds" unless period.is_a?(Integer) && period > 0
       period_mm, period_ss  = period.divmod(60)
       period_hh, period_mm  = period_mm.divmod(60)
       period_dd, period_hh  = period_hh.divmod(24)
-      ["#{period_dd} days",
-       "#{period_hh} hours",
-       "#{period_mm} minutes",
-       "#{period_ss} seconds"].reject {|s| s =~ /^0 /}.join(', ')
+      ["#{period_dd} day#{plural_s(period_dd)}",
+       "#{period_hh} hour#{plural_s(period_hh)}",
+       "#{period_mm} minute#{plural_s(period_mm)}",
+       "#{period_ss} second#{plural_s(period_ss)}"].reject {|s| s =~ /^0 /}.join(', ')
     end
 
     # Returns relative time in words referencing the given date
@@ -66,6 +67,24 @@ module Flapjack
       # flattens the arrays constructed in the block, it won't mess up
       # any values (or keys) that are themselves arrays/hashes.
       Hash[ *( key_value_pairs.flatten(1) )]
+    end
+
+    # copied from ActiveSupport
+    def truncate(str, length, options = {})
+      text = str.dup
+      options[:omission] ||= "..."
+
+      length_with_room_for_omission = length - options[:omission].length
+      stop = options[:separator] ?
+        (text.rindex(options[:separator], length_with_room_for_omission) || length_with_room_for_omission) : length_with_room_for_omission
+
+      (text.length > length ? text[0...stop] + options[:omission] : text).to_s
+    end
+
+    private
+
+    def plural_s(value)
+      (value == 1) ? '' : 's'
     end
 
   end

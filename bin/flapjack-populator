@@ -2,7 +2,10 @@
 
 require 'optparse'
 require 'ostruct'
-require 'yajl/json_gem'
+
+require 'oj'
+Oj.default_options = { :indent => 0, :mode => :strict }
+
 require 'redis'
 
 # add lib to the default include path
@@ -16,20 +19,20 @@ require 'flapjack/data/entity'
 require 'flapjack/data/event'
 
 options = OpenStruct.new
-options.config    = File.join('etc', 'flapjack_config.yaml')
-options.daemonize = nil
+options.config = Flapjack::Configuration::DEFAULT_CONFIG_PATH
 
-command = ARGV.shift
+exe = File.basename(__FILE__)
 
-banner  = "Usage: flapjack-populator command [options]\n"
-banner += "\n"
-banner += "  commands:\n"
-banner += "    - import-entities\n"
-banner += "    - import-contacts\n"
-banner += "    - purge-events (purge queued monitoring events)\n"
+optparse = OptionParser.new do |opts|
+  opts.banner = "Usage: #{exe} COMMAND [OPTIONS]"
 
-OptionParser.new do |opts|
-  opts.banner = "Usage: flapjack-populator command [options]"
+  opts.separator  ""
+  opts.separator  "Commands:"
+  opts.separator  "     import-entities"
+  opts.separator  "     import-contacts"
+  opts.separator  "     purge-events    purge queued monitoring events"
+  opts.separator  ""
+  opts.separator  "Options"
 
   opts.on("-c", "--config [PATH]", String, "PATH to the config file to use") do |c|
     options.config = c
@@ -39,9 +42,26 @@ OptionParser.new do |opts|
     options.from = f
   end
 
-end.parse!(ARGV)
+end
+optparse.parse!(ARGV)
 
-FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
+if options.help
+  puts optparse
+  exit
+elsif options.version
+  puts Flapjack::VERSION
+  exit
+elsif !["import-contacts", "import-entities", "purge-events"].include?(ARGV[0])
+  if ARGV.nil? || ARGV.empty?
+    puts "No command provided"
+  else
+    puts "Unknown command provided: '#{ARGV[0]}'"
+  end
+  puts "\n#{optparse}"
+  exit 1
+end
+
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
 
 config = Flapjack::Configuration.new
 config.load(options.config)
@@ -58,9 +78,9 @@ if options.from
   file     = File.new(filename)
 end
 
-case command
+case ARGV[0]
 when "import-contacts"
-  contacts = JSON.parse(file)
+  contacts = Oj.load(file)
 
   if contacts && contacts.is_a?(Enumerable) && contacts.any? {|e| !e['id'].nil?}
     @persistence = Redis.new(redis_options)
@@ -75,7 +95,7 @@ when "import-contacts"
   end
 
 when "import-entities"
-  entities = JSON.parse(file)
+  entities = Oj.load(file)
 
   if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
     @persistence = Redis.new(redis_options)

@@ -7,6 +7,8 @@ module Flapjack
 
   class Configuration
 
+    DEFAULT_CONFIG_PATH = '/etc/flapjack/flapjack_config.yaml'
+
     attr_reader :filename
 
     def initialize(opts = {})

@@ -1,4 +1,4 @@
-@events
+@events @processor
 Feature: events
   So people can be notified when things break and recover
   flapjack-executive must process events correctly
@@ -60,13 +60,13 @@ Feature: events
     Then  a notification should be generated
 
   @time
-  Scenario: Check critical and alerted to critical for 1 minute
+  Scenario: Check critical and alerted to critical for 40 seconds
     Given the check is in an ok state
     When  a critical event is received
     And   1 minute passes
     And   a critical event is received
     Then  a notification should be generated
-    When  1 minute passes
+    When  40 seconds passes
     And   a critical event is received
     Then  a notification should not be generated
 
@@ -89,6 +89,21 @@ Feature: events
     And   1 minute passes
     And   a critical event is received
     Then  a notification should not be generated
+
+  @time
+  Scenario: Alert when coming out of scheduled maintenance
+    Given the check is in an ok state
+    And   the check is in scheduled maintenance for 3 hours
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  a notification should not be generated
+    And   2 hours passes
+    And   a critical event is received
+    Then  a notification should not be generated
+    When  1 hours passes
+    And   a critical event is received
+    Then  a notification should be generated
 
   @time
   Scenario: Check ok to critical for 1 minute when in unscheduled maintenance
@@ -123,7 +138,12 @@ Feature: events
 
   @time
   Scenario: Check critical to ok when acknowledged
-    Given the check is in a critical state
+    Given the check is in an ok state
+    When  a critical event is received
+    And   one minute passes
+    And   a critical event is received
+    Then  a notification should be generated
+    # the above all needs to be just a call to the "Check ok to critical for 1 minute" Scenario if that's possible
     When  an acknowledgement event is received
     Then  a notification should be generated
     When  1 minute passes
@@ -184,6 +204,47 @@ Feature: events
     When  a critical event is received
     And   10 seconds passes
     And   an ok event is received
+    Then  a notification should not be generated
+
+  @time
+  Scenario: Quick stream of unknown
+    Given the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  a notification should be generated
+    When  10 minutes passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  60 seconds passes
+    And   an unknown event is received
+    Then  a notification should be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  1 minutes passes
+    And   an unknown event is received
+    Then  a notification should be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an unknown event is received
+    Then  a notification should not be generated
+    When  10 seconds passes
+    And   an unknown event is received
     Then  a notification should not be generated
 
   @time
@@ -253,96 +314,102 @@ Feature: events
 
 # commenting out this test for now, will revive it
 # when working on gh-119
-# @time
-# Scenario: a lot of quick ok -> warning -> ok -> warning
-#     Given the check is in an ok state
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   a warning event is received
-#     Then  a notification should not be generated
-#     When  10 seconds passes
-#     And   an ok event is received
-#     Then  a notification should not be generated
+@time
+Scenario: a lot of quick ok -> warning -> ok -> warning
+     Given the check is in an ok state
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  20 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should be generated
+     # recovered
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   a warning event is received
+     Then  a notification should not be generated
+     When  10 seconds passes
+     And   an ok event is received
+     Then  a notification should not be generated
+
+  Scenario: scheduled maintenance created for initial check reference
+    Given the check has no state
+    When  an ok event is received
+    Then  scheduled maintenance should be generated

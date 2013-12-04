@@ -7,9 +7,9 @@ module Flapjack
     class UnscheduledMaintenance
       include Base
 
-      def block?(event)
-        result = @persistence.exists("#{event.id}:unscheduled_maintenance")
-        @log.debug("Filter: Unscheduled Maintenance: #{result ? "block" : "pass"}")
+      def block?(event, entity_check, previous_state)
+        result = entity_check.in_unscheduled_maintenance? && !event.acknowledgement?
+        @logger.debug("Filter: Unscheduled Maintenance: #{result ? "block" : "pass"}")
         result
       end
     end

@@ -1,25 +1,18 @@
 #!/usr/bin/env ruby
 
+require 'em-hiredis'
+
 require 'socket'
 
-require 'eventmachine'
-# the redis/synchrony gems need to be required in this particular order, see
-# the redis-rb README for details
-require 'hiredis'
-require 'em-synchrony'
-require 'redis/connection/synchrony'
-require 'redis'
-
-require 'chronic_duration'
-
 require 'blather/client/client'
-require 'em-synchrony/fiber_iterator'
-require 'yajl/json_gem'
+require 'chronic_duration'
+require 'oj'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/redis_pool'
 require 'flapjack/utility'
 require 'flapjack/version'
+require 'flapjack/data/alert'
 
 module Flapjack
 
@@ -28,15 +21,33 @@ module Flapjack
     class Jabber < Blather::Client
       include Flapjack::Utility
 
-      log = Logger.new(STDOUT)
-      # log.level = Logger::DEBUG
-      log.level = Logger::INFO
+      log = ::Logger.new(STDOUT)
+      log.level = ::Logger::INFO
       Blather.logger = log
+
+      # TODO if we use 'xmpp4r' rather than 'blather', port this to 'rexml'
+      class TextHandler < Nokogiri::XML::SAX::Document
+        def initialize
+          @chunks = []
+        end
+
+        attr_reader :chunks
+
+        def cdata_block(string)
+          characters(string)
+        end
+
+        def characters(string)
+          @chunks << string.strip if string.strip != ""
+        end
+      end
 
       def initialize(opts = {})
         @config = opts[:config]
-        @redis_config = opts[:redis_config]
-        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2) # first will block
+        @redis_config = opts[:redis_config] || {}
+        @boot_time = opts[:boot_time]
+
+        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
 
         @logger = opts[:logger]
 
@@ -47,7 +58,10 @@ module Flapjack
 
       def stop
         @should_quit = true
-        @redis.rpush(@config['queue'], JSON.generate('notification_type' => 'shutdown'))
+        redis_uri = @redis_config[:path] ||
+          "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
+        shutdown_redis = EM::Hiredis.connect(redis_uri)
+        shutdown_redis.rpush(@config['queue'], Oj.dump('notification_type' => 'shutdown'))
       end
 
       def setup
@@ -98,7 +112,7 @@ module Flapjack
             presence = Blather::Stanza::Presence.new
             presence.from = @flapjack_jid
             presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
-            presence << "<x xmlns='http://jabber.org/protocol/muc'/>"
+            presence << "<x xmlns='http://jabber.org/protocol/muc'><history maxstanzas='0'></x>"
             EventMachine::Synchrony.next_tick do
               write presence
               say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
@@ -114,12 +128,50 @@ module Flapjack
         end
       end
 
-      def interpreter(command)
+      def get_check_details(entity_check, current_time)
+        sched   = entity_check.current_maintenance(:scheduled => true)
+        unsched = entity_check.current_maintenance(:unscheduled => true)
+        out = ''
+
+        if sched.nil? && unsched.nil?
+          out += "Not in scheduled or unscheduled maintenance.\n"
+        else
+          if sched.nil?
+            out += "Not in scheduled maintenance.\n"
+          else
+            start  = Time.at(sched[:start_time])
+            finish = Time.at(sched[:start_time] + sched[:duration])
+            remain = time_period_in_words( (finish - current_time).ceil )
+            # TODO a simpler time format?
+            out += "In scheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
+          end
+
+          if unsched.nil?
+            out += "Not in unscheduled maintenance.\n"
+          else
+            start  = Time.at(unsched[:start_time])
+            finish = Time.at(unsched[:start_time] + unsched[:duration])
+            remain = time_period_in_words( (finish - current_time).ceil )
+            # TODO a simpler time format?
+            out += "In unscheduled maintenance: #{start} -> #{finish} (#{remain} remaining)\n"
+          end
+        end
+
+        out
+      end
+
+      def interpreter(command_raw)
         msg          = nil
         action       = nil
         entity_check = nil
-        case
-        when command =~ /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i;
+
+        th = TextHandler.new
+        parser = Nokogiri::HTML::SAX::Parser.new(th)
+        parser.parse(command_raw)
+        command = th.chunks.join(' ')
+
+        case command
+        when /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
           ackid        = $1
           comment      = $2
           duration_str = $3
@@ -128,7 +180,7 @@ module Flapjack
           dur   = nil
 
           if comment.nil? || (comment.length == 0)
-            error = "please provide a comment, eg \"flapjack: ACKID #{$1} AL looking\""
+            error = "please provide a comment, eg \"#{@config['alias']}: ACKID #{$1} AL looking\""
           elsif duration_str
             # a fairly liberal match above, we'll let chronic_duration do the heavy lifting
             dur = ChronicDuration.parse(duration_str)
@@ -146,60 +198,143 @@ module Flapjack
             error = "unknown entity" if entity_check.nil?
           end
 
-          if entity_check && entity_check.in_unscheduled_maintenance?
-            error = "#{event_id} is already acknowledged"
-          end
-
           if error
             msg = "ERROR - couldn't ACK #{ackid} - #{error}"
           else
-            msg = "ACKing #{entity_check.check} on #{entity_check.entity_name} (#{ackid})"
+            entity_name, check = event_id.split(':', 2)
+
+            if entity_check.in_unscheduled_maintenance?
+              # ack = entity_check.current_maintenance(:unscheduled => true)
+              # FIXME details from current?
+              msg = "Changing ACK for #{check} on #{entity_name} (#{ackid})"
+            else
+              msg = "ACKing #{check} on #{entity_name} (#{ackid})"
+            end
             action = Proc.new {
-              entity_check.create_acknowledgement('summary' => (comment || ''),
-                'acknowledgement_id' => ackid, 'duration' => duration)
+              Flapjack::Data::Event.create_acknowledgement(
+                entity_name, check,
+                :summary => (comment || ''),
+                :acknowledgement_id => ackid,
+                :duration => duration,
+                :redis => @redis
+              )
             }
           end
 
-        when command =~ /^help$/
-          msg  = "commands: \n"
-          msg += "  ACKID <id> <comment> [duration: <time spec>] \n"
-          msg += "  find entities matching /pattern/ \n"
-          msg += "  test notifications for <entity>[:<check>] \n"
-          msg += "  identify \n"
-          msg += "  help \n"
+        when /^help$/i
+          msg = "commands: \n" +
+                "  ACKID <id> <comment> [duration: <time spec>]\n" +
+                "  find entities matching /pattern/\n" +
+                "  find checks[ matching /pattern/] on (<entity>|entities matching /pattern/)\n" +
+                "  test notifications for <entity>[:<check>]\n" +
+                "  tell me about <entity>[:<check>]\n" +
+                "  identify\n" +
+                "  help\n"
 
-        when command =~ /^identify$/
-          t = Process.times
-          fqdn         = `/bin/hostname -f`.chomp
-          pid          = Process.pid
-          instance_id  = "#{@fqdn}:#{@pid}"
-          boot_time = Time.at(@redis.hget("executive_instance:#{instance_id}", 'boot_time').to_i)
-          msg  = "Flapjack #{Flapjack::VERSION} process #{pid} on #{fqdn} \n"
-          msg += "Boot time: #{boot_time}\n"
-          msg += "User CPU Time: #{t.utime}\n"
-          msg += "System CPU Time: #{t.stime}\n"
-          msg += `uname -a`.chomp + "\n"
+        when /^identify$/i
+          t    = Process.times
+          fqdn = `/bin/hostname -f`.chomp
+          pid  = Process.pid
+          msg  = "Flapjack #{Flapjack::VERSION} process #{pid} on #{fqdn} \n" +
+                 "Boot time: #{@boot_time}\n" +
+                 "User CPU Time: #{t.utime}\n" +
+                 "System CPU Time: #{t.stime}\n" +
+                 `uname -a`.chomp + "\n"
 
-        when command =~ /^test notifications for\s+([a-z0-9\-\.]+)(:(.+))?$/i
+        when /^test notifications for\s+([a-z0-9\-\.]+)(?::(.+))?$/im
           entity_name = $1
-          check_name  = $3 ? $3 : 'test'
+          check_name  = $2 || 'test'
 
-          msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
+          if entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis)
+            msg = "so you want me to test notifications for entity: #{entity_name}, check: #{check_name} eh? ... well OK!"
 
-          entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis)
-          if entity
-            summary = "Testing notifications to all contacts interested in entity: #{entity.name}, check: #{check_name}"
-
-            entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check_name, :redis => @redis)
-            puts entity_check.inspect
-            entity_check.test_notifications('summary' => summary)
-
+            summary = "Testing notifications to all contacts interested in entity: #{entity_name}, check: #{check_name}"
+            Flapjack::Data::Event.test_notifications(entity_name, check_name, :summary => summary, :redis => @redis)
           else
-            msg = "yeah, no i can't see #{entity_name} in my systems"
+            msg = "yeah, no I can't see #{entity_name} in my systems"
           end
 
-        when command =~ /^(find )?entities matching\s+\/(.*)\/.*$/i
-          pattern = $2.chomp.strip
+        when /^tell me about\s+([a-z0-9\-\.]+)(?::(.+))?$+/im
+          entity_name = $1
+          check_name  = $2
+
+          if entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => @redis)
+            check_str = check_name.nil? ? '' : ", check: #{check_name}"
+            msg = "so you'd like details on entity: #{entity_name}#{check_str} hmm? ... OK!\n"
+
+            current_time = Time.now
+
+            check_names = check_name.nil? ? entity.check_list.sort : [check_name]
+
+            if check_names.empty?
+              msg += "I couldn't find any checks for entity: #{entity_name}"
+            else
+              check_names.each do |check|
+                entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check, :redis => @redis)
+                next if entity_check.nil?
+                msg += "---\n#{entity_name}:#{check}\n" if check_name.nil?
+                msg += get_check_details(entity_check, current_time)
+              end
+            end
+          else
+            msg = "hmmm, I can't see #{entity_name} in my systems"
+          end
+
+        when /^(?:find )?checks(?:\s+matching\s+\/(.+)\/)?\s+on\s+(?:entities matching\s+\/(.+)\/|([a-z0-9\-\.]+))/im
+          check_pattern = $1 ? $1.chomp.strip : nil
+          entity_pattern = $2 ? $2.chomp.strip : nil
+          entity_name = $3
+
+          entity_names = if entity_name
+            [entity_name]
+          elsif entity_pattern
+            Flapjack::Data::Entity.find_all_name_matching(entity_pattern, :redis => @redis)
+          else
+            []
+          end
+
+          msg = ""
+
+          # hash with entity => check_list, filtered by pattern if required
+          entities = entity_names.map {|name|
+            Flapjack::Data::Entity.find_by_name(name, :redis => @redis)
+          }.compact.inject({}) {|memo, entity|
+            memo[entity] = entity.check_list.select {|check_name|
+              !check_pattern || (check_name =~ /#{check_pattern}/i)
+            }
+            memo
+          }
+
+          report_entities = proc {|ents|
+            ents.inject('') do |memo, (entity, check_list)|
+              if check_list.empty?
+                memo += "Entity: #{entity.name} has no checks\n"
+              else
+                memo += "Entity: #{entity.name}\nChecks: #{check_list.join(', ')}\n"
+              end
+              memo += "----\n"
+              memo
+            end
+          }
+
+          case
+          when entity_pattern
+            if entities.empty?
+              msg = "found no entities matching /#{entity_pattern}/"
+            else
+              msg = "found #{entities.size} entities matching /#{entity_pattern}/ ... \n" +
+                    report_entities.call(entities)
+            end
+          when entity_name
+            if entities.empty?
+              msg = "found no entity for '#{entity_name}'"
+            else
+              msg = report_entities.call(entities)
+            end
+          end
+
+        when /^(?:find )?entities matching\s+\/(.+)\//im
+          pattern = $1.chomp.strip
           entity_list = Flapjack::Data::Entity.find_all_name_matching(pattern, :redis => @redis)
 
           if entity_list
@@ -211,7 +346,7 @@ module Flapjack
             when number_found == 0
               msg = "found no entities matching /#{pattern}/"
             when number_found == 1
-              msg = "found #{number_found} entity matching /#{pattern}/ ... \n"
+              msg = "found 1 entity matching /#{pattern}/ ... \n"
             when number_found > max_showable
               msg = "showing first #{max_showable} of #{number_found} entities found matching /#{pattern}/\n"
             else
@@ -223,7 +358,7 @@ module Flapjack
             msg = "that doesn't seem to be a valid pattern - /#{pattern}/"
           end
 
-        when command =~ /^(.*)/
+        when /^(.*)/
           words = $1
           msg   = "what do you mean, '#{words}'? Type 'help' for a list of acceptable commands."
 
@@ -236,13 +371,18 @@ module Flapjack
         return if @should_quit
         @logger.debug("groupchat message received: #{stanza.inspect}")
 
-        if stanza.body =~ /^#{@config['alias']}:\s+(.*)/
+        if stanza.body =~ /^#{@config['alias']}:\s+(.*)/m
           command = $1
         end
 
-        results = interpreter(command)
-        msg     = results[:msg]
-        action  = results[:action]
+        begin
+          results = interpreter(command)
+          msg     = results[:msg]
+          action  = results[:action]
+        rescue => e
+          @logger.error("Exception when interpreting command '#{command}' - #{e.class}, #{e.message}")
+          msg = "Oops, something went wrong processing that command (#{e.class}, #{e.message})"
+        end
 
         if msg || action
           EventMachine::Synchrony.next_tick do
@@ -257,15 +397,20 @@ module Flapjack
         return if @should_quit
         @logger.debug("chat message received: #{stanza.inspect}")
 
-        if stanza.body =~ /^flapjack:\s+(.*)/
+        if stanza.body =~ /^flapjack:\s+(.*)/m
           command = $1
         else
           command = stanza.body
         end
 
-        results = interpreter(command)
-        msg     = results[:msg]
-        action  = results[:action]
+        begin
+          results = interpreter(command)
+          msg     = results[:msg]
+          action  = results[:action]
+        rescue => e
+          @logger.error("Exception when interpreting command '#{command}' - #{e.class}, #{e.message}")
+          msg = "Oops, something went wrong processing that command (#{e.class}, #{e.message})"
+        end
 
         if msg || action
           EventMachine::Synchrony.next_tick do
@@ -319,11 +464,19 @@ module Flapjack
         @logger.info("starting")
         @logger.debug("new jabber pikelet with the following options: #{@config.inspect}")
 
-        keepalive_timer = EM::Synchrony.add_periodic_timer(60) do
-          @logger.debug("calling keepalive on the jabber connection")
-          if connected?
-            EventMachine::Synchrony.next_tick do
-              write(' ')
+        # the periodic timer can't be halted early (without doing EM.stop) so
+        # keep the time short and count the iterations ... could just use
+        # EM.sleep(1) in a loop, I suppose
+        ki = 0
+        keepalive_timer = EventMachine::Synchrony.add_periodic_timer(1) do
+          ki += 1
+          if ki == 60
+            ki = 0
+            @logger.debug("calling keepalive on the jabber connection")
+            if connected?
+              EventMachine::Synchrony.next_tick do
+                write(' ')
+              end
             end
           end
         end
@@ -340,63 +493,73 @@ module Flapjack
           # FIXME: should also check if presence has been established in any group chat rooms that are
           # configured before starting to process events, otherwise the first few may get lost (send
           # before joining the group chat rooms)
-          if connected?
-            @logger.debug("jabber is connected so commencing blpop on #{queue}")
-            events[queue] = @redis.blpop(queue, 0)
-            event         = Yajl::Parser.parse(events[queue][1])
-            type          = event['notification_type'] || 'unknown'
-            @logger.debug('jabber notification event received')
-            @logger.debug(event.inspect)
-            if 'shutdown'.eql?(type)
+          unless connected?
+            @logger.debug("not connected, sleep 1 before retry")
+            EM::Synchrony.sleep(1)
+            next
+          end
+
+          @logger.debug("jabber is connected so commencing blpop on #{queue}")
+          events[queue] = @redis.blpop(queue, 0)
+          event_json = events[queue][1]
+          begin
+            event = Oj.load(event_json)
+
+            @logger.debug('jabber notification event received: ' + event.inspect)
+
+            if 'shutdown'.eql?(event['notification_type'])
+              @logger.debug("@should_quit: #{@should_quit}")
               if @should_quit
                 EventMachine::Synchrony.next_tick do
                   # get delays without the next_tick
                   close # Blather::Client.close
                 end
               end
-            else
-              entity, check = event['event_id'].split(':')
-              state         = event['state']
-              summary       = event['summary']
-              duration      = event['duration'] ? time_period_in_words(event['duration']) : '4 hours'
-              address       = event['address']
-
-              @logger.debug("processing jabber notification address: #{address}, event: #{entity}:#{check}, state: #{state}, summary: #{summary}")
-
-              ack_str =
-                event['event_count'] &&
-                !state.eql?('ok') &&
-                !'acknowledgement'.eql?(type) &&
-                !'test'.eql?(type) ?
-                "::: flapjack: ACKID #{event['event_count']} " : ''
-
-              type = 'unknown' unless type
-
-              maint_str = case type
-              when 'acknowledgement'
-                "has been acknowledged, unscheduled maintenance created for #{duration}"
-              when 'test'
-                ''
-              else
-                "is #{state.upcase}"
-              end
-
-              # FIXME - should probably put all the message composition stuff in one place so
-              # the logic isn't duplicated in each notification channel.
-              # TODO - templatise the messages so they can be customised without changing core code
-              headline = "test".eql?(type.downcase) ? "TEST NOTIFICATION" : type.upcase
-
-              msg = "#{headline} #{ack_str}::: \"#{check}\" on #{entity} #{maint_str} ::: #{summary}"
-
-              chat_type = :chat
-              chat_type = :groupchat if @config['rooms'] && @config['rooms'].include?(address)
-              EventMachine::Synchrony.next_tick do
-                say(Blather::JID.new(address), msg, chat_type)
-              end
+              next
             end
-          else
-            @logger.debug("not connected, sleep 1 before retry")
-            EM::Synchrony.sleep(1)
+
+            alert = Flapjack::Data::Alert.new(event, :logger => @logger)
+
+            @logger.debug("processing jabber notification address: #{alert.address}, entity: #{alert.entity}, " +
+                          "check: '#{alert.check}', state: #{alert.state}, summary: #{alert.summary}")
+
+            @ack_str =
+              alert.event_count &&
+              !alert.state.eql?('ok') &&
+              !'acknowledgement'.eql?(alert.type) &&
+              !'test'.eql?(alert.type) ?
+              "#{@config['alias']}: ACKID #{event['event_count']}" : nil
+
+            message_type = alert.rollup ? 'rollup' : 'alert'
+
+            mydir = File.dirname(__FILE__)
+            message_template_path = mydir + "/jabber/#{message_type}.text.erb"
+            message_template = ERB.new(File.read(message_template_path), nil, '-')
+
+            @alert = alert
+            bnd    = binding
+
+            begin
+              message = message_template.result(bnd).chomp
+            rescue => e
+              @logger.error "Error while excuting the ERB for a jabber message, " +
+                "ERB being executed: #{message_template_path}"
+              raise
+            end
+
+            chat_type = :chat
+            chat_type = :groupchat if @config['rooms'] && @config['rooms'].include?(alert.address)
+            EventMachine::Synchrony.next_tick do
+              say(Blather::JID.new(alert.address), message, chat_type)
+              alert.record_send_success!
+            end
+
+          rescue => e
+            # TODO: have non-fatal errors generate messages (eg via flapjack events or straight to
+            # rollbar or similar)
+            @logger.error "Error generating or dispatching jabber message: #{e.class}: #{e.message}\n" +
+              e.backtrace.join("\n")
+            @logger.debug "Message that could not be processed: \n" + event_json
           end
         end
 

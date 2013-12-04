@@ -24,19 +24,30 @@ $:.unshift(File.dirname(__FILE__) + '/../lib')
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each {|f| require f}
 
 class MockLogger
-  attr_accessor :messages
+  attr_accessor :messages, :errors
 
   def initialize
     @messages = []
+    @errors   = []
   end
 
-  %w(debug info warn error fatal).each do |level|
+  %w(debug info warn).each do |level|
     class_eval <<-RUBY
       def #{level}(msg)
-        @messages << msg
+        @messages << '#{level.upcase}' + ': ' + msg
       end
     RUBY
   end
+
+  %w(error fatal).each do |level|
+    class_eval <<-ERRORS
+      def #{level}(msg)
+        @messages << '#{level.upcase}' + ': ' + msg
+        @errors   << '#{level.upcase}' + ': ' + msg
+      end
+    ERRORS
+  end
+
 end
 
 JsonSpec.configure do
@@ -61,16 +72,8 @@ RSpec.configure do |config|
   #     --seed 1234
   config.order = 'random'
 
-  config.before(:each, :logger => true) do
-    def test_logger(class_name)
-      logger = Log4r::Logger.new(class_name)
-      outp = Log4r::FileOutputter.new(class_name,
-        :filename => File.join(File.dirname(__FILE__), '..', 'log', 'test.log'))
-      outp.formatter = Log4r::PatternFormatter.new(:pattern => "[%l] %d :: #{class_name} :: %m",
-        :date_pattern => "%Y-%m-%dT%H:%M:%S%z")
-      logger.add(outp)
-      logger
-    end
+  if !(ENV.keys & ['SHOW_LOGGER_ALL', 'SHOW_LOGGER_ERRORS']).empty?
+    config.formatter = :documentation
   end
 
   config.around(:each, :redis => true) do |example|
@@ -83,16 +86,23 @@ RSpec.configure do |config|
   config.around(:each, :logger => true) do |example|
     @logger = MockLogger.new
     example.run
-    #messages = @logger.messages.compact
-    #p "logger: " + messages.join(", ") unless messages.empty?
-    @logger.messages.clear
+
+    if ENV['SHOW_LOGGER_ALL']
+      puts @logger.messages.compact.join("\n")
+    end
+
+    if ENV['SHOW_LOGGER_ERRORS']
+      puts @logger.errors.compact.join("\n")
+    end
+
+    @logger.errors.clear
   end
 
   config.after(:each, :time => true) do
     Delorean.back_to_the_present
   end
 
-  config.include HamlViewHelper, :haml_view => true
+  config.include ErbViewHelper, :erb_view => true
   config.include Rack::Test::Methods, :sinatra => true
   config.include JsonSpec::Helpers, :json => true
 end

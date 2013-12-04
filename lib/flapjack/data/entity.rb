@@ -87,7 +87,7 @@ module Flapjack
           return nil
         end
         redis.keys('entity_id:*').inject([]) {|memo, check|
-          a, entity_name = check.split(':')
+          a, entity_name = check.split(':', 2)
           if (entity_name =~ regex) && !memo.include?(entity_name)
             memo << entity_name
           end
@@ -95,14 +95,25 @@ module Flapjack
         }.sort
       end
 
+      def self.find_all_with_tags(tags, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        tags_prefixed = tags.collect {|tag|
+          "#{TAG_PREFIX}:#{tag}"
+        }
+        logger.debug "tags_prefixed: #{tags_prefixed.inspect}" if logger = options[:logger]
+        Flapjack::Data::Tag.find_intersection(tags_prefixed, :redis => redis).collect {|entity_id|
+          Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis).name
+        }.compact
+      end
+
       def self.find_all_with_checks(options)
         raise "Redis connection not set" unless redis = options[:redis]
-        redis.keys("check:*").map {|s| s.match(/.*:(.*):.*/)[1] }.to_set
+        redis.zrange("current_entities", 0, -1)
       end
 
       def self.find_all_with_failing_checks(options)
         raise "Redis connection not set" unless redis = options[:redis]
-        redis.zrange("failed_checks", 0, -1).map {|s| s.match(/(.*):.*/)[1] }.to_set
+        Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => redis).keys
       end
 
       def contacts
@@ -119,7 +130,7 @@ module Flapjack
       end
 
       def check_list
-        @redis.keys("check:#{@name}:*").map {|k| k =~ /^check:#{@name}:(.+)$/; $1}
+        @redis.zrange("current_checks:#{@name}", 0, -1)
       end
 
       def check_count

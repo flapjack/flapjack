@@ -4,41 +4,50 @@
 # from which individual 'Message' objects are created, one for each
 # contact+media recipient.
 
+require 'flapjack/data/contact'
+
 module Flapjack
   module Data
     class Message
 
-      attr_accessor :medium, :address, :id, :duration, :contact, :notification
+      attr_reader :medium, :address, :duration, :contact, :rollup
 
-      def self.for_contact(opts = {})
-        self.new(:contact => opts[:contact])
+      def self.for_contact(contact, opts = {})
+        self.new(:contact  => contact,
+                 :medium   => opts[:medium],
+                 :address  => opts[:address],
+                 :duration => opts[:duration],
+                 :rollup   => opts[:rollup])
       end
 
       def id
         return @id if @id
         t = Time.now
-        # FIXME: consider just using a UUID here
+        # FIXME: consider using a UUID here
         # this is planned to be used as part of alert history keys
-        @id = self.object_id.to_i.to_s + '-' + t.to_i.to_s + '.' + t.tv_usec.to_s
+        @id = "#{self.object_id.to_i}-#{t.to_i}.#{t.tv_usec}"
       end
 
       def contents
         c = {'media'              => medium,
              'address'            => address,
-             'id'                 => id}
-        if contact
-          c.merge('contact_id'         => contact.id,
-                  'contact_first_name' => contact.first_name,
-                  'contact_last_name'  => contact.last_name)
-        end
+             'id'                 => id,
+             'rollup'             => rollup,
+             'contact_id'         => contact.id,
+             'contact_first_name' => contact.first_name,
+             'contact_last_name'  => contact.last_name}
         c['duration'] = duration if duration
-        c.merge(notification.contents) if notification
+        c
       end
 
     private
 
       def initialize(opts = {})
-        @contact = opts[:contact]
+        @contact  = opts[:contact]
+        @medium   = opts[:medium]
+        @address  = opts[:address]
+        @duration = opts[:duration]
+        @rollup   = opts[:rollup]
       end
 
     end

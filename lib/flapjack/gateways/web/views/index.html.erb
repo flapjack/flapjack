@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <% nav  = render_erb('_nav.html.erb', binding) %>
+    <% head = render_erb('_head.html.erb', binding) %>
+    <% foot = render_erb('_foot.html.erb', binding) %>
+    <title>Flapjack - Summary</title>
+    <%= head %>
+  </head>
+  <body>
+    <div id="wrap">
+      <div class="container">
+        <div class="page-header">
+          <%= nav %>
+          <h2>Summary</h2>
+        </div>
+
+        <h4><a href="/entities_failing" title="failing entities"><%= h @count_failing_entities %></a> out of <a href="/entities_all" title="all entities"><%= h @count_all_entities %></a> entities have failing checks</h4>
+        <h4><a href="/checks_failing" title="failing checks"><%= h @count_failing_checks %></a> out of <a href="/checks_all" title="all checks"><%= h @count_all_checks %></a> checks are failing</h4>
+
+      </div>
+
+      <div id="push"></div>
+    </div>
+    <div id="footer">
+      <%= foot %>
+    </div>
+  </body>
+</html>

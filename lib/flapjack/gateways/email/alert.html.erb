@@ -1,0 +1,79 @@
+<style type="text/css" media="screen">
+  #container {
+    text-transform: uppercase;
+  }
+  table {
+    border-collapse: collapse;
+  }
+  table, th, td {
+    border: 1px solid #666;
+    padding: 4px;
+  }
+</style>
+
+<p>Hi <%= @alert.contact_first_name%></p>
+
+<p>Monitoring has detected the following:</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td><strong>Entity</strong></td>
+      <td><%= @alert.entity %></td>
+    </tr>
+
+    <tr>
+      <td><strong>Check</strong></td>
+      <td><%= @alert.check %></td>
+    </tr>
+
+    <tr>
+      <td><strong>State</strong></td>
+      <td><%= @alert.state_title_case %></td>
+    </tr>
+
+    <tr>
+      <td><strong>Summary</strong></td>
+      <td><%= @alert.summary %></td>
+    </tr>
+
+    <% if @alert.details %>
+      <tr>
+        <td><strong>Details</strong></td>
+        <td><%= @alert.details %></td>
+      </tr>
+    <% end %>
+
+    <% if @alert.time %>
+      <tr>
+        <td><strong>Time</strong></td>
+        <td><%= Time.at(@alert.time.to_i).to_s %></td>
+      </tr>
+    <% end %>
+
+    <% if @alert.state_duration && @alert.state_duration > 40 %>
+      <tr>
+        <td><strong>Duration</strong></td>
+        <td><%= ChronicDuration.output(@alert.state_duration, :keep_zero => true) || '0 secs' %></td>
+      </tr>
+    <% end %>
+
+    <% if @alert.last_state %>
+      <tr>
+        <td><strong>Previous State</strong></td>
+        <td><%= @alert.last_state_title_case %></td>
+      </tr>
+    <% end %>
+
+    <% if @alert.last_summary %>
+      <tr>
+        <td><strong>Previous Summary</strong></td>
+        <td><%= @alert.last_summary %></td>
+      </tr>
+    <% end %>
+
+  </tbody>
+</table>
+
+<p>Cheers,<br/>
+Flapjack</p>

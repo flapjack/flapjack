@@ -1,55 +1,115 @@
 #!/usr/bin/env ruby
 
-require 'log4r'
-require 'log4r/formatter/patternformatter'
-require 'log4r/outputter/consoleoutputters'
-require 'log4r/outputter/syslogoutputter'
+require 'logger'
+require 'syslog'
+require 'monitor'
 
 module Flapjack
 
   class Logger
 
+    LEVELS = [:debug, :info, :warn, :error, :fatal]
+
+    SEVERITY_LABELS = %w(DEBUG INFO WARN ERROR FATAL)
+
+    SYSLOG_LEVELS = [::Syslog::Constants::LOG_DEBUG,
+                     ::Syslog::Constants::LOG_INFO,
+                     ::Syslog::Constants::LOG_WARNING,
+                     ::Syslog::Constants::LOG_ERR,
+                     ::Syslog::Constants::LOG_CRIT
+                    ]
+
     def initialize(name, config = {})
       config ||= {}
 
-      # @name = name
+      @name = name
 
-      @log4r_logger = Log4r::Logger.new(name)
-
-      formatter = Log4r::PatternFormatter.new(:pattern => "%d [%l] :: #{name} :: %m",
-        :date_pattern => "%Y-%m-%dT%H:%M:%S%z")
-
-      [Log4r::StdoutOutputter, Log4r::SyslogOutputter].each do |outp_klass|
-        outp = outp_klass.new(name)
-        outp.formatter = formatter
-        @log4r_logger.add(outp)
+      @formatter = proc do |severity, datetime, progname, msg|
+        t = datetime.iso8601
+        "#{t} [#{severity}] :: #{name} :: #{msg}\n"
       end
+
+      @logger = ::Logger.new(STDOUT)
+      @logger.formatter = @formatter
 
       configure(config)
     end
 
     def configure(config)
+      raise "Cannot configure closed logger" if @logger.nil?
+
       level = config['level']
 
-      # we'll let Log4r spit the dummy on invalid level values -- but will
-      # assume ALL if nothing is provided
+      # we'll let Logger spit the dummy on invalid level values -- but will
+      # assume INFO if nothing is provided
       if level.nil? || level.empty?
-        level = 'ALL'
+        level = 'INFO'
       end
 
-      new_level = Log4r.const_get(level.upcase)
-      return if @log4r_logger.level.eql?(new_level)
+      err = nil
 
-      # puts "setting log level for '#{@name}' to '#{level.upcase}'"
-      @log4r_logger.level = new_level
+      @level = begin
+        ::Logger.const_get(level.upcase)
+      rescue NameError
+        err = "Unknown Logger severity level '#{level.upcase}', using INFO..."
+        ::Logger::INFO
+      end
+
+      @logger.error(err) if err
+
+      @logger.level = @level
+      @use_syslog = config.has_key?('syslog_errors') && config['syslog_errors']
     end
 
-    def method_missing(method, *args, &block)
-      @log4r_logger.send(method.to_sym, *args, &block)
+    def close
+      raise "Already closed" if @logger.nil?
+      @logger.close
+      @logger = nil
+    end
+
+    def self.syslog_add(severity, message, name)
+      @lock ||= Monitor.new
+      @lock.synchronize do
+        level = SYSLOG_LEVELS[severity]
+        t = Time.now.iso8601
+        l = SEVERITY_LABELS[severity]
+        begin
+          Syslog.open('flapjack', (Syslog::Constants::LOG_PID | Syslog::Constants::LOG_CONS),
+                                   Syslog::Constants::LOG_USER)
+          Syslog.mask = Syslog::LOG_UPTO(::Syslog::Constants::LOG_ERR)
+          Syslog.log(level, "#{t} [#{l}] :: #{name} :: %s", message)
+        ensure
+          Syslog.close
+        end
+      end
+    end
+
+    def add(severity, message = nil, progname = nil, &block)
+      raise "Cannot log with a closed logger" if @logger.nil?
+      @logger.add(severity, message, progname, &block)
+      if severity >= @level
+        progname ||= 'flapjack'
+        if message.nil?
+          if block_given?
+            message = yield
+          else
+            message = progname
+            progname = 'flapjack'
+          end
+        end
+      end
+
+      Flapjack::Logger.syslog_add(severity, message, @name) if @use_syslog
+    end
+
+    LEVELS.each do |level|
+      define_method(level) {|progname, &block|
+        add(::Logger.const_get(level.upcase), nil, progname, &block)
+      }
     end
 
     def respond_to?(sym)
-      @log4r_logger.respond_to?(sym)
+      (LEVELS + [:configure, :close, :add]).include?(sym)
     end
 
   end

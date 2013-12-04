@@ -1,49 +1,11 @@
 #!/usr/bin/env ruby
 
-require 'ostruct'
 require 'thin'
 require 'resque'
-# require 'log4r'
+require 'redis'
 
-class OpenStruct
-  def to_h
-    @table
-  end
-end
-
-#module Log4r
-#  class Logger
-#    def error(args)
-#      err(args)
-#    end
-#
-#    def warning(args)
-#      warn(args)
-#    end
-#  end
-#end
-
-# extracted from Extlib.
-# FIXME: what's the licensing here?
-class String
-  def camel_case
-    return self if self !~ /_/ && self =~ /[A-Z]+.*/
-    split('_').map{|e| e.capitalize}.join
-  end
-end
-
-# http://gist.github.com/151324
-class Hash
-  def symbolize_keys
-    inject({}) do |acc, (k,v)|
-      key = String === k ? k.to_sym : k
-      value = Hash === v ? v.symbolize_keys : v
-      acc[key] = value
-      acc
-    end
-  end
-end
-
+# we don't want to stop the entire EM reactor when we stop a web server
+# & @connections data type changed in thin 1.5.1
 module Thin
 
   # see https://github.com/flpjck/flapjack/issues/169
@@ -64,7 +26,6 @@ module Thin
     end
   end
 
-  # we don't want to stop the entire EM reactor when we stop a web server
   module Backends
     class Base
       def stop!
@@ -72,7 +33,13 @@ module Thin
         @stopping = false
 
         # EventMachine.stop if EventMachine.reactor_running?
-        @connections.each { |connection| connection.close_connection }
+
+        case @connections
+        when Array
+          @connections.each { |connection| connection.close_connection }
+        when Hash
+          @connections.each_value { |connection| connection.close_connection }
+        end
         close
       end
     end

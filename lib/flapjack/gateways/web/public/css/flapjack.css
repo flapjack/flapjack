@@ -42,8 +42,6 @@
       /* Not required for template or sticky footer method. */
 
       .container {
-        width: auto;
-        max-width: 900px;
       }
       .container .credit {
         margin: 10px 0;

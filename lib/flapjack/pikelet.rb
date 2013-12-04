@@ -17,7 +17,8 @@ require 'em-resque'
 require 'em-resque/worker'
 require 'thin'
 
-require 'flapjack/executive'
+require 'flapjack/notifier'
+require 'flapjack/processor'
 require 'flapjack/gateways/api'
 require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
@@ -27,7 +28,6 @@ require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/web'
 require 'flapjack/logger'
 require 'thin/version'
-
 
 module Thin
   # disable Thin's loading of daemons
@@ -52,12 +52,13 @@ module Flapjack
       !type_klass.nil?
     end
 
-    def self.create(type, config = {})
+    def self.create(type, opts = {})
       pikelet = nil
       [Flapjack::Pikelet::Generic,
        Flapjack::Pikelet::Resque,
        Flapjack::Pikelet::Thin].each do |kl|
-        break if pikelet = kl.create(type, config)
+        next unless kl::PIKELET_TYPES[type]
+        break if pikelet = kl.create(type, opts)
       end
       pikelet
     end
@@ -71,6 +72,8 @@ module Flapjack
 
         @config = opts[:config] || {}
         @redis_config = opts[:redis_config] || {}
+        @boot_time = opts[:boot_time]
+        @coordinator = opts[:coordinator]
 
         @logger = Flapjack::Logger.new("flapjack-#{type}", @config['logger'])
 
@@ -89,22 +92,37 @@ module Flapjack
       def stop
         @status = 'stopping'
       end
+
+      def configure_resque
+        unless ::Resque.instance_variable_defined?('@flapjack_pool') && !::Resque.instance_variable_get('@flapjack_pool').nil?
+          resque_pool = Flapjack::RedisPool.new(:config => @redis_config)
+          ::Resque.instance_variable_set('@flapjack_pool', resque_pool)
+          ::Resque.redis = resque_pool
+        end
+      end
+
     end
 
     class Generic < Flapjack::Pikelet::Base
 
-     PIKELET_TYPES = {'executive'  => Flapjack::Executive,
+     PIKELET_TYPES = {'notifier'   => Flapjack::Notifier,
+                      'processor'  => Flapjack::Processor,
                       'jabber'     => Flapjack::Gateways::Jabber,
                       'pagerduty'  => Flapjack::Gateways::Pagerduty,
                       'oobetet'    => Flapjack::Gateways::Oobetet}
 
-      def self.create(type, config = {})
-        return unless pikelet_klass = PIKELET_TYPES[type]
-        self.new(type, pikelet_klass, config)
+      def self.create(type, opts = {})
+        self.new(type, PIKELET_TYPES[type], :config => opts[:config],
+          :redis_config => opts[:redis_config],
+          :boot_time => opts[:boot_time],
+          :coordinator => opts[:coordinator])
       end
 
       def initialize(type, pikelet_klass, opts = {})
         super(type, pikelet_klass, opts)
+
+        configure_resque if type == 'notifier'
+
         @pikelet = @klass.new(opts.merge(:logger => @logger))
       end
 
@@ -132,6 +150,7 @@ module Flapjack
         return @status unless 'stopping'.eql?(@status)
         @status = 'stopped' if @fiber && !@fiber.alive?
       end
+
     end
 
     class Resque < Flapjack::Pikelet::Base
@@ -140,21 +159,24 @@ module Flapjack
                        'sms'   => Flapjack::Gateways::SmsMessagenet}
 
       def self.create(type, opts = {})
-        return unless pikelet_klass = PIKELET_TYPES[type]
-        self.new(type, pikelet_klass, opts)
+        self.new(type, PIKELET_TYPES[type], :config => opts[:config],
+          :redis_config => opts[:redis_config],
+          :boot_time => opts[:boot_time])
       end
 
       def initialize(type, pikelet_klass, opts = {})
         super(type, pikelet_klass, opts)
 
-        pikelet_klass.instance_variable_set('@config', @config)
-        pikelet_klass.instance_variable_set('@redis_config', @redis_config)
-        pikelet_klass.instance_variable_set('@logger', @logger)
+        configure_resque
 
-        unless defined?(@@resque_pool) && !@@resque_pool.nil?
-          @@resque_pool = Flapjack::RedisPool.new(:config => @redis_config)
-          ::Resque.redis = @@resque_pool
+        # guard against another Resque pikelet having created the pool already
+        unless defined?(@@redis_connection) && !@@redis_connection.nil?
+          @@redis_connection = Flapjack::RedisPool.new(:config => @redis_config)
         end
+
+        pikelet_klass.instance_variable_set('@config', @config)
+        pikelet_klass.instance_variable_set('@redis', @@redis_connection)
+        pikelet_klass.instance_variable_set('@logger', @logger)
 
         # TODO error if config['queue'].nil?
 
@@ -198,9 +220,10 @@ module Flapjack
                        'api'  => Flapjack::Gateways::API}
 
       def self.create(type, opts = {})
-        return unless pikelet_klass = PIKELET_TYPES[type]
         ::Thin::Logging.silent = true
-        self.new(type, pikelet_klass, :config => opts[:config], :redis_config => opts[:redis_config])
+        self.new(type, PIKELET_TYPES[type], :config => opts[:config],
+          :redis_config => opts[:redis_config],
+          :boot_time => opts[:boot_time])
       end
 
       def initialize(type, pikelet_klass, opts = {})

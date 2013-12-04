@@ -3,13 +3,14 @@
 require 'eventmachine'
 require 'em-synchrony'
 
+require 'syslog'
+
 require 'flapjack/configuration'
 require 'flapjack/patches'
-require 'flapjack/executive'
 require 'flapjack/redis_pool'
 
+require 'flapjack/logger'
 require 'flapjack/pikelet'
-require 'flapjack/executive'
 
 module Flapjack
 
@@ -20,31 +21,25 @@ module Flapjack
       @redis_options = config.for_redis
       @pikelets = []
 
-      # TODO convert this to use flapjack-logger
-      logger_name = "flapjack-coordinator"
-      @logger = Log4r::Logger.new(logger_name)
-
-      formatter = Log4r::PatternFormatter.new(:pattern => "%d [%l] :: #{logger_name} :: %m",
-        :date_pattern => "%Y-%m-%dT%H:%M:%S%z")
-
-      [Log4r::StdoutOutputter, Log4r::SyslogOutputter].each do |outp_klass|
-        outp = outp_klass.new(logger_name)
-        outp.formatter = formatter
-        @logger.add(outp)
-      end
+      @logger = Flapjack::Logger.new("flapjack-coordinator", @config.all['logger'])
     end
 
     def start(options = {})
+      @boot_time = Time.now
+
       EM.synchrony do
-        add_pikelets(pikelets(@config.all))
         setup_signals if options[:signals]
+        add_pikelets(pikelets(@config.all))
       end
+
+      @exit_value
     end
 
-    def stop
-      return if @stopping
-      @stopping = true
+    def stop(value = 0)
+      return unless @exit_value.nil?
+      @exit_value = value
       remove_pikelets(@pikelets, :shutdown => true)
+      # Syslog.close if Syslog.opened? # TODO revisit in threading branch
     end
 
     # NB: global config options (e.g. daemonize, pidfile,
@@ -118,10 +113,10 @@ module Flapjack
     # within a single coordinator instance. Coordinator is essentially
     # a singleton anyway...
     def setup_signals
-      Kernel.trap('INT')  { stop }
-      Kernel.trap('TERM') { stop }
+      Kernel.trap('INT')  { stop(Signal.list['INT']) }
+      Kernel.trap('TERM') { stop(Signal.list['TERM']) }
       unless RbConfig::CONFIG['host_os'] =~ /mswin|windows|cygwin/i
-        Kernel.trap('QUIT') { stop }
+        Kernel.trap('QUIT') { stop(Signal.list['QUIT']) }
         Kernel.trap('HUP')  { reload }
       end
     end
@@ -131,7 +126,7 @@ module Flapjack
       start_piks = []
       pikelets_data.each_pair do |type, cfg|
         next unless pikelet = Flapjack::Pikelet.create(type,
-          :config => cfg, :redis_config => @redis_options)
+          :config => cfg, :redis_config => @redis_options, :boot_time => @boot_time, :coordinator => self)
         start_piks << pikelet
         @pikelets << pikelet
       end
@@ -139,7 +134,7 @@ module Flapjack
         start_piks.each {|pik| pik.start }
       rescue Exception => e
         trace = e.backtrace.join("\n")
-        @logger.fatal "#{e.message}\n#{trace}"
+        @logger.fatal "#{e.class.name}\n#{e.message}\n#{trace}"
         stop
       end
     end
@@ -156,7 +151,8 @@ module Flapjack
             pik.update_status
             status = pik.status
             next if old_status.eql?(status)
-            @logger.info "#{pik.type}: #{old_status} -> #{status}"
+            # # can't log on exit w/Ruby 2.0
+            # @logger.info "#{pik.type}: #{old_status} -> #{status}"
           end
 
           if piks.any? {|p| p.status == 'stopping' }
@@ -171,13 +167,32 @@ module Flapjack
     end
 
     def pikelets(config_env)
-      return {} unless config_env
-      exec_cfg = config_env.has_key?('executive') && config_env['executive']['enabled'] ?
-        {'executive' => config_env['executive']} :
-        {}
-      return exec_cfg unless config_env && config_env['gateways'] &&
+      config = {}
+      return config unless config_env
+
+      # backwards-compatible with config file for previous 'executive' pikelet
+      exec_cfg = nil
+      if config_env.has_key?('executive') && config_env['executive']['enabled']
+        exec_cfg = config_env['executive']
+      end
+      ['processor', 'notifier'].each do |k|
+        if exec_cfg
+          if config_env.has_key?(k)
+            # need to allow for new config fields to override old settings if both present
+            merged = exec_cfg.merge(config_env[k])
+            config.update(k => merged) if merged['enabled']
+          else
+            config.update(k => exec_cfg)
+          end
+        else
+          next unless (config_env.has_key?(k) && config_env[k]['enabled'])
+          config.update(k => config_env[k])
+        end
+      end
+
+      return config unless config_env && config_env['gateways'] &&
         !config_env['gateways'].nil?
-      exec_cfg.merge( config_env['gateways'].select {|k, v|
+      config.merge( config_env['gateways'].select {|k, v|
         Flapjack::Pikelet.is_pikelet?(k) && v['enabled']
       } )
     end

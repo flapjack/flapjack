@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'flapjack/data/entity'
 
 describe Flapjack::Data::Tag, :redis => true do
 
