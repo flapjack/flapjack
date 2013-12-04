@@ -73,6 +73,10 @@ footer {
   color: gray;
 }
 
+footer .row {
+  margin: 0;
+}
+
 footer div.sponsor {
   text-align: center;
   background-color: #222;
@@ -89,6 +93,11 @@ footer span.bulletproof.subtext {
   font-size: 80%;
 }
 
+@media print, screen and (max-width: 1200px) {
+  div.container.content img {
+    max-width: 100%;
+  }
+}
 
 @media print, screen and (max-width: 384px) {
   div.jumbotron.intro {
