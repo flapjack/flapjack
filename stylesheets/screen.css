@@ -94,8 +94,16 @@ footer span.bulletproof.subtext {
 }
 
 @media print, screen and (max-width: 1200px) {
+  body {
+    margin: 0 0 180px;
+  }
+
   div.container.content img {
     max-width: 100%;
+  }
+
+  footer {
+    height: 180px;
   }
 }
 
