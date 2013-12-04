@@ -56,6 +56,21 @@ module Flapjack
             pass unless 'application/json'.eql?(request.content_type)
             content_type :json
 
+            if params[:id] && Flapjack::Data::Contact.find_by_id(params[:id], :logger => logger, :redis => redis)
+              halt err(403, "post cannot be used for update, do a put instead, or remove the id field from your post data")
+            end
+
+            logger.debug("post /contacts data: ")
+            logger.debug(params.inspect)
+
+            Flapjack::Data::Contact.add()
+
+          end
+
+          app.post '/contacts_atomic' do
+            pass unless 'application/json'.eql?(request.content_type)
+            content_type :json
+
             errors = []
 
             contacts_data = params[:contacts]
