@@ -29,7 +29,7 @@ module Flapjack
 
       set :show_exceptions, false
 
-      @rescue_exception = Proc.new { |env, exception|
+      rescue_exception = Proc.new { |env, exception|
 
         error = proc {|status, exception, *msg|
           if !msg || msg.empty?
@@ -58,7 +58,7 @@ module Flapjack
           error.call(500, exception)
         end
       }
-      use Rack::FiberPool, :size => 25, :rescue_exception => @rescue_exception
+      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
 
       use Rack::MethodOverride
       use Rack::JsonParamsParser
