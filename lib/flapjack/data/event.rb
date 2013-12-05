@@ -8,11 +8,11 @@ module Flapjack
 
       attr_accessor :counter
 
-      attr_reader :check, :summary, :details, :acknowledgement_id
+      attr_reader :check_name, :summary, :details, :acknowledgement_id
 
       # creates, or modifies, an event object and adds it to the events list in redis
-      #   'entity'    => entity,
-      #   'check'     => check,
+      #   'entity'    => entity_name,
+      #   'check'     => check_name,
       #   'type'      => 'service',
       #   'state'     => state,
       #   'summary'   => check_output,
@@ -43,11 +43,11 @@ module Flapjack
         Flapjack.redis.llen(queue)
       end
 
-      def self.create_acknowledgement(queue, entity_name, check, opts = {})
+      def self.create_acknowledgement(queue, entity_name, check_name, opts = {})
         data = { 'type'               => 'action',
                  'state'              => 'acknowledgement',
                  'entity'             => entity_name,
-                 'check'              => check,
+                 'check'              => check_name,
                  'summary'            => opts[:summary],
                  'duration'           => opts[:duration],
                  'acknowledgement_id' => opts[:acknowledgement_id]
@@ -55,11 +55,11 @@ module Flapjack
         self.push(queue, data, opts)
       end
 
-      def self.test_notifications(queue, entity_name, check, opts = {})
+      def self.test_notifications(queue, entity_name, check_name, opts = {})
         data = { 'type'               => 'action',
                  'state'              => 'test_notifications',
                  'entity'             => entity_name,
-                 'check'              => check,
+                 'check'              => check_name,
                  'summary'            => opts[:summary],
                  'details'            => opts[:details]
                }
@@ -67,9 +67,16 @@ module Flapjack
       end
 
       def initialize(attrs = {})
-        ['type', 'state', 'entity', 'check', 'time', 'summary', 'details',
-         'acknowledgement_id', 'duration'].each do |key|
-          instance_variable_set("@#{key}", attrs[key])
+        [:type, :state, :entity, :check, :time, :summary,
+         :details, :acknowledgement_id, :duration].each do |key|
+          case key
+          when :entity
+            @entity_name = attrs['entity']
+          when :check
+            @check_name = attrs['check']
+          else
+            instance_variable_set("@#{key.to_s}", attrs[key.to_s])
+          end
         end
         # details is optional. set it to nil if it only contains whitespace
         @details = (@details.is_a?(String) && ! @details.strip.empty?) ? @details.strip : nil
@@ -80,9 +87,9 @@ module Flapjack
         @state.downcase
       end
 
-      def entity
-        return unless @entity
-        @entity.downcase
+      def entity_name
+        return unless @entity_name
+        @entity_name.downcase
       end
 
       def duration
@@ -96,7 +103,7 @@ module Flapjack
       end
 
       def id
-        (entity || '-') + ':' + (check || '-')
+        (entity_name || '-') + ':' + (check_name || '-')
       end
 
       def type

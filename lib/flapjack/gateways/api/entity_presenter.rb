@@ -60,9 +60,9 @@ module Flapjack
           @checks ||= @entity.checks.all.sort_by(&:name)
         end
 
-        def check_presenter(entity_check)
-          return if entity_check.nil?
-          presenter = Flapjack::Gateways::API::CheckPresenter.new(entity_check)
+        def check_presenter(check)
+          return if check.nil?
+          presenter = Flapjack::Gateways::API::CheckPresenter.new(check)
         end
 
       end

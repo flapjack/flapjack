@@ -3,7 +3,7 @@ require 'flapjack/gateways/api/check_presenter'
 
 describe 'Flapjack::Gateways::API::CheckPresenter' do
 
-  let(:entity_check) { double(Flapjack::Data::Check) }
+  let(:check) { double(Flapjack::Data::Check) }
 
   let(:time) { Time.now.to_i }
 
@@ -80,10 +80,10 @@ describe 'Flapjack::Gateways::API::CheckPresenter' do
     states_assoc.should_receive(:intersect_range).
       with(nil, time - (5 * 60 * 60), :by_score => true, :limit => 2,
            :order => "desc").and_return(no_states)
-    entity_check.should_receive(:states).twice.and_return(states_assoc)
+    check.should_receive(:states).twice.and_return(states_assoc)
 
-    ecp = Flapjack::Gateways::API::CheckPresenter.new(entity_check)
-    outages = ecp.outages(time - (5 * 60 * 60), time - (2 * 60 * 60))
+    check_presenter = Flapjack::Gateways::API::CheckPresenter.new(check)
+    outages = check_presenter.outages(time - (5 * 60 * 60), time - (2 * 60 * 60))
     outages.should_not be_nil
     outages.should be_an(Array)
     outages.should have(4).time_ranges
@@ -98,10 +98,10 @@ describe 'Flapjack::Gateways::API::CheckPresenter' do
     states_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_states)
-    entity_check.should_receive(:states).and_return(states_assoc)
+    check.should_receive(:states).and_return(states_assoc)
 
-    ecp = Flapjack::Gateways::API::CheckPresenter.new(entity_check)
-    outages = ecp.outages(nil, nil)
+    check_presenter = Flapjack::Gateways::API::CheckPresenter.new(check)
+    outages = check_presenter.outages(nil, nil)
     outages.should_not be_nil
     outages.should be_an(Array)
     outages.should have(4).time_ranges
@@ -123,10 +123,10 @@ describe 'Flapjack::Gateways::API::CheckPresenter' do
     states_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_states)
-    entity_check.should_receive(:states).and_return(states_assoc)
+    check.should_receive(:states).and_return(states_assoc)
 
-    ecp = Flapjack::Gateways::API::CheckPresenter.new(entity_check)
-    outages = ecp.outages(nil, nil)
+    check_presenter = Flapjack::Gateways::API::CheckPresenter.new(check)
+    outages = check_presenter.outages(nil, nil)
     outages.should_not be_nil
     outages.should be_an(Array)
     outages.should have(3).time_ranges
@@ -142,9 +142,9 @@ describe 'Flapjack::Gateways::API::CheckPresenter' do
     states_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_states)
-    entity_check.should_receive(:states).and_return(states_assoc)
+    check.should_receive(:states).and_return(states_assoc)
 
-    ecp = Flapjack::Gateways::API::CheckPresenter.new(entity_check)
+    ecp = Flapjack::Gateways::API::CheckPresenter.new(check)
     outages = ecp.outages(nil, nil)
     outages.should_not be_nil
     outages.should be_an(Array)
@@ -161,10 +161,10 @@ describe 'Flapjack::Gateways::API::CheckPresenter' do
       and_return(all_unsched)
     unsched_assoc.should_receive(:intersect_range).
       with(nil, time - (12 * 60 * 60), :by_score => true).and_return(no_unsched)
-    entity_check.should_receive(:unscheduled_maintenances_by_start).twice.and_return(unsched_assoc)
+    check.should_receive(:unscheduled_maintenances_by_start).twice.and_return(unsched_assoc)
 
-    ecp = Flapjack::Gateways::API::CheckPresenter.new(entity_check)
-    unsched_maint = ecp.unscheduled_maintenances(time - (12 * 60 * 60), time)
+    check_presenter = Flapjack::Gateways::API::CheckPresenter.new(check)
+    unsched_maint = check_presenter.unscheduled_maintenances(time - (12 * 60 * 60), time)
 
     unsched_maint.should be_an(Array)
     unsched_maint.should have(4).time_ranges
@@ -182,10 +182,10 @@ describe 'Flapjack::Gateways::API::CheckPresenter' do
       and_return(all_sched)
     sched_assoc.should_receive(:intersect_range).
       with(nil, time - (12 * 60 * 60), :by_score => true).and_return(no_sched)
-    entity_check.should_receive(:scheduled_maintenances_by_start).twice.and_return(sched_assoc)
+    check.should_receive(:scheduled_maintenances_by_start).twice.and_return(sched_assoc)
 
-    ecp = Flapjack::Gateways::API::CheckPresenter.new(entity_check)
-    unsched_maint = ecp.scheduled_maintenances(time - (12 * 60 * 60), time)
+    check_presenter = Flapjack::Gateways::API::CheckPresenter.new(check)
+    unsched_maint = check_presenter.scheduled_maintenances(time - (12 * 60 * 60), time)
 
     unsched_maint.should be_an(Array)
     unsched_maint.should have(4).time_ranges
@@ -204,7 +204,7 @@ describe 'Flapjack::Gateways::API::CheckPresenter' do
     states_assoc.should_receive(:intersect_range).
       with(nil, time - (12 * 60 * 60), :by_score => true, :limit => 2,
            :order => "desc").and_return(no_states)
-    entity_check.should_receive(:states).twice.and_return(states_assoc)
+    check.should_receive(:states).twice.and_return(states_assoc)
 
     all_sched = double('all_sched', :all => scheduled_maintenances)
     no_sched = double('no_sched', :all => [])
@@ -215,10 +215,10 @@ describe 'Flapjack::Gateways::API::CheckPresenter' do
       and_return(all_sched)
     sched_assoc.should_receive(:intersect_range).
       with(nil, time - (12 * 60 * 60), :by_score => true).and_return(no_sched)
-    entity_check.should_receive(:scheduled_maintenances_by_start).twice.and_return(sched_assoc)
+    check.should_receive(:scheduled_maintenances_by_start).twice.and_return(sched_assoc)
 
-    ecp = Flapjack::Gateways::API::CheckPresenter.new(entity_check)
-    downtimes = ecp.downtime(time - (12 * 60 * 60), time)
+    check_presenter = Flapjack::Gateways::API::CheckPresenter.new(check)
+    downtimes = check_presenter.downtime(time - (12 * 60 * 60), time)
 
     # 22 minutes, 3 + 8 + 11
     downtimes.should be_a(Hash)
@@ -239,7 +239,7 @@ describe 'Flapjack::Gateways::API::CheckPresenter' do
     states_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_states)
-    entity_check.should_receive(:states).and_return(states_assoc)
+    check.should_receive(:states).and_return(states_assoc)
 
     all_sched = double('all_sched', :all => scheduled_maintenances)
 
@@ -247,10 +247,10 @@ describe 'Flapjack::Gateways::API::CheckPresenter' do
     sched_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_sched)
-    entity_check.should_receive(:scheduled_maintenances_by_start).and_return(sched_assoc)
+    check.should_receive(:scheduled_maintenances_by_start).and_return(sched_assoc)
 
-    ecp = Flapjack::Gateways::API::CheckPresenter.new(entity_check)
-    downtimes = ecp.downtime(nil, nil)
+    check_presenter = Flapjack::Gateways::API::CheckPresenter.new(check)
+    downtimes = check_presenter.downtime(nil, nil)
 
     # 22 minutes, 3 + 8 + 11
     downtimes.should be_a(Hash)
@@ -279,7 +279,7 @@ describe 'Flapjack::Gateways::API::CheckPresenter' do
     states_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_states)
-    entity_check.should_receive(:states).and_return(states_assoc)
+    check.should_receive(:states).and_return(states_assoc)
 
     all_sched = double('all_sched', :all => scheduled_maintenances)
 
@@ -287,10 +287,10 @@ describe 'Flapjack::Gateways::API::CheckPresenter' do
     sched_assoc.should_receive(:intersect_range).
       with(nil, nil, :by_score => true).
       and_return(all_sched)
-    entity_check.should_receive(:scheduled_maintenances_by_start).and_return(sched_assoc)
+    check.should_receive(:scheduled_maintenances_by_start).and_return(sched_assoc)
 
-    ecp = Flapjack::Gateways::API::CheckPresenter.new(entity_check)
-    downtimes = ecp.downtime(nil, nil)
+    check_presenter = Flapjack::Gateways::API::CheckPresenter.new(check)
+    downtimes = check_presenter.downtime(nil, nil)
 
     downtimes.should be_a(Hash)
     downtimes[:total_seconds].should == {'critical' => 180}

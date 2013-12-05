@@ -79,9 +79,9 @@ module Flapjack
             end
 
             unless check_names.nil? || check_names.empty?
-              check_names.each_pair do |entity_name, check_list|
-                check_list = [check_list] unless check_list.is_a?(Array)
-                check_list.each do |check_name|
+              check_names.each_pair do |entity_name, check_name_list|
+                check_name_list = [check_name_list] unless check_name_list.is_a?(Array)
+                check_name_list.each do |check_name|
                   yield( find_check(entity_name, check_name) )
                 end
               end
@@ -99,9 +99,9 @@ module Flapjack
             end
 
             unless check_names.nil? || check_names.empty?
-              result += check_names.inject([]) {|memo, (entity_name, check_list)|
-                check_list = [check_list] unless check_list.is_a?(Array)
-                memo += check_list.collect {|check_name|
+              result += check_names.inject([]) {|memo, (entity_name, check_name_list)|
+                check_name_list = [check_name_list] unless check_name_list.is_a?(Array)
+                memo += check_name_list.collect {|check_name|
                   check = find_check(entity_name, check_name)
                   {:entity => entity_name,
                    :check => check_name,
@@ -152,18 +152,18 @@ module Flapjack
 
             captures    = params[:captures] || []
             entity_name = captures[0]
-            check       = captures[1]
+            check_name  = captures[1]
 
-            entities, checks = entity_and_check_names(entity_name, check)
+            entity_names, check_names = entity_and_check_names(entity_name, check_name)
 
-            results = present_api_results(entities, checks, 'status') {|presenter|
+            results = present_api_results(entity_names, check_names, 'status') {|presenter|
               presenter.status
             }
 
             if entity_name
               # compatible with previous data format
               results = results.collect {|status_h| status_h[:status]}
-              (check ? results.first : results).to_json
+              (check_name ? results.first : results).to_json
             else
               # new and improved data format which reflects the request param structure
               results.to_json
@@ -173,18 +173,18 @@ module Flapjack
           app.get %r{/((?:outages|(?:un)?scheduled_maintenances|downtime))#{ENTITY_CHECK_FRAGMENT}} do
             action      = params[:captures][0].to_sym
             entity_name = params[:captures][1]
-            check       = params[:captures][2]
+            check_name  = params[:captures][2]
 
-            entities, checks = entity_and_check_names(entity_name, check)
+            entity_names, check_names = entity_and_check_names(entity_name, check_name)
 
             start_time = validate_and_parsetime(params[:start_time])
             end_time   = validate_and_parsetime(params[:end_time])
 
-            results = present_api_results(entities, checks, action) {|presenter|
+            results = present_api_results(entity_names, check_names, action) {|presenter|
               presenter.send(action, start_time, end_time)
             }
 
-            if check
+            if check_name
               # compatible with previous data format
               results.first[action].to_json
             elsif entity_name
@@ -213,9 +213,9 @@ module Flapjack
 
             captures    = params[:captures] || []
             entity_name = captures[0]
-            check       = captures[1]
+            check_name  = captures[1]
 
-            entities, checks = entity_and_check_names(entity_name, check)
+            entity_names, check_names = entity_and_check_names(entity_name, check_name)
 
             start_time = validate_and_parsetime(params[:start_time])
             halt( err(403, "start time must be provided") ) unless start_time
@@ -232,7 +232,7 @@ module Flapjack
               check.add_scheduled_maintenance(sched_maint)
             }
 
-            bulk_api_check_action(entities, checks, &act_proc)
+            bulk_api_check_action(entity_names, check_names, &act_proc)
             status 204
           end
 
@@ -242,9 +242,9 @@ module Flapjack
           app.post %r{/acknowledgements#{ENTITY_CHECK_FRAGMENT}} do
             captures    = params[:captures] || []
             entity_name = captures[0]
-            check       = captures[1]
+            check_name  = captures[1]
 
-            entities, checks = entity_and_check_names(entity_name, check)
+            entity_names, check_names = entity_and_check_names(entity_name, check_name)
 
             dur = params[:duration] ? params[:duration].to_i : nil
             duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
@@ -261,7 +261,7 @@ module Flapjack
                 :duration => duration)
             }
 
-            bulk_api_check_action(entities, checks, &act_proc)
+            bulk_api_check_action(entity_names, check_names, &act_proc)
             status 204
           end
 
@@ -269,7 +269,7 @@ module Flapjack
             action = params[:captures][0]
 
             # no backwards-compatible mode here, it's a new method
-            entities, checks = entity_and_check_names(nil, nil)
+            entity_names, check_names = entity_and_check_names(nil, nil)
 
             act_proc = case action
             when 'scheduled_maintenances'
@@ -286,16 +286,16 @@ module Flapjack
               proc {|check| check.clear_unscheduled_maintenance(end_time) }
             end
 
-            bulk_api_check_action(entities, checks, &act_proc)
+            bulk_api_check_action(entity_names, check_names, &act_proc)
             status 204
           end
 
           app.post %r{/test_notifications#{ENTITY_CHECK_FRAGMENT}} do
             captures    = params[:captures] || []
             entity_name = captures[0]
-            check       = captures[1]
+            check_name  = captures[1]
 
-            entities, checks = entity_and_check_names(entity_name, check)
+            entity_names, check_names = entity_and_check_names(entity_name, check_name)
 
             act_proc = proc {|check|
               summary = params[:summary] ||
@@ -306,7 +306,7 @@ module Flapjack
                 :summary => summary)
             }
 
-            bulk_api_check_action(entities, checks, &act_proc)
+            bulk_api_check_action(entity_names, check_names, &act_proc)
             status 204
           end
 

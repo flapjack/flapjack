@@ -67,8 +67,8 @@ module Flapjack
         @entity ||= Flapjack::Data::Entity.intersect(:name => self.entity_name).all.first
       end
 
-      def self.hash_by_entity_name(check_list)
-        check_list.inject({}) {|memo, check|
+      def self.hash_by_entity_name(checks)
+        checks.inject({}) {|memo, check|
           en = check.entity_name
           memo[en] = [] unless memo.has_key?(en)
           memo[en] << check

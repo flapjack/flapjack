@@ -11,10 +11,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   let(:entity_name_esc) { CGI.escape(entity_name) }
   let(:check)           { 'ping' }
 
-  let(:entity)          { double(Flapjack::Data::Entity) }
-  let(:entity_check)    { double(Flapjack::Data::Check) }
+  let(:entity) { double(Flapjack::Data::Entity) }
+  let(:check)  { double(Flapjack::Data::Check) }
 
-  let(:redis) { double(Redis) }
+  let(:redis)  { double(Redis) }
 
   before(:all) do
     Flapjack::Gateways::Web.class_eval {
@@ -53,12 +53,12 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     # entity.should_receive(:name).and_return('foo.example.com')
 
-    failing_enabled = double('failing_enabled', :all => [entity_check])
+    failing_enabled = double('failing_enabled', :all => [check])
     failing_checks.should_receive(:intersect).with(:enabled => true).
       and_return(failing_enabled)
   end
 
-  def expect_entity_check_status(ec)
+  def expect_check_status(ec)
     time = Time.now.to_i
 
     ec.should_receive(:state).and_return('ok')
@@ -92,11 +92,11 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   it "shows a page listing all checks" do
     expect_check_stats
 
-    expect_entity_check_status(entity_check)
+    expect_check_status(check)
 
-    entity_check.should_receive(:entity_name).and_return('foo')
-    entity_check.should_receive(:name).twice.and_return('ping')
-    Flapjack::Data::Check.should_receive(:all).and_return([entity_check])
+    check.should_receive(:entity_name).and_return('foo')
+    check.should_receive(:name).twice.and_return('ping')
+    Flapjack::Data::Check.should_receive(:all).and_return([check])
 
     Flapjack::Data::Check.should_receive(:intersect).
       with(:state => ['critical', 'warning', 'unknown']).
@@ -109,12 +109,12 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   it "shows a page listing failing checks" do
     expect_check_stats
 
-    expect_entity_check_status(entity_check)
+    expect_check_status(check)
 
-    entity_check.should_receive(:entity_name).and_return('foo')
-    entity_check.should_receive(:name).twice.and_return('ping')
+    check.should_receive(:entity_name).and_return('foo')
+    check.should_receive(:name).twice.and_return('ping')
 
-    failing_checks.should_receive(:all).and_return([entity_check])
+    failing_checks.should_receive(:all).and_return([check])
     Flapjack::Data::Check.should_receive(:intersect).with(:state =>
       ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
@@ -130,7 +130,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Flapjack::Data::Check.should_receive(:intersect).with(:state =>
       ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
-    entity_check.should_receive(:entity_name).and_return('foo')
+    check.should_receive(:entity_name).and_return('foo')
 
     get '/self_stats'
     last_response.should be_ok
@@ -142,10 +142,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     expect_check_stats
 
-    entity_check.should_receive(:state).and_return('ok')
-    entity_check.should_receive(:last_update).and_return(time.to_i - (3 * 60 * 60))
-    entity_check.should_receive(:summary).and_return('all good')
-    entity_check.should_receive(:details).and_return('seriously, all very wonderful')
+    check.should_receive(:state).and_return('ok')
+    check.should_receive(:last_update).and_return(time.to_i - (3 * 60 * 60))
+    check.should_receive(:summary).and_return('all good')
+    check.should_receive(:details).and_return('seriously, all very wonderful')
 
     failing_state = double(Flapjack::Data::CheckState, :state => 'critical', :timestamp => time - ((3 * 60 * 60) + (5 * 60)), :summary => 'N')
     last_failing = double('last_failing', :last => failing_state)
@@ -166,30 +166,30 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       and_return(no_last)
     states.should_receive(:last).and_return(ok_state)
 
-    entity_check.should_receive(:states).twice.and_return(states)
+    check.should_receive(:states).twice.and_return(states)
 
     no_sched_maint = double('no_sched_maint', :all => [])
-    entity_check.should_receive(:scheduled_maintenances_by_start).and_return(no_sched_maint)
+    check.should_receive(:scheduled_maintenances_by_start).and_return(no_sched_maint)
 
-    entity_check.should_receive(:failed?).and_return(false)
+    check.should_receive(:failed?).and_return(false)
 
-    entity_check.should_receive(:scheduled_maintenance_at).with(time).and_return(nil)
-    entity_check.should_receive(:unscheduled_maintenance_at).with(time).and_return(nil)
+    check.should_receive(:scheduled_maintenance_at).with(time).and_return(nil)
+    check.should_receive(:unscheduled_maintenance_at).with(time).and_return(nil)
 
     no_contacts = double('no_contacts', :all => [])
-    entity_check.should_receive(:contacts).and_return(no_contacts)
+    check.should_receive(:contacts).and_return(no_contacts)
 
     all_states = double('all_states', :all => [ok_state, failing_state])
     states.should_receive(:intersect_range).
       with(nil, time.to_i, :order => 'desc', :limit => 20, :by_score => true).
       and_return(all_states)
 
-    entity_check.should_receive(:enabled).and_return(true)
+    check.should_receive(:enabled).and_return(true)
 
     Flapjack::Data::Check.should_receive(:intersect).with(:state =>
       ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
-    all_checks = double('no_checks', :all => [entity_check])
+    all_checks = double('no_checks', :all => [check])
     Flapjack::Data::Check.should_receive(:intersect).
       with(:entity_name => entity_name_esc, :name => 'ping').and_return(all_checks)
 
@@ -208,9 +208,9 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   it "creates an acknowledgement for an entity check" do
-    all_entity_checks = double('all_entity_checks', :all => [entity_check])
+    all_checks = double('all_checks', :all => [check])
     Flapjack::Data::Check.should_receive(:intersect).
-      with(:entity_name => entity_name, :name => 'ping').and_return(all_entity_checks)
+      with(:entity_name => entity_name, :name => 'ping').and_return(all_checks)
 
     Flapjack::Data::Event.should_receive(:create_acknowledgement).
       with('events', entity_name, 'ping', :summary => "", :duration => (4 * 60 * 60),
@@ -230,9 +230,9 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Chronic.should_receive(:parse).with('1 day ago').and_return(start_time)
     ChronicDuration.should_receive(:parse).with('30 minutes').and_return(duration)
 
-    all_entity_checks = double('all_entity_checks', :all => [entity_check])
+    all_checks = double('all_checks', :all => [check])
     Flapjack::Data::Check.should_receive(:intersect).
-      with(:entity_name => entity_name_esc, :name => 'ping').and_return(all_entity_checks)
+      with(:entity_name => entity_name_esc, :name => 'ping').and_return(all_checks)
 
     sched_maint = double(Flapjack::Data::ScheduledMaintenance)
     sched_maint.should_receive(:save).and_return(true)
@@ -241,7 +241,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
            :end_time => start_time.to_i + duration,
            :summary => summary).and_return(sched_maint)
 
-    entity_check.should_receive(:add_scheduled_maintenance).
+    check.should_receive(:add_scheduled_maintenance).
       with(sched_maint)
 
     post "/scheduled_maintenances/#{entity_name_esc}/ping?"+
@@ -255,17 +255,17 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     start_time = t - (24 * 60 * 60)
 
-    all_entity_checks = double('all_entity_checks', :all => [entity_check])
+    all_checks = double('all_checks', :all => [check])
     Flapjack::Data::Check.should_receive(:intersect).
-      with(:entity_name => entity_name_esc, :name => 'ping').and_return(all_entity_checks)
+      with(:entity_name => entity_name_esc, :name => 'ping').and_return(all_checks)
 
     sched_maint = double(Flapjack::Data::ScheduledMaintenance)
     first_sched_maint = double('first_sched_maint', :first => sched_maint)
     sched_maints = double('sched_maints')
     sched_maints.should_receive(:intersect_range).with(start_time, start_time,
       :by_score => true).and_return(first_sched_maint)
-    entity_check.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints)
-    entity_check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Time))
+    check.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints)
+    check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Time))
 
     delete "/scheduled_maintenances/#{entity_name_esc}/ping?start_time=#{start_time}"
     last_response.status.should == 302

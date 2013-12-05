@@ -5,7 +5,7 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
 
   let(:event)   { double(Flapjack::Data::Event) }
 
-  let(:check) { double(Flapjack::Data::Check) }
+  let(:check)       { double(Flapjack::Data::Check) }
   let(:check_state) { double(Flapjack::Data::CheckState) }
 
   let(:contact) { double(Flapjack::Data::Contact) }

@@ -12,13 +12,13 @@ describe 'web/views/contact.html.erb', :erb_view => true do
 
     @contact_media = []
 
-    entity_check = double('entity_check')
-    entity_check.should_receive(:name).exactly(3).times.and_return('Disk / Utilisation')
-    entity_checks_all = double('all_checks', :all => [entity_check])
+    check = double('check')
+    check.should_receive(:name).exactly(3).times.and_return('Disk / Utilisation')
+    checks_all = double('all_checks', :all => [check])
 
     entity = double('entity')
     entity.should_receive(:name).exactly(3).times.and_return('abc-xyz-01')
-    entity.should_receive(:checks).and_return(entity_checks_all)
+    entity.should_receive(:checks).and_return(checks_all)
 
     all_entities = double('all_entities', :all => [entity])
     @contact.should_receive(:entities).and_return(all_entities)

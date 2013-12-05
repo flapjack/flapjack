@@ -27,10 +27,10 @@
             <th>Last Update</th>
             <th>Last Notification</th>
           </tr>
-          <% @entities_sorted.each do |entity| %>
-            <% row_entity = nil %>
-            <% entity_link = "/entity/" << u(entity) %>
-            <% @states[entity].each do |check, status, summary, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified| %>
+          <% @entity_names_sorted.each do |entity_name| %>
+            <% row_entity_name = nil %>
+            <% entity_link = "/entity/" << u(entity_name) %>
+            <% @states[entity_name].each do |check_name, status, summary, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified| %>
               <%
                 row_colour = case status
                 when 'critical', 'unknown'
@@ -41,17 +41,16 @@
                   status
                 end
 
-                check_link = "/check?entity=" << u(entity) << "&amp;check=" << u(check)
-
+                check_link = "/check?entity=" << u(entity_name) << "&amp;check=" << u(check_name)
               %>
               <tr class="<%= row_colour %>">
-                <% unless row_entity && entity == row_entity %>
-                  <td rowspan=<%= @states[entity].length %>>
-                    <a href="<%= entity_link %>"><%= h entity %></a>
+                <% unless row_entity_name && (entity_name == row_entity_name) %>
+                  <td rowspan=<%= @states[entity_name].length %>>
+                    <a href="<%= entity_link %>"><%= h entity_name %></a>
                   </td>
-                  <% row_entity = entity %>
+                  <% row_entity_name = entity_name %>
                 <% end %>
-                <td><a href="<%= check_link %>" title="check detail"><%= h check %></a></td>
+                <td><a href="<%= check_link %>" title="check detail"><%= h check_name %></a></td>
                 <td class="<%= status %>">
                   <%= h status.upcase %>
                   <% if in_unscheduled_outage%> (Ack'd)<% end %>

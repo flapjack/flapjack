@@ -4,7 +4,7 @@ require 'flapjack/data/event'
 describe Flapjack::Data::Event do
 
   let(:entity_name) { 'xyz-example.com' }
-  let(:check)       { 'ping' }
+  let(:check_name)  { 'ping' }
   let(:redis)  { double(Redis) }
 
   let!(:time) { Time.now}
@@ -12,7 +12,7 @@ describe Flapjack::Data::Event do
   let(:event_data) { {'type'    => 'service',
                       'state'   => 'critical',
                       'entity'  => entity_name,
-                      'check'   => check,
+                      'check'   => check_name,
                       'time'    => time.to_i,
                       'summary' => "timeout",
                       'details' => "couldn't access",
@@ -44,7 +44,7 @@ describe Flapjack::Data::Event do
       redis.should_receive(:lpush).with('events', /"testing"/ )
       redis.should_receive(:lpush).with('events_actions', anything)
 
-      Flapjack::Data::Event.test_notifications('events', entity_name, check,
+      Flapjack::Data::Event.test_notifications('events', entity_name, check_name,
         :summary => 'test', :details => 'testing')
     end
 
@@ -54,7 +54,7 @@ describe Flapjack::Data::Event do
       redis.should_receive(:lpush).with('events', /"acking"/ )
       redis.should_receive(:lpush).with('events_actions', anything)
 
-      Flapjack::Data::Event.create_acknowledgement('events', entity_name, check,
+      Flapjack::Data::Event.create_acknowledgement('events', entity_name, check_name,
         :summary => 'acking', :time => time.to_i)
     end
 
@@ -63,12 +63,12 @@ describe Flapjack::Data::Event do
   context 'instance' do
     subject { Flapjack::Data::Event.new(event_data) }
 
-    its(:entity)   { should == event_data['entity'] }
-    its(:state)    { should == event_data['state'] }
-    its(:duration) { should == event_data['duration'] }
-    its(:time)     { should == event_data['time'] }
-    its(:id)       { should == 'xyz-example.com:ping' }
-    its(:type)     { should == 'service' }
+    its(:entity_name) { should == event_data['entity'] }
+    its(:state)       { should == event_data['state'] }
+    its(:duration)    { should == event_data['duration'] }
+    its(:time)        { should == event_data['time'] }
+    its(:id)          { should == "#{entity_name}:#{check_name}" }
+    its(:type)        { should == 'service' }
 
     it { should be_a_service }
     it { should_not be_an_acknowledgement }

@@ -19,10 +19,10 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
   def expect_check_presenters
     check_a.should_receive(:name).twice.and_return('ssh')
     check_b.should_receive(:name).twice.and_return('ping')
-    all_entity_checks = double('entity_checks', :all => [check_a, check_b])
+    all_checks = double('checks', :all => [check_a, check_b])
 
     entity.should_receive(:name).twice.and_return('foo')
-    entity.should_receive(:checks).and_return(all_entity_checks)
+    entity.should_receive(:checks).and_return(all_checks)
 
     Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
       with(check_a).and_return(checkpres_a)

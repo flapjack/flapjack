@@ -6,7 +6,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
   let(:config) { {'queue'    => 'pagerduty_notifications'} }
 
-  let(:now)   { Time.now }
+  let(:now)   { Time.new }
 
   let(:redis) { double(Redis) }
   let(:lock)  { double(Monitor) }
@@ -84,7 +84,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
   context 'acknowledgements' do
 
-    let(:entity_check) { double(Flapjack::Data::Check) }
+    let(:check) { double(Flapjack::Data::Check) }
 
     let(:status_change) { {'id'        => 'ABCDEFG',
                            'name'      => 'John Smith',
@@ -121,12 +121,12 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       })
 
       contacts_all = double(:contacts, :all => [contact])
-      entity_check.should_receive(:contacts).and_return(contacts_all)
-      entity_check.should_receive(:entity_name).twice.and_return('foo-app-01.bar.net')
-      entity_check.should_receive(:name).twice.and_return('PING')
-      entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
+      check.should_receive(:contacts).and_return(contacts_all)
+      check.should_receive(:entity_name).twice.and_return('foo-app-01.bar.net')
+      check.should_receive(:name).twice.and_return('PING')
+      check.should_receive(:in_unscheduled_maintenance?).and_return(false)
 
-      failing_checks = double('failing_checks', :all => [entity_check])
+      failing_checks = double('failing_checks', :all => [check])
       Flapjack::Data::Check.should_receive(:intersect).with(:state =>
         ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
@@ -149,6 +149,9 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
     # testing separately and stubbing above
     it "looks for acknowledgements via the PagerDuty API" do
+
+      Time.should_receive(:now).and_return(now)
+
       check = 'PING'
       since = (now.utc - (60*60*24*7)).iso8601 # the last week
       unt   = (now.utc + (60*60*24)).iso8601   # 1 day in the future

@@ -4,7 +4,7 @@
     <% nav  = render_erb('_nav.html.erb', binding) %>
     <% head = render_erb('_head.html.erb', binding) %>
     <% foot = render_erb('_foot.html.erb', binding) %>
-    <title>Flapjack - <%=h @entity %> (entity) </title>
+    <title>Flapjack - <%=h @entity_name %> (entity) </title>
     <%= head %>
   </head>
   <body>
@@ -12,7 +12,7 @@
       <div class="container">
         <div class="page-header">
           <%= nav %>
-          <h2><%= h @entity %></h2>
+          <h2><%= h @entity_name %></h2>
         </div>
         <% if @states.empty? %>
           <div>
@@ -28,7 +28,7 @@
               <th>Last Update</th>
               <th>Last Notification</th>
             </tr>
-            <% @states.each do |check, status, summary, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified| %>
+            <% @states.each do |check_name, status, summary, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified| %>
               <%
                 row_colour = case status
                 when 'critical', 'unknown'
@@ -39,11 +39,11 @@
                   status
                 end
 
-                check_link = "/check?entity=" << u(@entity) << "&amp;check=" << u(check)
+                check_link = "/check?entity=" << u(@entity_name) << "&amp;check=" << u(check_name)
 
               %>
               <tr class="<%= row_colour %>">
-                <td><a href="<%= check_link %>" title="check detail"><%= h check %></a></td>
+                <td><a href="<%= check_link %>" title="check detail"><%= h check_name %></a></td>
                 <td class="<%= status %>">
                   <%= h status.upcase %>
                   <% if in_unscheduled_outage%> (Ack'd)<% end %>
