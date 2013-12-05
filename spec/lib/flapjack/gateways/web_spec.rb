@@ -94,7 +94,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     expect_entity_check_status(entity_check)
 
-    entity_check.should_receive(:entity_name).exactly(3).times.and_return('foo')
+    entity_check.should_receive(:entity_name).and_return('foo')
     entity_check.should_receive(:name).twice.and_return('ping')
     Flapjack::Data::Check.should_receive(:all).and_return([entity_check])
 
@@ -111,7 +111,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     expect_entity_check_status(entity_check)
 
-    entity_check.should_receive(:entity_name).exactly(3).times.and_return('foo')
+    entity_check.should_receive(:entity_name).and_return('foo')
     entity_check.should_receive(:name).twice.and_return('ping')
 
     failing_checks.should_receive(:all).and_return([entity_check])
@@ -130,7 +130,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Flapjack::Data::Check.should_receive(:intersect).with(:state =>
       ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
-    entity_check.should_receive(:entity_name).exactly(3).times.and_return('foo')
+    entity_check.should_receive(:entity_name).and_return('foo')
 
     get '/self_stats'
     last_response.should be_ok

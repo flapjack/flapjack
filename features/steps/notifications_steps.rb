@@ -30,10 +30,10 @@ def find_or_create_entity(entity_data)
       :name => entity_data['name'])
     entity.save.should be_true
 
-    entity_check = Flapjack::Data::Check.new(:entity_name => entity.name, :name => 'ping')
-    entity_check.save.should be_true
+    check = Flapjack::Data::Check.new(:entity_name => entity.name, :name => 'ping')
+    check.save.should be_true
 
-    entity.checks << entity_check
+    entity.checks << check
   end
 
   entity
@@ -74,19 +74,19 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_
                                     'check'   => 'ping',
                                     'time'    => timestamp)
 
-  entity_check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
+  check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
     :name => 'ping').all.first
-  entity_check.should_not be_nil
-  entity_check.state = 'critical'
-  entity_check.last_update = timestamp
-  entity_check.save.should be_true
+  check.should_not be_nil
+  check.state = 'critical'
+  check.last_update = timestamp
+  check.save.should be_true
 
-  max_notified_severity = entity_check.max_notified_severity_of_current_failure
+  max_notified_severity = check.max_notified_severity_of_current_failure
   severity = Flapjack::Data::Notification.severity_for_state(event.state,
                max_notified_severity)
 
-  current_state = entity_check.states.last
-  previous_state = entity_check.states.intersect_range(-2, -1).first
+  current_state = check.states.last
+  previous_state = check.states.intersect_range(-2, -1).first
 
   notification = Flapjack::Data::Notification.new(
     :state_duration    => 0,
@@ -94,16 +94,16 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_
     :type              => event.notification_type,
     :time              => event.time,
     :duration          => event.duration,
-    :tags              => entity_check.tags,
+    :tags              => check.tags,
   )
 
   unless notification.save
     raise "Couldn't save notification: #{@notification.errors.full_messages.inspect}"
   end
 
-  entity_check.notifications << notification
-  current_state.current_notifications << notification # unless current_state.nil?
-  previous_state.previous_notifications << notification # unless previous_state.nil?
+  check.notifications << notification
+  current_state.current_notifications << notification
+  previous_state.previous_notifications << notification
 
   @notifier.instance_variable_get('@queue').push(notification)
   drain_notifications
@@ -116,16 +116,16 @@ Then /^an (SMS|email) notification for entity '([\w\.\-]+)' should( not)? be que
 end
 
 Given /^an (SMS|email) notification has been queued for entity '([\w\.\-]+)'$/ do |media_type, entity_name|
-  entity_check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
+  check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
     :name => 'ping').all.first
-  entity_check.should_not be_nil
+  check.should_not be_nil
 
-  entity_check.state = 'critical'
-  entity_check.last_update = Time.now.to_i
-  entity_check.save.should be_true
+  check.state = 'critical'
+  check.last_update = Time.now.to_i
+  check.save.should be_true
 
   @alert = Flapjack::Data::Alert.new(
-    :state => entity_check.states.all.last.state,
+    :state => check.states.all.last.state,
     :rollup => nil,
     :state_duration => 15,
     :notification_type => 'problem',
@@ -135,14 +135,14 @@ Given /^an (SMS|email) notification has been queued for entity '([\w\.\-]+)'$/ d
     raise "Couldn't save alert: #{@alert.errors.full_messages.inspect}"
   end
 
-  contact = entity_check.entity.contacts.all.first
+  contact = check.entity.contacts.all.first
   contact.should_not be_nil
 
   medium = contact.media.intersect(:type => media_type.downcase).all.first
   medium.should_not be_nil
 
   medium.alerts << @alert
-  entity_check.alerts << @alert
+  check.alerts << @alert
 end
 
 # TODO may need to get more complex, depending which SMS provider is used

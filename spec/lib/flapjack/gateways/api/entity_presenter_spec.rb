@@ -8,8 +8,8 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
   let(:check_a) { double(Flapjack::Data::Check) }
   let(:check_b) { double(Flapjack::Data::Check) }
 
-  let(:checkpres_a) { double(Flapjack::Gateways::API::EntityCheckPresenter) }
-  let(:checkpres_b) { double(Flapjack::Gateways::API::EntityCheckPresenter) }
+  let(:checkpres_a) { double(Flapjack::Gateways::API::CheckPresenter) }
+  let(:checkpres_b) { double(Flapjack::Gateways::API::CheckPresenter) }
 
   let(:time) { Time.now.to_i }
 
@@ -24,9 +24,9 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
     entity.should_receive(:name).twice.and_return('foo')
     entity.should_receive(:checks).and_return(all_entity_checks)
 
-    Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
+    Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
       with(check_a).and_return(checkpres_a)
-    Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
+    Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
       with(check_b).and_return(checkpres_b)
   end
 

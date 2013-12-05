@@ -30,7 +30,9 @@ module Flapjack
                         :pagerduty_credentials => :hash,
                         :tags                  => :set
 
-      has_many :entities, :class_name => 'Flapjack::Data::Entity'
+      has_and_belongs_to_many :entities, :class_name => 'Flapjack::Data::Entity',
+        :inverse_of => :contacts
+
       has_many :media, :class_name => 'Flapjack::Data::Medium'
       has_many :notification_rules, :class_name => 'Flapjack::Data::NotificationRule'
 
@@ -38,13 +40,6 @@ module Flapjack
       def remove_child_records
         self.media.each               {|medium|             medium.destroy }
         self.notification_rules.each  {|notification_rule|  notification_rule.destroy }
-      end
-
-      after_destroy :remove_entity_linkages
-      def remove_entity_linkages
-        entities.each do |entity|
-          entity.contacts.delete(self)
-        end
       end
 
       # wrap the has_many to create the generic rule if none exists

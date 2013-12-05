@@ -12,31 +12,31 @@ module Flapjack
 
     class API < Sinatra::Base
 
-      class EntityCheckPresenter
+      class CheckPresenter
 
         class Outage
           attr_accessor :state, :start_time, :end_time,
                         :duration, :summary, :details
         end
 
-        def initialize(entity_check)
-          @entity_check = entity_check
+        def initialize(check)
+          @check = check
         end
 
         def status
-          last_update   = @entity_check.last_update
-          last_problem  = @entity_check.states.intersect(:state => Flapjack::Data::CheckState.failing_states,
+          last_update   = @check.last_update
+          last_problem  = @check.states.intersect(:state => Flapjack::Data::CheckState.failing_states,
             :notified => true).last
-          last_recovery = @entity_check.states.intersect(:state => 'ok', :notified => true).last
-          last_ack      = @entity_check.states.intersect(:state => 'acknowledgement', :notified => true).last
+          last_recovery = @check.states.intersect(:state => 'ok', :notified => true).last
+          last_ack      = @check.states.intersect(:state => 'acknowledgement', :notified => true).last
 
-          {'name'                              => @entity_check.name,
-           'state'                             => @entity_check.state,
-           'enabled'                           => @entity_check.enabled,
-           'summary'                           => @entity_check.summary,
-           'details'                           => @entity_check.details,
-           'in_unscheduled_maintenance'        => @entity_check.in_unscheduled_maintenance?,
-           'in_scheduled_maintenance'          => @entity_check.in_scheduled_maintenance?,
+          {'name'                              => @check.name,
+           'state'                             => @check.state,
+           'enabled'                           => @check.enabled,
+           'summary'                           => @check.summary,
+           'details'                           => @check.details,
+           'in_unscheduled_maintenance'        => @check.in_unscheduled_maintenance?,
+           'in_scheduled_maintenance'          => @check.in_scheduled_maintenance?,
            'last_update'                       => (last_update   ? last_update.timestamp   : nil),
            'last_problem_notification'         => (last_problem  ? last_problem.timestamp  : nil),
            'last_recovery_notification'        => (last_recovery ? last_recovery.timestamp : nil),
@@ -45,12 +45,12 @@ module Flapjack
         end
 
         def outages(start_time, end_time, options = {})
-          hist_states = @entity_check.states.
+          hist_states = @check.states.
             intersect_range(start_time, end_time, :by_score => true).all
           return [] if hist_states.empty?
 
           unless start_time.nil?
-            first_and_prior = @entity_check.states.
+            first_and_prior = @check.states.
               intersect_range(nil, start_time, :by_score => true,
                               :limit => 2, :order => 'desc').all
             hist_states.unshift(first_and_prior.last) if first_and_prior.size == 2
@@ -100,13 +100,13 @@ module Flapjack
         # TODO check that this doesn't double up if an unscheduled maintenance starts exactly
         # on the start_time param
         def unscheduled_maintenances(start_time, end_time)
-          unsched_maintenances = @entity_check.unscheduled_maintenances_by_start.
+          unsched_maintenances = @check.unscheduled_maintenances_by_start.
             intersect_range(start_time, end_time, :by_score => true).all
 
           # to see if we start in an unscheduled maintenance period, we must check all unscheduled
           # maintenances before the period and their durations
           start_in_unsched = start_time.nil? ? [] :
-            @entity_check.unscheduled_maintenances_by_start.
+            @check.unscheduled_maintenances_by_start.
               intersect_range(nil, start_time, :by_score => true).all.select {|pu|
               pu.end_time >= start_time
             }
@@ -115,13 +115,13 @@ module Flapjack
         end
 
         def scheduled_maintenances(start_time, end_time)
-          sched_maintenances = @entity_check.scheduled_maintenances_by_start.
+          sched_maintenances = @check.scheduled_maintenances_by_start.
             intersect_range(start_time, end_time, :by_score => true).all
 
           # to see if we start in an unscheduled maintenance period, we must check all unscheduled
           # maintenances before the period and their durations
           start_in_sched = start_time.nil? ? [] :
-            @entity_check.scheduled_maintenances_by_start.
+            @check.scheduled_maintenances_by_start.
               intersect_range(nil, start_time, :by_score => true).all.select {|ps|
               ps.end_time >= start_time
             }

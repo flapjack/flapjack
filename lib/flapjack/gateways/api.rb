@@ -85,12 +85,12 @@ module Flapjack
 
       error Flapjack::Gateways::API::EntityNotFound do
         e = env['sinatra.error']
-        err(403, "could not find entity '#{e.entity}'")
+        err(403, "could not find entity '#{e.entity_name}'")
       end
 
-      error Flapjack::Gateways::API::EntityCheckNotFound do
+      error Flapjack::Gateways::API::CheckNotFound do
         e = env['sinatra.error']
-        err(403, "could not find entity check '#{e.check}'")
+        err(403, "could not find check '#{e.check_name}'")
       end
 
       error do

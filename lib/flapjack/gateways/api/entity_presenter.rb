@@ -8,7 +8,7 @@ require 'sinatra/base'
 
 require 'flapjack/data/check'
 
-require 'flapjack/gateways/api/entity_check_presenter'
+require 'flapjack/gateways/api/check_presenter'
 
 module Flapjack
 
@@ -57,12 +57,12 @@ module Flapjack
       private
 
         def checks
-          @check_list ||= @entity.checks.all.sort_by(&:name)
+          @checks ||= @entity.checks.all.sort_by(&:name)
         end
 
         def check_presenter(entity_check)
           return if entity_check.nil?
-          presenter = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
+          presenter = Flapjack::Gateways::API::CheckPresenter.new(entity_check)
         end
 
       end

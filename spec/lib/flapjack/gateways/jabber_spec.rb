@@ -79,7 +79,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     let(:bot) { double(Flapjack::Gateways::Jabber::Bot) }
 
     let(:entity) { double(Flapjack::Data::Entity) }
-    let(:entity_check) { double(Flapjack::Data::Check) }
+    let(:check) { double(Flapjack::Data::Check) }
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by a signal" do
@@ -143,15 +143,15 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
 
-      all_checks = double('all_checks', :all => [entity_check])
+      all_checks = double('all_checks', :all => [check])
       entity.should_receive(:checks).and_return(all_checks)
       all_entities = double('all_entities', :all => [entity])
       Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => 'example.com').and_return(all_entities)
 
-      entity_check.should_receive(:name).twice.and_return('ping')
-      entity_check.should_receive(:scheduled_maintenance_at).and_return(nil)
-      entity_check.should_receive(:unscheduled_maintenance_at).and_return(nil)
+      check.should_receive(:name).twice.and_return('ping')
+      check.should_receive(:scheduled_maintenance_at).and_return(nil)
+      check.should_receive(:unscheduled_maintenance_at).and_return(nil)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -162,15 +162,15 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
 
-      all_checks = double('all_checks', :all => [entity_check])
+      all_checks = double('all_checks', :all => [check])
       entity.should_receive(:checks).and_return(all_checks)
       all_entities = double('all_entities', :all => [entity])
       Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => 'example.com').and_return(all_entities)
 
-      entity_check.should_receive(:name).twice.and_return('ping')
-      entity_check.should_receive(:scheduled_maintenance_at).and_return(nil)
-      entity_check.should_receive(:unscheduled_maintenance_at).and_return(nil)
+      check.should_receive(:name).twice.and_return('ping')
+      check.should_receive(:scheduled_maintenance_at).and_return(nil)
+      check.should_receive(:unscheduled_maintenance_at).and_return(nil)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@siblings', [bot])
@@ -181,10 +181,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
 
-      entity_check.should_receive(:scheduled_maintenance_at).and_return(nil)
-      entity_check.should_receive(:unscheduled_maintenance_at).and_return(nil)
+      check.should_receive(:scheduled_maintenance_at).and_return(nil)
+      check.should_receive(:unscheduled_maintenance_at).and_return(nil)
 
-      all_checks = double('all_checks', :all => [entity_check])
+      all_checks = double('all_checks', :all => [check])
       Flapjack::Data::Check.should_receive(:intersect).
         with(:entity_name => 'example.com', :name => 'ping').and_return(all_checks)
 
@@ -225,12 +225,12 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       bot.should_receive(:respond_to?).with(:announce).and_return(true)
       bot.should_receive(:announce).with('room1', 'ACKing ping on example.com (1234)')
 
-      entity_check.should_receive(:entity_name).and_return('example.com')
-      entity_check.should_receive(:name).and_return('ping')
-      entity_check.should_receive(:in_unscheduled_maintenance?).and_return(false)
+      check.should_receive(:entity_name).and_return('example.com')
+      check.should_receive(:name).and_return('ping')
+      check.should_receive(:in_unscheduled_maintenance?).and_return(false)
 
       state = double(Flapjack::Data::CheckState)
-      state.should_receive(:entity_check).and_return(entity_check)
+      state.should_receive(:check).and_return(check)
 
       all_states = double('all_states', :all => [state])
       Flapjack::Data::CheckState.should_receive(:intersect).

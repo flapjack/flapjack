@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/ali-graham/sandstorm.git
-  revision: b65ef52bb571fb13097a12c530e60e66f90797cf
+  revision: 9093cb98db462f51ea2059d09feed8e06787f063
   branch: master
   specs:
     sandstorm (0.0.1)

@@ -26,7 +26,7 @@ module Flapjack
                         :duration          => :integer,
                         :tags              => :set
 
-      belongs_to :entity_check, :class_name => 'Flapjack::Data::Check',
+      belongs_to :check, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :notifications
 
       # state association will not be set for notification tests
@@ -72,17 +72,17 @@ module Flapjack
         return [] if contacts.nil? || contacts.empty?
 
         default_timezone = opts[:default_timezone]
-        check = self.entity_check
+        alert_check = self.check
 
         alerts_for_contacts = []
 
         contacts.each do |contact|
-          media_to_use = media_for_contact(contact, :entity_check => check,
+          media_to_use = media_for_contact(contact, :check => alert_check,
             :default_timezone => default_timezone)
           next if media_to_use.nil? || media_to_use.empty?
 
           media_to_use.each do |medium|
-            alert = alert_for_medium(medium, :entity_check => check)
+            alert = alert_for_medium(medium, :check => alert_check)
             next if alert.nil?
             alerts_for_contacts << alert
           end
@@ -109,14 +109,14 @@ module Flapjack
 
         return media if rules.empty?
 
-        entity_check = opts[:entity_check]
-        entity_name = entity_check.entity_name
-        check_name  = entity_check.name
+        check = opts[:check]
+        entity_name = check.entity_name
+        check_name  = check.name
 
         log_rules(rules, "initial")
 
         matchers = rules.select do |rule|
-          (rule.match_entity?(entity_check.entity_name) ||
+          (rule.match_entity?(check.entity_name) ||
            rule.match_tags?(self.tags) || !rule.is_specific?) &&
           rule.is_occurring_now?(:contact => contact,
             :default_timezone => opts[:default_timezone])
@@ -154,7 +154,7 @@ module Flapjack
         final_media = rule_media.inject([]) {|memo, media_type|
           medium = media.intersect(:type => media_type).all.first
           next memo if medium.nil? ||
-            medium.drop_notifications?(:entity_check => entity_check,
+            medium.drop_notifications?(:check => check,
                                        :state => state_or_ack)
 
           memo << medium
@@ -177,12 +177,12 @@ module Flapjack
           logger.debug("using media #{media_type}")
         end
 
-        entity_check = opts[:entity_check]
+        alert_check = opts[:check]
 
         unless (['ok', 'acknowledgement', 'test'].include?(state_or_ack)) ||
-          medium.alerting_checks.exists?(entity_check.id)
+          medium.alerting_checks.exists?(alert_check.id)
 
-          medium.alerting_checks << entity_check
+          medium.alerting_checks << alert_check
         end
 
         # expunge checks in (un)scheduled maintenance from the alerting set
@@ -229,7 +229,7 @@ module Flapjack
         end
 
         medium.alerts << alert
-        entity_check.alerts << alert
+        alert_check.alerts << alert
 
         alert
       end

@@ -19,8 +19,8 @@ module Flapjack
       belongs_to :check, :class_name => 'Flapjack::Data::Check', :inverse_of => :notification_blocks
       belongs_to :medium, :class_name => 'Flapjack::Data::Medium', :inverse_of => :notification_blocks
 
-      # TODO if rollup == true, media_type must be set, entity_check_id and state not set
-      #      if rollup == false, media_type, entity_check_id and state must be set
+      # TODO if rollup == true, media_type must be set, check and state not set
+      #      if rollup == false, media_type, check and state must be set
 
       # can't handle these via validations as associations require an already saved record
 

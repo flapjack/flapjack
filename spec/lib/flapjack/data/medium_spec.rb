@@ -12,7 +12,7 @@ describe Flapjack::Data::Medium, :redis => true do
 
     Factory.check(entity, :entity_name => entity.name, :name => 'PING',
       :id => 1, :enabled => true)
-    entity_check = Flapjack::Data::Check.find_by_id('1')
+    check = Flapjack::Data::Check.find_by_id('1')
 
     Factory.contact(:id => '1', :first_name => 'John', :last_name => 'Smith',
       :email => 'jsmith@example.com') # raw redis
@@ -31,14 +31,14 @@ describe Flapjack::Data::Medium, :redis => true do
       :expire_at => t.to_i + (60 * 60), :state => 'critical')
     new_notification_block.save.should be_true
 
-    entity_check.notification_blocks << old_notification_block
-    entity_check.notification_blocks << new_notification_block
+    check.notification_blocks << old_notification_block
+    check.notification_blocks << new_notification_block
 
     medium.notification_blocks << old_notification_block <<
       new_notification_block
 
     Flapjack::Data::NotificationBlock.count.should == 2
-    medium.drop_notifications?(:state => 'critical', :entity_check => entity_check).should be_true
+    medium.drop_notifications?(:state => 'critical', :check => check).should be_true
     Flapjack::Data::NotificationBlock.count.should == 1
     remaining_block = Flapjack::Data::NotificationBlock.all.first
     remaining_block.should_not be_nil

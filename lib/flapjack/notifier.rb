@@ -85,12 +85,12 @@ module Flapjack
     def process_notification(notification)
       @logger.debug ("Processing notification: #{notification.inspect}")
 
-      timestamp    = Time.now
-      entity_check = notification.entity_check
-      contacts     = entity_check.contacts.all + entity_check.entity.contacts.all
+      timestamp   = Time.now
+      check       = notification.check
+      contacts    = check.contacts.all + check.entity.contacts.all
 
-      check_name  = entity_check.name
-      entity_name = entity_check.entity_name
+      check_name  = check.name
+      entity_name = check.entity_name
 
       if contacts.empty?
         @logger.debug("No contacts for '#{entity_name}:#{check_name}'")
@@ -102,10 +102,8 @@ module Flapjack
         :default_timezone => @default_contact_timezone,
         :logger => @logger)
 
-      # notification_contents = notification.contents
-
-      # in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
-      # in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
+      in_unscheduled_maintenance = check.in_scheduled_maintenance?
+      in_scheduled_maintenance   = check.in_unscheduled_maintenance?
 
       alerts.each do |alert|
         medium = alert.medium
@@ -116,18 +114,18 @@ module Flapjack
 
         address = medium.address
 
-        @notifylog.info("#{entity_check.entity_name}:#{entity_check.name} | " +
+        @notifylog.info("#{entity_name}:#{check_name} | " +
           "#{notification.type} | #{medium.contact.id} | #{medium.type} | #{medium.address}")
 
         @logger.info("Enqueueing #{medium.type} alert for " +
-          "#{entity_check.entity_name}:#{entity_check.name} to #{medium.address} " +
+          "#{entity_name}:#{check_name} to #{medium.address} " +
           " type: #{notification.type} rollup: #{alert.rollup || '-'}")
 
         Flapjack::Data::Check.send(:lock, Flapjack::Data::CheckState,
           Flapjack::Data::Alert, Flapjack::Data::RollupAlert) do
 
-          medium.alerting_checks.each do |entity_check|
-            last_state  = entity_check.states.last
+          medium.alerting_checks.each do |alert_check|
+            last_state  = alert_check.states.last
             last_change = last_state.nil? ? nil : last_state.timestamp.to_i
 
             rollup_alert = Flapjack::Data::RollupAlert.new(
@@ -135,7 +133,7 @@ module Flapjack
               :duration => (last_change ? (Time.now.to_i - last_change) : nil))
             rollup_alert.save
             alert.rollup_alerts << rollup_alert
-            entity_check.rollup_alerts << rollup_alert
+            alert_check.rollup_alerts << rollup_alert
           end
 
         end
@@ -144,13 +142,13 @@ module Flapjack
 
           ['warning', 'critical', 'unknown'].each do |alert_state|
             medium.update_sent_alert_keys(
-              :entity_check => entity_check,
+              :check => check,
               :state => alert_state,
               :delete => true)
           end
         elsif notification.state
           medium.update_sent_alert_keys(
-            :entity_check => entity_check,
+            :check => check,
             :state => notification.state.state)
         end
 

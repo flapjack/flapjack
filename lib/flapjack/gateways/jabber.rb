@@ -156,9 +156,9 @@ module Flapjack
           end
         end
 
-        def get_check_details(entity_check, at_time)
-          sched   = entity_check.scheduled_maintenance_at(at_time)
-          unsched = entity_check.unscheduled_maintenance_at(at_time)
+        def get_check_details(check, at_time)
+          sched   = check.scheduled_maintenance_at(at_time)
+          unsched = check.unscheduled_maintenance_at(at_time)
           out = ''
 
           if sched.nil? && unsched.nil?
@@ -187,7 +187,7 @@ module Flapjack
         def interpret(room, nick, time, command)
           msg = nil
           action = nil
-          entity_check = nil
+          check = nil
 
           begin
             case command
@@ -214,19 +214,19 @@ module Flapjack
               if check_state.nil?
                 error = "not found"
               else
-                entity_check = check_state.entity_check
-                error = "unknown entity" if entity_check.nil?
+                check = check_state.check
+                error = "unknown entity" if check.nil?
               end
 
               if error
                 msg = "ERROR - couldn't ACK #{ackid} - #{error}"
               else
 
-                entity_name = entity_check.entity_name
-                check_name = entity_check.name
+                entity_name = check.entity_name
+                check_name = check.name
 
                 details = "#{check_name} on #{entity_name} (#{ackid})"
-                if entity_check.in_unscheduled_maintenance?
+                if check.in_unscheduled_maintenance?
                   msg = "Changing ACK for #{details}"
                 else
                   msg = "ACKing #{details}"

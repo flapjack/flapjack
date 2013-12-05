@@ -23,17 +23,12 @@ module Flapjack
       unique_index_by :name
       index_by :enabled
 
-      has_many :contacts, :class_name => 'Flapjack::Data::Contact'
+      has_and_belongs_to_many :contacts, :class_name => 'Flapjack::Data::Contact',
+        :inverse_of => :entities
+
       has_many :checks, :class_name => 'Flapjack::Data::Check'
 
       validate :name, :presence => true
-
-      after_destroy :remove_contact_linkages
-      def remove_contact_linkages
-        contacts.each do |contact|
-          contact.entities.delete(self)
-        end
-      end
 
       # NB: if we're worried about user input, https://github.com/mudge/re2
       # has bindings for a non-backtracking RE engine that runs in linear
@@ -69,9 +64,6 @@ module Flapjack
         result
       end
 
-      # TODO change uses of Entity.all to Entity.all.sort_by(&:name)
-
-      # TODO change uses of Entity.find_by_name(N) to Entity.find_by(:name, N)
     end
 
   end

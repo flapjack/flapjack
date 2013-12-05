@@ -19,7 +19,7 @@ module Flapjack
     class Delays
       include Base
 
-      def block?(event, entity_check, previous_state)
+      def block?(event, check, previous_state)
         failure_delay = 30
         resend_delay  = 60
 
@@ -30,16 +30,16 @@ module Flapjack
           return false
         end
 
-        unless Flapjack::Data::CheckState.failing_states.include?( entity_check.state )
-          @logger.debug("#{label} entity_check is not failing...")
+        unless Flapjack::Data::CheckState.failing_states.include?( check.state )
+          @logger.debug("#{label} check is not failing...")
           return false
         end
 
-        last_change        = entity_check.states.last
-        last_notif         = entity_check.last_notification
+        last_change        = check.states.last
+        last_notif         = check.last_notification
 
         last_change_time   = last_change  ? last_change.timestamp  : nil
-        last_problem_alert = entity_check.last_problem_alert
+        last_problem_alert = check.last_problem_alert
         last_alert_state   = last_notif.nil? ? nil :
           (last_notif.respond_to?(:state) ? last_notif.state : 'acknowledgement')
 

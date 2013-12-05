@@ -9,7 +9,7 @@ require 'flapjack/data/check'
 require 'flapjack/data/event'
 
 require 'flapjack/gateways/api/entity_presenter'
-require 'flapjack/gateways/api/entity_check_presenter'
+require 'flapjack/gateways/api/check_presenter'
 
 module Flapjack
 
@@ -17,18 +17,18 @@ module Flapjack
 
     class API < Sinatra::Base
 
-      class EntityCheckNotFound < RuntimeError
-        attr_reader :entity, :check
-        def initialize(entity, check)
-          @entity = entity
-          @check = check
+      class CheckNotFound < RuntimeError
+        attr_reader :entity_name, :check_name
+        def initialize(entity_name, check_name)
+          @entity_name = entity_name
+          @check_name = check_name
         end
       end
 
       class EntityNotFound < RuntimeError
-        attr_reader :entity
-        def initialize(entity)
-          @entity = entity
+        attr_reader :entity_name
+        def initialize(entity_name)
+          @entity_name = entity_name
         end
       end
 
@@ -42,10 +42,10 @@ module Flapjack
             entity
           end
 
-          def find_entity_check(entity_name, check_name)
-            entity_check = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
-            raise Flapjack::Gateways::API::EntityCheckNotFound.new(entity_name, check_name) if entity_check.nil?
-            entity_check
+          def find_check(entity_name, check_name)
+            check = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
+            raise Flapjack::Gateways::API::CheckNotFound.new(entity_name, check_name) if check.nil?
+            check
           end
 
           def find_entity_tags(tags)
@@ -54,60 +54,58 @@ module Flapjack
             [tags]
           end
 
-          def entities_and_checks(entity_name, check_name)
+          def entity_and_check_names(entity_name, check_name)
             if entity_name
               # backwards-compatible, single entity or entity&check from route
-              entities = check_name ? nil : [entity_name]
-              checks   = check_name ? {entity_name => check_name} : nil
+              entity_names = check_name ? nil : [entity_name]
+              check_names  = check_name ? {entity_name => check_name} : nil
             else
               # new and improved bulk API queries
-              entities = params[:entity]
-              checks   = params[:check]
-              entities = [entities] unless entities.nil? || entities.is_a?(Array)
+              entity_names = params[:entity]
+              check_names  = params[:check]
+              entity_names = [entity_names] unless entity_names.nil? || entity_names.is_a?(Array)
               # TODO err if checks isn't a Hash (similar rules as in flapjack-diner)
             end
-            [entities, checks]
+            [entity_names, check_names]
           end
 
-          def bulk_api_check_action(entities, entity_checks, action, params = {})
-            unless entities.nil? || entities.empty?
-              entities.each do |entity_name|
-                entity = find_entity(entity_name)
-                checks = entity.check_list.sort
-                checks.each do |check_name|
-                  action.call( find_entity_check(entity_name, check_name) )
+          def bulk_api_check_action(entity_names, check_names)
+            unless entity_names.nil? || entity_names.empty?
+              entity_names.each do |entity_name|
+                find_entity(entity_name).checks.all.sort_by(&:name).each do |check|
+                  yield( check )
                 end
               end
             end
 
-            unless entity_checks.nil? || entity_checks.empty?
-              entity_checks.each_pair do |entity_name, checks|
-                checks = [checks] unless checks.is_a?(Array)
-                checks.each do |check|
-                  action.call( find_entity_check(entity_name, check) )
+            unless check_names.nil? || check_names.empty?
+              check_names.each_pair do |entity_name, check_list|
+                check_list = [check_list] unless check_list.is_a?(Array)
+                check_list.each do |check_name|
+                  yield( find_check(entity_name, check_name) )
                 end
               end
             end
           end
 
-          def present_api_results(entities, entity_checks, result_type, &block)
+          def present_api_results(entity_names, check_names, result_type)
             result = []
 
-            unless entities.nil? || entities.empty?
-              result += entities.collect {|entity_name|
+            unless entity_names.nil? || entity_names.empty?
+              result += entity_names.collect {|entity_name|
                 entity = find_entity(entity_name)
                 yield(Flapjack::Gateways::API::EntityPresenter.new(entity))
               }.flatten(1)
             end
 
-            unless entity_checks.nil? || entity_checks.empty?
-              result += entity_checks.inject([]) {|memo, (entity_name, checks)|
-                checks = [checks] unless checks.is_a?(Array)
-                memo += checks.collect {|check|
-                  entity_check = find_entity_check(entity_name, check)
+            unless check_names.nil? || check_names.empty?
+              result += check_names.inject([]) {|memo, (entity_name, check_list)|
+                check_list = [check_list] unless check_list.is_a?(Array)
+                memo += check_list.collect {|check_name|
+                  check = find_check(entity_name, check_name)
                   {:entity => entity_name,
-                   :check => check,
-                   result_type.to_sym => yield(Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check))
+                   :check => check_name,
+                   result_type.to_sym => yield(Flapjack::Gateways::API::CheckPresenter.new(check))
                   }
                 }
               }.flatten(1)
@@ -146,7 +144,7 @@ module Flapjack
           app.get '/checks/:entity' do
             content_type :json
             entity = find_entity(params[:entity])
-            entity.check_list.to_json
+            entity.checks.all.to_json
           end
 
           app.get %r{/status#{ENTITY_CHECK_FRAGMENT}} do
@@ -156,7 +154,7 @@ module Flapjack
             entity_name = captures[0]
             check       = captures[1]
 
-            entities, checks = entities_and_checks(entity_name, check)
+            entities, checks = entity_and_check_names(entity_name, check)
 
             results = present_api_results(entities, checks, 'status') {|presenter|
               presenter.status
@@ -177,7 +175,7 @@ module Flapjack
             entity_name = params[:captures][1]
             check       = params[:captures][2]
 
-            entities, checks = entities_and_checks(entity_name, check)
+            entities, checks = entity_and_check_names(entity_name, check)
 
             start_time = validate_and_parsetime(params[:start_time])
             end_time   = validate_and_parsetime(params[:end_time])
@@ -217,12 +215,12 @@ module Flapjack
             entity_name = captures[0]
             check       = captures[1]
 
-            entities, checks = entities_and_checks(entity_name, check)
+            entities, checks = entity_and_check_names(entity_name, check)
 
             start_time = validate_and_parsetime(params[:start_time])
             halt( err(403, "start time must be provided") ) unless start_time
 
-            act_proc = proc {|entity_check|
+            act_proc = proc {|check|
               sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => start_time,
                 :end_time => start_time + params[:duration].to_i,
                 :summary => params[:summary])
@@ -231,10 +229,10 @@ module Flapjack
                 halt( err(403, *sched_maint.errors.full_messages) )
               end
 
-              entity_check.add_scheduled_maintenance(sched_maint)
+              check.add_scheduled_maintenance(sched_maint)
             }
 
-            bulk_api_check_action(entities, checks, act_proc)
+            bulk_api_check_action(entities, checks, &act_proc)
             status 204
           end
 
@@ -246,7 +244,7 @@ module Flapjack
             entity_name = captures[0]
             check       = captures[1]
 
-            entities, checks = entities_and_checks(entity_name, check)
+            entities, checks = entity_and_check_names(entity_name, check)
 
             dur = params[:duration] ? params[:duration].to_i : nil
             duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
@@ -255,15 +253,15 @@ module Flapjack
             opts = {'duration' => duration}
             opts['summary'] = summary if summary
 
-            act_proc = proc {|entity_check|
+            act_proc = proc {|check|
               Flapjack::Data::Event.create_acknowledgement(
                 config['processor_queue'] || 'events',
-                entity_check.entity_name, entity_check.check,
+                check.entity_name, check.name,
                 :summary => params[:summary],
                 :duration => duration)
             }
 
-            bulk_api_check_action(entities, checks, act_proc)
+            bulk_api_check_action(entities, checks, &act_proc)
             status 204
           end
 
@@ -271,24 +269,24 @@ module Flapjack
             action = params[:captures][0]
 
             # no backwards-compatible mode here, it's a new method
-            entities, checks = entities_and_checks(nil, nil)
+            entities, checks = entity_and_check_names(nil, nil)
 
             act_proc = case action
             when 'scheduled_maintenances'
               start_time = validate_and_parsetime(params[:start_time])
               halt( err(403, "start time must be provided") ) unless start_time
               opts = {}
-              proc {|entity_check|
-                next unless sched_maint = entity_check.scheduled_maintenances_by_start.
+              proc {|check|
+                next unless sched_maint = check.scheduled_maintenances_by_start.
                   intersect_range(start_time.to_i, start_time.to_i, :by_score => true).all.first
-                entity_check.end_scheduled_maintenance(sched_maint, Time.now)
+                check.end_scheduled_maintenance(sched_maint, Time.now)
               }
             when 'unscheduled_maintenances'
               end_time = validate_and_parsetime(params[:end_time])
-              proc {|entity_check| entity_check.clear_unscheduled_maintenance(end_time) }
+              proc {|check| check.clear_unscheduled_maintenance(end_time) }
             end
 
-            bulk_api_check_action(entities, checks, act_proc)
+            bulk_api_check_action(entities, checks, &act_proc)
             status 204
           end
 
@@ -297,18 +295,18 @@ module Flapjack
             entity_name = captures[0]
             check       = captures[1]
 
-            entities, checks = entities_and_checks(entity_name, check)
+            entities, checks = entity_and_check_names(entity_name, check)
 
-            act_proc = proc {|entity_check|
+            act_proc = proc {|check|
               summary = params[:summary] ||
-                        "Testing notifications to all contacts interested in entity #{entity_check.entity.name}"
+                        "Testing notifications to all contacts interested in entity #{check.entity.name}"
               Flapjack::Data::Event.test_notifications(
                 config['processor_queue'] || 'events',
-                entity_check.entity_name, entity_check.check,
+                check.entity_name, check.name,
                 :summary => summary)
             }
 
-            bulk_api_check_action(entities, checks, act_proc)
+            bulk_api_check_action(entities, checks, &act_proc)
             status 204
           end
 

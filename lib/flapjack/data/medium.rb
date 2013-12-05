@@ -41,7 +41,7 @@ module Flapjack
       end
 
       def drop_notifications?(opts = {})
-        entity_check = opts[:entity_check]
+        check = opts[:check]
 
         attrs = if opts[:rollup]
           {:rollup => true}
@@ -59,23 +59,23 @@ module Flapjack
         else
           block_ids = self.notification_blocks.intersect(attrs).ids
           return false if block_ids.empty?
-          (block_ids & entity_check.notification_blocks.ids).size > 0
+          (block_ids & check.notification_blocks.ids).size > 0
         end
       end
 
       def update_sent_alert_keys(opts = {})
-        rollup       = opts[:rollup]
-        delete       = !!opts[:delete]
-        entity_check = opts[:entity_check]
-        state        = opts[:state]
+        rollup  = opts[:rollup]
+        delete  = !!opts[:delete]
+        check   = opts[:check]
+        state   = opts[:state]
 
         attrs = {}
-        entity_check_block_ids = nil
+        check_block_ids = nil
 
         if rollup
           attrs.update(:rollup => true)
         else
-          entity_check_block_ids = entity_check.notification_blocks.ids
+          check_block_ids = check.notification_blocks.ids
           attrs.update(:state => state)
         end
 
@@ -83,7 +83,7 @@ module Flapjack
           block_ids = self.notification_blocks.intersect(attrs).ids
 
           block_ids.each do |block_id|
-            next if !entity_check_block_ids.nil? && !entity_check_block_ids.include?(block_id)
+            next if !check_block_ids.nil? && !check_block_ids.include?(block_id)
             next unless block = Flapjack::Data::NotificationBlock.find_by_id(block_id)
             self.notification_blocks.delete(block)
             block.destroy
@@ -97,25 +97,21 @@ module Flapjack
           if block.nil?
             block = Flapjack::Data::NotificationBlock.new(attrs.merge(:expire_at => expire_at))
             block.save
-            if entity_check
-              entity_check.notification_blocks << block
-            end
-            self.notification_blocks << block
           else
             # need to remove it from the sorted_set that uses expire_at as a key,
             # change and re-add -- see https://github.com/ali-graham/sandstorm/issues/1
             # TODO should this be in a multi/exec block?
             self.notification_blocks.delete(block)
-            if entity_check
-              entity_check.notification_blocks.delete(block)
+            if check
+              check.notification_blocks.delete(block)
             end
             block.expire_at = expire_at
             block.save
-            if entity_check
-              entity_check.notification_blocks << block
-            end
-            self.notification_blocks << block
           end
+          if check
+            check.notification_blocks << block
+          end
+          self.notification_blocks << block
         end
       end
 

@@ -5,7 +5,7 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
 
   let(:event)   { double(Flapjack::Data::Event) }
 
-  let(:entity_check) { double(Flapjack::Data::Check) }
+  let(:check) { double(Flapjack::Data::Check) }
   let(:check_state) { double(Flapjack::Data::CheckState) }
 
   let(:contact) { double(Flapjack::Data::Contact) }
@@ -24,9 +24,9 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
       :tags              => Set.new
     )
     notification.save.should be_true
-    notification.should_receive(:entity_check).and_return(entity_check)
+    notification.should_receive(:check).and_return(check)
 
-    entity_check.should_receive(:id).twice.and_return('abcde')
+    check.should_receive(:id).twice.and_return('abcde')
 
     state = double(Flapjack::Data::CheckState)
     state.should_receive(:state).exactly(4).times.and_return('critical')
@@ -35,12 +35,12 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
 
     alerting_checks_1 = double('alerting_checks_1')
     alerting_checks_1.should_receive(:exists?).with('abcde').and_return(false)
-    alerting_checks_1.should_receive(:<<).with(entity_check)
+    alerting_checks_1.should_receive(:<<).with(check)
     alerting_checks_1.should_receive(:count).and_return(1)
 
     alerting_checks_2 = double('alerting_checks_1')
     alerting_checks_2.should_receive(:exists?).with('abcde').and_return(false)
-    alerting_checks_2.should_receive(:<<).with(entity_check)
+    alerting_checks_2.should_receive(:<<).with(check)
     alerting_checks_2.should_receive(:count).and_return(1)
 
     medium_1 = double(Flapjack::Data::Medium)
@@ -78,10 +78,10 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
     medium_alerts_2.should_receive(:<<).with(alert_2)
     medium_2.should_receive(:alerts).and_return(medium_alerts_2)
 
-    entity_check_alerts = double('check_alerts_1')
-    entity_check_alerts.should_receive(:<<).with(alert_1)
-    entity_check_alerts.should_receive(:<<).with(alert_2)
-    entity_check.should_receive(:alerts).twice.and_return(entity_check_alerts)
+    check_alerts = double('check_alerts_1')
+    check_alerts.should_receive(:<<).with(alert_1)
+    check_alerts.should_receive(:<<).with(alert_2)
+    check.should_receive(:alerts).twice.and_return(check_alerts)
 
     contact.should_receive(:id).and_return('23')
     contact.should_receive(:notification_rules).and_return([])

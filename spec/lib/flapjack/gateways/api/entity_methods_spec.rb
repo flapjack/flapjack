@@ -14,16 +14,16 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
   let(:all_entities)    { double('all_entities', :all => [entity]) }
   let(:no_entities)     { double('no_entities', :all => []) }
 
-  let(:entity_check)      { double(Flapjack::Data::Check) }
-  let(:all_entity_checks) { double('all_entity_checks', :all => [entity_check]) }
-  let(:no_entity_checks)  { double('no_entity_checks', :all => []) }
+  let(:check)      { double(Flapjack::Data::Check) }
+  let(:all_checks) { double('all_checks', :all => [check]) }
+  let(:no_checks)  { double('no_checks', :all => []) }
 
   let(:entity_name)     { 'www.example.net'}
   let(:entity_name_esc) { URI.escape(entity_name) }
-  let(:check)           { 'ping' }
+  let(:check_name)      { 'ping' }
 
-  let(:entity_presenter)       { double(Flapjack::Gateways::API::EntityPresenter) }
-  let(:entity_check_presenter) { double(Flapjack::Gateways::API::EntityCheckPresenter) }
+  let(:entity_presenter) { double(Flapjack::Gateways::API::EntityPresenter) }
+  let(:check_presenter)  { double(Flapjack::Gateways::API::CheckPresenter) }
 
   let(:redis)           { double(::Redis) }
 
@@ -41,13 +41,15 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
   end
 
   it "returns a list of checks for an entity" do
-    entity.should_receive(:check_list).and_return([check])
+    all_json_checks = double('all_checks', :all => [json_data])
+
+    entity.should_receive(:checks).and_return(all_json_checks)
     Flapjack::Data::Entity.should_receive(:intersect).
       with(:name => entity_name).and_return(all_entities)
 
     get "/checks/#{entity_name_esc}"
     last_response.should be_ok
-    last_response.body.should == [check].to_json
+    last_response.body.should == [json_data].to_json
   end
 
   context 'non-bulk API calls' do
@@ -76,29 +78,29 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "returns the status for a check on an entity" do
-      entity_check_presenter.should_receive(:status).and_return(json_data)
+      check_presenter.should_receive(:status).and_return(json_data)
 
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check).and_return(entity_check_presenter)
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
+        with(check).and_return(check_presenter)
 
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      get "/status/#{entity_name_esc}/#{check}"
+      get "/status/#{entity_name_esc}/ping"
       last_response.should be_ok
       last_response.body.should == json_data.to_json
     end
 
     it "should not show the status for a check that's not found on an entity" do
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(no_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(no_checks)
 
-      get "/status/#{entity_name_esc}/#{check}"
+      get "/status/#{entity_name_esc}/ping"
       last_response.should be_forbidden
     end
 
     it "returns a list of scheduled maintenance periods for an entity" do
-      result = {:entity => entity_name, :check => check, :scheduled_maintenances => json_data}
+      result = {:entity => entity_name, :check => check_name, :scheduled_maintenances => json_data}
       entity_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
@@ -107,14 +109,14 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
       get "/scheduled_maintenances/#{entity_name_esc}"
       last_response.should be_ok
-      last_response.body.should == [{:check => check, :scheduled_maintenance => json_data}].to_json
+      last_response.body.should == [{:check => check_name, :scheduled_maintenance => json_data}].to_json
     end
 
     it "returns a list of scheduled maintenance periods within a time window for an entity" do
       start  = Time.parse('1 Jan 2012')
       finish = Time.parse('6 Jan 2012')
 
-      result = {:entity => entity_name, :check => check, :scheduled_maintenances => json_data}
+      result = {:entity => entity_name, :check => check_name, :scheduled_maintenances => json_data}
       entity_presenter.should_receive(:scheduled_maintenances).with(start.to_i, finish.to_i).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
@@ -124,36 +126,36 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       get "/scheduled_maintenances/#{entity_name_esc}?" +
         "start_time=#{CGI.escape(start.iso8601)}&end_time=#{CGI.escape(finish.iso8601)}"
       last_response.should be_ok
-      last_response.body.should == [{:check => check, :scheduled_maintenance => json_data}].to_json
+      last_response.body.should == [{:check => check_name, :scheduled_maintenance => json_data}].to_json
     end
 
     it "returns a list of scheduled maintenance periods for a check on an entity" do
-      entity_check_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(json_data)
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check).and_return(entity_check_presenter)
+      check_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(json_data)
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
+        with(check).and_return(check_presenter)
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      get "/scheduled_maintenances/#{entity_name_esc}/#{check}"
+      get "/scheduled_maintenances/#{entity_name_esc}/ping"
       last_response.should be_ok
       last_response.body.should == json_data.to_json
     end
 
     it "creates an acknowledgement for an entity check" do
-      entity_check.should_receive(:entity_name).and_return(entity_name)
-      entity_check.should_receive(:check).and_return(check)
+      check.should_receive(:entity_name).and_return(entity_name)
+      check.should_receive(:name).and_return(check_name)
 
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
       Flapjack::Data::Event.should_receive(:create_acknowledgement).
-        with('events', entity_name, check, :summary => nil, :duration => (4 * 60 * 60))
+        with('events', entity_name, check_name, :summary => nil, :duration => (4 * 60 * 60))
 
-      post "/acknowledgements/#{entity_name_esc}/#{check}"
+      post "/acknowledgements/#{entity_name_esc}/ping"
       last_response.status.should == 204
     end
 
     it "returns a list of unscheduled maintenance periods for an entity" do
-      result = {:entity => entity_name, :check => check, :unscheduled_maintenances => json_data}
+      result = {:entity => entity_name, :check => check_name, :unscheduled_maintenances => json_data}
       entity_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
@@ -162,17 +164,17 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
       get "/unscheduled_maintenances/#{entity_name_esc}"
       last_response.should be_ok
-      last_response.body.should == [{:check => check, :unscheduled_maintenance => json_data}].to_json
+      last_response.body.should == [{:check => check_name, :unscheduled_maintenance => json_data}].to_json
     end
 
     it "returns a list of unscheduled maintenance periods for a check on an entity" do
-      entity_check_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(json_data)
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check).and_return(entity_check_presenter)
+      check_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(json_data)
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
+        with(check).and_return(check_presenter)
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      get "/unscheduled_maintenances/#{entity_name_esc}/#{check}"
+      get "/unscheduled_maintenances/#{entity_name_esc}/ping"
       last_response.should be_ok
       last_response.body.should == json_data.to_json
     end
@@ -181,20 +183,20 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       start    = Time.parse('1 Jan 2012')
       finish   = Time.parse('6 Jan 2012')
 
-      entity_check_presenter.should_receive(:unscheduled_maintenances).with(start.to_i, finish.to_i).and_return(json_data)
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check).and_return(entity_check_presenter)
+      check_presenter.should_receive(:unscheduled_maintenances).with(start.to_i, finish.to_i).and_return(json_data)
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
+        with(check).and_return(check_presenter)
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      get "/unscheduled_maintenances/#{entity_name_esc}/#{check}" +
+      get "/unscheduled_maintenances/#{entity_name_esc}/ping" +
         "?start_time=#{CGI.escape(start.iso8601)}&end_time=#{CGI.escape(finish.iso8601)}"
       last_response.should be_ok
       last_response.body.should == json_data.to_json
     end
 
     it "returns a list of outages for an entity" do
-      result = {:entity => entity_name, :check => check, :outages => json_data}
+      result = {:entity => entity_name, :check => check_name, :outages => json_data}
       entity_presenter.should_receive(:outages).with(nil, nil).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
@@ -203,23 +205,23 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
       get "/outages/#{entity_name_esc}"
       last_response.should be_ok
-      last_response.body.should == [{:check => check, :outages => json_data}].to_json
+      last_response.body.should == [{:check => check_name, :outages => json_data}].to_json
     end
 
     it "returns a list of outages for a check on an entity" do
-      entity_check_presenter.should_receive(:outages).with(nil, nil).and_return(json_data)
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check).and_return(entity_check_presenter)
+      check_presenter.should_receive(:outages).with(nil, nil).and_return(json_data)
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
+        with(check).and_return(check_presenter)
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      get "/outages/#{entity_name_esc}/#{check}"
+      get "/outages/#{entity_name_esc}/ping"
       last_response.should be_ok
       last_response.body.should == json_data.to_json
     end
 
     it "returns a list of downtimes for an entity" do
-      result = {:entity => entity_name, :check => check, :downtime => json_data}
+      result = {:entity => entity_name, :check => check_name, :downtime => json_data}
       entity_presenter.should_receive(:downtime).with(nil, nil).and_return(result)
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
@@ -228,28 +230,28 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
       get "/downtime/#{entity_name_esc}"
       last_response.should be_ok
-      last_response.body.should == [{:check => check, :downtime => json_data}].to_json
+      last_response.body.should == [{:check => check_name, :downtime => json_data}].to_json
     end
 
     it "returns a list of downtimes for a check on an entity" do
-      entity_check_presenter.should_receive(:downtime).with(nil, nil).and_return(json_data)
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check).and_return(entity_check_presenter)
+      check_presenter.should_receive(:downtime).with(nil, nil).and_return(json_data)
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
+        with(check).and_return(check_presenter)
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      get "/downtime/#{entity_name_esc}/#{check}"
+      get "/downtime/#{entity_name_esc}/ping"
       last_response.should be_ok
       last_response.body.should == json_data.to_json
     end
 
     it "creates a test notification event for check on an entity" do
       entity.should_receive(:name).and_return(entity_name)
-      entity_check.should_receive(:entity).and_return(entity)
-      entity_check.should_receive(:entity_name).and_return(entity_name)
-      entity_check.should_receive(:check).and_return('foo')
+      check.should_receive(:entity).and_return(entity)
+      check.should_receive(:entity_name).and_return(entity_name)
+      check.should_receive(:name).and_return('foo')
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => 'foo').and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => 'foo').and_return(all_checks)
 
       Flapjack::Data::Event.should_receive(:test_notifications).
         with('events', entity_name, 'foo', an_instance_of(Hash))
@@ -263,7 +265,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
   context 'bulk API calls' do
 
     it "returns the status for all checks on an entity" do
-      result = [{:entity => entity_name, :check => check, :status => json_data}]
+      result = [{:entity => entity_name, :check => check_name, :status => json_data}]
       entity_presenter.should_receive(:status).and_return(result)
 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
@@ -285,50 +287,50 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "returns the status for a check on an entity" do
-      result = [{:entity => entity_name, :check => check, :status => json_data}]
-      entity_check_presenter.should_receive(:status).and_return(json_data)
+      result = [{:entity => entity_name, :check => check_name, :status => json_data}]
+      check_presenter.should_receive(:status).and_return(json_data)
 
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check).and_return(entity_check_presenter)
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
+        with(check).and_return(check_presenter)
 
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      get "/status", :check => {entity_name => check}
+      get "/status", :check => {entity_name => check_name}
       last_response.should be_ok
       last_response.body.should == result.to_json
     end
 
     it "should not show the status for a check that's not found on an entity" do
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(no_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(no_checks)
 
-      get "/status", :check => {entity_name => check}
+      get "/status", :check => {entity_name => check_name}
       last_response.should be_forbidden
     end
 
     it "creates an acknowledgement for an entity check" do
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      entity_check.should_receive(:entity_name).and_return(entity_name)
-      entity_check.should_receive(:check).and_return(check)
+      check.should_receive(:entity_name).and_return(entity_name)
+      check.should_receive(:name).and_return(check_name)
 
       Flapjack::Data::Event.should_receive(:create_acknowledgement).
-        with('events', entity_name, check, :summary => nil, :duration => (4 * 60 * 60))
+        with('events', entity_name, check_name, :summary => nil, :duration => (4 * 60 * 60))
 
-      post '/acknowledgements',:check => {entity_name => check}
+      post '/acknowledgements',:check => {entity_name => check_name}
       last_response.status.should == 204
     end
 
     it "deletes an unscheduled maintenance period for an entity check" do
       end_time = Time.now + (60 * 60) # an hour from now
-      entity_check.should_receive(:clear_unscheduled_maintenance).with(end_time.to_i)
+      check.should_receive(:clear_unscheduled_maintenance).with(end_time.to_i)
 
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      delete "/unscheduled_maintenances", :check => {entity_name => check}, :end_time => end_time.iso8601
+      delete "/unscheduled_maintenances", :check => {entity_name => check_name}, :end_time => end_time.iso8601
       last_response.status.should == 204
     end
 
@@ -336,7 +338,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       start = Time.at(Time.now.to_i + (60 * 60)) # an hour from now
       duration = (2 * 60 * 60)     # two hours
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
       sched_maint = double(Flapjack::Data::ScheduledMaintenance)
       Flapjack::Data::ScheduledMaintenance.should_receive(:new).
@@ -344,10 +346,10 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
              :summary => 'test').and_return(sched_maint)
       sched_maint.should_receive(:save).and_return(true)
 
-      entity_check.should_receive(:add_scheduled_maintenance).
+      check.should_receive(:add_scheduled_maintenance).
         with(sched_maint)
 
-      post "/scheduled_maintenances/#{entity_name_esc}/#{check}?" +
+      post "/scheduled_maintenances/#{entity_name_esc}/ping?" +
          "start_time=#{CGI.escape(start.iso8601)}&summary=test&duration=#{duration}"
       last_response.status.should == 204
     end
@@ -355,7 +357,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     it "doesn't create a scheduled maintenance period if the start time isn't passed" do
       duration = (2 * 60 * 60)     # two hours
 
-      post "/scheduled_maintenances/#{entity_name_esc}/#{check}?" +
+      post "/scheduled_maintenances/#{entity_name_esc}/ping?" +
          "summary=test&duration=#{duration}"
       last_response.status.should == 403
     end
@@ -370,20 +372,20 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       sched_maints.should_receive(:intersect_range).
         with(start.to_i, start.to_i, :by_score => true).
         and_return(all_sched_maints)
-      entity_check.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints)
-      entity_check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Time))
+      check.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints)
+      check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Time))
 
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      delete "/scheduled_maintenances", :check => {entity_name => check}, :start_time => start.iso8601
+      delete "/scheduled_maintenances", :check => {entity_name => check_name}, :start_time => start.iso8601
       last_response.status.should == 204
     end
 
     it "doesn't delete a scheduled maintenance period if the start time isn't passed" do
-      entity_check.should_not_receive(:end_scheduled_maintenance)
+      check.should_not_receive(:end_scheduled_maintenance)
 
-      delete "/scheduled_maintenances", :check => {entity_name => check}
+      delete "/scheduled_maintenances", :check => {entity_name => check_name}
       last_response.status.should == 403
     end
 
@@ -396,14 +398,14 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       sched_maint_2 = double(Flapjack::Data::ScheduledMaintenance)
       all_sched_maints_2 = double('all_sched_maints', :all => [sched_maint_2])
 
-      entity_check_2 = double(Flapjack::Data::Check)
+      check_2 = double(Flapjack::Data::Check)
 
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      all_entity_checks_2 = double('all_entity_checks_2', :all => [entity_check_2])
+      all_checks_2 = double('all_checks_2', :all => [check_2])
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => 'foo').and_return(all_entity_checks_2)
+        with(:entity_name => entity_name, :name => 'foo').and_return(all_checks_2)
 
       sched_maints = double('sched_maints')
       sched_maints.should_receive(:intersect_range).
@@ -414,18 +416,18 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(start.to_i, start.to_i, :by_score => true).
         and_return(all_sched_maints_2)
 
-      entity_check.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints)
-      entity_check_2.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints_2)
+      check.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints)
+      check_2.should_receive(:scheduled_maintenances_by_start).and_return(sched_maints_2)
 
-      entity_check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Time))
-      entity_check_2.should_receive(:end_scheduled_maintenance).with(sched_maint_2, an_instance_of(Time))
+      check.should_receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Time))
+      check_2.should_receive(:end_scheduled_maintenance).with(sched_maint_2, an_instance_of(Time))
 
-      delete "/scheduled_maintenances", :check => {entity_name => [check, 'foo']}, :start_time => start.iso8601
+      delete "/scheduled_maintenances", :check => {entity_name => [check_name, 'foo']}, :start_time => start.iso8601
       last_response.status.should == 204
     end
 
     it "returns a list of scheduled maintenance periods for an entity" do
-      result = [{:entity => entity_name, :check => check, :scheduled_maintenances => json_data}]
+      result = [{:entity => entity_name, :check => check_name, :scheduled_maintenances => json_data}]
 
       entity_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(result)
 
@@ -444,7 +446,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       start  = Time.parse('1 Jan 2012')
       finish = Time.parse('6 Jan 2012')
 
-      result = [{:entity => entity_name, :check => check, :scheduled_maintenances => json_data}]
+      result = [{:entity => entity_name, :check => check_name, :scheduled_maintenances => json_data}]
 
       entity_presenter.should_receive(:scheduled_maintenances).with(start.to_i, finish.to_i).and_return(result)
 
@@ -461,23 +463,23 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "returns a list of scheduled maintenance periods for a check on an entity" do
-      result = [{:entity => entity_name, :check => check, :scheduled_maintenances => json_data}]
+      result = [{:entity => entity_name, :check => check_name, :scheduled_maintenances => json_data}]
 
-      entity_check_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(json_data)
+      check_presenter.should_receive(:scheduled_maintenances).with(nil, nil).and_return(json_data)
 
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check).and_return(entity_check_presenter)
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
+        with(check).and_return(check_presenter)
 
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      get "/scheduled_maintenances", :check => {entity_name => check}
+      get "/scheduled_maintenances", :check => {entity_name => check_name}
       last_response.should be_ok
       last_response.body.should == result.to_json
     end
 
     it "returns a list of unscheduled maintenance periods for an entity" do
-      result = [{:entity => entity_name, :check => check, :unscheduled_maintenances => json_data}]
+      result = [{:entity => entity_name, :check => check_name, :unscheduled_maintenances => json_data}]
 
       entity_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(result)
 
@@ -493,17 +495,17 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "returns a list of unscheduled maintenance periods for a check on an entity" do
-      result = [{:entity => entity_name, :check => check, :unscheduled_maintenances => json_data}]
+      result = [{:entity => entity_name, :check => check_name, :unscheduled_maintenances => json_data}]
 
-      entity_check_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(json_data)
+      check_presenter.should_receive(:unscheduled_maintenances).with(nil, nil).and_return(json_data)
 
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check).and_return(entity_check_presenter)
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
+        with(check).and_return(check_presenter)
 
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      get "/unscheduled_maintenances", :check => {entity_name => check}
+      get "/unscheduled_maintenances", :check => {entity_name => check_name}
       last_response.should be_ok
       last_response.body.should == result.to_json
     end
@@ -512,17 +514,17 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       start  = Time.parse('1 Jan 2012')
       finish = Time.parse('6 Jan 2012')
 
-      result = [{:entity => entity_name, :check => check, :unscheduled_maintenances => json_data}]
+      result = [{:entity => entity_name, :check => check_name, :unscheduled_maintenances => json_data}]
 
-      entity_check_presenter.should_receive(:unscheduled_maintenances).with(start.to_i, finish.to_i).and_return(json_data)
+      check_presenter.should_receive(:unscheduled_maintenances).with(start.to_i, finish.to_i).and_return(json_data)
 
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check).and_return(entity_check_presenter)
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
+        with(check).and_return(check_presenter)
 
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      get "/unscheduled_maintenances", :check => {entity_name => check},
+      get "/unscheduled_maintenances", :check => {entity_name => check_name},
         :start_time => start.iso8601, :end_time => finish.iso8601
       last_response.should be_ok
       last_response.body.should == result.to_json
@@ -535,7 +537,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       entity_2_name = 'entity_2'
       entity_2 = double(Flapjack::Data::Entity)
 
-      result = [{:entity => entity_name,   :check => check, :outages => json_data},
+      result = [{:entity => entity_name,   :check => check_name, :outages => json_data},
                 {:entity => entity_2_name, :check => 'foo', :outages => json_data_2},
                 {:entity => entity_2_name, :check => 'bar', :outages => json_data_3}]
 
@@ -544,8 +546,8 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       bar_check = double(Flapjack::Data::Check)
       all_bar_checks = double('all_bar_checks', :all => [bar_check])
 
-      foo_check_presenter = double(Flapjack::Gateways::API::EntityCheckPresenter)
-      bar_check_presenter = double(Flapjack::Gateways::API::EntityCheckPresenter)
+      foo_check_presenter = double(Flapjack::Gateways::API::CheckPresenter)
+      bar_check_presenter = double(Flapjack::Gateways::API::CheckPresenter)
 
       entity_presenter.should_receive(:outages).with(nil, nil).and_return(result[0])
       foo_check_presenter.should_receive(:outages).with(nil, nil).and_return(json_data_2)
@@ -554,9 +556,9 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       Flapjack::Gateways::API::EntityPresenter.should_receive(:new).
         with(entity).and_return(entity_presenter)
 
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
         with(foo_check).and_return(foo_check_presenter)
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
         with(bar_check).and_return(bar_check_presenter)
 
       Flapjack::Data::Entity.should_receive(:intersect).
@@ -573,23 +575,23 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "returns a list of outages for a check on an entity" do
-      result = [{:entity => entity_name, :check => check, :outages => json_data}]
+      result = [{:entity => entity_name, :check => check_name, :outages => json_data}]
 
-      entity_check_presenter.should_receive(:outages).with(nil, nil).and_return(json_data)
+      check_presenter.should_receive(:outages).with(nil, nil).and_return(json_data)
 
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check).and_return(entity_check_presenter)
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
+        with(check).and_return(check_presenter)
 
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      get "/outages", :check => {entity_name => check}
+      get "/outages", :check => {entity_name => check_name}
       last_response.should be_ok
       last_response.body.should == result.to_json
     end
 
     it "returns a list of downtimes for an entity" do
-      result = [{:entity => entity_name, :check => check, :downtime => json_data}]
+      result = [{:entity => entity_name, :check => check_name, :downtime => json_data}]
 
       entity_presenter.should_receive(:downtime).with(nil, nil).and_return(result)
 
@@ -605,45 +607,40 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
     end
 
     it "returns a list of downtimes for a check on an entity" do
-      result = [{:entity => entity_name, :check => check, :downtime => json_data}]
+      result = [{:entity => entity_name, :check => check_name, :downtime => json_data}]
 
-      entity_check_presenter.should_receive(:downtime).with(nil, nil).and_return(json_data)
+      check_presenter.should_receive(:downtime).with(nil, nil).and_return(json_data)
 
-      Flapjack::Gateways::API::EntityCheckPresenter.should_receive(:new).
-        with(entity_check).and_return(entity_check_presenter)
+      Flapjack::Gateways::API::CheckPresenter.should_receive(:new).
+        with(check).and_return(check_presenter)
 
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
-      get "/downtime", :check => {entity_name => check}
+      get "/downtime", :check => {entity_name => check_name}
       last_response.should be_ok
       last_response.body.should == result.to_json
     end
 
     it "creates test notification events for all checks on an entity" do
-      entity.should_receive(:check_list).and_return([check, 'foo'])
+      check.should_receive(:entity).and_return(entity)
+      check.should_receive(:entity_name).and_return(entity_name)
+      check.should_receive(:name).twice.and_return(check_name)
+
+      check_2 = double(Flapjack::Data::Check)
+      check_2.should_receive(:entity).and_return(entity)
+      check_2.should_receive(:entity_name).and_return(entity_name)
+      check_2.should_receive(:name).twice.and_return('foo')
+
+      all_checks = double('all_checks', :all => [check, check_2])
+
+      entity.should_receive(:checks).and_return(all_checks)
       entity.should_receive(:name).twice.and_return(entity_name)
       Flapjack::Data::Entity.should_receive(:intersect).
         with(:name => entity_name).and_return(all_entities)
 
-      entity_check.should_receive(:entity).and_return(entity)
-      entity_check.should_receive(:entity_name).and_return(entity_name)
-      entity_check.should_receive(:check).and_return(check)
-
-      Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
-
-      entity_check_2 = double(Flapjack::Data::Check)
-      entity_check_2.should_receive(:entity).and_return(entity)
-      entity_check_2.should_receive(:entity_name).and_return(entity_name)
-      entity_check_2.should_receive(:check).and_return('foo')
-
-      all_entity_checks_2 = double('all_entity_checks_2', :all => [entity_check_2])
-      Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => 'foo').and_return(all_entity_checks_2)
-
       Flapjack::Data::Event.should_receive(:test_notifications).
-        with('events', entity_name, check, an_instance_of(Hash))
+        with('events', entity_name, check_name, an_instance_of(Hash))
 
       Flapjack::Data::Event.should_receive(:test_notifications).
         with('events', entity_name, 'foo', an_instance_of(Hash))
@@ -654,16 +651,16 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
 
     it "creates a test notification event for check on an entity" do
       entity.should_receive(:name).and_return(entity_name)
-      entity_check.should_receive(:entity).and_return(entity)
-      entity_check.should_receive(:entity_name).and_return(entity_name)
-      entity_check.should_receive(:check).and_return(check)
+      check.should_receive(:entity).and_return(entity)
+      check.should_receive(:entity_name).and_return(entity_name)
+      check.should_receive(:name).and_return(check)
       Flapjack::Data::Check.should_receive(:intersect).
-        with(:entity_name => entity_name, :name => check).and_return(all_entity_checks)
+        with(:entity_name => entity_name, :name => check_name).and_return(all_checks)
 
       Flapjack::Data::Event.should_receive(:test_notifications).
       with('events', entity_name, check, an_instance_of(Hash))
 
-      post '/test_notifications', :check => {entity_name => check}
+      post '/test_notifications', :check => {entity_name => check_name}
       last_response.status.should == 204
     end
 

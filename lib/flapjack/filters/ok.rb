@@ -15,20 +15,20 @@ module Flapjack
     class Ok
       include Base
 
-      def block?(event, entity_check, previous_state)
+      def block?(event, check, previous_state)
         unless Flapjack::Data::CheckState.ok_states.include?( event.state )
           @logger.debug("Filter: Ok: pass")
           return false
         end
 
-        entity_check.clear_unscheduled_maintenance(Time.now)
+        check.clear_unscheduled_maintenance(Time.now)
 
         if !previous_state.nil? && Flapjack::Data::CheckState.ok_states.include?( previous_state.state )
           @logger.debug("Filter: Ok: block - previous state was ok, so blocking")
           return true
         end
 
-        last_notification = entity_check.last_notification
+        last_notification = check.last_notification
         @logger.debug("Filter: Ok: last notification: #{last_notification.inspect}")
 
         if last_notification.nil?

@@ -151,55 +151,53 @@ module Flapjack
       timestamp = Time.now.to_i
 
       entity_name, check_name = event.id.split(':', 2);
-      entity_check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
+      check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
         :name => check_name).all.first
 
       entity_for_check = nil
 
-      if entity_check.nil?
-        unless entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-          entity = Flapjack::Data::Entity.new(:name => entity_name, :enabled => true)
-          entity.save
+      if check.nil?
+        unless entity_for_check = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
+          entity_for_check = Flapjack::Data::Entity.new(:name => entity_name, :enabled => true)
+          entity_for_check.save
         end
 
-        entity_for_check = entity
-        entity_check = Flapjack::Data::Check.new(:entity_name => entity_name,
+        check = Flapjack::Data::Check.new(:entity_name => entity_name,
           :name => check_name)
 
         # not saving yet as check state isn't set, requires that for validation
         # TODO maybe change that?
-
       end
 
-      should_notify, previous_state = update_keys(event, entity_check, timestamp)
+      should_notify, previous_state = update_keys(event, check, timestamp)
 
-      entity_check.save
+      check.save
 
       if @ncsm_sched_maint
         @ncsm_sched_maint.save
-        entity_check.add_scheduled_maintenance(@ncsm_sched_maint)
+        check.add_scheduled_maintenance(@ncsm_sched_maint)
         @ncsm_sched_maint = nil
       end
 
       unless entity_for_check.nil?
         # created a new check, so add it to the entity's check list
-        entity_for_check.checks << entity_check
+        entity_for_check.checks << check
       end
 
       if !should_notify
         @logger.debug("Not generating notification for event #{event.id} because filtering was skipped")
         return
-      elsif blocker = @filters.find {|filter| filter.block?(event, entity_check, previous_state) }
+      elsif blocker = @filters.find {|filter| filter.block?(event, check, previous_state) }
         @logger.debug("Not generating notification for event #{event.id} because this filter blocked: #{blocker.name}")
         return
       end
 
       # redis_record rework -- up to here
       @logger.info("Generating notification for event #{event_str}")
-      generate_notification(event, entity_check, timestamp, previous_state)
+      generate_notification(event, check, timestamp, previous_state)
     end
 
-    def update_keys(event, entity_check, timestamp)
+    def update_keys(event, check, timestamp)
       touch_keys
 
       result = true
@@ -207,8 +205,6 @@ module Flapjack
 
       event.counter = Flapjack.redis.hincrby('event_counters', 'all', 1)
       Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
-
-      # FIXME skip if entity_check.nil?
 
       # FIXME: validate that the event is sane before we ever get here
       # FIXME: create an event if there is dodgy data
@@ -228,9 +224,7 @@ module Flapjack
         Flapjack.redis.exec
 
         # not available from an unsaved check
-        unless entity_check.id.nil?
-          previous_state = entity_check.states.last
-        end
+        previous_state = check.id.nil? ? nil : check.states.last
 
         if previous_state.nil?
           @logger.info("No previous state for event #{event.id}")
@@ -251,42 +245,36 @@ module Flapjack
           end
         end
 
-        # NB this creates a new entry in entity_check.states, through the magic
+        # this creates a new entry in check.states, through the magic
         # of callbacks
-        entity_check.state       = event.state
-        entity_check.summary     = event.summary
-        entity_check.details     = event.details
-        entity_check.count       = event.counter
-        entity_check.last_update = timestamp
+        check.state       = event.state
+        check.summary     = event.summary
+        check.details     = event.details
+        check.count       = event.counter
+        check.last_update = timestamp
 
       # Action events represent human or automated interaction with Flapjack
       when 'action'
-        # When an action event is processed, store the event.
         Flapjack.redis.multi
-        # Flapjack.redis.hset(event.id + ':actions', timestamp, event.state)
         Flapjack.redis.hincrby('event_counters', 'action', 1)
         Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'action', 1)
-
-        if event.acknowledgement? && event.acknowledgement_id
-          # Flapjack.redis.hdel('unacknowledged_failures', event.acknowledgement_id)
-        end
         Flapjack.redis.exec
       end
 
       [result, previous_state]
     end
 
-    def generate_notification(event, entity_check, timestamp, previous_state)
-      max_notified_severity = entity_check.max_notified_severity_of_current_failure
+    def generate_notification(event, check, timestamp, previous_state)
+      max_notified_severity = check.max_notified_severity_of_current_failure
 
-      current_state = entity_check.states.last
+      current_state = check.states.last
 
       # TODO should probably look these up by 'timestamp', last may not be safe...
       case event.type
       when 'service'
         if Flapjack::Data::CheckState.failing_states.include?( event.state )
-          entity_check.last_problem_alert = timestamp
-          entity_check.save
+          check.last_problem_alert = timestamp
+          check.save
         end
 
         current_state.notified = true
@@ -294,7 +282,7 @@ module Flapjack
         current_state.save
       when 'action'
         if event.state == 'acknowledgement'
-          unsched_maint = entity_check.unscheduled_maintenances_by_start.last
+          unsched_maint = check.unscheduled_maintenances_by_start.last
           unsched_maint.notified = true
           unsched_maint.last_notification_count = event.counter
           unsched_maint.save
@@ -312,12 +300,12 @@ module Flapjack
         :type              => event.notification_type,
         :time              => event.time,
         :duration          => event.duration,
-        :tags              => entity_check.tags,
+        :tags              => check.tags,
       )
 
       notification.save
 
-      entity_check.notifications << notification
+      check.notifications << notification
       current_state.current_notifications << notification unless current_state.nil?
       previous_state.previous_notifications << notification unless previous_state.nil?
 

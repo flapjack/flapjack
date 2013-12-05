@@ -198,19 +198,19 @@ module Flapjack
               ec.entity_name + ":" + ec.name
             }.join(', ')
 
-          unacked_failing_checks.each do |entity_check|
+          unacked_failing_checks.each do |check|
 
-            # If more than one contact for this entity_check has pagerduty
+            # If more than one contact for this check has pagerduty
             # credentials then there'll be one hash in the array for each set of
             # credentials.
-            ec_credentials = entity_check.contacts.all.inject([]) {|ret, contact|
+            ec_credentials = check.contacts.all.inject([]) {|ret, contact|
               cred = contact.pagerduty_credentials
               ret << cred if cred
               ret
             }
 
-            entity_name = entity_check.entity_name
-            check_name = entity_check.name
+            entity_name = check.entity_name
+            check_name = check.name
 
             event_id = "#{entity_name}:#{check_name}"
 

@@ -14,7 +14,7 @@ module Flapjack
     class Acknowledgement
       include Base
 
-      def block?(event, entity_check, previous_state)
+      def block?(event, check, previous_state)
         timestamp = Time.now.to_i
 
         label = 'Filter: Acknowledgement:'
@@ -26,13 +26,13 @@ module Flapjack
           return false
         end
 
-        if entity_check.nil?
+        if check.nil?
           @logger.error "#{label} unknown entity for event '#{event.id}'"
           return false
         end
 
-        unless Flapjack::Data::CheckState.failing_states.include?(entity_check.state)
-          @logger.debug("#{label} blocking because check '#{entity_check.name}' on entity '#{entity_check.entity_name}' is not failing")
+        unless Flapjack::Data::CheckState.failing_states.include?(check.state)
+          @logger.debug("#{label} blocking because check '#{check.name}' on entity '#{check.entity_name}' is not failing")
           return true
         end
 
@@ -42,7 +42,7 @@ module Flapjack
           :end_time => end_time, :summary => event.summary)
         unsched_maint.save
 
-        entity_check.set_unscheduled_maintenance(unsched_maint)
+        check.set_unscheduled_maintenance(unsched_maint)
 
         @logger.debug("#{label} pass (unscheduled maintenance created for #{event.id}, duration: #{end_time - timestamp})")
         false
