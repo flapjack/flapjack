@@ -48,6 +48,14 @@ class MockLogger
     ERRORS
   end
 
+  %w(debug info warn error fatal).each do |level|
+    class_eval <<-LEVELS
+      def #{level}?
+        true
+      end
+    LEVELS
+  end
+
 end
 
 JsonSpec.configure do
