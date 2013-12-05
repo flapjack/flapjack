@@ -21,9 +21,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       set :raise_errors, true
       set :show_exceptions, false
     }
-    Flapjack::Gateways::Web.instance_variable_get('@middleware').delete_if {|m|
-      m[0] == Rack::FiberPool
-    }
   end
 
   before(:each) do
@@ -87,7 +84,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, 'ping', :redis => redis).and_return(entity_check)
 
-    get '/checks_all'
+    aget '/checks_all'
     last_response.should be_ok
   end
 
@@ -106,7 +103,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, 'ping', :redis => redis).and_return(entity_check)
-    get '/checks_failing'
+    aget '/checks_failing'
     last_response.should be_ok
   end
 
@@ -117,7 +114,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     expect_check_stats
     expect_entity_stats
 
-    get '/self_stats'
+    aget '/self_stats'
     last_response.should be_ok
   end
 
@@ -152,7 +149,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Flapjack::Data::EntityCheck.should_receive(:for_entity).
       with(entity, 'ping', :redis => redis).and_return(entity_check)
 
-    get "/check?entity=#{entity_name_esc}&check=ping"
+    aget "/check?entity=#{entity_name_esc}&check=ping"
     last_response.should be_ok
     # TODO test instance variables set to appropriate values
   end
@@ -161,7 +158,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name_esc, :redis => redis).and_return(nil)
 
-    get "/check?entity=#{entity_name_esc}&check=ping"
+    aget "/check?entity=#{entity_name_esc}&check=ping"
     last_response.should be_not_found
   end
 
@@ -170,7 +167,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Flapjack::Data::Entity.should_receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    get "/check?entity=#{entity_name_esc}"
+    aget "/check?entity=#{entity_name_esc}"
     last_response.should be_not_found
   end
 
@@ -185,7 +182,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       with(entity_name, 'ping', :summary => "", :duration => (4 * 60 * 60),
            :acknowledgement_id => '1234', :redis => redis)
 
-    post "/acknowledgements/#{entity_name_esc}/ping?acknowledgement_id=1234"
+    apost "/acknowledgements/#{entity_name_esc}/ping?acknowledgement_id=1234"
     last_response.status.should == 302
   end
 
@@ -208,7 +205,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     entity_check.should_receive(:create_scheduled_maintenance).
       with(start_time.to_i, duration, :summary => summary)
 
-    post "/scheduled_maintenances/#{entity_name_esc}/ping?"+
+    apost "/scheduled_maintenances/#{entity_name_esc}/ping?"+
       "start_time=1+day+ago&duration=30+minutes&summary=wow"
 
     last_response.status.should == 302
@@ -227,14 +224,14 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     entity_check.should_receive(:end_scheduled_maintenance).with(start_time)
 
-    delete "/scheduled_maintenances/#{entity_name_esc}/ping?start_time=#{start_time}"
+    adelete "/scheduled_maintenances/#{entity_name_esc}/ping?start_time=#{start_time}"
     last_response.status.should == 302
   end
 
   it "shows a list of all known contacts" do
     Flapjack::Data::Contact.should_receive(:all)
 
-    get "/contacts"
+    aget "/contacts"
     last_response.should be_ok
   end
 
@@ -248,7 +245,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with('0362', :redis => redis).and_return(contact)
 
-    get "/contacts/0362"
+    aget "/contacts/0362"
     last_response.should be_ok
   end
 

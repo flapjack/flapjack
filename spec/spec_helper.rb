@@ -104,5 +104,6 @@ RSpec.configure do |config|
 
   config.include ErbViewHelper, :erb_view => true
   config.include Rack::Test::Methods, :sinatra => true
+  config.include AsyncRackTest::Methods, :sinatra => true
   config.include JsonSpec::Helpers, :json => true
 end
