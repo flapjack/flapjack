@@ -39,7 +39,13 @@ module Flapjack
           else
             msg_str = msg.join(", ")
           end
-          Flapjack::Gateways::API.instance_variable_get('@logger').info "Error: #{msg_str}"
+          logger = Flapjack::Gateways::API.instance_variable_get('@logger')
+          case
+          when status < 500
+            logger.warn "Error: #{msg_str}"
+          else
+            logger.error "Error: #{msg_str}"
+          end
           [status, {}, {:errors => msg}.to_json]
         }
 
@@ -85,11 +91,16 @@ module Flapjack
       end
 
       before do
-        input = env['rack.input'].read
-        input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
-        logger.info("#{request.request_method} #{request.path_info}#{request.query_string} #{input_short[0..80]}")
-        logger.debug("#{request.request_method} #{request.path_info}#{request.query_string} #{input}")
-        env['rack.input'].rewind
+        input = nil
+        if logger.debug?
+          input = env['rack.input'].read
+          logger.debug("#{request.request_method} #{request.path_info}#{request.query_string} #{input}")
+        elsif logger.info?
+          input = env['rack.input'].read
+          input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
+          logger.info("#{request.request_method} #{request.path_info}#{request.query_string} #{input_short[0..80]}")
+        end
+        env['rack.input'].rewind unless input.nil?
       end
 
       after do
