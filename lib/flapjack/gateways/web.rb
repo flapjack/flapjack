@@ -132,11 +132,11 @@ module Flapjack
         entity_stats
         check_stats
         {
-          'events_queued'    => @events_queued,
-          'all_entities'     => @count_all_entities,
-          'failing_entities' => @count_failing_entities,
-          'all_checks'       => @count_all_checks,
-          'failing_checks'   => @count_failing_checks,
+          'events_queued'       => @events_queued,
+          'all_entities'        => @count_all_entities,
+          'failing_entities'    => @count_failing_entities,
+          'all_checks'          => @count_all_checks,
+          'failing_checks'      => @count_failing_checks,
           'processed_events' => {
             'all_time' => {
               'total'   => @event_counters['all'].to_i,
@@ -145,10 +145,11 @@ module Flapjack
               'action'  => @event_counters['action'].to_i,
             }
           },
-          'total_keys' => @dbsize,
-          'uptime'     => @uptime_string,
-          'boottime'   => @boot_time,
-          'current_time' => Time.now,
+          'check_freshness'     => @current_checks_ages,
+          'total_keys'          => @dbsize,
+          'uptime'              => @uptime_string,
+          'boottime'            => @boot_time,
+          'current_time'        => Time.now,
           'executive_instances' => @executive_instances,
         }.to_json
       end
@@ -283,7 +284,6 @@ module Flapjack
       end
 
       get '/contacts' do
-        #self_stats
         @contacts = Flapjack::Data::Contact.all(:redis => redis)
 
         erb 'contacts.html'.to_sym
@@ -394,6 +394,7 @@ module Flapjack
         end
         @event_counters = redis.hgetall('event_counters')
         @events_queued  = redis.llen('events')
+        @current_checks_ages = Flapjack::Data::EntityCheck.find_all_split_by_freshness([0, 60, 300, 900, 3600], {:redis => redis, :counts => true} )
       end
 
       def entity_stats

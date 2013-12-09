@@ -130,6 +130,82 @@ module Flapjack
         redis.hget("check:#{event_id}", 'state')
       end
 
+      # takes an array of ages (in seconds) to split all checks up by
+      # - age means how long since the last update
+      # - 0 age is implied if not explicitly passed
+      # returns arrays of all current checks hashed by age range upper bound, eg:
+      #
+      # EntityCheck.find_all_split_by_freshness([60, 300], opts) =>
+      #   {   0 => [ 'foo-app-01:SSH' ],
+      #      60 => [ 'foo-app-01:Ping', 'foo-app-01:Disk / Utilisation' ],
+      #     300 => [] }
+      #
+      # you can also set :counts to true in options and you'll just get the counts, eg:
+      #
+      # EntityCheck.find_all_split_by_freshness([60, 300], opts.merge(:counts => true)) =>
+      #   {   0 => 1,
+      #      60 => 3,
+      #     300 => 0 }
+      #
+      # and you can get the last update time with each check too by passing :with_times => true eg:
+      #
+      # EntityCheck.find_all_split_by_freshness([60, 300], opts.merge(:with_times => true)) =>
+      #   {   0 => [ ['foo-app-01:SSH', 1382329923.0] ],
+      #      60 => [ ['foo-app-01:Ping', 1382329922.0], ['foo-app-01:Disk / Utilisation', 1382329921.0] ],
+      #     300 => [] }
+      #
+      def self.find_all_split_by_freshness(ages, options)
+        raise "Redis connection not set" unless redis = options[:redis]
+        raise "ages must be an array" unless ages.is_a?(Array)
+        ages.each do |age|
+          raise "ages must each be an integer" unless age.is_a?(Integer)
+        end
+        ages << 0
+        ages = ages.sort.uniq
+
+        start_time = Time.now
+
+        checks = []
+        # get all the current checks, with last update time
+        Flapjack::Data::Entity.find_all_current(:redis => redis).each do |entity|
+          redis.zrange("current_checks:#{entity}", 0, -1, {:withscores => true}).each do |check|
+            check[0] = "#{entity}:#{check[0]}"
+            checks << check
+          end
+        end
+
+        results_with_times = {}
+        ages_length = ages.length
+        ages.each_with_index do |age, index|
+          results_with_times[age] = checks.select do |check|
+            check_age = start_time.to_i - check[1]
+            check_age = 0 unless check_age > 0
+            if ages.length == (index + 1)
+              check_age >= age
+            else
+              (check_age >= age) && (check_age < ages[index + 1])
+            end
+          end
+        end
+
+        case
+        when options[:with_times]
+          return results_with_times
+        when options[:counts]
+          counts = {}
+          results_with_times.each_pair do |age, checks|
+            counts[age] = checks.length
+          end
+          return counts
+        else
+          results = {}
+          results_with_times.each_pair do |age, checks|
+            results[age] = checks.map { |check| check[0] }
+          end
+          return results
+        end
+      end
+
       def entity_name
         entity.name
       end
