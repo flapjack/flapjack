@@ -156,10 +156,10 @@ module Flapjack
       #
       def self.find_all_split_by_freshness(ages, options)
         raise "Redis connection not set" unless redis = options[:redis]
-        raise "ages must be an array" unless ages.is_a?(Array)
-        ages.each do |age|
-          raise "ages must each be an integer" unless age.is_a?(Integer)
-        end
+
+        raise "ages does not respond_to? :each and :each_with_index" unless ages.respond_to?(:each) && ages.respond_to?(:each_with_index)
+        raise "age values must respond_to? :to_i" unless ages.all? {|age| age.respond_to?(:to_i) }
+
         ages << 0
         ages = ages.sort.uniq
 
