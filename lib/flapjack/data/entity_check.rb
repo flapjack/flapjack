@@ -174,35 +174,33 @@ module Flapjack
           end
         end
 
-        results_with_times = {}
-        ages_length = ages.length
-        ages.each_with_index do |age, index|
-          results_with_times[age] = checks.select do |check|
-            check_age = start_time.to_i - check[1]
-            check_age = 0 unless check_age > 0
-            if ages.length == (index + 1)
-              check_age >= age
-            else
-              (check_age >= age) && (check_age < ages[index + 1])
-            end
+        skeleton = ages.inject({}) {|memo, age| memo[age] = [] ; memo }
+        age_ranges = ages.reverse.each_cons(2)
+        results_with_times = checks.inject(skeleton) do |memo, check|
+          check_age = start_time.to_i - check[1]
+          check_age = 0 unless check_age > 0
+          if check_age >= ages.last
+            memo[ages.last] << check
+          else
+            age_range = age_ranges.detect {|a, b| check_age < a && check_age >= b }
+            memo[age_range.last] << check unless age_range.nil?
           end
+          memo
         end
 
         case
         when options[:with_times]
-          return results_with_times
+          results_with_times
         when options[:counts]
-          counts = {}
-          results_with_times.each_pair do |age, checks|
-            counts[age] = checks.length
+          results_with_times.inject({}) do |memo, (age, checks)|
+            memo[age] = checks.length
+            memo
           end
-          return counts
         else
-          results = {}
-          results_with_times.each_pair do |age, checks|
-            results[age] = checks.map { |check| check[0] }
+          results_with_times.inject({}) do |memo, (age, checks)|
+            memo[age] = checks.map { |check| check[0] }
+            memo
           end
-          return results
         end
       end
 

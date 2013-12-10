@@ -394,7 +394,7 @@ module Flapjack
         end
         @event_counters = redis.hgetall('event_counters')
         @events_queued  = redis.llen('events')
-        @current_checks_ages = Flapjack::Data::EntityCheck.find_all_split_by_freshness([0, 60, 300, 900, 3600], {:redis => redis, :counts => true} )
+        @current_checks_ages = Flapjack::Data::EntityCheck.find_all_split_by_freshness([0, 60, 300, 900, 3600], {:redis => redis, :counts => true } )
       end
 
       def entity_stats
