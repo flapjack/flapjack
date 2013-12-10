@@ -1,5 +1,12 @@
 ## Flapjack Changelog
 
+# 0.7.35 - 2013-12-10
+- Feature: allow flapper to flap with an arbitrary interval gh-383 (@jessereynolds)
+- Feature: Expose statistics for currency of all checks gh-386 (@jessereynolds)
+- Chore: WebUI: contacts page - move notification rules section higher gh-376 (@jessereynolds)
+- Bug: 500 errors in api are not logged by default gh-379 (@ali-graham)
+- Bug: Exception generating notifications when state_duration is nil gh-372 (@jessereynolds)
+
 # 0.7.34 - 2013-11-20
 - Feature: update logoage (@jessereynolds)
 - Bug: flapjack-nagios-receiver to start daemonized from init script (@jessereynolds)
