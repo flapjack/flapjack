@@ -37,6 +37,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     redis.should_receive(:hgetall).twice.and_return({'all' => '8001', 'ok' => '8002'},
       {'all' => '9001', 'ok' => '9002'})
     redis.should_receive(:llen).with('events')
+    redis.should_receive(:zrange).with('current_entities', 0, -1).and_return(['foo-app-01.example.com'])
+    redis.should_receive(:zrange).with('current_checks:foo-app-01.example.com', 0, -1, {:withscores => true}).and_return([['ping', 1382329923.0]])
   end
 
   def expect_check_stats
