@@ -69,57 +69,56 @@ module Flapjack
       end
 
       def alerts(contacts, opts = {})
+        @logger = opts[:logger]
+
         return [] if contacts.nil? || contacts.empty?
 
         default_timezone = opts[:default_timezone]
+
         alert_check = self.check
 
-        alerts_for_contacts = []
-
-        contacts.each do |contact|
-          media_to_use = media_for_contact(contact, :check => alert_check,
+        contacts.inject([]) do |memo, contact|
+          matchers = matching_rules_for_contact(contact, :check => alert_check,
             :default_timezone => default_timezone)
-          next if media_to_use.nil? || media_to_use.empty?
+          next memo if matchers.nil?
+
+          media_to_use = media_for_contact(contact, matchers, :check => alert_check)
+          next memo if media_to_use.nil? || media_to_use.empty?
 
           media_to_use.each do |medium|
             alert = alert_for_medium(medium, :check => alert_check)
             next if alert.nil?
-            alerts_for_contacts << alert
+            memo << alert
           end
-        end
 
-        alerts_for_contacts
+          memo
+        end
       end
 
       def log_rules(rules, description)
         return if logger.nil?
-        logger.debug "#{rules.length} matching rules remain after #{description}:"
-          rules.each do |rules|
-          logger.debug "  - #{rule.to_json}"
+        logger.debug "#{rules.count} matching rules remain after #{description}:"
+        rules.each do |rule|
+          logger.debug "  - #{rule.inspect}"
+          # rule.states.each do |rule_state|
+          #   logger.debug "  - #{rule_state.inspect}"
+          # end
         end
       end
 
-      # return value may or may not be a Sandstorm association; i.e. collect,
-      # each, etc. methods may be used on its contained values. if nil is
-      # returned that value will be compacted away.
-      def media_for_contact(contact, opts = {})
-        contact_id = contact.id
+      def matching_rules_for_contact(contact, options = {})
         rules = contact.notification_rules
-        media = contact.media
 
-        return media if rules.empty?
-
-        check = opts[:check]
+        check = options[:check]
         entity_name = check.entity_name
-        check_name  = check.name
 
         log_rules(rules, "initial")
 
         matchers = rules.select do |rule|
-          (rule.match_entity?(check.entity_name) ||
+          (rule.match_entity?(entity_name) ||
            rule.match_tags?(self.tags) || !rule.is_specific?) &&
           rule.is_occurring_now?(:contact => contact,
-            :default_timezone => opts[:default_timezone])
+            :default_timezone => options[:default_timezone])
         end
 
         log_rules(matchers, "after time, entity and tags") if matchers.count != rules.count
@@ -133,7 +132,13 @@ module Flapjack
         end
 
         # delete media based on blackholes
-        blackhole_matchers = matchers.map {|matcher| matcher.blackhole?(self.severity) ? matcher : nil }.compact
+        blackhole_matchers = matchers.inject([]) {|memo, matcher|
+          if matcher.states.intersect(:state => self.severity, :blackhole => true).count > 0
+            memo << matcher
+          end
+          memo
+        }
+
         if blackhole_matchers.length > 0
           log_rules(blackhole_matchers, "#{blackhole_matchers.count} blackhole matchers found - skipping")
           return
@@ -141,24 +146,39 @@ module Flapjack
           logger.debug "no blackhole matchers matched"
         end
 
-        rule_media = matchers.inject(Set.new) {|memo, matcher|
-          med_sev = matcher.media_for_severity(self.severity)
-          next memo if med_sev.nil?
-          memo += med_sev
-        }
+        matchers
+      end
+
+      # return value may or may not be a Sandstorm association; i.e. collect,
+      # each, etc. methods may be used on its contained values. if nil is
+      # returned that value will be compacted away.
+      def media_for_contact(contact, matchers, opts = {})
+        contact_id = contact.id
+        media = contact.media
+
+        return media if matchers.empty?
+
+        check = opts[:check]
+
+        matcher_states = matchers.collect {|m|
+          m.states.intersect(:state => self.severity).all
+        }.flatten
+
+        rule_media = matcher_states.inject({}) do |memo, nr_state|
+          nr_state_media = nr_state.media.reject {|m| memo.has_key?(m.type) }
+          nr_state_media.each do |nrsm|
+            memo[nrsm.type] = nrsm
+          end
+          memo
+        end.values
 
         unless logger.nil?
           logger.debug "collected media_for_severity(#{self.severity}): #{rule_media.inspect}"
         end
 
-        final_media = rule_media.inject([]) {|memo, media_type|
-          medium = media.intersect(:type => media_type).all.first
-          next memo if medium.nil? ||
-            medium.drop_notifications?(:check => check,
-                                       :state => state_or_ack)
-
-          memo << medium
-          memo
+        final_media = rule_media.reject {|medium|
+          medium.drop_notifications?(:check => check,
+                                     :state => state_or_ack)
         }
 
         unless logger.nil?
@@ -178,6 +198,8 @@ module Flapjack
         end
 
         alert_check = opts[:check]
+        entity_name = check.entity_name
+        check_name = check.name
 
         unless (['ok', 'acknowledgement', 'test'].include?(state_or_ack)) ||
           medium.alerting_checks.exists?(alert_check.id)

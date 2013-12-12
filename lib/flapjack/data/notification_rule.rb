@@ -19,17 +19,13 @@ module Flapjack
 
       define_attributes :entities                => :set,
                         :tags                    => :set,
-                        :time_restrictions_json  => :string,
-                        :unknown_media           => :set,
-                        :warning_media           => :set,
-                        :critical_media          => :set,
-                        :unknown_blackhole       => :boolean,
-                        :warning_blackhole       => :boolean,
-                        :critical_blackhole      => :boolean
+                        :time_restrictions_json  => :string
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact'
 
-      validates_each :entities, :tags, :unknown_media, :warning_media, :critical_media,
+      has_many :states, :class_name => 'Flapjack::Data::NotificationRuleState'
+
+      validates_each :entities, :tags, #, :unknown_media, :warning_media, :critical_media,
         :allow_blank => true do |record, att, value|
         if value.is_a?(Set) && value.any? {|vs| !vs.is_a?(String) }
           record.errors.add(att, 'must only contain strings')
@@ -81,19 +77,6 @@ module Flapjack
         IceCube::Schedule.from_hash(tr)
       end
 
-      def self.create_generic
-        default_media = ['email', 'sms', 'jabber', 'pagerduty']
-        self.new(
-          :entities           => Set.new,
-          :tags               => Set.new,
-          :time_restrictions  => [],
-          :warning_media      => Set.new(default_media),
-          :critical_media     => Set.new(default_media),
-          :warning_blackhole  => false,
-          :critical_blackhole => false
-        )
-      end
-
       # entity names match?
       def match_entity?(event_id)
         entities.present? && entities.include?(event_id.split(':').first)
@@ -102,28 +85,6 @@ module Flapjack
       # tags match?
       def match_tags?(event_tags)
         tags.present? && tags.subset?(event_tags)
-      end
-
-      def blackhole?(severity)
-        case severity
-        when 'unknown'
-          self.unknown_blackhole
-        when 'warning'
-          self.warning_blackhole
-        when 'critical'
-          self.critical_blackhole
-        end
-      end
-
-      def media_for_severity(severity)
-        case severity
-        when 'unknown'
-          self.unknown_media
-        when 'warning'
-          self.warning_media
-        when 'critical'
-          self.critical_media
-        end
       end
 
       def is_specific?

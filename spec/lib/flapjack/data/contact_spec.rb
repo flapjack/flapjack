@@ -13,12 +13,6 @@ describe Flapjack::Data::Contact, :redis => true do
     {:tags               => Set.new(["database","physical"]),
      :entities           => Set.new(["foo-app-01.example.com"]),
      :time_restrictions  => [],
-     :unknown_media      => Set.new,
-     :warning_media      => Set.new(["email"]),
-     :critical_media     => Set.new(["sms", "email"]),
-     :unknown_blackhole  => false,
-     :warning_blackhole  => false,
-     :critical_blackhole => false
     }
   }
 
@@ -26,12 +20,7 @@ describe Flapjack::Data::Contact, :redis => true do
     {:entities           => Set.new,
      :tags               => Set.new,
      :time_restrictions  => [],
-     :unknown_media      => Set.new,
-     :warning_media      => Set.new(['email', 'sms', 'jabber', 'pagerduty']),
-     :critical_media     => Set.new(['email', 'sms', 'jabber', 'pagerduty']),
-     :unknown_blackhole  => false,
-     :warning_blackhole  => false,
-     :critical_blackhole => false}
+   }
   }
 
   let(:redis) { Flapjack.redis }

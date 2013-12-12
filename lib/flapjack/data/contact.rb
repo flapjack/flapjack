@@ -8,10 +8,12 @@ require 'ice_cube'
 
 require 'sandstorm/record'
 
+require 'flapjack/data/check_state'
 require 'flapjack/data/entity'
 require 'flapjack/data/medium'
 require 'flapjack/data/notification_block'
 require 'flapjack/data/notification_rule'
+require 'flapjack/data/notification_rule_state'
 
 module Flapjack
 
@@ -46,9 +48,24 @@ module Flapjack
       alias_method :orig_notification_rules, :notification_rules
       def notification_rules
         rules = orig_notification_rules
+        contact_media = media.all
+
         if rules.all.all? {|r| r.is_specific? } # also true if empty
-          rule = Flapjack::Data::NotificationRule.create_generic
+          nr_fail_states = Flapjack::Data::CheckState.failing_states.collect do |fail_state|
+            state = Flapjack::Data::NotificationRuleState.new(:state => fail_state,
+              :blackhole => false)
+            state.save
+            state.media.add(*contact_media) unless 'unknown'.eql?(fail_state) || contact_media.empty?
+            state
+          end
+
+          rule = Flapjack::Data::NotificationRule.new(
+            :entities           => Set.new,
+            :tags               => Set.new,
+            :time_restrictions  => []
+          )
           rule.save
+          rule.states.add(*nr_fail_states)
           rules << rule
         end
         rules

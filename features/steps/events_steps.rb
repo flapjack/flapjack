@@ -379,14 +379,18 @@ Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules
   end
 
   rules.hashes.each do |rule|
-    entities           = rule['entities']           ? rule['entities'].split(',').map(&:strip)        : []
-    tags               = rule['tags']               ? rule['tags'].split(',').map(&:strip)            : []
-    unknown_media      = rule['unknown_media']      ? rule['unknown_media'].split(',').map(&:strip)   : []
-    warning_media      = rule['warning_media']      ? rule['warning_media'].split(',').map(&:strip)   : []
-    critical_media     = rule['critical_media']     ? rule['critical_media'].split(',').map(&:strip)  : []
-    unknown_blackhole  = rule['unknown_blackhole']  ? (rule['unknown_blackhole'].downcase == 'true')  : false
-    warning_blackhole  = rule['warning_blackhole']  ? (rule['warning_blackhole'].downcase == 'true')  : false
-    critical_blackhole = rule['critical_blackhole'] ? (rule['critical_blackhole'].downcase == 'true') : false
+    entities           = rule['entities']      ? rule['entities'].split(',').map(&:strip)       : []
+    tags               = rule['tags']          ? rule['tags'].split(',').map(&:strip)           : []
+    media = {
+      :unknown  => (rule['unknown_media']      ? rule['unknown_media'].split(',').map(&:strip)  : []),
+      :warning  => (rule['warning_media']      ? rule['warning_media'].split(',').map(&:strip)  : []),
+      :critical => (rule['critical_media']     ? rule['critical_media'].split(',').map(&:strip) : [])
+    }
+    blackhole = {
+      :unknown  => (rule['unknown_blackhole']  ? (rule['unknown_blackhole'].downcase == 'true')  : false),
+      :warning  => (rule['warning_blackhole']  ? (rule['warning_blackhole'].downcase == 'true')  : false),
+      :critical => (rule['critical_blackhole'] ? (rule['critical_blackhole'].downcase == 'true') : false)
+    }
     time_restrictions  = rule['time_restrictions']  ? rule['time_restrictions'].split(',').map(&:strip).
       inject([]) { |memo, time_restriction|
       case time_restriction
@@ -396,17 +400,29 @@ Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules
         memo << icecube_schedule_to_time_restriction(weekdays_8_18, timezone)
       end
     } : []
+
+    state_data = {:media => media, :blackhole => blackhole}
+
     rule_data = {:entities           => Set.new(entities),
                  :tags               => Set.new(tags),
-                 :unknown_media      => Set.new(unknown_media),
-                 :warning_media      => Set.new(warning_media),
-                 :critical_media     => Set.new(critical_media),
-                 :unknown_blackhole  => unknown_blackhole,
-                 :warning_blackhole  => warning_blackhole,
-                 :critical_blackhole => critical_blackhole,
                  :time_restrictions  => time_restrictions}
     new_rule = Flapjack::Data::NotificationRule.new(rule_data)
     new_rule.save.should be_true
+
+    nr_fail_states = Flapjack::Data::CheckState.failing_states.collect do |fail_state|
+      state = Flapjack::Data::NotificationRuleState.new(:state => fail_state,
+        :blackhole => state_data[:blackhole][fail_state.to_sym])
+      state.save
+
+      media_types = state_data[:media][fail_state.to_sym]
+      unless media_types.empty?
+        state_media = contact.media.intersect(:type => media_types).all
+        state.media.add(*state_media) unless state_media.empty?
+      end
+      state
+    end
+    new_rule.states.add(*nr_fail_states)
+
     notification_rules << new_rule
   end
 end

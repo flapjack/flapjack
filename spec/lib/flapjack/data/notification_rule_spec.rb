@@ -16,10 +16,6 @@ describe Flapjack::Data::NotificationRule, :redis => true do
     {:tags               => Set.new(["database","physical"]),
      :entities           => Set.new(["foo-app-01.example.com"]),
      :time_restrictions  => [ weekdays_8_18 ],
-     :warning_media      => Set.new(["email"]),
-     :critical_media     => Set.new(["sms", "email"]),
-     :warning_blackhole  => false,
-     :critical_blackhole => false
     }
   }
 
@@ -27,6 +23,7 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
   def create_notification_rule
     rule = Flapjack::Data::NotificationRule.new(rule_data)
+
     rule.save
     rule
   end
@@ -53,25 +50,6 @@ describe Flapjack::Data::NotificationRule, :redis => true do
     rule.match_tags?(['database', 'physical', 'beetroot'].to_set).should be_true
     rule.match_tags?(['database'].to_set).should be_false
     rule.match_tags?(['virtual'].to_set).should be_false
-  end
-
-  it "checks if blackhole settings for a rule match a severity level" do
-    rule_data[:warning_blackhole] = true
-    rule = Flapjack::Data::NotificationRule.new(rule_data)
-
-    rule.blackhole?('warning').should be_true
-    rule.blackhole?('critical').should be_false
-  end
-
-  it "returns the media settings for a rule's severity level" do
-    rule = Flapjack::Data::NotificationRule.new(rule_data)
-
-    warning_media = rule.media_for_severity('warning')
-    warning_media.should be_a(Set)
-    warning_media.to_a.should == ['email']
-    critical_media = rule.media_for_severity('critical')
-    critical_media.should be_a(Set)
-    critical_media.to_a.should =~ ['email', 'sms']
   end
 
 end

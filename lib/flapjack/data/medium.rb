@@ -21,11 +21,14 @@ module Flapjack
 
       has_many :alerts, :class_name => 'Flapjack::Data::Alert'
 
-      has_and_belongs_to_many :alerting_checks, :class_name => 'Flapjack::Data::Check',
-        :inverse_of => :alerting_media
+      has_and_belongs_to_many :alerting_checks,
+        :class_name => 'Flapjack::Data::Check', :inverse_of => :alerting_media
 
-      has_sorted_set :notification_blocks, :class_name => 'Flapjack::Data::NotificationBlock',
-        :key => :expire_at
+      has_sorted_set :notification_blocks,
+        :class_name => 'Flapjack::Data::NotificationBlock', :key => :expire_at
+
+      has_and_belongs_to_many :notification_rule_states,
+        :class_name => 'Flapjack::Data::NotificationRuleState', :inverse_of => :media
 
       index_by :type
 

@@ -204,7 +204,6 @@ Feature: Rollup on a per contact, per media basis
     And   1 minute passes
     And   a critical event is received for check 'ping' on entity 'foo'
     Then  1 sms alert of type problem and rollup none should be queued for +61400000001
-    And   1 sms alert should be queued for +61400000001
     When  1 minute passes
     And   a test event is received for check 'sausage' on entity 'foo'
     Then  1 sms alert of type problem and rollup none should be queued for +61400000001

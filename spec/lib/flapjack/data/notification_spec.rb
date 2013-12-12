@@ -24,14 +24,16 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
       :tags              => Set.new
     )
     notification.save.should be_true
-    notification.should_receive(:check).and_return(check)
+    notification.should_receive(:check).exactly(5).times.and_return(check)
 
     check.should_receive(:id).twice.and_return('abcde')
+    check.should_receive(:entity_name).exactly(3).times.and_return('example.com')
+    check.should_receive(:name).twice.and_return('ping')
 
     state = double(Flapjack::Data::CheckState)
-    state.should_receive(:state).exactly(4).times.and_return('critical')
+    state.should_receive(:state).exactly(6).times.and_return('critical')
 
-    notification.should_receive(:state).exactly(8).times.and_return(state)
+    notification.should_receive(:state).exactly(12).times.and_return(state)
 
     alerting_checks_1 = double('alerting_checks_1')
     alerting_checks_1.should_receive(:exists?).with('abcde').and_return(false)
@@ -45,12 +47,14 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
 
     medium_1 = double(Flapjack::Data::Medium)
     medium_1.should_receive(:type).and_return('email')
+    medium_1.should_receive(:address).and_return('abcde@example.com')
     medium_1.should_receive(:alerting_checks).exactly(3).times.and_return(alerting_checks_1)
     medium_1.should_receive(:clean_alerting_checks).and_return(0)
     medium_1.should_receive(:rollup_threshold).exactly(3).times.and_return(10)
 
     medium_2 = double(Flapjack::Data::Medium)
     medium_2.should_receive(:type).and_return('sms')
+    medium_2.should_receive(:address).and_return('0123456789')
     medium_2.should_receive(:alerting_checks).exactly(3).times.and_return(alerting_checks_2)
     medium_2.should_receive(:clean_alerting_checks).and_return(0)
     medium_2.should_receive(:rollup_threshold).exactly(3).times.and_return(10)
