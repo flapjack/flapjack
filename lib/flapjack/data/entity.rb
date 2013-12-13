@@ -116,6 +116,16 @@ module Flapjack
         Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => redis).keys
       end
 
+      def self.find_all_current(options)
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.zrange('current_entities', 0, -1)
+      end
+
+      def self.find_all_current_with_last_update(options)
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.zrange('current_entities', 0, -1, {:withscores => true})
+      end
+
       def contacts
         contact_ids = @redis.smembers("contacts_for:#{id}")
 

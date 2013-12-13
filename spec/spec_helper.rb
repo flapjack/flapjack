@@ -48,6 +48,14 @@ class MockLogger
     ERRORS
   end
 
+  %w(debug info warn error fatal).each do |level|
+    class_eval <<-LEVELS
+      def #{level}?
+        true
+      end
+    LEVELS
+  end
+
 end
 
 JsonSpec.configure do
@@ -104,5 +112,6 @@ RSpec.configure do |config|
 
   config.include ErbViewHelper, :erb_view => true
   config.include Rack::Test::Methods, :sinatra => true
+  config.include AsyncRackTest::Methods, :sinatra => true
   config.include JsonSpec::Helpers, :json => true
 end

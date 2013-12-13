@@ -57,9 +57,6 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Gateways::API.class_eval {
       set :raise_errors, true
     }
-    Flapjack::Gateways::API.instance_variable_get('@middleware').delete_if {|m|
-      m[0] == Rack::FiberPool
-    }
   end
 
   before(:each) do
@@ -74,7 +71,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).
       and_return([contact])
 
-    get '/contacts'
+    aget '/contacts'
     last_response.should be_ok
     last_response.body.should be_json_eql([contact_core].to_json)
   end
@@ -84,7 +81,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    get "/contacts/#{contact.id}"
+    aget "/contacts/#{contact.id}"
     last_response.should be_ok
     last_response.body.should be_json_eql(contact_core.to_json)
   end
@@ -93,7 +90,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    get "/contacts/#{contact.id}"
+    aget "/contacts/#{contact.id}"
     last_response.should be_forbidden
   end
 
@@ -111,7 +108,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     Flapjack::Data::Contact.should_receive(:add)
 
-    post "/contacts", contact_data.to_json,
+    apost "/contacts", contact_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 200
     last_response.body.should be_json_eql('')
@@ -126,7 +123,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   it "does not create a contact if the data is improperly formatted" do
     Flapjack::Data::Contact.should_not_receive(:add)
 
-    post "/contacts", {'sausage' => 'good'}.to_json,
+    apost "/contacts", {'sausage' => 'good'}.to_json,
       {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 403
   end
@@ -134,7 +131,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   it "does not update a contact if the data is improperly formatted" do
     Flapjack::Data::Contact.should_not_receive(:add)
 
-    put "/contacts", {'sausage' => 'good'}.to_json,
+    aput "/contacts", {'sausage' => 'good'}.to_json,
       {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 403
   end
@@ -145,7 +142,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('21', {:redis => redis, :logger => @logger}).and_return(contact)
     Flapjack::Data::Contact.should_not_receive(:add)
 
-    put "/contacts", contact_data.to_json,
+    aput "/contacts", contact_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 403
   end
@@ -169,14 +166,14 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([])
     Flapjack::Data::Contact.should_receive(:add).twice
 
-    post "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 204
   end
 
   it "does not replace contacts if the data is improperly formatted" do
     Flapjack::Data::Contact.should_not_receive(:add)
 
-    post "/contacts_atomic", {'contacts' => ["Hello", "again"]}.to_json,
+    apost "/contacts_atomic", {'contacts' => ["Hello", "again"]}.to_json,
       {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 403
   end
@@ -199,7 +196,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([])
     Flapjack::Data::Contact.should_receive(:add)
 
-    post "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 204
   end
 
@@ -226,7 +223,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([existing])
     Flapjack::Data::Contact.should_receive(:add).with(contacts['contacts'][0], :redis => redis)
 
-    post "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 204
   end
 
@@ -247,7 +244,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:all).with(:redis => redis).and_return([existing])
     Flapjack::Data::Contact.should_receive(:add).with(contacts['contacts'][0], :redis => redis)
 
-    post "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 204
   end
 
@@ -261,7 +258,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    get "/contacts/#{contact.id}/notification_rules"
+    aget "/contacts/#{contact.id}/notification_rules"
     last_response.should be_ok
     last_response.body.should be_json_eql( '["rule_1", "rule_2"]' )
   end
@@ -270,7 +267,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    get "/contacts/#{contact.id}/notification_rules"
+    aget "/contacts/#{contact.id}/notification_rules"
     last_response.should be_forbidden
   end
 
@@ -279,7 +276,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
 
-    get "/notification_rules/#{notification_rule.id}"
+    aget "/notification_rules/#{notification_rule.id}"
     last_response.should be_ok
     last_response.body.should be_json_eql('"rule_1"')
   end
@@ -288,7 +285,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    get "/notification_rules/#{notification_rule.id}"
+    aget "/notification_rules/#{notification_rule.id}"
     last_response.should be_forbidden
   end
 
@@ -308,7 +305,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     contact.should_receive(:add_notification_rule).
       with(notification_rule_data_sym, :logger => @logger).and_return(notification_rule)
 
-    post "/notification_rules", notification_rule_data.to_json,
+    apost "/notification_rules", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
     last_response.should be_ok
     last_response.body.should be_json_eql('"rule_1"')
@@ -318,7 +315,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    post "/notification_rules", notification_rule_data.to_json,
+    apost "/notification_rules", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
     last_response.should be_forbidden
   end
@@ -326,7 +323,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   it "does not create a notification_rule if a rule id is provided" do
     contact.should_not_receive(:add_notification_rule)
 
-    post "/notification_rules", notification_rule_data.merge(:id => 1).to_json,
+    apost "/notification_rules", notification_rule_data.merge(:id => 1).to_json,
       {'CONTENT_TYPE' => 'application/json'}
     last_response.status.should == 403
   end
@@ -347,7 +344,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     notification_rule.should_receive(:update).with(notification_rule_data_sym, :logger => @logger).and_return(nil)
 
-    put "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
+    aput "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
     last_response.should be_ok
     last_response.body.should be_json_eql('"rule_1"')
@@ -357,7 +354,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    put "/notification_rules/#{notification_rule.id}", notification_rule_data
+    aput "/notification_rules/#{notification_rule.id}", notification_rule_data
     last_response.should be_forbidden
   end
 
@@ -367,7 +364,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    put "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
+    aput "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
     last_response.should be_forbidden
   end
@@ -381,7 +378,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    delete "/notification_rules/#{notification_rule.id}"
+    adelete "/notification_rules/#{notification_rule.id}"
     last_response.status.should == 204
   end
 
@@ -389,7 +386,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::NotificationRule.should_receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    delete "/notification_rules/#{notification_rule.id}"
+    adelete "/notification_rules/#{notification_rule.id}"
     last_response.should be_forbidden
   end
 
@@ -400,7 +397,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    delete "/notification_rules/#{notification_rule.id}"
+    adelete "/notification_rules/#{notification_rule.id}"
     last_response.should be_forbidden
   end
 
@@ -417,7 +414,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
            'rollup_threshold' => media_rollup_thresholds[m] }]
       }).flatten(1)].to_json
 
-    get "/contacts/#{contact.id}/media"
+    aget "/contacts/#{contact.id}/media"
     last_response.should be_ok
     last_response.body.should be_json_eql(result)
   end
@@ -426,7 +423,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    get "/contacts/#{contact.id}/media"
+    aget "/contacts/#{contact.id}/media"
     last_response.should be_forbidden
   end
 
@@ -444,7 +441,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       'rollup_threshold' => media_rollup_thresholds['sms'],
     }
 
-    get "/contacts/#{contact.id}/media/sms"
+    aget "/contacts/#{contact.id}/media/sms"
     last_response.should be_ok
     last_response.body.should be_json_eql(result.to_json)
   end
@@ -453,7 +450,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    get "/contacts/#{contact.id}/media/sms"
+    aget "/contacts/#{contact.id}/media/sms"
     last_response.should be_forbidden
   end
 
@@ -462,7 +459,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    get "/contacts/#{contact.id}/media/telepathy"
+    aget "/contacts/#{contact.id}/media/telepathy"
     last_response.should be_forbidden
   end
 
@@ -487,7 +484,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
               'interval'         => alt_media_intervals['sms'],
               'rollup_threshold' => alt_media_rollup_thresholds['sms']}
 
-    put "/contacts/#{contact.id}/media/sms", :address => '04987654321',
+    aput "/contacts/#{contact.id}/media/sms", :address => '04987654321',
       :interval => '200', :rollup_threshold => '5'
     last_response.should be_ok
     last_response.body.should be_json_eql(result.to_json)
@@ -504,7 +501,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    put "/contacts/#{contact.id}/media/pagerduty", :service_key => result['service_key'],
+    aput "/contacts/#{contact.id}/media/pagerduty", :service_key => result['service_key'],
       :subdomain => result['subdomain'], :username => result['username'],
       :password => result['password']
 
@@ -516,7 +513,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    put "/contacts/#{contact.id}/media/sms", :address => '04987654321', :interval => '200'
+    aput "/contacts/#{contact.id}/media/sms", :address => '04987654321', :interval => '200'
     last_response.should be_forbidden
   end
 
@@ -524,7 +521,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    put "/contacts/#{contact.id}/media/sms", :interval => '200'
+    aput "/contacts/#{contact.id}/media/sms", :interval => '200'
     last_response.should be_forbidden
   end
 
@@ -542,7 +539,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    put "/contacts/#{contact.id}/media/sms", :address => '04987654321'
+    aput "/contacts/#{contact.id}/media/sms", :address => '04987654321'
     last_response.should be_ok
   end
 
@@ -551,7 +548,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    delete "/contacts/#{contact.id}/media/sms"
+    adelete "/contacts/#{contact.id}/media/sms"
     last_response.status.should == 204
   end
 
@@ -559,7 +556,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    delete "/contacts/#{contact.id}/media/sms"
+    adelete "/contacts/#{contact.id}/media/sms"
     last_response.should be_forbidden
   end
 
@@ -569,7 +566,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    get "/contacts/#{contact.id}/timezone"
+    aget "/contacts/#{contact.id}/timezone"
     last_response.should be_ok
     last_response.body.should be_json_eql('"Australia/Sydney"')
   end
@@ -578,7 +575,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    get "/contacts/#{contact.id}/timezone"
+    aget "/contacts/#{contact.id}/timezone"
     last_response.should be_forbidden
   end
 
@@ -589,7 +586,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    put "/contacts/#{contact.id}/timezone", {:timezone => 'Australia/Perth'}
+    aput "/contacts/#{contact.id}/timezone", {:timezone => 'Australia/Perth'}
     last_response.should be_ok
   end
 
@@ -597,7 +594,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    put "/contacts/#{contact.id}/timezone", {:timezone => 'Australia/Perth'}
+    aput "/contacts/#{contact.id}/timezone", {:timezone => 'Australia/Perth'}
     last_response.should be_forbidden
   end
 
@@ -607,7 +604,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    delete "/contacts/#{contact.id}/timezone"
+    adelete "/contacts/#{contact.id}/timezone"
     last_response.status.should == 204
   end
 
@@ -615,7 +612,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    delete "/contacts/#{contact.id}/timezone"
+    adelete "/contacts/#{contact.id}/timezone"
     last_response.should be_forbidden
   end
 
@@ -625,7 +622,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    post "contacts/#{contact.id}/tags", :tag => 'web'
+    apost "contacts/#{contact.id}/tags", :tag => 'web'
     last_response.should be_ok
     last_response.body.should be_json_eql( ['web'].to_json )
   end
@@ -634,7 +631,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    post "contacts/#{contact.id}/tags", :tag => 'web'
+    apost "contacts/#{contact.id}/tags", :tag => 'web'
     last_response.should be_forbidden
   end
 
@@ -644,7 +641,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    post "contacts/#{contact.id}/tags", :tag => ['web', 'app']
+    apost "contacts/#{contact.id}/tags", :tag => ['web', 'app']
     last_response.should be_ok
     last_response.body.should be_json_eql( ['web', 'app'].to_json )
   end
@@ -653,7 +650,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    post "contacts/#{contact.id}/tags", :tag => ['web', 'app']
+    apost "contacts/#{contact.id}/tags", :tag => ['web', 'app']
     last_response.should be_forbidden
   end
 
@@ -662,7 +659,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    delete "contacts/#{contact.id}/tags", :tag => 'web'
+    adelete "contacts/#{contact.id}/tags", :tag => 'web'
     last_response.status.should == 204
   end
 
@@ -670,7 +667,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    delete "contacts/#{contact.id}/tags", :tag => 'web'
+    adelete "contacts/#{contact.id}/tags", :tag => 'web'
     last_response.should be_forbidden
   end
 
@@ -679,7 +676,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    delete "contacts/#{contact.id}/tags", :tag => ['web', 'app']
+    adelete "contacts/#{contact.id}/tags", :tag => ['web', 'app']
     last_response.status.should == 204
   end
 
@@ -687,7 +684,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    delete "contacts/#{contact.id}/tags", :tag => ['web', 'app']
+    adelete "contacts/#{contact.id}/tags", :tag => ['web', 'app']
     last_response.should be_forbidden
   end
 
@@ -696,7 +693,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    get "contacts/#{contact.id}/tags"
+    aget "contacts/#{contact.id}/tags"
     last_response.should be_ok
     last_response.body.should be_json_eql( ['web', 'app'].to_json )
   end
@@ -705,7 +702,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    get "contacts/#{contact.id}/tags"
+    aget "contacts/#{contact.id}/tags"
     last_response.should be_forbidden
   end
 
@@ -722,7 +719,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    get "contacts/#{contact.id}/entity_tags"
+    aget "contacts/#{contact.id}/entity_tags"
     last_response.should be_ok
     tag_response = {'entity_1' => ['web'],
                     'entity_2' => ['app']}
@@ -733,7 +730,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    get "contacts/#{contact.id}/entity_tags"
+    aget "contacts/#{contact.id}/entity_tags"
     last_response.should be_forbidden
   end
 
@@ -754,7 +751,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    post "contacts/#{contact.id}/entity_tags",
+    apost "contacts/#{contact.id}/entity_tags",
       :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
     last_response.should be_ok
     tag_response = {'entity_1' => ['web'],
@@ -766,7 +763,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    post "contacts/#{contact.id}/entity_tags",
+    apost "contacts/#{contact.id}/entity_tags",
       :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
     last_response.should be_forbidden
   end
@@ -785,7 +782,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    delete "contacts/#{contact.id}/entity_tags",
+    adelete "contacts/#{contact.id}/entity_tags",
       :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
     last_response.status.should == 204
   end
@@ -794,7 +791,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Data::Contact.should_receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    delete "contacts/#{contact.id}/entity_tags",
+    adelete "contacts/#{contact.id}/entity_tags",
       :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
     last_response.should be_forbidden
   end

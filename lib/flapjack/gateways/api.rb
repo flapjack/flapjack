@@ -29,16 +29,42 @@ module Flapjack
 
       set :show_exceptions, false
 
-      #rescue_exception = Proc.new { |env, exception|
-      #  @logger.error exception.message
-      #  @logger.error exception.backtrace.join("\n")
-      #  [503, {}, {:errors => [exception.message]}.to_json]
-      #}
-      #use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
-      #
-      # FIXME: not sure why the above isn't working, had to add a general
-      # error handler later in this file
-      use Rack::FiberPool, :size => 25
+      rescue_exception = Proc.new { |env, exception|
+
+        error = proc {|status, exception, *msg|
+          if !msg || msg.empty?
+            trace = exception.backtrace.join("\n")
+            msg = "#{exception.class} - #{exception.message}"
+            msg_str = "#{msg}\n#{trace}"
+          else
+            msg_str = msg.join(", ")
+          end
+          logger = Flapjack::Gateways::API.instance_variable_get('@logger')
+          case
+          when status < 500
+            logger.warn "Error: #{msg_str}"
+          else
+            logger.error "Error: #{msg_str}"
+          end
+          [status, {}, {:errors => msg}.to_json]
+        }
+
+        e = env['sinatra.error']
+
+        case exception
+        when Flapjack::Gateways::API::ContactNotFound
+          error.call(403, e, "could not find contact '#{e.contact_id}'")
+        when Flapjack::Gateways::API::NotificationRuleNotFound
+          error.call(403, e, "could not find notification rule '#{e.rule_id}'")
+        when Flapjack::Gateways::API::EntityNotFound
+          error.call(403, e, "could not find entity '#{e.entity}'")
+        when Flapjack::Gateways::API::EntityCheckNotFound
+          error.call(403, e, "could not find entity check '#{e.check}'")
+        else
+          error.call(500, exception)
+        end
+      }
+      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
 
       use Rack::MethodOverride
       use Rack::JsonParamsParser
@@ -65,11 +91,16 @@ module Flapjack
       end
 
       before do
-        input = env['rack.input'].read
-        input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
-        logger.info("#{request.request_method} #{request.path_info}#{request.query_string} #{input_short[0..80]}")
-        logger.debug("#{request.request_method} #{request.path_info}#{request.query_string} #{input}")
-        env['rack.input'].rewind
+        input = nil
+        if logger.debug?
+          input = env['rack.input'].read
+          logger.debug("#{request.request_method} #{request.path_info}#{request.query_string} #{input}")
+        elsif logger.info?
+          input = env['rack.input'].read
+          input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
+          logger.info("#{request.request_method} #{request.path_info}#{request.query_string} #{input_short[0..80]}")
+        end
+        env['rack.input'].rewind unless input.nil?
       end
 
       after do
@@ -81,33 +112,7 @@ module Flapjack
       register Flapjack::Gateways::API::ContactMethods
 
       not_found do
-        logger.debug("in not_found :-(")
         err(404, "not routable")
-      end
-
-      error Flapjack::Gateways::API::ContactNotFound do
-        e = env['sinatra.error']
-        err(403, "could not find contact '#{e.contact_id}'")
-      end
-
-      error Flapjack::Gateways::API::NotificationRuleNotFound do
-        e = env['sinatra.error']
-        err(403, "could not find notification rule '#{e.rule_id}'")
-      end
-
-      error Flapjack::Gateways::API::EntityNotFound do
-        e = env['sinatra.error']
-        err(403, "could not find entity '#{e.entity}'")
-      end
-
-      error Flapjack::Gateways::API::EntityCheckNotFound do
-        e = env['sinatra.error']
-        err(403, "could not find entity check '#{e.check}'")
-      end
-
-      error do
-        e = env['sinatra.error']
-        err(response.status, "#{e.class} - #{e.message}")
       end
 
       private
@@ -117,7 +122,6 @@ module Flapjack
         logger.info "Error: #{msg_str}"
         [status, {}, {:errors => msg}.to_json]
       end
-
     end
 
   end
