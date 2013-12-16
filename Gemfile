@@ -19,8 +19,6 @@ group :test do
   gem 'guard-rspec'
   gem 'guard-cucumber'
   gem 'fuubar'
-  # gem 'fuubar-cucumber', '>= 0.0.21'
   gem 'simplecov', :require => false
-  # gem 'json_spec'
   gem 'perftools.rb'
 end

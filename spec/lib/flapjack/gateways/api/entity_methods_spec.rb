@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'flapjack/gateways/api'
 
-describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => true, :json => true do
+describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => true do
 
   def app
     Flapjack::Gateways::API
