@@ -94,7 +94,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(last_response).to be_forbidden
   end
 
-  it "creates a contact" do
+  it "creates a contact with supplied ID" do
     contact_data = {
       "id"         => "0362",
       "first_name" => "John",
@@ -106,12 +106,13 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       }
     }
 
-    Flapjack::Data::Contact.should_receive(:add)
+    expect(Flapjack::Data::Contact).to receive(:add)
 
-    apost "/contacts", contact_data.to_json,
+    apost "/contacts", { :contacts => [contact_data]}.to_json,
       {'CONTENT_TYPE' => 'application/json'}
-    last_response.status.should == 200
-    last_response.body.should be_json_eql('')
+
+    expect(last_response.status).to eq(200)
+    expect(last_response.body).to eq(["0362"].to_json)
   end
 
   it "updates a contact" do
@@ -121,30 +122,30 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "does not create a contact if the data is improperly formatted" do
-    Flapjack::Data::Contact.should_not_receive(:add)
+    expect(Flapjack::Data::Contact).to not_receive(:add)
 
     apost "/contacts", {'sausage' => 'good'}.to_json,
       {'CONTENT_TYPE' => 'application/json'}
-    last_response.status.should == 403
+    expect(last_response.status).to eq(403)
   end
 
   it "does not update a contact if the data is improperly formatted" do
-    Flapjack::Data::Contact.should_not_receive(:add)
+    expect(Flapjack::Data::Contact).to not_receive(:add)
 
     aput "/contacts", {'sausage' => 'good'}.to_json,
       {'CONTENT_TYPE' => 'application/json'}
-    last_response.status.should == 403
+    expect(last_response.status).to eq(403)
   end
 
   it "does not update a contact if there is a conflict on id" do
     contact_data = {'id' => '21'}
-    Flapjack::Data::Contact.should_receive(:find_by_id).
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with('21', {:redis => redis, :logger => @logger}).and_return(contact)
-    Flapjack::Data::Contact.should_not_receive(:add)
+    expect(Flapjack::Data::Contact).to not_receive(:add)
 
     aput "/contacts", contact_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
-    last_response.status.should == 403
+    expect(last_response.status).to eq(403)
   end
 
   it "replaces contacts with a submitted list" do
