@@ -45,7 +45,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
       Flapjack::Gateways::SmsMessagenet.perform(message)
       EM.stop
     end
-    req.should have_been_requested
+    expect(req).to have_been_requested
   end
 
   it "truncates a long message a" do
@@ -70,7 +70,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
       Flapjack::Gateways::SmsMessagenet.perform(long_msg)
       EM.stop
     end
-    req.should have_been_requested
+    expect(req).to have_been_requested
   end
 
   it "does not send an SMS message with an invalid config" do
@@ -82,7 +82,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
       EM.stop
     end
 
-    WebMock.should_not have_requested(:get,
+    expect(WebMock).not_to have_requested(:get,
       "https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage")
   end
 

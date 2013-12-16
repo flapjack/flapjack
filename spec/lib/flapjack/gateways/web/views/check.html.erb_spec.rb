@@ -8,7 +8,7 @@ describe 'web/views/check.html.erb', :erb_view => true do
     @last_notifications = {}
 
     page = render_erb('check.html.erb', binding)
-    page.should match(%r{/abc-xyz-01/Disk%20%2F%20Utilisation})
+    expect(page).to match(%r{/abc-xyz-01/Disk%20%2F%20Utilisation})
   end
 
 end

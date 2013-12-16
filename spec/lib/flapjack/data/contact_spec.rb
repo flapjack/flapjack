@@ -70,28 +70,28 @@ describe Flapjack::Data::Contact, :redis => true do
 
   it "returns a list of all contacts" do
     contacts = Flapjack::Data::Contact.all(:redis => @redis)
-    contacts.should_not be_nil
-    contacts.should be_an(Array)
-    contacts.should have(2).contacts
-    contacts[0].name.should == 'Jane Janeley'
-    contacts[1].name.should == 'John Johnson'
+    expect(contacts).not_to be_nil
+    expect(contacts).to be_an(Array)
+    expect(contacts.size).to eq(2)
+    expect(contacts[0].name).to eq('Jane Janeley')
+    expect(contacts[1].name).to eq('John Johnson')
   end
 
   it "finds a contact by id" do
     contact = Flapjack::Data::Contact.find_by_id('c362', :redis => @redis)
-    contact.should_not be_nil
-    contact.name.should == "John Johnson"
+    expect(contact).not_to be_nil
+    expect(contact.name).to eq("John Johnson")
   end
 
   it "adds a contact with the same id as an existing one, clears notification rules" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
-    contact.should_not be_nil
+    expect(contact).not_to be_nil
 
     contact.add_notification_rule(notification_rule_data)
 
     nr = contact.notification_rules
-    nr.should_not be_nil
-    nr.should have(2).notification_rules
+    expect(nr).not_to be_nil
+    expect(nr.size).to eq(2)
 
     Flapjack::Data::Contact.add({'id'         => 'c363_a-f@42%*',
                                  'first_name' => 'Smithy',
@@ -100,44 +100,44 @@ describe Flapjack::Data::Contact, :redis => true do
                                  :redis       => @redis)
 
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
-    contact.should_not be_nil
-    contact.name.should == 'Smithy Smith'
+    expect(contact).not_to be_nil
+    expect(contact.name).to eq('Smithy Smith')
     rules = contact.notification_rules
-    rules.should have(1).notification_rule
-    nr.map(&:id).should_not include(rules.first.id)
+    expect(rules.size).to eq(1)
+    expect(nr.map(&:id)).not_to include(rules.first.id)
   end
 
   it "updates a contact and clears their media settings" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
 
     contact.update('media' => {})
-    contact.media.should be_empty
+    expect(contact.media).to be_empty
   end
 
   it "updates a contact, does not clear notification rules" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
-    contact.should_not be_nil
+    expect(contact).not_to be_nil
 
     contact.add_notification_rule(notification_rule_data)
 
     nr1 = contact.notification_rules
-    nr1.should_not be_nil
-    nr1.should have(2).notification_rules
+    expect(nr1).not_to be_nil
+    expect(nr1.size).to eq(2)
 
     contact.update('first_name' => 'John',
                    'last_name'  => 'Smith',
                    'email'      => 'johns@example.com')
-    contact.name.should == 'John Smith'
+    expect(contact.name).to eq('John Smith')
 
     nr2 = contact.notification_rules
-    nr2.should_not be_nil
-    nr2.should have(2).notification_rules
-    nr1.map(&:id).should == nr2.map(&:id)
+    expect(nr2).not_to be_nil
+    expect(nr2.size).to eq(2)
+    expect(nr1.map(&:id)).to eq(nr2.map(&:id))
   end
 
   it "adds a notification rule for a contact" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
-    contact.should_not be_nil
+    expect(contact).not_to be_nil
 
     expect {
       contact.add_notification_rule(notification_rule_data)
@@ -146,7 +146,7 @@ describe Flapjack::Data::Contact, :redis => true do
 
   it "removes a notification rule from a contact" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
-    contact.should_not be_nil
+    expect(contact).not_to be_nil
 
     rule = contact.add_notification_rule(notification_rule_data)
 
@@ -161,29 +161,29 @@ describe Flapjack::Data::Contact, :redis => true do
     @redis.smembers("contact_notification_rules:c363_a-f@42%*").each do |rule_id|
       @redis.srem("contact_notification_rules:c363_a-f@42%*", rule_id)
     end
-    @redis.smembers("contact_notification_rules:c363_a-f@42%*").should be_empty
+    expect(@redis.smembers("contact_notification_rules:c363_a-f@42%*")).to be_empty
 
     rules = contact.notification_rules
-    rules.should have(1).rule
+    expect(rules.size).to eq(1)
     rule = rules.first
     [:entities, :tags, :time_restrictions,
      :warning_media, :critical_media,
      :warning_blackhole, :critical_blackhole].each do |k|
-      rule.send(k).should == general_notification_rule_data[k]
+      expect(rule.send(k)).to eq(general_notification_rule_data[k])
     end
   end
 
   it "creates a general notification rule for a pre-existing contact if the existing general one was changed" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
     rules = contact.notification_rules
-    rules.should have(1).notification_rule
+    expect(rules.size).to eq(1)
     rule = rules.first
 
     rule.update(notification_rule_data)
 
     rules = contact.notification_rules
-    rules.should have(2).notification_rules
-    rules.select {|r| r.is_specific? }.should have(1).rule
+    expect(rules.size).to eq(2)
+    expect(rules.select {|r| r.is_specific? }.size).to eq(1)
   end
 
   it "deletes a contact by id, including linked entities, checks, tags and notification rules" do
@@ -223,30 +223,30 @@ describe Flapjack::Data::Contact, :redis => true do
 
     contact = Flapjack::Data::Contact.find_by_id('c362', :redis => @redis)
     eandcs = contact.entities(:checks => true)
-    eandcs.should_not be_nil
-    eandcs.should be_an(Array)
-    eandcs.should have(1).entity_and_checks
+    expect(eandcs).not_to be_nil
+    expect(eandcs).to be_an(Array)
+    expect(eandcs.size).to eq(1)
 
     eandc = eandcs.first
-    eandc.should be_a(Hash)
+    expect(eandc).to be_a(Hash)
 
     entity = eandc[:entity]
-    entity.name.should == entity_name
+    expect(entity.name).to eq(entity_name)
     checks = eandc[:checks]
-    checks.should be_a(Set)
-    checks.should have(1).check
-    checks.should include('PING')
+    expect(checks).to be_a(Set)
+    expect(checks.size).to eq(1)
+    expect(checks).to include('PING')
   end
 
   it "returns pagerduty credentials for a contact" do
     contact = Flapjack::Data::Contact.find_by_id('c362', :redis => @redis)
     credentials = contact.pagerduty_credentials
-    credentials.should_not be_nil
-    credentials.should be_a(Hash)
-    credentials.should == {'service_key' => '123456789012345678901234',
+    expect(credentials).not_to be_nil
+    expect(credentials).to be_a(Hash)
+    expect(credentials).to eq({'service_key' => '123456789012345678901234',
                            'subdomain'   => 'flpjck',
                            'username'    => 'flapjack',
-                           'password'    => 'very_secure'}
+                           'password'    => 'very_secure'})
   end
 
   it "sets pagerduty credentials for a contact" do
@@ -256,78 +256,78 @@ describe Flapjack::Data::Contact, :redis => true do
                                       'username'    => 'flapjack',
                                       'password'    => 'tomato')
 
-    @redis.hget('contact_media:c362', 'pagerduty').should == '567890123456789012345678'
-    @redis.hgetall('contact_pagerduty:c362').should == {
+    expect(@redis.hget('contact_media:c362', 'pagerduty')).to eq('567890123456789012345678')
+    expect(@redis.hgetall('contact_pagerduty:c362')).to eq({
       'subdomain'   => 'eggs',
       'username'    => 'flapjack',
       'password'    => 'tomato'
-    }
+    })
   end
 
   it "sets the interval for a contact's media" do
     contact = Flapjack::Data::Contact.find_by_id('c362', :redis => @redis)
     contact.set_interval_for_media('email', 42)
     email_interval_raw = @redis.hget("contact_media_intervals:#{contact.id}", 'email')
-    email_interval_raw.should == '42'
+    expect(email_interval_raw).to eq('42')
   end
 
   it "returns the interval for a contact's media" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
     email_interval = contact.interval_for_media('email')
-    email_interval.should == 60
+    expect(email_interval).to eq(60)
   end
 
   it "returns default 15 mins for interval for a contact's media that has no set interval" do
     contact = Flapjack::Data::Contact.find_by_id('c362', :redis => @redis)
     email_interval = contact.interval_for_media('email')
-    email_interval.should == 900
+    expect(email_interval).to eq(900)
   end
 
   it "removes the interval for a contact's media" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
     contact.set_interval_for_media('email', nil)
     email_interval_raw = @redis.hget("contact_media_intervals:#{contact.id}", 'email')
-    email_interval_raw.should be_nil
+    expect(email_interval_raw).to be_nil
   end
 
   it "sets the rollup threshold for a contact's media" do
     contact = Flapjack::Data::Contact.find_by_id('c362', :redis => @redis)
     email_rollup_threshold = contact.set_rollup_threshold_for_media('email', 3)
     email_rollup_threshold_raw = @redis.hget("contact_media_rollup_thresholds:#{contact.id}", 'email')
-    email_rollup_threshold_raw.should == '3'
+    expect(email_rollup_threshold_raw).to eq('3')
   end
 
   it "returns the rollup threshold for a contact's media" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
     email_rollup_threshold = contact.rollup_threshold_for_media('email')
-    email_rollup_threshold.should_not be_nil
-    email_rollup_threshold.should be_a(Integer)
-    email_rollup_threshold.should == 5
+    expect(email_rollup_threshold).not_to be_nil
+    expect(email_rollup_threshold).to be_a(Integer)
+    expect(email_rollup_threshold).to eq(5)
   end
 
   it "removes the rollup threshold for a contact's media" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
     email_rollup_threshold = contact.set_rollup_threshold_for_media('email', nil)
     email_rollup_threshold_raw = @redis.hget("contact_media_rollup_thresholds:#{contact.id}", 'email')
-    email_rollup_threshold_raw.should be_nil
+    expect(email_rollup_threshold_raw).to be_nil
   end
 
   it "sets the address for a contact's media" do
     contact = Flapjack::Data::Contact.find_by_id('c362', :redis => @redis)
     contact.set_address_for_media('email', 'spongebob@example.com')
     email_address_raw = @redis.hget("contact_media:#{contact.id}", 'email')
-    email_address_raw.should == 'spongebob@example.com'
+    expect(email_address_raw).to eq('spongebob@example.com')
   end
 
   it "removes a contact's media" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
     contact.remove_media('email')
     email_address_raw = @redis.hget("contac_media:#{contact.id}", 'email')
-    email_address_raw.should be_nil
+    expect(email_address_raw).to be_nil
     email_rollup_threshold_raw = @redis.hget("contact_media_rollup_thresholds:#{contact.id}", 'email')
-    email_rollup_threshold_raw.should be_nil
+    expect(email_rollup_threshold_raw).to be_nil
     email_interval_raw = @redis.hget("contact_media_intervals:#{contact.id}", 'email')
-    email_interval_raw.should be_nil
+    expect(email_interval_raw).to be_nil
   end
 
 end
