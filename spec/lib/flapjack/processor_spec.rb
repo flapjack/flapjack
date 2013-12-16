@@ -13,44 +13,44 @@ describe Flapjack::Processor, :logger => true do
   it "starts up, runs and shuts down" do
     t = Time.now.to_i
 
-    Flapjack::Filters::Ok.should_receive(:new)
-    Flapjack::Filters::ScheduledMaintenance.should_receive(:new)
-    Flapjack::Filters::UnscheduledMaintenance.should_receive(:new)
-    Flapjack::Filters::Delays.should_receive(:new)
-    Flapjack::Filters::Acknowledgement.should_receive(:new)
+    expect(Flapjack::Filters::Ok).to receive(:new)
+    expect(Flapjack::Filters::ScheduledMaintenance).to receive(:new)
+    expect(Flapjack::Filters::UnscheduledMaintenance).to receive(:new)
+    expect(Flapjack::Filters::Delays).to receive(:new)
+    expect(Flapjack::Filters::Acknowledgement).to receive(:new)
 
     redis = double('redis')
 
-    redis.should_receive(:hset).with(/^executive_instance:/, "boot_time", anything)
-    redis.should_receive(:hget).with('event_counters', 'all').and_return(nil)
-    redis.should_receive(:hset).with('event_counters', 'all', 0)
-    redis.should_receive(:hset).with('event_counters', 'ok', 0)
-    redis.should_receive(:hset).with('event_counters', 'failure', 0)
-    redis.should_receive(:hset).with('event_counters', 'action', 0)
+    expect(redis).to receive(:hset).with(/^executive_instance:/, "boot_time", anything)
+    expect(redis).to receive(:hget).with('event_counters', 'all').and_return(nil)
+    expect(redis).to receive(:hset).with('event_counters', 'all', 0)
+    expect(redis).to receive(:hset).with('event_counters', 'ok', 0)
+    expect(redis).to receive(:hset).with('event_counters', 'failure', 0)
+    expect(redis).to receive(:hset).with('event_counters', 'action', 0)
 
-    redis.should_receive(:hset).with(/^event_counters:/, 'all', 0)
-    redis.should_receive(:hset).with(/^event_counters:/, 'ok', 0)
-    redis.should_receive(:hset).with(/^event_counters:/, 'failure', 0)
-    redis.should_receive(:hset).with(/^event_counters:/, 'action', 0)
+    expect(redis).to receive(:hset).with(/^event_counters:/, 'all', 0)
+    expect(redis).to receive(:hset).with(/^event_counters:/, 'ok', 0)
+    expect(redis).to receive(:hset).with(/^event_counters:/, 'failure', 0)
+    expect(redis).to receive(:hset).with(/^event_counters:/, 'action', 0)
 
-    redis.should_receive(:expire).with(/^executive_instance:/, anything)
-    redis.should_receive(:expire).with(/^event_counters:/, anything).exactly(4).times
+    expect(redis).to receive(:expire).with(/^executive_instance:/, anything)
+    expect(redis).to receive(:expire).with(/^event_counters:/, anything).exactly(4).times
 
     # redis.should_receive(:hincrby).with('event_counters', 'all', 1)
     # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
 
-    Flapjack::Data::Event.should_receive(:pending_count).with('events', :redis => redis).and_return(0)
+    expect(Flapjack::Data::Event).to receive(:pending_count).with('events', :redis => redis).and_return(0)
 
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
+    expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
 
     fc = double('coordinator')
 
     executive = Flapjack::Processor.new(:config => {}, :logger => @logger, :coordinator => fc)
 
     noop_evt = double(Flapjack::Data::Event)
-    noop_evt.should_receive(:inspect)
-    noop_evt.should_receive(:type).and_return('noop')
-    Flapjack::Data::Event.should_receive(:next) {
+    expect(noop_evt).to receive(:inspect)
+    expect(noop_evt).to receive(:type).and_return('noop')
+    expect(Flapjack::Data::Event).to receive(:next) {
       executive.instance_variable_set('@should_quit', true)
       noop_evt
     }

@@ -6,9 +6,9 @@ Given /^NetSaint configuration is at "([^"]*)"$/ do |path|
   files << root.join('netsaint.cfg')
   files << root.join('resource.cfg')
 
-  File.directory?(root).should be_true
+  File.directory?(root).should be true
   files.each do |filename|
-    File.exists?(filename).should be_true
+    File.exists?(filename).should be true
   end
 end
 
@@ -42,7 +42,7 @@ Then /^I should see the following attributes for every (\w+):$/ do |type, table|
   @data[type].each_pair do |name, items|
     items.each do |item|
       nils.each do |attr|
-        item.member?(attr).should be_true
+        item.member?(attr).should be true
       end
     end
   end

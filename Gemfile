@@ -7,7 +7,7 @@ group :development do
 end
 
 group :test do
-  gem 'rspec'
+  gem 'rspec', '~> 3.0.0.beta1'
   gem 'cucumber'
   gem 'delorean'
   gem 'rack-test'
@@ -15,12 +15,10 @@ group :test do
   gem 'resque_spec'
   gem 'webmock'
   gem 'guard'
-  gem 'rb-fsevent', '~> 0.9.1'
+  gem 'rb-fsevent'
   gem 'guard-rspec'
   gem 'guard-cucumber'
   gem 'fuubar'
-  gem 'fuubar-cucumber'
   gem 'simplecov', :require => false
-  gem 'json_spec'
   gem 'perftools.rb'
 end

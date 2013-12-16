@@ -12,41 +12,41 @@ describe Flapjack::Utility do
     let(:time) { Time.new }
 
     before(:each) do
-      Time.should_receive(:now).and_return(time)
+      expect(Time).to receive(:now).and_return(time)
     end
 
     it 'displays now as a minute ago' do
-      'about a minute'.should == relative_time_ago(time - 60)
+      expect('about a minute').to eq(relative_time_ago(time - 60))
     end
     it "displays a few minutes ago" do
-      '4 minutes'.should == relative_time_ago(time - (4 * 60))
+      expect('4 minutes').to eq(relative_time_ago(time - (4 * 60)))
     end
     it "displays an hour ago" do
-      'about 1 hour'.should == relative_time_ago(time - (65 * 60))
+      expect('about 1 hour').to eq(relative_time_ago(time - (65 * 60)))
     end
     it "displays a few hours ago" do
-      'about 3 hours'.should == relative_time_ago(time - (185 * 60))
+      expect('about 3 hours').to eq(relative_time_ago(time - (185 * 60)))
     end
     it "displays a day ago" do
-      '1 day'.should == relative_time_ago(time - (24 * 60 * 60))
+      expect('1 day').to eq(relative_time_ago(time - (24 * 60 * 60)))
     end
     it "displays about 2 days ago" do
-      'about 2 days'.should == relative_time_ago(time - (2 * 24 * 60 * 60) + (5 * 60))
+      expect('about 2 days').to eq(relative_time_ago(time - (2 * 24 * 60 * 60) + (5 * 60)))
     end
     it "displays a few days ago" do
-      '5 days'.should == relative_time_ago(time - (5 * 24 * 60 * 60) - (5 * 60))
+      expect('5 days').to eq(relative_time_ago(time - (5 * 24 * 60 * 60) - (5 * 60)))
     end
     it "displays a month ago" do
-      'about 1 month'.should == relative_time_ago(time - (32 * 24 * 60 * 60) - (5 * 60))
+      expect('about 1 month').to eq(relative_time_ago(time - (32 * 24 * 60 * 60) - (5 * 60)))
     end
     it "displays a few months ago" do
-      '6 months'.should == relative_time_ago(time - (180 * 24 * 60 * 60) - (5 * 60))
+      expect('6 months').to eq(relative_time_ago(time - (180 * 24 * 60 * 60) - (5 * 60)))
     end
     it "displays a year ago" do
-      'about 1 year'.should == relative_time_ago(time - (365 * 24 * 60 * 60) - (5 * 60))
+      expect('about 1 year').to eq(relative_time_ago(time - (365 * 24 * 60 * 60) - (5 * 60)))
     end
     it "displays a few years ago" do
-      'over 7 years'.should == relative_time_ago(time - (2800 * 24 * 60 * 60) + (5 * 60))
+      expect('over 7 years').to eq(relative_time_ago(time - (2800 * 24 * 60 * 60) + (5 * 60)))
     end
 
   end

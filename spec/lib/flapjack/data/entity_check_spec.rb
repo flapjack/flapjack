@@ -26,43 +26,43 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
   it "is created for an event id" do
     ec = Flapjack::Data::EntityCheck.for_event_id("#{name}:ping", :redis => @redis)
-    ec.should_not be_nil
-    ec.entity.should_not be_nil
-    ec.entity.name.should_not be_nil
-    ec.entity.name.should == name
-    ec.check.should_not be_nil
-    ec.check.should == 'ping'
+    expect(ec).not_to be_nil
+    expect(ec.entity).not_to be_nil
+    expect(ec.entity.name).not_to be_nil
+    expect(ec.entity.name).to eq(name)
+    expect(ec.check).not_to be_nil
+    expect(ec.check).to eq('ping')
   end
 
   it "is created for an entity name" do
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, 'ping', :redis => @redis)
-    ec.should_not be_nil
-    ec.entity.should_not be_nil
-    ec.entity.name.should_not be_nil
-    ec.entity.name.should == name
-    ec.check.should_not be_nil
-    ec.check.should == 'ping'
+    expect(ec).not_to be_nil
+    expect(ec.entity).not_to be_nil
+    expect(ec.entity.name).not_to be_nil
+    expect(ec.entity.name).to eq(name)
+    expect(ec.check).not_to be_nil
+    expect(ec.check).to eq('ping')
   end
 
   it "is created for an entity id" do
     ec = Flapjack::Data::EntityCheck.for_entity_id(5000, 'ping', :redis => @redis)
-    ec.should_not be_nil
-    ec.entity.should_not be_nil
-    ec.entity.name.should_not be_nil
-    ec.entity.name.should == name
-    ec.check.should_not be_nil
-    ec.check.should == 'ping'
+    expect(ec).not_to be_nil
+    expect(ec.entity).not_to be_nil
+    expect(ec.entity.name).not_to be_nil
+    expect(ec.entity.name).to eq(name)
+    expect(ec.check).not_to be_nil
+    expect(ec.check).to eq('ping')
   end
 
   it "is created for an entity object" do
     e = Flapjack::Data::Entity.find_by_name(name, :redis => @redis)
     ec = Flapjack::Data::EntityCheck.for_entity(e, 'ping', :redis => @redis)
-    ec.should_not be_nil
-    ec.entity.should_not be_nil
-    ec.entity.name.should_not be_nil
-    ec.entity.name.should == name
-    ec.check.should_not be_nil
-    ec.check.should == 'ping'
+    expect(ec).not_to be_nil
+    expect(ec.entity).not_to be_nil
+    expect(ec.entity.name).not_to be_nil
+    expect(ec.entity.name).to eq(name)
+    expect(ec.check).not_to be_nil
+    expect(ec.check).to eq('ping')
   end
 
   it "is not created for a missing entity" do
@@ -83,36 +83,36 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       @redis.set("#{name}:#{check}:unscheduled_maintenance", Time.now.to_i.to_s)
 
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-      ec.should be_in_unscheduled_maintenance
+      expect(ec).to be_in_unscheduled_maintenance
     end
 
     it "returns that it is not in unscheduled maintenance" do
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-      ec.should_not be_in_unscheduled_maintenance
+      expect(ec).not_to be_in_unscheduled_maintenance
     end
 
     it "returns that it is in scheduled maintenance" do
       @redis.set("#{name}:#{check}:scheduled_maintenance", Time.now.to_i.to_s)
 
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-      ec.should be_in_scheduled_maintenance
+      expect(ec).to be_in_scheduled_maintenance
     end
 
     it "returns that it is not in scheduled maintenance" do
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-      ec.should_not be_in_scheduled_maintenance
+      expect(ec).not_to be_in_scheduled_maintenance
     end
 
     it "returns its current maintenance period" do
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-      ec.current_maintenance(:scheduled => true).should be_nil
+      expect(ec.current_maintenance(:scheduled => true)).to be_nil
 
       t = Time.now.to_i
 
       ec.create_unscheduled_maintenance(t, half_an_hour, :summary => 'oops')
-      ec.current_maintenance.should == {:start_time => t,
+      expect(ec.current_maintenance).to eq({:start_time => t,
                                         :duration => half_an_hour,
-                                        :summary => 'oops'}
+                                        :summary => 'oops'})
     end
 
     it "creates an unscheduled maintenance period" do
@@ -120,27 +120,27 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
       ec.create_unscheduled_maintenance(t, half_an_hour, :summary => 'oops')
 
-      ec.should be_in_unscheduled_maintenance
+      expect(ec).to be_in_unscheduled_maintenance
 
       umps = ec.maintenances(nil, nil, :scheduled => false)
-      umps.should_not be_nil
-      umps.should be_an(Array)
-      umps.should have(1).unscheduled_maintenance_period
-      umps[0].should be_a(Hash)
+      expect(umps).not_to be_nil
+      expect(umps).to be_an(Array)
+      expect(umps.size).to eq(1)
+      expect(umps[0]).to be_a(Hash)
 
       start_time = umps[0][:start_time]
-      start_time.should_not be_nil
-      start_time.should be_an(Integer)
-      start_time.should == t
+      expect(start_time).not_to be_nil
+      expect(start_time).to be_an(Integer)
+      expect(start_time).to eq(t)
 
       duration = umps[0][:duration]
-      duration.should_not be_nil
-      duration.should be_a(Float)
-      duration.should == half_an_hour
+      expect(duration).not_to be_nil
+      expect(duration).to be_a(Float)
+      expect(duration).to eq(half_an_hour)
 
       summary = @redis.get("#{name}:#{check}:#{t}:unscheduled_maintenance:summary")
-      summary.should_not be_nil
-      summary.should == 'oops'
+      expect(summary).not_to be_nil
+      expect(summary).to eq('oops')
     end
 
     it "creates an unscheduled maintenance period and ends the current one early", :time => true do
@@ -151,33 +151,33 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       Delorean.time_travel_to( Time.at(later_t) )
       ec.create_unscheduled_maintenance(later_t, half_an_hour, :summary => 'spoo')
 
-      ec.should be_in_unscheduled_maintenance
+      expect(ec).to be_in_unscheduled_maintenance
 
       umps = ec.maintenances(nil, nil, :scheduled => false)
-      umps.should_not be_nil
-      umps.should be_an(Array)
-      umps.should have(2).unscheduled_maintenance_periods
-      umps[0].should be_a(Hash)
+      expect(umps).not_to be_nil
+      expect(umps).to be_an(Array)
+      expect(umps.size).to eq(2)
+      expect(umps[0]).to be_a(Hash)
 
       start_time = umps[0][:start_time]
-      start_time.should_not be_nil
-      start_time.should be_an(Integer)
-      start_time.should == t
+      expect(start_time).not_to be_nil
+      expect(start_time).to be_an(Integer)
+      expect(start_time).to eq(t)
 
       duration = umps[0][:duration]
-      duration.should_not be_nil
-      duration.should be_a(Float)
-      duration.should == (15 * 60)
+      expect(duration).not_to be_nil
+      expect(duration).to be_a(Float)
+      expect(duration).to eq(15 * 60)
 
       start_time_curr = umps[1][:start_time]
-      start_time_curr.should_not be_nil
-      start_time_curr.should be_an(Integer)
-      start_time_curr.should == later_t
+      expect(start_time_curr).not_to be_nil
+      expect(start_time_curr).to be_an(Integer)
+      expect(start_time_curr).to eq(later_t)
 
       duration_curr = umps[1][:duration]
-      duration_curr.should_not be_nil
-      duration_curr.should be_a(Float)
-      duration_curr.should == half_an_hour
+      expect(duration_curr).not_to be_nil
+      expect(duration_curr).to be_a(Float)
+      expect(duration_curr).to eq(half_an_hour)
     end
 
     it "ends an unscheduled maintenance period" do
@@ -186,28 +186,28 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
 
       ec.create_unscheduled_maintenance(t, half_an_hour, :summary => 'oops')
-      ec.should be_in_unscheduled_maintenance
+      expect(ec).to be_in_unscheduled_maintenance
 
       Delorean.time_travel_to( Time.at(later_t) )
-      ec.should be_in_unscheduled_maintenance
+      expect(ec).to be_in_unscheduled_maintenance
       ec.end_unscheduled_maintenance(later_t)
-      ec.should_not be_in_unscheduled_maintenance
+      expect(ec).not_to be_in_unscheduled_maintenance
 
       umps = ec.maintenances(nil, nil, :scheduled => false)
-      umps.should_not be_nil
-      umps.should be_an(Array)
-      umps.should have(1).unscheduled_maintenance_period
-      umps[0].should be_a(Hash)
+      expect(umps).not_to be_nil
+      expect(umps).to be_an(Array)
+      expect(umps.size).to eq(1)
+      expect(umps[0]).to be_a(Hash)
 
       start_time = umps[0][:start_time]
-      start_time.should_not be_nil
-      start_time.should be_an(Integer)
-      start_time.should == t
+      expect(start_time).not_to be_nil
+      expect(start_time).to be_an(Integer)
+      expect(start_time).to eq(t)
 
       duration = umps[0][:duration]
-      duration.should_not be_nil
-      duration.should be_a(Float)
-      duration.should == (15 * 60)
+      expect(duration).not_to be_nil
+      expect(duration).to be_a(Float)
+      expect(duration).to eq(15 * 60)
     end
 
     it "creates a scheduled maintenance period for a future time" do
@@ -217,20 +217,20 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         half_an_hour, :summary => "30 minutes")
 
       smps = ec.maintenances(nil, nil, :scheduled => true)
-      smps.should_not be_nil
-      smps.should be_an(Array)
-      smps.should have(1).scheduled_maintenance_period
-      smps[0].should be_a(Hash)
+      expect(smps).not_to be_nil
+      expect(smps).to be_an(Array)
+      expect(smps.size).to eq(1)
+      expect(smps[0]).to be_a(Hash)
 
       start_time = smps[0][:start_time]
-      start_time.should_not be_nil
-      start_time.should be_an(Integer)
-      start_time.should == (t + (60 * 60))
+      expect(start_time).not_to be_nil
+      expect(start_time).to be_an(Integer)
+      expect(start_time).to eq(t + (60 * 60))
 
       duration = smps[0][:duration]
-      duration.should_not be_nil
-      duration.should be_a(Float)
-      duration.should == half_an_hour
+      expect(duration).not_to be_nil
+      expect(duration).to be_a(Float)
+      expect(duration).to eq(half_an_hour)
     end
 
     # TODO this should probably enforce that it starts in the future
@@ -241,20 +241,20 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         2 * (60 * 60), :summary => "2 hours")
 
       smps = ec.maintenances(nil, nil, :scheduled => true)
-      smps.should_not be_nil
-      smps.should be_an(Array)
-      smps.should have(1).scheduled_maintenance_period
-      smps[0].should be_a(Hash)
+      expect(smps).not_to be_nil
+      expect(smps).to be_an(Array)
+      expect(smps.size).to eq(1)
+      expect(smps[0]).to be_a(Hash)
 
       start_time = smps[0][:start_time]
-      start_time.should_not be_nil
-      start_time.should be_an(Integer)
-      start_time.should == (t - (60 * 60))
+      expect(start_time).not_to be_nil
+      expect(start_time).to be_an(Integer)
+      expect(start_time).to eq(t - (60 * 60))
 
       duration = smps[0][:duration]
-      duration.should_not be_nil
-      duration.should be_a(Float)
-      duration.should == 2 * (60 * 60)
+      expect(duration).not_to be_nil
+      expect(duration).to be_a(Float)
+      expect(duration).to eq(2 * (60 * 60))
     end
 
     it "removes a scheduled maintenance period for a future time" do
@@ -266,9 +266,9 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       ec.end_scheduled_maintenance(t + (60 * 60))
 
       smps = ec.maintenances(nil, nil, :scheduled => true)
-      smps.should_not be_nil
-      smps.should be_an(Array)
-      smps.should be_empty
+      expect(smps).not_to be_nil
+      expect(smps).to be_an(Array)
+      expect(smps).to be_empty
     end
 
     # maint period starts an hour from now, goes for two hours -- at 30 minutes into
@@ -284,11 +284,11 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       ec.end_scheduled_maintenance(t + (60 * 60))
 
       smps = ec.maintenances(nil, nil, :scheduled => true)
-      smps.should_not be_nil
-      smps.should be_an(Array)
-      smps.should_not be_empty
-      smps.should have(1).item
-      smps.first[:duration].should == (30 * 60)
+      expect(smps).not_to be_nil
+      expect(smps).to be_an(Array)
+      expect(smps).not_to be_empty
+      expect(smps.size).to eq(1)
+      expect(smps.first[:duration]).to eq(30 * 60)
     end
 
     it "does not alter or remove a scheduled maintenance period covering a past time", :time => true do
@@ -302,11 +302,11 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       ec.end_scheduled_maintenance(t + (60 * 60))
 
       smps = ec.maintenances(nil, nil, :scheduled => true)
-      smps.should_not be_nil
-      smps.should be_an(Array)
-      smps.should_not be_empty
-      smps.should have(1).item
-      smps.first[:duration].should == 2 * (60 * 60)
+      expect(smps).not_to be_nil
+      expect(smps).to be_an(Array)
+      expect(smps).not_to be_empty
+      expect(smps.size).to eq(1)
+      expect(smps.first[:duration]).to eq(2 * (60 * 60))
     end
 
     it "returns a list of scheduled maintenance periods" do
@@ -321,17 +321,17 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         :summary => "second")
 
       smp = ec.maintenances(nil, nil, :scheduled => true)
-      smp.should_not be_nil
-      smp.should be_an(Array)
-      smp.should have(2).scheduled_maintenance_periods
-      smp[0].should == {:start_time => five_hours_ago,
+      expect(smp).not_to be_nil
+      expect(smp).to be_an(Array)
+      expect(smp.size).to eq(2)
+      expect(smp[0]).to eq({:start_time => five_hours_ago,
                         :end_time   => five_hours_ago + half_an_hour,
                         :duration   => half_an_hour,
-                        :summary    => "first"}
-      smp[1].should == {:start_time => three_hours_ago,
+                        :summary    => "first"})
+      expect(smp[1]).to eq({:start_time => three_hours_ago,
                         :end_time   => three_hours_ago + half_an_hour,
                         :duration   => half_an_hour,
-                        :summary    => "second"}
+                        :summary    => "second"})
     end
 
     it "returns a list of unscheduled maintenance periods" do
@@ -346,17 +346,17 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         half_an_hour, :summary => "second")
 
       ump =  ec.maintenances(nil, nil, :scheduled => false)
-      ump.should_not be_nil
-      ump.should be_an(Array)
-      ump.should have(2).unscheduled_maintenance_periods
-      ump[0].should == {:start_time => five_hours_ago,
+      expect(ump).not_to be_nil
+      expect(ump).to be_an(Array)
+      expect(ump.size).to eq(2)
+      expect(ump[0]).to eq({:start_time => five_hours_ago,
                         :end_time   => five_hours_ago + half_an_hour,
                         :duration   => half_an_hour,
-                        :summary    => "first"}
-      ump[1].should == {:start_time => three_hours_ago,
+                        :summary    => "first"})
+      expect(ump[1]).to eq({:start_time => three_hours_ago,
                         :end_time   => three_hours_ago + half_an_hour,
                         :duration   => half_an_hour,
-                        :summary    => "second"}
+                        :summary    => "second"})
     end
 
   end
@@ -366,8 +366,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
     state = ec.state
-    state.should_not be_nil
-    state.should == 'ok'
+    expect(state).not_to be_nil
+    expect(state).to eq('ok')
   end
 
   it "updates state" do
@@ -379,11 +379,11 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec.update_state('critical')
 
     state = @redis.hget("check:#{name}:#{check}", 'state')
-    state.should_not be_nil
-    state.should == 'critical'
+    expect(state).not_to be_nil
+    expect(state).to eq('critical')
 
     new_timestamp = @redis.hget("check:#{name}:#{check}", 'last_update')
-    new_timestamp.should_not == old_timestamp
+    expect(new_timestamp).not_to eq(old_timestamp)
   end
 
   it "updates enabled checks" do
@@ -392,11 +392,11 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec.last_update = ts
 
     saved_check_ts = @redis.zscore("current_checks:#{name}", check)
-    saved_check_ts.should_not be_nil
-    saved_check_ts.should == ts
+    expect(saved_check_ts).not_to be_nil
+    expect(saved_check_ts).to eq(ts)
     saved_entity_ts = @redis.zscore("current_entities", name)
-    saved_entity_ts.should_not be_nil
-    saved_entity_ts.should == ts
+    expect(saved_entity_ts).not_to be_nil
+    expect(saved_entity_ts).to eq(ts)
   end
 
   it "exposes that it is enabled" do
@@ -405,14 +405,14 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
 
     e = ec.enabled?
-    e.should be_true
+    expect(e).to be true
   end
 
   it "exposes that it is disabled" do
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
 
     e = ec.enabled?
-    e.should be_false
+    expect(e).to be false
   end
 
   it "disables checks" do
@@ -423,8 +423,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
     saved_check_ts = @redis.zscore("current_checks:#{name}", check)
     saved_entity_ts = @redis.zscore("current_entities", name)
-    saved_check_ts.should be_nil
-    saved_entity_ts.should be_nil
+    expect(saved_check_ts).to be_nil
+    expect(saved_entity_ts).to be_nil
   end
 
   it "does not update state with invalid value" do
@@ -434,8 +434,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec.update_state('silly')
 
     state = @redis.hget("check:#{name}:#{check}", 'state')
-    state.should_not be_nil
-    state.should == 'ok'
+    expect(state).not_to be_nil
+    expect(state).to eq('ok')
   end
 
   it "does not update state with a repeated state value" do
@@ -448,15 +448,15 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     new_changed_at = @redis.hget("check:#{name}:#{check}", 'last_change')
     new_summary = @redis.hget("check:#{name}:#{check}", 'summary')
 
-    changed_at.should_not be_nil
-    new_changed_at.should_not be_nil
-    new_changed_at.should == changed_at
+    expect(changed_at).not_to be_nil
+    expect(new_changed_at).not_to be_nil
+    expect(new_changed_at).to eq(changed_at)
 
-    summary.should_not be_nil
-    new_summary.should_not be_nil
-    new_summary.should_not == summary
-    summary.should == 'small problem'
-    new_summary.should == 'big problem'
+    expect(summary).not_to be_nil
+    expect(new_summary).not_to be_nil
+    expect(new_summary).not_to eq(summary)
+    expect(summary).to eq('small problem')
+    expect(new_summary).to eq('big problem')
   end
 
   def time_before(t, min, sec = 0)
@@ -474,13 +474,13 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec.update_state('ok', :timestamp => time_before(t, 1), :summary => 'e')
 
     states = ec.historical_states(time_before(t, 4), t)
-    states.should_not be_nil
-    states.should be_an(Array)
-    states.should have(4).data_hashes
-    states[0][:summary].should == 'b'
-    states[1][:summary].should == 'c'
-    states[2][:summary].should == 'd'
-    states[3][:summary].should == 'e'
+    expect(states).not_to be_nil
+    expect(states).to be_an(Array)
+    expect(states.size).to eq(4)
+    expect(states[0][:summary]).to eq('b')
+    expect(states[1][:summary]).to eq('c')
+    expect(states[2][:summary]).to eq('d')
+    expect(states[3][:summary]).to eq('e')
   end
 
   it "returns a list of historical unscheduled maintenances for a time range" do
@@ -494,13 +494,13 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec.update_state('ok', :timestamp => time_before(t, 1), :summary => 'e')
 
     states = ec.historical_states(time_before(t, 4), t)
-    states.should_not be_nil
-    states.should be_an(Array)
-    states.should have(4).data_hashes
-    states[0][:summary].should == 'b'
-    states[1][:summary].should == 'c'
-    states[2][:summary].should == 'd'
-    states[3][:summary].should == 'e'
+    expect(states).not_to be_nil
+    expect(states).to be_an(Array)
+    expect(states.size).to eq(4)
+    expect(states[0][:summary]).to eq('b')
+    expect(states[1][:summary]).to eq('c')
+    expect(states[2][:summary]).to eq('d')
+    expect(states[3][:summary]).to eq('e')
   end
 
   it "returns a list of historical scheduled maintenances for a time range" do
@@ -517,34 +517,34 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
     sched_maint_periods = ec.maintenances(time_before(t, 150), t,
       :scheduled => true)
-    sched_maint_periods.should_not be_nil
-    sched_maint_periods.should be_an(Array)
-    sched_maint_periods.should have(2).data_hashes
-    sched_maint_periods[0][:summary].should == 'b'
-    sched_maint_periods[1][:summary].should == 'c'
+    expect(sched_maint_periods).not_to be_nil
+    expect(sched_maint_periods).to be_an(Array)
+    expect(sched_maint_periods.size).to eq(2)
+    expect(sched_maint_periods[0][:summary]).to eq('b')
+    expect(sched_maint_periods[1][:summary]).to eq('c')
   end
 
   it "returns that it has failed" do
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
 
     @redis.hset("check:#{name}:#{check}", 'state', 'warning')
-    ec.should be_failed
+    expect(ec).to be_failed
 
     @redis.hset("check:#{name}:#{check}", 'state', 'critical')
-    ec.should be_failed
+    expect(ec).to be_failed
 
     @redis.hset("check:#{name}:#{check}", 'state', 'unknown')
-    ec.should be_failed
+    expect(ec).to be_failed
   end
 
   it "returns that it has not failed" do
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
 
     @redis.hset("check:#{name}:#{check}", 'state', 'ok')
-    ec.should_not be_failed
+    expect(ec).not_to be_failed
 
     @redis.hset("check:#{name}:#{check}", 'state', 'acknowledgement')
-    ec.should_not be_failed
+    expect(ec).not_to be_failed
   end
 
   it "returns a status summary" do
@@ -557,7 +557,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec.update_state('critical', :timestamp => time_before(t, 2), :summary => 'd')
 
     summary = ec.summary
-    summary.should == 'd'
+    expect(summary).to eq('d')
   end
 
   it "returns timestamps for its last notifications" do
@@ -567,26 +567,26 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     @redis.set("#{name}:#{check}:last_recovery_notification", t)
 
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-    ec.last_notification_for_state(:problem)[:timestamp].should == t - 30
-    ec.last_notification_for_state(:acknowledgement)[:timestamp].should == t - 15
-    ec.last_notification_for_state(:recovery)[:timestamp].should == t
+    expect(ec.last_notification_for_state(:problem)[:timestamp]).to eq(t - 30)
+    expect(ec.last_notification_for_state(:acknowledgement)[:timestamp]).to eq(t - 15)
+    expect(ec.last_notification_for_state(:recovery)[:timestamp]).to eq(t)
   end
 
   it "finds all related contacts" do
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
     contacts = ec.contacts
-    contacts.should_not be_nil
-    contacts.should be_an(Array)
-    contacts.should have(1).contact
-    contacts.first.name.should == 'John Johnson'
+    expect(contacts).not_to be_nil
+    expect(contacts).to be_an(Array)
+    expect(contacts.size).to eq(1)
+    expect(contacts.first.name).to eq('John Johnson')
   end
 
   it "generates ephemeral tags for itself" do
     ec = Flapjack::Data::EntityCheck.for_entity_name('foo-app-01.example.com', 'Disk / Utilisation', :redis => @redis)
     tags = ec.tags
-    tags.should_not be_nil
-    tags.should be_a(Flapjack::Data::TagSet)
-    ['foo-app-01', 'example.com', 'disk', '/', 'utilisation'].to_set.subset?(tags).should be_true
+    expect(tags).not_to be_nil
+    expect(tags).to be_a(Flapjack::Data::TagSet)
+    expect(['foo-app-01', 'example.com', 'disk', '/', 'utilisation'].to_set.subset?(tags)).to be true
   end
 
 end

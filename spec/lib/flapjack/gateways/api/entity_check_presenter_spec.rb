@@ -38,33 +38,33 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
   }
 
   it "returns a list of outage hashes for an entity check" do
-    entity_check.should_receive(:historical_states).
+    expect(entity_check).to receive(:historical_states).
       with(time - (5 * 60 * 60), time - (2 * 60 * 60)).and_return(states)
 
-    entity_check.should_receive(:historical_state_before).
+    expect(entity_check).to receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
     ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     outages = ecp.outages(time - (5 * 60 * 60), time - (2 * 60 * 60))
-    outages.should_not be_nil
-    outages.should be_an(Array)
-    outages.should have(4).time_ranges
+    expect(outages).not_to be_nil
+    expect(outages).to be_an(Array)
+    expect(outages.size).to eq(4)
 
     # TODO check the data in those hashes
   end
 
   it "returns a list of outage hashes with no start and end time set" do
-    entity_check.should_receive(:historical_states).
+    expect(entity_check).to receive(:historical_states).
       with(nil, nil).and_return(states)
 
-    entity_check.should_receive(:historical_state_before).
+    expect(entity_check).to receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
     ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     outages = ecp.outages(nil, nil)
-    outages.should_not be_nil
-    outages.should be_an(Array)
-    outages.should have(4).time_ranges
+    expect(outages).not_to be_nil
+    expect(outages).to be_an(Array)
+    expect(outages.size).to eq(4)
 
     # TODO check the data in those hashes
   end
@@ -73,113 +73,113 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
     states[1][:state] = 'critical'
     states[2][:state] = 'ok'
 
-    entity_check.should_receive(:historical_states).
+    expect(entity_check).to receive(:historical_states).
       with(nil, nil).and_return(states)
 
-    entity_check.should_receive(:historical_state_before).
+    expect(entity_check).to receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
     ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     outages = ecp.outages(nil, nil)
-    outages.should_not be_nil
-    outages.should be_an(Array)
-    outages.should have(3).time_ranges
+    expect(outages).not_to be_nil
+    expect(outages).to be_an(Array)
+    expect(outages.size).to eq(3)
   end
 
   it "returns a (small) outage hash for a single state change" do
-    entity_check.should_receive(:historical_states).
+    expect(entity_check).to receive(:historical_states).
       with(nil, nil).and_return([{:state => 'critical', :timestamp => time - (4 * 60 * 60)}])
-    entity_check.should_receive(:historical_state_before).
+    expect(entity_check).to receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
     ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     outages = ecp.outages(nil, nil)
-    outages.should_not be_nil
-    outages.should be_an(Array)
-    outages.should have(1).time_range
+    expect(outages).not_to be_nil
+    expect(outages).to be_an(Array)
+    expect(outages.size).to eq(1)
   end
 
   it "a list of unscheduled maintenances for an entity check" do
-    entity_check.should_receive(:maintenances).
+    expect(entity_check).to receive(:maintenances).
       with(time - (12 * 60 * 60), time, :scheduled => false).and_return(maintenances)
 
-    entity_check.should_receive(:maintenances).
+    expect(entity_check).to receive(:maintenances).
       with(nil, time - (12 * 60 * 60), :scheduled => false).and_return([])
 
     ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     unsched_maint = ecp.unscheduled_maintenances(time - (12 * 60 * 60), time)
 
-    unsched_maint.should be_an(Array)
-    unsched_maint.should have(4).time_ranges
+    expect(unsched_maint).to be_an(Array)
+    expect(unsched_maint.size).to eq(4)
 
     # TODO check the data in those hashes
   end
 
   it "a list of scheduled maintenances for an entity check" do
-    entity_check.should_receive(:maintenances).
+    expect(entity_check).to receive(:maintenances).
       with(time - (12 * 60 * 60), time, :scheduled => true).and_return(maintenances)
 
-    entity_check.should_receive(:maintenances).
+    expect(entity_check).to receive(:maintenances).
       with(nil, time - (12 * 60 * 60), :scheduled => true).and_return([])
 
     ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     sched_maint = ecp.scheduled_maintenances(time - (12 * 60 * 60), time)
 
-    sched_maint.should be_an(Array)
-    sched_maint.should have(4).time_ranges
+    expect(sched_maint).to be_an(Array)
+    expect(sched_maint.size).to eq(4)
 
     # TODO check the data in those hashes
   end
 
   it "returns downtime and percentage for a downtime check" do
-    entity_check.should_receive(:historical_states).
+    expect(entity_check).to receive(:historical_states).
       with(time - (12 * 60 * 60), time).and_return(states)
 
-    entity_check.should_receive(:historical_state_before).
+    expect(entity_check).to receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
-    entity_check.should_receive(:maintenances).
+    expect(entity_check).to receive(:maintenances).
       with(time - (12 * 60 * 60), time, :scheduled => true).and_return(maintenances)
 
-    entity_check.should_receive(:maintenances).
+    expect(entity_check).to receive(:maintenances).
       with(nil, time - (12 * 60 * 60), :scheduled => true).and_return([])
 
     ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     downtimes = ecp.downtime(time - (12 * 60 * 60), time)
 
     # 22 minutes, 3 + 8 + 11
-    downtimes.should be_a(Hash)
-    downtimes[:total_seconds].should == {'critical' => (22 * 60),
-      'ok' => ((12 * 60 * 60) - (22 * 60))}
-    downtimes[:percentages].should == {'critical' => (((22 * 60) * 100.0) / (12 * 60 * 60)),
-      'ok' => ((((12 * 60 * 60) - (22 * 60)) * 100.0) / (12 * 60 *60))}
-    downtimes[:downtime].should be_an(Array)
+    expect(downtimes).to be_a(Hash)
+    expect(downtimes[:total_seconds]).to eq({'critical' => (22 * 60),
+      'ok' => ((12 * 60 * 60) - (22 * 60))})
+    expect(downtimes[:percentages]).to eq({'critical' => (((22 * 60) * 100.0) / (12 * 60 * 60)),
+      'ok' => ((((12 * 60 * 60) - (22 * 60)) * 100.0) / (12 * 60 *60))})
+    expect(downtimes[:downtime]).to be_an(Array)
     # the last outage gets split by the intervening maintenance period,
     # but the fully covered one gets removed.
-    downtimes[:downtime].should have(4).time_ranges
+    expect(downtimes[:downtime].size).to eq(4)
   end
 
   it "returns downtime (but no percentage) for an unbounded downtime check" do
-    entity_check.should_receive(:historical_states).
+    expect(entity_check).to receive(:historical_states).
       with(nil, nil).and_return(states)
 
-    entity_check.should_receive(:historical_state_before).
+    expect(entity_check).to receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
-    entity_check.should_receive(:maintenances).
+    expect(entity_check).to receive(:maintenances).
       with(nil, nil, :scheduled => true).and_return(maintenances)
 
     ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     downtimes = ecp.downtime(nil, nil)
 
     # 22 minutes, 3 + 8 + 11
-    downtimes.should be_a(Hash)
-    downtimes[:total_seconds].should == {'critical' => (22 * 60)}
-    downtimes[:percentages].should == {'critical' => nil}
-    downtimes[:downtime].should be_an(Array)
+    expect(downtimes).to be_a(Hash)
+    expect(downtimes[:total_seconds]).to eq({'critical' => (22 * 60)})
+    expect(downtimes[:percentages]).to eq({'critical' => nil})
+    expect(downtimes[:downtime]).to be_an(Array)
     # the last outage gets split by the intervening maintenance period,
     # but the fully covered one gets removed.
-    downtimes[:downtime].should have(4).time_ranges
+    expect(downtimes[:downtime].size).to eq(4)
   end
 
   it "returns downtime and handles an unfinished problem state" do
@@ -187,25 +187,25 @@ describe 'Flapjack::Gateways::API::EntityCheckPresenter' do
                {:state => 'ok',       :timestamp => time - (4 * 60 * 60) + (5 * 60)},
                {:state => 'critical', :timestamp => time - (3 * 60 * 60)}]
 
-    entity_check.should_receive(:historical_states).
+    expect(entity_check).to receive(:historical_states).
       with(nil, nil).and_return(current)
 
-    entity_check.should_receive(:historical_state_before).
+    expect(entity_check).to receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
-    entity_check.should_receive(:maintenances).
+    expect(entity_check).to receive(:maintenances).
       with(nil, nil, :scheduled => true).and_return([])
 
     ecp = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
     downtimes = ecp.downtime(nil, nil)
 
-    downtimes.should be_a(Hash)
-    downtimes[:total_seconds].should == {'critical' => (5 * 60)}
-    downtimes[:percentages].should == {'critical' => nil}
-    downtimes[:downtime].should be_an(Array)
+    expect(downtimes).to be_a(Hash)
+    expect(downtimes[:total_seconds]).to eq({'critical' => (5 * 60)})
+    expect(downtimes[:percentages]).to eq({'critical' => nil})
+    expect(downtimes[:downtime]).to be_an(Array)
     # the last outage gets split by the intervening maintenance period,
     # but the fully covered one gets removed.
-    downtimes[:downtime].should have(2).time_ranges
+    expect(downtimes[:downtime].size).to eq(2)
   end
 
 end

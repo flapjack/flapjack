@@ -279,7 +279,7 @@ Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on enti
   entity ||= @entity
   message = @logger.messages.find_all {|m| m =~ /enerating notification for event #{entity}:#{check}/ }.last
   found = message ? message.match(/Not generating notification/) : false
-  found.should be_true
+  found.should be_truthy
 end
 
 Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
@@ -287,7 +287,7 @@ Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '
   entity ||= @entity
   message = @logger.messages.find_all {|m| m =~ /enerating notification for event #{entity}:#{check}/ }.last
   found = message ? message.match(/Generating notification/) : false
-  found.should be_true
+  found.should be_truthy
 end
 
 Then /^(un)?scheduled maintenance should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |unsched, check, entity|
