@@ -24,49 +24,49 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   before(:each) do
-    Flapjack::RedisPool.should_receive(:new).and_return(redis)
+    expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
     Flapjack::Gateways::Web.instance_variable_set('@config', {})
     Flapjack::Gateways::Web.instance_variable_set('@logger', @logger)
     Flapjack::Gateways::Web.start
   end
 
   def expect_stats
-    redis.should_receive(:dbsize).and_return(3)
-    redis.should_receive(:keys).with('executive_instance:*').and_return(["executive_instance:foo-app-01"])
-    redis.should_receive(:hget).once.and_return(Time.now.to_i - 60)
-    redis.should_receive(:hgetall).twice.and_return({'all' => '8001', 'ok' => '8002'},
+    expect(redis).to receive(:dbsize).and_return(3)
+    expect(redis).to receive(:keys).with('executive_instance:*').and_return(["executive_instance:foo-app-01"])
+    expect(redis).to receive(:hget).once.and_return(Time.now.to_i - 60)
+    expect(redis).to receive(:hgetall).twice.and_return({'all' => '8001', 'ok' => '8002'},
       {'all' => '9001', 'ok' => '9002'})
-    redis.should_receive(:llen).with('events')
-    redis.should_receive(:zrange).with('current_entities', 0, -1).and_return(['foo-app-01.example.com'])
-    redis.should_receive(:zrange).with('current_checks:foo-app-01.example.com', 0, -1, {:withscores => true}).and_return([['ping', 1382329923.0]])
+    expect(redis).to receive(:llen).with('events')
+    expect(redis).to receive(:zrange).with('current_entities', 0, -1).and_return(['foo-app-01.example.com'])
+    expect(redis).to receive(:zrange).with('current_checks:foo-app-01.example.com', 0, -1, {:withscores => true}).and_return([['ping', 1382329923.0]])
   end
 
   def expect_check_stats
-    Flapjack::Data::EntityCheck.should_receive(:count_all).
+    expect(Flapjack::Data::EntityCheck).to receive(:count_all).
       with(:redis => redis).and_return(1)
-    Flapjack::Data::EntityCheck.should_receive(:count_all_failing).
+    expect(Flapjack::Data::EntityCheck).to receive(:count_all_failing).
       with(:redis => redis).and_return(1)
   end
 
   def expect_entity_stats
-    Flapjack::Data::Entity.should_receive(:find_all_with_checks).
+    expect(Flapjack::Data::Entity).to receive(:find_all_with_checks).
       with(:redis => redis).and_return([entity_name])
-    Flapjack::Data::Entity.should_receive(:find_all_with_failing_checks).
+    expect(Flapjack::Data::Entity).to receive(:find_all_with_failing_checks).
       with(:redis => redis).and_return([entity_name])
   end
 
   def expect_entity_check_status(ec)
     time = Time.now.to_i
 
-    ec.should_receive(:state).and_return('ok')
-    ec.should_receive(:summary).and_return('happy results are returned')
-    ec.should_receive(:last_update).and_return(time - (3 * 60 * 60))
-    ec.should_receive(:last_change).and_return(time - (3 * 60 * 60))
-    ec.should_receive(:last_notification_for_state).with(:problem).and_return({:timestamp => time - ((3 * 60 * 60) + (5 * 60))})
-    ec.should_receive(:last_notification_for_state).with(:recovery).and_return({:timestamp => time - (3 * 60 * 60)})
-    ec.should_receive(:last_notification_for_state).with(:acknowledgement).and_return({:timestamp => nil})
-    ec.should_receive(:in_scheduled_maintenance?).and_return(false)
-    ec.should_receive(:in_unscheduled_maintenance?).and_return(false)
+    expect(ec).to receive(:state).and_return('ok')
+    expect(ec).to receive(:summary).and_return('happy results are returned')
+    expect(ec).to receive(:last_update).and_return(time - (3 * 60 * 60))
+    expect(ec).to receive(:last_change).and_return(time - (3 * 60 * 60))
+    expect(ec).to receive(:last_notification_for_state).with(:problem).and_return({:timestamp => time - ((3 * 60 * 60) + (5 * 60))})
+    expect(ec).to receive(:last_notification_for_state).with(:recovery).and_return({:timestamp => time - (3 * 60 * 60)})
+    expect(ec).to receive(:last_notification_for_state).with(:acknowledgement).and_return({:timestamp => nil})
+    expect(ec).to receive(:in_scheduled_maintenance?).and_return(false)
+    expect(ec).to receive(:in_unscheduled_maintenance?).and_return(false)
   end
 
   # TODO add data, test that pages contain representations of it
@@ -74,20 +74,20 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
   it "shows a page listing all checks" do
     #redis.should_receive(:keys).with('*:*:states').and_return(["#{entity_name}:#{check}"])
-    Flapjack::Data::EntityCheck.should_receive(:find_all_by_entity).
+    expect(Flapjack::Data::EntityCheck).to receive(:find_all_by_entity).
       with(:redis => redis).and_return({entity_name => [check]})
     expect_check_stats
 
     expect_entity_check_status(entity_check)
 
-    Flapjack::Data::Entity.should_receive(:find_by_name).
+    expect(Flapjack::Data::Entity).to receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
       with(entity, 'ping', :redis => redis).and_return(entity_check)
 
     aget '/checks_all'
-    last_response.should be_ok
+    expect(last_response).to be_ok
   end
 
   it "shows a page listing failing checks" do
@@ -97,16 +97,16 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     expect_entity_check_status(entity_check)
 
-    Flapjack::Data::Entity.should_receive(:find_by_name).
+    expect(Flapjack::Data::Entity).to receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    Flapjack::Data::EntityCheck.should_receive(:find_all_failing_by_entity).
+    expect(Flapjack::Data::EntityCheck).to receive(:find_all_failing_by_entity).
       with(:redis => redis).and_return({entity_name => [check]})
 
-    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
       with(entity, 'ping', :redis => redis).and_return(entity_check)
     aget '/checks_failing'
-    last_response.should be_ok
+    expect(last_response).to be_ok
   end
 
   it "shows a page listing flapjack statistics" do
@@ -117,75 +117,74 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     expect_entity_stats
 
     aget '/self_stats'
-    last_response.should be_ok
+    expect(last_response).to be_ok
   end
 
   it "shows the state of a check for an entity" do
     time = Time.now
-    Time.should_receive(:now).exactly(5).times.and_return(time)
+    expect(Time).to receive(:now).exactly(5).times.and_return(time)
 
     last_notifications = {:problem         => {:timestamp => time.to_i - ((3 * 60 * 60) + (5 * 60)), :summary => 'prob'},
                           :recovery        => {:timestamp => time.to_i - (3 * 60 * 60), :summary => nil},
                           :acknowledgement => {:timestamp => nil, :summary => nil} }
 
     expect_check_stats
-    entity_check.should_receive(:state).and_return('ok')
-    entity_check.should_receive(:last_update).and_return(time.to_i - (3 * 60 * 60))
-    entity_check.should_receive(:last_change).and_return(time.to_i - (3 * 60 * 60))
-    entity_check.should_receive(:summary).and_return('all good')
-    entity_check.should_receive(:details).and_return('seriously, all very wonderful')
-    entity_check.should_receive(:last_notifications_of_each_type).and_return(last_notifications)
-    entity_check.should_receive(:maintenances).with(nil, nil, :scheduled => true).and_return([])
-    entity_check.should_receive(:failed?).and_return(false)
-    entity_check.should_receive(:current_maintenance).with(:scheduled => true).and_return(false)
-    entity_check.should_receive(:current_maintenance).with(:scheduled => false).and_return(false)
-    entity_check.should_receive(:contacts).and_return([])
-    entity_check.should_receive(:historical_states).
+    expect(entity_check).to receive(:state).and_return('ok')
+    expect(entity_check).to receive(:last_update).and_return(time.to_i - (3 * 60 * 60))
+    expect(entity_check).to receive(:last_change).and_return(time.to_i - (3 * 60 * 60))
+    expect(entity_check).to receive(:summary).and_return('all good')
+    expect(entity_check).to receive(:details).and_return('seriously, all very wonderful')
+    expect(entity_check).to receive(:last_notifications_of_each_type).and_return(last_notifications)
+    expect(entity_check).to receive(:maintenances).with(nil, nil, :scheduled => true).and_return([])
+    expect(entity_check).to receive(:failed?).and_return(false)
+    expect(entity_check).to receive(:current_maintenance).with(:scheduled => true).and_return(false)
+    expect(entity_check).to receive(:current_maintenance).with(:scheduled => false).and_return(false)
+    expect(entity_check).to receive(:contacts).and_return([])
+    expect(entity_check).to receive(:historical_states).
       with(nil, time.to_i, :order => 'desc', :limit => 20).and_return([])
-    entity_check.should_receive(:enabled?).with().
-      and_return(true)
+    expect(entity_check).to receive(:enabled?).and_return(true)
 
-    Flapjack::Data::Entity.should_receive(:find_by_name).
+    expect(Flapjack::Data::Entity).to receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
       with(entity, 'ping', :redis => redis).and_return(entity_check)
 
     aget "/check?entity=#{entity_name_esc}&check=ping"
-    last_response.should be_ok
+    expect(last_response).to be_ok
     # TODO test instance variables set to appropriate values
   end
 
   it "returns 404 if an unknown entity is requested" do
-    Flapjack::Data::Entity.should_receive(:find_by_name).
+    expect(Flapjack::Data::Entity).to receive(:find_by_name).
       with(entity_name_esc, :redis => redis).and_return(nil)
 
     aget "/check?entity=#{entity_name_esc}&check=ping"
-    last_response.should be_not_found
+    expect(last_response).to be_not_found
   end
 
   # TODO shouldn't create actual entity record
   it "returns 404 if no entity check is passed" do
-    Flapjack::Data::Entity.should_receive(:find_by_name).
+    expect(Flapjack::Data::Entity).to receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
     aget "/check?entity=#{entity_name_esc}"
-    last_response.should be_not_found
+    expect(last_response).to be_not_found
   end
 
   it "creates an acknowledgement for an entity check" do
-    Flapjack::Data::Entity.should_receive(:find_by_name).
+    expect(Flapjack::Data::Entity).to receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
       with(entity, 'ping', :redis => redis).and_return(entity_check)
 
-    Flapjack::Data::Event.should_receive(:create_acknowledgement).
+    expect(Flapjack::Data::Event).to receive(:create_acknowledgement).
       with(entity_name, 'ping', :summary => "", :duration => (4 * 60 * 60),
            :acknowledgement_id => '1234', :redis => redis)
 
     apost "/acknowledgements/#{entity_name_esc}/ping?acknowledgement_id=1234"
-    last_response.status.should == 302
+    expect(last_response.status).to eq(302)
   end
 
   it "creates a scheduled maintenance period for an entity check" do
@@ -195,22 +194,22 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     duration = 30 * 60
     summary = 'wow'
 
-    Chronic.should_receive(:parse).with('1 day ago').and_return(start_time)
-    ChronicDuration.should_receive(:parse).with('30 minutes').and_return(duration)
+    expect(Chronic).to receive(:parse).with('1 day ago').and_return(start_time)
+    expect(ChronicDuration).to receive(:parse).with('30 minutes').and_return(duration)
 
-    Flapjack::Data::Entity.should_receive(:find_by_name).
+    expect(Flapjack::Data::Entity).to receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
       with(entity, 'ping', :redis => redis).and_return(entity_check)
 
-    entity_check.should_receive(:create_scheduled_maintenance).
+    expect(entity_check).to receive(:create_scheduled_maintenance).
       with(start_time.to_i, duration, :summary => summary)
 
     apost "/scheduled_maintenances/#{entity_name_esc}/ping?"+
       "start_time=1+day+ago&duration=30+minutes&summary=wow"
 
-    last_response.status.should == 302
+    expect(last_response.status).to eq(302)
   end
 
   it "deletes a scheduled maintenance period for an entity check" do
@@ -218,37 +217,37 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     start_time = t - (24 * 60 * 60)
 
-    Flapjack::Data::Entity.should_receive(:find_by_name).
+    expect(Flapjack::Data::Entity).to receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    Flapjack::Data::EntityCheck.should_receive(:for_entity).
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
       with(entity, 'ping', :redis => redis).and_return(entity_check)
 
-    entity_check.should_receive(:end_scheduled_maintenance).with(start_time)
+    expect(entity_check).to receive(:end_scheduled_maintenance).with(start_time)
 
     adelete "/scheduled_maintenances/#{entity_name_esc}/ping?start_time=#{start_time}"
-    last_response.status.should == 302
+    expect(last_response.status).to eq(302)
   end
 
   it "shows a list of all known contacts" do
-    Flapjack::Data::Contact.should_receive(:all)
+    expect(Flapjack::Data::Contact).to receive(:all)
 
     aget "/contacts"
-    last_response.should be_ok
+    expect(last_response).to be_ok
   end
 
   it "shows details of an individual contact found by id" do
     contact = double('contact')
-    contact.should_receive(:name).twice.and_return("Smithson Smith")
-    contact.should_receive(:media).exactly(3).times.and_return({})
-    contact.should_receive(:entities).with(:checks => true).and_return([])
-    contact.should_receive(:notification_rules).and_return([])
+    expect(contact).to receive(:name).twice.and_return("Smithson Smith")
+    expect(contact).to receive(:media).exactly(3).times.and_return({})
+    expect(contact).to receive(:entities).with(:checks => true).and_return([])
+    expect(contact).to receive(:notification_rules).and_return([])
 
-    Flapjack::Data::Contact.should_receive(:find_by_id).
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with('0362', :redis => redis).and_return(contact)
 
     aget "/contacts/0362"
-    last_response.should be_ok
+    expect(last_response).to be_ok
   end
 
 end
