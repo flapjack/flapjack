@@ -60,7 +60,7 @@ Then /^(\S+) should ((?:re)?start|stop) within (\d+) seconds$/ do |exe, start_st
       attempts += 1; sleep 0.1; retry if attempts < max_attempts
       running = false
     end
-    running.should be true
+    expect(running).to be true
   when 'stop'
     if process
       # it's a child process, so we can use waitpid
@@ -84,7 +84,7 @@ Then /^(\S+) should ((?:re)?start|stop) within (\d+) seconds$/ do |exe, start_st
         end
       end
     end
-    running.should be false
+    expect(running).to be false
   when 'restart'
     read_pid = nil
     while attempts < max_attempts
@@ -93,7 +93,7 @@ Then /^(\S+) should ((?:re)?start|stop) within (\d+) seconds$/ do |exe, start_st
       break if read_pid != pid
       attempts += 1; sleep 0.1
     end
-    read_pid.should_not == pid
+    expect(read_pid).not_to eq(pid)
   end
 
 end
