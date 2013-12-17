@@ -19,7 +19,10 @@ WebMock.disable_net_connect!
 
 $:.unshift(File.dirname(__FILE__) + '/../lib')
 
-require 'json'
+require 'oj'
+Oj.mimic_JSON
+Oj.default_options = { :indent => 0, :mode => :strict }
+require 'active_support/json'
 
 # Requires supporting files with custom matchers and macros, etc,
 # in ./support/ and its subdirectories.

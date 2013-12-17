@@ -164,10 +164,10 @@ module Flapjack
             if entity_name
               # compatible with previous data format
               results = results.collect {|status_h| status_h[:status]}
-              (check ? results.first : results).to_json
+              check ? results.first.to_json : "[" + results.map {|r| r.to_json }.join(',') + "]"
             else
               # new and improved data format which reflects the request param structure
-              results.to_json
+              "[" + results.map {|r| r.to_json }.join(',') + "]"
             end
           end
 
