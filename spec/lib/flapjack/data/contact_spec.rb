@@ -30,8 +30,8 @@ describe Flapjack::Data::Contact, :redis => true do
       :email => 'jsmith@example.com') # raw redis
     contact = Flapjack::Data::Contact.find_by_id('1')
 
-    contact.should_not be_nil
-    contact.name.should == 'John Smith'
+    expect(contact).not_to be_nil
+    expect(contact.name).to eq('John Smith')
   end
 
   it "returns a list of entities and their checks for a contact"
@@ -97,7 +97,7 @@ describe Flapjack::Data::Contact, :redis => true do
       expect {
         rules = contact.notification_rules.all
       }.to change { Flapjack::Data::NotificationRule.count }.by(1)
-      rules.first.is_specific?.should_not be_true
+      expect(rules.first.is_specific?).not_to be_truthy
     end
 
     it "creates a general notification rule for a pre-existing contact if the existing general one was changed" do
@@ -105,15 +105,15 @@ describe Flapjack::Data::Contact, :redis => true do
         :email => 'jsmith@example.com') # raw redis
       contact = Flapjack::Data::Contact.find_by_id('1')
       rules = contact.notification_rules.all
-      rules.should have(1).notification_rule
+      expect(rules.size).to eq(1)
 
       rule = rules.first
       rule.tags = Set.new(['staging'])
       rule.save
 
       rules = contact.notification_rules.all
-      rules.should have(2).notification_rules
-      rules.select {|r| r.is_specific? }.should have(1).rule
+      expect(rules.size).to eq(2)
+      expect(rules.select {|r| r.is_specific? }.size).to eq(1)
     end
 
   end
@@ -124,13 +124,13 @@ describe Flapjack::Data::Contact, :redis => true do
       Factory.contact(:id => '1', :first_name => 'John', :last_name => 'Smith',
         :email => 'jsmith@example.com') # raw redis
       contact = Flapjack::Data::Contact.find_by_id('1')
-      contact.timezone.should be_nil
+      expect(contact.timezone).to be_nil
 
       contact.time_zone = 'Australia/Adelaide'
-      contact.save.should be_true
-      contact.timezone.should == 'Australia/Adelaide'
-      contact.time_zone.should respond_to(:name)
-      contact.time_zone.name.should == 'Australia/Adelaide'
+      expect(contact.save).to be_truthy
+      expect(contact.timezone).to eq('Australia/Adelaide')
+      expect(contact.time_zone).to respond_to(:name)
+      expect(contact.time_zone.name).to eq('Australia/Adelaide')
     end
 
     it "sets a timezone string from a time zone"
@@ -146,14 +146,14 @@ describe Flapjack::Data::Contact, :redis => true do
       :email => 'jsmith@example.com') # raw redis
     contact = Flapjack::Data::Contact.find_by_id('1')
 
-    contact.should respond_to(:to_json)
+    expect(contact).to respond_to(:to_json)
     contact_json = contact.to_json(:root => false,
       :only => [:id, :first_name, :last_name, :email, :tags])
-    contact_json.should == {"email"      => "jsmith@example.com",
+    expect(contact_json).to eq({"email"      => "jsmith@example.com",
                             "first_name" => "John",
                             "id"         => '1',
                             "last_name"  => "Smith",
-                            "tags"       => [] }.to_json
+                            "tags"       => [] }.to_json)
   end
 
 end

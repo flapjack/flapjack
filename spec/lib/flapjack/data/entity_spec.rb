@@ -15,32 +15,32 @@ describe Flapjack::Data::Entity, :redis => true do
                                          :tags => Set.new(['source:foobar', 'def']))
     entity1.save
 
-    entity0.tags.should include("source:foobar")
-    entity0.tags.should include("abc")
-    entity0.tags.should_not include("def")
+    expect(entity0.tags).to include("source:foobar")
+    expect(entity0.tags).to include("abc")
+    expect(entity0.tags).not_to include("def")
 
-    entity1.tags.should include("source:foobar")
-    entity1.tags.should include("def")
-    entity1.tags.should_not include("abc")
+    expect(entity1.tags).to include("source:foobar")
+    expect(entity1.tags).to include("def")
+    expect(entity1.tags).not_to include("abc")
 
     entities = Flapjack::Data::Entity.find_by_set_intersection(:tags, 'abc')
-    entities.should be_an(Array)
-    entities.should have(1).entity
-    entities.first.id.should == entity0.id
+    expect(entities).to be_an(Array)
+    expect(entities.size).to eq(1)
+    expect(entities.first.id).to eq(entity0.id)
 
     entities = Flapjack::Data::Entity.find_by_set_intersection(:tags, 'source:foobar')
-    entities.should be_an(Array)
-    entities.should have(2).entities
-    entities.map(&:id).should =~ [entity0.id, entity1.id]
+    expect(entities).to be_an(Array)
+    expect(entities.size).to eq(2)
+    expect(entities.map(&:id)).to match_array([entity0.id, entity1.id])
 
     entities = Flapjack::Data::Entity.find_by_set_intersection(:tags, 'source:foobar', 'def')
-    entities.should be_an(Array)
-    entities.should have(1).entity
-    entities.first.id.should == entity1.id
+    expect(entities).to be_an(Array)
+    expect(entities.size).to eq(1)
+    expect(entities.first.id).to eq(entity1.id)
 
     entities = Flapjack::Data::Entity.find_by_set_intersection(:tags, 'donkey')
-    entities.should be_an(Array)
-    entities.should have(0).entities
+    expect(entities).to be_an(Array)
+    expect(entities.size).to eq(0)
   end
 
 end

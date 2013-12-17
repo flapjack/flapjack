@@ -31,7 +31,7 @@ describe Flapjack::Data::NotificationRule, :redis => true do
   it "converts time restriction data to an IceCube schedule" do
     sched = Flapjack::Data::NotificationRule.
               time_restriction_to_icecube_schedule(weekdays_8_18, timezone)
-    sched.should_not be_nil
+    expect(sched).not_to be_nil
   end
 
   it "serializes its contents as JSON"
@@ -39,17 +39,17 @@ describe Flapjack::Data::NotificationRule, :redis => true do
   it "checks whether entity names match" do
     rule = Flapjack::Data::NotificationRule.new(rule_data)
 
-    rule.match_entity?('foo-app-01.example.com').should be_true
-    rule.match_entity?('foo-app-02.example.com').should be_false
+    expect(rule.match_entity?('foo-app-01.example.com')).to be_truthy
+    expect(rule.match_entity?('foo-app-02.example.com')).to be_falsey
   end
 
   it "checks whether entity tags match" do
     rule = Flapjack::Data::NotificationRule.new(rule_data)
 
-    rule.match_tags?(['database', 'physical'].to_set).should be_true
-    rule.match_tags?(['database', 'physical', 'beetroot'].to_set).should be_true
-    rule.match_tags?(['database'].to_set).should be_false
-    rule.match_tags?(['virtual'].to_set).should be_false
+    expect(rule.match_tags?(['database', 'physical'].to_set)).to be_truthy
+    expect(rule.match_tags?(['database', 'physical', 'beetroot'].to_set)).to be_truthy
+    expect(rule.match_tags?(['database'].to_set)).to be_falsey
+    expect(rule.match_tags?(['virtual'].to_set)).to be_falsey
   end
 
 end

@@ -9,13 +9,13 @@ def find_or_create_contact(contact_data)
       :first_name => contact_data['first_name'],
       :last_name => contact_data['last_name'],
       :email => contact_data['email'])
-    contact.save.should be_true
+    expect(contact.save).to be true
   end
 
   if contact_data['media']
     contact_data['media'].each_pair {|type, address|
       medium = Flapjack::Data::Medium.new(:type => type, :address => address, :interval => 600)
-      medium.save.should be_true
+      expect(medium.save).to be true
       contact.media << medium
     }
   end
@@ -28,10 +28,10 @@ def find_or_create_entity(entity_data)
   if entity.nil?
     entity = Flapjack::Data::Entity.new(:id => entity_data['id'],
       :name => entity_data['name'])
-    entity.save.should be_true
+    expect(entity.save).to be true
 
     check = Flapjack::Data::Check.new(:entity_name => entity.name, :name => 'ping')
-    check.save.should be_true
+    expect(check.save).to be true
 
     entity.checks << check
   end
@@ -76,10 +76,10 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_
 
   check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
     :name => 'ping').all.first
-  check.should_not be_nil
+  expect(check).not_to be_nil
   check.state = 'critical'
   check.last_update = timestamp
-  check.save.should be_true
+  expect(check.save).to be true
 
   max_notified_severity = check.max_notified_severity_of_current_failure
   severity = Flapjack::Data::Notification.severity_for_state(event.state,
@@ -111,18 +111,18 @@ end
 
 Then /^an (SMS|email) notification for entity '([\w\.\-]+)' should( not)? be queued$/ do |medium, entity_name, neg|
   queue = redis_peek("#{medium.downcase}_notifications", Flapjack::Data::Alert)
-  queue.select {|n| n.check.entity_name =~ /#{entity_name}/ }.
-        send((neg ? :should : :should_not), be_empty)
+  expect(queue.select {|n| n.check.entity_name =~ /#{entity_name}/ }).
+        send((neg ? :to : :not_to), be_empty)
 end
 
 Given /^an (SMS|email) notification has been queued for entity '([\w\.\-]+)'$/ do |media_type, entity_name|
   check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
     :name => 'ping').all.first
-  check.should_not be_nil
+  expect(check).not_to be_nil
 
   check.state = 'critical'
   check.last_update = Time.now.to_i
-  check.save.should be_true
+  expect(check.save).to be true
 
   @alert = Flapjack::Data::Alert.new(
     :state => check.states.all.last.state,
@@ -136,10 +136,10 @@ Given /^an (SMS|email) notification has been queued for entity '([\w\.\-]+)'$/ d
   end
 
   contact = check.entity.contacts.all.first
-  contact.should_not be_nil
+  expect(contact).not_to be_nil
 
   medium = contact.media.intersect(:type => media_type.downcase).all.first
-  medium.should_not be_nil
+  expect(medium).not_to be_nil
 
   medium.alerts << @alert
   check.alerts << @alert
@@ -185,21 +185,21 @@ When /^the email notification handler fails to send an email$/ do
 end
 
 Then /^the user should receive an SMS notification$/ do
-  @request.should have_been_requested
-  @sms.sent.should == 1
+  expect(@request).to have_been_requested
+  expect(@sms.sent).to eq(1)
 end
 
 Then /^the user should receive an email notification$/ do
-  Mail::TestMailer.deliveries.length.should == 1
-  @email.sent.should == 1
+  expect(Mail::TestMailer.deliveries.length).to eq(1)
+  expect(@email.sent).to eq(1)
 end
 
 Then /^the user should not receive an SMS notification$/ do
-  @request.should have_been_requested
-  @sms.sent.should == 0
+  expect(@request).to have_been_requested
+  expect(@sms.sent).to eq(0)
 end
 
 Then /^the user should not receive an email notification$/ do
-  Mail::TestMailer.deliveries.should be_empty
-  @email.sent.should == 0
+  expect(Mail::TestMailer.deliveries).to be_empty
+  expect(@email.sent).to eq(0)
 end

@@ -19,14 +19,14 @@ describe Flapjack::Data::Check, :redis => true do
       :enabled => true)
 
     checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( Flapjack::Data::Check.all )
-    checks_by_entity.should_not be_nil
-    checks_by_entity.should be_a(Hash)
-    checks_by_entity.should have(1).entity
-    checks_by_entity.keys.first.should == entity_name
+    expect(checks_by_entity).not_to be_nil
+    expect(checks_by_entity).to be_a(Hash)
+    expect(checks_by_entity.size).to eq(1)
+    expect(checks_by_entity.keys.first).to eq(entity_name)
     checks = checks_by_entity[entity_name]
-    checks.should_not be_nil
-    checks.should have(1).check
-    checks.first.name.should == check_name
+    expect(checks).not_to be_nil
+    expect(checks.size).to eq(1)
+    expect(checks.first.name).to eq(check_name)
   end
 
   it "finds all failing checks grouped by entity" do
@@ -43,10 +43,10 @@ describe Flapjack::Data::Check, :redis => true do
       intersect(:state => Flapjack::Data::CheckState.failing_states).all
 
     checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( failing_checks  )
-    checks_by_entity.should_not be_nil
-    checks_by_entity.should be_a(Hash)
-    checks_by_entity.should have(1).entity
-    checks_by_entity[entity_name].map(&:name).should =~ ['HTTP', 'FTP']
+    expect(checks_by_entity).not_to be_nil
+    expect(checks_by_entity).to be_a(Hash)
+    expect(checks_by_entity.size).to eq(1)
+    expect(checks_by_entity[entity_name].map(&:name)).to match_array(['HTTP', 'FTP'])
   end
 
   it "returns its entity's name" do
@@ -55,8 +55,8 @@ describe Flapjack::Data::Check, :redis => true do
     Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1)
 
     check = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
-    check.should_not be_nil
-    check.entity_name.should == entity_name
+    expect(check).not_to be_nil
+    expect(check.entity_name).to eq(entity_name)
   end
 
   context "maintenance" do
@@ -67,7 +67,7 @@ describe Flapjack::Data::Check, :redis => true do
       Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1)
 
       check = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
-      check.should_not be_in_unscheduled_maintenance
+      expect(check).not_to be_in_unscheduled_maintenance
     end
 
     it "returns that it is not in scheduled maintenance" do
@@ -76,7 +76,7 @@ describe Flapjack::Data::Check, :redis => true do
       Factory.check(entity, :entity_name => entity_name, :name => check_name, :id => 1)
 
       check = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
-      check.should_not be_in_scheduled_maintenance
+      expect(check).not_to be_in_scheduled_maintenance
     end
 
     it "returns its current scheduled maintenance period" do
@@ -87,7 +87,7 @@ describe Flapjack::Data::Check, :redis => true do
       t = Time.now
 
       check = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
-      check.scheduled_maintenance_at(t).should be_nil
+      expect(check.scheduled_maintenance_at(t)).to be_nil
 
       sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => t,
         :end_time => Time.at(t.to_i + 2400), :summary => 'planned')
@@ -103,11 +103,11 @@ describe Flapjack::Data::Check, :redis => true do
 
       Delorean.time_travel_to(future)
 
-      check.should be_in_scheduled_maintenance
+      expect(check).to be_in_scheduled_maintenance
 
       csm = check.scheduled_maintenance_at(future)
-      csm.should_not be_nil
-      csm.summary.should == 'planned'
+      expect(csm).not_to be_nil
+      expect(csm.summary).to eq('planned')
     end
 
     it "adds an unscheduled maintenance period" do
@@ -126,16 +126,16 @@ describe Flapjack::Data::Check, :redis => true do
 
       Delorean.time_travel_to( Time.at(t.to_i + 15) )
 
-      check.should be_in_unscheduled_maintenance
+      expect(check).to be_in_unscheduled_maintenance
 
       usms = check.unscheduled_maintenances_by_start.all
-      usms.should be_an(Array)
-      usms.should have(1).unscheduled_maintenance_period
-      usms.first.summary.should == 'impromptu'
+      expect(usms).to be_an(Array)
+      expect(usms.size).to eq(1)
+      expect(usms.first.summary).to eq('impromptu')
       usme = check.unscheduled_maintenances_by_end.all
-      usme.should be_an(Array)
-      usme.should have(1).unscheduled_maintenance_period
-      usme.first.summary.should == 'impromptu'
+      expect(usme).to be_an(Array)
+      expect(usme.size).to eq(1)
+      expect(usme.first.summary).to eq('impromptu')
     end
 
     it "adds an unscheduled maintenance period and ends the current one early", :time => true do
@@ -159,15 +159,15 @@ describe Flapjack::Data::Check, :redis => true do
       usm_b.save
       check.set_unscheduled_maintenance(usm_b)
 
-      check.should be_in_unscheduled_maintenance
+      expect(check).to be_in_unscheduled_maintenance
 
       usms = check.unscheduled_maintenances_by_start.all
-      usms.should be_an(Array)
-      usms.should have(2).unscheduled_maintenance_periods
-      usms.map(&:summary).should == ['scooby', 'shaggy']
+      expect(usms).to be_an(Array)
+      expect(usms.size).to eq(2)
+      expect(usms.map(&:summary)).to eq(['scooby', 'shaggy'])
 
-      usms.first.end_time.to_i.should == later_t
-      usms.last.end_time.to_i.should == later_t + half_an_hour
+      expect(usms.first.end_time.to_i).to eq(later_t)
+      expect(usms.last.end_time.to_i).to eq(later_t + half_an_hour)
     end
 
     it "ends an unscheduled maintenance period", :time => true do
@@ -185,17 +185,17 @@ describe Flapjack::Data::Check, :redis => true do
       check.set_unscheduled_maintenance(usm_a)
 
       Delorean.time_travel_to( later_t )
-      check.should be_in_unscheduled_maintenance
+      expect(check).to be_in_unscheduled_maintenance
       check.clear_unscheduled_maintenance(later_t)
 
       Delorean.time_travel_to( Time.at(later_t.to_i + 10) )
 
-      check.should_not be_in_unscheduled_maintenance
+      expect(check).not_to be_in_unscheduled_maintenance
 
       usms = check.unscheduled_maintenances_by_start.all
-      usms.should be_an(Array)
-      usms.should have(1).unscheduled_maintenance_period
-      usms.first.end_time.to_i.should == later_t.to_i
+      expect(usms).to be_an(Array)
+      expect(usms.size).to eq(1)
+      expect(usms.first.end_time.to_i).to eq(later_t.to_i)
     end
 
     it "ends a scheduled maintenance period for a future time" do
@@ -213,14 +213,14 @@ describe Flapjack::Data::Check, :redis => true do
       check.add_scheduled_maintenance(sm)
 
       sms = check.scheduled_maintenances_by_start.all
-      sms.should be_an(Array)
-      sms.should have(1).scheduled_maintenance_period
-      sms.first.summary.should == '2 hours'
+      expect(sms).to be_an(Array)
+      expect(sms.size).to eq(1)
+      expect(sms.first.summary).to eq('2 hours')
 
       check.end_scheduled_maintenance(sm, t)
       sms = check.scheduled_maintenances_by_start.all
-      sms.should be_an(Array)
-      sms.should be_empty
+      expect(sms).to be_an(Array)
+      expect(sms).to be_empty
     end
 
     # maint period starts an hour from now, goes for two hours -- at 30 minutes into
@@ -245,9 +245,9 @@ describe Flapjack::Data::Check, :redis => true do
       check.end_scheduled_maintenance(sm, future)
 
       sms = check.scheduled_maintenances_by_start.all
-      sms.should be_an(Array)
-      sms.should have(1).scheduled_maintenance_period
-      sms.first.end_time.to_i.should == future.to_i
+      expect(sms).to be_an(Array)
+      expect(sms.size).to eq(1)
+      expect(sms.first.end_time.to_i).to eq(future.to_i)
     end
 
     it "does not alter or remove a scheduled maintenance period covering a past time", :time => true do
@@ -270,9 +270,9 @@ describe Flapjack::Data::Check, :redis => true do
       check.end_scheduled_maintenance(sm, future)
 
       sms = check.scheduled_maintenances_by_start.all
-      sms.should be_an(Array)
-      sms.should have(1).scheduled_maintenance_period
-      sms.first.end_time.to_i.should == t.to_i + (3 * 60 * 60)
+      expect(sms).to be_an(Array)
+      expect(sms.size).to eq(1)
+      expect(sms.first.end_time.to_i).to eq(t.to_i + (3 * 60 * 60))
     end
 
   end

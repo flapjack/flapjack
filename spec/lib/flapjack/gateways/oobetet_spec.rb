@@ -22,32 +22,32 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
   context 'notifications' do
 
     it "raises an error if a required config setting is not set" do
-      lambda {
+      expect {
         Flapjack::Gateways::Oobetet::Notifier.new(:config => config.delete('watched_check'), :logger => @logger)
-      }.should raise_error
+      }.to raise_error
     end
 
     it "starts and is stopped by an exception" do
-      Kernel.should_receive(:sleep).with(10).and_raise(Flapjack::PikeletStop)
+      expect(Kernel).to receive(:sleep).with(10).and_raise(Flapjack::PikeletStop)
 
-      lock.should_receive(:synchronize).and_yield
+      expect(lock).to receive(:synchronize).and_yield
 
       fon = Flapjack::Gateways::Oobetet::Notifier.new(:lock => lock,
         :config => config, :logger => @logger)
-      fon.should_receive(:check_timers)
+      expect(fon).to receive(:check_timers)
       expect { fon.start }.to raise_error(Flapjack::PikeletStop)
     end
 
     it "checks for a breach and emits notifications" do
       time_check = double(Flapjack::Gateways::Oobetet::TimeChecker)
-      time_check.should_receive(:respond_to?).with(:announce).and_return(false)
-      time_check.should_receive(:respond_to?).with(:breach?).and_return(true)
-      time_check.should_receive(:breach?).
+      expect(time_check).to receive(:respond_to?).with(:announce).and_return(false)
+      expect(time_check).to receive(:respond_to?).with(:breach?).and_return(true)
+      expect(time_check).to receive(:breach?).
         and_return("haven't seen a test problem notification in the last 300 seconds")
 
       bot = double(Flapjack::Gateways::Oobetet::Bot)
-      bot.should_receive(:respond_to?).with(:announce).and_return(true)
-      bot.should_receive(:announce).with(/^Flapjack Self Monitoring is Critical/)
+      expect(bot).to receive(:respond_to?).with(:announce).and_return(true)
+      expect(bot).to receive(:announce).with(/^Flapjack Self Monitoring is Critical/)
 
       # TODO be more specific about the request body
       req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
@@ -57,7 +57,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
       fon.instance_variable_set('@siblings', [time_check, bot])
       fon.send(:check_timers)
 
-      req.should have_been_requested
+      expect(req).to have_been_requested
     end
 
   end
@@ -69,9 +69,9 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     let(:a_day_ago)    { now.to_i - (60 * 60 * 24) }
 
     it "starts and is stopped by a signal" do
-      lock.should_receive(:synchronize).and_yield
+      expect(lock).to receive(:synchronize).and_yield
       stop_cond = double(MonitorMixin::ConditionVariable)
-      stop_cond.should_receive(:wait_until)
+      expect(stop_cond).to receive(:wait_until)
 
       fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :stop_condition => stop_cond,
         :config => config, :logger => @logger)
@@ -79,37 +79,37 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     end
 
     it "records times of a problem status message" do
-      lock.should_receive(:synchronize).and_yield
+      expect(lock).to receive(:synchronize).and_yield
       fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
       fot.send(:receive_status, 'problem', now.to_i)
       fot_times = fot.instance_variable_get('@times')
-      fot_times.should_not be_nil
-      fot_times.should have_key(:last_problem)
-      fot_times[:last_problem].should == now.to_i
+      expect(fot_times).not_to be_nil
+      expect(fot_times).to have_key(:last_problem)
+      expect(fot_times[:last_problem]).to eq(now.to_i)
     end
 
     it "records times of a recovery status message" do
-      lock.should_receive(:synchronize).and_yield
+      expect(lock).to receive(:synchronize).and_yield
       fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
       fot.send(:receive_status, 'recovery', now.to_i)
       fot_times = fot.instance_variable_get('@times')
-      fot_times.should_not be_nil
-      fot_times.should have_key(:last_recovery)
-      fot_times[:last_recovery].should == now.to_i
+      expect(fot_times).not_to be_nil
+      expect(fot_times).to have_key(:last_recovery)
+      expect(fot_times[:last_recovery]).to eq(now.to_i)
     end
 
     it "records times of an acknowledgement status message" do
-      lock.should_receive(:synchronize).and_yield
+      expect(lock).to receive(:synchronize).and_yield
       fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
       fot.send(:receive_status, 'acknowledgement', now.to_i)
       fot_times = fot.instance_variable_get('@times')
-      fot_times.should_not be_nil
-      fot_times.should have_key(:last_ack)
-      fot_times[:last_ack].should == now.to_i
+      expect(fot_times).not_to be_nil
+      expect(fot_times).to have_key(:last_ack)
+      expect(fot_times[:last_ack]).to eq(now.to_i)
     end
 
     it "detects a time period with no test problem alerts" do
-      lock.should_receive(:synchronize).and_yield
+      expect(lock).to receive(:synchronize).and_yield
       fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
       fot_times = fot.instance_variable_get('@times')
 
@@ -119,12 +119,12 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
       fot_times[:last_ack_sent] = a_minute_ago
 
       breach = fot.breach?(now.to_i)
-      breach.should_not be_nil
-      breach.should == "haven't seen a test problem notification in the last 300 seconds"
+      expect(breach).not_to be_nil
+      expect(breach).to eq("haven't seen a test problem notification in the last 300 seconds")
     end
 
     it "detects a time period with no test recovery alerts" do
-      lock.should_receive(:synchronize).and_yield
+      expect(lock).to receive(:synchronize).and_yield
       fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
       fot_times = fot.instance_variable_get('@times')
 
@@ -134,8 +134,8 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
       fot_times[:last_ack_sent] = a_minute_ago
 
       breach = fot.breach?(now.to_i)
-      breach.should_not be_nil
-      breach.should == "haven't seen a test recovery notification in the last 300 seconds"
+      expect(breach).not_to be_nil
+      expect(breach).to eq("haven't seen a test recovery notification in the last 300 seconds")
     end
 
   end
@@ -145,38 +145,38 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     let(:muc_client) { double(::Jabber::MUC::SimpleMUCClient) }
 
     it "raises an error if a required config setting is not set" do
-      lambda {
+      expect {
         Flapjack::Gateways::Oobetet::Bot.new(:config => config.delete('watched_check'), :logger => @logger)
-      }.should raise_error
+      }.to raise_error
     end
 
     it "starts and is stopped by a signal" do
       t = now.to_i
 
       time_checker = double(Flapjack::Gateways::Oobetet::TimeChecker)
-      time_checker.should_receive(:respond_to?).with(:receive_status).and_return(true)
-      time_checker.should_receive(:receive_status).with('recovery', t)
+      expect(time_checker).to receive(:respond_to?).with(:receive_status).and_return(true)
+      expect(time_checker).to receive(:receive_status).with('recovery', t)
 
       client = double(::Jabber::Client)
-      client.should_receive(:connect)
-      client.should_receive(:auth).with('password')
-      client.should_receive(:send).with(an_instance_of(::Jabber::Presence))
+      expect(client).to receive(:connect)
+      expect(client).to receive(:auth).with('password')
+      expect(client).to receive(:send).with(an_instance_of(::Jabber::Presence))
 
-      muc_client.should_receive(:on_message).and_yield(t, 'test', 'Recovery "PING" on foo.bar.net')
-      muc_client.should_receive(:join).with('flapjacktest@conference.example.com/flapjack')
-      muc_client.should_receive(:say).with(/^flapjack oobetet gateway started/)
+      expect(muc_client).to receive(:on_message).and_yield(t, 'test', 'Recovery "PING" on foo.bar.net')
+      expect(muc_client).to receive(:join).with('flapjacktest@conference.example.com/flapjack')
+      expect(muc_client).to receive(:say).with(/^flapjack oobetet gateway started/)
 
-      muc_client.should_receive(:active?).and_return(true)
-      muc_client.should_receive(:exit)
+      expect(muc_client).to receive(:active?).and_return(true)
+      expect(muc_client).to receive(:exit)
 
-      client.should_receive(:close)
+      expect(client).to receive(:close)
 
-      ::Jabber::Client.should_receive(:new).and_return(client)
-      ::Jabber::MUC::SimpleMUCClient.should_receive(:new).and_return(muc_client)
+      expect(::Jabber::Client).to receive(:new).and_return(client)
+      expect(::Jabber::MUC::SimpleMUCClient).to receive(:new).and_return(muc_client)
 
-      lock.should_receive(:synchronize).and_yield
+      expect(lock).to receive(:synchronize).and_yield
       stop_cond = double(MonitorMixin::ConditionVariable)
-      stop_cond.should_receive(:wait_until)
+      expect(stop_cond).to receive(:wait_until)
 
       fob = Flapjack::Gateways::Oobetet::Bot.new(:lock => lock, :stop_condition => stop_cond,
         :config => config, :logger => @logger)
@@ -187,10 +187,10 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     it "announces to jabber rooms" do
       muc_client2 = double(::Jabber::MUC::SimpleMUCClient)
 
-      muc_client.should_receive(:say).with('hello!')
-      muc_client2.should_receive(:say).with('hello!')
+      expect(muc_client).to receive(:say).with('hello!')
+      expect(muc_client2).to receive(:say).with('hello!')
 
-      lock.should_receive(:synchronize).and_yield
+      expect(lock).to receive(:synchronize).and_yield
 
       fob = Flapjack::Gateways::Oobetet::Bot.new(:lock => lock, :config => config, :logger => @logger)
       fob.instance_variable_set('@muc_clients', {'room1' => muc_client, 'room2' => muc_client2})

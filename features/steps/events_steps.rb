@@ -27,7 +27,7 @@ def set_scheduled_maintenance(entity_name, check_name, duration)
   t = Time.now
   sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => t,
     :end_time => Time.at(t.to_i + duration), :summary => 'upgrading everything')
-  sched_maint.save.should be_true
+  expect(sched_maint.save).to be true
   check.add_scheduled_maintenance(sched_maint)
 end
 
@@ -48,7 +48,7 @@ def set_unscheduled_maintenance(entity_name, check_name, duration)
   t = Time.now
   unsched_maint = Flapjack::Data::UnscheduledMaintenance.new(:start_time => t,
     :end_time => Time.at(t.to_i + duration), :summary => 'fixing now')
-  unsched_maint.save.should be_true
+  expect(unsched_maint.save).to be true
   check.set_unscheduled_maintenance(unsched_maint)
 end
 
@@ -154,18 +154,18 @@ Given /^an entity '([\w\.\-]+)' exists$/ do |entity_name|
   if entity.nil?
     entity = Flapjack::Data::Entity.new(:id   => '5000',
                                         :name => entity_name)
-    entity.save.should be_true
+    expect(entity.save).to be true
   end
 end
 
 Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check_name, entity_name|
   entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  entity.should_not be_nil
+  expect(entity).not_to be_nil
 
   check = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
   if check.nil?
     check = Flapjack::Data::Check.new(:entity_name => entity_name, :name => check_name)
-    check.save.should be_true
+    expect(check.save).to be true
   end
   entity.checks << check
 
@@ -264,11 +264,11 @@ Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on enti
   entity_name ||= @entity_name
 
   check = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
-  check.should_not be_nil
+  expect(check).not_to be_nil
 
   if last_notification = check.last_notification
     puts @logger.messages.join("\n\n") if last_notification.last_notification_count == @last_event_count
-    last_notification.last_notification_count.should_not == @last_event_count
+    expect(last_notification.last_notification_count).not_to eq(@last_event_count)
   end
 end
 
@@ -277,12 +277,12 @@ Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '
   entity_name ||= @entity_name
 
   check = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
-  check.should_not be_nil
+  expect(check).not_to be_nil
 
   last_notification = check.last_notification
-  last_notification.should_not be_nil
+  expect(last_notification).not_to be_nil
   puts @logger.messages.join("\n\n") if last_notification.last_notification_count != @last_event_count
-  last_notification.last_notification_count.should == @last_event_count
+  expect(last_notification.last_notification_count).to eq(@last_event_count)
 end
 
 Then /^(un)?scheduled maintenance should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |unsched, check_name, entity_name|
@@ -290,9 +290,9 @@ Then /^(un)?scheduled maintenance should be generated(?: for check '([\w\.\-]+)'
   entity_name ||= @entity_name
 
   check = Flapjack::Data::Check.intersect(:entity_name => entity_name, :name => check_name).all.first
-  check.should_not be_nil
+  expect(check).not_to be_nil
 
-  check.should (unsched ? be_in_unscheduled_maintenance : be_in_scheduled_maintenance)
+  expect(check).to (unsched ? be_in_unscheduled_maintenance : be_in_scheduled_maintenance)
 end
 
 Then /^show me the (\w+ )*log$/ do |adjective|
@@ -317,7 +317,7 @@ Given /^the following entities exist:$/ do |entities|
     next if entity_data['contacts'].nil?
     entity_data['contacts'].split(',').map(&:strip).each do |contact_id|
       contact = Flapjack::Data::Contact.find_by_id(contact_id)
-      contact.should_not be_nil
+      expect(contact).not_to be_nil
       entity.contacts << contact
     end
   end
@@ -328,12 +328,12 @@ Given /^the following users exist:$/ do |contacts|
 
     contact = find_or_create_contact(contact_data)
     contact.timezone = contact_data['timezone']
-    contact.save.should be_true
+    expect(contact.save).to be true
 
     ['email', 'sms'].each do |type|
       medium = Flapjack::Data::Medium.new(:type => type,
         :address => contact_data[type], :interval => 600)
-      medium.save.should be_true
+      expect(medium.save).to be true
       contact.media << medium
     end
   end
@@ -345,9 +345,9 @@ Given /^user (\S+) has the following notification intervals:$/ do |contact_id, i
     @logger.info interval
     ['email', 'sms'].each do |type|
       medium = contact.media.intersect(:type => type).all.first
-      medium.should_not be_nil
+      expect(medium).not_to be_nil
       medium.interval = interval[type].to_i
-      medium.save.should be_true
+      expect(medium.save).to be true
       @logger.info "saved medium #{medium.inspect}"
     end
   end
@@ -407,7 +407,7 @@ Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules
                  :tags               => Set.new(tags),
                  :time_restrictions  => time_restrictions}
     new_rule = Flapjack::Data::NotificationRule.new(rule_data)
-    new_rule.save.should be_true
+    expect(new_rule.save).to be true
 
     nr_fail_states = Flapjack::Data::CheckState.failing_states.collect do |fail_state|
       state = Flapjack::Data::NotificationRuleState.new(:state => fail_state,
@@ -428,7 +428,7 @@ Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules
 end
 
 Then /^all alert dropping keys for user (\S+) should have expired$/ do |contact_id|
-  Flapjack.redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
+  expect(Flapjack.redis.keys("drop_alerts_for_contact:#{contact_id}*")).to be_empty
 end
 
 Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))? should be queued for (.*)$/ do |num_queued, media, notification_type, rollup, address|
@@ -437,7 +437,7 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
     num_queued = 0
   end
   queued = redis_peek("#{media}_notifications", Flapjack::Data::Alert, 0, 30)
-  queued.find_all {|alert|
+  queued_length = queued.find_all {|alert|
     type_ok = notification_type ? ( alert.notification_type == notification_type ) : true
     rollup_ok = true
     if rollup
@@ -448,14 +448,15 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
       end
     end
     type_ok && rollup_ok && (alert.medium.address == address)
-  }.length.should == num_queued.to_i
+  }.length
+  expect(queued_length).to eq(num_queued.to_i)
 end
 
 When(/^user (\S+) ceases to be a contact of entity '(.*)'$/) do |contact_id, entity_name|
   entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  entity.should_not be_nil
+  expect(entity).not_to be_nil
   contact = Flapjack::Data::Contact.find_by_id(contact_id)
-  contact.should_not be_nil
+  expect(contact).not_to be_nil
 
   entity.contacts.delete(contact)
 end

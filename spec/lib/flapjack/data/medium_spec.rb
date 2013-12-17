@@ -25,11 +25,11 @@ describe Flapjack::Data::Medium, :redis => true do
 
     old_notification_block = Flapjack::Data::NotificationBlock.new(
       :expire_at => t.to_i - (60 * 60), :state => 'critical')
-    old_notification_block.save.should be_true
+    expect(old_notification_block.save).to be_truthy
 
     new_notification_block = Flapjack::Data::NotificationBlock.new(
       :expire_at => t.to_i + (60 * 60), :state => 'critical')
-    new_notification_block.save.should be_true
+    expect(new_notification_block.save).to be_truthy
 
     check.notification_blocks << old_notification_block
     check.notification_blocks << new_notification_block
@@ -37,12 +37,12 @@ describe Flapjack::Data::Medium, :redis => true do
     medium.notification_blocks << old_notification_block <<
       new_notification_block
 
-    Flapjack::Data::NotificationBlock.count.should == 2
-    medium.drop_notifications?(:state => 'critical', :check => check).should be_true
-    Flapjack::Data::NotificationBlock.count.should == 1
+    expect(Flapjack::Data::NotificationBlock.count).to eq(2)
+    expect(medium.drop_notifications?(:state => 'critical', :check => check)).to be_truthy
+    expect(Flapjack::Data::NotificationBlock.count).to eq(1)
     remaining_block = Flapjack::Data::NotificationBlock.all.first
-    remaining_block.should_not be_nil
-    remaining_block.id.should == new_notification_block.id
+    expect(remaining_block).not_to be_nil
+    expect(remaining_block.id).to eq(new_notification_block.id)
   end
 
 end

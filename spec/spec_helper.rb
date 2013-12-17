@@ -20,6 +20,11 @@ WebMock.disable_net_connect!
 
 $:.unshift(File.dirname(__FILE__) + '/../lib')
 
+require 'oj'
+Oj.mimic_JSON
+Oj.default_options = { :indent => 0, :mode => :strict }
+require 'active_support/json'
+
 # Requires supporting files with custom matchers and macros, etc,
 # in ./support/ and its subdirectories.
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each {|f| require f}
@@ -59,16 +64,6 @@ class MockLogger
 
 end
 
-require 'oj'
-Oj.mimic_JSON
-Oj.default_options = { :indent => 0, :mode => :strict }
-require 'active_support/json'
-
-JsonSpec.configure do
-  # so we include id
-  exclude_keys "created_at", "updated_at"
-end
-
 require 'mail'
 ::Mail.defaults do
   delivery_method :test
@@ -86,7 +81,6 @@ require 'flapjack/redis_proxy'
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
 RSpec.configure do |config|
-  config.treat_symbols_as_metadata_keys_with_true_values = true
   config.run_all_when_everything_filtered = true
   config.filter_run :focus
 
@@ -133,5 +127,4 @@ RSpec.configure do |config|
   config.include Factory, :redis => true
   config.include ErbViewHelper, :erb_view => true
   config.include Rack::Test::Methods, :sinatra => true
-  config.include JsonSpec::Helpers, :json => true
 end
