@@ -106,30 +106,6 @@
           </table>
         <% end %>
 
-        <h3>All Entities and Checks</h3>
-        <% entities = @contact.entities.all %>
-        <% if entities.empty? %>
-          <p>No entities</p>
-        <% else %>
-          <table class="table table-bordered table-hover table-condensed">
-            <tr>
-              <th>Entity</th>
-              <th>Checks</th>
-            </tr>
-            <% entities.each do |entity| %>
-              <% checks = entity.checks.all.sort_by(&:name) %>
-              <tr>
-                <td><a href="/entity/<%= u(entity.name) %>" title="entity status"><%= h entity.name %></a></td>
-                <td>
-                  <% checks.each do |check| %>
-                    <a href="/check?entity=<%= u(entity.name) %>&amp;check=<%= u(check.name) %>" title="check status"><%= h check.name %></a>
-                  <% end %>
-                </td>
-              </tr>
-            <% end %>
-          </table>
-        <% end %>
-
         <h3>Notification Rules</h3>
         <% rules = @contact.notification_rules.all %>
         <% if !rules || rules.empty? %>
@@ -159,7 +135,31 @@
                 <td><%= h(blackholes.join(', ')) %></td>
               </tr>
             <% end %>
-            </table>
+          </table>
+        <% end %>
+
+        <h3>All Entities and Checks</h3>
+        <% entities = @contact.entities.all %>
+        <% if entities.empty? %>
+          <p>No entities</p>
+        <% else %>
+          <table class="table table-bordered table-hover table-condensed">
+            <tr>
+              <th>Entity</th>
+              <th>Checks</th>
+            </tr>
+            <% entities.each do |entity| %>
+              <% checks = entity.checks.all.sort_by(&:name) %>
+              <tr>
+                <td><a href="/entity/<%= u(entity.name) %>" title="entity status"><%= h entity.name %></a></td>
+                <td>
+                  <% checks.each do |check| %>
+                    <a href="/check?entity=<%= u(entity.name) %>&amp;check=<%= u(check.name) %>" title="check status"><%= h check.name %></a>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </table>
         <% end %>
 
       </div>

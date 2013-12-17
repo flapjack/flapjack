@@ -112,17 +112,12 @@ module Flapjack
       (LEVELS + [:configure, :close, :add]).include?(sym)
     end
 
-    def method_missing(method, *args, &block)
-      @logger.send(method.to_sym, *args, &block)
 
-      # if Syslog.const_defined?('Logger', false)
-      #   # Ruby 2.0+
-      #   @sys_logger.send(method.to_sym, *args, &block)
-      # else
-      #   # Ruby 1.9
-      #   @syslog.send(method.to_sym, *args, &block)
-      # end
-    end
+    ['debug', 'info', 'warn', 'error', 'fatal'].each { |level|
+      define_method("#{level}?") {
+        @logger.send("#{level}?")
+      }
+    }
 
   end
 

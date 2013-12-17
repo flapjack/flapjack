@@ -36,6 +36,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     redis.should_receive(:hgetall).twice.and_return({'all' => '8001', 'ok' => '8002'},
       {'all' => '9001', 'ok' => '9002'})
     redis.should_receive(:llen).with('events')
+    # redis.should_receive(:zrange).with('current_entities', 0, -1).and_return(['foo-app-01.example.com'])
+    # redis.should_receive(:zrange).with('current_checks:foo-app-01.example.com', 0, -1, :withscores => true).and_return([['ping', 1382329923.0]])
   end
 
   let(:failing_checks) { double('failing_checks') }
@@ -129,6 +131,11 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     Flapjack::Data::Check.should_receive(:intersect).with(:state =>
       ['critical', 'warning', 'unknown']).and_return(failing_checks)
+
+    no_checks = double('no_checks', :all => [])
+    Flapjack::Data::Check.should_receive(:intersect).with(:enabled => true).
+      and_return(no_checks)
+
 
     check.should_receive(:entity_name).and_return('foo')
 
