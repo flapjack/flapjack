@@ -166,7 +166,7 @@ module Flapjack
               (check_name ? results.first : results).to_json
             else
               # new and improved data format which reflects the request param structure
-              results.to_json
+              "[" + results.map {|r| r.to_json }.join(',') + "]"
             end
           end
 
