@@ -83,22 +83,22 @@ end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
   queue = redis_peek('sms_notifications')
-  queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }.should_not be_empty
+  expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
 end
 
 Then /^an email notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
   queue = redis_peek('email_notifications')
-  queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }.should_not be_empty
+  expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
 end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should not be queued for the user$/ do |entity|
   queue = redis_peek('sms_notifications')
-  queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }.should be_empty
+  expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).to be_empty
 end
 
 Then /^an email notification for entity '([\w\.\-]+)' should not be queued for the user$/ do |entity|
   queue = redis_peek('email_notifications')
-  queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }.should be_empty
+  expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).to be_empty
 end
 
 Given /^a user SMS notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
@@ -173,21 +173,21 @@ When /^the email notification handler fails to send an email$/ do
 end
 
 Then /^the user should receive an SMS notification$/ do
-  @request.should have_been_requested
-  @sms.sent.should == 1
+  expect(@request).to have_been_requested
+  expect(@sms.sent).to eq(1)
 end
 
 Then /^the user should receive an email notification$/ do
-  Mail::TestMailer.deliveries.length.should == 1
-  @email.sent.should == 1
+  expect(Mail::TestMailer.deliveries.length).to eq(1)
+  expect(@email.sent).to eq(1)
 end
 
 Then /^the user should not receive an SMS notification$/ do
-  @request.should have_been_requested
-  @sms.sent.should == 0
+  expect(@request).to have_been_requested
+  expect(@sms.sent).to eq(0)
 end
 
 Then /^the user should not receive an email notification$/ do
-  Mail::TestMailer.deliveries.should be_empty
-  @email.sent.should == 0
+  expect(Mail::TestMailer.deliveries).to be_empty
+  expect(@email.sent).to eq(0)
 end

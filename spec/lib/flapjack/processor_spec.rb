@@ -11,43 +11,43 @@ describe Flapjack::Processor, :logger => true do
   let(:redis) { double(Redis) }
 
   before(:each) do
-    Flapjack.stub(:redis).and_return(redis)
+    allow(Flapjack).to receive(:redis).and_return(redis)
   end
 
   # TODO this does too much -- split it up
   it "starts up, runs and shuts down" do
     t = Time.now.to_i
 
-    Flapjack::Filters::Ok.should_receive(:new)
-    Flapjack::Filters::ScheduledMaintenance.should_receive(:new)
-    Flapjack::Filters::UnscheduledMaintenance.should_receive(:new)
-    Flapjack::Filters::Delays.should_receive(:new)
-    Flapjack::Filters::Acknowledgement.should_receive(:new)
+    expect(Flapjack::Filters::Ok).to receive(:new)
+    expect(Flapjack::Filters::ScheduledMaintenance).to receive(:new)
+    expect(Flapjack::Filters::UnscheduledMaintenance).to receive(:new)
+    expect(Flapjack::Filters::Delays).to receive(:new)
+    expect(Flapjack::Filters::Acknowledgement).to receive(:new)
 
-    redis.should_receive(:hset).with(/^executive_instance:/, "boot_time", anything)
-    redis.should_receive(:hget).with('event_counters', 'all').and_return(nil)
-    redis.should_receive(:hset).with('event_counters', 'all', 0)
-    redis.should_receive(:hset).with('event_counters', 'ok', 0)
-    redis.should_receive(:hset).with('event_counters', 'failure', 0)
-    redis.should_receive(:hset).with('event_counters', 'action', 0)
+    expect(redis).to receive(:hset).with(/^executive_instance:/, "boot_time", anything)
+    expect(redis).to receive(:hget).with('event_counters', 'all').and_return(nil)
+    expect(redis).to receive(:hset).with('event_counters', 'all', 0)
+    expect(redis).to receive(:hset).with('event_counters', 'ok', 0)
+    expect(redis).to receive(:hset).with('event_counters', 'failure', 0)
+    expect(redis).to receive(:hset).with('event_counters', 'action', 0)
 
-    redis.should_receive(:hset).with(/^event_counters:/, 'all', 0)
-    redis.should_receive(:hset).with(/^event_counters:/, 'ok', 0)
-    redis.should_receive(:hset).with(/^event_counters:/, 'failure', 0)
-    redis.should_receive(:hset).with(/^event_counters:/, 'action', 0)
+    expect(redis).to receive(:hset).with(/^event_counters:/, 'all', 0)
+    expect(redis).to receive(:hset).with(/^event_counters:/, 'ok', 0)
+    expect(redis).to receive(:hset).with(/^event_counters:/, 'failure', 0)
+    expect(redis).to receive(:hset).with(/^event_counters:/, 'action', 0)
 
-    redis.should_receive(:expire).with(/^executive_instance:/, anything)
-    redis.should_receive(:expire).with(/^event_counters:/, anything).exactly(4).times
+    expect(redis).to receive(:expire).with(/^executive_instance:/, anything)
+    expect(redis).to receive(:expire).with(/^event_counters:/, anything).exactly(4).times
 
     # redis.should_receive(:hincrby).with('event_counters', 'all', 1)
     # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
 
-    lock.should_receive(:synchronize).and_yield
+    expect(lock).to receive(:synchronize).and_yield
 
     processor = Flapjack::Processor.new(:lock => lock, :config => {}, :logger => @logger)
 
-    Flapjack::Data::Event.should_receive(:foreach_on_queue)
-    Flapjack::Data::Event.should_receive(:wait_for_queue).and_raise(Flapjack::PikeletStop)
+    expect(Flapjack::Data::Event).to receive(:foreach_on_queue)
+    expect(Flapjack::Data::Event).to receive(:wait_for_queue).and_raise(Flapjack::PikeletStop)
 
     expect { processor.start }.to raise_error(Flapjack::PikeletStop)
   end
@@ -55,37 +55,37 @@ describe Flapjack::Processor, :logger => true do
   it "starts up, runs and shuts down everything when queue empty" do
     t = Time.now.to_i
 
-    Flapjack::Filters::Ok.should_receive(:new)
-    Flapjack::Filters::ScheduledMaintenance.should_receive(:new)
-    Flapjack::Filters::UnscheduledMaintenance.should_receive(:new)
-    Flapjack::Filters::Delays.should_receive(:new)
-    Flapjack::Filters::Acknowledgement.should_receive(:new)
+    expect(Flapjack::Filters::Ok).to receive(:new)
+    expect(Flapjack::Filters::ScheduledMaintenance).to receive(:new)
+    expect(Flapjack::Filters::UnscheduledMaintenance).to receive(:new)
+    expect(Flapjack::Filters::Delays).to receive(:new)
+    expect(Flapjack::Filters::Acknowledgement).to receive(:new)
 
-    redis.should_receive(:hset).with(/^executive_instance:/, "boot_time", anything)
-    redis.should_receive(:hget).with('event_counters', 'all').and_return(nil)
-    redis.should_receive(:hset).with('event_counters', 'all', 0)
-    redis.should_receive(:hset).with('event_counters', 'ok', 0)
-    redis.should_receive(:hset).with('event_counters', 'failure', 0)
-    redis.should_receive(:hset).with('event_counters', 'action', 0)
+    expect(redis).to receive(:hset).with(/^executive_instance:/, "boot_time", anything)
+    expect(redis).to receive(:hget).with('event_counters', 'all').and_return(nil)
+    expect(redis).to receive(:hset).with('event_counters', 'all', 0)
+    expect(redis).to receive(:hset).with('event_counters', 'ok', 0)
+    expect(redis).to receive(:hset).with('event_counters', 'failure', 0)
+    expect(redis).to receive(:hset).with('event_counters', 'action', 0)
 
-    redis.should_receive(:hset).with(/^event_counters:/, 'all', 0)
-    redis.should_receive(:hset).with(/^event_counters:/, 'ok', 0)
-    redis.should_receive(:hset).with(/^event_counters:/, 'failure', 0)
-    redis.should_receive(:hset).with(/^event_counters:/, 'action', 0)
+    expect(redis).to receive(:hset).with(/^event_counters:/, 'all', 0)
+    expect(redis).to receive(:hset).with(/^event_counters:/, 'ok', 0)
+    expect(redis).to receive(:hset).with(/^event_counters:/, 'failure', 0)
+    expect(redis).to receive(:hset).with(/^event_counters:/, 'action', 0)
 
-    redis.should_receive(:expire).with(/^executive_instance:/, anything)
-    redis.should_receive(:expire).with(/^event_counters:/, anything).exactly(4).times
+    expect(redis).to receive(:expire).with(/^executive_instance:/, anything)
+    expect(redis).to receive(:expire).with(/^event_counters:/, anything).exactly(4).times
 
     # redis.should_receive(:hincrby).with('event_counters', 'all', 1)
     # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
 
-    lock.should_receive(:synchronize).and_yield
+    expect(lock).to receive(:synchronize).and_yield
 
     processor = Flapjack::Processor.new(:lock => lock,
       :config => {'exit_on_queue_empty' => true}, :logger => @logger)
 
-    Flapjack::Data::Event.should_receive(:foreach_on_queue)
-    Flapjack::Data::Event.should_not_receive(:wait_for_queue)
+    expect(Flapjack::Data::Event).to receive(:foreach_on_queue)
+    expect(Flapjack::Data::Event).not_to receive(:wait_for_queue)
 
     expect { processor.start }.to raise_error(Flapjack::GlobalStop)
   end

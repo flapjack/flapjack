@@ -5,7 +5,7 @@ describe Flapjack::Gateways::Email, :logger => true do
 
   it "sends a mail with text and html parts" do
     redis = double(Redis)
-    Flapjack.stub(:redis).and_return(redis)
+    allow(Flapjack).to receive(:redis).and_return(redis)
 
     message = {'notification_type'   => 'recovery',
                'contact_first_name'  => 'John',
@@ -19,22 +19,22 @@ describe Flapjack::Gateways::Email, :logger => true do
                'address'             => 'johnsmith@example.com',
                'event_id'            => 'example.com:ping'}
 
-    Flapjack::Data::Message.should_receive(:foreach_on_queue).
+    expect(Flapjack::Data::Message).to receive(:foreach_on_queue).
       with('email_notifications', :logger => @logger).
       and_yield(message)
-    Flapjack::Data::Message.should_receive(:wait_for_queue).
+    expect(Flapjack::Data::Message).to receive(:wait_for_queue).
       with('email_notifications').
       and_raise(Flapjack::PikeletStop)
 
-    Mail::TestMailer.deliveries.should be_empty
+    expect(Mail::TestMailer.deliveries).to be_empty
 
     lock = double(Monitor)
-    lock.should_receive(:synchronize).and_yield
+    expect(lock).to receive(:synchronize).and_yield
 
     email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => {}, :logger => @logger)
     expect { email_gw.start }.to raise_error(Flapjack::PikeletStop)
 
-    Mail::TestMailer.deliveries.should have(1).mail
+    expect(Mail::TestMailer.deliveries.size).to eq(1)
   end
 
 end

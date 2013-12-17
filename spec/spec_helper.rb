@@ -56,10 +56,10 @@ class MockLogger
 
 end
 
-JsonSpec.configure do
-  # so we include id
-  exclude_keys "created_at", "updated_at"
-end
+require 'oj'
+Oj.mimic_JSON
+Oj.default_options = { :indent => 0, :mode => :strict }
+require 'active_support/json'
 
 require 'mail'
 ::Mail.defaults do
@@ -73,7 +73,6 @@ end
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
 RSpec.configure do |config|
-  config.treat_symbols_as_metadata_keys_with_true_values = true
   config.run_all_when_everything_filtered = true
   config.filter_run :focus
 
@@ -119,5 +118,4 @@ RSpec.configure do |config|
 
   config.include ErbViewHelper, :erb_view => true
   config.include Rack::Test::Methods, :sinatra => true
-  config.include JsonSpec::Helpers, :json => true
 end

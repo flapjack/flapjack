@@ -33,14 +33,14 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
                 }
 
   before(:each) do
-    Flapjack.stub(:redis).and_return(redis)
+    allow(Flapjack).to receive(:redis).and_return(redis)
   end
 
   it "sends an SMS message" do
-    Flapjack::Data::Message.should_receive(:foreach_on_queue).
+    expect(Flapjack::Data::Message).to receive(:foreach_on_queue).
       with('sms_notifications', :logger => @logger).
       and_yield(message)
-    Flapjack::Data::Message.should_receive(:wait_for_queue).
+    expect(Flapjack::Data::Message).to receive(:wait_for_queue).
       with('sms_notifications').
       and_raise(Flapjack::PikeletStop)
 
@@ -51,13 +51,13 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
                       'PhoneMessage' => "Recovery: 'ping' on example.com is OK at #{time_str}, smile"}).
       to_return(:status => 200)
 
-    lock.should_receive(:synchronize).and_yield
+    expect(lock).to receive(:synchronize).and_yield
 
     sms_gw = Flapjack::Gateways::SmsMessagenet.new(:lock => lock,
                                                    :config => config,
                                                    :logger => @logger)
     expect { sms_gw.start }.to raise_error(Flapjack::PikeletStop)
-    req.should have_been_requested
+    expect(req).to have_been_requested
   end
 
   it "truncates a long message a" do
@@ -65,10 +65,10 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
       'fathers brought forth on this continent, a new nation, conceived in ' +
       'Liberty, and dedicated to the proposition that all men are created equal.')
 
-    Flapjack::Data::Message.should_receive(:foreach_on_queue).
+    expect(Flapjack::Data::Message).to receive(:foreach_on_queue).
       with('sms_notifications', :logger => @logger).
       and_yield(long_msg)
-    Flapjack::Data::Message.should_receive(:wait_for_queue).
+    expect(Flapjack::Data::Message).to receive(:wait_for_queue).
       with('sms_notifications').
       and_raise(Flapjack::PikeletStop)
 
@@ -82,31 +82,31 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
                         'nation, conceived i...'}).
       to_return(:status => 200)
 
-    lock.should_receive(:synchronize).and_yield
+    expect(lock).to receive(:synchronize).and_yield
 
     sms_gw = Flapjack::Gateways::SmsMessagenet.new(:lock => lock,
                                                    :config => config,
                                                    :logger => @logger)
     expect { sms_gw.start }.to raise_error(Flapjack::PikeletStop)
-    req.should have_been_requested
+    expect(req).to have_been_requested
   end
 
   it "does not send an SMS message with an invalid config" do
-    Flapjack::Data::Message.should_receive(:foreach_on_queue).
+    expect(Flapjack::Data::Message).to receive(:foreach_on_queue).
       with('sms_notifications', :logger => @logger).
       and_yield(message)
-    Flapjack::Data::Message.should_receive(:wait_for_queue).
+    expect(Flapjack::Data::Message).to receive(:wait_for_queue).
       with('sms_notifications').
       and_raise(Flapjack::PikeletStop)
 
-    lock.should_receive(:synchronize).and_yield
+    expect(lock).to receive(:synchronize).and_yield
 
     sms_gw = Flapjack::Gateways::SmsMessagenet.new(:lock => lock,
                                                    :config => config.reject {|k, v| k == 'password'},
                                                    :logger => @logger)
     expect { sms_gw.start }.to raise_error(Flapjack::PikeletStop)
 
-    WebMock.should_not have_requested(:get,
+    expect(WebMock).not_to have_requested(:get,
                                       "https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage")
   end
 

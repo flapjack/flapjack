@@ -17,9 +17,7 @@ Bundler::GemHelper.install_tasks
 
 Cucumber::Rake::Task.new(:features) do |t|
   #t.cucumber_opts = 'features --format pretty'
-  #t.cucumber_opts = '--format progress'
-  #t.cucumber_opts = '--format fuubar'
-  t.cucumber_opts = '--format Cucumber::Formatter::Fuubar'
+  t.cucumber_opts = '--format progress'
 end
 
 require 'rspec/core/rake_task'

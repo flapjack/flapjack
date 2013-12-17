@@ -23,23 +23,23 @@ describe Flapjack::Data::Event do
   context 'class' do
 
     before(:each) do
-      Flapjack.stub(:redis).and_return(redis)
+      allow(Flapjack).to receive(:redis).and_return(redis)
     end
 
     it "returns the next event (non-blocking, archiving)" do
-      redis.should_receive(:rpoplpush).with('events', /^events_archive:/).and_return(event_data.to_json, nil)
-      redis.should_receive(:expire)
+      expect(redis).to receive(:rpoplpush).with('events', /^events_archive:/).and_return(event_data.to_json, nil)
+      expect(redis).to receive(:expire)
 
       Flapjack::Data::Event.foreach_on_queue('events', :archive_events => true) {|result|
-        result.should be_an_instance_of(Flapjack::Data::Event)
+        expect(result).to be_an_instance_of(Flapjack::Data::Event)
       }
     end
 
     it "returns the next event (non-blocking, not archiving)" do
-      redis.should_receive(:rpop).with('events').and_return(event_data.to_json, nil)
+      expect(redis).to receive(:rpop).with('events').and_return(event_data.to_json, nil)
 
       Flapjack::Data::Event.foreach_on_queue('events', :archive_events => false) {|result|
-        result.should be_an_instance_of(Flapjack::Data::Event)
+        expect(result).to be_an_instance_of(Flapjack::Data::Event)
       }
     end
 
@@ -49,27 +49,27 @@ describe Flapjack::Data::Event do
 
     it "returns a count of pending events" do
       events_len = 23
-      redis.should_receive(:llen).with('events').and_return(events_len)
+      expect(redis).to receive(:llen).with('events').and_return(events_len)
 
       pc = Flapjack::Data::Event.pending_count('events')
-      pc.should == events_len
+      expect(pc).to eq(events_len)
     end
 
     it "creates a notification testing event" do
-      Time.should_receive(:now).and_return(time)
-      redis.should_receive(:multi).and_yield
-      redis.should_receive(:lpush).with('events', /"testing"/ )
-      redis.should_receive(:lpush).with('events_actions', anything)
+      expect(Time).to receive(:now).and_return(time)
+      expect(redis).to receive(:multi).and_yield
+      expect(redis).to receive(:lpush).with('events', /"testing"/ )
+      expect(redis).to receive(:lpush).with('events_actions', anything)
 
       Flapjack::Data::Event.test_notifications('events', entity_name, check,
         :summary => 'test', :details => 'testing')
     end
 
     it "creates an acknowledgement event" do
-      Time.should_receive(:now).and_return(time)
-      redis.should_receive(:multi).and_yield
-      redis.should_receive(:lpush).with('events', /"acking"/ )
-      redis.should_receive(:lpush).with('events_actions', anything)
+      expect(Time).to receive(:now).and_return(time)
+      expect(redis).to receive(:multi).and_yield
+      expect(redis).to receive(:lpush).with('events', /"acking"/ )
+      expect(redis).to receive(:lpush).with('events_actions', anything)
 
       Flapjack::Data::Event.create_acknowledgement('events', entity_name, check,
         :summary => 'acking', :time => time.to_i)
@@ -78,20 +78,23 @@ describe Flapjack::Data::Event do
   end
 
   context 'instance' do
-    subject { Flapjack::Data::Event.new(event_data) }
+    let(:event) { Flapjack::Data::Event.new(event_data) }
 
-    its(:entity)   { should == event_data['entity'] }
-    its(:state)    { should == event_data['state'] }
-    its(:duration) { should == event_data['duration'] }
-    its(:time)     { should == event_data['time'] }
-    its(:id)       { should == 'xyz-example.com:ping' }
-    its(:type)     { should == 'service' }
+    it "matches the data it is initialised with" do
+      expect(event.entity).to eq(event_data['entity'])
+      expect(event.state).to eq(event_data['state'])
+      expect(event.duration).to eq(event_data['duration'])
+      expect(event.time).to eq(event_data['time'])
+      expect(event.id).to eq('xyz-example.com:ping')
+      expect(event.type).to eq('service')
 
-    it { should be_a_service }
-    it { should_not be_an_acknowledgement }
-    it { should_not be_a_test_notifications }
-    it { should_not be_ok }
-    it { should be_a_failure }
+      expect(event).to be_a_service
+      expect(event).to be_a_service
+      expect(event).not_to be_an_acknowledgement
+      expect(event).not_to be_a_test_notifications
+      expect(event).not_to be_ok
+      expect(event).to be_a_failure
+    end
   end
 
 end

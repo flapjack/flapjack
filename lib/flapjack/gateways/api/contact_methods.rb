@@ -113,7 +113,7 @@ module Flapjack
           app.get '/contacts/:contact_id/notification_rules' do
             content_type :json
 
-            find_contact(params[:contact_id]).notification_rules.to_json
+            "[" + find_contact(params[:contact_id]).notification_rules.map {|r| r.to_json }.join(',') + "]"
           end
 
           # Get the specified notification rule for this user
