@@ -15,7 +15,7 @@ if [ ! $(which flapjack-nagios-receiver) ]; then
 fi
 
 # Evaluate command
-flapjack-nagios-receiver $1
+flapjack-nagios-receiver $1 --daemonize
 
 RETVAL=$?
 exit $RETVAL

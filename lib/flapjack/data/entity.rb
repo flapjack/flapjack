@@ -108,6 +108,14 @@ module Flapjack
         Flapjack::Data::EntityCheck.find_all_failing_by_entity.keys
       end
 
+      def self.find_all_current
+        Flapjack.redis.zrange('current_entities', 0, -1)
+      end
+
+      def self.find_all_current_with_last_update
+        Flapjack.redis.zrange('current_entities', 0, -1, :withscores => true)
+      end
+
       def contacts
         contact_ids = Flapjack.redis.smembers("contacts_for:#{id}")
 

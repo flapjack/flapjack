@@ -51,6 +51,16 @@
                 </td>
               </tr>
               <tr>
+                <td>Check Freshness</td>
+                <td>
+                  <ul>
+                    <% @current_checks_ages.each_pair do |age, check_count| %>
+                      <li>&gt;= <%= age %>: <%= check_count %></li>
+                    <% end %>
+                  </ul>
+                </td>
+              </tr>
+              <tr>
                 <td>Total keys in redis</td>
                 <td><%= h @dbsize %></td>
               </tr>

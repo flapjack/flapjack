@@ -53,11 +53,16 @@ module Flapjack
       end
 
       before do
-        input = env['rack.input'].read
-        input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
-        logger.info("#{request.request_method} #{request.path_info}#{request.query_string} #{input_short[0..80]}")
-        logger.debug("#{request.request_method} #{request.path_info}#{request.query_string} #{input}")
-        env['rack.input'].rewind
+        input = nil
+        if logger.debug?
+          input = env['rack.input'].read
+          logger.debug("#{request.request_method} #{request.path_info}#{request.query_string} #{input}")
+        elsif logger.info?
+          input = env['rack.input'].read
+          input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
+          logger.info("#{request.request_method} #{request.path_info}#{request.query_string} #{input_short[0..80]}")
+        end
+        env['rack.input'].rewind unless input.nil?
       end
 
       after do
@@ -69,7 +74,6 @@ module Flapjack
       register Flapjack::Gateways::API::ContactMethods
 
       not_found do
-        logger.debug("in not_found :-(")
         err(404, "not routable")
       end
 
@@ -105,7 +109,6 @@ module Flapjack
         logger.info "Error: #{msg_str}"
         [status, {}, {:errors => msg}.to_json]
       end
-
     end
 
   end

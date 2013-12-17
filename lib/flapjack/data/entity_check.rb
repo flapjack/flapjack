@@ -111,6 +111,78 @@ module Flapjack
         Flapjack.redis.hget("check:#{event_id}", 'state')
       end
 
+      # takes an array of ages (in seconds) to split all checks up by
+      # - age means how long since the last update
+      # - 0 age is implied if not explicitly passed
+      # returns arrays of all current checks hashed by age range upper bound, eg:
+      #
+      # EntityCheck.find_all_split_by_freshness([60, 300], opts) =>
+      #   {   0 => [ 'foo-app-01:SSH' ],
+      #      60 => [ 'foo-app-01:Ping', 'foo-app-01:Disk / Utilisation' ],
+      #     300 => [] }
+      #
+      # you can also set :counts to true in options and you'll just get the counts, eg:
+      #
+      # EntityCheck.find_all_split_by_freshness([60, 300], opts.merge(:counts => true)) =>
+      #   {   0 => 1,
+      #      60 => 3,
+      #     300 => 0 }
+      #
+      # and you can get the last update time with each check too by passing :with_times => true eg:
+      #
+      # EntityCheck.find_all_split_by_freshness([60, 300], opts.merge(:with_times => true)) =>
+      #   {   0 => [ ['foo-app-01:SSH', 1382329923.0] ],
+      #      60 => [ ['foo-app-01:Ping', 1382329922.0], ['foo-app-01:Disk / Utilisation', 1382329921.0] ],
+      #     300 => [] }
+      #
+      def self.find_all_split_by_freshness(ages, options)
+        raise "ages does not respond_to? :each and :each_with_index" unless ages.respond_to?(:each) && ages.respond_to?(:each_with_index)
+        raise "age values must respond_to? :to_i" unless ages.all? {|age| age.respond_to?(:to_i) }
+
+        ages << 0
+        ages = ages.sort.uniq
+
+        start_time = Time.now
+
+        checks = []
+        # get all the current checks, with last update time
+        Flapjack::Data::Entity.find_all_current.each do |entity|
+          Flapjack.redis.zrange("current_checks:#{entity}", 0, -1, {:withscores => true}).each do |check|
+            check[0] = "#{entity}:#{check[0]}"
+            checks << check
+          end
+        end
+
+        skeleton = ages.inject({}) {|memo, age| memo[age] = [] ; memo }
+        age_ranges = ages.reverse.each_cons(2)
+        results_with_times = checks.inject(skeleton) do |memo, check|
+          check_age = start_time.to_i - check[1]
+          check_age = 0 unless check_age > 0
+          if check_age >= ages.last
+            memo[ages.last] << check
+          else
+            age_range = age_ranges.detect {|a, b| check_age < a && check_age >= b }
+            memo[age_range.last] << check unless age_range.nil?
+          end
+          memo
+        end
+
+        case
+        when options[:with_times]
+          results_with_times
+        when options[:counts]
+          results_with_times.inject({}) do |memo, (age, checks)|
+            memo[age] = checks.length
+            memo
+          end
+        else
+          results_with_times.inject({}) do |memo, (age, checks)|
+            memo[age] = checks.map { |check| check[0] }
+            memo
+          end
+        end
+      end
+
       def entity_name
         entity.name
       end

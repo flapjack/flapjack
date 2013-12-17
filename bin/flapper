@@ -18,11 +18,10 @@ ensure
   Socket.do_not_reverse_lookup = orig
 end
 
-def main(bind_ip)
-  start_every = 120
-  stop_after  = 60
-
-  bind_port   = 12345
+def main(bind_ip, bind_port, frequency)
+  raise "bind_port must be an integer" unless bind_port.is_a?(Integer)
+  start_every = frequency
+  stop_after  = frequency.to_f / 2
 
   begin
     loop do
@@ -114,12 +113,22 @@ OptionParser.new do |opts|
     options.bind_ip = b
   end
 
+  opts.on("-P", "--bind-port [PORT]", String, "PORT for flapper to bind to") do |p|
+    options.bind_port = p.to_i
+  end
+
+  opts.on("-f", "--frequency [SECONDS]", String, "oscillate with a frequency of SECONDS [120]") do |f|
+    options.frequency = f.to_f
+  end
+
 end.parse!(ARGV)
 
-pidfile = options.pidfile  || "/var/run/flapjack/#{exe}.pid"
-logfile = options.log_path || "/var/log/flapjack/#{exe}.log"
 daemonize = options.daemonize.nil? ? true : options.daemonize
-bind_ip = options.bind_ip  || local_ip
+pidfile   = options.pidfile   || "/var/run/flapjack/#{exe}.pid"
+logfile   = options.log_path  || "/var/log/flapjack/#{exe}.log"
+bind_ip   = options.bind_ip   || local_ip
+bind_port = options.bind_port || 12345
+frequency = options.frequency || 120.0
 
 runner = Dante::Runner.new(exe, :pid_path => pidfile, :log_path => logfile)
 
@@ -131,7 +140,7 @@ when "start"
   else
     print "#{exe} starting..."
     runner.execute(:daemonize => daemonize) {
-      main(bind_ip)
+      main(bind_ip, bind_port, frequency)
     }
     puts " done."
   end
@@ -149,7 +158,7 @@ when "stop"
 when "restart"
   print "#{exe} restarting..."
   runner.execute(:daemonize => true, :restart => true) {
-    main(bind_ip)
+    main(bind_ip, bind_port, frequency)
   }
   puts " done."
 
