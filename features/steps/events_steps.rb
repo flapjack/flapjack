@@ -288,7 +288,7 @@ end
 Then /^(un)?scheduled maintenance should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |unsched, check, entity|
   check  ||= @check
   entity ||= @entity
-  expect( Flapjack.redis.get("#{entity}:#{check}:#{unsched || ''}scheduled_maintenance")).not_to be_nil
+  expect(Flapjack.redis.get("#{entity}:#{check}:#{unsched || ''}scheduled_maintenance")).not_to be_nil
 end
 
 Then /^show me the (\w+ )*log$/ do |adjective|

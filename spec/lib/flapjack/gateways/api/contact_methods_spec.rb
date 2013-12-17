@@ -206,7 +206,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     get "/contacts/#{contact.id}/notification_rules"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq( '["rule_1","rule_2"]' )
+    expect(last_response.body).to eq('["rule_1","rule_2"]')
   end
 
   it "does not list notification rules for a contact that does not exist" do
