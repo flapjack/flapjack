@@ -146,7 +146,7 @@ DEPENDENCIES
   perftools.rb
   rack-test
   rake
-  rb-fsevent (~> 0.9.1)
+  rb-fsevent
   rspec (~> 3.0.0.beta1)
   ruby-prof
   simplecov

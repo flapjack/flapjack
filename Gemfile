@@ -13,7 +13,7 @@ group :test do
   gem 'rack-test'
   gem 'webmock'
   gem 'guard'
-  gem 'rb-fsevent', '~> 0.9.1'
+  gem 'rb-fsevent'
   gem 'guard-rspec'
   gem 'guard-cucumber'
   gem 'fuubar'
