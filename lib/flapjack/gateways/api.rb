@@ -104,7 +104,11 @@ module Flapjack
       end
 
       after do
-        logger.debug("Returning #{response.status} for #{request.request_method} #{request.path_info}#{request.query_string}")
+        if logger.debug?
+          logger.debug("Returning #{response.status} for #{request.request_method} #{request.path_info}#{request.query_string}, body: [#{response.body.join(', ')}]")
+        elsif logger.info?
+          logger.info("Returning #{response.status} for #{request.request_method} #{request.path_info}#{request.query_string}")
+        end
       end
 
       register Flapjack::Gateways::API::EntityMethods
