@@ -106,7 +106,10 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       }
     }
 
-    expect(Flapjack::Data::Contact).to receive(:add)
+    expect(Flapjack::Data::Contact).to receive(:exists_with_id?).
+      with("0362", {:redis => redis}).and_return(false)
+    expect(Flapjack::Data::Contact).to receive(:add).
+      with(contact_data, {:redis => redis}).and_return(contact)
 
     apost "/contacts", { :contacts => [contact_data]}.to_json,
       {'CONTENT_TYPE' => 'application/json'}
@@ -261,7 +264,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     aget "/contacts/#{contact.id}/notification_rules"
     expect(last_response).to be_ok
-    # last_response.body.should be_json_eql( '["rule_1", "rule_2"]' )
+    expect(last_response.body).to eq('["rule_1", "rule_2"]')
   end
 
   it "does not list notification rules for a contact that does not exist" do
@@ -279,7 +282,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     aget "/notification_rules/#{notification_rule.id}"
     expect(last_response).to be_ok
-    # last_response.body.should be_json_eql('"rule_1"')
+    expect(last_response.body).to eq('"rule_1"')
   end
 
   it "does not return a notification rule that does not exist" do
@@ -309,7 +312,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     apost "/notification_rules", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
     expect(last_response).to be_ok
-    # last_response.body.should be_json_eql('"rule_1"')
+    expect(last_response.body).to eq('"rule_1"')
   end
 
   it "does not create a notification_rule for a contact that's not present" do
@@ -348,7 +351,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     aput "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
     expect(last_response).to be_ok
-    # last_response.body.should be_json_eql('"rule_1"')
+    expect(last_response.body).to eq('"rule_1"')
   end
 
   it "does not update a notification rule that's not present" do
@@ -417,7 +420,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     aget "/contacts/#{contact.id}/media"
     expect(last_response).to be_ok
-    # last_response.body.should be_json_eql(result)
+    expect(last_response.body).to eq(result)
   end
 
   it "does not return the media of a contact if the contact is not present" do
