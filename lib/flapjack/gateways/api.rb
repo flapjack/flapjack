@@ -27,41 +27,37 @@ module Flapjack
 
       include Flapjack::Utility
 
-      set :show_exceptions, false
+      set :dump_errors, false
 
-      rescue_exception = Proc.new { |env, exception|
-
-        error = proc {|status, exception, *msg|
-          if !msg || msg.empty?
-            trace = exception.backtrace.join("\n")
-            msg = "#{exception.class} - #{exception.message}"
-            msg_str = "#{msg}\n#{trace}"
-          else
-            msg_str = msg.join(", ")
-          end
-          logger = Flapjack::Gateways::API.instance_variable_get('@logger')
-          case
-          when status < 500
-            logger.warn "Error: #{msg_str}"
-          else
-            logger.error "Error: #{msg_str}"
-          end
-          [status, {}, {:errors => msg}.to_json]
-        }
-
-        e = env['sinatra.error']
-
-        case exception
-        when Flapjack::Gateways::API::ContactNotFound
-          error.call(403, e, "could not find contact '#{e.contact_id}'")
-        when Flapjack::Gateways::API::NotificationRuleNotFound
-          error.call(403, e, "could not find notification rule '#{e.rule_id}'")
-        when Flapjack::Gateways::API::EntityNotFound
-          error.call(403, e, "could not find entity '#{e.entity}'")
-        when Flapjack::Gateways::API::EntityCheckNotFound
-          error.call(403, e, "could not find entity check '#{e.check}'")
+      rescue_error = Proc.new {|status, exception, *msg|
+        if !msg || msg.empty?
+          trace = exception.backtrace.join("\n")
+          msg = "#{exception.class} - #{exception.message}"
+          msg_str = "#{msg}\n#{trace}"
         else
-          error.call(500, exception)
+          msg_str = msg.join(", ")
+        end
+        case
+        when status < 500
+          @logger.warn "Error: #{msg_str}"
+        else
+          @logger.error "Error: #{msg_str}"
+        end
+        [status, {}, {:errors => msg}.to_json]
+      }
+
+      rescue_exception = Proc.new {|env, e|
+        case e
+        when Flapjack::Gateways::API::ContactNotFound
+          rescue_error.call(403, e, "could not find contact '#{e.contact_id}'")
+        when Flapjack::Gateways::API::NotificationRuleNotFound
+          rescue_error.call(403, e, "could not find notification rule '#{e.rule_id}'")
+        when Flapjack::Gateways::API::EntityNotFound
+          rescue_error.call(403, e, "could not find entity '#{e.entity}'")
+        when Flapjack::Gateways::API::EntityCheckNotFound
+          rescue_error.call(403, e, "could not find entity check '#{e.check}'")
+        else
+          rescue_error.call(500, e)
         end
       }
       use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
