@@ -30,9 +30,10 @@ module Flapjack
       set :show_exceptions, false
 
       rescue_exception = Proc.new { |env, exception|
-        @logger.debug("rescue_exception Proc, exception: #{exception.inspect} ")
 
         error = proc {|status, exception, *msg|
+          logger = Flapjack::Gateways::API.instance_variable_get('@logger')
+          logger.debug("rescue_exception Proc, exception: #{exception.inspect} ")
           if !msg || msg.empty?
             trace = exception.backtrace.join("\n")
             msg = "#{exception.class} - #{exception.message}"
@@ -40,7 +41,6 @@ module Flapjack
           else
             msg_str = msg.join(", ")
           end
-          logger = Flapjack::Gateways::API.instance_variable_get('@logger')
           case
           when status < 500
             logger.warn "Error: #{msg_str}"
