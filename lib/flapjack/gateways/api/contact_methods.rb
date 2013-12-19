@@ -60,16 +60,35 @@ module Flapjack
 
             #TODO: add lock around all create / delete operations against contacts
 
-            #if params[:id] && Flapjack::Data::Contact.find_by_id(params[:id], :logger => logger, :redis => redis)
-            #  halt err(403, "post cannot be used for update, do a put instead, or remove the id field from your post data")
-            #end
+            if contacts_data.nil? || !contacts_data.is_a?(Enumerable)
+              # https://tools.ietf.org/html/rfc2616#section-10.4.1
+              err(400, ["No valid contacts were submitted"])
+            end
+
+            contacts_ids = contacts_data.reject {|c| c['id'].nil? }.
+              map {|co| co['id'].to_s }
+
+            conflicted_ids = contacts_ids.find_all {|id|
+              Flapjack::Data::Contact.exists_with_id?(id, :redis => redis)
+            }
+
+            unless conflicted_ids.empty?
+              # https://tools.ietf.org/html/rfc2616#section-10.4.10
+              err(409, ["Contacts already exist with the following IDs: " +
+                conflicted_ids.join(', ')])
+            end
+
+            contacts_data.each do |contact_data|
+              unless contact_data['id']
+                contact_data['id'] = SecureRandom.uuid
+              end
+              Flapjack::Data::Contact.add(contact_data, :redis => redis)
+            end
 
             logger.debug("post /contacts data: ")
             logger.debug(params.inspect)
 
-            #Flapjack::Data::Contact.add()
-
-            ['sausage'].to_json
+            contacts_data.map {|cd| cd['id']}.to_json
           end
 
           app.post '/contacts_atomic' do
