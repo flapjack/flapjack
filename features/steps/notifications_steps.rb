@@ -84,22 +84,22 @@ end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
   queue = ResqueSpec.peek('sms_notifications')
-  queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }.should_not be_empty
+  expect(queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
 end
 
 Then /^an email notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
   queue = ResqueSpec.peek('email_notifications')
-  queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }.should_not be_empty
+  expect(queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
 end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should not be queued for the user$/ do |entity|
   queue = ResqueSpec.peek('sms_notifications')
-  queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }.should be_empty
+  expect(queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }).to be_empty
 end
 
 Then /^an email notification for entity '([\w\.\-]+)' should not be queued for the user$/ do |entity|
   queue = ResqueSpec.peek('email_notifications')
-  queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }.should be_empty
+  expect(queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }).to be_empty
 end
 
 Given /^a user SMS notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
@@ -199,19 +199,19 @@ When /^the email notification handler fails to send an email$/ do
 end
 
 Then /^the user should receive an SMS notification$/ do
-  @request.should have_been_requested
-  Flapjack::Gateways::SmsMessagenet.instance_variable_get('@sent').should == 1
+  expect(@request).to have_been_requested
+  expect(Flapjack::Gateways::SmsMessagenet.instance_variable_get('@sent')).to eq(1)
 end
 
 Then /^the user should receive an email notification$/ do
-  Flapjack::Gateways::Email.instance_variable_get('@sent').should == 1
+  expect(Flapjack::Gateways::Email.instance_variable_get('@sent')).to eq(1)
 end
 
 Then /^the user should not receive an SMS notification$/ do
-  @request.should have_been_requested
-  Flapjack::Gateways::SmsMessagenet.instance_variable_get('@sent').should == 0
+  expect(@request).to have_been_requested
+  expect(Flapjack::Gateways::SmsMessagenet.instance_variable_get('@sent')).to eq(0)
 end
 
 Then /^the user should not receive an email notification$/ do
-  Flapjack::Gateways::Email.instance_variable_get('@sent').should == 0
+  expect(Flapjack::Gateways::Email.instance_variable_get('@sent')).to eq(0)
 end

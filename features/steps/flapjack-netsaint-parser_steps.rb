@@ -6,16 +6,16 @@ Given /^NetSaint configuration is at "([^"]*)"$/ do |path|
   files << root.join('netsaint.cfg')
   files << root.join('resource.cfg')
 
-  File.directory?(root).should be true
+  expect(File.directory?(root)).to be true
   files.each do |filename|
-    File.exists?(filename).should be true
+    expect(File.exists?(filename)).to be true
   end
 end
 
 Then /^I should see a valid JSON output$/ do
-  lambda {
+  expect {
     @data = Oj.load(@output)
-  }.should_not raise_error
+  }.not_to raise_error
 end
 
 Then /^show me the output$/ do
@@ -23,8 +23,8 @@ Then /^show me the output$/ do
 end
 
 Then /^I should see a list of (\w+)$/ do |type|
-  @data[type].should_not be_nil
-  @data[type].size.should > 0
+  expect(@data[type]).not_to be_nil
+  expect(@data[type].size).to be > 0
 end
 
 Then /^I should see the following attributes for every (\w+):$/ do |type, table|
@@ -33,7 +33,7 @@ Then /^I should see the following attributes for every (\w+):$/ do |type, table|
   @data[type].each_pair do |name, items|
     items.each do |item|
       values.each do |attr|
-        item[attr].should_not be_nil
+        expect(item[attr]).not_to be_nil
       end
     end
   end
@@ -42,7 +42,7 @@ Then /^I should see the following attributes for every (\w+):$/ do |type, table|
   @data[type].each_pair do |name, items|
     items.each do |item|
       nils.each do |attr|
-        item.member?(attr).should be true
+        expect(item.member?(attr)).to be true
       end
     end
   end
