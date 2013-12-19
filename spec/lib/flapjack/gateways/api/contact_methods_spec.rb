@@ -91,7 +91,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aget "/contacts/#{contact.id}"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "creates a contact with supplied ID" do
@@ -119,36 +119,35 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   end
 
   it "updates a contact" do
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
+    expect(contact).to receive(:update)
+    expect(contact).to receive(:to_json).and_return('{"sausage": "good"}')
+
+    aput "/contacts/21", {'sausage' => 'good'}.to_json,
+      {'CONTENT_TYPE' => 'application/json'}
+    expect(last_response.status).to eq(200)
   end
 
   it "deletes a contact" do
   end
 
   it "does not create a contact if the data is improperly formatted" do
-    expect(Flapjack::Data::Contact).to not_receive(:add)
+    expect(Flapjack::Data::Contact).not_to receive(:add)
 
     apost "/contacts", {'sausage' => 'good'}.to_json,
       {'CONTENT_TYPE' => 'application/json'}
-    expect(last_response.status).to eq(403)
+    expect(last_response.status).to eq(422)
   end
 
-  it "does not update a contact if the data is improperly formatted" do
-    expect(Flapjack::Data::Contact).to not_receive(:add)
-
-    aput "/contacts", {'sausage' => 'good'}.to_json,
-      {'CONTENT_TYPE' => 'application/json'}
-    expect(last_response.status).to eq(403)
-  end
-
-  it "does not update a contact if there is a conflict on id" do
+  it "does not update a contact if id exists in sent entity" do
     contact_data = {'id' => '21'}
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('21', {:redis => redis, :logger => @logger}).and_return(contact)
-    expect(Flapjack::Data::Contact).to not_receive(:add)
+    expect(Flapjack::Data::Contact).not_to receive(:find_by_id)
+    expect(Flapjack::Data::Contact).not_to receive(:update)
 
-    aput "/contacts", contact_data.to_json,
+    aput "/contacts/21", contact_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
-    expect(last_response.status).to eq(403)
+    expect(last_response.status).to eq(422)
   end
 
   it "replaces contacts with a submitted list" do
@@ -179,7 +178,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     apost "/contacts_atomic", {'contacts' => ["Hello", "again"]}.to_json,
       {'CONTENT_TYPE' => 'application/json'}
-    expect(last_response.status).to eq(403)
+    expect(last_response.status).to eq(422)
   end
 
   it "does not replace contacts if they don't contain an id in the source" do
@@ -264,7 +263,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     aget "/contacts/#{contact.id}/notification_rules"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq('["rule_1", "rule_2"]')
+    expect(last_response.body).to eq('["rule_1","rule_2"]')
   end
 
   it "does not list notification rules for a contact that does not exist" do
@@ -272,7 +271,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aget "/contacts/#{contact.id}/notification_rules"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "returns a specified notification rule" do
@@ -290,7 +289,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aget "/notification_rules/#{notification_rule.id}"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   # POST /notification_rules
@@ -321,7 +320,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     apost "/notification_rules", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "does not create a notification_rule if a rule id is provided" do
@@ -329,7 +328,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     apost "/notification_rules", notification_rule_data.merge(:id => 1).to_json,
       {'CONTENT_TYPE' => 'application/json'}
-    expect(last_response.status).to eq(403)
+    expect(last_response.status).to eq(422)
   end
 
   # PUT /notification_rules/RULE_ID
@@ -359,7 +358,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aput "/notification_rules/#{notification_rule.id}", notification_rule_data
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "does not update a notification_rule for a contact that's not present" do
@@ -370,7 +369,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     aput "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   # DELETE /notification_rules/RULE_ID
@@ -391,7 +390,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     adelete "/notification_rules/#{notification_rule.id}"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "does not delete a notification rule if the contact is not present" do
@@ -402,7 +401,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     adelete "/notification_rules/#{notification_rule.id}"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   # GET /contacts/CONTACT_ID/media
@@ -428,7 +427,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aget "/contacts/#{contact.id}/media"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   # GET /contacts/CONTACT_ID/media/MEDIA
@@ -455,7 +454,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aget "/contacts/#{contact.id}/media/sms"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "does not return the media of a contact if the media is not present" do
@@ -464,7 +463,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     aget "/contacts/#{contact.id}/media/telepathy"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   # PUT, DELETE /contacts/CONTACT_ID/media/MEDIA
@@ -518,7 +517,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aput "/contacts/#{contact.id}/media/sms", :address => '04987654321', :interval => '200'
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "does not create a media of a contact if no address is provided" do
@@ -526,7 +525,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     aput "/contacts/#{contact.id}/media/sms", :interval => '200'
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(422)
   end
 
   it "creates a media of a contact even if no interval is provided" do
@@ -561,7 +560,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     adelete "/contacts/#{contact.id}/media/sms"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   # GET /contacts/CONTACT_ID/timezone
@@ -580,7 +579,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aget "/contacts/#{contact.id}/timezone"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   # PUT /contacts/CONTACT_ID/timezone
@@ -599,7 +598,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aput "/contacts/#{contact.id}/timezone", {:timezone => 'Australia/Perth'}
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   # DELETE /contacts/CONTACT_ID/timezone
@@ -617,7 +616,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     adelete "/contacts/#{contact.id}/timezone"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "sets a single tag on a contact and returns current tags" do
@@ -636,7 +635,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     apost "contacts/#{contact.id}/tags", :tag => 'web'
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "sets multiple tags on a contact and returns current tags" do
@@ -655,7 +654,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     apost "contacts/#{contact.id}/tags", :tag => ['web', 'app']
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "removes a single tag from a contact" do
@@ -672,7 +671,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     adelete "contacts/#{contact.id}/tags", :tag => 'web'
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "removes multiple tags from a contact" do
@@ -689,7 +688,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     adelete "contacts/#{contact.id}/tags", :tag => ['web', 'app']
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "gets all tags on a contact" do
@@ -707,7 +706,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aget "contacts/#{contact.id}/tags"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "gets all entity tags for a contact" do
@@ -735,7 +734,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aget "contacts/#{contact.id}/entity_tags"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "adds tags to multiple entities for a contact" do
@@ -769,7 +768,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     apost "contacts/#{contact.id}/entity_tags",
       :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
   it "deletes tags from multiple entities for a contact" do
@@ -797,7 +796,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     adelete "contacts/#{contact.id}/entity_tags",
       :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(404)
   end
 
 

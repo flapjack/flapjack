@@ -30,6 +30,7 @@ module Flapjack
       set :show_exceptions, false
 
       rescue_exception = Proc.new { |env, exception|
+        @logger.debug("rescue_exception Proc, exception: #{exception.inspect} ")
 
         error = proc {|status, exception, *msg|
           if !msg || msg.empty?
@@ -53,13 +54,13 @@ module Flapjack
 
         case exception
         when Flapjack::Gateways::API::ContactNotFound
-          error.call(403, e, "could not find contact '#{e.contact_id}'")
+          error.call(404, e, "could not find contact '#{e.contact_id}'")
         when Flapjack::Gateways::API::NotificationRuleNotFound
-          error.call(403, e, "could not find notification rule '#{e.rule_id}'")
+          error.call(404, e, "could not find notification rule '#{e.rule_id}'")
         when Flapjack::Gateways::API::EntityNotFound
-          error.call(403, e, "could not find entity '#{e.entity}'")
+          error.call(404, e, "could not find entity '#{e.entity}'")
         when Flapjack::Gateways::API::EntityCheckNotFound
-          error.call(403, e, "could not find entity check '#{e.check}'")
+          error.call(404, e, "could not find entity check '#{e.check}'")
         else
           error.call(500, exception)
         end
