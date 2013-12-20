@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/flpjck/flapjack.png)](https://travis-ci.org/flpjck/flapjack)
 
-[flapjack-project.com](http://flapjack-project.com/)
+[flapjack.io](http://flapjack.io/)
 
 Flapjack is a highly scalable and distributed monitoring notification system.
 
