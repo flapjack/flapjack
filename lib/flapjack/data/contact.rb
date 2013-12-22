@@ -419,6 +419,9 @@ module Flapjack
           "first_name" => self.first_name,
           "last_name"  => self.last_name,
           "email"      => self.email,
+          "media"      => self.media,
+          "media_intervals" => self.media_intervals,
+          "media_rollup_thresholds" => self.media_rollup_thresholds,
           "tags"       => self.tags.to_a }.to_json
       end
 

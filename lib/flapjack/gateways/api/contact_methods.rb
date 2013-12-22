@@ -185,13 +185,21 @@ module Flapjack
               halt err(422, "ID must not be supplied")
             end
 
-            semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
             contact = find_contact(params[:contact_id])
-            contact_data = hashify(:first_name, :last_name, :email, :media, :tags) {|k| [k, params[k]]}
+            contact_data = hashify('first_name', 'last_name', 'email', 'media', 'tags') {|k| [k, params[k]]}
+            logger.debug("contact_data: #{contact_data}")
             contact.update(contact_data)
-            semaphore.release
 
             contact.to_json
+          end
+
+          # Deletes a contact
+          app.delete '/contacts/:contact_id' do
+            semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
+            contact = find_contact(params[:contact_id])
+            contact.delete!
+            semaphore.release
+            status 204
           end
 
           # Lists this contact's notification rules
