@@ -4,6 +4,7 @@ require 'sinatra/base'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/notification_rule'
+require 'flapjack/data/semaphore'
 
 module Flapjack
 
@@ -25,7 +26,16 @@ module Flapjack
         end
       end
 
+      class ResourceLocked < RuntimeError
+        attr_reader :resource
+        def initialize(resource)
+          @resource = resource
+        end
+      end
+
       module ContactMethods
+
+        SEMAPHORE_CONTACT_MASS_UPDATE = 'contact_mass_update'
 
         module Helpers
 
@@ -46,6 +56,20 @@ module Flapjack
             tags
           end
 
+          def obtain_semaphore(resource)
+            semaphore = nil
+            strikes = 0
+            begin
+              semaphore = Flapjack::Data::Semaphore.new(resource, {:redis => redis, :expiry => 30})
+            rescue Flapjack::Data::Semaphore::ResourceLocked
+              strikes += 1
+              raise Flapjack::Gateways::API::ResourceLocked.new(resource) unless strikes < 3
+              sleep 1
+              retry
+            end
+            raise Flapjack::Gateways::API::ResourceLocked.new(resource) unless semaphore
+            semaphore
+          end
         end
 
         def self.registered(app)
@@ -58,8 +82,6 @@ module Flapjack
 
             contacts_data = params[:contacts]
 
-            #TODO: add lock around all create / delete operations against contacts
-
             if contacts_data.nil? || !contacts_data.is_a?(Enumerable)
               # https://tools.ietf.org/html/rfc2616#section-10.4.1
               halt err(422, "No valid contacts were submitted")
@@ -68,12 +90,14 @@ module Flapjack
             contacts_ids = contacts_data.reject {|c| c['id'].nil? }.
               map {|co| co['id'].to_s }
 
+            semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
+
             conflicted_ids = contacts_ids.find_all {|id|
               Flapjack::Data::Contact.exists_with_id?(id, :redis => redis)
             }
 
             unless conflicted_ids.empty?
-              # https://tools.ietf.org/html/rfc2616#section-10.4.10
+              semaphore.release
               halt err(409, "Contacts already exist with the following IDs: " +
                 conflicted_ids.join(', '))
             end
@@ -85,8 +109,7 @@ module Flapjack
               Flapjack::Data::Contact.add(contact_data, :redis => redis)
             end
 
-            logger.debug("post /contacts data: ")
-            logger.debug(params.inspect)
+            semaphore.release
 
             contacts_data.map {|cd| cd['id']}.to_json
           end
@@ -109,6 +132,8 @@ module Flapjack
               halt err(422, "No contacts with IDs were submitted")
             end
 
+            semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
+
             contacts = Flapjack::Data::Contact.all(:redis => redis)
             contacts_h = hashify(*contacts) {|c| [c.id, c] }
             contacts_ids = contacts_h.keys
@@ -127,6 +152,8 @@ module Flapjack
                 Flapjack::Data::Contact.add(contact_data, :redis => redis)
               end
             end
+
+            semaphore.release
             204
           end
 
@@ -158,10 +185,12 @@ module Flapjack
               halt err(422, "ID must not be supplied")
             end
 
+            semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
             contact = find_contact(params[:contact_id])
             contact_data = hashify(:first_name, :last_name, :email, :media, :tags) {|k| [k, params[k]]}
-
             contact.update(contact_data)
+            semaphore.release
+
             contact.to_json
           end
 
