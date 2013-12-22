@@ -53,6 +53,11 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     }
   }
 
+  let(:semaphore) {
+    double(Flapjack::Data::Semaphore, :resource => 'folly',
+           :key => 'semaphores:folly', :expiry => 30, :token => 'spatulas-R-us')
+  }
+
   before(:all) do
     Flapjack::Gateways::API.class_eval {
       set :raise_errors, true
@@ -106,10 +111,13 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       }
     }
 
+    expect(Flapjack::Data::Semaphore).to receive(:new).
+      with("contact_mass_update", {:redis => redis, :expiry => 30}).and_return(semaphore)
     expect(Flapjack::Data::Contact).to receive(:exists_with_id?).
       with("0362", {:redis => redis}).and_return(false)
     expect(Flapjack::Data::Contact).to receive(:add).
       with(contact_data, {:redis => redis}).and_return(contact)
+    expect(semaphore).to receive(:release).and_return(true)
 
     apost "/contacts", { :contacts => [contact_data]}.to_json,
       {'CONTENT_TYPE' => 'application/json'}
@@ -166,8 +174,11 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       ]
     }
 
+    expect(Flapjack::Data::Semaphore).to receive(:new).
+      with("contact_mass_update", {:redis => redis, :expiry => 30}).and_return(semaphore)
     expect(Flapjack::Data::Contact).to receive(:all).with(:redis => redis).and_return([])
     expect(Flapjack::Data::Contact).to receive(:add).twice
+    expect(semaphore).to receive(:release).and_return(true)
 
     apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     expect(last_response.status).to eq(204)
@@ -196,8 +207,11 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       ]
     }
 
+    expect(Flapjack::Data::Semaphore).to receive(:new).
+      with("contact_mass_update", {:redis => redis, :expiry => 30}).and_return(semaphore)
     expect(Flapjack::Data::Contact).to receive(:all).with(:redis => redis).and_return([])
     expect(Flapjack::Data::Contact).to receive(:add)
+    expect(semaphore).to receive(:release).and_return(true)
 
     apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     expect(last_response.status).to eq(204)
@@ -219,12 +233,15 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       ]
     }
 
+    expect(Flapjack::Data::Semaphore).to receive(:new).
+      with("contact_mass_update", {:redis => redis, :expiry => 30}).and_return(semaphore)
     existing = double(Flapjack::Data::Contact)
     expect(existing).to receive(:id).and_return("0363")
     expect(existing).to receive(:update).with(contacts['contacts'][1])
 
     expect(Flapjack::Data::Contact).to receive(:all).with(:redis => redis).and_return([existing])
     expect(Flapjack::Data::Contact).to receive(:add).with(contacts['contacts'][0], :redis => redis)
+    expect(semaphore).to receive(:release).and_return(true)
 
     apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     expect(last_response.status).to eq(204)
@@ -240,12 +257,15 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       ]
     }
 
+    expect(Flapjack::Data::Semaphore).to receive(:new).
+      with("contact_mass_update", {:redis => redis, :expiry => 30}).and_return(semaphore)
     existing = double(Flapjack::Data::Contact)
     expect(existing).to receive(:id).twice.and_return("0362")
     expect(existing).to receive(:delete!)
 
     expect(Flapjack::Data::Contact).to receive(:all).with(:redis => redis).and_return([existing])
     expect(Flapjack::Data::Contact).to receive(:add).with(contacts['contacts'][0], :redis => redis)
+    expect(semaphore).to receive(:release).and_return(true)
 
     apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
     expect(last_response.status).to eq(204)
