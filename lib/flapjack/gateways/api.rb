@@ -73,7 +73,7 @@ module Flapjack
         when Flapjack::Gateways::API::EntityCheckNotFound
           rescue_error.call(404, e, request_info, "could not find entity check '#{e.check}'")
         when Flapjack::Gateways::API::ResourceLocked
-          rescue_error.call(422, e, request_info, "unable to obtain lock for resource '#{e.resource}'")
+          rescue_error.call(423, e, request_info, "unable to obtain lock for resource '#{e.resource}'")
         else
           rescue_error.call(500, e, request_info)
         end
