@@ -24,7 +24,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'hiredis'
   gem.add_dependency 'em-synchrony', '~> 1.0.2'
   gem.add_dependency 'em-http-request'
-  gem.add_dependency 'redis'
+  gem.add_dependency 'redis', '~> 3.0.6'
   gem.add_dependency 'em-resque'
   gem.add_dependency 'resque', '~> 1.23.0'
   gem.add_dependency 'sinatra'
