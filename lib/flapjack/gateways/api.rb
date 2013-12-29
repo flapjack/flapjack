@@ -29,7 +29,7 @@ module Flapjack
 
       set :dump_errors, false
 
-      rescue_error = Proc.new {|status, exception, *msg|
+      rescue_error = Proc.new {|status, exception, request_info, *msg|
         if !msg || msg.empty?
           trace = exception.backtrace.join("\n")
           msg = "#{exception.class} - #{exception.message}"
@@ -43,21 +43,39 @@ module Flapjack
         else
           @logger.error "Error: #{msg_str}"
         end
-        [status, {}, {:errors => msg}.to_json]
+
+        response_body = {:errors => msg}.to_json
+
+        if @logger.debug?
+          @logger.debug("Returning #{status} for #{request_info[:request_method]} " +
+            "#{request_info[:path_info]}#{request_info[:query_string]}, body: #{response_body}")
+        elsif logger.info?
+          @logger.info("Returning #{status} for #{request_info[:request_method]} " +
+            "#{request_info[:path_info]}#{request_info[:query_string]}")
+        end
+
+        [status, {}, response_body]
       }
 
       rescue_exception = Proc.new {|env, e|
+        request_info = {
+          :path_info      => env['REQUEST_PATH'],
+          :request_method => env['REQUEST_METHOD'],
+          :query_string   => env['QUERY_STRING']
+        }
         case e
         when Flapjack::Gateways::API::ContactNotFound
-          rescue_error.call(403, e, "could not find contact '#{e.contact_id}'")
+          rescue_error.call(404, e, request_info, "could not find contact '#{e.contact_id}'")
         when Flapjack::Gateways::API::NotificationRuleNotFound
-          rescue_error.call(403, e, "could not find notification rule '#{e.rule_id}'")
+          rescue_error.call(404, e, request_info,"could not find notification rule '#{e.rule_id}'")
         when Flapjack::Gateways::API::EntityNotFound
-          rescue_error.call(403, e, "could not find entity '#{e.entity}'")
+          rescue_error.call(404, e, request_info, "could not find entity '#{e.entity}'")
         when Flapjack::Gateways::API::EntityCheckNotFound
-          rescue_error.call(403, e, "could not find entity check '#{e.check}'")
+          rescue_error.call(404, e, request_info, "could not find entity check '#{e.check}'")
+        when Flapjack::Gateways::API::ResourceLocked
+          rescue_error.call(423, e, request_info, "unable to obtain lock for resource '#{e.resource}'")
         else
-          rescue_error.call(500, e)
+          rescue_error.call(500, e, request_info)
         end
       }
       use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
@@ -100,7 +118,14 @@ module Flapjack
       end
 
       after do
-        logger.debug("Returning #{response.status} for #{request.request_method} #{request.path_info}#{request.query_string}")
+        return if response.status == 500
+        if logger.debug?
+          logger.debug("Returning #{response.status} for #{request.request_method} " +
+            "#{request.path_info}#{request.query_string}, body: #{response.body.join(', ')}")
+        elsif logger.info?
+          logger.info("Returning #{response.status} for #{request.request_method} " +
+            "#{request.path_info}#{request.query_string}")
+        end
       end
 
       register Flapjack::Gateways::API::EntityMethods

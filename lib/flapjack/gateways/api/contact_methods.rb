@@ -4,6 +4,7 @@ require 'sinatra/base'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/notification_rule'
+require 'flapjack/data/semaphore'
 
 module Flapjack
 
@@ -25,7 +26,16 @@ module Flapjack
         end
       end
 
+      class ResourceLocked < RuntimeError
+        attr_reader :resource
+        def initialize(resource)
+          @resource = resource
+        end
+      end
+
       module ContactMethods
+
+        SEMAPHORE_CONTACT_MASS_UPDATE = 'contact_mass_update'
 
         module Helpers
 
@@ -42,10 +52,24 @@ module Flapjack
           end
 
           def find_tags(tags)
-            halt err(403, "no tags") if tags.nil? || tags.empty?
+            halt err(400, "no tags given") if tags.nil? || tags.empty?
             tags
           end
 
+          def obtain_semaphore(resource)
+            semaphore = nil
+            strikes = 0
+            begin
+              semaphore = Flapjack::Data::Semaphore.new(resource, {:redis => redis, :expiry => 30})
+            rescue Flapjack::Data::Semaphore::ResourceLocked
+              strikes += 1
+              raise Flapjack::Gateways::API::ResourceLocked.new(resource) unless strikes < 3
+              sleep 1
+              retry
+            end
+            raise Flapjack::Gateways::API::ResourceLocked.new(resource) unless semaphore
+            semaphore
+          end
         end
 
         def self.registered(app)
@@ -56,41 +80,81 @@ module Flapjack
             pass unless 'application/json'.eql?(request.content_type)
             content_type :json
 
-            errors = []
+            contacts_data = params[:contacts]
+
+            if contacts_data.nil? || !contacts_data.is_a?(Enumerable)
+              # https://tools.ietf.org/html/rfc2616#section-10.4.1
+              halt err(422, "No valid contacts were submitted")
+            end
+
+            contacts_ids = contacts_data.reject {|c| c['id'].nil? }.
+              map {|co| co['id'].to_s }
+
+            semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
+
+            conflicted_ids = contacts_ids.find_all {|id|
+              Flapjack::Data::Contact.exists_with_id?(id, :redis => redis)
+            }
+
+            unless conflicted_ids.empty?
+              semaphore.release
+              halt err(409, "Contacts already exist with the following IDs: " +
+                conflicted_ids.join(', '))
+            end
+
+            contacts_data.each do |contact_data|
+              unless contact_data['id']
+                contact_data['id'] = SecureRandom.uuid
+              end
+              Flapjack::Data::Contact.add(contact_data, :redis => redis)
+            end
+
+            semaphore.release
+
+            contacts_data.map {|cd| cd['id']}.to_json
+          end
+
+          app.post '/contacts_atomic' do
+            pass unless 'application/json'.eql?(request.content_type)
+            content_type :json
 
             contacts_data = params[:contacts]
             if contacts_data.nil? || !contacts_data.is_a?(Enumerable)
-              errors << "No valid contacts were submitted"
-            else
-              # stringifying as integer string params are automatically integered,
-              # but our redis ids are strings
-              contacts_data_ids = contacts_data.reject {|c| c['id'].nil? }.
-                map {|co| co['id'].to_s }
+              halt err(422, "No valid contacts were submitted")
+            end
 
-              if contacts_data_ids.empty?
-                errors << "No contacts with IDs were submitted"
+            # stringifying as integer string params are automatically integered,
+            # but our redis ids are strings
+            contacts_data_ids = contacts_data.reject {|c| c['id'].nil? }.
+              map {|co| co['id'].to_s }
+
+            if contacts_data_ids.empty?
+              halt err(422, "No contacts with IDs were submitted")
+            end
+
+            semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
+
+            contacts = Flapjack::Data::Contact.all(:redis => redis)
+            contacts_h = hashify(*contacts) {|c| [c.id, c] }
+            contacts_ids = contacts_h.keys
+
+            # delete contacts not found in the bulk list
+            (contacts_ids - contacts_data_ids).each do |contact_to_delete_id|
+              contact_to_delete = contacts.detect {|c| c.id == contact_to_delete_id }
+              contact_to_delete.delete!
+            end
+
+            # add or update contacts found in the bulk list
+            contacts_data.reject {|cd| cd['id'].nil? }.each do |contact_data|
+              if contacts_ids.include?(contact_data['id'].to_s)
+                contacts_h[contact_data['id'].to_s].update(contact_data)
               else
-                contacts = Flapjack::Data::Contact.all(:redis => redis)
-                contacts_h = hashify(*contacts) {|c| [c.id, c] }
-                contacts_ids = contacts_h.keys
-
-                # delete contacts not found in the bulk list
-                (contacts_ids - contacts_data_ids).each do |contact_to_delete_id|
-                  contact_to_delete = contacts.detect {|c| c.id == contact_to_delete_id }
-                  contact_to_delete.delete!
-                end
-
-                # add or update contacts found in the bulk list
-                contacts_data.reject {|cd| cd['id'].nil? }.each do |contact_data|
-                  if contacts_ids.include?(contact_data['id'].to_s)
-                    contacts_h[contact_data['id'].to_s].update(contact_data)
-                  else
-                    Flapjack::Data::Contact.add(contact_data, :redis => redis)
-                  end
-                end
+                Flapjack::Data::Contact.add(contact_data, :redis => redis)
               end
             end
-            errors.empty? ? 204 : err(403, *errors)
+
+            semaphore.release
+            204
           end
 
           # Returns all the contacts
@@ -111,6 +175,31 @@ module Flapjack
 
             contact = find_contact(params[:contact_id])
             contact.to_json
+          end
+
+          # Updates a contact
+          app.put '/contacts/:contact_id' do
+            content_type :json
+
+            if params['id']
+              halt err(422, "ID must not be supplied")
+            end
+
+            contact = find_contact(params[:contact_id])
+            contact_data = hashify('first_name', 'last_name', 'email', 'media', 'tags') {|k| [k, params[k]]}
+            logger.debug("contact_data: #{contact_data}")
+            contact.update(contact_data)
+
+            contact.to_json
+          end
+
+          # Deletes a contact
+          app.delete '/contacts/:contact_id' do
+            semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
+            contact = find_contact(params[:contact_id])
+            contact.delete!
+            semaphore.release
+            status 204
           end
 
           # Lists this contact's notification rules
@@ -136,7 +225,7 @@ module Flapjack
             content_type :json
 
             if params[:id]
-              halt err(403, "post cannot be used for update, do a put instead")
+              halt err(422, "post cannot be used for update, do a put instead, or remove id")
             end
 
             logger.debug("post /notification_rules data: ")
@@ -151,7 +240,7 @@ module Flapjack
             rule_or_errors = contact.add_notification_rule(rule_data, :logger => logger)
 
             unless rule_or_errors.respond_to?(:critical_media)
-              halt err(403, *rule_or_errors)
+              halt err(422, *rule_or_errors)
             end
             rule_or_errors.to_json
           end
@@ -160,9 +249,6 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
           app.put('/notification_rules/:id') do
             content_type :json
-
-            logger.debug("put /notification_rules/#{params[:id]} data: ")
-            logger.debug(params.inspect)
 
             rule = find_rule(params[:id])
             contact = find_contact(rule.contact_id)
@@ -174,7 +260,7 @@ module Flapjack
             errors = rule.update(rule_data, :logger => logger)
 
             unless errors.nil? || errors.empty?
-              halt err(403, *errors)
+              halt err(422, *errors)
             end
             rule.to_json
           end
@@ -216,9 +302,10 @@ module Flapjack
             contact = find_contact(params[:contact_id])
             media = contact.media[params[:id]]
             if media.nil?
-              halt err(403, "no #{params[:id]} for contact '#{params[:contact_id]}'")
+              halt err(404, "no #{params[:id]} for contact '#{params[:contact_id]}'")
             end
             interval = contact.media_intervals[params[:id]]
+            # FIXME: does erroring when no interval found make sense?
             if interval.nil?
               halt err(403, "no #{params[:id]} interval for contact '#{params[:contact_id]}'")
             end
@@ -242,7 +329,7 @@ module Flapjack
                 memo
               end
 
-              halt err(403, *errors) unless errors.empty?
+              halt err(422, *errors) unless errors.empty?
 
               contact.set_pagerduty_credentials('service_key'  => params[:service_key],
                                                 'subdomain'    => params[:subdomain],
@@ -255,7 +342,7 @@ module Flapjack
                 errors << "no address for '#{params[:id]}' media"
               end
 
-              halt err(403, *errors) unless errors.empty?
+              halt err(422, *errors) unless errors.empty?
 
               contact.set_address_for_media(params[:id], params[:address])
               contact.set_interval_for_media(params[:id], params[:interval])
