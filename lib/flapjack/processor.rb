@@ -10,6 +10,7 @@ require 'flapjack/filters/scheduled_maintenance'
 require 'flapjack/filters/unscheduled_maintenance'
 require 'flapjack/filters/delays'
 
+require 'flapjack/data/action'
 require 'flapjack/data/check'
 require 'flapjack/data/notification'
 require 'flapjack/data/event'
@@ -28,7 +29,7 @@ module Flapjack
       @config = opts[:config]
       @logger = opts[:logger]
 
-      @boot_time    = opts[:boot_time]
+      @boot_time = opts[:boot_time]
 
       @queue = @config['queue'] || 'events'
 
@@ -169,7 +170,7 @@ module Flapjack
         # TODO maybe change that?
       end
 
-      should_notify, previous_state = update_keys(event, check, timestamp)
+      should_notify, previous_state, action = update_keys(event, check, timestamp)
 
       check.save
 
@@ -180,6 +181,8 @@ module Flapjack
       end
 
       unless entity_for_check.nil?
+        # action won't have been added to the check's actions set yet
+        check.actions << action
         # created a new check, so add it to the entity's check list
         entity_for_check.checks << check
       end
@@ -255,13 +258,19 @@ module Flapjack
 
       # Action events represent human or automated interaction with Flapjack
       when 'action'
+
+        action = Flapjack::Data::Action.new(:action => event.state,
+          :timestamp => timestamp)
+        action.save
+        check.actions << action if check.persisted?
+
         Flapjack.redis.multi
         Flapjack.redis.hincrby('event_counters', 'action', 1)
         Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'action', 1)
         Flapjack.redis.exec
       end
 
-      [result, previous_state]
+      [result, previous_state, action]
     end
 
     def generate_notification(event, check, timestamp, previous_state)

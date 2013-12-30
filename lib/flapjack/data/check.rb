@@ -15,6 +15,9 @@ module Flapjack
 
       include Sandstorm::Record
 
+      # NB: state could be retrieved from states.last instead -- summary, details
+      # and last_update can change without a new check_state being added though
+
       define_attributes :name               => :string,
                         :entity_name        => :string,
                         :state              => :string,
@@ -29,6 +32,7 @@ module Flapjack
       has_many :contacts, :class_name => 'Flapjack::Data::Contact'
 
       has_sorted_set :states, :class_name => 'Flapjack::Data::CheckState', :key => :timestamp
+      has_sorted_set :actions, :class_name => 'Flapjack::Data::Action', :key => :timestamp
 
       # keep two indices for each, so that we can query on their intersection
       has_sorted_set :scheduled_maintenances_by_start, :class_name => 'Flapjack::Data::ScheduledMaintenance',

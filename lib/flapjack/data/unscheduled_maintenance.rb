@@ -11,7 +11,7 @@ module Flapjack
       define_attributes :start_time => :timestamp,
                         :end_time   => :timestamp,
                         :summary    => :string,
-                        :notified  => :boolean,
+                        :notified   => :boolean,
                         :last_notification_count => :integer
 
       index_by :notified
