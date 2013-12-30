@@ -14,21 +14,6 @@ module Flapjack
 
     class API < Sinatra::Base
 
-      class EntityCheckNotFound < RuntimeError
-        attr_reader :entity, :check
-        def initialize(entity, check)
-          @entity = entity
-          @check = check
-        end
-      end
-
-      class EntityNotFound < RuntimeError
-        attr_reader :entity
-        def initialize(entity)
-          @entity = entity
-        end
-      end
-
       module EntityMethods
 
         module Helpers

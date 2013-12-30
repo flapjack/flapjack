@@ -12,27 +12,6 @@ module Flapjack
 
     class API < Sinatra::Base
 
-      class ContactNotFound < RuntimeError
-        attr_reader :contact_id
-        def initialize(contact_id)
-          @contact_id = contact_id
-        end
-      end
-
-      class NotificationRuleNotFound < RuntimeError
-        attr_reader :rule_id
-        def initialize(rule_id)
-          @rule_id = rule_id
-        end
-      end
-
-      class ResourceLocked < RuntimeError
-        attr_reader :resource
-        def initialize(resource)
-          @resource = resource
-        end
-      end
-
       module ContactMethods
 
         SEMAPHORE_CONTACT_MASS_UPDATE = 'contact_mass_update'

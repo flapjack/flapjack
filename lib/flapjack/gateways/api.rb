@@ -27,6 +27,42 @@ module Flapjack
 
       include Flapjack::Utility
 
+      class ContactNotFound < RuntimeError
+        attr_reader :contact_id
+        def initialize(contact_id)
+          @contact_id = contact_id
+        end
+      end
+
+      class NotificationRuleNotFound < RuntimeError
+        attr_reader :rule_id
+        def initialize(rule_id)
+          @rule_id = rule_id
+        end
+      end
+
+      class EntityNotFound < RuntimeError
+        attr_reader :entity
+        def initialize(entity)
+          @entity = entity
+        end
+      end
+
+      class EntityCheckNotFound < RuntimeError
+        attr_reader :entity, :check
+        def initialize(entity, check)
+          @entity = entity
+          @check = check
+        end
+      end
+
+      class ResourceLocked < RuntimeError
+        attr_reader :resource
+        def initialize(resource)
+          @resource = resource
+        end
+      end
+
       set :dump_errors, false
 
       rescue_error = Proc.new {|status, exception, request_info, *msg|
@@ -46,12 +82,14 @@ module Flapjack
 
         response_body = {:errors => msg}.to_json
 
+        query_string = (request_info[:query_string].respond_to?(:length) &&
+                        request_info[:query_string].length > 0) ? "?#{request_info[:query_string]}" : ""
         if @logger.debug?
           @logger.debug("Returning #{status} for #{request_info[:request_method]} " +
-            "#{request_info[:path_info]}#{request_info[:query_string]}, body: #{response_body}")
+            "#{request_info[:path_info]}#{query_string}, body: #{response_body}")
         elsif logger.info?
           @logger.info("Returning #{status} for #{request_info[:request_method]} " +
-            "#{request_info[:path_info]}#{request_info[:query_string]}")
+            "#{request_info[:path_info]}#{query_string}")
         end
 
         [status, {}, response_body]
@@ -106,25 +144,29 @@ module Flapjack
 
       before do
         input = nil
+        query_string = (request.query_string.respond_to?(:length) &&
+                        request.query_string.length > 0) ? "?#{request.query_string}" : ""
         if logger.debug?
           input = env['rack.input'].read
-          logger.debug("#{request.request_method} #{request.path_info}#{request.query_string} #{input}")
+          logger.debug("#{request.request_method} #{request.path_info}#{query_string} #{input}")
         elsif logger.info?
           input = env['rack.input'].read
           input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
-          logger.info("#{request.request_method} #{request.path_info}#{request.query_string} #{input_short[0..80]}")
+          logger.info("#{request.request_method} #{request.path_info}#{query_string} #{input_short[0..80]}")
         end
         env['rack.input'].rewind unless input.nil?
       end
 
       after do
         return if response.status == 500
+        query_string = (request.query_string.respond_to?(:length) &&
+                        request.query_string.length > 0) ? "?#{request.query_string}" : ""
         if logger.debug?
           logger.debug("Returning #{response.status} for #{request.request_method} " +
-            "#{request.path_info}#{request.query_string}, body: #{response.body.join(', ')}")
+            "#{request.path_info}#{query_string}, body: #{response.body.join(', ')}")
         elsif logger.info?
           logger.info("Returning #{response.status} for #{request.request_method} " +
-            "#{request.path_info}#{request.query_string}")
+            "#{request.path_info}#{query_string}")
         end
       end
 
