@@ -58,6 +58,7 @@ module Flapjack
           app.post '/contacts' do
             pass unless 'application/json'.eql?(request.content_type)
             content_type :json
+            cors_headers
 
             contacts_data = params[:contacts]
 
@@ -140,6 +141,7 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
           app.get '/contacts' do
             content_type :json
+            cors_headers
             "[" +
               Flapjack::Data::Contact.all(:redis => redis).map do |contact|
                 contact.to_json
@@ -151,6 +153,7 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id
           app.get '/contacts/:contact_id' do
             content_type :json
+            cors_headers
 
             contact = find_contact(params[:contact_id])
             contact.to_json
@@ -159,6 +162,7 @@ module Flapjack
           # Updates a contact
           app.put '/contacts/:contact_id' do
             content_type :json
+            cors_headers
 
             if params['id']
               halt err(422, "ID must not be supplied")
@@ -174,6 +178,7 @@ module Flapjack
 
           # Deletes a contact
           app.delete '/contacts/:contact_id' do
+            cors_headers
             semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
             contact = find_contact(params[:contact_id])
             contact.delete!
@@ -185,6 +190,7 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_notification_rules
           app.get '/contacts/:contact_id/notification_rules' do
             content_type :json
+            cors_headers
 
             "[" + find_contact(params[:contact_id]).notification_rules.map {|r| r.to_json }.join(',') + "]"
           end
@@ -193,6 +199,7 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_notification_rules_id
           app.get '/notification_rules/:id' do
             content_type :json
+            cors_headers
 
             rule = find_rule(params[:id])
             rule.to_json
@@ -202,6 +209,7 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-post_contacts_id_notification_rules
           app.post '/notification_rules' do
             content_type :json
+            cors_headers
 
             if params[:id]
               halt err(422, "post cannot be used for update, do a put instead, or remove id")
@@ -228,6 +236,7 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
           app.put('/notification_rules/:id') do
             content_type :json
+            cors_headers
 
             rule = find_rule(params[:id])
             contact = find_contact(rule.contact_id)
@@ -247,7 +256,7 @@ module Flapjack
           # Deletes a notification rule
           # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
           app.delete('/notification_rules/:id') do
-            logger.debug("delete /notification_rules/#{params[:id]}")
+            cors_headers
             rule = find_rule(params[:id])
             logger.debug("rule to delete: #{rule.inspect}, contact_id: #{rule.contact_id}")
             contact = find_contact(rule.contact_id)
@@ -259,6 +268,7 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_media
           app.get '/contacts/:contact_id/media' do
             content_type :json
+            cors_headers
 
             contact = find_contact(params[:contact_id])
 
@@ -277,6 +287,7 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_media_media
           app.get('/contacts/:contact_id/media/:id') do
             content_type :json
+            cors_headers
 
             contact = find_contact(params[:contact_id])
             media = contact.media[params[:id]]
@@ -298,6 +309,7 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_media_media
           app.put('/contacts/:contact_id/media/:id') do
             content_type :json
+            cors_headers
 
             contact = find_contact(params[:contact_id])
             errors = []
@@ -335,6 +347,7 @@ module Flapjack
 
           # delete a media of a contact
           app.delete('/contacts/:contact_id/media/:id') do
+            cors_headers
             contact = find_contact(params[:contact_id])
             contact.remove_media(params[:id])
             status 204
@@ -344,6 +357,7 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_timezone
           app.get('/contacts/:contact_id/timezone') do
             content_type :json
+            cors_headers
 
             contact = find_contact(params[:contact_id])
             contact.timezone.name.to_json
@@ -353,6 +367,7 @@ module Flapjack
           # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_timezone
           app.put('/contacts/:contact_id/timezone') do
             content_type :json
+            cors_headers
 
             contact = find_contact(params[:contact_id])
             contact.timezone = params[:timezone]
@@ -362,6 +377,7 @@ module Flapjack
           # Removes the timezone of a contact
           # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_timezone
           app.delete('/contacts/:contact_id/timezone') do
+            cors_headers
             contact = find_contact(params[:contact_id])
             contact.timezone = nil
             status 204
@@ -369,6 +385,7 @@ module Flapjack
 
           app.post '/contacts/:contact_id/tags' do
             content_type :json
+            cors_headers
 
             tags = find_tags(params[:tag])
             contact = find_contact(params[:contact_id])
@@ -378,6 +395,7 @@ module Flapjack
 
           app.post '/contacts/:contact_id/entity_tags' do
             content_type :json
+            cors_headers
             contact = find_contact(params[:contact_id])
             contact.entities.map {|e| e[:entity]}.each do |entity|
               next unless tags = params[:entity][entity.name]
@@ -390,6 +408,7 @@ module Flapjack
           end
 
           app.delete '/contacts/:contact_id/tags' do
+            cors_headers
             tags = find_tags(params[:tag])
             contact = find_contact(params[:contact_id])
             contact.delete_tags(*tags)
@@ -397,6 +416,7 @@ module Flapjack
           end
 
           app.delete '/contacts/:contact_id/entity_tags' do
+            cors_headers
             contact = find_contact(params[:contact_id])
             contact.entities.map {|e| e[:entity]}.each do |entity|
               next unless tags = params[:entity][entity.name]
@@ -407,6 +427,7 @@ module Flapjack
 
           app.get '/contacts/:contact_id/tags' do
             content_type :json
+            cors_headers
 
             contact = find_contact(params[:contact_id])
             contact.tags.to_json
@@ -414,6 +435,7 @@ module Flapjack
 
           app.get '/contacts/:contact_id/entity_tags' do
             content_type :json
+            cors_headers
 
             contact = find_contact(params[:contact_id])
             contact_ent_tag = hashify(*contact.entities(:tags => true)) {|et|

@@ -289,6 +289,10 @@ module Flapjack
         erb 'contacts.html'.to_sym
       end
 
+      get '/edit_contacts' do
+        erb 'edit_contacts.html'.to_sym
+      end
+
       get "/contacts/:contact" do
         contact_id = params[:contact]
 

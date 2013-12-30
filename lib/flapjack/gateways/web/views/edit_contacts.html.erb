@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <% nav  = render_erb('_nav.html.erb', binding) %>
+    <% head = render_erb('_head.html.erb', binding) %>
+    <% foot = render_erb('_foot.html.erb', binding) %>
+    <title>Flapjack - Edit Contacts</title>
+    <%= head %>
+
+    <script src="/js/underscore-min.js"></script>
+    <script src="/js/jquery-1.10.2.min.js"></script>
+    <script src="/js/backbone-min.js"></script>
+    <script src="/js/backbone.localStorage-min.js"></script>
+    <script src="/js/contacts.js"></script>
+
+    <style type="text/css">
+    <!--
+      html, body, form, fieldset, ol, li {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #dddddd;
+        color: #202020;
+        font-family: Verdana, sans-serif;
+        padding: 20px;
+      }
+
+      form {
+        padding: 20px;
+        width: 400px;
+      }
+
+      form > fieldset {
+        border: none;
+        margin-bottom: 10px;
+      }
+      form > fieldset:last-of-type {
+        margin-bottom: 0;
+      }
+
+      form > fieldset > ol > li {
+        line-height: 30px;
+        list-style: none;
+        padding: 5px 10px;
+        margin-bottom: 2px;
+      }
+
+      form label {
+        float: left;
+        width: 110px;
+      }
+      form input[type=text] {
+        width: 200px;
+      }
+
+    -->
+    </style>
+
+    <script type="text/template" id="contact-actions-template">
+      <button class="contact_add" type="button">Add</button>
+    </script>
+
+    <script type="text/template" id="contact-list-item-template">
+      <div class="contact_list_item"><@- firstName@>&nbsp;<@- lastName @> (<@- email @>) <button class="contact_remove" id="contact_<@- id @>_remove" type="button">Remove</button></div>
+      <div class="contact" style="display: <@- display @>">
+        <form>
+          <fieldset>
+            <ol>
+              <li>
+                <label class="contact_label">First Name</label>
+                <input class="contact_first_name" type="text" id="contact_<@- id @>_first_name" value="<@- firstName @>">
+              </li>
+              <li>
+                <label class="contact_label">Last Name</label>
+                <input class="contact_last_name" type="text" id="contact_<@- id @>_last_name" value="<@- lastName @>">
+              </li>
+              <li>
+                <label class="contact_label">Email</label>
+                <input class="contact_email" type="text" id="contact_<@- id @>_email" value="<@- email @>">
+              </li>
+            </ol>
+          </fieldset>
+          <fieldset>
+            <button class="contact_save" id="contact_<@- id @>_save" type="button">Save</button>
+            <button class="contact_reset" id="contact_<@- id @>_reset" type="button">Reset</button>
+        </form>
+      </div>
+    </script>
+
+  </head>
+  <body>
+
+    <div id="container"></div>
+
+  </body>
+</html>

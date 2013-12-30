@@ -10,6 +10,7 @@ require 'time'
 
 require 'rack/fiber_pool'
 require 'sinatra/base'
+require 'sinatra/cross_origin'
 
 require 'flapjack/rack_logger'
 require 'flapjack/redis_pool'
@@ -174,8 +175,36 @@ module Flapjack
 
       register Flapjack::Gateways::API::ContactMethods
 
+      # the following should add the cors headers to every request, but is no work
+      #register Sinatra::CrossOrigin
+      #
+      #configure do
+      #  enable :cross_origin
+      #end
+      #set :allow_origin, :any
+      #set :allow_methods, [:get, :post, :put, :patch, :delete, :options]
+
+      options '*' do
+        cors_headers
+        204
+      end
+
       not_found do
         err(404, "not routable")
+      end
+
+      def cors_headers
+        allow_headers  = %w(* Content-Type Accept AUTHORIZATION Cache-Control)
+        allow_methods  = %w(GET POST PUT PATCH DELETE OPTIONS)
+        expose_headers = %w(Cache-Control Content-Language Content-Type Expires Last-Modified Pragma)
+        cors_headers   = {
+          'Access-Control-Allow-Origin'   => '*',
+          'Access-Control-Allow-Methods'  => allow_methods.join(', '),
+          'Access-Control-Allow-Headers'  => allow_headers.join(', '),
+          'Access-Control-Expose-Headers' => expose_headers.join(', '),
+          'Access-Control-Max-Age'        => '1728000'
+        }
+        headers(cors_headers)
       end
 
       private
