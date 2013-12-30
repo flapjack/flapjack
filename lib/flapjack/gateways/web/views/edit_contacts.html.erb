@@ -62,18 +62,18 @@
     </script>
 
     <script type="text/template" id="contact-list-item-template">
-      <div class="contact_list_item"><@- firstName@>&nbsp;<@- lastName @> (<@- email @>) <button class="contact_remove" id="contact_<@- id @>_remove" type="button">Remove</button></div>
+      <div class="contact_list_item"><@- first_name@>&nbsp;<@- last_name @> (<@- email @>) <button class="contact_remove" id="contact_<@- id @>_remove" type="button">Remove</button></div>
       <div class="contact" style="display: <@- display @>">
         <form>
           <fieldset>
             <ol>
               <li>
                 <label class="contact_label">First Name</label>
-                <input class="contact_first_name" type="text" id="contact_<@- id @>_first_name" value="<@- firstName @>">
+                <input class="contact_first_name" type="text" id="contact_<@- id @>_first_name" value="<@- first_name @>">
               </li>
               <li>
                 <label class="contact_label">Last Name</label>
-                <input class="contact_last_name" type="text" id="contact_<@- id @>_last_name" value="<@- lastName @>">
+                <input class="contact_last_name" type="text" id="contact_<@- id @>_last_name" value="<@- last_name @>">
               </li>
               <li>
                 <label class="contact_label">Email</label>

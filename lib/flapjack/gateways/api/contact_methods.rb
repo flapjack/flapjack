@@ -164,8 +164,8 @@ module Flapjack
             content_type :json
             cors_headers
 
-            if params['id']
-              halt err(422, "ID must not be supplied")
+            if params['id'] && params['id'].to_s != params[:contact_id]
+              halt err(422, "ID, if supplied, must match URL")
             end
 
             contact = find_contact(params[:contact_id])
