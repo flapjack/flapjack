@@ -25,9 +25,9 @@ CHECK_PATTERN_FRAGMENT  = '.+'
 ID_PATTERN_FRAGMENT     = '.+'
 TAG_PATTERN_FRAGMENT    = '.+'
 
-# silence deprecation warning
-require 'i18n'
-I18n.config.enforce_available_locales = true
+# # silence deprecation warning
+# require 'i18n'
+# I18n.config.enforce_available_locales = true
 
 require 'sandstorm'
 
