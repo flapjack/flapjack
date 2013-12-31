@@ -78,7 +78,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     aget '/contacts'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq([contact_core].to_json)
+    expect(last_response.body).to eq({:contacts => [contact_core]}.to_json)
   end
 
   it "returns the core information of a specified contact" do
@@ -88,7 +88,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     aget "/contacts/#{contact.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(contact_core.to_json)
+    expect(last_response.body).to eq({:contacts => [contact_core]}.to_json)
   end
 
   it "does not return information for a contact that does not exist" do
@@ -132,7 +132,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(contact).to receive(:update)
     expect(contact).to receive(:to_json).and_return('{"sausage": "good"}')
 
-    aput "/contacts/21", {'sausage' => 'good'}.to_json,
+    aput "/contacts/21", {:contacts => [{'sausage' => 'good'}]}.to_json,
       {'CONTENT_TYPE' => 'application/json'}
     expect(last_response.status).to eq(200)
   end

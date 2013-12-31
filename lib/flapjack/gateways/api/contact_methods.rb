@@ -63,7 +63,6 @@ module Flapjack
             contacts_data = params[:contacts]
 
             if contacts_data.nil? || !contacts_data.is_a?(Enumerable)
-              # https://tools.ietf.org/html/rfc2616#section-10.4.1
               halt err(422, "No valid contacts were submitted")
             end
 
@@ -142,11 +141,11 @@ module Flapjack
           app.get '/contacts' do
             content_type :json
             cors_headers
-            "[" +
+            '{"contacts":[' +
               Flapjack::Data::Contact.all(:redis => redis).map do |contact|
                 contact.to_json
               end.join(',') +
-              "]"
+              ']}'
           end
 
           # Returns the core information about the specified contact
@@ -155,8 +154,9 @@ module Flapjack
             content_type :json
             cors_headers
 
-            contact = find_contact(params[:contact_id])
-            contact.to_json
+            '{"contacts":[' +
+              find_contact(params[:contact_id]).to_json +
+              ']}'
           end
 
           # Updates a contact
@@ -164,12 +164,24 @@ module Flapjack
             content_type :json
             cors_headers
 
-            if params['id'] && params['id'].to_s != params[:contact_id]
+            contacts_data = params[:contacts]
+
+            if contacts_data.nil? || !contacts_data.is_a?(Enumerable)
+              halt err(422, "No valid contacts were submitted")
+            end
+
+            unless contacts_data.length == 1
+              halt err(422, "Exactly one contact hash must be supplied.")
+            end
+
+            contact_data = contacts_data.first
+
+            if contact_data['id'] && contact_data['id'].to_s != params[:contact_id]
               halt err(422, "ID, if supplied, must match URL")
             end
 
             contact = find_contact(params[:contact_id])
-            contact_data = hashify('first_name', 'last_name', 'email', 'media', 'tags') {|k| [k, params[k]]}
+            #contact_data = hashify('first_name', 'last_name', 'email', 'media', 'tags') {|k| [k, params[k]]}
             logger.debug("contact_data: #{contact_data}")
             contact.update(contact_data)
 
