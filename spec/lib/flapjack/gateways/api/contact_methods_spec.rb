@@ -645,16 +645,16 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    apost "contacts/#{contact.id}/tags", :tag => 'web'
+    apost "contacts/#{contact.id}/tags", {:tags => ['web']}.to_json, {'CONTENT_TYPE' => 'application/json'}
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(['web'].to_json)
+    expect(last_response.body).to eq({:tags => ['web']}.to_json)
   end
 
   it "does not set a single tag on a contact that's not found" do
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    apost "contacts/#{contact.id}/tags", :tag => 'web'
+    apost "contacts/#{contact.id}/tags", {:tags => ['web']}.to_json, {'CONTENT_TYPE' => 'application/json'}
     expect(last_response.status).to eq(404)
   end
 
@@ -664,16 +664,16 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    apost "contacts/#{contact.id}/tags", :tag => ['web', 'app']
+    apost "contacts/#{contact.id}/tags", {:tags => ['web', 'app']}.to_json, {'CONTENT_TYPE' => 'application/json'}
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(['web', 'app'].to_json)
+    expect(last_response.body).to eq({:tags => ['web', 'app']}.to_json)
   end
 
   it "does not set multiple tags on a contact that's not found" do
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    apost "contacts/#{contact.id}/tags", :tag => ['web', 'app']
+    apost "contacts/#{contact.id}/tags", {:tags => ['web', 'app']}.to_json, {'CONTENT_TYPE' => 'application/json'}
     expect(last_response.status).to eq(404)
   end
 

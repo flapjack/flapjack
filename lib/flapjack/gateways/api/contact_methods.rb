@@ -399,10 +399,12 @@ module Flapjack
             content_type :json
             cors_headers
 
-            tags = find_tags(params[:tag])
+            tags = find_tags(params[:tags])
             contact = find_contact(params[:contact_id])
             contact.add_tags(*tags)
-            contact.tags.to_json
+            '{"tags":' +
+              contact.tags.to_json +
+            '}'
           end
 
           app.post '/contacts/:contact_id/entity_tags' do
