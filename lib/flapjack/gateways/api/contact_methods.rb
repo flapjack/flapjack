@@ -56,7 +56,7 @@ module Flapjack
           app.helpers Flapjack::Gateways::API::ContactMethods::Helpers
 
           app.post '/contacts' do
-            pass unless 'application/json'.eql?(request.content_type)
+            pass unless Flapjack::Gateways::API::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
             content_type :json
             cors_headers
 
@@ -94,7 +94,7 @@ module Flapjack
           end
 
           app.post '/contacts_atomic' do
-            pass unless 'application/json'.eql?(request.content_type)
+            pass unless Flapjack::Gateways::API::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
             content_type :json
 
             contacts_data = params[:contacts]
@@ -423,7 +423,7 @@ module Flapjack
 
           app.delete '/contacts/:contact_id/tags' do
             cors_headers
-            tags = find_tags(params[:tag])
+            tags = find_tags(params[:tags])
             contact = find_contact(params[:contact_id])
             contact.delete_tags(*tags)
             status 204
@@ -444,7 +444,10 @@ module Flapjack
             cors_headers
 
             contact = find_contact(params[:contact_id])
-            contact.tags.to_json
+            '{"tags":' +
+              contact.tags.to_json +
+              '}'
+
           end
 
           app.get '/contacts/:contact_id/entity_tags' do

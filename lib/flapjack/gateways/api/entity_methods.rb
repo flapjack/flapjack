@@ -286,7 +286,7 @@ module Flapjack
           end
 
           app.post '/entities' do
-            pass unless 'application/json'.eql?(request.content_type)
+            pass unless Flapjack::Gateways::API::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
 
             errors = []
             ret = nil

@@ -28,6 +28,8 @@ module Flapjack
 
       include Flapjack::Utility
 
+      JSON_REQUEST_MIME_TYPES = ['application/vnd.api+json', 'application/json']
+
       class ContactNotFound < RuntimeError
         attr_reader :contact_id
         def initialize(contact_id)

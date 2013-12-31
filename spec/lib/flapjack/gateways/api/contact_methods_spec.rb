@@ -7,6 +7,8 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     Flapjack::Gateways::API
   end
 
+  JSON_REQUEST_MIME = 'application/vnd.api+json'
+
   let(:contact)      { double(Flapjack::Data::Contact, :id => '21') }
   let(:contact_core) {
     {'id'         => contact.id,
@@ -120,7 +122,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(semaphore).to receive(:release).and_return(true)
 
     apost "/contacts", { :contacts => [contact_data]}.to_json,
-      {'CONTENT_TYPE' => 'application/json'}
+      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
 
     expect(last_response.status).to eq(200)
     expect(last_response.body).to eq(["0362"].to_json)
@@ -133,7 +135,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(contact).to receive(:to_json).and_return('{"sausage": "good"}')
 
     aput "/contacts/21", {:contacts => [{'sausage' => 'good'}]}.to_json,
-      {'CONTENT_TYPE' => 'application/json'}
+      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(200)
   end
 
@@ -144,7 +146,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).not_to receive(:add)
 
     apost "/contacts", {'sausage' => 'good'}.to_json,
-      {'CONTENT_TYPE' => 'application/json'}
+      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(422)
   end
 
@@ -154,7 +156,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).not_to receive(:update)
 
     aput "/contacts/21", contact_data.to_json,
-      {'CONTENT_TYPE' => 'application/json'}
+      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(422)
   end
 
@@ -180,7 +182,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:add).twice
     expect(semaphore).to receive(:release).and_return(true)
 
-    apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(204)
   end
 
@@ -188,7 +190,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).not_to receive(:add)
 
     apost "/contacts_atomic", {'contacts' => ["Hello", "again"]}.to_json,
-      {'CONTENT_TYPE' => 'application/json'}
+      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(422)
   end
 
@@ -213,7 +215,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:add)
     expect(semaphore).to receive(:release).and_return(true)
 
-    apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(204)
   end
 
@@ -243,7 +245,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:add).with(contacts['contacts'][0], :redis => redis)
     expect(semaphore).to receive(:release).and_return(true)
 
-    apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(204)
   end
 
@@ -267,7 +269,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:add).with(contacts['contacts'][0], :redis => redis)
     expect(semaphore).to receive(:release).and_return(true)
 
-    apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
+    apost "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(204)
   end
 
@@ -329,7 +331,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(notification_rule_data_sym, :logger => @logger).and_return(notification_rule)
 
     apost "/notification_rules", notification_rule_data.to_json,
-      {'CONTENT_TYPE' => 'application/json'}
+      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response).to be_ok
     expect(last_response.body).to eq('"rule_1"')
   end
@@ -339,7 +341,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     apost "/notification_rules", notification_rule_data.to_json,
-      {'CONTENT_TYPE' => 'application/json'}
+      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(404)
   end
 
@@ -347,7 +349,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(contact).not_to receive(:add_notification_rule)
 
     apost "/notification_rules", notification_rule_data.merge(:id => 1).to_json,
-      {'CONTENT_TYPE' => 'application/json'}
+      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(422)
   end
 
@@ -368,7 +370,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(notification_rule).to receive(:update).with(notification_rule_data_sym, :logger => @logger).and_return(nil)
 
     aput "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
-      {'CONTENT_TYPE' => 'application/json'}
+      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response).to be_ok
     expect(last_response.body).to eq('"rule_1"')
   end
@@ -388,7 +390,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aput "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
-      {'CONTENT_TYPE' => 'application/json'}
+      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(404)
   end
 
@@ -645,7 +647,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    apost "contacts/#{contact.id}/tags", {:tags => ['web']}.to_json, {'CONTENT_TYPE' => 'application/json'}
+    apost "contacts/#{contact.id}/tags", {:tags => ['web']}.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response).to be_ok
     expect(last_response.body).to eq({:tags => ['web']}.to_json)
   end
@@ -654,7 +656,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    apost "contacts/#{contact.id}/tags", {:tags => ['web']}.to_json, {'CONTENT_TYPE' => 'application/json'}
+    apost "contacts/#{contact.id}/tags", {:tags => ['web']}.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(404)
   end
 
@@ -664,7 +666,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    apost "contacts/#{contact.id}/tags", {:tags => ['web', 'app']}.to_json, {'CONTENT_TYPE' => 'application/json'}
+    apost "contacts/#{contact.id}/tags", {:tags => ['web', 'app']}.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response).to be_ok
     expect(last_response.body).to eq({:tags => ['web', 'app']}.to_json)
   end
@@ -673,7 +675,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    apost "contacts/#{contact.id}/tags", {:tags => ['web', 'app']}.to_json, {'CONTENT_TYPE' => 'application/json'}
+    apost "contacts/#{contact.id}/tags", {:tags => ['web', 'app']}.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(404)
   end
 
@@ -682,7 +684,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    adelete "contacts/#{contact.id}/tags", :tag => 'web'
+    adelete "contacts/#{contact.id}/tags", {:tags => ['web']}.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(204)
   end
 
@@ -690,7 +692,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    adelete "contacts/#{contact.id}/tags", :tag => 'web'
+    adelete "contacts/#{contact.id}/tags", {:tags => ['web']}.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(404)
   end
 
@@ -699,7 +701,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    adelete "contacts/#{contact.id}/tags", :tag => ['web', 'app']
+    adelete "contacts/#{contact.id}/tags", {:tags => ['web', 'app']}.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(204)
   end
 
@@ -707,7 +709,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    adelete "contacts/#{contact.id}/tags", :tag => ['web', 'app']
+    adelete "contacts/#{contact.id}/tags", {:tags => ['web', 'app']}.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(404)
   end
 
@@ -718,7 +720,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     aget "contacts/#{contact.id}/tags"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(['web', 'app'].to_json)
+    expect(last_response.body).to eq({"tags"=>['web', 'app']}.to_json)
   end
 
   it "does not get all tags on a contact that's not found" do
