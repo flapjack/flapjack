@@ -11,51 +11,8 @@
     <script src="/js/jquery-1.10.2.min.js"></script>
     <script src="/js/backbone-min.js"></script>
     <script src="/js/backbone.localStorage-min.js"></script>
+    <script src="/js/backbone.rails.js"></script>
     <script src="/js/contacts.js"></script>
-
-    <style type="text/css">
-    <!--
-      html, body, form, fieldset, ol, li {
-        margin: 0;
-        padding: 0;
-      }
-      body {
-        background: #dddddd;
-        color: #202020;
-        font-family: Verdana, sans-serif;
-        padding: 20px;
-      }
-
-      form {
-        padding: 20px;
-        width: 400px;
-      }
-
-      form > fieldset {
-        border: none;
-        margin-bottom: 10px;
-      }
-      form > fieldset:last-of-type {
-        margin-bottom: 0;
-      }
-
-      form > fieldset > ol > li {
-        line-height: 30px;
-        list-style: none;
-        padding: 5px 10px;
-        margin-bottom: 2px;
-      }
-
-      form label {
-        float: left;
-        width: 110px;
-      }
-      form input[type=text] {
-        width: 200px;
-      }
-
-    -->
-    </style>
 
     <script type="text/template" id="contact-actions-template">
       <button class="contact_add" type="button">Add</button>
@@ -90,8 +47,15 @@
 
   </head>
   <body>
+    <div id="wrap">
+      <div class="container">
+        <div class="page-header">
+          <%= nav %>
+          <h2>Contacts</h2>
+        </div>
 
-    <div id="container"></div>
-
+        <div id="container"></div>
+      </div>
+    </div>
   </body>
 </html>
