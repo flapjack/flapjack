@@ -10,7 +10,6 @@ require 'time'
 
 require 'rack/fiber_pool'
 require 'sinatra/base'
-require 'sinatra/cross_origin'
 
 require 'flapjack/rack_logger'
 require 'flapjack/redis_pool'

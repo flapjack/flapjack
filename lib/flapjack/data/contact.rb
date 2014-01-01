@@ -443,6 +443,12 @@ module Flapjack
         redis.hmset("contact:#{contact_id}",
                     *['first_name', 'last_name', 'email'].collect {|f| [f, contact_data[f]]})
 
+        if ( ! contact_data['tags'].nil? && contact_data['tags'].is_a?(Enumerable))
+          contact_data['tags'].each do |t|
+            Flapjack::Data::Tag.create("#{TAG_PREFIX}:#{t}", [contact_id], :redis => redis)
+          end
+        end
+
         unless contact_data['media'].nil?
           redis.del("contact_media:#{contact_id}")
           redis.del("contact_media_intervals:#{contact_id}")
