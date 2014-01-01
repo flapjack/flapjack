@@ -87,6 +87,7 @@ production:
       port: 3080
       timeout: 300
       access_log: "/var/log/flapjack/web_access.log"
+      api_url: "http://localhost:3081/"
       logger:
         level: INFO
         syslog_errors: yes
