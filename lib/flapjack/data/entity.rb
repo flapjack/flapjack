@@ -173,6 +173,13 @@ module Flapjack
         end
       end
 
+      def as_json(*args)
+        {
+          "id"    => self.id,
+          "name"  => self.name,
+        }
+      end
+
     private
 
       # NB: initializer should not be used directly -- instead one of the finder methods

@@ -141,11 +141,21 @@ module Flapjack
           app.get '/contacts' do
             content_type :json
             cors_headers
-            '{"contacts":[' +
-              Flapjack::Data::Contact.all(:redis => redis).map do |contact|
-                contact.to_json
-              end.join(',') +
-              ']}'
+
+            contacts = Flapjack::Data::Contact.all(:redis => redis)
+
+            linked_entities = {}
+
+            contacts_json = contacts.map do |contact|
+              contact.entities.map {|e| e[:entity] }.each do |entity|
+                next if linked_entities.has_key?(entity.id)
+                linked_entities[entity.id] = entity
+              end
+
+              contact.to_json
+            end.join(',')
+
+            '{"contacts":[' + contacts_json +'], "linked": {"entities":' + linked_entities.values.to_json + '}}'
           end
 
           # Returns the core information about the specified contact
@@ -153,10 +163,11 @@ module Flapjack
           app.get '/contacts/:contact_id' do
             content_type :json
             cors_headers
+            contact = find_contact(params[:contact_id])
 
-            '{"contacts":[' +
-              find_contact(params[:contact_id]).to_json +
-              ']}'
+            entities = contact.entities.map {|e| e[:entity] }
+
+            '{"contacts":[' + contact.to_json + '], "linked": {"entities":' + entities.to_json + '}}'
           end
 
           # Updates a contact

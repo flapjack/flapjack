@@ -422,7 +422,8 @@ module Flapjack
           "media"      => self.media,
           "media_intervals" => self.media_intervals,
           "media_rollup_thresholds" => self.media_rollup_thresholds,
-          "tags"       => self.tags.to_a }.to_json
+          "tags"       => self.tags.to_a,
+          "links"      => {:entities => self.entities.map {|e| e[:entity].id } }}.to_json
       end
 
     private
