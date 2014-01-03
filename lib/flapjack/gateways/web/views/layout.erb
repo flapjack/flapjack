@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Flapjack - Summary</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/bootstrap.min.css" media="screen">
+    <link rel="stylesheet" href="/css/bootstrap-responsive.min.css" media="screen">
+    <link rel="stylesheet" href="/css/screen.css" media="screen">
+    <link rel="shortcut icon" href="/img/flapjack-favicon-64-32-24-16.ico"> <!-- thank you http://xiconeditor.com/ -->
+  </head>
+  <body>
+    <nav class="navbar navbar-default navbar-inverse" role="navigation">
+
+      <div class="navbar-header">
+        <a class="navbar-brand" title="Summary" href="/">
+          <img alt="Flapjack" class="logo" src="/img/flapjack-2013-notext-transparent-300-300.png">
+        </a>
+      </div>
+
+      <div class="collapse navbar-collapse navbar-ex1-collapse">
+
+        <ul class="nav navbar-nav">
+          <li><a title="Summary" href="/">Summary</a></li>
+          <li><a title="All Entities" href="/entities_all">All Entities</a></li>
+          <li><a title="Failing Entities" href="/entities_failing">Failing Entities</a></li>
+          <li><a title="All Checks" href="/checks_all">All Checks</a></li>
+          <li><a title="Failing Checks" href="/checks_failing">Failing Checks</a></li>
+          <li><a title="Contacts" href="/contacts">Contacts</a></li>
+        </ul>
+
+        <ul class="nav navbar-nav navbar-right">
+          <li><a title="Internal Statistics" href="/self_stats">Internal Statistics</a></li>
+        </ul>
+
+      </div>
+    </nav>
+
+
+    <div class="container">
+      <%= yield %>
+    </div>
+
+    <footer>
+      <p class="credits">Flapjack version <%= ::Flapjack::VERSION %>
+        <span class="separator">|</span>
+        <a href="http://flapjack.io">Flapjack Website</a>
+        <span class="separator">|</span>
+        <a href="https://github.com/flpjck/flapjack">Flapjack on Github</a>
+      </p>
+    </footer>
+  </body>
+</html>
