@@ -19,13 +19,12 @@
 
     <script type="text/template" id="contact-list-item-template">
       <div class="contact_list_item">
-        <button class="contact_entities" id="contact_<@- id @>_entities" type="button">Entities</button>
-        <button class="contact_edit" id="contact_<@- id @>_edit" type="button">Edit</button>
-        <button class="contact_remove" id="contact_<@- id @>_remove" type="button">Remove</button>
-        <@- first_name@>&nbsp;<@- last_name @> (<@- email @>)
+        <button class="contact_entities" type="button">Entities</button>
+        <button class="contact_edit" type="button">Edit</button>
+        <button class="contact_remove" type="button">Remove</button>
+        <@- first_name @>&nbsp;<@- last_name @> (<@- email @>)
       </div>
       <div class="contact_entities_view" style="display: <@- entities_display @>">
-
       </div>
       <div class="contact_edit_view" style="display: <@- edit_display @>">
         <form>
@@ -33,21 +32,21 @@
             <ol>
               <li>
                 <label class="contact_label">First Name</label>
-                <input class="contact_first_name" type="text" id="contact_<@- id @>_first_name" value="<@- first_name @>">
+                <input class="contact_first_name" type="text" value="<@- first_name @>">
               </li>
               <li>
                 <label class="contact_label">Last Name</label>
-                <input class="contact_last_name" type="text" id="contact_<@- id @>_last_name" value="<@- last_name @>">
+                <input class="contact_last_name" type="text" value="<@- last_name @>">
               </li>
               <li>
                 <label class="contact_label">Email</label>
-                <input class="contact_email" type="text" id="contact_<@- id @>_email" value="<@- email @>">
+                <input class="contact_email" type="text" value="<@- email @>">
               </li>
             </ol>
           </fieldset>
           <fieldset>
-            <button class="contact_save" id="contact_<@- id @>_save" type="button">Save</button>
-            <button class="contact_reset" id="contact_<@- id @>_reset" type="button">Reset</button>
+            <button class="contact_save" type="button">Save</button>
+            <button class="contact_reset" type="button">Reset</button>
         </form>
       </div>
     </script>
