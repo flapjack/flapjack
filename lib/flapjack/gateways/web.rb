@@ -313,16 +313,6 @@ module Flapjack
         erb 'contact.html'.to_sym
       end
 
-    protected
-
-      # TODO cache constructed erb object to improve performance -- check mtime
-      # to know when to refresh; would need to synchronize accesses to the cache,
-      # to lock out reads while it's being refreshed
-      def render_erb(file, bind)
-        erb = ERB.new(File.read(File.dirname(__FILE__) + '/web/views/' + file))
-        erb.result(bind)
-      end
-
     private
 
       def get_entity_check(entity, check)
