@@ -121,11 +121,11 @@ module Flapjack
         refresh
       end
 
-      def self.add_or_update(rule_data, options = {})
-        redis = options[:redis]
-        raise "a redis connection must be supplied" unless redis
-        logger = options[:logger]
+      def self.prevalidate_data(rule_data, options = {})
+        errors = self.validate_data(preen(rule_data), options.merge(:id_not_required => true))
+      end
 
+      def self.preen(rule_data)
         # make some assumptions about the incoming data
         rule_data[:unknown_blackhole]  = rule_data[:unknown_blackhole] || false
         rule_data[:warning_blackhole]  = rule_data[:warning_blackhole] || false
@@ -133,9 +133,16 @@ module Flapjack
         if rule_data[:tags].is_a?(Array)
           rule_data[:tags] = Flapjack::Data::TagSet.new(rule_data[:tags])
         end
+        rule_data
+      end
 
+      def self.add_or_update(rule_data, options = {})
+        redis = options[:redis]
+        raise "a redis connection must be supplied" unless redis
+        logger = options[:logger]
+
+        rule_data = preen(rule_data)
         errors = self.validate_data(rule_data, options)
-
         return errors unless errors.nil? || errors.empty?
 
         # whitelisting fields, rather than passing through submitted data directly
@@ -227,61 +234,62 @@ module Flapjack
       end
 
       def self.validate_data(d, options = {})
+        id_not_required = !!options[:id_not_required]
         # hash with validation => error_message
-        validations = {proc { d.has_key?(:id) } =>
-                       "id not set",
+        validations = {}
+        validations.merge!({ proc { d.has_key?(:id) } => "id not set"}) unless id_not_required
+        validations.merge!({
+          proc { !d.has_key?(:entities) ||
+                 ( d[:entities].nil? ||
+                   d[:entities].is_a?(Array) &&
+                   d[:entities].all? {|e| e.is_a?(String)} ) } =>
+          "entities must be a list of strings",
 
-                       proc { !d.has_key?(:entities) ||
-                              ( d[:entities].nil? ||
-                                d[:entities].is_a?(Array) &&
-                                d[:entities].all? {|e| e.is_a?(String)} ) } =>
-                       "entities must be a list of strings",
+          proc { !d.has_key?(:tags) ||
+                 ( d[:tags].nil? ||
+                   d[:tags].is_a?(Flapjack::Data::TagSet) &&
+                   d[:tags].all? {|et| et.is_a?(String)} ) } =>
+          "tags must be a tag_set of strings",
 
-                       proc { !d.has_key?(:tags) ||
-                              ( d[:tags].nil? ||
-                                d[:tags].is_a?(Flapjack::Data::TagSet) &&
-                                d[:tags].all? {|et| et.is_a?(String)} ) } =>
-                       "tags must be a tag_set of strings",
+          proc { !d.has_key?(:time_restrictions) ||
+                 ( d[:time_restrictions].nil? ||
+                   d[:time_restrictions].all? {|tr|
+                     !!prepare_time_restriction(symbolize(tr))
+                   } )
+               } =>
+          "time restrictions are invalid",
 
-                       proc { !d.has_key?(:time_restrictions) ||
-                              ( d[:time_restrictions].nil? ||
-                                d[:time_restrictions].all? {|tr|
-                                  !!prepare_time_restriction(symbolize(tr))
-                                } )
-                            } =>
-                       "time restrictions are invalid",
+          # TODO should the media types be checked against a whitelist?
+          proc { !d.has_key?(:unknown_media) ||
+                 ( d[:unknown_media].nil? ||
+                   d[:unknown_media].is_a?(Array) &&
+                   d[:unknown_media].all? {|et| et.is_a?(String)} ) } =>
+          "unknown_media must be a list of strings",
 
-                       # TODO should the media types be checked against a whitelist?
-                       proc { !d.has_key?(:unknown_media) ||
-                              ( d[:unknown_media].nil? ||
-                                d[:unknown_media].is_a?(Array) &&
-                                d[:unknown_media].all? {|et| et.is_a?(String)} ) } =>
-                       "unknown_media must be a list of strings",
+          proc { !d.has_key?(:warning_media) ||
+                 ( d[:warning_media].nil? ||
+                   d[:warning_media].is_a?(Array) &&
+                   d[:warning_media].all? {|et| et.is_a?(String)} ) } =>
+          "warning_media must be a list of strings",
 
-                       proc { !d.has_key?(:warning_media) ||
-                              ( d[:warning_media].nil? ||
-                                d[:warning_media].is_a?(Array) &&
-                                d[:warning_media].all? {|et| et.is_a?(String)} ) } =>
-                       "warning_media must be a list of strings",
+          proc { !d.has_key?(:critical_media) ||
+                 ( d[:critical_media].nil? ||
+                   d[:critical_media].is_a?(Array) &&
+                   d[:critical_media].all? {|et| et.is_a?(String)} ) } =>
+          "critical_media must be a list of strings",
 
-                       proc { !d.has_key?(:critical_media) ||
-                              ( d[:critical_media].nil? ||
-                                d[:critical_media].is_a?(Array) &&
-                                d[:critical_media].all? {|et| et.is_a?(String)} ) } =>
-                       "critical_media must be a list of strings",
+          proc { !d.has_key?(:unknown_blackhole) ||
+                 [TrueClass, FalseClass].include?(d[:unknown_blackhole].class) } =>
+          "unknown_blackhole must be true or false",
 
-                       proc { !d.has_key?(:unknown_blackhole) ||
-                              [TrueClass, FalseClass].include?(d[:unknown_blackhole].class) } =>
-                       "unknown_blackhole must be true or false",
+          proc { !d.has_key?(:warning_blackhole) ||
+                 [TrueClass, FalseClass].include?(d[:warning_blackhole].class) } =>
+          "warning_blackhole must be true or false",
 
-                       proc { !d.has_key?(:warning_blackhole) ||
-                              [TrueClass, FalseClass].include?(d[:warning_blackhole].class) } =>
-                       "warning_blackhole must be true or false",
-
-                       proc { !d.has_key?(:critical_blackhole) ||
-                              [TrueClass, FalseClass].include?(d[:critical_blackhole].class) } =>
-                       "critical_blackhole must be true or false",
-                      }
+          proc { !d.has_key?(:critical_blackhole) ||
+                 [TrueClass, FalseClass].include?(d[:critical_blackhole].class) } =>
+          "critical_blackhole must be true or false",
+        })
 
         errors = validations.keys.inject([]) {|ret,vk|
           ret << "Rule #{validations[vk]}" unless vk.call

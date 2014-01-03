@@ -303,7 +303,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     aget "/notification_rules/#{notification_rule.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq('"rule_1"')
+    expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
   end
 
   it "does not return a notification rule that does not exist" do
@@ -330,17 +330,17 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(contact).to receive(:add_notification_rule).
       with(notification_rule_data_sym, :logger => @logger).and_return(notification_rule)
 
-    apost "/notification_rules", notification_rule_data.to_json,
+    apost "/notification_rules", {"notification_rules" => [notification_rule_data]}.to_json,
       {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-    expect(last_response).to be_ok
-    expect(last_response.body).to eq('"rule_1"')
+    expect(last_response.status).to eq(201)
+    expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
   end
 
   it "does not create a notification_rule for a contact that's not present" do
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    apost "/notification_rules", notification_rule_data.to_json,
+    apost "/notification_rules", {"notification_rules" => [notification_rule_data]}.to_json,
       {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(404)
   end
@@ -348,7 +348,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   it "does not create a notification_rule if a rule id is provided" do
     expect(contact).not_to receive(:add_notification_rule)
 
-    apost "/notification_rules", notification_rule_data.merge(:id => 1).to_json,
+    apost "/notification_rules", {"notification_rules" => [notification_rule_data.merge(:id => 1)]}.to_json,
       {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(422)
   end
@@ -369,17 +369,18 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     expect(notification_rule).to receive(:update).with(notification_rule_data_sym, :logger => @logger).and_return(nil)
 
-    aput "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
+    aput "/notification_rules/#{notification_rule.id}", {"notification_rules" => [notification_rule_data]}.to_json,
       {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response).to be_ok
-    expect(last_response.body).to eq('"rule_1"')
+    expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
   end
 
   it "does not update a notification rule that's not present" do
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    aput "/notification_rules/#{notification_rule.id}", notification_rule_data
+    aput "/notification_rules/#{notification_rule.id}", {"notification_rules" => [notification_rule_data]}.to_json,
+      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(404)
   end
 
@@ -389,7 +390,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    aput "/notification_rules/#{notification_rule.id}", notification_rule_data.to_json,
+    aput "/notification_rules/#{notification_rule.id}", {"notification_rules" => [notification_rule_data]}.to_json,
       {'CONTENT_TYPE' => JSON_REQUEST_MIME}
     expect(last_response.status).to eq(404)
   end
