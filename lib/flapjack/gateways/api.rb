@@ -27,18 +27,96 @@ module Flapjack
 
       include Flapjack::Utility
 
-      set :show_exceptions, false
+      class ContactNotFound < RuntimeError
+        attr_reader :contact_id
+        def initialize(contact_id)
+          @contact_id = contact_id
+        end
+      end
 
-      #rescue_exception = Proc.new { |env, exception|
-      #  @logger.error exception.message
-      #  @logger.error exception.backtrace.join("\n")
-      #  [503, {}, {:errors => [exception.message]}.to_json]
-      #}
-      #use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
-      #
-      # FIXME: not sure why the above isn't working, had to add a general
-      # error handler later in this file
-      use Rack::FiberPool, :size => 25
+      class NotificationRuleNotFound < RuntimeError
+        attr_reader :rule_id
+        def initialize(rule_id)
+          @rule_id = rule_id
+        end
+      end
+
+      class EntityNotFound < RuntimeError
+        attr_reader :entity
+        def initialize(entity)
+          @entity = entity
+        end
+      end
+
+      class EntityCheckNotFound < RuntimeError
+        attr_reader :entity, :check
+        def initialize(entity, check)
+          @entity = entity
+          @check = check
+        end
+      end
+
+      class ResourceLocked < RuntimeError
+        attr_reader :resource
+        def initialize(resource)
+          @resource = resource
+        end
+      end
+
+      set :dump_errors, false
+
+      rescue_error = Proc.new {|status, exception, request_info, *msg|
+        if !msg || msg.empty?
+          trace = exception.backtrace.join("\n")
+          msg = "#{exception.class} - #{exception.message}"
+          msg_str = "#{msg}\n#{trace}"
+        else
+          msg_str = msg.join(", ")
+        end
+        case
+        when status < 500
+          @logger.warn "Error: #{msg_str}"
+        else
+          @logger.error "Error: #{msg_str}"
+        end
+
+        response_body = {:errors => msg}.to_json
+
+        query_string = (request_info[:query_string].respond_to?(:length) &&
+                        request_info[:query_string].length > 0) ? "?#{request_info[:query_string]}" : ""
+        if @logger.debug?
+          @logger.debug("Returning #{status} for #{request_info[:request_method]} " +
+            "#{request_info[:path_info]}#{query_string}, body: #{response_body}")
+        elsif logger.info?
+          @logger.info("Returning #{status} for #{request_info[:request_method]} " +
+            "#{request_info[:path_info]}#{query_string}")
+        end
+
+        [status, {}, response_body]
+      }
+
+      rescue_exception = Proc.new {|env, e|
+        request_info = {
+          :path_info      => env['REQUEST_PATH'],
+          :request_method => env['REQUEST_METHOD'],
+          :query_string   => env['QUERY_STRING']
+        }
+        case e
+        when Flapjack::Gateways::API::ContactNotFound
+          rescue_error.call(404, e, request_info, "could not find contact '#{e.contact_id}'")
+        when Flapjack::Gateways::API::NotificationRuleNotFound
+          rescue_error.call(404, e, request_info,"could not find notification rule '#{e.rule_id}'")
+        when Flapjack::Gateways::API::EntityNotFound
+          rescue_error.call(404, e, request_info, "could not find entity '#{e.entity}'")
+        when Flapjack::Gateways::API::EntityCheckNotFound
+          rescue_error.call(404, e, request_info, "could not find entity check '#{e.check}'")
+        when Flapjack::Gateways::API::ResourceLocked
+          rescue_error.call(423, e, request_info, "unable to obtain lock for resource '#{e.resource}'")
+        else
+          rescue_error.call(500, e, request_info)
+        end
+      }
+      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
 
       use Rack::MethodOverride
       use Rack::JsonParamsParser
@@ -65,15 +143,31 @@ module Flapjack
       end
 
       before do
-        input = env['rack.input'].read
-        input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
-        logger.info("#{request.request_method} #{request.path_info}#{request.query_string} #{input_short[0..80]}")
-        logger.debug("#{request.request_method} #{request.path_info}#{request.query_string} #{input}")
-        env['rack.input'].rewind
+        input = nil
+        query_string = (request.query_string.respond_to?(:length) &&
+                        request.query_string.length > 0) ? "?#{request.query_string}" : ""
+        if logger.debug?
+          input = env['rack.input'].read
+          logger.debug("#{request.request_method} #{request.path_info}#{query_string} #{input}")
+        elsif logger.info?
+          input = env['rack.input'].read
+          input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
+          logger.info("#{request.request_method} #{request.path_info}#{query_string} #{input_short[0..80]}")
+        end
+        env['rack.input'].rewind unless input.nil?
       end
 
       after do
-        logger.debug("Returning #{response.status} for #{request.request_method} #{request.path_info}#{request.query_string}")
+        return if response.status == 500
+        query_string = (request.query_string.respond_to?(:length) &&
+                        request.query_string.length > 0) ? "?#{request.query_string}" : ""
+        if logger.debug?
+          logger.debug("Returning #{response.status} for #{request.request_method} " +
+            "#{request.path_info}#{query_string}, body: #{response.body.join(', ')}")
+        elsif logger.info?
+          logger.info("Returning #{response.status} for #{request.request_method} " +
+            "#{request.path_info}#{query_string}")
+        end
       end
 
       register Flapjack::Gateways::API::EntityMethods
@@ -81,33 +175,7 @@ module Flapjack
       register Flapjack::Gateways::API::ContactMethods
 
       not_found do
-        logger.debug("in not_found :-(")
         err(404, "not routable")
-      end
-
-      error Flapjack::Gateways::API::ContactNotFound do
-        e = env['sinatra.error']
-        err(403, "could not find contact '#{e.contact_id}'")
-      end
-
-      error Flapjack::Gateways::API::NotificationRuleNotFound do
-        e = env['sinatra.error']
-        err(403, "could not find notification rule '#{e.rule_id}'")
-      end
-
-      error Flapjack::Gateways::API::EntityNotFound do
-        e = env['sinatra.error']
-        err(403, "could not find entity '#{e.entity}'")
-      end
-
-      error Flapjack::Gateways::API::EntityCheckNotFound do
-        e = env['sinatra.error']
-        err(403, "could not find entity check '#{e.check}'")
-      end
-
-      error do
-        e = env['sinatra.error']
-        err(response.status, "#{e.class} - #{e.message}")
       end
 
       private
@@ -117,7 +185,6 @@ module Flapjack
         logger.info "Error: #{msg_str}"
         [status, {}, {:errors => msg}.to_json]
       end
-
     end
 
   end

@@ -112,6 +112,12 @@ module Flapjack
       (LEVELS + [:configure, :close, :add]).include?(sym)
     end
 
+    ['debug', 'info', 'warn', 'error', 'fatal'].each { |level|
+      define_method("#{level}?") {
+        @logger.send("#{level}?")
+      }
+    }
+
   end
 
 end

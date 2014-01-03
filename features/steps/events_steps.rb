@@ -279,7 +279,7 @@ Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on enti
   entity ||= @entity
   message = @logger.messages.find_all {|m| m =~ /enerating notification for event #{entity}:#{check}/ }.last
   found = message ? message.match(/Not generating notification/) : false
-  found.should be_true
+  expect(found).to be_truthy
 end
 
 Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
@@ -287,13 +287,13 @@ Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '
   entity ||= @entity
   message = @logger.messages.find_all {|m| m =~ /enerating notification for event #{entity}:#{check}/ }.last
   found = message ? message.match(/Generating notification/) : false
-  found.should be_true
+  expect(found).to be_truthy
 end
 
 Then /^(un)?scheduled maintenance should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |unsched, check, entity|
   check  ||= @check
   entity ||= @entity
-  @redis.get("#{entity}:#{check}:#{unsched || ''}scheduled_maintenance").should_not be_nil
+  expect(@redis.get("#{entity}:#{check}:#{unsched || ''}scheduled_maintenance")).not_to be_nil
 end
 
 Then /^show me the (\w+ )*log$/ do |adjective|
@@ -401,7 +401,7 @@ Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules
 end
 
 Then /^all alert dropping keys for user (\S+) should have expired$/ do |contact_id|
-  @redis.keys("drop_alerts_for_contact:#{contact_id}*").should be_empty
+  expect(@redis.keys("drop_alerts_for_contact:#{contact_id}*")).to be_empty
 end
 
 Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))? should be queued for (.*)$/ do |num_queued, media, notification_type, rollup, address|
@@ -412,7 +412,7 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
     num_queued = 0
   end
   queue = Resque.peek("#{media}_notifications", 0, 30)
-  queue.find_all {|n|
+  queued_length = queue.find_all {|n|
     type_ok = notification_type ? ( n['args'].first['notification_type'] == notification_type ) : true
     rollup_ok = true
     if rollup
@@ -423,7 +423,8 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
       end
     end
     type_ok && rollup_ok && ( n['args'].first['address'] == address )
-  }.length.should == num_queued.to_i
+  }.length
+  expect(queued_length).to eq(num_queued.to_i)
 end
 
 When(/^user (\S+) ceases to be a contact of entity '(.*)'$/) do |contact_id, entity|

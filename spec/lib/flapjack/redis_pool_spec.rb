@@ -11,7 +11,7 @@ describe Flapjack::RedisPool do
         redis = double('redis')
         redis
       }
-      ::Redis.should_receive(:new).exactly(redis_count).times.and_return(*redis_conns)
+      expect(::Redis).to receive(:new).exactly(redis_count).times.and_return(*redis_conns)
 
       frp = Flapjack::RedisPool.new(:size => redis_count)
 

@@ -23,56 +23,56 @@ describe Flapjack::Data::Event do
   context 'class' do
 
     it "returns the next event (blocking, archiving)" do
-      mock_redis.should_receive(:brpoplpush).with('events', /^events_archive:/, 0).and_return(event_data.to_json)
-      mock_redis.should_receive(:expire)
+      expect(mock_redis).to receive(:brpoplpush).with('events', /^events_archive:/, 0).and_return(event_data.to_json)
+      expect(mock_redis).to receive(:expire)
 
       result = Flapjack::Data::Event.next('events', :block => true, :archive_events => true, :redis => mock_redis)
-      result.should be_an_instance_of(Flapjack::Data::Event)
+      expect(result).to be_an_instance_of(Flapjack::Data::Event)
     end
 
     it "returns the next event (blocking, not archiving)" do
-      mock_redis.should_receive(:brpop).with('events', 0).and_return(['events', event_data.to_json])
+      expect(mock_redis).to receive(:brpop).with('events', 0).and_return(['events', event_data.to_json])
 
       result = Flapjack::Data::Event.next('events', :block => true, :archive_events => false, :redis => mock_redis)
-      result.should be_an_instance_of(Flapjack::Data::Event)
+      expect(result).to be_an_instance_of(Flapjack::Data::Event)
     end
 
     it "returns the next event (non-blocking, archiving)" do
-      mock_redis.should_receive(:rpoplpush).with('events', /^events_archive:/).and_return(event_data.to_json)
-      mock_redis.should_receive(:expire)
+      expect(mock_redis).to receive(:rpoplpush).with('events', /^events_archive:/).and_return(event_data.to_json)
+      expect(mock_redis).to receive(:expire)
 
       result = Flapjack::Data::Event.next('events', :block => false, :archive_events => true, :redis => mock_redis)
-      result.should be_an_instance_of(Flapjack::Data::Event)
+      expect(result).to be_an_instance_of(Flapjack::Data::Event)
     end
 
     it "returns the next event (non-blocking, not archiving)" do
-      mock_redis.should_receive(:rpop).with('events').and_return(event_data.to_json)
+      expect(mock_redis).to receive(:rpop).with('events').and_return(event_data.to_json)
 
       result = Flapjack::Data::Event.next('events', :block => false, :archive_events => false, :redis => mock_redis)
-      result.should be_an_instance_of(Flapjack::Data::Event)
+      expect(result).to be_an_instance_of(Flapjack::Data::Event)
     end
 
     it "handles invalid event JSON"
 
     it "returns a count of pending events" do
       events_len = 23
-      mock_redis.should_receive(:llen).with('events').and_return(events_len)
+      expect(mock_redis).to receive(:llen).with('events').and_return(events_len)
 
       pc = Flapjack::Data::Event.pending_count('events', :redis => mock_redis)
-      pc.should == events_len
+      expect(pc).to eq(events_len)
     end
 
     it "creates a notification testing event" do
-      Time.should_receive(:now).and_return(time)
-      mock_redis.should_receive(:lpush).with('events', /"testing"/ )
+      expect(Time).to receive(:now).and_return(time)
+      expect(mock_redis).to receive(:lpush).with('events', /"testing"/ )
 
       Flapjack::Data::Event.test_notifications(entity_name, check,
         :summary => 'test', :details => 'testing', :redis => mock_redis)
     end
 
     it "creates an acknowledgement event" do
-      Time.should_receive(:now).and_return(time)
-      mock_redis.should_receive(:lpush).with('events', /"acking"/ )
+      expect(Time).to receive(:now).and_return(time)
+      expect(mock_redis).to receive(:lpush).with('events', /"acking"/ )
 
       Flapjack::Data::Event.create_acknowledgement(entity_name, check,
         :summary => 'acking', :time => time.to_i, :redis => mock_redis)
@@ -81,20 +81,24 @@ describe Flapjack::Data::Event do
   end
 
   context 'instance' do
-    subject { Flapjack::Data::Event.new(event_data) }
+    let(:event) { Flapjack::Data::Event.new(event_data) }
 
-    its(:entity)   { should == event_data['entity'] }
-    its(:state)    { should == event_data['state'] }
-    its(:duration) { should == event_data['duration'] }
-    its(:time)     { should == event_data['time'] }
-    its(:id)       { should == 'xyz-example.com:ping' }
-    its(:type)     { should == 'service' }
+    it "matches the data it is initialised with" do
+      expect(event.entity).to eq(event_data['entity'])
+      expect(event.state).to eq(event_data['state'])
+      expect(event.duration).to eq(event_data['duration'])
+      expect(event.time).to eq(event_data['time'])
+      expect(event.id).to eq('xyz-example.com:ping')
+      expect(event.type).to eq('service')
 
-    it { should be_a_service }
-    it { should_not be_a_acknowledgement }
-    it { should_not be_a_test_notifications }
-    it { should_not be_ok }
-    it { should be_a_failure }
+      expect(event).to be_a_service
+      expect(event).to be_a_service
+      expect(event).not_to be_an_acknowledgement
+      expect(event).not_to be_a_test_notifications
+      expect(event).not_to be_ok
+      expect(event).to be_a_failure
+    end
+
   end
 
 end

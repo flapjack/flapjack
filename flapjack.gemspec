@@ -4,9 +4,9 @@ require File.expand_path('../lib/flapjack/version', __FILE__)
 Gem::Specification.new do |gem|
   gem.authors       = [ "Lindsay Holmwood", "Jesse Reynolds", "Ali Graham" ]
   gem.email         = "lindsay@holmwood.id.au"
-  gem.description   = "Flapjack is distributed monitoring notification system that provides a scalable method for processing streams of events from Nagios and deciding who should be notified"
+  gem.description   = "Flapjack is a distributed monitoring notification system that provides a scalable method for processing streams of events from Nagios and deciding who should be notified"
   gem.summary       = "Intelligent, scalable, distributed monitoring notification system."
-  gem.homepage      = "http://flapjack-project.com/"
+  gem.homepage      = "http://flapjack.io/"
   gem.license       = 'MIT'
 
   # see http://yehudakatz.com/2010/12/16/clarifying-the-roles-of-the-gemspec-and-gemfile/
@@ -24,7 +24,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'hiredis'
   gem.add_dependency 'em-synchrony', '~> 1.0.2'
   gem.add_dependency 'em-http-request'
-  gem.add_dependency 'redis'
+  gem.add_dependency 'redis', '~> 3.0.6'
   gem.add_dependency 'em-resque'
   gem.add_dependency 'resque', '~> 1.23.0'
   gem.add_dependency 'sinatra'

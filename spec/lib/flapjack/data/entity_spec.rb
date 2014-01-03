@@ -9,9 +9,9 @@ describe Flapjack::Data::Entity, :redis => true do
   it "creates an entity if allowed when it can't find it" do
     entity = Flapjack::Data::Entity.find_by_name(name, :redis => @redis, :create => true)
 
-    entity.should_not be_nil
-    entity.name.should == name
-    @redis.get("entity_id:#{name}").should == ''
+    expect(entity).not_to be_nil
+    expect(entity.name).to eq(name)
+    expect(@redis.get("entity_id:#{name}")).to eq('')
   end
 
   it "adds a registered contact with an entity" do
@@ -27,12 +27,12 @@ describe Flapjack::Data::Entity, :redis => true do
                                 :redis => @redis)
 
     entity = Flapjack::Data::Entity.find_by_id('5000', :redis => @redis)
-    entity.should_not be_nil
+    expect(entity).not_to be_nil
     contacts = entity.contacts
-    contacts.should_not be_nil
-    contacts.should be_an(Array)
-    contacts.should have(1).contact
-    contacts.first.name.should == 'John Johnson'
+    expect(contacts).not_to be_nil
+    expect(contacts).to be_an(Array)
+    expect(contacts.size).to eq(1)
+    expect(contacts.first.name).to eq('John Johnson')
   end
 
   it "does not add a registered contact with an entity if the contact is unknown" do
@@ -42,11 +42,11 @@ describe Flapjack::Data::Entity, :redis => true do
                                 :redis => @redis)
 
     entity = Flapjack::Data::Entity.find_by_id('5000', :redis => @redis)
-    entity.should_not be_nil
+    expect(entity).not_to be_nil
     contacts = entity.contacts
-    contacts.should_not be_nil
-    contacts.should be_an(Array)
-    contacts.should be_empty
+    expect(contacts).not_to be_nil
+    expect(contacts).to be_an(Array)
+    expect(contacts).to be_empty
   end
 
   it "finds an entity by id" do
@@ -55,8 +55,8 @@ describe Flapjack::Data::Entity, :redis => true do
                                 :redis => @redis)
 
     entity = Flapjack::Data::Entity.find_by_id('5000', :redis => @redis)
-    entity.should_not be_nil
-    entity.name.should == name
+    expect(entity).not_to be_nil
+    expect(entity.name).to eq(name)
   end
 
   it "finds an entity by name" do
@@ -65,8 +65,8 @@ describe Flapjack::Data::Entity, :redis => true do
                                 :redis => @redis)
 
     entity = Flapjack::Data::Entity.find_by_name(name, :redis => @redis)
-    entity.should_not be_nil
-    entity.id.should == '5000'
+    expect(entity).not_to be_nil
+    expect(entity.id).to eq('5000')
   end
 
   it "returns a list of all entities" do
@@ -78,11 +78,11 @@ describe Flapjack::Data::Entity, :redis => true do
                                 :redis => @redis)
 
     entities = Flapjack::Data::Entity.all(:redis => @redis)
-    entities.should_not be_nil
-    entities.should be_an(Array)
-    entities.should have(2).entities
-    entities[0].id.should == '5000'
-    entities[1].id.should == '5001'
+    expect(entities).not_to be_nil
+    expect(entities).to be_an(Array)
+    expect(entities.size).to eq(2)
+    expect(entities[0].id).to eq('5000')
+    expect(entities[1].id).to eq('5001')
   end
 
   it "returns a list of checks for an entity" do
@@ -95,11 +95,11 @@ describe Flapjack::Data::Entity, :redis => true do
 
     entity = Flapjack::Data::Entity.find_by_name(name, :redis => @redis)
     check_list = entity.check_list
-    check_list.should_not be_nil
-    check_list.should have(2).checks
+    expect(check_list).not_to be_nil
+    expect(check_list.size).to eq(2)
     sorted_list = check_list.sort
-    sorted_list[0].should == 'ping'
-    sorted_list[1].should == 'ssh'
+    expect(sorted_list[0]).to eq('ping')
+    expect(sorted_list[1]).to eq('ssh')
   end
 
   it "returns a count of checks for an entity" do
@@ -113,8 +113,8 @@ describe Flapjack::Data::Entity, :redis => true do
 
     entity = Flapjack::Data::Entity.find_by_id(5000, :redis => @redis)
     check_count = entity.check_count
-    check_count.should_not be_nil
-    check_count.should == 2
+    expect(check_count).not_to be_nil
+    expect(check_count).to eq(2)
   end
 
   it "finds entity names matching a pattern" do
@@ -129,10 +129,10 @@ describe Flapjack::Data::Entity, :redis => true do
                                :redis => @redis)
 
     entities = Flapjack::Data::Entity.find_all_name_matching('abc', :redis => @redis)
-    entities.should_not be_nil
-    entities.should be_an(Array)
-    entities.should have(1).entity
-    entities.first.should == 'abc-123'
+    expect(entities).not_to be_nil
+    expect(entities).to be_an(Array)
+    expect(entities.size).to eq(1)
+    expect(entities.first).to eq('abc-123')
   end
 
   it "adds tags to entities" do
@@ -143,16 +143,16 @@ describe Flapjack::Data::Entity, :redis => true do
 
     entity.add_tags('source:foobar', 'foo')
 
-    entity.should_not be_nil
-    entity.should be_an(Flapjack::Data::Entity)
-    entity.name.should == 'abc-123'
-    entity.tags.should include("source:foobar")
-    entity.tags.should include("foo")
+    expect(entity).not_to be_nil
+    expect(entity).to be_an(Flapjack::Data::Entity)
+    expect(entity.name).to eq('abc-123')
+    expect(entity.tags).to include("source:foobar")
+    expect(entity.tags).to include("foo")
 
     # and test the tags as read back from redis
     entity = Flapjack::Data::Entity.find_by_id('5000', :redis => @redis)
-    entity.tags.should include("source:foobar")
-    entity.tags.should include("foo")
+    expect(entity.tags).to include("source:foobar")
+    expect(entity.tags).to include("foo")
 
   end
 
@@ -164,14 +164,14 @@ describe Flapjack::Data::Entity, :redis => true do
 
     entity.add_tags('source:foobar', 'foo')
 
-    entity.should_not be_nil
-    entity.tags.should include("source:foobar")
-    entity.tags.should include("foo")
+    expect(entity).not_to be_nil
+    expect(entity.tags).to include("source:foobar")
+    expect(entity.tags).to include("foo")
 
     entity.delete_tags('source:foobar')
 
-    entity.tags.should_not include("source:foobar")
-    entity.tags.should include("foo")
+    expect(entity.tags).not_to include("source:foobar")
+    expect(entity.tags).to include("foo")
 
   end
 
@@ -189,25 +189,25 @@ describe Flapjack::Data::Entity, :redis => true do
     entity0.add_tags('source:foobar', 'abc')
     entity1.add_tags('source:foobar', 'def')
 
-    entity0.should_not be_nil
-    entity0.should be_an(Flapjack::Data::Entity)
-    entity0.tags.should include("source:foobar")
-    entity0.tags.should include("abc")
-    entity0.tags.should_not include("def")
-    entity1.should_not be_nil
-    entity1.should be_an(Flapjack::Data::Entity)
-    entity1.tags.should include("source:foobar")
-    entity1.tags.should include("def")
-    entity1.tags.should_not include("abc")
+    expect(entity0).not_to be_nil
+    expect(entity0).to be_an(Flapjack::Data::Entity)
+    expect(entity0.tags).to include("source:foobar")
+    expect(entity0.tags).to include("abc")
+    expect(entity0.tags).not_to include("def")
+    expect(entity1).not_to be_nil
+    expect(entity1).to be_an(Flapjack::Data::Entity)
+    expect(entity1.tags).to include("source:foobar")
+    expect(entity1.tags).to include("def")
+    expect(entity1.tags).not_to include("abc")
 
     entities = Flapjack::Data::Entity.find_all_with_tags(['abc'], :redis => @redis)
-    entities.should be_an(Array)
-    entities.should have(1).entity
-    entities.first.should == 'abc-123'
+    expect(entities).to be_an(Array)
+    expect(entities.size).to eq(1)
+    expect(entities.first).to eq('abc-123')
 
     entities = Flapjack::Data::Entity.find_all_with_tags(['donkey'], :redis => @redis)
-    entities.should be_an(Array)
-    entities.should have(0).entities
+    expect(entities).to be_an(Array)
+    expect(entities).to be_empty
   end
 
   it "finds entities with several tags" do
@@ -224,23 +224,23 @@ describe Flapjack::Data::Entity, :redis => true do
     entity0.add_tags('source:foobar', 'abc')
     entity1.add_tags('source:foobar', 'def')
 
-    entity0.should_not be_nil
-    entity0.should be_an(Flapjack::Data::Entity)
-    entity0.tags.should include("source:foobar")
-    entity0.tags.should include("abc")
-    entity1.should_not be_nil
-    entity1.should be_an(Flapjack::Data::Entity)
-    entity1.tags.should include("source:foobar")
-    entity1.tags.should include("def")
+    expect(entity0).not_to be_nil
+    expect(entity0).to be_an(Flapjack::Data::Entity)
+    expect(entity0.tags).to include("source:foobar")
+    expect(entity0.tags).to include("abc")
+    expect(entity1).not_to be_nil
+    expect(entity1).to be_an(Flapjack::Data::Entity)
+    expect(entity1.tags).to include("source:foobar")
+    expect(entity1.tags).to include("def")
 
     entities = Flapjack::Data::Entity.find_all_with_tags(['source:foobar'], :redis => @redis)
-    entities.should be_an(Array)
-    entities.should have(2).entity
+    expect(entities).to be_an(Array)
+    expect(entities.size).to eq(2)
 
     entities = Flapjack::Data::Entity.find_all_with_tags(['source:foobar', 'def'], :redis => @redis)
-    entities.should be_an(Array)
-    entities.should have(1).entity
-    entities.first.should == 'def-456'
+    expect(entities).to be_an(Array)
+    expect(entities.size).to eq(1)
+    expect(entities.first).to eq('def-456')
   end
 
 end

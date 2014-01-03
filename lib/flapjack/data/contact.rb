@@ -46,6 +46,13 @@ module Flapjack
         contact
       end
 
+      def self.exists_with_id?(contact_id, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        raise "No id value passed" unless contact_id
+
+        redis.exists("contact:#{contact_id}")
+      end
+
       def self.add(contact_data, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         contact_id = contact_data['id']
@@ -412,6 +419,9 @@ module Flapjack
           "first_name" => self.first_name,
           "last_name"  => self.last_name,
           "email"      => self.email,
+          "media"      => self.media,
+          "media_intervals" => self.media_intervals,
+          "media_rollup_thresholds" => self.media_rollup_thresholds,
           "tags"       => self.tags.to_a }.to_json
       end
 

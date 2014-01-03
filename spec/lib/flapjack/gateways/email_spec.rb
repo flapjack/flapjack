@@ -10,15 +10,15 @@ describe Flapjack::Gateways::Email, :logger => true do
     redis = double('redis')
 
     # TODO better checking of what gets passed here
-    EM::P::SmtpClient.should_receive(:send).with(
+    expect(EM::P::SmtpClient).to receive(:send).with(
       hash_including(:host    => 'localhost',
                      :port    => 25)).and_return(email)
 
     response = double(response)
-    response.should_receive(:"respond_to?").with(:code).and_return(true)
-    response.should_receive(:code).and_return(250)
+    expect(response).to receive(:"respond_to?").with(:code).and_return(true)
+    expect(response).to receive(:code).and_return(250)
 
-    EM::Synchrony.should_receive(:sync).with(email).and_return(response)
+    expect(EM::Synchrony).to receive(:sync).with(email).and_return(response)
 
     notification = {'notification_type'   => 'recovery',
                     'contact_first_name'  => 'John',
