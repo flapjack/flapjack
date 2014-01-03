@@ -157,7 +157,7 @@ module Flapjack
 
             '{"contacts":[' + contacts_json + ']' +
               ( linked_entities.empty? ? '}' :
-                '], "linked": {"entities":' + linked_entities.values.to_json + '}}')
+                ', "linked": {"entities":' + linked_entities.values.to_json + '}}')
           end
 
           # Returns the core information about the specified contact
@@ -171,7 +171,7 @@ module Flapjack
 
             '{"contacts":[' + contact.to_json + ']' +
               ( entities.empty? ? '}' :
-                '], "linked": {"entities":' + entities.values.to_json + '}}')
+                ', "linked": {"entities":' + entities.values.to_json + '}}')
           end
 
           # Updates a contact
