@@ -18,8 +18,16 @@
     </script>
 
     <script type="text/template" id="contact-list-item-template">
-      <div class="contact_list_item"><@- first_name@>&nbsp;<@- last_name @> (<@- email @>) <button class="contact_remove" id="contact_<@- id @>_remove" type="button">Remove</button></div>
-      <div class="contact" style="display: <@- display @>">
+      <div class="contact_list_item">
+        <button class="contact_entities" id="contact_<@- id @>_entities" type="button">Entities</button>
+        <button class="contact_edit" id="contact_<@- id @>_edit" type="button">Edit</button>
+        <button class="contact_remove" id="contact_<@- id @>_remove" type="button">Remove</button>
+        <@- first_name@>&nbsp;<@- last_name @> (<@- email @>)
+      </div>
+      <div class="contact_entities_view" style="display: <@- entities_display @>">
+
+      </div>
+      <div class="contact_edit_view" style="display: <@- edit_display @>">
         <form>
           <fieldset>
             <ol>
