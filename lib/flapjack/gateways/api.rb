@@ -89,7 +89,7 @@ module Flapjack
         if @logger.debug?
           @logger.debug("Returning #{status} for #{request_info[:request_method]} " +
             "#{request_info[:path_info]}#{query_string}, body: #{response_body}")
-        elsif logger.info?
+        elsif @logger.info?
           @logger.info("Returning #{status} for #{request_info[:request_method]} " +
             "#{request_info[:path_info]}#{query_string}")
         end
