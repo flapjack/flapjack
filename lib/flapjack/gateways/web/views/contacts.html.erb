@@ -1,42 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <% nav  = render_erb('_nav.html.erb', binding) %>
-    <% head = render_erb('_head.html.erb', binding) %>
-    <% foot = render_erb('_foot.html.erb', binding) %>
-    <title>Flapjack - Contacts</title>
-    <%= head %>
-  </head>
-  <body>
-    <div id="wrap">
-      <div class="container">
-        <div class="page-header">
-          <%= nav %>
-          <h2>Contacts</h2>
-        </div>
+<div class="page-header">
+  <h2>Contacts</h2>
+</div>
 
-        <% if !@contacts || @contacts.empty? %>
-          <p>No contacts</p>
-        <% else %>
-          <table class="table table-bordered table-hover table-condensed">
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-            </tr>
-            <% @contacts.sort_by {|c| [c.last_name, c.first_name] }.each do |contact| %>
-            <tr>
-              <td><a href="/contacts/<%= contact.id %>" title="contact details"><%= h contact.name %></a></td>
-              <td><%= h contact.email %></td>
-            </tr>
-            <% end %>
-          </table>
-        <% end %>
-
-      </div>
-      <div id="push"></div>
-    </div>
-    <div id="footer">
-      <%= foot %>
-    </div>
-  </body>
-</html>
+<% if !@contacts || @contacts.empty? %>
+  <p>No contacts</p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>Name</th>
+      <th>Email</th>
+    </tr>
+    <% @contacts.sort_by {|c| [c.last_name, c.first_name] }.each do |contact| %>
+    <tr>
+      <td><a href="/contacts/<%= contact.id %>" title="contact details"><%= h contact.name %></a></td>
+      <td><%= h contact.email %></td>
+    </tr>
+    <% end %>
+  </table>
+<% end %>
