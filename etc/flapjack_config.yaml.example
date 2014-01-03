@@ -91,9 +91,17 @@ production:
       logger:
         level: INFO
         syslog_errors: yes
-    api:
+    jsonapi:
       enabled: yes
       port: 3081
+      timeout: 300
+      access_log: "/var/log/flapjack/jsonapi_access.log"
+      logger:
+        level: INFO
+        syslog_errors: yes
+    api:
+      enabled: yes
+      port: 3071
       timeout: 300
       access_log: "/var/log/flapjack/api_access.log"
       logger:

@@ -118,10 +118,10 @@ module Flapjack
           rescue_error.call(500, e, request_info)
         end
       }
-      use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+      use ::Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
 
-      use Rack::MethodOverride
-      use Rack::JsonParamsParser
+      use ::Rack::MethodOverride
+      use Flapjack::Gateways::JSONAPI::Rack::JsonParamsParser
 
       class << self
         def start
