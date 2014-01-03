@@ -1,0 +1,25 @@
+nav.navbar-inverse {
+  border-radius: 0px;
+}
+
+nav.navbar .navbar-brand {
+  padding: 7px;
+}
+
+nav.navbar .navbar-header img.logo {
+  height: 28px;
+  display: block;
+  float: left;
+  margin-left: 8px;
+}
+
+nav.navbar .navbar-header span.name {
+  padding-top: 8px;
+  display: block;
+  float: left;
+  margin-left: 8px;
+}
+
+.container.content {
+  padding-bottom: 20px;
+}
