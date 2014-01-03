@@ -1,7 +1,7 @@
 require 'spec_helper'
-require 'flapjack/gateways/api'
+require 'flapjack/gateways/jsonapi'
 
-describe 'Flapjack::Gateways::API', :sinatra => true, :logger => true do
+describe 'Flapjack::Gateways::JSONAPI', :sinatra => true, :logger => true do
 
   it "handles a route matching failure"
 

@@ -1,15 +1,15 @@
 require 'spec_helper'
-require 'flapjack/gateways/api/entity_presenter'
+require 'flapjack/gateways/jsonapi/entity_presenter'
 
-describe 'Flapjack::Gateways::API::EntityPresenter' do
+describe 'Flapjack::Gateways::JSONAPI::EntityPresenter' do
 
   let(:entity) { double(Flapjack::Data::Entity) }
 
   let(:check_a) { double(Flapjack::Data::EntityCheck) }
   let(:check_b) { double(Flapjack::Data::EntityCheck) }
 
-  let(:checkpres_a) { double(Flapjack::Gateways::API::EntityCheckPresenter) }
-  let(:checkpres_b) { double(Flapjack::Gateways::API::EntityCheckPresenter) }
+  let(:checkpres_a) { double(Flapjack::Gateways::JSONAPI::EntityCheckPresenter) }
+  let(:checkpres_b) { double(Flapjack::Gateways::JSONAPI::EntityCheckPresenter) }
 
   let(:time) { Time.now.to_i }
 
@@ -24,9 +24,9 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
       with(entity, 'ping', anything).and_return(check_b)
 
-    expect(Flapjack::Gateways::API::EntityCheckPresenter).to receive(:new).
+    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
       with(check_a).and_return(checkpres_a)
-    expect(Flapjack::Gateways::API::EntityCheckPresenter).to receive(:new).
+    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
       with(check_b).and_return(checkpres_b)
   end
 
@@ -38,7 +38,7 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
     expect(checkpres_a).to receive(:status).and_return(status_a)
     expect(checkpres_b).to receive(:status).and_return(status_b)
 
-    ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
+    ep = Flapjack::Gateways::JSONAPI::EntityPresenter.new(entity)
     status = ep.status
     expect(status).to eq([{:entity => entity.name, :check => 'ping', :status => status_b},
                       {:entity => entity.name, :check => 'ssh',  :status => status_a}])
@@ -54,7 +54,7 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
     expect(checkpres_b).to receive(:outages).with(start_time, end_time).
       and_return(outages_b)
 
-    ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
+    ep = Flapjack::Gateways::JSONAPI::EntityPresenter.new(entity)
     outages = ep.outages(start_time, end_time)
     expect(outages).to eq([{:entity => entity.name, :check => 'ping', :outages => outages_b},
                        {:entity => entity.name, :check => 'ssh',  :outages => outages_a}])
@@ -69,7 +69,7 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
     expect(checkpres_b).to receive(:unscheduled_maintenances).with(start_time, end_time).
       and_return(unsched_maint_b)
 
-    ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
+    ep = Flapjack::Gateways::JSONAPI::EntityPresenter.new(entity)
     unsched_maint = ep.unscheduled_maintenances(start_time, end_time)
     expect(unsched_maint).to eq([{:entity => entity.name, :check => 'ping', :unscheduled_maintenances => unsched_maint_b},
                              {:entity => entity.name, :check => 'ssh',  :unscheduled_maintenances => unsched_maint_a}])
@@ -84,7 +84,7 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
     expect(checkpres_b).to receive(:scheduled_maintenances).with(start_time, end_time).
       and_return(sched_maint_b)
 
-    ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
+    ep = Flapjack::Gateways::JSONAPI::EntityPresenter.new(entity)
     sched_maint = ep.scheduled_maintenances(start_time, end_time)
     expect(sched_maint).to eq([{:entity => entity.name, :check => 'ping', :scheduled_maintenances => sched_maint_b},
                            {:entity => entity.name, :check => 'ssh',  :scheduled_maintenances => sched_maint_a}])
@@ -99,7 +99,7 @@ describe 'Flapjack::Gateways::API::EntityPresenter' do
     expect(checkpres_b).to receive(:downtime).with(start_time, end_time).
       and_return(downtime_b)
 
-    ep = Flapjack::Gateways::API::EntityPresenter.new(entity)
+    ep = Flapjack::Gateways::JSONAPI::EntityPresenter.new(entity)
     downtime = ep.downtime(start_time, end_time)
     expect(downtime).to eq([{:entity => entity.name, :check => 'ping', :downtime => downtime_b},
                         {:entity => entity.name, :check => 'ssh',  :downtime => downtime_a}])

@@ -6,14 +6,14 @@
 
 require 'sinatra/base'
 
-require 'flapjack/gateways/api/entity_check_presenter'
+require 'flapjack/gateways/jsonapi/entity_check_presenter'
 require 'flapjack/data/entity_check'
 
 module Flapjack
 
   module Gateways
 
-    class API < Sinatra::Base
+    class JSONAPI < Sinatra::Base
 
       class EntityPresenter
 
@@ -63,7 +63,7 @@ module Flapjack
         def check_presenter(check)
           entity_check = Flapjack::Data::EntityCheck.for_entity(@entity, check,
             :redis => @redis)
-          presenter = Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check)
+          presenter = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
         end
 
       end

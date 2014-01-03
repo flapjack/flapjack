@@ -5,14 +5,14 @@ require 'sinatra/base'
 require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
 
-require 'flapjack/gateways/api/entity_presenter'
-require 'flapjack/gateways/api/entity_check_presenter'
+require 'flapjack/gateways/jsonapi/entity_presenter'
+require 'flapjack/gateways/jsonapi/entity_check_presenter'
 
 module Flapjack
 
   module Gateways
 
-    class API < Sinatra::Base
+    class JSONAPI < Sinatra::Base
 
       module EntityMethods
 
@@ -20,14 +20,14 @@ module Flapjack
 
           def find_entity(entity_name)
             entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
-            raise Flapjack::Gateways::API::EntityNotFound.new(entity_name) if entity.nil?
+            raise Flapjack::Gateways::JSONAPI::EntityNotFound.new(entity_name) if entity.nil?
             entity
           end
 
           def find_entity_check(entity, check)
             entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
               check, :redis => redis)
-            raise Flapjack::Gateways::API::EntityCheckNotFound.new(entity, check) if entity_check.nil?
+            raise Flapjack::Gateways::JSONAPI::EntityCheckNotFound.new(entity, check) if entity_check.nil?
             entity_check
           end
 
@@ -79,7 +79,7 @@ module Flapjack
             unless entities.nil? || entities.empty?
               result += entities.collect {|entity_name|
                 entity = find_entity(entity_name)
-                yield(Flapjack::Gateways::API::EntityPresenter.new(entity, :redis => redis))
+                yield(Flapjack::Gateways::JSONAPI::EntityPresenter.new(entity, :redis => redis))
               }.flatten(1)
             end
 
@@ -91,7 +91,7 @@ module Flapjack
                   entity_check = find_entity_check(entity, check)
                   {:entity => entity_name,
                    :check => check,
-                   result_type.to_sym => yield(Flapjack::Gateways::API::EntityCheckPresenter.new(entity_check))
+                   result_type.to_sym => yield(Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check))
                   }
                 }
               }.flatten(1)
@@ -116,12 +116,12 @@ module Flapjack
 
         def self.registered(app)
 
-          app.helpers Flapjack::Gateways::API::EntityMethods::Helpers
+          app.helpers Flapjack::Gateways::JSONAPI::EntityMethods::Helpers
 
           app.get '/entities' do
             content_type :json
             ret = Flapjack::Data::Entity.all(:redis => redis).sort_by(&:name).collect {|e|
-              presenter = Flapjack::Gateways::API::EntityPresenter.new(e, :redis => redis)
+              presenter = Flapjack::Gateways::JSONAPI::EntityPresenter.new(e, :redis => redis)
               {'id' => e.id, 'name' => e.name, 'checks' => presenter.status }
             }
             ret.to_json
@@ -286,7 +286,7 @@ module Flapjack
           end
 
           app.post '/entities' do
-            pass unless Flapjack::Gateways::API::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
+            pass unless Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
 
             errors = []
             ret = nil

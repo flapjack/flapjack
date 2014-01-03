@@ -1,10 +1,10 @@
 require 'spec_helper'
-require 'flapjack/gateways/api'
+require 'flapjack/gateways/jsonapi'
 
-describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger => true do
+describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logger => true do
 
   def app
-    Flapjack::Gateways::API
+    Flapjack::Gateways::JSONAPI
   end
 
   JSON_REQUEST_MIME = 'application/vnd.api+json'
@@ -61,16 +61,16 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
   }
 
   before(:all) do
-    Flapjack::Gateways::API.class_eval {
+    Flapjack::Gateways::JSONAPI.class_eval {
       set :raise_errors, true
     }
   end
 
   before(:each) do
     expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
-    Flapjack::Gateways::API.instance_variable_set('@config', {})
-    Flapjack::Gateways::API.instance_variable_set('@logger', @logger)
-    Flapjack::Gateways::API.start
+    Flapjack::Gateways::JSONAPI.instance_variable_set('@config', {})
+    Flapjack::Gateways::JSONAPI.instance_variable_set('@logger', @logger)
+    Flapjack::Gateways::JSONAPI.start
   end
 
   it "returns all the contacts" do

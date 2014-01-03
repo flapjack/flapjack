@@ -14,16 +14,16 @@ require 'sinatra/base'
 require 'flapjack/rack_logger'
 require 'flapjack/redis_pool'
 
-require 'flapjack/gateways/api/rack/json_params_parser'
+require 'flapjack/gateways/jsonapi/rack/json_params_parser'
 
-require 'flapjack/gateways/api/contact_methods'
-require 'flapjack/gateways/api/entity_methods'
+require 'flapjack/gateways/jsonapi/contact_methods'
+require 'flapjack/gateways/jsonapi/entity_methods'
 
 module Flapjack
 
   module Gateways
 
-    class API < Sinatra::Base
+    class JSONAPI < Sinatra::Base
 
       include Flapjack::Utility
 
@@ -104,15 +104,15 @@ module Flapjack
           :query_string   => env['QUERY_STRING']
         }
         case e
-        when Flapjack::Gateways::API::ContactNotFound
+        when Flapjack::Gateways::JSONAPI::ContactNotFound
           rescue_error.call(404, e, request_info, "could not find contact '#{e.contact_id}'")
-        when Flapjack::Gateways::API::NotificationRuleNotFound
+        when Flapjack::Gateways::JSONAPI::NotificationRuleNotFound
           rescue_error.call(404, e, request_info,"could not find notification rule '#{e.rule_id}'")
-        when Flapjack::Gateways::API::EntityNotFound
+        when Flapjack::Gateways::JSONAPI::EntityNotFound
           rescue_error.call(404, e, request_info, "could not find entity '#{e.entity}'")
-        when Flapjack::Gateways::API::EntityCheckNotFound
+        when Flapjack::Gateways::JSONAPI::EntityCheckNotFound
           rescue_error.call(404, e, request_info, "could not find entity check '#{e.check}'")
-        when Flapjack::Gateways::API::ResourceLocked
+        when Flapjack::Gateways::JSONAPI::ResourceLocked
           rescue_error.call(423, e, request_info, "unable to obtain lock for resource '#{e.resource}'")
         else
           rescue_error.call(500, e, request_info)
@@ -127,7 +127,7 @@ module Flapjack
         def start
           @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
 
-          @logger.info "starting api - class"
+          @logger.info "starting jsonapi - class"
 
           if @config && @config['access_log']
             access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
@@ -172,9 +172,9 @@ module Flapjack
         end
       end
 
-      register Flapjack::Gateways::API::EntityMethods
+      register Flapjack::Gateways::JSONAPI::EntityMethods
 
-      register Flapjack::Gateways::API::ContactMethods
+      register Flapjack::Gateways::JSONAPI::ContactMethods
 
       # the following should add the cors headers to every request, but is no work
       #register Sinatra::CrossOrigin

@@ -20,7 +20,7 @@ module Rack
 
     def type_match? env
       type = env['CONTENT_TYPE'] and
-        Flapjack::Gateways::API::JSON_REQUEST_MIME_TYPES.include?(type.split(/\s*[;,]\s*/, 2).first.downcase)
+        Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(type.split(/\s*[;,]\s*/, 2).first.downcase)
     end
   end
 end

@@ -10,7 +10,7 @@ module Flapjack
 
   module Gateways
 
-    class API < Sinatra::Base
+    class JSONAPI < Sinatra::Base
 
       module ContactMethods
 
@@ -20,13 +20,13 @@ module Flapjack
 
           def find_contact(contact_id)
             contact = Flapjack::Data::Contact.find_by_id(contact_id, :logger => logger, :redis => redis)
-            raise Flapjack::Gateways::API::ContactNotFound.new(contact_id) if contact.nil?
+            raise Flapjack::Gateways::JSONAPI::ContactNotFound.new(contact_id) if contact.nil?
             contact
           end
 
           def find_rule(rule_id)
             rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :logger => logger, :redis => redis)
-            raise Flapjack::Gateways::API::NotificationRuleNotFound.new(rule_id) if rule.nil?
+            raise Flapjack::Gateways::JSONAPI::NotificationRuleNotFound.new(rule_id) if rule.nil?
             rule
           end
 
@@ -42,21 +42,21 @@ module Flapjack
               semaphore = Flapjack::Data::Semaphore.new(resource, {:redis => redis, :expiry => 30})
             rescue Flapjack::Data::Semaphore::ResourceLocked
               strikes += 1
-              raise Flapjack::Gateways::API::ResourceLocked.new(resource) unless strikes < 3
+              raise Flapjack::Gateways::JSONAPI::ResourceLocked.new(resource) unless strikes < 3
               sleep 1
               retry
             end
-            raise Flapjack::Gateways::API::ResourceLocked.new(resource) unless semaphore
+            raise Flapjack::Gateways::JSONAPI::ResourceLocked.new(resource) unless semaphore
             semaphore
           end
         end
 
         def self.registered(app)
 
-          app.helpers Flapjack::Gateways::API::ContactMethods::Helpers
+          app.helpers Flapjack::Gateways::JSONAPI::ContactMethods::Helpers
 
           app.post '/contacts' do
-            pass unless Flapjack::Gateways::API::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
+            pass unless Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
             content_type :json
             cors_headers
 
@@ -94,7 +94,7 @@ module Flapjack
           end
 
           app.post '/contacts_atomic' do
-            pass unless Flapjack::Gateways::API::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
+            pass unless Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
             content_type :json
 
             contacts_data = params[:contacts]

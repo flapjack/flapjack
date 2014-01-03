@@ -10,7 +10,7 @@ module Flapjack
 
   module Gateways
 
-    class API < Sinatra::Base
+    class JSONAPI < Sinatra::Base
 
       class EntityCheckPresenter
 
