@@ -90,6 +90,9 @@ module Flapjack
 
             semaphore.release
 
+            ids = contacts_data.map {|c| c['id']}
+            location(ids)
+
             contacts_data.map {|cd| cd['id']}.to_json
           end
 
@@ -282,6 +285,8 @@ module Flapjack
                 status 200
               end
             end
+            ids = rules.map {|r| r.id}
+            location(ids)
             '{"notification_rules":[' +
               rules.map {|r| r.to_json}.join(',') +
               ']}'

@@ -133,6 +133,23 @@ module Flapjack
             access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
             use Flapjack::CommonLogger, access_logger
           end
+
+          @base_url = @config['base_url']
+          dummy_url = "http://api.example.com"
+          if @base_url
+            @base_url = $1 if @base_url.match(/^(.+)\/$/)
+          else
+            @logger.error "base_url must be a valid http or https URI (not configured), setting to dummy value (#{dummy_url})"
+            # FIXME: at this point I'd like to stop this pikelet without bringing down the whole
+            @base_url = dummy_url
+          end
+          if (@base_url =~ /^#{URI::regexp(%w(http https))}$/).nil?
+            @logger.error "base_url must be a valid http or https URI (#{@base_url}), setting to dummy value (#{dummy_url})"
+            # FIXME: at this point I'd like to stop this pikelet without bringing down the whole
+            # flapjack process
+            # For now, set a dummy value
+            @base_url = dummy_url
+          end
         end
       end
 
@@ -142,6 +159,10 @@ module Flapjack
 
       def logger
         self.class.instance_variable_get('@logger')
+      end
+
+      def base_url
+        self.class.instance_variable_get('@base_url')
       end
 
       before do
@@ -161,6 +182,7 @@ module Flapjack
 
       after do
         return if response.status == 500
+
         query_string = (request.query_string.respond_to?(:length) &&
                         request.query_string.length > 0) ? "?#{request.query_string}" : ""
         if logger.debug?
@@ -206,6 +228,11 @@ module Flapjack
           'Access-Control-Max-Age'        => '1728000'
         }
         headers(cors_headers)
+      end
+
+      def location(ids)
+        location = "#{base_url}#{request.path_info}#{ids.length == 1 ? '/' + ids.first : '?ids=' + ids.join(',')}"
+        headers({'Location' => location})
       end
 
       private

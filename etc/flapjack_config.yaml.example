@@ -96,6 +96,7 @@ production:
       port: 3081
       timeout: 300
       access_log: "/var/log/flapjack/jsonapi_access.log"
+      base_url: "http://localhost:3081/"
       logger:
         level: INFO
         syslog_errors: yes
