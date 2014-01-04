@@ -7,8 +7,23 @@
   <h2><%= h @check %> on <a href="<%= entity_link %>" title="entity summary"><%= h @entity %></a></h2>
 </div>
 
-<% state_qualifier = @check_enabled ? '' : "DISABLED. Last " %>
-<h3><%= state_qualifier %>State: <%= @check_state ? h(@check_state.upcase) : '' %></h3>
+<%
+  state_qualifier = @check_enabled ? '' : "DISABLED. Last "
+  state_class     = case @check_state
+                    when 'ok'
+                      'success'
+                    when 'critical'
+                      'danger'
+                    else
+                      "info #{@check_state}"
+                    end
+
+%>
+
+<div class="alert alert-<%= state_class %>">
+  <%= state_qualifier %>State:
+  <span class="alert-link"><%= @check_state ? h(@check_state.upcase) : '' %></span>
+</div>
 <% if @current_unscheduled_maintenance %>
   <% ack_msg = "#{@current_unscheduled_maintenance[:summary]}" %>
   <% ack_msg = ack_msg.length > 0 ? ack_msg : 'no summary given' %>
