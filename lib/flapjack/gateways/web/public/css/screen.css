@@ -38,6 +38,12 @@ nav.navbar .navbar-header span.name {
 
 /* end navigation */
 
+/* check page */
+
+button.decommission-check {
+  margin-left: 12px;
+}
+
 
 /* footer */
 
