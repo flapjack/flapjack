@@ -7,6 +7,7 @@
   require_js  'backbone'
   require_js  'backbone.jsonapi'
   require_js  'contacts'
+  require_js  'bootstrap.min'
 %>
 
 <script type="text/template" id="contact-actions-template">
@@ -14,12 +15,12 @@
 </script>
 
 <script type="text/template" id="contact-list-item-template">
-  <div class="contact_list_item">
-    <button class="contact_entities" type="button">Entities</button>
-    <button class="contact_edit" type="button">Edit</button>
-    <button class="contact_remove" type="button">Remove</button>
-    <@- first_name @>&nbsp;<@- last_name @> (<@- email @>)
-  </div>
+  <tr class="contact_list_item">
+    <td><@- first_name @></td>
+    <td><@- last_name @></td>
+    <td><@- email @></td>
+  </tr>
+
   <div class="contact_entities_view" style="display: <@- entities_display @>">
   </div>
   <div class="contact_edit_view panel panel-default" style="display: <@- edit_display @>">
@@ -62,5 +63,62 @@
       <h2>Edit Contacts</h2>
     </div>
     <div id="container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody id="contactList">
+        </tbody>
+      </table>
+
+<!-- Button trigger modal -->
+<button class="btn btn-success" data-toggle="modal" data-target="#contactModal">
+  Add contact
+</button>
+
+<!-- Modal -->
+<div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="myModalLabel">New Contact</h4>
+      </div>
+      <div class="modal-body">
+
+        <form action="/contacts" method="post" role="form" class="form-horizontal">
+          <div class="form-group">
+            <label class="col-sm-3 control-label" for="contact_first_name">First name</label>
+            <div class="col-sm-9">
+              <input type="text" name="contact_first_name" class="form-control" value="">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-3 control-label" for="contact_last_name">Last name</label>
+            <div class="col-sm-9">
+              <input type="text" name="contact_last_name" class="form-control" value="">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-3 control-label" for="contact_email">Email</label>
+            <div class="col-sm-9">
+              <input type="text" name="contact_email" class="form-control" value="">
+            </div>
+          </div>
+        </form><!-- form-horizontal-->
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-success">Create Contact</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
     </div>
 </div>
