@@ -16,9 +16,11 @@ module Flapjack
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        redis.keys("entity_id:*").collect {|k|
+        keys = redis.keys("entity_id:*")
+        ids = redis.mget(keys)
+        keys.collect {|k|
           k =~ /^entity_id:(.+)$/; entity_name = $1
-          self.new(:name => entity_name, :id => redis.get("entity_id:#{entity_name}"), :redis => redis)
+          self.new(:name => entity_name, :id => ids.shift, :redis => redis)
         }.sort_by(&:name)
       end
 
