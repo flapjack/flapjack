@@ -74,7 +74,9 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   end
 
   it "returns all the contacts" do
-    expect(contact).to receive(:entities).and_return([])
+    expect(Flapjack::Data::Contact).to receive(:entities_jsonapi).
+      with([contact.id], :redis => redis).and_return([[], {}])
+    expect(contact).to receive(:linked_entity_ids=).with(nil)
     expect(contact).to receive(:to_json).and_return(contact_core.to_json)
     expect(Flapjack::Data::Contact).to receive(:all).with(:redis => redis).
       and_return([contact])
