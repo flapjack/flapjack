@@ -433,8 +433,54 @@ module Flapjack
         end
       end
 
+      def require_css(*css)
+        @required_css ||= []
+        @required_css += css
+      end
+
+      def require_js(*js)
+        @required_js ||= []
+        @required_js += js
+      end
+
+      def include_required_js
+        if @required_js
+          @required_js.map { |filename|
+            "<script type='text/javascript' src='#{link_to("/js/#{filename}.js")}'></script>"
+          }.join("\n    ")
+        else
+          ""
+        end
+      end
+
+      def include_required_css
+        if @required_css
+          @required_css.map { |filename|
+            %(<link rel="stylesheet" href="#{link_to("/css/#{filename}.css")}" media="screen">)
+          }.join("\n    ")
+        else
+          ""
+        end
+      end
+
+      # from http://gist.github.com/98310
+      def link_to(url_fragment, mode=:path_only)
+        case mode
+        when :path_only
+          base = request.script_name
+        when :full_url
+          if (request.scheme == 'http' && request.port == 80 ||
+              request.scheme == 'https' && request.port == 443)
+            port = ""
+          else
+            port = ":#{request.port}"
+          end
+          base = "#{request.scheme}://#{request.host}#{port}#{request.script_name}"
+        else
+          raise "Unknown script_url mode #{mode}"
+        end
+        "#{base}#{url_fragment}"
+      end
     end
-
   end
-
 end
