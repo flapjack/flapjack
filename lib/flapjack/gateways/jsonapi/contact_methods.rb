@@ -144,20 +144,16 @@ module Flapjack
 
             contacts = Flapjack::Data::Contact.all(:redis => redis)
 
-            linked_entities = {}
+            linked_entity_data, linked_entity_ids = Flapjack::Data::Contact.entities_jsonapi(contacts.map(&:id), :redis => redis)
 
-            contacts_json = contacts.map do |contact|
-              contact.entities.map {|e| e[:entity] }.each do |entity|
-                next if linked_entities.has_key?(entity.id)
-                linked_entities[entity.id] = entity
-              end
-
+            contact_json = contacts.collect {|contact|
+              contact.linked_entity_ids = linked_entity_ids[contact.id]
               contact.to_json
-            end.join(',')
+            }.join(", ")
 
-            '{"contacts":[' + contacts_json + ']' +
-              ( linked_entities.empty? ? '}' :
-                ', "linked": {"entities":' + linked_entities.values.to_json + '}}')
+            '{"contacts":[' + contact_json + ']' +
+              ( linked_entity_data.empty? ? '}' :
+                ', "linked": {"entities":' + linked_entity_data.to_json + '}}')
           end
 
           # Returns the core information about the specified contact

@@ -10,13 +10,17 @@ require 'flapjack/data/notification_rule'
 require 'flapjack/data/tag'
 require 'flapjack/data/tag_set'
 
+require 'securerandom'
+
 module Flapjack
 
   module Data
 
     class Contact
 
-      attr_accessor :id, :first_name, :last_name, :email, :media, :media_intervals, :media_rollup_thresholds, :pagerduty_credentials
+      attr_accessor :id, :first_name, :last_name, :email, :media,
+        :media_intervals, :media_rollup_thresholds, :pagerduty_credentials,
+        :linked_entity_ids
 
       TAG_PREFIX = 'contact_tag'
       ALL_MEDIA  = ['email', 'sms', 'jabber', 'pagerduty']
@@ -174,6 +178,36 @@ module Flapjack
           end
           ret
         }.values
+      end
+
+      def self.entities_jsonapi(contact_ids, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        entity_data = []
+        linked_entity_ids = {}
+
+        temp_set = SecureRandom.uuid
+        redis.sadd(temp_set, contact_ids)
+
+        redis.keys('contacts_for:*').each do |k|
+          contact_ids = redis.sinter(k, temp_set)
+          next if contact_ids.empty?
+          next unless k =~ /^contacts_for:([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?::(\w+))?$/
+
+          entity_id = $1
+          check = $2
+
+          entity_data << {:id => entity_id, :name => redis.hget("entity:#{entity_id}", 'name')}
+
+          contact_ids.each do |contact_id|
+            linked_entity_ids[contact_id] ||= []
+            linked_entity_ids[contact_id] << entity_id
+          end
+        end
+
+        redis.del(temp_set)
+
+        [entity_data, linked_entity_ids]
       end
 
       def name
@@ -423,7 +457,8 @@ module Flapjack
           "media_intervals" => self.media_intervals,
           "media_rollup_thresholds" => self.media_rollup_thresholds,
           "tags"       => self.tags.to_a,
-          "links"      => {:entities => self.entities.map {|e| e[:entity].id } }}.to_json
+          "links"      => {:entities => @linked_entity_ids || []}
+        }.to_json
       end
 
     private
