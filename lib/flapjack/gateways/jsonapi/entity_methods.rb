@@ -120,11 +120,14 @@ module Flapjack
 
           app.get '/entities' do
             content_type :json
-            ret = Flapjack::Data::Entity.all(:redis => redis).sort_by(&:name).collect {|e|
+            cors_headers
+
+            entities_json = Flapjack::Data::Entity.all(:redis => redis).collect {|e|
               presenter = Flapjack::Gateways::JSONAPI::EntityPresenter.new(e, :redis => redis)
-              {'id' => e.id, 'name' => e.name, 'checks' => presenter.status }
-            }
-            ret.to_json
+              {'id' => e.id, 'name' => e.name, 'checks' => presenter.status }.to_json
+            }.join(',')
+
+            '{"entities":[' + entities_json + ']}'
           end
 
           app.get '/checks/:entity' do

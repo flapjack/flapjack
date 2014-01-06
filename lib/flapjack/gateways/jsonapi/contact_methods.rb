@@ -146,12 +146,12 @@ module Flapjack
 
             linked_entity_data, linked_entity_ids = Flapjack::Data::Contact.entities_jsonapi(contacts.map(&:id), :redis => redis)
 
-            contact_json = contacts.collect {|contact|
+            contacts_json = contacts.collect {|contact|
               contact.linked_entity_ids = linked_entity_ids[contact.id]
               contact.to_json
             }.join(", ")
 
-            '{"contacts":[' + contact_json + ']' +
+            '{"contacts":[' + contacts_json + ']' +
               ( linked_entity_data.empty? ? '}' :
                 ', "linked": {"entities":' + linked_entity_data.to_json + '}}')
           end
