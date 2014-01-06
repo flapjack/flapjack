@@ -10,7 +10,7 @@
 %>
 
 <script type="text/template" id="contact-actions-template">
-  <button class="contact_add" type="button">Add</button>
+  <button class="contact_add btn btn-success" type="button">Add</button>
 </script>
 
 <script type="text/template" id="contact-list-item-template">
@@ -22,27 +22,37 @@
   </div>
   <div class="contact_entities_view" style="display: <@- entities_display @>">
   </div>
-  <div class="contact_edit_view" style="display: <@- edit_display @>">
-    <form>
-      <fieldset>
-        <ol>
-          <li>
-            <label class="contact_label">First Name</label>
-            <input class="contact_first_name" type="text" value="<@- first_name @>">
-          </li>
-          <li>
-            <label class="contact_label">Last Name</label>
-            <input class="contact_last_name" type="text" value="<@- last_name @>">
-          </li>
-          <li>
-            <label class="contact_label">Email</label>
-            <input class="contact_email" type="text" value="<@- email @>">
-          </li>
-        </ol>
-      </fieldset>
-      <fieldset>
-        <button class="contact_save" type="button">Save</button>
-        <button class="contact_reset" type="button">Reset</button>
+  <div class="contact_edit_view panel panel-default" style="display: <@- edit_display @>">
+    <div class="panel-body">
+    <form class="form-horizontal" role="form">
+
+      <div class="form-group">
+        <label class="col-md-2 control-label">First Name</label>
+        <div class="col-md-8">
+          <input class="contact_first_name form-control" type="text" value="<@- first_name @>">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="col-md-2 control-label">Rast Name</label>
+        <div class="col-md-8">
+          <input class="contact_last_name form-control" type="text" value="<@- last_name @>">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="col-md-2 control-label">Email</label>
+        <div class="col-md-8">
+          <input class="contact_email form-control" type="text" value="<@- email @>">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="col-md-8 col-md-offset-2">
+          <button class="contact_save btn btn-success" type="button">Save</button>
+        </div>
+      </div>
+      </div>
     </form>
   </div>
 </script>
@@ -50,5 +60,7 @@
 <div id="data-api-url" data-api-url="<%= @api_url %>">
     <div class="page-header">
       <h2>Edit Contacts</h2>
+    </div>
+    <div id="container">
     </div>
 </div>
