@@ -50,6 +50,15 @@ module Flapjack
         contact
       end
 
+      def self.find_by_ids(contact_ids, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        logger = options[:logger]
+
+        contact_ids.map do |id|
+          self.find_by_id(id, options)
+        end
+      end
+
       def self.exists_with_id?(contact_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         raise "No id value passed" unless contact_id
