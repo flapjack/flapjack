@@ -481,6 +481,14 @@ module Flapjack
         end
         "#{base}#{url_fragment}"
       end
+
+      def page_title(string)
+        @page_title = string
+      end
+
+      def include_page_title
+        @page_title ? "#{@page_title} | Flapjack" : "Flapjack"
+      end
     end
   end
 end

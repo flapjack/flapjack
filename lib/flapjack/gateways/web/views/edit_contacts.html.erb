@@ -1,19 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <% nav  = render_erb('_nav.html.erb', binding) %>
-    <% head = render_erb('_head.html.erb', binding) %>
-    <% foot = render_erb('_foot.html.erb', binding) %>
-    <title>Flapjack - Edit Contacts</title>
-    <%= head %>
-    <link rel="stylesheet" href="/css/select2.css" media="screen">
+<%
+  require_css 'select2'
 
-    <script src="/js/underscore.js"></script>
-    <script src="/js/jquery-1.10.2.js"></script>
-    <script src="/js/select2.js"></script>
-    <script src="/js/backbone.js"></script>
-    <script src="/js/backbone.jsonapi.js"></script>
-    <script src="/js/contacts.js"></script>
+  require_js  'underscore'
+  require_js  'jquery-1.10.2'
+  require_js  'select2'
+  require_js  'backbone'
+  require_js  'backbone.jsonapi'
+  require_js  'contacts'
+%>
 
     <script type="text/template" id="contact-actions-template">
       <button class="contact_add" type="button">Add</button>
@@ -53,12 +47,10 @@
       </div>
     </script>
 
-  </head>
   <body data-api-url="<%= @api_url %>">
     <div id="wrap">
       <div class="container">
         <div class="page-header">
-          <%= nav %>
           <h2>Edit Contacts</h2>
         </div>
 
@@ -67,8 +59,4 @@
       </div>
       <div id="push"></div>
     </div>
-    <div id="footer">
-      <%= foot %>
-    </div>
   </body>
-</html>
