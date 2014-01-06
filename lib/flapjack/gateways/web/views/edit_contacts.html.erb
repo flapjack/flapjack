@@ -9,54 +9,46 @@
   require_js  'contacts'
 %>
 
-    <script type="text/template" id="contact-actions-template">
-      <button class="contact_add" type="button">Add</button>
-    </script>
+<script type="text/template" id="contact-actions-template">
+  <button class="contact_add" type="button">Add</button>
+</script>
 
-    <script type="text/template" id="contact-list-item-template">
-      <div class="contact_list_item">
-        <button class="contact_entities" type="button">Entities</button>
-        <button class="contact_edit" type="button">Edit</button>
-        <button class="contact_remove" type="button">Remove</button>
-        <@- first_name @>&nbsp;<@- last_name @> (<@- email @>)
-      </div>
-      <div class="contact_entities_view" style="display: <@- entities_display @>">
-      </div>
-      <div class="contact_edit_view" style="display: <@- edit_display @>">
-        <form>
-          <fieldset>
-            <ol>
-              <li>
-                <label class="contact_label">First Name</label>
-                <input class="contact_first_name" type="text" value="<@- first_name @>">
-              </li>
-              <li>
-                <label class="contact_label">Last Name</label>
-                <input class="contact_last_name" type="text" value="<@- last_name @>">
-              </li>
-              <li>
-                <label class="contact_label">Email</label>
-                <input class="contact_email" type="text" value="<@- email @>">
-              </li>
-            </ol>
-          </fieldset>
-          <fieldset>
-            <button class="contact_save" type="button">Save</button>
-            <button class="contact_reset" type="button">Reset</button>
-        </form>
-      </div>
-    </script>
+<script type="text/template" id="contact-list-item-template">
+  <div class="contact_list_item">
+    <button class="contact_entities" type="button">Entities</button>
+    <button class="contact_edit" type="button">Edit</button>
+    <button class="contact_remove" type="button">Remove</button>
+    <@- first_name @>&nbsp;<@- last_name @> (<@- email @>)
+  </div>
+  <div class="contact_entities_view" style="display: <@- entities_display @>">
+  </div>
+  <div class="contact_edit_view" style="display: <@- edit_display @>">
+    <form>
+      <fieldset>
+        <ol>
+          <li>
+            <label class="contact_label">First Name</label>
+            <input class="contact_first_name" type="text" value="<@- first_name @>">
+          </li>
+          <li>
+            <label class="contact_label">Last Name</label>
+            <input class="contact_last_name" type="text" value="<@- last_name @>">
+          </li>
+          <li>
+            <label class="contact_label">Email</label>
+            <input class="contact_email" type="text" value="<@- email @>">
+          </li>
+        </ol>
+      </fieldset>
+      <fieldset>
+        <button class="contact_save" type="button">Save</button>
+        <button class="contact_reset" type="button">Reset</button>
+    </form>
+  </div>
+</script>
 
-  <body data-api-url="<%= @api_url %>">
-    <div id="wrap">
-      <div class="container">
-        <div class="page-header">
-          <h2>Edit Contacts</h2>
-        </div>
-
-        <div id="container"></div>
-
-      </div>
-      <div id="push"></div>
+<div id="data-api-url" data-api-url="<%= @api_url %>">
+    <div class="page-header">
+      <h2>Edit Contacts</h2>
     </div>
-  </body>
+</div>
