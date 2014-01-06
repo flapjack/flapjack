@@ -7,11 +7,15 @@
   <h2><%= h @check %> on <a href="<%= entity_link %>" title="entity summary"><%= h @entity %></a></h2>
 </div>
 
+<div class="row">
+  <div class="col-md-6">
 <%
   state_qualifier = @check_enabled ? '' : "DISABLED. Last "
   state_class     = case @check_state
                     when 'ok'
                       'success'
+                    when 'warning'
+                      'warning'
                     when 'critical'
                       'danger'
                     else
@@ -24,6 +28,9 @@
   <%= state_qualifier %>State:
   <span class="alert-link"><%= @check_state ? h(@check_state.upcase) : '' %></span>
 </div>
+</div>
+
+<div class="col-md-6">
 <% if @current_unscheduled_maintenance %>
   <% ack_msg = "#{@current_unscheduled_maintenance[:summary]}" %>
   <% ack_msg = ack_msg.length > 0 ? ack_msg : 'no summary given' %>
@@ -33,14 +40,14 @@
   <% remain = time_period_in_words( (finish - current_time).ceil ) %>
   <p><%= h start.to_s %> -&gt; <%= h finish.to_s %> (<%= h remain %> remaining)</p>
   <form action="/end_unscheduled_maintenance/<%= check_path_escaped %>" method="post">
-    <input type="submit" value="End Unscheduled Maintenance (Unacknowledge)" class="button">
+    <button type="submit" class="btn btn-critical">End Unscheduled Maintenance (Unacknowledge)</button>
   </form>
 <% end %>
 
 <% if (['warning', 'critical', 'unknown'].include?(@check_state) and !@current_scheduled_maintenance) %>
   <form action="/acknowledgements/<%= check_path_escaped %>" method="post" class="form-inline">
     <input type="hidden" name="acknowledgement_id" value="<%= @acknowledgement_id %>">
-    <input type="submit" value="<%= @current_unscheduled_maintenance ? 'Replace acknowledgment' : 'Acknowledge' %>" class="button">
+    <input type="submit"><%= @current_unscheduled_maintenance ? 'Replace acknowledgment' : 'Acknowledge' %></button>
     with
     <label>summary:</label>
     <input type="text" name="summary" value="">
@@ -60,6 +67,11 @@
   <p><%= h start.to_s %> -&gt; <%= h finish.to_s %> (<%= h remain %> remaining)</p>
 <% end %>
 
+</div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
 <h3>Output: <%= h @check_summary %></h3>
 <p><%= h @check_details %></p>
 <table class="table table-hover table-condensed">
@@ -84,18 +96,32 @@
     </tr>
   <% end %>
 </table>
-
-<div id="currency">
-  <% if @check_enabled %>
-    Enabled ...
-    <form action="/checks/<%= check_path_escaped %>" method="post" style="display:inline-block">
-      <input type='hidden' name='_method' value='delete'>
-      <input type='submit' value="Disable" class='button'>
-    </form>
+  </div>
+  <div class="col-md-6">
+    <h3>Recent state changes</h3>
+  <% if @state_changes && !@state_changes.empty? %>
+    <table class="table table-hover table-condensed">
+      <tr>
+        <th>Timestamp</th>
+        <th>State</th>
+        <th>Summary</th>
+      </tr>
+      <% @state_changes.each do |state_change| %>
+      <tr>
+        <td><%= h Time.at(state_change[:timestamp]).to_s %></td>
+        <td><%= h state_change[:state] %></td>
+        <td><%= h state_change[:summary] %></td>
+      </tr>
+      <% end %>
+    </table>
   <% else %>
-    Disabled
+    <p>No state changes recorded for this check.</p>
   <% end %>
+  </div>
+</div>
 
+<div class="row">
+  <div class="col-md-12">
   <a name="scheduled_maintenance_periods"></a>
   <h3>Scheduled Maintenance Periods</h3>
 <% if @scheduled_maintenances && !@scheduled_maintenances.empty? %>
@@ -126,69 +152,82 @@
           <form action="/scheduled_maintenances/<%= check_path_escaped %>" method="post">
             <input type="hidden" name="_method" value="delete">
             <input type="hidden" name="start_time" value="<%= start_time %>">
-            <input type="submit" value="<%= label %>" class="button">
+            <button type="submit" class="btn btn-danger"><%= label %></button>
           </form>
         <% else %>
           &nbsp;
         <% end %>
       </td>
     </tr>
+  </table>
+</div>
 <% end %>
-
-</table>
 <% else %>
 <p>No maintenance is scheduled</p>
 <% end %>
 
-<h4>Add Scheduled Maintenance</h4>
-<form action="/scheduled_maintenances/<%= check_path_escaped %>" method="post" class="form-horizontal">
-  <div class="control-group">
-    <label class="control-label" for="start_time">Start time:</label>
-    <div class="controls">
-      <input type="text" name="start_time" class="text" size="20" maxlength="80" value="">
-      e.g. "today 4pm", "two hours hence", "friday 2pm", "2012-01-28 13:00"
+<div class="col-md-8">
+
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3 class="panel-title">Add Scheduled Maintenance</h4>
+    </div>
+    <div class="panel-body">
+
+<form action="/scheduled_maintenances/<%= check_path_escaped %>" method="post" role="form" class="form-horizontal">
+
+  <div class="form-group">
+    <label class="col-sm-2 control-label" for="start_time">Start time:</label>
+    <div class="col-sm-9">
+      <input type="text" name="start_time" class="form-control" size="20" maxlength="80" value="">
+      <span class="help-block">
+        e.g. "today 4pm", "two hours hence", "friday 2pm", "2012-01-28 13:00"
+      </span>
     </div>
   </div>
-  <div class="control-group">
-    <label class="control-label" for="duration">Duration:</label>
-    <div class="controls">
-      <input type="text" name="duration" class="text" size="20" maxlength="80" value="">
-      e.g. "1 hour", "2:30:00", "three days", etc
+
+  <div class="form-group">
+    <label class="col-sm-2 control-label" for="duration">Duration:</label>
+    <div class="col-sm-9">
+      <input type="text" name="duration" class="form-control" size="20" maxlength="80" value="">
+      <span class="help-block">
+        e.g. "1 hour", "2:30:00", "three days", etc
+      </span>
     </div>
   </div>
-  <div class="control-group">
-    <label class="control-label" for="summary">Summary:</label>
-    <div class="controls">
-      <input type="text" name="summary" class="text" size="80" maxlength="160" value="">
+
+  <div class="col-sm-9 col-md-offset-2">
+    <div class="alert alert-info">
+      Times given will be interpreted in the local timezone of <%= h local_timezone %>
     </div>
   </div>
-  <div class="control-group">
-    <div class="controls">
-      <input type="submit" value="Save" class="button">
+
+  <div class="form-group">
+    <label class="col-sm-2 control-label" for="summary">Summary:</label>
+    <div class="col-sm-9">
+      <input type="text" name="summary" class="form-control" size="80" maxlength="160" value="">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <div class="col-sm-2"></div>
+    <div class="col-sm-9">
+      <button type="submit" class="btn btn-success">Save</button>
     </div>
   </div>
 </form>
 
-<p>Times given will be interpreted in the local timezone of <%= h local_timezone %></p>
-<% if @state_changes && !@state_changes.empty? %>
-  <h3>Recent state changes</h3>
-  <table class="table table-bordered table-hover table-condensed">
-    <tr>
-    <th>Timestamp</th>
-    <th>State</th>
-    <th>Summary</th>
-    </tr>
-    <% @state_changes.each do |state_change| %>
-    <tr>
-    <td><%= h Time.at(state_change[:timestamp]).to_s %></td>
-    <td><%= h state_change[:state] %></td>
-    <td><%= h state_change[:summary] %></td>
-    </tr>
-    <% end %>
-  </table>
-<% end %>
 
 
+</div>
+</div>
+
+</div>
+</div>
+
+
+<div class="row">
+  <div class="col-md-8">
 <h3>Contacts</h3>
 <% if @contacts && !@contacts.empty? %>
   <table class="table table-bordered table-hover table-condensed">
@@ -210,5 +249,44 @@
     <% end %>
   </table>
 <% else %>
-  <p>No contacts</p>
+  <p>There are <strong>no contacts</strong> associated with this check.</p>
 <% end %>
+</div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="panel panel-danger">
+      <div class="panel-heading">
+        <h3 class="panel-title">
+          <i class="fa fa-warning"></i>
+          Zone of Surprise
+        </h3>
+      </div>
+    <div class="panel-body">
+      <% if @check_enabled %>
+        <h4>Decommission check</h4>
+        <form action="/checks/<%= check_path_escaped %>" method="post" style="display:inline-block" class="pull-right">
+          <input type='hidden' name='_method' value='delete'>
+          <button type='submit' class="btn btn-danger">Decommission Check</button>
+        </form>
+        <p>
+          Hide the check from the Flapjack web interface.
+          Use this if you are no longer actively running this check.
+        </p>
+        <p>
+          Flapjack will automatically re-commission this check if it receives another event for it.
+        </p>
+      <% else %>
+      <p>
+        This check has been decommissioned.
+      </p>
+      <p>
+        Flapjack will re-commission this check if it receives another event for it.
+      </p>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+
