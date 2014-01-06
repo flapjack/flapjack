@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <% nav  = render_erb('_nav.html.erb', binding) %>
+    <% head = render_erb('_head.html.erb', binding) %>
+    <% foot = render_erb('_foot.html.erb', binding) %>
+    <title>Flapjack - Edit Contacts</title>
+    <%= head %>
+    <link rel="stylesheet" href="/css/select2.css" media="screen">
+
+    <script src="/js/underscore.js"></script>
+    <script src="/js/jquery-1.10.2.js"></script>
+    <script src="/js/select2.js"></script>
+    <script src="/js/backbone.js"></script>
+    <script src="/js/backbone.jsonapi.js"></script>
+    <script src="/js/contacts.js"></script>
+
+    <script type="text/template" id="contact-actions-template">
+      <button class="contact_add" type="button">Add</button>
+    </script>
+
+    <script type="text/template" id="contact-list-item-template">
+      <div class="contact_list_item">
+        <button class="contact_entities" type="button">Entities</button>
+        <button class="contact_edit" type="button">Edit</button>
+        <button class="contact_remove" type="button">Remove</button>
+        <@- first_name @>&nbsp;<@- last_name @> (<@- email @>)
+      </div>
+      <div class="contact_entities_view" style="display: <@- entities_display @>">
+      </div>
+      <div class="contact_edit_view" style="display: <@- edit_display @>">
+        <form>
+          <fieldset>
+            <ol>
+              <li>
+                <label class="contact_label">First Name</label>
+                <input class="contact_first_name" type="text" value="<@- first_name @>">
+              </li>
+              <li>
+                <label class="contact_label">Last Name</label>
+                <input class="contact_last_name" type="text" value="<@- last_name @>">
+              </li>
+              <li>
+                <label class="contact_label">Email</label>
+                <input class="contact_email" type="text" value="<@- email @>">
+              </li>
+            </ol>
+          </fieldset>
+          <fieldset>
+            <button class="contact_save" type="button">Save</button>
+            <button class="contact_reset" type="button">Reset</button>
+        </form>
+      </div>
+    </script>
+
+  </head>
+  <body data-api-url="<%= @api_url %>">
+    <div id="wrap">
+      <div class="container">
+        <div class="page-header">
+          <%= nav %>
+          <h2>Edit Contacts</h2>
+        </div>
+
+        <div id="container"></div>
+
+      </div>
+      <div id="push"></div>
+    </div>
+    <div id="footer">
+      <%= foot %>
+    </div>
+  </body>
+</html>

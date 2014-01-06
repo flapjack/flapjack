@@ -6,6 +6,7 @@ require 'sinatra/base'
 require 'erb'
 require 'rack/fiber_pool'
 require 'json'
+require 'uri'
 
 require 'flapjack/rack_logger'
 
@@ -54,6 +55,18 @@ module Flapjack
             use Flapjack::CommonLogger, access_logger
           end
 
+          @api_url = @config['api_url']
+          if @api_url
+            if (@api_url =~ /^#{URI::regexp(%w(http https))}$/).nil?
+              @logger.error "api_url is not a valid http or https URI (#{@api_url})"
+              @api_url = nil
+            end
+          end
+
+          unless @api_url
+            @logger.error "api_url is not configured, parts of the web interface will be broken"
+          end
+
         end
       end
 
@@ -78,6 +91,10 @@ module Flapjack
 
       def logger
         self.class.instance_variable_get('@logger')
+      end
+
+      def api_url
+        self.class.instance_variable_get('@api_url')
       end
 
       get '/' do
@@ -287,6 +304,11 @@ module Flapjack
         @contacts = Flapjack::Data::Contact.all(:redis => redis)
 
         erb 'contacts.html'.to_sym
+      end
+
+      get '/edit_contacts' do
+        @api_url = api_url
+        erb 'edit_contacts.html'.to_sym
       end
 
       get "/contacts/:contact" do
