@@ -124,7 +124,8 @@ module Flapjack
 
             entities_json = Flapjack::Data::Entity.all(:redis => redis).collect {|e|
               presenter = Flapjack::Gateways::JSONAPI::EntityPresenter.new(e, :redis => redis)
-              {'id' => e.id, 'name' => e.name, 'checks' => presenter.status }.to_json
+              id = (e.id.respond_to?(:length) && e.id.length > 0) ? e.id : e.name
+              {'id' => id, 'name' => e.name, 'checks' => presenter.status }.to_json
             }.join(',')
 
             '{"entities":[' + entities_json + ']}'
