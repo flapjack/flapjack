@@ -22,6 +22,11 @@
   <td><@- email @></td>
 </script>
 
+<script type="text/template" id="contact-entities-list-item-template">
+  <td><@- name @></td>
+  <td><button type="button" class="danger" aria-hidden="true">&times;</button></td>
+</script>
+
 <div id="data-api-url" data-api-url="<%= @api_url %>">
     <div class="page-header">
       <h2>Edit Contacts</h2>
@@ -68,12 +73,25 @@
               <input type="text" name="contact_email" class="form-control" value="">
             </div>
           </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-success">Create Contact</button>
+          </div>
         </form><!-- form-horizontal-->
 
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-success">Create Contact</button>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Entity</th>
+              <th>&nbsp;</th>
+            </tr>
+          </thead>
+          <tbody id="contactEntityList">
+          </tbody>
+        </table>
+
+        <input type="hidden" class="entityChooser">
+
       </div>
     </div><!-- /.modal-content -->
   </div><!-- /.modal-dialog -->
