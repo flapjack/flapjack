@@ -145,18 +145,17 @@ module Flapjack
             content_type :json
             cors_headers
 
-            if params[:ids]
-              contacts = Flapjack::Data::Contact.find_by_ids(params[:ids].split(',').uniq, :redis => redis)
+            contacts = if params[:ids]
+              Flapjack::Data::Contact.find_by_ids(params[:ids].split(',').uniq, :redis => redis)
             else
-              contacts = Flapjack::Data::Contact.all(:redis => redis)
+              Flapjack::Data::Contact.all(:redis => redis)
             end
             contacts.compact!
 
-            if contacts.any?
-              linked_entity_data, linked_entity_ids = Flapjack::Data::Contact.entities_jsonapi(contacts.map(&:id), :redis => redis)
+            linked_entity_data, linked_entity_ids = if contacts.empty?
+              [[], []]
             else
-              linked_entity_data = []
-              linked_entity_ids = []
+              Flapjack::Data::Contact.entities_jsonapi(contacts.map(&:id), :redis => redis)
             end
 
             contacts_json = contacts.collect {|contact|

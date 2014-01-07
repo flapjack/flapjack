@@ -11,51 +11,15 @@
 %>
 
 <script type="text/template" id="contact-actions-template">
-  <button class="contact_add btn btn-success" type="button">Add</button>
+  <button class="btn btn-success" id="addContact">
+    Add contact
+  </button>
 </script>
 
 <script type="text/template" id="contact-list-item-template">
-  <tr class="contact_list_item">
-    <td><@- first_name @></td>
-    <td><@- last_name @></td>
-    <td><@- email @></td>
-  </tr>
-
-  <div class="contact_entities_view" style="display: <@- entities_display @>">
-  </div>
-  <div class="contact_edit_view panel panel-default" style="display: <@- edit_display @>">
-    <div class="panel-body">
-    <form class="form-horizontal" role="form">
-
-      <div class="form-group">
-        <label class="col-md-2 control-label">First Name</label>
-        <div class="col-md-8">
-          <input class="contact_first_name form-control" type="text" value="<@- first_name @>">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="col-md-2 control-label">Rast Name</label>
-        <div class="col-md-8">
-          <input class="contact_last_name form-control" type="text" value="<@- last_name @>">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="col-md-2 control-label">Email</label>
-        <div class="col-md-8">
-          <input class="contact_email form-control" type="text" value="<@- email @>">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <div class="col-md-8 col-md-offset-2">
-          <button class="contact_save btn btn-success" type="button">Save</button>
-        </div>
-      </div>
-      </div>
-    </form>
-  </div>
+  <td><@- first_name @></td>
+  <td><@- last_name @></td>
+  <td><@- email @></td>
 </script>
 
 <div id="data-api-url" data-api-url="<%= @api_url %>">
@@ -75,18 +39,13 @@
         </tbody>
       </table>
 
-<!-- Button trigger modal -->
-<button class="btn btn-success" data-toggle="modal" data-target="#contactModal">
-  Add contact
-</button>
-
 <!-- Modal -->
-<div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h4 class="modal-title" id="myModalLabel">New Contact</h4>
+        <h4 class="modal-title" id="contactModalLabel">New Contact</h4>
       </div>
       <div class="modal-body">
 
