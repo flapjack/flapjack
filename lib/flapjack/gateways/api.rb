@@ -27,45 +27,9 @@ module Flapjack
 
       include Flapjack::Utility
 
-      class ContactNotFound < RuntimeError
-        attr_reader :contact_id
-        def initialize(contact_id)
-          @contact_id = contact_id
-        end
-      end
-
-      class NotificationRuleNotFound < RuntimeError
-        attr_reader :rule_id
-        def initialize(rule_id)
-          @rule_id = rule_id
-        end
-      end
-
-      class EntityNotFound < RuntimeError
-        attr_reader :entity
-        def initialize(entity)
-          @entity = entity
-        end
-      end
-
-      class EntityCheckNotFound < RuntimeError
-        attr_reader :entity, :check
-        def initialize(entity, check)
-          @entity = entity
-          @check = check
-        end
-      end
-
-      class ResourceLocked < RuntimeError
-        attr_reader :resource
-        def initialize(resource)
-          @resource = resource
-        end
-      end
-
       set :dump_errors, false
 
-      rescue_error = Proc.new {|status, exception, request_info, *msg|
+      rescue_error = Proc.new {|status, exception, *msg|
         if !msg || msg.empty?
           trace = exception.backtrace.join("\n")
           msg = "#{exception.class} - #{exception.message}"
@@ -79,41 +43,21 @@ module Flapjack
         else
           @logger.error "Error: #{msg_str}"
         end
-
-        response_body = {:errors => msg}.to_json
-
-        query_string = (request_info[:query_string].respond_to?(:length) &&
-                        request_info[:query_string].length > 0) ? "?#{request_info[:query_string]}" : ""
-        if @logger.debug?
-          @logger.debug("Returning #{status} for #{request_info[:request_method]} " +
-            "#{request_info[:path_info]}#{query_string}, body: #{response_body}")
-        elsif logger.info?
-          @logger.info("Returning #{status} for #{request_info[:request_method]} " +
-            "#{request_info[:path_info]}#{query_string}")
-        end
-
-        [status, {}, response_body]
+        [status, {}, {:errors => msg}.to_json]
       }
 
       rescue_exception = Proc.new {|env, e|
-        request_info = {
-          :path_info      => env['REQUEST_PATH'],
-          :request_method => env['REQUEST_METHOD'],
-          :query_string   => env['QUERY_STRING']
-        }
         case e
         when Flapjack::Gateways::API::ContactNotFound
-          rescue_error.call(404, e, request_info, "could not find contact '#{e.contact_id}'")
+          rescue_error.call(403, e, "could not find contact '#{e.contact_id}'")
         when Flapjack::Gateways::API::NotificationRuleNotFound
-          rescue_error.call(404, e, request_info,"could not find notification rule '#{e.rule_id}'")
+          rescue_error.call(403, e, "could not find notification rule '#{e.rule_id}'")
         when Flapjack::Gateways::API::EntityNotFound
-          rescue_error.call(404, e, request_info, "could not find entity '#{e.entity}'")
+          rescue_error.call(403, e, "could not find entity '#{e.entity}'")
         when Flapjack::Gateways::API::EntityCheckNotFound
-          rescue_error.call(404, e, request_info, "could not find entity check '#{e.check}'")
-        when Flapjack::Gateways::API::ResourceLocked
-          rescue_error.call(423, e, request_info, "unable to obtain lock for resource '#{e.resource}'")
+          rescue_error.call(403, e, "could not find entity check '#{e.check}'")
         else
-          rescue_error.call(500, e, request_info)
+          rescue_error.call(500, e)
         end
       }
       use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
@@ -144,30 +88,19 @@ module Flapjack
 
       before do
         input = nil
-        query_string = (request.query_string.respond_to?(:length) &&
-                        request.query_string.length > 0) ? "?#{request.query_string}" : ""
         if logger.debug?
           input = env['rack.input'].read
-          logger.debug("#{request.request_method} #{request.path_info}#{query_string} #{input}")
+          logger.debug("#{request.request_method} #{request.path_info}#{request.query_string} #{input}")
         elsif logger.info?
           input = env['rack.input'].read
           input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
-          logger.info("#{request.request_method} #{request.path_info}#{query_string} #{input_short[0..80]}")
+          logger.info("#{request.request_method} #{request.path_info}#{request.query_string} #{input_short[0..80]}")
         end
         env['rack.input'].rewind unless input.nil?
       end
 
       after do
-        return if response.status == 500
-        query_string = (request.query_string.respond_to?(:length) &&
-                        request.query_string.length > 0) ? "?#{request.query_string}" : ""
-        if logger.debug?
-          logger.debug("Returning #{response.status} for #{request.request_method} " +
-            "#{request.path_info}#{query_string}, body: #{response.body.join(', ')}")
-        elsif logger.info?
-          logger.info("Returning #{response.status} for #{request.request_method} " +
-            "#{request.path_info}#{query_string}")
-        end
+        logger.debug("Returning #{response.status} for #{request.request_method} #{request.path_info}#{request.query_string}")
       end
 
       register Flapjack::Gateways::API::EntityMethods

@@ -14,6 +14,21 @@ module Flapjack
 
     class API < Sinatra::Base
 
+      class EntityCheckNotFound < RuntimeError
+        attr_reader :entity, :check
+        def initialize(entity, check)
+          @entity = entity
+          @check = check
+        end
+      end
+
+      class EntityNotFound < RuntimeError
+        attr_reader :entity
+        def initialize(entity)
+          @entity = entity
+        end
+      end
+
       module EntityMethods
 
         module Helpers
@@ -120,7 +135,7 @@ module Flapjack
 
           app.get '/entities' do
             content_type :json
-            ret = Flapjack::Data::Entity.all(:redis => redis).sort_by(&:name).collect {|e|
+            ret = Flapjack::Data::Entity.all(:redis => redis).collect {|e|
               presenter = Flapjack::Gateways::API::EntityPresenter.new(e, :redis => redis)
               {'id' => e.id, 'name' => e.name, 'checks' => presenter.status }
             }

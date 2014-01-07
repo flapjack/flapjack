@@ -65,7 +65,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_name, :redis => redis).and_return(nil)
 
       aget "/status/#{entity_name_esc}"
-      expect(last_response.status).to eq(404)
+      expect(last_response).to be_forbidden
     end
 
     it "returns the status for a check on an entity" do
@@ -91,7 +91,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_name, :redis => redis).and_return(nil)
 
       aget "/status/#{entity_name_esc}/#{check}"
-      expect(last_response.status).to eq(404)
+      expect(last_response).to be_forbidden
     end
 
     it "should not show the status for a check that's not found on an entity" do
@@ -102,7 +102,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity, check, :redis => redis).and_return(nil)
 
       aget "/status/#{entity_name_esc}/#{check}"
-      expect(last_response.status).to eq(404)
+      expect(last_response).to be_forbidden
     end
 
     it "returns a list of scheduled maintenance periods for an entity" do
@@ -314,7 +314,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_name, :redis => redis).and_return(nil)
 
       aget "/status", :entity => entity_name
-      expect(last_response.status).to eq(404)
+      expect(last_response).to be_forbidden
     end
 
     it "returns the status for a check on an entity" do
@@ -341,7 +341,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_name, :redis => redis).and_return(nil)
 
       aget "/status", :check => {entity_name => check}
-      expect(last_response.status).to eq(404)
+      expect(last_response).to be_forbidden
     end
 
     it "should not show the status for a check that's not found on an entity" do
@@ -352,7 +352,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity, check, :redis => redis).and_return(nil)
 
       aget "/status", :check => {entity_name => check}
-      expect(last_response.status).to eq(404)
+      expect(last_response).to be_forbidden
     end
 
     it "creates an acknowledgement for an entity check" do
@@ -783,7 +783,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_name, :redis => redis).and_return(nil)
 
       apost "entities/#{entity_name}/tags", :tag => 'web'
-      expect(last_response.status).to eq(404)
+      expect(last_response).to be_forbidden
     end
 
     it "sets multiple tags on an entity and returns current tags" do
@@ -803,7 +803,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_name, :redis => redis).and_return(nil)
 
       apost "entities/#{entity_name}/tags", :tag => ['web', 'app']
-      expect(last_response.status).to eq(404)
+      expect(last_response).to be_forbidden
     end
 
     it "removes a single tag from an entity" do
@@ -820,7 +820,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_name, :redis => redis).and_return(nil)
 
       adelete "entities/#{entity_name}/tags", :tag => 'web'
-      expect(last_response.status).to eq(404)
+      expect(last_response).to be_forbidden
     end
 
     it "removes multiple tags from an entity" do
@@ -837,7 +837,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_name, :redis => redis).and_return(nil)
 
       adelete "entities/#{entity_name}/tags", :tag => ['web', 'app']
-      expect(last_response.status).to eq(404)
+      expect(last_response).to be_forbidden
     end
 
     it "gets all tags on an entity" do
@@ -855,7 +855,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(entity_name, :redis => redis).and_return(nil)
 
       aget "entities/#{entity_name}/tags"
-      expect(last_response.status).to eq(404)
+      expect(last_response).to be_forbidden
     end
 
   end

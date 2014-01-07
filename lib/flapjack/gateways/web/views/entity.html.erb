@@ -1,67 +1,48 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <% nav  = render_erb('_nav.html.erb', binding) %>
-    <% head = render_erb('_head.html.erb', binding) %>
-    <% foot = render_erb('_foot.html.erb', binding) %>
-    <title>Flapjack - <%=h @entity %> (entity) </title>
-    <%= head %>
-  </head>
-  <body>
-    <div id="wrap">
-      <div class="container">
-        <div class="page-header">
-          <%= nav %>
-          <h2><%= h @entity %></h2>
-        </div>
-        <% if @states.empty? %>
-          <div>
-            <p>This entity has no check output associated with it</p>
-          </div>
-        <% else %>
-          <table class="table table-bordered table-hover table-condensed">
-            <tr>
-              <th>Check</th>
-              <th>State</th>
-              <th>Summary</th>
-              <th>Last State Change</th>
-              <th>Last Update</th>
-              <th>Last Notification</th>
-            </tr>
-            <% @states.each do |check, status, summary, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified| %>
-              <%
-                row_colour = case status
-                when 'critical', 'unknown'
-                  'error'
-                when 'ok', 'up'
-                  'success'
-                else
-                  status
-                end
+<% page_title "#{h(@entity)} (entity)" %>
 
-                check_link = "/check?entity=" << u(@entity) << "&amp;check=" << u(check)
+<div class="page-header">
+  <h2><%= h @entity %></h2>
+</div>
+<% if @states.empty? %>
+  <div>
+    <p>This entity has no check output associated with it</p>
+  </div>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>Check</th>
+      <th>State</th>
+      <th>Summary</th>
+      <th>Last State Change</th>
+      <th>Last Update</th>
+      <th>Last Notification</th>
+    </tr>
+    <% @states.each do |check, status, summary, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified| %>
+      <%
+        row_colour = case status
+        when 'critical', 'unknown'
+          'error'
+        when 'ok', 'up'
+          'success'
+        else
+          status
+        end
 
-              %>
-              <tr class="<%= row_colour %>">
-                <td><a href="<%= check_link %>" title="check detail"><%= h check %></a></td>
-                <td class="<%= status %>">
-                  <%= h status.upcase %>
-                  <% if in_unscheduled_outage%> (Ack'd)<% end %>
-                  <% if in_scheduled_outage %> (Sched)<% end %>
-                </td>
-                <td><%= summary %></td>
-                <td><%= changed %></td>
-                <td><%= updated %></td>
-                <td><%= notified %></td>
-              </tr>
-            <% end %>
-          </table>
-        <% end %>
-      </div>
-      <div id="push"></div>
-    </div>
-    <div id="footer">
-      <%= foot %>
-    </div>
-  </body>
-</html>
+        check_link = "/check?entity=" << u(@entity) << "&amp;check=" << u(check)
+
+      %>
+      <tr class="<%= row_colour %>">
+        <td><a href="<%= check_link %>" title="check detail"><%= h check %></a></td>
+        <td class="<%= status %>">
+          <%= h status.upcase %>
+          <% if in_unscheduled_outage%> (Ack'd)<% end %>
+          <% if in_scheduled_outage %> (Sched)<% end %>
+        </td>
+        <td><%= summary %></td>
+        <td><%= changed %></td>
+        <td><%= updated %></td>
+        <td><%= notified %></td>
+      </tr>
+    <% end %>
+  </table>
+<% end %>

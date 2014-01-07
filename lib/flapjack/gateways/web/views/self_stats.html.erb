@@ -1,116 +1,102 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <% nav  = render_erb('_nav.html.erb', binding) %>
-    <% head = render_erb('_head.html.erb', binding) %>
-    <% foot = render_erb('_foot.html.erb', binding) %>
-    <title>Flapjack - Internal Statistics</title>
-    <%= head %>
-  </head>
-  <body>
-    <div id="wrap">
-      <div class="container">
-        <div class="page-header">
-          <%= nav %>
-          <h2>Internal Statistics</h2>
-        </div>
+<% page_title 'Internal Statistics' %>
 
-        <div class="row">
-          <div class="span5">
-            <h4>Global Statistics:</h4>
-            <table class="table table-bordered table-hover table-condensed">
-              <tr>
-                <td>Events queued:</td>
-                <td><%= h @events_queued %></td>
-              </tr>
-              <tr>
-                <td>Number of entities:</td>
-                <td><%= h @count_all_entities %></td>
-              </tr>
-              <tr>
-                <td>Number of failing entities:</td>
-                <td><%= h @count_failing_entities %></td>
-              </tr>
-              <tr>
-                <td>Number of checks:</td>
-                <td><%= h @count_all_checks %></td>
-              </tr>
-              <tr>
-                <td>Number of failing checks:</td>
-                <td><%= h @count_failing_checks %></td>
-              </tr>
-              <tr>
-                <td>Events processed (all time)</td>
-                <td>
-                  <ul>
-                    <li>all: <%= h @event_counters['all'] %> events</li>
-                    <li>ok: <%= h @event_counters['ok'] %> events</li>
-                    <li>failure: <%= h @event_counters['failure'] %> events</li>
-                    <li>action: <%= h @event_counters['action'] %> events</li>
-                  </ul>
-                </td>
-              </tr>
-              <tr>
-                <td>Check Freshness</td>
-                <td>
-                  <ul>
-                    <% @current_checks_ages.each_pair do |age, check_count| %>
-                      <li>&gt;= <%= age %>: <%= check_count %></li>
-                    <% end %>
-                  </ul>
-                </td>
-              </tr>
-              <tr>
-                <td>Total keys in redis</td>
-                <td><%= h @dbsize %></td>
-              </tr>
-              <tr>
-                <td>Current time</td>
-                <td><%= h Time.now.to_s %></td>
-              </tr>
-            </table>
-          </div>
-          <div class="span7">
-            <h4>Processor Instances:</h4>
-            <table class="table table-bordered table-hover">
-              <tr>
-                <th>Hostname</th>
-                <th>PID</th>
-                <th>Uptime</th>
-                <th>Events Processed</th>
-              </tr>
-              <% @executive_instances.sort_by {|i, d| d['uptime']}.each do |ei| %>
-                <%
-                  instance_id, details = ei
-                  hostname, pid  = instance_id.split(':')
-                  started        = details['uptime_string']
-                  event_counters = details['event_counters']
-                  event_rates    = details['event_rates']
-                 %>
-                <tr>
-                  <td><%= h hostname %></td>
-                  <td><%= h pid %></td>
-                  <td><%= h started %></td>
-                  <td>
-                    <ul>
-                      <li>all: <%= h event_counters['all'] %> (<%= h event_rates['all'] %> events/s)</li>
-                      <li>ok: <%= h event_counters['ok'] %> (<%= h event_rates['ok'] %> events/s)</li>
-                      <li>failure: <%= h event_counters['failure'] %> (<%= h event_rates['failure'] %> events/s)</li>
-                      <li>action: <%= h event_counters['action'] %> (<%= h event_rates['action'] %> events/s)</li>
-                    </ul>
-                  </td>
-                </tr>
-              <% end %>
-            </table>
-          </div>
-        </div>
+<div class="page-header">
+  <h2>Internal Statistics</h2>
+</div>
 
-        <p><a href="/self_stats.json">Instrument as JSON</a></p>
-      </div>
-      <div id="push"></div>
-    </div>
-    <div id="footer">
-      <%= foot %>
-    </div>
-  </body>
-</html>
+<div class="row">
+  <div class="col-md-6">
+    <h4>Global Statistics:</h4>
+    <table class="table table-bordered table-hover table-condensed">
+      <tr>
+        <td>Events queued:</td>
+        <td><%= h @events_queued %></td>
+      </tr>
+      <tr>
+        <td>Number of entities:</td>
+        <td><%= h @count_all_entities %></td>
+      </tr>
+      <tr>
+        <td>Number of failing entities:</td>
+        <td><%= h @count_failing_entities %></td>
+      </tr>
+      <tr>
+        <td>Number of checks:</td>
+        <td><%= h @count_all_checks %></td>
+      </tr>
+      <tr>
+        <td>Number of failing checks:</td>
+        <td><%= h @count_failing_checks %></td>
+      </tr>
+      <tr>
+        <td>Events processed (all time)</td>
+        <td>
+          <ul>
+            <li>all: <%= h @event_counters['all'] %> events</li>
+            <li>ok: <%= h @event_counters['ok'] %> events</li>
+            <li>failure: <%= h @event_counters['failure'] %> events</li>
+            <li>action: <%= h @event_counters['action'] %> events</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td>Check Freshness</td>
+        <td>
+          <ul>
+            <% @current_checks_ages.each_pair do |age, check_count| %>
+              <li>&gt;= <%= age %>: <%= check_count %></li>
+            <% end %>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td>Total keys in redis</td>
+        <td><%= h @dbsize %></td>
+      </tr>
+      <tr>
+        <td>Current time</td>
+        <td><%= h Time.now.to_s %></td>
+      </tr>
+    </table>
+  </div>
+  <div class="col-md-6">
+    <h4>Processor Instances:</h4>
+    <table class="table table-bordered table-hover">
+      <tr>
+        <th>Hostname</th>
+        <th>PID</th>
+        <th>Uptime</th>
+        <th>Events Processed</th>
+      </tr>
+      <% @executive_instances.sort_by {|i, d| d['uptime']}.each do |ei| %>
+        <%
+          instance_id, details = ei
+          hostname, pid  = instance_id.split(':')
+          started        = details['uptime_string']
+          event_counters = details['event_counters']
+          event_rates    = details['event_rates']
+         %>
+        <tr>
+          <td><%= h hostname %></td>
+          <td><%= h pid %></td>
+          <td><%= h started %></td>
+          <td>
+            <ul>
+              <li>all: <%= h event_counters['all'] %> (<%= h event_rates['all'] %> events/s)</li>
+              <li>ok: <%= h event_counters['ok'] %> (<%= h event_rates['ok'] %> events/s)</li>
+              <li>failure: <%= h event_counters['failure'] %> (<%= h event_rates['failure'] %> events/s)</li>
+              <li>action: <%= h event_counters['action'] %> (<%= h event_rates['action'] %> events/s)</li>
+            </ul>
+          </td>
+        </tr>
+      <% end %>
+    </table>
+  </div>
+</div>
+
+<p>
+  <a class="btn btn-success" href="/self_stats.json">View as JSON</a>.
+  Learn how to
+  <a href="https://github.com/flpjck/flapjack/wiki/Gathering-internal-statistics-with-collectd">
+    use these metrics</a>.
+</p>
