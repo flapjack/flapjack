@@ -29,11 +29,28 @@
   <td><button type="button" class="danger" aria-hidden="true">&times;</button></td>
 </script>
 
+<script type="text/template" id="contact-media-list-item-template">
+  <td>
+    <select class="form-control" name="media">
+      <option>email</option>
+      <option>sms</option>
+      <option>jabber</option>
+    </select>
+  </td>
+  <td>
+    <input type="text" name="uri" class="form-control" value="me@example.org">
+  </td>
+  <td>
+    <button type="button" class="close button delete" aria-hidden="true">&times;</button>
+  </td>
+</script>
+
+
 <script type="text/template" id="contact-template">
   <div class="form-group">
     <label class="col-sm-3 control-label" for="contact_first_name">First name</label>
     <div class="col-sm-9">
-      <input type="text" name="contact_first_name" class="form-control" value="<@- first_name @>">
+      <input type="text" autofocus="autofocus" name="contact_first_name" class="form-control" value="<@- first_name @>">
     </div>
   </div>
   <div class="form-group">
@@ -77,6 +94,22 @@
             <button type="button" class="btn btn-success">Create Contact</button>
           </div>
         </form><!-- form-horizontal-->
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Media</th>
+              <th>&nbsp;</th>
+            </tr>
+          </thead>
+          <tbody id="contactMediaList">
+          </tbody>
+        </table>
+        <button id="add-contact-media" type="button" class="btn btn-default btn-xs">
+          <i class="fa fa-plus-square"></i>
+          &nbsp;
+          Add Media
+        </button>
 
         <table class="table">
           <thead>
