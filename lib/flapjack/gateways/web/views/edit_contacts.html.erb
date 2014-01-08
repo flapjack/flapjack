@@ -19,7 +19,9 @@
 <script type="text/template" id="contact-list-item-template">
   <td><@- first_name @></td>
   <td><@- last_name @></td>
-  <td><@- email @></td>
+  <td>
+    <button type="button" class="close button delete" aria-hidden="true">&times;</button>
+  </td>
 </script>
 
 <script type="text/template" id="contact-entities-list-item-template">
@@ -40,12 +42,6 @@
       <input type="text" name="contact_last_name" class="form-control" value="<@- last_name @>">
     </div>
   </div>
-  <div class="form-group">
-    <label class="col-sm-3 control-label" for="contact_email">Email</label>
-    <div class="col-sm-9">
-      <input type="text" name="contact_email" class="form-control" value="<@- email @>">
-    </div>
-  </div>
 </script>
 
 <div id="data-api-url" data-api-url="<%= @api_url %>">
@@ -58,7 +54,7 @@
         <tr>
           <th>First Name</th>
           <th>Last Name</th>
-          <th>Email</th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="contactList">
