@@ -17,6 +17,7 @@ module Flapjack
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         keys = redis.keys("entity_id:*")
+        return [] unless keys.any?
         ids = redis.mget(keys)
         keys.collect {|k|
           k =~ /^entity_id:(.+)$/; entity_name = $1

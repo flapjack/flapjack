@@ -56,7 +56,7 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::ContactMethods::Helpers
 
           app.post '/contacts' do
-            pass unless Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
+            pass unless Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type.split(/\s*[;,]\s*/, 2).first.downcase)
             content_type :json
             cors_headers
 
