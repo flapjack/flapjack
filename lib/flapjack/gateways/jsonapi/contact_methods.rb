@@ -158,14 +158,32 @@ module Flapjack
               Flapjack::Data::Contact.entities_jsonapi(contacts.map(&:id), :redis => redis)
             end
 
+            linked_media_data = []
+            linked_media_ids  = {}
+            contacts.each do |contact|
+              contact.media.keys.each do |medium|
+                id = "#{contact.id}_#{medium}"
+                interval = contact.media_intervals[medium].nil? ? nil : contact.media_intervals[medium].to_i
+                rollup_threshold = contact.media_rollup_thresholds[medium].nil? ? nil : contact.media_rollup_thresholds[medium].to_i
+                linked_media_ids[contact.id] = id
+                linked_media_data <<
+                  { "id" => id,
+                    "type" => medium,
+                    "address" => contact.media[medium],
+                    "interval" => interval,
+                    "rollup_threshold" => rollup_threshold }
+              end
+            end
+
             contacts_json = contacts.collect {|contact|
               contact.linked_entity_ids = linked_entity_ids[contact.id]
-              contact.to_json
+              contact.linked_media_ids  = linked_media_ids[contact.id]
+              contact.to_jsonapi
             }.join(", ")
 
             '{"contacts":[' + contacts_json + ']' +
-              ( linked_entity_data.empty? ? '}' :
-                ', "linked": {"entities":' + linked_entity_data.to_json + '}}')
+                ',"linked":{"entities":' + linked_entity_data.to_json +
+                          ',"media":' + linked_media_data.to_json + '}}'
           end
 
           # Returns the core information about the specified contact
@@ -177,7 +195,7 @@ module Flapjack
 
             entities = contact.entities.map {|e| e[:entity] }
 
-            '{"contacts":[' + contact.to_json + ']' +
+            '{"contacts":[' + contact.to_jsonapi + ']' +
               ( entities.empty? ? '}' :
                 ', "linked": {"entities":' + entities.values.to_json + '}}')
           end
@@ -208,7 +226,7 @@ module Flapjack
             logger.debug("contact_data: #{contact_data}")
             contact.update(contact_data)
 
-            contact.to_json
+            contact.to_jsonapi
           end
 
           # Deletes a contact
