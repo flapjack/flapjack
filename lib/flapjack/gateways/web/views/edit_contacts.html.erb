@@ -26,7 +26,7 @@
 
 <script type="text/template" id="contact-entities-list-item-template">
   <td><@- name @></td>
-  <td><button type="button" class="danger" aria-hidden="true">&times;</button></td>
+  <td><button type="button" class="close button delete" aria-hidden="true">&times;</button></td>
 </script>
 
 <script type="text/template" id="contact-media-list-item-template">
@@ -61,6 +61,15 @@
   </div>
 </script>
 
+<script type="text/template" id="contact-entity-chooser">
+  <input type="hidden" id="entityChooser" style="width: 80%">
+  <button id="add-contact-entity" type="button" class="btn btn-default btn-xs">
+    <i class="fa fa-plus-square"></i>
+    &nbsp;
+    Add Entities
+  </button>
+</script>
+
 <div id="data-api-url" data-api-url="<%= @api_url %>">
   <div class="page-header">
     <h2>Edit Contacts</h2>
@@ -91,7 +100,7 @@
         <form action="/contacts" method="post" role="form" class="form-horizontal">
 
           <div class="modal-footer">
-            <button type="button" class="btn btn-success">Create Contact</button>
+            <button type="button" class="btn btn-success" id="contactAccept">Create Contact</button>
           </div>
         </form><!-- form-horizontal-->
 
@@ -122,7 +131,8 @@
           </tbody>
         </table>
 
-        <input type="hidden" class="entityChooser">
+        <div id="entityAdd">
+        </div>
 
       </div>
     </div><!-- /.modal-content -->
