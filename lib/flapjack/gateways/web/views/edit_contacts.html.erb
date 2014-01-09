@@ -31,17 +31,14 @@
 
 <script type="text/template" id="contact-media-list-item-template">
   <td>
-    <select class="form-control" name="type">
-      <option value="email"<@- type == 'email' ? ' selected' : '' @->Email</option>
-      <option value="sms"<@- type == 'email' ? ' selected' : '' @->>SMS</option>
-      <option value="jabber"<@- type == 'email' ? ' selected' : '' @->>Jabber</option>
-    </select>
+    <@- labels[type] @>
   </td>
   <td>
     <input type="text" name="address" class="form-control" value="<@- address @>">
   </td>
   <td>
-    <button type="button" class="close button delete delete-medium" aria-hidden="true">&minus;</button>
+  </td>
+  <td>
   </td>
 </script>
 
@@ -79,7 +76,7 @@
         <tr>
           <th>First Name</th>
           <th>Last Name</th>
-          <th></th>
+          <th>&nbsp;</th>
         </tr>
       </thead>
       <tbody id="contactList">
@@ -107,17 +104,14 @@
           <thead>
             <tr>
               <th>Media</th>
-              <th>&nbsp;</th>
+              <th>Address</th>
+              <th>Interval</th>
+              <th>Rollup</th>
             </tr>
           </thead>
           <tbody id="contactMediaList">
           </tbody>
         </table>
-        <button id="add-contact-media" type="button" class="btn btn-default btn-xs">
-          <i class="fa fa-plus-square"></i>
-          &nbsp;
-          Add Media
-        </button>
 
         <table class="table" style="margin-top: 1em">
           <thead>
