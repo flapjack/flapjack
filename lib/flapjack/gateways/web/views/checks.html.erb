@@ -35,7 +35,7 @@
       %>
       <tr class="<%= row_colour %>">
         <% unless row_entity && entity == row_entity %>
-          <td rowspan=<%= @states[entity].length %>>
+          <td rowspan="<%= @states[entity].length %>">
             <a href="<%= entity_link %>"><%= h entity %></a>
           </td>
           <% row_entity = entity %>
