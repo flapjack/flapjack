@@ -155,6 +155,18 @@ module Flapjack
                      *['subdomain', 'username', 'password'].collect {|f| [f, details[f]]})
       end
 
+      # returns false if this contact was already in the set for the entity
+      def add_entity(entity)
+        key = "contacts_for:#{entity.id}"
+        @redis.sadd(key, self.id)
+      end
+
+      # returns false if this contact wasn't in the set for the entity
+      def remove_entity(entity)
+        key = "contacts_for:#{entity.id}"
+        @redis.srem(key, self.id)
+      end
+
       # NB ideally contacts_for:* keys would scope the entity and check by an
       # input source, for namespacing purposes
       def entities(options = {})

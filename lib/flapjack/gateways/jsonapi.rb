@@ -27,7 +27,7 @@ module Flapjack
 
       include Flapjack::Utility
 
-      JSON_REQUEST_MIME_TYPES = ['application/vnd.api+json', 'application/json']
+      JSON_REQUEST_MIME_TYPES = ['application/vnd.api+json', 'application/json', 'application/json-patch+json']
 
       class ContactNotFound < RuntimeError
         attr_reader :contact_id
@@ -192,6 +192,14 @@ module Flapjack
           logger.info("Returning #{response.status} for #{request.request_method} " +
             "#{request.path_info}#{query_string}")
         end
+      end
+
+      def is_json_request?
+        Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type.split(/\s*[;,]\s*/, 2).first.downcase)
+      end
+
+      def is_jsonpatch_request?
+        'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first.downcase)
       end
 
       register Flapjack::Gateways::JSONAPI::EntityMethods

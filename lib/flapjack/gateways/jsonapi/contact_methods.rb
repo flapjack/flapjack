@@ -49,6 +49,7 @@ module Flapjack
             raise Flapjack::Gateways::JSONAPI::ResourceLocked.new(resource) unless semaphore
             semaphore
           end
+
         end
 
         def self.registered(app)
@@ -56,7 +57,7 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::ContactMethods::Helpers
 
           app.post '/contacts' do
-            pass unless Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type.split(/\s*[;,]\s*/, 2).first.downcase)
+            pass unless is_json_request?
             content_type :json
             cors_headers
 
@@ -97,7 +98,7 @@ module Flapjack
           end
 
           app.post '/contacts_atomic' do
-            pass unless Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
+            pass unless is_json_request?
             content_type :json
 
             contacts_data = params[:contacts]
@@ -142,7 +143,7 @@ module Flapjack
           # Returns all the contacts
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
           app.get '/contacts' do
-            content_type :json
+            content_type 'application/vnd.api+json'
             cors_headers
 
             contacts = if params[:ids]
@@ -189,7 +190,7 @@ module Flapjack
           # Returns the core information about the specified contact
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id
           app.get '/contacts/:contact_id' do
-            content_type :json
+            content_type 'application/vnd.api+json'
             cors_headers
             contact = find_contact(params[:contact_id])
 
@@ -202,8 +203,8 @@ module Flapjack
 
           # Updates a contact
           app.put '/contacts/:contact_id' do
-            content_type :json
             cors_headers
+            content_type :json
 
             contacts_data = params[:contacts]
 
@@ -227,6 +228,59 @@ module Flapjack
             contact.update(contact_data)
 
             contact.to_jsonapi
+          end
+
+          # TODO this should build up all data, verify entities exist, etc.
+          # before applying any changes
+          # TODO generalise JSON-Patch data parsing code
+          app.patch '/contacts/:contact_id' do
+            pass unless is_jsonpatch_request?
+            content_type :json
+            cors_headers
+
+            ops = params[:ops]
+
+            if ops.nil? || !ops.is_a?(Array)
+              halt err(400, "Invalid JSON-Patch request")
+            end
+
+            ops.each do |operation|
+              op = operation['op']
+              operation['path'] =~ /\A\/contacts\/0\/([^\/]+)(?:\/([^\/]+)(?:\/([^\/]+))?)?\z/
+              if 'links'.eql?($1)
+                # update linked data
+                type = $2
+                next unless 'entities'.eql?(type)
+
+                case op
+                when 'add'
+                  entity_id = operation['value']
+                  entity = Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis)
+                  next if entity.nil?
+
+                  contact = find_contact(params[:contact_id])
+                  contact.add_entity(entity)
+                when 'remove'
+                  entity_id = $3
+                  entity = Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis)
+                  next if entity.nil?
+
+                  contact = find_contact(params[:contact_id])
+                  contact.remove_entity(entity)
+                end
+              else
+                property = $1
+                value = $3
+                next unless ['first_name', 'last_name', 'email'].include?(property)
+
+                contact = find_contact(params[:contact_id])
+                contact.update(property => value)
+              end
+            end
+
+            # will need to be 200 and return contact.to_jsonapi
+            # if updated_at changes, or Etag, when those are introduced
+            status 204
           end
 
           # Deletes a contact
