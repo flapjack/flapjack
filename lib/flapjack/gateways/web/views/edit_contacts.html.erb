@@ -20,31 +20,30 @@
   <td><@- first_name @></td>
   <td><@- last_name @></td>
   <td>
-    <button type="button" class="close button delete" aria-hidden="true">&times;</button>
+    <button type="button" class="close button delete delete-contact" aria-hidden="true">&minus;</button>
   </td>
 </script>
 
 <script type="text/template" id="contact-entities-list-item-template">
   <td><@- name @></td>
-  <td><button type="button" class="close button delete" aria-hidden="true">&times;</button></td>
+  <td><button type="button" class="close button delete delete-entity" aria-hidden="true">&minus;</button></td>
 </script>
 
 <script type="text/template" id="contact-media-list-item-template">
   <td>
-    <select class="form-control" name="media">
-      <option>email</option>
-      <option>sms</option>
-      <option>jabber</option>
+    <select class="form-control" name="type">
+      <option value="email"<@- type == 'email' ? ' selected' : '' @->Email</option>
+      <option value="sms"<@- type == 'email' ? ' selected' : '' @->>SMS</option>
+      <option value="jabber"<@- type == 'email' ? ' selected' : '' @->>Jabber</option>
     </select>
   </td>
   <td>
-    <input type="text" name="uri" class="form-control" value="me@example.org">
+    <input type="text" name="address" class="form-control" value="<@- address @>">
   </td>
   <td>
-    <button type="button" class="close button delete" aria-hidden="true">&times;</button>
+    <button type="button" class="close button delete delete-medium" aria-hidden="true">&minus;</button>
   </td>
 </script>
-
 
 <script type="text/template" id="contact-template">
   <div class="form-group">
