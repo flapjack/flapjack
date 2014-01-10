@@ -50,6 +50,39 @@ module Flapjack
             semaphore
           end
 
+          def apply_json_patch(object_path, &block)
+            ops = params[:ops]
+
+            if ops.nil? || !ops.is_a?(Array)
+              halt err(400, "Invalid JSON-Patch request")
+            end
+
+            ops.each do |operation|
+              linked = nil
+              property = nil
+
+              op = operation['op']
+              operation['path'] =~ /\A\/#{object_path}\/0\/([^\/]+)(?:\/([^\/]+)(?:\/([^\/]+))?)?\z/
+              if 'links'.eql?($1)
+                linked = $2
+
+                value = case op
+                when 'add'
+                  operations['value']
+                when 'remove'
+                  $3
+                end
+              elsif 'replace'.eql?(op)
+                property = $1
+                value = $3
+              else
+                next
+              end
+
+              yield(op, property, linked, value)
+            end
+          end
+
         end
 
         def self.registered(app)
@@ -172,7 +205,8 @@ module Flapjack
                     "type" => medium,
                     "address" => contact.media[medium],
                     "interval" => interval,
-                    "rollup_threshold" => rollup_threshold }
+                    "rollup_threshold" => rollup_threshold,
+                    "contact_id" => contact.id }
               end
             end
 
@@ -238,43 +272,24 @@ module Flapjack
             content_type :json
             cors_headers
 
-            ops = params[:ops]
+            contact = find_contact(params[:contact_id])
 
-            if ops.nil? || !ops.is_a?(Array)
-              halt err(400, "Invalid JSON-Patch request")
-            end
-
-            ops.each do |operation|
-              op = operation['op']
-              operation['path'] =~ /\A\/contacts\/0\/([^\/]+)(?:\/([^\/]+)(?:\/([^\/]+))?)?\z/
-              if 'links'.eql?($1)
-                # update linked data
-                type = $2
-                next unless 'entities'.eql?(type)
-
-                case op
-                when 'add'
-                  entity_id = operation['value']
-                  entity = Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis)
-                  next if entity.nil?
-
-                  contact = find_contact(params[:contact_id])
-                  contact.add_entity(entity)
-                when 'remove'
-                  entity_id = $3
-                  entity = Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis)
-                  next if entity.nil?
-
-                  contact = find_contact(params[:contact_id])
-                  contact.remove_entity(entity)
+            apply_json_patch('contacts') do |op, property, linked, value|
+              case op
+              when 'replace'
+                if ['first_name', 'last_name', 'email'].include?(property)
+                  contact.update(property => value)
                 end
-              else
-                property = $1
-                value = $3
-                next unless ['first_name', 'last_name', 'email'].include?(property)
-
-                contact = find_contact(params[:contact_id])
-                contact.update(property => value)
+              when 'add'
+                if 'entities'.eql?(linked)
+                  entity = Flapjack::Data::Entity.find_by_id(value, :redis => redis)
+                  contact.add_entity(entity) unless entity.nil?
+                end
+              when 'remove'
+                if 'entities'.eql?(linked)
+                  entity = Flapjack::Data::Entity.find_by_id(value, :redis => redis)
+                  contact.remove_entity(entity) unless entity.nil?
+                end
               end
             end
 
@@ -290,6 +305,85 @@ module Flapjack
             contact = find_contact(params[:contact_id])
             contact.delete!
             semaphore.release
+            status 204
+          end
+
+          app.post '/media' do
+            pass unless is_json_request?
+            content_type :json
+            cors_headers
+
+            media_data = params[:media]
+
+            if media_data.nil? || !media_data.is_a?(Enumerable)
+              halt err(422, "No valid media were submitted")
+            end
+
+            unless media_data.all? {|m| m['id'].nil? }
+              halt err(422, "Media creation cannot include IDs")
+            end
+
+            semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
+
+            contacts = media_data.inject({}) {|memo, medium_data|
+              contact_id = medium_data['contact_id']
+              if contact_id.nil?
+                semaphore.release
+                halt err(422, "Media data must include 'contact_id'")
+              end
+              next memo if memo.has_key?(contact_id)
+              contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => redis)
+              if contact.nil?
+                semaphore.release
+                halt err(422, "Contact id:'#{contact_id}' could not be loaded")
+              end
+              memo[contact_id] = contact
+              memo
+            }
+
+            media_data.each do |medium_data|
+              contact = contacts[medium_data['contact_id']]
+              type = medium_data['type']
+              contact.set_address_for_media(type, medium_data['address'])
+              contact.set_interval_for_media(type, medium_data['interval'])
+              contact.set_rollup_threshold_for_media(type, medium_data['rollup_threshold'])
+              medium_data['id'] = "#{contact.id}_#{type}"
+            end
+
+            semaphore.release
+
+            {:media => media_data.to_json}
+          end
+
+          app.patch '/media/:media_id' do
+            pass unless is_jsonpatch_request?
+            content_type :json
+            cors_headers
+
+            media_id = params[:media_id]
+            media_id =~ /\A(.+)_(email|sms|jabber)\z/
+
+            contact_id = $1
+            type = $2
+
+            halt err(422, "Could not get contact_id from media_id") if contact_id.nil?
+            halt err(422, "Could not get type from media_id") if type.nil?
+
+            contact = find_contact(contact_id)
+
+            apply_json_patch('media') do |op, property, linked, value|
+              if 'replace'.eql?(op)
+                case property
+                when 'address'
+                  contact.set_address_for_media(type, value)
+                when 'interval'
+                  contact.set_interval_for_media(type, value)
+                when 'rollup_threshold'
+                  contact.set_rollup_threshold_for_media(type, value)
+                end
+              end
+            end
+
             status 204
           end
 
