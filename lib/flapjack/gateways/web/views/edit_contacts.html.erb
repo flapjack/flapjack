@@ -34,11 +34,13 @@
     <@- labels[type] @>
   </td>
   <td>
-    <input type="text" name="address" class="form-control" value="<@- address @>">
+    <input type="text" data-attr="address" class="form-control" value="<@- address @>">
   </td>
   <td>
+    <input type="text" data-attr="interval" class="form-control" value="<@- interval @>">
   </td>
   <td>
+    <input type="text" data-attr="rollup_threshold" class="form-control" value="<@- rollup_threshold @>">
   </td>
 </script>
 
@@ -103,10 +105,10 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Media</th>
-              <th>Address</th>
-              <th>Interval</th>
-              <th>Rollup</th>
+              <th style="width: 15%">Media</th>
+              <th style="width: 65%">Address</th>
+              <th style="width: 10%">Interval</th>
+              <th style="width: 10%">Rollup</th>
             </tr>
           </thead>
           <tbody id="contactMediaList">
