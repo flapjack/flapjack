@@ -29,7 +29,7 @@ describe Flapjack::Coordinator do
 
     fc = Flapjack::Coordinator.new(config)
     expect(Flapjack::Pikelet).to receive(:create).with('processor',
-        :config => cfg['processor'], :redis_config => {}, :boot_time => time, :coordinator => fc).
+        :config => cfg['processor'], :redis_config => {}, :boot_time => time).
       and_return(processor)
 
     expect(EM).to receive(:stop)
@@ -62,7 +62,7 @@ describe Flapjack::Coordinator do
 
     fc = Flapjack::Coordinator.new(config)
     expect(Flapjack::Pikelet).to receive(:create).with('processor',
-        :config => cfg['processor'], :redis_config => {}, :boot_time => time, :coordinator => fc)
+        :config => cfg['processor'], :redis_config => {}, :boot_time => time)
       .and_return(processor)
 
     expect(EM).to receive(:stop)
@@ -95,10 +95,10 @@ describe Flapjack::Coordinator do
 
     fc = Flapjack::Coordinator.new(config)
     expect(Flapjack::Pikelet).to receive(:create).with('processor',
-        :config => cfg['executive'], :redis_config => {}, :boot_time => time, :coordinator => fc).
+        :config => cfg['executive'], :redis_config => {}, :boot_time => time).
       and_return(processor)
     expect(Flapjack::Pikelet).to receive(:create).with('notifier',
-        :config => cfg['executive'], :redis_config => {}, :boot_time => time, :coordinator => fc).
+        :config => cfg['executive'], :redis_config => {}, :boot_time => time).
       and_return(notifier)
 
     expect(EM).to receive(:stop)
@@ -132,7 +132,7 @@ describe Flapjack::Coordinator do
     fc = Flapjack::Coordinator.new(config)
     expect(Flapjack::Pikelet).to receive(:create).with('processor',
         :config => cfg['executive'].merge(cfg['processor']),
-        :redis_config => {}, :boot_time => time, :coordinator => fc).
+        :redis_config => {}, :boot_time => time).
       and_return(processor)
 
     expect(EM).to receive(:stop)
@@ -210,7 +210,7 @@ describe Flapjack::Coordinator do
     jabber = double('jabber')
     expect(Flapjack::Pikelet).to receive(:create).
       with('jabber', :config => {"enabled" => true}, :redis_config => {},
-        :boot_time => time, :coordinator => fc).
+        :boot_time => time).
       and_return(jabber)
     expect(jabber).to receive(:start)
 
@@ -281,7 +281,7 @@ describe Flapjack::Coordinator do
 
     expect(Flapjack::Pikelet).to receive(:create).
       with('processor', :config => new_cfg['processor'], :redis_config => {},
-        :boot_time => time, :coordinator => fc).
+        :boot_time => time).
       and_return(new_exec)
 
     fc.instance_variable_set('@boot_time', time)

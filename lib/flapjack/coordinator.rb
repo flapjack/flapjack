@@ -131,7 +131,7 @@ module Flapjack
       pikelets_data.each_pair do |type, cfg|
         next unless pikelet = Flapjack::Pikelet.create(type,
           :config => cfg, :redis_config => @redis_options,
-          :boot_time => @boot_time, :coordinator => self)
+          :boot_time => @boot_time)
 
         @pikelets << pikelet
         pikelet.start
