@@ -20,6 +20,9 @@ module Flapjack
       # Calling next with :block => false, will return a nil if there are no
       # events on the queue.
       #
+      # NB: this should probably lock access to its relevant queues to
+      # stop multiple processor pikelets accessing the same redis db contending.
+      # For now, don't do that!
       def self.next(queue, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
 
@@ -28,15 +31,18 @@ module Flapjack
                      :events_archive_maxage => (3 * 60 * 60) }
         options  = defaults.merge(opts)
 
+        archive_dest = nil
+        base_time_str = Time.now.utc.strftime("%Y%m%d%H")
+
         if options[:archive_events]
-          dest = "events_archive:#{Time.now.utc.strftime "%Y%m%d%H"}"
+          archive_dest = "events_archive:#{base_time_str}"
           if options[:block]
-            raw = redis.brpoplpush(queue, dest, 0)
+            raw = redis.brpoplpush(queue, archive_dest, 0)
           else
-            raw = redis.rpoplpush(queue, dest)
+            raw = redis.rpoplpush(queue, archive_dest)
             return unless raw
           end
-          redis.expire(dest, options[:events_archive_maxage])
+          redis.expire(archive_dest, options[:events_archive_maxage])
         else
           if options[:block]
             raw = redis.brpop(queue, 0)[1]
@@ -45,15 +51,44 @@ module Flapjack
             return unless raw
           end
         end
-        begin
-          parsed = ::Oj.load( raw )
-        rescue Oj::Error => e
-          if options[:logger]
-            options[:logger].warn("Error deserialising event json: #{e}, raw json: #{raw.inspect}")
+        parsed = parse_and_validate(raw)
+        if parsed.nil?
+          # either bad json or invalid data -- in either case we'll
+          # store the raw data in a rejected list
+          rejected_dest = "events_rejected:#{base_time_str}"
+          if options[:archive_events]
+            # as we know that the last item added to the archive == raw,
+            # we can just use that instead
+            redis.multi
+            redis.lpop(archive_dest)
+            redis.lpush(rejected_dest, raw)
+            redis.exec
+          else
+            redis.lpush(rejected_dest, raw)
           end
-          return nil
+          return
         end
-        self.new( parsed )
+        self.new(parsed)
+      end
+
+      def self.parse_and_validate(raw, opts = {})
+        parsed = ::Oj.load(raw)
+
+        valid = true
+
+        # TODO validate
+
+        return parsed if valid
+
+        if opts[:logger]
+          opts[:logger].error("Invalid event data received: #{parsed.inspect}")
+        end
+        nil
+      rescue Oj::Error => e
+        if opts[:logger]
+          opts[:logger].error("Error deserialising event json: #{e}, raw json: #{raw.inspect}")
+        end
+        nil
       end
 
       # creates, or modifies, an event object and adds it to the events list in redis
