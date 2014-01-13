@@ -38,10 +38,10 @@
           <% if in_unscheduled_outage%> (Ack'd)<% end %>
           <% if in_scheduled_outage %> (Sched)<% end %>
         </td>
-        <td><%= summary %></td>
-        <td><%= changed %></td>
-        <td><%= updated %></td>
-        <td><%= notified %></td>
+        <td><%= h summary %></td>
+        <td><%= h changed %></td>
+        <td><%= h updated %></td>
+        <td><%= h notified %></td>
       </tr>
     <% end %>
   </table>

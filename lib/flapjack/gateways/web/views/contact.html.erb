@@ -143,7 +143,7 @@
         <td><a href="/entity/<%= u(entity.name) %>" title="entity status"><%= h entity.name %></a></td>
         <td>
           <% checks.each do |check| %>
-          <%=   "<a href=\"/check?entity=#{u(entity.name)}&amp;check=#{u(check)}\" title=\"check status\">#{ h check }</a>" %>
+          <%= "<a href=\"/check?entity=#{u(entity.name)}&amp;check=#{u(check)}\" title=\"check status\">#{ h check }</a>" %>
           <% end %>
         </td>
       </tr>

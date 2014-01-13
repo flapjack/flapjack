@@ -69,6 +69,7 @@ test:
 
   Scenario: Reloading flapjack configuration
     When I start flapjack with `flapjack start --config tmp/cucumber_cli/flapjack_cfg.yaml`
+    Then flapjack should start within 15 seconds
     When I run `mv tmp/cucumber_cli/flapjack_cfg.yaml tmp/cucumber_cli/flapjack_cfg.yaml.bak`
     Given a file named "flapjack_cfg.yaml" with:
 """
@@ -80,7 +81,7 @@ test:
 """
     When I send a SIGHUP to the flapjack process
     # TODO how to test for config file change?
-    When I send a SIGINT to the flapjack process
+    When I stop flapjack with `flapjack stop --config tmp/cucumber_cli/flapjack_cfg_d.yaml`
     Then flapjack should stop within 15 seconds
 
 

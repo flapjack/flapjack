@@ -44,7 +44,7 @@
         <td>
           <ul>
             <% @current_checks_ages.each_pair do |age, check_count| %>
-              <li>&gt;= <%= age %>: <%= check_count %></li>
+              <li>&gt;= <%= h age %>: <%= h check_count %></li>
             <% end %>
           </ul>
         </td>
