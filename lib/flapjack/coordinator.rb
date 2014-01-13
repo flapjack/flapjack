@@ -21,6 +21,8 @@ module Flapjack
       @redis_options = config.for_redis
       @pikelets = []
 
+      @received_signals = []
+
       @logger = Flapjack::Logger.new("flapjack-coordinator", @config.all['logger'])
     end
 
@@ -29,22 +31,39 @@ module Flapjack
 
       EM.synchrony do
         setup_signals if options[:signals]
-        add_pikelets(pikelets(@config.all))
+
+        begin
+          add_pikelets(pikelets(@config.all))
+          loop do
+            while sig = @received_signals.shift do
+              case sig
+              when 'INT', 'TERM', 'QUIT'
+                @exit_value = Signal.list[sig] + 128
+                raise Interrupt
+              when 'HUP'
+                reload
+              end
+            end
+            EM::Synchrony.sleep 0.25
+          end
+        rescue Exception => e
+          unless e.is_a?(Interrupt)
+            trace = e.backtrace.join("\n")
+            @logger.fatal "#{e.class.name}\n#{e.message}\n#{trace}"
+            @exit_value = 1
+          end
+          remove_pikelets(@pikelets)
+          EM.stop
+        end
       end
+
+      Syslog.close if Syslog.opened?
 
       @exit_value
     end
 
-    def stop(value = 0)
-      return unless @exit_value.nil?
-      @exit_value = value
-      remove_pikelets(@pikelets, :shutdown => true)
-      # Syslog.close if Syslog.opened? # TODO revisit in threading branch
-    end
+    private
 
-    # NB: global config options (e.g. daemonize, pidfile,
-    # logfile, redis options) won't be checked on reload.
-    # should we do a full restart if some of these change?
     def reload
       prev_pikelet_cfg = pikelets(@config.all)
 
@@ -85,85 +104,61 @@ module Flapjack
         added << pik.type
       end
 
-      # puts "removed"
-      # p removed
-
-      # puts "added"
-      # p added
-
       removed_pikelets = @pikelets.select {|pik| removed.include?(pik.type) }
-
-      # puts "removed pikelets"
-      # p removed_pikelets
 
       remove_pikelets(removed_pikelets)
 
       # is there a nicer way to only keep the parts of the hash with matching keys?
       added_pikelets = enabled_pikelet_cfg.select {|k, v| added.include?(k) }
 
-      # puts "added pikelet configs"
-      # p added_pikelets
-
       add_pikelets(added_pikelets)
     end
-
-  private
 
     # the global nature of this seems at odds with it calling stop
     # within a single coordinator instance. Coordinator is essentially
     # a singleton anyway...
     def setup_signals
-      Kernel.trap('INT')  { stop(Signal.list['INT']) }
-      Kernel.trap('TERM') { stop(Signal.list['TERM']) }
+      Kernel.trap('INT')    { @received_signals << 'INT' unless @received_signals.include?('INT') }
+      Kernel.trap('TERM')   { @received_signals << 'TERM' unless @received_signals.include?('TERM') }
       unless RbConfig::CONFIG['host_os'] =~ /mswin|windows|cygwin/i
-        Kernel.trap('QUIT') { stop(Signal.list['QUIT']) }
-        Kernel.trap('HUP')  { reload }
+        Kernel.trap('QUIT') { @received_signals << 'QUIT' unless @received_signals.include?('QUIT') }
+        Kernel.trap('HUP')  { @received_signals << 'HUP' unless @received_signals.include?('HUP') }
       end
     end
 
     # passed a hash with {PIKELET_TYPE => PIKELET_CFG, ...}
     def add_pikelets(pikelets_data = {})
-      start_piks = []
       pikelets_data.each_pair do |type, cfg|
         next unless pikelet = Flapjack::Pikelet.create(type,
-          :config => cfg, :redis_config => @redis_options, :boot_time => @boot_time, :coordinator => self)
-        start_piks << pikelet
+          :config => cfg, :redis_config => @redis_options,
+          :boot_time => @boot_time, :coordinator => self)
+
         @pikelets << pikelet
-      end
-      begin
-        start_piks.each {|pik| pik.start }
-      rescue Exception => e
-        trace = e.backtrace.join("\n")
-        @logger.fatal "#{e.class.name}\n#{e.message}\n#{trace}"
-        stop
+        pikelet.start
       end
     end
 
     def remove_pikelets(piks, opts = {})
-      Fiber.new {
-        piks.map(&:stop)
+      piks.map(&:stop)
 
-        loop do
-          # only prints state changes, otherwise pikelets not closing promptly can
-          # cause everything else to be spammy
-          piks.each do |pik|
-            old_status = pik.status
-            pik.update_status
-            status = pik.status
-            next if old_status.eql?(status)
-            # # can't log on exit w/Ruby 2.0
-            # @logger.info "#{pik.type}: #{old_status} -> #{status}"
-          end
-
-          if piks.any? {|p| p.status == 'stopping' }
-            EM::Synchrony.sleep 0.25
-          else
-            EM.stop if opts[:shutdown]
-            @pikelets -= piks
-            break
-          end
+      loop do
+        # only prints state changes, otherwise pikelets not closing promptly can
+        # cause everything else to be spammy
+        piks.each do |pik|
+          old_status = pik.status
+          pik.update_status
+          status = pik.status
+          next if old_status.eql?(status)
+          @logger.info "#{pik.type}: #{old_status} -> #{status}"
         end
-      }.resume
+
+        if piks.any? {|p| p.status == 'stopping' }
+          EM::Synchrony.sleep 0.25
+        else
+          @pikelets -= piks
+          break
+        end
+      end
     end
 
     def pikelets(config_env)

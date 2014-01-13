@@ -32,16 +32,15 @@ describe Flapjack::Coordinator do
         :config => cfg['processor'], :redis_config => {}, :boot_time => time, :coordinator => fc).
       and_return(processor)
 
-    expect(fiber).to receive(:resume)
-    expect(Fiber).to receive(:new).and_yield.and_return(fiber)
-
     expect(EM).to receive(:stop)
+    expect(EM::Synchrony).to receive(:sleep).and_return {
+      fc.instance_variable_set('@received_signals', ['INT'])
+    }
 
-    # Syslog.should_receive(:opened?).and_return(true)
-    # Syslog.should_receive(:close)
+    expect(Syslog).to receive(:opened?).and_return(true)
+    expect(Syslog).to receive(:close)
 
     fc.start(:signals => false)
-    fc.stop
   end
 
   it "handles an exception raised by a pikelet and shuts down" do
@@ -66,16 +65,12 @@ describe Flapjack::Coordinator do
         :config => cfg['processor'], :redis_config => {}, :boot_time => time, :coordinator => fc)
       .and_return(processor)
 
-    expect(fiber).to receive(:resume)
-    expect(Fiber).to receive(:new).and_yield.and_return(fiber)
-
     expect(EM).to receive(:stop)
 
-    # Syslog.should_receive(:opened?).and_return(true)
-    # Syslog.should_receive(:close)
+    expect(Syslog).to receive(:opened?).and_return(true)
+    expect(Syslog).to receive(:close)
 
     fc.start(:signals => false)
-    fc.stop
   end
 
   it "loads an old executive pikelet config block with no new data" do
@@ -106,16 +101,15 @@ describe Flapjack::Coordinator do
         :config => cfg['executive'], :redis_config => {}, :boot_time => time, :coordinator => fc).
       and_return(notifier)
 
-    expect(fiber).to receive(:resume)
-    expect(Fiber).to receive(:new).and_yield.and_return(fiber)
-
     expect(EM).to receive(:stop)
+    expect(EM::Synchrony).to receive(:sleep).and_return {
+      fc.instance_variable_set('@received_signals', ['INT'])
+    }
 
-    # Syslog.should_receive(:opened?).and_return(true)
-    # Syslog.should_receive(:close)
+    expect(Syslog).to receive(:opened?).and_return(true)
+    expect(Syslog).to receive(:close)
 
     fc.start(:signals => false)
-    fc.stop
   end
 
   it "loads an old executive pikelet config block with some new data" do
@@ -141,16 +135,15 @@ describe Flapjack::Coordinator do
         :redis_config => {}, :boot_time => time, :coordinator => fc).
       and_return(processor)
 
-    expect(fiber).to receive(:resume)
-    expect(Fiber).to receive(:new).and_yield.and_return(fiber)
-
     expect(EM).to receive(:stop)
+    expect(EM::Synchrony).to receive(:sleep).and_return {
+      fc.instance_variable_set('@received_signals', ['INT'])
+    }
 
-    # Syslog.should_receive(:opened?).and_return(true)
-    # Syslog.should_receive(:close)
+    expect(Syslog).to receive(:opened?).and_return(true)
+    expect(Syslog).to receive(:close)
 
     fc.start(:signals => false)
-    fc.stop
   end
 
   it "traps system signals and shuts down" do
@@ -166,10 +159,9 @@ describe Flapjack::Coordinator do
     expect(config).to receive(:all).and_return({})
     expect(config).to receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
-    expect(fc).to receive(:stop).exactly(3).times
-    expect(fc).to receive(:reload)
 
     fc.send(:setup_signals)
+    expect(fc.instance_variable_get('@received_signals')).to eq(['INT', 'TERM', 'QUIT', 'HUP'])
   end
 
   it "only traps two system signals on Windows" do
@@ -185,9 +177,9 @@ describe Flapjack::Coordinator do
     expect(config).to receive(:all).and_return({})
     expect(config).to receive(:for_redis).and_return({})
     fc = Flapjack::Coordinator.new(config)
-    expect(fc).to receive(:stop).twice
 
     fc.send(:setup_signals)
+    expect(fc.instance_variable_get('@received_signals')).to eq(['INT', 'TERM'])
   end
 
   it "stops one pikelet and starts another on reload" do
@@ -222,15 +214,10 @@ describe Flapjack::Coordinator do
       and_return(jabber)
     expect(jabber).to receive(:start)
 
-    expect(fiber).to receive(:resume)
-    expect(Fiber).to receive(:new).and_yield.and_return(fiber)
-
     fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [processor])
-    fc.reload
+    fc.send(:reload)
     expect(fc.instance_variable_get('@pikelets')).to eq([jabber])
-
-
   end
 
   it "reloads a pikelet config without restarting it" do
@@ -259,7 +246,7 @@ describe Flapjack::Coordinator do
     fc = Flapjack::Coordinator.new(config)
     fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [processor])
-    fc.reload
+    fc.send(:reload)
     expect(fc.instance_variable_get('@pikelets')).to eq([processor])
   end
 
@@ -286,9 +273,6 @@ describe Flapjack::Coordinator do
     expect(processor).to receive(:update_status)
     expect(processor).to receive(:status).exactly(3).times.and_return('stopped')
 
-    expect(fiber).to receive(:resume)
-    expect(Fiber).to receive(:new).and_yield.and_return(fiber)
-
     new_exec = double('new_executive')
     expect(new_exec).to receive(:start)
 
@@ -302,7 +286,7 @@ describe Flapjack::Coordinator do
 
     fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [processor])
-    fc.reload
+    fc.send(:reload)
     expect(fc.instance_variable_get('@pikelets')).to eq([new_exec])
   end
 
