@@ -233,66 +233,68 @@ module Flapjack
         tr
       end
 
+      VALIDATION_PROCS = {
+        proc {|d| !d.has_key?(:entities) ||
+               ( d[:entities].nil? ||
+                 d[:entities].is_a?(Array) &&
+                 d[:entities].all? {|e| e.is_a?(String)} ) } =>
+        "entities must be a list of strings",
+
+        proc {|d| !d.has_key?(:tags) ||
+               ( d[:tags].nil? ||
+                 d[:tags].is_a?(Flapjack::Data::TagSet) &&
+                 d[:tags].all? {|et| et.is_a?(String)} ) } =>
+        "tags must be a tag_set of strings",
+
+        proc {|d| !d.has_key?(:time_restrictions) ||
+               ( d[:time_restrictions].nil? ||
+                 d[:time_restrictions].all? {|tr|
+                   !!prepare_time_restriction(symbolize(tr))
+                 } )
+             } =>
+        "time restrictions are invalid",
+
+        # TODO should the media types be checked against a whitelist?
+        proc {|d| !d.has_key?(:unknown_media) ||
+               ( d[:unknown_media].nil? ||
+                 d[:unknown_media].is_a?(Array) &&
+                 d[:unknown_media].all? {|et| et.is_a?(String)} ) } =>
+        "unknown_media must be a list of strings",
+
+        proc {|d| !d.has_key?(:warning_media) ||
+               ( d[:warning_media].nil? ||
+                 d[:warning_media].is_a?(Array) &&
+                 d[:warning_media].all? {|et| et.is_a?(String)} ) } =>
+        "warning_media must be a list of strings",
+
+        proc {|d| !d.has_key?(:critical_media) ||
+               ( d[:critical_media].nil? ||
+                 d[:critical_media].is_a?(Array) &&
+                 d[:critical_media].all? {|et| et.is_a?(String)} ) } =>
+        "critical_media must be a list of strings",
+
+        proc {|d| !d.has_key?(:unknown_blackhole) ||
+               [TrueClass, FalseClass].include?(d[:unknown_blackhole].class) } =>
+        "unknown_blackhole must be true or false",
+
+        proc {|d| !d.has_key?(:warning_blackhole) ||
+               [TrueClass, FalseClass].include?(d[:warning_blackhole].class) } =>
+        "warning_blackhole must be true or false",
+
+        proc {|d| !d.has_key?(:critical_blackhole) ||
+               [TrueClass, FalseClass].include?(d[:critical_blackhole].class) } =>
+        "critical_blackhole must be true or false",
+      }
+
       def self.validate_data(d, options = {})
         id_not_required = !!options[:id_not_required]
         # hash with validation => error_message
         validations = {}
         validations.merge!({ proc { d.has_key?(:id) } => "id not set"}) unless id_not_required
-        validations.merge!({
-          proc { !d.has_key?(:entities) ||
-                 ( d[:entities].nil? ||
-                   d[:entities].is_a?(Array) &&
-                   d[:entities].all? {|e| e.is_a?(String)} ) } =>
-          "entities must be a list of strings",
-
-          proc { !d.has_key?(:tags) ||
-                 ( d[:tags].nil? ||
-                   d[:tags].is_a?(Flapjack::Data::TagSet) &&
-                   d[:tags].all? {|et| et.is_a?(String)} ) } =>
-          "tags must be a tag_set of strings",
-
-          proc { !d.has_key?(:time_restrictions) ||
-                 ( d[:time_restrictions].nil? ||
-                   d[:time_restrictions].all? {|tr|
-                     !!prepare_time_restriction(symbolize(tr))
-                   } )
-               } =>
-          "time restrictions are invalid",
-
-          # TODO should the media types be checked against a whitelist?
-          proc { !d.has_key?(:unknown_media) ||
-                 ( d[:unknown_media].nil? ||
-                   d[:unknown_media].is_a?(Array) &&
-                   d[:unknown_media].all? {|et| et.is_a?(String)} ) } =>
-          "unknown_media must be a list of strings",
-
-          proc { !d.has_key?(:warning_media) ||
-                 ( d[:warning_media].nil? ||
-                   d[:warning_media].is_a?(Array) &&
-                   d[:warning_media].all? {|et| et.is_a?(String)} ) } =>
-          "warning_media must be a list of strings",
-
-          proc { !d.has_key?(:critical_media) ||
-                 ( d[:critical_media].nil? ||
-                   d[:critical_media].is_a?(Array) &&
-                   d[:critical_media].all? {|et| et.is_a?(String)} ) } =>
-          "critical_media must be a list of strings",
-
-          proc { !d.has_key?(:unknown_blackhole) ||
-                 [TrueClass, FalseClass].include?(d[:unknown_blackhole].class) } =>
-          "unknown_blackhole must be true or false",
-
-          proc { !d.has_key?(:warning_blackhole) ||
-                 [TrueClass, FalseClass].include?(d[:warning_blackhole].class) } =>
-          "warning_blackhole must be true or false",
-
-          proc { !d.has_key?(:critical_blackhole) ||
-                 [TrueClass, FalseClass].include?(d[:critical_blackhole].class) } =>
-          "critical_blackhole must be true or false",
-        })
+        validations.merge!(VALIDATION_PROCS)
 
         errors = validations.keys.inject([]) {|ret,vk|
-          ret << "Rule #{validations[vk]}" unless vk.call
+          ret << "Rule #{validations[vk]}" unless vk.call(d)
           ret
         }
 

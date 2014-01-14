@@ -10,6 +10,44 @@ module Flapjack
 
       attr_reader :check, :summary, :details, :acknowledgement_id
 
+      REQUIRED_KEYS = ['type', 'state', 'entity', 'check', 'summary']
+      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration']
+
+      VALIDATIONS = {
+        proc {|e| ['service', 'action'].include?(e['type']) } =>
+          "type must be either 'service' or 'action'",
+
+        proc {|e| ['ok', 'warning', 'critical', 'unknown', 'acknowledgement', 'test_notifications'].include?(e['state']) } =>
+          "state must be one of 'ok', 'warning', 'critical', 'unknown', 'acknowledgement' or 'test_notifications'",
+
+        proc {|e| e['entity'].is_a?(String) } =>
+          "entity must be a string",
+
+        proc {|e| e['check'].is_a?(String) } =>
+          "check must be a string",
+
+        proc {|e| e['summary'].is_a?(String) } =>
+          "summary must be a string",
+
+        proc {|e| e['time'].nil? ||
+                  e['time'].is_a?(Integer) ||
+                 (e['time'].is_a?(String) && !!(parsed_duration =~ /^\d+$/)) } =>
+          "time must be a positive integer, or a string castable to one",
+
+        proc {|e| e['details'].nil? || e['details'].is_a?(String) } =>
+          "details must be a string",
+
+        proc {|e| e['acknowledgement_id'].nil? ||
+                  e['acknowledgement_id'].is_a?(String) ||
+                  e['acknowledgement_id'].is_a?(Integer) } =>
+          "acknowledgement_id must be a string or an integer",
+
+        proc {|e| e['duration'].nil? ||
+                  e['duration'].is_a?(Integer) ||
+                 (e['duration'].is_a?(String) && !!(parsed_duration =~ /^\d+$/)) } =>
+          "duration must be a positive integer, or a string castable to one",
+      }
+
       # Helper method for getting the next event.
       #
       # Has a blocking and non-blocking method signature.
@@ -42,7 +80,6 @@ module Flapjack
             raw = redis.rpoplpush(queue, archive_dest)
             return unless raw
           end
-          redis.expire(archive_dest, options[:events_archive_maxage])
         else
           if options[:block]
             raw = redis.brpop(queue, 0)[1]
@@ -51,7 +88,7 @@ module Flapjack
             return unless raw
           end
         end
-        parsed = parse_and_validate(raw)
+        parsed = parse_and_validate(raw, :logger => options[:logger])
         if parsed.nil?
           # either bad json or invalid data -- in either case we'll
           # store the raw data in a rejected list
@@ -63,25 +100,50 @@ module Flapjack
             redis.lpop(archive_dest)
             redis.lpush(rejected_dest, raw)
             redis.exec
+            redis.expire(archive_dest, options[:events_archive_maxage])
           else
             redis.lpush(rejected_dest, raw)
           end
           return
+        elsif options[:archive_events]
+          redis.expire(archive_dest, options[:events_archive_maxage])
         end
         self.new(parsed)
       end
 
       def self.parse_and_validate(raw, opts = {})
-        parsed = ::Oj.load(raw)
+        errors = []
+        if parsed = ::Oj.load(raw)
 
-        valid = true
+          if parsed.is_a?(Hash)
+            missing_keys = REQUIRED_KEYS.select {|k|
+              !parsed.has_key?(k) || parsed[k].nil? || parsed[k].empty?
+            }
+            unless missing_keys.empty?
+              errors << "Event hash has missing keys '#{missing_keys.join('\', \'')}'"
+            end
 
-        # TODO validate
+            unknown_keys =  parsed.keys - (REQUIRED_KEYS + OPTIONAL_KEYS)
+            unless unknown_keys.empty?
+              errors << "Event hash has unknown key(s) '#{unknown_keys.join('\', \'')}'"
+            end
+          else
+            errors << "Event must be a JSON hash, see https://github.com/flpjck/flapjack/wiki/DATA_STRUCTURES#event-queue"
+          end
 
-        return parsed if valid
+          if errors.empty?
+            errors += VALIDATIONS.keys.inject([]) {|ret,vk|
+              ret << "Event #{VALIDATIONS[vk]}" unless vk.call(parsed)
+              ret
+            }
+          end
+
+          return parsed if errors.empty?
+        end
 
         if opts[:logger]
-          opts[:logger].error("Invalid event data received: #{parsed.inspect}")
+          error_str = errors.nil? ? '' : errors.join(', ')
+          opts[:logger].error("Invalid event data received #{error_str}#{parsed.inspect}")
         end
         nil
       rescue Oj::Error => e
