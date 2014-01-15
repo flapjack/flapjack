@@ -25,7 +25,6 @@ module Flapjack
       @config = opts[:config]
       @redis_config = opts[:redis_config] || {}
       @logger = opts[:logger]
-      @coordinator = opts[:coordinator]
 
       @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
 
@@ -102,11 +101,8 @@ module Flapjack
         if @exit_on_queue_empty && event.nil? && Flapjack::Data::Event.pending_count(@queue, :redis => @redis)
           # SHUT IT ALL DOWN!!!
           @logger.warn "Shutting down as exit_on_queue_empty is true, and the queue is empty"
-          @should_quit = true
-          @coordinator.stop
-          # FIXME: seems the above call doesn't block until the remove_pikelets fiber exits...
-          EM::Synchrony.sleep(1)
-          exit
+          Process.kill('INT', Process.pid)
+          break
         end
 
         process_event(event) unless event.nil?

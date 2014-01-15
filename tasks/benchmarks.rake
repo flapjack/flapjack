@@ -54,10 +54,12 @@ namespace :benchmarks do
     end
     time_flapjack_start = Time.now.to_f
     puts "Starting flapjack..."
-    if system({"FLAPJACK_ENV" => FLAPJACK_ENV,
+    result = system({"FLAPJACK_ENV" => FLAPJACK_ENV,
                "CPUPROFILE"   => "artifacts/flapjack-perftools-cpuprofile",
                "RUBYOPT"      => "-r#{perftools}"},
               "bin/flapjack start --no-daemonize --config tasks/support/flapjack_config_benchmark.yaml")
+    status = $?
+    if status.exited? && (Signal.list['INT'] + 128).eql?($?.exitstatus)
       puts "Flapjack run completed successfully"
     else
       raise "Problem starting flapjack: #{$?}"
