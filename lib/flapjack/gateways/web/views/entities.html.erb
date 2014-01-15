@@ -7,13 +7,20 @@
 <p><%= h @count_failing_entities %> failing out of <%= h @count_all_entities %></p>
 
 <% if @entities.length > 0 %>
-<table class="table table-bordered table-hover table-condensed">
-  <% @entities.sort.each do |entity| %>
+<table class="table table-bordered table-hover table-condensed tablesorter">
+  <thead>
     <tr>
-      <td><a href="/entity/<%= CGI.escape(entity) %>"><%= h entity %></a>
-      </td>
+      <th data-placeholder="e.g. app[1-3]*">Entity</th>
     </tr>
-  <% end %>
+  </thead>
+  <tbody>
+    <% @entities.sort.each do |entity| %>
+      <tr>
+        <td><a href="/entity/<%= CGI.escape(entity) %>"><%= h entity %></a>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
 </table>
 <% else %>
   <p>No check output has been processed yet, so there are no entities we can show you here.</p>
