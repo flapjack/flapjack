@@ -83,8 +83,7 @@ def submit_ok(entity, check)
     'state'   => 'ok',
     'summary' => '0% packet loss',
     'entity'  => entity,
-    'check'   => check,
-    'client'  => 'clientx'
+    'check'   => check
   }
   submit_event(event)
 end
@@ -95,8 +94,7 @@ def submit_warning(entity, check)
     'state'   => 'warning',
     'summary' => '25% packet loss',
     'entity'  => entity,
-    'check'   => check,
-    'client'  => 'clientx'
+    'check'   => check
   }
   submit_event(event)
 end
@@ -107,8 +105,7 @@ def submit_critical(entity, check)
     'state'   => 'critical',
     'summary' => '100% packet loss',
     'entity'  => entity,
-    'check'   => check,
-    'client'  => 'clientx'
+    'check'   => check
   }
   submit_event(event)
 end
@@ -119,8 +116,7 @@ def submit_unknown(entity, check)
     'state'   => 'unknown',
     'summary' => 'check execution error',
     'entity'  => entity,
-    'check'   => check,
-    'client'  => 'clientx'
+    'check'   => check
   }
   submit_event(event)
 end
@@ -131,8 +127,7 @@ def submit_acknowledgement(entity, check)
     'state'              => 'acknowledgement',
     'summary'            => "I'll have this fixed in a jiffy, saw the same thing yesterday",
     'entity'             => entity,
-    'check'              => check,
-    'client'             => 'clientx',
+    'check'              => check
   }
   submit_event(event)
 end
@@ -143,8 +138,7 @@ def submit_test(entity, check)
     'state'              => 'test_notifications',
     'summary'            => "test notification for all contacts interested in #{entity}",
     'entity'             => entity,
-    'check'              => check,
-    'client'             => 'clientx',
+    'check'              => check
   }
   submit_event(event)
 end

@@ -23,36 +23,163 @@ describe Flapjack::Data::Event do
   context 'class' do
 
     it "returns the next event (blocking, archiving)" do
-      expect(mock_redis).to receive(:brpoplpush).with('events', /^events_archive:/, 0).and_return(event_data.to_json)
+      expect(mock_redis).to receive(:brpoplpush).
+        with('events', /^events_archive:/, 0).and_return(event_data.to_json)
       expect(mock_redis).to receive(:expire)
 
-      result = Flapjack::Data::Event.next('events', :block => true, :archive_events => true, :redis => mock_redis)
+      result = Flapjack::Data::Event.next('events', :block => true,
+        :archive_events => true, :redis => mock_redis)
       expect(result).to be_an_instance_of(Flapjack::Data::Event)
     end
 
     it "returns the next event (blocking, not archiving)" do
-      expect(mock_redis).to receive(:brpop).with('events', 0).and_return(['events', event_data.to_json])
+      expect(mock_redis).to receive(:brpop).with('events', 0).
+        and_return(['events', event_data.to_json])
 
-      result = Flapjack::Data::Event.next('events', :block => true, :archive_events => false, :redis => mock_redis)
+      result = Flapjack::Data::Event.next('events',:block => true,
+        :archive_events => false, :redis => mock_redis)
       expect(result).to be_an_instance_of(Flapjack::Data::Event)
     end
 
     it "returns the next event (non-blocking, archiving)" do
-      expect(mock_redis).to receive(:rpoplpush).with('events', /^events_archive:/).and_return(event_data.to_json)
+      expect(mock_redis).to receive(:rpoplpush).
+        with('events', /^events_archive:/).and_return(event_data.to_json)
       expect(mock_redis).to receive(:expire)
 
-      result = Flapjack::Data::Event.next('events', :block => false, :archive_events => true, :redis => mock_redis)
+      result = Flapjack::Data::Event.next('events', :block => false,
+        :archive_events => true, :redis => mock_redis)
       expect(result).to be_an_instance_of(Flapjack::Data::Event)
     end
 
     it "returns the next event (non-blocking, not archiving)" do
-      expect(mock_redis).to receive(:rpop).with('events').and_return(event_data.to_json)
+      expect(mock_redis).to receive(:rpop).with('events').
+        and_return(event_data.to_json)
 
-      result = Flapjack::Data::Event.next('events', :block => false, :archive_events => false, :redis => mock_redis)
+      result = Flapjack::Data::Event.next('events', :block => false,
+        :archive_events => false, :redis => mock_redis)
       expect(result).to be_an_instance_of(Flapjack::Data::Event)
     end
 
-    it "handles invalid event JSON"
+    it "rejects invalid event JSON (archiving)" do
+      bad_event_json = '{{{'
+      expect(mock_redis).to receive(:brpoplpush).
+        with('events', /^events_archive:/, 0).and_return(bad_event_json)
+      expect(mock_redis).to receive(:multi)
+      expect(mock_redis).to receive(:lpop).with(/^events_archive:/)
+      expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+      expect(mock_redis).to receive(:exec)
+      expect(mock_redis).to receive(:expire)
+
+      result = Flapjack::Data::Event.next('events', :block => true,
+        :archive_events => true, :redis => mock_redis)
+      expect(result).to be_nil
+    end
+
+    it "rejects invalid event JSON (not archiving)" do
+      bad_event_json = '{{{'
+      expect(mock_redis).to receive(:brpop).with('events', 0).
+        and_return(['events', bad_event_json])
+      expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+
+      result = Flapjack::Data::Event.next('events', :block => true,
+        :archive_events => false, :redis => mock_redis)
+      expect(result).to be_nil
+    end
+
+    ['type', 'state', 'entity', 'check', 'summary'].each do |required_key|
+
+      it "rejects an event with missing '#{required_key}' key (archiving)" do
+        bad_event_data = event_data.clone
+        bad_event_data.delete(required_key)
+        bad_event_json = bad_event_data.to_json
+        expect(mock_redis).to receive(:brpoplpush).
+          with('events', /^events_archive:/, 0).and_return(bad_event_json)
+        expect(mock_redis).to receive(:multi)
+        expect(mock_redis).to receive(:lpop).with(/^events_archive:/)
+        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+        expect(mock_redis).to receive(:exec)
+        expect(mock_redis).to receive(:expire)
+
+        result = Flapjack::Data::Event.next('events', :block => true,
+          :archive_events => true, :redis => mock_redis)
+        expect(result).to be_nil
+      end
+
+      it "rejects an event with missing '#{required_key}' key (not archiving)" do
+        bad_event_data = event_data.clone
+        bad_event_data.delete(required_key)
+        bad_event_json = bad_event_data.to_json
+        expect(mock_redis).to receive(:brpop).with('events', 0).
+          and_return(['events', bad_event_json])
+        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+
+        result = Flapjack::Data::Event.next('events', :block => true,
+          :archive_events => false, :redis => mock_redis)
+        expect(result).to be_nil
+      end
+
+      it "rejects an event with invalid '#{required_key}' key (archiving)" do
+        bad_event_data = event_data.clone
+        bad_event_data[required_key] = {'hello' => 'there'}
+        bad_event_json = bad_event_data.to_json
+        expect(mock_redis).to receive(:brpoplpush).
+          with('events', /^events_archive:/, 0).and_return(bad_event_json)
+        expect(mock_redis).to receive(:multi)
+        expect(mock_redis).to receive(:lpop).with(/^events_archive:/)
+        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+        expect(mock_redis).to receive(:exec)
+        expect(mock_redis).to receive(:expire)
+
+        result = Flapjack::Data::Event.next('events', :block => true,
+          :archive_events => true, :redis => mock_redis)
+        expect(result).to be_nil
+      end
+
+      it "rejects an event with invalid '#{required_key}' key (not archiving)" do
+        bad_event_data = event_data.clone
+        bad_event_data[required_key] = {'hello' => 'there'}
+        bad_event_json = bad_event_data.to_json
+        expect(mock_redis).to receive(:brpop).with('events', 0).
+          and_return(['events', bad_event_json])
+        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+
+        result = Flapjack::Data::Event.next('events', :block => true,
+          :archive_events => false, :redis => mock_redis)
+        expect(result).to be_nil
+      end
+    end
+
+    ['time', 'details', 'acknowledgement_id', 'duration'].each do |optional_key|
+      it "rejects an event with invalid '#{optional_key}' key (archiving)" do
+        bad_event_data = event_data.clone
+        bad_event_data[optional_key] = {'hello' => 'there'}
+        bad_event_json = bad_event_data.to_json
+        expect(mock_redis).to receive(:brpoplpush).
+          with('events', /^events_archive:/, 0).and_return(bad_event_json)
+        expect(mock_redis).to receive(:multi)
+        expect(mock_redis).to receive(:lpop).with(/^events_archive:/)
+        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+        expect(mock_redis).to receive(:exec)
+        expect(mock_redis).to receive(:expire)
+
+        result = Flapjack::Data::Event.next('events', :block => true,
+          :archive_events => true, :redis => mock_redis)
+        expect(result).to be_nil
+      end
+
+      it "rejects an event with invalid '#{optional_key}' key (archiving)" do
+        bad_event_data = event_data.clone
+        bad_event_data[optional_key] = {'hello' => 'there'}
+        bad_event_json = bad_event_data.to_json
+        expect(mock_redis).to receive(:brpop).with('events', 0).
+          and_return(['events', bad_event_json])
+        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+
+        result = Flapjack::Data::Event.next('events', :block => true,
+          :archive_events => false, :redis => mock_redis)
+        expect(result).to be_nil
+      end
+    end
 
     it "returns a count of pending events" do
       events_len = 23
