@@ -1,9 +1,10 @@
 ## Flapjack Changelog
 
-# 0.8.2 - UNRELEASED
-- Bug: no HTML parsing in summary of scheduled maintenance (thanks @marek-knappe!) gh-413 (@ali-graham)
-- Bug: if tags and entities are present in a notification rule, both should match the event (thanks @jswoods!) gh-417 (@jessereynolds)
-- Bug: improperly structured events crash the processor gh-411 (thanks @someword!) (@ali-graham)
+# 0.8.2 - 2014-01-16
+- Bug: no HTML parsing in summary of scheduled maintenance (thanks @marek-knappe) gh-413 (@ali-graham)
+- Bug: if tags and entities are present in a notification rule, both should match the event (thanks @jswoods) gh-417 (@jessereynolds)
+- Bug: improperly structured events crash the processor gh-411 (thanks @someword) (@ali-graham)
+- Bug: Critical events are no longer showing up as red in the flapjack UI gh-419 (thanks @jswoods) (@jessereynolds)
 
 # 0.8.1 - 2014-01-06
 - Bug: JSONAPI: 500 on GET /entities with no entities in the db gh-409 (@jessereynolds)
