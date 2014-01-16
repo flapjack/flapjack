@@ -57,10 +57,6 @@ module Flapjack
       #
       # Calling next with :block => false, will return a nil if there are no
       # events on the queue.
-      #
-      # NB: this should probably lock access to its relevant queues to
-      # stop multiple processor pikelets accessing the same redis db contending.
-      # For now, don't do that!
       def self.next(queue, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
 
@@ -94,10 +90,8 @@ module Flapjack
           # store the raw data in a rejected list
           rejected_dest = "events_rejected:#{base_time_str}"
           if options[:archive_events]
-            # as we know that the last item added to the archive == raw,
-            # we can just use that instead
             redis.multi
-            redis.lpop(archive_dest)
+            redis.lrem(archive_dest, 1, raw)
             redis.lpush(rejected_dest, raw)
             redis.exec
             redis.expire(archive_dest, options[:events_archive_maxage])

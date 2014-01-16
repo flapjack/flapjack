@@ -65,7 +65,7 @@ describe Flapjack::Data::Event do
       expect(mock_redis).to receive(:brpoplpush).
         with('events', /^events_archive:/, 0).and_return(bad_event_json)
       expect(mock_redis).to receive(:multi)
-      expect(mock_redis).to receive(:lpop).with(/^events_archive:/)
+      expect(mock_redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
       expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
       expect(mock_redis).to receive(:exec)
       expect(mock_redis).to receive(:expire)
@@ -95,7 +95,7 @@ describe Flapjack::Data::Event do
         expect(mock_redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(bad_event_json)
         expect(mock_redis).to receive(:multi)
-        expect(mock_redis).to receive(:lpop).with(/^events_archive:/)
+        expect(mock_redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
         expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
         expect(mock_redis).to receive(:exec)
         expect(mock_redis).to receive(:expire)
@@ -125,7 +125,7 @@ describe Flapjack::Data::Event do
         expect(mock_redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(bad_event_json)
         expect(mock_redis).to receive(:multi)
-        expect(mock_redis).to receive(:lpop).with(/^events_archive:/)
+        expect(mock_redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
         expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
         expect(mock_redis).to receive(:exec)
         expect(mock_redis).to receive(:expire)
@@ -157,7 +157,7 @@ describe Flapjack::Data::Event do
         expect(mock_redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(bad_event_json)
         expect(mock_redis).to receive(:multi)
-        expect(mock_redis).to receive(:lpop).with(/^events_archive:/)
+        expect(mock_redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
         expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
         expect(mock_redis).to receive(:exec)
         expect(mock_redis).to receive(:expire)
