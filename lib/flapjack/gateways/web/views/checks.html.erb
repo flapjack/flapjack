@@ -23,7 +23,7 @@
       <%
         row_colour = case status
         when 'critical', 'unknown'
-          'error'
+          'danger'
         when 'ok', 'up'
           'success'
         else
@@ -33,23 +33,23 @@
         check_link = "/check?entity=" << u(entity) << "&amp;check=" << u(check)
 
       %>
-      <tr class="<%= row_colour %>">
+      <tr>
         <% unless row_entity && entity == row_entity %>
           <td rowspan="<%= @states[entity].length %>">
             <a href="<%= entity_link %>"><%= h entity %></a>
           </td>
           <% row_entity = entity %>
         <% end %>
-        <td><a href="<%= check_link %>" title="check detail"><%= h check %></a></td>
-        <td class="<%= status %>">
+        <td class="<%= row_colour %>"><a href="<%= check_link %>" title="check detail"><%= h check %></a></td>
+        <td class="<%= row_colour %>">
           <%= h status.upcase %>
           <% if in_unscheduled_outage%> (Ack'd)<% end %>
           <% if in_scheduled_outage %> (Sched)<% end %>
         </td>
-        <td><%= h summary %></td>
-        <td><%= h changed %></td>
-        <td><%= h updated %></td>
-        <td><%= h notified %></td>
+        <td class="<%= row_colour %>"><%= h summary %></td>
+        <td class="<%= row_colour %>"><%= h changed %></td>
+        <td class="<%= row_colour %>"><%= h updated %></td>
+        <td class="<%= row_colour %>"><%= h notified %></td>
       </tr>
 
     <% end %>
