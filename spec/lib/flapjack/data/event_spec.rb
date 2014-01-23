@@ -167,7 +167,7 @@ describe Flapjack::Data::Event do
         expect(result).to be_nil
       end
 
-      it "rejects an event with invalid '#{optional_key}' key (archiving)" do
+      it "rejects an event with invalid '#{optional_key}' key (not archiving)" do
         bad_event_data = event_data.clone
         bad_event_data[optional_key] = {'hello' => 'there'}
         bad_event_json = bad_event_data.to_json
@@ -179,6 +179,36 @@ describe Flapjack::Data::Event do
           :archive_events => false, :redis => mock_redis)
         expect(result).to be_nil
       end
+    end
+
+    ['time', 'duration'].each do |key|
+
+      it "rejects an event with a non-numeric or numeric string #{key} key (not archiving)" do
+        bad_event_data = event_data.clone
+        bad_event_data[key] = 'NaN'
+        bad_event_json = bad_event_data.to_json
+        expect(mock_redis).to receive(:brpop).with('events', 0).
+          and_return(['events', bad_event_json])
+        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+
+        result = Flapjack::Data::Event.next('events', :block => true,
+          :archive_events => false, :redis => mock_redis)
+        expect(result).to be_nil
+      end
+
+      it "rejects an event with a non-numeric or numeric string #{key} key (not archiving)" do
+        bad_event_data = event_data.clone
+        bad_event_data[key] = 'NaN'
+        bad_event_json = bad_event_data.to_json
+        expect(mock_redis).to receive(:brpop).with('events', 0).
+          and_return(['events', bad_event_json])
+        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+
+        result = Flapjack::Data::Event.next('events', :block => true,
+          :archive_events => false, :redis => mock_redis)
+        expect(result).to be_nil
+      end
+
     end
 
     it "returns a count of pending events" do

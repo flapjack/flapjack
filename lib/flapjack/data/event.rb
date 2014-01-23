@@ -31,7 +31,7 @@ module Flapjack
 
         proc {|e| e['time'].nil? ||
                   e['time'].is_a?(Integer) ||
-                 (e['time'].is_a?(String) && !!(parsed_duration =~ /^\d+$/)) } =>
+                 (e['time'].is_a?(String) && !!([e['time']] =~ /^\d+$/)) } =>
           "time must be a positive integer, or a string castable to one",
 
         proc {|e| e['details'].nil? || e['details'].is_a?(String) } =>
@@ -44,7 +44,7 @@ module Flapjack
 
         proc {|e| e['duration'].nil? ||
                   e['duration'].is_a?(Integer) ||
-                 (e['duration'].is_a?(String) && !!(parsed_duration =~ /^\d+$/)) } =>
+                 (e['duration'].is_a?(String) && !!(e['duration'] =~ /^\d+$/)) } =>
           "duration must be a positive integer, or a string castable to one",
       }
 
