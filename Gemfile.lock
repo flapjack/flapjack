@@ -22,7 +22,6 @@ PATH
       thin
       tzinfo (~> 1.0.1)
       tzinfo-data
-      tzinfo-data
 
 GEM
   remote: https://rubygems.org/
