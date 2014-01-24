@@ -14,11 +14,15 @@ module Flapjack
       OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration']
 
       VALIDATIONS = {
-        proc {|e| ['service', 'action'].include?(e['type']) } =>
+        proc {|e| e['type'].is_a?(String) &&
+          ['service', 'action'].include?(e['type'].downcase) } =>
           "type must be either 'service' or 'action'",
 
-        proc {|e| ['ok', 'warning', 'critical', 'unknown', 'acknowledgement', 'test_notifications'].include?(e['state']) } =>
-          "state must be one of 'ok', 'warning', 'critical', 'unknown', 'acknowledgement' or 'test_notifications'",
+        proc {|e| e['state'].is_a?(String) &&
+            ['ok', 'warning', 'critical', 'unknown', 'acknowledgement',
+             'test_notifications'].include?(e['state'].downcase) } =>
+          "state must be one of 'ok', 'warning', 'critical', 'unknown', " +
+          "'acknowledgement' or 'test_notifications'",
 
         proc {|e| e['entity'].is_a?(String) } =>
           "entity must be a string",
