@@ -1,5 +1,12 @@
 ## Flapjack Changelog
 
+# 0.8.3 - 2014-01-24
+- Feature: Fix background color for failing events for entity page gh-425 (@jswoods)
+- Feature: Enabled sort and filter options in the flapjack UI gh-418 (@jswoods)
+- Bug: Exception in event.rb: parsed_duration undefined gh-423 (thanks @nmcclain) (@ali-graham)
+- Bug: Incoming event states and types don't pass validation if not all lowercase (thanks @nmcclain) (@ali-graham)
+- Bug: Incoming valid event time doesn't pass validation (thanks @nmcclain) (@ali-graham)
+
 # 0.8.2 - 2014-01-16
 - Bug: no HTML parsing in summary of scheduled maintenance (thanks @marek-knappe) gh-413 (@ali-graham)
 - Bug: if tags and entities are present in a notification rule, both should match the event (thanks @jswoods) gh-417 (@jessereynolds)
