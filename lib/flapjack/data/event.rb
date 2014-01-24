@@ -35,7 +35,7 @@ module Flapjack
 
         proc {|e| e['time'].nil? ||
                   e['time'].is_a?(Integer) ||
-                 (e['time'].is_a?(String) && !!([e['time']] =~ /^\d+$/)) } =>
+                 (e['time'].is_a?(String) && !!(e['time'] =~ /^\d+$/)) } =>
           "time must be a positive integer, or a string castable to one",
 
         proc {|e| e['details'].nil? || e['details'].is_a?(String) } =>
@@ -141,7 +141,7 @@ module Flapjack
 
         if opts[:logger]
           error_str = errors.nil? ? '' : errors.join(', ')
-          opts[:logger].error("Invalid event data received #{error_str}#{parsed.inspect}")
+          opts[:logger].error("Invalid event data received, #{error_str} #{parsed.inspect}")
         end
         nil
       rescue Oj::Error => e
