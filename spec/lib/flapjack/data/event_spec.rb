@@ -186,7 +186,6 @@ describe Flapjack::Data::Event do
       it "it matches case-insensitively for #{key} (archiving)" do
         case_event_data = event_data.clone
         case_event_data[key] = event_data[key].upcase
-        case_event_json = case_event_data.to_json
         expect(mock_redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(case_event_data.to_json)
         expect(mock_redis).to receive(:expire)
@@ -199,7 +198,6 @@ describe Flapjack::Data::Event do
       it "it matches case-insensitively for #{key} (not archiving)" do
         case_event_data = event_data.clone
         case_event_data[key] = event_data[key].upcase
-        case_event_json = case_event_data.to_json
         expect(mock_redis).to receive(:brpop).with('events', 0).
           and_return(['events', case_event_data.to_json])
 
@@ -211,7 +209,30 @@ describe Flapjack::Data::Event do
 
     ['time', 'duration'].each do |key|
 
-      it "rejects an event with a non-numeric or numeric string #{key} key (archiving)" do
+      it "it accepts an event with a numeric #{key} key (archiving)" do
+        num_event_data = event_data.clone
+        num_event_data[key] = event_data[key].to_i.to_s
+        expect(mock_redis).to receive(:brpoplpush).
+          with('events', /^events_archive:/, 0).and_return(num_event_data.to_json)
+        expect(mock_redis).to receive(:expire)
+
+        result = Flapjack::Data::Event.next('events', :block => true,
+          :archive_events => true, :redis => mock_redis)
+        expect(result).to be_an_instance_of(Flapjack::Data::Event)
+      end
+
+      it "it accepts an event with a numeric #{key} key (not archiving)" do
+        num_event_data = event_data.clone
+        num_event_data[key] = event_data[key].to_i.to_s
+        expect(mock_redis).to receive(:brpop).with('events', 0).
+          and_return(['events', num_event_data.to_json])
+
+        result = Flapjack::Data::Event.next('events',:block => true,
+          :archive_events => false, :redis => mock_redis)
+        expect(result).to be_an_instance_of(Flapjack::Data::Event)
+      end
+
+      it "rejects an event with a non-numeric string #{key} key (archiving)" do
         bad_event_data = event_data.clone
         bad_event_data[key] = 'NaN'
         bad_event_json = bad_event_data.to_json
@@ -228,7 +249,7 @@ describe Flapjack::Data::Event do
         expect(result).to be_nil
       end
 
-      it "rejects an event with a non-numeric or numeric string #{key} key (not archiving)" do
+      it "rejects an event with a non-numeric string #{key} key (not archiving)" do
         bad_event_data = event_data.clone
         bad_event_data[key] = 'NaN'
         bad_event_json = bad_event_data.to_json
