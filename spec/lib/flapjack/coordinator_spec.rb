@@ -24,27 +24,27 @@ describe Flapjack::Coordinator do
     expect(processor).to receive(:start)
     expect(processor).to receive(:stop)
 
-    expect(Thread).to receive(:new).and_yield
-
     running_cond = double(MonitorMixin::ConditionVariable)
-    expect(running_cond).to receive(:wait_until).and_yield
     expect(running_cond).to receive(:signal)
 
     monitor = double(Monitor)
-    expect(monitor).to receive(:synchronize).twice.and_yield
+    expect(monitor).to receive(:synchronize).and_yield
     expect(monitor).to receive(:new_cond).and_return(running_cond)
     expect(Monitor).to receive(:new).and_return(monitor)
 
     expect(Time).to receive(:now).and_return(time)
 
     fc = Flapjack::Coordinator.new(config)
+    expect(running_cond).to receive(:wait_until) {
+      fc.instance_variable_set('@state', :stopping)
+    }
+
     expect(Flapjack::Pikelet).to receive(:create).with('processor',
         an_instance_of(Proc), :config => cfg['processor'],
         :boot_time => time).
       and_return([processor])
 
     fc.start(:signals => false)
-    fc.stop
   end
 
   it "loads an old executive pikelet config block with no new data" do
@@ -63,20 +63,22 @@ describe Flapjack::Coordinator do
     expect(notifier).to receive(:start)
     expect(notifier).to receive(:stop)
 
-    expect(Thread).to receive(:new).and_yield
-
     running_cond = double(MonitorMixin::ConditionVariable)
-    expect(running_cond).to receive(:wait_until).and_yield
     expect(running_cond).to receive(:signal)
 
     monitor = double(Monitor)
-    expect(monitor).to receive(:synchronize).twice.and_yield
+    expect(monitor).to receive(:synchronize).and_yield
     expect(monitor).to receive(:new_cond).and_return(running_cond)
     expect(Monitor).to receive(:new).and_return(monitor)
 
     expect(Time).to receive(:now).and_return(time)
 
+
     fc = Flapjack::Coordinator.new(config)
+    expect(running_cond).to receive(:wait_until) {
+      fc.instance_variable_set('@state', :stopping)
+    }
+
     expect(Flapjack::Pikelet).to receive(:create).with('processor',
         an_instance_of(Proc), :config => cfg['executive'],
         :boot_time => time).
@@ -87,7 +89,6 @@ describe Flapjack::Coordinator do
       and_return([notifier])
 
     fc.start(:signals => false)
-    fc.stop
   end
 
   it "loads an old executive pikelet config block with some new data" do
@@ -105,27 +106,27 @@ describe Flapjack::Coordinator do
     expect(processor).to receive(:start)
     expect(processor).to receive(:stop)
 
-    expect(Thread).to receive(:new).and_yield
-
     running_cond = double(MonitorMixin::ConditionVariable)
-    expect(running_cond).to receive(:wait_until).and_yield
     expect(running_cond).to receive(:signal)
 
     monitor = double(Monitor)
-    expect(monitor).to receive(:synchronize).twice.and_yield
+    expect(monitor).to receive(:synchronize).and_yield
     expect(monitor).to receive(:new_cond).and_return(running_cond)
     expect(Monitor).to receive(:new).and_return(monitor)
 
     expect(Time).to receive(:now).and_return(time)
 
     fc = Flapjack::Coordinator.new(config)
+    expect(running_cond).to receive(:wait_until) {
+      fc.instance_variable_set('@state', :stopping)
+    }
+
     expect(Flapjack::Pikelet).to receive(:create).with('processor',
         an_instance_of(Proc), :config => cfg['processor'].merge('enabled' => true),
         :boot_time => time).
       and_return([processor])
 
     fc.start(:signals => false)
-    fc.stop
   end
 
   it "traps system signals and shuts down" do
@@ -134,14 +135,25 @@ describe Flapjack::Coordinator do
     expect(config).to receive(:all).and_return({})
     expect(RbConfig::CONFIG).to receive(:[]).with('host_os').and_return('darwin12.0.0')
 
+    thread = double(Thread)
+    expect(thread).to receive(:join).exactly(4).times
+    expect(Thread).to receive(:new).exactly(4).times.and_yield.and_return(thread)
+
     expect(Kernel).to receive(:trap).with('INT').and_yield
     expect(Kernel).to receive(:trap).with('TERM').and_yield
     expect(Kernel).to receive(:trap).with('QUIT').and_yield
     expect(Kernel).to receive(:trap).with('HUP').and_yield
 
+    shutdown = double('shutdown')
+    expect(shutdown).to receive(:call).with(2).once
+    expect(shutdown).to receive(:call).with(15).once
+    expect(shutdown).to receive(:call).with(3).once
+    reload = double('reload')
+    expect(reload).to receive(:call).once
+
     fc = Flapjack::Coordinator.new(config)
-    expect(fc).to receive(:stop).exactly(3).times
-    expect(fc).to receive(:reload)
+    fc.instance_variable_set('@shutdown', shutdown)
+    fc.instance_variable_set('@reload', reload)
 
     fc.send(:setup_signals)
   end
@@ -152,13 +164,23 @@ describe Flapjack::Coordinator do
     expect(config).to receive(:all).and_return({})
     expect(RbConfig::CONFIG).to receive(:[]).with('host_os').and_return('mswin')
 
+    thread = double(Thread)
+    expect(thread).to receive(:join).twice
+    expect(Thread).to receive(:new).twice.and_yield.and_return(thread)
+
     expect(Kernel).to receive(:trap).with('INT').and_yield
     expect(Kernel).to receive(:trap).with('TERM').and_yield
     expect(Kernel).not_to receive(:trap).with('QUIT')
     expect(Kernel).not_to receive(:trap).with('HUP')
 
+    shutdown = double('shutdown')
+    expect(shutdown).to receive(:call).with(2).once
+    expect(shutdown).to receive(:call).with(15).once
+    reload = double('reload')
+
     fc = Flapjack::Coordinator.new(config)
-    expect(fc).to receive(:stop).twice
+    fc.instance_variable_set('@shutdown', shutdown)
+    fc.instance_variable_set('@reload', reload)
 
     fc.send(:setup_signals)
   end
@@ -195,7 +217,7 @@ describe Flapjack::Coordinator do
 
     fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [processor])
-    fc.reload
+    fc.send(:reload)
     expect(fc.instance_variable_get('@pikelets')).to eq([jabber])
   end
 
@@ -224,7 +246,7 @@ describe Flapjack::Coordinator do
     fc = Flapjack::Coordinator.new(config)
     fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [processor])
-    fc.reload
+    fc.send(:reload)
     expect(fc.instance_variable_get('@pikelets')).to eq([processor])
   end
 
@@ -262,7 +284,7 @@ describe Flapjack::Coordinator do
 
     fc.instance_variable_set('@boot_time', time)
     fc.instance_variable_set('@pikelets', [processor])
-    fc.reload
+    fc.send(:reload)
     expect(fc.instance_variable_get('@pikelets')).to eq([new_processor])
   end
 

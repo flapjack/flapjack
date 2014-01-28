@@ -82,8 +82,9 @@ RSpec.configure do |config|
   #     --seed 1234
   config.order = 'random'
 
-  if !(ENV.keys & ['SHOW_LOGGER_ALL', 'SHOW_LOGGER_ERRORS']).empty?
-    config.formatter = :documentation
+  unless (ENV.keys & ['SHOW_LOGGER_ALL', 'SHOW_LOGGER_ERRORS']).empty?
+    config.instance_variable_set('@formatters', [])
+    config.add_formatter(:documentation)
   end
 
   config.around(:each, :redis => true) do |example|

@@ -2,15 +2,30 @@
 
 [![Build Status](https://travis-ci.org/flpjck/flapjack.png)](https://travis-ci.org/flpjck/flapjack)
 
-[flapjack-project.com](http://flapjack-project.com/)
+[Flapjack](http://flapjack.io/) is a flexible monitoring notification routing system that handles:
 
-Flapjack is a highly scalable and distributed monitoring notification system.
+* **Alert routing** (determining who should receive alerts based on interest, time of day, scheduled maintenance, etc)
+* **Alert summarisation** (with per-user, per media summary thresholds)
+* **Your standard operational tasks** (setting scheduled maintenance, acknowledgements, etc)
+
+Flapjack will be immediately useful to you if:
+
+* You want to **identify failures faster** by rolling up your alerts across multiple monitoring systems.
+* You monitor infrastructures that have **multiple teams responsible** for keeping them up.
+* Your monitoring infrastructure is **multitenant**, and each customer has a **bespoke alerting strategy**.
+* You want to dip your toe in the water and try alternative check execution engines like Sensu, Icinga, or cron in parallel to Nagios.
+
+### The technical low-down
 
 Flapjack provides a scalable method for dealing with events representing changes in system state (OK -> WARNING -> CRITICAL transitions) and alerting appropriate people as necessary.
 
 At its core, Flapjack processes events received from external check execution engines, such as Nagios. Nagios provides a 'perfdata' event output channel, which writes to a named pipe. `flapjack-nagios-receiver` then reads from this named pipe, converts each line to JSON and adds them to the events queue.
 
-Flapjack picks up the events and processes them -- deciding when and who to notifify about problems, recoveries, acknowledgements, etc.
+Flapjack sits downstream of check execution engines (like Nagios, Sensu, Icinga, or cron), processing events to determine: 
+
+ * if a problem has been detected
+ * who should know about the problem
+ * how they should be told
 
 Additional check engines can be supported by adding additional receiver processes similar to the nagios receiver.
 
@@ -18,25 +33,25 @@ Additional check engines can be supported by adding additional receiver processe
 
 **Ubuntu Precise 64 (12.04):**
 
-Add the flapjack deb repository to your apt sources:
+Add the Flapjack Debian repository to your Apt sources:
 
-```text
+``` text
 echo 'deb http://packages.flapjack.io/deb precise main' > /tmp/flapjack.list
 sudo cp /tmp/flapjack.list /etc/apt/sources.list.d/flapjack.list
 sudo apt-get update
 ```
 
-Install the latest flapjack package:
+Install the latest Flapjack package:
 
-```text
+``` text
 sudo apt-get install flapjack
 ```
 
 Alternatively, [download the deb](http://packages.flapjack.io/deb/pool/main/f/flapjack/) and install using `sudo dpkg -i <filename>`
 
-The flapjack package is an 'omnibus' package and as such contains most dependencies under /opt/flapjack, including redis.
+The Flapjack package is an [Omnibus](https://github.com/opscode/omnibus-ruby) package and as such contains most dependencies under `/opt/flapjack`, including Redis.
 
-Installing the package will start redis and flapjack. You should now be able to access the flapjack Web UI at:
+Installing the package will start Redis and Flapjack. You should now be able to access the Flapjack Web UI at:
 
 [http://localhost:3080/](http://localhost:3080)
 
@@ -44,23 +59,25 @@ And consume the REST API at:
 
 [http://localhost:3081/](http://localhost:3081)
 
+N.B. The Redis installed by Flapjack runs on a non-standard port, so it doesn't conflict with other Redis instances you may already have installed.
+
 **Other OSes:**
 
-Currently we only make a package for Ubuntu Precise (amd64). If you feel comfortable getting a ruby 1.9 or 2.0 environment going on your preferred OS, then you can also just install flapjack from rubygems.org:
+Currently we only make a package for Ubuntu Precise (amd64). If you feel comfortable getting a ruby 1.9 or 2.0 environment going on your preferred OS, then you can also just install Flapjack from rubygems.org:
 
 ```text
 gem install flapjack
 ```
 
-Using a tool like [rbenv](https://github.com/sstephenson/rbenv) or [rvm](https://rvm.io/) is recommended to keep your ruby applications from intefering with one another.
+Using a tool like [rbenv](https://github.com/sstephenson/rbenv) or [rvm](https://rvm.io/) is recommended to keep your Ruby applications from intefering with one another.
 
-Alternatively, you can add support for your OS of choice to [omnibus-flapjack](https://github.com/flpjck/omnibus-flapjack) and build a native package. Pull requests welcome!
+Alternatively, you can add support for your OS of choice to [omnibus-flapjack](https://github.com/flpjck/omnibus-flapjack) and build a native package. Pull requests welcome, and we'll help you make this happen!
 
 ## Configuring
 
 Have a look at the default config file and modify things as required. See the [Configuring Components](https://github.com/flpjck/flapjack/wiki/USING#wiki-configuring_components) section on the wiki for more details.
 
-```bash
+``` bash
 # hack the config
 sudo vi /etc/flapjack/flapjack_config.yaml
 
@@ -72,10 +89,11 @@ sudo /etc/init.d/flapjack reload
 
 **Ubuntu Precise 64:**
 
-After installing the flapjack package, redis and flapjack should be automatically started.
+After installing the Flapjack package, Redis and Flapjack should be automatically started.
 
-First up, start redis if it's not already started:
-```bash
+First up, start Redis if it's not already started:
+
+``` bash
 # status:
 sudo /etc/init.d/redis status
 
@@ -83,8 +101,9 @@ sudo /etc/init.d/redis status
 sudo /etc/init.d/redis start
 ```
 
-Operating flapjack:
-```bash
+Operating Flapjack:
+
+``` bash
 # status:
 sudo /etc/init.d/flapjack status
 
@@ -126,7 +145,7 @@ If you make changes to the documentation locally, here's how to publish them:
 
 ## More on the wiki
 
-https://github.com/flpjck/flapjack/wiki has even more goodies:
+[The Flapjack wiki](https://github.com/flpjck/flapjack/wiki) has even more goodies:
 
 - [Using Flapjack](https://github.com/flpjck/flapjack/wiki/USING)
 - [Developing Flapjack](https://github.com/flpjck/flapjack/wiki/DEVELOPING)

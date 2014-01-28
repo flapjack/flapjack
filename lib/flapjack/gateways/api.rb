@@ -27,6 +27,41 @@ module Flapjack
       set :raise_errors, true
       set :show_exceptions, false
 
+      # set :dump_errors, false
+
+      # rescue_error = Proc.new {|status, exception, *msg|
+      #   if !msg || msg.empty?
+      #     trace = exception.backtrace.join("\n")
+      #     msg = "#{exception.class} - #{exception.message}"
+      #     msg_str = "#{msg}\n#{trace}"
+      #   else
+      #     msg_str = msg.join(", ")
+      #   end
+      #   case
+      #   when status < 500
+      #     @logger.warn "Error: #{msg_str}"
+      #   else
+      #     @logger.error "Error: #{msg_str}"
+      #   end
+      #   [status, {}, {:errors => msg}.to_json]
+      # }
+
+      # rescue_exception = Proc.new {|env, e|
+      #   case e
+      #   when Flapjack::Gateways::API::ContactNotFound
+      #     rescue_error.call(403, e, "could not find contact '#{e.contact_id}'")
+      #   when Flapjack::Gateways::API::NotificationRuleNotFound
+      #     rescue_error.call(403, e, "could not find notification rule '#{e.rule_id}'")
+      #   when Flapjack::Gateways::API::EntityNotFound
+      #     rescue_error.call(403, e, "could not find entity '#{e.entity}'")
+      #   when Flapjack::Gateways::API::EntityCheckNotFound
+      #     rescue_error.call(403, e, "could not find entity check '#{e.check}'")
+      #   else
+      #     rescue_error.call(500, e)
+      #   end
+      # }
+      # use Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+
       use Rack::MethodOverride
       use Rack::JsonParamsParser
 
@@ -79,22 +114,22 @@ module Flapjack
 
       error Flapjack::Gateways::API::ContactNotFound do
         e = env['sinatra.error']
-        err(403, "could not find contact '#{e.contact_id}'")
+        err(404, "could not find contact '#{e.contact_id}'")
       end
 
       error Flapjack::Gateways::API::NotificationRuleNotFound do
         e = env['sinatra.error']
-        err(403, "could not find notification rule '#{e.rule_id}'")
+        err(404, "could not find notification rule '#{e.rule_id}'")
       end
 
       error Flapjack::Gateways::API::EntityNotFound do
         e = env['sinatra.error']
-        err(403, "could not find entity '#{e.entity}'")
+        err(404, "could not find entity '#{e.entity}'")
       end
 
       error Flapjack::Gateways::API::EntityCheckNotFound do
         e = env['sinatra.error']
-        err(403, "could not find entity check '#{e.check}'")
+        err(404, "could not find entity check '#{e.check}'")
       end
 
       error do

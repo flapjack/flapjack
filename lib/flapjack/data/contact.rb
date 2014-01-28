@@ -10,13 +10,17 @@ require 'flapjack/data/notification_rule'
 require 'flapjack/data/tag'
 require 'flapjack/data/tag_set'
 
+require 'securerandom'
+
 module Flapjack
 
   module Data
 
     class Contact
 
-      attr_accessor :id, :first_name, :last_name, :email, :media, :media_intervals, :media_rollup_thresholds, :pagerduty_credentials
+      attr_accessor :id, :first_name, :last_name, :email, :media,
+        :media_intervals, :media_rollup_thresholds, :pagerduty_credentials,
+        :linked_entity_ids
 
       TAG_PREFIX = 'contact_tag'
       ALL_MEDIA  = ['email', 'sms', 'jabber', 'pagerduty']
@@ -43,7 +47,18 @@ module Flapjack
         contact
       end
 
-      def self.add(contact_data)
+      def self.find_by_ids(contact_ids, options = {})
+        contact_ids.map do |id|
+          self.find_by_id(id, options)
+        end
+      end
+
+      def self.exists_with_id?(contact_id)
+        raise "No id value passed" unless contact_id
+        Flapjack.redis.exists("contact:#{contact_id}")
+      end
+
+      def self.add(contact_data, options = {})
         contact_id = contact_data['id']
         raise "Contact id value not provided" if contact_id.nil?
 
@@ -161,6 +176,35 @@ module Flapjack
           end
           ret
         }.values
+      end
+
+      def self.entities_jsonapi(contact_ids, options = {})
+
+        entity_data = []
+        linked_entity_ids = {}
+
+        temp_set = SecureRandom.uuid
+        redis.sadd(temp_set, contact_ids)
+
+        Flapjack.redis.keys('contacts_for:*').each do |k|
+          contact_ids = Flapjack.redis.sinter(k, temp_set)
+          next if contact_ids.empty?
+          next unless k =~ /^contacts_for:([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?::(\w+))?$/
+
+          entity_id = $1
+          check = $2
+
+          entity_data << {:id => entity_id, :name => Flapjack.redis.hget("entity:#{entity_id}", 'name')}
+
+          contact_ids.each do |contact_id|
+            linked_entity_ids[contact_id] ||= []
+            linked_entity_ids[contact_id] << entity_id
+          end
+        end
+
+        Flapjack.redis.del(temp_set)
+
+        [entity_data, linked_entity_ids]
       end
 
       def name
@@ -403,11 +447,17 @@ module Flapjack
       end
 
       def to_json(*args)
-        { "id"         => self.id,
-          "first_name" => self.first_name,
-          "last_name"  => self.last_name,
-          "email"      => self.email,
-          "tags"       => self.tags.to_a }.to_json
+        { "id"                      => self.id,
+          "first_name"              => self.first_name,
+          "last_name"               => self.last_name,
+          "email"                   => self.email,
+          "media"                   => self.media,
+          "media_intervals"         => self.media_intervals,
+          "media_rollup_thresholds" => self.media_rollup_thresholds,
+          "timezone"                => self.timezone.name,
+          "tags"                    => self.tags.to_a,
+          "links"                   => {:entities => @linked_entity_ids || []}
+        }.to_json
       end
 
     private
@@ -424,6 +474,12 @@ module Flapjack
         # TODO check that the rest of this is safe for the update case
         Flapjack.redis.hmset("contact:#{contact_id}",
                     *['first_name', 'last_name', 'email'].collect {|f| [f, contact_data[f]]})
+
+        if ( ! contact_data['tags'].nil? && contact_data['tags'].is_a?(Enumerable))
+          contact_data['tags'].each do |t|
+            Flapjack::Data::Tag.create("#{TAG_PREFIX}:#{t}", [contact_id])
+          end
+        end
 
         unless contact_data['media'].nil?
           Flapjack.redis.del("contact_media:#{contact_id}")
@@ -443,6 +499,16 @@ module Flapjack
               Flapjack.redis.hset("contact_media_rollup_thresholds:#{contact_id}", medium, details['rollup_threshold']) if details['rollup_threshold']
             end
           }
+        end
+        if contact_data.key?('timezone')
+          tz = contact_data['timezone']
+          if tz.nil?
+            Flapjack.redis.del("contact_tz:#{contact_id}")
+          else
+            # ActiveSupport::TimeZone or String
+            Flpajck.redis.set("contact_tz:#{contact_id}",
+              tz.respond_to?(:name) ? tz.name : tz )
+          end
         end
       end
 

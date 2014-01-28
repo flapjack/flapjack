@@ -233,7 +233,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
   it "shows details of an individual contact found by id" do
     contact = double('contact')
-    expect(contact).to receive(:name).twice.and_return("Smithson Smith")
+    expect(contact).to receive(:name).and_return("Smithson Smith")
     expect(contact).to receive(:media).exactly(3).times.and_return({})
     expect(contact).to receive(:entities).with(:checks => true).and_return([])
     expect(contact).to receive(:notification_rules).and_return([])

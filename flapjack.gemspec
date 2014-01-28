@@ -6,7 +6,7 @@ Gem::Specification.new do |gem|
   gem.email         = 'lindsay@holmwood.id.au'
   gem.description   = 'Flapjack is a distributed monitoring notification system that provides a scalable method for processing streams of events from Nagios and deciding who should be notified'
   gem.summary       = 'Intelligent, scalable, distributed monitoring notification system.'
-  gem.homepage      = 'http://flapjack-project.com/'
+  gem.homepage      = 'http://flapjack.io/'
   gem.license       = 'MIT'
 
   # see http://yehudakatz.com/2010/12/16/clarifying-the-roles-of-the-gemspec-and-gemfile/
@@ -21,7 +21,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'dante'
   gem.add_dependency 'oj'
   gem.add_dependency 'hiredis'
-  gem.add_dependency 'redis'
+  gem.add_dependency 'redis', '~> 3.0.6'
   gem.add_dependency 'sinatra'
   gem.add_dependency 'mail'
   gem.add_dependency 'xmpp4r', '>= 0.5.5'

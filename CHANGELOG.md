@@ -1,5 +1,22 @@
 ## Flapjack Changelog
 
+# 0.8.2 - 2014-01-16
+- Bug: no HTML parsing in summary of scheduled maintenance (thanks @marek-knappe) gh-413 (@ali-graham)
+- Bug: if tags and entities are present in a notification rule, both should match the event (thanks @jswoods) gh-417 (@jessereynolds)
+- Bug: improperly structured events crash the processor gh-411 (thanks @someword) (@ali-graham)
+- Bug: Critical events are no longer showing up as red in the flapjack UI gh-419 (thanks @jswoods) (@jessereynolds)
+
+# 0.8.1 - 2014-01-06
+- Bug: JSONAPI: 500 on GET /entities with no entities in the db gh-409 (@jessereynolds)
+
+# 0.8.0 - 2014-01-06
+- Feature: Start rewriting API as per jsonapi.org gh-253 (@ali-graham, @jessereynolds)
+- Feature: API consuming webapp beginnings gh-253 (@ali-graham, @auxesis, @jessereynolds)
+- Feature: New styles for navigation and so on (@auxesis)
+- Chore: Upgrade Rspec to v3 gh-389 (@ali-graham)
+- Chore: Make README clearer gh-406 (@auxesis)
+- Bug: Listing notification rules for a non existent contact gives 500, should be 404 gh-392 (@ali-graham)
+
 # 0.7.35 - 2013-12-10
 - Feature: allow flapper to flap with an arbitrary interval gh-383 (@jessereynolds)
 - Feature: Expose statistics for currency of all checks gh-386 (@jessereynolds)

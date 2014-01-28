@@ -17,21 +17,35 @@ module Flapjack
 
   class Coordinator
 
+    # states: :starting, :running, :reloading, :stopping, :stopped
+
     def initialize(config)
 
       Thread.abort_on_exception = true
 
       @config   = config
       @pikelets = []
-      @stopping = false
 
+      @received_signals = []
+
+      @state = :starting
       @monitor = Monitor.new
-      @shutdown_cond = @monitor.new_cond
+      @monitor_cond = @monitor.new_cond
 
-      @shutdown = proc {
+      @reload = proc {
         @monitor.synchronize {
-          @stopping = true
-          @shutdown_cond.signal
+          @monitor_cond.wait_until { :running.eql?(@state) }
+          @state = :reloading
+          @monitor_cond.signal
+        }
+      }
+
+      @shutdown = proc { |exit_val|
+        @monitor.synchronize {
+          @monitor_cond.wait_until { :running.eql?(@state) }
+          @state = :stopping
+          @exit_value = exit_val
+          @monitor_cond.signal
         }
       }
 
@@ -59,27 +73,77 @@ module Flapjack
       # block this thread until 'stop' has been called, and
       # all pikelets have been stopped
       @monitor.synchronize {
-        @shutdown_cond.wait_until { @stopping }
-        @pikelets.map(&:stop)
-        @pikelets.clear
+        @monitor_cond.wait_until { !(:running.eql?(@state)) }
+        case @state
+        when :reloading
+          reload
+          @state = :running
+          @monitor_cond.signal
+        when :stopping
+          @pikelets.map(&:stop)
+          @pikelets.clear
+          @state = :stopped
+          @monitor_cond.signal
+        end
       }
 
       @exit_value
     end
 
-    def stop(value = 0)
-      return unless @exit_value.nil?
-      @exit_value = value
-      # a new thread is required to avoid deadlock errors; signal
-      # handler runs by jumping into main thread
-      Thread.new do
-        Thread.current.abort_on_exception = true
-        @monitor.synchronize do
-          @stopping = true
-          @shutdown_cond.signal
+  private
+
+    # the global nature of this seems at odds with it calling stop
+    # within a single coordinator instance. Coordinator is essentially
+    # a singleton anyway...
+    def setup_signals
+      Kernel.trap('INT')    { Thread.new { @shutdown.call(Signal.list['INT']) }.join }
+      Kernel.trap('TERM')   { Thread.new { @shutdown.call(Signal.list['TERM']) }.join }
+      unless RbConfig::CONFIG['host_os'] =~ /mswin|windows|cygwin/i
+        Kernel.trap('QUIT') { Thread.new { @shutdown.call(Signal.list['QUIT']) }.join }
+        Kernel.trap('HUP')  { Thread.new { @reload.call   }.join }
+      end
+    end
+
+    def pikelet_definitions(config_env)
+       config = {}
+      return config unless config_env
+
+      # backwards-compatible with config file for previous 'executive' pikelet
+      exec_cfg = nil
+      if config_env.has_key?('executive') && config_env['executive']['enabled']
+        exec_cfg = config_env['executive']
+      end
+      ['processor', 'notifier'].each do |k|
+        if exec_cfg
+          if config_env.has_key?(k)
+            # need to allow for new config fields to override old settings if both present
+            merged = exec_cfg.merge(config_env[k])
+            config.update(k => merged) if merged['enabled']
+          else
+            config.update(k => exec_cfg)
+          end
+        else
+          next unless (config_env.has_key?(k) && config_env[k]['enabled'])
+          config.update(k => config_env[k])
         end
       end
-      @exit_value
+
+      return config unless config_env && config_env['gateways'] &&
+        !config_env['gateways'].nil?
+      config.merge( config_env['gateways'].select {|k, v|
+        Flapjack::Pikelet.is_pikelet?(k) && v['enabled']
+      } )
+    end
+
+    # passed a hash with {PIKELET_TYPE => PIKELET_CFG, ...}
+    # returns unstarted pikelet instances.
+    def create_pikelets(pikelets_data = {})
+      pikelets_data.inject([]) do |memo, (type, cfg)|
+        pikelets = Flapjack::Pikelet.create(type, @shutdown, :config => cfg,
+                                            :boot_time => @boot_time)
+        memo += pikelets
+        memo
+      end
     end
 
     # NB: global config options (e.g. daemonize, pidfile,
@@ -127,62 +191,6 @@ module Flapjack
         @pikelets << pik
         pik.start
       end
-    end
-
-  private
-
-    # the global nature of this seems at odds with it calling stop
-    # within a single coordinator instance. Coordinator is essentially
-    # a singleton anyway...
-    def setup_signals
-      Kernel.trap('INT')  { stop(Signal.list['INT']) }
-      Kernel.trap('TERM') { stop(Signal.list['TERM']) }
-      unless RbConfig::CONFIG['host_os'] =~ /mswin|windows|cygwin/i
-        Kernel.trap('QUIT') { stop(Signal.list['QUIT']) }
-        Kernel.trap('HUP')  { reload }
-      end
-    end
-
-    # passed a hash with {PIKELET_TYPE => PIKELET_CFG, ...}
-    # returns unstarted pikelet instances.
-    def create_pikelets(pikelets_data = {})
-      pikelets_data.inject([]) do |memo, (type, cfg)|
-        pikelets = Flapjack::Pikelet.create(type, @shutdown, :config => cfg,
-                                            :boot_time => @boot_time)
-        memo += pikelets
-        memo
-      end
-    end
-
-    def pikelet_definitions(config_env)
-       config = {}
-      return config unless config_env
-
-      # backwards-compatible with config file for previous 'executive' pikelet
-      exec_cfg = nil
-      if config_env.has_key?('executive') && config_env['executive']['enabled']
-        exec_cfg = config_env['executive']
-      end
-      ['processor', 'notifier'].each do |k|
-        if exec_cfg
-          if config_env.has_key?(k)
-            # need to allow for new config fields to override old settings if both present
-            merged = exec_cfg.merge(config_env[k])
-            config.update(k => merged) if merged['enabled']
-          else
-            config.update(k => exec_cfg)
-          end
-        else
-          next unless (config_env.has_key?(k) && config_env[k]['enabled'])
-          config.update(k => config_env[k])
-        end
-      end
-
-      return config unless config_env && config_env['gateways'] &&
-        !config_env['gateways'].nil?
-      config.merge( config_env['gateways'].select {|k, v|
-        Flapjack::Pikelet.is_pikelet?(k) && v['enabled']
-      } )
     end
 
   end

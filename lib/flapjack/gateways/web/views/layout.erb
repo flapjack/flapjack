@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title><%= h include_page_title %></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/bootstrap.min.css" media="screen">
+    <link rel="stylesheet" href="/css/bootstrap-responsive.min.css" media="screen">
+    <link rel="stylesheet" href="/css/screen.css" media="screen">
+    <link rel="stylesheet" href="/css/font-awesome.min.css">
+    <link rel="shortcut icon" href="/img/flapjack-favicon-64-32-24-16.ico"> <!-- thank you http://xiconeditor.com/ -->
+    <%= include_required_css %>
+    <%= include_required_js %>
+  </head>
+  <body>
+    <nav class="navbar navbar-default navbar-inverse" role="navigation">
+
+      <div class="navbar-header">
+        <a class="navbar-brand" title="Summary" href="/">
+          <img alt="Flapjack" class="logo" src="/img/flapjack-2013-notext-transparent-300-300.png">
+        </a>
+      </div>
+
+      <div class="collapse navbar-collapse navbar-ex1-collapse">
+
+        <ul class="nav navbar-nav">
+          <li>
+            <a title="Summary" href="/">
+              <i class="fa fa-trophy fa-lg"></i>
+              Summary
+            </a>
+          </li>
+          <li>
+            <a title="All Entities" href="/entities_all">
+              <i class="fa fa-bullseye fa-lg"></i>
+              All Entities
+            </a>
+          </li>
+          <li>
+            <a title="Failing Entities" href="/entities_failing">
+              <i class="fa fa-bullhorn fa-lg"></i>
+              Failing Entities
+            </a>
+          </li>
+          <li>
+            <a title="All Checks" href="/checks_all">
+              <i class="fa fa-check-circle-o fa-lg"></i>
+              All Checks
+            </a>
+          </li>
+          <li>
+            <a title="Failing Checks" href="/checks_failing">
+              <i class="fa fa-times-circle-o fa-lg"></i>
+              Failing Checks
+            </a>
+          </li>
+          <li>
+            <a title="Contacts" href="/contacts">
+              <i class="fa fa-users fa-lg"></i>
+              Contacts
+            </a>
+          </li>
+        </ul>
+
+        <ul class="nav navbar-nav navbar-right">
+          <li>
+            <a title="Internal Statistics" href="/self_stats">
+              <i class="fa fa-tachometer fa-lg"></i>
+              Internal Statistics
+            </a>
+          </li>
+        </ul>
+
+      </div>
+    </nav>
+
+    <div class="container">
+      <%= yield %>
+    </div>
+
+    <footer>
+      <p class="credits">Flapjack version <%= ::Flapjack::VERSION %>
+        <span class="separator">|</span>
+        <a href="http://flapjack.io" target="_website">
+          <i class="fa fa-cloud"></i>
+          Flapjack Website
+        </a>
+        <span class="separator">|</span>
+        <a href="https://github.com/flpjck/flapjack" target="_github">
+          <i class="fa fa-github"></i>
+          Flapjack on GitHub
+        </a>
+      </p>
+    </footer>
+  </body>
+</html>

@@ -77,6 +77,14 @@ describe Flapjack::Data::Contact, :redis => true do
     expect(contact.name).to eq("John Johnson")
   end
 
+  it "finds contacts by ids" do
+    contacts = Flapjack::Data::Contact.find_by_ids(['c362','c363_a-f@42%*'], :redis => @redis)
+    expect(contacts).not_to be_nil
+    expect(contacts.length).to eq(2)
+    contact = contacts.first
+    expect(contact.name).to eq("John Johnson")
+  end
+
   it "adds a contact with the same id as an existing one, clears notification rules" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*')
     expect(contact).not_to be_nil

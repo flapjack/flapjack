@@ -64,6 +64,13 @@ describe Flapjack::Data::Entity, :redis => true do
     expect(entity.id).to eq('5000')
   end
 
+  it "returns an empty list when asked for all entities, if there are no entities" do
+    entities = Flapjack::Data::Entity.all
+    expect(entities).not_to be_nil
+    expect(entities).to be_an(Array)
+    expect(entities.size).to eq(0)
+  end
+
   it "returns a list of all entities" do
     Flapjack::Data::Entity.add({'id'   => '5000',
                                 'name' => name})

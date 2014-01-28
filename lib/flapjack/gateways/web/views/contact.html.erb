@@ -1,174 +1,152 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <% nav  = render_erb('_nav.html.erb', binding) %>
-    <% head = render_erb('_head.html.erb', binding) %>
-    <% foot = render_erb('_foot.html.erb', binding) %>
-    <title>Flapjack - <%= h @contact.name %> (contact)</title>
-    <%= head %>
-  </head>
-  <body>
-    <div id="wrap">
-      <div class="container">
-        <div class="page-header">
-          <%= nav %>
-          <h2><%= h @contact.name %></h2>
-        </div>
+<div class="page-header">
+  <h2><%= h @contact.name %></h2>
+</div>
 
-        <% alerting = {} %>
+<% alerting = {} %>
 
-        <h3>Contact Media</h3>
-        <% if !@contact.media || @contact.media.empty? %>
-          <p>No media</p>
-        <% else %>
-          <table class="table table-bordered table-hover table-condensed">
-            <tr>
-              <th>Media</th>
-              <th>Address</th>
-              <th>Interval</th>
-              <th>Summary Mode</th>
-              <th>Summary Threshold</th>
-            </tr>
-            <% @contact.media.each_pair do |mk, mv| %>
-              <% alerting_checks = @contact.alerting_checks_for_media(mk) %>
-              <% alerting[mk] = alerting_checks unless (alerting_checks.nil? || alerting_checks.empty?) %>
-              <tr>
-                <% if 'pagerduty'.eql?(mk) %>
-                  <td>PagerDuty</td>
-                  <td>
-                    <% @pagerduty_credentials.each_pair do |pk, pv| %>
-                      <p><%= 'password'.eql?(pk) ? h("#{pk}: ...") : h("#{pk}: #{pv}") %></p>
-                    <% end %>
-                  </td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                <% else %>
-                  <td><%= h mk.capitalize %></td>
-                  <td><%= h mv %></td>
-                  <td>
-                    <% if @contact.media_intervals[mk] %>
-                      <%= h @contact.media_intervals[mk] %> seconds
-                    <% else %>
-                      no custom interval
-                    <% end %>
-                  </td>
-                  <td>
-                    <% rollup_threshold = @contact.media_rollup_thresholds[mk] %>
-                    <% num_alerting = alerting[mk].nil? ? 0 : alerting[mk].length %>
-                    <% if rollup_threshold.nil? || (num_alerting < rollup_threshold.to_i) %>
-                      No -
-                    <% else %>
-                      Yes -
-                    <% end %>
-                    <%= num_alerting %> alerting
-                  </td>
-                  <td>
-                    <% if rollup_threshold.nil? %>
-                      -
-                    <% else %>
-                      <%= h rollup_threshold %>
-                    <% end %>
-                  </td>
-                <% end %>
-              </tr>
+<h3>Contact Media</h3>
+<% if !@contact.media || @contact.media.empty? %>
+  <p>No media</p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>Media</th>
+      <th>Address</th>
+      <th>Interval</th>
+      <th>Summary Mode</th>
+      <th>Summary Threshold</th>
+    </tr>
+    <% @contact.media.each_pair do |mk, mv| %>
+      <% alerting_checks = @contact.alerting_checks_for_media(mk) %>
+      <% alerting[mk] = alerting_checks unless (alerting_checks.nil? || alerting_checks.empty?) %>
+      <tr>
+        <% if 'pagerduty'.eql?(mk) %>
+          <td>PagerDuty</td>
+          <td>
+            <% @pagerduty_credentials.each_pair do |pk, pv| %>
+              <p><%= 'password'.eql?(pk) ? h("#{pk}: ...") : h("#{pk}: #{pv}") %></p>
             <% end %>
-          </table>
-        <% end %>
-
-        <h3>Alerting Checks</h3>
-        <p>Alerting checks are any that are failing, not acknowledged, not in scheduled maintenance, and currently allowed by this contact's notification rules.</p>
-
-        <% if alerting.empty? %>
-          <p><em>There are no currently alerting checks.</em></p>
+          </td>
+          <td></td>
+          <td></td>
+          <td></td>
         <% else %>
-          <table class="table table-bordered table-hover table-condensed">
-            <tr>
-              <th>Media</th>
-              <th>Alerting Checks</th>
-            </tr>
-            <% alerting.each_pair do |media, checks| %>
-              <% if checks.length > 0 %>
-                <tr>
-                  <td><%= h media.capitalize %></td>
-                  <td>
-                    <% checks.each do |entity_check| %>
-                      <% entity, check = entity_check.split(':', 2) %>
-                      <% check_link = "<a href=\"/check?entity=#{u(entity)}&amp;check=#{u(check)}\" title=\"check status\">" +
-                         h(check) + "</a>"%>
-                      <a href="/entity/<%= u(entity) %>" title="entity status"><%= h entity %></a> ::
-                      <%= check_link %> <br />
-                    <% end %>
-                  </td>
-                </tr>
-              <% end %>
+          <td><%= h mk.capitalize %></td>
+          <td><%= h mv %></td>
+          <td>
+            <% if @contact.media_intervals[mk] %>
+              <%= h @contact.media_intervals[mk] %> seconds
+            <% else %>
+              no custom interval
             <% end %>
-          </table>
-        <% end %>
-
-        <h3>Notification Rules</h3>
-        <% rules = @contact.notification_rules %>
-        <% if !rules || rules.empty? %>
-          <p>No notification rules</p>
-        <% else %>
-          <table class="table table-bordered table-hover table-condensed">
-            <tr>
-              <th>ID</th>
-              <th>Entities</th>
-              <th>Tags</th>
-              <th>Warning Media</th>
-              <th>Critical Media</th>
-              <th>Time Restrictions</th>
-              <th>Blackholes</th>
-            </tr>
-            <% rules.each do |rule| %>
-              <tr>
-                <td><%= h rule.id %></td>
-                <td><%= h( (rule.entities && !rule.entities.empty?) ? rule.entities.join(', ') : '-') %></td>
-                <td><%= h( (rule.tags && !rule.tags.empty?) ? rule.tags.to_a.join(', ') : '-') %></td>
-                <td><%= h( (rule.warning_media && !rule.warning_media.empty?) ? rule.warning_media.join(', ') : '-')%></td>
-                <td><%= h( (rule.critical_media && !rule.critical_media.empty?) ? rule.critical_media.join(', ') : '-') %></td>
-                <td><%= h(rule.time_restrictions) %></td>
-                <% blackholes = [] %>
-                <% blackholes << 'Warning' if rule.warning_blackhole %>
-                <% blackholes << 'Critical' if rule.critical_blackhole %>
-                <td><%= h(blackholes.join(', ')) %></td>
-              </tr>
+          </td>
+          <td>
+            <% rollup_threshold = @contact.media_rollup_thresholds[mk] %>
+            <% num_alerting = alerting[mk].nil? ? 0 : alerting[mk].length %>
+            <% if rollup_threshold.nil? || (num_alerting < rollup_threshold.to_i) %>
+              No -
+            <% else %>
+              Yes -
             <% end %>
-          </table>
-        <% end %>
-
-        <h3>All Entities and Checks</h3>
-        <% if !@entities_and_checks || @entities_and_checks.empty? %>
-          <p>No entities</p>
-        <% else %>
-          <table class="table table-bordered table-hover table-condensed">
-            <tr>
-              <th>Entity</th>
-              <th>Checks</th>
-            </tr>
-            <% @entities_and_checks.each do |ec| %>
-              <%
-                entity = ec[:entity]
-                checks = ec[:checks]
-               %>
-              <tr>
-                <td><a href="/entity/<%= u(entity.name) %>" title="entity status"><%= h entity.name %></a></td>
-                <td>
-                  <% checks.each do |check| %>
-                  <%=   "<a href=\"/check?entity=#{u(entity.name)}&amp;check=#{u(check)}\" title=\"check status\">#{ h check }</a>" %>
-                  <% end %>
-                </td>
-              </tr>
+            <%= num_alerting %> alerting
+          </td>
+          <td>
+            <% if rollup_threshold.nil? %>
+              -
+            <% else %>
+              <%= h rollup_threshold %>
             <% end %>
-          </table>
+          </td>
         <% end %>
+      </tr>
+    <% end %>
+  </table>
+<% end %>
 
-      </div>
-      <div id="push"></div>
-    </div>
-    <div id="footer">
-      <%= foot %>
-    </div>
-  </body>
-</html>
+<h3>Alerting Checks</h3>
+<p>Alerting checks are any that are failing, not acknowledged, not in scheduled maintenance, and currently allowed by this contact's notification rules.</p>
+
+<% if alerting.empty? %>
+  <p><em>There are no currently alerting checks.</em></p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>Media</th>
+      <th>Alerting Checks</th>
+    </tr>
+    <% alerting.each_pair do |media, checks| %>
+      <% if checks.length > 0 %>
+        <tr>
+          <td><%= h media.capitalize %></td>
+          <td>
+            <% checks.each do |entity_check| %>
+              <% entity, check = entity_check.split(':', 2) %>
+              <% check_link = "<a href=\"/check?entity=#{u(entity)}&amp;check=#{u(check)}\" title=\"check status\">" +
+                 h(check) + "</a>"%>
+              <a href="/entity/<%= u(entity) %>" title="entity status"><%= h entity %></a> ::
+              <%= check_link %> <br />
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    <% end %>
+  </table>
+<% end %>
+
+<h3>Notification Rules</h3>
+<% rules = @contact.notification_rules %>
+<% if !rules || rules.empty? %>
+  <p>No notification rules</p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>ID</th>
+      <th>Entities</th>
+      <th>Tags</th>
+      <th>Warning Media</th>
+      <th>Critical Media</th>
+      <th>Time Restrictions</th>
+      <th>Blackholes</th>
+    </tr>
+    <% rules.each do |rule| %>
+      <tr>
+        <td><%= h rule.id %></td>
+        <td><%= h( (rule.entities && !rule.entities.empty?) ? rule.entities.join(', ') : '-') %></td>
+        <td><%= h( (rule.tags && !rule.tags.empty?) ? rule.tags.to_a.join(', ') : '-') %></td>
+        <td><%= h( (rule.warning_media && !rule.warning_media.empty?) ? rule.warning_media.join(', ') : '-')%></td>
+        <td><%= h( (rule.critical_media && !rule.critical_media.empty?) ? rule.critical_media.join(', ') : '-') %></td>
+        <td><%= h(rule.time_restrictions) %></td>
+        <% blackholes = [] %>
+        <% blackholes << 'Warning' if rule.warning_blackhole %>
+        <% blackholes << 'Critical' if rule.critical_blackhole %>
+        <td><%= h(blackholes.join(', ')) %></td>
+      </tr>
+    <% end %>
+  </table>
+<% end %>
+
+<h3>All Entities and Checks</h3>
+<% if !@entities_and_checks || @entities_and_checks.empty? %>
+  <p>No entities</p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>Entity</th>
+      <th>Checks</th>
+    </tr>
+    <% @entities_and_checks.each do |ec| %>
+      <%
+        entity = ec[:entity]
+        checks = ec[:checks]
+       %>
+      <tr>
+        <td><a href="/entity/<%= u(entity.name) %>" title="entity status"><%= h entity.name %></a></td>
+        <td>
+          <% checks.each do |check| %>
+          <%= "<a href=\"/check?entity=#{u(entity.name)}&amp;check=#{u(check)}\" title=\"check status\">#{ h check }</a>" %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </table>
+<% end %>

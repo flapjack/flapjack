@@ -15,10 +15,12 @@ module Flapjack
       TAG_PREFIX = 'entity_tag'
 
       def self.all
-        Flapjack.redis.keys("entity_id:*").collect {|k|
+        keys = Flapjack.redis.keys("entity_id:*")
+        return [] unless keys.any?
+        ids = Flapjack.redis.mget(keys)
+        keys.collect {|k|
           k =~ /^entity_id:(.+)$/; entity_name = $1
-          self.new(:name => entity_name,
-                   :id => Flapjack.redis.get("entity_id:#{entity_name}"))
+          self.new(:name => entity_name, :id => ids.shift)
         }.sort_by(&:name)
       end
 
@@ -161,6 +163,13 @@ module Flapjack
           tag.delete(@id)
           tags.delete(t)
         end
+      end
+
+      def as_json(*args)
+        {
+          "id"    => self.id,
+          "name"  => self.name,
+        }
       end
 
     private
