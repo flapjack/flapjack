@@ -1,11 +1,9 @@
 #!/usr/bin/env ruby
 
 def drain_events
-  @processor.send(:foreach_on_queue) do |event_json|
-    if event = Flapjack::Data::Event.new( ::Oj.load( event_json ) )
-      @processor.send(:process_event, event)
-      @last_event_count = event.counter
-    end
+  @processor.send(:foreach_on_queue, 'events') do |event|
+    @processor.send(:process_event, event)
+    @last_event_count = event.counter
   end
   drain_notifications
 end

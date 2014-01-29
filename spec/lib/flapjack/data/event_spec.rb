@@ -26,10 +26,6 @@ describe Flapjack::Data::Event do
       allow(Flapjack).to receive(:redis).and_return(redis)
     end
 
-    it "blocks waiting for an event wakeup"
-
-    it "handles invalid event JSON"
-
     it "returns a count of pending events" do
       events_len = 23
       expect(redis).to receive(:llen).with('events').and_return(events_len)
@@ -76,6 +72,55 @@ describe Flapjack::Data::Event do
       expect(event).not_to be_an_acknowledgement
       expect(event).not_to be_a_test_notifications
     end
+  end
+
+  ['type', 'state', 'entity', 'check', 'summary'].each do |required_key|
+
+    it "rejects an event with missing '#{required_key}' key" do
+      bad_event_data = event_data.clone
+      bad_event_data.delete(required_key)
+      bad_event_json = bad_event_data.to_json
+
+      expect( Flapjack::Data::Event.parse_and_validate(bad_event_json) ).to be_nil
+    end
+
+    it "rejects an event with invalid '#{required_key}' key" do
+      bad_event_data = event_data.clone
+      bad_event_data[required_key] = {'hello' => 'there'}
+      bad_event_json = bad_event_data.to_json
+
+      expect( Flapjack::Data::Event.parse_and_validate(bad_event_json) ).to be_nil
+    end
+  end
+
+  ['time', 'details', 'acknowledgement_id', 'duration'].each do |optional_key|
+    it "rejects an event with invalid '#{optional_key}' key" do
+      bad_event_data = event_data.clone
+      bad_event_data[optional_key] = {'hello' => 'there'}
+      bad_event_json = bad_event_data.to_json
+
+      expect( Flapjack::Data::Event.parse_and_validate(bad_event_json) ).to be_nil
+    end
+  end
+
+  ['time', 'duration'].each do |key|
+
+    it "accepts an event with a numeric string #{key} key" do
+      numstr_event_data = event_data.clone
+      numstr_event_data[key] = '352'
+      numstr_event_json = numstr_event_data.to_json
+
+      expect( Flapjack::Data::Event.parse_and_validate(numstr_event_json) ).to_not be_nil
+    end
+
+    it "rejects an event with a non-numeric or numeric string #{key} key" do
+      bad_event_data = event_data.clone
+      bad_event_data[key] = 'NaN'
+      bad_event_json = bad_event_data.to_json
+
+      expect( Flapjack::Data::Event.parse_and_validate(bad_event_json) ).to be_nil
+    end
+
   end
 
 end

@@ -4,6 +4,7 @@ require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
 require 'erb'
+require 'uri'
 
 require 'flapjack/redis_proxy'
 
@@ -33,6 +34,18 @@ module Flapjack
             end
 
             use Rack::CommonLogger, ::Logger.new(@config['access_log'])
+
+            @api_url = @config['api_url']
+            if @api_url
+              if (@api_url =~ /^#{URI::regexp(%w(http https))}$/).nil?
+                @logger.error "api_url is not a valid http or https URI (#{@api_url})"
+                @api_url = nil
+              end
+            end
+
+            unless @api_url
+              @logger.error "api_url is not configured, parts of the web interface will be broken"
+            end
           end
         end
       end
@@ -56,6 +69,10 @@ module Flapjack
         define_method(class_inst_var.to_sym) do
           self.class.instance_variable_get("@#{class_inst_var}")
         end
+      end
+
+      def api_url
+        self.class.instance_variable_get('@api_url')
       end
 
       get '/' do
@@ -314,6 +331,11 @@ module Flapjack
         erb 'contacts.html'.to_sym
       end
 
+      get '/edit_contacts' do
+        @api_url = api_url
+        erb 'edit_contacts.html'.to_sym
+      end
+
       get "/contacts/:contact" do
         if contact_id = params[:contact]
           @contact = Flapjack::Data::Contact.find_by_id(contact_id)
@@ -327,16 +349,6 @@ module Flapjack
         end
 
         erb 'contact.html'.to_sym
-      end
-
-    protected
-
-      # TODO cache constructed erb object to improve performance -- check mtime
-      # to know when to refresh; would need to synchronize accesses to the cache,
-      # to lock out reads while it's being refreshed
-      def render_erb(file, bind)
-        erb = ERB.new(File.read(File.dirname(__FILE__) + '/web/views/' + file))
-        erb.result(bind)
       end
 
     private
@@ -439,6 +451,63 @@ module Flapjack
                                :summary => notif.summary}
           memo
         end
+      end
+
+      def require_css(*css)
+        @required_css ||= []
+        @required_css += css
+      end
+
+      def require_js(*js)
+        @required_js ||= []
+        @required_js += js
+      end
+
+      def include_required_js
+        if @required_js
+          @required_js.map { |filename|
+            "<script type='text/javascript' src='#{link_to("/js/#{filename}.js")}'></script>"
+          }.join("\n    ")
+        else
+          ""
+        end
+      end
+
+      def include_required_css
+        if @required_css
+          @required_css.map { |filename|
+            %(<link rel="stylesheet" href="#{link_to("/css/#{filename}.css")}" media="screen">)
+          }.join("\n    ")
+        else
+          ""
+        end
+      end
+
+      # from http://gist.github.com/98310
+      def link_to(url_fragment, mode=:path_only)
+        case mode
+        when :path_only
+          base = request.script_name
+        when :full_url
+          if (request.scheme == 'http' && request.port == 80 ||
+              request.scheme == 'https' && request.port == 443)
+            port = ""
+          else
+            port = ":#{request.port}"
+          end
+          base = "#{request.scheme}://#{request.host}#{port}#{request.script_name}"
+        else
+          raise "Unknown script_url mode #{mode}"
+        end
+        "#{base}#{url_fragment}"
+      end
+
+      def page_title(string)
+        @page_title = string
+      end
+
+      def include_page_title
+        @page_title ? "#{@page_title} | Flapjack" : "Flapjack"
       end
 
     end

@@ -248,7 +248,7 @@ module Flapjack
             logger.debug("delete /notification_rules/#{params[:id]}")
             rule = find_rule(params[:id])
             contact = rule.contact
-            halt err(403, "no contact") if contact.nil?
+            halt err(404, "no contact") if contact.nil?
             logger.debug("rule to delete: #{rule.inspect}, contact: #{contact.inspect}")
             contact.notification_rules.delete(rule)
             rule.destroy

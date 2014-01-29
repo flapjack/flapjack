@@ -5,7 +5,7 @@ describe 'web/views/contact.html.erb', :erb_view => true do
   it "should escape unsafe check characters in URI parameters" do
     @contact = double('contact')
 
-    expect(@contact).to receive(:name).twice.and_return('Aeschylus')
+    expect(@contact).to receive(:name).and_return('Aeschylus')
 
     no_notification_rules = double('no_notification_rules', :all => [])
     expect(@contact).to receive(:notification_rules).and_return(no_notification_rules)

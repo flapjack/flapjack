@@ -3,12 +3,13 @@ Feature: Notification rules on a per contact basis
 
   Background:
     Given the following users exist:
-      | id  | first_name | last_name | email             | sms          | timezone         |
-      | c1  | Malak      | Al-Musawi | malak@example.com | +61400000001 | Asia/Baghdad     |
-      | c2  | Imani      | Farooq    | imani@example.com | +61400000002 | Europe/Moscow    |
-      | c3  | Vera       | Дурейко   | vera@example.com  | +61400000003 | Europe/Paris     |
-      | c4  | Lucia      | Moretti   | lucia@example.com | +61400000004 | Europe/Rome      |
-      | c5  | Wang Fang  | Wong      | fang@example.com  | +61400000005 | Asia/Shanghai    |
+      | id  | first_name | last_name | email             | sms          | timezone            |
+      | c1  | Malak      | Al-Musawi | malak@example.com | +61400000001 | Asia/Baghdad        |
+      | c2  | Imani      | Farooq    | imani@example.com | +61400000002 | Europe/Moscow       |
+      | c3  | Vera       | Дурейко   | vera@example.com  | +61400000003 | Europe/Paris        |
+      | c4  | Lucia      | Moretti   | lucia@example.com | +61400000004 | Europe/Rome         |
+      | c5  | Wang Fang  | Wong      | fang@example.com  | +61400000005 | Asia/Shanghai       |
+      | c6  | Jive       | Smith     | jive@example.com  | +61400000006 | America/Los_Angeles |
 
     And the following entities exist:
       | id  | name           | contacts |
@@ -16,7 +17,7 @@ Feature: Notification rules on a per contact basis
       | 2   | bar            | c1,c2,c3 |
       | 3   | baz            | c1,c3    |
       | 4   | buf            | c1,c2,c3 |
-      | 5   | foo-app-01.xyz | c4       |
+      | 5   | foo-app-01.xyz | c4,c6    |
 
     And user c1 has the following notification intervals:
       | email | sms |
@@ -65,6 +66,11 @@ Feature: Notification rules on a per contact basis
     And user c5 has the following notification rules:
       | unknown_media | critical_media |
       | email         | email, sms     |
+
+    And user c6 has the following notification rules:
+      | entities       | tags            | warning_media | critical_media   |
+      |                |                 |               |                  |
+      | foo-app-01.xyz | check_disk      | email         | email            |
 
   @time_restrictions @time
   Scenario: Alerts only during specified time restrictions
@@ -381,6 +387,15 @@ Feature: Notification rules on a per contact basis
     And   1 minute passes
     And   a critical event is received
     Then  no sms alerts should be queued for +61400000004
+
+  @time
+  Scenario: Don't notify when tags in a rule don't match, but the entity does match
+    Given the check is check 'Memory Util' on entity 'foo-app-01.xyz'
+    And   the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  no email alerts should be queued for jive@example.com
 
   @time
   Scenario: Only notify during specified time periods in tag matched rules

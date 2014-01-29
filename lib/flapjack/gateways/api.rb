@@ -79,22 +79,22 @@ module Flapjack
 
       error Flapjack::Gateways::API::ContactNotFound do
         e = env['sinatra.error']
-        err(403, "could not find contact '#{e.contact_id}'")
+        err(404, "could not find contact '#{e.contact_id}'")
       end
 
       error Flapjack::Gateways::API::NotificationuleNotFound do
         e = env['sinatra.error']
-        err(403, "could not find notification rule '#{e.rule_id}'")
+        err(404, "could not find notification rule '#{e.rule_id}'")
       end
 
       error Flapjack::Gateways::API::EntityNotFound do
         e = env['sinatra.error']
-        err(403, "could not find entity '#{e.entity_name}'")
+        err(404, "could not find entity '#{e.entity_name}'")
       end
 
       error Flapjack::Gateways::API::CheckNotFound do
         e = env['sinatra.error']
-        err(403, "could not find check '#{e.check_name}'")
+        err(404, "could not find entity check '#{e.check_name}'")
       end
 
       error do

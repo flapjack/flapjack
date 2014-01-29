@@ -74,7 +74,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(:name => entity_name).and_return(no_entities)
 
       get "/status/#{entity_name_esc}"
-      expect(last_response).to be_forbidden
+      expect(last_response).to be_not_found
     end
 
     it "returns the status for a check on an entity" do
@@ -95,8 +95,8 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:entity_name => entity_name, :name => check_name).and_return(no_checks)
 
-      get "/status/#{entity_name_esc}/ping"
-      expect(last_response).to be_forbidden
+      get "/status/#{entity_name_esc}/#{check_name}"
+      expect(last_response).to be_not_found
     end
 
     it "returns a list of scheduled maintenance periods for an entity" do
@@ -283,7 +283,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(:name => entity_name).and_return(no_entities)
 
       get "/status", :entity => entity_name
-      expect(last_response).to be_forbidden
+      expect(last_response).to be_not_found
     end
 
     it "returns the status for a check on an entity" do
@@ -306,7 +306,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(:entity_name => entity_name, :name => check_name).and_return(no_checks)
 
       get "/status", :check => {entity_name => check_name}
-      expect(last_response).to be_forbidden
+      expect(last_response).to be_not_found
     end
 
     it "creates an acknowledgement for an entity check" do
@@ -735,7 +735,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(:name => entity_name).and_return(no_entities)
 
       post "entities/#{entity_name}/tags", :tag => 'web'
-      expect(last_response).to be_forbidden
+      expect(last_response).to be_not_found
     end
 
     it "sets multiple tags on an entity and returns current tags" do
@@ -757,7 +757,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(:name => entity_name).and_return(no_entities)
 
       post "entities/#{entity_name}/tags", :tag => ['web', 'app']
-      expect(last_response).to be_forbidden
+      expect(last_response).to be_not_found
     end
 
     it "removes a single tag from an entity" do
@@ -777,7 +777,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(:name => entity_name).and_return(no_entities)
 
       delete "entities/#{entity_name}/tags", :tag => 'web'
-      expect(last_response).to be_forbidden
+      expect(last_response).to be_not_found
     end
 
     it "removes multiple tags from an entity" do
@@ -797,7 +797,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(:name => entity_name).and_return(no_entities)
 
       delete "entities/#{entity_name}/tags", :tag => ['web', 'app']
-      expect(last_response).to be_forbidden
+      expect(last_response).to be_not_found
     end
 
     it "gets all tags on an entity" do
@@ -816,7 +816,7 @@ describe 'Flapjack::Gateways::API::EntityMethods', :sinatra => true, :logger => 
         with(:name => entity_name).and_return(no_entities)
 
       get "entities/#{entity_name}/tags"
-      expect(last_response).to be_forbidden
+      expect(last_response).to be_not_found
     end
 
   end

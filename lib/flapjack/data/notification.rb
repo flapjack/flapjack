@@ -115,10 +115,15 @@ module Flapjack
         log_rules(rules, "initial")
 
         matchers = rules.select do |rule|
-          (rule.match_entity?(entity_name) ||
-           rule.match_tags?(self.tags) || !rule.is_specific?) &&
-          rule.is_occurring_now?(:contact => contact,
-            :default_timezone => options[:default_timezone])
+          matches_tags   = rule.tags.nil? || rule.tags.empty? ||
+                           rule.match_tags?(self.tags)
+
+          matches_entity = rule.entities.nil? || rule.entities.empty? ||
+                           rule.match_entity?(entity_name)
+
+          ((matches_entity && matches_tags) || !rule.is_specific?) &&
+            rule.is_occurring_now?(:contact => contact,
+              :default_timezone => options[:default_timezone])
         end
 
         log_rules(matchers, "after time, entity and tags") if matchers.count != rules.count

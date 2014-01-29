@@ -245,7 +245,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     get "/contacts/0362"
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "lists a contact's notification rules" do
@@ -270,7 +270,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     get "/contacts/0362/notification_rules"
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "returns a specified notification rule" do
@@ -288,7 +288,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('abcdef').and_return(nil)
 
     get "/notification_rules/abcdef"
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   # POST /notification_rules
@@ -323,7 +323,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     post "/notification_rules", notification_rule_data.to_json,
       {'CONTENT_TYPE' => 'application/json'}
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "does not create a notification_rule if a rule id is provided" do
@@ -360,7 +360,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(notification_rule.id).and_return(nil)
 
     put "/notification_rules/#{notification_rule.id}", notification_rule_data
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   # DELETE /notification_rules/RULE_ID
@@ -384,7 +384,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with(notification_rule.id).and_return(nil)
 
     delete "/notification_rules/#{notification_rule.id}"
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "does not delete a notification rule if the contact is not present" do
@@ -394,7 +394,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(notification_rule).to receive(:contact).and_return(nil)
 
     delete "/notification_rules/#{notification_rule.id}"
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   # GET /contacts/CONTACT_ID/media
@@ -413,7 +413,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     get "/contacts/0362/media"
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   # GET /contacts/CONTACT_ID/media/MEDIA
@@ -438,7 +438,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     get "/contacts/0362/media/sms"
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "does not return the media of a contact if the media is not present" do
@@ -451,7 +451,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(contact)
 
     get "/contacts/0362/media/telepathy"
-    expect(last_response).to be_forbidden
+    expect(last_response.status).to eq(403)
   end
 
   # PUT, DELETE /contacts/CONTACT_ID/media/MEDIA
@@ -481,7 +481,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     put "/contacts/0362/media/sms", {:address => '04987654321', :interval => '200'}
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "does not create a media of a contact if no address is provided" do
@@ -501,8 +501,8 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with('0362').and_return(contact)
 
-    put "/contacts/0362/media/sms", {:interval => '200'}
-    expect(last_response).to be_forbidden
+    put "/contacts/0362/media/sms", :interval => '200'
+    expect(last_response.status).to eq(403)
   end
 
   it "creates a media of a contact even if no interval is provided" do
@@ -549,7 +549,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     delete "/contacts/0362/media/sms"
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   # GET /contacts/CONTACT_ID/timezone
@@ -568,7 +568,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     get "/contacts/0362/timezone"
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   # PUT /contacts/CONTACT_ID/timezone
@@ -588,7 +588,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     put "/contacts/0362/timezone", {:timezone => 'Australia/Perth'}
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   # DELETE /contacts/CONTACT_ID/timezone
@@ -607,7 +607,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     delete "/contacts/0362/timezone"
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "sets a single tag on a contact and returns current tags" do
@@ -628,7 +628,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     post "contacts/0362/tags", :tag => 'web'
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "sets multiple tags on a contact and returns current tags" do
@@ -650,7 +650,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     post "contacts/0362/tags", :tag => ['web', 'app']
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "removes a single tag from a contact" do
@@ -670,7 +670,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     delete "contacts/0362/tags", :tag => 'web'
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "removes multiple tags from a contact" do
@@ -690,7 +690,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     delete "contacts/0362/tags", :tag => ['web', 'app']
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "gets all tags on a contact" do
@@ -708,7 +708,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     get "contacts/0362/tags"
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "gets all entity tags for a contact" do
@@ -737,7 +737,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
       with('0362').and_return(nil)
 
     get "contacts/0362/entity_tags"
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "adds tags to multiple entities for a contact" do
@@ -776,7 +776,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     post "contacts/0362/entity_tags",
       :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
   it "deletes tags from multiple entities for a contact" do
@@ -811,7 +811,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
     delete "contacts/0362/entity_tags",
       :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
-    expect(last_response).to be_forbidden
+    expect(last_response).to be_not_found
   end
 
 end

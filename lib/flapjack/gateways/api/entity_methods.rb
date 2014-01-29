@@ -136,7 +136,8 @@ module Flapjack
             content_type :json
             ret = Flapjack::Data::Entity.all.sort_by(&:name).collect {|e|
               presenter = Flapjack::Gateways::API::EntityPresenter.new(e)
-              {'id' => e.id, 'name' => e.name, 'checks' => presenter.status }
+              id = (e.id.respond_to?(:length) && e.id.length > 0) ? e.id : e.name
+              {'id' => id, 'name' => e.name, 'checks' => presenter.status }
             }
             ret.to_json
           end

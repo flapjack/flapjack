@@ -12,6 +12,10 @@ module ErbViewHelper
     erb.result(bind)
   end
 
+  def page_title(string)
+    @page_title = string
+  end
+
   def h(text)
     ERB::Util.h(text)
   end

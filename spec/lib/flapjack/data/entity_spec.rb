@@ -3,7 +3,6 @@ require 'flapjack/data/entity'
 
 describe Flapjack::Data::Entity, :redis => true do
 
-  # TODO move to redis_record spec, as the class method is defined there
   it "finds entities by tags" do
     entity0 = Flapjack::Data::Entity.new(:id   => '5000',
                                          :name => 'abc-123',

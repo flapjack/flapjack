@@ -88,27 +88,20 @@ module Flapjack
 
         Flapjack.redis.exec
 
-        parse_json_proc = Proc.new {|event_json|
-          begin
-            Flapjack::Data::Event.new( ::Oj.load( event_json ) )
-          rescue Oj::Error => e
-            @logger.warn("Error deserialising event json: #{e}, raw json: #{event_json.inspect}")
-            nil
-          end
-        }
+        queue = (@config['queue'] || 'events')
 
         loop do
           @lock.synchronize do
-            foreach_on_queue(:archive_events => @archive_events,
-                             :events_archive_maxage => @events_archive_maxage) do |event_json|
-              event = parse_json_proc.call(event_json)
-              process_event(event) if event
+            foreach_on_queue(queue,
+                             :archive_events => @archive_events,
+                             :events_archive_maxage => @events_archive_maxage) do |event|
+              process_event(event)
             end
           end
 
           raise Flapjack::GlobalStop if @config['exit_on_queue_empty']
 
-          wait_for_queue
+          wait_for_queue(queue)
         end
 
       ensure
@@ -122,22 +115,34 @@ module Flapjack
 
   private
 
-    def foreach_on_queue(opts = {})
-      if opts[:archive_events]
-        dest = "events_archive:#{Time.now.utc.strftime "%Y%m%d%H"}"
-        while event_json = Flapjack.redis.rpoplpush(@queue, dest)
-          Flapjack.redis.expire(dest, opts[:events_archive_maxage])
-          yield event_json
-        end
-      else
-        while event_json = Flapjack.redis.rpop(@queue)
-          yield event_json
+    def foreach_on_queue(queue, opts = {})
+      base_time_str = Time.now.utc.strftime "%Y%m%d%H"
+      rejects = "events_rejected:#{base_time_str}"
+      archive = opts[:archive_events] ? "events_archive:#{base_time_str}" : nil
+      max_age = archive ? opts[:events_archive_maxage] : nil
+
+      while event_json = (archive ? Flapjack.redis.rpoplpush(queue, archive) :
+                                    Flapjack.redis.rpop(queue))
+        parsed = Flapjack::Data::Event.parse_and_validate(event_json, :logger => @logger)
+        if parsed.nil?
+          if archive
+            Flapjack.redis.multi
+            Flapjack.redis.lrem(archive, 1, event_json)
+          end
+          Flapjack.redis.lpush(rejects, event_json)
+          if archive
+            Flapjack.redis.exec
+            Flapjack.redis.expire(archive, max_age)
+          end
+        else
+          Flapjack.redis.expire(archive, max_age) if archive
+          yield Flapjack::Data::Event.new(parsed) if block_given?
         end
       end
     end
 
-    def wait_for_queue
-      Flapjack.redis.brpop("#{@queue}_actions")
+    def wait_for_queue(queue)
+      Flapjack.redis.brpop("#{queue}_actions")
     end
 
     def process_event(event)

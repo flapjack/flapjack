@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/ali-graham/sandstorm.git
-  revision: 9093cb98db462f51ea2059d09feed8e06787f063
+  revision: dc9fb058652c998e81090f628bfcd9885ebf3633
   branch: master
   specs:
     sandstorm (0.0.1)
@@ -10,8 +10,8 @@ GIT
 PATH
   remote: .
   specs:
-    flapjack (0.7.35)
-      activesupport (~> 3.2.14)
+    flapjack (0.8.2)
+      activesupport (~> 3.2.16)
       chronic
       chronic_duration
       dante
@@ -19,7 +19,7 @@ PATH
       ice_cube
       mail
       oj
-      redis
+      redis (~> 3.0.6)
       sinatra
       tzinfo (~> 1.0.1)
       tzinfo-data
@@ -28,10 +28,10 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    activemodel (3.2.15)
-      activesupport (= 3.2.15)
+    activemodel (3.2.16)
+      activesupport (= 3.2.16)
       builder (~> 3.0.0)
-    activesupport (3.2.15)
+    activesupport (3.2.16)
       i18n (~> 0.6, >= 0.6.4)
       multi_json (~> 1.0)
     addressable (2.3.5)
@@ -50,7 +50,8 @@ GEM
       gherkin (~> 2.12.0)
       multi_json (~> 1.7.5)
       multi_test (>= 0.0.2)
-    dante (0.1.5)
+    dante (0.2.0)
+    debugger-ruby_core_source (1.3.1)
     delorean (2.1.0)
       chronic
     diff-lcs (1.2.5)
@@ -74,8 +75,8 @@ GEM
       guard (>= 2.1.1)
       rspec (>= 2.14, < 4.0)
     hiredis (0.4.5)
-    i18n (0.6.5)
-    ice_cube (0.11.0)
+    i18n (0.6.9)
+    ice_cube (0.11.2)
     listen (2.4.0)
       celluloid (>= 0.15.2)
       rb-fsevent (>= 0.9.3)
@@ -85,11 +86,11 @@ GEM
       mime-types (~> 1.16)
       treetop (~> 1.4.8)
     method_source (0.8.2)
-    mime-types (1.25)
+    mime-types (1.25.1)
     multi_json (1.7.9)
     multi_test (0.0.2)
     numerizer (0.1.1)
-    oj (2.1.7)
+    oj (2.5.4)
     perftools.rb (2.0.1)
     polyglot (0.3.3)
     pry (0.9.12.4)
@@ -97,7 +98,7 @@ GEM
       method_source (~> 0.8)
       slop (~> 3.4)
     rack (1.5.2)
-    rack-protection (1.5.1)
+    rack-protection (1.5.2)
       rack
     rack-test (0.6.2)
       rack (>= 1.0)
@@ -105,7 +106,7 @@ GEM
     rb-fsevent (0.9.3)
     rb-inotify (0.9.3)
       ffi (>= 0.5.0)
-    redis (3.0.6)
+    redis (3.0.7)
     rspec (3.0.0.beta1)
       rspec-core (= 3.0.0.beta1)
       rspec-expectations (= 3.0.0.beta1)
@@ -125,7 +126,7 @@ GEM
       multi_json (~> 1.0)
       simplecov-html (~> 0.7.1)
     simplecov-html (0.7.1)
-    sinatra (1.4.3)
+    sinatra (1.4.4)
       rack (~> 1.4)
       rack-protection (~> 1.4)
       tilt (~> 1.3, >= 1.3.4)
@@ -137,7 +138,8 @@ GEM
       polyglot
       polyglot (>= 0.3.1)
     tzinfo (1.0.1)
-    tzinfo-data (1.2013.7)
+    tzinfo-data (1.2013.9)
+      tzinfo (>= 1.0.0)
     webmock (1.13.0)
       addressable (>= 2.2.7)
       crack (>= 0.3.2)
@@ -148,6 +150,7 @@ PLATFORMS
 
 DEPENDENCIES
   cucumber
+  debugger-ruby_core_source (>= 1.3.1)
   delorean
   flapjack!
   fuubar

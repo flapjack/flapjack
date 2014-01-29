@@ -17,6 +17,7 @@ require 'flapjack'
 require 'flapjack/notifier'
 require 'flapjack/processor'
 require 'flapjack/gateways/api'
+require 'flapjack/gateways/jsonapi'
 require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
 require 'flapjack/gateways/pagerduty'
@@ -202,6 +203,7 @@ module Flapjack
     WRAPPERS = [Flapjack::Pikelet::Generic, Flapjack::Pikelet::HTTP]
 
     TYPES = {'api'        => [Flapjack::Gateways::API],
+             'jsonapi'    => [Flapjack::Gateways::JSONAPI],
              'email'      => [Flapjack::Gateways::Email],
              'notifier'   => [Flapjack::Notifier],
              'processor'  => [Flapjack::Processor],

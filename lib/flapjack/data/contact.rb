@@ -15,11 +15,15 @@ require 'flapjack/data/notification_block'
 require 'flapjack/data/notification_rule'
 require 'flapjack/data/notification_rule_state'
 
+require 'securerandom'
+
 module Flapjack
 
   module Data
 
     class Contact
+
+      attr_accessor :linked_entity_ids
 
       include Sandstorm::Record
       include ActiveModel::Serializers::JSON
@@ -102,7 +106,29 @@ module Flapjack
         self.timezone = tz.respond_to?(:name) ? tz.name : tz
       end
 
+      def self.entities_jsonapi(contact_ids, options = {})
+        entity_data = {}
+        linked_entity_ids = {}
+
+        contact_ids.each do |contact_id|
+          contact = Flapjack::Data::Contact.find_by_id(contact_id)
+          next if contact.nil?
+
+          entity_ids = contact.entities.ids
+
+          entity_ids.each do |entity_id|
+            next if entity_data.has_key?(entity_id)
+            entity = Flapjack::Data::Entity.find_by_id(entity_id)
+            entity_data[entity_id] = {:id => entity_id, :name => entity.name}
+          end
+          linked_entity_ids[contact_id] = entity_ids
+        end
+
+        [entity_data.values, linked_entity_ids]
+      end
+
       # TODO usage of to_json should have :only => [:first_name, :last_name, :email, :tags]
+      # TODO linked_entity_ids handling
 
     end
   end
