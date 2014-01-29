@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.8.4 - UNRELEASED
+- Bug: The scheduled maintenance periods table on the checks page is messed up gh-427 (@jswoods)
+
 # 0.8.3 - 2014-01-24
 - Feature: Fix background color for failing events for entity page gh-425 (@jswoods)
 - Feature: Enabled sort and filter options in the flapjack UI gh-418 (@jswoods)
