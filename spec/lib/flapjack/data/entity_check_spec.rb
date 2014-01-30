@@ -440,13 +440,15 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
   it "does not update state with a repeated state value" do
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-    ec.update_state('critical', :summary => 'small problem')
+    ec.update_state('critical', :summary => 'small problem', :details => 'none')
     changed_at = @redis.hget("check:#{name}:#{check}", 'last_change')
-    summary = @redis.hget("check:#{name}:#{check}", 'summary')
+    summary = ec.summary
+    details = ec.details
 
-    ec.update_state('critical', :summary => 'big problem')
+    ec.update_state('critical', :summary => 'big problem', :details => 'some')
     new_changed_at = @redis.hget("check:#{name}:#{check}", 'last_change')
-    new_summary = @redis.hget("check:#{name}:#{check}", 'summary')
+    new_summary = ec.summary
+    new_details = ec.details
 
     expect(changed_at).not_to be_nil
     expect(new_changed_at).not_to be_nil
@@ -457,6 +459,12 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     expect(new_summary).not_to eq(summary)
     expect(summary).to eq('small problem')
     expect(new_summary).to eq('big problem')
+
+    expect(details).not_to be_nil
+    expect(new_details).not_to be_nil
+    expect(new_details).not_to eq(details)
+    expect(details).to eq('none')
+    expect(new_details).to eq('some')
   end
 
   def time_before(t, min, sec = 0)
