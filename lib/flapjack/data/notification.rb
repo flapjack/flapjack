@@ -142,7 +142,13 @@ module Flapjack
             # for time, entity and tags
             matchers = rules.select do |rule|
               logger.debug("considering rule with entities: #{rule.entities} and tags: #{rule.tags.to_json}")
-              (rule.match_entity?(@event_id) || rule.match_tags?(@tags) || ! rule.is_specific?) &&
+              rule_has_tags     = rule.tags     ? (rule.tags.length > 0)     : false
+              rule_has_entities = rule.entities ? (rule.entities.length > 0) : false
+
+              matches_tags   = rule_has_tags     ? rule.match_tags?(@tags)       : true
+              matches_entity = rule_has_entities ? rule.match_entity?(@event_id) : true
+
+              ((matches_entity && matches_tags) || ! rule.is_specific?) &&
                 rule_occurring_now?(rule, :contact => contact, :default_timezone => default_timezone)
             end
 
