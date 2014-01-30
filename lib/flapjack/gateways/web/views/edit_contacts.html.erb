@@ -1,12 +1,13 @@
 <%
   require_css 'select2'
+  require_css 'select2-bootstrap'
 
   require_js  'underscore'
   require_js  'jquery-1.10.2'
-  require_js  'select2'
   require_js  'backbone'
   require_js  'backbone.jsonapi'
   require_js  'bootstrap.min'
+  require_js  'select2'
   require_js  'contacts'
 %>
 
@@ -60,7 +61,7 @@
 </script>
 
 <script type="text/template" id="contact-entity-chooser">
-  <input type="hidden" id="entityChooser" style="width: 80%">
+  <input type="hidden" id="entityChooser" style="width: 440px">
   <button id="add-contact-entity" type="button" class="btn btn-default btn-xs">
     <i class="fa fa-plus-square"></i>
     &nbsp;
@@ -115,6 +116,9 @@
           </tbody>
         </table>
 
+        <div id="entityAdd">
+        </div>
+
         <table class="table" style="margin-top: 1em">
           <thead>
             <tr>
@@ -125,9 +129,6 @@
           <tbody id="contactEntityList">
           </tbody>
         </table>
-
-        <div id="entityAdd">
-        </div>
 
       </div>
     </div><!-- /.modal-content -->
