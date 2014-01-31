@@ -45,6 +45,10 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     }
   }
 
+  let(:critical_state) { double(Flapjack::Data::NotificationRuleState) }
+  let(:warning_state)  { double(Flapjack::Data::NotificationRuleState) }
+  let(:unknown_state)  { double(Flapjack::Data::NotificationRuleState) }
+
   before(:all) do
     Flapjack::Gateways::API.class_eval {
       set :raise_errors, true
@@ -296,16 +300,61 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(notification_rule_data['contact_id']).and_return(contact)
 
-    # symbolize the keys
-    notification_rule_data_sym = notification_rule_data.inject({}){|memo,(k,v)|
-      memo[k.to_sym] = v; memo
-    }
-    notification_rule_data_sym.delete(:contact_id)
-    notification_rule_data_sym[:tags] = Set.new(notification_rule_data['tags'])
     expect(notification_rule).to receive(:as_json).and_return(json_data)
-    expect(notification_rule).to receive(:save).and_return(true)
+
     expect(Flapjack::Data::NotificationRule).to receive(:new).
-      with(notification_rule_data_sym).and_return(notification_rule)
+      with(:entities           => notification_rule_data['entities'],
+           :tags               => Set.new(notification_rule_data['tags']),
+           :time_restrictions  => notification_rule_data['time_restrictions']).
+      and_return(notification_rule)
+
+    expect(Flapjack::Data::NotificationRuleState).to receive(:new).
+      with(:state => 'critical', :blackhole => false).
+      and_return(critical_state)
+
+    expect(Flapjack::Data::NotificationRuleState).to receive(:new).
+      with(:state => 'warning', :blackhole => false).
+      and_return(warning_state)
+
+    expect(Flapjack::Data::NotificationRuleState).to receive(:new).
+      with(:state => 'unknown', :blackhole => false).
+      and_return(unknown_state)
+
+    expect(critical_state).to receive(:save).and_return(true)
+    expect(warning_state).to receive(:save).and_return(true)
+    expect(unknown_state).to receive(:save).and_return(true)
+
+    sms_media    = double(Flapjack::Data::Medium)
+    email_media  = double(Flapjack::Data::Medium)
+    jabber_media = double(Flapjack::Data::Medium)
+
+    sms_email_all_media = double('sms_email_all_media', :all => [sms_media, email_media])
+    email_all_media     = double('email_all_media', :all => [email_media])
+    jabber_all_media    = double('jabber_all_media', :all => [jabber_media])
+
+    contact_media = double('contact_media')
+    expect(contact_media).to receive(:intersect).with(:type => ['sms', 'email']).and_return(sms_email_all_media)
+    expect(contact_media).to receive(:intersect).with(:type => ['email']).and_return(email_all_media)
+    expect(contact_media).to receive(:intersect).with(:type => ['jabber']).and_return(jabber_all_media)
+    expect(contact).to receive(:media).exactly(3).times.and_return(contact_media)
+
+    critical_state_media = double('critical_state_media')
+    warning_state_media  = double('warning_state_media')
+    unknown_state_media  = double('unknown_state_media')
+
+    expect(critical_state_media).to receive(:add).with(sms_media, email_media)
+    expect(warning_state_media).to receive(:add).with(email_media)
+    expect(unknown_state_media).to receive(:add).with(jabber_media)
+
+    expect(critical_state).to receive(:media).and_return(critical_state_media)
+    expect(warning_state).to receive(:media).and_return(warning_state_media)
+    expect(unknown_state).to receive(:media).and_return(unknown_state_media)
+
+    notification_rule_states = double('notification_rule_states')
+    expect(notification_rule_states).to receive(:add).with(critical_state, warning_state, unknown_state)
+    expect(notification_rule).to receive(:states).and_return(notification_rule_states)
+
+    expect(notification_rule).to receive(:save).and_return(true)
 
     notification_rules = double('notification_rules')
     expect(notification_rules).to receive(:<<).with(notification_rule)
@@ -334,18 +383,69 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
 
   # PUT /notification_rules/RULE_ID
   it "updates a notification rule" do
+    expect(notification_rule).to receive(:contact).and_return(contact)
+
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
       with(notification_rule.id).and_return(notification_rule)
 
-    # symbolize the keys
-    notification_rule_data_sym = notification_rule_data.inject({}){|memo,(k,v)|
-      memo[k.to_sym] = v; memo
-    }
-    notification_rule_data_sym.delete(:contact_id)
-    notification_rule_data_sym[:tags] = Set.new(notification_rule_data['tags'])
-    notification_rule_data_sym.each_pair do |k,v|
+    {'entities'           => notification_rule_data['entities'],
+     'tags'               => Set.new(notification_rule_data['tags']),
+     'time_restrictions'  => notification_rule_data['time_restrictions']}.each_pair do |k,v|
+
       expect(notification_rule).to receive("#{k}=".to_sym).with(v)
     end
+
+    notification_rule_states = double('notification_rule_states')
+    expect(notification_rule).to receive(:states).exactly(3).times.
+      and_return(notification_rule_states)
+
+    all_critical_states = double('all_critical_states', :all => [critical_state])
+    all_warning_states  = double('all_warning_states', :all => [warning_state])
+    all_unknown_states  = double('all_unknown_states', :all => [unknown_state])
+
+    expect(notification_rule_states).to receive(:intersect).
+      with(:state => 'critical').and_return(all_critical_states)
+
+    expect(notification_rule_states).to receive(:intersect).
+      with(:state => 'warning').and_return(all_warning_states)
+
+    expect(notification_rule_states).to receive(:intersect).
+      with(:state => 'unknown').and_return(all_unknown_states)
+
+    expect(critical_state).to receive(:blackhole=).with(false)
+    expect(warning_state).to receive(:blackhole=).with(false)
+    expect(unknown_state).to receive(:blackhole=).with(false)
+
+    expect(critical_state).to receive(:save).and_return(true)
+    expect(warning_state).to receive(:save).and_return(true)
+    expect(unknown_state).to receive(:save).and_return(true)
+
+    sms_media    = double(Flapjack::Data::Medium)
+    email_media  = double(Flapjack::Data::Medium)
+    jabber_media = double(Flapjack::Data::Medium)
+
+    sms_email_all_media = double('sms_email_all_media', :all => [sms_media, email_media])
+    email_all_media     = double('email_all_media', :all => [email_media])
+    jabber_all_media    = double('jabber_all_media', :all => [jabber_media])
+
+    contact_media = double('contact_media')
+    expect(contact_media).to receive(:intersect).with(:type => ['sms', 'email']).and_return(sms_email_all_media)
+    expect(contact_media).to receive(:intersect).with(:type => ['email']).and_return(email_all_media)
+    expect(contact_media).to receive(:intersect).with(:type => ['jabber']).and_return(jabber_all_media)
+    expect(contact).to receive(:media).exactly(3).times.and_return(contact_media)
+
+    critical_state_media = double('critical_state_media')
+    warning_state_media  = double('warning_state_media')
+    unknown_state_media  = double('unknown_state_media')
+
+    expect(critical_state_media).to receive(:add).with(sms_media, email_media)
+    expect(warning_state_media).to receive(:add).with(email_media)
+    expect(unknown_state_media).to receive(:add).with(jabber_media)
+
+    expect(critical_state).to receive(:media).and_return(critical_state_media)
+    expect(warning_state).to receive(:media).and_return(warning_state_media)
+    expect(unknown_state).to receive(:media).and_return(unknown_state_media)
+
     expect(notification_rule).to receive(:save).and_return(true)
     expect(notification_rule).to receive(:as_json).and_return(json_data)
 

@@ -190,16 +190,25 @@ module Flapjack
             notification_rule = Flapjack::Data::NotificationRule.new(
               :entities           => params[:entities],
               :tags               => tag_data,
-              :time_restrictions  => params[:time_restrictions],
-              :unknown_media      => params[:unknown_media],
-              :warning_media      => params[:warning_media],
-              :critical_media     => params[:critical_media],
-              :unknown_blackhole  => !!params[:unknown_blackhole],
-              :warning_blackhole  => !!params[:warning_blackhole],
-              :critical_blackhole => !!params[:critical_blackhole],
+              :time_restrictions  => params[:time_restrictions]
             )
-
             check_errors_on_save(notification_rule)
+
+            nr_fail_states = Flapjack::Data::CheckState.failing_states.collect do |fail_state|
+              state = Flapjack::Data::NotificationRuleState.new(:state => fail_state,
+                :blackhole => !!params["#{fail_state}_blackhole".to_sym])
+              state.save
+
+              media_types = params["#{fail_state}_media".to_sym]
+              unless media_types.empty?
+                state_media = contact.media.intersect(:type => media_types).all
+                state.media.add(*state_media) unless state_media.empty?
+              end
+              state
+            end
+
+            notification_rule.states.add(*nr_fail_states)
+
             contact.notification_rules << notification_rule
 
             notification_rule.to_json
@@ -226,18 +235,32 @@ module Flapjack
 
             {:entities           => params[:entities],
              :tags               => tag_data,
-             :time_restrictions  => params[:time_restrictions],
-             :unknown_media      => params[:unknown_media],
-             :warning_media      => params[:warning_media],
-             :critical_media     => params[:critical_media],
-             :unknown_blackhole  => !!params[:unknown_blackhole],
-             :warning_blackhole  => !!params[:warning_blackhole],
-             :critical_blackhole => !!params[:critical_blackhole]}.each_pair do |att, value|
+             :time_restrictions  => params[:time_restrictions]
+            }.each_pair do |att, value|
 
               notification_rule.send("#{att}=".to_sym, value)
             end
 
             check_errors_on_save(notification_rule)
+
+            contact = notification_rule.contact
+
+            Flapjack::Data::CheckState.failing_states.each do |fail_state|
+              next unless params.has_key?("#{fail_state}_blackhole") ||
+                params.has_key?("#{fail_state}_media")
+
+              state = notification_rule.states.intersect(:state => fail_state).all.first ||
+                        Flapjack::Data::NotificationRuleState.new(:state => fail_state)
+
+              state.blackhole = !!params.has_key?("#{fail_state}_blackhole".to_sym)
+              state.save
+
+              media_types = params["#{fail_state}_media".to_sym]
+              unless media_types.nil? || media_types.empty?
+                state_media = contact.media.intersect(:type => media_types).all
+                state.media.add(*state_media) unless state_media.empty?
+              end
+            end
 
             notification_rule.to_json
           end
