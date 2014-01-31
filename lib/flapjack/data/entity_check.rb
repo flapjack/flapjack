@@ -486,13 +486,11 @@ module Flapjack
       end
 
       def summary
-        timestamp = @redis.lindex("#{@key}:states", -1)
-        @redis.get("#{@key}:#{timestamp}:summary")
+        @redis.hget("check:#{@key}", 'summary')
       end
 
       def details
-        timestamp = @redis.lindex("#{@key}:states", -1)
-        @redis.get("#{@key}:#{timestamp}:details")
+        @redis.hget("check:#{@key}", 'details')
       end
 
       # Returns a list of states for this entity check, sorted by timestamp.
