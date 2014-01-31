@@ -1,7 +1,8 @@
 ## Flapjack Changelog
 
-# 0.8.4 - UNRELEASED
+# 0.8.4 - 2014-01-31
 - Bug: The scheduled maintenance periods table on the checks page is messed up gh-427 (@jswoods)
+- Bug: api current check state shows check summary and details from last state change gh-431 (@ali-graham)
 
 # 0.8.3 - 2014-01-24
 - Feature: Fix background color for failing events for entity page gh-425 (@jswoods)
