@@ -187,7 +187,7 @@ module Flapjack
                         request.query_string.length > 0) ? "?#{request.query_string}" : ""
         if logger.debug?
           logger.debug("Returning #{response.status} for #{request.request_method} " +
-            "#{request.path_info}#{query_string}, body: #{response.body.join(', ')}")
+            "#{request.path_info}#{query_string}, body: #{response.body}")
         elsif logger.info?
           logger.info("Returning #{response.status} for #{request.request_method} " +
             "#{request.path_info}#{query_string}")
