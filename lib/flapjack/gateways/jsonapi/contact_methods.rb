@@ -130,61 +130,30 @@ module Flapjack
             contacts_data.map {|cd| cd['id']}.to_json
           end
 
-          app.post '/contacts_atomic' do
-            pass unless is_json_request?
-            content_type :json
 
-            contacts_data = params[:contacts]
-            if contacts_data.nil? || !contacts_data.is_a?(Enumerable)
-              halt err(422, "No valid contacts were submitted")
-            end
-
-            # stringifying as integer string params are automatically integered,
-            # but our redis ids are strings
-            contacts_data_ids = contacts_data.reject {|c| c['id'].nil? }.
-              map {|co| co['id'].to_s }
-
-            if contacts_data_ids.empty?
-              halt err(422, "No contacts with IDs were submitted")
-            end
-
-            semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
-
-            contacts = Flapjack::Data::Contact.all(:redis => redis)
-            contacts_h = hashify(*contacts) {|c| [c.id, c] }
-            contacts_ids = contacts_h.keys
-
-            # delete contacts not found in the bulk list
-            (contacts_ids - contacts_data_ids).each do |contact_to_delete_id|
-              contact_to_delete = contacts.detect {|c| c.id == contact_to_delete_id }
-              contact_to_delete.delete!
-            end
-
-            # add or update contacts found in the bulk list
-            contacts_data.reject {|cd| cd['id'].nil? }.each do |contact_data|
-              if contacts_ids.include?(contact_data['id'].to_s)
-                contacts_h[contact_data['id'].to_s].update(contact_data)
-              else
-                Flapjack::Data::Contact.add(contact_data, :redis => redis)
-              end
-            end
-
-            semaphore.release
-            204
-          end
-
-          # Returns all the contacts
+          # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contact/2) contact(s)
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
-          app.get '/contacts' do
+          app.get %r{/contacts(?:/)?([^/]+)?} do
             content_type 'application/vnd.api+json'
             cors_headers
 
-            contacts = if params[:ids]
-              Flapjack::Data::Contact.find_by_ids(params[:ids].split(',').uniq, :redis => redis)
+            requested_contacts = if params[:captures] && params[:captures][0]
+              params[:captures][0].split(',').uniq
+            else
+              nil
+            end
+
+            #FIXME: do we need to url decode the ids? has rack or some middleware already done this?
+            contacts = if requested_contacts
+              Flapjack::Data::Contact.find_by_ids(requested_contacts, :logger => logger, :redis => redis)
             else
               Flapjack::Data::Contact.all(:redis => redis)
             end
             contacts.compact!
+
+            if requested_contacts && contacts.empty?
+              raise Flapjack::Gateways::JSONAPI::ContactsNotFound.new(requested_contacts)
+            end
 
             linked_entity_data, linked_entity_ids = if contacts.empty?
               [[], []]
@@ -387,17 +356,6 @@ module Flapjack
             status 204
           end
 
-          # Lists this contact's notification rules
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_notification_rules
-          app.get '/contacts/:contact_id/notification_rules' do
-            content_type :json
-            cors_headers
-
-            "[" + find_contact(params[:contact_id]).notification_rules.map {|r| r.to_json }.join(',') + "]"
-          end
-
-          # Get the specified notification rule for this user
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_notification_rules_id
           app.get '/notification_rules/:id' do
             content_type :json
             cors_headers
@@ -408,7 +366,6 @@ module Flapjack
           end
 
           # Creates a notification rule or rules for a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-post_contacts_id_notification_rules
           app.post '/notification_rules' do
             content_type :json
             cors_headers
@@ -464,7 +421,6 @@ module Flapjack
           end
 
           # Updates a notification rule
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
           app.put('/notification_rules/:id') do
             content_type :json
             cors_headers
@@ -504,7 +460,6 @@ module Flapjack
           end
 
           # Deletes a notification rule
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
           app.delete('/notification_rules/:id') do
             cors_headers
             rule = find_rule(params[:id])
@@ -512,191 +467,6 @@ module Flapjack
             contact = find_contact(rule.contact_id)
             contact.delete_notification_rule(rule)
             status 204
-          end
-
-          # Returns the media of a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_media
-          app.get '/contacts/:contact_id/media' do
-            content_type :json
-            cors_headers
-
-            contact = find_contact(params[:contact_id])
-
-            media = contact.media
-            media_intervals = contact.media_intervals
-            media_rollup_thresholds = contact.media_rollup_thresholds
-            media_addr_int = hashify(*media.keys) {|k|
-              [k, {'address'          => media[k],
-                   'interval'         => media_intervals[k],
-                   'rollup_threshold' => media_rollup_thresholds[k] }]
-            }
-            media_addr_int.to_json
-          end
-
-          # Returns the specified media of a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_media_media
-          app.get('/contacts/:contact_id/media/:id') do
-            content_type :json
-            cors_headers
-
-            contact = find_contact(params[:contact_id])
-            media = contact.media[params[:id]]
-            if media.nil?
-              halt err(404, "no #{params[:id]} for contact '#{params[:contact_id]}'")
-            end
-            interval = contact.media_intervals[params[:id]]
-            # FIXME: does erroring when no interval found make sense?
-            if interval.nil?
-              halt err(403, "no #{params[:id]} interval for contact '#{params[:contact_id]}'")
-            end
-            rollup_threshold = contact.media_rollup_thresholds[params[:id]]
-            {'address'          => media,
-             'interval'         => interval,
-             'rollup_threshold' => rollup_threshold }.to_json
-          end
-
-          # Creates or updates a media of a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_media_media
-          app.put('/contacts/:contact_id/media/:id') do
-            content_type :json
-            cors_headers
-
-            contact = find_contact(params[:contact_id])
-            errors = []
-
-            if 'pagerduty'.eql?(params[:id])
-              errors = [:service_key, :subdomain, :username, :password].inject([]) do |memo, pdp|
-                memo << "no #{pdp.to_s} for 'pagerduty' media" if params[pdp].nil?
-                memo
-              end
-
-              halt err(422, *errors) unless errors.empty?
-
-              contact.set_pagerduty_credentials('service_key'  => params[:service_key],
-                                                'subdomain'    => params[:subdomain],
-                                                'username'     => params[:username],
-                                                'password'     => params[:password])
-
-              contact.pagerduty_credentials.to_json
-            else
-              if params[:address].nil?
-                errors << "no address for '#{params[:id]}' media"
-              end
-
-              halt err(422, *errors) unless errors.empty?
-
-              contact.set_address_for_media(params[:id], params[:address])
-              contact.set_interval_for_media(params[:id], params[:interval])
-              contact.set_rollup_threshold_for_media(params[:id], params[:rollup_threshold])
-
-              {'address'          => contact.media[params[:id]],
-               'interval'         => contact.media_intervals[params[:id]],
-               'rollup_threshold' => contact.media_rollup_thresholds[params[:id]]}.to_json
-            end
-          end
-
-          # delete a media of a contact
-          app.delete('/contacts/:contact_id/media/:id') do
-            cors_headers
-            contact = find_contact(params[:contact_id])
-            contact.remove_media(params[:id])
-            status 204
-          end
-
-          # Returns the timezone of a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_timezone
-          app.get('/contacts/:contact_id/timezone') do
-            content_type :json
-            cors_headers
-
-            contact = find_contact(params[:contact_id])
-            contact.timezone.name.to_json
-          end
-
-          # Sets the timezone of a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_timezone
-          app.put('/contacts/:contact_id/timezone') do
-            content_type :json
-            cors_headers
-
-            contact = find_contact(params[:contact_id])
-            contact.timezone = params[:timezone]
-            contact.timezone.name.to_json
-          end
-
-          # Removes the timezone of a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_timezone
-          app.delete('/contacts/:contact_id/timezone') do
-            cors_headers
-            contact = find_contact(params[:contact_id])
-            contact.timezone = nil
-            status 204
-          end
-
-          app.post '/contacts/:contact_id/tags' do
-            content_type :json
-            cors_headers
-
-            tags = find_tags(params[:tags])
-            contact = find_contact(params[:contact_id])
-            contact.add_tags(*tags)
-            '{"tags":' +
-              contact.tags.to_json +
-            '}'
-          end
-
-          app.post '/contacts/:contact_id/entity_tags' do
-            content_type :json
-            cors_headers
-            contact = find_contact(params[:contact_id])
-            contact.entities.map {|e| e[:entity]}.each do |entity|
-              next unless tags = params[:entity][entity.name]
-              entity.add_tags(*tags)
-            end
-            contact_ent_tag = hashify(*contact.entities(:tags => true)) {|et|
-              [et[:entity].name, et[:tags]]
-            }
-            contact_ent_tag.to_json
-          end
-
-          app.delete '/contacts/:contact_id/tags' do
-            cors_headers
-            tags = find_tags(params[:tags])
-            contact = find_contact(params[:contact_id])
-            contact.delete_tags(*tags)
-            status 204
-          end
-
-          app.delete '/contacts/:contact_id/entity_tags' do
-            cors_headers
-            contact = find_contact(params[:contact_id])
-            contact.entities.map {|e| e[:entity]}.each do |entity|
-              next unless tags = params[:entity][entity.name]
-              entity.delete_tags(*tags)
-            end
-            status 204
-          end
-
-          app.get '/contacts/:contact_id/tags' do
-            content_type :json
-            cors_headers
-
-            contact = find_contact(params[:contact_id])
-            '{"tags":' +
-              contact.tags.to_json +
-              '}'
-
-          end
-
-          app.get '/contacts/:contact_id/entity_tags' do
-            content_type :json
-            cors_headers
-
-            contact = find_contact(params[:contact_id])
-            contact_ent_tag = hashify(*contact.entities(:tags => true)) {|et|
-              [et[:entity].name, et[:tags]]
-            }
-            contact_ent_tag.to_json
           end
 
         end

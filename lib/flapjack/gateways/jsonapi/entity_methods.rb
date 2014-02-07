@@ -131,11 +131,6 @@ module Flapjack
             '{"entities":[' + entities_json + ']}'
           end
 
-          app.get '/checks/:entity' do
-            content_type :json
-            entity = find_entity(params[:entity])
-            entity.check_list.to_json
-          end
 
           app.get %r{/status#{ENTITY_CHECK_FRAGMENT}} do
             content_type :json
@@ -314,29 +309,6 @@ module Flapjack
               Flapjack::Data::Entity.add(entity, :redis => redis)
             end
             errors.empty? ? 204 : err(403, *errors)
-          end
-
-          app.post '/entities/:entity/tags' do
-            content_type :json
-
-            tags = find_tags(params[:tag])
-            entity = find_entity(params[:entity])
-            entity.add_tags(*tags)
-            entity.tags.to_json
-          end
-
-          app.delete '/entities/:entity/tags' do
-            tags = find_tags(params[:tag])
-            entity = find_entity(params[:entity])
-            entity.delete_tags(*tags)
-            status 204
-          end
-
-          app.get '/entities/:entity/tags' do
-            content_type :json
-
-            entity = find_entity(params[:entity])
-            entity.tags.to_json
           end
 
         end
