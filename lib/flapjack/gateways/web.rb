@@ -441,6 +441,7 @@ module Flapjack
       def require_js(*js)
         @required_js ||= []
         @required_js += js
+        @required_js.uniq!
       end
 
       def include_required_js
