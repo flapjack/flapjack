@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 0.8.5 - UNRELEASED
+- Feature: jsonapi rework now supports PATCH, eg for media under contacts gh-253 (@ali-graham)
+- Feature: experimental backbone based /edit_contacts page in the web UI has improvements gh-253 (@ali-graham)
+
 # 0.8.4 - 2014-01-31
 - Bug: The scheduled maintenance periods table on the checks page is messed up gh-427 (@jswoods)
 - Bug: api current check state shows check summary and details from last state change gh-431 (@ali-graham)
