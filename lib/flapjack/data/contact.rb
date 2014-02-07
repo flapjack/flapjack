@@ -20,7 +20,7 @@ module Flapjack
 
       attr_accessor :id, :first_name, :last_name, :email, :media,
         :media_intervals, :media_rollup_thresholds, :pagerduty_credentials,
-        :linked_entity_ids
+        :linked_entity_ids, :linked_media_ids
 
       TAG_PREFIX = 'contact_tag'
       ALL_MEDIA  = ['email', 'sms', 'jabber', 'pagerduty']
@@ -155,6 +155,18 @@ module Flapjack
                      *['subdomain', 'username', 'password'].collect {|f| [f, details[f]]})
       end
 
+      # returns false if this contact was already in the set for the entity
+      def add_entity(entity)
+        key = "contacts_for:#{entity.id}"
+        @redis.sadd(key, self.id)
+      end
+
+      # returns false if this contact wasn't in the set for the entity
+      def remove_entity(entity)
+        key = "contacts_for:#{entity.id}"
+        @redis.srem(key, self.id)
+      end
+
       # NB ideally contacts_for:* keys would scope the entity and check by an
       # input source, for namespacing purposes
       def entities(options = {})
@@ -204,7 +216,7 @@ module Flapjack
           next unless k =~ /^contacts_for:([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?::(\w+))?$/
 
           entity_id = $1
-          check = $2
+          check     = $2
 
           entity_data << {:id => entity_id, :name => redis.hget("entity:#{entity_id}", 'name')}
 
@@ -466,8 +478,21 @@ module Flapjack
           "media_intervals"         => self.media_intervals,
           "media_rollup_thresholds" => self.media_rollup_thresholds,
           "timezone"                => self.timezone.name,
+          "tags"                    => self.tags.to_a
+        }.to_json
+      end
+
+      def to_jsonapi(*args)
+        { "id"                      => self.id,
+          "first_name"              => self.first_name,
+          "last_name"               => self.last_name,
+          "email"                   => self.email,
+          "timezone"                => self.timezone.name,
           "tags"                    => self.tags.to_a,
-          "links"                   => {:entities => @linked_entity_ids || []}
+          "links"                   => {
+            :entities => @linked_entity_ids || [],
+            :media    => @linked_media_ids  || []
+          }
         }.to_json
       end
 

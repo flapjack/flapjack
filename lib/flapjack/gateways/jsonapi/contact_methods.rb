@@ -49,6 +49,40 @@ module Flapjack
             raise Flapjack::Gateways::JSONAPI::ResourceLocked.new(resource) unless semaphore
             semaphore
           end
+
+          def apply_json_patch(object_path, &block)
+            ops = params[:ops]
+
+            if ops.nil? || !ops.is_a?(Array)
+              halt err(400, "Invalid JSON-Patch request")
+            end
+
+            ops.each do |operation|
+              linked = nil
+              property = nil
+
+              op = operation['op']
+              operation['path'] =~ /\A\/#{object_path}\/0\/([^\/]+)(?:\/([^\/]+)(?:\/([^\/]+))?)?\z/
+              if 'links'.eql?($1)
+                linked = $2
+
+                value = case op
+                when 'add'
+                  operations['value']
+                when 'remove'
+                  $3
+                end
+              elsif 'replace'.eql?(op)
+                property = $1
+                value = $3
+              else
+                next
+              end
+
+              yield(op, property, linked, value)
+            end
+          end
+
         end
 
         def self.registered(app)
@@ -56,7 +90,7 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::ContactMethods::Helpers
 
           app.post '/contacts' do
-            pass unless Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
+            pass unless is_json_request?
             content_type :json
             cors_headers
 
@@ -97,7 +131,7 @@ module Flapjack
           end
 
           app.post '/contacts_atomic' do
-            pass unless Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
+            pass unless is_json_request?
             content_type :json
 
             contacts_data = params[:contacts]
@@ -142,7 +176,7 @@ module Flapjack
           # Returns all the contacts
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
           app.get '/contacts' do
-            content_type :json
+            content_type 'application/vnd.api+json'
             cors_headers
 
             contacts = if params[:ids]
@@ -158,34 +192,53 @@ module Flapjack
               Flapjack::Data::Contact.entities_jsonapi(contacts.map(&:id), :redis => redis)
             end
 
+            linked_media_data = []
+            linked_media_ids  = {}
+            contacts.each do |contact|
+              contact.media.keys.each do |medium|
+                id = "#{contact.id}_#{medium}"
+                interval = contact.media_intervals[medium].nil? ? nil : contact.media_intervals[medium].to_i
+                rollup_threshold = contact.media_rollup_thresholds[medium].nil? ? nil : contact.media_rollup_thresholds[medium].to_i
+                linked_media_ids[contact.id] = id
+                linked_media_data <<
+                  { "id" => id,
+                    "type" => medium,
+                    "address" => contact.media[medium],
+                    "interval" => interval,
+                    "rollup_threshold" => rollup_threshold,
+                    "contact_id" => contact.id }
+              end
+            end
+
             contacts_json = contacts.collect {|contact|
               contact.linked_entity_ids = linked_entity_ids[contact.id]
-              contact.to_json
+              contact.linked_media_ids  = linked_media_ids[contact.id]
+              contact.to_jsonapi
             }.join(", ")
 
             '{"contacts":[' + contacts_json + ']' +
-              ( linked_entity_data.empty? ? '}' :
-                ', "linked": {"entities":' + linked_entity_data.to_json + '}}')
+                ',"linked":{"entities":' + linked_entity_data.to_json +
+                          ',"media":' + linked_media_data.to_json + '}}'
           end
 
           # Returns the core information about the specified contact
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id
           app.get '/contacts/:contact_id' do
-            content_type :json
+            content_type 'application/vnd.api+json'
             cors_headers
             contact = find_contact(params[:contact_id])
 
             entities = contact.entities.map {|e| e[:entity] }
 
-            '{"contacts":[' + contact.to_json + ']' +
+            '{"contacts":[' + contact.to_jsonapi + ']' +
               ( entities.empty? ? '}' :
                 ', "linked": {"entities":' + entities.values.to_json + '}}')
           end
 
           # Updates a contact
           app.put '/contacts/:contact_id' do
-            content_type :json
             cors_headers
+            content_type :json
 
             contacts_data = params[:contacts]
 
@@ -208,7 +261,41 @@ module Flapjack
             logger.debug("contact_data: #{contact_data}")
             contact.update(contact_data)
 
-            contact.to_json
+            contact.to_jsonapi
+          end
+
+          # TODO this should build up all data, verify entities exist, etc.
+          # before applying any changes
+          # TODO generalise JSON-Patch data parsing code
+          app.patch '/contacts/:contact_id' do
+            pass unless is_jsonpatch_request?
+            content_type :json
+            cors_headers
+
+            contact = find_contact(params[:contact_id])
+
+            apply_json_patch('contacts') do |op, property, linked, value|
+              case op
+              when 'replace'
+                if ['first_name', 'last_name', 'email'].include?(property)
+                  contact.update(property => value)
+                end
+              when 'add'
+                if 'entities'.eql?(linked)
+                  entity = Flapjack::Data::Entity.find_by_id(value, :redis => redis)
+                  contact.add_entity(entity) unless entity.nil?
+                end
+              when 'remove'
+                if 'entities'.eql?(linked)
+                  entity = Flapjack::Data::Entity.find_by_id(value, :redis => redis)
+                  contact.remove_entity(entity) unless entity.nil?
+                end
+              end
+            end
+
+            # will need to be 200 and return contact.to_jsonapi
+            # if updated_at changes, or Etag, when those are introduced
+            status 204
           end
 
           # Deletes a contact
@@ -218,6 +305,85 @@ module Flapjack
             contact = find_contact(params[:contact_id])
             contact.delete!
             semaphore.release
+            status 204
+          end
+
+          app.post '/media' do
+            pass unless is_json_request?
+            content_type :json
+            cors_headers
+
+            media_data = params[:media]
+
+            if media_data.nil? || !media_data.is_a?(Enumerable)
+              halt err(422, "No valid media were submitted")
+            end
+
+            unless media_data.all? {|m| m['id'].nil? }
+              halt err(422, "Media creation cannot include IDs")
+            end
+
+            semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
+
+            contacts = media_data.inject({}) {|memo, medium_data|
+              contact_id = medium_data['contact_id']
+              if contact_id.nil?
+                semaphore.release
+                halt err(422, "Media data must include 'contact_id'")
+              end
+              next memo if memo.has_key?(contact_id)
+              contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => redis)
+              if contact.nil?
+                semaphore.release
+                halt err(422, "Contact id:'#{contact_id}' could not be loaded")
+              end
+              memo[contact_id] = contact
+              memo
+            }
+
+            media_data.each do |medium_data|
+              contact = contacts[medium_data['contact_id']]
+              type = medium_data['type']
+              contact.set_address_for_media(type, medium_data['address'])
+              contact.set_interval_for_media(type, medium_data['interval'])
+              contact.set_rollup_threshold_for_media(type, medium_data['rollup_threshold'])
+              medium_data['id'] = "#{contact.id}_#{type}"
+            end
+
+            semaphore.release
+
+            {:media => media_data.to_json}
+          end
+
+          app.patch '/media/:media_id' do
+            pass unless is_jsonpatch_request?
+            content_type :json
+            cors_headers
+
+            media_id = params[:media_id]
+            media_id =~ /\A(.+)_(email|sms|jabber)\z/
+
+            contact_id = $1
+            type = $2
+
+            halt err(422, "Could not get contact_id from media_id") if contact_id.nil?
+            halt err(422, "Could not get type from media_id") if type.nil?
+
+            contact = find_contact(contact_id)
+
+            apply_json_patch('media') do |op, property, linked, value|
+              if 'replace'.eql?(op)
+                case property
+                when 'address'
+                  contact.set_address_for_media(type, value)
+                when 'interval'
+                  contact.set_interval_for_media(type, value)
+                when 'rollup_threshold'
+                  contact.set_rollup_threshold_for_media(type, value)
+                end
+              end
+            end
+
             status 204
           end
 

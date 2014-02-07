@@ -76,19 +76,21 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   it "returns all the contacts" do
     expect(Flapjack::Data::Contact).to receive(:entities_jsonapi).
       with([contact.id], :redis => redis).and_return([[], {}])
+    expect(contact).to receive(:media).and_return({})
     expect(contact).to receive(:linked_entity_ids=).with(nil)
-    expect(contact).to receive(:to_json).and_return(contact_core.to_json)
+    expect(contact).to receive(:linked_media_ids=).with(nil)
+    expect(contact).to receive(:to_jsonapi).and_return(contact_core.to_json)
     expect(Flapjack::Data::Contact).to receive(:all).with(:redis => redis).
       and_return([contact])
 
     aget '/contacts'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq({:contacts => [contact_core]}.to_json)
+    expect(last_response.body).to eq({:contacts => [contact_core], :linked => {'entities' => [], 'media' => []}}.to_json)
   end
 
   it "returns the core information of a specified contact" do
     expect(contact).to receive(:entities).and_return([])
-    expect(contact).to receive(:to_json).and_return(contact_core.to_json)
+    expect(contact).to receive(:to_jsonapi).and_return(contact_core.to_json)
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
@@ -136,7 +138,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
     expect(contact).to receive(:update)
-    expect(contact).to receive(:to_json).and_return('{"sausage": "good"}')
+    expect(contact).to receive(:to_jsonapi).and_return('{"sausage": "good"}')
 
     aput "/contacts/21", {:contacts => [{'sausage' => 'good'}]}.to_json,
       {'CONTENT_TYPE' => JSON_REQUEST_MIME}
