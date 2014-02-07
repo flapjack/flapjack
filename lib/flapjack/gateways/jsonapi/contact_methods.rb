@@ -352,7 +352,7 @@ module Flapjack
 
             semaphore.release
 
-            {:media => media_data.to_json}
+            '{"media":' + media_data.to_json + '}'
           end
 
           app.patch '/media/:media_id' do
