@@ -250,8 +250,10 @@ module Flapjack
                   contact.update(property => value)
                 end
               when 'add'
+                logger.debug "patch add operation. linked: #{linked}"
                 if 'entities'.eql?(linked)
                   entity = Flapjack::Data::Entity.find_by_id(value, :redis => redis)
+                  logger.debug "adding this entity: #{entity}"
                   contact.add_entity(entity) unless entity.nil?
                 end
               when 'remove'

@@ -32,6 +32,8 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
         raise "Entity name not provided" unless entity['name'] && !entity['name'].empty?
 
+        #FIXME: should probably raise an exception if trying to create a new entity with the 
+        # same name or id as an existing entity. (Go away and use update instead.)
         if entity['id']
           existing_name = redis.hget("entity:#{entity['id']}", 'name')
           redis.del("entity_id:#{existing_name}") unless existing_name == entity['name']
