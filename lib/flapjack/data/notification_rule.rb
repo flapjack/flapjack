@@ -38,7 +38,11 @@ module Flapjack
       def self.add(rule_data, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        rule_id = SecureRandom.uuid
+        if rule_data[:id] && self.find_by_id(rule_data[:id], :redis => redis)
+          errors = ["a notification rule already exists with id '#{rule_data[:id]}'"]
+          return errors
+        end
+        rule_id = rule_data[:id] || SecureRandom.uuid
         errors = self.add_or_update(rule_data.merge(:id => rule_id), options)
         return errors unless errors.nil? || errors.empty?
         self.find_by_id(rule_id, :redis => redis)

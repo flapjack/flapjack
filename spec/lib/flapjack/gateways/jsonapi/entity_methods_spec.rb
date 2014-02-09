@@ -32,15 +32,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     Flapjack::Gateways::JSONAPI.start
   end
 
-  it "returns a list of checks for an entity" do
-    expect(entity).to receive(:check_list).and_return([check])
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
-
-    aget "/checks/#{entity_name_esc}"
-    expect(last_response).to be_ok
-    expect(last_response.body).to eq([check].to_json)
-  end
+  it "returns a list of checks for an entity"
 
   context 'non-bulk API calls' do
 
@@ -761,101 +753,6 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
 
       apost "/entities", entities.to_json, {'CONTENT_TYPE' => 'application/json'}
       expect(last_response.status).to eq(403)
-    end
-
-  end
-
-  context "tags" do
-
-    it "sets a single tag on an entity and returns current tags" do
-      expect(entity).to receive(:add_tags).with('web')
-      expect(entity).to receive(:tags).and_return(['web'])
-      expect(Flapjack::Data::Entity).to receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
-
-      apost "entities/#{entity_name}/tags", :tag => 'web'
-      expect(last_response).to be_ok
-      expect(last_response.body).to eq(['web'].to_json)
-    end
-
-    it "does not set a single tag on an entity that's not found" do
-      expect(Flapjack::Data::Entity).to receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
-
-      apost "entities/#{entity_name}/tags", :tag => 'web'
-      expect(last_response.status).to eq(404)
-    end
-
-    it "sets multiple tags on an entity and returns current tags" do
-      expect(entity).to receive(:add_tags).with('web', 'app')
-      expect(entity).to receive(:tags).and_return(['web', 'app'])
-      expect(Flapjack::Data::Entity).to receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
-
-      # NB submitted at a lower level as tag[]=web&tag[]=app
-      apost "entities/#{entity_name}/tags", :tag => ['web', 'app']
-      expect(last_response).to be_ok
-      expect(last_response.body).to eq(['web', 'app'].to_json)
-    end
-
-    it "does not set multiple tags on an entity that's not found" do
-      expect(Flapjack::Data::Entity).to receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
-
-      apost "entities/#{entity_name}/tags", :tag => ['web', 'app']
-      expect(last_response.status).to eq(404)
-    end
-
-    it "removes a single tag from an entity" do
-      expect(entity).to receive(:delete_tags).with('web')
-      expect(Flapjack::Data::Entity).to receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
-
-      adelete "entities/#{entity_name}/tags", :tag => 'web'
-      expect(last_response.status).to eq(204)
-    end
-
-    it "does not remove a single tag from an entity that's not found" do
-      expect(Flapjack::Data::Entity).to receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
-
-      adelete "entities/#{entity_name}/tags", :tag => 'web'
-      expect(last_response.status).to eq(404)
-    end
-
-    it "removes multiple tags from an entity" do
-      expect(entity).to receive(:delete_tags).with('web', 'app')
-      expect(Flapjack::Data::Entity).to receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
-
-      adelete "entities/#{entity_name}/tags", :tag => ['web', 'app']
-      expect(last_response.status).to eq(204)
-    end
-
-    it "does not remove multiple tags from an entity that's not found" do
-      expect(Flapjack::Data::Entity).to receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
-
-      adelete "entities/#{entity_name}/tags", :tag => ['web', 'app']
-      expect(last_response.status).to eq(404)
-    end
-
-    it "gets all tags on an entity" do
-      expect(entity).to receive(:tags).and_return(['web', 'app'])
-      expect(Flapjack::Data::Entity).to receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
-
-      aget "entities/#{entity_name}/tags"
-      expect(last_response).to be_ok
-      expect(last_response.body).to eq(['web', 'app'].to_json)
-    end
-
-    it "does not get all tags on an entity that's not found" do
-      expect(Flapjack::Data::Entity).to receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(nil)
-
-      aget "entities/#{entity_name}/tags"
-      expect(last_response.status).to eq(404)
     end
 
   end
