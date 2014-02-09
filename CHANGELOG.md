@@ -1,6 +1,6 @@
 ## Flapjack Changelog
 
-# 0.8.5 - UNRELEASED
+# 0.8.5 - 2014-02-10
 - Feature: jsonapi rework now supports PATCH, eg for media under contacts gh-253 (@ali-graham)
 - Feature: experimental backbone based /edit_contacts page in the web UI has improvements gh-253 (@ali-graham)
 
