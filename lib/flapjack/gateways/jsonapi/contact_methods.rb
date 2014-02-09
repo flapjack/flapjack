@@ -68,7 +68,7 @@ module Flapjack
 
                 value = case op
                 when 'add'
-                  operations['value']
+                  operation['value']
                 when 'remove'
                   $3
                 end
@@ -133,7 +133,7 @@ module Flapjack
 
           # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contact/2) contact(s)
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
-          app.get %r{/contacts(?:/)?([^/]+)?} do
+          app.get %r{/contacts(?:/)?([^/]+)?$} do
             content_type 'application/vnd.api+json'
             cors_headers
 
