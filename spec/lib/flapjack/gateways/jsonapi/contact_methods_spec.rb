@@ -221,14 +221,6 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(last_response.status).to eq(404)
   end
 
-  it "does not create a notification_rule if a rule id is provided" do
-    expect(contact).not_to receive(:add_notification_rule)
-
-    apost "/notification_rules", {"notification_rules" => [notification_rule_data.merge(:id => 1)]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-    expect(last_response.status).to eq(422)
-  end
-
   # PUT /notification_rules/RULE_ID
   it "updates a notification rule" do
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
