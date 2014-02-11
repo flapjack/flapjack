@@ -29,7 +29,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'resque', '~> 1.23.0'
   gem.add_dependency 'sinatra'
   gem.add_dependency 'rack-fiber_pool'
-  gem.add_dependency 'thin'
+  gem.add_dependency 'thin', '~> 1.6.1'
   gem.add_dependency 'mail'
   gem.add_dependency 'blather', '~> 0.8.3'
   gem.add_dependency 'chronic'

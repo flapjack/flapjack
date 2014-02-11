@@ -19,7 +19,7 @@ PATH
       redis (~> 3.0.6)
       resque (~> 1.23.0)
       sinatra
-      thin
+      thin (~> 1.6.1)
       tzinfo (~> 1.0.1)
       tzinfo-data
 
@@ -103,7 +103,7 @@ GEM
     hiredis (0.4.5)
     http_parser.rb (0.6.0)
     i18n (0.6.9)
-    ice_cube (0.11.1)
+    ice_cube (0.11.3)
     listen (2.4.0)
       celluloid (>= 0.15.2)
       rb-fsevent (>= 0.9.3)
@@ -122,7 +122,7 @@ GEM
     nokogiri (1.6.1)
       mini_portile (~> 0.5.0)
     numerizer (0.1.1)
-    oj (2.5.3)
+    oj (2.5.4)
     perftools.rb (2.0.1)
     polyglot (0.3.3)
     pry (0.9.12.4)
@@ -192,7 +192,6 @@ GEM
       polyglot (>= 0.3.1)
     tzinfo (1.0.1)
     tzinfo-data (1.2013.9)
-      tzinfo (>= 1.0.0)
     vegas (0.1.11)
       rack (>= 1.0.0)
     webmock (1.16.1)
