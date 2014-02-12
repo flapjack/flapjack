@@ -130,7 +130,6 @@ module Flapjack
             contacts_data.map {|cd| cd['id']}.to_json
           end
 
-
           # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contact/2) contact(s)
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
           app.get %r{/contacts(?:/)?([^/]+)?$} do

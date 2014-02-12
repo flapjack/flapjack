@@ -195,8 +195,14 @@ module Flapjack
         query_string = (request.query_string.respond_to?(:length) &&
                         request.query_string.length > 0) ? "?#{request.query_string}" : ""
         if logger.debug?
+          body_debug = case
+          when response.body.respond_to?(:each)
+            response.body.each_with_index {|r, i| "body[#{i}]: #{r}"}.join(', ')
+          else
+            response.body.to_s
+          end
           logger.debug("Returning #{response.status} for #{request.request_method} " +
-            "#{request.path_info}#{query_string}, body: #{response.body}")
+            "#{request.path_info}#{query_string}, body: #{body_debug}")
         elsif logger.info?
           logger.info("Returning #{response.status} for #{request.request_method} " +
             "#{request.path_info}#{query_string}")
