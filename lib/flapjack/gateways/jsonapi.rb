@@ -28,6 +28,10 @@ module Flapjack
       include Flapjack::Utility
 
       JSON_REQUEST_MIME_TYPES = ['application/vnd.api+json', 'application/json', 'application/json-patch+json']
+      # http://www.iana.org/assignments/media-types/application/vnd.api+json
+      JSON_API_MEDIA_TYPE = 'application/vnd.api+json; charset=utf-8'
+      # http://tools.ietf.org/html/rfc6902
+      JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8' 
 
       class ContactNotFound < RuntimeError
         attr_reader :contact_id

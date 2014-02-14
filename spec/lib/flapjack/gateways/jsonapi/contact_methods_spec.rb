@@ -7,7 +7,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     Flapjack::Gateways::JSONAPI
   end
 
-  JSON_REQUEST_MIME = 'application/vnd.api+json'
+  JSON_API_MEDIA_TYPE = 'application/vnd.api+json; charset=utf-8'
 
   let(:contact)      { double(Flapjack::Data::Contact, :id => '21') }
   let(:contact_core) {
@@ -73,6 +73,17 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     Flapjack::Gateways::JSONAPI.start
   end
 
+  after(:each) do
+    #puts "last_response: #{last_response.inspect}"
+    if last_response.status >= 200 && last_response.status < 300
+      expect(last_response.headers.keys).to include('Access-Control-Allow-Methods')
+      expect(last_response.headers['Access-Control-Allow-Origin']).to eq("*")
+      unless last_response.status == 204
+        expect(last_response.headers['Content-Type']).to eq(JSON_API_MEDIA_TYPE)
+      end
+    end
+  end
+
   it "returns all the contacts" do
     expect(Flapjack::Data::Contact).to receive(:entities_jsonapi).
       with([contact.id], :redis => redis).and_return([[], {}])
@@ -134,7 +145,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(semaphore).to receive(:release).and_return(true)
 
     apost "/contacts", { :contacts => [contact_data]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
+      {'CONTENT_TYPE' => JSON_API_MEDIA_TYPE}
 
     expect(last_response.status).to eq(200)
     expect(last_response.body).to eq(["0362"].to_json)
@@ -147,18 +158,26 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(contact).to receive(:to_jsonapi).and_return('{"sausage": "good"}')
 
     aput "/contacts/21", {:contacts => [{'sausage' => 'good'}]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
+      {'CONTENT_TYPE' => JSON_API_MEDIA_TYPE}
     expect(last_response.status).to eq(200)
   end
 
   it "deletes a contact" do
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
+    expect(Flapjack::Data::Semaphore).to receive(:new).and_return(semaphore)
+    expect(semaphore).to receive(:release)
+    expect(contact).to receive(:delete!)
+
+    adelete "/contacts/21"
+    expect(last_response.status).to eq(204)
   end
 
   it "does not create a contact if the data is improperly formatted" do
     expect(Flapjack::Data::Contact).not_to receive(:add)
 
     apost "/contacts", {'sausage' => 'good'}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
+      {'CONTENT_TYPE' => JSON_API_MEDIA_TYPE}
     expect(last_response.status).to eq(422)
   end
 
@@ -168,7 +187,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).not_to receive(:update)
 
     aput "/contacts/21", contact_data.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
+      {'CONTENT_TYPE' => JSON_API_MEDIA_TYPE}
     expect(last_response.status).to eq(422)
   end
 
@@ -207,7 +226,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
       with(notification_rule_data_sym, :logger => @logger).and_return(notification_rule)
 
     apost "/notification_rules", {"notification_rules" => [notification_rule_data]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
+      {'CONTENT_TYPE' => JSON_API_MEDIA_TYPE}
     expect(last_response.status).to eq(201)
     expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
   end
@@ -217,7 +236,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     apost "/notification_rules", {"notification_rules" => [notification_rule_data]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
+      {'CONTENT_TYPE' => JSON_API_MEDIA_TYPE}
     expect(last_response.status).to eq(404)
   end
 
@@ -238,7 +257,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(notification_rule).to receive(:update).with(notification_rule_data_sym, :logger => @logger).and_return(nil)
 
     aput "/notification_rules/#{notification_rule.id}", {"notification_rules" => [notification_rule_data]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
+      {'CONTENT_TYPE' => JSON_API_MEDIA_TYPE}
     expect(last_response).to be_ok
     expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
   end
@@ -248,7 +267,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aput "/notification_rules/#{notification_rule.id}", {"notification_rules" => [notification_rule_data]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
+      {'CONTENT_TYPE' => JSON_API_MEDIA_TYPE}
     expect(last_response.status).to eq(404)
   end
 
@@ -259,7 +278,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
     aput "/notification_rules/#{notification_rule.id}", {"notification_rules" => [notification_rule_data]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
+      {'CONTENT_TYPE' => JSON_API_MEDIA_TYPE}
     expect(last_response.status).to eq(404)
   end
 
