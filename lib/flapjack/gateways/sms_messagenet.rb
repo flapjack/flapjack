@@ -34,7 +34,8 @@ module Flapjack
           message_type    = alert.rollup ? 'rollup' : 'alert'
 
           my_dir = File.dirname(__FILE__)
-          sms_template_path = my_dir + "/sms_messagenet/#{message_type}.text.erb"
+          sms_template_path = @config.has_key?('templates') && @config['templates']["#{message_type}.text"] \
+            || my_dir + "/sms_messagenet/#{message_type}.text.erb"
           sms_template = ERB.new(File.read(sms_template_path), nil, '-')
 
           @alert  = alert

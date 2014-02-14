@@ -107,18 +107,15 @@ module Flapjack
           message_id = opts[:message_id]
           alert      = opts[:alert]
 
-          message_type = case
-          when alert.rollup
-            'rollup'
-          else
-            'alert'
-          end
+          message_type = alert.rollup ? 'rollup' : 'alert'
 
           mydir = File.dirname(__FILE__)
-
-          subject_template_path = mydir + "/email/#{message_type}_subject.text.erb"
-          text_template_path    = mydir + "/email/#{message_type}.text.erb"
-          html_template_path    = mydir + "/email/#{message_type}.html.erb"
+          subject_template_path = @config.has_key?('templates') && @config['templates']["#{message_type}_subject.text"] \
+            || mydir + "/email/#{message_type}_subject.text.erb"
+          text_template_path    = @config.has_key?('templates') && @config['templates']["#{message_type}.text"] \
+            || mydir + "/email/#{message_type}.text.erb"
+          html_template_path    = @config.has_key?('templates') && @config['templates']["#{message_type}.html"] \
+            || mydir + "/email/#{message_type}.html.erb"
 
           subject_template = ERB.new(File.read(subject_template_path), nil, '-')
           text_template    = ERB.new(File.read(text_template_path), nil, '-')
