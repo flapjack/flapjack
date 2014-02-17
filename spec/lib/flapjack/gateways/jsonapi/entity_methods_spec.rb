@@ -7,6 +7,8 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     Flapjack::Gateways::JSONAPI
   end
 
+  JSON_API_MEDIA_TYPE = 'application/vnd.api+json; charset=utf-8'
+
   let(:entity)          { double(Flapjack::Data::Entity) }
   let(:entity_check)    { double(Flapjack::Data::EntityCheck) }
 
@@ -30,6 +32,18 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     Flapjack::Gateways::JSONAPI.instance_variable_set('@config', {})
     Flapjack::Gateways::JSONAPI.instance_variable_set('@logger', @logger)
     Flapjack::Gateways::JSONAPI.start
+  end
+
+  after(:each) do
+    # FIXME: the following should be uncommented for json api conformance testing
+    # if last_response.status >= 200 && last_response.status < 300
+    #   expect(last_response.headers.keys).to include('Access-Control-Allow-Methods')
+    #   expect(last_response.headers['Access-Control-Allow-Origin']).to eq("*")
+    #   unless last_response.status == 204
+    #     expect(Oj.load(last_response.body)).to be_a(Enumerable)
+    #     expect(last_response.headers['Content-Type']).to eq(JSON_API_MEDIA_TYPE)
+    #   end
+    # end
   end
 
   it "returns a list of checks for an entity"
@@ -710,6 +724,25 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
       expect(last_response.status).to eq(204)
     end
 
+    it "retrieves all entities" do
+      expect(Flapjack::Data::Entity).to receive(:all).with(:redis => redis).and_return([entity])
+      expect(Flapjack::Gateways::JSONAPI::EntityPresenter).to receive(:new).
+        with(entity, :redis => redis).and_return(entity_presenter)
+      expect(entity).to receive(:id).exactly(3).times.and_return('sausage')
+      expect(entity).to receive(:name).and_return('andrew')
+      expect(entity_presenter).to receive(:status).and_return([{:entity => 'andrew', :check => 'ping', :status => 'OK'}])
+      aget "/entities"
+      expect(last_response.status).to eq(200)
+    end
+
+    # it "retrieves one entity" do
+
+    #   aget "/entities/clientx-app-01"
+    #   expect(last_response.status).to eq(200)
+    # end
+
+    it "retrieves a group of entities" 
+
     it "creates entities from a submitted list" do
       entities = {'entities' =>
         [
@@ -725,15 +758,16 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
       }
       expect(Flapjack::Data::Entity).to receive(:add).twice
 
-      apost "/entities", entities.to_json, {'CONTENT_TYPE' => 'application/json'}
-      expect(last_response.status).to eq(204)
+      apost "/entities", entities.to_json, {'CONTENT_TYPE' => JSON_API_MEDIA_TYPE}
+      expect(last_response.status).to eq(200)
+      expect(last_response.body).to eq('["10001","10002"]')
     end
 
     it "does not create entities if the data is improperly formatted" do
       expect(Flapjack::Data::Entity).not_to receive(:add)
 
       apost "/entities", {'entities' => ["Hello", "there"]}.to_json,
-        {'CONTENT_TYPE' => 'application/json'}
+        {'CONTENT_TYPE' => JSON_API_MEDIA_TYPE}
       expect(last_response.status).to eq(403)
     end
 
@@ -751,7 +785,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
       }
       expect(Flapjack::Data::Entity).to receive(:add)
 
-      apost "/entities", entities.to_json, {'CONTENT_TYPE' => 'application/json'}
+      apost "/entities", entities.to_json, {'CONTENT_TYPE' => JSON_API_MEDIA_TYPE}
       expect(last_response.status).to eq(403)
     end
 
