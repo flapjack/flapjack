@@ -74,11 +74,11 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   end
 
   after(:each) do
-    #puts "last_response: #{last_response.inspect}"
     if last_response.status >= 200 && last_response.status < 300
       expect(last_response.headers.keys).to include('Access-Control-Allow-Methods')
       expect(last_response.headers['Access-Control-Allow-Origin']).to eq("*")
       unless last_response.status == 204
+        expect(Oj.load(last_response.body)).to be_a(Enumerable)
         expect(last_response.headers['Content-Type']).to eq(JSON_API_MEDIA_TYPE)
       end
     end
