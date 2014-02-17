@@ -131,6 +131,40 @@ module Flapjack
             '{"entities":[' + entities_json + ']}'
           end
 
+          app.post '/entities' do
+            pass unless is_json_request?
+
+            cors_headers
+
+            errors = []
+            ret = nil
+
+            # FIXME should scan for invalid records before making any changes, fail early
+
+            entities = params[:entities]
+            unless entities
+              logger.debug("no entities object found in the following supplied JSON:")
+              logger.debug(request.body)
+              return err(403, "No entities object received")
+            end
+            return err(403, "The received entities object is not an Enumerable") unless entities.is_a?(Enumerable)
+            return err(403, "Entity with a nil id detected") unless entities.any? {|e| !e['id'].nil?}
+
+            created_ids = []
+            entities.each do |entity|
+              unless entity['id']
+                errors << "Entity not imported as it has no id: #{entity.inspect}"
+                next
+              end
+              Flapjack::Data::Entity.add(entity, :redis => redis)
+              created_ids << entity['id']
+            end
+            
+            return err(403, *errors) unless errors.empty?
+            
+            created_ids.to_json
+
+          end
 
           app.get %r{/status#{ENTITY_CHECK_FRAGMENT}} do
             content_type :json
@@ -282,33 +316,6 @@ module Flapjack
 
             bulk_api_check_action(entities, checks, act_proc)
             status 204
-          end
-
-          app.post '/entities' do
-            pass unless Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type)
-
-            errors = []
-            ret = nil
-
-            # FIXME should scan for invalid records before making any changes, fail early
-
-            entities = params[:entities]
-            unless entities
-              logger.debug("no entities object found in the following supplied JSON:")
-              logger.debug(request.body)
-              return err(403, "No entities object received")
-            end
-            return err(403, "The received entities object is not an Enumerable") unless entities.is_a?(Enumerable)
-            return err(403, "Entity with a nil id detected") unless entities.any? {|e| !e['id'].nil?}
-
-            entities.each do |entity|
-              unless entity['id']
-                errors << "Entity not imported as it has no id: #{entity.inspect}"
-                next
-              end
-              Flapjack::Data::Entity.add(entity, :redis => redis)
-            end
-            errors.empty? ? 204 : err(403, *errors)
           end
 
         end
