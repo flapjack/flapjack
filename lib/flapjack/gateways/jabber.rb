@@ -533,8 +533,12 @@ module Flapjack
             message_type = alert.rollup ? 'rollup' : 'alert'
 
             mydir = File.dirname(__FILE__)
-            message_template_path = @config.has_key?('templates') && @config['templates']["#{message_type}.text"] \
-              || mydir + "/jabber/#{message_type}.text.erb"
+            message_template_path = case
+            when @config.has_key?('templates') && @config['templates']["#{message_type}.text"]
+              @config['templates']["#{message_type}.text"]
+            else
+              mydir + "/jabber/#{message_type}.text.erb"
+            end
             message_template = ERB.new(File.read(message_template_path), nil, '-')
 
             @alert = alert
