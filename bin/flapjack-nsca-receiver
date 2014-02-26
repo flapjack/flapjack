@@ -24,10 +24,8 @@ require 'dante'
 require 'flapjack/configuration'
 require 'flapjack/data/event'
 
-# Nsca reports this:
+# Nsca example line for a storage-device check:
 #[1393410685] PROCESS_SERVICE_CHECK_RESULT;db1.dev;STORAGE;0;Raid Set # 000 (800.0GB) is Normal.
-#
-#| awk '{print "[SERVICEDATA]", $1, $3, $4, case $5 0)OK;1)WARN;2)CRIT,0,0,$6
 
 def process_input(opts)
   redis = opts[:redis]
@@ -41,7 +39,6 @@ def process_input(opts)
       split_passive = passivecheck.split(";")
       timestamp = timestamp.delete('[]')
 
-      #object_type, timestamp, entity, check, state, check_time, check_latency, check_output, check_perfdata, check_long_output = split_line
       check_long_output = ''
       object_type, entity, check, state, check_output = split_passive
 
@@ -135,11 +132,16 @@ optparse = OptionParser.new do |opts|
 Required Nagios Configuration Changes
 -------------------------------------
 
-flapjack-nsca-receiver reads events from the nagios "command file" written to by Nagios. The named pipe is automatically created by nagios if it is enabled
+flapjack-nsca-receiver reads events from the nagios "command file" read from by Nagios, written to by the Nsca-daemon.
+
+The named pipe is automatically created by _nagios_ if it is enabled
 in the configfile:
 
   # modified lines:
-# command_file=/var/lib/nagios3/rw/nagios.cmd
+  command_file=/var/lib/nagios3/rw/nagios.cmd
+
+The Nsca daemon is optionally writing to a tempfile if the named pipe does
+not exist.
 
 Details on the wiki: https://github.com/flpjck/flapjack/wiki/USING#XXX
 '
