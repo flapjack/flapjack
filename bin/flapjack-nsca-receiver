@@ -43,25 +43,20 @@ def process_input(opts)
       object_type, entity, check, state, check_output = split_passive
 
       case
-      when ! (split_line.length >= 2)
-        puts "ERROR - rejecting this line as it doesn't split into at least 2 space separated strings: [#{line}]"
-        next
-      when ! (split_passive.length >= 5)
-        puts "ERROR - rejecting the second part as it doesn't split into 5 semicolon separated strings: [#{passivecheck}, len=#{split_passive.length}]"
+      when (split_line.length < 2 || split_passive.length < 5)
+        puts "ERROR - rejecting this line; illegal format: [#{line}]"
         next
       when (timestamp !~ /^\d+$/)
-        puts "ERROR - rejecting this line as second string doesn't look like a timestamp: [#{line}]"
+        puts "ERROR - rejecting this line; timestamp look like a timestamp: [#{line}]"
         next
       when (object_type != 'PROCESS_SERVICE_CHECK_RESULT')
-        puts "ERROR - rejecting this line as the identifyer 'PROCESS_SERVICE_CHECK_RESULT' is missing: [#{line}]"
+        puts "ERROR - rejecting this line; identifier 'PROCESS_SERVICE_CHECK_RESULT' is missing: [#{line}]"
         next
       end
 
       puts "#{object_type}, #{timestamp}, #{entity}, #{check}, #{state}, #{check_output}"
 
-      state = 'ok'       if state.downcase == '0'
-      state = 'warning'  if state.downcase == '1'
-      state = 'critical' if state.downcase == '2'
+      state = {'0' => 'ok', '1' => 'warning', '2' => 'critical'}[state.downcase] || 'unknown'
       event = {
         'entity'    => entity,
         'check'     => check,
