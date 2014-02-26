@@ -37,6 +37,10 @@ production:
     fifo: "/var/cache/nagios3/event_stream.fifo"
     pid_file: "/var/run/flapjack/flapjack-nagios-receiver.pid"
     log_file: "/var/log/flapjack/flapjack-nagios-receiver.log"
+  nsca-receiver:
+    fifo: "/var/lib/nagios3/rw/nagios.cmd"
+    pid_file: "/var/run/flapjack/flapjack-nsca-receiver.pid"
+    log_file: "/var/log/flapjack/flapjack-nsca-receiver.log"
   gateways:
     email:
       enabled: no
