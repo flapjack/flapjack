@@ -18,6 +18,7 @@ require 'flapjack/gateways/jsonapi/rack/json_params_parser'
 
 require 'flapjack/gateways/jsonapi/contact_methods'
 require 'flapjack/gateways/jsonapi/entity_methods'
+require 'flapjack/gateways/jsonapi/report_methods'
 
 module Flapjack
 
@@ -29,9 +30,9 @@ module Flapjack
 
       JSON_REQUEST_MIME_TYPES = ['application/vnd.api+json', 'application/json', 'application/json-patch+json']
       # http://www.iana.org/assignments/media-types/application/vnd.api+json
-      JSON_API_MEDIA_TYPE = 'application/vnd.api+json; charset=utf-8'
+      JSONAPI_MEDIA_TYPE = 'application/vnd.api+json; charset=utf-8'
       # http://tools.ietf.org/html/rfc6902
-      JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8' 
+      JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
 
       class ContactNotFound < RuntimeError
         attr_reader :contact_id
@@ -58,6 +59,13 @@ module Flapjack
         attr_reader :entity
         def initialize(entity)
           @entity = entity
+        end
+      end
+
+      class EntitiesNotFound < RuntimeError
+        attr_reader :entity_ids
+        def initialize(entity_ids)
+          @entity_ids = entity_ids
         end
       end
 
@@ -222,7 +230,7 @@ module Flapjack
       end
 
       register Flapjack::Gateways::JSONAPI::EntityMethods
-
+      register Flapjack::Gateways::JSONAPI::ReportMethods
       register Flapjack::Gateways::JSONAPI::ContactMethods
 
       # the following should add the cors headers to every request, but is no work

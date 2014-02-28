@@ -204,7 +204,7 @@ module Flapjack
       def self.entities_jsonapi(contact_ids, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        entity_data = []
+        entity_data       = {}
         linked_entity_ids = {}
 
         temp_set = SecureRandom.uuid
@@ -218,7 +218,7 @@ module Flapjack
           entity_id = $1
           check     = $2
 
-          entity_data << {:id => entity_id, :name => redis.hget("entity:#{entity_id}", 'name')}
+          entity_data[entity_id] ||= {:id => entity_id, :name => redis.hget("entity:#{entity_id}", 'name')}
 
           contact_ids.each do |contact_id|
             linked_entity_ids[contact_id] ||= []
@@ -228,7 +228,7 @@ module Flapjack
 
         redis.del(temp_set)
 
-        [entity_data, linked_entity_ids]
+        [entity_data.values, linked_entity_ids]
       end
 
       def name

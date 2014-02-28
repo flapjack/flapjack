@@ -91,7 +91,7 @@ module Flapjack
 
           app.post '/contacts' do
             pass unless is_json_request?
-            content_type JSON_API_MEDIA_TYPE
+            content_type JSONAPI_MEDIA_TYPE
             cors_headers
 
             contacts_data = params[:contacts]
@@ -130,10 +130,10 @@ module Flapjack
             contacts_data.map {|cd| cd['id']}.to_json
           end
 
-          # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contact/2) contact(s)
+          # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contacts/2) contact(s)
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
           app.get %r{/contacts(?:/)?([^/]+)?$} do
-            content_type JSON_API_MEDIA_TYPE
+            content_type JSONAPI_MEDIA_TYPE
             cors_headers
 
             requested_contacts = if params[:captures] && params[:captures][0]
@@ -142,7 +142,6 @@ module Flapjack
               nil
             end
 
-            #FIXME: do we need to url decode the ids? has rack or some middleware already done this?
             contacts = if requested_contacts
               Flapjack::Data::Contact.find_by_ids(requested_contacts, :logger => logger, :redis => redis)
             else
@@ -194,7 +193,7 @@ module Flapjack
           # Returns the core information about the specified contact
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id
           app.get '/contacts/:contact_id' do
-            content_type JSON_API_MEDIA_TYPE
+            content_type JSONAPI_MEDIA_TYPE
             cors_headers
             contact = find_contact(params[:contact_id])
 
@@ -208,7 +207,7 @@ module Flapjack
           # Updates a contact
           app.put '/contacts/:contact_id' do
             cors_headers
-            content_type JSON_API_MEDIA_TYPE
+            content_type JSONAPI_MEDIA_TYPE
 
             contacts_data = params[:contacts]
 
@@ -239,7 +238,7 @@ module Flapjack
           # TODO generalise JSON-Patch data parsing code
           app.patch '/contacts/:contact_id' do
             pass unless is_jsonpatch_request?
-            content_type JSON_API_MEDIA_TYPE
+            content_type JSONAPI_MEDIA_TYPE
             cors_headers
 
             contact = find_contact(params[:contact_id])
@@ -282,7 +281,7 @@ module Flapjack
 
           app.post '/media' do
             pass unless is_json_request?
-            content_type JSON_API_MEDIA_TYPE
+            content_type JSONAPI_MEDIA_TYPE
             cors_headers
 
             media_data = params[:media]
@@ -329,7 +328,7 @@ module Flapjack
 
           app.patch '/media/:media_id' do
             pass unless is_jsonpatch_request?
-            content_type JSON_API_MEDIA_TYPE
+            content_type JSONAPI_MEDIA_TYPE
             cors_headers
 
             media_id = params[:media_id]
@@ -360,7 +359,7 @@ module Flapjack
           end
 
           app.get '/notification_rules/:id' do
-            content_type JSON_API_MEDIA_TYPE
+            content_type JSONAPI_MEDIA_TYPE
             cors_headers
 
             '{"notification_rules":[' +
@@ -370,7 +369,7 @@ module Flapjack
 
           # Creates a notification rule or rules for a contact
           app.post '/notification_rules' do
-            content_type JSON_API_MEDIA_TYPE
+            content_type JSONAPI_MEDIA_TYPE
             cors_headers
 
             rules_data = params[:notification_rules]
@@ -421,7 +420,7 @@ module Flapjack
 
           # Updates a notification rule
           app.put '/notification_rules/:id' do
-            content_type JSON_API_MEDIA_TYPE
+            content_type JSONAPI_MEDIA_TYPE
             cors_headers
 
             rules_data = params[:notification_rules]

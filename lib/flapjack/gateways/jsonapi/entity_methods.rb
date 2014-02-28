@@ -5,9 +5,6 @@ require 'sinatra/base'
 require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
 
-require 'flapjack/gateways/jsonapi/entity_presenter'
-require 'flapjack/gateways/jsonapi/entity_check_presenter'
-
 module Flapjack
 
   module Gateways
@@ -24,10 +21,10 @@ module Flapjack
             entity
           end
 
-          def find_entity_check(entity, check)
+          def find_entity_check(entity, check_name)
             entity_check = Flapjack::Data::EntityCheck.for_entity(entity,
-              check, :redis => redis)
-            raise Flapjack::Gateways::JSONAPI::EntityCheckNotFound.new(entity, check) if entity_check.nil?
+              check_name, :redis => redis)
+            raise Flapjack::Gateways::JSONAPI::EntityCheckNotFound.new(entity_name, check_name) if entity_check.nil?
             entity_check
           end
 
@@ -73,33 +70,6 @@ module Flapjack
             end
           end
 
-          def present_api_results(entities, entity_checks, result_type, &block)
-            result = []
-
-            unless entities.nil? || entities.empty?
-              result += entities.collect {|entity_name|
-                entity = find_entity(entity_name)
-                yield(Flapjack::Gateways::JSONAPI::EntityPresenter.new(entity, :redis => redis))
-              }.flatten(1)
-            end
-
-            unless entity_checks.nil? || entity_checks.empty?
-              result += entity_checks.inject([]) {|memo, (entity_name, checks)|
-                checks = [checks] unless checks.is_a?(Array)
-                entity = find_entity(entity_name)
-                memo += checks.collect {|check|
-                  entity_check = find_entity_check(entity, check)
-                  {:entity => entity_name,
-                   :check => check,
-                   result_type.to_sym => yield(Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check))
-                  }
-                }
-              }.flatten(1)
-            end
-
-            result
-          end
-
           # NB: casts to UTC before converting to a timestamp
           def validate_and_parsetime(value)
             return unless value
@@ -118,17 +88,45 @@ module Flapjack
 
           app.helpers Flapjack::Gateways::JSONAPI::EntityMethods::Helpers
 
-          app.get '/entities' do
-            content_type :json
+          # Returns all (/entities) or some (/entities/A,B,C) or one (/entities/A) contact(s)
+          # NB: only works with good data -- i.e. entity must have an id
+          app.get %r{/entities(?:/)?([^/]+)?$} do
+            content_type JSONAPI_MEDIA_TYPE
             cors_headers
 
-            entities_json = Flapjack::Data::Entity.all(:redis => redis).collect {|e|
-              presenter = Flapjack::Gateways::JSONAPI::EntityPresenter.new(e, :redis => redis)
-              id = (e.id.respond_to?(:length) && e.id.length > 0) ? e.id : e.name
-              {'id' => id, 'name' => e.name, 'checks' => presenter.status }.to_json
-            }.join(',')
+            requested_entities = if params[:captures] && params[:captures][0]
+              params[:captures][0].split(',').uniq
+            else
+              nil
+            end
 
-            '{"entities":[' + entities_json + ']}'
+            entities = if requested_entities
+              # TODO find by names
+              Flapjack::Data::Entity.find_by_ids(requested_entities, :logger => logger, :redis => redis)
+            else
+              Flapjack::Data::Entity.all(:redis => redis)
+            end
+            entities.compact!
+
+            if requested_entities && requested_entities.empty?
+              raise Flapjack::Gateways::JSONAPI::EntitiesNotFound.new(requested_entities)
+            end
+
+            linked_contact_data, linked_contact_ids = if entities.empty?
+              [[], []]
+            else
+              Flapjack::Data::Entity.contacts_jsonapi(entities.map(&:id), :redis => redis)
+            end
+
+            # can maybe send back linked checks in Flapjack 2.0
+
+            entities_json = entities.collect {|entity|
+              entity.linked_contact_ids = linked_contact_ids[entity.id]
+              entity.to_jsonapi
+            }.join(", ")
+
+            '{"entities":[' + entities_json + ']' +
+                ',"linked":{"contacts":' + linked_contact_data.to_json + '}}'
           end
 
           app.post '/entities' do
@@ -159,77 +157,14 @@ module Flapjack
               Flapjack::Data::Entity.add(entity, :redis => redis)
               created_ids << entity['id']
             end
-            
+
             return err(403, *errors) unless errors.empty?
-            
+
             created_ids.to_json
-
-          end
-
-          app.get %r{/status#{ENTITY_CHECK_FRAGMENT}} do
-            content_type :json
-
-            captures    = params[:captures] || []
-            entity_name = captures[0]
-            check       = captures[1]
-
-            entities, checks = entities_and_checks(entity_name, check)
-
-            results = present_api_results(entities, checks, 'status') {|presenter|
-              presenter.status
-            }
-
-            if entity_name
-              # compatible with previous data format
-              results = results.collect {|status_h| status_h[:status]}
-              check ? results.first.to_json : "[" + results.map {|r| r.to_json }.join(',') + "]"
-            else
-              # new and improved data format which reflects the request param structure
-              "[" + results.map {|r| r.to_json }.join(',') + "]"
-            end
-          end
-
-          app.get %r{/((?:outages|(?:un)?scheduled_maintenances|downtime))#{ENTITY_CHECK_FRAGMENT}} do
-            action      = params[:captures][0].to_sym
-            entity_name = params[:captures][1]
-            check       = params[:captures][2]
-
-            entities, checks = entities_and_checks(entity_name, check)
-
-            start_time = validate_and_parsetime(params[:start_time])
-            end_time   = validate_and_parsetime(params[:end_time])
-
-            results = present_api_results(entities, checks, action) {|presenter|
-              presenter.send(action, start_time, end_time)
-            }
-
-            if check
-              # compatible with previous data format
-              results.first[action].to_json
-            elsif entity_name
-              # compatible with previous data format
-              rename = {:unscheduled_maintenances => :unscheduled_maintenance,
-                        :scheduled_maintenances   => :scheduled_maintenance}
-              drop   = [:entity]
-              results.collect{|r|
-                r.inject({}) {|memo, (k, v)|
-                  if new_k = rename[k]
-                    memo[new_k] = v
-                  elsif !drop.include?(k)
-                    memo[k] = v
-                  end
-                 memo
-                }
-              }.to_json
-            else
-              # new and improved data format which reflects the request param structure
-              results.to_json
-            end
           end
 
           # create a scheduled maintenance period for a check on an entity
           app.post %r{/scheduled_maintenances#{ENTITY_CHECK_FRAGMENT}} do
-
             captures    = params[:captures] || []
             entity_name = captures[0]
             check       = captures[1]

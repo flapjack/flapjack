@@ -32,7 +32,7 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
         raise "Entity name not provided" unless entity['name'] && !entity['name'].empty?
 
-        #FIXME: should probably raise an exception if trying to create a new entity with the 
+        #FIXME: should probably raise an exception if trying to create a new entity with the
         # same name or id as an existing entity. (Go away and use update instead.)
         if entity['id']
           existing_name = redis.hget("entity:#{entity['id']}", 'name')
@@ -76,6 +76,15 @@ module Flapjack
         entity_name = redis.hget("entity:#{entity_id}", 'name')
         return if entity_name.nil? || entity_name.empty?
         self.new(:name => entity_name, :id => entity_id, :redis => redis)
+      end
+
+      def self.find_by_ids(entity_ids, redis = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        logger = options[:logger]
+
+        entity_ids.map do |id|
+          self.find_by_id(id, options)
+        end
       end
 
       # NB: if we're worried about user input, https://github.com/mudge/re2
@@ -144,6 +153,24 @@ module Flapjack
         }.compact
       end
 
+      def self.contacts_jsonapi(entity_ids, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        contact_ids = redis.sunion( entity_ids.map {|entity_id| "contacts_for:#{entity_id}" } )
+
+        contact_data = contact_ids.collect {|contact_id|
+          contact = Flapjack::Data::Contact.find_by_id(contact_id)
+          {
+            :id          => contact_id,
+            :first_name  => contact.first_name,
+            :last_name   => contact.last_name,
+          }
+        }
+
+        [contact_data, contact_ids]
+      end
+
+
       def check_list
         @redis.zrange("current_checks:#{@name}", 0, -1)
       end
@@ -183,6 +210,16 @@ module Flapjack
           "id"    => self.id,
           "name"  => self.name,
         }
+      end
+
+      def to_jsonapi(*args)
+        {
+          "id"        => self.id,
+          "name"      => self.name,
+          "links"     => {
+            :contacts   => @linked_contact_ids || [],
+          }
+        }.to_json
       end
 
     private
