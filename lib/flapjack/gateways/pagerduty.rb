@@ -81,7 +81,12 @@ module Flapjack
                           "check: '#{alert.check}', state: #{alert.state}, summary: #{alert.summary}")
 
             mydir = File.dirname(__FILE__)
-            message_template_path = mydir + "/pagerduty/alert.text.erb"
+            message_template_path = case
+            when @config.has_key?('templates') && @config['templates']['alert.text']
+              @config['templates']['alert.text']
+            else
+              mydir + "/pagerduty/alert.text.erb"
+            end
             message_template = ERB.new(File.read(message_template_path), nil, '-')
 
             @alert = alert
