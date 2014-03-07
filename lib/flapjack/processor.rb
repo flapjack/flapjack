@@ -177,9 +177,8 @@ module Flapjack
       when 'service'
         if event.failure?
           # ensure that the check's hash is stored for later lookup
-          unless @redis.hget("check_hashes", entity_check.ack_hash)
-            @redis.hset("check_hashes", entity_check.ack_hash, event.id)
-          end
+          # can't happen inside the multi as it must get a value
+          event.id_hash = entity_check.ack_hash
         end
 
         @redis.multi

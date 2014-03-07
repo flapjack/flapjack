@@ -55,8 +55,8 @@ module Flapjack
         raise "no logger supplied" unless @logger = opts[:logger]
 
         @event_id                   = contents['event_id']
-        sha1 = Digest::SHA1.new
-        @event_hash                 = Digest.hexencode(sha1.digest(@event_id))[0..7].upcase
+        @event_hash                 = contents['event_hash'] ||
+                                        Digest.hexencode(Digest::SHA1.new.digest(@event_id))[0..7].upcase
         @state                      = contents['state']
         @summary                    = contents['summary']
         @acknowledgement_duration   = contents['duration'] # SMELLY

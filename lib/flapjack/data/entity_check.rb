@@ -628,9 +628,12 @@ module Flapjack
       end
 
       def ack_hash
-        return @ack_hash unless @ack_hash.nil?
-        sha1 = Digest::SHA1.new
-        @ack_hash = Digest.hexencode(sha1.digest(@key))[0..7].upcase
+        @ack_hash ||= @redis.hget('check_hashes_by_id', @key)
+        if @ack_hash.nil?
+          sha1 = Digest::SHA1.new
+          @ack_hash = Digest.hexencode(sha1.digest(@key))[0..7].upcase
+          @redis.hset("checks_by_hash", @ack_hash, @key)
+        end
         @ack_hash
       end
 
