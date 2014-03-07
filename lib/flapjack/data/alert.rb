@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'digest'
+
 require 'active_support/inflector'
 require 'flapjack/utility'
 
@@ -44,7 +46,8 @@ module Flapjack
       # from self
       attr_reader :entity,
                   :check,
-                  :notification_id
+                  :notification_id,
+                  :event_hash
 
       include Flapjack::Utility
 
@@ -52,6 +55,8 @@ module Flapjack
         raise "no logger supplied" unless @logger = opts[:logger]
 
         @event_id                   = contents['event_id']
+        sha1 = Digest::SHA1.new
+        @event_hash                 = Digest.hexencode(sha1.digest(@event_id))[0..7].upcase
         @state                      = contents['state']
         @summary                    = contents['summary']
         @acknowledgement_duration   = contents['duration'] # SMELLY

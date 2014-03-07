@@ -105,6 +105,16 @@ module Flapjack
         end
       end
 
+      def self.unacknowledged_failing(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        redis.zrange('failed_checks', '0', '-1').reject {|entity_check|
+          redis.exists(entity_check + ':unscheduled_maintenance')
+        }.collect {|entity_check|
+          Flapjack::Data::EntityCheck.for_event_id(entity_check, :redis => redis)
+        }
+      end
+
       def self.conflate_to_keys(entity_checks_hash)
         result = []
         entity_checks_hash.each {|entity, checks|
@@ -615,6 +625,13 @@ module Flapjack
         ta = Flapjack::Data::TagSet.new([])
         ta += entity.split('.', 2).map {|x| x.downcase}
         ta += check.split(' ').map {|x| x.downcase}
+      end
+
+      def ack_hash
+        return @ack_hash unless @ack_hash.nil?
+        sha1 = Digest::SHA1.new
+        @ack_hash = Digest.hexencode(sha1.digest(@key))[0..7].upcase
+        @ack_hash
       end
 
     private
