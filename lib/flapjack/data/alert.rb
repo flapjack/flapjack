@@ -56,7 +56,7 @@ module Flapjack
 
         @event_id                   = contents['event_id']
         @event_hash                 = contents['event_hash'] ||
-                                        Digest.hexencode(Digest::SHA1.new.digest(@event_id))[0..7].upcase
+                                        Digest.hexencode(Digest::SHA1.new.digest(@event_id))[0..7].downcase
         @state                      = contents['state']
         @summary                    = contents['summary']
         @acknowledgement_duration   = contents['duration'] # SMELLY

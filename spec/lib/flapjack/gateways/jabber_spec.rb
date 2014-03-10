@@ -52,13 +52,13 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   end
 
   it "receives an acknowledgement message" do
-    expect(stanza).to receive(:body).and_return('flapjack: ACKID 1F8AC10F fixing now duration: 90m')
+    expect(stanza).to receive(:body).and_return('flapjack: ACKID 1f8ac10f fixing now duration: 90m')
     from = double('from')
     expect(from).to receive(:stripped).and_return('sender')
     expect(stanza).to receive(:from).and_return(from)
 
     redis = double('redis')
-    expect(redis).to receive(:hget).with('check_hashes', '1F8AC10F').
+    expect(redis).to receive(:hget).with('check_hashes', '1f8ac10f').
       and_return('main-example.com:ping')
 
     entity_check = double(Flapjack::Data::EntityCheck)
@@ -66,7 +66,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     expect(Flapjack::Data::Event).to receive(:create_acknowledgement).
       with('main-example.com', 'ping', :summary => 'fixing now',
-           :acknowledgement_id => '1F8AC10F',
+           :acknowledgement_id => '1f8ac10f',
            :duration => (90 * 60), :redis => redis)
 
     expect(Flapjack::Data::EntityCheck).to receive(:for_event_id).
