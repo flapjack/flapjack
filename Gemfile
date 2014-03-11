@@ -20,6 +20,6 @@ group :test do
   gem 'guard-cucumber'
   gem 'fuubar'
   gem 'simplecov', :require => false
-  gem 'debugger-ruby_core_source', '>= 1.3.1' # required for perftools
+  gem 'debugger-ruby_core_source', '>= 1.3.2' # required for perftools
   gem 'perftools.rb'
 end
