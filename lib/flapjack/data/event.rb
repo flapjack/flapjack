@@ -6,7 +6,7 @@ module Flapjack
   module Data
     class Event
 
-      attr_accessor :counter, :tags
+      attr_accessor :counter, :id_hash, :tags
 
       attr_reader :check, :summary, :details, :acknowledgement_id
 

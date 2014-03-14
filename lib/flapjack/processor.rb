@@ -175,6 +175,12 @@ module Flapjack
       case event.type
       # Service events represent current state of checks on monitored systems
       when 'service'
+        if event.failure?
+          # ensure that the check's hash is stored for later lookup
+          # can't happen inside the multi as it must get a value
+          event.id_hash = entity_check.ack_hash
+        end
+
         @redis.multi
         if event.ok?
           @redis.hincrby('event_counters', 'ok', 1)
@@ -182,7 +188,6 @@ module Flapjack
         elsif event.failure?
           @redis.hincrby('event_counters', 'failure', 1)
           @redis.hincrby("event_counters:#{@instance_id}", 'failure', 1)
-          @redis.hset('unacknowledged_failures', event.counter, event.id)
         end
         @redis.exec
 
@@ -217,10 +222,6 @@ module Flapjack
         @redis.hset(event.id + ':actions', timestamp, event.state)
         @redis.hincrby('event_counters', 'action', 1)
         @redis.hincrby("event_counters:#{@instance_id}", 'action', 1)
-
-        if event.acknowledgement? && event.acknowledgement_id
-          @redis.hdel('unacknowledged_failures', event.acknowledgement_id)
-        end
         @redis.exec
       end
 

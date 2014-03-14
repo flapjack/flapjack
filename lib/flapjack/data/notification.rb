@@ -52,6 +52,7 @@ module Flapjack
 
         tag_data = event.tags.is_a?(Set) ? event.tags.to_a : nil
         notif = {'event_id'       => event.id,
+                 'event_hash'     => event.id_hash,
                  'state'          => event.state,
                  'summary'        => event.summary,
                  'details'        => event.details,
@@ -105,6 +106,7 @@ module Flapjack
 
       def contents
         @contents ||= {'event_id'          => @event_id,
+                       'event_hash'        => @event_hash,
                        'state'             => @state,
                        'summary'           => @summary,
                        'duration'          => @duration,

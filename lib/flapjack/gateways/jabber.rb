@@ -171,7 +171,7 @@ module Flapjack
         command = th.chunks.join(' ')
 
         case command
-        when /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
+        when /^ACKID\s+([0-9A-F]+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
           ackid        = $1
           comment      = $2
           duration_str = $3
@@ -189,7 +189,7 @@ module Flapjack
           four_hours = 4 * 60 * 60
           duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
 
-          event_id = @redis.hget('unacknowledged_failures', ackid)
+          event_id = @redis.hget('check_hashes', ackid)
 
           if event_id.nil?
             error = "not found"
@@ -523,17 +523,21 @@ module Flapjack
             @logger.debug("processing jabber notification address: #{alert.address}, entity: #{alert.entity}, " +
                           "check: '#{alert.check}', state: #{alert.state}, summary: #{alert.summary}")
 
-            @ack_str =
-              alert.event_count &&
-              !alert.state.eql?('ok') &&
-              !'acknowledgement'.eql?(alert.type) &&
-              !'test'.eql?(alert.type) ?
-              "#{@config['alias']}: ACKID #{event['event_count']}" : nil
+            @ack_str = if alert.state.eql?('ok') || ['test', 'acknowledgement'].include?(alert.type)
+              nil
+            else
+              "#{@config['alias']}: ACKID #{alert.event_hash}"
+            end
 
             message_type = alert.rollup ? 'rollup' : 'alert'
 
             mydir = File.dirname(__FILE__)
-            message_template_path = mydir + "/jabber/#{message_type}.text.erb"
+            message_template_path = case
+            when @config.has_key?('templates') && @config['templates']["#{message_type}.text"]
+              @config['templates']["#{message_type}.text"]
+            else
+              mydir + "/jabber/#{message_type}.text.erb"
+            end
             message_template = ERB.new(File.read(message_template_path), nil, '-')
 
             @alert = alert
