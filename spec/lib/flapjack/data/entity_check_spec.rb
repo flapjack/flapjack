@@ -597,4 +597,6 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     expect(['foo-app-01', 'example.com', 'disk', '/', 'utilisation'].to_set.subset?(tags)).to be true
   end
 
+  it "returns unacknowledged failing checks"
+
 end

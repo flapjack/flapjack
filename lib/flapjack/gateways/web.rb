@@ -218,8 +218,7 @@ module Flapjack
         @last_notifications         = last_notification_data(entity_check)
 
         @scheduled_maintenances     = entity_check.maintenances(nil, nil, :scheduled => true)
-        @acknowledgement_id         = entity_check.failed? ?
-          entity_check.event_count_at(entity_check.last_change) : nil
+        @acknowledgement_id         = entity_check.failed? ? entity_check.ack_hash : nil
 
         @current_scheduled_maintenance   = entity_check.current_maintenance(:scheduled => true)
         @current_unscheduled_maintenance = entity_check.current_maintenance(:scheduled => false)

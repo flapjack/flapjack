@@ -7,7 +7,6 @@ require 'em-synchrony/em-http'
 require 'oj'
 
 require 'flapjack/data/entity_check'
-require 'flapjack/data/global'
 require 'flapjack/data/alert'
 require 'flapjack/redis_pool'
 require 'flapjack/utility'
@@ -179,7 +178,7 @@ module Flapjack
       def find_pagerduty_acknowledgements
         @logger.debug("looking for acks in pagerduty for unack'd problems")
 
-        unacknowledged_failing_checks = Flapjack::Data::Global.unacknowledged_failing_checks(:redis => @redis)
+        unacknowledged_failing_checks = Flapjack::Data::EntityCheck.unacknowledged_failing(:redis => @redis)
 
         @logger.debug "found unacknowledged failing checks as follows: " + unacknowledged_failing_checks.join(', ')
 
