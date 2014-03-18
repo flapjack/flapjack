@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'oj'
+require 'flapjack/data/tag_set'
 
 module Flapjack
   module Data
@@ -11,7 +12,7 @@ module Flapjack
       attr_reader :check, :summary, :details, :acknowledgement_id
 
       REQUIRED_KEYS = ['type', 'state', 'entity', 'check', 'summary']
-      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration']
+      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration', 'tags']
 
       VALIDATIONS = {
         proc {|e| e['type'].is_a?(String) &&
@@ -50,6 +51,11 @@ module Flapjack
                   e['duration'].is_a?(Integer) ||
                  (e['duration'].is_a?(String) && !!(e['duration'] =~ /^\d+$/)) } =>
           "duration must be a positive integer, or a string castable to one",
+
+        proc {|e| e['tags'].nil? ||
+                  (e['tags'].is_a?(Array) &&
+                   e['tags'].all? {|tag| tag.is_a?(String)}) } =>
+          "tags must be an array of strings",
       }
 
       # Helper method for getting the next event.
@@ -203,6 +209,10 @@ module Flapjack
         end
         # details is optional. set it to nil if it only contains whitespace
         @details = (@details.is_a?(String) && ! @details.strip.empty?) ? @details.strip : nil
+        if attrs['tags']
+          @tags = Flapjack::Data::TagSet.new
+          attrs['tags'].each {|tag| @tags.add(tag)}
+        end
       end
 
       def state
@@ -261,4 +271,3 @@ module Flapjack
     end
   end
 end
-

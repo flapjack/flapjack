@@ -14,10 +14,11 @@ describe Flapjack::Data::Event do
                       'entity'  => entity_name,
                       'check'   => check,
                       'time'    => time.to_i,
-                      'summary' => "timeout",
+                      'summary' => 'timeout',
                       'details' => "couldn't access",
                       'acknowledgement_id' => '1234',
-                      'duration' => (60 * 60) }
+                      'duration' => (60 * 60),
+                      'tags' => ['dev'] }
   }
 
   context 'class' do
@@ -149,7 +150,7 @@ describe Flapjack::Data::Event do
       end
     end
 
-    ['time', 'details', 'acknowledgement_id', 'duration'].each do |optional_key|
+    ['time', 'details', 'acknowledgement_id', 'duration', 'tags'].each do |optional_key|
       it "rejects an event with invalid '#{optional_key}' key (archiving)" do
         bad_event_data = event_data.clone
         bad_event_data[optional_key] = {'hello' => 'there'}
@@ -300,6 +301,9 @@ describe Flapjack::Data::Event do
       expect(event.time).to eq(event_data['time'])
       expect(event.id).to eq('xyz-example.com:ping')
       expect(event.type).to eq('service')
+      expect(event.tags).to be_an_instance_of(Flapjack::Data::TagSet)
+      expect(event.tags).to include('dev')
+      expect(event.tags).to_not include('prod')
 
       expect(event).to be_a_service
       expect(event).to be_a_service
