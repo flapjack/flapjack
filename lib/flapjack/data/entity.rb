@@ -32,7 +32,7 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
         raise "Entity name not provided" unless entity['name'] && !entity['name'].empty?
 
-        #FIXME: should probably raise an exception if trying to create a new entity with the 
+        #FIXME: should probably raise an exception if trying to create a new entity with the
         # same name or id as an existing entity. (Go away and use update instead.)
         if entity['id']
           existing_name = redis.hget("entity:#{entity['id']}", 'name')
@@ -132,7 +132,8 @@ module Flapjack
       end
 
       def contacts
-        contact_ids = @redis.smembers("contacts_for:#{id}")
+        contact_ids = @redis.smembers("contacts_for:#{id}") +
+          @redis.smembers("contacts_for:ALL")
 
         if @logger
           @logger.debug("#{contact_ids.length} contact(s) for #{id} (#{name}): " +
