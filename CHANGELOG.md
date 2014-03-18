@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 0.8.7 - 2014-03-19
+- Added "tags" (array of strings) to event hash gh-453 (@portertech)
+- Allow contacts to be associated with a common entity "ALL" gh-454 (@portertech)
+
 # 0.8.6 - 2014-03-14
 - Bug: tie Thin to < 2.0.0pre gh-442 (@mattdelves)
 - Feature: Allow site-specific ERB templates for messages. gh-443 (@jswoods)
