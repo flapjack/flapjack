@@ -73,14 +73,14 @@ if config_env.nil? || config_env.empty?
   exit(false)
 end
 
-if options.from
-  filename = options.from
-  file     = File.new(filename)
-end
-
 case ARGV[0]
 when "import-contacts"
-  contacts = Oj.load(file)
+  unless options.from
+    puts "No import file provided with --from, eg. --from contacts.json"
+    puts "\n#{optparse}"
+    exit(false)
+  end
+  contacts = Oj.load(File.new(options.from))
 
   if contacts && contacts.is_a?(Enumerable) && contacts.any? {|e| !e['id'].nil?}
     @persistence = Redis.new(redis_options)
@@ -95,7 +95,12 @@ when "import-contacts"
   end
 
 when "import-entities"
-  entities = Oj.load(file)
+  unless options.from
+    puts "No import file provided with --from, eg. --from entities.json"
+    puts "\n#{optparse}"
+    exit(false)
+  end
+  entities = Oj.load(File.new(options.from))
 
   if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
     @persistence = Redis.new(redis_options)

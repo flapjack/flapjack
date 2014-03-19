@@ -78,3 +78,12 @@ test:
     When I run `bin/flapjack-populator import-entities --from tmp/cucumber_cli/flapjack-populator-entities.json --config tmp/cucumber_cli/flapjack-populator.yaml`
     Then the exit status should be 0
 
+  Scenario Outline: Running an flapjack-populator import command with a missing '--from' exits uncleanly and shows usage
+    When I run `bin/flapjack-populator <Command> example.json --config tmp/cucumber_cli/flapjack-populator.yaml`
+    Then the exit status should not be 0
+    And  the output should contain "No import file provided with --from"
+    And  the output should contain "Usage: flapjack-populator"
+    Examples:
+      | Command         |
+      | import-entities |
+      | import-contacts |
