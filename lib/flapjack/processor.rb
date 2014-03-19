@@ -196,7 +196,7 @@ module Flapjack
         if previous_state.nil?
           @logger.info("No previous state for event #{event.id}")
 
-          if @ncsm_duration >= 0
+          if @ncsm_duration > 0
             @logger.info("Setting scheduled maintenance for #{time_period_in_words(@ncsm_duration)}")
             entity_check.create_scheduled_maintenance(timestamp,
               @ncsm_duration, :summary => 'Automatically created for new check')
