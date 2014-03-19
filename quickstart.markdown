@@ -13,6 +13,8 @@ You'll also learn the basics of how to:
 - Simulate a failure of a monitored service
 - Integrate Flapjack with Nagios (or Icinga), so Flapjack takes over alerting
 
+To skip this tutorial and jump straight to the code, view the project on [GitHub](https://github.com/flpjck/flapjack).
+
 ## Getting Flapjack running
 
 ### Dependencies
