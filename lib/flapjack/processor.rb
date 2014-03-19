@@ -36,7 +36,7 @@ module Flapjack
       @events_archive_maxage = @config['events_archive_maxage']
 
       ncsm_duration_conf = @config['new_check_scheduled_maintenance_duration'] || '100 years'
-      @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf)
+      @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf, :keep_zero => true)
 
       @exit_on_queue_empty = !! @config['exit_on_queue_empty']
 
