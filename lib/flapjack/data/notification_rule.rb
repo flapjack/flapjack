@@ -90,7 +90,13 @@ module Flapjack
       # tags match?
       def match_tags?(event_tags)
         return false unless @tags && @tags.length > 0
-        @tags.subset?(event_tags)
+        matches = 0
+        event_tags.each do |event_tag|
+          @tags.each do |tag|
+            matches += 1 if /^#{tag}$/ === event_tag
+          end
+        end
+        matches >= @tags.length
       end
 
       def blackhole?(severity)
