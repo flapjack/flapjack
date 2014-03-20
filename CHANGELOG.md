@@ -1,8 +1,12 @@
 ## Flapjack Changelog
 
+# 0.8.8 - 2014-03-20
+- Feature: Be able to disable automatic sched maint by setting duration to zero gh-457, gh-458 (@portertech)
+- Bug: Make bin/flapjack-populator explicitly whinge about `-f` instead of dying gh-455 (@damncabbage)
+
 # 0.8.7 - 2014-03-19
-- Added "tags" (array of strings) to event hash gh-453 (@portertech)
-- Allow contacts to be associated with a common entity "ALL" gh-454 (@portertech)
+- Feature: Added "tags" (array of strings) to event hash gh-453 (@portertech)
+- Feature: Allow contacts to be associated with a common entity "ALL" gh-454 (@portertech)
 
 # 0.8.6 - 2014-03-14
 - Bug: tie Thin to < 2.0.0pre gh-442 (@mattdelves)
