@@ -148,7 +148,7 @@ module Flapjack
               rule_has_regex_tags = rule.regex_tags ? (rule.regex_tags.length > 0) : false
               rule_has_entities   = rule.entities   ? (rule.entities.length > 0)   : false
 
-              matches_tags       = rule_has_tags       ? rule.match_regex_tags?(@tags) : true
+              matches_tags       = rule_has_tags       ? rule.match_tags?(@tags)       : true
               matches_regex_tags = rule_has_regex_tags ? rule.match_regex_tags?(@tags) : true
               matches_entity     = rule_has_entities   ? rule.match_entity?(@event_id) : true
 
