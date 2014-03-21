@@ -194,7 +194,6 @@ Feature: Notification rules on a per contact basis
     When  a warning event is received
     And   1 minute passes
     And   a warning event is received
-    And show me the lovely log
     Then  0 email alerts should be queued for imani@example.com
     When  an ok event is received
     Then  0 email alerts should be queued for imani@example.com
