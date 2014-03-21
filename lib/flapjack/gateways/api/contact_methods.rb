@@ -144,7 +144,7 @@ module Flapjack
 
             contact = find_contact(params[:contact_id])
 
-            rule_data = hashify(:entities, :tags, :regex_tags,
+            rule_data = hashify(:entities, :regex_entities, :tags, :regex_tags,
               :unknown_media, :warning_media, :critical_media, :time_restrictions,
               :unknown_blackhole, :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
 
@@ -167,7 +167,7 @@ module Flapjack
             rule = find_rule(params[:id])
             contact = find_contact(rule.contact_id)
 
-            rule_data = hashify(:entities, :tags, :regex_tags,
+            rule_data = hashify(:entities, :regex_entities, :tags, :regex_tags,
               :unknown_media, :warning_media, :critical_media, :time_restrictions,
               :unknown_blackhole, :warning_blackhole, :critical_blackhole) {|k| [k, params[k]]}
 

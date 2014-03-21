@@ -102,8 +102,9 @@
     <tr>
       <th>ID</th>
       <th>Entities</th>
+      <th>Entities Regex</th>
       <th>Tags</th>
-      <th>Regex Tags</th>
+      <th>Tags Regex</th>
       <th>Warning Media</th>
       <th>Critical Media</th>
       <th>Time Restrictions</th>
@@ -113,6 +114,7 @@
       <tr>
         <td><%= h rule.id %></td>
         <td><%= h( (rule.entities && !rule.entities.empty?) ? rule.entities.join(', ') : '-') %></td>
+        <td><%= h( (rule.regex_entities && !rule.regex_entities.empty?) ? rule.regex_entities.join(', ') : '-') %></td>
         <td><%= h( (rule.tags && !rule.tags.empty?) ? rule.tags.to_a.join(', ') : '-') %></td>
         <td><%= h( (rule.regex_tags && !rule.regex_tags.empty?) ? rule.regex_tags.to_a.join(', ') : '-') %></td>
         <td><%= h( (rule.warning_media && !rule.warning_media.empty?) ? rule.warning_media.join(', ') : '-')%></td>

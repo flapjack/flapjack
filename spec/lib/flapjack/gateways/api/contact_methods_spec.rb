@@ -44,6 +44,7 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
      "tags"               => ["database","physical"],
      "regex_tags"         => ["^data.*$","^(physical|bare_metal)$"],
      "entities"           => ["foo-app-01.example.com"],
+     "regex_entities"     => ["^foo-\S{3}-\d{2}.example.com$"],
      "time_restrictions"  => nil,
      "unknown_media"      => ["jabber"],
      "warning_media"      => ["email"],
