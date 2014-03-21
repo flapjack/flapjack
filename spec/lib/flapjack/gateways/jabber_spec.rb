@@ -54,6 +54,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   it "receives an acknowledgement message" do
     expect(stanza).to receive(:body).and_return('flapjack: ACKID 1f8ac10f fixing now duration: 90m')
     from = double('from')
+    expect(from).to receive(:resource).and_return('sender')
     expect(from).to receive(:stripped).and_return('sender')
     expect(stanza).to receive(:from).and_return(from)
 
@@ -89,6 +90,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
                  '<a href="http://example.org/">example.org</a></span>')
 
     from = double('from')
+    expect(from).to receive(:resource).and_return('sender')
     expect(from).to receive(:stripped).and_return('sender')
     expect(stanza).to receive(:from).and_return(from)
 
@@ -121,6 +123,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       and_return("flapjack: tell me about \nexample.com")
 
     from = double('from')
+    expect(from).to receive(:resource).and_return('sender')
     expect(from).to receive(:stripped).and_return('sender')
     expect(stanza).to receive(:from).and_return(from)
 
@@ -151,6 +154,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   it "receives a message it doesn't understand" do
     expect(stanza).to receive(:body).once.and_return('flapjack: hello!')
     from = double('from')
+    expect(from).to receive(:resource).and_return('sender')
     expect(from).to receive(:stripped).and_return('sender')
     expect(stanza).to receive(:from).and_return(from)
 

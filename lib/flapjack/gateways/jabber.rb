@@ -368,7 +368,7 @@ module Flapjack
           duration_str     = $3 ? $3.chomp.strip : '1 hour'
           duration         = ChronicDuration.parse(duration_str)
           entity_list      = Flapjack::Data::Entity.find_all_name_matching(entity_pattern, :redis => @redis)
-          
+
           if comment.nil? || (comment.length == 0)
             comment = "#{from}: Set via chatbot"
           else
@@ -449,7 +449,7 @@ module Flapjack
           else
             comment = "#{from}: #{comment}"
           end
-          
+
           if entity_list
             number_found = entity_list.length
             case
@@ -458,7 +458,7 @@ module Flapjack
             when number_found >= 1
 
               failing_list = Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => @redis)
-              
+
               my_failing_checks = Hash[failing_list.map do |k,v|
                 if entity_list.include?(k)
                   [k, v.keep_if {|e| e =~ /#{check_pattern}/}].compact
@@ -541,10 +541,10 @@ module Flapjack
           command  = $1
         end
 
-        from = stanza.from.resource.to_s
+        from = stanza.from
 
         begin
-          results = interpreter(command,from)
+          results = interpreter(command, from.resource.to_s)
           msg     = results[:msg]
           action  = results[:action]
         rescue => e
@@ -555,7 +555,7 @@ module Flapjack
         if msg || action
           EventMachine::Synchrony.next_tick do
             @logger.info("sending to group chat: #{msg}")
-            say(stanza.from.stripped, msg, :groupchat)
+            say(from.stripped, msg, :groupchat)
             action.call if action
           end
         end
