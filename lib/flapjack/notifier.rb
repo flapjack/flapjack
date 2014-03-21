@@ -131,7 +131,7 @@ module Flapjack
         @notifylog.info("#{event_id} | " +
           "#{notification.type} | #{message.contact.id} | #{media_type} | #{address}")
 
-        unless @queues[media_type.to_sym]
+        unless @queues[media_type.to_s]
           @logger.error("no queue for media type: #{media_type}")
           return
         end
@@ -161,12 +161,12 @@ module Flapjack
         case media_type.to_sym
         when :sms
           # FIXME(@auxesis): change Resque jobs to use raw blpop
-          Resque.enqueue_to(@queues[:sms], Flapjack::Gateways::SmsMessagenet, contents)
+          Resque.enqueue_to(@queues['sms'], Flapjack::Gateways::SmsMessagenet, contents)
         when :email
           # FIXME(@auxesis): change Resque jobs to use raw blpop
-          Resque.enqueue_to(@queues[:email], Flapjack::Gateways::Email, contents)
+          Resque.enqueue_to(@queues['email'], Flapjack::Gateways::Email, contents)
         else
-          @redis.rpush(@queues[media_type.to_sym], Oj.dump(contents))
+          @redis.rpush(@queues[media_type.to_s], Oj.dump(contents))
         end
       end
     end
