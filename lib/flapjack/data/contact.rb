@@ -247,6 +247,7 @@ module Flapjack
           rule = self.add_notification_rule({
               :entities           => [],
               :tags               => Flapjack::Data::TagSet.new([]),
+              :regex_tags         => Flapjack::Data::TagSet.new([]),
               :time_restrictions  => [],
               :warning_media      => ALL_MEDIA,
               :critical_media     => ALL_MEDIA,

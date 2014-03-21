@@ -15,6 +15,7 @@ describe Flapjack::Data::NotificationRule, :redis => true do
   let(:rule_data) {
     {:contact_id         => '23',
      :tags               => ["database","physical"],
+     :regex_tags         => [],
      :entities           => ["foo-app-01.example.com"],
      :time_restrictions  => [ weekdays_8_18 ],
      :unknown_media      => [],
@@ -28,7 +29,8 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
   let(:regex_rule_data) {
     {:contact_id         => '23',
-     :tags               => ["regex:data.*","regex:physical|bare_metal"],
+     :tags               => [],
+     :regex_tags         => ["^data.*$","^(physical|bare_metal)$"],
      :entities           => ["foo-app-01.example.com"],
      :time_restrictions  => [ weekdays_8_18 ],
      :unknown_media      => [],
@@ -108,10 +110,10 @@ describe Flapjack::Data::NotificationRule, :redis => true do
   it "checks whether entity tags match a regex" do
     rule = existing_regex_rule
 
-    expect(rule.match_tags?(['database', 'physical'].to_set)).to be true
-    expect(rule.match_tags?(['database', 'physical', 'beetroot'].to_set)).to be true
-    expect(rule.match_tags?(['database'].to_set)).to be false
-    expect(rule.match_tags?(['virtual'].to_set)).to be false
+    expect(rule.match_regex_tags?(['database', 'physical'].to_set)).to be true
+    expect(rule.match_regex_tags?(['database', 'physical', 'beetroot'].to_set)).to be true
+    expect(rule.match_regex_tags?(['database'].to_set)).to be false
+    expect(rule.match_regex_tags?(['virtual'].to_set)).to be false
   end
 
   it "checks if blackhole settings for a rule match a severity level" do
