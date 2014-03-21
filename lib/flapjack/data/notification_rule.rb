@@ -12,8 +12,8 @@ module Flapjack
 
       extend Flapjack::Utility
 
-      attr_accessor :id, :contact_id, :entities, :tags, :time_restrictions,
-        :unknown_media, :warning_media, :critical_media,
+      attr_accessor :id, :contact_id, :entities, :tags, :regex_tags,
+        :time_restrictions, :unknown_media, :warning_media, :critical_media,
         :unknown_blackhole, :warning_blackhole, :critical_blackhole
 
       def self.exists_with_id?(rule_id, options = {})
@@ -74,7 +74,7 @@ module Flapjack
       end
 
       def to_json(*args)
-        self.class.hashify(:id, :contact_id, :tags, :entities,
+        self.class.hashify(:id, :contact_id, :tags, :regex_tags, :entities,
             :time_restrictions, :unknown_media, :warning_media, :critical_media,
             :unknown_blackhole, :warning_blackhole, :critical_blackhole) {|k|
           [k, self.send(k)]
@@ -91,6 +91,18 @@ module Flapjack
       def match_tags?(event_tags)
         return false unless @tags && @tags.length > 0
         @tags.subset?(event_tags)
+      end
+
+      # regex_tags match?
+      def match_regex_tags?(event_tags)
+        return false unless @regex_tags && @regex_tags.length > 0
+        matches = 0
+        event_tags.each do |event_tag|
+          @regex_tags.each do |regex_tag|
+            matches += 1 if /#{regex_tag}/ === event_tag
+          end
+        end
+        matches >= @regex_tags.length
       end
 
       def blackhole?(severity)
@@ -112,7 +124,8 @@ module Flapjack
 
       def is_specific?
         (!@entities.nil? && !@entities.empty?) ||
-          (!@tags.nil? && !@tags.empty?)
+          (!@tags.nil? && !@tags.empty?) ||
+          (!@regex_tags.nil? && !@regex_tags.empty?)
       end
 
     private
@@ -137,6 +150,9 @@ module Flapjack
         if rule_data[:tags].is_a?(Array)
           rule_data[:tags] = Flapjack::Data::TagSet.new(rule_data[:tags])
         end
+        if rule_data[:regex_tags].is_a?(Array)
+          rule_data[:regex_tags] = Flapjack::Data::TagSet.new(rule_data[:regex_tags])
+        end
         rule_data
       end
 
@@ -150,12 +166,14 @@ module Flapjack
         return errors unless errors.nil? || errors.empty?
 
         # whitelisting fields, rather than passing through submitted data directly
-        tag_data = rule_data[:tags].is_a?(Set) ? rule_data[:tags].to_a : nil
+        tag_data       = rule_data[:tags].is_a?(Set) ? rule_data[:tags].to_a : nil
+        regex_tag_data = rule_data[:regex_tags].is_a?(Set) ? rule_data[:regex_tags].to_a : nil
         json_rule_data = {
           :id                 => rule_data[:id].to_s,
           :contact_id         => rule_data[:contact_id].to_s,
           :entities           => Oj.dump(rule_data[:entities]),
           :tags               => Oj.dump(tag_data),
+          :regex_tags         => Oj.dump(regex_tag_data),
           :time_restrictions  => Oj.dump(rule_data[:time_restrictions], :mode => :compat),
           :unknown_media      => Oj.dump(rule_data[:unknown_media]),
           :warning_media      => Oj.dump(rule_data[:warning_media]),
@@ -250,6 +268,12 @@ module Flapjack
                  d[:tags].all? {|et| et.is_a?(String)} ) } =>
         "tags must be a tag_set of strings",
 
+        proc {|d| !d.has_key?(:regex_tags) ||
+               ( d[:regex_tags].nil? ||
+                 d[:regex_tags].is_a?(Flapjack::Data::TagSet) &&
+                 d[:regex_tags].all? {|et| et.is_a?(String)} ) } =>
+        "regex_tags must be a tag_set of strings",
+
         proc {|d| !d.has_key?(:time_restrictions) ||
                ( d[:time_restrictions].nil? ||
                  d[:time_restrictions].all? {|tr|
@@ -318,6 +342,8 @@ module Flapjack
         @contact_id         = rule_data['contact_id']
         tags                = Oj.load(rule_data['tags'] || '')
         @tags               = tags ? Flapjack::Data::TagSet.new(tags) : nil
+        regex_tags          = Oj.load(rule_data['regex_tags'] || '')
+        @regex_tags         = regex_tags ? Flapjack::Data::TagSet.new(regex_tags) : nil
         @entities           = Oj.load(rule_data['entities'] || '')
         @time_restrictions  = Oj.load(rule_data['time_restrictions'] || '')
         @unknown_media      = Oj.load(rule_data['unknown_media'] || '')
