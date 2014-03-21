@@ -1,5 +1,10 @@
 ## Flapjack Changelog
 
+# 0.8.9 - 2014-04-21
+- Feature: Support arbitrary gateways in notifier, queue names from config gh-456 (@auxesis)
+- Feature: Add chat bot features (ack by regex, query status by regex) gh-459 (@someword)
+- Feature: Add regex tags to notification rules gh-461 (@jswoods)
+
 # 0.8.8 - 2014-03-20
 - Feature: Be able to disable automatic sched maint by setting duration to zero gh-457, gh-458 (@portertech)
 - Bug: Make bin/flapjack-populator explicitly whinge about `-f` instead of dying gh-455 (@damncabbage)
