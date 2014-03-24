@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.8.10 - UNRELEASED
+- Feature: Add regex entities to notification rules gh-463 (@jswoods)
+
 # 0.8.9 - 2014-04-21
 - Feature: Support arbitrary gateways in notifier, queue names from config gh-456 (@auxesis)
 - Feature: Add chat bot features (ack by regex, query status by regex) gh-459 (@someword)
