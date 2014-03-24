@@ -246,6 +246,7 @@ module Flapjack
         if rules.all? {|r| r.is_specific? } # also true if empty
           rule = self.add_notification_rule({
               :entities           => [],
+              :regex_entities     => [],
               :tags               => Flapjack::Data::TagSet.new([]),
               :regex_tags         => Flapjack::Data::TagSet.new([]),
               :time_restrictions  => [],

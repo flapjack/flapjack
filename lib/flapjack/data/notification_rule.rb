@@ -12,7 +12,7 @@ module Flapjack
 
       extend Flapjack::Utility
 
-      attr_accessor :id, :contact_id, :entities, :tags, :regex_tags,
+      attr_accessor :id, :contact_id, :entities, :regex_entities, :tags, :regex_tags,
         :time_restrictions, :unknown_media, :warning_media, :critical_media,
         :unknown_blackhole, :warning_blackhole, :critical_blackhole
 
@@ -74,7 +74,7 @@ module Flapjack
       end
 
       def to_json(*args)
-        self.class.hashify(:id, :contact_id, :tags, :regex_tags, :entities,
+        self.class.hashify(:id, :contact_id, :tags, :regex_tags, :entities, :regex_entities,
             :time_restrictions, :unknown_media, :warning_media, :critical_media,
             :unknown_blackhole, :warning_blackhole, :critical_blackhole) {|k|
           [k, self.send(k)]
@@ -85,6 +85,17 @@ module Flapjack
       def match_entity?(event_id)
         return false unless @entities
         @entities.include?(event_id.split(':').first)
+      end
+
+      # entity names match regex?
+      def match_regex_entities?(event_id)
+        return false unless @regex_entities && @regex_entities.length > 0
+        entity = event_id.split(':').first
+        matches = 0
+        @regex_entities.each do |regex_entity|
+          matches += 1 if /#{regex_entity}/ === entity
+        end
+        matches >= @regex_entities.length
       end
 
       # tags match?
@@ -124,6 +135,7 @@ module Flapjack
 
       def is_specific?
         (!@entities.nil? && !@entities.empty?) ||
+          (!@regex_entities.nil? && !@regex_entities.empty?) ||
           (!@tags.nil? && !@tags.empty?) ||
           (!@regex_tags.nil? && !@regex_tags.empty?)
       end
@@ -172,6 +184,7 @@ module Flapjack
           :id                 => rule_data[:id].to_s,
           :contact_id         => rule_data[:contact_id].to_s,
           :entities           => Oj.dump(rule_data[:entities]),
+          :regex_entities     => Oj.dump(rule_data[:regex_entities]),
           :tags               => Oj.dump(tag_data),
           :regex_tags         => Oj.dump(regex_tag_data),
           :time_restrictions  => Oj.dump(rule_data[:time_restrictions], :mode => :compat),
@@ -262,6 +275,12 @@ module Flapjack
                  d[:entities].all? {|e| e.is_a?(String)} ) } =>
         "entities must be a list of strings",
 
+        proc {|d| !d.has_key?(:regex_entities) ||
+               ( d[:regex_entities].nil? ||
+                 d[:regex_entities].is_a?(Array) &&
+                 d[:regex_entities].all? {|e| e.is_a?(String)} ) } =>
+        "regex_entities must be a list of strings",
+
         proc {|d| !d.has_key?(:tags) ||
                ( d[:tags].nil? ||
                  d[:tags].is_a?(Flapjack::Data::TagSet) &&
@@ -345,6 +364,7 @@ module Flapjack
         regex_tags          = Oj.load(rule_data['regex_tags'] || '')
         @regex_tags         = regex_tags ? Flapjack::Data::TagSet.new(regex_tags) : nil
         @entities           = Oj.load(rule_data['entities'] || '')
+        @regex_entities     = Oj.load(rule_data['regex_entities'] || '')
         @time_restrictions  = Oj.load(rule_data['time_restrictions'] || '')
         @unknown_media      = Oj.load(rule_data['unknown_media'] || '')
         @warning_media      = Oj.load(rule_data['warning_media'] || '')
