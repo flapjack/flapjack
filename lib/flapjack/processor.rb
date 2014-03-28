@@ -58,18 +58,19 @@ module Flapjack
       # point on...
 
       # FIXME: add an administrative function to reset all event counters
-      if @redis.hget('event_counters', 'all').nil?
-        @redis.hset('event_counters', 'all', 0)
-        @redis.hset('event_counters', 'ok', 0)
-        @redis.hset('event_counters', 'failure', 0)
-        @redis.hset('event_counters', 'action', 0)
-      end
-
+      
+      @redis.hset('event_counters', 'all', 0)     if @redis.hget('event_counters', 'all').nil?
+      @redis.hset('event_counters', 'ok', 0)      if @redis.hget('event_counters', 'ok').nil?
+      @redis.hset('event_counters', 'failure', 0) if @redis.hget('event_counters', 'failure').nil?
+      @redis.hset('event_counters', 'action', 0)  if @redis.hget('event_counters', 'action').nil?
+      @redis.hset('event_counters', 'invalid', 0) if @redis.hget('event_counters', 'invalid').nil?
+      
       @redis.hset("executive_instance:#{@instance_id}", 'boot_time', boot_time.to_i)
       @redis.hset("event_counters:#{@instance_id}", 'all', 0)
       @redis.hset("event_counters:#{@instance_id}", 'ok', 0)
       @redis.hset("event_counters:#{@instance_id}", 'failure', 0)
       @redis.hset("event_counters:#{@instance_id}", 'action', 0)
+      @redis.hset("event_counters:#{@instance_id}", 'invalid', 0)
       touch_keys
     end
 
@@ -105,7 +106,14 @@ module Flapjack
           break
         end
 
-        process_event(event) unless event.nil?
+        if event.nil?
+          @redis.hincrby('event_counters', 'all', 1)
+          @redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
+          @redis.hincrby('event_counters', 'invalid', 1)
+          @redis.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+        else
+          process_event(event)
+        end
       end
 
       @logger.info("Exiting main loop.")
@@ -166,7 +174,7 @@ module Flapjack
 
       event.counter = @redis.hincrby('event_counters', 'all', 1)
       @redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
-
+        
       # FIXME skip if entity_check.nil?
 
       # FIXME: validate that the event is sane before we ever get here
@@ -188,6 +196,10 @@ module Flapjack
         elsif event.failure?
           @redis.hincrby('event_counters', 'failure', 1)
           @redis.hincrby("event_counters:#{@instance_id}", 'failure', 1)
+        else
+          @redis.hincrby('event_counters', 'invalid', 1)
+          @redis.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+          @logger.error("Invalid event received: #{event.inspect}")
         end
         @redis.exec
 
@@ -223,6 +235,10 @@ module Flapjack
         @redis.hincrby('event_counters', 'action', 1)
         @redis.hincrby("event_counters:#{@instance_id}", 'action', 1)
         @redis.exec
+      else
+        @redis.hincrby('event_counters', 'invalid', 1)
+        @redis.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+        @logger.error("Invalid event received: #{event.inspect}")
       end
 
       [result, previous_state]
