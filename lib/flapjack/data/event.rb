@@ -261,7 +261,7 @@ module Flapjack
       end
 
       def failure?
-        ['critical', 'warning', 'unknown'].include?(state)
+        ['critical', 'warning', 'unknown', 'down', 'unreachable'].include?(state)
       end
 
       # # Not used anywhere
