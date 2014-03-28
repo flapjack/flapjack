@@ -18,23 +18,6 @@ module Flapjack
 
         module Helpers
 
-          def find_contact(contact_id)
-            contact = Flapjack::Data::Contact.find_by_id(contact_id, :logger => logger, :redis => redis)
-            raise Flapjack::Gateways::JSONAPI::ContactNotFound.new(contact_id) if contact.nil?
-            contact
-          end
-
-          def find_rule(rule_id)
-            rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :logger => logger, :redis => redis)
-            raise Flapjack::Gateways::JSONAPI::NotificationRuleNotFound.new(rule_id) if rule.nil?
-            rule
-          end
-
-          def find_tags(tags)
-            halt err(400, "no tags given") if tags.nil? || tags.empty?
-            tags
-          end
-
           def obtain_semaphore(resource)
             semaphore = nil
             strikes = 0
@@ -86,7 +69,7 @@ module Flapjack
         end
 
         def self.registered(app)
-
+          app.helpers Flapjack::Gateways::JSONAPI::Helpers
           app.helpers Flapjack::Gateways::JSONAPI::ContactMethods::Helpers
 
           app.post '/contacts' do

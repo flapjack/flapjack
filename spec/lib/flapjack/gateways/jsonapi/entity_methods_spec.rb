@@ -33,14 +33,14 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
   end
 
   after(:each) do
-    # if last_response.status >= 200 && last_response.status < 300
-    #   expect(last_response.headers.keys).to include('Access-Control-Allow-Methods')
-    #   expect(last_response.headers['Access-Control-Allow-Origin']).to eq("*")
-    #   unless last_response.status == 204
-    #     expect(Oj.load(last_response.body)).to be_a(Enumerable)
-    #     expect(last_response.headers['Content-Type']).to eq(Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE)
-    #   end
-    # end
+    if last_response.status >= 200 && last_response.status < 300
+      expect(last_response.headers.keys).to include('Access-Control-Allow-Methods')
+      expect(last_response.headers['Access-Control-Allow-Origin']).to eq("*")
+      unless [201, 204].include?(last_response.status)
+        expect(Oj.load(last_response.body)).to be_a(Enumerable)
+        expect(last_response.headers['Content-Type']).to eq(Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE)
+      end
+    end
   end
 
   it "creates an acknowledgement for an entity check" do
@@ -55,8 +55,9 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Event).to receive(:create_acknowledgement).
       with(entity_name, check, :summary => nil, :duration => (4 * 60 * 60), :redis => redis)
 
-    apost '/acknowledgements',:check => {entity_name => check}
-    expect(last_response.status).to eq(204)
+    apost '/acknowledgements', :check => "#{entity_name}:#{check}"
+    expect(last_response.status).to eq(201)
+    expect(last_response.headers['Location']).to match(/http:\/\/example.org\/reports\/unscheduled_maintenances\?start_time=.+&check\[\]=#{entity_name}:#{check}/)
   end
 
   it "deletes an unscheduled maintenance period for an entity check" do
@@ -69,7 +70,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Entity).to receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    adelete "/unscheduled_maintenances", :check => {entity_name => check}, :end_time => end_time.iso8601
+    adelete "/unscheduled_maintenances", :check => "#{entity_name}:#{check}", :end_time => end_time.iso8601
     expect(last_response.status).to eq(204)
   end
 
@@ -83,16 +84,17 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(entity_check).to receive(:create_scheduled_maintenance).
       with(start.getutc.to_i, duration, :summary => 'test')
 
-    apost "/scheduled_maintenances/#{entity_name_esc}/#{check}?" +
-       "start_time=#{CGI.escape(start.iso8601)}&summary=test&duration=#{duration}"
-    expect(last_response.status).to eq(204)
+    apost "/scheduled_maintenances", :check => "#{entity_name}:#{check}",
+      :start_time => start.iso8601, :summary => 'test', :duration => duration
+    expect(last_response.status).to eq(201)
+    expect(last_response.headers['Location']).to eq("http://example.org/reports/scheduled_maintenances?start_time=#{start.iso8601}&check[]=#{entity_name}:#{check}")
   end
 
   it "doesn't create a scheduled maintenance period if the start time isn't passed" do
     duration = (2 * 60 * 60)     # two hours
 
-    apost "/scheduled_maintenances/#{entity_name_esc}/#{check}?" +
-       "summary=test&duration=#{duration}"
+    apost "/scheduled_maintenances", :check => "#{entity_name}:#{check}",
+      :summary => 'test', :duration => duration
     expect(last_response.status).to eq(403)
   end
 
@@ -106,14 +108,14 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Entity).to receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
 
-    adelete "/scheduled_maintenances", :check => {entity_name => check}, :start_time => start_time.iso8601
+    adelete "/scheduled_maintenances", :check => "#{entity_name}:#{check}", :start_time => start_time.iso8601
     expect(last_response.status).to eq(204)
   end
 
   it "doesn't delete a scheduled maintenance period if the start time isn't passed" do
     expect(entity_check).not_to receive(:end_scheduled_maintenance)
 
-    adelete "/scheduled_maintenances", :check => {entity_name => check}
+    adelete "/scheduled_maintenances", :check => "#{entity_name}:#{check}"
     expect(last_response.status).to eq(403)
   end
 
@@ -131,9 +133,11 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
       with(entity, 'foo', :redis => redis).and_return(entity_check_2)
 
     expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
+      with(entity_name, :redis => redis).twice.and_return(entity)
 
-    adelete "/scheduled_maintenances", :check => {entity_name => [check, 'foo']}, :start_time => start_time.iso8601
+    adelete "/scheduled_maintenances",
+      :check => ["#{entity_name}:#{check}", "#{entity_name}:foo"],
+      :start_time => start_time.iso8601
     expect(last_response.status).to eq(204)
   end
 
@@ -165,7 +169,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
       with(entity_name, 'foo', hash_including(:redis => redis))
 
     apost '/test_notifications', :entity => entity_name
-    expect(last_response.status).to eq(204)
+    expect(last_response.status).to eq(201)
   end
 
   it "creates a test notification event for check on an entity" do
@@ -181,8 +185,8 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Event).to receive(:test_notifications).
       with(entity_name, check, hash_including(:redis => redis))
 
-    apost '/test_notifications', :check => {entity_name => check}
-    expect(last_response.status).to eq(204)
+    apost '/test_notifications', :check => "#{entity_name}:#{check}"
+    expect(last_response.status).to eq(201)
   end
 
   it "retrieves all entities" do
@@ -223,7 +227,8 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Entity).to receive(:add).twice
 
     apost "/entities", entities.to_json, {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE}
-    expect(last_response.status).to eq(200)
+    expect(last_response.status).to eq(201)
+    expect(last_response.headers['Location']).to eq("http://example.org/entities/10001,10002")
     expect(last_response.body).to eq('["10001","10002"]')
   end
 
@@ -247,7 +252,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
        }
       ]
     }
-    expect(Flapjack::Data::Entity).to receive(:add)
+    expect(Flapjack::Data::Entity).not_to receive(:add)
 
     apost "/entities", entities.to_json, {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE}
     expect(last_response.status).to eq(403)

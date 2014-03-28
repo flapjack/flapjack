@@ -17,28 +17,6 @@ module Flapjack
 
         module Helpers
 
-          def find_entity(entity_name)
-            entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
-            raise Flapjack::Gateways::JSONAPI::EntityNotFound.new(entity_name) if entity.nil?
-            entity
-          end
-
-          def find_entity_check_by_name(entity_name, check_name)
-            entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity_name,
-              check_name, :redis => redis)
-            raise Flapjack::Gateways::JSONAPI::EntityCheckNotFound.new(entity_name, check_name) if entity_check.nil?
-            entity_check
-          end
-
-          def parse_report_params
-            entity_names = params[:entity]
-            entity_names = [entity_names] unless entity_names.nil? || entity_names.is_a?(Array)
-
-            entity_check_names = params[:check]
-            entity_check_names = [entity_check_names] unless entity_check_names.nil? || entity_check_names.is_a?(Array)
-            [entity_names, entity_check_names]
-          end
-
           def load_api_data(entity_names, entity_check_names, result_type, &block)
             entities_by_name             = {}
             entity_checks_by_entity_name = {}
@@ -92,19 +70,10 @@ module Flapjack
             [entity_data, entity_check_data]
           end
 
-          # NB: casts to UTC before converting to a timestamp
-          def validate_and_parsetime(value)
-            return unless value
-            Time.iso8601(value).getutc.to_i
-          rescue ArgumentError => e
-            logger.error "Couldn't parse time from '#{value}'"
-            nil
-          end
-
         end
 
         def self.registered(app)
-
+          app.helpers Flapjack::Gateways::JSONAPI::Helpers
           app.helpers Flapjack::Gateways::JSONAPI::ReportMethods::Helpers
 
           app.get %r{/reports/(status|outages|(?:un)?scheduled_maintenances|downtime)} do
@@ -113,7 +82,7 @@ module Flapjack
 
             action = params[:captures].first
 
-            entity_names, entity_check_names = parse_report_params
+            entity_names, entity_check_names = parse_entity_and_check_names
 
             args = []
 

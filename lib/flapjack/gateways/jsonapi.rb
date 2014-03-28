@@ -221,12 +221,68 @@ module Flapjack
         end
       end
 
-      def is_json_request?
-        Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type.split(/\s*[;,]\s*/, 2).first.downcase)
-      end
+      module Helpers
+        def is_json_request?
+          Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type.split(/\s*[;,]\s*/, 2).first.downcase)
+        end
 
-      def is_jsonpatch_request?
-        'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first.downcase)
+        def is_jsonpatch_request?
+          'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first.downcase)
+        end
+
+        def find_contact(contact_id)
+          contact = Flapjack::Data::Contact.find_by_id(contact_id, :logger => logger, :redis => redis)
+          raise Flapjack::Gateways::JSONAPI::ContactNotFound.new(contact_id) if contact.nil?
+          contact
+        end
+
+        def find_rule(rule_id)
+          rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :logger => logger, :redis => redis)
+          raise Flapjack::Gateways::JSONAPI::NotificationRuleNotFound.new(rule_id) if rule.nil?
+          rule
+        end
+
+        def find_tags(tags)
+          halt err(400, "no tags given") if tags.nil? || tags.empty?
+          tags
+        end
+
+        def find_entity(entity_name)
+          entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
+          raise Flapjack::Gateways::JSONAPI::EntityNotFound.new(entity_name) if entity.nil?
+          entity
+        end
+
+        def find_entity_check(entity, check_name)
+          entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check_name, :redis => redis)
+          raise Flapjack::Gateways::JSONAPI::EntityCheckNotFound.new(entity.name, check_name) if entity_check.nil?
+          entity_check
+        end
+
+        def find_entity_check_by_name(entity_name, check_name)
+          entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity_name, check_name, :redis => redis)
+          raise Flapjack::Gateways::JSONAPI::EntityCheckNotFound.new(entity_name, check_name) if entity_check.nil?
+          entity_check
+        end
+
+        def parse_entity_and_check_names
+          entity_names = params[:entity]
+          entity_names = [entity_names] unless entity_names.nil? || entity_names.is_a?(Array)
+
+          entity_check_names = params[:check]
+          entity_check_names = [entity_check_names] unless entity_check_names.nil? || entity_check_names.is_a?(Array)
+          [entity_names, entity_check_names]
+        end
+
+        # NB: casts to UTC before converting to a timestamp
+        def validate_and_parsetime(value)
+          return unless value
+          Time.iso8601(value).getutc.to_i
+        rescue ArgumentError => e
+          logger.error "Couldn't parse time from '#{value}'"
+          nil
+        end
+
       end
 
       register Flapjack::Gateways::JSONAPI::EntityMethods
