@@ -36,7 +36,7 @@ module Flapjack
       @events_archive_maxage = @config['events_archive_maxage']
 
       ncsm_duration_conf = @config['new_check_scheduled_maintenance_duration'] || '100 years'
-      @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf)
+      @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf, :keep_zero => true)
 
       @exit_on_queue_empty = !! @config['exit_on_queue_empty']
 
@@ -175,6 +175,12 @@ module Flapjack
       case event.type
       # Service events represent current state of checks on monitored systems
       when 'service'
+        if event.failure?
+          # ensure that the check's hash is stored for later lookup
+          # can't happen inside the multi as it must get a value
+          event.id_hash = entity_check.ack_hash
+        end
+
         @redis.multi
         if event.ok?
           @redis.hincrby('event_counters', 'ok', 1)
@@ -182,7 +188,6 @@ module Flapjack
         elsif event.failure?
           @redis.hincrby('event_counters', 'failure', 1)
           @redis.hincrby("event_counters:#{@instance_id}", 'failure', 1)
-          @redis.hset('unacknowledged_failures', event.counter, event.id)
         end
         @redis.exec
 
@@ -191,7 +196,7 @@ module Flapjack
         if previous_state.nil?
           @logger.info("No previous state for event #{event.id}")
 
-          if @ncsm_duration >= 0
+          if @ncsm_duration > 0
             @logger.info("Setting scheduled maintenance for #{time_period_in_words(@ncsm_duration)}")
             entity_check.create_scheduled_maintenance(timestamp,
               @ncsm_duration, :summary => 'Automatically created for new check')
@@ -217,10 +222,6 @@ module Flapjack
         @redis.hset(event.id + ':actions', timestamp, event.state)
         @redis.hincrby('event_counters', 'action', 1)
         @redis.hincrby("event_counters:#{@instance_id}", 'action', 1)
-
-        if event.acknowledgement? && event.acknowledgement_id
-          @redis.hdel('unacknowledged_failures', event.acknowledgement_id)
-        end
         @redis.exec
       end
 

@@ -7,7 +7,6 @@ require 'em-synchrony/em-http'
 require 'oj'
 
 require 'flapjack/data/entity_check'
-require 'flapjack/data/global'
 require 'flapjack/data/alert'
 require 'flapjack/redis_pool'
 require 'flapjack/utility'
@@ -81,7 +80,12 @@ module Flapjack
                           "check: '#{alert.check}', state: #{alert.state}, summary: #{alert.summary}")
 
             mydir = File.dirname(__FILE__)
-            message_template_path = mydir + "/pagerduty/alert.text.erb"
+            message_template_path = case
+            when @config.has_key?('templates') && @config['templates']['alert.text']
+              @config['templates']['alert.text']
+            else
+              mydir + "/pagerduty/alert.text.erb"
+            end
             message_template = ERB.new(File.read(message_template_path), nil, '-')
 
             @alert = alert
@@ -174,7 +178,7 @@ module Flapjack
       def find_pagerduty_acknowledgements
         @logger.debug("looking for acks in pagerduty for unack'd problems")
 
-        unacknowledged_failing_checks = Flapjack::Data::Global.unacknowledged_failing_checks(:redis => @redis)
+        unacknowledged_failing_checks = Flapjack::Data::EntityCheck.unacknowledged_failing(:redis => @redis)
 
         @logger.debug "found unacknowledged failing checks as follows: " + unacknowledged_failing_checks.join(', ')
 

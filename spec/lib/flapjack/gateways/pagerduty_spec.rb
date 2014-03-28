@@ -109,7 +109,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     expect(Flapjack::Data::Event).to receive(:create_acknowledgement).with('foo-app-01.bar.net', 'PING',
       :summary => 'Acknowledged on PagerDuty', :duration => 14400, :redis => redis)
 
-    expect(Flapjack::Data::Global).to receive(:unacknowledged_failing_checks).and_return([entity_check])
+    expect(Flapjack::Data::EntityCheck).to receive(:unacknowledged_failing).and_return([entity_check])
 
     expect(fp).to receive(:pagerduty_acknowledged?).and_return({})
 

@@ -1,5 +1,27 @@
 ## Flapjack Changelog
 
+# 0.8.10 - UNRELEASED
+- Feature: Add regex entities to notification rules gh-463 (@jswoods)
+
+# 0.8.9 - 2014-04-21
+- Feature: Support arbitrary gateways in notifier, queue names from config gh-456 (@auxesis)
+- Feature: Add chat bot features (ack by regex, query status by regex) gh-459 (@someword)
+- Feature: Add regex tags to notification rules gh-461 (@jswoods)
+
+# 0.8.8 - 2014-03-20
+- Feature: Be able to disable automatic sched maint by setting duration to zero gh-457, gh-458 (@portertech)
+- Bug: Make bin/flapjack-populator explicitly whinge about `-f` instead of dying gh-455 (@damncabbage)
+
+# 0.8.7 - 2014-03-19
+- Feature: Added "tags" (array of strings) to event hash gh-453 (@portertech)
+- Feature: Allow contacts to be associated with a common entity "ALL" gh-454 (@portertech)
+
+# 0.8.6 - 2014-03-14
+- Bug: tie Thin to < 2.0.0pre gh-442 (@mattdelves)
+- Feature: Allow site-specific ERB templates for messages. gh-443 (@jswoods)
+- Feature: Add flapjack-nsca-receiver gh-444 (@giganteous)
+- Bug: Redis storage leak - unacknowledged_failures gh-446, gh-430 (@ali-graham)
+
 # 0.8.5 - 2014-02-10
 - Feature: jsonapi rework now supports PATCH, eg for media under contacts gh-253 (@ali-graham)
 - Feature: experimental backbone based /edit_contacts page in the web UI has improvements gh-253 (@ali-graham)

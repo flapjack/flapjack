@@ -141,7 +141,8 @@ module Flapjack
       end
 
       def contacts
-        contact_ids = @redis.smembers("contacts_for:#{id}")
+        contact_ids = @redis.smembers("contacts_for:#{id}") +
+          @redis.smembers("contacts_for:ALL")
 
         if @logger
           @logger.debug("#{contact_ids.length} contact(s) for #{id} (#{name}): " +

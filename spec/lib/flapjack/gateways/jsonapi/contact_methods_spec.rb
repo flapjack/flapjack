@@ -42,7 +42,8 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   let(:notification_rule_data) {
     {"contact_id"         => "21",
      "tags"               => ["database","physical"],
-     "entities"           => ["foo-app-01.example.com"],
+     "regex_tags"         => ["^data.*$","^(physical|bare_metal)$"],
+     "regex_entities"     => ["^foo-\S{3}-\d{2}.example.com$"],
      "time_restrictions"  => nil,
      "unknown_media"      => ["jabber"],
      "warning_media"      => ["email"],

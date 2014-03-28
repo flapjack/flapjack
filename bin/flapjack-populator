@@ -45,6 +45,12 @@ optparse = OptionParser.new do |opts|
 end
 optparse.parse!(ARGV)
 
+bail_with_usage = proc do |message|
+  puts message
+  puts "\n#{optparse}"
+  exit(false)
+end
+
 if options.help
   puts optparse
   exit
@@ -52,13 +58,12 @@ elsif options.version
   puts Flapjack::VERSION
   exit
 elsif !["import-contacts", "import-entities", "purge-events"].include?(ARGV[0])
-  if ARGV.nil? || ARGV.empty?
-    puts "No command provided"
-  else
-    puts "Unknown command provided: '#{ARGV[0]}'"
-  end
-  puts "\n#{optparse}"
-  exit 1
+  message = if ARGV.nil? || ARGV.empty?
+              "No command provided"
+            else
+              "Unknown command provided: '#{ARGV[0]}'"
+            end
+  bail_with_usage.call message
 end
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
@@ -73,14 +78,12 @@ if config_env.nil? || config_env.empty?
   exit(false)
 end
 
-if options.from
-  filename = options.from
-  file     = File.new(filename)
-end
-
 case ARGV[0]
 when "import-contacts"
-  contacts = Oj.load(file)
+  unless options.from
+    bail_with_usage.call "No import file provided with --from, eg. --from contacts.json"
+  end
+  contacts = Oj.load(File.new(options.from))
 
   if contacts && contacts.is_a?(Enumerable) && contacts.any? {|e| !e['id'].nil?}
     @persistence = Redis.new(redis_options)
@@ -95,7 +98,10 @@ when "import-contacts"
   end
 
 when "import-entities"
-  entities = Oj.load(file)
+  unless options.from
+    bail_with_usage.call "No import file provided with --from, eg. --from contacts.json"
+  end
+  entities = Oj.load(File.new(options.from))
 
   if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
     @persistence = Redis.new(redis_options)
@@ -121,7 +127,6 @@ when "purge-events"
   @persistence.quit
 
 else
-  puts "you need to give me something to do, eg a command like 'import-entities' or 'import-clients' etc"
-  raise ArgumentError
+  bail_with_usage.call "You need to give me something to do, eg. a command like 'import-entities', 'import-clients', etc."
 end
 

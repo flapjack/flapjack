@@ -160,7 +160,7 @@ module Flapjack
         out
       end
 
-      def interpreter(command_raw)
+      def interpreter(command_raw,from)
         msg          = nil
         action       = nil
         entity_check = nil
@@ -171,7 +171,7 @@ module Flapjack
         command = th.chunks.join(' ')
 
         case command
-        when /^ACKID\s+(\d+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
+        when /^ACKID\s+([0-9A-F]+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
           ackid        = $1
           comment      = $2
           duration_str = $3
@@ -189,7 +189,7 @@ module Flapjack
           four_hours = 4 * 60 * 60
           duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
 
-          event_id = @redis.hget('unacknowledged_failures', ackid)
+          event_id = @redis.hget('check_hashes', ackid)
 
           if event_id.nil?
             error = "not found"
@@ -224,6 +224,10 @@ module Flapjack
         when /^help$/i
           msg = "commands: \n" +
                 "  ACKID <id> <comment> [duration: <time spec>]\n" +
+                "  ack entities /pattern/ <comment> [duration: <time spec>]\n" +
+                "  status entities /pattern/\n" +
+                "  ack checks /check_pattern/ on /entity_pattern/ <comment> [duration: <time spec>]\n" +
+                "  status checks /check_pattern/ on /entity_pattern/\n" +
                 "  find entities matching /pattern/\n" +
                 "  find checks[ matching /pattern/] on (<entity>|entities matching /pattern/)\n" +
                 "  test notifications for <entity>[:<check>]\n" +
@@ -358,6 +362,168 @@ module Flapjack
             msg = "that doesn't seem to be a valid pattern - /#{pattern}/"
           end
 
+        when /^(?:ack )?entities\s+\/(.+)\/(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i
+          entity_pattern   = $1.chomp.strip
+          comment          = $2 ? $2.chomp.strip : nil
+          duration_str     = $3 ? $3.chomp.strip : '1 hour'
+          duration         = ChronicDuration.parse(duration_str)
+          entity_list      = Flapjack::Data::Entity.find_all_name_matching(entity_pattern, :redis => @redis)
+
+          if comment.nil? || (comment.length == 0)
+            comment = "#{from}: Set via chatbot"
+          else
+            comment = "#{from}: #{comment}"
+          end
+
+          if entity_list
+            number_found = entity_list.length
+            case
+            when number_found == 0
+              msg = "found no entities matching /#{pattern}/"
+            when number_found >= 1
+              failing_list = Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => @redis)
+              entities = failing_list.select {|k,v| v.count >= 1 && entity_list.include?(k) }
+              if entities.length >= 1
+                entities.each_pair do |entity,check_list|
+                  check_list.each do |check|
+                    Flapjack::Data::Event.create_acknowledgement(
+                      entity, check,
+                      :summary => comment,
+                      :duration => duration,
+                      :redis => @redis
+                      )
+                  end
+                end
+                msg = failing_list.inject("Ack list:\n") {|memo,kv|
+                  kv[1].each {|e| memo << "#{kv[0]}:#{e}\n" }
+                  memo
+                }
+            else
+              msg = "found no matching entities with failing checks"
+            end
+          else
+            msg = "that doesn't seem to be a valid pattern - /#{pattern}/"
+          end
+        end
+
+        when /^(?:status )?entities\s+\/(.+)\/.*$/im
+          entity_pattern  = $1 ? $1.chomp.strip : nil
+          entity_names    = Flapjack::Data::Entity.find_all_name_matching(entity_pattern, :redis => @redis)
+
+          if entity_names
+            number_found = entity_names.length
+            case
+            when number_found == 0
+              msg = "found no entities matching /#{pattern}/"
+            when number_found >= 1
+              entities = entity_names.map {|name|
+                Flapjack::Data::Entity.find_by_name(name, :redis => @redis)
+              }.compact.inject({}) {|memo, entity|
+                memo[entity.name] = entity.check_list.map {|check_name|
+                  ec = Flapjack::Data::EntityCheck.for_entity(entity, check_name, :redis => @redis)
+                  "#{check_name}: #{ec.state}"
+                }
+                memo
+              }
+              msg = entities.inject("Status list:\n") {|memo,kv|
+                kv[1].each {|e| memo << "#{kv[0]}:#{e}\n"}
+                memo
+              }
+            else
+              msg = "found no matching entities with failing checks"
+            end
+          else
+            msg = "that doesn't seem to be a valid pattern - /#{pattern}/"
+          end
+
+        when /^(?:ack )?checks\s+\/(.+)\/\s+on\s+\/(.+)\/(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/i
+          check_pattern  = $1.chomp.strip
+          entity_pattern = $2.chomp.strip
+          comment        = $3 ? $3.chomp.strip : nil
+          duration_str   = $4 ? $4.chomp.strip : '1 hour'
+          duration       = ChronicDuration.parse(duration_str)
+          entity_list    = Flapjack::Data::Entity.find_all_name_matching(entity_pattern, :redis => @redis)
+
+          if comment.nil? || (comment.length == 0)
+            comment = "#{from}: Set via chatbot"
+          else
+            comment = "#{from}: #{comment}"
+          end
+
+          if entity_list
+            number_found = entity_list.length
+            case
+            when number_found == 0
+              msg = "found no entities matching /#{entity_pattern}/"
+            when number_found >= 1
+
+              failing_list = Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => @redis)
+
+              my_failing_checks = Hash[failing_list.map do |k,v|
+                if entity_list.include?(k)
+                  [k, v.keep_if {|e| e =~ /#{check_pattern}/}].compact
+                end
+              end]
+              if my_failing_checks.delete_if {|k,v| v.empty? }.length >= 1
+                my_failing_checks.each_pair do |entity,check_list|
+                  check_list.each do |check|
+                    Flapjack::Data::Event.create_acknowledgement(
+                      entity, check,
+                      :summary => comment,
+                      :duration => duration,
+                      :redis => @redis
+                      )
+                  end
+                end
+                msg = failing_list.inject("Ack list:\n") {|memo,kv|
+                  kv[1].each {|e| memo << "#{kv[0]}:#{e}\n" }
+                  memo
+                }
+            else
+              msg = "found no matching failing checks"
+            end
+          else
+            msg = "that doesn't seem to be a valid pattern - /#{pattern}/"
+          end
+        end
+
+        when /^(?:status )checks\s+\/(.+?)\/(?:\s+on\s+)?(?:\/(.+)?\/)?/i
+          check_pattern  = $1 ? $1.chomp.strip : nil
+          entity_pattern = $2 ? $2.chomp.strip : '.*'
+          entity_names   = Flapjack::Data::Entity.find_all_name_matching(entity_pattern, :redis => @redis)
+
+          if entity_names
+            number_found = entity_names.length
+            case
+            when number_found == 0
+              msg = "found no entities matching /#{entity_pattern}/"
+            when number_found >= 1
+              entities = entity_names.map {|name|
+                Flapjack::Data::Entity.find_by_name(name, :redis => @redis)
+              }.compact.inject({}) {|memo, entity|
+                memo[entity.name] = entity.check_list.map {|check_name|
+                  if check_name =~ /#{check_pattern}/
+                    ec = Flapjack::Data::EntityCheck.for_entity(entity, check_name, :redis => @redis)
+                    "#{check_name}: #{ec.state}"
+                  end
+                }.compact
+                memo
+              }
+              if entities.delete_if {|k,v| v.empty? }.length >= 1
+                msg = entities.inject("Status list:\n") {|memo,kv|
+                  kv[1].each {|e| memo << "#{kv[0]}:#{e}\n" ; memo }
+                  memo
+                }
+              else
+                msg = "found no matching checks"
+              end
+            else
+              msg = "found no matching checks"
+            end
+          else
+            msg = "that doesn't seem to be a valid pattern - /#{pattern}/"
+          end
+
         when /^(.*)/
           words = $1
           msg   = "what do you mean, '#{words}'? Type 'help' for a list of acceptable commands."
@@ -372,11 +538,13 @@ module Flapjack
         @logger.debug("groupchat message received: #{stanza.inspect}")
 
         if stanza.body =~ /^#{@config['alias']}:\s+(.*)/m
-          command = $1
+          command  = $1
         end
 
+        from = stanza.from
+
         begin
-          results = interpreter(command)
+          results = interpreter(command, from.resource.to_s)
           msg     = results[:msg]
           action  = results[:action]
         rescue => e
@@ -387,7 +555,7 @@ module Flapjack
         if msg || action
           EventMachine::Synchrony.next_tick do
             @logger.info("sending to group chat: #{msg}")
-            say(stanza.from.stripped, msg, :groupchat)
+            say(from.stripped, msg, :groupchat)
             action.call if action
           end
         end
@@ -523,17 +691,21 @@ module Flapjack
             @logger.debug("processing jabber notification address: #{alert.address}, entity: #{alert.entity}, " +
                           "check: '#{alert.check}', state: #{alert.state}, summary: #{alert.summary}")
 
-            @ack_str =
-              alert.event_count &&
-              !alert.state.eql?('ok') &&
-              !'acknowledgement'.eql?(alert.type) &&
-              !'test'.eql?(alert.type) ?
-              "#{@config['alias']}: ACKID #{event['event_count']}" : nil
+            @ack_str = if alert.state.eql?('ok') || ['test', 'acknowledgement'].include?(alert.type)
+              nil
+            else
+              "#{@config['alias']}: ACKID #{alert.event_hash}"
+            end
 
             message_type = alert.rollup ? 'rollup' : 'alert'
 
             mydir = File.dirname(__FILE__)
-            message_template_path = mydir + "/jabber/#{message_type}.text.erb"
+            message_template_path = case
+            when @config.has_key?('templates') && @config['templates']["#{message_type}.text"]
+              @config['templates']["#{message_type}.text"]
+            else
+              mydir + "/jabber/#{message_type}.text.erb"
+            end
             message_template = ERB.new(File.read(message_template_path), nil, '-')
 
             @alert = alert
