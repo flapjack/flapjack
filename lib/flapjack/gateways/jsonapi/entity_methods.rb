@@ -44,9 +44,6 @@ module Flapjack
           # Returns all (/entities) or some (/entities/A,B,C) or one (/entities/A) contact(s)
           # NB: only works with good data -- i.e. entity must have an id
           app.get %r{/entities(?:/)?([^/]+)?$} do
-            content_type JSONAPI_MEDIA_TYPE
-            cors_headers
-
             requested_entities = if params[:captures] && params[:captures][0]
               params[:captures][0].split(',').uniq
             else
@@ -71,8 +68,6 @@ module Flapjack
               Flapjack::Data::Entity.contacts_jsonapi(entities.map(&:id), :redis => redis)
             end
 
-            # can maybe send back linked checks in Flapjack 2.0
-
             entities_json = entities.collect {|entity|
               entity.linked_contact_ids = linked_contact_ids[entity.id]
               entity.to_jsonapi
@@ -83,11 +78,6 @@ module Flapjack
           end
 
           app.post '/entities' do
-            pass unless is_json_request?
-
-            content_type 'application/json'
-            cors_headers
-
             entities = params[:entities]
             unless entities
               logger.debug("no entities object found in the following supplied JSON:")
@@ -109,8 +99,6 @@ module Flapjack
 
           # create a scheduled maintenance period for a check on an entity
           app.post '/scheduled_maintenances' do
-            cors_headers
-
             entity_names, check_names = parse_entity_and_check_names
 
             start_time = validate_and_parsetime(params[:start_time])
@@ -140,8 +128,6 @@ module Flapjack
           # NB currently, this does not acknowledge a specific failure event, just
           # the entity-check as a whole
           app.post '/acknowledgements' do
-            cors_headers
-
             entity_names, check_names = parse_entity_and_check_names
 
             dur = params[:duration] ? params[:duration].to_i : nil
@@ -177,8 +163,6 @@ module Flapjack
           end
 
           app.delete %r{/((?:un)?scheduled_maintenances)} do
-            cors_headers
-
             action = params[:captures][0]
 
             entity_names, check_names = parse_entity_and_check_names
@@ -199,8 +183,6 @@ module Flapjack
           end
 
           app.post '/test_notifications' do
-            cors_headers
-
             entity_names, check_names = parse_entity_and_check_names
 
             act_proc = proc {|entity_check|

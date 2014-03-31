@@ -73,10 +73,6 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::ContactMethods::Helpers
 
           app.post '/contacts' do
-            pass unless is_json_request?
-            content_type JSONAPI_MEDIA_TYPE
-            cors_headers
-
             contacts_data = params[:contacts]
 
             if contacts_data.nil? || !contacts_data.is_a?(Enumerable)
@@ -116,9 +112,6 @@ module Flapjack
           # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contacts/2) contact(s)
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
           app.get %r{/contacts(?:/)?([^/]+)?$} do
-            content_type JSONAPI_MEDIA_TYPE
-            cors_headers
-
             requested_contacts = if params[:captures] && params[:captures][0]
               params[:captures][0].split(',').uniq
             else
@@ -176,8 +169,6 @@ module Flapjack
           # Returns the core information about the specified contact
           # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id
           app.get '/contacts/:contact_id' do
-            content_type JSONAPI_MEDIA_TYPE
-            cors_headers
             contact = find_contact(params[:contact_id])
 
             entities = contact.entities.map {|e| e[:entity] }
@@ -189,9 +180,6 @@ module Flapjack
 
           # Updates a contact
           app.put '/contacts/:contact_id' do
-            cors_headers
-            content_type JSONAPI_MEDIA_TYPE
-
             contacts_data = params[:contacts]
 
             if contacts_data.nil? || !contacts_data.is_a?(Enumerable)
@@ -220,10 +208,6 @@ module Flapjack
           # before applying any changes
           # TODO generalise JSON-Patch data parsing code
           app.patch '/contacts/:contact_id' do
-            pass unless is_jsonpatch_request?
-            content_type JSONAPI_MEDIA_TYPE
-            cors_headers
-
             contact = find_contact(params[:contact_id])
 
             apply_json_patch('contacts') do |op, property, linked, value|
@@ -254,7 +238,6 @@ module Flapjack
 
           # Deletes a contact
           app.delete '/contacts/:contact_id' do
-            cors_headers
             semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
             contact = find_contact(params[:contact_id])
             contact.delete!
@@ -263,10 +246,6 @@ module Flapjack
           end
 
           app.post '/media' do
-            pass unless is_json_request?
-            content_type JSONAPI_MEDIA_TYPE
-            cors_headers
-
             media_data = params[:media]
 
             if media_data.nil? || !media_data.is_a?(Enumerable)
@@ -310,10 +289,6 @@ module Flapjack
           end
 
           app.patch '/media/:media_id' do
-            pass unless is_jsonpatch_request?
-            content_type JSONAPI_MEDIA_TYPE
-            cors_headers
-
             media_id = params[:media_id]
             media_id =~ /\A(.+)_(email|sms|jabber)\z/
 
@@ -342,19 +317,11 @@ module Flapjack
           end
 
           app.get '/notification_rules/:id' do
-            content_type JSONAPI_MEDIA_TYPE
-            cors_headers
-
-            '{"notification_rules":[' +
-              find_rule(params[:id]).to_json +
-              ']}'
+            '{"notification_rules":[' + find_rule(params[:id]).to_json + ']}'
           end
 
           # Creates a notification rule or rules for a contact
           app.post '/notification_rules' do
-            content_type JSONAPI_MEDIA_TYPE
-            cors_headers
-
             rules_data = params[:notification_rules]
 
             if rules_data.nil? || !rules_data.is_a?(Enumerable)
@@ -403,9 +370,6 @@ module Flapjack
 
           # Updates a notification rule
           app.put '/notification_rules/:id' do
-            content_type JSONAPI_MEDIA_TYPE
-            cors_headers
-
             rules_data = params[:notification_rules]
 
             if rules_data.nil? || !rules_data.is_a?(Enumerable)
@@ -442,7 +406,6 @@ module Flapjack
 
           # Deletes a notification rule
           app.delete '/notification_rules/:id' do
-            cors_headers
             rule = find_rule(params[:id])
             logger.debug("rule to delete: #{rule.inspect}, contact_id: #{rule.contact_id}")
             contact = find_contact(rule.contact_id)

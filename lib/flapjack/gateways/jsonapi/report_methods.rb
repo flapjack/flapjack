@@ -77,9 +77,6 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::ReportMethods::Helpers
 
           app.get %r{/reports/(status|outages|(?:un)?scheduled_maintenances|downtime)} do
-            content_type JSONAPI_MEDIA_TYPE
-            cors_headers
-
             action = params[:captures].first
 
             entity_names, entity_check_names = parse_entity_and_check_names

@@ -222,12 +222,42 @@ module Flapjack
       end
 
       module Helpers
+
+        def cors_headers
+          allow_headers  = %w(* Content-Type Accept AUTHORIZATION Cache-Control)
+          allow_methods  = %w(GET POST PUT PATCH DELETE OPTIONS)
+          expose_headers = %w(Cache-Control Content-Language Content-Type Expires Last-Modified Pragma)
+          cors_headers   = {
+            'Access-Control-Allow-Origin'   => '*',
+            'Access-Control-Allow-Methods'  => allow_methods.join(', '),
+            'Access-Control-Allow-Headers'  => allow_headers.join(', '),
+            'Access-Control-Expose-Headers' => expose_headers.join(', '),
+            'Access-Control-Max-Age'        => '1728000'
+          }
+          headers(cors_headers)
+        end
+
+        def location(ids)
+          location = "#{base_url}#{request.path_info}#{ids.length == 1 ? '/' + ids.first : '?ids=' + ids.join(',')}"
+          headers({'Location' => location})
+        end
+
+        def err(status, *msg)
+          msg_str = msg.join(", ")
+          logger.info "Error: #{msg_str}"
+          [status, {}, {:errors => msg}.to_json]
+        end
+
         def is_json_request?
-          Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type.split(/\s*[;,]\s*/, 2).first.downcase)
+          Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type.split(/\s*[;,]\s*/, 2).first)
+        end
+
+        def is_jsonapi_request?
+          'application/vnd.api+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
         end
 
         def is_jsonpatch_request?
-          'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first.downcase)
+          'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
         end
 
         def find_contact(contact_id)
@@ -285,54 +315,51 @@ module Flapjack
 
       end
 
-      register Flapjack::Gateways::JSONAPI::EntityMethods
-      register Flapjack::Gateways::JSONAPI::ReportMethods
-      register Flapjack::Gateways::JSONAPI::ContactMethods
-
-      # the following should add the cors headers to every request, but is no work
-      #register Sinatra::CrossOrigin
-      #
-      #configure do
-      #  enable :cross_origin
-      #end
-      #set :allow_origin, :any
-      #set :allow_methods, [:get, :post, :put, :patch, :delete, :options]
-
       options '*' do
         cors_headers
         204
       end
 
+      # The following catch-all routes act as impromptu filters for their method types
+      get '*' do
+        content_type JSONAPI_MEDIA_TYPE
+        cors_headers
+        pass
+      end
+
+      post '*' do
+        halt(405) unless is_jsonapi_request?
+        content_type JSONAPI_MEDIA_TYPE
+        cors_headers
+        pass
+      end
+
+      put '*' do
+        content_type JSONAPI_MEDIA_TYPE
+        cors_headers
+        pass
+      end
+
+      patch '*' do
+        halt(405) unless is_jsonpatch_request?
+        content_type JSONAPI_MEDIA_TYPE
+        cors_headers
+        pass
+      end
+
+      delete '*' do
+        cors_headers
+        pass
+      end
+
+      register Flapjack::Gateways::JSONAPI::EntityMethods
+      register Flapjack::Gateways::JSONAPI::ReportMethods
+      register Flapjack::Gateways::JSONAPI::ContactMethods
+
       not_found do
         err(404, "not routable")
       end
 
-      def cors_headers
-        allow_headers  = %w(* Content-Type Accept AUTHORIZATION Cache-Control)
-        allow_methods  = %w(GET POST PUT PATCH DELETE OPTIONS)
-        expose_headers = %w(Cache-Control Content-Language Content-Type Expires Last-Modified Pragma)
-        cors_headers   = {
-          'Access-Control-Allow-Origin'   => '*',
-          'Access-Control-Allow-Methods'  => allow_methods.join(', '),
-          'Access-Control-Allow-Headers'  => allow_headers.join(', '),
-          'Access-Control-Expose-Headers' => expose_headers.join(', '),
-          'Access-Control-Max-Age'        => '1728000'
-        }
-        headers(cors_headers)
-      end
-
-      def location(ids)
-        location = "#{base_url}#{request.path_info}#{ids.length == 1 ? '/' + ids.first : '?ids=' + ids.join(',')}"
-        headers({'Location' => location})
-      end
-
-      private
-
-      def err(status, *msg)
-        msg_str = msg.join(", ")
-        logger.info "Error: #{msg_str}"
-        [status, {}, {:errors => msg}.to_json]
-      end
     end
 
   end

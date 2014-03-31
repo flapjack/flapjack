@@ -10,7 +10,7 @@ module Flapjack
 
     class Entity
 
-      attr_accessor :name, :id
+      attr_accessor :name, :id, :linked_contact_ids
 
       TAG_PREFIX = 'entity_tag'
 
@@ -157,16 +157,21 @@ module Flapjack
       def self.contacts_jsonapi(entity_ids, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        contact_ids = redis.sunion( entity_ids.map {|entity_id| "contacts_for:#{entity_id}" } )
+        all_contact_ids = redis.sunion( entity_ids.map {|entity_id| "contacts_for:#{entity_id}" } )
 
-        contact_data = contact_ids.collect {|contact_id|
-          contact = Flapjack::Data::Contact.find_by_id(contact_id)
+        contact_data = all_contact_ids.collect {|contact_id|
+          contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => redis)
           {
             :id          => contact_id,
             :first_name  => contact.first_name,
             :last_name   => contact.last_name,
           }
         }
+
+        contact_ids = entity_ids.inject({}) do |memo, entity_id|
+          memo[entity_id] = redis.smembers("contacts_for:#{entity_id}")
+          memo
+        end
 
         [contact_data, contact_ids]
       end
