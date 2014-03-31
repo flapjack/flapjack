@@ -9,12 +9,11 @@ module Flapjack
         class JsonParamsParser < Struct.new(:app)
           def call(env)
             t = type(env)
-            if env['rack.input'] and not input_parsed?(env) and type_match?(t)
+            if env['rack.input'] && !input_parsed?(env) && type_match?(t)
               env['rack.request.form_input'] = env['rack.input']
               json_data = env['rack.input'].read
               env['rack.input'].rewind
-
-              data = Oj.load(json_data)
+              data = json_data.empty? ? {} : Oj.load(json_data)
               env['rack.request.form_hash'] = data.empty? ? {} :
                 (('application/json-patch+json'.eql?(t)) ? {'ops' => data} : data)
             end
@@ -26,8 +25,8 @@ module Flapjack
           end
 
           def type(env)
-            return unless env['CONTENT_TYPE']
-            env['CONTENT_TYPE'].split(/\s*[;,]\s*/, 2).first.downcase
+            return if env['CONTENT_TYPE'].nil?
+            env['CONTENT_TYPE'].split(/\s*[;,]\s*/, 2).first
           end
 
           def type_match?(t)

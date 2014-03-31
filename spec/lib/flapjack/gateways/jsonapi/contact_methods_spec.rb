@@ -59,6 +59,11 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
            :key => 'semaphores:folly', :expiry => 30, :token => 'spatulas-R-us')
   }
 
+  let(:jsonapi_env) {
+    {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE,
+     'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
+  }
+
   before(:all) do
     Flapjack::Gateways::JSONAPI.class_eval {
       set :raise_errors, true
@@ -93,7 +98,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).to receive(:all).with(:redis => redis).
       and_return([contact])
 
-    aget '/contacts'
+    aget '/contacts', {}.to_json, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq({:contacts => [contact_core], :linked => {'entities' => [], 'media' => []}}.to_json)
   end
@@ -109,7 +114,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    aget "/contacts/#{contact.id}"
+    aget "/contacts/#{contact.id}", {}.to_json, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq({:contacts => [contact_core], :linked => {'entities' => [], 'media' => []}}.to_json)
   end
@@ -118,7 +123,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    aget "/contacts/#{contact.id}"
+    aget "/contacts/#{contact.id}", {}.to_json, jsonapi_env
     expect(last_response.status).to eq(404)
   end
 
@@ -143,9 +148,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
       with(contact_data, {:redis => redis}).and_return(contact)
     expect(semaphore).to receive(:release).and_return(true)
 
-    apost "/contacts", { :contacts => [contact_data]}.to_json,
-      {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE}
-
+    apost "/contacts", {:contacts => [contact_data]}.to_json, jsonapi_env
     expect(last_response.status).to eq(200)
     expect(last_response.body).to eq(["0362"].to_json)
   end
@@ -156,8 +159,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(contact).to receive(:update)
     expect(contact).to receive(:to_jsonapi).and_return('{"sausage": "good"}')
 
-    aput "/contacts/21", {:contacts => [{'sausage' => 'good'}]}.to_json,
-      {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE}
+    aput "/contacts/21", {:contacts => [{'sausage' => 'good'}]}.to_json, jsonapi_env
     expect(last_response.status).to eq(200)
   end
 
@@ -168,15 +170,14 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(semaphore).to receive(:release)
     expect(contact).to receive(:delete!)
 
-    adelete "/contacts/21"
+    adelete "/contacts/21", {}.to_json, jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
   it "does not create a contact if the data is improperly formatted" do
     expect(Flapjack::Data::Contact).not_to receive(:add)
 
-    apost "/contacts", {'sausage' => 'good'}.to_json,
-      {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE}
+    apost "/contacts", {'sausage' => 'good'}.to_json, jsonapi_env
     expect(last_response.status).to eq(422)
   end
 
@@ -185,8 +186,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).not_to receive(:find_by_id)
     expect(Flapjack::Data::Contact).not_to receive(:update)
 
-    aput "/contacts/21", contact_data.to_json,
-      {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE}
+    aput "/contacts/21", contact_data.to_json, jsonapi_env
     expect(last_response.status).to eq(422)
   end
 
@@ -195,7 +195,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
 
-    aget "/notification_rules/#{notification_rule.id}"
+    aget "/notification_rules/#{notification_rule.id}", {}.to_json, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
   end
@@ -204,7 +204,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    aget "/notification_rules/#{notification_rule.id}"
+    aget "/notification_rules/#{notification_rule.id}", {}.to_json, jsonapi_env
     expect(last_response.status).to eq(404)
   end
 
@@ -224,8 +224,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(contact).to receive(:add_notification_rule).
       with(notification_rule_data_sym, :logger => @logger).and_return(notification_rule)
 
-    apost "/notification_rules", {"notification_rules" => [notification_rule_data]}.to_json,
-      {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE}
+    apost "/notification_rules", {"notification_rules" => [notification_rule_data]}.to_json, jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
   end
@@ -265,8 +264,8 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    aput "/notification_rules/#{notification_rule.id}", {"notification_rules" => [notification_rule_data]}.to_json,
-      {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE}
+    aput "/notification_rules/#{notification_rule.id}",
+      {"notification_rules" => [notification_rule_data]}.to_json, jsonapi_env
     expect(last_response.status).to eq(404)
   end
 
@@ -276,8 +275,8 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    aput "/notification_rules/#{notification_rule.id}", {"notification_rules" => [notification_rule_data]}.to_json,
-      {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE}
+    aput "/notification_rules/#{notification_rule.id}",
+      {"notification_rules" => [notification_rule_data]}.to_json, jsonapi_env
     expect(last_response.status).to eq(404)
   end
 
@@ -290,7 +289,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    adelete "/notification_rules/#{notification_rule.id}"
+    adelete "/notification_rules/#{notification_rule.id}", {}.to_json, jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -298,7 +297,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    adelete "/notification_rules/#{notification_rule.id}"
+    adelete "/notification_rules/#{notification_rule.id}", {}.to_json, jsonapi_env
     expect(last_response.status).to eq(404)
   end
 
@@ -309,7 +308,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    adelete "/notification_rules/#{notification_rule.id}"
+    adelete "/notification_rules/#{notification_rule.id}", {}.to_json, jsonapi_env
     expect(last_response.status).to eq(404)
   end
 
