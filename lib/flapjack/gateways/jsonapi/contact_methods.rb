@@ -33,6 +33,40 @@ module Flapjack
             semaphore
           end
 
+          def bulk_contact_operation(contact_ids, &block)
+            semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
+
+            contacts_by_id = contact_ids.inject({}) do |memo, contact_id|
+              # can't use find_contact here as that would halt immediately
+              memo[contact_id] = Flapjack::Data::Contact.find_by_id(contact_id, :redis => redis, :logger => logger)
+              memo
+            end
+
+            missing_ids = contacts_by_id.select {|k, v| v.nil? }.keys
+            unless missing_ids.empty?
+              semaphore.release
+              halt(404, "Contacts with ids #{missing_ids.join(', ')} were not found")
+            end
+
+            block.call(contacts_by_id.select {|k, v| !v.nil? }.values)
+            semaphore.release
+          end
+
+          def split_media_ids(media_id)
+            media_ids = media_id.split(',')
+
+            media_ids.collect do |m_id|
+              m_id =~ /\A(.+)_(email|sms|jabber)\z/
+
+              contact_id = $1
+              media_type = $2
+              halt err(422, "Could not get contact_id from media_id") if contact_id.nil?
+              halt err(422, "Could not get media type from media_id") if media_type.nil?
+
+              {:contact => find_contact(contact_id), :type => media_type}
+            end
+          end
+
           def apply_json_patch(object_path, &block)
             ops = params[:ops]
 
@@ -166,86 +200,49 @@ module Flapjack
                           ',"media":' + linked_media_data.to_json + '}}'
           end
 
-          # Returns the core information about the specified contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id
-          app.get '/contacts/:contact_id' do
-            contact = find_contact(params[:contact_id])
-
-            entities = contact.entities.map {|e| e[:entity] }
-
-            '{"contacts":[' + contact.to_jsonapi + ']' +
-              ( entities.empty? ? '}' :
-                ', "linked": {"entities":' + entities.values.to_json + '}}')
-          end
-
-          # Updates a contact
-          app.put '/contacts/:contact_id' do
-            contacts_data = params[:contacts]
-
-            if contacts_data.nil? || !contacts_data.is_a?(Enumerable)
-              halt err(422, "No valid contacts were submitted")
-            end
-
-            unless contacts_data.length == 1
-              halt err(422, "Exactly one contact hash must be supplied.")
-            end
-
-            contact_data = contacts_data.first
-
-            if contact_data['id'] && contact_data['id'].to_s != params[:contact_id]
-              halt err(422, "ID, if supplied, must match URL")
-            end
-
-            contact = find_contact(params[:contact_id])
-            #contact_data = hashify('first_name', 'last_name', 'email', 'media', 'tags') {|k| [k, params[k]]}
-            logger.debug("contact_data: #{contact_data}")
-            contact.update(contact_data)
-
-            contact.to_jsonapi
-          end
-
           # TODO this should build up all data, verify entities exist, etc.
           # before applying any changes
           # TODO generalise JSON-Patch data parsing code
-          app.patch '/contacts/:contact_id' do
-            contact = find_contact(params[:contact_id])
-
-            apply_json_patch('contacts') do |op, property, linked, value|
-              case op
-              when 'replace'
-                if ['first_name', 'last_name', 'email'].include?(property)
-                  contact.update(property => value)
-                end
-              when 'add'
-                logger.debug "patch add operation. linked: #{linked}"
-                if 'entities'.eql?(linked)
-                  entity = Flapjack::Data::Entity.find_by_id(value, :redis => redis)
-                  logger.debug "adding this entity: #{entity}"
-                  contact.add_entity(entity) unless entity.nil?
-                end
-              when 'remove'
-                if 'entities'.eql?(linked)
-                  entity = Flapjack::Data::Entity.find_by_id(value, :redis => redis)
-                  contact.remove_entity(entity) unless entity.nil?
+          app.patch '/contacts/:id' do
+            bulk_contact_operation(params[:id].split(',')) do |contacts|
+              contacts.each do |contact|
+                apply_json_patch('contacts') do |op, property, linked, value|
+                  case op
+                  when 'replace'
+                    if ['first_name', 'last_name', 'email'].include?(property)
+                      contact.update(property => value)
+                    end
+                  when 'add'
+                    logger.debug "patch add operation. linked: #{linked}"
+                    if 'entities'.eql?(linked)
+                      entity = Flapjack::Data::Entity.find_by_id(value, :redis => redis)
+                      logger.debug "adding this entity: #{entity}"
+                      contact.add_entity(entity) unless entity.nil?
+                    end
+                  when 'remove'
+                    if 'entities'.eql?(linked)
+                      entity = Flapjack::Data::Entity.find_by_id(value, :redis => redis)
+                      contact.remove_entity(entity) unless entity.nil?
+                    end
+                  end
                 end
               end
             end
 
-            # will need to be 200 and return contact.to_jsonapi
-            # if updated_at changes, or Etag, when those are introduced
             status 204
           end
 
-          # Deletes a contact
-          app.delete '/contacts/:contact_id' do
-            semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
-            contact = find_contact(params[:contact_id])
-            contact.delete!
-            semaphore.release
+          # Delete one or more contacts
+          app.delete '/contacts/:id' do
+            bulk_contact_operation(params[:id].split(',')) do |contacts|
+              contacts.each {|contact| contact.delete!}
+            end
+
             status 204
           end
 
-          app.post '/media' do
+          # Creates media records for a contact
+          app.post '/contacts/:contact_id/media' do
             media_data = params[:media]
 
             if media_data.nil? || !media_data.is_a?(Enumerable)
@@ -257,25 +254,13 @@ module Flapjack
             end
 
             semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
-
-            contacts = media_data.inject({}) {|memo, medium_data|
-              contact_id = medium_data['contact_id']
-              if contact_id.nil?
-                semaphore.release
-                halt err(422, "Media data must include 'contact_id'")
-              end
-              next memo if memo.has_key?(contact_id)
-              contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => redis)
-              if contact.nil?
-                semaphore.release
-                halt err(422, "Contact id:'#{contact_id}' could not be loaded")
-              end
-              memo[contact_id] = contact
-              memo
-            }
+            contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
+            if contact.nil?
+              semaphore.release
+              halt err(422, "Contact id:'#{contact_id}' could not be loaded")
+            end
 
             media_data.each do |medium_data|
-              contact = contacts[medium_data['contact_id']]
               type = medium_data['type']
               contact.set_address_for_media(type, medium_data['address'])
               contact.set_interval_for_media(type, medium_data['interval'])
@@ -288,27 +273,42 @@ module Flapjack
             '{"media":' + media_data.to_json + '}'
           end
 
+          # get one or more media records; media ids are, for Flapjack
+          # v1, composed of "#{contact.id}_#{media_type}"
+          app.get '/media/:media_id' do
+            contact_media = split_media_ids(params[:media_id])
+
+            contact_media.inject() do |memo, (contact, media_type)|
+              memo["#{contact.id}_#{media_type}"] = if 'pagerduty'.eql?(media_type)
+                contact.pagerduty_credentials
+               else
+                {'address'          => contact.media[media_type],
+                 'interval'         => contact.media_intervals[media_type],
+                 'rollup_threshold' => contact.media_rollup_thresholds[media_type]}
+               end
+
+              memo
+            end
+
+            '{"media":' + media_data.to_json + '}'
+          end
+
+          # update one or more media records; media ids are, for Flapjack
+          # v1, composed of "#{contact.id}_#{media_type}"
           app.patch '/media/:media_id' do
-            media_id = params[:media_id]
-            media_id =~ /\A(.+)_(email|sms|jabber)\z/
+            contact_media = split_media_ids(params[:media_id])
 
-            contact_id = $1
-            type = $2
-
-            halt err(422, "Could not get contact_id from media_id") if contact_id.nil?
-            halt err(422, "Could not get type from media_id") if type.nil?
-
-            contact = find_contact(contact_id)
-
-            apply_json_patch('media') do |op, property, linked, value|
-              if 'replace'.eql?(op)
-                case property
-                when 'address'
-                  contact.set_address_for_media(type, value)
-                when 'interval'
-                  contact.set_interval_for_media(type, value)
-                when 'rollup_threshold'
-                  contact.set_rollup_threshold_for_media(type, value)
+            contact_media.each_pair do |contact, media_type|
+              apply_json_patch('media') do |op, property, linked, value|
+                if 'replace'.eql?(op)
+                  case property
+                  when 'address'
+                    contact.set_address_for_media(media_type, value)
+                  when 'interval'
+                    contact.set_interval_for_media(media_type, value)
+                  when 'rollup_threshold'
+                    contact.set_rollup_threshold_for_media(media_type, value)
+                  end
                 end
               end
             end
@@ -316,17 +316,34 @@ module Flapjack
             status 204
           end
 
+          # delete one or more media records; media ids are, for Flapjack
+          # v1, composed of "#{contact.id}_#{media_type}"
+          app.delete '/media/:media_id' do
+            contact_media = split_media_ids(params[:media_id])
+            contact_media.each_pair do |contact, media_type|
+              contact.remove_media(media_type)
+            end
+            status 204
+          end
+
+          # get one or more notification rules
           app.get '/notification_rules/:id' do
-            '{"notification_rules":[' + find_rule(params[:id]).to_json + ']}'
+            rules_json = params[:id].split(',').collect {|rule_id|
+              find_rule(rule_id).to_json
+            }.join(', ')
+
+            '{"notification_rules":[' + rules_json + ']}'
           end
 
           # Creates a notification rule or rules for a contact
-          app.post '/notification_rules' do
+          app.post '/contacts/:contact_id/notification_rules' do
             rules_data = params[:notification_rules]
 
             if rules_data.nil? || !rules_data.is_a?(Enumerable)
               halt err(422, "No valid notification rules were submitted")
             end
+
+            contact = find_contact(params[:contact_id])
 
             errors = []
             rules_data.each do |rule_data|
@@ -342,7 +359,6 @@ module Flapjack
             errors = []
             rules_data.each do |rule_data|
               rule_data = symbolize(rule_data)
-              contact   = find_contact(rule_data.delete(:contact_id))
               rule_or_errors = contact.add_notification_rule(rule_data, :logger => logger)
               if rule_or_errors.respond_to?(:critical_media)
                 rules << rule_or_errors
@@ -361,14 +377,15 @@ module Flapjack
                 status 200
               end
             end
+
             ids = rules.map {|r| r.id}
             location(ids)
-            '{"notification_rules":[' +
-              rules.map {|r| r.to_json}.join(',') +
-              ']}'
+
+            rules_json = rules.map {|r| r.to_json}.join(',')
+            '{"notification_rules":[' + rules_json + ']}'
           end
 
-          # Updates a notification rule
+          # Updates one or more notification rules
           app.put '/notification_rules/:id' do
             rules_data = params[:notification_rules]
 
@@ -376,40 +393,36 @@ module Flapjack
               halt err(422, "No valid notification rules were submitted")
             end
 
-            unless rules_data.length == 1
-              halt err(422, "Exactly one notification rules hash must be supplied.")
+            rule_ids       = params[:id].split(',')
+            rules_data_ids = rules_data.collect {|rd| rd['id'].to_s }
+
+            unless (rule_ids & rules_data_ids) == rule_ids
+              halt err(422, "Rule id parameters do not match rule update data ids")
             end
 
-            rule_data = rules_data.first
+            # pre-retrieve rule objects, errors before data is changed if any
+            # are not found
+            rules      = rule_ids.collect {|rule_id| find_rule(rule_id) }
+            rules_json = rules.inject([]) {|memo, rule|
+              if rule_data = rules_data.detect {|rd| rd['id'].to_s == rule.id}
+                rule.update(symbolize(rule_data), :logger => logger)
+                memo << rule.to_json
+              end
+              memo
+            }.join(', ')
 
-            if rule_data['id'] && rule_data['id'].to_s != params[:id]
-              halt err(422, "ID, if supplied, must match URL")
-            end
-
-            rule = find_rule(params[:id])
-            contact = find_contact(rule.contact_id)
-
-            supplied_contact = rule_data.delete('contact_id')
-            if supplied_contact && supplied_contact != contact.id
-              halt err(422, "contact_id cannot be modified")
-            end
-
-            errors = rule.update(symbolize(rule_data), :logger => logger)
-
-            unless errors.nil? || errors.empty?
-              halt err(422, *errors)
-            end
-            '{"notification_rules":[' +
-              rule.to_json +
-              ']}'
+            '{"notification_rules":[' + rules_json + ']}'
           end
 
-          # Deletes a notification rule
+          # Deletes one or more notification rules
           app.delete '/notification_rules/:id' do
-            rule = find_rule(params[:id])
-            logger.debug("rule to delete: #{rule.inspect}, contact_id: #{rule.contact_id}")
-            contact = find_contact(rule.contact_id)
-            contact.delete_notification_rule(rule)
+            params[:id].split(',').each do |rule_id|
+              rule = find_rule(rule_id)
+              logger.debug("rule to delete: #{rule.inspect}, contact_id: #{rule.contact_id}")
+              contact = find_contact(rule.contact_id)
+              contact.delete_notification_rule(rule)
+            end
+
             status 204
           end
 

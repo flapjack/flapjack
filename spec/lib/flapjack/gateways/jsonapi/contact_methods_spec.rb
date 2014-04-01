@@ -40,8 +40,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   }
 
   let(:notification_rule_data) {
-    {"contact_id"         => "21",
-     "tags"               => ["database","physical"],
+    {"tags"               => ["database","physical"],
      "regex_tags"         => ["^data.*$","^(physical|bare_metal)$"],
      "regex_entities"     => ["^foo-\S{3}-\d{2}.example.com$"],
      "time_restrictions"  => nil,
@@ -153,16 +152,6 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(last_response.body).to eq(["0362"].to_json)
   end
 
-  it "updates a contact" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
-    expect(contact).to receive(:update)
-    expect(contact).to receive(:to_jsonapi).and_return('{"sausage": "good"}')
-
-    aput "/contacts/21", {:contacts => [{'sausage' => 'good'}]}.to_json, jsonapi_env
-    expect(last_response.status).to eq(200)
-  end
-
   it "deletes a contact" do
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
@@ -178,15 +167,6 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).not_to receive(:add)
 
     apost "/contacts", {'sausage' => 'good'}.to_json, jsonapi_env
-    expect(last_response.status).to eq(422)
-  end
-
-  it "does not update a contact if id exists in sent entity" do
-    contact_data = {'id' => '21'}
-    expect(Flapjack::Data::Contact).not_to receive(:find_by_id)
-    expect(Flapjack::Data::Contact).not_to receive(:update)
-
-    aput "/contacts/21", contact_data.to_json, jsonapi_env
     expect(last_response.status).to eq(422)
   end
 
@@ -219,12 +199,11 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     notification_rule_data_sym = notification_rule_data.inject({}){|memo,(k,v)|
       memo[k.to_sym] = v; memo
     }
-    notification_rule_data_sym.delete(:contact_id)
 
     expect(contact).to receive(:add_notification_rule).
       with(notification_rule_data_sym, :logger => @logger).and_return(notification_rule)
 
-    apost "/notification_rules", {"notification_rules" => [notification_rule_data]}.to_json, jsonapi_env
+    apost "/contacts/#{contact.id}/notification_rules", {"notification_rules" => [notification_rule_data]}.to_json, jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
   end
@@ -233,24 +212,23 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    apost "/notification_rules", {"notification_rules" => [notification_rule_data]}.to_json,
+    apost "/contacts/#{contact.id}/notification_rules", {"notification_rules" => [notification_rule_data]}.to_json,
       {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE}
     expect(last_response.status).to eq(404)
   end
 
   # PUT /notification_rules/RULE_ID
   it "updates a notification rule" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
     expect(notification_rule).to receive(:to_json).and_return('"rule_1"')
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
+
+    notification_rule_data['id'] = notification_rule.id
 
     # symbolize the keys
     notification_rule_data_sym = notification_rule_data.inject({}){|memo,(k,v)|
       memo[k.to_sym] = v; memo
     }
-    notification_rule_data_sym.delete(:contact_id)
 
     expect(notification_rule).to receive(:update).with(notification_rule_data_sym, :logger => @logger).and_return(nil)
 
@@ -264,16 +242,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    aput "/notification_rules/#{notification_rule.id}",
-      {"notification_rules" => [notification_rule_data]}.to_json, jsonapi_env
-    expect(last_response.status).to eq(404)
-  end
-
-  it "does not update a notification_rule for a contact that's not present" do
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
-      with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
+    notification_rule_data['id'] = notification_rule.id
 
     aput "/notification_rules/#{notification_rule.id}",
       {"notification_rules" => [notification_rule_data]}.to_json, jsonapi_env
