@@ -24,6 +24,6 @@ Then /^the exit status should( not)? be (\d+)$/ do |negativity, number|
   expect(@exit_status).send(negativity ? :not_to : :to, eq(number.to_i))
 end
 
-Then /^the output should contain "([^"]*)"$/ do |matcher|
-  expect(@output).to include(matcher)
+Then /^the output should( not)? contain "([^"]*)"$/ do |negativity, matcher|
+  expect(@output).send(negativity ? :not_to : :to, include(matcher))
 end
