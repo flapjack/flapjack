@@ -22,6 +22,7 @@ PATH
       thin (~> 1.6.1)
       tzinfo (~> 1.0.1)
       tzinfo-data
+      yajl-ruby (~> 1.2)
 
 GEM
   remote: https://rubygems.org/
@@ -198,6 +199,7 @@ GEM
     webmock (1.16.1)
       addressable (>= 2.2.7)
       crack (>= 0.3.2)
+    yajl-ruby (1.2.0)
 
 PLATFORMS
   ruby
