@@ -26,7 +26,7 @@ end
 
 def fail(opts)
   redis = Redis.new(opts[:redis_options])
-  stop_after = opts[:minutes].to_i * 60
+  stop_after = (opts[:minutes] * 60).to_i
   recover = opts[:recover]
   state = opts[:state] || 'critical'
   event  = {
@@ -82,8 +82,8 @@ optparse = OptionParser.new do |opts|
     options.config = c
   end
 
-  opts.on("-t", "--time MINUTES", String, "MINUTES to generate failure events for") do |t|
-    options.minutes = t
+  opts.on("-t", "--time MINUTES", String, "MINUTES to generate failure events for (0.75)") do |t|
+    options.minutes = t.to_f
   end
 
   opts.on("-i", "--interval SECONDS", String, "SECONDS between events, can be decimal eg 0.1 (10)") do |i|
@@ -107,6 +107,10 @@ optparse.parse!(ARGV)
 
 unless options.interval.to_f > 0
   options.interval = 10.0
+end
+
+unless options.minutes
+  options.minutes = 0.75
 end
 
 FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
