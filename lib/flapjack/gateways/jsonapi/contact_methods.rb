@@ -67,39 +67,6 @@ module Flapjack
             end
           end
 
-          def apply_json_patch(object_path, &block)
-            ops = params[:ops]
-
-            if ops.nil? || !ops.is_a?(Array)
-              halt err(400, "Invalid JSON-Patch request")
-            end
-
-            ops.each do |operation|
-              linked = nil
-              property = nil
-
-              op = operation['op']
-              operation['path'] =~ /\A\/#{object_path}\/0\/([^\/]+)(?:\/([^\/]+)(?:\/([^\/]+))?)?\z/
-              if 'links'.eql?($1)
-                linked = $2
-
-                value = case op
-                when 'add'
-                  operation['value']
-                when 'remove'
-                  $3
-                end
-              elsif 'replace'.eql?(op)
-                property = $1
-                value = $3
-              else
-                next
-              end
-
-              yield(op, property, linked, value)
-            end
-          end
-
         end
 
         def self.registered(app)

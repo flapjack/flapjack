@@ -92,7 +92,7 @@ module Flapjack
               presenter.send(action, *args)
             }
 
-            '{"entities":' + entity_data.to_json +
+            '{"reports":' + entity_data.to_json +
               ',"linked":{"checks":' + check_data.to_json + '}}'
           end
 

@@ -301,7 +301,42 @@ module Flapjack
 
           entity_check_names = params[:check]
           entity_check_names = [entity_check_names] unless entity_check_names.nil? || entity_check_names.is_a?(Array)
+
+          halt( err(404, "no entities or checks found") ) if entity_names.empty? && check_names.empty?
           [entity_names, entity_check_names]
+        end
+
+        def apply_json_patch(object_path, &block)
+          ops = params[:ops]
+
+          if ops.nil? || !ops.is_a?(Array)
+            halt err(400, "Invalid JSON-Patch request")
+          end
+
+          ops.each do |operation|
+            linked = nil
+            property = nil
+
+            op = operation['op']
+            operation['path'] =~ /\A\/#{object_path}\/0\/([^\/]+)(?:\/([^\/]+)(?:\/([^\/]+))?)?\z/
+            if 'links'.eql?($1)
+              linked = $2
+
+              value = case op
+              when 'add'
+                operation['value']
+              when 'remove'
+                $3
+              end
+            elsif 'replace'.eql?(op)
+              property = $1
+              value = $3
+            else
+              next
+            end
+
+            yield(op, property, linked, value)
+          end
         end
 
         # NB: casts to UTC before converting to a timestamp
@@ -322,6 +357,7 @@ module Flapjack
 
       # The following catch-all routes act as impromptu filters for their method types
       get '*' do
+        halt(405) unless params.empty? || is_jsonapi_request?
         content_type JSONAPI_MEDIA_TYPE
         cors_headers
         pass
