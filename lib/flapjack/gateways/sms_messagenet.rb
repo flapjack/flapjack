@@ -28,6 +28,10 @@ module Flapjack
           endpoint = @config["endpoint"] || MESSAGENET_DEFAULT_URL
           username = @config["username"]
           password = @config["password"]
+          username_field = @config["username_field"] || 'Username'
+	      password_field = @config["password_field"] || 'Pwd'
+	      phone_num_field = @config["phone_num_field"] || 'PhoneNumber'
+	      message_field    = @config["message_field"] || 'PhoneMessage' 
 
           address         = alert.address
           notification_id = alert.notification_id
@@ -76,10 +80,10 @@ module Flapjack
             return
           end
 
-          query = {'Username'     => username,
-                   'Pwd'          => password,
-                   'PhoneNumber'  => address,
-                   'PhoneMessage' => safe_message}
+          query = {username_field     => username,
+                   password_field          => password,
+                   phone_num_field  => address,
+                   message_field => safe_message}
 
           http = EM::HttpRequest.new(endpoint).get(:query => query)
 

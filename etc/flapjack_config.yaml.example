@@ -71,6 +71,10 @@ production:
       endpoint: 'https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage'
       username: "ermahgerd"
       password: "xxxx"
+      username_field: "Username"
+      password_field: "Pwd"
+      phone_num_field: "PhoneNumber"
+      message_field: "PhoneMessage"
       logger:
         level: INFO
         syslog_errors: yes
