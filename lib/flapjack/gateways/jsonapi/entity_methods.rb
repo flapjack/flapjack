@@ -21,22 +21,14 @@ module Flapjack
             end
           end
 
-          def bulk_api_check_action(entity_names, entity_check_names, params = {}, &block)
-            unless entity_names.nil? || entity_names.empty?
-              entity_names.each do |entity_name|
-                entity = find_entity(entity_name)
+          def bulk_jsonapi_entity_action(entity_ids, params = {}, &block)
+            unless entity_ids.nil? || entity_ids.empty?
+              entity_ids.each do |entity_id|
+                entity = find_entity_by_id(entity_id)
                 check_names = entity.check_list.sort
                 check_names.each do |check_name|
                   yield find_entity_check(entity, check_name)
                 end
-              end
-            end
-
-            unless entity_check_names.nil? || entity_check_names.empty?
-              entity_check_names.each do |entity_check_name|
-                entity_name, check_name = entity_check_name.split(':', 2)
-                entity = find_entity(entity_name)
-                yield find_entity_check(entity, check_name)
               end
             end
           end
@@ -131,26 +123,20 @@ module Flapjack
           end
 
           # create a scheduled maintenance period for a check on an entity
-          app.post '/scheduled_maintenances' do
-            entity_names, check_names = parse_entity_and_check_names
+          app.post %r{/entities/([^/]+)/scheduled_maintenances} do
+            entity_ids = params[:captures][0].split(',')
 
             start_time = validate_and_parsetime(params[:start_time])
             halt( err(403, "start time must be provided") ) unless start_time
 
-            bulk_api_check_action(entity_names, check_names) do |entity_check|
+            bulk_jsonapi_entity_action(entity_ids) do |entity_check|
               entity_check.create_scheduled_maintenance(start_time,
                 params[:duration].to_i, :summary => params[:summary])
             end
 
             response.headers['Location'] =
-              "#{request.base_url}/reports/scheduled_maintenances?" +
-              "start_time=#{params[:start_time]}" + (entity_names.nil? ? '' :
-              ("&" + entity_names.collect{|en|
-                "entity[]=#{en}"
-              }.join("&"))) + (check_names.nil? ? '' :
-              ("&" + check_names.collect {|cn|
-                "check[]=#{cn}"
-              }.join("&")))
+              "#{request.base_url}/entities/" + entity_ids.join(',') +
+              "/scheduled_maintenance_report?start_time=#{params[:start_time]}"
 
             status 201
           end
@@ -158,8 +144,8 @@ module Flapjack
           # create an acknowledgement for a service on an entity
           # NB currently, this does not acknowledge a specific failure event, just
           # the entity-check as a whole
-          app.post '/acknowledgements' do
-            entity_names, check_names = parse_entity_and_check_names
+          app.post %r{/entities/([^/]+)/unscheduled_maintenances} do
+            entity_ids = params[:captures][0].split(',')
 
             dur = params[:duration] ? params[:duration].to_i : nil
             duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
@@ -170,7 +156,7 @@ module Flapjack
 
             t = Time.now
 
-            bulk_api_check_action(entity_names, check_names) do |entity_check|
+            bulk_jsonapi_entity_action(entity_ids) do |entity_check|
               Flapjack::Data::Event.create_acknowledgement(
                 entity_check.entity_name, entity_check.check,
                 :summary => params[:summary],
@@ -179,22 +165,15 @@ module Flapjack
             end
 
             response.headers['Location'] =
-              "#{request.base_url}/reports/unscheduled_maintenances?" +
-              "start_time=#{t.iso8601}" + (entity_names.nil? ? '' :
-              ("&" + entity_names.collect{|en|
-                "entity[]=#{en}"
-              }.join("&"))) + (check_names.nil? ? '' :
-              ("&" + check_names.collect {|cn|
-                "check[]=#{cn}"
-              }.join("&")))
+              "#{request.base_url}/entities/" + entity_ids.join(',') +
+              "/unscheduled_maintenance_report?start_time=#{t.iso8601}"
 
             status 201
           end
 
-          app.delete %r{/((?:un)?scheduled_maintenances)} do
-            action = params[:captures][0]
-
-            entity_names, check_names = parse_entity_and_check_names
+          app.delete %r{/entities/([^/]+)/((?:un)?scheduled_maintenances)} do
+            entity_ids = params[:captures][0].split(',')
+            action = params[:captures][1]
 
             act_proc = case action
             when 'scheduled_maintenances'
@@ -206,14 +185,14 @@ module Flapjack
               proc {|entity_check| entity_check.end_unscheduled_maintenance(end_time.to_i) }
             end
 
-            bulk_api_check_action(entity_names, check_names, &act_proc)
+            bulk_jsonapi_entity_action(entity_ids, &act_proc)
             status 204
           end
 
-          app.post '/test_notifications' do
-            entity_names, check_names = parse_entity_and_check_names
+          app.post %r{/entities/([^/]+)/test_notifications} do
+            entity_ids = params[:captures][0].split(',')
 
-            bulk_api_check_action(entity_names, check_names) do |entity_check|
+            bulk_jsonapi_entity_action(entity_ids) do |entity_check|
               summary = params[:summary] ||
                         "Testing notifications to all contacts interested in entity #{entity_check.entity.name}"
               Flapjack::Data::Event.test_notifications(
@@ -221,7 +200,7 @@ module Flapjack
                 :summary => summary,
                 :redis => redis)
             end
-            status 204
+            status 201
           end
 
         end

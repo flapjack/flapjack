@@ -45,7 +45,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
       with(time - (4 * 60 * 60)).and_return(nil)
 
     ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
-    outages = ecp.outages(time - (5 * 60 * 60), time - (2 * 60 * 60))
+    outages = ecp.outage(time - (5 * 60 * 60), time - (2 * 60 * 60))
     expect(outages).not_to be_nil
     expect(outages).to be_an(Array)
     expect(outages.size).to eq(4)
@@ -61,7 +61,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
       with(time - (4 * 60 * 60)).and_return(nil)
 
     ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
-    outages = ecp.outages(nil, nil)
+    outages = ecp.outage(nil, nil)
     expect(outages).not_to be_nil
     expect(outages).to be_an(Array)
     expect(outages.size).to eq(4)
@@ -80,7 +80,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
       with(time - (4 * 60 * 60)).and_return(nil)
 
     ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
-    outages = ecp.outages(nil, nil)
+    outages = ecp.outage(nil, nil)
     expect(outages).not_to be_nil
     expect(outages).to be_an(Array)
     expect(outages.size).to eq(3)
@@ -93,7 +93,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
       with(time - (4 * 60 * 60)).and_return(nil)
 
     ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
-    outages = ecp.outages(nil, nil)
+    outages = ecp.outage(nil, nil)
     expect(outages).not_to be_nil
     expect(outages).to be_an(Array)
     expect(outages.size).to eq(1)
@@ -107,7 +107,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
       with(nil, time - (12 * 60 * 60), :scheduled => false).and_return([])
 
     ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
-    unsched_maint = ecp.unscheduled_maintenances(time - (12 * 60 * 60), time)
+    unsched_maint = ecp.unscheduled_maintenance(time - (12 * 60 * 60), time)
 
     expect(unsched_maint).to be_an(Array)
     expect(unsched_maint.size).to eq(4)
@@ -123,7 +123,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
       with(nil, time - (12 * 60 * 60), :scheduled => true).and_return([])
 
     ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
-    sched_maint = ecp.scheduled_maintenances(time - (12 * 60 * 60), time)
+    sched_maint = ecp.scheduled_maintenance(time - (12 * 60 * 60), time)
 
     expect(sched_maint).to be_an(Array)
     expect(sched_maint.size).to eq(4)

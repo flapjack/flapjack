@@ -10,11 +10,11 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
   let(:entity)          { double(Flapjack::Data::Entity) }
   let(:entity_check)    { double(Flapjack::Data::EntityCheck) }
 
+  let(:entity_id)       { '457' }
   let(:entity_name)     { 'www.example.net'}
   let(:entity_name_esc) { URI.escape(entity_name) }
   let(:check)           { 'ping' }
 
-  let(:entity_presenter)       { double(Flapjack::Gateways::JSONAPI::EntityPresenter) }
   let(:entity_check_presenter) { double(Flapjack::Gateways::JSONAPI::EntityCheckPresenter) }
 
   let(:redis)           { double(::Redis) }
@@ -46,158 +46,6 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
         expect(last_response.headers['Content-Type']).to eq(Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE)
       end
     end
-  end
-
-  it "creates an acknowledgement for an entity check" do
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
-    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
-      with(entity, check, :redis => redis).and_return(entity_check)
-
-    expect(entity_check).to receive(:entity_name).and_return(entity_name)
-    expect(entity_check).to receive(:check).and_return(check)
-
-    expect(Flapjack::Data::Event).to receive(:create_acknowledgement).
-      with(entity_name, check, :summary => nil, :duration => (4 * 60 * 60), :redis => redis)
-
-    apost '/acknowledgements', {:check => "#{entity_name}:#{check}"}.to_json, jsonapi_env
-    expect(last_response.status).to eq(201)
-    expect(last_response.headers['Location']).to match(/http:\/\/example.org\/reports\/unscheduled_maintenances\?start_time=.+&check\[\]=#{entity_name}:#{check}/)
-  end
-
-  it "deletes an unscheduled maintenance period for an entity check" do
-    end_time = Time.now + (60 * 60) # an hour from now
-    expect(entity_check).to receive(:end_unscheduled_maintenance).with(end_time.to_i)
-
-    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
-      with(entity, check, :redis => redis).and_return(entity_check)
-
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
-
-    adelete "/unscheduled_maintenances",
-      {:check => "#{entity_name}:#{check}", :end_time => end_time.iso8601}.to_json,
-      jsonapi_env
-    expect(last_response.status).to eq(204)
-  end
-
-  it "creates a scheduled maintenance period for an entity check" do
-    start = Time.now + (60 * 60) # an hour from now
-    duration = (2 * 60 * 60)     # two hours
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
-    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
-      with(entity, check, :redis => redis).and_return(entity_check)
-    expect(entity_check).to receive(:create_scheduled_maintenance).
-      with(start.getutc.to_i, duration, :summary => 'test')
-
-    apost "/scheduled_maintenances", {:check => "#{entity_name}:#{check}",
-      :start_time => start.iso8601, :summary => 'test', :duration => duration}.to_json,
-      jsonapi_env
-    expect(last_response.status).to eq(201)
-    expect(last_response.headers['Location']).to eq("http://example.org/reports/scheduled_maintenances?start_time=#{start.iso8601}&check[]=#{entity_name}:#{check}")
-  end
-
-  it "doesn't create a scheduled maintenance period if the start time isn't passed" do
-    duration = (2 * 60 * 60)     # two hours
-
-    apost "/scheduled_maintenances", {:check => "#{entity_name}:#{check}",
-      :summary => 'test', :duration => duration}.to_json, jsonapi_env
-    expect(last_response.status).to eq(403)
-  end
-
-  it "deletes a scheduled maintenance period for an entity check" do
-    start_time = Time.now + (60 * 60) # an hour from now
-    expect(entity_check).to receive(:end_scheduled_maintenance).with(start_time.to_i)
-
-    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
-      with(entity, check, :redis => redis).and_return(entity_check)
-
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
-
-    adelete "/scheduled_maintenances",
-      {:check => "#{entity_name}:#{check}", :start_time => start_time.iso8601}.to_json,
-      jsonapi_env
-    expect(last_response.status).to eq(204)
-  end
-
-  it "doesn't delete a scheduled maintenance period if the start time isn't passed" do
-    expect(entity_check).not_to receive(:end_scheduled_maintenance)
-
-    adelete "/scheduled_maintenances", {:check => "#{entity_name}:#{check}"}.to_json,
-      jsonapi_env
-    expect(last_response.status).to eq(403)
-  end
-
-  it "deletes scheduled maintenance periods for multiple entity checks" do
-    start_time = Time.now + (60 * 60) # an hour from now
-
-    entity_check_2 = double(Flapjack::Data::EntityCheck)
-
-    expect(entity_check).to receive(:end_scheduled_maintenance).with(start_time.to_i)
-    expect(entity_check_2).to receive(:end_scheduled_maintenance).with(start_time.to_i)
-
-    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
-      with(entity, check, :redis => redis).and_return(entity_check)
-    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
-      with(entity, 'foo', :redis => redis).and_return(entity_check_2)
-
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).twice.and_return(entity)
-
-    adelete "/scheduled_maintenances",
-      {:check => ["#{entity_name}:#{check}", "#{entity_name}:foo"],
-       :start_time => start_time.iso8601}.to_json, jsonapi_env
-    expect(last_response.status).to eq(204)
-  end
-
-  it "creates test notification events for all checks on an entity" do
-    expect(entity).to receive(:check_list).and_return([check, 'foo'])
-    expect(entity).to receive(:name).twice.and_return(entity_name)
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
-
-    expect(entity_check).to receive(:entity).and_return(entity)
-    expect(entity_check).to receive(:entity_name).and_return(entity_name)
-    expect(entity_check).to receive(:check).and_return(check)
-
-    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
-      with(entity, check, :redis => redis).and_return(entity_check)
-
-    entity_check_2 = double(Flapjack::Data::EntityCheck)
-    expect(entity_check_2).to receive(:entity).and_return(entity)
-    expect(entity_check_2).to receive(:entity_name).and_return(entity_name)
-    expect(entity_check_2).to receive(:check).and_return('foo')
-
-    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
-      with(entity, 'foo', :redis => redis).and_return(entity_check_2)
-
-    expect(Flapjack::Data::Event).to receive(:test_notifications).
-      with(entity_name, check, hash_including(:redis => redis))
-
-    expect(Flapjack::Data::Event).to receive(:test_notifications).
-      with(entity_name, 'foo', hash_including(:redis => redis))
-
-    apost '/test_notifications', {:entity => entity_name}.to_json, jsonapi_env
-    expect(last_response.status).to eq(201)
-  end
-
-  it "creates a test notification event for check on an entity" do
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
-    expect(entity).to receive(:name).and_return(entity_name)
-    expect(entity_check).to receive(:entity).and_return(entity)
-    expect(entity_check).to receive(:entity_name).and_return(entity_name)
-    expect(entity_check).to receive(:check).and_return(check)
-    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
-      with(entity, check, :redis => redis).and_return(entity_check)
-
-    expect(Flapjack::Data::Event).to receive(:test_notifications).
-      with(entity_name, check, hash_including(:redis => redis))
-
-    apost '/test_notifications', {:check => "#{entity_name}:#{check}"}.to_json, jsonapi_env
-    expect(last_response.status).to eq(201)
   end
 
   it "retrieves all entities" do
@@ -266,6 +114,151 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
 
     apost "/entities", entities.to_json, jsonapi_env
     expect(last_response.status).to eq(403)
+  end
+
+  it "creates acknowledgements for all checks on an entity" do
+    expect(entity).to receive(:check_list).and_return([check])
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with(entity_id, :redis => redis).and_return(entity)
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+
+    expect(entity_check).to receive(:entity_name).and_return(entity_name)
+    expect(entity_check).to receive(:check).and_return(check)
+
+    expect(Flapjack::Data::Event).to receive(:create_acknowledgement).
+      with(entity_name, check, :summary => nil, :duration => (4 * 60 * 60), :redis => redis)
+
+    apost "/entities/#{entity_id}/unscheduled_maintenances", {}, jsonapi_env
+    expect(last_response.status).to eq(201)
+    expect(last_response.headers['Location']).to match(/http:\/\/example.org\/entities\/#{entity_id}\/unscheduled_maintenance_report\?start_time=/)
+  end
+
+  it "deletes unscheduled maintenance periods for all checks on an entity" do
+    end_time = Time.now + (60 * 60) # an hour from now
+    expect(entity_check).to receive(:end_unscheduled_maintenance).with(end_time.to_i)
+
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+
+    expect(entity).to receive(:check_list).and_return([check])
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with(entity_id, :redis => redis).and_return(entity)
+
+    adelete "/entities/#{entity_id}/unscheduled_maintenances",
+      {:end_time => end_time.iso8601}.to_json,
+      jsonapi_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it "creates scheduled maintenance periods for all checks on an entity" do
+    start = Time.now + (60 * 60) # an hour from now
+    duration = (2 * 60 * 60)     # two hours
+
+    expect(entity).to receive(:check_list).and_return([check])
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with(entity_id, :redis => redis).and_return(entity)
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+    expect(entity_check).to receive(:create_scheduled_maintenance).
+      with(start.getutc.to_i, duration, :summary => 'test')
+
+    apost "/entities/#{entity_id}/scheduled_maintenances",
+      {:start_time => start.iso8601, :summary => 'test', :duration => duration}.to_json,
+      jsonapi_env
+    expect(last_response.status).to eq(201)
+    expect(last_response.headers['Location']).to eq("http://example.org/entities/#{entity_id}/scheduled_maintenance_report?start_time=#{start.iso8601}")
+  end
+
+  it "doesn't create scheduled maintenance periods if the start time isn't passed" do
+    duration = (2 * 60 * 60)     # two hours
+
+    apost "/entities/#{entity_id}/scheduled_maintenances",
+      {:summary => 'test', :duration => duration}.to_json, jsonapi_env
+    expect(last_response.status).to eq(403)
+  end
+
+  it "deletes scheduled maintenance periods for all checks on an entity" do
+    start_time = Time.now + (60 * 60) # an hour from now
+    expect(entity_check).to receive(:end_scheduled_maintenance).with(start_time.to_i)
+
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+
+    expect(entity).to receive(:check_list).and_return([check])
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with(entity_id, :redis => redis).and_return(entity)
+
+    adelete "/entities/#{entity_id}/scheduled_maintenances",
+      {:start_time => start_time.iso8601}.to_json,
+      jsonapi_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it "doesn't delete scheduled maintenance periods if the start time isn't passed" do
+    expect(entity_check).not_to receive(:end_scheduled_maintenance)
+
+    adelete "/entities/#{entity_id}/scheduled_maintenances", {}, jsonapi_env
+    expect(last_response.status).to eq(403)
+  end
+
+  it "deletes scheduled maintenance periods for all checks on a multiple entities" do
+    start_time = Time.now + (60 * 60) # an hour from now
+
+    check_2 = 'HOST'
+    entity_2 = double(Flapjack::Data::Entity)
+    entity_check_2 = double(Flapjack::Data::EntityCheck)
+
+    expect(entity_check).to receive(:end_scheduled_maintenance).with(start_time.to_i)
+    expect(entity_check_2).to receive(:end_scheduled_maintenance).with(start_time.to_i)
+
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
+      with(entity_2, check_2, :redis => redis).and_return(entity_check_2)
+
+    expect(entity).to receive(:check_list).and_return([check])
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with(entity_id, :redis => redis).and_return(entity)
+
+    expect(entity_2).to receive(:check_list).and_return([check_2])
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with('873', :redis => redis).and_return(entity_2)
+
+    adelete "/entities/#{entity_id},873/scheduled_maintenances",
+      {:start_time => start_time.iso8601}.to_json, jsonapi_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it "creates test notification events for all checks on an entity" do
+    expect(entity).to receive(:check_list).and_return([check, 'foo'])
+    expect(entity).to receive(:name).twice.and_return(entity_name)
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with(entity_id, :redis => redis).and_return(entity)
+
+    expect(entity_check).to receive(:entity).and_return(entity)
+    expect(entity_check).to receive(:entity_name).and_return(entity_name)
+    expect(entity_check).to receive(:check).and_return(check)
+
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+
+    entity_check_2 = double(Flapjack::Data::EntityCheck)
+    expect(entity_check_2).to receive(:entity).and_return(entity)
+    expect(entity_check_2).to receive(:entity_name).and_return(entity_name)
+    expect(entity_check_2).to receive(:check).and_return('foo')
+
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
+      with(entity, 'foo', :redis => redis).and_return(entity_check_2)
+
+    expect(Flapjack::Data::Event).to receive(:test_notifications).
+      with(entity_name, check, hash_including(:redis => redis))
+
+    expect(Flapjack::Data::Event).to receive(:test_notifications).
+      with(entity_name, 'foo', hash_including(:redis => redis))
+
+    apost "/entities/#{entity_id}/test_notifications", {}, jsonapi_env
+    expect(last_response.status).to eq(201)
   end
 
 end

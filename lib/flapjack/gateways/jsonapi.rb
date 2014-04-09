@@ -16,6 +16,7 @@ require 'flapjack/redis_pool'
 
 require 'flapjack/gateways/jsonapi/rack/json_params_parser'
 
+require 'flapjack/gateways/jsonapi/check_methods'
 require 'flapjack/gateways/jsonapi/contact_methods'
 require 'flapjack/gateways/jsonapi/entity_methods'
 require 'flapjack/gateways/jsonapi/report_methods'
@@ -253,10 +254,12 @@ module Flapjack
         end
 
         def is_jsonapi_request?
+          return false if request.content_type.nil?
           'application/vnd.api+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
         end
 
         def is_jsonpatch_request?
+          return false if request.content_type.nil?
           'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
         end
 
@@ -283,6 +286,12 @@ module Flapjack
           entity
         end
 
+        def find_entity_by_id(entity_id)
+          entity = Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis)
+          raise Flapjack::Gateways::JSONAPI::EntityNotFound.new(entity_id) if entity.nil?
+          entity
+        end
+
         def find_entity_check(entity, check_name)
           entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check_name, :redis => redis)
           raise Flapjack::Gateways::JSONAPI::EntityCheckNotFound.new(entity.name, check_name) if entity_check.nil?
@@ -293,17 +302,6 @@ module Flapjack
           entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity_name, check_name, :redis => redis)
           raise Flapjack::Gateways::JSONAPI::EntityCheckNotFound.new(entity_name, check_name) if entity_check.nil?
           entity_check
-        end
-
-        def parse_entity_and_check_names
-          entity_names = params[:entity]
-          entity_names = [entity_names] unless entity_names.nil? || entity_names.is_a?(Array)
-
-          entity_check_names = params[:check]
-          entity_check_names = [entity_check_names] unless entity_check_names.nil? || entity_check_names.is_a?(Array)
-
-          halt( err(404, "no entities or checks found") ) if entity_names.empty? && check_names.empty?
-          [entity_names, entity_check_names]
         end
 
         def apply_json_patch(object_path, &block)
@@ -388,9 +386,10 @@ module Flapjack
         pass
       end
 
+      register Flapjack::Gateways::JSONAPI::CheckMethods
+      register Flapjack::Gateways::JSONAPI::ContactMethods
       register Flapjack::Gateways::JSONAPI::EntityMethods
       register Flapjack::Gateways::JSONAPI::ReportMethods
-      register Flapjack::Gateways::JSONAPI::ContactMethods
 
       not_found do
         err(404, "not routable")
