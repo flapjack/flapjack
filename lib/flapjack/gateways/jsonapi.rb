@@ -355,7 +355,6 @@ module Flapjack
 
       # The following catch-all routes act as impromptu filters for their method types
       get '*' do
-        halt(405) unless params.empty? || is_jsonapi_request?
         content_type JSONAPI_MEDIA_TYPE
         cors_headers
         pass
@@ -369,6 +368,7 @@ module Flapjack
       end
 
       put '*' do
+        halt(405) unless is_jsonapi_request?
         content_type JSONAPI_MEDIA_TYPE
         cors_headers
         pass
