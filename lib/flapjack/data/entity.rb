@@ -78,7 +78,7 @@ module Flapjack
         self.new(:name => entity_name, :id => entity_id, :redis => redis)
       end
 
-      def self.find_by_ids(entity_ids, redis = {})
+      def self.find_by_ids(entity_ids, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         logger = options[:logger]
 

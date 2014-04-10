@@ -41,7 +41,7 @@ module Flapjack
 
           # Returns all (/entities) or some (/entities/A,B,C) or one (/entities/A) contact(s)
           # NB: only works with good data -- i.e. entity must have an id
-          app.get %r{/entities(?:/)?([^/]+)?$} do
+          app.get %r{^/entities(?:/)?([^/]+)?$} do
             requested_entities = if params[:captures] && params[:captures][0]
               params[:captures][0].split(',').uniq
             else
@@ -123,7 +123,7 @@ module Flapjack
           end
 
           # create a scheduled maintenance period for a check on an entity
-          app.post %r{/entities/([^/]+)/scheduled_maintenances} do
+          app.post %r{^/entities/([^/]+)/scheduled_maintenances$} do
             entity_ids = params[:captures][0].split(',')
 
             start_time = validate_and_parsetime(params[:start_time])
@@ -144,7 +144,7 @@ module Flapjack
           # create an acknowledgement for a service on an entity
           # NB currently, this does not acknowledge a specific failure event, just
           # the entity-check as a whole
-          app.post %r{/entities/([^/]+)/unscheduled_maintenances} do
+          app.post %r{^/entities/([^/]+)/unscheduled_maintenances$} do
             entity_ids = params[:captures][0].split(',')
 
             dur = params[:duration] ? params[:duration].to_i : nil
@@ -171,7 +171,7 @@ module Flapjack
             status 201
           end
 
-          app.delete %r{/entities/([^/]+)/((?:un)?scheduled_maintenances)} do
+          app.delete %r{^/entities/([^/]+)/((?:un)?scheduled_maintenances)$} do
             entity_ids = params[:captures][0].split(',')
             action = params[:captures][1]
 
@@ -189,7 +189,7 @@ module Flapjack
             status 204
           end
 
-          app.post %r{/entities/([^/]+)/test_notifications} do
+          app.post %r{^/entities/([^/]+)/test_notifications$} do
             entity_ids = params[:captures][0].split(',')
 
             bulk_jsonapi_entity_action(entity_ids) do |entity_check|

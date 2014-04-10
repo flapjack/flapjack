@@ -48,6 +48,49 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     end
   end
 
+  it "returns the status for all entities" do
+    status = double('status')
+    expect(status).to receive(:as_json).and_return({:status => 'data'})
+    expect(entity_check_presenter).to receive(:status).and_return(status)
+
+    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
+      with(entity_check).and_return(entity_check_presenter)
+
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
+      with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
+
+    expect(entity).to receive(:check_list).and_return(['SSH'])
+
+    expect(Flapjack::Data::Entity).to receive(:all).
+      with(:redis => redis).and_return([entity])
+
+    expect(entity).to receive(:name).exactly(3).times.and_return(entity_name)
+    expect(entity).to receive(:id).and_return(entity_id)
+
+    expect(entity_check).to receive(:name).twice.and_return('SSH')
+
+    result = {
+                :status_reports => [{
+                  'id'    => entity_id,
+                  'name'  =>  entity_name,
+                  'links' => {
+                    'checks' => ["#{entity_name}:SSH"],
+                  }
+                }],
+                :linked => {
+                  :checks => [{
+                    :id       => "#{entity_name}:SSH",
+                    :name     => 'SSH',
+                    :statuses => {'status' => 'data'}
+                  }]
+                }
+              }
+
+    aget "/status_report/entities", {}, jsonapi_env
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq(result.to_json)
+  end
+
   it "returns the status for all checks on an entity" do
     status = double('status')
     expect(status).to receive(:as_json).and_return({:status => 'data'})
@@ -86,7 +129,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/entities/#{entity_id}/status_report", {}, jsonapi_env
+    aget "/status_report/entities/#{entity_id}", {}, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -95,7 +138,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Entity).to receive(:find_by_id).
       with(entity_id, :redis => redis).and_return(nil)
 
-    aget "/entities/#{entity_id}/status_report", {}, jsonapi_env
+    aget "/status_report/entities/#{entity_id}", {}, jsonapi_env
     expect(last_response.status).to eq(404)
   end
 
@@ -110,11 +153,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
 
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
-
     expect(entity).to receive(:id).and_return(entity_id)
 
+    expect(entity).to receive(:name).and_return(entity_name)
+    expect(entity_check).to receive(:entity).and_return(entity)
     expect(entity_check).to receive(:name).twice.and_return('SSH')
 
     result = {
@@ -134,26 +176,24 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/checks/#{entity_name}:SSH/status_report", {}, jsonapi_env
+    aget "/status_report/checks/#{entity_name}:SSH", {}, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
 
   it "should not show the status for a check on an entity that's not found" do
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(nil)
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
+      with(entity_name, 'SSH', :redis => redis).and_return(nil)
 
-    aget "/checks/#{entity_name}:SSH/status_report", {}, jsonapi_env
+    aget "/status_report/checks/#{entity_name}:SSH", {}, jsonapi_env
     expect(last_response).to be_not_found
   end
 
   it "should not show the status for a check that's not found on an entity" do
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(nil)
 
-    aget "/checks/#{entity_name}:SSH/status_report", {}, jsonapi_env
+    aget "/status_report/checks/#{entity_name}:SSH", {}, jsonapi_env
     expect(last_response).to be_not_found
   end
 
@@ -195,7 +235,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/entities/#{entity_id}/scheduled_maintenance_report", {}, jsonapi_env
+    aget "/scheduled_maintenance_report/entities/#{entity_id}", {}, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -215,9 +255,12 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
 
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
+    expect(entity).to receive(:check_list).and_return(['SSH'])
 
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with(entity_id, :redis => redis).and_return(entity)
+
+    expect(entity).to receive(:name).exactly(3).times.and_return(entity_name)
     expect(entity).to receive(:id).and_return(entity_id)
 
     expect(entity_check).to receive(:name).twice.and_return('SSH')
@@ -239,7 +282,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/checks/#{entity_name}:SSH/scheduled_maintenance_report",
+    aget "/scheduled_maintenance_report/entities/#{entity_id}",
       {:start_time => start.iso8601, :end_time => finish.iso8601}, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
@@ -256,11 +299,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
 
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
-
     expect(entity).to receive(:id).and_return(entity_id)
 
+    expect(entity).to receive(:name).and_return(entity_name)
+    expect(entity_check).to receive(:entity).and_return(entity)
     expect(entity_check).to receive(:name).twice.and_return('SSH')
 
     result = {
@@ -280,7 +322,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/checks/#{entity_name}:SSH/scheduled_maintenance_report", {}, jsonapi_env
+    aget "/scheduled_maintenance_report/checks/#{entity_name}:SSH", {}, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -323,7 +365,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/entities/#{entity_id}/unscheduled_maintenance_report", {}, jsonapi_env
+    aget "/unscheduled_maintenance_report/entities/#{entity_id}", {}, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -339,11 +381,11 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
 
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
 
     expect(entity).to receive(:id).and_return(entity_id)
 
+    expect(entity).to receive(:name).and_return(entity_name)
+    expect(entity_check).to receive(:entity).and_return(entity)
     expect(entity_check).to receive(:name).twice.and_return('SSH')
 
     result = {
@@ -363,7 +405,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/checks/#{entity_name}:SSH/unscheduled_maintenance_report", {}, jsonapi_env
+    aget "/unscheduled_maintenance_report/checks/#{entity_name}:SSH", {}, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -383,11 +425,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
 
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
-
     expect(entity).to receive(:id).and_return(entity_id)
 
+    expect(entity).to receive(:name).and_return(entity_name)
+    expect(entity_check).to receive(:entity).and_return(entity)
     expect(entity_check).to receive(:name).twice.and_return('SSH')
 
     result = {
@@ -407,7 +448,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/checks/#{entity_name}:SSH/unscheduled_maintenance_report",
+    aget "/unscheduled_maintenance_report/checks/#{entity_name}:SSH",
       {:start_time => start.iso8601, :end_time => finish.iso8601}, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
@@ -424,11 +465,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
 
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
-
     expect(entity).to receive(:id).and_return(entity_id)
 
+    expect(entity).to receive(:name).and_return(entity_name)
+    expect(entity_check).to receive(:entity).and_return(entity)
     expect(entity_check).to receive(:name).twice.and_return('SSH')
 
     result = {
@@ -448,7 +488,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/checks/#{entity_name}:SSH/outage_report", {}, jsonapi_env
+    aget "/outage_report/checks/#{entity_name}:SSH", {}, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -492,7 +532,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/entities/#{entity_id}/downtime_report", {}, jsonapi_env
+    aget "/downtime_report/entities/#{entity_id}", {}, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -508,11 +548,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
 
-    expect(Flapjack::Data::Entity).to receive(:find_by_name).
-      with(entity_name, :redis => redis).and_return(entity)
-
     expect(entity).to receive(:id).and_return(entity_id)
 
+    expect(entity).to receive(:name).and_return(entity_name)
+    expect(entity_check).to receive(:entity).and_return(entity)
     expect(entity_check).to receive(:name).twice.and_return('SSH')
 
     result = {
@@ -532,7 +571,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/checks/#{entity_name}:SSH/downtime_report", {}, jsonapi_env
+    aget "/downtime_report/checks/#{entity_name}:SSH", {}, jsonapi_env
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end

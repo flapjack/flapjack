@@ -138,7 +138,7 @@ module Flapjack
       event_str << ", #{Time.at(event.time).to_s}" if event.time
       @logger.debug("Processing Event: #{event_str}")
 
-      entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
+      entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :create_entity => true, :redis => @redis)
       timestamp = Time.now.to_i
 
       event.tags = (event.tags || Flapjack::Data::TagSet.new) + entity_check.tags

@@ -27,31 +27,38 @@ module Flapjack
 
       attr_accessor :entity, :check
 
-      # TODO probably shouldn't always be creating on query -- work out when this should be happening
       def self.for_event_id(event_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
+        entity_name, check_name = event_id.split(':', 2)
+        create_entity = options[:create_entity]
         logger = options[:logger]
-        entity_name, check = event_id.split(':', 2)
-        self.new(Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis, :create => true, :logger => true), check,
-          :redis => redis, :logger => logger)
+        entity = Flapjack::Data::Entity.find_by_name(entity_name,
+          :create => create_entity, :logger => logger, :redis => redis)
+        self.new(entity, check_name, :logger => logger, :redis => redis)
       end
 
-      # TODO probably shouldn't always be creating on query -- work out when this should be happening
-      def self.for_entity_name(entity_name, check, options = {})
+      def self.for_entity_name(entity_name, check_name, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        self.new(Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis, :create => true), check,
-          :redis => redis)
+        create_entity = options[:create_entity]
+        logger = options[:logger]
+        entity = Flapjack::Data::Entity.find_by_name(entity_name,
+          :create => create_entity, :logger => logger, :redis => redis)
+        self.new(entity, check_name, :logger => logger, :redis => redis)
       end
 
       def self.for_entity_id(entity_id, check, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        self.new(Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis), check,
-          :redis => redis)
+        create_entity = options[:create_entity]
+        logger = options[:logger]
+        entity = Flapjack::Data::Entity.find_by_id(entity_id,
+          :create => create_entity, :logger => logger, :redis => redis)
+        self.new(entity, check, :redis => redis)
       end
 
       def self.for_entity(entity, check, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        self.new(entity, check, :redis => redis)
+        logger = options[:logger]
+        self.new(entity, check, :logger => logger, :redis => redis)
       end
 
       def self.find_all_for_entity_name(entity_name, options = {})

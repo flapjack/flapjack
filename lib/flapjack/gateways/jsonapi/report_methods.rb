@@ -17,29 +17,54 @@ module Flapjack
 
         module Helpers
 
-          def load_api_data(entity_ids, entity_check_names, result_type, &block)
+          def load_api_data(entity_ids, event_ids, action, &block)
+            result_type = case action
+            when 'status'
+              'statuses'
+            when 'outage'
+              'outages'
+            when 'scheduled_maintenance'
+              'scheduled_maintenances'
+            when 'unscheduled_maintenance'
+              'unscheduled_maintenances'
+            when 'downtime'
+              'downtimes'
+            end
+
+            entities = if entity_ids.nil?
+              Flapjack::Data::Entity.all(:redis => redis)
+            elsif !entity_ids.empty?
+              entity_ids.collect {|entity_id| find_entity_by_id(entity_id) }
+            else
+              nil
+            end
+
+            checks = if event_ids.nil?
+              Flapjack::Data::EntityCheck.all(:redis => redis)
+            elsif !event_ids.empty?
+              event_ids.collect {|event_id| find_entity_check_by_name(*event_id.split(':', 2)) }
+            else
+              nil
+            end
+
             entities_by_name             = {}
             entity_checks_by_entity_name = {}
 
-            unless entity_ids.nil? || entity_ids.empty?
-              entity_ids.each do |entity_id|
-                entity = find_entity_by_id(entity_id)
-                entities_by_name[entity.name] = entity
-                check_list_names = entity.check_list
-                entity_checks_by_entity_name[entity.name] = check_list_names.collect {|entity_check_name|
-                  find_entity_check_by_name(entity.name, entity_check_name)
-                }
-              end
+            (entities || []).each do |entity|
+              entities_by_name[entity.name] = entity
+              check_list_names = entity.check_list
+              entity_checks_by_entity_name[entity.name] = check_list_names.collect {|check_name|
+                find_entity_check_by_name(entity.name, check_name)
+              }
             end
 
-            unless entity_check_names.nil? || entity_check_names.empty?
-              entity_check_names.each do |entity_check_name|
-                entity_name, check_name = entity_check_name.split(':', 2)
-                entities_by_name[entity_name] ||= find_entity(entity_name)
+            (checks || []).each do |check|
+              check_entity = check.entity
+              check_entity_name = check_entity.name
+              entities_by_name[check_entity_name] ||= check_entity
 
-                entity_checks_by_entity_name[entity_name] ||= []
-                entity_checks_by_entity_name[entity_name] << find_entity_check_by_name(entity_name, check_name)
-              end
+              entity_checks_by_entity_name[check_entity_name] ||= []
+              entity_checks_by_entity_name[check_entity_name] << check
             end
 
             entity_data = entities_by_name.inject([]) do |memo, (entity_name, entity)|
@@ -76,39 +101,25 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::Helpers
           app.helpers Flapjack::Gateways::JSONAPI::ReportMethods::Helpers
 
-          app.get %r{/(entities|checks)/([^/]+)/(status|outage|(?:un)?scheduled_maintenance|downtime)_report} do
-            entities_or_checks = params[:captures][0]
-            action = params[:captures][2]
+          app.get %r{^/(status|outage|(?:un)?scheduled_maintenance|downtime)_report/(entities|checks)(?:/([^/]+))?$} do
+            entities_or_checks = params[:captures][1]
+            action = params[:captures][0]
 
             args = []
-
             unless 'status'.eql?(action)
               args += [validate_and_parsetime(params[:start_time]),
                        validate_and_parsetime(params[:end_time])]
             end
 
-            report_type = case action
-            when 'status'
-              'statuses'
-            when 'outage'
-              'outages'
-            when 'scheduled_maintenance'
-              'scheduled_maintenances'
-            when 'unscheduled_maintenance'
-              'unscheduled_maintenances'
-            when 'downtime'
-              'downtimes'
-            end
-
             entity_data, check_data = case entities_or_checks
             when 'entities'
-              entity_ids = params[:captures][1].split(',')
-              load_api_data(entity_ids, nil, report_type) {|presenter|
+              entity_ids = params[:captures][2].nil? ? nil : params[:captures][2].split(',')
+              load_api_data(entity_ids, [], action) {|presenter|
                 presenter.send(action, *args)
               }
             when 'checks'
-              entity_check_names = params[:captures][1].split(',')
-              load_api_data(nil, entity_check_names, report_type) {|presenter|
+              entity_check_names = params[:captures][2].nil? ? nil : params[:captures][2].split(',')
+              load_api_data([], entity_check_names, action) {|presenter|
                 presenter.send(action, *args)
               }
             end
