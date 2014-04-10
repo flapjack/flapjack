@@ -220,6 +220,9 @@
   <div class="col-md-6">
     <h3>Output: <%= h @check_summary %></h3>
     <p><%= h @check_details %></p>
+    <% if @check_perfdata %>
+    <p><strong>Performance Data:</strong> <%= @check_perfdata %></p>
+    <% end %>
     <table class="table table-hover table-condensed">
       <tr>
         <td>Last state change:</td>
@@ -435,5 +438,3 @@
     </div><!-- panel-danger -->
   </div><!-- col-md-8 col-md-offset-2 -->
 </div><!-- row -->
-
-

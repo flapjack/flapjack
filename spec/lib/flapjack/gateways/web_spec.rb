@@ -134,6 +134,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     expect(entity_check).to receive(:last_change).and_return(time.to_i - (3 * 60 * 60))
     expect(entity_check).to receive(:summary).and_return('all good')
     expect(entity_check).to receive(:details).and_return('seriously, all very wonderful')
+    expect(entity_check).to receive(:perfdata).and_return("'foo'=1;0;2")
     expect(entity_check).to receive(:last_notifications_of_each_type).and_return(last_notifications)
     expect(entity_check).to receive(:maintenances).with(nil, nil, :scheduled => true).and_return([])
     expect(entity_check).to receive(:failed?).and_return(false)
