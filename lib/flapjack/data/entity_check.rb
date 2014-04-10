@@ -360,6 +360,7 @@ module Flapjack
         timestamp = options[:timestamp] || Time.now.to_i
         summary = options[:summary]
         details = options[:details]
+        perfdata = options[:perfdata]
         count = options[:count]
 
         old_state = self.state
@@ -388,6 +389,7 @@ module Flapjack
           @redis.set("#{@key}:#{timestamp}:state", new_state)
           @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
           @redis.set("#{@key}:#{timestamp}:details", details) if details
+          @redis.set("#{@key}:#{timestamp}:perfdata", perfdata) if perfdata
           @redis.set("#{@key}:#{timestamp}:count", count) if count
 
           @redis.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
@@ -501,6 +503,10 @@ module Flapjack
 
       def details
         @redis.hget("check:#{@key}", 'details')
+      end
+
+      def perfdata
+        @redis.hget("check:#{@key}", 'perfdata')
       end
 
       # Returns a list of states for this entity check, sorted by timestamp.
