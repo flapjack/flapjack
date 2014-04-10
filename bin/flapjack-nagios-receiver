@@ -59,6 +59,7 @@ def process_input(opts)
         'state'     => state,
         'summary'   => check_output,
         'details'   => details,
+        'perfdata'  => check_perfdata,
         'time'      => timestamp,
       }
       Flapjack::Data::Event.add(event, :redis => redis)
@@ -243,5 +244,3 @@ else
   exit 1
 
 end
-
-
