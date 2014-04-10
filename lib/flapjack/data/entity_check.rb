@@ -389,7 +389,6 @@ module Flapjack
           @redis.set("#{@key}:#{timestamp}:state", new_state)
           @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
           @redis.set("#{@key}:#{timestamp}:details", details) if details
-          @redis.set("#{@key}:#{timestamp}:perfdata", perfdata) if perfdata
           @redis.set("#{@key}:#{timestamp}:count", count) if count
 
           @redis.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
@@ -402,6 +401,10 @@ module Flapjack
         # hash summary and details (as they may have changed)
         @redis.hset("check:#{@key}", 'summary', (summary || ''))
         @redis.hset("check:#{@key}", 'details', (details || ''))
+        if perfdata
+          @redis.hset("check:#{@key}", 'perfdata', perfdata)
+          @redis.set("#{@key}:#{timestamp}:perfdata", perfdata)
+        end
 
         @redis.exec
       end
