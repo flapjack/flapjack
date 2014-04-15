@@ -394,7 +394,7 @@ module Flapjack
                       )
                   end
                 end
-                msg = failing_list.inject("Ack list:\n") {|memo,kv|
+                msg = entities.inject("Ack list:\n") {|memo,kv|
                   kv[1].each {|e| memo << "#{kv[0]}:#{e}\n" }
                   memo
                 }
@@ -475,7 +475,7 @@ module Flapjack
                       )
                   end
                 end
-                msg = failing_list.inject("Ack list:\n") {|memo,kv|
+                msg = my_failing_checks.inject("Ack list:\n") {|memo,kv|
                   kv[1].each {|e| memo << "#{kv[0]}:#{e}\n" }
                   memo
                 }
