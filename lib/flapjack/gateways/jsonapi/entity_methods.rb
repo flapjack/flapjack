@@ -15,24 +15,17 @@ module Flapjack
 
         module Helpers
 
-          def bulk_entity_operations(entity_ids, &block)
-            entity_ids.each do |entity_id|
-              yield find_entity_by_id(entity_id)
-            end
-          end
-
-          def bulk_jsonapi_entity_action(entity_ids, params = {}, &block)
-            unless entity_ids.nil? || entity_ids.empty?
-              entity_ids.each do |entity_id|
-                entity = find_entity_by_id(entity_id)
-                check_names = entity.check_list.sort
-                check_names.each do |check_name|
-                  yield find_entity_check(entity, check_name)
-                end
+          def checks_for_entity_ids(entity_ids)
+            return if entity_ids.nil?
+            entity_ids.inject([]) do |memo, entity_id|
+              entity = find_entity_by_id(entity_id)
+              check_names = entity.check_list.sort
+              check_names.each do |check_name|
+                memo << find_entity_check(entity, check_name)
               end
+              memo
             end
           end
-
         end
 
         def self.registered(app)
@@ -49,7 +42,6 @@ module Flapjack
             end
 
             entities = if requested_entities
-              # TODO find by names
               Flapjack::Data::Entity.find_by_ids(requested_entities, :logger => logger, :redis => redis)
             else
               Flapjack::Data::Entity.all(:redis => redis)
@@ -96,24 +88,24 @@ module Flapjack
           end
 
           app.patch '/entities/:id' do
-            bulk_entity_operations(params[:id].split(',')) do |entities|
-              entities.each do |entity|
-                apply_json_patch('entities') do |op, property, linked, value|
-                  case op
-                  when 'replace'
-                    if ['name'].include?(property)
-                      entity.update(property => value)
-                    end
-                  when 'add'
-                    if 'contacts'.eql?(linked)
-                      contact = Flapjack::Data::Contact.find_by_id(value, :redis => redis)
-                      contact.add_entity(entity) unless contact.nil?
-                    end
-                  when 'remove'
-                    if 'contacts'.eql?(linked)
-                      contact = Flapjack::Data::Contact.find_by_id(value, :redis => redis)
-                      contact.remove_entity(entity) unless contact.nil?
-                    end
+            params[:id].split(',').collect {|entity_id|
+              find_entity_by_id(entity_id)
+            }.each do |entity|
+              apply_json_patch('entities') do |op, property, linked, value|
+                case op
+                when 'replace'
+                  if ['name'].include?(property)
+                    entity.update(property => value)
+                  end
+                when 'add'
+                  if 'contacts'.eql?(linked)
+                    contact = Flapjack::Data::Contact.find_by_id(value, :redis => redis)
+                    contact.add_entity(entity) unless contact.nil?
+                  end
+                when 'remove'
+                  if 'contacts'.eql?(linked)
+                    contact = Flapjack::Data::Contact.find_by_id(value, :redis => redis)
+                    contact.remove_entity(entity) unless contact.nil?
                   end
                 end
               end
@@ -123,20 +115,20 @@ module Flapjack
           end
 
           # create a scheduled maintenance period for a check on an entity
-          app.post %r{^/entities/([^/]+)/scheduled_maintenances$} do
+          app.post %r{^/scheduled_maintenances/entities/([^/]+)$} do
             entity_ids = params[:captures][0].split(',')
 
             start_time = validate_and_parsetime(params[:start_time])
             halt( err(403, "start time must be provided") ) unless start_time
 
-            bulk_jsonapi_entity_action(entity_ids) do |entity_check|
-              entity_check.create_scheduled_maintenance(start_time,
+            checks_for_entity_ids(entity_ids).each do |check|
+              check.create_scheduled_maintenance(start_time,
                 params[:duration].to_i, :summary => params[:summary])
             end
 
             response.headers['Location'] =
-              "#{request.base_url}/entities/" + entity_ids.join(',') +
-              "/scheduled_maintenance_report?start_time=#{params[:start_time]}"
+              "#{request.base_url}/scheduled_maintenance_report/entities/" + entity_ids.join(',') +
+              "?start_time=#{params[:start_time]}"
 
             status 201
           end
@@ -144,7 +136,7 @@ module Flapjack
           # create an acknowledgement for a service on an entity
           # NB currently, this does not acknowledge a specific failure event, just
           # the entity-check as a whole
-          app.post %r{^/entities/([^/]+)/unscheduled_maintenances$} do
+          app.post %r{^/unscheduled_maintenances/entities/([^/]+)$} do
             entity_ids = params[:captures][0].split(',')
 
             dur = params[:duration] ? params[:duration].to_i : nil
@@ -156,47 +148,52 @@ module Flapjack
 
             t = Time.now
 
-            bulk_jsonapi_entity_action(entity_ids) do |entity_check|
+            checks_for_entity_ids(entity_ids).each do |check|
               Flapjack::Data::Event.create_acknowledgement(
-                entity_check.entity_name, entity_check.check,
+                check.entity_name, check.check,
                 :summary => params[:summary],
                 :duration => duration,
                 :redis => redis)
             end
 
             response.headers['Location'] =
-              "#{request.base_url}/entities/" + entity_ids.join(',') +
-              "/unscheduled_maintenance_report?start_time=#{t.iso8601}"
+              "#{request.base_url}/unscheduled_maintenance_report/entities/" + entity_ids.join(',') +
+              "?start_time=#{t.iso8601}"
 
             status 201
           end
 
-          app.delete %r{^/entities/([^/]+)/((?:un)?scheduled_maintenances)$} do
-            entity_ids = params[:captures][0].split(',')
-            action = params[:captures][1]
-
-            act_proc = case action
-            when 'scheduled_maintenances'
-              start_time = validate_and_parsetime(params[:start_time])
-              halt( err(403, "start time must be provided") ) unless start_time
-              proc {|entity_check| entity_check.end_scheduled_maintenance(start_time.to_i) }
-            when 'unscheduled_maintenances'
-              end_time = validate_and_parsetime(params[:end_time]) || Time.now
-              proc {|entity_check| entity_check.end_unscheduled_maintenance(end_time.to_i) }
+          app.patch %r{^/unscheduled_maintenances/entities/([^/]+)$} do
+            checks_for_entity_ids( params[:captures][0].split(',') ).each do |check|
+              apply_json_patch('unscheduled_maintenances') do |op, property, linked, value|
+                case op
+                when 'replace'
+                  if ['end_time'].include?(property)
+                    end_time = validate_and_parsetime(value)
+                    check.end_unscheduled_maintenance(end_time.to_i)
+                  end
+                end
+              end
             end
-
-            bulk_jsonapi_entity_action(entity_ids, &act_proc)
             status 204
           end
 
-          app.post %r{^/entities/([^/]+)/test_notifications$} do
-            entity_ids = params[:captures][0].split(',')
+          app.delete %r{^/scheduled_maintenances/entities/([^/]+)$} do
+            start_time = validate_and_parsetime(params[:start_time])
+            halt( err(403, "start time must be provided") ) unless start_time
 
-            bulk_jsonapi_entity_action(entity_ids) do |entity_check|
+            checks_for_entity_ids(params[:captures][0].split(',')).each do |check|
+              check.end_scheduled_maintenance(start_time.to_i)
+            end
+            status 204
+          end
+
+          app.post %r{^/test_notifications/entities/([^/]+)$} do
+            checks_for_entity_ids(params[:captures][0].split(',')).each do |check|
               summary = params[:summary] ||
-                        "Testing notifications to all contacts interested in entity #{entity_check.entity.name}"
+                        "Testing notifications to all contacts interested in entity #{check.entity.name}"
               Flapjack::Data::Event.test_notifications(
-                entity_check.entity_name, entity_check.check,
+                check.entity_name, check.check,
                 :summary => summary,
                 :redis => redis)
             end

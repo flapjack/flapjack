@@ -328,7 +328,7 @@ module Flapjack
               end
             elsif 'replace'.eql?(op)
               property = $1
-              value = $3
+              value = operation['value']
             else
               next
             end
