@@ -268,6 +268,14 @@ module Flapjack
           :redis => @redis, :logger => opts[:logger])
       end
 
+      # move an existing notification rule from another contact to this one
+      def grab_notification_rule(rule)
+        @redis.srem("contact_notification_rules:#{rule.contact.id}", rule.id)
+        rule.contact_id = self.id
+        rule.update({})
+        @redis.sadd("contact_notification_rules:#{self.id}", rule.id)
+      end
+
       def delete_notification_rule(rule)
         @redis.srem("contact_notification_rules:#{self.id}", rule.id)
         @redis.del("notification_rule:#{rule.id}")

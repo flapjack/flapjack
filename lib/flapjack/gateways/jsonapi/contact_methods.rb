@@ -22,7 +22,7 @@ module Flapjack
             semaphore = nil
             strikes = 0
             begin
-              semaphore = Flapjack::Data::Semaphore.new(resource, {:redis => redis, :expiry => 30})
+              semaphore = Flapjack::Data::Semaphore.new(resource, :redis => redis, :expiry => 30)
             rescue Flapjack::Data::Semaphore::ResourceLocked
               strikes += 1
               raise Flapjack::Gateways::JSONAPI::ResourceLocked.new(resource) unless strikes < 3
@@ -139,9 +139,6 @@ module Flapjack
             '{"contacts":[' + contacts_json + ']}'
           end
 
-          # TODO this should build up all data, verify entities exist, etc.
-          # before applying any changes
-          # TODO generalise JSON-Patch data parsing code
           app.patch '/contacts/:id' do
             bulk_contact_operation(params[:id].split(',')) do |contacts|
               contacts.each do |contact|
@@ -152,16 +149,28 @@ module Flapjack
                       contact.update(property => value)
                     end
                   when 'add'
-                    logger.debug "patch add operation. linked: #{linked}"
-                    if 'entities'.eql?(linked)
+                    case linked
+                    when 'entities'
                       entity = Flapjack::Data::Entity.find_by_id(value, :redis => redis)
-                      logger.debug "adding this entity: #{entity}"
                       contact.add_entity(entity) unless entity.nil?
+                    when 'notification_rules'
+                      notification_rule = Flapjack::Data::NotificationRule.find_by_id(value, :redis => redis)
+                      unless notification_rule.nil?
+                        contact.grab_notification_rule(notification_rule)
+                      end
+                    # when 'media' # not supported yet due to id brokenness
                     end
                   when 'remove'
-                    if 'entities'.eql?(linked)
+                    case linked
+                    when 'entities'
                       entity = Flapjack::Data::Entity.find_by_id(value, :redis => redis)
                       contact.remove_entity(entity) unless entity.nil?
+                    when 'notification_rules'
+                      notification_rule = Flapjack::Data::NotificationRule.find_by_id(value, :redis => redis)
+                      unless notification_rule.nil?
+                        contact.delete_notification_rule(notification_rule)
+                      end
+                    # when 'media' # not supported yet due to id brokenness
                     end
                   end
                 end
