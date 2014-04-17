@@ -15,7 +15,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
   let(:entity_name_esc)   { URI.escape(entity_name) }
   let(:entity_check_name) { 'ping' }
 
-  let(:entity_check_presenter) { double(Flapjack::Gateways::JSONAPI::EntityCheckPresenter) }
+  let(:check_presenter) { double(Flapjack::Gateways::JSONAPI::CheckPresenter) }
 
   let(:redis)           { double(::Redis) }
 
@@ -51,10 +51,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
   it "returns the status for all entities" do
     status = double('status')
     expect(status).to receive(:as_json).and_return({:status => 'data'})
-    expect(entity_check_presenter).to receive(:status).and_return(status)
+    expect(check_presenter).to receive(:status).and_return(status)
 
-    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
-      with(entity_check).and_return(entity_check_presenter)
+    expect(Flapjack::Gateways::JSONAPI::CheckPresenter).to receive(:new).
+      with(entity_check).and_return(check_presenter)
 
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
@@ -94,10 +94,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
   it "returns the status for all checks on an entity" do
     status = double('status')
     expect(status).to receive(:as_json).and_return({:status => 'data'})
-    expect(entity_check_presenter).to receive(:status).and_return(status)
+    expect(check_presenter).to receive(:status).and_return(status)
 
-    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
-      with(entity_check).and_return(entity_check_presenter)
+    expect(Flapjack::Gateways::JSONAPI::CheckPresenter).to receive(:new).
+      with(entity_check).and_return(check_presenter)
 
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
@@ -145,10 +145,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
   it "returns the status for an entity check" do
     status = double('status')
     expect(status).to receive(:as_json).and_return({:status => 'data'})
-    expect(entity_check_presenter).to receive(:status).and_return(status)
+    expect(check_presenter).to receive(:status).and_return(status)
 
-    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
-      with(entity_check).and_return(entity_check_presenter)
+    expect(Flapjack::Gateways::JSONAPI::CheckPresenter).to receive(:new).
+      with(entity_check).and_return(check_presenter)
 
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
@@ -200,10 +200,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
   it "returns a list of scheduled maintenance periods for an entity" do
     sched_maint = double('scheduled_maintenances')
     expect(sched_maint).to receive(:as_json).and_return({:scheduled_maintenances => 'data'})
-    expect(entity_check_presenter).to receive(:scheduled_maintenance).and_return(sched_maint)
+    expect(check_presenter).to receive(:scheduled_maintenance).and_return(sched_maint)
 
-    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
-      with(entity_check).and_return(entity_check_presenter)
+    expect(Flapjack::Gateways::JSONAPI::CheckPresenter).to receive(:new).
+      with(entity_check).and_return(check_presenter)
 
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
@@ -246,11 +246,11 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
 
     sched_maint = double('scheduled_maintenances')
     expect(sched_maint).to receive(:as_json).and_return({:scheduled_maintenances => 'data'})
-    expect(entity_check_presenter).to receive(:scheduled_maintenance).
+    expect(check_presenter).to receive(:scheduled_maintenance).
       with(start.to_i, finish.to_i).and_return(sched_maint)
 
-    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
-      with(entity_check).and_return(entity_check_presenter)
+    expect(Flapjack::Gateways::JSONAPI::CheckPresenter).to receive(:new).
+      with(entity_check).and_return(check_presenter)
 
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
@@ -291,10 +291,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
   it "returns a list of scheduled maintenance periods for a check on an entity" do
     sched_maint = double('scheduled_maintenances')
     expect(sched_maint).to receive(:as_json).and_return({:scheduled_maintenances => 'data'})
-    expect(entity_check_presenter).to receive(:scheduled_maintenance).and_return(sched_maint)
+    expect(check_presenter).to receive(:scheduled_maintenance).and_return(sched_maint)
 
-    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
-      with(entity_check).and_return(entity_check_presenter)
+    expect(Flapjack::Gateways::JSONAPI::CheckPresenter).to receive(:new).
+      with(entity_check).and_return(check_presenter)
 
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
@@ -330,10 +330,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
   it "returns a list of unscheduled maintenance periods for an entity" do
     unsched_maint = double('unscheduled_maintenances')
     expect(unsched_maint).to receive(:as_json).and_return({:unscheduled_maintenances => 'data'})
-    expect(entity_check_presenter).to receive(:unscheduled_maintenance).and_return(unsched_maint)
+    expect(check_presenter).to receive(:unscheduled_maintenance).and_return(unsched_maint)
 
-    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
-      with(entity_check).and_return(entity_check_presenter)
+    expect(Flapjack::Gateways::JSONAPI::CheckPresenter).to receive(:new).
+      with(entity_check).and_return(check_presenter)
 
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
@@ -373,10 +373,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
   it "returns a list of unscheduled maintenance periods for a check on an entity" do
     unsched_maint = double('unscheduled_maintenances')
     expect(unsched_maint).to receive(:as_json).and_return({:unscheduled_maintenances => 'data'})
-    expect(entity_check_presenter).to receive(:unscheduled_maintenance).and_return(unsched_maint)
+    expect(check_presenter).to receive(:unscheduled_maintenance).and_return(unsched_maint)
 
-    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
-      with(entity_check).and_return(entity_check_presenter)
+    expect(Flapjack::Gateways::JSONAPI::CheckPresenter).to receive(:new).
+      with(entity_check).and_return(check_presenter)
 
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
@@ -416,11 +416,11 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
 
     unsched_maint = double('scheduled_maintenances')
     expect(unsched_maint).to receive(:as_json).and_return({:unscheduled_maintenances => 'data'})
-    expect(entity_check_presenter).to receive(:unscheduled_maintenance).
+    expect(check_presenter).to receive(:unscheduled_maintenance).
       with(start.to_i, finish.to_i).and_return(unsched_maint)
 
-    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
-      with(entity_check).and_return(entity_check_presenter)
+    expect(Flapjack::Gateways::JSONAPI::CheckPresenter).to receive(:new).
+      with(entity_check).and_return(check_presenter)
 
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
@@ -457,10 +457,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
   it "returns a list of outages for a check on an entity" do
     outages = double('outages')
     expect(outages).to receive(:as_json).and_return({:outages => 'data'})
-    expect(entity_check_presenter).to receive(:outage).and_return(outages)
+    expect(check_presenter).to receive(:outage).and_return(outages)
 
-    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
-      with(entity_check).and_return(entity_check_presenter)
+    expect(Flapjack::Gateways::JSONAPI::CheckPresenter).to receive(:new).
+      with(entity_check).and_return(check_presenter)
 
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
@@ -496,10 +496,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
   it "returns a list of downtimes for an entity" do
     downtime = double('downtime')
     expect(downtime).to receive(:as_json).and_return({:downtime => 'data'})
-    expect(entity_check_presenter).to receive(:downtime).and_return(downtime)
+    expect(check_presenter).to receive(:downtime).and_return(downtime)
 
-    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
-      with(entity_check).and_return(entity_check_presenter)
+    expect(Flapjack::Gateways::JSONAPI::CheckPresenter).to receive(:new).
+      with(entity_check).and_return(check_presenter)
 
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)
@@ -540,10 +540,10 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
   it "returns a list of downtimes for a check on an entity" do
     downtime = double('downtime')
     expect(downtime).to receive(:as_json).and_return({:downtime => 'data'})
-    expect(entity_check_presenter).to receive(:downtime).and_return(downtime)
+    expect(check_presenter).to receive(:downtime).and_return(downtime)
 
-    expect(Flapjack::Gateways::JSONAPI::EntityCheckPresenter).to receive(:new).
-      with(entity_check).and_return(entity_check_presenter)
+    expect(Flapjack::Gateways::JSONAPI::CheckPresenter).to receive(:new).
+      with(entity_check).and_return(check_presenter)
 
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(entity_check)

@@ -12,7 +12,7 @@ module Flapjack
 
     class JSONAPI < Sinatra::Base
 
-      class EntityCheckPresenter
+      class CheckPresenter
 
         def initialize(entity_check)
           @entity_check = entity_check

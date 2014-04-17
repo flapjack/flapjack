@@ -154,6 +154,11 @@ module Flapjack
                      *['subdomain', 'username', 'password'].collect {|f| [f, details[f]]})
       end
 
+      def delete_pagerduty_credentials
+        @redis.hdel("contact_media:#{self.id}", 'pagerduty')
+        @redis.del("contact_pagerduty:#{self.id}")
+      end
+
       # returns false if this contact was already in the set for the entity
       def add_entity(entity)
         key = "contacts_for:#{entity.id}"
@@ -444,7 +449,7 @@ module Flapjack
       # return a list of media enabled for this contact
       # eg [ 'email', 'sms' ]
       def media_list
-        @redis.hkeys("contact_media:#{self.id}")
+        @redis.hkeys("contact_media:#{self.id}") - 'pagerduty'
       end
 
       def media_ids

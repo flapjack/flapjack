@@ -5,7 +5,7 @@ require 'sinatra/base'
 require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
 
-require 'flapjack/gateways/jsonapi/entity_check_presenter'
+require 'flapjack/gateways/jsonapi/check_presenter'
 
 module Flapjack
 
@@ -86,7 +86,7 @@ module Flapjack
                 {
                   'id'        => "#{entity_name}:#{entity_check_name}",
                   'name'      => entity_check_name,
-                  result_type => yield(Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check))
+                  result_type => yield(Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check))
                 }
               end
               memo

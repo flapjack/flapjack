@@ -15,7 +15,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
   let(:entity_name_esc) { URI.escape(entity_name) }
   let(:check)           { 'ping' }
 
-  let(:entity_check_presenter) { double(Flapjack::Gateways::JSONAPI::EntityCheckPresenter) }
+  let(:check_presenter) { double(Flapjack::Gateways::JSONAPI::CheckPresenter) }
 
   let(:redis)           { double(::Redis) }
 
