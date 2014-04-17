@@ -81,6 +81,14 @@ module Flapjack
         }.to_json
       end
 
+      def to_jsonapi(opts = {})
+        self.class.hashify(:id, :tags, :regex_tags, :entities, :regex_entities,
+            :time_restrictions, :unknown_media, :warning_media, :critical_media,
+            :unknown_blackhole, :warning_blackhole, :critical_blackhole) {|k|
+          [k, self.send(k)]
+        }..merge(:links => {:contacts => [self.contact_id]}).to_json
+      end
+
       # entity names match?
       def match_entity?(event_id)
         return false unless @entities

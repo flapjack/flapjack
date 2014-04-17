@@ -52,19 +52,13 @@ module Flapjack
               raise Flapjack::Gateways::JSONAPI::EntitiesNotFound.new(requested_entities)
             end
 
-            linked_contact_data, linked_contact_ids = if entities.empty?
-              [[], []]
-            else
-              Flapjack::Data::Entity.contacts_jsonapi(entities.map(&:id), :redis => redis)
-            end
+            linked_contact_ids = Flapjack::Data::Entity.contact_ids_for(entities.map(&:id), :redis => redis)
 
             entities_json = entities.collect {|entity|
-              entity.linked_contact_ids = linked_contact_ids[entity.id]
-              entity.to_jsonapi
+              entity.to_jsonapi(:contact_ids => linked_contact_ids[entity.id])
             }.join(", ")
 
-            '{"entities":[' + entities_json + ']' +
-                ',"linked":{"contacts":' + linked_contact_data.to_json + '}}'
+            '{"entities":[' + entities_json + ']}'
           end
 
           app.post '/entities' do

@@ -88,34 +88,27 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   end
 
   it "returns all the contacts" do
-    expect(Flapjack::Data::Contact).to receive(:entities_jsonapi).
-      with([contact.id], :redis => redis).and_return([[], {}])
-    expect(contact).to receive(:media).and_return({})
-    expect(contact).to receive(:linked_entity_ids=).with(nil)
-    expect(contact).to receive(:linked_media_ids=).with(nil)
+    expect(Flapjack::Data::Contact).to receive(:entity_ids_for).
+      with([contact.id], :redis => redis).and_return({})
     expect(contact).to receive(:to_jsonapi).and_return(contact_core.to_json)
     expect(Flapjack::Data::Contact).to receive(:all).with(:redis => redis).
       and_return([contact])
 
     aget '/contacts', {}.to_json, jsonapi_env
     expect(last_response).to be_ok
-    expect(last_response.body).to eq({:contacts => [contact_core], :linked => {'entities' => [], 'media' => []}}.to_json)
+    expect(last_response.body).to eq({:contacts => [contact_core]}.to_json)
   end
 
   it "returns the core information of a specified contact" do
-    #expect(contact).to receive(:entities).and_return([])
-    expect(Flapjack::Data::Contact).to receive(:entities_jsonapi).
-      with([contact.id], :redis => redis).and_return([[], {}])
-    expect(contact).to receive(:media).and_return({})
-    expect(contact).to receive(:linked_entity_ids=).with(nil)
-    expect(contact).to receive(:linked_media_ids=).with(nil)
+    expect(Flapjack::Data::Contact).to receive(:entity_ids_for).
+      with([contact.id], :redis => redis).and_return({})
     expect(contact).to receive(:to_jsonapi).and_return(contact_core.to_json)
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
     aget "/contacts/#{contact.id}", {}.to_json, jsonapi_env
     expect(last_response).to be_ok
-    expect(last_response.body).to eq({:contacts => [contact_core], :linked => {'entities' => [], 'media' => []}}.to_json)
+    expect(last_response.body).to eq({:contacts => [contact_core]}.to_json)
   end
 
   it "does not return information for a contact that does not exist" do
@@ -171,7 +164,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   end
 
   it "returns a specified notification rule" do
-    expect(notification_rule).to receive(:to_json).and_return('"rule_1"')
+    expect(notification_rule).to receive(:to_jsonapi).and_return('"rule_1"')
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
 

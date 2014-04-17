@@ -54,21 +54,19 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
   end
 
   it "retrieves all entities" do
-    entity_core = {'id'         => '1234',
-                   'name' => 'www.example.com'
-                  }
+    entity_core = {'id'   => '1234',
+                   'name' => 'www.example.com'}
     expect(entity).to receive(:id).twice.and_return('1234')
 
-    expect(Flapjack::Data::Entity).to receive(:contacts_jsonapi).
-      with(['1234'], :redis => redis).and_return([[], {}])
-    expect(entity).to receive(:linked_contact_ids=).with(nil)
+    expect(Flapjack::Data::Entity).to receive(:contact_ids_for).
+      with(['1234'], :redis => redis).and_return({})
     expect(entity).to receive(:to_jsonapi).and_return(entity_core.to_json)
     expect(Flapjack::Data::Entity).to receive(:all).with(:redis => redis).
       and_return([entity])
 
     aget '/entities', {}.to_json, jsonapi_env
     expect(last_response).to be_ok
-    expect(last_response.body).to eq({:entities => [entity_core], :linked => {'contacts' => []}}.to_json)
+    expect(last_response.body).to eq({:entities => [entity_core]}.to_json)
   end
 
   it "retrieves one entity"

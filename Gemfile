@@ -11,7 +11,7 @@ group :test do
   gem 'cucumber'
   gem 'delorean'
   gem 'rack-test'
-  gem 'async_rack_test', :github => 'flpjck/async_rack_test', :branch => 'patch_method'
+  gem 'async_rack_test', '>= 0.0.5'
   gem 'resque_spec'
   gem 'webmock'
   gem 'guard'

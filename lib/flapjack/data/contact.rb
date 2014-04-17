@@ -19,8 +19,7 @@ module Flapjack
     class Contact
 
       attr_accessor :id, :first_name, :last_name, :email, :media,
-        :media_intervals, :media_rollup_thresholds, :pagerduty_credentials,
-        :linked_entity_ids, :linked_media_ids
+        :media_intervals, :media_rollup_thresholds, :pagerduty_credentials
 
       TAG_PREFIX = 'contact_tag'
       ALL_MEDIA  = ['email', 'sms', 'jabber', 'pagerduty']
@@ -201,11 +200,10 @@ module Flapjack
         }.values
       end
 
-      def self.entities_jsonapi(contact_ids, options = {})
+      def self.entity_ids_for(contact_ids, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        entity_data       = {}
-        linked_entity_ids = {}
+        entity_ids = {}
 
         temp_set = SecureRandom.uuid
         redis.sadd(temp_set, contact_ids)
@@ -216,28 +214,30 @@ module Flapjack
           next unless k =~ /^contacts_for:([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?::(\w+))?$/
 
           entity_id = $1
-          check     = $2
-
-          entity_data[entity_id] ||= {:id => entity_id, :name => redis.hget("entity:#{entity_id}", 'name')}
+          # check     = $2
 
           contact_ids.each do |contact_id|
-            linked_entity_ids[contact_id] ||= []
-            linked_entity_ids[contact_id] << entity_id
+            entity_ids[contact_id] ||= []
+            entity_ids[contact_id] << entity_id
           end
         end
 
         redis.del(temp_set)
 
-        [entity_data.values, linked_entity_ids]
+        entity_ids
       end
 
       def name
         [(self.first_name || ''), (self.last_name || '')].join(" ").strip
       end
 
+      def notification_rule_ids
+        @redis.smembers("contact_notification_rules:#{self.id}")
+      end
+
       # return an array of the notification rules of this contact
       def notification_rules(opts = {})
-        rules = @redis.smembers("contact_notification_rules:#{self.id}").inject([]) do |ret, rule_id|
+        rules = self.notification_rule_ids.inject([]) do |ret, rule_id|
           unless (rule_id.nil? || rule_id == '')
             ret << Flapjack::Data::NotificationRule.find_by_id(rule_id, :redis => @redis)
           end
@@ -439,6 +439,10 @@ module Flapjack
         @redis.hkeys("contact_media:#{self.id}")
       end
 
+      def media_ids
+        self.media_list.collect {|medium| "#{self.id}_#{medium}" }
+      end
+
       # return the timezone of the contact, or the system default if none is set
       # TODO cache?
       def timezone(opts = {})
@@ -484,16 +488,17 @@ module Flapjack
         }.to_json
       end
 
-      def to_jsonapi(*args)
-        { "id"                      => self.id,
-          "first_name"              => self.first_name,
-          "last_name"               => self.last_name,
-          "email"                   => self.email,
-          "timezone"                => self.timezone.name,
-          "tags"                    => self.tags.to_a,
-          "links"                   => {
-            :entities => @linked_entity_ids || [],
-            :media    => @linked_media_ids  || []
+      def to_jsonapi(opts = {})
+        { "id"                    => self.id,
+          "first_name"            => self.first_name,
+          "last_name"             => self.last_name,
+          "email"                 => self.email,
+          "timezone"              => self.timezone.name,
+          "tags"                  => self.tags.to_a,
+          "links"                 => {
+            :entities               => opts[:entity_ids]          || [],
+            :media                  => self.media_ids             || [],
+            :notification_rules     => self.notification_rule_ids || [],
           }
         }.to_json
       end

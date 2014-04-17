@@ -130,41 +130,13 @@ module Flapjack
               raise Flapjack::Gateways::JSONAPI::ContactsNotFound.new(requested_contacts)
             end
 
-            linked_entity_data, linked_entity_ids = if contacts.empty?
-              [[], []]
-            else
-              Flapjack::Data::Contact.entities_jsonapi(contacts.map(&:id), :redis => redis)
-            end
-
-            linked_media_data = []
-            linked_media_ids  = {}
-            contacts.each do |contact|
-              linked_media_ids[contact.id] = []
-              contact.media.keys.each do |medium|
-                id = "#{contact.id}_#{medium}"
-                interval = contact.media_intervals[medium].nil? ? nil : contact.media_intervals[medium].to_i
-                rollup_threshold = contact.media_rollup_thresholds[medium].nil? ? nil : contact.media_rollup_thresholds[medium].to_i
-                linked_media_ids[contact.id] << id
-                linked_media_data <<
-                  { "id" => id,
-                    "type" => medium,
-                    "address" => contact.media[medium],
-                    "interval" => interval,
-                    "rollup_threshold" => rollup_threshold,
-                    "contact_id" => contact.id }
-              end
-              linked_media_ids[contact.id] = nil if linked_media_ids[contact.id].empty?
-            end
+            entity_ids = Flapjack::Data::Contact.entity_ids_for(contacts.map(&:id), :redis => redis)
 
             contacts_json = contacts.collect {|contact|
-              contact.linked_entity_ids = linked_entity_ids[contact.id]
-              contact.linked_media_ids  = linked_media_ids[contact.id]
-              contact.to_jsonapi
+              contact.to_jsonapi(:entity_ids => entity_ids[contact.id])
             }.join(", ")
 
-            '{"contacts":[' + contacts_json + ']' +
-                ',"linked":{"entities":' + linked_entity_data.to_json +
-                          ',"media":' + linked_media_data.to_json + '}}'
+            '{"contacts":[' + contacts_json + ']}'
           end
 
           # TODO this should build up all data, verify entities exist, etc.
@@ -245,14 +217,18 @@ module Flapjack
           app.get '/media/:media_id' do
             contact_media = split_media_ids(params[:media_id])
 
-            contact_media.inject() do |memo, (contact, media_type)|
-              memo["#{contact.id}_#{media_type}"] = if 'pagerduty'.eql?(media_type)
+            media_data = contact_media.inject([]) do |memo, (contact, media_type)|
+              medium_id = "#{contact.id}_#{media_type}"
+              data = if 'pagerduty'.eql?(media_type)
                 contact.pagerduty_credentials
-               else
-                {'address'          => contact.media[media_type],
-                 'interval'         => contact.media_intervals[media_type],
-                 'rollup_threshold' => contact.media_rollup_thresholds[media_type]}
-               end
+              else
+                {:address          => contact.media[media_type],
+                 :interval         => contact.media_intervals[media_type],
+                 :rollup_threshold => contact.media_rollup_thresholds[media_type] }
+              end
+
+              memo[medium_id] = data.merge(:id => medium_id, :type => media_type,
+                :links => {:contacts => [contact.id]})
 
               memo
             end
@@ -296,7 +272,7 @@ module Flapjack
           # get one or more notification rules
           app.get '/notification_rules/:id' do
             rules_json = params[:id].split(',').collect {|rule_id|
-              find_rule(rule_id).to_json
+              find_rule(rule_id).to_jsonapi
             }.join(', ')
 
             '{"notification_rules":[' + rules_json + ']}'
