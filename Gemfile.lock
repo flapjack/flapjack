@@ -14,7 +14,7 @@ PATH
       hiredis
       ice_cube
       mail
-      oj
+      oj (>= 2.8.2)
       rack-fiber_pool
       redis (~> 3.0.6)
       resque (~> 1.23.0)
@@ -22,7 +22,6 @@ PATH
       thin (~> 1.6.1)
       tzinfo (~> 1.0.1)
       tzinfo-data
-      yajl-ruby (~> 1.2)
 
 GEM
   remote: https://rubygems.org/
@@ -123,7 +122,7 @@ GEM
     nokogiri (1.6.1)
       mini_portile (~> 0.5.0)
     numerizer (0.1.1)
-    oj (2.6.0)
+    oj (2.8.2)
     perftools.rb (2.0.1)
     polyglot (0.3.4)
     pry (0.9.12.4)
@@ -199,7 +198,6 @@ GEM
     webmock (1.16.1)
       addressable (>= 2.2.7)
       crack (>= 0.3.2)
-    yajl-ruby (1.2.0)
 
 PLATFORMS
   ruby

@@ -101,4 +101,4 @@ test:
     When I run `cat tmp/cucumber_cli/invalid-json.json | bin/flapjack-feed-events -c tmp/cucumber_cli/flapjack-feed-events.yaml`
     Then the exit status should be 1
     And  the output should not contain "Enqueued event data, "
-    And  the output should contain "(Yajl::ParseError)"
+    And  the output should contain "(Oj::ParseError)"

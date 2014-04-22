@@ -6,7 +6,7 @@ end
 require 'optparse'
 require 'ostruct'
 require 'redis'
-require 'yajl' # JSON parsing from streams
+require 'oj'
 
 require 'flapjack/configuration'
 require 'flapjack/data/event'
@@ -69,8 +69,47 @@ input = if options.from
 # This handles both the case of a process sending a single JSON and then exiting
 # (eg. cat foo.json | bin/flapjack-feed-event) *and* a longer-running process spitting
 # out events (eg. /usr/bin/slow-event-feed | bin/flapjack-feed-event)
-parser = Yajl::Parser.new
-parser.on_parse_complete = proc do |parsed|
+
+class EventFeedHandler < Oj::ScHandler
+
+  def initialize(&block)
+    @hash_depth = 0
+    @callback = block if block_given?
+  end
+
+  def hash_start
+    @hash_depth += 1
+    Hash.new
+  end
+
+  def hash_end
+    @hash_depth -= 1
+  end
+
+  def array_start
+    Array.new
+  end
+
+  def array_end
+  end
+
+  def add_value(value)
+    @callback.call(value) if @callback
+    nil
+  end
+
+  def hash_set(hash, key, value)
+    hash[key] = value
+  end
+
+  def array_append(array, value)
+    array << value
+  end
+
+end
+
+parser = EventFeedHandler.new do |parsed|
+  # Handle "parsed" (a hash)
   errors = Flapjack::Data::Event.validation_errors_for_hash(parsed)
   if errors.empty?
     Flapjack::Data::Event.add(parsed, :redis => redis)
@@ -79,7 +118,7 @@ parser.on_parse_complete = proc do |parsed|
     puts "Invalid event data received, #{errors.join(', ')} #{parsed.inspect}"
   end
 end
-input.each_line do |line|
-  parser << line
-end
+
+Oj.sc_parse(parser, input)
+
 puts "Done."

@@ -19,7 +19,7 @@ Gem::Specification.new do |gem|
   gem.version       = Flapjack::VERSION
 
   gem.add_dependency 'dante'
-  gem.add_dependency 'oj'
+  gem.add_dependency 'oj', '>= 2.8.2'
   gem.add_dependency 'eventmachine', '~> 1.0.0'
   gem.add_dependency 'hiredis'
   gem.add_dependency 'em-synchrony', '~> 1.0.2'
@@ -38,7 +38,6 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'ice_cube'
   gem.add_dependency 'tzinfo', '~> 1.0.1'
   gem.add_dependency 'tzinfo-data'
-  gem.add_dependency 'yajl-ruby', '~> 1.2'
 
   gem.add_development_dependency 'rake'
 end
