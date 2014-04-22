@@ -33,7 +33,10 @@ module Flapjack
 
           # TODO validate that media type exists in redis
           def split_media_ids(media_ids)
-            media_ids.split(',').collect do |m_id|
+
+            contact_cache = {}
+
+            media_ids.split(',').uniq.collect do |m_id|
               m_id =~ /\A(.+)_(email|sms|jabber)\z/
 
               contact_id = $1
@@ -41,7 +44,9 @@ module Flapjack
               halt err(422, "Could not get contact_id from media_id") if contact_id.nil?
               halt err(422, "Could not get media type from media_id") if media_type.nil?
 
-              {:contact => find_contact(contact_id), :type => media_type}
+              contact_cache[contact_id] ||= find_contact(contact_id)
+
+              {:contact => contact_cache[contact_id], :type => media_type}
             end
           end
 
@@ -67,7 +72,7 @@ module Flapjack
             contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
             if contact.nil?
               semaphore.release
-              halt err(422, "Contact id:'#{contact_id}' could not be loaded")
+              halt err(422, "Contact id:'#{params[:contact_id]}' could not be loaded")
             end
 
             media_data.each do |medium_data|
@@ -81,17 +86,30 @@ module Flapjack
 
             semaphore.release
 
+            status 201
+
             '{"media":' + media_data.to_json + '}'
           end
 
           # get one or more media records; media ids are, for Flapjack
           # v1, composed of "#{contact.id}_#{media_type}"
-          app.get '/media/:id' do
-            contact_media = split_media_ids(params[:id])
+          app.get %r{^/media(?:/)?([^/]+)?$} do
+            contact_media = if params[:captures] && params[:captures][0]
+              split_media_ids(params[:captures][0])
+            else
+              Flapjack::Data::Contact.all(:redis => redis).collect do |c|
+                c.media_list.collect do |media_type|
+                  {:contact => c, :type => media_type}
+                end
+              end.flatten(1)
+            end
 
-            media_data = contact_media.inject([]) do |memo, (contact, media_type)|
+            media_data = contact_media.inject([]) do |memo, contact_media_type|
+              contact = contact_media_type[:contact]
+              media_type = contact_media_type[:type]
+
               medium_id = "#{contact.id}_#{media_type}"
-              memo[medium_id] =
+              memo <<
                 {:id               => medium_id,
                  :type             => media_type,
                  :address          => contact.media[media_type],

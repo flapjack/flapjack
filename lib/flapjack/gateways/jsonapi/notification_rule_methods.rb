@@ -80,50 +80,26 @@ module Flapjack
           end
 
           app.patch '/notification_rules/:id' do
-
-            params[:id].split(',').collect {|notification_rule_id|
-              find_rule(notification_rule_id)
-            }.each do |notification_rule|
+            params[:id].split(',').collect {|rule_id|
+              find_rule(rule_id)
+            }.each do |rule|
               apply_json_patch('notification_rules') do |op, property, linked, value|
                 case op
                 when 'replace'
                   case property
-                  when ''
+                  when 'entities', 'regex_entities', 'tags', 'regex_tags',
+                    'time_restrictions', 'unknown_media', 'warning_media',
+                    'critical_media', 'unknown_blackhole', 'warning_blackhole',
+                    'critical_blackhole'
+
+                    rule.update({property.to_sym => value}, :logger => logger)
                   end
                 end
               end
             end
 
+            status 204
           end
-
-          # # Updates one or more notification rules
-          # app.put '/notification_rules/:id' do
-          #   rules_data = params[:notification_rules]
-
-          #   if rules_data.nil? || !rules_data.is_a?(Enumerable)
-          #     halt err(422, "No valid notification rules were submitted")
-          #   end
-
-          #   rule_ids       = params[:id].split(',')
-          #   rules_data_ids = rules_data.collect {|rd| rd['id'].to_s }
-
-          #   unless (rule_ids & rules_data_ids) == rule_ids
-          #     halt err(422, "Rule id parameters do not match rule update data ids")
-          #   end
-
-          #   # pre-retrieve rule objects, errors before data is changed if any
-          #   # are not found
-          #   rules      = rule_ids.collect {|rule_id| find_rule(rule_id) }
-          #   rules_json = rules.inject([]) {|memo, rule|
-          #     if rule_data = rules_data.detect {|rd| rd['id'].to_s == rule.id}
-          #       rule.update(symbolize(rule_data), :logger => logger)
-          #       memo << rule.to_json
-          #     end
-          #     memo
-          #   }.join(', ')
-
-          #   '{"notification_rules":[' + rules_json + ']}'
-          # end
 
           # Deletes one or more notification rules
           app.delete '/notification_rules/:id' do

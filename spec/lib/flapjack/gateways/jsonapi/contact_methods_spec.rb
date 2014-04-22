@@ -111,6 +111,8 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(last_response.body).to eq(["0362"].to_json)
   end
 
+  it "updates a contact"
+
   it "deletes a contact" do
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)

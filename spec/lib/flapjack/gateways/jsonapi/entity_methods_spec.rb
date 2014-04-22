@@ -119,6 +119,8 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(last_response.status).to eq(403)
   end
 
+  it "updates an entity"
+
   it "creates acknowledgements for all checks on an entity" do
     expect(entity).to receive(:check_list).and_return([check])
     expect(Flapjack::Data::Entity).to receive(:find_by_id).

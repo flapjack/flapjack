@@ -111,25 +111,17 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
   end
 
   # PATCH /notification_rules/RULE_ID
-  it "updates a notification rule" # do
-  #   expect(notification_rule).to receive(:to_json).and_return('"rule_1"')
-  #   expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
-  #     with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
+  it "updates a notification rule" do
+    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
+      with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
 
-  #   notification_rule_data['id'] = notification_rule.id
+    expect(notification_rule).to receive(:update).with({:warning_blackhole => true}, :logger => @logger).and_return(nil)
 
-  #   # symbolize the keys
-  #   notification_rule_data_sym = notification_rule_data.inject({}){|memo,(k,v)|
-  #     memo[k.to_sym] = v; memo
-  #   }
-
-  #   expect(notification_rule).to receive(:update).with(notification_rule_data_sym, :logger => @logger).and_return(nil)
-
-  #   aput "/notification_rules/#{notification_rule.id}", {"notification_rules" => [notification_rule_data]}.to_json,
-  #     {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE}
-  #   expect(last_response).to be_ok
-  #   expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
-  # end
+    apatch "/notification_rules/#{notification_rule.id}",
+      [{:op => 'replace', :path => '/notification_rules/0/warning_blackhole', :value => true}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
 
   it "does not update a notification rule that's not present" do
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
