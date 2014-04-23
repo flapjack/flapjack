@@ -370,13 +370,6 @@ module Flapjack
         pass
       end
 
-      put '*' do
-        halt(405) unless is_jsonapi_request?
-        content_type JSONAPI_MEDIA_TYPE
-        cors_headers
-        pass
-      end
-
       patch '*' do
         halt(405) unless is_jsonpatch_request?
         content_type JSONAPI_MEDIA_TYPE

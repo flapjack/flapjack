@@ -69,9 +69,50 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(last_response.body).to eq({:entities => [entity_core]}.to_json)
   end
 
-  it "retrieves one entity"
+  it "retrieves one entity" do
+    entity_core = {'id'   => '1234',
+                   'name' => 'www.example.com'}
+    expect(entity).to receive(:id).twice.and_return('1234')
 
-  it "retrieves a group of entities"
+    expect(Flapjack::Data::Entity).to receive(:contact_ids_for).
+      with(['1234'], :redis => redis).and_return({})
+    expect(entity).to receive(:to_jsonapi).and_return(entity_core.to_json)
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with('1234', :logger => @logger, :redis => redis).
+      and_return(entity)
+
+    aget '/entities/1234', {}.to_json, jsonapi_env
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq({:entities => [entity_core]}.to_json)
+  end
+
+  it "retrieves several entities" do
+    entity_2 = double(Flapjack::Data::Entity)
+    entity_core = {'id'   => '1234',
+                   'name' => 'www.example.com'}
+    entity_core_2 = {'id'   => '5678',
+                   'name' => 'www.example2.com'}
+
+    expect(Flapjack::Data::Entity).to receive(:contact_ids_for).
+      with(['1234', '5678'], :redis => redis).and_return({})
+
+    expect(entity).to receive(:id).twice.and_return('1234')
+    expect(entity_2).to receive(:id).twice.and_return('5678')
+
+    expect(entity).to receive(:to_jsonapi).and_return(entity_core.to_json)
+    expect(entity_2).to receive(:to_jsonapi).and_return(entity_core_2.to_json)
+
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with('1234', :logger => @logger, :redis => redis).
+      and_return(entity)
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with('5678', :logger => @logger, :redis => redis).
+      and_return(entity_2)
+
+    aget '/entities/1234,5678', {}.to_json, jsonapi_env
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq({:entities => [entity_core, entity_core_2]}.to_json)
+  end
 
   it "creates entities from a submitted list" do
     entities = {'entities' =>
@@ -119,7 +160,17 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(last_response.status).to eq(403)
   end
 
-  it "updates an entity"
+  it "updates an entity" do
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with('1234',:redis => redis).and_return(entity)
+
+    expect(entity).to receive(:update).with('name' => 'mail.example.com').and_return(nil)
+
+    apatch "/entities/1234",
+      [{:op => 'replace', :path => '/entities/0/name', :value => 'mail.example.com'}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
 
   it "creates acknowledgements for all checks on an entity" do
     expect(entity).to receive(:check_list).and_return([check])

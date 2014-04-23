@@ -56,7 +56,7 @@ module Flapjack
 
             entities_json = entities.collect {|entity|
               entity.to_jsonapi(:contact_ids => linked_contact_ids[entity.id])
-            }.join(", ")
+            }.join(",")
 
             '{"entities":[' + entities_json + ']}'
           end

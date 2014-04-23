@@ -29,6 +29,11 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
      'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
   }
 
+  let(:jsonapi_patch_env) {
+    {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSON_PATCH_MEDIA_TYPE,
+     'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
+  }
+
   before(:all) do
     Flapjack::Gateways::JSONAPI.class_eval {
       set :raise_errors, true
@@ -111,7 +116,20 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(last_response.body).to eq(["0362"].to_json)
   end
 
-  it "updates a contact"
+  it "updates a contact" do
+    expect(Flapjack::Data::Semaphore).to receive(:new).
+      with("contact_mass_update", {:redis => redis, :expiry => 30}).and_return(semaphore)
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with('1234', :logger => @logger, :redis => redis).and_return(contact)
+
+    expect(contact).to receive(:update).with('first_name' => 'Elias').and_return(nil)
+    expect(semaphore).to receive(:release).and_return(true)
+
+    apatch "/contacts/1234",
+      [{:op => 'replace', :path => '/contacts/0/first_name', :value => 'Elias'}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
 
   it "deletes a contact" do
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
