@@ -94,12 +94,14 @@ module Flapjack
           # get one or more media records; media ids are, for Flapjack
           # v1, composed of "#{contact.id}_#{media_type}"
           app.get %r{^/media(?:/)?([^/]+)?$} do
+            media_list_cache = {}
             contact_media = if params[:captures] && params[:captures][0]
               split_media_ids(params[:captures][0])
             else
-              Flapjack::Data::Contact.all(:redis => redis).collect do |c|
-                c.media_list.collect do |media_type|
-                  {:contact => c, :type => media_type}
+              Flapjack::Data::Contact.all(:redis => redis).collect do |contact|
+                media_list_cache[contact.id] ||= contact.media_list
+                media_list_cache[contact.id].collect do |media_type|
+                  {:contact => contact, :type => media_type}
                 end
               end.flatten(1)
             end
@@ -108,14 +110,17 @@ module Flapjack
               contact = contact_media_type[:contact]
               media_type = contact_media_type[:type]
 
-              medium_id = "#{contact.id}_#{media_type}"
-              memo <<
-                {:id               => medium_id,
-                 :type             => media_type,
-                 :address          => contact.media[media_type],
-                 :interval         => contact.media_intervals[media_type],
-                 :rollup_threshold => contact.media_rollup_thresholds[media_type],
-                 :links            => {:contacts => [contact.id]}}
+              media_list_cache[contact.id] ||= contact.media_list
+              if media_list_cache[contact.id].include?(media_type)
+                medium_id = "#{contact.id}_#{media_type}"
+                memo <<
+                  {:id               => medium_id,
+                   :type             => media_type,
+                   :address          => contact.media[media_type],
+                   :interval         => contact.media_intervals[media_type],
+                   :rollup_threshold => contact.media_rollup_thresholds[media_type],
+                   :links            => {:contacts => [contact.id]}}
+              end
 
               memo
             end
@@ -126,9 +131,12 @@ module Flapjack
           # update one or more media records; media ids are, for Flapjack
           # v1, composed of "#{contact.id}_#{media_type}"
           app.patch '/media/:id' do
-            contact_media = split_media_ids(params[:id])
-
-            contact_media.each_pair do |contact, media_type|
+            media_list_cache = {}
+            split_media_ids(params[:id]).each do |contact_media_type|
+              contact = contact_media_type[:contact]
+              media_type = contact_media_type[:type]
+              media_list_cache[contact.id] ||= contact.media_list
+              next unless media_list_cache[contact.id].include?(media_type)
               apply_json_patch('media') do |op, property, linked, value|
                 if 'replace'.eql?(op)
                   case property
@@ -149,8 +157,12 @@ module Flapjack
           # delete one or more media records; media ids are, for Flapjack
           # v1, composed of "#{contact.id}_#{media_type}"
           app.delete '/media/:id' do
-            contact_media = split_media_ids(params[:id])
-            contact_media.each_pair do |contact, media_type|
+            media_list_cache = {}
+            split_media_ids(params[:id]).each do |contact_media_type|
+              contact = contact_media_type[:contact]
+              media_type = contact_media_type[:type]
+              media_list_cache[contact.id] ||= contact.media_list
+              next unless media_list_cache[contact.id].include?(media_type)
               contact.remove_media(media_type)
             end
             status 204

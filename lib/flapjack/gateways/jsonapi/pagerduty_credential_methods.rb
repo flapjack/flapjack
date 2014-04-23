@@ -12,24 +12,14 @@ module Flapjack
 
       module PagerdutyCredentialMethods
 
-        module Helpers
+        SEMAPHORE_CONTACT_MASS_UPDATE = 'contact_mass_update'
 
-          def split_pagerduty_credentials_ids(pagerduty_credentials_ids)
-            pagerduty_credentials_ids.split(',').collect do |m_id|
-              m_id =~ /\A(.+)_pagerduty\z/
-
-              contact_id = $1
-              halt err(422, "Could not get contact_id from pagerduty_credentials_id") if contact_id.nil?
-
-              {:contact => find_contact(contact_id), :type => 'pagerduty'}
-            end
-          end
-
-        end
+        # module Helpers
+        # end
 
         def self.registered(app)
           app.helpers Flapjack::Gateways::JSONAPI::Helpers
-          app.helpers Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods::Helpers
+          # app.helpers Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods::Helpers
 
           # Creates/overwrites pagerduty credentials for a contact
           app.post '/contacts/:contact_id/pagerduty_credentials' do
@@ -48,7 +38,7 @@ module Flapjack
               halt err(422, "No valid pagerduty credentials were submitted")
             end
 
-            if (fields | pagerduty_credential.keys).size != field.size
+            if (fields | pagerduty_credential.keys).size != fields.size
               halt err(422, "Pagerduty credential data has incorrect fields")
             end
 
@@ -56,41 +46,33 @@ module Flapjack
             contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
             if contact.nil?
               semaphore.release
-              halt err(422, "Contact id:'#{contact_id}' could not be loaded")
+              halt err(422, "Contact id '#{params[:contact_id]}' could not be loaded")
             end
 
-            pagerduty_credential_data = field.inject({}).each do |memo, field|
+            pagerduty_credential_data = fields.inject({}) do |memo, field|
               memo[field] = pagerduty_credential[field]
+              memo
             end
 
             contact.set_pagerduty_credentials(pagerduty_credential_data)
             semaphore.release
 
-            pagerduty_credential_data['links'] = {'contacts' => [contact_id]}
+            pagerduty_credential_data['links'] = {'contacts' => [contact.id]}
 
+            status 201
             '{"pagerduty_credentials":[' + pagerduty_credential_data.to_json + ']}'
           end
 
           app.get %r{^/pagerduty_credentials(?:/)?([^/]+)?$} do
-            requested_contacts = if params[:captures] && params[:captures][0]
-              params[:captures][0].split(',').uniq
-            else
-              nil
-            end
-
-            contacts = if requested_contacts
-              Flapjack::Data::Contact.find_by_ids(requested_contacts, :logger => logger, :redis => redis)
+            contacts = if params[:captures] && params[:captures][0]
+              params[:captures][0].split(',').uniq.collect {|c_id| find_contact(c_id)}
             else
               Flapjack::Data::Contact.all(:redis => redis)
             end
-            contacts.compact!
 
-            if requested_contacts && requested_contacts.empty?
-              raise Flapjack::Gateways::JSONAPI::ContactsNotFound.new(requested_contacts)
-            end
+            pagerduty_credentials_data = contacts.inject([]) do |memo, contact|
+              pdc = contact.pagerduty_credentials.clone
 
-            pagerduty_credentials_data = contacts.inject([]).each do |memo, contact|
-              pdc = contact.pagerduty_credentials.dup
               pdc['links'] = {'contacts' => [contact.id]}
               memo << pdc
               memo
@@ -101,14 +83,11 @@ module Flapjack
 
           # update one or more sets of pagerduty credentials
           app.patch '/pagerduty_credentials/:contact_id' do
-            contact_ids = split_contact_ids(params[:contact_id])
-            contacts = Flapjack::Data::Contact.find_by_ids(contacts, :logger => logger, :redis => redis)
-
-            contacts.each do |contact|
+            params[:contact_id].split(',').uniq.collect {|c_id| find_contact(c_id)}.each do |contact|
               apply_json_patch('pagerduty_credentials') do |op, property, linked, value|
                 if 'replace'.eql?(op)
 
-                  pdc = contact.pagerduty_credentials.dup
+                  pdc = contact.pagerduty_credentials.clone
 
                   case property
                   when 'service_key'
@@ -132,10 +111,9 @@ module Flapjack
           end
 
           app.delete '/pagerduty_credentials/:contact_id' do
-            contact_ids = split_contact_ids(params[:contact_id])
-            contacts = Flapjack::Data::Contact.find_by_ids(contacts, :logger => logger, :redis => redis)
-
-            contacts.each {|contact| contact.delete_pagerduty_credentials }
+            params[:contact_id].split(',').uniq.collect {|c_id| find_contact(c_id) }.each do |contact|
+              contact.delete_pagerduty_credentials
+            end
             status 204
           end
 

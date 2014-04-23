@@ -29,6 +29,11 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
      'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
   }
 
+  let(:jsonapi_patch_env) {
+    {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSON_PATCH_MEDIA_TYPE,
+     'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
+  }
+
   before(:all) do
     Flapjack::Gateways::JSONAPI.class_eval {
       set :raise_errors, true
@@ -57,6 +62,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, :redis => redis, :logger => @logger).and_return(contact)
 
+    expect(contact).to receive(:media_list).and_return([medium_data[:type]])
     expect(contact).to receive(:media).and_return(medium_data[:type] => medium_data[:address])
     expect(contact).to receive(:media_intervals).and_return(medium_data[:type] => medium_data[:interval])
     expect(contact).to receive(:media_rollup_thresholds).and_return(medium_data[:type] => medium_data[:rollup_threshold])
@@ -75,6 +81,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact_2.id, :redis => redis, :logger => @logger).and_return(contact_2)
 
+    expect(contact).to receive(:media_list).and_return([medium_data[:type]])
     expect(contact).to receive(:media).and_return(medium_data[:type] => medium_data[:address])
     expect(contact).to receive(:media_intervals).and_return(medium_data[:type] => medium_data[:interval])
     expect(contact).to receive(:media_rollup_thresholds).and_return(medium_data[:type] => medium_data[:rollup_threshold])
@@ -82,6 +89,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     medium_2_data = {:type => 'sms', :address => '0123456789',
      :interval => 120, :rollup_threshold => 3}
 
+    expect(contact_2).to receive(:media_list).and_return([medium_2_data[:type]])
     expect(contact_2).to receive(:media).and_return(medium_2_data[:type] => medium_2_data[:address])
     expect(contact_2).to receive(:media_intervals).and_return(medium_2_data[:type] => medium_2_data[:interval])
     expect(contact_2).to receive(:media_rollup_thresholds).and_return(medium_2_data[:type] => medium_2_data[:rollup_threshold])
@@ -117,7 +125,16 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(last_response.status).to eq(404)
   end
 
-  it "does not return a medium if the medium is not present"
+  it "does not return a medium if the medium is not present" do
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id, :redis => redis, :logger => @logger).and_return(contact)
+
+    expect(contact).to receive(:media_list).and_return(['email'])
+
+    aget "/media/#{contact.id}_sms", {}, jsonapi_env
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq({:media => []}.to_json)
+  end
 
   it "creates a medium for a contact" do
     expect(Flapjack::Data::Semaphore).to receive(:new).
@@ -158,10 +175,96 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(last_response.status).to eq(422)
   end
 
-  it "updates a medium"
+  it "updates a medium" do
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id, :logger => @logger, :redis => redis).and_return(contact)
 
-  it "deletes a medium"
+    expect(contact).to receive(:media_list).and_return(['email'])
+    expect(contact).to receive(:set_address_for_media).with('email', 'xyz@example.com')
 
-  it "does not delete a medium that's not found"
+    apatch "/media/#{contact.id}_email",
+      [{:op => 'replace', :path => '/media/0/address', :value => 'xyz@example.com'}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it "updates multiple media" do
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id, :logger => @logger, :redis => redis).and_return(contact)
+
+    expect(contact).to receive(:media_list).and_return(['email', 'sms'])
+    expect(contact).to receive(:set_interval_for_media).with('email', 80)
+    expect(contact).to receive(:set_interval_for_media).with('sms', 80)
+
+    apatch "/media/#{contact.id}_email,#{contact.id}_sms",
+      [{:op => 'replace', :path => '/media/0/interval', :value => 80}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it "does not update a medium for a contact that's not present" do
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id, :logger => @logger, :redis => redis).and_return(nil)
+
+    apatch "/media/#{contact.id}_email",
+      [{:op => 'replace', :path => '/media/0/address', :value => 'xyz@example.com'}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(404)
+  end
+
+  it "does not update a medium that's not present" do
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id, :logger => @logger, :redis => redis).and_return(contact)
+
+    expect(contact).to receive(:media_list).and_return(['sms'])
+    expect(contact).not_to receive(:set_address_for_media).with('email', 'xyz@example.com')
+
+    apatch "/media/#{contact.id}_email",
+      [{:op => 'replace', :path => '/media/0/address', :value => 'xyz@example.com'}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it "deletes a medium" do
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id, :logger => @logger, :redis => redis).and_return(contact)
+
+    expect(contact).to receive(:media_list).and_return(['sms', 'email'])
+    expect(contact).to receive(:remove_media).with('email')
+
+    adelete "/media/#{contact.id}_email", {}, jsonapi_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it "deletes multiple media" do
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id, :logger => @logger, :redis => redis).and_return(contact)
+
+    expect(contact).to receive(:media_list).and_return(['sms', 'email'])
+    expect(contact).to receive(:remove_media).with('email')
+    expect(contact).to receive(:remove_media).with('sms')
+
+    adelete "/media/#{contact.id}_email,#{contact.id}_sms", {}, jsonapi_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it "does not delete a medium that's not found" do
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id, :logger => @logger, :redis => redis).and_return(contact)
+
+    expect(contact).to receive(:media_list).and_return(['sms'])
+    expect(contact).not_to receive(:remove_media).with('email')
+
+    adelete "/media/#{contact.id}_email", {}, jsonapi_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it "does not delete a medium for a contact that's not found" do
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with('23', :logger => @logger, :redis => redis).and_return(nil)
+
+    adelete '/media/23_email', {}, jsonapi_env
+    expect(last_response.status).to eq(404)
+  end
 
 end
