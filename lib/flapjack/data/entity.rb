@@ -10,7 +10,7 @@ module Flapjack
 
     class Entity
 
-      attr_accessor :name, :id, :linked_contact_ids
+      attr_accessor :name, :id
 
       TAG_PREFIX = 'entity_tag'
 
@@ -204,12 +204,12 @@ module Flapjack
         }
       end
 
-      def to_jsonapi(*args)
+      def to_jsonapi(opts = {})
         {
           "id"        => self.id,
           "name"      => self.name,
           "links"     => {
-            :contacts   => @linked_contact_ids || [],
+            :contacts   => opts[:contact_ids] || [],
           }
         }.to_json
       end

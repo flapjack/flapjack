@@ -449,7 +449,7 @@ module Flapjack
       # return a list of media enabled for this contact
       # eg [ 'email', 'sms' ]
       def media_list
-        @redis.hkeys("contact_media:#{self.id}") - 'pagerduty'
+        @redis.hkeys("contact_media:#{self.id}") - ['pagerduty']
       end
 
       def media_ids
