@@ -91,6 +91,7 @@ module Flapjack
 
             ids = contacts_data.map {|c| c['id']}
             location(ids)
+            status 201
 
             contacts_data.map {|cd| cd['id']}.to_json
           end

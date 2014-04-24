@@ -112,7 +112,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(semaphore).to receive(:release).and_return(true)
 
     apost "/contacts", {:contacts => [contact_data]}.to_json, jsonapi_env
-    expect(last_response.status).to eq(200)
+    expect(last_response.status).to eq(201)
     expect(last_response.body).to eq(["0362"].to_json)
   end
 
