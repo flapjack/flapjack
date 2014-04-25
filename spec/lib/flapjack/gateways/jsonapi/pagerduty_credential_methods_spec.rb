@@ -3,9 +3,7 @@ require 'flapjack/gateways/jsonapi'
 
 describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => true, :logger => true do
 
-  def app
-    Flapjack::Gateways::JSONAPI
-  end
+  include_context "jsonapi"
 
   let(:contact) { double(Flapjack::Data::Contact, :id => '21') }
 
@@ -17,46 +15,10 @@ describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => 
     }
   }
 
-  let(:redis) { double(::Redis) }
-
   let(:semaphore) {
     double(Flapjack::Data::Semaphore, :resource => 'folly',
            :key => 'semaphores:folly', :expiry => 30, :token => 'spatulas-R-us')
   }
-
-  let(:jsonapi_env) {
-    {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE,
-     'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
-  }
-
-  let(:jsonapi_patch_env) {
-    {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSON_PATCH_MEDIA_TYPE,
-     'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
-  }
-
-  before(:all) do
-    Flapjack::Gateways::JSONAPI.class_eval {
-      set :raise_errors, true
-    }
-  end
-
-  before(:each) do
-    expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
-    Flapjack::Gateways::JSONAPI.instance_variable_set('@config', {})
-    Flapjack::Gateways::JSONAPI.instance_variable_set('@logger', @logger)
-    Flapjack::Gateways::JSONAPI.start
-  end
-
-  after(:each) do
-    if last_response.status >= 200 && last_response.status < 300
-      expect(last_response.headers.keys).to include('Access-Control-Allow-Methods')
-      expect(last_response.headers['Access-Control-Allow-Origin']).to eq("*")
-      unless last_response.status == 204
-        expect(Oj.load(last_response.body)).to be_a(Enumerable)
-        expect(last_response.headers['Content-Type']).to eq(Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE)
-      end
-    end
-  end
 
   it "returns pagerduty credentials" do
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
@@ -64,7 +26,7 @@ describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => 
 
     expect(contact).to receive(:pagerduty_credentials).and_return(pagerduty_credentials)
 
-    aget "/pagerduty_credentials/#{contact.id}", {}, jsonapi_env
+    aget "/pagerduty_credentials/#{contact.id}"
     expect(last_response).to be_ok
     expect(last_response.body).to eq({:pagerduty_credentials => [pagerduty_credentials.
         merge(:links => {:contacts => [contact.id]})]}.to_json)
@@ -74,7 +36,7 @@ describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => 
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, :redis => redis, :logger => @logger).and_return(nil)
 
-    aget "/pagerduty_credentials/#{contact.id}", {}, jsonapi_env
+    aget "/pagerduty_credentials/#{contact.id}"
     expect(last_response.status).to eq(404)
   end
 
@@ -88,7 +50,8 @@ describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => 
     expect(contact).to receive(:set_pagerduty_credentials).with(pagerduty_credentials)
     expect(semaphore).to receive(:release).and_return(true)
 
-    apost "/contacts/#{contact.id}/pagerduty_credentials", {:pagerduty_credentials => [pagerduty_credentials]}.to_json, jsonapi_env
+    apost "/contacts/#{contact.id}/pagerduty_credentials",
+      {:pagerduty_credentials => [pagerduty_credentials]}.to_json, jsonapi_post_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to eq('{"pagerduty_credentials":[' +
       pagerduty_credentials.merge(:links => {:contacts => [contact.id]}).to_json + ']}')
@@ -101,7 +64,8 @@ describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => 
       with(contact.id, :redis => redis).and_return(nil)
     expect(semaphore).to receive(:release).and_return(true)
 
-    apost "/contacts/#{contact.id}/pagerduty_credentials", {:pagerduty_credentials => [pagerduty_credentials]}.to_json, jsonapi_env
+    apost "/contacts/#{contact.id}/pagerduty_credentials",
+      {:pagerduty_credentials => [pagerduty_credentials]}.to_json, jsonapi_post_env
     expect(last_response.status).to eq(422)
   end
 
@@ -134,7 +98,7 @@ describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => 
 
     expect(contact).to receive(:delete_pagerduty_credentials)
 
-    adelete "/pagerduty_credentials/#{contact.id}", {}, jsonapi_env
+    adelete "/pagerduty_credentials/#{contact.id}"
     expect(last_response.status).to eq(204)
   end
 
@@ -142,7 +106,7 @@ describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => 
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, :redis => redis, :logger => @logger).and_return(nil)
 
-    adelete "/pagerduty_credentials/#{contact.id}", {}, jsonapi_env
+    adelete "/pagerduty_credentials/#{contact.id}"
     expect(last_response.status).to eq(404)
   end
 

@@ -3,9 +3,7 @@ require 'flapjack/gateways/jsonapi'
 
 describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger => true do
 
-  def app
-    Flapjack::Gateways::JSONAPI
-  end
+  include_context "jsonapi"
 
   let(:medium_data) {
     {:type => 'email',
@@ -17,46 +15,10 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
 
   let(:contact) { double(Flapjack::Data::Contact, :id => '21') }
 
-  let(:redis) { double(::Redis) }
-
   let(:semaphore) {
     double(Flapjack::Data::Semaphore, :resource => 'folly',
            :key => 'semaphores:folly', :expiry => 30, :token => 'spatulas-R-us')
   }
-
-  let(:jsonapi_env) {
-    {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE,
-     'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
-  }
-
-  let(:jsonapi_patch_env) {
-    {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSON_PATCH_MEDIA_TYPE,
-     'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
-  }
-
-  before(:all) do
-    Flapjack::Gateways::JSONAPI.class_eval {
-      set :raise_errors, true
-    }
-  end
-
-  before(:each) do
-    expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
-    Flapjack::Gateways::JSONAPI.instance_variable_set('@config', {})
-    Flapjack::Gateways::JSONAPI.instance_variable_set('@logger', @logger)
-    Flapjack::Gateways::JSONAPI.start
-  end
-
-  after(:each) do
-    if last_response.status >= 200 && last_response.status < 300
-      expect(last_response.headers.keys).to include('Access-Control-Allow-Methods')
-      expect(last_response.headers['Access-Control-Allow-Origin']).to eq("*")
-      unless last_response.status == 204
-        expect(Oj.load(last_response.body)).to be_a(Enumerable)
-        expect(last_response.headers['Content-Type']).to eq(Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE)
-      end
-    end
-  end
 
   it "returns a single medium" do
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
@@ -67,7 +29,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(contact).to receive(:media_intervals).and_return(medium_data[:type] => medium_data[:interval])
     expect(contact).to receive(:media_rollup_thresholds).and_return(medium_data[:type] => medium_data[:rollup_threshold])
 
-    aget "/media/#{contact.id}_#{medium_data[:type]}", {}, jsonapi_env
+    aget "/media/#{contact.id}_#{medium_data[:type]}"
     expect(last_response).to be_ok
     expect(last_response.body).to eq({:media => [{:id => "#{contact.id}_#{medium_data[:type]}"}.merge(medium_data).
         merge(:links => {:contacts => [contact.id]})]}.to_json)
@@ -94,7 +56,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(contact_2).to receive(:media_intervals).and_return(medium_2_data[:type] => medium_2_data[:interval])
     expect(contact_2).to receive(:media_rollup_thresholds).and_return(medium_2_data[:type] => medium_2_data[:rollup_threshold])
 
-    aget "/media/#{contact.id}_#{medium_data[:type]},#{contact_2.id}_#{medium_2_data[:type]}", {}, jsonapi_env
+    aget "/media/#{contact.id}_#{medium_data[:type]},#{contact_2.id}_#{medium_2_data[:type]}"
     expect(last_response).to be_ok
     expect(last_response.body).to eq({:media => [{:id => "#{contact.id}_#{medium_data[:type]}"}.merge(medium_data).
         merge(:links => {:contacts => [contact.id]}),
@@ -111,7 +73,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(contact).to receive(:media_intervals).and_return(medium_data[:type] => medium_data[:interval])
     expect(contact).to receive(:media_rollup_thresholds).and_return(medium_data[:type] => medium_data[:rollup_threshold])
 
-    aget '/media', {}, jsonapi_env
+    aget '/media'
     expect(last_response).to be_ok
     expect(last_response.body).to eq({:media => [{:id => "#{contact.id}_#{medium_data[:type]}"}.merge(medium_data).
         merge(:links => {:contacts => [contact.id]})]}.to_json)
@@ -121,7 +83,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, :redis => redis, :logger => @logger).and_return(nil)
 
-    aget "/media/#{contact.id}_email", {}, jsonapi_env
+    aget "/media/#{contact.id}_email"
     expect(last_response.status).to eq(404)
   end
 
@@ -131,7 +93,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
 
     expect(contact).to receive(:media_list).and_return(['email'])
 
-    aget "/media/#{contact.id}_sms", {}, jsonapi_env
+    aget "/media/#{contact.id}_sms"
     expect(last_response).to be_ok
     expect(last_response.body).to eq({:media => []}.to_json)
   end
@@ -152,7 +114,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
 
     expect(semaphore).to receive(:release).and_return(true)
 
-    apost "/contacts/#{contact.id}/media", {:media => [medium_data]}.to_json, jsonapi_env
+    apost "/contacts/#{contact.id}/media", {:media => [medium_data]}.to_json, jsonapi_post_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to eq('{"media":[' +
       medium_data.merge(:id => "#{contact.id}_email",
@@ -171,7 +133,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
 
     expect(semaphore).to receive(:release).and_return(true)
 
-    apost "/contacts/#{contact.id}/media", {:media => [medium_data]}.to_json, jsonapi_env
+    apost "/contacts/#{contact.id}/media", {:media => [medium_data]}.to_json, jsonapi_post_env
     expect(last_response.status).to eq(422)
   end
 
@@ -232,7 +194,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(contact).to receive(:media_list).and_return(['sms', 'email'])
     expect(contact).to receive(:remove_media).with('email')
 
-    adelete "/media/#{contact.id}_email", {}, jsonapi_env
+    adelete "/media/#{contact.id}_email"
     expect(last_response.status).to eq(204)
   end
 
@@ -244,7 +206,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(contact).to receive(:remove_media).with('email')
     expect(contact).to receive(:remove_media).with('sms')
 
-    adelete "/media/#{contact.id}_email,#{contact.id}_sms", {}, jsonapi_env
+    adelete "/media/#{contact.id}_email,#{contact.id}_sms"
     expect(last_response.status).to eq(204)
   end
 
@@ -255,7 +217,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(contact).to receive(:media_list).and_return(['sms'])
     expect(contact).not_to receive(:remove_media).with('email')
 
-    adelete "/media/#{contact.id}_email", {}, jsonapi_env
+    adelete "/media/#{contact.id}_email"
     expect(last_response.status).to eq(204)
   end
 
@@ -263,7 +225,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with('23', :logger => @logger, :redis => redis).and_return(nil)
 
-    adelete '/media/23_email', {}, jsonapi_env
+    adelete '/media/23_email'
     expect(last_response.status).to eq(404)
   end
 

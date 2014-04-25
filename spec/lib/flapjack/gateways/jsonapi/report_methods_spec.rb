@@ -3,9 +3,7 @@ require 'flapjack/gateways/jsonapi'
 
 describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger => true do
 
-  def app
-    Flapjack::Gateways::JSONAPI
-  end
+  include_context "jsonapi"
 
   let(:entity)          { double(Flapjack::Data::Entity) }
   let(:entity_check)    { double(Flapjack::Data::EntityCheck) }
@@ -16,37 +14,6 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
   let(:entity_check_name) { 'ping' }
 
   let(:check_presenter) { double(Flapjack::Gateways::JSONAPI::CheckPresenter) }
-
-  let(:redis)           { double(::Redis) }
-
-  let(:jsonapi_env) {
-    {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE,
-     'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
-  }
-
-  before(:all) do
-    Flapjack::Gateways::JSONAPI.class_eval {
-      set :raise_errors, true
-    }
-  end
-
-  before(:each) do
-    expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
-    Flapjack::Gateways::JSONAPI.instance_variable_set('@config', {})
-    Flapjack::Gateways::JSONAPI.instance_variable_set('@logger', @logger)
-    Flapjack::Gateways::JSONAPI.start
-  end
-
-  after(:each) do
-    if last_response.status >= 200 && last_response.status < 300
-      expect(last_response.headers.keys).to include('Access-Control-Allow-Methods')
-      expect(last_response.headers['Access-Control-Allow-Origin']).to eq("*")
-      unless last_response.status == 204
-        expect(Oj.load(last_response.body)).to be_a(Enumerable)
-        expect(last_response.headers['Content-Type']).to eq(Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE)
-      end
-    end
-  end
 
   it "returns the status for all entities" do
     status = double('status')
@@ -86,7 +53,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/status_report/entities", {}, jsonapi_env
+    aget "/status_report/entities"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -129,7 +96,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/status_report/entities/#{entity_id}", {}, jsonapi_env
+    aget "/status_report/entities/#{entity_id}"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -138,7 +105,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Entity).to receive(:find_by_id).
       with(entity_id, :redis => redis).and_return(nil)
 
-    aget "/status_report/entities/#{entity_id}", {}, jsonapi_env
+    aget "/status_report/entities/#{entity_id}"
     expect(last_response.status).to eq(404)
   end
 
@@ -176,7 +143,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/status_report/checks/#{entity_name}:SSH", {}, jsonapi_env
+    aget "/status_report/checks/#{entity_name}:SSH"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -185,7 +152,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(nil)
 
-    aget "/status_report/checks/#{entity_name}:SSH", {}, jsonapi_env
+    aget "/status_report/checks/#{entity_name}:SSH"
     expect(last_response).to be_not_found
   end
 
@@ -193,7 +160,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
       with(entity_name, 'SSH', :redis => redis).and_return(nil)
 
-    aget "/status_report/checks/#{entity_name}:SSH", {}, jsonapi_env
+    aget "/status_report/checks/#{entity_name}:SSH"
     expect(last_response).to be_not_found
   end
 
@@ -235,7 +202,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/scheduled_maintenance_report/entities/#{entity_id}", {}, jsonapi_env
+    aget "/scheduled_maintenance_report/entities/#{entity_id}"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -283,7 +250,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
               }
 
     aget "/scheduled_maintenance_report/entities/#{entity_id}",
-      {:start_time => start.iso8601, :end_time => finish.iso8601}, jsonapi_env
+      :start_time => start.iso8601, :end_time => finish.iso8601
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -322,7 +289,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/scheduled_maintenance_report/checks/#{entity_name}:SSH", {}, jsonapi_env
+    aget "/scheduled_maintenance_report/checks/#{entity_name}:SSH"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -365,7 +332,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/unscheduled_maintenance_report/entities/#{entity_id}", {}, jsonapi_env
+    aget "/unscheduled_maintenance_report/entities/#{entity_id}"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -405,7 +372,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/unscheduled_maintenance_report/checks/#{entity_name}:SSH", {}, jsonapi_env
+    aget "/unscheduled_maintenance_report/checks/#{entity_name}:SSH"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -449,7 +416,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
               }
 
     aget "/unscheduled_maintenance_report/checks/#{entity_name}:SSH",
-      {:start_time => start.iso8601, :end_time => finish.iso8601}, jsonapi_env
+      :start_time => start.iso8601, :end_time => finish.iso8601
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -488,7 +455,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/outage_report/checks/#{entity_name}:SSH", {}, jsonapi_env
+    aget "/outage_report/checks/#{entity_name}:SSH"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -532,7 +499,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/downtime_report/entities/#{entity_id}", {}, jsonapi_env
+    aget "/downtime_report/entities/#{entity_id}"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end
@@ -571,7 +538,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
                 }
               }
 
-    aget "/downtime_report/checks/#{entity_name}:SSH", {}, jsonapi_env
+    aget "/downtime_report/checks/#{entity_name}:SSH"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(result.to_json)
   end

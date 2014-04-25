@@ -3,13 +3,9 @@ require 'flapjack/gateways/jsonapi'
 
 describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => true, :logger => true do
 
-  def app
-    Flapjack::Gateways::JSONAPI
-  end
+  include_context "jsonapi"
 
   let(:contact)      { double(Flapjack::Data::Contact, :id => '21') }
-
-  let(:redis)           { double(::Redis) }
 
   let(:notification_rule) {
     double(Flapjack::Data::NotificationRule, :id => '1', :contact_id => '21')
@@ -29,46 +25,12 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
     }
   }
 
-  let(:jsonapi_env) {
-    {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE,
-     'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
-  }
-
-  let(:jsonapi_patch_env) {
-    {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSON_PATCH_MEDIA_TYPE,
-     'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
-  }
-
-  before(:all) do
-    Flapjack::Gateways::JSONAPI.class_eval {
-      set :raise_errors, true
-    }
-  end
-
-  before(:each) do
-    expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
-    Flapjack::Gateways::JSONAPI.instance_variable_set('@config', {})
-    Flapjack::Gateways::JSONAPI.instance_variable_set('@logger', @logger)
-    Flapjack::Gateways::JSONAPI.start
-  end
-
-  after(:each) do
-    if last_response.status >= 200 && last_response.status < 300
-      expect(last_response.headers.keys).to include('Access-Control-Allow-Methods')
-      expect(last_response.headers['Access-Control-Allow-Origin']).to eq("*")
-      unless last_response.status == 204
-        expect(Oj.load(last_response.body)).to be_a(Enumerable)
-        expect(last_response.headers['Content-Type']).to eq(Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE)
-      end
-    end
-  end
-
   it "returns a specified notification rule" do
     expect(notification_rule).to receive(:to_jsonapi).and_return('"rule_1"')
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
 
-    aget "/notification_rules/#{notification_rule.id}", {}.to_json, jsonapi_env
+    aget "/notification_rules/#{notification_rule.id}"
     expect(last_response).to be_ok
     expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
   end
@@ -77,7 +39,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    aget "/notification_rules/#{notification_rule.id}", {}.to_json, jsonapi_env
+    aget "/notification_rules/#{notification_rule.id}"
     expect(last_response.status).to eq(404)
   end
 
@@ -96,7 +58,8 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
     expect(contact).to receive(:add_notification_rule).
       with(notification_rule_data_sym, :logger => @logger).and_return(notification_rule)
 
-    apost "/contacts/#{contact.id}/notification_rules", {"notification_rules" => [notification_rule_data]}.to_json, jsonapi_env
+    apost "/contacts/#{contact.id}/notification_rules",
+      {"notification_rules" => [notification_rule_data]}.to_json, jsonapi_post_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
   end
@@ -105,8 +68,8 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    apost "/contacts/#{contact.id}/notification_rules", {"notification_rules" => [notification_rule_data]}.to_json,
-      {'CONTENT_TYPE' => Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE}
+    apost "/contacts/#{contact.id}/notification_rules",
+      {"notification_rules" => [notification_rule_data]}.to_json, jsonapi_post_env
     expect(last_response.status).to eq(404)
   end
 
@@ -142,7 +105,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
 
-    adelete "/notification_rules/#{notification_rule.id}", {}.to_json, jsonapi_env
+    adelete "/notification_rules/#{notification_rule.id}"
     expect(last_response.status).to eq(204)
   end
 
@@ -150,7 +113,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
       with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    adelete "/notification_rules/#{notification_rule.id}", {}.to_json, jsonapi_env
+    adelete "/notification_rules/#{notification_rule.id}"
     expect(last_response.status).to eq(404)
   end
 
@@ -161,7 +124,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(nil)
 
-    adelete "/notification_rules/#{notification_rule.id}", {}.to_json, jsonapi_env
+    adelete "/notification_rules/#{notification_rule.id}"
     expect(last_response.status).to eq(404)
   end
 

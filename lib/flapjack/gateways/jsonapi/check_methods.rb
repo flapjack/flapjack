@@ -33,51 +33,34 @@ module Flapjack
 
           # create a scheduled maintenance period for a check on an entity
           app.post %r{^/scheduled_maintenances/checks/([^/]+)$} do
-            check_names = params[:captures][0].split(',')
-
             start_time = validate_and_parsetime(params[:start_time])
             halt( err(403, "start time must be provided") ) unless start_time
 
-            checks_for_check_names(check_names).each do |check|
+            checks_for_check_names(params[:captures][0].split(',')).each do |check|
               check.create_scheduled_maintenance(start_time,
                 params[:duration].to_i, :summary => params[:summary])
             end
 
-            response.headers['Location'] =
-              "#{request.base_url}/scheduled_maintenance_report/checks/" +
-                check_names.join(',') + "?start_time=#{params[:start_time]}"
-
-            status 201
+            status 204
           end
 
           # create an acknowledgement for a service on an entity
           # NB currently, this does not acknowledge a specific failure event, just
           # the entity-check as a whole
           app.post %r{^/unscheduled_maintenances/checks/([^/]+)$} do
-            check_names = params[:captures][0].split(',')
-
             dur = params[:duration] ? params[:duration].to_i : nil
             duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
             summary = params[:summary]
 
-            opts = {'duration' => duration}
-            opts['summary'] = summary if summary
+            opts = {:duration => duration}
+            opts[:summary] = summary if summary
 
-            t = Time.now
-
-            checks_for_check_names(check_names).each do |check|
+            checks_for_check_names(params[:captures][0].split(',')).each do |check|
               Flapjack::Data::Event.create_acknowledgement(
-                check.entity_name, check.check,
-                :summary => params[:summary],
-                :duration => duration,
-                :redis => redis)
+                check.entity_name, check.check, {:redis => redis}.merge(opts))
             end
 
-            response.headers['Location'] =
-              "#{request.base_url}/unscheduled_maintenance_report/checks/" +
-                check_names.join(',') + "?start_time=#{t.iso8601}&"
-
-            status 201
+            status 204
           end
 
           app.patch %r{^/unscheduled_maintenances/checks/([^/]+)$} do
@@ -114,7 +97,7 @@ module Flapjack
                 :summary => summary,
                 :redis => redis)
             end
-            status 201
+            status 204
           end
 
         end
