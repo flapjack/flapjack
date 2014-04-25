@@ -530,9 +530,11 @@ module Flapjack
       def self.add_or_update(contact_id, contact_data, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        # TODO check that the rest of this is safe for the update case
-        redis.hmset("contact:#{contact_id}",
-                    *['first_name', 'last_name', 'email'].collect {|f| [f, contact_data[f]]})
+        attrs = (['first_name', 'last_name', 'email'] & contact_data.keys).collect do |key|
+          [key, contact_data[key]]
+        end.flatten(1)
+
+        redis.hmset("contact:#{contact_id}", *attrs) unless attrs.empty?
 
         if ( ! contact_data['tags'].nil? && contact_data['tags'].is_a?(Enumerable))
           contact_data['tags'].each do |t|
