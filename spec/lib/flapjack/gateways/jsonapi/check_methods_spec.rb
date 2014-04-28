@@ -49,6 +49,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
   it "creates a scheduled maintenance period for an entity check" do
     start = Time.now + (60 * 60) # an hour from now
     duration = (2 * 60 * 60)     # two hours
+
     expect(Flapjack::Data::Entity).to receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
@@ -57,7 +58,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
       with(start.getutc.to_i, duration, :summary => 'test')
 
     apost "/scheduled_maintenances/checks/#{entity_name}:#{check}",
-      {:start_time => start.iso8601, :summary => 'test', :duration => duration}.to_json,
+      {:scheduled_maintenances => [{:start_time => start.iso8601, :summary => 'test', :duration => duration}]}.to_json,
       jsonapi_post_env
     expect(last_response.status).to eq(204)
   end

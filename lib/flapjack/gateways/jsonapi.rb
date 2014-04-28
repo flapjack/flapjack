@@ -266,6 +266,23 @@ module Flapjack
           'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
         end
 
+        def wrapped_params(name, error_on_nil = true)
+          result = params[name.to_sym]
+          if result.nil?
+            if error_on_nil
+              logger.debug("No '#{name}' object found in the following supplied JSON:")
+              logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
+              halt err(403, "No '#{name}' object received")
+            else
+              result = [{}]
+            end
+          end
+          unless result.is_a?(Array)
+            halt err(403, "The received '#{name}'' object is not an Array")
+          end
+          result
+        end
+
         def find_contact(contact_id)
           contact = Flapjack::Data::Contact.find_by_id(contact_id, :logger => logger, :redis => redis)
           raise Flapjack::Gateways::JSONAPI::ContactNotFound.new(contact_id) if contact.nil?

@@ -62,13 +62,7 @@ module Flapjack
           end
 
           app.post '/entities' do
-            entities = params[:entities]
-            unless entities
-              logger.debug("no entities object found in the following supplied JSON:")
-              logger.debug(request.body)
-              return err(403, "No entities object received")
-            end
-            return err(403, "The received entities object is not an Enumerable") unless entities.is_a?(Enumerable)
+            entities = wrapped_params('entities')
             return err(403, "Entity with a nil id detected") if entities.any? {|e| e['id'].nil?}
 
             entity_ids = entities.collect{|entity_data|
@@ -89,7 +83,8 @@ module Flapjack
                 case op
                 when 'replace'
                   if ['name'].include?(property)
-                    entity.update(property => value)
+                    # # Name change not supported in Flapjack v1.x, too many changes required
+                    # entity.update(property => value)
                   end
                 when 'add'
                   if 'contacts'.eql?(linked)
@@ -110,12 +105,14 @@ module Flapjack
 
           # create a scheduled maintenance period for a check on an entity
           app.post %r{^/scheduled_maintenances/entities/([^/]+)$} do
-            start_time = validate_and_parsetime(params[:start_time])
-            halt( err(403, "start time must be provided") ) unless start_time
-
+            scheduled_maintenances = wrapped_params('scheduled_maintenances')
             checks_for_entity_ids(params[:captures][0].split(',')).each do |check|
-              check.create_scheduled_maintenance(start_time,
-                params[:duration].to_i, :summary => params[:summary])
+              scheduled_maintenances.each do |wp|
+                start_time = validate_and_parsetime(wp['start_time'])
+                halt( err(403, "start time must be provided") ) unless start_time
+                check.create_scheduled_maintenance(start_time,
+                  wp['duration'].to_i, :summary => wp['summary'])
+              end
             end
 
             status 204
@@ -125,16 +122,19 @@ module Flapjack
           # NB currently, this does not acknowledge a specific failure event, just
           # the entity-check as a whole
           app.post %r{^/unscheduled_maintenances/entities/([^/]+)$} do
-            dur = params[:duration] ? params[:duration].to_i : nil
-            duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
-            summary = params[:summary]
-
-            opts = {:duration => duration}
-            opts[:summary] = summary if summary
-
+            unscheduled_maintenances = wrapped_params('unscheduled_maintenances', false)
             checks_for_entity_ids(params[:captures][0].split(',')).each do |check|
-              Flapjack::Data::Event.create_acknowledgement(
-                check.entity_name, check.check, {:redis => redis}.merge(opts))
+              unscheduled_maintenances.each do |wp|
+                dur = wp['duration'] ? wp['duration'].to_i : nil
+                duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
+                summary = wp['summary']
+
+                opts = {:duration => duration}
+                opts[:summary] = summary if summary
+
+                Flapjack::Data::Event.create_acknowledgement(
+                  check.entity_name, check.check, {:redis => redis}.merge(opts))
+              end
             end
 
             status 204
@@ -166,13 +166,16 @@ module Flapjack
           end
 
           app.post %r{^/test_notifications/entities/([^/]+)$} do
+            test_notifications = wrapped_params('test_notifications', false)
             checks_for_entity_ids(params[:captures][0].split(',')).each do |check|
-              summary = params[:summary] ||
-                        "Testing notifications to all contacts interested in entity #{check.entity.name}"
-              Flapjack::Data::Event.test_notifications(
-                check.entity_name, check.check,
-                :summary => summary,
-                :redis => redis)
+              test_notifications.each do |wp|
+                summary = wp['summary'] ||
+                          "Testing notifications to all contacts interested in entity #{check.entity.name}"
+                Flapjack::Data::Event.test_notifications(
+                  check.entity_name, check.check,
+                  :summary => summary,
+                  :redis => redis)
+              end
             end
             status 204
           end

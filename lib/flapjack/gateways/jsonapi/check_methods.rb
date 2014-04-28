@@ -33,12 +33,15 @@ module Flapjack
 
           # create a scheduled maintenance period for a check on an entity
           app.post %r{^/scheduled_maintenances/checks/([^/]+)$} do
-            start_time = validate_and_parsetime(params[:start_time])
-            halt( err(403, "start time must be provided") ) unless start_time
-
+            scheduled_maintenances = wrapped_params('scheduled_maintenances')
             checks_for_check_names(params[:captures][0].split(',')).each do |check|
-              check.create_scheduled_maintenance(start_time,
-                params[:duration].to_i, :summary => params[:summary])
+              scheduled_maintenances.each do |wp|
+                start_time = validate_and_parsetime(wp['start_time'])
+                halt( err(403, "start time must be provided") ) unless start_time
+
+                check.create_scheduled_maintenance(start_time,
+                  wp[:duration].to_i, :summary => wp[:summary])
+              end
             end
 
             status 204
@@ -48,16 +51,19 @@ module Flapjack
           # NB currently, this does not acknowledge a specific failure event, just
           # the entity-check as a whole
           app.post %r{^/unscheduled_maintenances/checks/([^/]+)$} do
-            dur = params[:duration] ? params[:duration].to_i : nil
-            duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
-            summary = params[:summary]
-
-            opts = {:duration => duration}
-            opts[:summary] = summary if summary
-
+            unscheduled_maintenances = wrapped_params('unscheduled_maintenances', false)
             checks_for_check_names(params[:captures][0].split(',')).each do |check|
-              Flapjack::Data::Event.create_acknowledgement(
-                check.entity_name, check.check, {:redis => redis}.merge(opts))
+              unscheduled_maintenances.each do |wp|
+                dur = wp['duration'] ? wp['duration'].to_i : nil
+                duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
+                summary = wp['summary']
+
+                opts = {:duration => duration}
+                opts[:summary] = summary if summary
+
+                Flapjack::Data::Event.create_acknowledgement(
+                  check.entity_name, check.check, {:redis => redis}.merge(opts))
+              end
             end
 
             status 204
@@ -89,13 +95,16 @@ module Flapjack
           end
 
           app.post %r{^/test_notifications/checks/([^/]+)$} do
+            test_notifications = wrapped_params('test_notifications', false)
             checks_for_check_names(params[:captures][0].split(',')).each do |check|
-              summary = params[:summary] ||
-                        "Testing notifications to all contacts interested in entity #{check.entity.name}"
-              Flapjack::Data::Event.test_notifications(
-                check.entity_name, check.check,
-                :summary => summary,
-                :redis => redis)
+              test_notifications.each do |wp|
+                summary = wp['summary'] ||
+                          "Testing notifications to all contacts interested in entity #{check.entity.name}"
+                Flapjack::Data::Event.test_notifications(
+                  check.entity_name, check.check,
+                  :summary => summary,
+                  :redis => redis)
+              end
             end
             status 204
           end

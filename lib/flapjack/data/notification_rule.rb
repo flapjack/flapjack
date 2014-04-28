@@ -86,7 +86,7 @@ module Flapjack
             :time_restrictions, :unknown_media, :warning_media, :critical_media,
             :unknown_blackhole, :warning_blackhole, :critical_blackhole) {|k|
           [k, self.send(k)]
-        }..merge(:links => {:contacts => [self.contact_id]}).to_json
+        }.merge(:links => {:contacts => [self.contact_id]}).to_json
       end
 
       # entity names match?

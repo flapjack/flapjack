@@ -123,13 +123,16 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
   end
 
   it "updates an entity" do
-    expect(Flapjack::Data::Entity).to receive(:find_by_id).
-      with('1234',:redis => redis).and_return(entity)
+    contact = double(Flapjack::Data::Contact)
+    expect(contact).to receive(:add_entity).with(entity)
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with('32', :redis => redis).and_return(contact)
 
-    expect(entity).to receive(:update).with('name' => 'mail.example.com').and_return(nil)
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with('1234', :redis => redis).and_return(entity)
 
     apatch "/entities/1234",
-      [{:op => 'replace', :path => '/entities/0/name', :value => 'mail.example.com'}].to_json,
+      [{:op => 'add', :path => '/entities/0/links/contacts/-', :value => '32'}].to_json,
       jsonapi_patch_env
     expect(last_response.status).to eq(204)
   end
@@ -181,16 +184,24 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
       with(start.getutc.to_i, duration, :summary => 'test')
 
     apost "/scheduled_maintenances/entities/#{entity_id}",
-      {:start_time => start.iso8601, :summary => 'test', :duration => duration}.to_json,
+      {:scheduled_maintenances => [{:start_time => start.iso8601, :summary => 'test', :duration => duration}]}.to_json,
       jsonapi_post_env
+
     expect(last_response.status).to eq(204)
   end
 
   it "doesn't create scheduled maintenance periods if the start time isn't passed" do
     duration = (2 * 60 * 60)     # two hours
 
+    expect(entity).to receive(:check_list).and_return([check])
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with(entity_id, :redis => redis).and_return(entity)
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+    expect(entity_check).not_to receive(:create_scheduled_maintenance)
+
     apost "/scheduled_maintenances/entities/#{entity_id}",
-      {:summary => 'test', :duration => duration}.to_json, jsonapi_post_env
+       {:scheduled_maintenances => [{:summary => 'test', :duration => duration}]}.to_json, jsonapi_post_env
     expect(last_response.status).to eq(403)
   end
 
