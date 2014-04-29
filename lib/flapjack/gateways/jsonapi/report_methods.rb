@@ -40,7 +40,11 @@ module Flapjack
             end
 
             checks = if event_ids.nil?
-              Flapjack::Data::EntityCheck.all(:redis => redis)
+              Flapjack::Data::Entity.all(:redis => redis).collect {|entity|
+                entity.check_list.collect {|check_name|
+                  find_entity_check(entity, check_name)
+                }
+              }.flatten(2)
             elsif !event_ids.empty?
               event_ids.collect {|event_id| find_entity_check_by_name(*event_id.split(':', 2)) }
             else
@@ -73,7 +77,7 @@ module Flapjack
                 'name'  => entity_name,
                 'links' => {
                   'checks' => entity_checks_by_entity_name[entity_name].collect {|entity_check|
-                    "#{entity_name}:#{entity_check.name}"
+                    "#{entity_name}:#{entity_check.check}"
                   },
                 }
               }
@@ -82,7 +86,7 @@ module Flapjack
 
             entity_check_data = entity_checks_by_entity_name.inject([]) do |memo, (entity_name, entity_checks)|
               memo += entity_checks.collect do |entity_check|
-                entity_check_name = entity_check.name
+                entity_check_name = entity_check.check
                 {
                   'id'        => "#{entity_name}:#{entity_check_name}",
                   'name'      => entity_check_name,

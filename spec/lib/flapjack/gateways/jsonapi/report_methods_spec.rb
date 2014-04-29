@@ -34,7 +34,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(entity).to receive(:name).exactly(3).times.and_return(entity_name)
     expect(entity).to receive(:id).and_return(entity_id)
 
-    expect(entity_check).to receive(:name).twice.and_return('SSH')
+    expect(entity_check).to receive(:check).twice.and_return('SSH')
 
     result = {
                 :status_reports => [{
@@ -77,7 +77,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(entity).to receive(:name).exactly(3).times.and_return(entity_name)
     expect(entity).to receive(:id).and_return(entity_id)
 
-    expect(entity_check).to receive(:name).twice.and_return('SSH')
+    expect(entity_check).to receive(:check).twice.and_return('SSH')
 
     result = {
                 :status_reports => [{
@@ -124,7 +124,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
 
     expect(entity).to receive(:name).and_return(entity_name)
     expect(entity_check).to receive(:entity).and_return(entity)
-    expect(entity_check).to receive(:name).twice.and_return('SSH')
+    expect(entity_check).to receive(:check).twice.and_return('SSH')
 
     result = {
                 :status_reports => [{
@@ -183,7 +183,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(entity).to receive(:name).exactly(3).times.and_return(entity_name)
     expect(entity).to receive(:id).and_return(entity_id)
 
-    expect(entity_check).to receive(:name).twice.and_return('SSH')
+    expect(entity_check).to receive(:check).twice.and_return('SSH')
 
     result = {
                 :scheduled_maintenance_reports => [{
@@ -230,7 +230,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(entity).to receive(:name).exactly(3).times.and_return(entity_name)
     expect(entity).to receive(:id).and_return(entity_id)
 
-    expect(entity_check).to receive(:name).twice.and_return('SSH')
+    expect(entity_check).to receive(:check).twice.and_return('SSH')
 
     result = {
                 :scheduled_maintenance_reports => [{
@@ -270,7 +270,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
 
     expect(entity).to receive(:name).and_return(entity_name)
     expect(entity_check).to receive(:entity).and_return(entity)
-    expect(entity_check).to receive(:name).twice.and_return('SSH')
+    expect(entity_check).to receive(:check).twice.and_return('SSH')
 
     result = {
                 :scheduled_maintenance_reports => [{
@@ -313,7 +313,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(entity).to receive(:name).exactly(3).times.and_return(entity_name)
     expect(entity).to receive(:id).and_return(entity_id)
 
-    expect(entity_check).to receive(:name).twice.and_return('SSH')
+    expect(entity_check).to receive(:check).twice.and_return('SSH')
 
     result = {
                 :unscheduled_maintenance_reports => [{
@@ -353,7 +353,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
 
     expect(entity).to receive(:name).and_return(entity_name)
     expect(entity_check).to receive(:entity).and_return(entity)
-    expect(entity_check).to receive(:name).twice.and_return('SSH')
+    expect(entity_check).to receive(:check).twice.and_return('SSH')
 
     result = {
                 :unscheduled_maintenance_reports => [{
@@ -396,7 +396,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
 
     expect(entity).to receive(:name).and_return(entity_name)
     expect(entity_check).to receive(:entity).and_return(entity)
-    expect(entity_check).to receive(:name).twice.and_return('SSH')
+    expect(entity_check).to receive(:check).twice.and_return('SSH')
 
     result = {
                 :unscheduled_maintenance_reports => [{
@@ -436,7 +436,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
 
     expect(entity).to receive(:name).and_return(entity_name)
     expect(entity_check).to receive(:entity).and_return(entity)
-    expect(entity_check).to receive(:name).twice.and_return('SSH')
+    expect(entity_check).to receive(:check).twice.and_return('SSH')
 
     result = {
                 :outage_reports => [{
@@ -480,7 +480,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
 
     expect(entity).to receive(:id).and_return(entity_id)
 
-    expect(entity_check).to receive(:name).twice.and_return('SSH')
+    expect(entity_check).to receive(:check).twice.and_return('SSH')
 
     result = {
                 :downtime_reports => [{
@@ -519,7 +519,7 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
 
     expect(entity).to receive(:name).and_return(entity_name)
     expect(entity_check).to receive(:entity).and_return(entity)
-    expect(entity_check).to receive(:name).twice.and_return('SSH')
+    expect(entity_check).to receive(:check).twice.and_return('SSH')
 
     result = {
                 :downtime_reports => [{
