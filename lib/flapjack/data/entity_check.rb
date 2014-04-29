@@ -360,6 +360,7 @@ module Flapjack
         timestamp = options[:timestamp] || Time.now.to_i
         summary = options[:summary]
         details = options[:details]
+        perfdata = options[:perfdata]
         count = options[:count]
 
         old_state = self.state
@@ -400,6 +401,10 @@ module Flapjack
         # hash summary and details (as they may have changed)
         @redis.hset("check:#{@key}", 'summary', (summary || ''))
         @redis.hset("check:#{@key}", 'details', (details || ''))
+        if perfdata
+          @redis.hset("check:#{@key}", 'perfdata', format_perfdata(perfdata).to_json)
+#          @redis.set("#{@key}:#{timestamp}:perfdata", perfdata)
+        end
 
         @redis.exec
       end
@@ -501,6 +506,18 @@ module Flapjack
 
       def details
         @redis.hget("check:#{@key}", 'details')
+      end
+
+      def perfdata
+        data = @redis.hget("check:#{@key}", 'perfdata')
+        begin
+          data = JSON.parse(data) if data
+        rescue
+          data = "Unable to parse string: #{data}"
+        end
+
+        data = [data] if data.is_a?(Hash)
+        data
       end
 
       # Returns a list of states for this entity check, sorted by timestamp.
@@ -645,6 +662,23 @@ module Flapjack
         raise "Invalid check" unless @check = check
         @key = "#{entity.name}:#{check}"
         @logger = options[:logger]
+      end
+
+      def format_perfdata(perfdata)
+        # example perfdata: time=0.486630s;;;0.000000 size=909B;;;0
+        items = perfdata.split(' ')
+        # Do some fancy regex
+        data = []
+        items.each do |item|
+          components = item.split '='
+          key = components[0].to_s
+          value = ""
+          if components[1]
+            value = components[1].split(';')[0].to_s
+          end
+          data << {"key" => key, "value" => value}
+        end
+        data
       end
 
     end

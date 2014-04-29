@@ -9,10 +9,10 @@ module Flapjack
 
       attr_accessor :counter, :id_hash, :tags
 
-      attr_reader :check, :summary, :details, :acknowledgement_id
+      attr_reader :check, :summary, :details, :acknowledgement_id, :perfdata
 
       REQUIRED_KEYS = ['type', 'state', 'entity', 'check', 'summary']
-      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration', 'tags']
+      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration', 'tags', 'perfdata']
 
       VALIDATIONS = {
         proc {|e| e['type'].is_a?(String) &&
@@ -41,6 +41,9 @@ module Flapjack
 
         proc {|e| e['details'].nil? || e['details'].is_a?(String) } =>
           "details must be a string",
+
+        proc { |e| e['perfdata'].nil? || e['perfdata'].is_a?(String) } =>
+          "perfdata must be a string",
 
         proc {|e| e['acknowledgement_id'].nil? ||
                   e['acknowledgement_id'].is_a?(String) ||
@@ -164,6 +167,7 @@ module Flapjack
       #   'state'     => state,
       #   'summary'   => check_output,
       #   'details'   => check_long_output,
+      #   'perfdata'  => perf_data,
       #   'time'      => timestamp
       def self.add(evt, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
@@ -204,11 +208,13 @@ module Flapjack
 
       def initialize(attrs = {})
         ['type', 'state', 'entity', 'check', 'time', 'summary', 'details',
-         'acknowledgement_id', 'duration'].each do |key|
+         'perfdata', 'acknowledgement_id', 'duration'].each do |key|
           instance_variable_set("@#{key}", attrs[key])
         end
         # details is optional. set it to nil if it only contains whitespace
         @details = (@details.is_a?(String) && ! @details.strip.empty?) ? @details.strip : nil
+        # perfdata is optional. set it to nil if it only contains whitespace
+        @perfdata = (@perfdata.is_a?(String) && ! @perfdata.strip.empty?) ? @perfdata.strip : nil
         if attrs['tags']
           @tags = Flapjack::Data::TagSet.new
           attrs['tags'].each {|tag| @tags.add(tag)}

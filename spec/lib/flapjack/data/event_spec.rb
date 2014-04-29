@@ -9,16 +9,17 @@ describe Flapjack::Data::Event do
 
   let!(:time) { Time.now}
 
-  let(:event_data) { {'type'    => 'service',
-                      'state'   => 'critical',
-                      'entity'  => entity_name,
-                      'check'   => check,
-                      'time'    => time.to_i,
-                      'summary' => 'timeout',
-                      'details' => "couldn't access",
+  let(:event_data) { {'type'     => 'service',
+                      'state'    => 'critical',
+                      'entity'   => entity_name,
+                      'check'    => check,
+                      'time'     => time.to_i,
+                      'summary'  => 'timeout',
+                      'details'  => "couldn't access",
+                      'perfdata' => "/=5504MB;5554;6348;0;7935",
                       'acknowledgement_id' => '1234',
                       'duration' => (60 * 60),
-                      'tags' => ['dev'] }
+                      'tags'     => ['dev'] }
   }
 
   context 'class' do
@@ -150,7 +151,7 @@ describe Flapjack::Data::Event do
       end
     end
 
-    ['time', 'details', 'acknowledgement_id', 'duration', 'tags'].each do |optional_key|
+    ['time', 'details', 'perfdata', 'acknowledgement_id', 'duration', 'tags'].each do |optional_key|
       it "rejects an event with invalid '#{optional_key}' key (archiving)" do
         bad_event_data = event_data.clone
         bad_event_data[optional_key] = {'hello' => 'there'}
