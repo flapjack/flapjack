@@ -49,8 +49,9 @@ production:
         level: INFO
         syslog_errors: yes
       smtp_config:
-        # port 1025 is the default port for http://mailcatcher.me
+        #from: "flapjack@noreply.example"
         host: 127.0.0.1
+        # 1025 is the default port for http://mailcatcher.me
         port: 1025
         starttls: false
         #auth:

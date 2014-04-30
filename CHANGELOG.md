@@ -1,7 +1,9 @@
 ## Flapjack Changelog
 
-# 0.8.10 - UNRELEASED
-- Feature: Add regex entities to notification rules gh-463 (@jswoods)
+# 0.8.10 - 2014-04-28
+- Feature: Add regex entities to notification rules #463 (@jswoods)
+- Bug: oobetet gateway exception sending pagerduty event #464 (@jessereynolds)
+- Bug: Event counters don't add up #465 (@jessereynolds)
 
 # 0.8.9 - 2014-04-21
 - Feature: Support arbitrary gateways in notifier, queue names from config gh-456 (@auxesis)

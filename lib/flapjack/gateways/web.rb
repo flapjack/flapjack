@@ -214,6 +214,7 @@ module Flapjack
         @check_last_change          = last_change
         @check_summary              = entity_check.summary
         @check_details              = entity_check.details
+        @check_perfdata             = entity_check.perfdata
 
         @last_notifications         = last_notification_data(entity_check)
 

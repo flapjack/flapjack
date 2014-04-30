@@ -24,6 +24,7 @@ module Flapjack
            'enabled'                           => @entity_check.enabled?,
            'summary'                           => @entity_check.summary,
            'details'                           => @entity_check.details,
+           'perfdata'                          => @entity_check.perfdata,
            'in_unscheduled_maintenance'        => @entity_check.in_unscheduled_maintenance?,
            'in_scheduled_maintenance'          => @entity_check.in_scheduled_maintenance?,
            'last_update'                       => @entity_check.last_update,

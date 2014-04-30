@@ -24,14 +24,20 @@ describe Flapjack::Processor, :logger => true do
     expect(redis).to receive(:hset).with(/^executive_instance:/, "boot_time", anything)
     expect(redis).to receive(:hget).with('event_counters', 'all').and_return(nil)
     expect(redis).to receive(:hset).with('event_counters', 'all', 0)
+    expect(redis).to receive(:hget).with('event_counters', 'ok').and_return(nil)
     expect(redis).to receive(:hset).with('event_counters', 'ok', 0)
+    expect(redis).to receive(:hget).with('event_counters', 'failure').and_return(nil)
     expect(redis).to receive(:hset).with('event_counters', 'failure', 0)
+    expect(redis).to receive(:hget).with('event_counters', 'action').and_return(nil)
     expect(redis).to receive(:hset).with('event_counters', 'action', 0)
+    expect(redis).to receive(:hget).with('event_counters', 'invalid').and_return(nil)
+    expect(redis).to receive(:hset).with('event_counters', 'invalid', 0)
 
     expect(redis).to receive(:hset).with(/^event_counters:/, 'all', 0)
     expect(redis).to receive(:hset).with(/^event_counters:/, 'ok', 0)
     expect(redis).to receive(:hset).with(/^event_counters:/, 'failure', 0)
     expect(redis).to receive(:hset).with(/^event_counters:/, 'action', 0)
+    expect(redis).to receive(:hset).with(/^event_counters:/, 'invalid', 0)
 
     expect(redis).to receive(:expire).with(/^executive_instance:/, anything)
     expect(redis).to receive(:expire).with(/^event_counters:/, anything).exactly(4).times

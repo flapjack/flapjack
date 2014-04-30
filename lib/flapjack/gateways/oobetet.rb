@@ -190,10 +190,10 @@ module Flapjack
 
       def emit_pagerduty(summary, event_type = 'trigger')
         if @config['pagerduty_contact']
-          pagerduty_event = { :service_key  => @config['pagerduty_contact'],
-                              :incident_key => "Flapjack Self Monitoring from #{@hostname}",
-                              :event_type   => event_type,
-                              :description  => summary }
+          pagerduty_event = { 'service_key'  => @config['pagerduty_contact'],
+                              'incident_key' => "Flapjack Self Monitoring from #{@hostname}",
+                              'event_type'   => event_type,
+                              'description'  => summary }
           status, response = send_pagerduty_event(pagerduty_event)
           if status == 200
             @logger.debug("successfully sent pagerduty event")
@@ -211,7 +211,7 @@ module Flapjack
 
       def send_pagerduty_event(event)
         options  = { :body => Oj.dump(event) }
-        http = EM::HttpRequest.new(@pagerduty_events_api_url).post(options)
+        http     = EM::HttpRequest.new(@pagerduty_events_api_url).post(options)
         response = Oj.load(http.response)
         status   = http.response_header.status
         @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
