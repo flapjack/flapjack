@@ -1,0 +1,512 @@
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+
+    <!-- Always force latest IE rendering engine or request Chrome Frame -->
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+
+    <!-- Use title if it's in the page YAML frontmatter -->
+    <title>API Documentation</title>
+
+    <link href="../stylesheets/screen.css" media="screen" rel="stylesheet" type="text/css" />
+    <link href="../stylesheets/print.css" media="print" rel="stylesheet" type="text/css" />
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script src="../javascripts/all.js" type="text/javascript"></script>
+
+    <script>
+      $(function() {
+        var toc = $("#toc").tocify({
+          selectors: "h1,h2",
+          extendPage: false,
+          theme: "none",
+          smoothScroll: false,
+          showEffectSpeed: 0,
+          hideEffectSpeed: 180,
+          ignoreSelector: ".toc-ignore",
+          hashGenerator: 'pretty',
+          highlightOffset: 60,
+          scrollTo: -2,
+          scrollHistory: true,
+          hashGenerator: function(text, element) {
+            return element[0].getAttribute('id');
+          }
+        }).data("toc-tocify");
+        // Hack to make already open sections to start opened,
+        // instead of displaying an ugly animation
+        setTimeout(function() {
+          toc.setOption("showEffectSpeed", 180);
+        },50);
+        setupLanguages([
+          
+        ]);
+      });
+    </script>
+  </head>
+
+  <body class="sections sections_4_notification_rules">
+    <div class="tocify-wrapper">
+      <a href="/">
+        <img src="../images/logo.png" />
+      </a>
+      <div id="toc">
+      </div>
+      
+    </div>
+    <div class="page-wrapper">
+      <div class="content">
+        <h1 id="notification-rules">Notification Rules</h1>
+
+<p>The Notification Rule resource has the following attributes:</p>
+
+<table><thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>id</td>
+<td>String</td>
+<td></td>
+</tr>
+<tr>
+<td>contact_id</td>
+<td>String</td>
+<td></td>
+</tr>
+<tr>
+<td>entities</td>
+<td>Array[String]</td>
+<td></td>
+</tr>
+<tr>
+<td>regex_entities</td>
+<td>Array[String]</td>
+<td></td>
+</tr>
+<tr>
+<td>tags</td>
+<td>Array[String]</td>
+<td></td>
+</tr>
+<tr>
+<td>regex_tags</td>
+<td>Array[String]</td>
+<td></td>
+</tr>
+<tr>
+<td>time_restrictions</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>unknown_media</td>
+<td>Array[String]</td>
+<td></td>
+</tr>
+<tr>
+<td>warning_media</td>
+<td>Array[String]</td>
+<td></td>
+</tr>
+<tr>
+<td>critical_media</td>
+<td>Array[String]</td>
+<td></td>
+</tr>
+<tr>
+<td>unknown_blackhole</td>
+<td>Boolean</td>
+<td></td>
+</tr>
+<tr>
+<td>warning_blackhole</td>
+<td>Boolean</td>
+<td></td>
+</tr>
+<tr>
+<td>critical_blackhole</td>
+<td>Boolean</td>
+<td></td>
+</tr>
+</tbody></table>
+
+<h2 id="create-notification-rules-for-a-contact">Create notification rules for a contact</h2>
+<pre class="highlight shell">curl -w <span class="s1">'response: %{http_code} \n'</span> -X POST -H <span class="s2">"Content-Type: application/vnd.api+json"</span> -d <span class="se">\</span>
+ <span class="s1">'{
+    "notification_rules": [
+      {
+        "entities": [
+          "foo-app-01.example.com"
+        ],
+        "regex_entities" : [
+          "^foo-\S{3}-\d{2}.example.com$"
+        ],
+        "tags": [
+          "database",
+          "physical"
+        ],
+        "regex_tags" : [],
+        "time_restrictions": [
+          {
+            "start_time": "2013-01-28 08:00:00",
+            "end_time": "2013-01-28 18:00:00",
+            "rrules": [
+              {
+                "validations": {
+                  "day": [1,2,3,4,5]
+                },
+                "rule_type": "Weekly",
+                "interval": 1,
+                "week_start": 0
+              }
+            ],
+            "exrules": [],
+            "rtimes": [],
+            "extimes": []
+          }
+        ],
+        "unknown_media": [],
+        "warning_media": [
+          "email"
+        ],
+        "critical_media": [
+          "sms",
+          "email"
+        ],
+        "unknown_blackhole": false,
+        "warning_blackhole": false,
+        "critical_blackhole": false
+      }
+    ]
+  }'</span> <span class="se">\</span>
+http://localhost:3081/contacts/5/notification_rules
+</pre>
+<pre class="highlight ruby"><span class="nb">require</span> <span class="s1">'flapjack-diner'</span>
+<span class="no">Flapjack</span><span class="o">::</span><span class="no">Diner</span><span class="p">.</span><span class="nf">base_uri</span><span class="p">(</span><span class="s1">'localhost:3081'</span><span class="p">)</span>
+
+<span class="no">Flapjack</span><span class="o">::</span><span class="no">Diner</span><span class="p">.</span><span class="nf">create_contact_notification_rules</span><span class="p">(</span>
+  <span class="s1">'5'</span><span class="p">,</span>
+  <span class="p">{</span>
+    <span class="s1">'entities'</span>           <span class="o">=&gt;</span> <span class="o">[</span> <span class="s1">'foo-app-01.example.com'</span> <span class="o">]</span><span class="p">,</span>
+    <span class="s1">'regex_entities'</span>     <span class="o">=&gt;</span> <span class="o">[</span> <span class="s1">'^foo-\S{3}-\d{2}.example.com$'</span> <span class="o">]</span><span class="p">,</span>
+    <span class="s1">'tags'</span>               <span class="o">=&gt;</span> <span class="o">[</span> <span class="s1">'database'</span><span class="p">,</span> <span class="s1">'physical'</span> <span class="o">]</span><span class="p">,</span>
+    <span class="s1">'regex_tags'</span>         <span class="o">=&gt;</span> <span class="kp">nil</span><span class="p">,</span>
+    <span class="s1">'time_restrictions'</span>  <span class="o">=&gt;</span> <span class="o">[</span>
+      <span class="p">{</span>
+        <span class="s1">'start_time'</span> <span class="o">=&gt;</span> <span class="s1">'2013-01-28 08:00:00'</span><span class="p">,</span>
+        <span class="s1">'end_time'</span>   <span class="o">=&gt;</span> <span class="s1">'2013-01-28 18:00:00'</span><span class="p">,</span>
+        <span class="s1">'rrules'</span>     <span class="o">=&gt;</span> <span class="o">[</span>
+          <span class="p">{</span>
+            <span class="s1">'validations'</span> <span class="o">=&gt;</span> <span class="p">{</span>
+              <span class="s1">'day'</span> <span class="o">=&gt;</span> <span class="o">[</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span> <span class="o">]</span>
+              <span class="p">},</span>
+            <span class="s1">'rule_type'</span>   <span class="o">=&gt;</span> <span class="s1">'Weekly'</span><span class="p">,</span>
+            <span class="s1">'interval'</span>    <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">'week_start'</span>  <span class="o">=&gt;</span> <span class="mi">0</span>
+          <span class="p">}</span>
+        <span class="o">]</span><span class="p">,</span>
+      <span class="s1">'exrules'</span>       <span class="o">=&gt;</span> <span class="o">[]</span><span class="p">,</span>
+      <span class="s1">'rtimes'</span>        <span class="o">=&gt;</span> <span class="o">[]</span><span class="p">,</span>
+      <span class="s1">'extimes'</span>       <span class="o">=&gt;</span> <span class="o">[]</span>
+      <span class="p">}</span>
+    <span class="o">]</span><span class="p">,</span>
+    <span class="s1">'unknown_media'</span>      <span class="o">=&gt;</span> <span class="o">[]</span><span class="p">,</span>
+    <span class="s1">'warning_media'</span>      <span class="o">=&gt;</span> <span class="o">[</span> <span class="s1">'email'</span> <span class="o">]</span><span class="p">,</span>
+    <span class="s1">'critical_media'</span>     <span class="o">=&gt;</span> <span class="o">[</span> <span class="s1">'sms'</span><span class="p">,</span> <span class="s1">'email'</span> <span class="o">]</span><span class="p">,</span>
+    <span class="s1">'unknown_blackhole'</span>  <span class="o">=&gt;</span> <span class="kp">false</span><span class="p">,</span>
+    <span class="s1">'warning_blackhole'</span>  <span class="o">=&gt;</span> <span class="kp">false</span><span class="p">,</span>
+    <span class="s1">'critical_blackhole'</span> <span class="o">=&gt;</span> <span class="kp">false</span>
+  <span class="p">}</span>
+<span class="p">)</span>
+</pre>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">POST /contacts/CONTACT_ID/notification_rules</code></p>
+
+<h3 id="query-parameters">Query Parameters</h3>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>notification_rules</td>
+<td>Array[NotificationRule]</td>
+<td>An array of NotificationRule resources to create.</td>
+</tr>
+</tbody></table>
+
+<h3 id="http-return-codes">HTTP Return Codes</h3>
+
+<table><thead>
+<tr>
+<th>Return code</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>201</td>
+<td>The submitted notification rule resources were created successfully.</td>
+</tr>
+<tr>
+<td>405</td>
+<td><strong>Error</strong> The submitted notification rule data was not sent with the JSONAPI MIME type <code class="prettyprint">application/vnd.api+json</code>.</td>
+</tr>
+<tr>
+<td>409</td>
+<td><strong>Error</strong> Notification rules with ids matching those submitted were found.</td>
+</tr>
+<tr>
+<td>422</td>
+<td><strong>Error</strong> The submitted notification rule data did not conform to the provided specification.</td>
+</tr>
+</tbody></table>
+
+<h2 id="get-notification-rules">Get notification rules</h2>
+<pre class="highlight shell">curl http://localhost:3081/notification_rules
+
+<span class="c"># or</span>
+curl http://localhost:3081/notification_rules/30fd36ae-3922-4957-ae3e-c8f6dd27e543
+
+<span class="c"># or</span>
+curl http://localhost:3081/notification_rules/30fd36ae-3922-4957-ae3e-c8f6dd27e543,bfd8be61-3d80-4b95-94df-6e77183ce4e3
+</pre>
+<pre class="highlight ruby"><span class="nb">require</span> <span class="s1">'flapjack-diner'</span>
+<span class="no">Flapjack</span><span class="o">::</span><span class="no">Diner</span><span class="p">.</span><span class="nf">base_uri</span><span class="p">(</span><span class="s1">'localhost:3081'</span><span class="p">)</span>
+
+<span class="no">Flapjack</span><span class="o">::</span><span class="no">Diner</span><span class="p">.</span><span class="nf">notification_rules</span>
+
+<span class="c1"># or</span>
+<span class="no">Flapjack</span><span class="o">::</span><span class="no">Diner</span><span class="p">.</span><span class="nf">notification_rules</span><span class="p">(</span>
+  <span class="s1">'30fd36ae-3922-4957-ae3e-c8f6dd27e543'</span>
+<span class="p">)</span>
+
+<span class="c1"># or</span>
+<span class="no">Flapjack</span><span class="o">::</span><span class="no">Diner</span><span class="p">.</span><span class="nf">notification_rules</span><span class="p">(</span>
+  <span class="s1">'30fd36ae-3922-4957-ae3e-c8f6dd27e543'</span><span class="p">,</span>
+  <span class="s1">'bfd8be61-3d80-4b95-94df-6e77183ce4e3'</span>
+<span class="p">)</span>
+</pre>
+
+<blockquote>
+<p>The commands return JSON structured like this, which is broken up by Flapjack::Diner into its constituent hashes:</p>
+</blockquote>
+<pre class="highlight json"><span class="p">{</span><span class="w">
+  </span><span class="s2">"notification_rules"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"entities"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="s2">"foo-app-01.example.com"</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="s2">"regex_entities"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="s2">"^foo-\S{3}-\d{2}.example.com$"</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="s2">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="s2">"database"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"physical"</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="s2">"regex_tags"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"time_restrictions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+          </span><span class="s2">"start_time"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2013-01-28 08:00:00"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"end_time"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2013-01-28 18:00:00"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"rrules"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+              </span><span class="s2">"validations"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="s2">"day"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">]</span><span class="w">
+              </span><span class="p">},</span><span class="w">
+              </span><span class="s2">"rule_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Weekly"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"interval"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"week_start"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+          </span><span class="p">],</span><span class="w">
+          </span><span class="s2">"exrules"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"rtimes"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"extimes"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="s2">"unknown_media"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"warning_media"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="s2">"email"</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="s2">"critical_media"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="s2">"sms"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"email"</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="s2">"unknown_blackhole"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"warning_blackhole"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"critical_blackhole"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"links"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="s2">"contacts"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"12"</span><span class="p">]</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></pre>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">GET /notification_rules</code></p>
+
+<p><strong>or</strong></p>
+
+<p><code class="prettyprint">GET /media/ID[,ID,ID...]</code></p>
+
+<h3 id="query-parameters">Query Parameters</h3>
+
+<p>None.</p>
+
+<h3 id="http-return-codes">HTTP Return Codes</h3>
+
+<table><thead>
+<tr>
+<th>Return code</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>200</td>
+<td>OK</td>
+</tr>
+</tbody></table>
+
+<h2 id="update-notification-rules">Update notification rules</h2>
+
+<p>Update one or more attributes for one or more notification rules.</p>
+<pre class="highlight shell">curl -w <span class="s1">'response: %{http_code} \n'</span> -X PATCH -H <span class="s2">"Content-Type: application/json-patch+json"</span> -d <span class="se">\</span>
+<span class="s1">'[
+  {"op"    : "replace",
+   "path"  : "/notification_rules/0/tags",
+   "value" : ["leased", "small"]}
+]'</span> <span class="se">\</span>
+ <span class="s1">'http://localhost:3081/notification_rules/a82fe0ec-1972-4c12-9732-6ebec9dcf479'</span>
+</pre>
+<pre class="highlight ruby"><span class="nb">require</span> <span class="s1">'flapjack-diner'</span>
+<span class="no">Flapjack</span><span class="o">::</span><span class="no">Diner</span><span class="p">.</span><span class="nf">base_uri</span><span class="p">(</span><span class="s1">'localhost:3081'</span><span class="p">)</span>
+
+<span class="no">Flapjack</span><span class="o">::</span><span class="no">Diner</span><span class="p">.</span><span class="nf">update_notification_rules</span><span class="p">(</span>
+  <span class="s1">'a82fe0ec-1972-4c12-9732-6ebec9dcf479'</span><span class="p">,</span>
+  <span class="ss">:tags</span> <span class="o">=&gt;</span> <span class="o">[</span> <span class="s1">'leased'</span><span class="p">,</span> <span class="s1">'small'</span> <span class="o">]</span>
+<span class="p">)</span>
+</pre>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">PATCH /notification_rules/ID[,ID,ID...]</code></p>
+
+<h3 id="query-parameters">Query Parameters</h3>
+
+<p>Parameters sent for notification rule updates must form a valid <a href="http://tools.ietf.org/html/rfc6902">JSON Patch (RFC 6902)</a> document. This is comprised of a bare JSON array of JSON-Patch operation objects, which have three members:</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>op</td>
+<td>String</td>
+<td>may only be <em>replace</em></td>
+</tr>
+<tr>
+<td>path</td>
+<td>String</td>
+<td>&ldquo;/notification_rules/0/ATTRIBUTE&rdquo; (e.g. &lsquo;warning_blackhole&rsquo;)</td>
+</tr>
+<tr>
+<td>value</td>
+<td>-&gt;</td>
+<td>a value of the correct data type for the attribute in the path</td>
+</tr>
+</tbody></table>
+
+<h3 id="http-return-codes">HTTP Return Codes</h3>
+
+<table><thead>
+<tr>
+<th>Return code</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>204</td>
+<td>The submitted notification rule updates were made successfully. No content is returned.</td>
+</tr>
+<tr>
+<td>404</td>
+<td>Notification rules could not be found for one or more of the provided ids. No notification rules were altered by this request.</td>
+</tr>
+<tr>
+<td>405</td>
+<td><strong>Error</strong> The submitted notification rule data was not sent with the JSON-Patch MIME type <code class="prettyprint">application/json-patch+json</code>.</td>
+</tr>
+</tbody></table>
+
+<h2 id="delete-notification-rules">Delete notification rules</h2>
+
+<p>Delete one or more notification rules.</p>
+<pre class="highlight shell">curl -w <span class="s1">'response: %{http_code} \n'</span> -X DELETE <span class="se">\</span>
+  <span class="s1">'http://localhost:3081/notification_rules/2caf75f4-0043-4884-b2e9-dfb418e275ba'</span>
+
+<span class="c"># or</span>
+curl -w <span class="s1">'response: %{http_code} \n'</span> -X DELETE <span class="se">\</span>
+  <span class="s1">'http://localhost:3081/notification_rules/2caf75f4-0043-4884-b2e9-dfb418e275ba,bd0dd8b6-2c72-49da-9b83-e0b283ec1931'</span>
+</pre>
+<pre class="highlight ruby"><span class="nb">require</span> <span class="s1">'flapjack-diner'</span>
+<span class="no">Flapjack</span><span class="o">::</span><span class="no">Diner</span><span class="p">.</span><span class="nf">base_uri</span><span class="p">(</span><span class="s1">'localhost:3081'</span><span class="p">)</span>
+
+<span class="no">Flapjack</span><span class="o">::</span><span class="no">Diner</span><span class="p">.</span><span class="nf">delete_notification_rules</span><span class="p">(</span>
+  <span class="s1">'2caf75f4-0043-4884-b2e9-dfb418e275ba'</span>
+<span class="p">)</span>
+
+<span class="c1"># or</span>
+<span class="no">Flapjack</span><span class="o">::</span><span class="no">Diner</span><span class="p">.</span><span class="nf">delete_notification_rules</span><span class="p">(</span>
+  <span class="s1">'2caf75f4-0043-4884-b2e9-dfb418e275ba'</span><span class="p">,</span>
+  <span class="s1">'bd0dd8b6-2c72-49da-9b83-e0b283ec1931'</span>
+<span class="p">)</span>
+</pre>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">DELETE /notification_rules/ID[,ID,ID...]</code></p>
+
+<h3 id="query-parameters">Query Parameters</h3>
+
+<p>None.</p>
+
+<h3 id="http-return-codes">HTTP Return Codes</h3>
+
+<table><thead>
+<tr>
+<th>Return code</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>204</td>
+<td>The notification rule(s) were deleted</td>
+</tr>
+<tr>
+<td>404</td>
+<td>Notification rules could not be found for one or more of the provided ids. No notification rules were deleted by this request.</td>
+</tr>
+</tbody></table>
+
+      </div>
+      <div class="dark-box">
+        <div id="lang-selector">
+          
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
