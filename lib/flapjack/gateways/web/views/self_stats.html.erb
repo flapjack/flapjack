@@ -1,7 +1,34 @@
-<% page_title 'Internal Statistics' %>
+<%
+  page_title  'Internal Statistics'
+  require_css 'nv.d3'
+  require_js  'jquery-1.10.2'
+  require_js  'd3.v3.min'
+  require_js  'nv.d3.min'
+  require_js  'self_stats'
+%>
 
 <div class="page-header">
   <h2>Internal Statistics</h2>
+</div>
+
+<style>
+  div#chart {
+    height: 150px;
+  }
+
+  .nv-interactive { display: none; }
+
+  .nvd3 .nv-x line { stroke: none; }
+  .nvd3 .nv-lineChart rect { stroke-width:3;stroke:rgb(0,0,0) }
+</style>
+
+<div class="row">
+  <div class="col-md-12">
+    <h4>Event queue length:</h4>
+    <div id="chart">
+      <svg></svg>
+    </div>
+  </div>
 </div>
 
 <div class="row">
