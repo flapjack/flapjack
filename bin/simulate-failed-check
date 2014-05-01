@@ -117,7 +117,7 @@ unless options.minutes
   options.minutes = 0.75
 end
 
-FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || options.environment || 'production'
+FLAPJACK_ENV = options.environment || ENV['FLAPJACK_ENV'] || 'production'
 
 config = Flapjack::Configuration.new
 config.load(options.config)
