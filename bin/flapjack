@@ -61,6 +61,10 @@ optparse = OptionParser.new do |opts|
     options.daemonize = d
   end
 
+  opts.on('-r', '--rbtrace', 'Enable rbtrace profiling') do
+    require 'rbtrace'
+  end
+
   opts.on("-p", "--pidfile [PATH]", String, "PATH to the pidfile to write to") do |pid|
     options.pidfile = pid
   end
