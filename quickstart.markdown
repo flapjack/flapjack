@@ -299,5 +299,8 @@ Stay tuned for more info on how to configure:
 - intervals
 - summary thresholds
 
-In the mean time, **check out the [API documentation](https://github.com/flpjck/flapjack/wiki/IMPORTING) on how to import contacts and entities**.
+In the mean time, check out:
+
+ - [Documentation](https://github.com/flpjck/flapjack/wiki/IMPORTING) on **how to import contacts and entities**
+ - **[JSONAPI documentation](/docs/jsonapi)** for working with individual contacts and entities
 
