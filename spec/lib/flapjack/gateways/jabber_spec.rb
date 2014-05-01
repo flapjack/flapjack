@@ -59,7 +59,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     expect(stanza).to receive(:from).and_return(from)
 
     redis = double('redis')
-    expect(redis).to receive(:hget).with('check_hashes', '1f8ac10f').
+    expect(redis).to receive(:hget).with('checks_by_hash', '1f8ac10f').
       and_return('main-example.com:ping')
 
     entity_check = double(Flapjack::Data::EntityCheck)
