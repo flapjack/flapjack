@@ -189,7 +189,7 @@ module Flapjack
           four_hours = 4 * 60 * 60
           duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
 
-          event_id = @redis.hget('check_hashes', ackid)
+          event_id = @redis.hget('checks_by_hash', ackid)
 
           if event_id.nil?
             error = "not found"
