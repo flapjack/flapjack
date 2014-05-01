@@ -13,6 +13,8 @@ You'll also learn the basics of how to:
 - Simulate a failure of a monitored service
 - Integrate Flapjack with Nagios (or Icinga), so Flapjack takes over alerting
 
+To skip this tutorial and jump straight to the code, view the project on [GitHub](https://github.com/flpjck/flapjack).
+
 ## Getting Flapjack running
 
 ### Dependencies
@@ -285,13 +287,15 @@ Visit [foo-app-01](http://localhost:3080/entity/foo-app-01.example.com) in the w
 
 ![Entity - foo-app-01.example.com](/images/quickstart/entity-foo-app-01-no-checks.png)
 
-## Coming soon
+## Feedback?
 
-<div class="alert alert-danger">
-<p>
-<strong>Work in progress.</strong>
-</p>
-</div>
+Found an error in the above? Please [submit a bug report](https://github.com/flpjck/flapjack/issues/new) and/or a pull request against the [gh-pages branch](https://github.com/flpjck/flapjack/tree/gh-pages) with the fix.
+
+Something not clear? That's a bug too!
+
+Got questions? Suggestions? Talk to us via irc, mailing list, or twitter. See [Support](/support) for details.
+
+## Coming soon
 
 Stay tuned for more info on how to configure:
 
