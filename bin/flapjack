@@ -53,6 +53,10 @@ optparse = OptionParser.new do |opts|
     options.config = c
   end
 
+  opts.on("-n", "--environment [ENV]", String, "Environment to boot") do |e|
+    options.environment = e
+  end
+
   opts.on("-d", "--[no-]daemonize", "Daemonize?") do |d|
     options.daemonize = d
   end
@@ -88,7 +92,7 @@ elsif !["start", "stop", "restart", "reload", "status"].include?(ARGV[0])
   exit 1
 end
 
-FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
+FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || options.environment || 'production'
 
 config = Flapjack::Configuration.new
 config.load(options.config)
