@@ -53,8 +53,16 @@ optparse = OptionParser.new do |opts|
     options.config = c
   end
 
+  opts.on("-n", "--environment [ENV]", String, "Environment to boot") do |e|
+    options.environment = e
+  end
+
   opts.on("-d", "--[no-]daemonize", "Daemonize?") do |d|
     options.daemonize = d
+  end
+
+  opts.on('-r', '--rbtrace', 'Enable rbtrace profiling') do
+    require 'rbtrace'
   end
 
   opts.on("-p", "--pidfile [PATH]", String, "PATH to the pidfile to write to") do |pid|
@@ -88,7 +96,7 @@ elsif !["start", "stop", "restart", "reload", "status"].include?(ARGV[0])
   exit 1
 end
 
-FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
+FLAPJACK_ENV = options.environment || ENV['FLAPJACK_ENV'] || 'production'
 
 config = Flapjack::Configuration.new
 config.load(options.config)
@@ -158,6 +166,7 @@ when "start"
     puts "Flapjack is already running."
   else
     print "Flapjack starting..."
+    print "\n" unless daemonize
     return_value = nil
     runner.execute(:daemonize => daemonize) {
       return_value = flapjack_coord.call

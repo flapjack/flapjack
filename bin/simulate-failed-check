@@ -82,6 +82,10 @@ optparse = OptionParser.new do |opts|
     options.config = c
   end
 
+  opts.on("-n", "--environment [ENV]", String, "Environment to boot") do |e|
+    options.environment = e
+  end
+
   opts.on("-t", "--time MINUTES", String, "MINUTES to generate failure events for (0.75)") do |t|
     options.minutes = t.to_f
   end
@@ -113,7 +117,7 @@ unless options.minutes
   options.minutes = 0.75
 end
 
-FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
+FLAPJACK_ENV = options.environment || ENV['FLAPJACK_ENV'] || 'production'
 
 config = Flapjack::Configuration.new
 config.load(options.config)
