@@ -590,7 +590,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
   end
 
   it "generates ephemeral tags for itself" do
-    ec = Flapjack::Data::EntityCheck.for_entity_name('foo-app-01.example.com', 'Disk / Utilisation', :redis => @redis)
+    ec = Flapjack::Data::EntityCheck.for_entity_name('foo-app-01.example.com', 'Disk / Utilisation', :create_entity => true, :redis => @redis)
     tags = ec.tags
     expect(tags).not_to be_nil
     expect(tags).to be_a(Flapjack::Data::TagSet)
