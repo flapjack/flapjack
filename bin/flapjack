@@ -162,6 +162,7 @@ when "start"
     puts "Flapjack is already running."
   else
     print "Flapjack starting..."
+    print "\n" unless daemonize
     return_value = nil
     runner.execute(:daemonize => daemonize) {
       return_value = flapjack_coord.call
