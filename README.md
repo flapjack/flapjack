@@ -19,6 +19,23 @@ To manually trigger a Jekyll rebuild:
 rake build
 ```
 
+This will copy slate documentation from `../slate/build` if it's available.
+
+### JSONAPI documentation
+
+JSONAPI documentation is in a [separate repository](https://github.com/flpjck/slate).
+
+There is a task to pull a built copy of the documentation into the Jekyll site:
+
+``` bash
+rake slate
+```
+
+This will copy slate documentation from `../slate/build` if it's available.
+
+Calling `rake build` will also call the `slate` task.
+
+
 ### LiveReload
 
 If you are using the LiveReload browser extension, Guard will reload the site in your browser when you make changes.
