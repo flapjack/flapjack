@@ -5,7 +5,8 @@
 - Feature: allow email messages to have custom from address #468 (@mattdelves)
 - Feature: jabber - The reply message should only include the filtered list of entity checks #472 (@someword)
 - Feature: Add perfdata handling #471 (@mattdelves)
-- Feature: jsonapi featureset reaches critical mass #474 (#aligraham)
+- Feature: jsonapi featureset reaches critical mass #474 (@ali-graham)
+- Feature: Add rbtrace command line option for profiling #479 (@auxesis)
 - Bug: ack'ing via jabber fails #480 (@jessereynolds)
 
 # 0.8.10 - 2014-04-28
