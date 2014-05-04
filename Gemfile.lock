@@ -11,6 +11,7 @@ PATH
       em-resque
       em-synchrony (~> 1.0.2)
       eventmachine (~> 1.0.0)
+      gli
       hiredis
       ice_cube
       mail
@@ -89,6 +90,7 @@ GEM
     girl_friday (0.11.2)
       connection_pool (~> 1.0)
       rubinius-actor
+    gli (2.10.0)
     guard (2.2.5)
       formatador (>= 0.2.4)
       listen (~> 2.1)
@@ -124,7 +126,7 @@ GEM
     nokogiri (1.6.1)
       mini_portile (~> 0.5.0)
     numerizer (0.1.1)
-    oj (2.8.1)
+    oj (2.9.0)
     perftools.rb (2.0.1)
     polyglot (0.3.4)
     pry (0.9.12.4)
