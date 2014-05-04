@@ -1,0 +1,172 @@
+#!/usr/bin/env ruby
+require 'gli'
+begin # XXX: Remove this begin/rescue before distributing your app
+require 'flapjack'
+rescue LoadError
+  STDERR.puts "In development, you need to use `bundle exec bin/flapjack` to run your app"
+  STDERR.puts "At install-time, RubyGems will make sure lib, etc. are in the load path"
+  STDERR.puts "Feel free to remove this message from bin/flapjack now"
+  exit 64
+end
+
+include GLI::App
+
+program_desc 'Flexible monitoring notification routing system'
+
+version Flapjack::VERSION
+
+#desc 'Describe some switch here'
+#switch [:s,:switch]
+
+desc 'Configuration file to use'
+default_value '/etc/flapjack/flapjack.yaml'
+arg_name '/path/to/flapjack.yaml'
+flag [:c,:config]
+
+desc 'Environment to boot'
+default_value 'production'
+arg_name '<environment>'
+flag [:n, :env, :environment]
+
+desc 'Bulk import data from an external source'
+command :import do |import|
+
+  import.desc 'Import contacts'
+  import.command :contacts do |contacts|
+    contacts.action do |global_options,options,args|
+      puts "contacts command ran"
+    end
+  end
+
+  import.desc 'Import entities'
+  import.command :entities do |entities|
+    entities.action do |global_options,options,args|
+      puts "entities command ran"
+    end
+  end
+end
+
+desc 'Receive events from external systems and send them to Flapjack'
+arg_name 'receiver'
+command :receiver do |receiver|
+
+  receiver.desc 'Nagios receiver'
+  #receiver.arg_name 'Turn Nagios check results into Flapjack events'
+  receiver.command :nagios do |nagios|
+    nagios.action do |global_options,options,args|
+      puts "nagios command ran"
+    end
+  end
+
+  receiver.desc 'NSCA receiver'
+  #receiver.arg_name 'Turn Nagios passive check results into Flapjack events'
+  receiver.command :nsca do |nsca|
+    nsca.action do |global_options,options,args|
+      puts "nsca command ran"
+    end
+  end
+
+  receiver.desc 'JSON receiver'
+  receiver.command :json do |json|
+    json.action do |global_options,options,args|
+      puts "json command ran"
+    end
+  end
+
+  receiver.desc 'Mirror receiver'
+  receiver.command :mirror do |mirror|
+    mirror.action do |global_options,options,args|
+      puts "mirror command ran"
+    end
+  end
+
+end
+
+desc 'Artificial service that oscillates up and down'
+command :flapper do |flapper|
+  flapper.action do |global_options,options,args|
+    puts "flapper command ran"
+  end
+end
+
+desc 'Generate streams of events in various states'
+command :simulate do |simulate|
+
+  simulate.desc 'Generate a stream of failure events'
+  simulate.command :fail do |_fail|
+    # Because `fail` is a keyword (that you can actually override in a block,
+    # but we want to be good Ruby citizens).
+    _fail.action do |global_options,options,args|
+      puts "fail command ran"
+    end
+  end
+
+  simulate.desc 'Generate a stream of failure events, and one final recovery'
+  simulate.command :fail_and_recover do |fail_and_recover|
+    fail_and_recover.action do |global_options,options,args|
+      puts "fail_and_recover command ran"
+    end
+  end
+
+  simulate.desc 'Generate a stream of ok events'
+  simulate.command :ok do |ok|
+    ok.action do |global_options,options,args|
+      puts "ok command ran"
+    end
+  end
+end
+
+desc 'Server for running components (e.g. processor, notifier, gateways)'
+command :server do |server|
+
+  server.desc 'Start the server'
+  server.command :start do |start|
+    start.action do |global_options,options,args|
+      puts "start command ran"
+    end
+  end
+
+  server.desc 'Stop the server'
+  server.command :stop do |stop|
+    stop.action do |global_options,options,args|
+      puts "stop command ran"
+    end
+  end
+
+  server.desc 'Restart the server'
+  server.command :restart do |restart|
+    restart.action do |global_options,options,args|
+      puts "restart command ran"
+    end
+  end
+
+  server.desc 'Reload the server'
+  server.command :reload do |reload|
+    reload.action do |global_options,options,args|
+      puts "reload command ran"
+    end
+  end
+end
+
+pre do |global,command,options,args|
+  # Pre logic here
+  # Return true to proceed; false to abort and not call the
+  # chosen command
+  # Use skips_pre before a command to skip this block
+  # on that command only
+  true
+end
+
+post do |global,command,options,args|
+  # Post logic here
+  # Use skips_post before a command to skip this
+  # block on that command only
+end
+
+on_error do |exception|
+  # Error logic here
+  # return false to skip default error handling
+  true
+end
+
+exit run(ARGV)
