@@ -16,6 +16,7 @@ PATH
       mail
       oj
       rack-fiber_pool
+      rake
       rbtrace
       redis (~> 3.0.6)
       resque (~> 1.23.0)
@@ -137,7 +138,7 @@ GEM
       rack
     rack-test (0.6.2)
       rack (>= 1.0)
-    rake (10.1.1)
+    rake (10.3.1)
     rb-fsevent (0.9.4)
     rb-inotify (0.9.3)
       ffi (>= 0.5.0)
@@ -221,7 +222,6 @@ DEPENDENCIES
   guard-rspec
   perftools.rb
   rack-test
-  rake
   rb-fsevent
   resque_spec
   rspec (~> 3.0.0.beta1)
