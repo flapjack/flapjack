@@ -85,7 +85,7 @@ module Flapjack
         end
 
         def include_active?(path)
-          request.path == "/#{path}" ? "class='active'" : ""
+          request.path == "/#{path}" ? " class='active'" : ""
         end
       end
 
