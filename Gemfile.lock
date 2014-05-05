@@ -14,7 +14,7 @@ PATH
       hiredis
       ice_cube
       mail
-      oj (>= 2.8.2)
+      oj (>= 2.9.0)
       rack-fiber_pool
       redis (~> 3.0.6)
       resque (~> 1.23.0)
@@ -122,7 +122,7 @@ GEM
     nokogiri (1.6.1)
       mini_portile (~> 0.5.0)
     numerizer (0.1.1)
-    oj (2.8.2)
+    oj (2.9.0)
     perftools.rb (2.0.1)
     polyglot (0.3.4)
     pry (0.9.12.4)
@@ -191,7 +191,7 @@ GEM
       polyglot
       polyglot (>= 0.3.1)
     tzinfo (1.0.1)
-    tzinfo-data (1.2014.1)
+    tzinfo-data (1.2014.2)
       tzinfo (>= 1.0.0)
     vegas (0.1.11)
       rack (>= 1.0.0)
