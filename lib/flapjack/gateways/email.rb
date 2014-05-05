@@ -51,6 +51,7 @@ module Flapjack
           host = @smtp_config ? @smtp_config['host'] : nil
           port = @smtp_config ? @smtp_config['port'] : nil
           starttls = @smtp_config ? !! @smtp_config['starttls'] : nil
+          m_from = @smtp_config ? @smtp_config['from'] : "flapjack@#{@fqdn}"
           if @smtp_config
             if auth_config = @smtp_config['auth']
               auth = {}
@@ -60,7 +61,6 @@ module Flapjack
             end
           end
 
-          m_from = "flapjack@#{@fqdn}"
           @logger.debug("flapjack_mailer: set from to #{m_from}")
 
           mail = prepare_email(:from       => m_from,
@@ -176,4 +176,3 @@ module Flapjack
     end
   end
 end
-

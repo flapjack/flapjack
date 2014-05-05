@@ -189,7 +189,7 @@ module Flapjack
           four_hours = 4 * 60 * 60
           duration = (dur.nil? || (dur <= 0)) ? four_hours : dur
 
-          event_id = @redis.hget('check_hashes', ackid)
+          event_id = @redis.hget('checks_by_hash', ackid)
 
           if event_id.nil?
             error = "not found"
@@ -394,7 +394,7 @@ module Flapjack
                       )
                   end
                 end
-                msg = failing_list.inject("Ack list:\n") {|memo,kv|
+                msg = entities.inject("Ack list:\n") {|memo,kv|
                   kv[1].each {|e| memo << "#{kv[0]}:#{e}\n" }
                   memo
                 }
@@ -475,7 +475,7 @@ module Flapjack
                       )
                   end
                 end
-                msg = failing_list.inject("Ack list:\n") {|memo,kv|
+                msg = my_failing_checks.inject("Ack list:\n") {|memo,kv|
                   kv[1].each {|e| memo << "#{kv[0]}:#{e}\n" }
                   memo
                 }

@@ -19,8 +19,7 @@ module Flapjack
     class Contact
 
       attr_accessor :id, :first_name, :last_name, :email, :media,
-        :media_intervals, :media_rollup_thresholds, :pagerduty_credentials,
-        :linked_entity_ids, :linked_media_ids
+        :media_intervals, :media_rollup_thresholds, :pagerduty_credentials
 
       TAG_PREFIX = 'contact_tag'
       ALL_MEDIA  = ['email', 'sms', 'jabber', 'pagerduty']
@@ -155,6 +154,11 @@ module Flapjack
                      *['subdomain', 'username', 'password'].collect {|f| [f, details[f]]})
       end
 
+      def delete_pagerduty_credentials
+        @redis.hdel("contact_media:#{self.id}", 'pagerduty')
+        @redis.del("contact_pagerduty:#{self.id}")
+      end
+
       # returns false if this contact was already in the set for the entity
       def add_entity(entity)
         key = "contacts_for:#{entity.id}"
@@ -201,11 +205,10 @@ module Flapjack
         }.values
       end
 
-      def self.entities_jsonapi(contact_ids, options = {})
+      def self.entity_ids_for(contact_ids, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        entity_data = []
-        linked_entity_ids = {}
+        entity_ids = {}
 
         temp_set = SecureRandom.uuid
         redis.sadd(temp_set, contact_ids)
@@ -216,28 +219,30 @@ module Flapjack
           next unless k =~ /^contacts_for:([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?::(\w+))?$/
 
           entity_id = $1
-          check     = $2
-
-          entity_data << {:id => entity_id, :name => redis.hget("entity:#{entity_id}", 'name')}
+          # check     = $2
 
           contact_ids.each do |contact_id|
-            linked_entity_ids[contact_id] ||= []
-            linked_entity_ids[contact_id] << entity_id
+            entity_ids[contact_id] ||= []
+            entity_ids[contact_id] << entity_id
           end
         end
 
         redis.del(temp_set)
 
-        [entity_data, linked_entity_ids]
+        entity_ids
       end
 
       def name
         [(self.first_name || ''), (self.last_name || '')].join(" ").strip
       end
 
+      def notification_rule_ids
+        @redis.smembers("contact_notification_rules:#{self.id}")
+      end
+
       # return an array of the notification rules of this contact
       def notification_rules(opts = {})
-        rules = @redis.smembers("contact_notification_rules:#{self.id}").inject([]) do |ret, rule_id|
+        rules = self.notification_rule_ids.inject([]) do |ret, rule_id|
           unless (rule_id.nil? || rule_id == '')
             ret << Flapjack::Data::NotificationRule.find_by_id(rule_id, :redis => @redis)
           end
@@ -266,6 +271,14 @@ module Flapjack
         end
         Flapjack::Data::NotificationRule.add(rule_data.merge(:contact_id => self.id),
           :redis => @redis, :logger => opts[:logger])
+      end
+
+      # move an existing notification rule from another contact to this one
+      def grab_notification_rule(rule)
+        @redis.srem("contact_notification_rules:#{rule.contact.id}", rule.id)
+        rule.contact_id = self.id
+        rule.update({})
+        @redis.sadd("contact_notification_rules:#{self.id}", rule.id)
       end
 
       def delete_notification_rule(rule)
@@ -436,7 +449,11 @@ module Flapjack
       # return a list of media enabled for this contact
       # eg [ 'email', 'sms' ]
       def media_list
-        @redis.hkeys("contact_media:#{self.id}")
+        @redis.hkeys("contact_media:#{self.id}") - ['pagerduty']
+      end
+
+      def media_ids
+        self.media_list.collect {|medium| "#{self.id}_#{medium}" }
       end
 
       # return the timezone of the contact, or the system default if none is set
@@ -484,16 +501,17 @@ module Flapjack
         }.to_json
       end
 
-      def to_jsonapi(*args)
-        { "id"                      => self.id,
-          "first_name"              => self.first_name,
-          "last_name"               => self.last_name,
-          "email"                   => self.email,
-          "timezone"                => self.timezone.name,
-          "tags"                    => self.tags.to_a,
-          "links"                   => {
-            :entities => @linked_entity_ids || [],
-            :media    => @linked_media_ids  || []
+      def to_jsonapi(opts = {})
+        { "id"                    => self.id,
+          "first_name"            => self.first_name,
+          "last_name"             => self.last_name,
+          "email"                 => self.email,
+          "timezone"              => self.timezone.name,
+          "tags"                  => self.tags.to_a,
+          "links"                 => {
+            :entities               => opts[:entity_ids]          || [],
+            :media                  => self.media_ids             || [],
+            :notification_rules     => self.notification_rule_ids || [],
           }
         }.to_json
       end
@@ -512,9 +530,11 @@ module Flapjack
       def self.add_or_update(contact_id, contact_data, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        # TODO check that the rest of this is safe for the update case
-        redis.hmset("contact:#{contact_id}",
-                    *['first_name', 'last_name', 'email'].collect {|f| [f, contact_data[f]]})
+        attrs = (['first_name', 'last_name', 'email'] & contact_data.keys).collect do |key|
+          [key, contact_data[key]]
+        end.flatten(1)
+
+        redis.hmset("contact:#{contact_id}", *attrs) unless attrs.empty?
 
         if ( ! contact_data['tags'].nil? && contact_data['tags'].is_a?(Enumerable))
           contact_data['tags'].each do |t|

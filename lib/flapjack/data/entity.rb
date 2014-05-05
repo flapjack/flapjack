@@ -78,6 +78,15 @@ module Flapjack
         self.new(:name => entity_name, :id => entity_id, :redis => redis)
       end
 
+      def self.find_by_ids(entity_ids, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        logger = options[:logger]
+
+        entity_ids.map do |id|
+          self.find_by_id(id, options)
+        end
+      end
+
       # NB: if we're worried about user input, https://github.com/mudge/re2
       # has bindings for a non-backtracking RE engine that runs in linear
       # time
@@ -145,6 +154,15 @@ module Flapjack
         }.compact
       end
 
+      def self.contact_ids_for(entity_ids, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        entity_ids.inject({}) do |memo, entity_id|
+          memo[entity_id] = redis.smembers("contacts_for:#{entity_id}")
+          memo
+        end
+      end
+
       def check_list
         @redis.zrange("current_checks:#{@name}", 0, -1)
       end
@@ -184,6 +202,16 @@ module Flapjack
           "id"    => self.id,
           "name"  => self.name,
         }
+      end
+
+      def to_jsonapi(opts = {})
+        {
+          "id"        => self.id,
+          "name"      => self.name,
+          "links"     => {
+            :contacts   => opts[:contact_ids] || [],
+          }
+        }.to_json
       end
 
     private

@@ -16,8 +16,13 @@ require 'flapjack/redis_pool'
 
 require 'flapjack/gateways/jsonapi/rack/json_params_parser'
 
+require 'flapjack/gateways/jsonapi/check_methods'
 require 'flapjack/gateways/jsonapi/contact_methods'
 require 'flapjack/gateways/jsonapi/entity_methods'
+require 'flapjack/gateways/jsonapi/medium_methods'
+require 'flapjack/gateways/jsonapi/notification_rule_methods'
+require 'flapjack/gateways/jsonapi/pagerduty_credential_methods'
+require 'flapjack/gateways/jsonapi/report_methods'
 
 module Flapjack
 
@@ -28,6 +33,10 @@ module Flapjack
       include Flapjack::Utility
 
       JSON_REQUEST_MIME_TYPES = ['application/vnd.api+json', 'application/json', 'application/json-patch+json']
+      # http://www.iana.org/assignments/media-types/application/vnd.api+json
+      JSONAPI_MEDIA_TYPE = 'application/vnd.api+json; charset=utf-8'
+      # http://tools.ietf.org/html/rfc6902
+      JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
 
       class ContactNotFound < RuntimeError
         attr_reader :contact_id
@@ -54,6 +63,13 @@ module Flapjack
         attr_reader :entity
         def initialize(entity)
           @entity = entity
+        end
+      end
+
+      class EntitiesNotFound < RuntimeError
+        attr_reader :entity_ids
+        def initialize(entity_ids)
+          @entity_ids = entity_ids
         end
       end
 
@@ -209,62 +225,194 @@ module Flapjack
         end
       end
 
-      def is_json_request?
-        Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type.split(/\s*[;,]\s*/, 2).first.downcase)
+      module Helpers
+
+        def cors_headers
+          allow_headers  = %w(* Content-Type Accept AUTHORIZATION Cache-Control)
+          allow_methods  = %w(GET POST PUT PATCH DELETE OPTIONS)
+          expose_headers = %w(Cache-Control Content-Language Content-Type Expires Last-Modified Pragma)
+          cors_headers   = {
+            'Access-Control-Allow-Origin'   => '*',
+            'Access-Control-Allow-Methods'  => allow_methods.join(', '),
+            'Access-Control-Allow-Headers'  => allow_headers.join(', '),
+            'Access-Control-Expose-Headers' => expose_headers.join(', '),
+            'Access-Control-Max-Age'        => '1728000'
+          }
+          headers(cors_headers)
+        end
+
+        def location(ids)
+          location = "#{base_url}#{request.path_info}#{ids.length == 1 ? '/' + ids.first : '?ids=' + ids.join(',')}"
+          headers({'Location' => location})
+        end
+
+        def err(status, *msg)
+          msg_str = msg.join(", ")
+          logger.info "Error: #{msg_str}"
+          [status, {}, {:errors => msg}.to_json]
+        end
+
+        def is_json_request?
+          Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type.split(/\s*[;,]\s*/, 2).first)
+        end
+
+        def is_jsonapi_request?
+          return false if request.content_type.nil?
+          'application/vnd.api+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
+        end
+
+        def is_jsonpatch_request?
+          return false if request.content_type.nil?
+          'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
+        end
+
+        def wrapped_params(name, error_on_nil = true)
+          result = params[name.to_sym]
+          if result.nil?
+            if error_on_nil
+              logger.debug("No '#{name}' object found in the following supplied JSON:")
+              logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
+              halt err(403, "No '#{name}' object received")
+            else
+              result = [{}]
+            end
+          end
+          unless result.is_a?(Array)
+            halt err(403, "The received '#{name}'' object is not an Array")
+          end
+          result
+        end
+
+        def find_contact(contact_id)
+          contact = Flapjack::Data::Contact.find_by_id(contact_id, :logger => logger, :redis => redis)
+          raise Flapjack::Gateways::JSONAPI::ContactNotFound.new(contact_id) if contact.nil?
+          contact
+        end
+
+        def find_rule(rule_id)
+          rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :logger => logger, :redis => redis)
+          raise Flapjack::Gateways::JSONAPI::NotificationRuleNotFound.new(rule_id) if rule.nil?
+          rule
+        end
+
+        def find_tags(tags)
+          halt err(400, "no tags given") if tags.nil? || tags.empty?
+          tags
+        end
+
+        def find_entity(entity_name)
+          entity = Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis)
+          raise Flapjack::Gateways::JSONAPI::EntityNotFound.new(entity_name) if entity.nil?
+          entity
+        end
+
+        def find_entity_by_id(entity_id)
+          entity = Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis)
+          raise Flapjack::Gateways::JSONAPI::EntityNotFound.new(entity_id) if entity.nil?
+          entity
+        end
+
+        def find_entity_check(entity, check_name)
+          entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check_name, :redis => redis)
+          raise Flapjack::Gateways::JSONAPI::EntityCheckNotFound.new(entity.name, check_name) if entity_check.nil?
+          entity_check
+        end
+
+        def find_entity_check_by_name(entity_name, check_name)
+          entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity_name, check_name, :redis => redis)
+          raise Flapjack::Gateways::JSONAPI::EntityCheckNotFound.new(entity_name, check_name) if entity_check.nil?
+          entity_check
+        end
+
+        def apply_json_patch(object_path, &block)
+          ops = params[:ops]
+
+          if ops.nil? || !ops.is_a?(Array)
+            halt err(400, "Invalid JSON-Patch request")
+          end
+
+          ops.each do |operation|
+            linked = nil
+            property = nil
+
+            op = operation['op']
+            operation['path'] =~ /\A\/#{object_path}\/0\/([^\/]+)(?:\/([^\/]+)(?:\/([^\/]+))?)?\z/
+            if 'links'.eql?($1)
+              linked = $2
+
+              value = case op
+              when 'add'
+                operation['value']
+              when 'remove'
+                $3
+              end
+            elsif 'replace'.eql?(op)
+              property = $1
+              value = operation['value']
+            else
+              next
+            end
+
+            yield(op, property, linked, value)
+          end
+        end
+
+        # NB: casts to UTC before converting to a timestamp
+        def validate_and_parsetime(value)
+          return unless value
+          Time.iso8601(value).getutc.to_i
+        rescue ArgumentError => e
+          logger.error "Couldn't parse time from '#{value}'"
+          nil
+        end
+
       end
-
-      def is_jsonpatch_request?
-        'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first.downcase)
-      end
-
-      register Flapjack::Gateways::JSONAPI::EntityMethods
-
-      register Flapjack::Gateways::JSONAPI::ContactMethods
-
-      # the following should add the cors headers to every request, but is no work
-      #register Sinatra::CrossOrigin
-      #
-      #configure do
-      #  enable :cross_origin
-      #end
-      #set :allow_origin, :any
-      #set :allow_methods, [:get, :post, :put, :patch, :delete, :options]
 
       options '*' do
         cors_headers
         204
       end
 
+      # The following catch-all routes act as impromptu filters for their method types
+      get '*' do
+        content_type JSONAPI_MEDIA_TYPE
+        cors_headers
+        pass
+      end
+
+      # bare 'params' may have splat/captures for regex route, see
+      # https://github.com/sinatra/sinatra/issues/453
+      post '*' do
+        halt(405) unless request.params.empty? || is_json_request? || is_jsonapi_request
+        content_type JSONAPI_MEDIA_TYPE
+        cors_headers
+        pass
+      end
+
+      patch '*' do
+        halt(405) unless is_jsonpatch_request?
+        content_type JSONAPI_MEDIA_TYPE
+        cors_headers
+        pass
+      end
+
+      delete '*' do
+        cors_headers
+        pass
+      end
+
+      register Flapjack::Gateways::JSONAPI::CheckMethods
+      register Flapjack::Gateways::JSONAPI::ContactMethods
+      register Flapjack::Gateways::JSONAPI::EntityMethods
+      register Flapjack::Gateways::JSONAPI::MediumMethods
+      register Flapjack::Gateways::JSONAPI::NotificationRuleMethods
+      register Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods
+      register Flapjack::Gateways::JSONAPI::ReportMethods
+
       not_found do
         err(404, "not routable")
       end
 
-      def cors_headers
-        allow_headers  = %w(* Content-Type Accept AUTHORIZATION Cache-Control)
-        allow_methods  = %w(GET POST PUT PATCH DELETE OPTIONS)
-        expose_headers = %w(Cache-Control Content-Language Content-Type Expires Last-Modified Pragma)
-        cors_headers   = {
-          'Access-Control-Allow-Origin'   => '*',
-          'Access-Control-Allow-Methods'  => allow_methods.join(', '),
-          'Access-Control-Allow-Headers'  => allow_headers.join(', '),
-          'Access-Control-Expose-Headers' => expose_headers.join(', '),
-          'Access-Control-Max-Age'        => '1728000'
-        }
-        headers(cors_headers)
-      end
-
-      def location(ids)
-        location = "#{base_url}#{request.path_info}#{ids.length == 1 ? '/' + ids.first : '?ids=' + ids.join(',')}"
-        headers({'Location' => location})
-      end
-
-      private
-
-      def err(status, *msg)
-        msg_str = msg.join(", ")
-        logger.info "Error: #{msg_str}"
-        [status, {}, {:errors => msg}.to_json]
-      end
     end
 
   end

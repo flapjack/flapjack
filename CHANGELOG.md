@@ -1,5 +1,14 @@
 ## Flapjack Changelog
 
+# 0.8.11 - 2014-05-01
+- Feature: simulate-failed-check - give -t a default of 45 seconds (@jessereynolds)
+- Feature: allow email messages to have custom from address #468 (@mattdelves)
+- Feature: jabber - The reply message should only include the filtered list of entity checks #472 (@someword)
+- Feature: Add perfdata handling #471 (@mattdelves)
+- Feature: jsonapi featureset reaches critical mass #474 (@ali-graham)
+- Feature: Add rbtrace command line option for profiling #479 (@auxesis)
+- Bug: ack'ing via jabber fails #480 (@jessereynolds)
+
 # 0.8.10 - 2014-04-28
 - Feature: Add regex entities to notification rules #463 (@jswoods)
 - Bug: oobetet gateway exception sending pagerduty event #464 (@jessereynolds)

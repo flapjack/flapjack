@@ -38,6 +38,6 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'ice_cube'
   gem.add_dependency 'tzinfo', '~> 1.0.1'
   gem.add_dependency 'tzinfo-data'
-
-  gem.add_development_dependency 'rake'
+  gem.add_dependency 'rbtrace'
+  gem.add_dependency 'rake'
 end

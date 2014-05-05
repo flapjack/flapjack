@@ -58,13 +58,13 @@ module Flapjack
       # point on...
 
       # FIXME: add an administrative function to reset all event counters
-      
+
       @redis.hset('event_counters', 'all', 0)     if @redis.hget('event_counters', 'all').nil?
       @redis.hset('event_counters', 'ok', 0)      if @redis.hget('event_counters', 'ok').nil?
       @redis.hset('event_counters', 'failure', 0) if @redis.hget('event_counters', 'failure').nil?
       @redis.hset('event_counters', 'action', 0)  if @redis.hget('event_counters', 'action').nil?
       @redis.hset('event_counters', 'invalid', 0) if @redis.hget('event_counters', 'invalid').nil?
-      
+
       @redis.hset("executive_instance:#{@instance_id}", 'boot_time', boot_time.to_i)
       @redis.hset("event_counters:#{@instance_id}", 'all', 0)
       @redis.hset("event_counters:#{@instance_id}", 'ok', 0)
@@ -146,7 +146,7 @@ module Flapjack
       event_str << ", #{Time.at(event.time).to_s}" if event.time
       @logger.debug("Processing Event: #{event_str}")
 
-      entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :redis => @redis)
+      entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :create_entity => true, :redis => @redis)
       timestamp = Time.now.to_i
 
       event.tags = (event.tags || Flapjack::Data::TagSet.new) + entity_check.tags
@@ -174,7 +174,7 @@ module Flapjack
 
       event.counter = @redis.hincrby('event_counters', 'all', 1)
       @redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
-        
+
       # FIXME skip if entity_check.nil?
 
       # FIXME: validate that the event is sane before we ever get here
@@ -223,7 +223,8 @@ module Flapjack
         end
 
         entity_check.update_state(event.state, :timestamp => timestamp,
-          :summary => event.summary, :count => event.counter, :details => event.details)
+                                  :summary => event.summary, :count => event.counter,
+                                  :details => event.details, :perfdata => event.perfdata)
 
         entity_check.update_current_scheduled_maintenance
 
@@ -276,4 +277,3 @@ module Flapjack
 
   end
 end
-

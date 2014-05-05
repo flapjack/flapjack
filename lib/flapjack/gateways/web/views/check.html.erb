@@ -220,6 +220,17 @@
   <div class="col-md-6">
     <h3>Output: <%= h @check_summary %></h3>
     <p><%= h @check_details %></p>
+    <% if @check_perfdata && @check_perfdata.is_a?(Array) %>
+    <h3>Performance Data:</h3>
+    <table>
+      <% @check_perfdata.each do |perfdata| %>
+      <tr>
+        <td><%= perfdata["key"] %></td>
+        <td><%= perfdata["value"] %></td>
+      </tr>
+      <% end %>
+    </table>
+    <% end %>
     <table class="table table-hover table-condensed">
       <tr>
         <td>Last state change:</td>
@@ -435,5 +446,3 @@
     </div><!-- panel-danger -->
   </div><!-- col-md-8 col-md-offset-2 -->
 </div><!-- row -->
-
-

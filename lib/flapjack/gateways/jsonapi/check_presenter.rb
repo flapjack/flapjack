@@ -12,7 +12,7 @@ module Flapjack
 
     class JSONAPI < Sinatra::Base
 
-      class EntityCheckPresenter
+      class CheckPresenter
 
         def initialize(entity_check)
           @entity_check = entity_check
@@ -24,6 +24,7 @@ module Flapjack
            'enabled'                           => @entity_check.enabled?,
            'summary'                           => @entity_check.summary,
            'details'                           => @entity_check.details,
+           'perfdata'                          => @entity_check.perfdata,
            'in_unscheduled_maintenance'        => @entity_check.in_unscheduled_maintenance?,
            'in_scheduled_maintenance'          => @entity_check.in_scheduled_maintenance?,
            'last_update'                       => @entity_check.last_update,
@@ -32,7 +33,7 @@ module Flapjack
            'last_acknowledgement_notification' => @entity_check.last_notification_for_state(:acknowledgement)[:timestamp]}
         end
 
-        def outages(start_time, end_time, options = {})
+        def outage(start_time, end_time, options = {})
           # hist_states is an array of hashes, with [state, timestamp, summary] keys
           hist_states = @entity_check.historical_states(start_time, end_time)
           return hist_states if hist_states.empty?
@@ -83,7 +84,7 @@ module Flapjack
           result
         end
 
-        def unscheduled_maintenances(start_time, end_time)
+        def unscheduled_maintenance(start_time, end_time)
           # unsched_maintenance is an array of hashes, with [duration, timestamp, summary] keys
           unsched_maintenance = @entity_check.maintenances(start_time, end_time,
             :scheduled => false)
@@ -98,7 +99,7 @@ module Flapjack
           start_in_unsched + unsched_maintenance
         end
 
-        def scheduled_maintenances(start_time, end_time)
+        def scheduled_maintenance(start_time, end_time)
           # sched_maintenance is an array of hashes, with [duration, timestamp, summary] keys
           sched_maintenance = @entity_check.maintenances(start_time, end_time,
             :scheduled => true)
@@ -119,9 +120,9 @@ module Flapjack
         #
         # TODO test performance with larger data sets
         def downtime(start_time, end_time)
-          sched_maintenances = scheduled_maintenances(start_time, end_time)
+          sched_maintenances = scheduled_maintenance(start_time, end_time)
 
-          outs = outages(start_time, end_time)
+          outs = outage(start_time, end_time)
 
           total_secs  = {}
           percentages = {}
