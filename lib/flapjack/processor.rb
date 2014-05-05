@@ -39,7 +39,7 @@ module Flapjack
       @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf, :keep_zero => true)
 
       ncsm_ignore_conf = @config['new_check_scheduled_maintenance_ignore'] || ''
-      @ncsm_ignore = ncsm_ignore_conf.split(' ,')
+      @ncsm_ignore = ncsm_ignore_conf.split(/\s*,\s*/)
 
       @exit_on_queue_empty = !! @config['exit_on_queue_empty']
 
