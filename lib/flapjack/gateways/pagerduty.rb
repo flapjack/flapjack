@@ -235,6 +235,8 @@ module Flapjack
         password    = opts['password']
         check       = opts['check']
 
+        return nil unless subdomain && username && password && check
+
         t = Time.now.utc
 
         url = 'https://' + subdomain + '.pagerduty.com/api/v1/incidents'
