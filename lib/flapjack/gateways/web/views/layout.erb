@@ -33,37 +33,37 @@
       <div class="collapse navbar-collapse navbar-ex1-collapse">
 
         <ul class="nav navbar-nav">
-          <li>
+          <li<%= include_active?('') %>>
             <a title="Summary" href="/">
               <i class="fa fa-trophy fa-lg"></i>
               Summary
             </a>
           </li>
-          <li>
+          <li<%= include_active?('entities_all') %>>
             <a title="All Entities" href="/entities_all">
               <i class="fa fa-bullseye fa-lg"></i>
               All Entities
             </a>
           </li>
-          <li>
+          <li<%= include_active?('entities_failing') %>>
             <a title="Failing Entities" href="/entities_failing">
               <i class="fa fa-bullhorn fa-lg"></i>
               Failing Entities
             </a>
           </li>
-          <li>
+          <li<%= include_active?('checks_all') %>>
             <a title="All Checks" href="/checks_all">
               <i class="fa fa-check-circle-o fa-lg"></i>
               All Checks
             </a>
           </li>
-          <li>
+          <li<%= include_active?('checks_failing') %>>
             <a title="Failing Checks" href="/checks_failing">
               <i class="fa fa-times-circle-o fa-lg"></i>
               Failing Checks
             </a>
           </li>
-          <li>
+          <li<%= include_active?('contacts') %>>
             <a title="Contacts" href="/contacts">
               <i class="fa fa-users fa-lg"></i>
               Contacts
@@ -72,7 +72,7 @@
         </ul>
 
         <ul class="nav navbar-nav navbar-right">
-          <li>
+          <li<%= include_active?('self_stats') %>>
             <a title="Internal Statistics" href="/self_stats">
               <i class="fa fa-tachometer fa-lg"></i>
               Internal Statistics

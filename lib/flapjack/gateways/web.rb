@@ -83,6 +83,10 @@ module Flapjack
         def u(text)
           ERB::Util.u(text)
         end
+
+        def include_active?(path)
+          request.path == "/#{path}" ? " class='active'" : ""
+        end
       end
 
       def redis

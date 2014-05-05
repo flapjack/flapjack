@@ -145,8 +145,8 @@ end
 
 def icecube_schedule_to_time_restriction(sched, time_zone)
   tr = sched.to_hash
-  tr[:start_time] = time_zone.utc_to_local(tr[:start_date][:time]).strftime "%Y-%m-%d %H:%M:%S"
-  tr[:end_time]   = time_zone.utc_to_local(tr[:end_time][:time]).strftime "%Y-%m-%d %H:%M:%S"
+  tr[:start_time] = {:time => time_zone.utc_to_local(tr[:start_time][:time]).strftime("%Y-%m-%d %H:%M:%S"), :zone => time_zone}
+  tr[:end_time]   = {:time => time_zone.utc_to_local(tr[:end_time][:time]).strftime("%Y-%m-%d %H:%M:%S"), :zone => time_zone}
 
   # rewrite IceCube::WeeklyRule to Weekly, etc
   tr[:rrules].each {|rrule|

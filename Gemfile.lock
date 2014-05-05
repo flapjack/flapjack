@@ -14,7 +14,7 @@ PATH
       hiredis
       ice_cube
       mail
-      oj
+      oj (>= 2.9.0)
       rack-fiber_pool
       rake
       rbtrace
@@ -125,7 +125,7 @@ GEM
     nokogiri (1.6.1)
       mini_portile (~> 0.5.0)
     numerizer (0.1.1)
-    oj (2.8.1)
+    oj (2.9.0)
     perftools.rb (2.0.1)
     polyglot (0.3.4)
     pry (0.9.12.4)
