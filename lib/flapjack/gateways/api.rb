@@ -104,7 +104,6 @@ module Flapjack
       end
 
       register Flapjack::Gateways::API::EntityMethods
-
       register Flapjack::Gateways::API::ContactMethods
 
       not_found do

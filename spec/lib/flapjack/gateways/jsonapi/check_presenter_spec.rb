@@ -1,7 +1,7 @@
 require 'spec_helper'
-require 'flapjack/gateways/jsonapi/entity_check_presenter'
+require 'flapjack/gateways/jsonapi/check_presenter'
 
-describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
+describe 'Flapjack::Gateways::JSONAPI::CheckPresenter' do
 
   let(:entity_check) { double(Flapjack::Data::EntityCheck) }
 
@@ -44,8 +44,8 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
     expect(entity_check).to receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
-    ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
-    outages = ecp.outages(time - (5 * 60 * 60), time - (2 * 60 * 60))
+    ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
+    outages = ecp.outage(time - (5 * 60 * 60), time - (2 * 60 * 60))
     expect(outages).not_to be_nil
     expect(outages).to be_an(Array)
     expect(outages.size).to eq(4)
@@ -60,8 +60,8 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
     expect(entity_check).to receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
-    ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
-    outages = ecp.outages(nil, nil)
+    ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
+    outages = ecp.outage(nil, nil)
     expect(outages).not_to be_nil
     expect(outages).to be_an(Array)
     expect(outages.size).to eq(4)
@@ -79,8 +79,8 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
     expect(entity_check).to receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
-    ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
-    outages = ecp.outages(nil, nil)
+    ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
+    outages = ecp.outage(nil, nil)
     expect(outages).not_to be_nil
     expect(outages).to be_an(Array)
     expect(outages.size).to eq(3)
@@ -92,8 +92,8 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
     expect(entity_check).to receive(:historical_state_before).
       with(time - (4 * 60 * 60)).and_return(nil)
 
-    ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
-    outages = ecp.outages(nil, nil)
+    ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
+    outages = ecp.outage(nil, nil)
     expect(outages).not_to be_nil
     expect(outages).to be_an(Array)
     expect(outages.size).to eq(1)
@@ -106,8 +106,8 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
     expect(entity_check).to receive(:maintenances).
       with(nil, time - (12 * 60 * 60), :scheduled => false).and_return([])
 
-    ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
-    unsched_maint = ecp.unscheduled_maintenances(time - (12 * 60 * 60), time)
+    ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
+    unsched_maint = ecp.unscheduled_maintenance(time - (12 * 60 * 60), time)
 
     expect(unsched_maint).to be_an(Array)
     expect(unsched_maint.size).to eq(4)
@@ -122,8 +122,8 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
     expect(entity_check).to receive(:maintenances).
       with(nil, time - (12 * 60 * 60), :scheduled => true).and_return([])
 
-    ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
-    sched_maint = ecp.scheduled_maintenances(time - (12 * 60 * 60), time)
+    ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
+    sched_maint = ecp.scheduled_maintenance(time - (12 * 60 * 60), time)
 
     expect(sched_maint).to be_an(Array)
     expect(sched_maint.size).to eq(4)
@@ -144,7 +144,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
     expect(entity_check).to receive(:maintenances).
       with(nil, time - (12 * 60 * 60), :scheduled => true).and_return([])
 
-    ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
+    ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
     downtimes = ecp.downtime(time - (12 * 60 * 60), time)
 
     # 22 minutes, 3 + 8 + 11
@@ -169,7 +169,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
     expect(entity_check).to receive(:maintenances).
       with(nil, nil, :scheduled => true).and_return(maintenances)
 
-    ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
+    ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
     downtimes = ecp.downtime(nil, nil)
 
     # 22 minutes, 3 + 8 + 11
@@ -196,7 +196,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityCheckPresenter' do
     expect(entity_check).to receive(:maintenances).
       with(nil, nil, :scheduled => true).and_return([])
 
-    ecp = Flapjack::Gateways::JSONAPI::EntityCheckPresenter.new(entity_check)
+    ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
     downtimes = ecp.downtime(nil, nil)
 
     expect(downtimes).to be_a(Hash)

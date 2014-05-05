@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    flapjack (0.8.10)
+    flapjack (0.8.11)
       activesupport (~> 3.2.14)
       blather (~> 0.8.3)
       chronic
@@ -14,8 +14,10 @@ PATH
       hiredis
       ice_cube
       mail
-      oj
+      oj (>= 2.9.0)
       rack-fiber_pool
+      rake
+      rbtrace
       redis (~> 3.0.6)
       resque (~> 1.23.0)
       sinatra
@@ -30,7 +32,7 @@ GEM
       i18n (~> 0.6, >= 0.6.4)
       multi_json (~> 1.0)
     addressable (2.3.5)
-    async_rack_test (0.0.4)
+    async_rack_test (0.0.5)
     blather (0.8.8)
       activesupport (>= 2.3.11)
       eventmachine (>= 1.0.0)
@@ -103,7 +105,7 @@ GEM
     hiredis (0.4.5)
     http_parser.rb (0.6.0)
     i18n (0.6.9)
-    ice_cube (0.11.3)
+    ice_cube (0.12.0)
     listen (2.4.0)
       celluloid (>= 0.15.2)
       rb-fsevent (>= 0.9.3)
@@ -115,6 +117,7 @@ GEM
     method_source (0.8.2)
     mime-types (1.25.1)
     mini_portile (0.5.3)
+    msgpack (0.5.8)
     multi_json (1.8.2)
     multi_test (0.0.3)
     niceogiri (1.1.2)
@@ -122,7 +125,7 @@ GEM
     nokogiri (1.6.1)
       mini_portile (~> 0.5.0)
     numerizer (0.1.1)
-    oj (2.6.0)
+    oj (2.9.0)
     perftools.rb (2.0.1)
     polyglot (0.3.4)
     pry (0.9.12.4)
@@ -135,10 +138,14 @@ GEM
       rack
     rack-test (0.6.2)
       rack (>= 1.0)
-    rake (10.1.1)
+    rake (10.3.1)
     rb-fsevent (0.9.4)
     rb-inotify (0.9.3)
       ffi (>= 0.5.0)
+    rbtrace (0.4.3)
+      ffi (>= 1.0.6)
+      msgpack (>= 0.4.3)
+      trollop (>= 1.16.2)
     redis (3.0.6)
     redis-namespace (1.4.1)
       redis (~> 3.0.4)
@@ -190,8 +197,9 @@ GEM
     treetop (1.4.15)
       polyglot
       polyglot (>= 0.3.1)
+    trollop (2.0)
     tzinfo (1.0.1)
-    tzinfo-data (1.2014.1)
+    tzinfo-data (1.2014.2)
       tzinfo (>= 1.0.0)
     vegas (0.1.11)
       rack (>= 1.0.0)
@@ -203,7 +211,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  async_rack_test
+  async_rack_test (>= 0.0.5)
   cucumber
   debugger-ruby_core_source (>= 1.3.2)
   delorean
@@ -214,7 +222,6 @@ DEPENDENCIES
   guard-rspec
   perftools.rb
   rack-test
-  rake
   rb-fsevent
   resque_spec
   rspec (~> 3.0.0.beta1)

@@ -69,7 +69,6 @@ module Flapjack
         return unless !tr.nil? && tr.is_a?(Hash)
         return if timezone.nil? && !timezone.is_a?(ActiveSupport::TimeZone)
         return unless tr = prepare_time_restriction(tr, timezone)
-
         IceCube::Schedule.from_hash(tr)
       end
 
@@ -79,6 +78,14 @@ module Flapjack
             :unknown_blackhole, :warning_blackhole, :critical_blackhole) {|k|
           [k, self.send(k)]
         }.to_json
+      end
+
+      def to_jsonapi(opts = {})
+        self.class.hashify(:id, :tags, :regex_tags, :entities, :regex_entities,
+            :time_restrictions, :unknown_media, :warning_media, :critical_media,
+            :unknown_blackhole, :warning_blackhole, :critical_blackhole) {|k|
+          [k, self.send(k)]
+        }.merge(:links => {:contacts => [self.contact_id]}).to_json
       end
 
       # entity names match?
@@ -208,39 +215,34 @@ module Flapjack
         # this will hand back a 'deep' copy
         tr = symbolize(time_restriction)
 
-        return unless tr.has_key?(:start_time) && tr.has_key?(:end_time)
+        return unless (tr.has_key?(:start_time) || tr.has_key?(:start_date)) &&
+          (tr.has_key?(:end_time) || tr.has_key?(:end_date))
 
-        parsed_time = proc {|t|
-          if t.is_a?(Time)
-            t
+        parsed_time = proc {|tr, field|
+          if t = tr.delete(field)
+            t = t.dup
+            t = t[:time] if t.is_a?(Hash)
+
+            if t.is_a?(Time)
+              t
+            else
+              begin; (timezone || Time).parse(t); rescue ArgumentError; nil; end
+            end
           else
-            begin; (timezone || Time).parse(t); rescue ArgumentError; nil; end
+            nil
           end
         }
 
-        start_time = case tr[:start_time]
-        when String, Time
-          parsed_time.call(tr.delete(:start_time).dup)
-        when Hash
-          time_hash = tr.delete(:start_time).dup
-          parsed_time.call(time_hash[:time])
-        end
-
-        end_time = case tr[:end_time]
-        when String, Time
-          parsed_time.call(tr.delete(:end_time).dup)
-        when Hash
-          time_hash = tr.delete(:end_time).dup
-          parsed_time.call(time_hash[:time])
-        end
+        start_time = parsed_time.call(tr, :start_date) || parsed_time.call(tr, :start_time)
+        end_time   = parsed_time.call(tr, :end_date) || parsed_time.call(tr, :end_time)
 
         return unless start_time && end_time
 
-        tr[:start_date] = timezone ?
+        tr[:start_time] = timezone ?
                             {:time => start_time, :zone => timezone.name} :
                             start_time
 
-        tr[:end_date]   = timezone ?
+        tr[:end_time]   = timezone ?
                             {:time => end_time, :zone => timezone.name} :
                             end_time
 
