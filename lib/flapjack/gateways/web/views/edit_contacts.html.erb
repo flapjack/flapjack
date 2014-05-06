@@ -6,9 +6,9 @@
   require_js  'jquery-1.10.2'
   require_js  'backbone'
   require_js  'backbone.jsonapi'
-  require_js  'bootstrap.min'
+  require_js  'bootstrap'
   require_js  'select2'
-  require_js  'contacts'
+
 %>
 
 <script type="text/template" id="contact-actions-template">
@@ -69,6 +69,14 @@
   </button>
 </script>
 
+<%
+  require_js  'flapjack'
+
+  require_js  'modules/contact'
+  require_js  'modules/entity'
+  require_js  'modules/medium'
+%>
+
 <div id="data-api-url" data-api-url="<%= @api_url %>">
   <div class="page-header">
     <h2>Edit Contacts</h2>
@@ -98,6 +106,8 @@
 
         <form action="/contacts" method="post" role="form" class="form-horizontal">
 
+          <div id="contactDetails"></div>
+
           <div class="modal-footer">
             <button type="button" class="btn btn-success" id="contactAccept">Create Contact</button>
           </div>
@@ -116,7 +126,7 @@
           </tbody>
         </table>
 
-        <div id="entityAdd">
+        <div id="contactEntityChooser">
         </div>
 
         <table class="table" style="margin-top: 1em">
@@ -137,3 +147,4 @@
 
     </div>
 </div>
+
