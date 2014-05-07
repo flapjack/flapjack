@@ -8,7 +8,7 @@ require 'redis'
 # & @connections data type changed in thin 1.5.1
 module Thin
 
-  # see https://github.com/flpjck/flapjack/issues/169
+  # see https://github.com/flapjack/flapjack/issues/169
   class Request
     class EqlTempfile < ::Tempfile
       def eql?(obj)

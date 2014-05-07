@@ -138,7 +138,7 @@ in the configfile:
 The Nsca daemon is optionally writing to a tempfile if the named pipe does
 not exist.
 
-Details on the wiki: https://github.com/flpjck/flapjack/wiki/USING#XXX
+Details on the wiki: https://github.com/flapjack/flapjack/wiki/USING#XXX
 '
 
     exit

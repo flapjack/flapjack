@@ -3,7 +3,7 @@
 # A HTTP-based API server, which provides queries to determine the status of
 # entities and the checks that are reported against them.
 #
-# There's a matching flapjack-diner gem at https://github.com/flpjck/flapjack-diner
+# There's a matching flapjack-diner gem at https://github.com/flapjack/flapjack-diner
 # which consumes data from this API.
 
 require 'time'

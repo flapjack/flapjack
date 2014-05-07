@@ -97,7 +97,7 @@ module Flapjack
           end
 
           # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contacts/2) contact(s)
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-get_contacts
           app.get %r{^/contacts(?:/)?([^/]+)?$} do
             requested_contacts = if params[:captures] && params[:captures][0]
               params[:captures][0].split(',').uniq
