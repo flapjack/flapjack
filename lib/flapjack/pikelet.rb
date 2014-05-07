@@ -32,7 +32,7 @@ require 'thin/version'
 
 module Thin
   # disable Thin's loading of daemons
-  # workaround for https://github.com/flpjck/flapjack/issues/133
+  # workaround for https://github.com/flapjack/flapjack/issues/133
   def self.win?
     true
   end

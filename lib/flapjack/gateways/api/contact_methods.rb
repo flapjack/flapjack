@@ -94,7 +94,7 @@ module Flapjack
           end
 
           # Returns all the contacts
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-get_contacts
           app.get '/contacts' do
             content_type :json
             "[" +
@@ -105,7 +105,7 @@ module Flapjack
           end
 
           # Returns the core information about the specified contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-get_contacts_id
           app.get '/contacts/:contact_id' do
             content_type :json
 
@@ -114,7 +114,7 @@ module Flapjack
           end
 
           # Lists this contact's notification rules
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_notification_rules
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-get_contacts_id_notification_rules
           app.get '/contacts/:contact_id/notification_rules' do
             content_type :json
 
@@ -122,7 +122,7 @@ module Flapjack
           end
 
           # Get the specified notification rule for this user
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_notification_rules_id
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-get_contacts_id_notification_rules_id
           app.get '/notification_rules/:id' do
             content_type :json
 
@@ -131,7 +131,7 @@ module Flapjack
           end
 
           # Creates a notification rule for a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-post_contacts_id_notification_rules
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-post_contacts_id_notification_rules
           app.post '/notification_rules' do
             content_type :json
 
@@ -157,7 +157,7 @@ module Flapjack
           end
 
           # Updates a notification rule
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-put_notification_rules_id
           app.put('/notification_rules/:id') do
             content_type :json
 
@@ -180,7 +180,7 @@ module Flapjack
           end
 
           # Deletes a notification rule
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-put_notification_rules_id
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-put_notification_rules_id
           app.delete('/notification_rules/:id') do
             logger.debug("delete /notification_rules/#{params[:id]}")
             rule = find_rule(params[:id])
@@ -191,7 +191,7 @@ module Flapjack
           end
 
           # Returns the media of a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_media
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-get_contacts_id_media
           app.get '/contacts/:contact_id/media' do
             content_type :json
 
@@ -209,7 +209,7 @@ module Flapjack
           end
 
           # Returns the specified media of a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_media_media
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-get_contacts_id_media_media
           app.get('/contacts/:contact_id/media/:id') do
             content_type :json
 
@@ -229,7 +229,7 @@ module Flapjack
           end
 
           # Creates or updates a media of a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_media_media
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-put_contacts_id_media_media
           app.put('/contacts/:contact_id/media/:id') do
             content_type :json
 
@@ -275,7 +275,7 @@ module Flapjack
           end
 
           # Returns the timezone of a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts_id_timezone
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-get_contacts_id_timezone
           app.get('/contacts/:contact_id/timezone') do
             content_type :json
 
@@ -284,7 +284,7 @@ module Flapjack
           end
 
           # Sets the timezone of a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_timezone
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-put_contacts_id_timezone
           app.put('/contacts/:contact_id/timezone') do
             content_type :json
 
@@ -294,7 +294,7 @@ module Flapjack
           end
 
           # Removes the timezone of a contact
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-put_contacts_id_timezone
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-put_contacts_id_timezone
           app.delete('/contacts/:contact_id/timezone') do
             contact = find_contact(params[:contact_id])
             contact.timezone = nil

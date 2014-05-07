@@ -140,7 +140,7 @@ nagios.cfg changes:
   host_perfdata_file_mode=p
   service_perfdata_file_mode=p
 
-Details on the wiki: https://github.com/flpjck/flapjack/wiki/USING#configuring-nagios
+Details on the wiki: https://github.com/flapjack/flapjack/wiki/USING#configuring-nagios
 '
 
     exit
