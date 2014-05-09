@@ -73,6 +73,8 @@ Using a tool like [rbenv](https://github.com/sstephenson/rbenv) or [rvm](https:/
 
 Alternatively, you can add support for your OS of choice to [omnibus-flapjack](https://github.com/flapjack/omnibus-flapjack) and build a native package. Pull requests welcome, and we'll help you make this happen!
 
+You'll also need Redis >= 2.6.12.
+
 ## Configuring
 
 Have a look at the default config file and modify things as required. See the [Configuring Components](https://github.com/flapjack/flapjack/wiki/USING#wiki-configuring_components) section on the wiki for more details.
