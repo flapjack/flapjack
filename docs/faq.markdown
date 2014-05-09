@@ -42,11 +42,6 @@ The default port for `jsonapi` will remain the same in the example configuration
 
 If you need to talk to Flapjack's API, you should be using `jsonapi`. 
 
-## How does event archiving work?
-
-**TODO.**
-
-
 ## Do I need to set up alerting in Nagios or Sensu for Flapjack to work?
 
 No. Flapjack sends alerts independently of check execution engines like Nagios or Sensu.. 
@@ -171,10 +166,6 @@ We recommend you also do this for HA.
 The processor and notifier will easily run in separate instances across multiple machines, provided they can all talk to the same Redis instance.
 
 Flapjack makes this easy by allowing you to specify what components you want to run within the Flapjack config. You can run all the components on a single machine, one component per host, or a mix. 
-
-## How do I integrate Flapjack with PagerDuty?
-
-**TODO**.
 
 ## I remember Flapjack from a few years ago. Is this the same project?
 
