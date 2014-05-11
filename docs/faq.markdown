@@ -1,5 +1,5 @@
 ---
-title: Support | Flapjack
+title: Frequently Asked Questions | Flapjack
 layout: default
 ---
 
