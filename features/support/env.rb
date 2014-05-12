@@ -5,6 +5,7 @@ require 'delorean'
 require 'chronic'
 require 'active_support/time'
 require 'ice_cube'
+require 'flapjack/configuration'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/event'
 
@@ -23,6 +24,8 @@ end
 
 ENV["FLAPJACK_ENV"] = 'test'
 FLAPJACK_ENV = 'test'
+FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..', '..')
+FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.yaml')
 
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
@@ -119,7 +122,10 @@ EXPIRE_AS_IF_AT
 
 end
 
-redis_opts = { :db => 14, :driver => :ruby }
+config = Flapjack::Configuration.new
+redis_opts = config.load(FLAPJACK_CONFIG) ?
+             config.for_redis :
+             {:db => 14, :driver => :ruby}
 redis = ::Redis.new(redis_opts)
 redis.flushdb
 RedisDelorean.before_all(:redis => redis)

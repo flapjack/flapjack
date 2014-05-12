@@ -291,5 +291,4 @@ development:
 
 test:
   redis:
-    database: 14
-
+    db: 14
