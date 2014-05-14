@@ -18,7 +18,8 @@ production:
     archive_events: true
     events_archive_maxage: 10800
     new_check_scheduled_maintenance_duration: 100 years
-    new_check_scheduled_maintenance_ignore: onetime
+    new_check_scheduled_maintenance_ignore_tags:
+      - bypass_ncsm
     logger:
       level: INFO
       syslog_errors: yes
