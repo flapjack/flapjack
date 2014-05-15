@@ -31,7 +31,7 @@ module Flapjack
           k =~ /^contact:(.*)$/
           id = $1
           contact = self.find_by_id(id, :redis => redis)
-          ret << contact if contact
+          ret << contact unless contact.nil?
           ret
         }.sort_by {|c| [c.last_name, c.first_name]}
       end

@@ -70,13 +70,29 @@ module Flapjack
             '{"notification_rules":[' + rules_json + ']}'
           end
 
-          # get one or more notification rules
-          app.get '/notification_rules/:id' do
-            rules_json = params[:id].split(',').collect {|rule_id|
-              find_rule(rule_id).to_jsonapi
-            }.join(', ')
+          app.get %r{^/notification_rules(?:/)?([^/]+)?$} do
+            requested_notification_rules = if params[:captures] && params[:captures][0]
+              params[:captures][0].split(',').uniq
+            else
+              nil
+            end
 
-            '{"notification_rules":[' + rules_json + ']}'
+            notification_rules = if requested_notification_rules
+              Flapjack::Data::NotificationRule.find_by_ids(requested_notification_rules, :logger => logger, :redis => redis)
+            else
+              Flapjack::Data::NotificationRule.all(:redis => redis)
+            end
+            notification_rules.compact!
+
+            if requested_notification_rules && notification_rules.empty?
+              raise Flapjack::Gateways::JSONAPI::NotificationRulesNotFound.new(requested_notification_rules)
+            end
+
+            notification_rules_json = notification_rules.collect {|notification_rule|
+              notification_rule.to_jsonapi
+            }.join(", ")
+
+            '{"notification_rules":[' + notification_rules_json + ']}'
           end
 
           app.patch '/notification_rules/:id' do

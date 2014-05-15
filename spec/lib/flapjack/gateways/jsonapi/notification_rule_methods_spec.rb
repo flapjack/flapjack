@@ -28,9 +28,35 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
   it "returns a specified notification rule" do
     expect(notification_rule).to receive(:to_jsonapi).and_return('"rule_1"')
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
-      with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
+      with(notification_rule.id, :redis => redis, :logger => @logger).and_return(notification_rule)
 
     aget "/notification_rules/#{notification_rule.id}"
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
+  end
+
+  it "returns multiple notification rules" do
+  notification_rule_2 = double(Flapjack::Data::NotificationRule, :id => '2', :contact_id => '21')
+
+    expect(notification_rule).to receive(:to_jsonapi).and_return('"rule_1"')
+    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
+      with(notification_rule.id, :redis => redis, :logger => @logger).and_return(notification_rule)
+
+    expect(notification_rule_2).to receive(:to_jsonapi).and_return('"rule_2"')
+    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
+      with(notification_rule_2.id, :redis => redis, :logger => @logger).and_return(notification_rule_2)
+
+    aget "/notification_rules/#{notification_rule.id},#{notification_rule_2.id}"
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq('{"notification_rules":["rule_1", "rule_2"]}')
+  end
+
+  it "returns all notification rules" do
+    expect(notification_rule).to receive(:to_jsonapi).and_return('"rule_1"')
+    expect(Flapjack::Data::NotificationRule).to receive(:all).
+      with(:redis => redis).and_return([notification_rule])
+
+    aget "/notification_rules"
     expect(last_response).to be_ok
     expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
   end
