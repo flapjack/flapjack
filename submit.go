@@ -18,19 +18,33 @@ type Event struct {
 	Type	string `json:"type"`
 	State	string `json:"state"`
 	Summary	string `json:"summary"`
-	Time	int    `json:"time"`
+	Time	int64  `json:"time"`
+}
+
+func (e Event) IsValid() (bool, string) {
+	if len(e.Entity)  == 0 { return false, "No entity" }
+	if len(e.Check)   == 0 { return false, "No check" }
+	if len(e.State)   == 0 { return false, "No state" }
+	if len(e.Summary) == 0 { return false, "No summary" }
+	return true, "ok"
 }
 
 func submit(conn redis.Conn, event *Event) (interface{}) {
-    data, _ := json.Marshal(event)
-	reply, err := conn.Do("LPUSH", "events", data)
-	if err != nil {
-		log.Println(reply)
-		log.Println(err)
-		os.Exit(2)
-	}
+	valid, err := event.IsValid()
+	if valid {
+	    data, _ := json.Marshal(event)
+		reply, err := conn.Do("LPUSH", "events", data)
+		if err != nil {
+			log.Println(reply)
+			log.Println(err)
+			os.Exit(2)
+		}
 
-	return reply
+		return reply
+	} else {
+		log.Println("Error: Invalid event:", err)
+		return false
+	}
 }
 
 func main() {
@@ -73,6 +87,7 @@ func main() {
 		Type:		"service",
 		State:		*state,
 		Summary:	*summary,
+		Time:		time.Now().Unix(),
 	}
 	submit(conn, event) // Submit first event
 
