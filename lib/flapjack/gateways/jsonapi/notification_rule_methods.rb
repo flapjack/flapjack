@@ -80,7 +80,7 @@ module Flapjack
             notification_rules = if requested_notification_rules
               Flapjack::Data::NotificationRule.find_by_ids(requested_notification_rules, :logger => logger, :redis => redis)
             else
-              Flapjack::Data::NotificationRule.all(:redis => redis)
+              Flapjack::Data::NotificationRule.all(:redis => redis).reject {|nr| nr.id.nil? || nr.id.empty? }
             end
             notification_rules.compact!
 

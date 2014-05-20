@@ -108,7 +108,7 @@ module Flapjack
             contacts = if requested_contacts
               Flapjack::Data::Contact.find_by_ids(requested_contacts, :logger => logger, :redis => redis)
             else
-              Flapjack::Data::Contact.all(:redis => redis)
+              Flapjack::Data::Contact.all(:redis => redis).reject {|c| c.id.nil? || c.id.empty? }
             end
             contacts.compact!
 
