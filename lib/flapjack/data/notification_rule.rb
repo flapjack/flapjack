@@ -16,22 +16,39 @@ module Flapjack
         :time_restrictions, :unknown_media, :warning_media, :critical_media,
         :unknown_blackhole, :warning_blackhole, :critical_blackhole
 
+      def self.all(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.keys("contact_notification_rules:*").inject([]) do |memo, contact_key|
+          redis.smembers(contact_key).each do |rule_id|
+            ret = self.find_by_id(rule_id, :redis => redis)
+            memo << ret unless ret.nil?
+          end
+          memo
+        end
+      end
+
       def self.exists_with_id?(rule_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         raise "No id value passed" unless not (rule_id.nil? || rule_id == '')
-        logger   = options[:logger]
         redis.exists("notification_rule:#{rule_id}")
       end
 
       def self.find_by_id(rule_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         raise "No id value passed" unless not (rule_id.nil? || rule_id == '')
-        logger   = options[:logger]
 
         # sanity check
         return unless redis.exists("notification_rule:#{rule_id}")
 
         self.new({:id => rule_id.to_s}, {:redis => redis})
+      end
+
+      def self.find_by_ids(rule_ids, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        rule_ids.map do |id|
+          self.find_by_id(id, options)
+        end
       end
 
       # replacing save! etc

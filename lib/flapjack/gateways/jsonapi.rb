@@ -53,9 +53,16 @@ module Flapjack
       end
 
       class NotificationRuleNotFound < RuntimeError
-        attr_reader :rule_id
-        def initialize(rule_id)
-          @rule_id = rule_id
+        attr_reader :notification_rule_id
+        def initialize(notification_rule_id)
+          @notification_rule_id = notification_rule_id
+        end
+      end
+
+      class NotificationRulesNotFound < RuntimeError
+        attr_reader :notification_rule_ids
+        def initialize(notification_rule_ids)
+          @notification_rule_ids = notification_rule_ids
         end
       end
 
@@ -132,7 +139,9 @@ module Flapjack
         when Flapjack::Gateways::JSONAPI::ContactsNotFound
           rescue_error.call(404, e, request_info, "could not find contacts '" + e.contact_ids.join(', ') + "'")
         when Flapjack::Gateways::JSONAPI::NotificationRuleNotFound
-          rescue_error.call(404, e, request_info,"could not find notification rule '#{e.rule_id}'")
+          rescue_error.call(404, e, request_info,"could not find notification rule '#{e.notification_rule_id}'")
+        when Flapjack::Gateways::JSONAPI::NotificationRulesNotFound
+          rescue_error.call(404, e, request_info, "could not find notification rules '" + e.notification_rule_ids.join(', ') + "'")
         when Flapjack::Gateways::JSONAPI::EntityNotFound
           rescue_error.call(404, e, request_info, "could not find entity '#{e.entity}'")
         when Flapjack::Gateways::JSONAPI::EntityCheckNotFound
