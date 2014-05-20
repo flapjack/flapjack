@@ -60,15 +60,18 @@ module Flapjack
           return errors
         end
         rule_id = rule_data[:id] || SecureRandom.uuid
-        errors = self.add_or_update(rule_data.merge(:id => rule_id), options)
+
+        errors = self.add_or_update(rule_data.merge(:id => rule_id), :redis => redis, :logger => options[:logger])
         return errors unless errors.nil? || errors.empty?
+
         self.find_by_id(rule_id, :redis => redis)
       end
 
-      def update(rule_data, opts = {})
-        errors = self.class.add_or_update({:contact_id => @contact_id}.merge(rule_data.merge(:id => @id)),
-          :redis => @redis, :logger => opts[:logger])
+      def update(update_data, opts = {})
+        rule_data = @redis.hgetall("notification_rule:#{@id}").merge(update_data.merge(:id => @id))
+        errors = self.class.add_or_update(rule_data, :redis => @redis, :logger => opts[:logger])
         return errors unless errors.nil? || errors.empty?
+
         refresh
         nil
       end
