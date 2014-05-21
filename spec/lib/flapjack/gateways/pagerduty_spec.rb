@@ -188,4 +188,20 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     end
   end
 
+  it "does not look for acknowledgements if all required credentials are not present" do
+    creds = {'subdomain' => 'example',
+             'username'  => 'sausage',
+             'check'     => 'PING'}
+
+    expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+    fp = Flapjack::Gateways::Pagerduty.new(:config => config, :logger => @logger)
+    EM.synchrony do
+      result = fp.send(:pagerduty_acknowledged?, creds)
+
+      expect(result).to be(nil)
+      EM.stop
+    end
+
+  end
+
 end
