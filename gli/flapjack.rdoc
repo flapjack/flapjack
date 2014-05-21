@@ -1,0 +1,5 @@
+= flapjack
+
+Generate this with
+    flapjack rdoc
+After you have described your command line interface

@@ -1,0 +1,55 @@
+#!/usr/bin/env ruby
+
+$:.push(File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib')))
+require 'gli'
+begin # XXX: Remove this begin/rescue before distributing your app
+require 'flapjack'
+rescue LoadError
+  STDERR.puts "In development, you need to use `bundle exec bin/flapjack` to run your app"
+  STDERR.puts "At install-time, RubyGems will make sure lib, etc. are in the load path"
+  STDERR.puts "Feel free to remove this message from bin/flapjack now"
+  exit 64
+end
+
+include GLI::App
+commands_from 'flapjack/cli'
+
+program_desc 'Flexible monitoring notification routing system'
+
+version Flapjack::VERSION
+
+#desc 'Describe some switch here'
+#switch [:s,:switch]
+
+desc 'Configuration file to use'
+default_value '/etc/flapjack/flapjack.yaml'
+arg_name '/path/to/flapjack.yaml'
+flag [:c,:config]
+
+desc 'Environment to boot'
+default_value 'production'
+arg_name '<environment>'
+flag [:n, :env, :environment]
+
+pre do |global,command,options,args|
+  # Pre logic here
+  # Return true to proceed; false to abort and not call the
+  # chosen command
+  # Use skips_pre before a command to skip this block
+  # on that command only
+  true
+end
+
+post do |global,command,options,args|
+  # Post logic here
+  # Use skips_post before a command to skip this
+  # block on that command only
+end
+
+on_error do |exception|
+  # Error logic here
+  # return false to skip default error handling
+  true
+end
+
+exit run(ARGV)

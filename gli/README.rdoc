@@ -1,0 +1,6 @@
+= flapjack
+
+Describe your project here
+
+:include:flapjack.rdoc
+
