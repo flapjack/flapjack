@@ -38,7 +38,7 @@ module Flapjack
       ncsm_duration_conf = @config['new_check_scheduled_maintenance_duration'] || '100 years'
       @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf, :keep_zero => true)
 
-      @ncsm_ignore = @config['new_check_scheduled_maintenance_ignore_tags'] || []
+      @ncsm_ignore_tags = @config['new_check_scheduled_maintenance_ignore_tags'] || []
 
       @exit_on_queue_empty = !! @config['exit_on_queue_empty']
 
@@ -210,7 +210,7 @@ module Flapjack
         if previous_state.nil?
           @logger.info("No previous state for event #{event.id}")
 
-          if @ncsm_duration > 0 && (event.tags & @ncsm_ignore).empty?
+          if @ncsm_duration > 0 && (event.tags & @ncsm_ignore_tags).empty?
             @logger.info("Setting scheduled maintenance for #{time_period_in_words(@ncsm_duration)}")
             entity_check.create_scheduled_maintenance(timestamp,
               @ncsm_duration, :summary => 'Automatically created for new check')
