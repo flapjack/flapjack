@@ -116,9 +116,8 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
 
     apost "/contacts/#{contact.id}/media", {:media => [medium_data]}.to_json, jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq('{"media":[' +
-      medium_data.merge(:id => "#{contact.id}_email",
-                        :links => {:contacts => [contact.id]}).to_json + ']}')
+    expect(last_response.headers['Location']).to match(/\/media\/#{contact.id}_email$/)
+    expect(last_response.body).to eq(["#{contact.id}_email"].to_json)
   end
 
   it "does not create a medium for a contact that's not present" do

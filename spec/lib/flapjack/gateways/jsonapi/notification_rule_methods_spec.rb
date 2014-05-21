@@ -87,7 +87,6 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
     expect(notification_rule).to receive(:respond_to?).with(:critical_media).and_return(true)
-    expect(notification_rule).to receive(:to_json).and_return('"rule_1"')
 
     # symbolize the keys
     notification_rule_data_sym = notification_rule_data.inject({}){|memo,(k,v)|
@@ -100,7 +99,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
     apost "/contacts/#{contact.id}/notification_rules",
       {"notification_rules" => [notification_rule_data]}.to_json, jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
+    expect(last_response.headers['Location']).to match(/\/notification_rules\/.+$/)
   end
 
   it "does not create a notification_rule for a contact that's not present" do

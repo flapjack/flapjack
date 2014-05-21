@@ -80,15 +80,16 @@ module Flapjack
               contact.set_address_for_media(type, medium_data['address'])
               contact.set_interval_for_media(type, medium_data['interval'])
               contact.set_rollup_threshold_for_media(type, medium_data['rollup_threshold'])
-              medium_data[:id] = "#{contact.id}_#{type}"
-              medium_data[:links] = {:contacts => [contact.id]}
+              medium_data['id'] = "#{contact.id}_#{type}"
             end
 
             semaphore.release
 
-            status 201
+            media_ids = media_data.collect {|md| md['id']}
 
-            '{"media":' + media_data.to_json + '}'
+            status 201
+            response.headers['Location'] = "#{base_url}/media/#{media_ids.join(',')}"
+            media_ids.to_json
           end
 
           # get one or more media records; media ids are, for Flapjack

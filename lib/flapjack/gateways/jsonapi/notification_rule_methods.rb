@@ -59,15 +59,16 @@ module Flapjack
                 status 201
               else
                 logger.warn("Errors during bulk notification rules creation: " + errors.join(', '))
-                status 200
+                halt 200
               end
             end
 
-            ids = rules.map {|r| r.id}
-            location(ids)
+            rule_ids = rules.map {|r| r.id}
 
-            rules_json = rules.map {|r| r.to_json}.join(',')
-            '{"notification_rules":[' + rules_json + ']}'
+            unless rule_ids.empty?
+              response.headers['Location'] = "#{base_url}/notification_rules/#{rule_ids.join(',')}"
+              rule_ids.to_json
+            end
           end
 
           app.get %r{^/notification_rules(?:/)?([^/]+)?$} do

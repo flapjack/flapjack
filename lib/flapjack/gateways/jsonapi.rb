@@ -251,11 +251,6 @@ module Flapjack
           headers(cors_headers)
         end
 
-        def location(ids)
-          location = "#{base_url}#{request.path_info}#{ids.length == 1 ? '/' + ids.first : '?ids=' + ids.join(',')}"
-          headers({'Location' => location})
-        end
-
         def err(status, *msg)
           msg_str = msg.join(", ")
           logger.info "Error: #{msg_str}"
