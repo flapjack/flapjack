@@ -385,8 +385,9 @@ module Flapjack
       end
 
       def self_stats
-        @fqdn         = `/bin/hostname -f`.chomp
-        @pid          = Process.pid
+        @fqdn    = `/bin/hostname -f`.chomp
+        @pid     = Process.pid
+        @api_url = api_url
 
         @dbsize              = redis.dbsize
         @executive_instances = redis.keys("executive_instance:*").inject({}) do |memo, i|

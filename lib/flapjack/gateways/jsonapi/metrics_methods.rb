@@ -76,7 +76,8 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::MetricsMethods::Helpers
 
           app.get %r{^/metrics} do
-            filter = filter_query(params[:filter])
+
+            filter = params[:filter] ? filter_query(params[:filter]) : 'all'
 
             keys = %w(fqdn pid total_keys processed_events event_queue_length check_freshness entities checks)
             keys = keys.find_all {|m| filter.include?(m) } unless filter == 'all'
