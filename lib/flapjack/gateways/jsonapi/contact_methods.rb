@@ -89,11 +89,11 @@ module Flapjack
 
             semaphore.release
 
-            ids = contacts_data.map {|c| c['id']}
-            location(ids)
-            status 201
+            contact_ids = contacts_data.map {|c| c['id']}
 
-            contacts_data.map {|cd| cd['id']}.to_json
+            response.headers['Location'] = "#{base_url}/contacts/#{contact_ids.join(',')}"
+            status 201
+            contact_ids.to_json
           end
 
           # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contacts/2) contact(s)

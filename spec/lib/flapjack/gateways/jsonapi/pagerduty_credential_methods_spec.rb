@@ -53,8 +53,8 @@ describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => 
     apost "/contacts/#{contact.id}/pagerduty_credentials",
       {:pagerduty_credentials => [pagerduty_credentials]}.to_json, jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq('{"pagerduty_credentials":[' +
-      pagerduty_credentials.merge(:links => {:contacts => [contact.id]}).to_json + ']}')
+    expect(last_response.headers['Location']).to match(/\/pagerduty_credentials\/#{contact.id}$/)
+    expect(last_response.body).to eq([contact.id].to_json)
   end
 
   it "does not create pagerduty credentials for a contact that's not present" do
