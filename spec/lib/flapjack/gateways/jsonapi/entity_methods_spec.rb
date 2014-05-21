@@ -7,6 +7,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
 
   let(:entity)          { double(Flapjack::Data::Entity) }
   let(:entity_check)    { double(Flapjack::Data::EntityCheck) }
+  let(:entity_core)     { {'id'   => '1234', 'name' => 'www.example.com'} }
 
   let(:entity_id)       { '457' }
   let(:entity_name)     { 'www.example.net'}
@@ -16,15 +17,29 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
   let(:check_presenter) { double(Flapjack::Gateways::JSONAPI::CheckPresenter) }
 
   it "retrieves all entities" do
-    entity_core = {'id'   => '1234',
-                   'name' => 'www.example.com'}
-    expect(entity).to receive(:id).twice.and_return('1234')
+    expect(entity).to receive(:id).exactly(4).times.and_return(entity_core['id'])
 
     expect(Flapjack::Data::Entity).to receive(:contact_ids_for).
-      with(['1234'], :redis => redis).and_return({})
+      with([entity_core['id']], :redis => redis).and_return({})
     expect(entity).to receive(:to_jsonapi).and_return(entity_core.to_json)
     expect(Flapjack::Data::Entity).to receive(:all).with(:redis => redis).
       and_return([entity])
+
+    aget '/entities'
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq({:entities => [entity_core]}.to_json)
+  end
+
+  it "skips entities without ids when getting all" do
+    idless_entity = double(Flapjack::Data::Entity, :id => '')
+
+    expect(entity).to receive(:id).exactly(4).times.and_return(entity_core['id'])
+    expect(Flapjack::Data::Entity).to receive(:contact_ids_for).
+      with([entity_core['id']], :redis => redis).and_return({})
+    expect(entity).to receive(:to_jsonapi).and_return(entity_core.to_json)
+    expect(idless_entity).not_to receive(:to_jsonapi)
+    expect(Flapjack::Data::Entity).to receive(:all).with(:redis => redis).
+      and_return([entity, idless_entity])
 
     aget '/entities'
     expect(last_response).to be_ok

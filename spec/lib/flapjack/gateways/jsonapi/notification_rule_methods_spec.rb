@@ -36,7 +36,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
   end
 
   it "returns multiple notification rules" do
-  notification_rule_2 = double(Flapjack::Data::NotificationRule, :id => '2', :contact_id => '21')
+    notification_rule_2 = double(Flapjack::Data::NotificationRule, :id => '2', :contact_id => '21')
 
     expect(notification_rule).to receive(:to_jsonapi).and_return('"rule_1"')
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
@@ -57,6 +57,19 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
       with(:redis => redis).and_return([notification_rule])
 
     aget "/notification_rules"
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
+  end
+
+  it "skips notification rules without ids when getting all" do
+    idless_notification_rule = double(Flapjack::Data::NotificationRule, :id => '')
+
+    expect(notification_rule).to receive(:to_jsonapi).and_return('"rule_1"')
+    expect(idless_notification_rule).not_to receive(:to_jsonapi)
+    expect(Flapjack::Data::NotificationRule).to receive(:all).with(:redis => redis).
+      and_return([notification_rule, idless_notification_rule])
+
+    aget '/notification_rules'
     expect(last_response).to be_ok
     expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
   end
