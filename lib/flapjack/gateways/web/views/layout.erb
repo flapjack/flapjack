@@ -1,4 +1,7 @@
 <%
+  require_css 'bootstrap'
+  require_css 'screen'
+  require_css 'font-awesome'
   require_css 'tablesort'
 
   require_js  'jquery-1.10.2'
@@ -13,9 +16,6 @@
   <head>
     <title><%= h include_page_title %></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/css/bootstrap.css" media="screen">
-    <link rel="stylesheet" href="/css/screen.css" media="screen">
-    <link rel="stylesheet" href="/css/font-awesome.css">
     <link rel="shortcut icon" href="/img/flapjack-favicon-64-32-24-16.ico"> <!-- thank you http://xiconeditor.com/ -->
     <%= include_required_css %>
     <%= include_required_js %>
