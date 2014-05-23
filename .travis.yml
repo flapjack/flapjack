@@ -1,10 +1,8 @@
 language: ruby
 rvm:
-  - "1.9.3"
-  - "2.0"
-  - "2.1"
-env:
-  - ENTITIES=10 INTERVAL=120
+  - '1.9.3'
+  - '2.0'
+  - '2.1'
 gemfile:
   - Gemfile
 services:
@@ -15,3 +13,6 @@ before_install:
   - git submodule update --init --recursive
   - gem install bundler
 script: bundle exec rspec spec && bundle exec cucumber features
+notifications:
+  hipchat:
+    secure: AP3lHqqwyTHUNp5fcNj4bTMX+8RFgvPY/etwnt7I1A6MiM7wDgzOkE/uvXkPMDGAVXQHD+bFUrtLuooGgrn2f+W6MEV459aEtTmCbH87bb8058kfPxS3+1Qi4Mm9Frz2TpSmXCaXrRuEKCsg8aPBbPLxLzimLiOqMgDcmlB7420=
