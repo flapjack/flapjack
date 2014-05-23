@@ -14,6 +14,7 @@ before_install:
 - gem install bundler
 script: bundle exec rspec spec && bundle exec cucumber features
 notifications:
+  irc: 'irc.freenode.net#flapjack'
   hipchat:
     template:
     - '%{repository}#%{build_number} (%{branch} - %{commit} : %{author}): %{message}
