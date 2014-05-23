@@ -19,7 +19,6 @@ require 'thin'
 
 require 'flapjack/notifier'
 require 'flapjack/processor'
-require 'flapjack/gateways/api'
 require 'flapjack/gateways/jsonapi'
 require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
@@ -218,7 +217,6 @@ module Flapjack
     class Thin < Flapjack::Pikelet::Base
 
       PIKELET_TYPES = {'web'     => Flapjack::Gateways::Web,
-                       'api'     => Flapjack::Gateways::API,
                        'jsonapi' => Flapjack::Gateways::JSONAPI}
 
       def self.create(type, opts = {})
