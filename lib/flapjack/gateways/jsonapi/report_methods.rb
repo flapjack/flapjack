@@ -17,20 +17,7 @@ module Flapjack
 
         module Helpers
 
-          def load_api_data(entity_ids, event_ids, action, &block)
-            result_type = case action
-            when 'status'
-              'statuses'
-            when 'outage'
-              'outages'
-            when 'scheduled_maintenance'
-              'scheduled_maintenances'
-            when 'unscheduled_maintenance'
-              'unscheduled_maintenances'
-            when 'downtime'
-              'downtimes'
-            end
-
+          def load_api_data(entity_ids, event_ids, &block)
             entities = if entity_ids.nil?
               Flapjack::Data::Entity.all(:redis => redis)
             elsif !entity_ids.empty?
@@ -51,32 +38,32 @@ module Flapjack
               nil
             end
 
-            entities_by_name             = {}
-            entity_checks_by_entity_name = {}
+            entities_by_id             = {}
+            entity_checks_by_entity_id = {}
 
             (entities || []).each do |entity|
-              entities_by_name[entity.name] = entity
-              check_list_names = entity.check_list
-              entity_checks_by_entity_name[entity.name] = check_list_names.collect {|check_name|
-                find_entity_check_by_name(entity.name, check_name)
+              entities_by_id[entity.id] = entity
+              entity_checks_by_entity_id[entity.id] = entity.check_list.collect {|check_name|
+                find_entity_check(entity, check_name)
               }
             end
 
             (checks || []).each do |check|
               check_entity = check.entity
-              check_entity_name = check_entity.name
-              entities_by_name[check_entity_name] ||= check_entity
+              check_entity_id = check_entity.id
+              entities_by_id[check_entity_id] ||= check_entity
 
-              entity_checks_by_entity_name[check_entity_name] ||= []
-              entity_checks_by_entity_name[check_entity_name] << check
+              entity_checks_by_entity_id[check_entity_id] ||= []
+              entity_checks_by_entity_id[check_entity_id] << check
             end
 
-            entity_data = entities_by_name.inject([]) do |memo, (entity_name, entity)|
+            entity_data = entities_by_id.inject([]) do |memo, (entity_id, entity)|
+              entity_name = entity.name
               memo << {
-                'id'    => entity.id,
+                'id'    => entity_id,
                 'name'  => entity_name,
                 'links' => {
-                  'checks' => entity_checks_by_entity_name[entity_name].collect {|entity_check|
+                  'checks' => entity_checks_by_entity_id[entity_id].collect {|entity_check|
                     "#{entity_name}:#{entity_check.check}"
                   },
                 }
@@ -84,19 +71,27 @@ module Flapjack
               memo
             end
 
-            entity_check_data = entity_checks_by_entity_name.inject([]) do |memo, (entity_name, entity_checks)|
-              memo += entity_checks.collect do |entity_check|
+            report_data = []
+            entity_check_data = []
+
+            entity_checks_by_entity_id.each_pair do |entity_id, entity_checks|
+              entity = entities_by_id[entity_id]
+              entity_checks.each do |entity_check|
                 entity_check_name = entity_check.check
-                {
-                  'id'        => "#{entity_name}:#{entity_check_name}",
-                  'name'      => entity_check_name,
-                  result_type => yield(Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check))
+                entity_check_id = "#{entity.name}:#{entity_check.check}"
+                report_data << yield(Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)).
+                    merge('links'  => {
+                      'entity' => [entity_id],
+                      'check'  => [entity_check_id],
+                    })
+                 entity_check_data << {
+                  'id'        => entity_check_id,
+                  'name'      => entity_check_name
                 }
               end
-              memo
             end
 
-            [entity_data, entity_check_data]
+            [report_data, entity_data, entity_check_data]
           end
 
         end
@@ -115,21 +110,22 @@ module Flapjack
                        validate_and_parsetime(params[:end_time])]
             end
 
-            entity_data, check_data = case entities_or_checks
+            report_data, entity_data, check_data = case entities_or_checks
             when 'entities'
               entity_ids = params[:captures][2].nil? ? nil : params[:captures][2].split(',')
-              load_api_data(entity_ids, [], action) {|presenter|
+              load_api_data(entity_ids, []) {|presenter|
                 presenter.send(action, *args)
               }
             when 'checks'
               entity_check_names = params[:captures][2].nil? ? nil : params[:captures][2].split(',')
-              load_api_data([], entity_check_names, action) {|presenter|
+              load_api_data([], entity_check_names) {|presenter|
                 presenter.send(action, *args)
               }
             end
 
-            "{\"#{action}_reports\":" + entity_data.to_json +
-              ",\"linked\":{\"checks\":" + check_data.to_json + "}}"
+            "{\"#{action}_reports\":" + report_data.to_json + "," +
+             "\"linked\":{\"entities\":" + entity_data.to_json + "," +
+                         "\"checks\":" + check_data.to_json + "}}"
           end
 
         end
