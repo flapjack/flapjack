@@ -16,3 +16,6 @@ script: bundle exec rspec spec && bundle exec cucumber features
 notifications:
   hipchat:
     secure: AP3lHqqwyTHUNp5fcNj4bTMX+8RFgvPY/etwnt7I1A6MiM7wDgzOkE/uvXkPMDGAVXQHD+bFUrtLuooGgrn2f+W6MEV459aEtTmCbH87bb8058kfPxS3+1Qi4Mm9Frz2TpSmXCaXrRuEKCsg8aPBbPLxLzimLiOqMgDcmlB7420=
+    template:
+      - '%{repository}#%{build_number} (%{branch} - %{commit} : %{author}): %{message} (<a href="%{build_url}">Details</a>/<a href="%{compare_url}">Change view</a>)'
+    format: html
