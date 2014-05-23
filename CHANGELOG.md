@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.9.0 - 2014-05-23
+- Chore: split reports data from entities and checks in jsonapi #525 (@ali-graham)
+
 # 0.8.12 - 2014-05-21
 - Feature: highlight the section that I'm in #483 (@auxesis)
 - Feature: Visualise the event queue length on self stats page #482 (@auxesis)
