@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 desc 'Generate streams of events in various states'
 command :simulate do |simulate|
 

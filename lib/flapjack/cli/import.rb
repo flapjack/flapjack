@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 desc 'Bulk import data from an external source'
 command :import do |import|
 

@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 desc 'Server for running components (e.g. processor, notifier, gateways)'
 command :server do |server|
 

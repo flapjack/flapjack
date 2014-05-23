@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 desc 'Receive events from external systems and send them to Flapjack'
 arg_name 'receiver'
 command :receiver do |receiver|
