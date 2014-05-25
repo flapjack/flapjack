@@ -169,6 +169,9 @@ command :flapper do |flapper|
     restart.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to',
       :default_value =>  "/var/log/flapjack/flapper.log"
 
+    restart.switch [:d, 'daemonize'], :desc => 'Daemonize',
+      :default_value => true
+
     restart.flag   [:b, 'bind-ip'],   :desc => 'ADDRESS (IPv4 or IPv6) for flapper to bind to',
       :default_value => Flapjack::CLI::Flapper.local_ip
 

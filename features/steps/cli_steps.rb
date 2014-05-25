@@ -11,12 +11,12 @@ Given /^a fifo named "([^"]*)" exists$/ do |fifo_name|
   create_fifo(fifo_name)
 end
 
-When /^I ((?:re)?start|stop) (\S+)( \(daemonised\))? with `(.+)`$/ do |start_stop_restart, exe, daemonise, cmd|
+When /^I ((?:re)?start|stop) (\S+)( \(daemonised\))?( \(via bundle exec\))? with `(.+)`$/ do |start_stop_restart, exe, daemonise, bundle_exec, cmd|
   @daemons_output      ||= []
   @daemons_exit_status ||= []
 
   @root = Pathname.new(File.dirname(__FILE__)).parent.parent.expand_path
-  command = "#{@root.join('bin')}/#{cmd}"
+  command = "#{bundle_exec ? 'bundle exec ' : ''}#{@root.join('bin')}/#{cmd}"
 
   # enable debugging output from spawn_process etc
   #@debug = true
