@@ -2,16 +2,18 @@
 
 $:.push(File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib')))
 require 'gli'
-begin # XXX: Remove this begin/rescue before distributing your app
-require 'flapjack'
-rescue LoadError
-  STDERR.puts "In development, you need to use `bundle exec bin/flapjack` to run your app"
-  STDERR.puts "At install-time, RubyGems will make sure lib, etc. are in the load path"
-  STDERR.puts "Feel free to remove this message from bin/flapjack now"
-  exit 64
-end
+# begin # XXX: Remove this begin/rescue before distributing your app
+# require 'flapjack'
+# rescue LoadError
+#   STDERR.puts "In development, you need to use `bundle exec bin/flapjack` to run your app"
+#   STDERR.puts "At install-time, RubyGems will make sure lib, etc. are in the load path"
+#   STDERR.puts "Feel free to remove this message from bin/flapjack now"
+#   exit 64
+# end
 
 include GLI::App
+subcommand_option_handling :normal
+sort_help :manually
 commands_from 'flapjack/cli'
 
 program_desc 'Flexible monitoring notification routing system'
