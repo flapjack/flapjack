@@ -131,7 +131,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
         ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
       expect(Flapjack::Data::Event).to receive(:create_acknowledgement).with('events',
-        'foo-app-01.bar.net', 'PING',
+        check,
         :summary => 'Acknowledged on PagerDuty by John Smith',
         :duration => 14400)
 

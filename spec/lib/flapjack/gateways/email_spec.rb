@@ -10,7 +10,7 @@ describe Flapjack::Gateways::Email, :logger => true do
   let(:queue) { double(Flapjack::RecordQueue) }
   let(:alert) { double(Flapjack::Data::Alert) }
 
-  it "sends a mail with text and html parts" do
+  it "sends a mail with text and html parts and custom from address" do
     expect(redis).to receive(:quit)
     allow(Flapjack).to receive(:redis).and_return(redis)
 
@@ -53,7 +53,8 @@ describe Flapjack::Gateways::Email, :logger => true do
 
     expect(Mail::TestMailer.deliveries).to be_empty
 
-    email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => {}, :logger => @logger)
+    config = {"smtp_config" => {'from' => 'from@example.org'}}
+    email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => config, :logger => @logger)
     expect { email_gw.start }.to raise_error(Flapjack::PikeletStop)
 
     expect(Mail::TestMailer.deliveries.size).to eq(1)

@@ -69,8 +69,14 @@ module Flapjack
           @logger.debug("processing pagerduty notification service_key: #{address}, entity: #{entity_name}, " +
                         "check: '#{check_name}', state: #{alert.state}, summary: #{alert.summary}")
 
-          mydir = File.dirname(__FILE__)
-          message_template_path = mydir + "/pagerduty/alert.text.erb"
+          pagerduty_dir = File.join(File.dirname(__FILE__), 'pagerduty')
+          message_template_path = case
+          when @config.has_key?('templates') && @config['templates']['alert.text']
+            @config['templates']['alert.text']
+          else
+            File.join(pagerduty_dir, 'alert.text.erb')
+          end
+
           message_template = ERB.new(File.read(message_template_path), nil, '-')
 
           @alert = alert
@@ -240,7 +246,7 @@ module Flapjack
             four_hours = 4 * 60 * 60
             Flapjack::Data::Event.create_acknowledgement(
               @config['processor_queue'] || 'events',
-              entity_name, check_name,
+              check,
               :summary  => "Acknowledged on PagerDuty" + who_text,
               :duration => four_hours)
           end
@@ -252,6 +258,8 @@ module Flapjack
           username    = opts['username']
           password    = opts['password']
           check       = opts['check']
+
+          return nil unless subdomain && username && password && check
 
           t = Time.now.utc
 

@@ -80,19 +80,24 @@ module Flapjack
 
       def handle_alert(alert)
         @logger.debug "Woo, got an alert to send out: #{alert.inspect}"
-        host = @smtp_config ? @smtp_config['host'] : nil
-        port = @smtp_config ? @smtp_config['port'] : nil
-        starttls = @smtp_config ? !! @smtp_config['starttls'] : nil
         if @smtp_config
+          host = @smtp_config['host']
+          port = @smtp_config['port']
+          starttls = !!@smtp_config['starttls']
+          m_from = @smtp_config['from']
           if auth_config = @smtp_config['auth']
             auth = {}
             auth[:type] = auth_config['type'].to_sym || :plain
             auth[:username] = auth_config['username']
             auth[:password] = auth_config['password']
           end
+        else
+          host = nil
+          port = nil
+          starttls = nil
+          m_from = "flapjack@#{@fqdn}"
         end
 
-        m_from = "flapjack@#{@fqdn}"
         @logger.debug("flapjack_mailer: set from to #{m_from}")
 
         mail = prepare_email(:from => m_from,
@@ -125,18 +130,27 @@ module Flapjack
         message_id = opts[:message_id]
         alert = opts[:alert]
 
-        message_type = case
-        when alert.rollup
-          'rollup'
+        message_type = alert.rollup ? 'rollup' : 'alert'
+
+        email_dir = File.join(File.dirname(__FILE__), 'email')
+
+        subject_template_path = if @config.has_key?('templates') && @config['templates']["#{message_type}_subject.text"]
+          @config['templates']["#{message_type}_subject.text"]
         else
-          'alert'
+          File.join(email_dir, "#{message_type}_subject.text.erb")
         end
 
-        mydir = File.dirname(__FILE__)
+        text_template_path = if @config.has_key?('templates') && @config['templates']["#{message_type}.text"]
+          @config['templates']["#{message_type}.text"]
+        else
+          File.join(email_dir, "#{message_type}.text.erb")
+        end
 
-        subject_template_path = mydir + "/email/#{message_type}_subject.text.erb"
-        text_template_path = mydir + "/email/#{message_type}.text.erb"
-        html_template_path = mydir + "/email/#{message_type}.html.erb"
+        html_template_path = if @config.has_key?('templates') && @config['templates']["#{message_type}.html"]
+          @config['templates']["#{message_type}.html"]
+        else
+          File.join(email_dir, "#{message_type}.html.erb")
+        end
 
         subject_template = ERB.new(File.read(subject_template_path), nil, '-')
         text_template = ERB.new(File.read(text_template_path), nil, '-')

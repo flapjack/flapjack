@@ -40,7 +40,7 @@ module Flapjack
       @events_archive_maxage = @config['events_archive_maxage']
 
       ncsm_duration_conf = @config['new_check_scheduled_maintenance_duration'] || '100 years'
-      @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf)
+      @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf, :keep_zero => true)
 
       @exit_on_queue_empty = !! @config['exit_on_queue_empty']
 
@@ -71,19 +71,20 @@ module Flapjack
 
       begin
         # FIXME: add an administrative function to reset all event counters
-        counters = Flapjack.redis.hget('event_counters', 'all')
+
+        counter_types = ['all', 'ok', 'failure', 'action', 'invalid']
+        counters = Hash[counter_types.zip(Flapjack.redis.hmget('event_counters', *counter_types))]
 
         Flapjack.redis.multi
 
-        if counters.nil?
-          Flapjack.redis.hmset('event_counters',
-                       'all', 0, 'ok', 0, 'failure', 0, 'action', 0)
+        counter_types.select {|ct| counters[ct].nil? }.each do |counter_type|
+          Flapjack.redis.hset('event_counters', counter_type, 0)
         end
 
-        # Flapjack.redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
+        Flapjack.redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
         Flapjack.redis.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
         Flapjack.redis.hmset("event_counters:#{@instance_id}",
-                             'all', 0, 'ok', 0, 'failure', 0, 'action', 0)
+                             'all', 0, 'ok', 0, 'failure', 0, 'action', 0, 'invalid', 0)
         touch_keys
 
         Flapjack.redis.exec
@@ -130,6 +131,10 @@ module Flapjack
             Flapjack.redis.lrem(archive, 1, event_json)
           end
           Flapjack.redis.lpush(rejects, event_json)
+          Flapjack.redis.hincrby('event_counters', 'all', 1)
+          Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
+          Flapjack.redis.hincrby('event_counters', 'invalid', 1)
+          Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
           if archive
             Flapjack.redis.exec
             Flapjack.redis.expire(archive, max_age)
@@ -227,7 +232,11 @@ module Flapjack
         elsif Flapjack::Data::CheckState.failing_states.include?( event.state )
           Flapjack.redis.hincrby('event_counters', 'failure', 1)
           Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'failure', 1)
-          # Flapjack.redis.hset('unacknowledged_failures', event.counter, event.id)
+          event.id_hash = check.ack_hash
+        else
+          Flapjack.redis.hincrby('event_counters', 'invalid', 1)
+          Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+          @logger.error("Invalid event received: #{event.inspect}")
         end
         Flapjack.redis.exec
 
@@ -237,7 +246,7 @@ module Flapjack
         if previous_state.nil?
           @logger.info("No previous state for event #{event.id}")
 
-          if @ncsm_duration >= 0
+          if @ncsm_duration > 0
             @logger.info("Setting scheduled maintenance for #{time_period_in_words(@ncsm_duration)}")
 
             @ncsm_sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => timestamp,
@@ -259,11 +268,11 @@ module Flapjack
         check.summary     = event.summary
         check.details     = event.details
         check.count       = event.counter
+        check.perfdata    = event.perfdata
         check.last_update = timestamp
 
       # Action events represent human or automated interaction with Flapjack
       when 'action'
-
         action = Flapjack::Data::Action.new(:action => event.state,
           :timestamp => timestamp)
         action.save
@@ -273,6 +282,12 @@ module Flapjack
         Flapjack.redis.hincrby('event_counters', 'action', 1)
         Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'action', 1)
         Flapjack.redis.exec
+      else
+        Flapjack.redis.multi
+        Flapjack.redis.hincrby('event_counters', 'invalid', 1)
+        Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+        Flapjack.redis.exec
+        @logger.error("Invalid event received: #{event.inspect}")
       end
 
       [result, previous_state, action]

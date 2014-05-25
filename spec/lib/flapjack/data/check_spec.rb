@@ -289,24 +289,32 @@ describe Flapjack::Data::Check, :redis => true do
   # end
 
   # it "does not update state with a repeated state value" do
-  #   check = Flapjack::Data::EntityCheck.for_entity_name(name, check)
-  #   check.update_state('critical', :summary => 'small problem')
-  #   changed_at = Flapjack.redis.hget("check:#{name}:#{check}", 'last_change')
-  #   summary = Flapjack.redis.hget("check:#{name}:#{check}", 'summary')
+  #   ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+  #   ec.update_state('critical', :summary => 'small problem', :details => 'none')
+  #   changed_at = @redis.hget("check:#{name}:#{check}", 'last_change')
+  #   summary = ec.summary
+  #   details = ec.details
 
-  #   check.update_state('critical', :summary => 'big problem')
-  #   new_changed_at = Flapjack.redis.hget("check:#{name}:#{check}", 'last_change')
-  #   new_summary = Flapjack.redis.hget("check:#{name}:#{check}", 'summary')
+  #   ec.update_state('critical', :summary => 'big problem', :details => 'some')
+  #   new_changed_at = @redis.hget("check:#{name}:#{check}", 'last_change')
+  #   new_summary = ec.summary
+  #   new_details = ec.details
 
-  #   changed_at.should_not be_nil
-  #   new_changed_at.should_not be_nil
-  #   new_changed_at.should == changed_at
+  #   expect(changed_at).not_to be_nil
+  #   expect(new_changed_at).not_to be_nil
+  #   expect(new_changed_at).to eq(changed_at)
 
-  #   summary.should_not be_nil
-  #   new_summary.should_not be_nil
-  #   new_summary.should_not == summary
-  #   summary.should == 'small problem'
-  #   new_summary.should == 'big problem'
+  #   expect(summary).not_to be_nil
+  #   expect(new_summary).not_to be_nil
+  #   expect(new_summary).not_to eq(summary)
+  #   expect(summary).to eq('small problem')
+  #   expect(new_summary).to eq('big problem')
+
+  #   expect(details).not_to be_nil
+  #   expect(new_details).not_to be_nil
+  #   expect(new_details).not_to eq(details)
+  #   expect(details).to eq('none')
+  #   expect(new_details).to eq('some')
   # end
 
   # def time_before(t, min, sec = 0)

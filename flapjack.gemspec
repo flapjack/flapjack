@@ -19,7 +19,7 @@ Gem::Specification.new do |gem|
   gem.version       = Flapjack::VERSION
 
   gem.add_dependency 'dante'
-  gem.add_dependency 'oj'
+  gem.add_dependency 'oj', '>= 2.9.0'
   gem.add_dependency 'hiredis'
   gem.add_dependency 'redis', '~> 3.0.6'
   gem.add_dependency 'sinatra'
@@ -27,7 +27,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'xmpp4r', '>= 0.5.5'
   gem.add_dependency 'chronic'
   gem.add_dependency 'chronic_duration'
-  gem.add_dependency 'activesupport', '~> 3.2.16'
+  gem.add_dependency 'activesupport', '~> 3.2.18'
   gem.add_dependency 'ice_cube'
   gem.add_dependency 'tzinfo', '~> 1.0.1'
   gem.add_dependency 'tzinfo-data'

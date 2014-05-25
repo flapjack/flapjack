@@ -9,7 +9,12 @@ if ENV['COVERAGE']
   end
 end
 
-FLAPJACK_ENV = ENV["FLAPJACK_ENV"] || 'test'
+require 'i18n'
+I18n.config.enforce_available_locales = true
+
+FLAPJACK_ENV    = ENV["FLAPJACK_ENV"] || 'test'
+FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..')
+FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.yaml')
 ENV['RACK_ENV'] = ENV["FLAPJACK_ENV"]
 
 require 'bundler'
@@ -19,6 +24,7 @@ require 'webmock/rspec'
 WebMock.disable_net_connect!
 
 $:.unshift(File.dirname(__FILE__) + '/../lib')
+require 'flapjack/configuration'
 
 require 'oj'
 Oj.mimic_JSON
@@ -95,8 +101,15 @@ RSpec.configure do |config|
     config.add_formatter(:documentation)
   end
 
+  config.before(:suite) do
+    cfg = Flapjack::Configuration.new
+    $redis_options = cfg.load(FLAPJACK_CONFIG) ?
+                     cfg.for_redis :
+                     {:db => 14, :driver => :ruby}
+  end
+
   config.around(:each, :redis => true) do |example|
-    Flapjack::RedisProxy.config = {:db => 14, :driver => :hiredis}
+    Flapjack::RedisProxy.config = $redis_options
     Flapjack.redis.flushdb
     example.run
     Flapjack.redis.quit

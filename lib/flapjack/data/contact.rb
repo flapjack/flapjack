@@ -23,8 +23,6 @@ module Flapjack
 
     class Contact
 
-      attr_accessor :linked_entity_ids
-
       include Sandstorm::Record
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
@@ -33,13 +31,14 @@ module Flapjack
                         :last_name             => :string,
                         :email                 => :string,
                         :timezone              => :string,
-                        :pagerduty_credentials => :hash,
                         :tags                  => :set
 
       has_and_belongs_to_many :entities, :class_name => 'Flapjack::Data::Entity',
         :inverse_of => :contacts
 
       has_many :media, :class_name => 'Flapjack::Data::Medium'
+      has_one :pagerduty_credentials, :class_name => 'Flapjack::Data::PagerdutyCredentials'
+
       has_many :notification_rules, :class_name => 'Flapjack::Data::NotificationRule'
 
       before_destroy :remove_child_records
@@ -65,7 +64,9 @@ module Flapjack
 
           rule = Flapjack::Data::NotificationRule.new(
             :entities           => Set.new,
+            :regex_entities     => Set.new,
             :tags               => Set.new,
+            :regex_tags         => Set.new,
             :time_restrictions  => []
           )
           rule.save
@@ -106,29 +107,16 @@ module Flapjack
         self.timezone = tz.respond_to?(:name) ? tz.name : tz
       end
 
-      def self.entities_jsonapi(contact_ids, options = {})
-        entity_data = {}
-        linked_entity_ids = {}
-
-        contact_ids.each do |contact_id|
-          contact = Flapjack::Data::Contact.find_by_id(contact_id)
-          next if contact.nil?
-
-          entity_ids = contact.entities.ids
-
-          entity_ids.each do |entity_id|
-            next if entity_data.has_key?(entity_id)
-            entity = Flapjack::Data::Entity.find_by_id(entity_id)
-            entity_data[entity_id] = {:id => entity_id, :name => entity.name}
-          end
-          linked_entity_ids[contact_id] = entity_ids
-        end
-
-        [entity_data.values, linked_entity_ids]
+      def as_json(opts = {})
+        self.attributes.merge(
+          :links => {
+            :entities              => opts[:entity_ids] || [],
+            :media                 => opts[:medium_ids] || [],
+            :pagerduty_credentials => opts[:pagerduty_credentials_ids] || [],
+            :notification_rules    => opts[:notification_rule_ids] || [],
+          }
+        )
       end
-
-      # TODO usage of to_json should have :only => [:first_name, :last_name, :email, :tags]
-      # TODO linked_entity_ids handling
 
     end
   end

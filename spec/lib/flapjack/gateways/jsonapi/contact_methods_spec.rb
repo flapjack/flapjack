@@ -3,82 +3,90 @@ require 'flapjack/gateways/jsonapi'
 
 describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logger => true do
 
-  def app
-    Flapjack::Gateways::JSONAPI
-  end
+  include_context "jsonapi"
 
-  JSON_REQUEST_MIME = 'application/vnd.api+json'
+  # let(:json_data)       { {'valid' => 'json'} }
 
-  let(:json_data)       { {'valid' => 'json'} }
+  # let(:media) {
+  #   {'email' => 'ada@example.com',
+  #    'sms'   => '04123456789'
+  #   }
+  # }
 
-  let(:contact)      { double(Flapjack::Data::Contact, :id => '21') }
-  let(:contact_core) {
-    {'id'         => contact.id,
-     'first_name' => "Ada",
-     'last_name'  => "Lovelace",
-     'email'      => "ada@example.com",
-     'tags'       => ["legend", "first computer programmer"]
-    }
-  }
+  # let(:media_intervals) {
+  #   {'email' => 500,
+  #    'sms'   => 300
+  #   }
+  # }
 
-  let(:media) {
-    {'email' => 'ada@example.com',
-     'sms'   => '04123456789'
-    }
-  }
+  # let(:media_rollup_thresholds) {
+  #   {'email' => 5}
+  # }
 
-  let(:media_intervals) {
-    {'email' => 500,
-     'sms'   => 300
-    }
-  }
+  # let(:notification_rule) {
+  #   double(Flapjack::Data::NotificationRule, :id => '1', :contact_id => '21')
+  # }
 
-  let(:media_rollup_thresholds) {
-    {'email' => 5}
-  }
+  # let(:notification_rule_data) {
+  #   {"contact_id"         => "21",
+  #    "tags"               => ["database","physical"],
+  #    "entities"           => ["foo-app-01.example.com"],
+  #    "time_restrictions"  => nil,
+  #    "unknown_media"      => ["jabber"],
+  #    "warning_media"      => ["email"],
+  #    "critical_media"     => ["sms", "email"],
+  #    "unknown_blackhole"  => false,
+  #    "warning_blackhole"  => false,
+  #    "critical_blackhole" => false
+  #   }
+  # }
 
-  let(:redis)           { double(::Redis) }
+  # let(:critical_state) { double(Flapjack::Data::NotificationRuleState) }
+  # let(:warning_state)  { double(Flapjack::Data::NotificationRuleState) }
+  # let(:unknown_state)  { double(Flapjack::Data::NotificationRuleState) }
 
-  let(:notification_rule) {
-    double(Flapjack::Data::NotificationRule, :id => '1', :contact_id => '21')
-  }
+  it "creates a contact" # do
+    # contact_data = {
+    #   "id"         => "0362",
+    #   "first_name" => "John",
+    #   "last_name"  => "Smith",
+    #   "email"      => "johns@example.dom",
+    #   "media"      => {
+    #     "email"  => "johns@example.dom",
+    #     "jabber" => "johns@conference.localhost"
+    #   }
+    # }
 
-  let(:notification_rule_data) {
-    {"contact_id"         => "21",
-     "tags"               => ["database","physical"],
-     "entities"           => ["foo-app-01.example.com"],
-     "time_restrictions"  => nil,
-     "unknown_media"      => ["jabber"],
-     "warning_media"      => ["email"],
-     "critical_media"     => ["sms", "email"],
-     "unknown_blackhole"  => false,
-     "warning_blackhole"  => false,
-     "critical_blackhole" => false
-    }
-  }
+    # expect(Flapjack::Data::Semaphore).to receive(:new).
+    #   with("contact_mass_update", {:redis => redis, :expiry => 30}).and_return(semaphore)
+    # expect(Flapjack::Data::Contact).to receive(:exists_with_id?).
+    #   with("0362", {:redis => redis}).and_return(false)
+    # expect(Flapjack::Data::Contact).to receive(:add).
+    #   with(contact_data, {:redis => redis}).and_return(contact)
+    # expect(semaphore).to receive(:release).and_return(true)
 
-  let(:critical_state) { double(Flapjack::Data::NotificationRuleState) }
-  let(:warning_state)  { double(Flapjack::Data::NotificationRuleState) }
-  let(:unknown_state)  { double(Flapjack::Data::NotificationRuleState) }
+    # post "/contacts", {:contacts => [contact_data]}.to_json, jsonapi_post_env
+    # expect(last_response.status).to eq(201)
+    # expect(last_response.body).to eq(["0362"].to_json)
+  # end
 
-  before(:all) do
-    Flapjack::Gateways::JSONAPI.class_eval {
-      set :raise_errors, true
-    }
-  end
+  it "does not create a contact if the data is improperly formatted" # do
+    # expect(Flapjack::Data::Contact).not_to receive(:add)
 
-  before(:each) do
-    # expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
-    Flapjack::Gateways::JSONAPI.instance_variable_set('@config', {})
-    Flapjack::Gateways::JSONAPI.instance_variable_set('@logger', @logger)
-    Flapjack::Gateways::JSONAPI.start
-  end
+    # post "/contacts", {'sausage' => 'good'}.to_json, jsonapi_post_env
+    # expect(last_response.status).to eq(422)
+  # end
 
   it "returns all the contacts" do
-    expect(Flapjack::Data::Contact).to receive(:entities_jsonapi).
-      with([contact.id]).and_return([[], {}])
-    expect(contact).to receive(:linked_entity_ids=).with(nil)
-    expect(contact).to receive(:to_json).and_return(contact_core.to_json)
+    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_entities).
+      with([contact.id]).and_return({})
+    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_media).
+      with([contact.id]).and_return({})
+    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_pagerduty_credentials).
+      with([contact.id]).and_return({})
+    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_notification_rules).
+      with([contact.id]).and_return({})
+    expect(contact).to receive(:as_json).and_return(contact_core)
     expect(Flapjack::Data::Contact).to receive(:all).and_return([contact])
 
     get '/contacts'
@@ -87,10 +95,17 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   end
 
   it "returns the core information of a specified contact" do
-    expect(contact).to receive(:entities).and_return([])
-    expect(contact).to receive(:to_json).and_return(contact_core.to_json)
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(contact.id).and_return(contact)
+    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_entities).
+      with([contact.id]).and_return({})
+    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_media).
+      with([contact.id]).and_return({})
+    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_pagerduty_credentials).
+      with([contact.id]).and_return({})
+    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_notification_rules).
+      with([contact.id]).and_return({})
+    expect(contact).to receive(:as_json).and_return(contact_core)
+    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
+      with([contact.id]).and_return([contact])
 
     get "/contacts/#{contact.id}"
     expect(last_response).to be_ok
@@ -98,981 +113,37 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   end
 
   it "does not return information for a contact that does not exist" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(contact.id).and_return(nil)
+    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
+      with([contact.id]).and_raise(Sandstorm::Errors::RecordsNotFound.new(Flapjack::Data::Contact, [contact.id]))
 
     get "/contacts/#{contact.id}"
-    expect(last_response).to be_not_found
-  end
-
-  it "creates a contact with supplied ID" do
-    contact_data = {
-      "id"         => "0362",
-      "first_name" => "John",
-      "last_name"  => "Smith",
-      "email"      => "johns@example.dom",
-      "media"      => {
-        "email"  => "johns@example.dom",
-        "jabber" => "johns@conference.localhost"
-      }
-    }
-
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium).and_yield
-
-    expect(Flapjack::Data::Contact).to receive(:exists?).
-      with("0362").and_return(false)
-
-    media = double('media')
-
-    medium = double(Flapjack::Data::Medium)
-    medium_2 = double(Flapjack::Data::Medium)
-
-    expect(medium).to receive(:address=).with('johns@example.dom')
-    expect(medium_2).to receive(:address=).with('johns@conference.localhost')
-
-    expect(medium).to receive(:save).and_return(true)
-    expect(medium_2).to receive(:save).and_return(true)
-
-    expect(media).to receive(:each)
-
-    expect(media).to receive(:<<).with(medium)
-    expect(media).to receive(:<<).with(medium_2)
-
-    expect(Flapjack::Data::Medium).to receive(:new).with(:type => 'email').and_return(medium)
-    expect(Flapjack::Data::Medium).to receive(:new).with(:type => 'jabber').and_return(medium_2)
-
-    pd_cred = double('pagerduty_credentials')
-    expect(pd_cred).to receive(:clear)
-
-    expect(contact).to receive(:pagerduty_credentials).and_return(pd_cred)
-    expect(contact).to receive(:first_name=).with('John')
-    expect(contact).to receive(:last_name=).with('Smith')
-    expect(contact).to receive(:email=).with('johns@example.dom')
-
-    expect(contact).to receive(:media).exactly(3).times.and_return(media)
-
-    expect(contact).to receive(:save).and_return(true)
-
-    expect(Flapjack::Data::Contact).to receive(:new).with(:id => "0362").and_return(contact)
-
-    post "/contacts", { :contacts => [contact_data]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-
-    expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(["0362"].to_json)
+    expect(last_response.status).to eq(404)
   end
 
   it "updates a contact" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(contact.id).and_return(contact)
-    expect(contact).to receive(:update)
-    expect(contact).to receive(:to_json).and_return('{"sausage": "good"}')
+    expect(Flapjack::Data::Contact).to receive(:find_by_ids).
+      with([contact.id]).and_return([contact])
 
-    put "/contacts/21", {:contacts => [{'sausage' => 'good'}]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-    expect(last_response.status).to eq(200)
-  end
-
-  it "deletes a contact"
-
-  it "does not create a contact if the data is improperly formatted" do
-    expect(Flapjack::Data::Contact).not_to receive(:add)
-
-    post "/contacts", {'sausage' => 'good'}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-    expect(last_response.status).to eq(422)
-  end
-
-  it "does not update a contact if id exists in sent entity" do
-    contact_data = {'id' => '21'}
-    expect(Flapjack::Data::Contact).not_to receive(:find_by_id)
-    expect(Flapjack::Data::Contact).not_to receive(:update)
-
-    put "/contacts/21", contact_data.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-    expect(last_response.status).to eq(422)
-  end
-
-  it "replaces contacts with a submitted list" do
-    contacts = {'contacts' =>
-      [{"id" => "0363",
-        "first_name" => "Jane",
-        "last_name" => "Jones",
-        "email" => "jane@example.dom",
-        "media" => {"email" => "jane@example.dom"}}
-      ]
-    }
-
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium).and_yield
-
-    media = double('media')
-
-    medium = double(Flapjack::Data::Medium)
-    expect(medium).to receive(:address=).with('jane@example.dom')
-    expect(medium).to receive(:save).and_return(true)
-    expect(Flapjack::Data::Medium).to receive(:new).with(:type => 'email').and_return(medium)
-
-    expect(media).to receive(:each)
-
-    expect(media).to receive(:<<).with(medium)
-
-    existing = double(Flapjack::Data::Contact)
-    expect(existing).to receive(:id).and_return("0363")
-
-    pd_cred = double('pagerduty_credentials')
-    expect(pd_cred).to receive(:clear)
-
-    expect(existing).to receive(:pagerduty_credentials).and_return(pd_cred)
-    expect(existing).to receive(:first_name=).with('Jane')
-    expect(existing).to receive(:last_name=).with('Jones')
-    expect(existing).to receive(:email=).with('jane@example.dom')
-
-    expect(existing).to receive(:media).twice.and_return(media)
-
-    expect(existing).to receive(:save).and_return(true)
-
-    expect(Flapjack::Data::Contact).to receive(:all).and_return([existing])
-
-    post "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => 'application/json'}
-    expect(last_response.status).to eq(204)
-  end
-
-  it "does not replace contacts if the data is improperly formatted" do
-    expect(Flapjack::Data::Contact).not_to receive(:add)
-
-    post "/contacts_atomic", {'contacts' => ["Hello", "again"]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-    expect(last_response.status).to eq(403)
-  end
-
-  it "does not replace contacts if they don't contain an id in the source" do
-    contacts = {'contacts' =>
-      [{"id" => "0362",
-        "first_name" => "John",
-        "last_name" => "Smith",
-        "email" => "johns@example.dom",
-        "media" => {"email"  => "johns@example.dom",
-                    "jabber" => "johns@conference.localhost"}},
-       {"first_name" => "Jane",
-        "last_name" => "Jones",
-        "email" => "jane@example.dom",
-        "media" => {"email" => "jane@example.dom"}}
-      ]
-    }
-
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium).and_yield
-
-    media = double('media')
-
-    medium = double(Flapjack::Data::Medium)
-    medium_2 = double(Flapjack::Data::Medium)
-
-    expect(medium).to receive(:address=).with('johns@example.dom')
-    expect(medium_2).to receive(:address=).with('johns@conference.localhost')
-
-    expect(medium).to receive(:save).and_return(true)
-    expect(medium_2).to receive(:save).and_return(true)
-
-    expect(media).to receive(:each)
-
-    expect(media).to receive(:<<).with(medium)
-    expect(media).to receive(:<<).with(medium_2)
-
-    expect(Flapjack::Data::Medium).to receive(:new).with(:type => 'email').and_return(medium)
-    expect(Flapjack::Data::Medium).to receive(:new).with(:type => 'jabber').and_return(medium_2)
-
-    pd_cred = double('pagerduty_credentials')
-    expect(pd_cred).to receive(:clear)
-
-    expect(contact).to receive(:pagerduty_credentials).and_return(pd_cred)
-    expect(contact).to receive(:first_name=).with('John')
-    expect(contact).to receive(:last_name=).with('Smith')
-    expect(contact).to receive(:email=).with('johns@example.dom')
-
-    expect(contact).to receive(:media).exactly(3).times.and_return(media)
-
+    expect(contact).to receive(:first_name=).with('Elias')
     expect(contact).to receive(:save).and_return(true)
 
-    expect(Flapjack::Data::Contact).to receive(:all).and_return([])
+    expect(Flapjack::Data::Contact).to receive(:lock).and_yield
 
-    expect(Flapjack::Data::Contact).to receive(:new).with(:id => "0362").and_return(contact)
-
-    post "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
+    patch "/contacts/#{contact.id}",
+      [{:op => 'replace', :path => '/contacts/0/first_name', :value => 'Elias'}].to_json,
+      jsonapi_patch_env
     expect(last_response.status).to eq(204)
   end
 
-  it "updates a contact in a bulk replacement list if it is already present" do
-    contacts = {'contacts' =>
-      [{"id" => "0363",
-        "first_name" => "Jane",
-        "last_name" => "Jones",
-        "email" => "jane@example.dom",
-        "media" => {"email" => "jane@example.dom"}}
-      ]
-    }
+  it "deletes a contact" do
+    expect(Flapjack::Data::Contact).to receive(:find_by_ids).
+      with([contact.id]).and_return([contact])
+    expect(contact).to receive(:destroy)
 
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium).and_yield
+    expect(Flapjack::Data::Contact).to receive(:lock).and_yield
 
-    existing = double(Flapjack::Data::Contact)
-    expect(existing).to receive(:id).and_return("0363")
-
-    expect(Flapjack::Data::Contact).to receive(:all).and_return([existing])
-
-    media = double('media')
-
-    medium = double(Flapjack::Data::Medium)
-    expect(medium).to receive(:address=).with('jane@example.dom')
-    expect(medium).to receive(:save).and_return(true)
-    expect(Flapjack::Data::Medium).to receive(:new).with(:type => 'email').and_return(medium)
-
-    expect(media).to receive(:each)
-
-    expect(media).to receive(:<<).with(medium)
-
-    pd_cred = double('pagerduty_credentials')
-    expect(pd_cred).to receive(:clear)
-
-    expect(existing).to receive(:pagerduty_credentials).and_return(pd_cred)
-    expect(existing).to receive(:first_name=).with('Jane')
-    expect(existing).to receive(:last_name=).with('Jones')
-    expect(existing).to receive(:email=).with('jane@example.dom')
-
-    expect(existing).to receive(:media).twice.and_return(media)
-
-    expect(existing).to receive(:save).and_return(true)
-
-    post "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
+    delete "/contacts/#{contact.id}"
     expect(last_response.status).to eq(204)
-  end
-
-  it "deletes a contact not found in a bulk update list" do
-    contacts = {'contacts' =>
-      [{"id" => "0363",
-        "first_name" => "Jane",
-        "last_name" => "Jones",
-        "email" => "jane@example.dom",
-        "media" => {"email" => "jane@example.dom"}}
-      ]
-    }
-
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium).and_yield
-
-    contacts = {'contacts' =>
-      [{"id" => "0363",
-        "first_name" => "Jane",
-        "last_name" => "Jones",
-        "email" => "jane@example.dom",
-        "media" => {"email" => "jane@example.dom"}}
-      ]
-    }
-
-    existing = double(Flapjack::Data::Contact)
-    expect(existing).to receive(:id).twice.and_return("0362")
-    expect(existing).to receive(:destroy)
-
-    expect(Flapjack::Data::Contact).to receive(:all).and_return([existing])
-
-    medium = double(Flapjack::Data::Medium)
-    expect(medium).to receive(:address=).with('jane@example.dom')
-    expect(medium).to receive(:save).and_return(true)
-    expect(Flapjack::Data::Medium).to receive(:new).with(:type => 'email').and_return(medium)
-
-    media = double('media')
-    expect(media).to receive(:each)
-    expect(media).to receive(:<<).with(medium)
-
-    pd_cred = double('pagerduty_credentials')
-    expect(pd_cred).to receive(:clear)
-
-    expect(contact).to receive(:pagerduty_credentials).and_return(pd_cred)
-    expect(contact).to receive(:first_name=).with('Jane')
-    expect(contact).to receive(:last_name=).with('Jones')
-    expect(contact).to receive(:email=).with('jane@example.dom')
-    expect(contact).to receive(:media).twice.and_return(media)
-    expect(contact).to receive(:save).and_return(true)
-
-    expect(Flapjack::Data::Contact).to receive(:new).with(:id => "0363").and_return(contact)
-
-    post "/contacts_atomic", contacts.to_json, {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-    expect(last_response.status).to eq(204)
-  end
-
-  it "lists a contact's notification rules" do
-    notification_rule_2 = double(Flapjack::Data::NotificationRule, :id => '2', :contact_id => '21')
-    expect(notification_rule).to receive(:to_json).and_return('"rule_1"')
-    expect(notification_rule_2).to receive(:to_json).and_return('"rule_2"')
-    notification_rules = [ notification_rule, notification_rule_2 ]
-
-    expect(contact).to receive(:notification_rules).and_return(notification_rules)
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(contact.id).and_return(contact)
-
-    get "/contacts/#{contact.id}/notification_rules"
-    expect(last_response).to be_ok
-    expect(last_response.body).to eq('["rule_1","rule_2"]')
-  end
-
-  it "does not list notification rules for a contact that does not exist" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(contact.id).and_return(nil)
-
-    get "/contacts/#{contact.id}/notification_rules"
-    expect(last_response).to be_not_found
-  end
-
-  it "returns a specified notification rule" do
-    expect(notification_rule).to receive(:to_json).and_return('"rule_1"')
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
-      with(notification_rule.id).and_return(notification_rule)
-
-    get "/notification_rules/#{notification_rule.id}"
-    expect(last_response).to be_ok
-    expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
-  end
-
-  it "does not return a notification rule that does not exist" do
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
-      with(notification_rule.id).and_return(nil)
-
-    get "/notification_rules/#{notification_rule.id}"
-    expect(last_response).to be_not_found
-  end
-
-  # POST /notification_rules
-  it "creates a new notification rule" do
-    notification_rules = double('notification_rules')
-    expect(notification_rules).to receive(:<<).with(notification_rule)
-    expect(contact).to receive(:notification_rules).and_return(notification_rules)
-
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(notification_rule_data['contact_id']).and_return(contact)
-
-    expect(Flapjack::Data::NotificationRule).to receive(:new).
-      with(:entities           => notification_rule_data['entities'],
-           :tags               => Set.new(notification_rule_data['tags']),
-           :time_restrictions  => notification_rule_data['time_restrictions']).
-      and_return(notification_rule)
-
-    expect(Flapjack::Data::NotificationRuleState).to receive(:new).
-      with(:state => 'critical', :blackhole => false).
-      and_return(critical_state)
-
-    expect(Flapjack::Data::NotificationRuleState).to receive(:new).
-      with(:state => 'warning', :blackhole => false).
-      and_return(warning_state)
-
-    expect(Flapjack::Data::NotificationRuleState).to receive(:new).
-      with(:state => 'unknown', :blackhole => false).
-      and_return(unknown_state)
-
-    expect(critical_state).to receive(:save).and_return(true)
-    expect(warning_state).to receive(:save).and_return(true)
-    expect(unknown_state).to receive(:save).and_return(true)
-
-    sms_media    = double(Flapjack::Data::Medium)
-    email_media  = double(Flapjack::Data::Medium)
-    jabber_media = double(Flapjack::Data::Medium)
-
-    sms_email_all_media = double('sms_email_all_media', :all => [sms_media, email_media])
-    email_all_media     = double('email_all_media', :all => [email_media])
-    jabber_all_media    = double('jabber_all_media', :all => [jabber_media])
-
-    contact_media = double('contact_media')
-    expect(contact_media).to receive(:intersect).with(:type => ['sms', 'email']).and_return(sms_email_all_media)
-    expect(contact_media).to receive(:intersect).with(:type => ['email']).and_return(email_all_media)
-    expect(contact_media).to receive(:intersect).with(:type => ['jabber']).and_return(jabber_all_media)
-    expect(contact).to receive(:media).exactly(3).times.and_return(contact_media)
-
-    critical_state_media = double('critical_state_media')
-    warning_state_media  = double('warning_state_media')
-    unknown_state_media  = double('unknown_state_media')
-
-    expect(critical_state_media).to receive(:add).with(sms_media, email_media)
-    expect(warning_state_media).to receive(:add).with(email_media)
-    expect(unknown_state_media).to receive(:add).with(jabber_media)
-
-    expect(critical_state).to receive(:media).and_return(critical_state_media)
-    expect(warning_state).to receive(:media).and_return(warning_state_media)
-    expect(unknown_state).to receive(:media).and_return(unknown_state_media)
-
-    notification_rule_states = double('notification_rule_states')
-    expect(notification_rule_states).to receive(:add).with(critical_state, warning_state, unknown_state)
-    expect(notification_rule).to receive(:states).and_return(notification_rule_states)
-
-    expect(notification_rule).to receive(:valid?).and_return(true)
-    expect(notification_rule).to receive(:save).and_return(true)
-    expect(notification_rule).to receive(:to_json).and_return('"rule_1"')
-
-    post "/notification_rules", {"notification_rules" => [notification_rule_data], :contact_id => contact.id}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-    expect(last_response).to be_ok
-    expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
-  end
-
-  it "does not create a notification_rule for a contact that's not present" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(contact.id).and_return(nil)
-
-    post "/notification_rules", {"notification_rules" => [notification_rule_data], :contact_id => contact.id}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-    expect(last_response).to be_not_found
-  end
-
-  it "does not create a notification_rule if a rule id is provided" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(contact.id).and_return(contact)
-
-    expect(contact).not_to receive(:add_notification_rule)
-
-    post "/notification_rules", {"notification_rules" => [notification_rule_data.merge(:id => 1)], :contact_id => contact.id}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-    expect(last_response.status).to eq(422)
-  end
-
-  # PUT /notification_rules/RULE_ID
-  it "updates a notification rule" do
-    expect(notification_rule).to receive(:contact).and_return(contact)
-
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
-      with(notification_rule.id).and_return(notification_rule)
-
-    {'entities'           => notification_rule_data['entities'],
-     'tags'               => Set.new(notification_rule_data['tags']),
-     'time_restrictions'  => notification_rule_data['time_restrictions']}.each_pair do |k,v|
-
-      expect(notification_rule).to receive("#{k}=".to_sym).with(v)
-    end
-
-    notification_rule_states = double('notification_rule_states')
-    expect(notification_rule).to receive(:states).exactly(3).times.
-      and_return(notification_rule_states)
-
-    all_critical_states = double('all_critical_states', :all => [critical_state])
-    all_warning_states  = double('all_warning_states', :all => [warning_state])
-    all_unknown_states  = double('all_unknown_states', :all => [unknown_state])
-
-    expect(notification_rule_states).to receive(:intersect).
-      with(:state => 'critical').and_return(all_critical_states)
-
-    expect(notification_rule_states).to receive(:intersect).
-      with(:state => 'warning').and_return(all_warning_states)
-
-    expect(notification_rule_states).to receive(:intersect).
-      with(:state => 'unknown').and_return(all_unknown_states)
-
-    expect(critical_state).to receive(:blackhole=).with(false)
-    expect(warning_state).to receive(:blackhole=).with(false)
-    expect(unknown_state).to receive(:blackhole=).with(false)
-
-    expect(critical_state).to receive(:save).and_return(true)
-    expect(warning_state).to receive(:save).and_return(true)
-    expect(unknown_state).to receive(:save).and_return(true)
-
-    sms_media    = double(Flapjack::Data::Medium)
-    email_media  = double(Flapjack::Data::Medium)
-    jabber_media = double(Flapjack::Data::Medium)
-
-    sms_email_all_media = double('sms_email_all_media', :all => [sms_media, email_media])
-    email_all_media     = double('email_all_media', :all => [email_media])
-    jabber_all_media    = double('jabber_all_media', :all => [jabber_media])
-
-    contact_media = double('contact_media')
-    expect(contact_media).to receive(:intersect).with(:type => ['sms', 'email']).and_return(sms_email_all_media)
-    expect(contact_media).to receive(:intersect).with(:type => ['email']).and_return(email_all_media)
-    expect(contact_media).to receive(:intersect).with(:type => ['jabber']).and_return(jabber_all_media)
-    expect(contact).to receive(:media).exactly(3).times.and_return(contact_media)
-
-    critical_state_media = double('critical_state_media')
-    warning_state_media  = double('warning_state_media')
-    unknown_state_media  = double('unknown_state_media')
-
-    expect(critical_state_media).to receive(:add).with(sms_media, email_media)
-    expect(warning_state_media).to receive(:add).with(email_media)
-    expect(unknown_state_media).to receive(:add).with(jabber_media)
-
-    expect(critical_state).to receive(:media).and_return(critical_state_media)
-    expect(warning_state).to receive(:media).and_return(warning_state_media)
-    expect(unknown_state).to receive(:media).and_return(unknown_state_media)
-
-    expect(notification_rule).to receive(:save).and_return(true)
-    expect(notification_rule).to receive(:to_json).and_return('"rule_1"')
-
-    put "/notification_rules/#{notification_rule.id}", {"notification_rules" => [notification_rule_data]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-    expect(last_response).to be_ok
-    expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
-  end
-
-  it "does not update a notification rule that's not present" do
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
-      with(notification_rule.id).and_return(nil)
-
-    put "/notification_rules/#{notification_rule.id}", {"notification_rules" => [notification_rule_data]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-    expect(last_response).to be_not_found
-  end
-
-  it "does not update a notification_rule for a contact that's not present" do
-    expect(notification_rule).to receive(:contact).and_return(nil)
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
-      with(notification_rule.id).and_return(notification_rule)
-
-    put "/notification_rules/#{notification_rule.id}", {"notification_rules" => [notification_rule_data]}.to_json,
-      {'CONTENT_TYPE' => JSON_REQUEST_MIME}
-    expect(last_response).to be_not_found
-  end
-
-  # DELETE /notification_rules/RULE_ID
-  it "deletes a notification rule" do
-    expect(notification_rule).to receive(:contact).and_return(contact)
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
-      with(notification_rule.id).and_return(notification_rule)
-
-    notification_rules = double('notification_rules')
-    expect(notification_rules).to receive(:delete).with(notification_rule)
-    expect(contact).to receive(:notification_rules).and_return(notification_rules)
-
-    delete "/notification_rules/#{notification_rule.id}"
-    expect(last_response.status).to eq(204)
-  end
-
-  it "does not delete a notification rule that's not present" do
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
-      with(notification_rule.id).and_return(nil)
-
-    delete "/notification_rules/#{notification_rule.id}"
-    expect(last_response).to be_not_found
-  end
-
-  it "does not delete a notification rule if the contact is not present" do
-    expect(notification_rule).to receive(:contact).and_return(nil)
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
-      with(notification_rule.id).and_return(notification_rule)
-
-    delete "/notification_rules/#{notification_rule.id}"
-    expect(last_response).to be_not_found
-  end
-
-  # GET /contacts/CONTACT_ID/media
-  it "returns the media of a contact" do
-    expect(contact).to receive(:media).and_return([json_data])
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    get "/contacts/0362/media"
-    expect(last_response).to be_ok
-    expect(last_response.body).to eq([json_data].to_json)
-  end
-
-  it "does not return the media of a contact if the contact is not present" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    get "/contacts/0362/media"
-    expect(last_response).to be_not_found
-  end
-
-  # GET /contacts/CONTACT_ID/media/MEDIA
-  it "returns the specified media of a contact" do
-    medium = double(Flapjack::Data::Medium)
-    expect(medium).to receive(:as_json).and_return(json_data)
-    all_media = double('all_media', :all => [medium])
-    media = double('media')
-    expect(media).to receive(:intersect).with(:type => 'sms').and_return(all_media)
-    expect(contact).to receive(:media).and_return(media)
-
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    get "/contacts/0362/media/sms"
-    expect(last_response).to be_ok
-    expect(last_response.body).to eq(json_data.to_json)
-  end
-
-  it "does not return the media of a contact if the contact is not present" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    get "/contacts/0362/media/sms"
-    expect(last_response).to be_not_found
-  end
-
-  it "does not return the media of a contact if the media is not present" do
-    all_media = double('all_media', :all => [])
-    media = double('media')
-    expect(media).to receive(:intersect).with(:type => 'telepathy').and_return(all_media)
-    expect(contact).to receive(:media).and_return(media)
-
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    get "/contacts/0362/media/telepathy"
-    expect(last_response.status).to eq(403)
-  end
-
-  # PUT, DELETE /contacts/CONTACT_ID/media/MEDIA
-  it "creates/updates a media of a contact" do
-    medium = double(Flapjack::Data::Medium)
-    expect(medium).to receive(:address=).with('04987654321')
-    expect(medium).to receive(:interval=).with(200)
-    expect(medium).to receive(:save).and_return(true)
-    expect(medium).to receive(:as_json).and_return(json_data)
-
-    all_media = double('all_media', :all => [medium])
-
-    media = double('media')
-    expect(media).to receive(:intersect).with(:type => 'sms').and_return(all_media)
-    expect(contact).to receive(:media).and_return(media)
-
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    put "/contacts/0362/media/sms", {:address => '04987654321', :interval => '200'}
-    expect(last_response).to be_ok
-    expect(last_response.body).to eq(json_data.to_json)
-  end
-
-  it "does not create a media of a contact that's not present" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    put "/contacts/0362/media/sms", {:address => '04987654321', :interval => '200'}
-    expect(last_response).to be_not_found
-  end
-
-  it "does not create a media of a contact if no address is provided" do
-    medium = double(Flapjack::Data::Medium)
-    expect(medium).to receive(:address=).with(nil)
-    expect(medium).to receive(:interval=).with(200)
-    expect(medium).to receive(:save).and_return(false)
-    errors = double('errors', :full_messages => ['Address cannot be blank'])
-    expect(medium).to receive(:errors).and_return(errors)
-
-    all_media = double('all_media', :all => [medium])
-
-    media = double('media')
-    expect(media).to receive(:intersect).with(:type => 'sms').and_return(all_media)
-    expect(contact).to receive(:media).and_return(media)
-
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    put "/contacts/0362/media/sms", :interval => '200'
-    expect(last_response.status).to eq(403)
-  end
-
-  it "creates a media of a contact even if no interval is provided" do
-    medium = double(Flapjack::Data::Medium)
-    expect(medium).to receive(:address=).with('04987654321')
-    expect(medium).to receive(:save).and_return(true)
-    expect(medium).to receive(:as_json).and_return(json_data)
-    expect(Flapjack::Data::Medium).to receive(:new).and_return(medium)
-
-    no_media = double('no_media', :all => [])
-
-    media = double('media')
-    expect(media).to receive(:intersect).with(:type => 'sms').and_return(no_media)
-    expect(media).to receive(:<<).with(medium)
-    expect(contact).to receive(:media).and_return(media)
-
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    put "/contacts/0362/media/sms", {:address => '04987654321'}
-    expect(last_response).to be_ok
-  end
-
-  it "deletes a media of a contact" do
-    medium = double(Flapjack::Data::Medium)
-    expect(medium).to receive(:destroy)
-
-    all_media = double('all_media', :all => [medium])
-
-    media = double('media')
-    expect(media).to receive(:intersect).with(:type => 'sms').and_return(all_media)
-    expect(media).to receive(:delete).with(medium)
-
-    expect(contact).to receive(:media).and_return(media)
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    delete "/contacts/0362/media/sms"
-    expect(last_response.status).to eq(204)
-  end
-
-  it "does not delete a media of a contact that's not present" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    delete "/contacts/0362/media/sms"
-    expect(last_response).to be_not_found
-  end
-
-  # GET /contacts/CONTACT_ID/timezone
-  it "returns the timezone of a contact" do
-    expect(contact).to receive(:timezone).and_return(::ActiveSupport::TimeZone.new('Australia/Sydney'))
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    get "/contacts/0362/timezone"
-    expect(last_response).to be_ok
-    expect(last_response.body).to eq('"Australia/Sydney"')
-  end
-
-  it "doesn't get the timezone of a contact that doesn't exist" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    get "/contacts/0362/timezone"
-    expect(last_response).to be_not_found
-  end
-
-  # PUT /contacts/CONTACT_ID/timezone
-  it "sets the timezone of a contact" do
-    expect(contact).to receive(:timezone=).with('Australia/Perth')
-    expect(contact).to receive(:save).and_return(true)
-    expect(contact).to receive(:timezone).and_return(ActiveSupport::TimeZone.new('Australia/Perth'))
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    put "/contacts/0362/timezone", {:timezone => 'Australia/Perth'}
-    expect(last_response).to be_ok
-  end
-
-  it "doesn't set the timezone of a contact who can't be found" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    put "/contacts/0362/timezone", {:timezone => 'Australia/Perth'}
-    expect(last_response).to be_not_found
-  end
-
-  # DELETE /contacts/CONTACT_ID/timezone
-  it "deletes the timezone of a contact" do
-    expect(contact).to receive(:timezone=).with(nil)
-    expect(contact).to receive(:save).and_return(true)
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    delete "/contacts/0362/timezone"
-    expect(last_response.status).to eq(204)
-  end
-
-  it "does not delete the timezone of a contact that's not present" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    delete "/contacts/0362/timezone"
-    expect(last_response).to be_not_found
-  end
-
-  it "sets a single tag on a contact and returns current tags" do
-    tags = ['web']
-    expect(contact).to receive(:tags=).with(Set.new(tags))
-    expect(contact).to receive(:tags).twice.and_return(Set.new, Set.new(tags))
-    expect(contact).to receive(:save).and_return(true)
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    post "contacts/0362/tags", :tag => tags.first
-    expect(last_response).to be_ok
-    expect(last_response.body).to eq( tags.to_json )
-  end
-
-  it "does not set a single tag on a contact that's not found" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    post "contacts/0362/tags", :tag => 'web'
-    expect(last_response).to be_not_found
-  end
-
-  it "sets multiple tags on a contact and returns current tags" do
-    tags = ['web', 'app']
-    expect(contact).to receive(:tags=).with(Set.new(tags))
-    expect(contact).to receive(:tags).twice.and_return(Set.new, Set.new(tags))
-    expect(contact).to receive(:save).and_return(true)
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    # NB submitted at a lower level as tag[]=web&tag[]=app
-    post "contacts/0362/tags", :tag => tags
-    expect(last_response).to be_ok
-    expect(last_response.body).to eq( tags.to_json )
-  end
-
-  it "does not set multiple tags on a contact that's not found" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    post "contacts/0362/tags", :tag => ['web', 'app']
-    expect(last_response).to be_not_found
-  end
-
-  it "removes a single tag from a contact" do
-    tags = ['web']
-    expect(contact).to receive(:tags=).with(Set.new)
-    expect(contact).to receive(:tags).and_return(Set.new(tags))
-    expect(contact).to receive(:save).and_return(true)
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    delete "contacts/0362/tags", :tag => tags.first
-    expect(last_response.status).to eq(204)
-  end
-
-  it "does not remove a single tag from a contact that's not found" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    delete "contacts/0362/tags", :tag => 'web'
-    expect(last_response).to be_not_found
-  end
-
-  it "removes multiple tags from a contact" do
-    tags = ['web', 'app']
-    expect(contact).to receive(:tags=).with(Set.new)
-    expect(contact).to receive(:tags).and_return(Set.new(tags))
-    expect(contact).to receive(:save).and_return(true)
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    delete "contacts/0362/tags", :tag => tags
-    expect(last_response.status).to eq(204)
-  end
-
-  it "does not remove multiple tags from a contact that's not found" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    delete "contacts/0362/tags", :tag => ['web', 'app']
-    expect(last_response).to be_not_found
-  end
-
-  it "gets all tags on a contact" do
-    expect(contact).to receive(:tags).and_return(Set.new(['web', 'app']))
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    get "contacts/0362/tags"
-    expect(last_response).to be_ok
-    expect(last_response.body).to eq( ['web', 'app'].to_json )
-  end
-
-  it "does not get all tags on a contact that's not found" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    get "contacts/0362/tags"
-    expect(last_response).to be_not_found
-  end
-
-  it "gets all entity tags for a contact" do
-    entity_1 = double(Flapjack::Data::Entity)
-    expect(entity_1).to receive(:name).and_return('entity_1')
-    expect(entity_1).to receive(:tags).and_return(Set.new(['web']))
-    entity_2 = double(Flapjack::Data::Entity)
-    expect(entity_2).to receive(:name).and_return('entity_2')
-    expect(entity_2).to receive(:tags).and_return(Set.new(['app']))
-
-    all_entities = double('all_entities', :all => [entity_1, entity_2])
-    expect(contact).to receive(:entities).and_return(all_entities)
-
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    get "contacts/0362/entity_tags"
-    expect(last_response).to be_ok
-    tag_response = {'entity_1' => ['web'],
-                    'entity_2' => ['app']}
-    expect(last_response.body).to eq( tag_response.to_json )
-  end
-
-  it "does not get all entity tags for a contact that's not found" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    get "contacts/0362/entity_tags"
-    expect(last_response).to be_not_found
-  end
-
-  it "adds tags to multiple entities for a contact" do
-    tags_1 = Set.new
-    tags_2 = Set.new
-
-    entity_1 = double(Flapjack::Data::Entity)
-    expect(entity_1).to receive(:name).twice.and_return('entity_1')
-    expect(entity_1).to receive(:tags).twice.and_return(tags_1, tags_1 + ['web'])
-    expect(entity_1).to receive(:tags=).with(tags_1 + ['web'])
-    entity_2 = double(Flapjack::Data::Entity)
-    expect(entity_2).to receive(:name).twice.and_return('entity_2')
-    expect(entity_2).to receive(:tags).twice.and_return(tags_2, tags_2 + ['app'])
-    expect(entity_2).to receive(:tags=).with(tags_2 + ['app'])
-
-    all_entities = double('all_entities')
-    expect(all_entities).to receive(:all).and_return([entity_1, entity_2])
-    expect(all_entities).to receive(:each).and_yield(entity_1).and_yield(entity_2)
-
-    expect(contact).to receive(:entities).and_return(all_entities)
-
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    post "contacts/0362/entity_tags",
-      :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
-    expect(last_response).to be_ok
-    tag_response = {'entity_1' => ['web'],
-                    'entity_2' => ['app']}
-    expect(last_response.body).to eq( tag_response.to_json )
-  end
-
-  it "does not add tags to multiple entities for a contact that's not found" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    post "contacts/0362/entity_tags",
-      :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
-    expect(last_response).to be_not_found
-  end
-
-  it "deletes tags from multiple entities for a contact" do
-    tags_1 = Set.new(['web'])
-    tags_2 = Set.new(['app'])
-
-    entity_1 = double(Flapjack::Data::Entity)
-    expect(entity_1).to receive(:name).and_return('entity_1')
-    expect(entity_1).to receive(:tags).and_return(tags_1)
-    expect(entity_1).to receive(:tags=).with(tags_1 - ['web'])
-    entity_2 = double(Flapjack::Data::Entity)
-    expect(entity_2).to receive(:name).and_return('entity_2')
-    expect(entity_2).to receive(:tags).and_return(tags_2)
-    expect(entity_2).to receive(:tags=).with(tags_2 - ['app'])
-
-    all_entities = double('all_entities')
-    expect(all_entities).to receive(:each).and_yield(entity_1).and_yield(entity_2)
-
-    expect(contact).to receive(:entities).and_return(all_entities)
-
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(contact)
-
-    delete "contacts/0362/entity_tags",
-      :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
-    expect(last_response.status).to eq(204)
-  end
-
-  it "does not delete tags from multiple entities for a contact that's not found" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with('0362').and_return(nil)
-
-    delete "contacts/0362/entity_tags",
-      :entity => {'entity_1' => ['web'], 'entity_2' => ['app']}
-    expect(last_response).to be_not_found
   end
 
 end

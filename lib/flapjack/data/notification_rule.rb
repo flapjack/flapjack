@@ -18,14 +18,16 @@ module Flapjack
       include Sandstorm::Record
 
       define_attributes :entities                => :set,
+                        :regex_entities          => :set,
                         :tags                    => :set,
+                        :regex_tags              => :set,
                         :time_restrictions_json  => :string
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact'
 
       has_many :states, :class_name => 'Flapjack::Data::NotificationRuleState'
 
-      validates_each :entities, :tags, #, :unknown_media, :warning_media, :critical_media,
+      validates_each :entities, :regex_entities, :tags, :regex_tags,
         :allow_blank => true do |record, att, value|
         if value.is_a?(Set) && value.any? {|vs| !vs.is_a?(String) }
           record.errors.add(att, 'must only contain strings')
@@ -77,18 +79,29 @@ module Flapjack
         IceCube::Schedule.from_hash(tr)
       end
 
-      # entity names match?
-      def match_entity?(event_id)
-        entities.present? && entities.include?(event_id.split(':').first)
+      def match_entity?(entity)
+        !entities.present? || entities.include?(entity)
       end
 
-      # tags match?
+      def match_regex_entities?(entity)
+        !regex_entities.present? ||
+          regex_entities.any? {|regex_entity| /#{regex_entity}/ === entity }
+      end
+
       def match_tags?(event_tags)
-        tags.present? && tags.subset?(event_tags)
+        !tags.present? || tags.subset?(event_tags.to_set)
+      end
+
+      def match_regex_tags?(event_tags)
+        !regex_tags.present? ||
+          event_tags.all? do |event_tag|
+            regex_tags.any? {|regex_tag| /#{regex_tag}/ === event_tag }
+          end
       end
 
       def is_specific?
-        entities.present? || tags.present?
+        entities.present? || regex_entities.present? ||
+          tags.present? || regex_tags.present?
       end
 
       # nil time_restrictions matches
@@ -111,45 +124,47 @@ module Flapjack
         end
       end
 
+      def as_json(opts = {})
+        super.as_json(opts.merge(:except => :time_restrictions_json)).merge(
+          :time_restrictions        => @time_restrictions,
+          :links => {
+            :contact                  => [opts[:contact_id]].compact,
+            :notification_rule_states => opts[:states_ids] || []
+          }
+        )
+      end
+
     private
 
       def self.prepare_time_restriction(time_restriction, timezone = nil)
         # this will hand back a 'deep' copy
         tr = symbolize(time_restriction)
 
-        return unless tr.has_key?(:start_time) && tr.has_key?(:end_time)
+        parsed_time = proc {|tr, field|
+          if t = tr.delete(field)
+            t = t.dup
+            t = t[:time] if t.is_a?(Hash)
 
-        parsed_time = proc {|t|
-          if t.is_a?(Time)
-            t
+            if t.is_a?(Time)
+              t
+            else
+              begin; (timezone || Time).parse(t); rescue ArgumentError; nil; end
+            end
           else
-            begin; (timezone || Time).parse(t); rescue ArgumentError; nil; end
+            nil
           end
         }
 
-        start_time = case tr[:start_time]
-        when String, Time
-          parsed_time.call(tr.delete(:start_time).dup)
-        when Hash
-          time_hash = tr.delete(:start_time).dup
-          parsed_time.call(time_hash[:time])
-        end
-
-        end_time = case tr[:end_time]
-        when String, Time
-          parsed_time.call(tr.delete(:end_time).dup)
-        when Hash
-          time_hash = tr.delete(:end_time).dup
-          parsed_time.call(time_hash[:time])
-        end
+        start_time = parsed_time.call(tr, :start_date) || parsed_time.call(tr, :start_time)
+        end_time   = parsed_time.call(tr, :end_date) || parsed_time.call(tr, :end_time)
 
         return unless start_time && end_time
 
-        tr[:start_date] = timezone ?
+        tr[:start_time] = timezone ?
                             {:time => start_time, :zone => timezone.name} :
                             start_time
 
-        tr[:end_date]   = timezone ?
+        tr[:end_time]   = timezone ?
                             {:time => end_time, :zone => timezone.name} :
                             end_time
 

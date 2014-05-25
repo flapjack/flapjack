@@ -23,6 +23,9 @@ module Flapjack
 
       validate :state, :presence => true,
         :inclusion => { :in => Flapjack::Data::CheckState.failing_states }
+
+      # TODO validate that notification_rule and media belong to the same contact
+
     end
   end
 end

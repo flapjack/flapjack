@@ -5,6 +5,8 @@ require 'chronic'
 require 'active_support/time'
 require 'ice_cube'
 
+require 'flapjack/configuration'
+
 if ENV['COVERAGE']
   require 'simplecov'
   SimpleCov.start do
@@ -18,8 +20,13 @@ end
 
 @debug = false
 
+require 'i18n'
+I18n.config.enforce_available_locales = true
+
 ENV["FLAPJACK_ENV"] = 'test'
 FLAPJACK_ENV = 'test'
+FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..', '..')
+FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.yaml')
 
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
@@ -114,7 +121,10 @@ EXPIRE_AS_IF_AT
 
 end
 
-Flapjack::RedisProxy.config = {:db => 14, :driver => :hiredis}
+config = Flapjack::Configuration.new
+Flapjack::RedisProxy.config = config.load(FLAPJACK_CONFIG) ?
+                                config.for_redis :
+                                {:db => 14, :driver => :ruby}
 Flapjack.redis.flushdb
 RedisDelorean.before_all
 Flapjack.redis.quit

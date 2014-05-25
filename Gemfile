@@ -2,24 +2,22 @@ source 'https://rubygems.org'
 
 gemspec :name => 'flapjack'
 
-gem 'sandstorm', :github => 'ali-graham/sandstorm', :branch => 'master'
+gem 'sandstorm', :path => '../sandstorm'
+
+# gem 'sandstorm', :github => 'ali-graham/sandstorm', :branch => 'master'
 
 group :development do
   gem 'ruby-prof'
 end
 
 group :test do
-  gem 'rspec', '~> 3.0.0.beta1'
+  gem 'rspec', '~> 3.0.0.rc1'
   gem 'cucumber'
   gem 'delorean'
   gem 'rack-test'
   gem 'webmock'
-  gem 'guard'
-  gem 'rb-fsevent'
-  gem 'guard-rspec'
-  gem 'guard-cucumber'
-  gem 'fuubar'
+  gem 'fuubar', :github => 'eagletmt/fuubar', :branch => 'rspec-300-rc1'
   gem 'simplecov', :require => false
-  gem 'debugger-ruby_core_source', '>= 1.3.1' # required for perftools
+  gem 'debugger-ruby_core_source', '>= 1.3.5' # required for perftools
   gem 'perftools.rb'
 end

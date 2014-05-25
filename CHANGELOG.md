@@ -1,5 +1,53 @@
 ## Flapjack Changelog
 
+# 0.8.11 - 2014-05-01
+- Feature: simulate-failed-check - give -t a default of 45 seconds (@jessereynolds)
+- Feature: allow email messages to have custom from address #468 (@mattdelves)
+- Feature: jabber - The reply message should only include the filtered list of entity checks #472 (@someword)
+- Feature: Add perfdata handling #471 (@mattdelves)
+- Feature: jsonapi featureset reaches critical mass #474 (@ali-graham)
+- Feature: Add rbtrace command line option for profiling #479 (@auxesis)
+- Bug: ack'ing via jabber fails #480 (@jessereynolds)
+
+# 0.8.10 - 2014-04-28
+- Feature: Add regex entities to notification rules #463 (@jswoods)
+- Bug: oobetet gateway exception sending pagerduty event #464 (@jessereynolds)
+- Bug: Event counters don't add up #465 (@jessereynolds)
+
+# 0.8.9 - 2014-04-21
+- Feature: Support arbitrary gateways in notifier, queue names from config gh-456 (@auxesis)
+- Feature: Add chat bot features (ack by regex, query status by regex) gh-459 (@someword)
+- Feature: Add regex tags to notification rules gh-461 (@jswoods)
+
+# 0.8.8 - 2014-03-20
+- Feature: Be able to disable automatic sched maint by setting duration to zero gh-457, gh-458 (@portertech)
+- Bug: Make bin/flapjack-populator explicitly whinge about `-f` instead of dying gh-455 (@damncabbage)
+
+# 0.8.7 - 2014-03-19
+- Feature: Added "tags" (array of strings) to event hash gh-453 (@portertech)
+- Feature: Allow contacts to be associated with a common entity "ALL" gh-454 (@portertech)
+
+# 0.8.6 - 2014-03-14
+- Bug: tie Thin to < 2.0.0pre gh-442 (@mattdelves)
+- Feature: Allow site-specific ERB templates for messages. gh-443 (@jswoods)
+- Feature: Add flapjack-nsca-receiver gh-444 (@giganteous)
+- Bug: Redis storage leak - unacknowledged_failures gh-446, gh-430 (@ali-graham)
+
+# 0.8.5 - 2014-02-10
+- Feature: jsonapi rework now supports PATCH, eg for media under contacts gh-253 (@ali-graham)
+- Feature: experimental backbone based /edit_contacts page in the web UI has improvements gh-253 (@ali-graham)
+
+# 0.8.4 - 2014-01-31
+- Bug: The scheduled maintenance periods table on the checks page is messed up gh-427 (@jswoods)
+- Bug: api current check state shows check summary and details from last state change gh-431 (@ali-graham)
+
+# 0.8.3 - 2014-01-24
+- Feature: Fix background color for failing events for entity page gh-425 (@jswoods)
+- Feature: Enabled sort and filter options in the flapjack UI gh-418 (@jswoods)
+- Bug: Exception in event.rb: parsed_duration undefined gh-423 (thanks @nmcclain) (@ali-graham)
+- Bug: Incoming event states and types don't pass validation if not all lowercase (thanks @nmcclain) (@ali-graham)
+- Bug: Incoming valid event time doesn't pass validation (thanks @nmcclain) (@ali-graham)
+
 # 0.8.2 - 2014-01-16
 - Bug: no HTML parsing in summary of scheduled maintenance (thanks @marek-knappe) gh-413 (@ali-graham)
 - Bug: if tags and entities are present in a notification rule, both should match the event (thanks @jswoods) gh-417 (@jessereynolds)

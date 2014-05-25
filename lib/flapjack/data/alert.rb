@@ -32,8 +32,10 @@ module Flapjack
                         :acknowledgement_duration => :integer, # SMELL -- passed in as duration in other code
                         :state_duration => :integer,
 
-                        :tags           => :set,
-                        :rollup         => :string
+                        :tags         => :set,
+                        :rollup       => :string,
+
+                        :event_hash   => :string
 
       belongs_to :medium, :class_name => 'Flapjack::Data::Medium', :inverse_of => :alerts
         # media_type, address, :rollup_threshold retrieved from medium

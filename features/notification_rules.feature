@@ -18,6 +18,7 @@ Feature: Notification rules on a per contact basis
       | 3   | baz            | c1,c3    |
       | 4   | buf            | c1,c2,c3 |
       | 5   | foo-app-01.xyz | c4,c6    |
+      | 6   | blakes7        | c2       |
 
     And user c1 has the following notification intervals:
       | email | sms |
@@ -43,11 +44,11 @@ Feature: Notification rules on a per contact basis
       | baz      |               | email         | sms,email        |                   |                    |                   |
 
     And user c2 has the following notification rules:
-      | entities | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole |
-      |          |      | email         | email            |                   |                    |
-      |          |      | sms           | sms              |                   |                    |
-      | bar      |      | email         | email,sms        |                   |                    |
-      | bar      | wags |               |                  | true              | true               |
+      | entities    | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole |
+      |             |      | email         | email            |                   |                    |
+      |             |      | sms           | sms              |                   |                    |
+      | bar,blakes7 |      | email         | email,sms        |                   |                    |
+      | bar,blakes7 | wags |               |                  | true              | true               |
 
     And user c3 has the following notification rules:
       | entities | warning_media | critical_media   | warning_blackhole | critical_blackhole |
@@ -190,7 +191,7 @@ Feature: Notification rules on a per contact basis
 
   @blackhole @time
   Scenario: Drop alerts matching a blackhole rule by tags
-    Given the check is check 'wags the dog' on entity 'bar'
+    Given the check is check 'wags the dog' on entity 'blakes7'
     And   the check is in an ok state
     When  a warning event is received
     And   1 minute passes

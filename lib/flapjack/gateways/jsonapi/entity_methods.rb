@@ -6,8 +6,7 @@ require 'flapjack/data/check'
 require 'flapjack/data/entity'
 require 'flapjack/data/event'
 
-require 'flapjack/gateways/jsonapi/entity_presenter'
-require 'flapjack/gateways/jsonapi/check_presenter'
+require 'flapjack/gateways/jsonapi/entity_check_methods_helpers'
 
 module Flapjack
 
@@ -18,372 +17,145 @@ module Flapjack
       module EntityMethods
 
         module Helpers
-
-          def find_entity(entity_name)
-            entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-            raise Flapjack::Gateways::JSONAPI::EntityNotFound.new(entity_name) if entity.nil?
-            entity
-          end
-
-          def find_check(entity_name, check_name)
-            check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
-              :name => check_name).all.first
-            raise Flapjack::Gateways::JSONAPI::CheckNotFound.new(entity_name, check_name) if check.nil?
-            check
-          end
-
-          def find_entity_tags(tags)
-            halt err(403, "no tags") if tags.nil? || tags.empty?
-            return tags if tags.is_a?(Array)
-            [tags]
-          end
-
-          def entity_and_check_names(entity_name, check_name)
-            if entity_name
-              # backwards-compatible, single entity or entity&check from route
-              entity_names = check_name ? nil : [entity_name]
-              check_names  = check_name ? {entity_name => check_name} : nil
-            else
-              # new and improved bulk API queries
-              entity_names = params[:entity]
-              check_names  = params[:check]
-              entity_names = [entity_names] unless entity_names.nil? || entity_names.is_a?(Array)
-              # TODO err if checks isn't a Hash (similar rules as in flapjack-diner)
-            end
-            [entity_names, check_names]
-          end
-
-          def bulk_api_check_action(entity_names, check_names)
-            unless entity_names.nil? || entity_names.empty?
-              entity_names.each do |entity_name|
-                find_entity(entity_name).checks.all.sort_by(&:name).each do |check|
-                  yield( check )
-                end
-              end
-            end
-
-            unless check_names.nil? || check_names.empty?
-              check_names.each_pair do |entity_name, check_name_list|
-                check_name_list = [check_name_list] unless check_name_list.is_a?(Array)
-                check_name_list.each do |check_name|
-                  yield( find_check(entity_name, check_name) )
-                end
-              end
-            end
-          end
-
-          def present_api_results(entity_names, check_names, result_type)
-            result = []
-
-            unless entity_names.nil? || entity_names.empty?
-              result += entity_names.collect {|entity_name|
-                entity = find_entity(entity_name)
-                yield(Flapjack::Gateways::JSONAPI::EntityPresenter.new(entity))
-              }.flatten(1)
-            end
-
-            unless check_names.nil? || check_names.empty?
-              result += check_names.inject([]) {|memo, (entity_name, check_name_list)|
-                check_name_list = [check_name_list] unless check_name_list.is_a?(Array)
-                memo += check_name_list.collect {|check_name|
-                  check = find_check(entity_name, check_name)
-                  {:entity => entity_name,
-                   :check => check_name,
-                   result_type.to_sym => yield(Flapjack::Gateways::JSONAPI::CheckPresenter.new(check))
-                  }
-                }
-              }.flatten(1)
-            end
-
-            result
-          end
-
-          # NB: casts to UTC before converting to a timestamp
-          def validate_and_parsetime(value)
-            return unless value
-            Time.iso8601(value).getutc.to_i
-          rescue ArgumentError => e
-            logger.error "Couldn't parse time from '#{value}'"
-            nil
-          end
-
         end
 
-        # used for backwards-compatible route matching below
-        ENTITY_CHECK_FRAGMENT = '(?:/([a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9])(?:/(.+))?)?'
-
         def self.registered(app)
+          app.helpers Flapjack::Gateways::JSONAPI::Helpers
+          # app.helpers Flapjack::Gateways::JSONAPI::EntityMethods::Helpers
+          app.helpers Flapjack::Gateways::JSONAPI::EntityCheckMethods::Helpers
 
-          app.helpers Flapjack::Gateways::JSONAPI::EntityMethods::Helpers
-
-          app.get '/entities' do
-            content_type :json
-            cors_headers
-
-            content_type :json
-            ret = Flapjack::Data::Entity.all.sort_by(&:name).collect {|e|
-              presenter = Flapjack::Gateways::API::EntityPresenter.new(e)
-              id = (e.id.respond_to?(:length) && e.id.length > 0) ? e.id : e.name
-              {'id' => id, 'name' => e.name, 'checks' => presenter.status }
-            }
-
-            {'entities' => ret}.to_json
-          end
-
-          app.get '/checks/:entity' do
-            content_type :json
-            entity = find_entity(params[:entity])
-            entity.checks.all.to_json
-          end
-
-          app.get %r{/status#{ENTITY_CHECK_FRAGMENT}} do
-            content_type :json
-
-            captures    = params[:captures] || []
-            entity_name = captures[0]
-            check_name  = captures[1]
-
-            entity_names, check_names = entity_and_check_names(entity_name, check_name)
-
-            results = present_api_results(entity_names, check_names, 'status') {|presenter|
-              presenter.status
-            }
-
-            if entity_name
-              # compatible with previous data format
-              results = results.collect {|status_h| status_h[:status]}
-              (check_name ? results.first : results).to_json
+          # Returns all (/entities) or some (/entities/A,B,C) or one (/entities/A) contact(s)
+          # NB: only works with good data -- i.e. entity must have an id
+          app.get %r{^/entities(?:/)?([^/]+)?$} do
+            requested_entities = if params[:captures] && params[:captures][0]
+              params[:captures][0].split(',').uniq
             else
-              # new and improved data format which reflects the request param structure
-              "[" + results.map {|r| r.to_json }.join(',') + "]"
+              nil
             end
-          end
 
-          app.get %r{/((?:outages|(?:un)?scheduled_maintenances|downtime))#{ENTITY_CHECK_FRAGMENT}} do
-            action      = params[:captures][0].to_sym
-            entity_name = params[:captures][1]
-            check_name  = params[:captures][2]
-
-            entity_names, check_names = entity_and_check_names(entity_name, check_name)
-
-            start_time = validate_and_parsetime(params[:start_time])
-            end_time   = validate_and_parsetime(params[:end_time])
-
-            results = present_api_results(entity_names, check_names, action) {|presenter|
-              presenter.send(action, start_time, end_time)
-            }
-
-            if check_name
-              # compatible with previous data format
-              results.first[action].to_json
-            elsif entity_name
-              # compatible with previous data format
-              rename = {:unscheduled_maintenances => :unscheduled_maintenance,
-                        :scheduled_maintenances   => :scheduled_maintenance}
-              drop   = [:entity]
-              results.collect{|r|
-                r.inject({}) {|memo, (k, v)|
-                  if new_k = rename[k]
-                    memo[new_k] = v
-                  elsif !drop.include?(k)
-                    memo[k] = v
-                  end
-                 memo
-                }
-              }.to_json
+            entities = if requested_entities
+              Flapjack::Data::Entity.find_by_ids!(requested_entities)
             else
-              # new and improved data format which reflects the request param structure
-              results.to_json
-            end
-          end
-
-          # create a scheduled maintenance period for a check on an entity
-          app.post %r{/scheduled_maintenances#{ENTITY_CHECK_FRAGMENT}} do
-
-            captures    = params[:captures] || []
-            entity_name = captures[0]
-            check_name  = captures[1]
-
-            entity_names, check_names = entity_and_check_names(entity_name, check_name)
-
-            start_time = validate_and_parsetime(params[:start_time])
-            halt( err(403, "start time must be provided") ) unless start_time
-
-            act_proc = proc {|check|
-              sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => start_time,
-                :end_time => start_time + params[:duration].to_i,
-                :summary => params[:summary])
-
-              unless sched_maint.save
-                halt( err(403, *sched_maint.errors.full_messages) )
-              end
-
-              check.add_scheduled_maintenance(sched_maint)
-            }
-
-            bulk_api_check_action(entity_names, check_names, &act_proc)
-            status 204
-          end
-
-          # create an acknowledgement for a service on an entity
-          # NB currently, this does not acknowledge a specific failure event, just
-          # the entity-check as a whole
-          app.post %r{/acknowledgements#{ENTITY_CHECK_FRAGMENT}} do
-            captures    = params[:captures] || []
-            entity_name = captures[0]
-            check_name  = captures[1]
-
-            entity_names, check_names = entity_and_check_names(entity_name, check_name)
-
-            dur = params[:duration] ? params[:duration].to_i : nil
-            duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
-            summary = params[:summary]
-
-            opts = {'duration' => duration}
-            opts['summary'] = summary if summary
-
-            act_proc = proc {|check|
-              Flapjack::Data::Event.create_acknowledgement(
-                config['processor_queue'] || 'events',
-                check.entity_name, check.name,
-                :summary => params[:summary],
-                :duration => duration)
-            }
-
-            bulk_api_check_action(entity_names, check_names, &act_proc)
-            status 204
-          end
-
-          app.delete %r{/((?:un)?scheduled_maintenances)} do
-            action = params[:captures][0]
-
-            # no backwards-compatible mode here, it's a new method
-            entity_names, check_names = entity_and_check_names(nil, nil)
-
-            act_proc = case action
-            when 'scheduled_maintenances'
-              start_time = validate_and_parsetime(params[:start_time])
-              halt( err(403, "start time must be provided") ) unless start_time
-              opts = {}
-              proc {|check|
-                next unless sched_maint = check.scheduled_maintenances_by_start.
-                  intersect_range(start_time.to_i, start_time.to_i, :by_score => true).all.first
-                check.end_scheduled_maintenance(sched_maint, Time.now)
-              }
-            when 'unscheduled_maintenances'
-              end_time = validate_and_parsetime(params[:end_time])
-              proc {|check| check.clear_unscheduled_maintenance(end_time) }
+              Flapjack::Data::Entity.all
             end
 
-            bulk_api_check_action(entity_names, check_names, &act_proc)
-            status 204
-          end
+            entities_ids = entities.map(&:id)
+            linked_contacts_ids = Flapjack::Data::Entity.associated_ids_for_contacts(entities_ids)
+            linked_checks_ids  = Flapjack::Data::Entity.associated_ids_for_checks(entities_ids)
 
-          app.post %r{/test_notifications#{ENTITY_CHECK_FRAGMENT}} do
-            captures    = params[:captures] || []
-            entity_name = captures[0]
-            check_name  = captures[1]
+            entities_json = entities.collect {|entity|
+              entity.as_json(:contacts_ids => linked_contacts_ids[entity.id],
+                             :checks_ids   => linked_checks_ids[entity.id]).to_json
+            }.join(",")
 
-            entity_names, check_names = entity_and_check_names(entity_name, check_name)
-
-            act_proc = proc {|check|
-              summary = params[:summary] ||
-                        "Testing notifications to all contacts interested in entity #{check.entity.name}"
-              Flapjack::Data::Event.test_notifications(
-                config['processor_queue'] || 'events',
-                check.entity_name, check.name,
-                :summary => summary)
-            }
-
-            bulk_api_check_action(entity_names, check_names, &act_proc)
-            status 204
+            '{"entities":[' + entities_json + ']}'
           end
 
           app.post '/entities' do
-            pass unless 'application/json'.eql?(request.content_type)
+            entity_data = wrapped_params('entities')
 
-            errors = []
-            ret = nil
+            entity_err = nil
+            entity_ids = nil
+            entities   = nil
 
-            # FIXME should scan for invalid records before making any changes, fail early
+            Flapjack::Data::Entity.send(:lock) do
 
-            entities = params[:entities]
-            unless entities
-              logger.debug("no entities object found in the following supplied JSON:")
-              logger.debug(request.body)
-              return err(403, "No entities object received")
+              conflicted_ids = data_ids.select {|id|
+                Flapjack::Data::Entity.exists?(id)
+              }
+
+              if conflicted_ids.length > 0
+                contact_err = "Entities already exist with the following ids: " +
+                                conflicted_ids.join(', ')
+              else
+                entities = entity_data.collect do |ed|
+                  Flapjack::Data::Entity.new(:id => ed['id'], :name => ed['name'],
+                    :enabled => ed['enabled'], :tags => ed['tags'])
+                end
+              end
+
+              if invalid = entities.detect {|c| c.invalid? }
+                entity_err = "Entity validation failed, " + invalid.errors.full_messages.join(', ')
+              else
+                entity_ids = entities.collect {|e| e.save; e.id }
+              end
+
             end
-            return err(403, "The received entities object is not an Enumerable") unless entities.is_a?(Enumerable)
-            return err(403, "Entity with a nil id detected") unless entities.any? {|e| !e['id'].nil?}
 
-            entities_to_save = []
-            entity_contacts = {}
-            entities.each do |ent|
-              unless ent['id']
-                errors << "Entity not imported as it has no id: #{ent.inspect}"
-                next
-              end
+            if entity_err
+              halt err(403, entity_err)
+            end
 
-              enabled = false
+            status 201
+            response.headers['Location'] = "#{base_url}/entities/#{entity_ids.join(',')}"
+            entity_ids.to_json
+          end
 
-              if entity = Flapjack::Data::Entity.intersect(:name => ent['name']).all.first
-                enabled = entity.enabled
-                entity.destroy
-              end
-
-              entity = Flapjack::Data::Entity.new(:id => ent['id'], :name => ent['name'],
-                :enabled => enabled)
-              if entity.valid?
-                if errors.empty?
-                  entities_to_save << entity
-                  if ent['contacts'] && ent['contacts'].respond_to?(:collect)
-                    entity_contacts[ent['id']] = ent['contacts'].collect {|contact_id|
-                      Flapjack::Data::Contact.find_by_id(contact_id)
-                    }.compact
+          app.patch '/entities/:id' do
+            Flapjack::Data::Entity.find_by_ids!(params[:id].split(',')).each do |entity|
+              apply_json_patch('entities') do |op, property, linked, value|
+                case op
+                when 'replace'
+                  if ['name'].include?(property)
+                    entity.send("#{property}=".to_sym, value)
+                  end
+                when 'add'
+                  if 'contacts'.eql?(linked)
+                    contact = Flapjack::Data::Contact.find_by_id(value)
+                    contact.entities << entity unless contact.nil?
+                  end
+                when 'remove'
+                  if 'contacts'.eql?(linked)
+                    contact = Flapjack::Data::Contact.find_by_id(value)
+                    contact.entities.delete(entity) unless contact.nil?
                   end
                 end
-              else
-                errors << entity.errors.full_messages.join(", ")
               end
+              entity.save # no-op if it hasn't changed
             end
 
-            unless errors.empty?
-              halt err(403, *errors)
-            end
-
-            entities_to_save.each {|entity|
-              entity.save
-              entity_contacts[entity.id].each do |contact|
-                entity.contacts << contact
-                contact.entities << entity
-              end
-            }
-            204
-          end
-
-          app.post '/entities/:entity/tags' do
-            content_type :json
-
-            tags = find_entity_tags(params[:tag])
-            entity = find_entity(params[:entity])
-            entity.tags += tags
-            entity.save
-            entity.tags.to_json
-          end
-
-          app.delete '/entities/:entity/tags' do
-            tags = find_entity_tags(params[:tag])
-            entity = find_entity(params[:entity])
-            entity.tags -= tags
-            entity.save
             status 204
           end
 
-          app.get '/entities/:entity/tags' do
-            content_type :json
+          app.delete '/entities/:id' do
+            Flapjack::Data::Entity.find_by_ids!(params[:id].split(',')).map(&:destroy)
 
-            entity = find_entity(params[:entity])
-            entity.tags.to_json
+            status 204
+          end
+
+          app.post %r{^/scheduled_maintenances/entities/([^/]+)$} do
+            entity_ids = params[:captures][0].split(',')
+            check_ids = Flapjack::Data::Entity.associated_ids_for_checks(entity_ids).values.flatten(1)
+            create_scheduled_maintenances(check_ids)
+          end
+
+          # NB this does not acknowledge a specific failure event, just
+          # the entity-check as a whole
+          app.post %r{^/unscheduled_maintenances/entities/([^/]+)$} do
+            entity_ids = params[:captures][0].split(',')
+            check_ids = Flapjack::Data::Entity.associated_ids_for_checks(entity_ids).values.flatten(1)
+            create_unscheduled_maintenances(check_ids)
+          end
+
+          app.patch %r{^/unscheduled_maintenances/entities/([^/]+)$} do
+            entity_ids = params[:captures][0].split(',')
+            check_ids = Flapjack::Data::Entity.associated_ids_for_checks(entity_ids).values.flatten(1)
+            update_unscheduled_maintenances(check_ids)
+          end
+
+          app.delete %r{^/scheduled_maintenances/entities/([^/]+)$} do
+            start_time = validate_and_parsetime(params[:start_time])
+            halt( err(403, "start time must be provided") ) unless start_time
+
+            entity_ids = params[:captures][0].split(',')
+            check_ids = Flapjack::Data::Entity.associated_ids_for_checks(entity_ids).values.flatten(1)
+            delete_scheduled_maintenances(start_time, check_ids)
+          end
+
+          app.post %r{^/test_notifications/entities/([^/]+)$} do
+            entity_ids = params[:captures][0].split(',')
+            check_ids = Flapjack::Data::Entity.associated_ids_for_checks(entity_ids).values.flatten(1)
+            create_test_notifications(check_ids)
           end
 
         end

@@ -8,11 +8,14 @@ module Flapjack
       module Rack
         class JsonParamsParser < Struct.new(:app)
           def call(env)
-            if env['rack.input'] and not input_parsed?(env) and type_match?(env)
+            t = type(env)
+            if env['rack.input'] && !input_parsed?(env) && type_match?(t)
               env['rack.request.form_input'] = env['rack.input']
-              data = env['rack.input'].read
+              json_data = env['rack.input'].read
               env['rack.input'].rewind
-              env['rack.request.form_hash'] = data.empty? ? {} : Oj.load(data)
+              data = json_data.empty? ? {} : Oj.load(json_data)
+              env['rack.request.form_hash'] = data.empty? ? {} :
+                (('application/json-patch+json'.eql?(t)) ? {'ops' => data} : data)
             end
             app.call(env)
           end
@@ -21,9 +24,13 @@ module Flapjack
             env['rack.request.form_input'].eql? env['rack.input']
           end
 
-          def type_match? env
-            type = env['CONTENT_TYPE'] and
-              Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(type.split(/\s*[;,]\s*/, 2).first.downcase)
+          def type(env)
+            return if env['CONTENT_TYPE'].nil?
+            env['CONTENT_TYPE'].split(/\s*[;,]\s*/, 2).first
+          end
+
+          def type_match?(t)
+            Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(t)
           end
         end
       end

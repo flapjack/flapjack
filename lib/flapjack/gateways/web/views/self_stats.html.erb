@@ -36,6 +36,7 @@
             <li>ok: <%= h @event_counters['ok'] %> events</li>
             <li>failure: <%= h @event_counters['failure'] %> events</li>
             <li>action: <%= h @event_counters['action'] %> events</li>
+            <li>invalid: <%= h @event_counters['invalid'] %> events</li>
           </ul>
         </td>
       </tr>
@@ -86,6 +87,7 @@
               <li>ok: <%= h event_counters['ok'] %> (<%= h event_rates['ok'] %> events/s)</li>
               <li>failure: <%= h event_counters['failure'] %> (<%= h event_rates['failure'] %> events/s)</li>
               <li>action: <%= h event_counters['action'] %> (<%= h event_rates['action'] %> events/s)</li>
+              <li>invalid: <%= h event_counters['invalid'] %> (<%= h event_rates['invalid'] %> events/s)</li>
             </ul>
           </td>
         </tr>
@@ -95,8 +97,8 @@
 </div>
 
 <p>
-  <a class="btn btn-success" href="/self_stats.json">View as JSON</a>.
+  <a class="btn btn-success" href="/self_stats.json">View as JSON</a>
   Learn how to
-  <a href="https://github.com/flpjck/flapjack/wiki/Gathering-internal-statistics-with-collectd">
+  <a href="https://github.com/flapjack/flapjack/wiki/Gathering-internal-statistics-with-collectd">
     use these metrics</a>.
 </p>

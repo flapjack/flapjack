@@ -19,12 +19,13 @@ module Flapjack
 
       # NB can't use has_one associations for the states, as the redis persistence
       # is only transitory (used to trigger a queue pop)
-      define_attributes :state_duration    => :integer,
-                        :severity          => :string,
-                        :type              => :string,
-                        :time              => :timestamp,
-                        :duration          => :integer,
-                        :tags              => :set
+      define_attributes :state_duration => :integer,
+                        :severity       => :string,
+                        :type           => :string,
+                        :time           => :timestamp,
+                        :duration       => :integer,
+                        :tags           => :set,
+                        :event_hash     => :string
 
       belongs_to :check, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :notifications
@@ -39,6 +40,7 @@ module Flapjack
       validate :severity, :presence => true
       validate :type, :presence => true
       validate :time, :presence => true
+      validate :event_hash, :presence => true
 
       # TODO ensure 'unacknowledged_failures' behaviour is covered
 
@@ -115,15 +117,11 @@ module Flapjack
         log_rules(rules, "initial")
 
         matchers = rules.select do |rule|
-          matches_tags   = rule.tags.nil? || rule.tags.empty? ||
-                           rule.match_tags?(self.tags)
-
-          matches_entity = rule.entities.nil? || rule.entities.empty? ||
-                           rule.match_entity?(entity_name)
-
-          ((matches_entity && matches_tags) || !rule.is_specific?) &&
-            rule.is_occurring_now?(:contact => contact,
-              :default_timezone => options[:default_timezone])
+          (!rule.is_specific? ||
+           (rule.match_tags?(self.tags) && rule.match_regex_tags?(self.tags) &&
+            rule.match_entity?(entity_name) && rule.match_regex_entities?(entity_name))) &&
+          rule.is_occurring_now?(:contact => contact,
+            :default_timezone => options[:default_timezone])
         end
 
         log_rules(matchers, "after time, entity and tags") if matchers.count != rules.count

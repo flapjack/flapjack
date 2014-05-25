@@ -1,12 +1,21 @@
+<%
+  require_css 'bootstrap'
+  require_css 'screen'
+  require_css 'font-awesome'
+  require_css 'tablesort'
+
+  require_js  'jquery-1.10.2'
+  require_js  'jquery.tablesorter'
+  require_js  'jquery.tablesorter.widgets'
+  require_js  'tablesort'
+  require_js  'moment'
+%>
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <title><%= h include_page_title %></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/css/bootstrap.min.css" media="screen">
-    <link rel="stylesheet" href="/css/bootstrap-responsive.min.css" media="screen">
-    <link rel="stylesheet" href="/css/screen.css" media="screen">
-    <link rel="stylesheet" href="/css/font-awesome.min.css">
     <link rel="shortcut icon" href="/img/flapjack-favicon-64-32-24-16.ico"> <!-- thank you http://xiconeditor.com/ -->
     <%= include_required_css %>
     <%= include_required_js %>
@@ -23,37 +32,37 @@
       <div class="collapse navbar-collapse navbar-ex1-collapse">
 
         <ul class="nav navbar-nav">
-          <li>
+          <li<%= include_active?('') %>>
             <a title="Summary" href="/">
               <i class="fa fa-trophy fa-lg"></i>
               Summary
             </a>
           </li>
-          <li>
+          <li<%= include_active?('entities_all') %>>
             <a title="All Entities" href="/entities_all">
               <i class="fa fa-bullseye fa-lg"></i>
               All Entities
             </a>
           </li>
-          <li>
+          <li<%= include_active?('entities_failing') %>>
             <a title="Failing Entities" href="/entities_failing">
               <i class="fa fa-bullhorn fa-lg"></i>
               Failing Entities
             </a>
           </li>
-          <li>
+          <li<%= include_active?('checks_all') %>>
             <a title="All Checks" href="/checks_all">
               <i class="fa fa-check-circle-o fa-lg"></i>
               All Checks
             </a>
           </li>
-          <li>
+          <li<%= include_active?('checks_failing') %>>
             <a title="Failing Checks" href="/checks_failing">
               <i class="fa fa-times-circle-o fa-lg"></i>
               Failing Checks
             </a>
           </li>
-          <li>
+          <li<%= include_active?('contacts') %>>
             <a title="Contacts" href="/contacts">
               <i class="fa fa-users fa-lg"></i>
               Contacts
@@ -62,7 +71,7 @@
         </ul>
 
         <ul class="nav navbar-nav navbar-right">
-          <li>
+          <li<%= include_active?('self_stats') %>>
             <a title="Internal Statistics" href="/self_stats">
               <i class="fa fa-tachometer fa-lg"></i>
               Internal Statistics
@@ -85,7 +94,7 @@
           Flapjack Website
         </a>
         <span class="separator">|</span>
-        <a href="https://github.com/flpjck/flapjack" target="_github">
+        <a href="https://github.com/flapjack/flapjack" target="_github">
           <i class="fa fa-github"></i>
           Flapjack on GitHub
         </a>

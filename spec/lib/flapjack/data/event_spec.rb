@@ -9,16 +9,18 @@ describe Flapjack::Data::Event do
 
   let!(:time) { Time.now}
 
-  let(:event_data) { {'type'    => 'service',
-                      'state'   => 'critical',
-                      'entity'  => entity_name,
-                      'check'   => check_name,
-                      'time'    => time.to_i,
-                      'summary' => "timeout",
-                      'details' => "couldn't access",
+  let(:event_data) { {'type'     => 'service',
+                      'state'    => 'critical',
+                      'entity'   => entity_name,
+                      'check'    => check_name,
+                      'time'     => time.to_i,
+                      'summary'  => 'timeout',
+                      'details'  => "couldn't access",
+                      'perfdata' => "/=5504MB;5554;6348;0;7935",
                       'acknowledgement_id' => '1234',
-                      'duration' => (60 * 60) }
-  }
+                      'duration' => (60 * 60),
+                      'tags'     => ['dev'] }
+                   }
 
   context 'class' do
 
@@ -35,22 +37,31 @@ describe Flapjack::Data::Event do
     end
 
     it "creates a notification testing event" do
+      entity = double(Flapjack::Data::Entity)
+      check = double(Flapjack::Data::Check)
+      expect(check).to receive(:entity_name).and_return(entity_name)
+      expect(check).to receive(:name).and_return(check_name)
+
       expect(Time).to receive(:now).and_return(time)
       expect(redis).to receive(:multi).and_yield
       expect(redis).to receive(:lpush).with('events', /"testing"/ )
       expect(redis).to receive(:lpush).with('events_actions', anything)
 
-      Flapjack::Data::Event.test_notifications('events', entity_name, check_name,
+      Flapjack::Data::Event.test_notifications('events', entity, check,
         :summary => 'test', :details => 'testing')
     end
 
     it "creates an acknowledgement event" do
+      check = double(Flapjack::Data::Check)
+      expect(check).to receive(:entity_name).and_return(entity_name)
+      expect(check).to receive(:name).and_return(check_name)
+
       expect(Time).to receive(:now).and_return(time)
       expect(redis).to receive(:multi).and_yield
       expect(redis).to receive(:lpush).with('events', /"acking"/ )
       expect(redis).to receive(:lpush).with('events_actions', anything)
 
-      Flapjack::Data::Event.create_acknowledgement('events', entity_name, check_name,
+      Flapjack::Data::Event.create_acknowledgement('events', check,
         :summary => 'acking', :time => time.to_i)
     end
 
@@ -75,7 +86,6 @@ describe Flapjack::Data::Event do
   end
 
   ['type', 'state', 'entity', 'check', 'summary'].each do |required_key|
-
     it "rejects an event with missing '#{required_key}' key" do
       bad_event_data = event_data.clone
       bad_event_data.delete(required_key)
@@ -93,7 +103,7 @@ describe Flapjack::Data::Event do
     end
   end
 
-  ['time', 'details', 'acknowledgement_id', 'duration'].each do |optional_key|
+  ['time', 'details', 'perfdata', 'acknowledgement_id', 'duration', 'tags'].each do |optional_key|
     it "rejects an event with invalid '#{optional_key}' key" do
       bad_event_data = event_data.clone
       bad_event_data[optional_key] = {'hello' => 'there'}
@@ -104,7 +114,6 @@ describe Flapjack::Data::Event do
   end
 
   ['time', 'duration'].each do |key|
-
     it "accepts an event with a numeric string #{key} key" do
       numstr_event_data = event_data.clone
       numstr_event_data[key] = '352'

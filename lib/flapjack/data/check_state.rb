@@ -28,6 +28,7 @@ module Flapjack
         ['ok']
       end
 
+      # TODO add 'down', 'unreachable' per event.rb in Flapjack v1?
       def self.failing_states
         ['critical', 'warning', 'unknown']
       end

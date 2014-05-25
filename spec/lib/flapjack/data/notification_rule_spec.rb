@@ -19,22 +19,20 @@ describe Flapjack::Data::NotificationRule, :redis => true do
     }
   }
 
+  let(:regex_rule_data) {
+    {:regex_tags         => ["^data.*$","^(physical|bare_metal)$"],
+     :regex_entities     => ["^foo-\S{3}-\d{2}.example.com$"],
+     :time_restrictions  => [ weekdays_8_18 ],
+    }
+  }
+
   let(:timezone) { ActiveSupport::TimeZone.new("Europe/Moscow") }
-
-  def create_notification_rule
-    rule = Flapjack::Data::NotificationRule.new(rule_data)
-
-    rule.save
-    rule
-  end
 
   it "converts time restriction data to an IceCube schedule" do
     sched = Flapjack::Data::NotificationRule.
               time_restriction_to_icecube_schedule(weekdays_8_18, timezone)
     expect(sched).not_to be_nil
   end
-
-  it "serializes its contents as JSON"
 
   it "checks whether entity names match" do
     rule = Flapjack::Data::NotificationRule.new(rule_data)
@@ -46,10 +44,20 @@ describe Flapjack::Data::NotificationRule, :redis => true do
   it "checks whether entity tags match" do
     rule = Flapjack::Data::NotificationRule.new(rule_data)
 
-    expect(rule.match_tags?(['database', 'physical'].to_set)).to be_truthy
-    expect(rule.match_tags?(['database', 'physical', 'beetroot'].to_set)).to be_truthy
-    expect(rule.match_tags?(['database'].to_set)).to be_falsey
-    expect(rule.match_tags?(['virtual'].to_set)).to be_falsey
+    expect(rule.match_tags?(['database', 'physical'])).to be_truthy
+    expect(rule.match_tags?(['database', 'physical', 'beetroot'])).to be_truthy
+    expect(rule.match_tags?(['database'])).to be_falsey
+    expect(rule.match_tags?(['virtual'])).to be_falsey
+  end
+
+  it "checks whether entity tags match a regex" do
+    rule = Flapjack::Data::NotificationRule.new(regex_rule_data)
+
+    # FIXME check intended functionality of regex_*
+    expect(rule.match_regex_tags?(['database', 'physical'])).to be_truthy
+    expect(rule.match_regex_tags?(['database', 'physical', 'beetroot'])).to be_falsey
+    expect(rule.match_regex_tags?(['database'])).to be_truthy
+    expect(rule.match_regex_tags?(['virtual'])).to be_falsey
   end
 
 end

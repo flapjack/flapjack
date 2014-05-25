@@ -4,28 +4,30 @@ require 'redis'
 
 require 'oj'
 Oj.mimic_JSON
-Oj.default_options = { :indent => 0, :mode => :strict }
+Oj.default_options = { :indent => 0, :mode => :compat }
 require 'active_support/json'
 
 id = "%.2d" % (1..10).to_a[rand(9)]
 
 events = []
 
-events << {
+events << Oj.dump({
   'entity' => "app-#{id}",
   'check' => 'http',
   'type' => 'service',
   'state' => 'ok',
-}.to_json
+  'summary' => 'well i don\'t know',
+})
 
-events << {
+events << Oj.dump({
   'entity' => "app-#{id}",
   'check' => 'http',
-  'type' => 'service',
+  'type' => 'host',
   'state' => 'critical',
-}.to_json
+  'summary' => 'well i don\'t know',
+})
 
-redis = Redis.new
+redis = Redis.new(:db => 13)
 
 2000.times do
   events.each {|event|

@@ -2,7 +2,6 @@ require 'spec_helper'
 
 require 'active_support/time_with_zone'
 require 'ice_cube'
-
 require 'flapjack/data/contact'
 require 'flapjack/data/check'
 require 'flapjack/data/notification_rule'
@@ -139,21 +138,6 @@ describe Flapjack::Data::Contact, :redis => true do
 
     it "returns a time zone"
 
-  end
-
-  it "serializes its contents as JSON" do
-    Factory.contact(:id => '1', :first_name => 'John', :last_name => 'Smith',
-      :email => 'jsmith@example.com') # raw redis
-    contact = Flapjack::Data::Contact.find_by_id('1')
-
-    expect(contact).to respond_to(:to_json)
-    contact_json = contact.to_json(:root => false,
-      :only => [:id, :first_name, :last_name, :email, :tags])
-    expect(contact_json).to eq({"email"      => "jsmith@example.com",
-                            "first_name" => "John",
-                            "id"         => '1',
-                            "last_name"  => "Smith",
-                            "tags"       => [] }.to_json)
   end
 
 end

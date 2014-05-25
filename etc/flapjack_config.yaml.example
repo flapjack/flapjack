@@ -37,6 +37,10 @@ production:
     fifo: "/var/cache/nagios3/event_stream.fifo"
     pid_file: "/var/run/flapjack/flapjack-nagios-receiver.pid"
     log_file: "/var/log/flapjack/flapjack-nagios-receiver.log"
+  nsca-receiver:
+    fifo: "/var/lib/nagios3/rw/nagios.cmd"
+    pid_file: "/var/run/flapjack/flapjack-nsca-receiver.pid"
+    log_file: "/var/log/flapjack/flapjack-nsca-receiver.log"
   gateways:
     email:
       enabled: no
@@ -45,14 +49,23 @@ production:
         level: INFO
         syslog_errors: yes
       smtp_config:
-        # port 1025 is the default port for http://mailcatcher.me
+        #from: "flapjack@noreply.example"
         host: 127.0.0.1
+        # 1025 is the default port for http://mailcatcher.me
         port: 1025
         starttls: false
         #auth:
         #  type:
         #  username:
         #  password:
+      # location of custom alert templates
+      #templates:
+      #  rollup_subject.text: '/etc/flapjack/templates/email/rollup_subject.text.erb'
+      #  alert_subject.text: '/etc/flapjack/templates/email/alert_subject.text.erb'
+      #  rollup.text: '/etc/flapjack/templates/email/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/email/alert.text.erb'
+      #  rollup.html: '/etc/flapjack/templates/email/rollup.html.erb'
+      #  alert.html: '/etc/flapjack/templates/email/alert.html.erb'
     sms:
       enabled: no
       queue: sms_notifications
@@ -62,6 +75,10 @@ production:
       logger:
         level: INFO
         syslog_errors: yes
+      # location of custom alert templates
+      #templates:
+      #  rollup.text: '/etc/flapjack/templates/sms/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/sms/alert.text.erb'
     jabber:
       enabled: no
       queue: jabber_notifications
@@ -76,12 +93,19 @@ production:
       logger:
         level: INFO
         syslog_errors: yes
+      # location of custom alert templates
+      #templates:
+      #  rollup.text: '/etc/flapjack/templates/jabber/rollup.text.erb' 
+      #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb' 
     pagerduty:
       enabled: no
       queue: pagerduty_notifications
       logger:
         level: INFO
         syslog_errors: yes
+      # location of custom alert templates
+      #templates:
+      #  alert.text: '/etc/flapjack/templates/pagerduty/alert.text.erb' 
     web:
       enabled: yes
       port: 3080
@@ -180,6 +204,14 @@ development:
         #  type:
         #  username:
         #  password:
+      # location of custom alert templates
+      #templates:
+      #  rollup_subject.text: '/etc/flapjack/templates/email/rollup_subject.text.erb'
+      #  alert_subject.text: '/etc/flapjack/templates/email/alert_subject.text.erb'
+      #  rollup.text: '/etc/flapjack/templates/email/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/email/alert.text.erb'
+      #  rollup.html: '/etc/flapjack/templates/email/rollup.html.erb'
+      #  alert.html: '/etc/flapjack/templates/email/alert.html.erb'
     sms:
       enabled: yes
       queue: sms_notifications
@@ -191,6 +223,10 @@ development:
       logger:
         level: INFO
         syslog_errors: yes
+      # location of custom alert templates
+      #templates:
+      #  rollup.text: '/etc/flapjack/templates/sms/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/sms/alert.text.erb'
     jabber:
       enabled: no
       queue: jabber_notifications
@@ -205,12 +241,19 @@ development:
       logger:
         level: INFO
         syslog_errors: yes
+      # location of custom alert templates
+      #templates:
+      #  rollup.text: '/etc/flapjack/templates/jabber/rollup.text.erb' 
+      #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb' 
     pagerduty:
       enabled: no
       queue: pagerduty_notifications
       logger:
         level: INFO
         syslog_errors: yes
+      # location of custom alert templates
+      #templates:
+      #  alert.text: '/etc/flapjack/templates/pagerduty/alert.text.erb' 
     web:
       enabled: yes
       port: 4080
@@ -248,5 +291,4 @@ development:
 
 test:
   redis:
-    database: 14
-
+    db: 14

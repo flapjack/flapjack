@@ -149,10 +149,11 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     expect_check_stats
 
-    expect(check).to receive(:state).and_return('ok')
+    expect(check).to receive(:state).twice.and_return('ok')
     expect(check).to receive(:last_update).and_return(time.to_i - (3 * 60 * 60))
     expect(check).to receive(:summary).and_return('all good')
     expect(check).to receive(:details).and_return('seriously, all very wonderful')
+    expect(check).to receive(:perfdata).and_return([{"key" => "foo", "value" => "bar"}])
 
     failing_state = double(Flapjack::Data::CheckState, :state => 'critical', :timestamp => time - ((3 * 60 * 60) + (5 * 60)), :summary => 'N')
     last_failing = double('last_failing', :last => failing_state)
@@ -177,8 +178,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     no_sched_maint = double('no_sched_maint', :all => [])
     expect(check).to receive(:scheduled_maintenances_by_start).and_return(no_sched_maint)
-
-    expect(check).to receive(:failed?).and_return(false)
 
     expect(check).to receive(:scheduled_maintenance_at).with(time).and_return(nil)
     expect(check).to receive(:unscheduled_maintenance_at).with(time).and_return(nil)
@@ -220,7 +219,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       with(:entity_name => entity_name, :name => 'ping').and_return(all_checks)
 
     expect(Flapjack::Data::Event).to receive(:create_acknowledgement).
-      with('events', entity_name, 'ping', :summary => "", :duration => (4 * 60 * 60),
+      with('events', check, :summary => "", :duration => (4 * 60 * 60),
            :acknowledgement_id => '1234')
 
     post "/acknowledgements/#{entity_name_esc}/ping?acknowledgement_id=1234"

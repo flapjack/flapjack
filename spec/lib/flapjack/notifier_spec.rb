@@ -8,7 +8,11 @@ describe Flapjack::Notifier, :logger => true do
   let(:queue) { double(Flapjack::RecordQueue) }
 
   it "starts up, runs and shuts down" do
-    config = {'default_contact_timezone' => 'Australia/Broken_Hill'.taint}
+    config = {'default_contact_timezone' => 'Australia/Broken_Hill'.taint,
+              'email_queue'     => 'email_notifications',
+              'sms_queue'       => 'sms_notifications',
+              'pagerduty_queue' => 'pagerduty_notifications',
+              'jabber_queue'    => 'jabber_notifications'}
 
     expect(Flapjack::RecordQueue).to receive(:new).with('notifications',
       Flapjack::Data::Notification).and_return(queue)
@@ -25,9 +29,7 @@ describe Flapjack::Notifier, :logger => true do
 
     notifier = Flapjack::Notifier.new(:lock => lock, :config => config, :logger => @logger)
 
-    # redis.should_receive(:rpop).with('notifications').and_return("}", nil)
     expect(redis).to receive(:quit)
-    # redis.should_receive(:brpop).with('notifications_actions').and_raise(Flapjack::PikeletStop)
     allow(Flapjack).to receive(:redis).and_return(redis)
 
     expect { notifier.start }.to raise_error(Flapjack::PikeletStop)

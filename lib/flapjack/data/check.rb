@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'digest'
+
 require 'sandstorm/record'
 
 require 'flapjack/data/check_state'
@@ -22,12 +24,17 @@ module Flapjack
                         :entity_name        => :string,
                         :state              => :string,
                         :summary            => :string,
+                        :perfdata_json      => :string,
                         :details            => :string,
                         :last_update        => :timestamp,
                         :last_problem_alert => :timestamp,
-                        :enabled            => :boolean
+                        :enabled            => :boolean,
+                        :ack_hash           => :string
 
       index_by :entity_name, :name, :enabled, :state
+      unique_index_by :ack_hash
+
+      belongs_to :entity, :class_name => 'Flapjack::Data::Entity'
 
       has_many :contacts, :class_name => 'Flapjack::Data::Contact'
 
@@ -57,15 +64,51 @@ module Flapjack
       has_many :alerts, :class_name => 'Flapjack::Data::Alert'
       has_many :rollup_alerts, :class_name => 'Flapjack::Data::RollupAlert'
 
+      # TODO validate uniqueness of :name, :scope => :entity_name
+
       validates :name, :presence => true
       validates :entity_name, :presence => true
       validates :state,
         :inclusion => {:in => Flapjack::Data::CheckState.all_states, :allow_blank => true }
 
+      before_validation :create_ack_hash
+      validates :ack_hash, :presence => true
+
       around_create :handle_state_change_and_enabled
       around_update :handle_state_change_and_enabled
 
       attr_accessor :count
+
+      # TODO handle JSON exception
+      def perfdata
+        if self.perfdata_json.nil?
+          @perfdata = nil
+          return
+        end
+        @perfdata ||= JSON.parse(self.perfdata_json)
+      end
+
+      # example perfdata: time=0.486630s;;;0.000000 size=909B;;;0
+      def perfdata=(data)
+        if data.nil?
+          self.perfdata_json = nil
+          return
+        end
+
+        data = data.strip
+        if data.length == 0
+          self.perfdata_json = nil
+          return
+        end
+        # Could maybe be replaced by a fancy regex
+        @perfdata = data.split(' ').inject([]) do |item|
+          parts = item.split('=')
+          memo << {"key"   => parts[0].to_s,
+                   "value" => parts[1].nil? ? '' : parts[1].split(';')[0].to_s}
+          memo
+        end
+        self.perfdata_json = @perfdata.nil? ? nil : @perfdata.to_json
+      end
 
       def entity
         @entity ||= Flapjack::Data::Entity.intersect(:name => self.entity_name).all.first
@@ -190,7 +233,6 @@ module Flapjack
         self.states << check_state
       end
 
-
       def add_scheduled_maintenance(sched_maint)
         self.scheduled_maintenances_by_start << sched_maint
         self.scheduled_maintenances_by_end << sched_maint
@@ -298,6 +340,14 @@ module Flapjack
       end
 
       private
+
+      # would need to be "#{entity_name}:#{name}" to be compatible with v1, but
+      # to support name changes it must be something invariant
+      def create_ack_hash
+        return unless self.id.nil? # :on => :create isn't working
+        self.id = self.class.generate_id
+        self.ack_hash = Digest.hexencode(Digest::SHA1.new.digest(self.id))[0..7].downcase
+      end
 
       def scheduled_maintenance_ids_at(at_time)
         at_time = Time.at(at_time) unless at_time.is_a?(Time)

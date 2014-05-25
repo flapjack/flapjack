@@ -11,6 +11,8 @@ module Flapjack
 
     class Entity
 
+      # TODO how to integrate contacts_for:ALL ?
+
       include Sandstorm::Record
 
       include ActiveModel::Serializers::JSON
@@ -28,17 +30,17 @@ module Flapjack
 
       has_many :checks, :class_name => 'Flapjack::Data::Check'
 
+      # TODO validate uniqueness of name
+
       validate :name, :presence => true
 
-      # NB: if we're worried about user input, https://github.com/mudge/re2
-      # has bindings for a non-backtracking RE engine that runs in linear
-      # time
-      # Raises RegexpError if the provided pattern is invalid
-      def self.find_all_name_matching(pattern)
-        regexp = Regexp.new(pattern)
-        Flapjack.redis.hkeys(self.name_index(nil).key).select {|name|
-          name =~ regexp
-        }.sort
+      def as_json(opts = {})
+        super.as_json(opts).merge(
+          :links => {
+            :contacts => opts[:contact_ids] || [],
+            :checks   => opts[:checks_ids] || []
+          }
+        )
       end
 
       def self.find_by_set_intersection(key, *values)

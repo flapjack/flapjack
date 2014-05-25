@@ -7,19 +7,23 @@ module Flapjack
   module Data
     class Event
 
-      attr_accessor :counter
+      attr_accessor :counter, :id_hash, :tags
 
-      attr_reader :check_name, :summary, :details, :acknowledgement_id
+      attr_reader :check_name, :summary, :details, :acknowledgement_id, :perfdata
 
       REQUIRED_KEYS = ['type', 'state', 'entity', 'check', 'summary']
-      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration']
+      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration', 'tags', 'perfdata']
 
       VALIDATIONS = {
-        proc {|e| ['service', 'action'].include?(e['type']) } =>
+        proc {|e| e['type'].is_a?(String) &&
+          ['service', 'action'].include?(e['type'].downcase) } =>
           "type must be either 'service' or 'action'",
 
-        proc {|e| ['ok', 'warning', 'critical', 'unknown', 'acknowledgement', 'test_notifications'].include?(e['state']) } =>
-          "state must be one of 'ok', 'warning', 'critical', 'unknown', 'acknowledgement' or 'test_notifications'",
+        proc {|e| e['state'].is_a?(String) &&
+            ['ok', 'warning', 'critical', 'unknown', 'acknowledgement',
+             'test_notifications'].include?(e['state'].downcase) } =>
+          "state must be one of 'ok', 'warning', 'critical', 'unknown', " +
+          "'acknowledgement' or 'test_notifications'",
 
         proc {|e| e['entity'].is_a?(String) } =>
           "entity must be a string",
@@ -38,6 +42,9 @@ module Flapjack
         proc {|e| e['details'].nil? || e['details'].is_a?(String) } =>
           "details must be a string",
 
+        proc { |e| e['perfdata'].nil? || e['perfdata'].is_a?(String) } =>
+          "perfdata must be a string",
+
         proc {|e| e['acknowledgement_id'].nil? ||
                   e['acknowledgement_id'].is_a?(String) ||
                   e['acknowledgement_id'].is_a?(Integer) } =>
@@ -47,41 +54,27 @@ module Flapjack
                   e['duration'].is_a?(Integer) ||
                  (e['duration'].is_a?(String) && !!(e['duration'] =~ /^\d+$/)) } =>
           "duration must be a positive integer, or a string castable to one",
+
+        proc {|e| e['tags'].nil? ||
+                  (e['tags'].is_a?(Array) &&
+                   e['tags'].all? {|tag| tag.is_a?(String)}) } =>
+          "tags must be an array of strings",
       }
 
       def self.parse_and_validate(raw, opts = {})
         errors = []
         if parsed = ::Oj.load(raw)
-
           if parsed.is_a?(Hash)
-            missing_keys = REQUIRED_KEYS.select {|k|
-              !parsed.has_key?(k) || parsed[k].nil? || parsed[k].empty?
-            }
-            unless missing_keys.empty?
-              errors << "Event hash has missing keys '#{missing_keys.join('\', \'')}'"
-            end
-
-            unknown_keys =  parsed.keys - (REQUIRED_KEYS + OPTIONAL_KEYS)
-            unless unknown_keys.empty?
-              errors << "Event hash has unknown key(s) '#{unknown_keys.join('\', \'')}'"
-            end
+            errors = validation_errors_for_hash(parsed, opts)
           else
-            errors << "Event must be a JSON hash, see https://github.com/flpjck/flapjack/wiki/DATA_STRUCTURES#event-queue"
+            errors << "Event must be a JSON hash, see https://github.com/flapjack/flapjack/wiki/DATA_STRUCTURES#event-queue"
           end
-
-          if errors.empty?
-            errors += VALIDATIONS.keys.inject([]) {|ret,vk|
-              ret << "Event #{VALIDATIONS[vk]}" unless vk.call(parsed)
-              ret
-            }
-          end
-
           return parsed if errors.empty?
         end
 
         if opts[:logger]
           error_str = errors.nil? ? '' : errors.join(', ')
-          opts[:logger].error("Invalid event data received #{error_str}#{parsed.inspect}")
+          opts[:logger].error("Invalid event data received, #{error_str} #{parsed.inspect}")
         end
         nil
       rescue Oj::Error => e
@@ -91,6 +84,29 @@ module Flapjack
         nil
       end
 
+      def self.validation_errors_for_hash(hash, opts = {})
+        errors = []
+        missing_keys = REQUIRED_KEYS.select {|k|
+          !hash.has_key?(k) || hash[k].nil? || hash[k].empty?
+        }
+        unless missing_keys.empty?
+          errors << "Event hash has missing keys '#{missing_keys.join('\', \'')}'"
+        end
+
+        unknown_keys =  hash.keys - (REQUIRED_KEYS + OPTIONAL_KEYS)
+        unless unknown_keys.empty?
+          errors << "Event hash has unknown key(s) '#{unknown_keys.join('\', \'')}'"
+        end
+
+        if errors.empty?
+          errors += VALIDATIONS.keys.inject([]) {|ret,vk|
+            ret << "Event #{VALIDATIONS[vk]}" unless vk.call(hash)
+            ret
+          }
+        end
+        errors
+      end
+
       # creates, or modifies, an event object and adds it to the events list in redis
       #   'entity'    => entity_name,
       #   'check'     => check_name,
@@ -98,6 +114,7 @@ module Flapjack
       #   'state'     => state,
       #   'summary'   => check_output,
       #   'details'   => check_long_output,
+      #   'perfdata'  => perf_data,
       #   'time'      => timestamp
       def self.push(queue, event, opts = {})
         event['time'] = Time.now.to_i if event['time'].nil?
@@ -124,11 +141,12 @@ module Flapjack
         Flapjack.redis.llen(queue)
       end
 
-      def self.create_acknowledgement(queue, entity_name, check_name, opts = {})
+      # TODO maybe pass check.id instead, and not use main queue?
+      def self.create_acknowledgement(queue, check, opts = {})
         data = { 'type'               => 'action',
                  'state'              => 'acknowledgement',
-                 'entity'             => entity_name,
-                 'check'              => check_name,
+                 'entity'             => check.entity_name,
+                 'check'              => check.name,
                  'summary'            => opts[:summary],
                  'duration'           => opts[:duration],
                  'acknowledgement_id' => opts[:acknowledgement_id]
@@ -136,11 +154,13 @@ module Flapjack
         self.push(queue, data, opts)
       end
 
-      def self.test_notifications(queue, entity_name, check_name, opts = {})
+      # TODO maybe pass check.id instead, and not use main queue?
+      def self.test_notifications(queue, entity, check, opts = {})
+        raise "Entity must be provided" if entity.nil?
         data = { 'type'               => 'action',
                  'state'              => 'test_notifications',
-                 'entity'             => entity_name,
-                 'check'              => check_name,
+                 'entity'             => (check ? check.entity_name : (entity ? entity.name : nil)),
+                 'check'              => (check ? check.name : 'test'),
                  'summary'            => opts[:summary],
                  'details'            => opts[:details]
                }
@@ -149,7 +169,7 @@ module Flapjack
 
       def initialize(attrs = {})
         [:type, :state, :entity, :check, :time, :summary,
-         :details, :acknowledgement_id, :duration].each do |key|
+         :perfdata, :details, :acknowledgement_id, :duration, :tags].each do |key|
           case key
           when :entity
             @entity_name = attrs['entity']
@@ -161,6 +181,8 @@ module Flapjack
         end
         # details is optional. set it to nil if it only contains whitespace
         @details = (@details.is_a?(String) && ! @details.strip.empty?) ? @details.strip : nil
+        # perfdata is optional. set it to nil if it only contains whitespace
+        @perfdata = (@perfdata.is_a?(String) && ! @perfdata.strip.empty?) ? @perfdata.strip : nil
       end
 
       def state

@@ -25,16 +25,27 @@ describe Flapjack::Processor, :logger => true do
   def expect_counters
     expect(redis).to receive(:multi)
     expect(redis).to receive(:hset).with(/^executive_instance:/, "boot_time", anything)
-    expect(redis).to receive(:hget).with('event_counters', 'all').and_return(nil)
-    expect(redis).to receive(:hmset).with('event_counters', 'all', 0, 'ok', 0, 'failure', 0, 'action', 0)
-    expect(redis).to receive(:hmset).with(/^event_counters:/, 'all', 0, 'ok', 0, 'failure', 0, 'action', 0)
+    expect(redis).to receive(:hmget).with('event_counters', 'all', 'ok', 'failure', 'action', 'invalid').and_return([nil, nil, nil, nil])
+    expect(redis).to receive(:hset).with('event_counters', 'all', 0)
+    expect(redis).to receive(:hset).with('event_counters', 'ok', 0)
+    expect(redis).to receive(:hset).with('event_counters', 'failure', 0)
+    expect(redis).to receive(:hset).with('event_counters', 'action', 0)
+    expect(redis).to receive(:hset).with('event_counters', 'invalid', 0)
 
+    expect(redis).to receive(:hmset).with(/^event_counters:/, 'all', 0, 'ok', 0, 'failure', 0, 'action', 0, 'invalid', 0)
+    expect(redis).to receive(:zadd).with('executive_instances', 0, an_instance_of(String))
     expect(redis).to receive(:expire).with(/^executive_instance:/, anything)
     expect(redis).to receive(:expire).with(/^event_counters:/, anything)
 
-    # redis.should_receive(:hincrby).with('event_counters', 'all', 1)
-    # redis.should_receive(:hincrby).with(/^event_counters:/, 'all', 1)
     expect(redis).to receive(:exec)
+  end
+
+  def expect_counters_invalid
+    expect(redis).to receive(:hincrby).with('event_counters', 'all', 1)
+    expect(redis).to receive(:hincrby).with(/^event_counters:/, 'all', 1)
+
+    expect(redis).to receive(:hincrby).with('event_counters', 'invalid', 1)
+    expect(redis).to receive(:hincrby).with(/^event_counters:/, 'invalid', 1)
   end
 
   it "starts up, runs and shuts down (archiving, accepted)" do
@@ -72,6 +83,7 @@ describe Flapjack::Processor, :logger => true do
   it "starts up, runs and shuts down (archiving, rejected)" do
     expect_filters
     expect_counters
+    expect_counters_invalid
 
     expect(lock).to receive(:synchronize).and_yield
 
@@ -129,6 +141,7 @@ describe Flapjack::Processor, :logger => true do
   it "starts up, runs and shuts down (not archiving, rejected)" do
     expect_filters
     expect_counters
+    expect_counters_invalid
 
     expect(lock).to receive(:synchronize).and_yield
 

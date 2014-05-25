@@ -6,16 +6,19 @@
 
 <p><%= h @count_failing_checks %> failing out of <%= h @count_all_checks %></p>
 
-<table class="table table-bordered table-hover table-condensed">
-  <tr>
-    <th>Entity</th>
-    <th>Check</th>
-    <th>State</th>
-    <th>Summary</th>
-    <th>Last State Change</th>
-    <th>Last Update</th>
-    <th>Last Notification</th>
-  </tr>
+<table class="table table-bordered table-hover table-condensed tablesorter">
+  <thead>
+    <tr>
+      <th data-placeholder="e.g. app[1-3]*">Entity</th>
+      <th data-placeholder="e.g. disk">Check</th>
+      <th data-placeholder="e.g. critical">State</th>
+      <th data-placeholder="e.g. !simulated">Summary</th>
+      <th data-placeholder="e.g. <2h 0m">Last State Change</th>
+      <th data-placeholder="">Last Update</th>
+      <th data-placeholder="">Last Notification</th>
+    </tr>
+  </thead>
+  <tbody>
   <% @entity_names_sorted.each do |entity_name| %>
     <% row_entity_name = nil %>
     <% entity_link = "/entity/" << u(entity_name) %>
@@ -31,27 +34,26 @@
         end
 
         check_link = "/check?entity=" << u(entity_name) << "&amp;check=" << u(check_name)
-
       %>
-      <tr>
-        <% unless row_entity_name && entity_name == row_entity %>
-          <td rowspan="<%= @states[entity_name].length %>">
+      <tr class="<%= row_colour %>">
+        <% unless row_entity_name && (entity_name == row_entity_name) %>
+          <td>
             <a href="<%= entity_link %>"><%= h entity_name %></a>
           </td>
-          <% row_entity_name = entity_name %>
         <% end %>
-        <td class="<%= row_colour %>"><a href="<%= check_link %>" title="check detail"><%= h check_name %></a></td>
-        <td class="<%= row_colour %>">
+        <td><a href="<%= check_link %>" title="check detail"><%= h check_name %></a></td>
+        <td>
           <%= h status.upcase %>
-          <% if in_unscheduled_outage%> (Ack'd)<% end %>
+          <% if in_unscheduled_outage %> (Ack'd)<% end %>
           <% if in_scheduled_outage %> (Sched)<% end %>
         </td>
-        <td class="<%= row_colour %>"><%= h summary %></td>
-        <td class="<%= row_colour %>"><%= h changed %></td>
-        <td class="<%= row_colour %>"><%= h updated %></td>
-        <td class="<%= row_colour %>"><%= h notified %></td>
+        <td><%= h summary %></td>
+        <td><%= h changed %></td>
+        <td><%= h updated %></td>
+        <td><%= h notified %></td>
       </tr>
 
     <% end %>
   <% end %>
+  </tbody>
 </table>

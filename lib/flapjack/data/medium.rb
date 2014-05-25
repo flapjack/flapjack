@@ -141,6 +141,16 @@ module Flapjack
         end
       end
 
+      def as_json(opts = {})
+        super.as_json(opts).merge(
+          :time_restrictions        => @time_restrictions,
+          :links => {
+            :contact                  => [opts[:contact_id]].compact,
+            :notification_rule_states => opts[:notification_rule_states_ids] || []
+          }
+        )
+      end
+
     end
 
   end

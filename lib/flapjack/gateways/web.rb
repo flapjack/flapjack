@@ -63,6 +63,11 @@ module Flapjack
         def u(text)
           ERB::Util.u(text)
         end
+
+        def include_active?(path)
+          return '' unless request.path == "/#{path}"
+          " class='active'"
+        end
       end
 
       ['logger', 'config'].each do |class_inst_var|
@@ -206,17 +211,18 @@ module Flapjack
         last_change = states.last
         last_update = check.last_update
 
-        @check_state                = check.state
-        @check_enabled              = !!check.enabled
-        @check_last_update          = last_update
-        @check_last_change          = last_change ? last_change.timestamp : nil
-        @check_summary              = check.summary
-        @check_details              = check.details
+        @check_state            = check.state
+        @check_enabled          = !!check.enabled
+        @check_last_update      = last_update
+        @check_last_change      = last_change ? last_change.timestamp : nil
+        @check_summary          = check.summary
+        @check_details          = check.details
+        @check_perfdata         = check.perfdata
 
-        @last_notifications         = last_notification_data(check, @current_time)
+        @last_notifications     = last_notification_data(check, @current_time)
 
-        @scheduled_maintenances     = check.scheduled_maintenances_by_start.all
-        @acknowledgement_id         = check.failed? ? check.count : nil
+        @scheduled_maintenances = check.scheduled_maintenances_by_start.all
+        @acknowledgement_id     = Flapjack::Data::CheckState.failing_states.include?(check.state) ? check.ack_hash : nil
 
         @current_scheduled_maintenance   = check.scheduled_maintenance_at(@current_time)
         @current_unscheduled_maintenance = check.unscheduled_maintenance_at(@current_time)
@@ -244,7 +250,7 @@ module Flapjack
 
         ack = Flapjack::Data::Event.create_acknowledgement(
           config['processor_queue'] || 'events',
-          entity_name, check_name,
+          check,
           :summary => (summary || ''),
           :acknowledgement_id => acknowledgement_id,
           :duration => duration,
@@ -453,34 +459,30 @@ module Flapjack
         end
       end
 
-      def require_css(*css)
-        @required_css ||= []
-        @required_css += css
-      end
-
       def require_js(*js)
         @required_js ||= []
         @required_js += js
+        @required_js.uniq!
+      end
+
+      def require_css(*css)
+        @required_css ||= []
+        @required_css += css
+        @required_css.uniq!
       end
 
       def include_required_js
-        if @required_js
-          @required_js.map { |filename|
-            "<script type='text/javascript' src='#{link_to("/js/#{filename}.js")}'></script>"
-          }.join("\n    ")
-        else
-          ""
-        end
+        return "" if @required_js.nil?
+        @required_js.map { |filename|
+          "<script type='text/javascript' src='#{link_to("/js/#{filename}.js")}'></script>"
+        }.join("\n    ")
       end
 
       def include_required_css
-        if @required_css
-          @required_css.map { |filename|
-            %(<link rel="stylesheet" href="#{link_to("/css/#{filename}.css")}" media="screen">)
-          }.join("\n    ")
-        else
-          ""
-        end
+        return "" if @required_css.nil?
+        @required_css.map { |filename|
+          %(<link rel="stylesheet" href="#{link_to("/css/#{filename}.css")}" media="screen">)
+        }.join("\n    ")
       end
 
       # from http://gist.github.com/98310

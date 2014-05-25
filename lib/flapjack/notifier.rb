@@ -30,12 +30,10 @@ module Flapjack
       @queue = Flapjack::RecordQueue.new(@config['queue'] || 'notifications',
                  Flapjack::Data::Notification)
 
-      @queues = [:email, :sms, :jabber, :pagerduty].inject({}) do |memo, media_type|
-        memo[media_type] = Flapjack::RecordQueue.new(
-          (@config["#{media_type}_queue"] || "#{media_type}_notifications"),
-          Flapjack::Data::Alert)
-        memo
-      end
+      queue_configs = @config.find_all {|k, v| k =~ /_queue$/ }
+      @queues = Hash[queue_configs.map {|k, v|
+        [k[/^(.*)_queue$/, 1], Flapjack::RecordQueue.new(v, Flapjack::Data::Alert)]
+      }]
 
       notify_logfile  = @config['notification_log_file'] || 'log/notify.log'
       unless File.directory?(File.dirname(notify_logfile))
@@ -107,7 +105,7 @@ module Flapjack
 
       alerts.each do |alert|
         medium = alert.medium
-        unless @queues.keys.include?(medium.type.to_sym)
+        unless @queues.has_key?(medium.type)
           @logger.error("no queue for media type: #{medium.type}")
           next
         end
@@ -152,7 +150,7 @@ module Flapjack
             :state => notification.state.state)
         end
 
-        @queues[medium.type.to_sym].push(alert)
+        @queues[medium.type].push(alert)
       end
     end
 
