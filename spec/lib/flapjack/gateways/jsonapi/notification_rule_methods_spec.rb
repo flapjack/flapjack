@@ -10,16 +10,62 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
   }
 
   let(:notification_rule_data) {
-    {"tags"               => ["database","physical"],
-     "regex_tags"         => ["^data.*$","^(physical|bare_metal)$"],
-     "regex_entities"     => ["^foo-\S{3}-\d{2}.example.com$"],
-     "time_restrictions"  => nil,
+    {:entities           => [],
+     :tags               => ["database","physical"],
+     :regex_tags         => ["^data.*$","^(physical|bare_metal)$"],
+     :regex_entities     => ["^foo-\S{3}-\d{2}.example.com$"],
+     :time_restrictions  => nil,
     }
   }
 
-  it 'creates a notification rule'
+  let(:contact)      { double(Flapjack::Data::Contact, :id => '21') }
 
-  it "does not create a notification rule for a contact that doesn't exist"
+  it "creates a notification_rule" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::NotificationRule).and_yield
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id).and_return(contact)
+
+    expect(notification_rule).to receive(:invalid?).and_return(false)
+    expect(notification_rule).to receive(:save).and_return(true)
+    expect(Flapjack::Data::NotificationRule).to receive(:new).
+      with(notification_rule_data.merge(:id => nil)).and_return(notification_rule)
+
+    contact_notification_rules = ('contact_notification_rules')
+    expect(contact).to receive(:notification_rules).and_return(contact_notification_rules)
+    expect(contact_notification_rules).to receive(:"<<").with(notification_rule)
+
+    post "/contacts/#{contact.id}/notification_rules", {:notification_rules => [notification_rule_data]}.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(201)
+    expect(last_response.body).to eq([notification_rule.id].to_json)
+  end
+
+  it "does not create a notification_rule if the data is improperly formatted" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::NotificationRule).and_yield
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id).and_return(contact)
+
+    errors = double('errors', :full_messages => ['err'])
+    expect(notification_rule).to receive(:errors).and_return(errors)
+
+    expect(notification_rule).to receive(:invalid?).and_return(true)
+    expect(notification_rule).not_to receive(:save)
+    expect(Flapjack::Data::NotificationRule).to receive(:new).and_return(notification_rule)
+
+    post "/contacts/#{contact.id}/notification_rules", {:notification_rules => [{'silly' => 'sausage'}]}.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(403)
+  end
+
+  it "does not create a notification_rule if the contact doesn't exist" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::NotificationRule).and_yield
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id).and_return(nil)
+
+    post "/contacts/#{contact.id}/notification_rules", {:notification_rules => [notification_rule_data]}.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(403)
+  end
 
   it "gets all notification rules" do
     expect(Flapjack::Data::NotificationRule).to receive(:all).

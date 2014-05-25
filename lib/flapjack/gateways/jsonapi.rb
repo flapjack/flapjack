@@ -78,7 +78,7 @@ module Flapjack
         end
       end
 
-      ['logger', 'config'].each do |class_inst_var|
+      ['logger', 'config', 'base_url'].each do |class_inst_var|
         define_method(class_inst_var.to_sym) do
           self.class.instance_variable_get("@#{class_inst_var}")
         end

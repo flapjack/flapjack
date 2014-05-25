@@ -44,13 +44,14 @@ module Flapjack
                 if invalid = media.detect {|m| m.invalid? }
                   media_err = "Medium validation failed, " + invalid.errors.full_messages.join(', ')
                 else
-                  media_ids = media.each {|m|
+                  media_ids = media.collect {|m|
                     m.save
-                    if existing_medium = contact.media.intersect(:type => m.type).all.first
+                    contact_media = contact.media
+                    if existing_medium = contact_media.intersect(:type => m.type).all.first
                       # TODO is this the right thing to do here?
                       existing_medium.destroy
                     end
-                    contact.media << m
+                    contact_media << m
                     m.id
                   }
                 end

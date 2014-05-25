@@ -6,22 +6,7 @@ module JsonapiHelper
       Flapjack::Gateways::JSONAPI
     end
 
-    let(:contact)      { double(Flapjack::Data::Contact, :id => '21') }
-    let(:contact_core) {
-      {'id'         => contact.id,
-       'first_name' => "Ada",
-       'last_name'  => "Lovelace",
-       'email'      => "ada@example.com",
-       'tags'       => ["legend", "first computer programmer"]
-      }
-    }
-
     let(:redis)           { double(::Redis) }
-
-    let(:semaphore) {
-      double(Flapjack::Data::Semaphore, :resource => 'folly',
-             :key => 'semaphores:folly', :expiry => 30, :token => 'spatulas-R-us')
-    }
 
     let(:jsonapi_post_env) {
       {'CONTENT_TYPE' => 'application/json',

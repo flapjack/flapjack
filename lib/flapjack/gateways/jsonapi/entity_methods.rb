@@ -24,6 +24,49 @@ module Flapjack
           # app.helpers Flapjack::Gateways::JSONAPI::EntityMethods::Helpers
           app.helpers Flapjack::Gateways::JSONAPI::EntityCheckMethods::Helpers
 
+          app.post '/entities' do
+            entities_data = wrapped_params('entities')
+
+            entity_err = nil
+            entity_ids = nil
+            entities   = nil
+
+           data_ids = entities_data.reject {|c| c['id'].nil? }.
+              map {|co| co['id'].to_s }
+
+            Flapjack::Data::Entity.send(:lock) do
+
+              conflicted_ids = data_ids.select {|id|
+                Flapjack::Data::Entity.exists?(id)
+              }
+
+              if conflicted_ids.length > 0
+                contact_err = "Entities already exist with the following ids: " +
+                                conflicted_ids.join(', ')
+              else
+                entities = entities_data.collect do |ed|
+                  Flapjack::Data::Entity.new(:id => ed['id'], :name => ed['name'],
+                    :enabled => ed['enabled'], :tags => ed['tags'])
+                end
+              end
+
+              if invalid = entities.detect {|c| c.invalid? }
+                entity_err = "Entity validation failed, " + invalid.errors.full_messages.join(', ')
+              else
+                entity_ids = entities.collect {|e| e.save; e.id }
+              end
+
+            end
+
+            if entity_err
+              halt err(403, entity_err)
+            end
+
+            status 201
+            response.headers['Location'] = "#{base_url}/entities/#{entity_ids.join(',')}"
+            entity_ids.to_json
+          end
+
           # Returns all (/entities) or some (/entities/A,B,C) or one (/entities/A) contact(s)
           # NB: only works with good data -- i.e. entity must have an id
           app.get %r{^/entities(?:/)?([^/]+)?$} do
@@ -51,52 +94,12 @@ module Flapjack
             '{"entities":[' + entities_json + ']}'
           end
 
-          app.post '/entities' do
-            entity_data = wrapped_params('entities')
-
-            entity_err = nil
-            entity_ids = nil
-            entities   = nil
-
-            Flapjack::Data::Entity.send(:lock) do
-
-              conflicted_ids = data_ids.select {|id|
-                Flapjack::Data::Entity.exists?(id)
-              }
-
-              if conflicted_ids.length > 0
-                contact_err = "Entities already exist with the following ids: " +
-                                conflicted_ids.join(', ')
-              else
-                entities = entity_data.collect do |ed|
-                  Flapjack::Data::Entity.new(:id => ed['id'], :name => ed['name'],
-                    :enabled => ed['enabled'], :tags => ed['tags'])
-                end
-              end
-
-              if invalid = entities.detect {|c| c.invalid? }
-                entity_err = "Entity validation failed, " + invalid.errors.full_messages.join(', ')
-              else
-                entity_ids = entities.collect {|e| e.save; e.id }
-              end
-
-            end
-
-            if entity_err
-              halt err(403, entity_err)
-            end
-
-            status 201
-            response.headers['Location'] = "#{base_url}/entities/#{entity_ids.join(',')}"
-            entity_ids.to_json
-          end
-
           app.patch '/entities/:id' do
             Flapjack::Data::Entity.find_by_ids!(params[:id].split(',')).each do |entity|
               apply_json_patch('entities') do |op, property, linked, value|
                 case op
                 when 'replace'
-                  if ['name'].include?(property)
+                  if ['name', 'enabled', 'tags'].include?(property)
                     entity.send("#{property}=".to_sym, value)
                   end
                 when 'add'

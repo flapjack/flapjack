@@ -8,36 +8,85 @@ describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => 
   let(:pagerduty_credentials) { double(Flapjack::Data::PagerdutyCredentials, :id => 'abcd') }
 
   let(:pagerduty_credentials_data) {
-    {'service_key' => 'abc',
-     'subdomain'   => 'def',
-     'username'    => 'ghi',
-     'password'    => 'jkl',
+    {:service_key => 'abc',
+     :subdomain   => 'def',
+     :username    => 'ghi',
+     :password    => 'jkl',
     }
   }
 
-  it "creates pagerduty credentials for a contact" # do
-  #   expect(Flapjack::Data::Contact).to receive(:find_by_id).
-  #     with(contact.id, :redis => redis).and_return(contact)
+  let(:contact)      { double(Flapjack::Data::Contact, :id => '21') }
 
-  #   expect(contact).to receive(:set_pagerduty_credentials).with(pagerduty_credentials)
-  #   expect(semaphore).to receive(:release).and_return(true)
+  it "creates pagerduty credentials" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::PagerdutyCredentials).and_yield
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id).and_return(contact)
 
-  #   post "/contacts/#{contact.id}/pagerduty_credentials",
-  #     {:pagerduty_credentials => [pagerduty_credentials]}.to_json, jsonapi_post_env
-  #   expect(last_response.status).to eq(201)
-  #   expect(last_response.body).to eq('{"pagerduty_credentials":[' +
-  #     pagerduty_credentials.merge(:links => {:contacts => [contact.id]}).to_json + ']}')
-  # end
+    expect(pagerduty_credentials).to receive(:invalid?).and_return(false)
+    expect(pagerduty_credentials).to receive(:save).and_return(true)
+    expect(Flapjack::Data::PagerdutyCredentials).to receive(:new).
+      with(pagerduty_credentials_data.merge(:id => nil)).
+      and_return(pagerduty_credentials)
 
-  it "does not create pagerduty credentials for a contact that's not present" # do
-  #   expect(Flapjack::Data::Contact).to receive(:find_by_id).
-  #     with(contact.id, :redis => redis).and_return(nil)
-  #   expect(semaphore).to receive(:release).and_return(true)
+    expect(contact).to receive(:pagerduty_credentials).and_return(nil)
+    expect(contact).to receive(:pagerduty_credentials=).with(pagerduty_credentials)
 
-  #   post "/contacts/#{contact.id}/pagerduty_credentials",
-  #     {:pagerduty_credentials => [pagerduty_credentials]}.to_json, jsonapi_post_env
-  #   expect(last_response.status).to eq(422)
-  # end
+    post "/contacts/#{contact.id}/pagerduty_credentials", {:pagerduty_credentials => [pagerduty_credentials_data]}.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(201)
+    expect(last_response.body).to eq([pagerduty_credentials.id].to_json)
+  end
+
+  it "does not create pagerduty credentials if the data is improperly formatted" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::PagerdutyCredentials).and_yield
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id).and_return(contact)
+
+    errors = double('errors', :full_messages => ['err'])
+    expect(pagerduty_credentials).to receive(:errors).and_return(errors)
+
+    expect(pagerduty_credentials).to receive(:invalid?).and_return(true)
+    expect(pagerduty_credentials).not_to receive(:save)
+    expect(Flapjack::Data::PagerdutyCredentials).to receive(:new).and_return(pagerduty_credentials)
+
+    post "/contacts/#{contact.id}/pagerduty_credentials", {:pagerduty_credentials => [{'silly' => 'sausage'}]}.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(403)
+  end
+
+  it "does not create pagerduty credentials if the contact doesn't exist" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::PagerdutyCredentials).and_yield
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id).and_return(nil)
+
+    post "/contacts/#{contact.id}/pagerduty_credentials", {:pagerduty_credentials => [pagerduty_credentials_data]}.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(403)
+  end
+
+  # it "creates pagerduty credentials for a contact" # do
+  # #   expect(Flapjack::Data::Contact).to receive(:find_by_id).
+  # #     with(contact.id, :redis => redis).and_return(contact)
+
+  # #   expect(contact).to receive(:set_pagerduty_credentials).with(pagerduty_credentials)
+  # #   expect(semaphore).to receive(:release).and_return(true)
+
+  # #   post "/contacts/#{contact.id}/pagerduty_credentials",
+  # #     {:pagerduty_credentials => [pagerduty_credentials]}.to_json, jsonapi_post_env
+  # #   expect(last_response.status).to eq(201)
+  # #   expect(last_response.body).to eq('{"pagerduty_credentials":[' +
+  # #     pagerduty_credentials.merge(:links => {:contacts => [contact.id]}).to_json + ']}')
+  # # end
+
+  # it "does not create pagerduty credentials for a contact that's not present" # do
+  # #   expect(Flapjack::Data::Contact).to receive(:find_by_id).
+  # #     with(contact.id, :redis => redis).and_return(nil)
+  # #   expect(semaphore).to receive(:release).and_return(true)
+
+  # #   post "/contacts/#{contact.id}/pagerduty_credentials",
+  # #     {:pagerduty_credentials => [pagerduty_credentials]}.to_json, jsonapi_post_env
+  # #   expect(last_response.status).to eq(422)
+  # # end
 
   it "returns pagerduty credentials" do
     expect(Flapjack::Data::PagerdutyCredentials).to receive(:find_by_ids!).

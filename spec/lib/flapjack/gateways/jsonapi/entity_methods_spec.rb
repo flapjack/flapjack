@@ -7,125 +7,101 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
 
   let(:entity)        { double(Flapjack::Data::Entity, :id => '126') }
   let(:check)         { double(Flapjack::Data::Check, :id => '457') }
-  let(:entity_core)   { {'id' => '126', 'name' => 'www.example.com'} }
+  let(:entity_data)   {
+    {:id      => entity.id,
+     :name    => 'www.example.com',
+     :enabled => false,
+     :tags    => []
+    }
+   }
 
-  # let(:entity_id)       { '457' }
-  # let(:entity_name)     { 'www.example.net'}
+  it "creates an entity" do
+    expect(Flapjack::Data::Entity).to receive(:lock).and_yield
+    expect(Flapjack::Data::Entity).to receive(:exists?).with(entity.id).and_return(false)
 
-  it "creates entities"
+    expect(entity).to receive(:invalid?).and_return(false)
+    expect(entity).to receive(:save).and_return(true)
+    expect(Flapjack::Data::Entity).to receive(:new).
+      with(entity_data).and_return(entity)
 
-  it "does not create entities if passed invalid data"
+    post "/entities", {:entities => [entity_data]}.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(201)
+    expect(last_response.body).to eq([entity.id].to_json)
+  end
+
+  it "does not create an entity if the data is improperly formatted" do
+    expect(Flapjack::Data::Entity).to receive(:lock).and_yield
+    expect(Flapjack::Data::Entity).not_to receive(:exists?)
+
+    errors = double('errors', :full_messages => ['err'])
+    expect(entity).to receive(:errors).and_return(errors)
+
+    expect(entity).to receive(:invalid?).and_return(true)
+    expect(entity).not_to receive(:save)
+    expect(Flapjack::Data::Entity).to receive(:new).and_return(entity)
+
+    post "/entities", {:entities => [{'silly' => 'sausage'}]}.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(403)
+  end
 
   it "retrieves all entities" do
-    expect(entity).to receive(:id).exactly(3).times.and_return(entity_core['id'])
-
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_contacts).
-      with([entity_core['id']]).and_return({})
+      with([entity.id]).and_return({})
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_checks).
-      with([entity_core['id']]).and_return({})
-    expect(entity).to receive(:as_json).and_return(entity_core)
+      with([entity.id]).and_return({})
+    expect(entity).to receive(:as_json).and_return(entity_data)
     expect(Flapjack::Data::Entity).to receive(:all).and_return([entity])
 
     get '/entities'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq({:entities => [entity_core]}.to_json)
+    expect(last_response.body).to eq({:entities => [entity_data]}.to_json)
   end
 
   it "retrieves one entity" do
-    expect(entity).to receive(:id).exactly(3).times.and_return(entity_core['id'])
-
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_contacts).
-      with([entity_core['id']]).and_return({})
+      with([entity.id]).and_return({})
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_checks).
-      with([entity_core['id']]).and_return({})
-    expect(entity).to receive(:as_json).and_return(entity_core)
+      with([entity.id]).and_return({})
+    expect(entity).to receive(:as_json).and_return(entity_data)
     expect(Flapjack::Data::Entity).to receive(:find_by_ids!).
-      with([entity_core['id']]).and_return([entity])
+      with([entity.id]).and_return([entity])
 
-    get "/entities/#{entity_core['id']}"
+    get "/entities/#{entity.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq({:entities => [entity_core]}.to_json)
+    expect(last_response.body).to eq({:entities => [entity_data]}.to_json)
   end
 
   it "retrieves several entities" do
-    entity_2 = double(Flapjack::Data::Entity)
-    entity_core_2 = {'id'   => '5678',
-                     'name' => 'www.example2.com'}
-
-    expect(entity).to receive(:id).exactly(3).times.and_return(entity_core['id'])
-    expect(entity_2).to receive(:id).exactly(3).times.and_return(entity_core_2['id'])
+    entity_2 = double(Flapjack::Data::Entity, :id => '5678')
+    entity_data_2 = {'name' => 'www.example2.com'}
 
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_contacts).
-      with([entity_core['id'], entity_core_2['id']]).and_return({})
+      with([entity.id, entity_2.id]).and_return({})
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_checks).
-      with([entity_core['id'], entity_core_2['id']]).and_return({})
-    expect(entity).to receive(:as_json).and_return(entity_core)
-    expect(entity_2).to receive(:as_json).and_return(entity_core_2)
+      with([entity.id, entity_2.id]).and_return({})
+    expect(entity).to receive(:as_json).and_return(entity_data)
+    expect(entity_2).to receive(:as_json).and_return(entity_data_2)
     expect(Flapjack::Data::Entity).to receive(:find_by_ids!).
-      with([entity_core['id'], entity_core_2['id']]).and_return([entity, entity_2])
+      with([entity.id, entity_2.id]).and_return([entity, entity_2])
 
-    get "/entities/#{entity_core['id']},#{entity_core_2['id']}"
+    get "/entities/#{entity.id},#{entity_2.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq({:entities => [entity_core, entity_core_2]}.to_json)
+    expect(last_response.body).to eq({:entities => [entity_data, entity_data_2]}.to_json)
   end
 
-  # it "creates entities from a submitted list" do
-  #   entities = {'entities' =>
-  #     [
-  #      {"id" => "10001",
-  #       "name" => "clientx-app-01",
-  #      },
-  #      {"id" => "10002",
-  #       "name" => "clientx-app-02",
-  #      }
-  #     ]
-  #   }
+  it "updates an entity" do
+    expect(Flapjack::Data::Entity).to receive(:find_by_ids!).
+      with([entity.id]).and_return([entity])
 
-  #   apost "/entities", entities.to_json, jsonapi_post_env
-  #   expect(last_response.status).to eq(201)
-  #   expect(last_response.headers['Location']).to eq("http://example.org/entities/10001,10002")
-  #   expect(last_response.body).to eq('["10001","10002"]')
-  # end
+    expect(entity).to receive(:enabled=).with(true)
+    expect(entity).to receive(:save).and_return(true)
 
-  # it "does not create entities if the data is improperly formatted" do
-  #   expect(Flapjack::Data::Entity).not_to receive(:add)
+    patch "/entities/#{entity.id}",
+      [{:op => 'replace', :path => '/entities/0/enabled', :value => true}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
 
-  #   apost "/entities", {'entities' => ["Hello", "there"]}.to_json, jsonapi_post_env
-  #   expect(last_response.status).to eq(403)
-  # end
-
-  # it "does not create entities if they don't contain an id" do
-  #   entities = {'entities' =>
-  #     [
-  #      {"id" => "10001",
-  #       "name" => "clientx-app-01",
-  #       "contacts" => ["0362","0363","0364"]
-  #      },
-  #      {"name" => "clientx-app-02",
-  #       "contacts" => ["0362"]
-  #      }
-  #     ]
-  #   }
-  #   expect(Flapjack::Data::Entity).not_to receive(:add)
-
-  #   apost "/entities", entities.to_json, jsonapi_post_env
-  #   expect(last_response.status).to eq(403)
-  # end
-
-  # it "updates an entity" do
-  #   contact = double(Flapjack::Data::Contact)
-  #   expect(contact).to receive(:add_entity).with(entity)
-  #   expect(Flapjack::Data::Contact).to receive(:find_by_id).
-  #     with('32', :redis => redis).and_return(contact)
-
-  #   expect(Flapjack::Data::Entity).to receive(:find_by_id).
-  #     with('1234', :redis => redis).and_return(entity)
-
-  #   apatch "/entities/1234",
-  #     [{:op => 'add', :path => '/entities/0/links/contacts/-', :value => '32'}].to_json,
-  #     jsonapi_patch_env
-  #   expect(last_response.status).to eq(204)
-  # end
 
   it "creates an acknowledgement for all checks on an entity" do
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
@@ -135,9 +111,9 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
       with('events', check, :duration => (4 * 60 * 60))
 
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_checks).
-      with([entity_core['id']]).and_return(entity_core['id'] => [check.id])
+      with([entity.id]).and_return(entity.id => [check.id])
 
-    post "/unscheduled_maintenances/entities/#{entity_core['id']}", {}, jsonapi_post_env
+    post "/unscheduled_maintenances/entities/#{entity.id}", {}, jsonapi_post_env
     expect(last_response.status).to eq(204)
   end
 
@@ -149,9 +125,9 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
       with([check.id]).and_return([check])
 
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_checks).
-      with([entity_core['id']]).and_return(entity_core['id'] => [check.id])
+      with([entity.id]).and_return(entity.id => [check.id])
 
-    patch "/unscheduled_maintenances/entities/#{entity_core['id']}",
+    patch "/unscheduled_maintenances/entities/#{entity.id}",
       [{:op => 'replace', :path => '/unscheduled_maintenances/0/end_time', :value => end_time.iso8601}].to_json,
       jsonapi_patch_env
     expect(last_response.status).to eq(204)
@@ -178,9 +154,9 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
       and_return(sched_maint)
 
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_checks).
-      with([entity_core['id']]).and_return(entity_core['id'] => [check.id])
+      with([entity.id]).and_return(entity.id => [check.id])
 
-    post "/scheduled_maintenances/entities/#{entity_core['id']}",
+    post "/scheduled_maintenances/entities/#{entity.id}",
       {:scheduled_maintenances => [{:start_time => start.iso8601, :summary => 'test', :duration => duration}]}.to_json,
       jsonapi_post_env
     expect(last_response.status).to eq(204)
@@ -190,9 +166,9 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     duration = (2 * 60 * 60)     # two hours
 
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_checks).
-      with([entity_core['id']]).and_return(entity_core['id'] => [check.id])
+      with([entity.id]).and_return(entity.id => [check.id])
 
-    post "/scheduled_maintenances/entities/#{entity_core['id']}",
+    post "/scheduled_maintenances/entities/#{entity.id}",
       {:summary => 'test', :duration => duration}.to_json, jsonapi_post_env
     expect(last_response.status).to eq(403)
   end
@@ -214,9 +190,9 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
       with([check.id]).and_return([check])
 
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_checks).
-      with([entity_core['id']]).and_return(entity_core['id'] => [check.id])
+      with([entity.id]).and_return(entity.id => [check.id])
 
-    delete "/scheduled_maintenances/entities/#{entity_core['id']}",
+    delete "/scheduled_maintenances/entities/#{entity.id}",
       :start_time => start_time.iso8601
     expect(last_response.status).to eq(204)
   end
@@ -224,7 +200,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
   it "doesn't delete a scheduled maintenance period for all checks on an entityif the start time isn't passed" do
     expect(check).not_to receive(:end_scheduled_maintenance)
 
-    delete "/scheduled_maintenances/entities/#{entity_core['id']}"
+    delete "/scheduled_maintenances/entities/#{entity.id}"
     expect(last_response.status).to eq(403)
   end
 
@@ -257,9 +233,9 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
       with([check.id, check_2.id]).and_return([check, check_2])
 
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_checks).
-      with([entity_core['id']]).and_return(entity_core['id'] => [check.id, check_2.id])
+      with([entity.id]).and_return(entity.id => [check.id, check_2.id])
 
-    delete "/scheduled_maintenances/entities/#{entity_core['id']}",
+    delete "/scheduled_maintenances/entities/#{entity.id}",
       :start_time => start_time.iso8601
     expect(last_response.status).to eq(204)
   end
@@ -274,9 +250,9 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
       with('events', check, an_instance_of(Hash))
 
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_checks).
-      with([entity_core['id']]).and_return(entity_core['id'] => [check.id])
+      with([entity.id]).and_return(entity.id => [check.id])
 
-    post "/test_notifications/entities/#{entity_core['id']}"
+    post "/test_notifications/entities/#{entity.id}"
     expect(last_response.status).to eq(204)
   end
 

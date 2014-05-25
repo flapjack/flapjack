@@ -46,6 +46,7 @@ module Flapjack
                 else
                   pagerduty_credentials.save
                   if existing_pagerduty_credentials = contact.pagerduty_credentials
+                    p existing_pagerduty_credentials
                     # TODO is this the right thing to do here?
                     existing_pagerduty_credentials.destroy
                   end

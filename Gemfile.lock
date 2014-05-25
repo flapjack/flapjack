@@ -7,6 +7,15 @@ GIT
       rspec (~> 3.0.0.rc1)
       ruby-progressbar (~> 1.4)
 
+GIT
+  remote: git://github.com/flapjack/sandstorm.git
+  revision: fa2f8d4876668038b9236f785c6e42a5e0a89a03
+  branch: master
+  specs:
+    sandstorm (0.0.1)
+      activemodel (~> 3.2.18)
+      redis
+
 PATH
   remote: .
   specs:
@@ -24,13 +33,6 @@ PATH
       tzinfo (~> 1.0.1)
       tzinfo-data
       xmpp4r (>= 0.5.5)
-
-PATH
-  remote: ../sandstorm
-  specs:
-    sandstorm (0.0.1)
-      activemodel (~> 3.2.18)
-      redis
 
 GEM
   remote: https://rubygems.org/

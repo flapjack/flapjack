@@ -5,77 +5,46 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
 
   include_context "jsonapi"
 
-  # let(:json_data)       { {'valid' => 'json'} }
+  let(:contact)      { double(Flapjack::Data::Contact, :id => '21') }
 
-  # let(:media) {
-  #   {'email' => 'ada@example.com',
-  #    'sms'   => '04123456789'
-  #   }
-  # }
+  let(:contact_data) {
+    {:id         => contact.id,
+     :first_name => "Ada",
+     :last_name  => "Lovelace",
+     :email      => "ada@example.com",
+     :timezone   => 'Australia/Perth',
+     :tags       => ["legend", "first computer programmer"]
+    }
+  }
 
-  # let(:media_intervals) {
-  #   {'email' => 500,
-  #    'sms'   => 300
-  #   }
-  # }
+  it "creates a contact" do
+    expect(Flapjack::Data::Contact).to receive(:lock).and_yield
+    expect(Flapjack::Data::Contact).to receive(:exists?).with(contact.id).and_return(false)
 
-  # let(:media_rollup_thresholds) {
-  #   {'email' => 5}
-  # }
+    expect(contact).to receive(:invalid?).and_return(false)
+    expect(contact).to receive(:save).and_return(true)
+    expect(Flapjack::Data::Contact).to receive(:new).
+      with(contact_data).and_return(contact)
 
-  # let(:notification_rule) {
-  #   double(Flapjack::Data::NotificationRule, :id => '1', :contact_id => '21')
-  # }
+    post "/contacts", {:contacts => [contact_data]}.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(201)
+    expect(last_response.body).to eq([contact.id].to_json)
+  end
 
-  # let(:notification_rule_data) {
-  #   {"contact_id"         => "21",
-  #    "tags"               => ["database","physical"],
-  #    "entities"           => ["foo-app-01.example.com"],
-  #    "time_restrictions"  => nil,
-  #    "unknown_media"      => ["jabber"],
-  #    "warning_media"      => ["email"],
-  #    "critical_media"     => ["sms", "email"],
-  #    "unknown_blackhole"  => false,
-  #    "warning_blackhole"  => false,
-  #    "critical_blackhole" => false
-  #   }
-  # }
+  it "does not create a contact if the data is improperly formatted" do
+    expect(Flapjack::Data::Contact).to receive(:lock).and_yield
+    expect(Flapjack::Data::Contact).not_to receive(:exists?)
 
-  # let(:critical_state) { double(Flapjack::Data::NotificationRuleState) }
-  # let(:warning_state)  { double(Flapjack::Data::NotificationRuleState) }
-  # let(:unknown_state)  { double(Flapjack::Data::NotificationRuleState) }
+    errors = double('errors', :full_messages => ['err'])
+    expect(contact).to receive(:errors).and_return(errors)
 
-  it "creates a contact" # do
-    # contact_data = {
-    #   "id"         => "0362",
-    #   "first_name" => "John",
-    #   "last_name"  => "Smith",
-    #   "email"      => "johns@example.dom",
-    #   "media"      => {
-    #     "email"  => "johns@example.dom",
-    #     "jabber" => "johns@conference.localhost"
-    #   }
-    # }
+    expect(contact).to receive(:invalid?).and_return(true)
+    expect(contact).not_to receive(:save)
+    expect(Flapjack::Data::Contact).to receive(:new).and_return(contact)
 
-    # expect(Flapjack::Data::Semaphore).to receive(:new).
-    #   with("contact_mass_update", {:redis => redis, :expiry => 30}).and_return(semaphore)
-    # expect(Flapjack::Data::Contact).to receive(:exists_with_id?).
-    #   with("0362", {:redis => redis}).and_return(false)
-    # expect(Flapjack::Data::Contact).to receive(:add).
-    #   with(contact_data, {:redis => redis}).and_return(contact)
-    # expect(semaphore).to receive(:release).and_return(true)
-
-    # post "/contacts", {:contacts => [contact_data]}.to_json, jsonapi_post_env
-    # expect(last_response.status).to eq(201)
-    # expect(last_response.body).to eq(["0362"].to_json)
-  # end
-
-  it "does not create a contact if the data is improperly formatted" # do
-    # expect(Flapjack::Data::Contact).not_to receive(:add)
-
-    # post "/contacts", {'sausage' => 'good'}.to_json, jsonapi_post_env
-    # expect(last_response.status).to eq(422)
-  # end
+    post "/contacts", {:contacts => [{'silly' => 'sausage'}]}.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(403)
+  end
 
   it "returns all the contacts" do
     expect(Flapjack::Data::Contact).to receive(:associated_ids_for_entities).
@@ -86,12 +55,12 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
       with([contact.id]).and_return({})
     expect(Flapjack::Data::Contact).to receive(:associated_ids_for_notification_rules).
       with([contact.id]).and_return({})
-    expect(contact).to receive(:as_json).and_return(contact_core)
+    expect(contact).to receive(:as_json).and_return(contact_data)
     expect(Flapjack::Data::Contact).to receive(:all).and_return([contact])
 
     get '/contacts'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq({:contacts => [contact_core]}.to_json)
+    expect(last_response.body).to eq({:contacts => [contact_data]}.to_json)
   end
 
   it "returns the core information of a specified contact" do
@@ -103,13 +72,13 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
       with([contact.id]).and_return({})
     expect(Flapjack::Data::Contact).to receive(:associated_ids_for_notification_rules).
       with([contact.id]).and_return({})
-    expect(contact).to receive(:as_json).and_return(contact_core)
+    expect(contact).to receive(:as_json).and_return(contact_data)
     expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
       with([contact.id]).and_return([contact])
 
     get "/contacts/#{contact.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq({:contacts => [contact_core]}.to_json)
+    expect(last_response.body).to eq({:contacts => [contact_data]}.to_json)
   end
 
   it "does not return information for a contact that does not exist" do

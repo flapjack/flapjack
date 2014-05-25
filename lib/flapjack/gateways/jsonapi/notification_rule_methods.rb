@@ -22,7 +22,7 @@ module Flapjack
 
           # Creates a notification rule or rules for a contact
           app.post '/contacts/:contact_id/notification_rules' do
-            notification_rules_data = wrapped_params('media')
+            notification_rules_data = wrapped_params('notification_rules')
 
             notification_rules_err = nil
             notification_rule_ids = nil
@@ -46,7 +46,7 @@ module Flapjack
                 if invalid = notification_rules.detect {|nr| nr.invalid? }
                   notification_rules_err = "Notification rule validation failed, " + invalid.errors.full_messages.join(', ')
                 else
-                  notification_rule_ids = notification_rules.each {|nr|
+                  notification_rule_ids = notification_rules.collect {|nr|
                     nr.save
                     contact.notification_rules << nr
                     nr.id

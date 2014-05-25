@@ -53,6 +53,7 @@ module Flapjack
 
             Flapjack::Data::Contact.send(:lock) do
 
+              # TODO should these overwrite instead?
               conflicted_ids = data_ids.select {|id|
                 Flapjack::Data::Contact.exists?(id)
               }

@@ -15,6 +15,61 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     }
   }
 
+  let(:contact)      { double(Flapjack::Data::Contact, :id => '21') }
+
+  it "creates a medium" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium).and_yield
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id).and_return(contact)
+
+    expect(medium).to receive(:invalid?).and_return(false)
+    expect(medium).to receive(:save).and_return(true)
+    expect(medium).to receive(:type).and_return(medium_data[:type])
+    expect(Flapjack::Data::Medium).to receive(:new).
+      with(medium_data.merge(:id => nil)).
+      and_return(medium)
+
+    no_media = double('no_media', :all => [])
+    contact_media = ('contact_media')
+    expect(contact_media).to receive(:intersect).
+      with(:type => medium_data[:type]).and_return(no_media)
+    expect(contact).to receive(:media).and_return(contact_media)
+
+    expect(contact_media).to receive(:"<<").with(medium)
+
+    post "/contacts/#{contact.id}/media", {:media => [medium_data]}.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(201)
+    expect(last_response.body).to eq([medium.id].to_json)
+  end
+
+  it "does not create a medium if the data is improperly formatted" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium).and_yield
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id).and_return(contact)
+
+    errors = double('errors', :full_messages => ['err'])
+    expect(medium).to receive(:errors).and_return(errors)
+
+    expect(medium).to receive(:invalid?).and_return(true)
+    expect(medium).not_to receive(:save)
+    expect(Flapjack::Data::Medium).to receive(:new).and_return(medium)
+
+    post "/contacts/#{contact.id}/media", {:media => [{'silly' => 'sausage'}]}.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(403)
+  end
+
+  it "does not create a medium if the contact doesn't exist" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium).and_yield
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id).and_return(nil)
+
+    post "/contacts/#{contact.id}/media", {:media => [medium_data]}.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(403)
+  end
+
   it "returns a single medium" do
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
       with([medium.id]).and_return([medium])
@@ -47,45 +102,6 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     get "/media/#{medium.id}"
     expect(last_response).to be_not_found
   end
-
-  it "creates a medium for a contact" # do
-  #   expect(Flapjack::Data::Semaphore).to receive(:new).
-  #     with("contact_mass_update", :redis => redis, :expiry => 30).and_return(semaphore)
-
-  #   expect(Flapjack::Data::Contact).to receive(:find_by_id).
-  #     with(contact.id, :redis => redis).and_return(contact)
-
-  #   expect(contact).to receive(:set_address_for_media).
-  #     with(medium_data[:type], medium_data[:address])
-  #   expect(contact).to receive(:set_interval_for_media).
-  #     with(medium_data[:type], medium_data[:interval])
-  #   expect(contact).to receive(:set_rollup_threshold_for_media).
-  #     with(medium_data[:type], medium_data[:rollup_threshold])
-
-  #   expect(semaphore).to receive(:release).and_return(true)
-
-  #   post "/contacts/#{contact.id}/media", {:media => [medium_data]}.to_json, jsonapi_post_env
-  #   expect(last_response.status).to eq(201)
-  #   expect(last_response.body).to eq('{"media":[' +
-  #     medium_data.merge(:id => "#{contact.id}_email",
-  #                       :links => {:contacts => [contact.id]}).to_json + ']}')
-  # end
-
-  it "does not create a medium for a contact that's not present" # do
-  #   expect(Flapjack::Data::Semaphore).to receive(:new).
-  #     with("contact_mass_update", :redis => redis, :expiry => 30).and_return(semaphore)
-
-  #   expect(Flapjack::Data::Contact).to receive(:find_by_id).
-  #     with(contact.id, :redis => redis).and_return(nil)
-
-  #   medium_data = {:type => 'email',
-  #     :address => 'abc@example.com', :interval => 120, :rollup_threshold => 3}
-
-  #   expect(semaphore).to receive(:release).and_return(true)
-
-  #   post "/contacts/#{contact.id}/media", {:media => [medium_data]}.to_json, jsonapi_post_env
-  #   expect(last_response.status).to eq(422)
-  # end
 
   it "updates a medium" do
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
