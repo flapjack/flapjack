@@ -10,7 +10,7 @@ GIT
 PATH
   remote: .
   specs:
-    flapjack (0.8.11)
+    flapjack (0.9.0)
       activesupport (~> 3.2.18)
       chronic
       chronic_duration

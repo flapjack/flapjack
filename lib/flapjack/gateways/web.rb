@@ -401,8 +401,9 @@ module Flapjack
       end
 
       def self_stats(time)
-        @fqdn         = `/bin/hostname -f`.chomp
-        @pid          = Process.pid
+        @fqdn    = `/bin/hostname -f`.chomp
+        @pid     = Process.pid
+        @api_url = api_url
         @dbsize              = Flapjack.redis.dbsize
         @executive_instances = Flapjack.redis.keys("executive_instance:*").inject({}) do |memo, i|
           instance_id    = i.match(/executive_instance:(.*)/)[1]
