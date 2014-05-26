@@ -48,7 +48,7 @@ module Flapjack
       redis_config
     end
 
-    def load(filename)
+    def load(filename, flapjack_env = nil)
       @filename = nil
       @config_env = nil
 
@@ -57,10 +57,12 @@ module Flapjack
         return
       end
 
-      unless defined?(FLAPJACK_ENV)
-        @logger.error "Environment variable 'FLAPJACK_ENV' is not set" if @logger
+      unless defined?(FLAPJACK_ENV) || defined?(flapjack_env)
+        @logger.error "Environment variable 'FLAPJACK_ENV' is not set, and no override supplied" if @logger
         return
       end
+
+      flapjack_env ||= FLAPJACK_ENV
 
       config = YAML::load_file(filename)
 
@@ -69,10 +71,10 @@ module Flapjack
         return
       end
 
-      @config_env = config[FLAPJACK_ENV]
+      @config_env = config[flapjack_env]
 
       if @config_env.nil?
-        @logger.error "No config data for environment '#{FLAPJACK_ENV}' found in '#{filename}'" if @logger
+        @logger.error "No config data for environment '#{flapjack_env}' found in '#{filename}'" if @logger
         return
       end
 

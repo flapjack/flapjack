@@ -4,7 +4,6 @@ require 'eventmachine'
 require 'socket'
 require 'dante'
 
-
 module Flapjack
   module CLI
     class Flapper
