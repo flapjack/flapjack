@@ -120,14 +120,14 @@ command :flapper do |flapper|
   flapper.desc 'start flapper'
   flapper.command :start do |start|
 
+    start.switch [:d, 'daemonize'], :desc => 'Daemonize',
+      :default_value => true
+
     start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to',
       :default_value =>  "/var/run/flapjack/flapper.pid"
 
     start.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to',
       :default_value =>  "/var/log/flapjack/flapper.log"
-
-    start.switch [:d, 'daemonize'], :desc => 'Daemonize',
-      :default_value => true
 
     start.flag   [:b, 'bind-ip'],   :desc => 'ADDRESS (IPv4 or IPv6) for flapper to bind to',
       :default_value => Flapjack::CLI::Flapper.local_ip
@@ -167,9 +167,6 @@ command :flapper do |flapper|
 
     restart.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to',
       :default_value =>  "/var/log/flapjack/flapper.log"
-
-    restart.switch [:d, 'daemonize'], :desc => 'Daemonize',
-      :default_value => true
 
     restart.flag   [:b, 'bind-ip'],   :desc => 'ADDRESS (IPv4 or IPv6) for flapper to bind to',
       :default_value => Flapjack::CLI::Flapper.local_ip

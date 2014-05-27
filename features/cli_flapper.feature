@@ -32,7 +32,7 @@ Feature: Flapper command line
   Scenario: Starting, restarting and stopping flapper, daemonized
     When I start flapper (daemonised) (via bundle exec) with `flapjack flapper start -d -p tmp/cucumber_cli/flapper_d.pid -l tmp/cucumber_cli/flapper_d.log`
     Then flapper should start within 15 seconds
-    When I restart flapper (daemonised) (via bundle exec) with `flapjack flapper restart -d -p tmp/cucumber_cli/flapper_d.pid -l tmp/cucumber_cli/flapper_d.log`
+    When I restart flapper (daemonised) (via bundle exec) with `flapjack flapper restart -p tmp/cucumber_cli/flapper_d.pid -l tmp/cucumber_cli/flapper_d.log`
     Then flapper should restart within 15 seconds
     When I stop flapper (via bundle exec) with `flapjack flapper stop -p tmp/cucumber_cli/flapper_d.pid`
     Then flapper should stop within 15 seconds

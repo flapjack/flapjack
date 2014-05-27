@@ -13,16 +13,14 @@ test:
 """
 
   Scenario: Running with --help shows usage information
-    When I run `bin/flapjack-feed-events --help`
+    When I run `bundle exec bin/flapjack -n test receiver json --help`
     Then the exit status should be 0
-    And  the output should contain "Usage: flapjack-feed-events"
-    And  the output should contain "-c, --config"
-    And  the output should contain "-f, --from"
+    And  the output should contain "JSON receiver"
+    And  the output should contain "-f, --from=arg"
 
   Scenario: Running flapjack-feed-events with no arguments and no STDIN fails with a warning
-    When I run `bin/flapjack-feed-events -c tmp/cucumber_cli/flapjack-feed-events.yaml`
+    When I run `bundle exec bin/flapjack -n test -c tmp/cucumber_cli/flapjack-feed-events.yaml receiver json`
     And  the output should contain "No file provided, and STDIN is from terminal! Exiting..."
-    And  the output should contain "Usage: flapjack-feed-events"
     Then the exit status should be 1
 
 
@@ -37,14 +35,14 @@ test:
   "summary": "testing"
 }
 """
-    When I run `cat tmp/cucumber_cli/single-event.json | bin/flapjack-feed-events -c tmp/cucumber_cli/flapjack-feed-events.yaml`
+    When I run `cat tmp/cucumber_cli/single-event.json | bundle exec bin/flapjack -n test -c tmp/cucumber_cli/flapjack-feed-events.yaml receiver json`
     Then the exit status should be 0
     And  the output should not contain "Invalid event data received"
     And  the output should contain "Enqueued event data, "
     And  the output should contain "client1-localhost-test-1"
     And  the output should contain "Done."
 
-    When I run `bin/flapjack-feed-events -c tmp/cucumber_cli/flapjack-feed-events.yaml -f tmp/cucumber_cli/single-event.json`
+    When I run `bundle exec bin/flapjack -n test -c tmp/cucumber_cli/flapjack-feed-events.yaml receiver json -f tmp/cucumber_cli/single-event.json`
     Then the exit status should be 0
     And  the output should not contain "Invalid event data received"
     And  the output should contain "Enqueued event data, "
@@ -62,7 +60,7 @@ test:
   "testing"
   }
 """
-    When I run `cat tmp/cucumber_cli/multiple-events.json | bin/flapjack-feed-events -c tmp/cucumber_cli/flapjack-feed-events.yaml`
+    When I run `cat tmp/cucumber_cli/multiple-events.json | bundle exec bin/flapjack -n test -c tmp/cucumber_cli/flapjack-feed-events.yaml receiver json`
     Then the exit status should be 0
     And  the output should not contain "Invalid event data received"
     And  the output should contain "Enqueued event data, "
@@ -70,7 +68,7 @@ test:
     And  the output should contain "client1-localhost-test-2"
     And  the output should contain "Done."
 
-    When I run `bin/flapjack-feed-events -c tmp/cucumber_cli/flapjack-feed-events.yaml -f tmp/cucumber_cli/multiple-events.json`
+    When I run `bundle exec bin/flapjack -n test -c tmp/cucumber_cli/flapjack-feed-events.yaml receiver json -f tmp/cucumber_cli/multiple-events.json`
     Then the exit status should be 0
     And  the output should not contain "Invalid event data received"
     And  the output should contain "Enqueued event data, "
@@ -84,7 +82,7 @@ test:
 {"entity": "client1-localhost-test-1"}
 {"entity": "client1-localhost-test-2", "check": "bar"}
 """
-    When I run `cat tmp/cucumber_cli/invalid-events.json | bin/flapjack-feed-events -c tmp/cucumber_cli/flapjack-feed-events.yaml`
+    When I run `cat tmp/cucumber_cli/invalid-events.json | bundle exec bin/flapjack -n test -c tmp/cucumber_cli/flapjack-feed-events.yaml receiver json`
     Then the exit status should be 0
     And  the output should not contain "Enqueued event data, "
     And  the output should contain "Invalid event data received"
@@ -98,7 +96,7 @@ test:
 {"entity": "client1-localhost-test-1"
 {"entity": "client1-localhost-test-2", "check": "bar"}
 """
-    When I run `cat tmp/cucumber_cli/invalid-json.json | bin/flapjack-feed-events -c tmp/cucumber_cli/flapjack-feed-events.yaml`
+    When I run `cat tmp/cucumber_cli/invalid-json.json | bundle exec bin/flapjack -n test -c tmp/cucumber_cli/flapjack-feed-events.yaml receiver json`
     Then the exit status should be 1
     And  the output should not contain "Enqueued event data, "
-    And  the output should contain "(Oj::ParseError)"
+    And  the output should contain "expected comma at line 2"
