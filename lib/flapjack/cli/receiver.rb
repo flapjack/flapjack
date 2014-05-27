@@ -49,7 +49,12 @@ module Flapjack
         else
           print "nagios-receiver starting..."
           runner('nagios').execute(:daemonize => @options[:daemonize]) do
-            nagios_main(:fifo => fifo, :nagios => true)
+            begin
+              main(:fifo => @options[:fifo], :nagios => true)
+            rescue Exception => e
+              p e.message
+              puts e.backtrace.join("\n")
+            end
           end
           puts " done."
         end
@@ -69,7 +74,7 @@ module Flapjack
       def nagios_restart
         print "nagios-receiver restarting..."
         runner('nagios').execute(:daemonize => true, :restart => true) do
-          main(:fifo => fifo, :nagios => true)
+          main(:fifo => @options[:fifo], :nagios => true)
         end
         puts " done."
       end
@@ -94,7 +99,7 @@ module Flapjack
         else
           print "nsca-receiver starting..."
           runner('nsca').execute(:daemonize => @options[:daemonize]) do
-          main(:fifo => fifo, :nsca => true)
+            main(:fifo => @options[:fifo], :nsca => true)
           end
           puts " done."
         end
@@ -114,7 +119,7 @@ module Flapjack
       def nsca_restart
         print "nsca-receiver restarting..."
         runner('nsca').execute(:daemonize => true, :restart => true) do
-          main(:fifo => fifo, :nsca => true)
+          main(:fifo => @options[:fifo], :nsca => true)
         end
         puts " done."
       end
@@ -157,11 +162,11 @@ module Flapjack
 
         pidfile = @options[:pidfile].nil? ?
                     (config_runner['pid_file'] || "/var/run/flapjack/#{type}-receiver.pid") :
-                    nil
+                    @options[:pidfile]
 
         logfile = @options[:logfile].nil? ?
                     (config_runner['log_file'] || "/var/log/flapjack/#{type}-receiver.log") :
-                    nil
+                    @options[:logfile]
 
         @runner = Dante::Runner.new("#{type}-receiver", :pid_path => pidfile,
           :log_path => logfile)
@@ -170,9 +175,9 @@ module Flapjack
 
       def process_input(opts)
         config_rec = if opts[:nagios]
-          @config_env['nagios_receiver'] || {}
+          @config_env['nagios-receiver'] || {}
         elsif opts[:nsca]
-          @config_env['nsca_receiver'] || {}
+          @config_env['nsca-receiver'] || {}
         else
           raise "Unknown receiver type"
         end
@@ -342,6 +347,11 @@ module Flapjack
 
 
       def mirror_receive(opts)
+        unless opts[:follow] || opts[:all]
+          puts "one or both of --follow or --all is required"
+          exit 1
+        end
+
         source_redis = Redis.new(:url => opts[:source])
 
         archives = mirror_get_archive_keys_stats(source_redis)
@@ -463,6 +473,11 @@ command :receiver do |receiver|
     end
 
     nagios.command :stop do |stop|
+
+      stop.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
+
+      stop.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
+
       stop.action do |global_options,options,args|
         receiver = Flapjack::CLI::Receiver.new(global_options, options)
         receiver.nagios_stop
@@ -484,6 +499,11 @@ command :receiver do |receiver|
     end
 
     nagios.command :status do |status|
+
+      status.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
+
+      status.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
+
       status.action do |global_options,options,args|
         receiver = Flapjack::CLI::Receiver.new(global_options, options)
         receiver.nagios_status
@@ -533,6 +553,11 @@ command :receiver do |receiver|
     end
 
     nsca.command :stop do |stop|
+
+      stop.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
+
+      stop.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
+
       stop.action do |global_options,options,args|
         receiver = Flapjack::CLI::Receiver.new(global_options, options)
         receiver.nsca_stop
@@ -554,6 +579,11 @@ command :receiver do |receiver|
     end
 
     nsca.command :status do |status|
+
+      status.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
+
+      status.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
+
       status.action do |global_options,options,args|
         receiver = Flapjack::CLI::Receiver.new(global_options, options)
         receiver.nsca_status

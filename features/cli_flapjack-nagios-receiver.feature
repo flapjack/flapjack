@@ -28,9 +28,8 @@ test:
   Scenario: Running with --help shows usage information
     When I run `bundle exec bin/flapjack receiver nagios --help`
     Then the exit status should be 0
-    And  the output should contain "Usage: flapjack-nagios-receiver"
-    And  the output should contain "-f, --fifo FIFO"
-    And  the output should contain "Required Nagios Configuration Changes"
+    And  the output should contain "[-f arg|--fifo arg]"
+    And  the output should contain "receiver nagios start [-d|--daemonize]"
 
   Scenario: Starting flapjack-nagios-receiver
     When I start flapjack-nagios-receiver (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack-nagios-receiver.yaml receiver start --no-daemonize`
@@ -47,21 +46,21 @@ test:
     Then flapjack-nagios-receiver should start within 15 seconds
     When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack-nagios-receiver_d.yaml receiver nagios status`
     Then the exit status should be 0
-    And  the output should contain "flapjack-nagios-receiver is running"
-    When I stop flapjack-nagios-receiver (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack-nagios-receiver_d.yaml receiver nagios stop `
+    And  the output should contain "nagios-receiver is running"
+    When I stop flapjack-nagios-receiver (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack-nagios-receiver_d.yaml receiver nagios stop`
     Then flapjack-nagios-receiver should stop within 15 seconds
 
   Scenario: Starting, restarting and stopping flapjack-nagios-receiver, daemonized
     When I start flapjack-nagios-receiver (daemonised) (via bundle exec) with `flapjack  -n test --config tmp/cucumber_cli/flapjack-nagios-receiver_d.yaml receiver nagios start -d`
     Then flapjack-nagios-receiver should start within 15 seconds
-    When I restart flapjack-nagios-receiver (daemonised) (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack-nagios-receiver_d.yaml receiver nagios restart -d`
+    When I restart flapjack-nagios-receiver (daemonised) (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack-nagios-receiver_d.yaml receiver nagios restart`
     Then flapjack-nagios-receiver should restart within 15 seconds
-    When I stop flapjack-nagios-receiver (via bundle exec) with `flapjack -n test --config  --config tmp/cucumber_cli/flapjack-nagios-receiver_d.yaml receiver nagios stop`
+    When I stop flapjack-nagios-receiver (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack-nagios-receiver_d.yaml receiver nagios stop`
     Then flapjack-nagios-receiver should stop within 15 seconds
 
   Scenario: Getting status when stopped
     When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack-nagios-receiver_d.yaml receiver nagios status`
     Then the exit status should not be 0
-    And  the output should contain "flapjack-nagios-receiver is not running"
+    And  the output should contain "nagios-receiver is not running"
 
 
