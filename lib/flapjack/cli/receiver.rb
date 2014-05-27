@@ -21,9 +21,9 @@ module Flapjack
 
         config = Flapjack::Configuration.new
         config.load(global_options[:config], global_options[:environment])
-        config_env = config.all
+        @config_env = config.all
 
-        if config_env.nil? || config_env.empty?
+        if @config_env.nil? || @config_env.empty?
           puts "No config data for environment '#{global_options[:environment]}' found in '#{global_options[:config]}'"
           exit 1
         end
@@ -75,7 +75,10 @@ module Flapjack
       end
 
       def nagios_status
-        uptime = (runner('nagios').daemon_running?) ? (Time.now - File.stat(@options[:pidfile]).ctime) : 0
+        config_runner = @config_env["nagios-receiver"] || {}
+        pidfile = @options[:pidfile] || (config_runner['pid_file'] ||
+          "/var/run/flapjack/nagios-receiver.pid")
+        uptime = (runner('nagios').daemon_running?) ? (Time.now - File.stat(pidfile).ctime) : 0
         if runner('nagios').daemon_running?
           puts "nagios-receiver is running: #{uptime}"
         else
@@ -117,7 +120,12 @@ module Flapjack
       end
 
       def nsca_status
-        uptime = (runner('nsca').daemon_running?) ? (Time.now - File.stat(@options[:pidfile]).ctime) : 0
+        config_runner = @config_env["nsca-receiver"] || {}
+
+        pidfile = @options[:pidfile] || (config_runner['pid_file'] ||
+          "/var/run/flapjack/nsca-receiver.pid")
+
+        uptime = (runner('nsca').daemon_running?) ? (Time.now - File.stat(pidfile).ctime) : 0
         if runner('nsca').daemon_running?
           puts "nsca-receiver is running: #{uptime}"
         else
@@ -145,13 +153,42 @@ module Flapjack
       def runner(type)
         return @runner if @runner
 
-        @runner = Dante::Runner.new("#{type}-receiver", :pid_path => @options[:pidfile],
-          :log_path => @options[:logfile])
+        config_runner = @config_env["#{type}-receiver"] || {}
+
+        pidfile = @options[:pidfile].nil? ?
+                    (config_runner['pid_file'] || "/var/run/flapjack/#{type}-receiver.pid") :
+                    nil
+
+        logfile = @options[:logfile].nil? ?
+                    (config_runner['log_file'] || "/var/log/flapjack/#{type}-receiver.log") :
+                    nil
+
+        @runner = Dante::Runner.new("#{type}-receiver", :pid_path => pidfile,
+          :log_path => logfile)
         @runner
       end
 
       def process_input(opts)
-        fifo  = File.new(opts[:fifo])
+        config_rec = if opts[:nagios]
+          @config_env['nagios_receiver'] || {}
+        elsif opts[:nsca]
+          @config_env['nsca_receiver'] || {}
+        else
+          raise "Unknown receiver type"
+        end
+
+        opt_fifo = (opts[:fifo] || config_rec['fifo'] || '/var/cache/nagios3/event_stream.fifo')
+        unless File.exist?(opt_fifo)
+          raise "No fifo (named pipe) file found at #{opt_fifo}"
+        end
+        unless File.pipe?(opt_fifo)
+          raise "The file at #{opt_fifo} is not a named pipe, try using mkfifo to make one"
+        end
+        unless File.readable?(opt_fifo)
+          raise "The fifo (named pipe) at #{opt_fifo} is unreadable"
+        end
+
+        fifo  = File.new(opt_fifo)
         begin
           while line = fifo.gets
             skip unless line
@@ -413,11 +450,9 @@ command :receiver do |receiver|
       start.switch [:d, 'daemonize'], :desc => 'Daemonize',
         :default_value => true
 
-      start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to',
-        :default_value =>  "/var/run/flapjack/nagios-receiver.pid"
+      start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
 
-      start.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to',
-        :default_value =>  "/var/log/flapjack/nagios-receiver.log"
+      start.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
       start.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
 
@@ -436,11 +471,9 @@ command :receiver do |receiver|
 
     nagios.command :restart do |restart|
 
-      restart.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to',
-        :default_value =>  "/var/run/flapjack/nsca-receiver.pid"
+      restart.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
 
-      restart.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to',
-        :default_value =>  "/var/log/flapjack/nsca-receiver.log"
+      restart.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
       restart.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
 
@@ -465,34 +498,31 @@ command :receiver do |receiver|
 
     nsca.command :start do |start|
 
+      # # Not sure what to do with this, extra help output:
 
-# # Not sure what to do with this, extra help output:
+      # Required Nagios Configuration Changes
+      # -------------------------------------
 
-# Required Nagios Configuration Changes
-# -------------------------------------
+      # flapjack-nsca-receiver reads events from the nagios "command file" read from by Nagios, written to by the Nsca-daemon.
 
-# flapjack-nsca-receiver reads events from the nagios "command file" read from by Nagios, written to by the Nsca-daemon.
+      # The named pipe is automatically created by _nagios_ if it is enabled
+      # in the configfile:
 
-# The named pipe is automatically created by _nagios_ if it is enabled
-# in the configfile:
+      #   # modified lines:
+      #   command_file=/var/lib/nagios3/rw/nagios.cmd
 
-#   # modified lines:
-#   command_file=/var/lib/nagios3/rw/nagios.cmd
+      # The Nsca daemon is optionally writing to a tempfile if the named pipe does
+      # not exist.
 
-# The Nsca daemon is optionally writing to a tempfile if the named pipe does
-# not exist.
-
-# Details on the wiki: https://github.com/flapjack/flapjack/wiki/USING#XXX
-# '
+      # Details on the wiki: https://github.com/flapjack/flapjack/wiki/USING#XXX
+      # '
 
       start.switch [:d, 'daemonize'], :desc => 'Daemonize',
         :default_value => true
 
-      start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to',
-        :default_value =>  "/var/run/flapjack/nagios-receiver.pid"
+      start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
 
-      start.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to',
-        :default_value =>  "/var/log/flapjack/nagios-receiver.log"
+      start.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
       start.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
 
@@ -511,11 +541,9 @@ command :receiver do |receiver|
 
     nsca.command :restart do |restart|
 
-      restart.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to',
-        :default_value =>  "/var/run/flapjack/nsca-receiver.pid"
+      restart.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
 
-      restart.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to',
-        :default_value =>  "/var/log/flapjack/nsca-receiver.log"
+      restart.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
       restart.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
 
@@ -559,11 +587,11 @@ command :receiver do |receiver|
       :default_value => nil
 
     # options.count in code
-    mirror.flag   [:l, 'last'],     :desc => 'replay the last COUNT events from the source',
+    mirror.flag     [:l, 'last'],   :desc => 'replay the last COUNT events from the source',
       :default_value => nil
 
     # options.since in code
-    mirror.flag   [:t, 'time'],     :desc => 'replay all events archived on the source since TIME',
+    mirror.flag     [:t, 'time'],   :desc => 'replay all events archived on the source since TIME',
       :default_value => nil
 
     mirror.action do |global_options,options,args|
@@ -573,52 +601,6 @@ command :receiver do |receiver|
   end
 
 end
-
-
-
-# config = Flapjack::Configuration.new
-# config.load(options.config)
-# config_env = config.all
-# redis_options = config.for_redis
-
-# if config_env.nil? || config_env.empty?
-#   puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{options.config}'"
-#   puts optparse
-#   exit 1
-# end
-
-# config_nr = config_env['nagios-receiver'] || {}
-
-# pidfile = options.pidfile.nil? ?
-#             (config_nr['pid_file'] || "/var/run/flapjack/#{exe}.pid") :
-#             options.pidfile
-
-# logfile = options.logfile.nil? ?
-#             (config_nr['log_file'] || "/var/log/flapjack/#{exe}.log") :
-#             options.logfile
-
-# fifo = options.fifo.nil? ?
-#          (config_nr['fifo'] || '/var/cache/nagios3/event_stream.fifo') :
-#          options.fifo
-
-# daemonize = options.daemonize.nil? ?
-#               !!config_nr['daemonize'] :
-#               options.daemonize
-
-
-# runner = Dante::Runner.new(exe, :pid_path => pidfile, :log_path => logfile)
-# case ARGV[0]
-# when "start", "restart"
-#   unless File.exist?(fifo)
-#     raise "No fifo (named pipe) file found at #{fifo}"
-#   end
-#   unless File.pipe?(fifo)
-#     raise "The file at #{fifo} is not a named pipe, try using mkfifo to make one"
-#   end
-#   unless File.readable?(fifo)
-#     raise "The fifo (named pipe) at #{fifo} is unreadable"
-#   end
-# end
 
 
 
@@ -642,18 +624,3 @@ end
 # daemonize = options.daemonize.nil? ?
 #               !!config_nr['daemonize'] :
 #               options.daemonize
-
-
-# runner = Dante::Runner.new(exe, :pid_path => pidfile, :log_path => logfile)
-# case ARGV[0]
-# when "start", "restart"
-#   unless File.exist?(fifo)
-#     raise "No fifo (named pipe) file found at #{fifo}"
-#   end
-#   unless File.pipe?(fifo)
-#     raise "The file at #{fifo} is not a named pipe, try using mkfifo to make one"
-#   end
-#   unless File.readable?(fifo)
-#     raise "The fifo (named pipe) at #{fifo} is unreadable"
-#   end
-# end
