@@ -10,6 +10,7 @@ Feature: flapjack-feed-events command line
 test:
   redis:
     db: 14
+    driver: ruby
 """
 
   Scenario: Running with --help shows usage information

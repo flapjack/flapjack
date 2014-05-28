@@ -57,12 +57,12 @@ module Flapjack
         return
       end
 
-      unless defined?(FLAPJACK_ENV) || defined?(flapjack_env)
+      if defined?(FLAPJACK_ENV)
+        flapjack_env ||= FLAPJACK_ENV
+      elsif !defined?(flapjack_env)
         @logger.error "Environment variable 'FLAPJACK_ENV' is not set, and no override supplied" if @logger
         return
       end
-
-      flapjack_env ||= FLAPJACK_ENV
 
       config = YAML::load_file(filename)
 

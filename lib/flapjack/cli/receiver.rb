@@ -81,8 +81,8 @@ module Flapjack
 
       def nagios_status
         config_runner = @config_env["nagios-receiver"] || {}
-        pidfile = @options[:pidfile] || (config_runner['pid_file'] ||
-          "/var/run/flapjack/nagios-receiver.pid")
+        pidfile = @options[:pidfile] || config_runner['pid_file'] ||
+          "/var/run/flapjack/nagios-receiver.pid"
         uptime = (runner('nagios').daemon_running?) ? (Time.now - File.stat(pidfile).ctime) : 0
         if runner('nagios').daemon_running?
           puts "nagios-receiver is running: #{uptime}"
@@ -127,8 +127,8 @@ module Flapjack
       def nsca_status
         config_runner = @config_env["nsca-receiver"] || {}
 
-        pidfile = @options[:pidfile] || (config_runner['pid_file'] ||
-          "/var/run/flapjack/nsca-receiver.pid")
+        pidfile = @options[:pidfile] || config_runner['pid_file'] ||
+          "/var/run/flapjack/nsca-receiver.pid"
 
         uptime = (runner('nsca').daemon_running?) ? (Time.now - File.stat(pidfile).ctime) : 0
         if runner('nsca').daemon_running?
@@ -606,7 +606,7 @@ command :receiver do |receiver|
   receiver.desc 'Mirror receiver'
   receiver.command :mirror do |mirror|
 
-    mirror.flag [:s, 'source'],     :desc => 'URL of source redis database, eg redis://localhost:6379/0',
+    mirror.flag     [:s, 'source'], :desc => 'URL of source redis database, eg redis://localhost:6379/0',
       :required => true
 
     # one or both of follow, all is required
