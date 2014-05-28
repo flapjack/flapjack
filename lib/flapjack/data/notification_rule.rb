@@ -68,8 +68,16 @@ module Flapjack
       end
 
       def update(update_data, opts = {})
-        rule_data = @redis.hgetall("notification_rule:#{@id}").merge(update_data.merge(:id => @id))
-        errors = self.class.add_or_update(rule_data, :redis => @redis, :logger => opts[:logger])
+        [:entities, :regex_entities, :tags, :regex_tags,
+         :time_restrictions, :unknown_media, :warning_media, :critical_media,
+         :unknown_blackhole, :warning_blackhole, :critical_blackhole].each do |update_key|
+
+          next if update_data.has_key?(update_key)
+          update_data[update_key] = self.send(update_key)
+        end
+
+        update_data.update(:id => @id, :contact_id => @contact_id)
+        errors = self.class.add_or_update(update_data, :redis => @redis, :logger => opts[:logger])
         return errors unless errors.nil? || errors.empty?
 
         refresh
@@ -207,6 +215,7 @@ module Flapjack
         # whitelisting fields, rather than passing through submitted data directly
         tag_data       = rule_data[:tags].is_a?(Set) ? rule_data[:tags].to_a : nil
         regex_tag_data = rule_data[:regex_tags].is_a?(Set) ? rule_data[:regex_tags].to_a : nil
+
         json_rule_data = {
           :id                 => rule_data[:id].to_s,
           :contact_id         => rule_data[:contact_id].to_s,
@@ -222,6 +231,7 @@ module Flapjack
           :warning_blackhole  => rule_data[:warning_blackhole],
           :critical_blackhole => rule_data[:critical_blackhole],
         }
+
         logger.debug("NotificationRule#add_or_update json_rule_data: #{json_rule_data.inspect}") if logger
 
         redis.sadd("contact_notification_rules:#{json_rule_data[:contact_id]}",
