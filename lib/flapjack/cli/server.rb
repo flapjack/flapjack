@@ -18,12 +18,12 @@ module Flapjack
         @options = options
 
         @config = Flapjack::Configuration.new
-        @config.load(global_options[:config], global_options[:environment])
+        @config.load(global_options[:config])
         @config_env = @config.all
 
         if @config_env.nil? || @config_env.empty?
-          puts "No config data for environment '#{global_options[:environment]}' found in '#{global_options[:config]}'"
-          exit(false)
+          puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
+          exit 1
         end
 
         if options[:rbtrace]

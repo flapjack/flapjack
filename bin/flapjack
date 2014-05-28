@@ -34,6 +34,9 @@ arg_name '<environment>'
 flag [:n, :env, :environment]
 
 pre do |global,command,options,args|
+
+  FLAPJACK_ENV = ENV["FLAPJACK_ENV"] || global[:environment]
+
   # Pre logic here
   # Return true to proceed; false to abort and not call the
   # chosen command
