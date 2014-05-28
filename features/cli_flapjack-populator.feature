@@ -10,6 +10,7 @@ Feature: flapjack-populator command line
 test:
   redis:
     db: 14
+    driver: ruby
 """
     And  a file named "flapjack-populator-contacts.json" with:
 """
@@ -58,32 +59,32 @@ test:
 """
 
   Scenario: Running with --help shows usage information
-    When I run `bin/flapjack-populator --help`
+    When I run `bundle exec bin/flapjack import --help`
     Then the exit status should be 0
-    And  the output should contain "Usage: flapjack-populator"
-    And  the output should contain "import-contacts"
-    And  the output should contain "import-entities"
-    And  the output should contain "--config"
+    And  the output should contain "Bulk import data from an external source"
+    And  the output should contain "import contacts"
+    And  the output should contain "import entities"
+    And  the output should contain "[-f arg|--from arg]"
 
   Scenario: Running flapjack-populator with no arguments exits uncleanly and shows usage
-    When I run `bin/flapjack-populator`
+    When I run `bundle exec bin/flapjack import`
     Then the exit status should not be 0
-    And  the output should contain "Usage: flapjack-populator"
+    And  the output should contain "Bulk import data from an external source"
 
   Scenario: Importing contacts
-    When I run `bin/flapjack-populator import-contacts --from tmp/cucumber_cli/flapjack-populator-contacts.json --config tmp/cucumber_cli/flapjack-populator.yaml`
+    When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack-populator.yaml import contacts --from tmp/cucumber_cli/flapjack-populator-contacts.json`
     Then the exit status should be 0
 
   Scenario: Importing entities
-    When I run `bin/flapjack-populator import-entities --from tmp/cucumber_cli/flapjack-populator-entities.json --config tmp/cucumber_cli/flapjack-populator.yaml`
+    When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack-populator.yaml import entities --from tmp/cucumber_cli/flapjack-populator-entities.json`
     Then the exit status should be 0
 
   Scenario Outline: Running an flapjack-populator import command with a missing '--from' exits uncleanly and shows usage
-    When I run `bin/flapjack-populator <Command> example.json --config tmp/cucumber_cli/flapjack-populator.yaml`
+    When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack-populator.yaml import <Type> example.json`
     Then the exit status should not be 0
-    And  the output should contain "No import file provided with --from"
-    And  the output should contain "Usage: flapjack-populator"
+    And  the output should contain "error: f is required"
+    And  the output should contain "Bulk import data from an external source"
     Examples:
-      | Command         |
-      | import-entities |
-      | import-contacts |
+      | Type     |
+      | entities |
+      | contacts |

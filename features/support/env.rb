@@ -201,8 +201,9 @@ After('@process') do
    'tmp/cucumber_cli/flapjack-nagios-receiver.yaml',
    'tmp/cucumber_cli/flapper_d.pid',
    'tmp/cucumber_cli/flapper_d.log',
-   'tmp/cucumber_cli/flapjack-populator.yaml',
-   'tmp/cucumber_cli/flapjack-populator-contacts.json',
+   # 'tmp/cucumber_cli/flapjack-populator.yaml',
+   # 'tmp/cucumber_cli/flapjack-populator-contacts.json',
+   # 'tmp/cucumber_cli/flapjack-populator-entities.json',
   ].each do |file|
     next unless File.exists?(file)
     File.unlink(file)
