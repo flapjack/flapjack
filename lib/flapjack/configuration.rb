@@ -58,7 +58,7 @@ module Flapjack
       end
 
       unless defined?(FLAPJACK_ENV)
-        @logger.error "Environment variable 'FLAPJACK_ENV' is not set, and no override supplied" if @logger
+        @logger.error "Environment variable 'FLAPJACK_ENV' is not set" if @logger
         return
       end
 
