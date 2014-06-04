@@ -1,6 +1,7 @@
 ## Flapjack Changelog
 
 # 0.9.0 - 2014-05-23
+- Feature: create 0.9.x series - the last to contain the original API
 - Chore: split reports data from entities and checks in jsonapi #525 (@ali-graham)
 
 # 0.8.12 - 2014-05-21
