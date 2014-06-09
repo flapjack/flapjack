@@ -32,6 +32,7 @@ def fail(opts)
   event  = {
     'entity'    => opts[:entity] || 'foo-app-01',
     'check'     => opts[:check]  || 'HTTP',
+    'tags'      => opts[:tags]   || [],
     'type'      => 'service'
   }
   failure  = event.merge('state' => state, 'summary' => 'Simulated check output (test by operator)')
@@ -106,6 +107,10 @@ optparse = OptionParser.new do |opts|
     options.state = s
   end
 
+  opts.on("-T", "--tags TAGS", Array, "optional list of TAGS to include as part of the event") do |t|
+    options.tags = t
+  end
+
 end
 optparse.parse!(ARGV)
 
@@ -132,7 +137,7 @@ end
 
 options = {:redis_options => redis_options, :minutes => options.minutes,
            :entity => options.entity, :check => options.check, :state => options.state,
-           :interval => options.interval}
+           :interval => options.interval, :tags => options.tags}
 case ARGV[0]
 when "fail-and-recover"
   fail(options.merge(:recover => true))
