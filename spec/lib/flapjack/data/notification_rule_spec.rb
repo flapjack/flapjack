@@ -76,11 +76,10 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
     expect {
       expect {
-        rule_data[:warning_blackhole] = true
-        errors = rule.update(rule_data)
+        errors = rule.update(:warning_blackhole => true)
         expect(errors).to be_nil
       }.to change { rule.warning_blackhole }.from(false).to(true)
-    }.not_to change { rule.warning_media }
+    }.not_to change { rule.contact_id }
   end
 
   it "converts time restriction data to an IceCube schedule" do

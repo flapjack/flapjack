@@ -180,7 +180,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(duration_curr).to eq(half_an_hour)
     end
 
-    it "ends an unscheduled maintenance period" do
+    it "ends an unscheduled maintenance period", :time => true do
       t = Time.now.to_i
       later_t = t + (15 * 60)
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
