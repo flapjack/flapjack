@@ -16,7 +16,7 @@
   <head>
     <title><%= h include_page_title %></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="shortcut icon" href="/img/flapjack-favicon-64-32-24-16.ico"> <!-- thank you http://xiconeditor.com/ -->
+    <link rel="shortcut icon" href="<%= base_url %>img/flapjack-favicon-64-32-24-16.ico"> <!-- thank you http://xiconeditor.com/ -->
     <%= include_required_css %>
     <%= include_required_js %>
   </head>
@@ -24,8 +24,8 @@
     <nav class="navbar navbar-default navbar-inverse" role="navigation">
 
       <div class="navbar-header">
-        <a class="navbar-brand" title="Summary" href="/">
-          <img alt="Flapjack" class="logo" src="/img/flapjack-2013-notext-transparent-300-300.png">
+        <a class="navbar-brand" title="Summary" href="<%= base_url %>">
+          <img alt="Flapjack" class="logo" src="<%= base_url %>img/flapjack-2013-notext-transparent-300-300.png">
         </a>
       </div>
 
@@ -33,37 +33,37 @@
 
         <ul class="nav navbar-nav">
           <li<%= include_active?('') %>>
-            <a title="Summary" href="/">
+            <a title="Summary" href="<%= base_url %>">
               <i class="fa fa-trophy fa-lg"></i>
               Summary
             </a>
           </li>
           <li<%= include_active?('entities_all') %>>
-            <a title="All Entities" href="/entities_all">
+            <a title="All Entities" href="<%= base_url %>entities_all">
               <i class="fa fa-bullseye fa-lg"></i>
               All Entities
             </a>
           </li>
           <li<%= include_active?('entities_failing') %>>
-            <a title="Failing Entities" href="/entities_failing">
+            <a title="Failing Entities" href="<%= base_url %>entities_failing">
               <i class="fa fa-bullhorn fa-lg"></i>
               Failing Entities
             </a>
           </li>
           <li<%= include_active?('checks_all') %>>
-            <a title="All Checks" href="/checks_all">
+            <a title="All Checks" href="<%= base_url %>checks_all">
               <i class="fa fa-check-circle-o fa-lg"></i>
               All Checks
             </a>
           </li>
           <li<%= include_active?('checks_failing') %>>
-            <a title="Failing Checks" href="/checks_failing">
+            <a title="Failing Checks" href="<%= base_url %>checks_failing">
               <i class="fa fa-times-circle-o fa-lg"></i>
               Failing Checks
             </a>
           </li>
           <li<%= include_active?('contacts') %>>
-            <a title="Contacts" href="/contacts">
+            <a title="Contacts" href="<%= base_url %>contacts">
               <i class="fa fa-users fa-lg"></i>
               Contacts
             </a>
@@ -72,7 +72,7 @@
 
         <ul class="nav navbar-nav navbar-right">
           <li<%= include_active?('self_stats') %>>
-            <a title="Internal Statistics" href="/self_stats">
+            <a title="Internal Statistics" href="<%= base_url %>self_stats">
               <i class="fa fa-tachometer fa-lg"></i>
               Internal Statistics
             </a>
