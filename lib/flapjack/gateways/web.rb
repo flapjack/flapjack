@@ -72,6 +72,8 @@ module Flapjack
 
       include Flapjack::Utility
 
+      set :protection, :except => :path_traversal
+
       set :views, settings.root + '/web/views'
       set :public_folder, settings.root + '/web/public'
 
