@@ -81,9 +81,9 @@
           <td>
             <% checks.each do |entity_check| %>
               <% entity, check = entity_check.split(':', 2) %>
-              <% check_link = "<a href=\"#{u(base_url)}check?entity=#{u(entity)}&amp;check=#{u(check)}\" title=\"check status\">" +
+              <% check_link = "<a href=\"#{u(@base_url)}check?entity=#{u(entity)}&amp;check=#{u(check)}\" title=\"check status\">" +
                  h(check) + "</a>"%>
-              <a href="<%= base_url %>entity/<%= u(entity) %>" title="entity status"><%= h entity %></a> ::
+              <a href="<%= @base_url %>entity/<%= u(entity) %>" title="entity status"><%= h entity %></a> ::
               <%= check_link %> <br />
             <% end %>
           </td>
@@ -144,10 +144,10 @@
         checks = ec[:checks]
        %>
       <tr>
-        <td><a href="<%= base_url %>entity/<%= u(entity.name) %>" title="entity status"><%= h entity.name %></a></td>
+        <td><a href="<%= @base_url %>entity/<%= u(entity.name) %>" title="entity status"><%= h entity.name %></a></td>
         <td>
           <% checks.each do |check| %>
-          <%= "<a href=\"#{u(base_url)}check?entity=#{u(entity.name)}&amp;check=#{u(check)}\" title=\"check status\">#{ h check }</a>" %>
+          <%= "<a href=\"#{u(@base_url)}check?entity=#{u(entity.name)}&amp;check=#{u(check)}\" title=\"check status\">#{ h check }</a>" %>
           <% end %>
         </td>
       </tr>

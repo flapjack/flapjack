@@ -108,12 +108,9 @@ module Flapjack
         self.class.instance_variable_get('@logger')
       end
 
-      def api_url
-        self.class.instance_variable_get('@api_url')
-      end
-
-      def base_url
-        self.class.instance_variable_get('@base_url')
+      before do
+        @api_url  = self.class.instance_variable_get('@api_url')
+        @base_url = self.class.instance_variable_get('@base_url')
       end
 
       get '/' do
@@ -326,7 +323,6 @@ module Flapjack
       end
 
       get '/edit_contacts' do
-        @api_url = api_url
         erb 'edit_contacts.html'.to_sym
       end
 
@@ -402,7 +398,6 @@ module Flapjack
       def self_stats
         @fqdn    = `/bin/hostname -f`.chomp
         @pid     = Process.pid
-        @api_url = api_url
 
         @dbsize              = redis.dbsize
         @executive_instances = redis.keys("executive_instance:*").inject({}) do |memo, i|
@@ -488,7 +483,7 @@ module Flapjack
       def link_to(url_fragment, mode=:path_only)
         case mode
         when :path_only
-          base = base_url
+          base = @base_url
         when :full_url
           if (request.scheme == 'http' && request.port == 80 ||
               request.scheme == 'https' && request.port == 443)
