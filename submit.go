@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"time"
-    "github.com/garyburd/redigo/redis"
+	"github.com/garyburd/redigo/redis"
 	"encoding/json"
 	"flag"
 	"unicode"
@@ -32,7 +32,7 @@ func (e Event) IsValid() (bool, string) {
 func submit(conn redis.Conn, event *Event) (interface{}) {
 	valid, err := event.IsValid()
 	if valid {
-	    data, _ := json.Marshal(event)
+		data, _ := json.Marshal(event)
 		reply, err := conn.Do("LPUSH", "events", data)
 		if err != nil {
 			log.Println(reply)
@@ -57,7 +57,7 @@ func main() {
 	debug    := flag.Bool("v", false, "Turn on debugging messages")
 	address  := flag.String("a", "localhost:6380", "Redis instance to connect to")
 	database := flag.Int("d", 0, "Redis database to connect to")
-    flag.Parse()
+	flag.Parse()
 
 	if *debug {
 		fmt.Println("entity:", *entity)
@@ -82,7 +82,7 @@ func main() {
 	conn.Do("SELECT", *database) // Switch database
 
 	event := &Event{
-       	Entity: 	*entity,
+		Entity: 	*entity,
 		Check: 		*check,
 		Type:		"service",
 		State:		*state,
