@@ -21,7 +21,7 @@
   <tbody>
     <% @entities_sorted.each do |entity| %>
       <% row_entity = nil %>
-      <% entity_link = @base_url + "entity/" << u(entity) %>
+      <% entity_link = u(@base_url) + "entity/" << u(entity) %>
       <% @states[entity].each do |check, status, summary, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified| %>
         <%
           row_colour = case status
@@ -33,7 +33,7 @@
             status
           end
 
-          check_link = @base_url +  "check?entity=" << u(entity) << "&amp;check=" << u(check)
+          check_link = u(@base_url) + "check?entity=" << u(entity) << "&amp;check=" << u(check)
         %>
         <tr class="<%= row_colour %>">
         <% unless row_entity && entity == row_entity %>

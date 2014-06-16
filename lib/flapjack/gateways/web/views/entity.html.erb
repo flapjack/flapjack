@@ -28,7 +28,7 @@
           status
         end
 
-        check_link = @base_url + "check?entity=" << u(@entity) << "&amp;check=" << u(check)
+        check_link = u(@base_url) + "check?entity=" << u(@entity) << "&amp;check=" << u(check)
 
       %>
       <tr class="<%= row_colour %>">
