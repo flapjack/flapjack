@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+
+# add lib to the default include path
+unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+  $: << File.dirname(__FILE__) + '/../lib'
+end
+
+require 'flapjack/app'
