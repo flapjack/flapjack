@@ -155,7 +155,7 @@ module Flapjack
 
     class HTTP < Flapjack::Pikelet::Base
 
-      TYPES = ['web', 'api']
+      TYPES = ['web', 'jsonapi']
 
       def start
         @pikelet_class.instance_variable_set('@config', @config)

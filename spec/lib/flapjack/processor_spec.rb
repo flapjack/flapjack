@@ -64,8 +64,6 @@ describe Flapjack::Processor, :logger => true do
     event = double(Flapjack::Data::Event)
 
     expect(redis).to receive(:rpoplpush).with('events', /^events_archive:/).twice.and_return(event_json, nil)
-    # expect(redis).to receive(:multi)
-    # expect(redis).to receive(:exec)
     expect(redis).to receive(:expire).with(/^events_archive:/, kind_of(Integer))
 
     expect(Flapjack::Data::Event).to receive(:parse_and_validate).

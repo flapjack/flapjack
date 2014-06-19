@@ -6,7 +6,7 @@
 
 <p><%= h @count_failing_entities %> failing out of <%= h @count_all_entities %></p>
 
-<% if @entities.length > 0 %>
+<% if @entity_names.length > 0 %>
 <table class="table table-bordered table-hover table-condensed tablesorter">
   <thead>
     <tr>
@@ -14,9 +14,9 @@
     </tr>
   </thead>
   <tbody>
-    <% @entities.sort.each do |entity| %>
+    <% @entity_names.sort.each do |entity_name| %>
       <tr>
-        <td><a href="/entity/<%= CGI.escape(entity) %>"><%= h entity %></a>
+        <td><a href="/entity/<%= CGI.escape(entity_name) %>"><%= h entity_name %></a>
         </td>
       </tr>
     <% end %>

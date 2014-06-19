@@ -1,7 +1,7 @@
-<% page_title "#{h(@entity)} (entity)" %>
+<% page_title "#{h(@entity_name)} (entity)" %>
 
 <div class="page-header">
-  <h2><%= h @entity %></h2>
+  <h2><%= h @entity_name %></h2>
 </div>
 <% if @states.empty? %>
   <div>
@@ -28,7 +28,7 @@
           status
         end
 
-        check_link = "/check?entity=" << u(@entity) << "&amp;check=" << u(check)
+        check_link = "/check?entity=" << u(@entity_name) << "&amp;check=" << u(check)
 
       %>
       <tr class="<%= row_colour %>">

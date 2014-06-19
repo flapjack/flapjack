@@ -17,7 +17,7 @@ module Flapjack
 
   class Coordinator
 
-    # states: :starting, :running, :reloading, :stopping, :stopped
+    # states: :starting, :running, :reloading, :stopped
 
     def initialize(config)
       Thread.abort_on_exception = true
@@ -52,39 +52,45 @@ module Flapjack
     end
 
     def start(opts = {})
-      @boot_time = Time.now
+      # we can't block on the main thread, as signals interrupt that
+      Thread.new do
 
-      Flapjack::RedisProxy.config = @config.for_redis
+        @boot_time = Time.now
 
-      pikelet_defs = pikelet_definitions(@config.all)
-      return if pikelet_defs.empty?
+        Flapjack::RedisProxy.config = @config.for_redis
 
-      create_pikelets(pikelet_defs).each do |pik|
-        @pikelets << pik
-      end
+        pikelet_defs = pikelet_definitions(@config.all)
+        return if pikelet_defs.empty?
 
-      @pikelets.each do |pik|
-        pik.start
-      end
-
-      setup_signals if opts[:signals]
-
-      # block this thread until 'stop' has been called, and
-      # all pikelets have been stopped
-      @monitor.synchronize {
-        @monitor_cond.wait_until { !(:running.eql?(@state)) }
-        case @state
-        when :reloading
-          reload
-          @state = :running
-          @monitor_cond.signal
-        when :stopping
-          @pikelets.map(&:stop)
-          @pikelets.clear
-          @state = :stopped
-          @monitor_cond.signal
+        create_pikelets(pikelet_defs).each do |pik|
+          @pikelets << pik
         end
-      }
+
+        @pikelets.each do |pik|
+          pik.start
+        end
+
+        setup_signals if opts[:signals]
+
+        # block this thread until 'stop' has been called, and
+        # all pikelets have been stopped
+        @monitor.synchronize {
+          @state = :running
+          @monitor_cond.wait_until { !(:running.eql?(@state)) }
+          case @state
+          when :reloading
+            reload
+            @state = :running
+            @monitor_cond.signal
+          when :stopping
+            @pikelets.map(&:stop)
+            @pikelets.clear
+            @state = :stopped
+            @monitor_cond.signal
+          end
+        }
+
+      end.join
 
       @exit_value
     end

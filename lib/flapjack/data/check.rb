@@ -229,6 +229,7 @@ module Flapjack
           :summary => self.summary,
           :details => self.details,
           :count => self.count)
+
         check_state.save
         self.states << check_state
       end
@@ -272,7 +273,7 @@ module Flapjack
         }
         return if current_sched_ms.empty?
         # if multiple scheduled maintenances found, find the end_time furthest in the future
-        current_sched_ms.max {|sm| sm.end_time }
+        current_sched_ms.max_by(&:end_time)
       end
 
       def unscheduled_maintenance_at(at_time)
@@ -281,7 +282,7 @@ module Flapjack
         }
         return if current_unsched_ms.empty?
         # if multiple unscheduled maintenances found, find the end_time furthest in the future
-        current_unsched_ms.max {|um| um.end_time }
+        current_unsched_ms.max_by(&:end_time)
       end
 
       def set_unscheduled_maintenance(unsched_maint)
@@ -315,7 +316,7 @@ module Flapjack
 
         case events.size
         when 2
-          events.max_by {|e| e.last_notification_count }
+          events.max_by(&:last_notification_count)
         when 1
           events.first
         else

@@ -59,6 +59,8 @@ module Flapjack
 
     def start
       begin
+        Sandstorm.redis = Flapjack.redis
+
         loop do
           @lock.synchronize do
             @queue.foreach {|notif| process_notification(notif) }

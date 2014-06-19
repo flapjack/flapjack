@@ -85,6 +85,8 @@ module Flapjack
       end
 
       before do
+        Sandstorm.redis ||= Flapjack.redis
+
         input = nil
         query_string = (request.query_string.respond_to?(:length) &&
                         request.query_string.length > 0) ? "?#{request.query_string}" : ""

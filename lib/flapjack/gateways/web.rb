@@ -18,7 +18,12 @@ module Flapjack
   module Gateways
 
     class Web < Sinatra::Base
+
       set :raise_errors, true
+      set :protection, except: :path_traversal
+
+      set :views, settings.root + '/web/views'
+      set :public_folder, settings.root + '/web/public'
 
       use Rack::MethodOverride
 
@@ -52,9 +57,6 @@ module Flapjack
 
       include Flapjack::Utility
 
-      set :views, settings.root + '/web/views'
-      set :public_folder, settings.root + '/web/public'
-
       helpers do
         def h(text)
           ERB::Util.h(text)
@@ -78,6 +80,10 @@ module Flapjack
 
       def api_url
         self.class.instance_variable_get('@api_url')
+      end
+
+      before do
+        Sandstorm.redis ||= Flapjack.redis
       end
 
       get '/' do
@@ -303,16 +309,22 @@ module Flapjack
 
         check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
           :name => check_name).all.first
+
         return 404 if check.nil?
 
         # TODO better error checking on this param?
-        start_time = params[:start_time].to_i
+        start_time = Time.parse(params[:start_time])
 
-        sched_maint = check.scheduled_maintenances_by_start.
-          intersect_range(start_time, start_time, :by_score => true).first
-        return 404 if sched_maint.nil?
+        # TODO maybe intersect_range should auto-coerce for timestamp fields?
+        # (actually, this should just pass sched maint ID in now that it can)
+        sched_maints = check.scheduled_maintenances_by_start.
+          intersect_range(start_time.to_i, start_time.to_i, :by_score => true).all
 
-        check.end_scheduled_maintenance(sched_maint, Time.now)
+        return 404 if sched_maints.empty?
+
+        sched_maints.each do |sched_maint|
+          check.end_scheduled_maintenance(sched_maint, Time.now)
+        end
         redirect back
       end
 

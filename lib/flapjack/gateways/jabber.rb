@@ -43,6 +43,8 @@ module Flapjack
 
         def start
           begin
+            Sandstorm.redis = Flapjack.redis
+
             loop do
               @lock.synchronize do
                 @queue.foreach {|alert| handle_alert(alert) }
@@ -140,6 +142,8 @@ module Flapjack
         end
 
         def start
+          Sandstorm.redis = Flapjack.redis
+
           @lock.synchronize do
             until @messages.empty? && @should_quit
               while msg = @messages.pop

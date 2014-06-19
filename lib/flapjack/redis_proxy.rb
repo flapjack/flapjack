@@ -12,7 +12,7 @@ module Flapjack
     def redis
       redis_cxn = Thread.current[:flapjack_redis]
       return redis_cxn unless redis_cxn.nil?
-      Sandstorm.redis = Thread.current[:flapjack_redis] = Flapjack::RedisProxy.new
+      Thread.current[:flapjack_redis] = Flapjack::RedisProxy.new
     end
   end
 

@@ -89,7 +89,7 @@ when "import-contacts"
 
   if contacts && contacts.is_a?(Enumerable) && contacts.any? {|e| !e['id'].nil?}
     Flapjack::RedisProxy.config = redis_options
-    Flapjack.redis # ensure proxy is initialised for sandstorm
+    Sandstorm.redis = Flapjack.redis
 
     contacts.each do |contact_data|
       unless contact_data['id']
@@ -130,7 +130,7 @@ when "import-entities"
 
   if entities && entities.is_a?(Enumerable) && entities.any? {|e| !e['id'].nil?}
     Flapjack::RedisProxy.config = redis_options
-    Flapjack.redis # ensure proxy is initialised for sandstorm
+    Sandstorm.redis = Flapjack.redis
 
     entities.each do |entity_data|
       unless entity_data['id']

@@ -110,6 +110,7 @@ RSpec.configure do |config|
 
   config.around(:each, :redis => true) do |example|
     Flapjack::RedisProxy.config = $redis_options
+    Sandstorm.redis = Flapjack.redis
     Flapjack.redis.flushdb
     example.run
     Flapjack.redis.quit

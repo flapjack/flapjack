@@ -42,7 +42,7 @@ module Flapjack
       ncsm_duration_conf = @config['new_check_scheduled_maintenance_duration'] || '100 years'
       @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf, :keep_zero => true)
 
-      @exit_on_queue_empty = !! @config['exit_on_queue_empty']
+      @exit_on_queue_empty = !!@config['exit_on_queue_empty']
 
       filter_opts = {:logger => opts[:logger]}
 
@@ -70,6 +70,8 @@ module Flapjack
       @logger.info("Booting main loop.")
 
       begin
+        Sandstorm.redis = Flapjack.redis
+
         # FIXME: add an administrative function to reset all event counters
 
         counter_types = ['all', 'ok', 'failure', 'action', 'invalid']
@@ -100,7 +102,7 @@ module Flapjack
             end
           end
 
-          raise Flapjack::GlobalStop if @config['exit_on_queue_empty']
+          raise Flapjack::GlobalStop if @exit_on_queue_empty
 
           wait_for_queue(queue)
         end

@@ -266,14 +266,14 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       with(:entity_name => entity_name_esc, :name => 'ping').and_return(all_checks)
 
     sched_maint = double(Flapjack::Data::ScheduledMaintenance)
-    first_sched_maint = double('first_sched_maint', :first => sched_maint)
+    all_sched_maints = double('all_sched_maints', :all => [sched_maint])
     sched_maints = double('sched_maints')
     expect(sched_maints).to receive(:intersect_range).with(start_time, start_time,
-      :by_score => true).and_return(first_sched_maint)
+      :by_score => true).and_return(all_sched_maints)
     expect(check).to receive(:scheduled_maintenances_by_start).and_return(sched_maints)
     expect(check).to receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Time))
 
-    delete "/scheduled_maintenances/#{entity_name_esc}/ping?start_time=#{start_time}"
+    delete "/scheduled_maintenances/#{entity_name_esc}/ping?start_time=#{Time.at(start_time).iso8601}"
     expect(last_response.status).to eq(302)
   end
 

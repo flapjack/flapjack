@@ -60,6 +60,8 @@ module Flapjack
         @logger.debug("new email gateway pikelet with the following options: #{@config.inspect}")
 
         begin
+          Sandstorm.redis = Flapjack.redis
+
           loop do
             @lock.synchronize do
               @queue.foreach {|alert| handle_alert(alert) }

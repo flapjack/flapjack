@@ -22,10 +22,10 @@ module Flapjack
     def for_redis
       return unless @config_env
 
-      redis_defaults = {'host' => 'localhost',
-                        'port' => 6379,
-                        'path' => nil,
-                        'db'   => 0}
+      redis_defaults = {'host'   => '127.0.0.1',
+                        'port'   => 6379,
+                        'path'   => nil,
+                        'db'     => 0}
 
       @config_env['redis'] = {} unless @config_env.has_key?('redis')
 
