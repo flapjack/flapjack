@@ -67,10 +67,21 @@ module Flapjack
             @logger.error "api_url is not configured, parts of the web interface will be broken"
           end
 
+          @base_url = @config['base_url']
+          if @base_url
+            @base_url = $1 if @base_url.match(/^(.+\/)$/)
+          else
+	          dummy_url = "/"
+            @logger.error "base_url must contain trailing '/', setting it to safe default (#{dummy_url})"
+            @base_url = dummy_url
+          end
+
         end
       end
 
       include Flapjack::Utility
+
+      set :protection, :except => :path_traversal
 
       set :views, settings.root + '/web/views'
       set :public_folder, settings.root + '/web/public'
@@ -97,8 +108,9 @@ module Flapjack
         self.class.instance_variable_get('@logger')
       end
 
-      def api_url
-        self.class.instance_variable_get('@api_url')
+      before do
+        @api_url  = self.class.instance_variable_get('@api_url')
+        @base_url = self.class.instance_variable_get('@base_url')
       end
 
       get '/' do
@@ -311,7 +323,6 @@ module Flapjack
       end
 
       get '/edit_contacts' do
-        @api_url = api_url
         erb 'edit_contacts.html'.to_sym
       end
 
@@ -387,7 +398,6 @@ module Flapjack
       def self_stats
         @fqdn    = `/bin/hostname -f`.chomp
         @pid     = Process.pid
-        @api_url = api_url
 
         @dbsize              = redis.dbsize
         @executive_instances = redis.keys("executive_instance:*").inject({}) do |memo, i|
@@ -452,7 +462,7 @@ module Flapjack
       def include_required_js
         if @required_js
           @required_js.map { |filename|
-            "<script type='text/javascript' src='#{link_to("/js/#{filename}.js")}'></script>"
+            "<script type='text/javascript' src='#{link_to("js/#{filename}.js")}'></script>"
           }.join("\n    ")
         else
           ""
@@ -462,7 +472,7 @@ module Flapjack
       def include_required_css
         if @required_css
           @required_css.map { |filename|
-            %(<link rel="stylesheet" href="#{link_to("/css/#{filename}.css")}" media="screen">)
+            %(<link rel="stylesheet" href="#{link_to("css/#{filename}.css")}" media="screen">)
           }.join("\n    ")
         else
           ""
@@ -473,7 +483,7 @@ module Flapjack
       def link_to(url_fragment, mode=:path_only)
         case mode
         when :path_only
-          base = request.script_name
+          base = @base_url
         when :full_url
           if (request.scheme == 'http' && request.port == 80 ||
               request.scheme == 'https' && request.port == 443)

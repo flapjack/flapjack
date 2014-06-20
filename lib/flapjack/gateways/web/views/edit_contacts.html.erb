@@ -36,7 +36,7 @@
     <h4 class="modal-title" id="contactModalLabel"><@- is_new ? 'New' : 'Edit' @> Contact</h4>
   </div>
   <div class="modal-body">
-    <form action="/contacts" method="post" role="form" class="form-horizontal">
+    <form action="<%= @base_url %>contacts" method="post" role="form" class="form-horizontal">
 
       <div id="contactDetails">
         <div class="form-group">
