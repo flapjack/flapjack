@@ -1,51 +1,16 @@
 package main
 
 import (
-	"log"
-	"fmt"
 	"os"
+	"fmt"
+	"log"
 	"time"
-	"github.com/garyburd/redigo/redis"
-	"encoding/json"
 	"flag"
 	"unicode"
 	"strings"
+	"flapjack"
+	"github.com/garyburd/redigo/redis"
 )
-
-type Event struct {
-	Entity	string `json:"entity"`
-	Check	string `json:"check"`
-	Type	string `json:"type"`
-	State	string `json:"state"`
-	Summary	string `json:"summary"`
-	Time	int64  `json:"time"`
-}
-
-func (e Event) IsValid() (bool, string) {
-	if len(e.Entity)  == 0 { return false, "No entity" }
-	if len(e.Check)   == 0 { return false, "No check" }
-	if len(e.State)   == 0 { return false, "No state" }
-	if len(e.Summary) == 0 { return false, "No summary" }
-	return true, "ok"
-}
-
-func submit(conn redis.Conn, event *Event) (interface{}) {
-	valid, err := event.IsValid()
-	if valid {
-		data, _ := json.Marshal(event)
-		reply, err := conn.Do("LPUSH", "events", data)
-		if err != nil {
-			log.Println(reply)
-			log.Println(err)
-			os.Exit(2)
-		}
-
-		return reply
-	} else {
-		log.Println("Error: Invalid event:", err)
-		return false
-	}
-}
 
 func main() {
 
@@ -81,7 +46,7 @@ func main() {
 	}
 	conn.Do("SELECT", *database) // Switch database
 
-	event := &Event{
+	event := &flapjack.Event{
 		Entity: 	*entity,
 		Check: 		*check,
 		Type:		"service",
@@ -89,7 +54,7 @@ func main() {
 		Summary:	*summary,
 		Time:		time.Now().Unix(),
 	}
-	submit(conn, event) // Submit first event
+	event.Submit(conn) // Submit first event
 
 	// Determine the interval to submit events
 	i := *interval
@@ -101,7 +66,7 @@ func main() {
 	if _interval > 0 {
 		// Loop, submit, delay by interval
 		for {
-			reply := submit(conn, event)
+			reply := event.Submit(conn)
 			if *debug {
 				log.Println("Queue length", reply)
 				log.Println("Sleeping for", _interval)
