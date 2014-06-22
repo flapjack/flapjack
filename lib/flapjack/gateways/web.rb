@@ -76,6 +76,23 @@ module Flapjack
             @base_url = dummy_url
           end
 
+          logo_image_path = @config['logo_image_path']
+          if logo_image_path
+            if !File.file?(logo_image_path)
+              @logger.error "logo_image_path does not point to a valid file."
+              @logo_image_url = nil
+            else  
+              target_folder = File.join(settings.root, '/web/public/img/custom/')
+              logo_image_filename = File.basename(logo_image_path)
+              FileUtils.mkdir_p target_folder   
+              FileUtils.cp logo_image_path, target_folder
+                        
+              @logo_image_url = "#{@base_url}img/custom/#{logo_image_filename}"
+            end
+          end   
+          # SMELL Hard coded reference to default logo image
+          @logo_image_url = "#{@base_url}img/flapjack-2013-notext-transparent-300-300.png" unless @logo_image_url
+
         end
       end
 
@@ -111,6 +128,7 @@ module Flapjack
       before do
         @api_url  = self.class.instance_variable_get('@api_url')
         @base_url = self.class.instance_variable_get('@base_url')
+        @logo_image_url = self.class.instance_variable_get('@logo_image_url')
       end
 
       get '/' do
