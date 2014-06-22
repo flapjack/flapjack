@@ -38,6 +38,41 @@ describe Flapjack::Gateways::Email, :logger => true do
     Flapjack::Gateways::Email.perform(notification)
   end
 
+  it "can have a full name in custom from email address" do
+    email = double('email')
+    redis = double('redis')
+
+    expect(EM::P::SmtpClient).to receive(:send).with(
+      hash_including(host: 'localhost',
+                     port: 25,
+                     from: "Full Name <from@example.org>")
+    ).and_return(email)
+
+    response = double(response)
+    expect(response).to receive(:"respond_to?").with(:code).and_return(true)
+    expect(response).to receive(:code).and_return(250)
+
+    expect(EM::Synchrony).to receive(:sync).with(email).and_return(response)
+
+    notification = {'notification_type'   => 'recovery',
+                    'contact_first_name'  => 'John',
+                    'contact_last_name'   => 'Smith',
+                    'state'               => 'ok',
+                    'state_duration'      => 2,
+                    'summary'             => 'smile',
+                    'last_state'          => 'problem',
+                    'last_summary'        => 'frown',
+                    'time'                => Time.now.to_i,
+                    'event_id'            => 'example.com:ping'}
+
+    config = {"smtp_config" => {'from' => 'Full Name <from@example.org>'}}
+    Flapjack::Gateways::Email.instance_variable_set('@config', config)
+    Flapjack::Gateways::Email.instance_variable_set('@redis', redis)
+    Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
+    Flapjack::Gateways::Email.start
+    Flapjack::Gateways::Email.perform(notification)
+  end
+
   it "sends a mail with text, html parts and default from address" do
     email = double('email')
 
