@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"flapjack"
 	"encoding/json"
+	"gopkg.in/alecthomas/kingpin.v1"
 )
 
 // handler caches
@@ -43,7 +44,7 @@ func handler(newState chan flapjack.Event, w http.ResponseWriter, r *http.Reques
 	newState <- state
 
 	json, _ := json.Marshal(state)
-	fmt.Printf("Caching event: %s\n", json)
+	log.Printf("Caching event: %s\n", json)
 	fmt.Fprintf(w, "Caching event: %s\n", json)
 }
 
@@ -58,15 +59,15 @@ func cacheState(newState chan flapjack.Event, state map[string]flapjack.Event) {
 }
 
 // submitCachedState periodically samples the cached state, sends it to Flapjack.
-func submitCachedState(states map[string]flapjack.Event) {
-	transport, err := flapjack.Dial("localhost:6379", 13)
+func submitCachedState(states map[string]flapjack.Event, config Config) {
+	transport, err := flapjack.Dial(config.Server, config.Database)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
 		os.Exit(1)
 	}
 
 	for {
-		fmt.Printf("Number of cached states: %d\n", len(states))
+		log.Printf("Number of cached states: %d\n", len(states))
 		for id, state := range(states) {
 			event := flapjack.Event{
 				Entity:  state.Entity,
@@ -76,20 +77,48 @@ func submitCachedState(states map[string]flapjack.Event) {
 				Summary: state.Summary,
 				Time:    time.Now().Unix(),
 			}
-
-			fmt.Printf("%s : %+v\n", id, event)
+			if config.Debug {
+				log.Printf("Sending event data for %s\n", id)
+			}
 			transport.Send(event)
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(config.Interval)
 	}
 }
 
+var (
+	server		= kingpin.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
+	database	= kingpin.Flag("database", "Redis database to connect to (default 0)").Int() // .Default("13").Int()
+	interval	= kingpin.Flag("interval", "How often to submit events (default 10s)").Default("10s").Duration()
+	debug		= kingpin.Flag("debug", "Enable verbose output (default false)").Bool()
+)
+
+type Config struct {
+	Server		string
+	Database	int
+	Interval	time.Duration
+	Debug		bool
+}
+
 func main() {
+	kingpin.Version("0.0.1")
+	kingpin.Parse()
+
+	config := Config{
+		Server: 	*server,
+		Database: 	*database,
+		Interval: 	*interval,
+		Debug:		*debug,
+	}
+	if config.Debug {
+		log.Printf("Booting with config: %+v\n", config)
+	}
+
 	newState := make(chan flapjack.Event)
 	state := map[string]flapjack.Event{}
 
 	go cacheState(newState, state)
-	go submitCachedState(state)
+	go submitCachedState(state, config)
 
 	http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
 		handler(newState, w, r)
