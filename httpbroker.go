@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 )
 
+// handler caches
 func handler(newState chan flapjack.Event, w http.ResponseWriter, r *http.Request) {
 	var state flapjack.Event
 
@@ -30,17 +31,25 @@ func handler(newState chan flapjack.Event, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	fmt.Printf("Caching event: %+v\n", state)
-
 	// Populate a time if none has been set.
 	if state.Time == 0 {
 		state.Time = time.Now().Unix()
 	}
 
+	if len(state.Type) == 0 {
+		state.Type = "service"
+	}
+
 	newState <- state
-	fmt.Fprintf(w, "Caching event\n")
+
+	json, _ := json.Marshal(state)
+	fmt.Printf("Caching event: %s\n", json)
+	fmt.Fprintf(w, "Caching event: %s\n", json)
 }
 
+// cacheState stores a cache of event state to be sent to Flapjack.
+// The event state is queried later when submitting events periodically
+// to Flapjack.
 func cacheState(newState chan flapjack.Event, state map[string]flapjack.Event) {
 	for ns := range newState {
 		key := ns.Entity + ":" + ns.Check
@@ -48,6 +57,7 @@ func cacheState(newState chan flapjack.Event, state map[string]flapjack.Event) {
 	}
 }
 
+// submitCachedState periodically samples the cached state, sends it to Flapjack.
 func submitCachedState(states map[string]flapjack.Event) {
 	transport, err := flapjack.Dial("localhost:6379", 13)
 	if err != nil {
@@ -61,7 +71,7 @@ func submitCachedState(states map[string]flapjack.Event) {
 			event := flapjack.Event{
 				Entity:  state.Entity,
 				Check:   state.Check,
-				Type:    "service",
+				Type:    state.Type,
 				State:   state.State,
 				Summary: state.Summary,
 				Time:    time.Now().Unix(),
