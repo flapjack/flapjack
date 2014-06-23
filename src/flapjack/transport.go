@@ -5,13 +5,14 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
+// Transport is a representation of a Redis connection.
 type Transport struct {
 	Address		string
 	Database	int
 	Connection	redis.Conn
 }
 
-// Dial a connection to Redis.
+// Dial establishes a connection to Redis, wrapped in a Transport.
 func Dial(address string, database int) (Transport,error) {
 	// Connect to Redis
 	conn, err := redis.Dial("tcp", address)
@@ -30,7 +31,7 @@ func Dial(address string, database int) (Transport,error) {
 	return transport, nil
 }
 
-// Provide a simple interface for sending events over a transport.
+// Send takes an event and sends it over a transport.
 func (t Transport) Send(event Event) (interface{}) {
 	valid, err := event.IsValid()
 	if valid {

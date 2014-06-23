@@ -29,3 +29,4 @@ _site/*
 .ruby-version
 .rvmrc
 artifacts/*
+submit
