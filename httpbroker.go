@@ -87,6 +87,7 @@ func submitCachedState(states map[string]flapjack.Event, config Config) {
 }
 
 var (
+	port		= kingpin.Flag("port", "Address to bind HTTP server (default 3090)").Default("3090").String()
 	server		= kingpin.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
 	database	= kingpin.Flag("database", "Redis database to connect to (default 0)").Int() // .Default("13").Int()
 	interval	= kingpin.Flag("interval", "How often to submit events (default 10s)").Default("10s").Duration()
@@ -94,6 +95,7 @@ var (
 )
 
 type Config struct {
+	Port		string
 	Server		string
 	Database	int
 	Interval	time.Duration
@@ -109,6 +111,7 @@ func main() {
 		Database: 	*database,
 		Interval: 	*interval,
 		Debug:		*debug,
+		Port: 		":" + *port,
 	}
 	if config.Debug {
 		log.Printf("Booting with config: %+v\n", config)
@@ -123,5 +126,5 @@ func main() {
 	http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
 		handler(newState, w, r)
 	})
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(config.Port, nil)
 }
