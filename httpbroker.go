@@ -2,13 +2,12 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"log"
+	"os"
 	"io/ioutil"
 	"time"
 	"net/http"
 	"flapjack"
-	"github.com/garyburd/redigo/redis"
 	"encoding/json"
 )
 
@@ -50,37 +49,28 @@ func cacheState(newState chan flapjack.Event, state map[string]flapjack.Event) {
 }
 
 func submitCachedState(states map[string]flapjack.Event) {
-	address  := "localhost:6379"
-	database := 13
-
-	conn, err := redis.Dial("tcp", address) // Connect to Redis
+	transport, err := flapjack.Dial("localhost:6379", 13)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
 		os.Exit(1)
 	}
-	conn.Do("SELECT", database) // Switch database
-
-	interval := 1 * time.Second
 
 	for {
 		fmt.Printf("Number of cached states: %d\n", len(states))
-
-		for id, state := range (states) {
-			fmt.Printf("%s : %+v\n", id, state)
-
-			event := &flapjack.Event{
+		for id, state := range(states) {
+			event := flapjack.Event{
 				Entity:  state.Entity,
 				Check:   state.Check,
 				Type:    "service",
 				State:   state.State,
 				Summary: state.Summary,
-				Time:    state.Time,
+				Time:    time.Now().Unix(),
 			}
 
-			event.Submit(conn)
+			fmt.Printf("%s : %+v\n", id, event)
+			transport.Send(event)
 		}
-
-		time.Sleep(interval)
+		time.Sleep(1 * time.Second)
 	}
 }
 
