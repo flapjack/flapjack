@@ -15,6 +15,7 @@ type Event struct {
 
 // IsValid performs basic validations on the event data.
 func (e Event) IsValid() (error) {
+	// FIXME(auxesis): provide validation errors for each failure
 	if len(e.Entity)  == 0 { return errors.New("no entity") }
 	if len(e.Check)   == 0 { return errors.New("no check") }
 	if len(e.State)   == 0 { return errors.New("no state") }
