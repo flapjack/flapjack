@@ -66,14 +66,15 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     before(:each) do
       expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
-      Flapjack::Gateways::Web.instance_variable_set('@logger', @logger) 
+      Flapjack::Gateways::Web.instance_variable_set('@logger', @logger)
     end
 
     it "displays a custom logo if configured" do
-      # NOTE Reuse image in current public img folder. Creates a dependency between this test and the 
-      public_image_folder = "../../../../../lib/flapjack/gateways/web/public/img/"
-      image_path = File.expand_path(File.join(public_image_folder, "flapjack-transparent-350-400.png"), __FILE__)
+      image_path = '/tmp/branding.png'
       config = {"logo_image_path" => image_path}
+
+      allow(File).to receive(:file?).and_call_original
+      allow(File).to receive(:file?).with(image_path) { true }
 
       Flapjack::Gateways::Web.instance_variable_set('@config', config)
       Flapjack::Gateways::Web.start
@@ -83,35 +84,30 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect_check_stats
       expect_entity_stats
 
-      logo_image_tag = '<img alt="Flapjack" class="logo" src="/img/custom/flapjack-transparent-350-400.png">'
-                        
-      aget '/self_stats'
-      
-      expect( last_response.body ).to include(logo_image_tag)
+      logo_image_tag = '<img alt="Flapjack" class="logo" src="/img/branding.png">'
 
-      # Clean up /public/img/custom folder
-      FileUtils.rm_rf(File.expand_path(File.join(public_image_folder, "custom"), __FILE__))
+      aget '/self_stats'
+
+      expect( last_response.body ).to include(logo_image_tag)
     end
 
-    # SMELL Commented out, though this works in isolation. For some reason when @config is set in the 
-    #       test above, it sticks - even though the call to Web.start should reset everything
-    # it "displays the standard logo if no custom logo configured" do
-    #   Flapjack::Gateways::Web.instance_variable_set('@config', {})
-    #   Flapjack::Gateways::Web.start
-    #   # NOTE Reuse enough of the stats specs to be able to build a page quickly
-    #   expect_stats
-    #   expect_check_stats
-    #   expect_entity_stats
+    it "displays the standard logo if no custom logo configured" do
+      Flapjack::Gateways::Web.instance_variable_set('@config', {})
+      Flapjack::Gateways::Web.start
+      # NOTE Reuse enough of the stats specs to be able to build a page quickly
+      expect_stats
+      expect_check_stats
+      expect_entity_stats
 
-    #   logo_image_tag = '<img alt="Flapjack" class="logo" src="/img/flapjack-2013-notext-transparent-300-300.png">'
-                     
-    #   aget '/self_stats'
-      
-    #   expect( last_response.body.to_s ).to include(logo_image_tag)
-    # end 
+      logo_image_tag = '<img alt="Flapjack" class="logo" src="/img/flapjack-2013-notext-transparent-300-300.png">'
+
+      aget '/self_stats'
+
+      expect( last_response.body ).to include(logo_image_tag)
+    end
   end
-  
-  context "Web page behavior" do 
+
+  context "Web page behavior" do
 
     before(:each) do
       expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
@@ -119,8 +115,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       Flapjack::Gateways::Web.instance_variable_set('@logger', @logger)
       Flapjack::Gateways::Web.start
     end
-
-
 
     # TODO add data, test that pages contain representations of it
     # (for the methods that access redis directly)
@@ -303,7 +297,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       aget "/contacts/0362"
       expect(last_response).to be_ok
     end
-  end  
+  end
 
 
 end

@@ -25,7 +25,7 @@
 
       <div class="navbar-header">
         <a class="navbar-brand" title="Summary" href="<%= @base_url %>">
-          <img alt="Flapjack" class="logo" src="<%= @logo_image_url %>">
+          <img alt="Flapjack" class="logo" src="<%= @base_url %><%= @logo_image_file ? "img/branding#{@logo_image_ext}" : @default_logo_url %>">
         </a>
       </div>
 
