@@ -32,18 +32,18 @@ func Dial(address string, database int) (Transport,error) {
 }
 
 // Send takes an event and sends it over a transport.
-func (t Transport) Send(event Event) (interface{}) {
-	valid, err := event.IsValid()
-	if valid {
+func (t Transport) Send(event Event) (interface{}, error) {
+	err := event.IsValid()
+	if err == nil {
 		data, _ := json.Marshal(event)
 		reply, err := t.Connection.Do("LPUSH", "events", data)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		return reply
+		return reply, nil
 	} else {
-		return err
+		return nil, err
 	}
 }
 

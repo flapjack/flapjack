@@ -1,5 +1,7 @@
 package flapjack
 
+import "errors"
+
 // Event is a basic representation of a Flapjack event.
 // Find more at https://github.com/flapjack/flapjack/wiki/DATA_STRUCTURES
 type Event struct {
@@ -12,11 +14,11 @@ type Event struct {
 }
 
 // IsValid performs basic validations on the event data.
-func (e Event) IsValid() (bool, string) {
-	if len(e.Entity)  == 0 { return false, "No entity" }
-	if len(e.Check)   == 0 { return false, "No check" }
-	if len(e.State)   == 0 { return false, "No state" }
-	if len(e.Summary) == 0 { return false, "No summary" }
-	return true, "ok"
+func (e Event) IsValid() (error) {
+	if len(e.Entity)  == 0 { return errors.New("no entity") }
+	if len(e.Check)   == 0 { return errors.New("no check") }
+	if len(e.State)   == 0 { return errors.New("no state") }
+	if len(e.Summary) == 0 { return errors.New("no summary") }
+	return nil
 }
 
