@@ -76,6 +76,19 @@ module Flapjack
             @base_url = dummy_url
           end
 
+          # constants won't be exposed to eRb scope
+          @default_logo_url = "img/flapjack-2013-notext-transparent-300-300.png"
+          @logo_image_file  = nil
+          @logo_image_ext   = nil
+
+          if logo_image_path = @config['logo_image_path']
+            if File.file?(logo_image_path)
+              @logo_image_file = logo_image_path
+              @logo_image_ext  = File.extname(logo_image_path)
+            else
+              @logger.error "logo_image_path '#{logo_image_path}'' does not point to a valid file."
+            end
+          end
         end
       end
 
@@ -109,8 +122,16 @@ module Flapjack
       end
 
       before do
-        @api_url  = self.class.instance_variable_get('@api_url')
-        @base_url = self.class.instance_variable_get('@base_url')
+        @api_url          = self.class.instance_variable_get('@api_url')
+        @base_url         = self.class.instance_variable_get('@base_url')
+        @default_logo_url = self.class.instance_variable_get('@default_logo_url')
+        @logo_image_file  = self.class.instance_variable_get('@logo_image_file')
+        @logo_image_ext   = self.class.instance_variable_get('@logo_image_ext')
+      end
+
+      get '/img/branding.*' do
+        halt(404) unless @logo_image_file && params[:splat].first.eql?(@logo_image_ext[1..-1])
+        send_file(@logo_image_file)
       end
 
       get '/' do
