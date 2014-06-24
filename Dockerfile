@@ -4,4 +4,5 @@ RUN echo deb http://packages.flapjack.io/deb precise main >> /etc/apt/sources.li
 RUN apt-get update
 RUN apt-get install -y --force-yes flapjack
 
-CMD /etc/init.d/redis-flapjack start && /etc/init.d/flapjack start && /bin/bash
+CMD /etc/init.d/redis-flapjack start && /opt/flapjack/bin/flapjack start --no-daemonize
+
