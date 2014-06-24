@@ -4,21 +4,24 @@ import (
 	"os"
 	"fmt"
 	"time"
-	"flag"
 	"strings"
 	"flapjack"
+	"gopkg.in/alecthomas/kingpin.v1"
+)
+
+var (
+	entity 		= kingpin.Arg("entity", "Entity name").Required().String()
+	check 		= kingpin.Arg("check", "Check name").Required().String()
+	state 		= kingpin.Arg("state", "Current state").Required().String()
+	summary 	= kingpin.Arg("summary", "Summary of event").Required().String()
+	debug		= kingpin.Flag("debug", "Enable verbose output (default false)").Bool()
+	server		= kingpin.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
+	database	= kingpin.Flag("database", "Redis database to connect to (default 0)").Int()
 )
 
 func main() {
-
-	entity   := flag.String("e", "", "Entity name")
-	check    := flag.String("c", "", "Check name")
-	state    := flag.String("s", "", "Current state")
-	summary  := flag.String("u", "", "Summary of event")
-	debug    := flag.Bool("v", false, "Turn on debugging messages")
-	address  := flag.String("a", "localhost:6380", "Redis instance to connect to")
-	database := flag.Int("d", 0, "Redis database to connect to")
-	flag.Parse()
+	kingpin.Version("0.0.1")
+	kingpin.Parse()
 
 	if *debug {
 		fmt.Println("entity:", *entity)
@@ -27,16 +30,10 @@ func main() {
 		fmt.Println("summary:", *summary)
 	}
 
-	addr := strings.Split(*address, ":")
+	addr := strings.Split(*server, ":")
 	if len(addr) != 2 {
-		fmt.Println("Error: invalid address specified:", *address)
+		fmt.Println("Error: invalid address specified:", *server)
 		fmt.Println("Should be in format `addr:port` (e.g. 127.0.0.1:6380)")
-		os.Exit(1)
-	}
-
-	transport, err := flapjack.Dial(*address, *database)
-	if err != nil {
-		fmt.Println("Error: couldn't connect to Redis:", err)
 		os.Exit(1)
 	}
 
@@ -49,7 +46,14 @@ func main() {
 		Time:		time.Now().Unix(),
 	}
 
-	_, err = transport.Send(event)
+	transport, err := flapjack.Dial(*server, *database)
+	if err != nil {
+		fmt.Println("Error: couldn't connect to Redis:", err)
+		os.Exit(1)
+	}
+
+	reply, err := transport.Send(event)
+	fmt.Println("reply", reply)
 	if err != nil {
 		fmt.Println("Error: couldn't send event:", err)
 		os.Exit(1)
