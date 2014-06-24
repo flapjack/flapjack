@@ -7,6 +7,7 @@ import (
 	"strings"
 	"flapjack"
 	"gopkg.in/alecthomas/kingpin.v1"
+	"encoding/json"
 )
 
 var (
@@ -24,10 +25,13 @@ func main() {
 	kingpin.Parse()
 
 	if *debug {
-		fmt.Println("entity:", *entity)
-		fmt.Println("check:", *check)
-		fmt.Println("state:", *state)
-		fmt.Println("summary:", *summary)
+		fmt.Println("Entity:", *entity)
+		fmt.Println("Check:", *check)
+		fmt.Println("State:", *state)
+		fmt.Println("Summary:", *summary)
+		fmt.Println("Debug:", *debug)
+		fmt.Println("Server:", *server)
+		fmt.Println("Database:", *database)
 	}
 
 	addr := strings.Split(*server, ":")
@@ -46,14 +50,24 @@ func main() {
 		Time:		time.Now().Unix(),
 	}
 
+	if *debug {
+		data, _ := json.Marshal(event)
+		fmt.Printf("Event data: %s\n", data)
+	}
+
 	transport, err := flapjack.Dial(*server, *database)
+	if *debug {
+		fmt.Printf("Transport: %+v\n", transport)
+	}
 	if err != nil {
 		fmt.Println("Error: couldn't connect to Redis:", err)
 		os.Exit(1)
 	}
 
 	reply, err := transport.Send(event)
-	fmt.Println("reply", reply)
+	if *debug {
+		fmt.Println("Reply from Redis:", reply)
+	}
 	if err != nil {
 		fmt.Println("Error: couldn't send event:", err)
 		os.Exit(1)
