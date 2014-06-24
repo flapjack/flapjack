@@ -78,6 +78,8 @@ module Flapjack
 
           # constants won't be exposed to eRb scope
           @default_logo_url = "img/flapjack-2013-notext-transparent-300-300.png"
+          @logo_image_file  = nil
+          @logo_image_ext   = nil
 
           if logo_image_path = @config['logo_image_path']
             if File.file?(logo_image_path)
