@@ -51,8 +51,8 @@ production:
         level: INFO
         syslog_errors: yes
       smtp_config:
-        #from: "flapjack@noreply.example"
-        #reply_to: "flapjack@support.example"
+        # from: "Flapjack Example <flapjack@noreply.example>"
+        # reply_to: "flapjack@support.example"
         host: 127.0.0.1
         # 1025 is the default port for http://mailcatcher.me
         port: 1025
