@@ -119,16 +119,16 @@ func main() {
 		log.Printf("Booting with config: %+v\n", config)
 	}
 
-	newState := make(chan flapjack.Event)
-	state := map[string]flapjack.Event{}
+	updates := make(chan State)
+	state := map[string]State{}
 
-	go cacheState(newState, state)
-	//go submitCachedState(state, config)
+	go cacheState(updates, state)
+	go submitCachedState(state, config)
 
 	m := martini.Classic()
 	m.Group("/state", func(r martini.Router) {
 		r.Post("", func(res http.ResponseWriter, req *http.Request) {
-			CreateState(newState, res, req)
+			CreateState(updates, res, req)
 		})
 		r.Get("", func() []byte {
 			data, _ := json.Marshal(state)
