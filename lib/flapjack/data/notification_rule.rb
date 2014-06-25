@@ -93,11 +93,19 @@ module Flapjack
       #
       # We don't want to replicate IceCube's from_hash behaviour here,
       # but we do need to apply some sanity checking on the passed data.
-      def self.time_restriction_to_icecube_schedule(tr, timezone)
-        return unless !tr.nil? && tr.is_a?(Hash)
-        return if timezone.nil? && !timezone.is_a?(ActiveSupport::TimeZone)
-        return unless tr = prepare_time_restriction(tr, timezone)
-        IceCube::Schedule.from_hash(tr)
+      def self.time_restriction_to_icecube_schedule(tr, timezone, opts = {})
+        return if tr.nil? || !tr.is_a?(Hash) ||
+                  timezone.nil? || !timezone.is_a?(ActiveSupport::TimeZone)
+        prepared_restrictions = prepare_time_restriction(tr, timezone)
+        return if prepared_restrictions.nil?
+        IceCube::Schedule.from_hash(prepared_restrictions)
+      rescue ArgumentError => ae
+        if logger = opts[:logger]
+          logger.error "Couldn't parse rule data #{e.class}: #{e.message}"
+          logger.error prepared_restrictions.inspect
+          logger.error e.backtrace.join("\n")
+        end
+        nil
       end
 
       def to_json(*args)
@@ -325,10 +333,11 @@ module Flapjack
                  d[:regex_tags].all? {|et| et.is_a?(String)} ) } =>
         "regex_tags must be a tag_set of strings",
 
+        # conversion to a schedule needs a time zone, any one will do
         proc {|d| !d.has_key?(:time_restrictions) ||
                ( d[:time_restrictions].nil? ||
                  d[:time_restrictions].all? {|tr|
-                   !!prepare_time_restriction(symbolize(tr))
+                   !!self.time_restriction_to_icecube_schedule(symbolize(tr), ActiveSupport::TimeZone['UTC'])
                  } )
              } =>
         "time restrictions are invalid",
