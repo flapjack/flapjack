@@ -29,4 +29,9 @@ _site/*
 .ruby-version
 .rvmrc
 artifacts/*
-submit
+libexec/httpbroker
+libexec/httpbroker.linux_386
+libexec/httpbroker.linux_amd64
+libexec/oneoff
+libexec/oneoff.linux_386
+libexec/oneoff.linux_amd64
