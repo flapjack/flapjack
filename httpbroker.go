@@ -10,10 +10,11 @@ import (
 	"flapjack"
 	"encoding/json"
 	"gopkg.in/alecthomas/kingpin.v1"
+	"github.com/go-martini/martini"
 )
 
 // handler caches
-func handler(newState chan flapjack.Event, w http.ResponseWriter, r *http.Request) {
+func CreateState(newState chan flapjack.Event, w http.ResponseWriter, r *http.Request) {
 	var state flapjack.Event
 
 	body, err := ioutil.ReadAll(r.Body)
@@ -44,8 +45,9 @@ func handler(newState chan flapjack.Event, w http.ResponseWriter, r *http.Reques
 	newState <- state
 
 	json, _ := json.Marshal(state)
-	log.Printf("Caching event: %s\n", json)
-	fmt.Fprintf(w, "Caching event: %s\n", json)
+	message := "Caching state: %s\n"
+	log.Printf(message, json)
+	fmt.Fprintf(w, message, json)
 }
 
 // cacheState stores a cache of event state to be sent to Flapjack.
@@ -87,7 +89,7 @@ func submitCachedState(states map[string]flapjack.Event, config Config) {
 }
 
 var (
-	port		= kingpin.Flag("port", "Address to bind HTTP server (default 3090)").Default("3090").String()
+	port		= kingpin.Flag("port", "Address to bind HTTP server (default 3090)").Default("3090").OverrideDefaultFromEnvar("PORT").String()
 	server		= kingpin.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
 	database	= kingpin.Flag("database", "Redis database to connect to (default 0)").Int() // .Default("13").Int()
 	interval	= kingpin.Flag("interval", "How often to submit events (default 10s)").Default("10s").Duration()
@@ -121,10 +123,18 @@ func main() {
 	state := map[string]flapjack.Event{}
 
 	go cacheState(newState, state)
-	go submitCachedState(state, config)
+	//go submitCachedState(state, config)
 
-	http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
-		handler(newState, w, r)
+	m := martini.Classic()
+	m.Group("/state", func(r martini.Router) {
+		r.Post("", func(res http.ResponseWriter, req *http.Request) {
+			CreateState(newState, res, req)
+		})
+		r.Get("", func() []byte {
+			data, _ := json.Marshal(state)
+			return data
+		})
 	})
-	http.ListenAndServe(config.Port, nil)
+
+	log.Fatal(http.ListenAndServe(config.Port, m))
 }
