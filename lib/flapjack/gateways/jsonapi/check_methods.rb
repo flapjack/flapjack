@@ -31,8 +31,24 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::Helpers
           app.helpers Flapjack::Gateways::JSONAPI::CheckMethods::Helpers
 
+          app.patch %r{^/checks/(.+)$} do
+            checks_for_check_names(params[:captures][0].split(',')).each do |check|
+              apply_json_patch('checks') do |op, property, linked, value|
+                case op
+                when 'replace'
+                  if ['enabled'].include?(property)
+                    # explicitly checking for false being passed in
+                    check.disable! if value.is_a?(FalseClass)
+                  end
+                end
+              end
+            end
+
+            status 204
+          end
+
           # create a scheduled maintenance period for a check on an entity
-          app.post %r{^/scheduled_maintenances/checks/([^/]+)$} do
+          app.post %r{^/scheduled_maintenances/checks/(.+)$} do
             scheduled_maintenances = wrapped_params('scheduled_maintenances')
             checks_for_check_names(params[:captures][0].split(',')).each do |check|
               scheduled_maintenances.each do |wp|
@@ -50,7 +66,7 @@ module Flapjack
           # create an acknowledgement for a service on an entity
           # NB currently, this does not acknowledge a specific failure event, just
           # the entity-check as a whole
-          app.post %r{^/unscheduled_maintenances/checks/([^/]+)$} do
+          app.post %r{^/unscheduled_maintenances/checks/(.+)$} do
             unscheduled_maintenances = wrapped_params('unscheduled_maintenances', false)
             checks_for_check_names(params[:captures][0].split(',')).each do |check|
               unscheduled_maintenances.each do |wp|
@@ -69,7 +85,7 @@ module Flapjack
             status 204
           end
 
-          app.patch %r{^/unscheduled_maintenances/checks/([^/]+)$} do
+          app.patch %r{^/unscheduled_maintenances/checks/(.+)$} do
             checks_for_check_names(params[:captures][0].split(',')).each do |check|
               apply_json_patch('unscheduled_maintenances') do |op, property, linked, value|
                 case op
@@ -84,7 +100,7 @@ module Flapjack
             status 204
           end
 
-          app.delete %r{^/scheduled_maintenances/checks/([^/]+)$} do
+          app.delete %r{^/scheduled_maintenances/checks/(.+)$} do
             start_time = validate_and_parsetime(params[:start_time])
             halt( err(403, "start time must be provided") ) unless start_time
 
@@ -94,7 +110,7 @@ module Flapjack
             status 204
           end
 
-          app.post %r{^/test_notifications/checks/([^/]+)$} do
+          app.post %r{^/test_notifications/checks/(.+)$} do
             test_notifications = wrapped_params('test_notifications', false)
             checks_for_check_names(params[:captures][0].split(',')).each do |check|
               test_notifications.each do |wp|

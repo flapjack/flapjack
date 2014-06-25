@@ -98,6 +98,8 @@ module Flapjack
 
       set :dump_errors, false
 
+      set :protection, :except => :path_traversal
+
       rescue_error = Proc.new {|status, exception, request_info, *msg|
         if !msg || msg.empty?
           trace = exception.backtrace.join("\n")
