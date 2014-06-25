@@ -94,10 +94,11 @@ func submitCachedState(states map[string]State, config Config) {
 			}
 
 			// Stale state sends UNKNOWNs
-			if state.TTL >= 0 && now - state.Time > state.TTL {
+			elapsed := now - state.Time
+			if state.TTL >= 0 && elapsed > state.TTL {
 				log.Printf("State for %s is stale. Sending UNKNOWN.\n", id)
 				event.State = "UNKNOWN"
-				event.Summary = fmt.Sprintf("httpbroker: Cached state is stale (>%ds old)", state.TTL)
+				event.Summary = fmt.Sprintf("httpbroker: Cached state is stale (%ds old, should be < %ds)", elapsed, state.TTL)
 			}
 			if config.Debug {
 				log.Printf("Sending event data for %s\n", id)
