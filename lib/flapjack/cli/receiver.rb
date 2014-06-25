@@ -8,6 +8,7 @@ Oj.default_options = { :indent => 0, :mode => :strict }
 
 require 'flapjack/configuration'
 require 'flapjack/data/event'
+require 'flapjack/patches'
 
 # TODO options should be overridden by similar config file options
 
@@ -630,8 +631,19 @@ command :receiver do |receiver|
     end
   end
 
-end
 
+  receiver.desc 'One-off event submitter'
+  receiver.command :oneoff do |oneoff|
+    oneoff.passthrough = true
+    oneoff.action do |global_options, options, args|
+      libexec = Pathname.new(__FILE__).parent.parent.parent.parent.join('libexec').expand_path
+      oneoff  = libexec.join('oneoff')
+      if oneoff.exist?
+        Kernel.exec(oneoff.to_s, *ARGV)
+      end
+    end
+  end
+end
 
 
 # # Nsca example line for a storage-device check:
