@@ -32,6 +32,21 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(last_response.body).to eq({:contacts => [contact_core]}.to_json)
   end
 
+  it "skips contacts without ids when getting all" do
+    idless_contact = double(Flapjack::Data::Contact, :id => '')
+
+    expect(Flapjack::Data::Contact).to receive(:entity_ids_for).
+      with([contact.id], :redis => redis).and_return({})
+    expect(contact).to receive(:to_jsonapi).and_return(contact_core.to_json)
+    expect(idless_contact).not_to receive(:to_jsonapi)
+    expect(Flapjack::Data::Contact).to receive(:all).with(:redis => redis).
+      and_return([contact, idless_contact])
+
+    aget '/contacts'
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq({:contacts => [contact_core]}.to_json)
+  end
+
   it "returns the core information of a specified contact" do
     expect(Flapjack::Data::Contact).to receive(:entity_ids_for).
       with([contact.id], :redis => redis).and_return({})

@@ -156,7 +156,8 @@ module Flapjack
               matches_regex_entities = rule_has_regex_entities ? rule.match_regex_entities?(@event_id) : true
 
               ((matches_entity && matches_regex_entities && matches_tags && matches_regex_tags) || ! rule.is_specific?) &&
-                rule_occurring_now?(rule, :contact => contact, :default_timezone => default_timezone)
+                rule_occurring_now?(rule, :contact => contact, :default_timezone => default_timezone,
+                  :logger => logger)
             end
 
             logger.debug "#{matchers.length} matchers remain for this contact after time, entity and tags are matched:"
@@ -280,7 +281,7 @@ module Flapjack
         rule.time_restrictions.any? do |tr|
           # add contact's timezone to the time restriction schedule
           schedule = Flapjack::Data::NotificationRule.
-                       time_restriction_to_icecube_schedule(tr, timezone)
+                       time_restriction_to_icecube_schedule(tr, timezone, :logger => options[:logger])
           schedule && schedule.occurring_at?(usertime)
         end
       end

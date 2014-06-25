@@ -19,7 +19,6 @@ require 'thin'
 
 require 'flapjack/notifier'
 require 'flapjack/processor'
-require 'flapjack/gateways/api'
 require 'flapjack/gateways/jsonapi'
 require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
@@ -32,7 +31,7 @@ require 'thin/version'
 
 module Thin
   # disable Thin's loading of daemons
-  # workaround for https://github.com/flpjck/flapjack/issues/133
+  # workaround for https://github.com/flapjack/flapjack/issues/133
   def self.win?
     true
   end
@@ -218,7 +217,6 @@ module Flapjack
     class Thin < Flapjack::Pikelet::Base
 
       PIKELET_TYPES = {'web'     => Flapjack::Gateways::Web,
-                       'api'     => Flapjack::Gateways::API,
                        'jsonapi' => Flapjack::Gateways::JSONAPI}
 
       def self.create(type, opts = {})

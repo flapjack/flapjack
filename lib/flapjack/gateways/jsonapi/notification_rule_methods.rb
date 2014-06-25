@@ -59,24 +59,41 @@ module Flapjack
                 status 201
               else
                 logger.warn("Errors during bulk notification rules creation: " + errors.join(', '))
-                status 200
+                halt 200
               end
             end
 
-            ids = rules.map {|r| r.id}
-            location(ids)
+            rule_ids = rules.map {|r| r.id}
 
-            rules_json = rules.map {|r| r.to_json}.join(',')
-            '{"notification_rules":[' + rules_json + ']}'
+            unless rule_ids.empty?
+              response.headers['Location'] = "#{base_url}/notification_rules/#{rule_ids.join(',')}"
+              rule_ids.to_json
+            end
           end
 
-          # get one or more notification rules
-          app.get '/notification_rules/:id' do
-            rules_json = params[:id].split(',').collect {|rule_id|
-              find_rule(rule_id).to_jsonapi
-            }.join(', ')
+          app.get %r{^/notification_rules(?:/)?([^/]+)?$} do
+            requested_notification_rules = if params[:captures] && params[:captures][0]
+              params[:captures][0].split(',').uniq
+            else
+              nil
+            end
 
-            '{"notification_rules":[' + rules_json + ']}'
+            notification_rules = if requested_notification_rules
+              Flapjack::Data::NotificationRule.find_by_ids(requested_notification_rules, :logger => logger, :redis => redis)
+            else
+              Flapjack::Data::NotificationRule.all(:redis => redis).reject {|nr| nr.id.nil? || nr.id.empty? }
+            end
+            notification_rules.compact!
+
+            if requested_notification_rules && notification_rules.empty?
+              raise Flapjack::Gateways::JSONAPI::NotificationRulesNotFound.new(requested_notification_rules)
+            end
+
+            notification_rules_json = notification_rules.collect {|notification_rule|
+              notification_rule.to_jsonapi
+            }.join(", ")
+
+            '{"notification_rules":[' + notification_rules_json + ']}'
           end
 
           app.patch '/notification_rules/:id' do

@@ -235,6 +235,13 @@ module Flapjack
         password    = opts['password']
         check       = opts['check']
 
+        unless subdomain && username && password && check
+          @logger.warn("pagerduty_acknowledged?: Unable to look for acknowledgements on pagerduty" +
+                       " as all of the following options are required:" +
+                       " subdomain (#{subdomain}), username (#{username}), password (#{password}), check (#{check})")
+          return nil
+        end
+
         t = Time.now.utc
 
         url = 'https://' + subdomain + '.pagerduty.com/api/v1/incidents'

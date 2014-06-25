@@ -60,7 +60,8 @@ module Flapjack
             pagerduty_credential_data['links'] = {'contacts' => [contact.id]}
 
             status 201
-            '{"pagerduty_credentials":[' + pagerduty_credential_data.to_json + ']}'
+            response.headers['Location'] = "#{base_url}/pagerduty_credentials/#{contact.id}"
+            [contact.id].to_json
           end
 
           app.get %r{^/pagerduty_credentials(?:/)?([^/]+)?$} do

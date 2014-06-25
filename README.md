@@ -1,6 +1,6 @@
-# ![Flapjack](https://raw.github.com/flpjck/flapjack/gh-pages/images/flapjack-2013-notext-transparent-50-50.png "Flapjack") Flapjack
+# ![Flapjack](https://raw.github.com/flapjack/flapjack/gh-pages/images/flapjack-2013-notext-transparent-50-50.png "Flapjack") Flapjack
 
-[![Build Status](https://travis-ci.org/flpjck/flapjack.png)](https://travis-ci.org/flpjck/flapjack)
+[![Build Status](https://travis-ci.org/flapjack/flapjack.png)](https://travis-ci.org/flapjack/flapjack)
 
 [Flapjack](http://flapjack.io/) is a flexible monitoring notification routing system that handles:
 
@@ -71,11 +71,13 @@ gem install flapjack
 
 Using a tool like [rbenv](https://github.com/sstephenson/rbenv) or [rvm](https://rvm.io/) is recommended to keep your Ruby applications from intefering with one another.
 
-Alternatively, you can add support for your OS of choice to [omnibus-flapjack](https://github.com/flpjck/omnibus-flapjack) and build a native package. Pull requests welcome, and we'll help you make this happen!
+Alternatively, you can add support for your OS of choice to [omnibus-flapjack](https://github.com/flapjack/omnibus-flapjack) and build a native package. Pull requests welcome, and we'll help you make this happen!
+
+You'll also need Redis >= 2.6.12.
 
 ## Configuring
 
-Have a look at the default config file and modify things as required. See the [Configuring Components](https://github.com/flpjck/flapjack/wiki/USING#wiki-configuring_components) section on the wiki for more details.
+Have a look at the default config file and modify things as required. See the [Configuring Components](https://github.com/flapjack/flapjack/wiki/USING#wiki-configuring_components) section on the wiki for more details.
 
 ``` bash
 # hack the config
@@ -122,11 +124,11 @@ sudo /etc/init.d/flapjack start
 
 ## Using - Details
 
-For more information, including full specification of the configuration file and the data import formats, please refer to the [USING](https://github.com/flpjck/flapjack/wiki/USING) section of the Flapjack wiki
+For more information, including full specification of the configuration file and the data import formats, please refer to the [USING](https://github.com/flapjack/flapjack/wiki/USING) section of the Flapjack wiki
 
 ## Developing Flapjack
 
-Information on developing more Flapjack components or contributing to core Flapjack development can be found in the [DEVELOPING](https://github.com/flpjck/flapjack/wiki/DEVELOPING) section of the Flapjack wiki
+Information on developing more Flapjack components or contributing to core Flapjack development can be found in the [DEVELOPING](https://github.com/flapjack/flapjack/wiki/DEVELOPING) section of the Flapjack wiki
 
 ## Documentation Submodule
 
@@ -145,14 +147,14 @@ If you make changes to the documentation locally, here's how to publish them:
 
 ## More on the wiki
 
-[The Flapjack wiki](https://github.com/flpjck/flapjack/wiki) has even more goodies:
+[The Flapjack wiki](https://github.com/flapjack/flapjack/wiki) has even more goodies:
 
-- [Using Flapjack](https://github.com/flpjck/flapjack/wiki/USING)
-- [Developing Flapjack](https://github.com/flpjck/flapjack/wiki/DEVELOPING)
-- [Redis Data Structure](https://github.com/flpjck/flapjack/wiki/DATA_STRUCTURES)
-- [API](https://github.com/flpjck/flapjack/wiki/API)
-- [Importing](https://github.com/flpjck/flapjack/wiki/IMPORTING)
-- [Debugging Flapjack](https://github.com/flpjck/flapjack/wiki/DEBUGGING)
-- [Flapjack Glossary](https://github.com/flpjck/flapjack/wiki/GLOSSARY)
+- [Using Flapjack](https://github.com/flapjack/flapjack/wiki/USING)
+- [Developing Flapjack](https://github.com/flapjack/flapjack/wiki/DEVELOPING)
+- [Redis Data Structure](https://github.com/flapjack/flapjack/wiki/DATA_STRUCTURES)
+- [API](https://github.com/flapjack/flapjack/wiki/API)
+- [Importing](https://github.com/flapjack/flapjack/wiki/IMPORTING)
+- [Debugging Flapjack](https://github.com/flapjack/flapjack/wiki/DEBUGGING)
+- [Flapjack Glossary](https://github.com/flapjack/flapjack/wiki/GLOSSARY)
 
 

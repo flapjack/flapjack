@@ -6,9 +6,8 @@
   require_js  'jquery-1.10.2'
   require_js  'backbone'
   require_js  'backbone.jsonapi'
-  require_js  'bootstrap.min'
+  require_js  'bootstrap'
   require_js  'select2'
-  require_js  'contacts'
 %>
 
 <script type="text/template" id="contact-actions-template">
@@ -20,14 +19,70 @@
 <script type="text/template" id="contact-list-item-template">
   <td><@- first_name @></td>
   <td><@- last_name @></td>
-  <td>
-    <button type="button" class="close button delete delete-contact" aria-hidden="true">&minus;</button>
+  <td class="actions">
+    <button type="button" class="btn btn-default contact-media" style="visibility: hidden" aria-hidden="true">Media</button>
+  </td>
+  <td class="actions">
+    <button type="button" class="btn btn-default contact-entities" style="visibility: hidden" aria-hidden="true">Entities</button>
+  </td>
+  <td class="actions">
+    <button type="button" class="btn btn-danger delete-contact" style="visibility: hidden" aria-hidden="true">&minus;</button>
   </td>
 </script>
 
-<script type="text/template" id="contact-entities-list-item-template">
-  <td><@- name @></td>
-  <td><button type="button" class="close button delete delete-entity" aria-hidden="true">&minus;</button></td>
+<script type="text/template" id="contact-details-form-template">
+<div class="modal-content">
+  <div class="modal-header">
+    <h4 class="modal-title" id="contactModalLabel"><@- is_new ? 'New' : 'Edit' @> Contact</h4>
+  </div>
+  <div class="modal-body">
+    <form action="<%= @base_url %>contacts" method="post" role="form" class="form-horizontal">
+
+      <div id="contactDetails">
+        <div class="form-group">
+          <label class="col-sm-3 control-label" for="contact_first_name">First name</label>
+          <div class="col-sm-9">
+            <input type="text" autofocus="autofocus" name="contact_first_name" class="form-control" value="<@- first_name @>">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-3 control-label" for="contact_last_name">Last name</label>
+          <div class="col-sm-9">
+            <input type="text" name="contact_last_name" class="form-control" value="<@- last_name @>">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" id="contactAccept"<@- is_valid ? '' : ' disabled="disabled"' @>><@- is_new ? 'Create' : 'Update' @></button>
+        <button type="button" class="btn btn-cancel" id="contactCancel">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+</script>
+
+<script type="text/template" id="contact-media-template">
+<div class="modal-content">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+    <h4 class="modal-title" id="contactModalLabel">Media for <@- first_name @> <@- last_name @></h4>
+  </div>
+  <div class="modal-body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width: 15%">Media</th>
+          <th style="width: 65%">Address</th>
+          <th style="width: 10%">Interval</th>
+          <th style="width: 10%">Rollup</th>
+        </tr>
+      </thead>
+      <tbody id="contactMediaList">
+      </tbody>
+    </table>
+  </div>
+</div>
 </script>
 
 <script type="text/template" id="contact-media-list-item-template">
@@ -45,29 +100,51 @@
   </td>
 </script>
 
-<script type="text/template" id="contact-template">
-  <div class="form-group">
-    <label class="col-sm-3 control-label" for="contact_first_name">First name</label>
-    <div class="col-sm-9">
-      <input type="text" autofocus="autofocus" name="contact_first_name" class="form-control" value="<@- first_name @>">
-    </div>
+<script type="text/template" id="contact-entities-template">
+<div class="modal-content">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+    <h4 class="modal-title" id="contactModalLabel">Entities for <@- first_name @> <@- last_name @></h4>
   </div>
-  <div class="form-group">
-    <label class="col-sm-3 control-label" for="contact_last_name">Last name</label>
-    <div class="col-sm-9">
-      <input type="text" name="contact_last_name" class="form-control" value="<@- last_name @>">
+  <div class="modal-body">
+    <div id="contactEntityChooser">
     </div>
+
+    <table class="table" style="margin-top: 1em; width: 100%">
+      <thead>
+        <tr>
+          <th style="width: 90%">Entities</th>
+          <th>&nbsp;</th>
+        </tr>
+      </thead>
+      <tbody id="contactEntityList">
+      </tbody>
+    </table>
   </div>
+</div><!-- /.modal-content -->
 </script>
 
-<script type="text/template" id="contact-entity-chooser">
-  <input type="hidden" id="entityChooser" style="width: 440px">
-  <button id="add-contact-entity" type="button" class="btn btn-default btn-xs">
-    <i class="fa fa-plus-square"></i>
-    &nbsp;
-    Add Entities
-  </button>
+<script type="text/template" id="contact-entities-chooser-template">
+<input type="hidden" id="entityChooser" style="width: 440px">
+<button id="add-contact-entity" type="button" class="btn btn-default btn-xs">
+  <i class="fa fa-plus-square"></i>
+  &nbsp;
+  Add Entities
+</button>
 </script>
+
+<script type="text/template" id="contact-entities-list-item-template">
+  <td><@- name @></td>
+  <td><button type="button" class="close btn delete delete-entity" aria-hidden="true">&minus;</button></td>
+</script>
+
+<%
+  require_js  'flapjack'
+
+  require_js  'modules/contact'
+  require_js  'modules/entity'
+  require_js  'modules/medium'
+%>
 
 <div id="data-api-url" data-api-url="<%= @api_url %>">
   <div class="page-header">
@@ -79,61 +156,19 @@
         <tr>
           <th>First Name</th>
           <th>Last Name</th>
-          <th>&nbsp;</th>
+          <th colspan="3">Actions</th>
         </tr>
       </thead>
       <tbody id="contactList">
       </tbody>
     </table>
 
-<!-- Modal -->
-<div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h4 class="modal-title" id="contactModalLabel">New Contact</h4>
-      </div>
-      <div class="modal-body">
-
-        <form action="/contacts" method="post" role="form" class="form-horizontal">
-
-          <div class="modal-footer">
-            <button type="button" class="btn btn-success" id="contactAccept">Create Contact</button>
-          </div>
-        </form><!-- form-horizontal-->
-
-        <table class="table">
-          <thead>
-            <tr>
-              <th style="width: 15%">Media</th>
-              <th style="width: 65%">Address</th>
-              <th style="width: 10%">Interval</th>
-              <th style="width: 10%">Rollup</th>
-            </tr>
-          </thead>
-          <tbody id="contactMediaList">
-          </tbody>
-        </table>
-
-        <div id="entityAdd">
-        </div>
-
-        <table class="table" style="margin-top: 1em">
-          <thead>
-            <tr>
-              <th>Entities</th>
-              <th>&nbsp;</th>
-            </tr>
-          </thead>
-          <tbody id="contactEntityList">
-          </tbody>
-        </table>
-
-      </div>
-    </div><!-- /.modal-content -->
-  </div><!-- /.modal-dialog -->
-</div><!-- /.modal -->
+    <!-- Modal -->
+    <div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
 
     </div>
 </div>
+

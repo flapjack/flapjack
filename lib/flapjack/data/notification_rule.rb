@@ -16,22 +16,39 @@ module Flapjack
         :time_restrictions, :unknown_media, :warning_media, :critical_media,
         :unknown_blackhole, :warning_blackhole, :critical_blackhole
 
+      def self.all(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        redis.keys("contact_notification_rules:*").inject([]) do |memo, contact_key|
+          redis.smembers(contact_key).each do |rule_id|
+            ret = self.find_by_id(rule_id, :redis => redis)
+            memo << ret unless ret.nil?
+          end
+          memo
+        end
+      end
+
       def self.exists_with_id?(rule_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         raise "No id value passed" unless not (rule_id.nil? || rule_id == '')
-        logger   = options[:logger]
         redis.exists("notification_rule:#{rule_id}")
       end
 
       def self.find_by_id(rule_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         raise "No id value passed" unless not (rule_id.nil? || rule_id == '')
-        logger   = options[:logger]
 
         # sanity check
         return unless redis.exists("notification_rule:#{rule_id}")
 
         self.new({:id => rule_id.to_s}, {:redis => redis})
+      end
+
+      def self.find_by_ids(rule_ids, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        rule_ids.map do |id|
+          self.find_by_id(id, options)
+        end
       end
 
       # replacing save! etc
@@ -43,15 +60,26 @@ module Flapjack
           return errors
         end
         rule_id = rule_data[:id] || SecureRandom.uuid
-        errors = self.add_or_update(rule_data.merge(:id => rule_id), options)
+
+        errors = self.add_or_update(rule_data.merge(:id => rule_id), :redis => redis, :logger => options[:logger])
         return errors unless errors.nil? || errors.empty?
+
         self.find_by_id(rule_id, :redis => redis)
       end
 
-      def update(rule_data, opts = {})
-        errors = self.class.add_or_update({:contact_id => @contact_id}.merge(rule_data.merge(:id => @id)),
-          :redis => @redis, :logger => opts[:logger])
+      def update(update_data, opts = {})
+        [:entities, :regex_entities, :tags, :regex_tags,
+         :time_restrictions, :unknown_media, :warning_media, :critical_media,
+         :unknown_blackhole, :warning_blackhole, :critical_blackhole].each do |update_key|
+
+          next if update_data.has_key?(update_key)
+          update_data[update_key] = self.send(update_key)
+        end
+
+        update_data.update(:id => @id, :contact_id => @contact_id)
+        errors = self.class.add_or_update(update_data, :redis => @redis, :logger => opts[:logger])
         return errors unless errors.nil? || errors.empty?
+
         refresh
         nil
       end
@@ -65,12 +93,19 @@ module Flapjack
       #
       # We don't want to replicate IceCube's from_hash behaviour here,
       # but we do need to apply some sanity checking on the passed data.
-      def self.time_restriction_to_icecube_schedule(tr, timezone)
-        return unless !tr.nil? && tr.is_a?(Hash)
-        return if timezone.nil? && !timezone.is_a?(ActiveSupport::TimeZone)
-        return unless tr = prepare_time_restriction(tr, timezone)
-
-        IceCube::Schedule.from_hash(tr)
+      def self.time_restriction_to_icecube_schedule(tr, timezone, opts = {})
+        return if tr.nil? || !tr.is_a?(Hash) ||
+                  timezone.nil? || !timezone.is_a?(ActiveSupport::TimeZone)
+        prepared_restrictions = prepare_time_restriction(tr, timezone)
+        return if prepared_restrictions.nil?
+        IceCube::Schedule.from_hash(prepared_restrictions)
+      rescue ArgumentError => ae
+        if logger = opts[:logger]
+          logger.error "Couldn't parse rule data #{e.class}: #{e.message}"
+          logger.error prepared_restrictions.inspect
+          logger.error e.backtrace.join("\n")
+        end
+        nil
       end
 
       def to_json(*args)
@@ -188,6 +223,7 @@ module Flapjack
         # whitelisting fields, rather than passing through submitted data directly
         tag_data       = rule_data[:tags].is_a?(Set) ? rule_data[:tags].to_a : nil
         regex_tag_data = rule_data[:regex_tags].is_a?(Set) ? rule_data[:regex_tags].to_a : nil
+
         json_rule_data = {
           :id                 => rule_data[:id].to_s,
           :contact_id         => rule_data[:contact_id].to_s,
@@ -203,6 +239,7 @@ module Flapjack
           :warning_blackhole  => rule_data[:warning_blackhole],
           :critical_blackhole => rule_data[:critical_blackhole],
         }
+
         logger.debug("NotificationRule#add_or_update json_rule_data: #{json_rule_data.inspect}") if logger
 
         redis.sadd("contact_notification_rules:#{json_rule_data[:contact_id]}",
@@ -216,39 +253,34 @@ module Flapjack
         # this will hand back a 'deep' copy
         tr = symbolize(time_restriction)
 
-        return unless tr.has_key?(:start_time) && tr.has_key?(:end_time)
+        return unless (tr.has_key?(:start_time) || tr.has_key?(:start_date)) &&
+          (tr.has_key?(:end_time) || tr.has_key?(:end_date))
 
-        parsed_time = proc {|t|
-          if t.is_a?(Time)
-            t
+        parsed_time = proc {|tr, field|
+          if t = tr.delete(field)
+            t = t.dup
+            t = t[:time] if t.is_a?(Hash)
+
+            if t.is_a?(Time)
+              t
+            else
+              begin; (timezone || Time).parse(t); rescue ArgumentError; nil; end
+            end
           else
-            begin; (timezone || Time).parse(t); rescue ArgumentError; nil; end
+            nil
           end
         }
 
-        start_time = case tr[:start_time]
-        when String, Time
-          parsed_time.call(tr.delete(:start_time).dup)
-        when Hash
-          time_hash = tr.delete(:start_time).dup
-          parsed_time.call(time_hash[:time])
-        end
-
-        end_time = case tr[:end_time]
-        when String, Time
-          parsed_time.call(tr.delete(:end_time).dup)
-        when Hash
-          time_hash = tr.delete(:end_time).dup
-          parsed_time.call(time_hash[:time])
-        end
+        start_time = parsed_time.call(tr, :start_date) || parsed_time.call(tr, :start_time)
+        end_time   = parsed_time.call(tr, :end_date) || parsed_time.call(tr, :end_time)
 
         return unless start_time && end_time
 
-        tr[:start_date] = timezone ?
+        tr[:start_time] = timezone ?
                             {:time => start_time, :zone => timezone.name} :
                             start_time
 
-        tr[:end_date]   = timezone ?
+        tr[:end_time]   = timezone ?
                             {:time => end_time, :zone => timezone.name} :
                             end_time
 
@@ -301,10 +333,11 @@ module Flapjack
                  d[:regex_tags].all? {|et| et.is_a?(String)} ) } =>
         "regex_tags must be a tag_set of strings",
 
+        # conversion to a schedule needs a time zone, any one will do
         proc {|d| !d.has_key?(:time_restrictions) ||
                ( d[:time_restrictions].nil? ||
                  d[:time_restrictions].all? {|tr|
-                   !!prepare_time_restriction(symbolize(tr))
+                   !!self.time_restriction_to_icecube_schedule(symbolize(tr), ActiveSupport::TimeZone['UTC'])
                  } )
              } =>
         "time restrictions are invalid",

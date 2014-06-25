@@ -1,5 +1,35 @@
 ## Flapjack Changelog
 
+# 1.0.0rc1 - 2014-06-25
+- Feature: Allow ncsm to be skipped using a configured whitelist #485 (@StephenWeber)
+- Feature: GLI the CLI (one command to rule them all) #478 (@auxesis, @ali-graham)
+- Feature: Remove the original HTTP API #526 (@ali-graham)
+- Feature: connecting to an password protected redis server is a good idea #533 (@mattdelves)
+- Feature: Add option to pass tags to simulate-failed-check command. #537 (@jwoods)
+- Feature: Dockerfile that runs flapjack #541 (@michaelneale)
+- Feature: allow customistion of email from reply to #543 (@ferrisoxide)
+- Feature: Allow custom Flapjack branding. #544 (@ferrisoxide)
+- Feature: Add base_url functionality to the web gateway. #539 (@pieterlange)
+- Bug: PATCHing blackhole properties for notification rule changes other blackholes - further fixes #504 (@ali-graham)
+- Bug: JSONAPI get all entities/contacts with empty db e3725fc (@ali-graham)
+
+# 0.9.0 - 2014-05-23
+- Feature: create 0.9.x series - the last to contain the original API
+- Chore: split reports data from entities and checks in jsonapi #525 (@ali-graham)
+
+# 0.8.12 - 2014-05-21
+- Feature: highlight the section that I'm in #483 (@auxesis)
+- Feature: Visualise the event queue length on self stats page #482 (@auxesis)
+- Feature: Restructure backbone /edit_contacts UI (and backend file structure), fix remaining usage issues #515 (@ali-graham)
+- Bug: pagerduty gateway exception when subdomain not set #486 (@jessereynolds)
+- Bug: tests use default redis port #495 (@spazm)
+- Bug: GET /notification_rules doesn't work #510 (@ali-graham)
+- Bug: JSONAPI -- do not emit entities without ids #521 (@ali-graham)
+- Bug: PATCHing blackhole properties for notification rule changes other blackholes #504 (@ali-graham)
+- Chore: updated github urls to use new flapjack project name #491 (@spazm)
+- Chore: Add a CONTRIBUTING.md doc for potential helpers #492 (@spazm)
+
+
 # 0.8.11 - 2014-05-01
 - Feature: simulate-failed-check - give -t a default of 45 seconds (@jessereynolds)
 - Feature: allow email messages to have custom from address #468 (@mattdelves)

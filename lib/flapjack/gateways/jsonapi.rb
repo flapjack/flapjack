@@ -3,7 +3,7 @@
 # A HTTP-based API server, which provides queries to determine the status of
 # entities and the checks that are reported against them.
 #
-# There's a matching flapjack-diner gem at https://github.com/flpjck/flapjack-diner
+# There's a matching flapjack-diner gem at https://github.com/flapjack/flapjack-diner
 # which consumes data from this API.
 
 require 'time'
@@ -20,6 +20,7 @@ require 'flapjack/gateways/jsonapi/check_methods'
 require 'flapjack/gateways/jsonapi/contact_methods'
 require 'flapjack/gateways/jsonapi/entity_methods'
 require 'flapjack/gateways/jsonapi/medium_methods'
+require 'flapjack/gateways/jsonapi/metrics_methods'
 require 'flapjack/gateways/jsonapi/notification_rule_methods'
 require 'flapjack/gateways/jsonapi/pagerduty_credential_methods'
 require 'flapjack/gateways/jsonapi/report_methods'
@@ -53,9 +54,16 @@ module Flapjack
       end
 
       class NotificationRuleNotFound < RuntimeError
-        attr_reader :rule_id
-        def initialize(rule_id)
-          @rule_id = rule_id
+        attr_reader :notification_rule_id
+        def initialize(notification_rule_id)
+          @notification_rule_id = notification_rule_id
+        end
+      end
+
+      class NotificationRulesNotFound < RuntimeError
+        attr_reader :notification_rule_ids
+        def initialize(notification_rule_ids)
+          @notification_rule_ids = notification_rule_ids
         end
       end
 
@@ -89,6 +97,8 @@ module Flapjack
       end
 
       set :dump_errors, false
+
+      set :protection, :except => :path_traversal
 
       rescue_error = Proc.new {|status, exception, request_info, *msg|
         if !msg || msg.empty?
@@ -132,7 +142,9 @@ module Flapjack
         when Flapjack::Gateways::JSONAPI::ContactsNotFound
           rescue_error.call(404, e, request_info, "could not find contacts '" + e.contact_ids.join(', ') + "'")
         when Flapjack::Gateways::JSONAPI::NotificationRuleNotFound
-          rescue_error.call(404, e, request_info,"could not find notification rule '#{e.rule_id}'")
+          rescue_error.call(404, e, request_info,"could not find notification rule '#{e.notification_rule_id}'")
+        when Flapjack::Gateways::JSONAPI::NotificationRulesNotFound
+          rescue_error.call(404, e, request_info, "could not find notification rules '" + e.notification_rule_ids.join(', ') + "'")
         when Flapjack::Gateways::JSONAPI::EntityNotFound
           rescue_error.call(404, e, request_info, "could not find entity '#{e.entity}'")
         when Flapjack::Gateways::JSONAPI::EntityCheckNotFound
@@ -239,11 +251,6 @@ module Flapjack
             'Access-Control-Max-Age'        => '1728000'
           }
           headers(cors_headers)
-        end
-
-        def location(ids)
-          location = "#{base_url}#{request.path_info}#{ids.length == 1 ? '/' + ids.first : '?ids=' + ids.join(',')}"
-          headers({'Location' => location})
         end
 
         def err(status, *msg)
@@ -405,6 +412,7 @@ module Flapjack
       register Flapjack::Gateways::JSONAPI::ContactMethods
       register Flapjack::Gateways::JSONAPI::EntityMethods
       register Flapjack::Gateways::JSONAPI::MediumMethods
+      register Flapjack::Gateways::JSONAPI::MetricsMethods
       register Flapjack::Gateways::JSONAPI::NotificationRuleMethods
       register Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods
       register Flapjack::Gateways::JSONAPI::ReportMethods

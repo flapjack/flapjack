@@ -38,11 +38,14 @@ module Flapjack
 
       redis_path = (redis['path'] || nil)
       base_opts = {:db => (redis['db'] || 0)}
+      base_opts[:driver] = redis['driver'] if redis['driver']
       redis_config = base_opts.merge(
         (redis_path ? { :path => redis_path } :
                       { :host => (redis['host'] || '127.0.0.1'),
                         :port => (redis['port'] || 6379)})
       )
+
+      redis_config[:password] = redis["password"] if redis["password"]
 
       redis_config
     end

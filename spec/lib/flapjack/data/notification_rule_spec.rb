@@ -75,10 +75,11 @@ describe Flapjack::Data::NotificationRule, :redis => true do
     rule = existing_rule
 
     expect {
-      rule_data[:warning_blackhole] = true
-      errors = rule.update(rule_data)
-      expect(errors).to be_nil
-    }.to change { rule.warning_blackhole }.from(false).to(true)
+      expect {
+        errors = rule.update(:warning_blackhole => true)
+        expect(errors).to be_nil
+      }.to change { rule.warning_blackhole }.from(false).to(true)
+    }.not_to change { rule.contact_id }
   end
 
   it "converts time restriction data to an IceCube schedule" do
@@ -152,6 +153,34 @@ describe Flapjack::Data::NotificationRule, :redis => true do
         expect(errors.size).to eq(1)
         expect(errors).to eq(["Rule entities must be a list of strings"])
       }.not_to change { rule.entities }
+    end
+
+    # https://github.com/flapjack/flapjack/issues/549
+    it "fails to add a notification rule with invalid data" do
+      rule_data[:time_restrictions] = [
+        {
+          "start_time" => "2014-06-22 00:00:00",
+          "end_time" => "2015-01-01 00:00:00",
+          "rrules" => [
+            {
+              "validations" => {
+                "day" => [1,2,3,4,5,6,7]
+              },
+              "rule_type" => "Weekly",
+              "interval" => 1,
+              "week_start" => 0
+            }
+          ],
+          "exrules" => [],
+          "rtimes" => [],
+          "extimes" => []
+        }
+      ]
+      rule_or_errors = Flapjack::Data::NotificationRule.add(rule_data, :redis => @redis)
+      expect(rule_or_errors).not_to be_nil
+      expect(rule_or_errors).to be_an(Array)
+      expect(rule_or_errors.size).to eq(1)
+      expect(rule_or_errors).to eq(["Rule time restrictions are invalid"])
     end
 
   end

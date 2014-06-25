@@ -89,15 +89,15 @@ module Flapjack
 
             semaphore.release
 
-            ids = contacts_data.map {|c| c['id']}
-            location(ids)
-            status 201
+            contact_ids = contacts_data.map {|c| c['id']}
 
-            contacts_data.map {|cd| cd['id']}.to_json
+            response.headers['Location'] = "#{base_url}/contacts/#{contact_ids.join(',')}"
+            status 201
+            contact_ids.to_json
           end
 
           # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contacts/2) contact(s)
-          # https://github.com/flpjck/flapjack/wiki/API#wiki-get_contacts
+          # https://github.com/flapjack/flapjack/wiki/API#wiki-get_contacts
           app.get %r{^/contacts(?:/)?([^/]+)?$} do
             requested_contacts = if params[:captures] && params[:captures][0]
               params[:captures][0].split(',').uniq
@@ -108,7 +108,7 @@ module Flapjack
             contacts = if requested_contacts
               Flapjack::Data::Contact.find_by_ids(requested_contacts, :logger => logger, :redis => redis)
             else
-              Flapjack::Data::Contact.all(:redis => redis)
+              Flapjack::Data::Contact.all(:redis => redis).reject {|c| c.id.nil? || c.id.empty? }
             end
             contacts.compact!
 
@@ -116,7 +116,7 @@ module Flapjack
               raise Flapjack::Gateways::JSONAPI::ContactsNotFound.new(requested_contacts)
             end
 
-            entity_ids = Flapjack::Data::Contact.entity_ids_for(contacts.map(&:id), :redis => redis)
+            entity_ids = contacts.empty? ? [] : Flapjack::Data::Contact.entity_ids_for(contacts.map(&:id), :redis => redis)
 
             contacts_json = contacts.collect {|contact|
               contact.to_jsonapi(:entity_ids => entity_ids[contact.id])

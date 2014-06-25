@@ -44,15 +44,15 @@ module Flapjack
             entities = if requested_entities
               Flapjack::Data::Entity.find_by_ids(requested_entities, :logger => logger, :redis => redis)
             else
-              Flapjack::Data::Entity.all(:redis => redis)
+              Flapjack::Data::Entity.all(:redis => redis).reject {|e| e.id.nil? || e.id.empty? }
             end
             entities.compact!
 
-            if requested_entities && requested_entities.empty?
+            if requested_entities && entities.empty?
               raise Flapjack::Gateways::JSONAPI::EntitiesNotFound.new(requested_entities)
             end
 
-            linked_contact_ids = Flapjack::Data::Entity.contact_ids_for(entities.map(&:id), :redis => redis)
+            linked_contact_ids = entities.empty? ? [] : Flapjack::Data::Entity.contact_ids_for(entities.map(&:id), :redis => redis)
 
             entities_json = entities.collect {|entity|
               entity.to_jsonapi(:contact_ids => linked_contact_ids[entity.id])

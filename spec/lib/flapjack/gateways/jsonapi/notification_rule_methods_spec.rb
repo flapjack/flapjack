@@ -28,9 +28,48 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
   it "returns a specified notification rule" do
     expect(notification_rule).to receive(:to_jsonapi).and_return('"rule_1"')
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
-      with(notification_rule.id, {:redis => redis, :logger => @logger}).and_return(notification_rule)
+      with(notification_rule.id, :redis => redis, :logger => @logger).and_return(notification_rule)
 
     aget "/notification_rules/#{notification_rule.id}"
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
+  end
+
+  it "returns multiple notification rules" do
+    notification_rule_2 = double(Flapjack::Data::NotificationRule, :id => '2', :contact_id => '21')
+
+    expect(notification_rule).to receive(:to_jsonapi).and_return('"rule_1"')
+    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
+      with(notification_rule.id, :redis => redis, :logger => @logger).and_return(notification_rule)
+
+    expect(notification_rule_2).to receive(:to_jsonapi).and_return('"rule_2"')
+    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
+      with(notification_rule_2.id, :redis => redis, :logger => @logger).and_return(notification_rule_2)
+
+    aget "/notification_rules/#{notification_rule.id},#{notification_rule_2.id}"
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq('{"notification_rules":["rule_1", "rule_2"]}')
+  end
+
+  it "returns all notification rules" do
+    expect(notification_rule).to receive(:to_jsonapi).and_return('"rule_1"')
+    expect(Flapjack::Data::NotificationRule).to receive(:all).
+      with(:redis => redis).and_return([notification_rule])
+
+    aget "/notification_rules"
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
+  end
+
+  it "skips notification rules without ids when getting all" do
+    idless_notification_rule = double(Flapjack::Data::NotificationRule, :id => '')
+
+    expect(notification_rule).to receive(:to_jsonapi).and_return('"rule_1"')
+    expect(idless_notification_rule).not_to receive(:to_jsonapi)
+    expect(Flapjack::Data::NotificationRule).to receive(:all).with(:redis => redis).
+      and_return([notification_rule, idless_notification_rule])
+
+    aget '/notification_rules'
     expect(last_response).to be_ok
     expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
   end
@@ -48,7 +87,6 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
     expect(notification_rule).to receive(:respond_to?).with(:critical_media).and_return(true)
-    expect(notification_rule).to receive(:to_json).and_return('"rule_1"')
 
     # symbolize the keys
     notification_rule_data_sym = notification_rule_data.inject({}){|memo,(k,v)|
@@ -61,7 +99,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
     apost "/contacts/#{contact.id}/notification_rules",
       {"notification_rules" => [notification_rule_data]}.to_json, jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq('{"notification_rules":["rule_1"]}')
+    expect(last_response.headers['Location']).to match(/\/notification_rules\/.+$/)
   end
 
   it "does not create a notification_rule for a contact that's not present" do

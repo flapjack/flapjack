@@ -121,30 +121,11 @@ module Flapjack
       def self.parse_and_validate(raw, opts = {})
         errors = []
         if parsed = ::Oj.load(raw)
-
           if parsed.is_a?(Hash)
-            missing_keys = REQUIRED_KEYS.select {|k|
-              !parsed.has_key?(k) || parsed[k].nil? || parsed[k].empty?
-            }
-            unless missing_keys.empty?
-              errors << "Event hash has missing keys '#{missing_keys.join('\', \'')}'"
-            end
-
-            unknown_keys =  parsed.keys - (REQUIRED_KEYS + OPTIONAL_KEYS)
-            unless unknown_keys.empty?
-              errors << "Event hash has unknown key(s) '#{unknown_keys.join('\', \'')}'"
-            end
+            errors = validation_errors_for_hash(parsed, opts)
           else
-            errors << "Event must be a JSON hash, see https://github.com/flpjck/flapjack/wiki/DATA_STRUCTURES#event-queue"
+            errors << "Event must be a JSON hash, see https://github.com/flapjack/flapjack/wiki/DATA_STRUCTURES#event-queue"
           end
-
-          if errors.empty?
-            errors += VALIDATIONS.keys.inject([]) {|ret,vk|
-              ret << "Event #{VALIDATIONS[vk]}" unless vk.call(parsed)
-              ret
-            }
-          end
-
           return parsed if errors.empty?
         end
 
@@ -158,6 +139,29 @@ module Flapjack
           opts[:logger].error("Error deserialising event json: #{e}, raw json: #{raw.inspect}")
         end
         nil
+      end
+
+      def self.validation_errors_for_hash(hash, opts = {})
+        errors = []
+        missing_keys = REQUIRED_KEYS.select {|k|
+          !hash.has_key?(k) || hash[k].nil? || hash[k].empty?
+        }
+        unless missing_keys.empty?
+          errors << "Event hash has missing keys '#{missing_keys.join('\', \'')}'"
+        end
+
+        unknown_keys =  hash.keys - (REQUIRED_KEYS + OPTIONAL_KEYS)
+        unless unknown_keys.empty?
+          errors << "Event hash has unknown key(s) '#{unknown_keys.join('\', \'')}'"
+        end
+
+        if errors.empty?
+          errors += VALIDATIONS.keys.inject([]) {|ret,vk|
+            ret << "Event #{VALIDATIONS[vk]}" unless vk.call(hash)
+            ret
+          }
+        end
+        errors
       end
 
       # creates, or modifies, an event object and adds it to the events list in redis

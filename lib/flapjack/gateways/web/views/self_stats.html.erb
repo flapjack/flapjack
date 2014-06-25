@@ -1,7 +1,35 @@
-<% page_title 'Internal Statistics' %>
+<%
+  page_title  'Internal Statistics'
+  require_css 'nv.d3'
+  require_js  'jquery-1.10.2'
+  require_js  'd3.v3'
+  require_js  'nv.d3'
+  require_js  'self_stats'
+%>
+<div id="data-api-url" data-api-url="<%= @api_url %>">
+  <div class="page-header">
+    <h2>Internal Statistics</h2>
+  </div>
+</div>
 
-<div class="page-header">
-  <h2>Internal Statistics</h2>
+<style>
+  div#chart {
+    height: 150px;
+  }
+
+  .nv-interactive { display: none; }
+
+  .nvd3 .nv-wrap line { stroke: none; }
+  .nvd3.nv-wrap rect { stroke-width:1; stroke: #ccc; opacity: 1; fill; white; }
+</style>
+
+<div class="row">
+  <div class="col-md-12">
+    <h4>Event queue length:</h4>
+    <div id="chart">
+      <svg></svg>
+    </div>
+  </div>
 </div>
 
 <div class="row">
@@ -97,8 +125,8 @@
 </div>
 
 <p>
-  <a class="btn btn-success" href="/self_stats.json">View as JSON</a>
+  <a class="btn btn-success" href="<% @base_url %>self_stats.json">View as JSON</a>
   Learn how to
-  <a href="https://github.com/flpjck/flapjack/wiki/Gathering-internal-statistics-with-collectd">
+  <a href="https://github.com/flapjack/flapjack/wiki/Gathering-internal-statistics-with-collectd">
     use these metrics</a>.
 </p>

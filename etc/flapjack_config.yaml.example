@@ -18,6 +18,8 @@ production:
     archive_events: true
     events_archive_maxage: 10800
     new_check_scheduled_maintenance_duration: 100 years
+    new_check_scheduled_maintenance_ignore_tags:
+      - bypass_ncsm
     logger:
       level: INFO
       syslog_errors: yes
@@ -49,7 +51,8 @@ production:
         level: INFO
         syslog_errors: yes
       smtp_config:
-        #from: "flapjack@noreply.example"
+        # from: "Flapjack Example <flapjack@noreply.example>"
+        # reply_to: "flapjack@support.example"
         host: 127.0.0.1
         # 1025 is the default port for http://mailcatcher.me
         port: 1025
@@ -95,8 +98,8 @@ production:
         syslog_errors: yes
       # location of custom alert templates
       #templates:
-      #  rollup.text: '/etc/flapjack/templates/jabber/rollup.text.erb' 
-      #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb' 
+      #  rollup.text: '/etc/flapjack/templates/jabber/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb'
     pagerduty:
       enabled: no
       queue: pagerduty_notifications
@@ -105,13 +108,14 @@ production:
         syslog_errors: yes
       # location of custom alert templates
       #templates:
-      #  alert.text: '/etc/flapjack/templates/pagerduty/alert.text.erb' 
+      #  alert.text: '/etc/flapjack/templates/pagerduty/alert.text.erb'
     web:
       enabled: yes
       port: 3080
       timeout: 300
       access_log: "/var/log/flapjack/web_access.log"
       api_url: "http://localhost:3081/"
+      #logo_image_path: "/etc/flapjack/web/custom_logo/flapjack-2013-notext-transparent-300-300.png"
       logger:
         level: INFO
         syslog_errors: yes
@@ -121,14 +125,6 @@ production:
       timeout: 300
       access_log: "/var/log/flapjack/jsonapi_access.log"
       base_url: "http://localhost:3081/"
-      logger:
-        level: INFO
-        syslog_errors: yes
-    api:
-      enabled: yes
-      port: 3071
-      timeout: 300
-      access_log: "/var/log/flapjack/api_access.log"
       logger:
         level: INFO
         syslog_errors: yes
@@ -169,6 +165,7 @@ development:
     archive_events: true
     events_archive_maxage: 10800
     new_check_scheduled_maintenance_duration: 100 years
+    new_check_scheduled_maintenance_ignore: onetime
     logger:
       level: DEBUG
       syslog_errors: yes
@@ -243,8 +240,8 @@ development:
         syslog_errors: yes
       # location of custom alert templates
       #templates:
-      #  rollup.text: '/etc/flapjack/templates/jabber/rollup.text.erb' 
-      #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb' 
+      #  rollup.text: '/etc/flapjack/templates/jabber/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb'
     pagerduty:
       enabled: no
       queue: pagerduty_notifications
@@ -253,20 +250,12 @@ development:
         syslog_errors: yes
       # location of custom alert templates
       #templates:
-      #  alert.text: '/etc/flapjack/templates/pagerduty/alert.text.erb' 
+      #  alert.text: '/etc/flapjack/templates/pagerduty/alert.text.erb'
     web:
       enabled: yes
       port: 4080
       timeout: 300
       access_log: "log/web_access.log"
-      logger:
-        level: INFO
-        syslog_errors: yes
-    api:
-      enabled: yes
-      port: 4081
-      timeout: 300
-      access_log: "log/api_access.log"
       logger:
         level: INFO
         syslog_errors: yes
@@ -291,5 +280,4 @@ development:
 
 test:
   redis:
-    database: 14
-
+    db: 14

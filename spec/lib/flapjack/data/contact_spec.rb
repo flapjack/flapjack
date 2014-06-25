@@ -2,7 +2,6 @@ require 'spec_helper'
 
 require 'active_support/time_with_zone'
 require 'ice_cube'
-
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/notification_rule'

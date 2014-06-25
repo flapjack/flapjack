@@ -52,6 +52,7 @@ module Flapjack
           port = @smtp_config ? @smtp_config['port'] : nil
           starttls = @smtp_config ? !! @smtp_config['starttls'] : nil
           m_from = @smtp_config ? @smtp_config['from'] : "flapjack@#{@fqdn}"
+          m_reply_to = @smtp_config ? ( @smtp_config['reply_to'] ||= m_from ) : "flapjack@#{@fqdn}"
           if @smtp_config
             if auth_config = @smtp_config['auth']
               auth = {}
@@ -64,6 +65,7 @@ module Flapjack
           @logger.debug("flapjack_mailer: set from to #{m_from}")
 
           mail = prepare_email(:from       => m_from,
+                               :reply_to   => m_reply_to,
                                :to         => alert.address,
                                :message_id => "<#{alert.notification_id}@#{@fqdn}>",
                                :alert      => alert)
@@ -103,6 +105,7 @@ module Flapjack
         # returns a Mail object
         def prepare_email(opts = {})
           from       = opts[:from]
+          reply_to   = opts[:reply_to] 
           to         = opts[:to]
           message_id = opts[:message_id]
           alert      = opts[:alert]
@@ -157,7 +160,7 @@ module Flapjack
             from       from
             to         to
             subject    subject
-            reply_to   from
+            reply_to   reply_to
             message_id message_id
 
             text_part do
