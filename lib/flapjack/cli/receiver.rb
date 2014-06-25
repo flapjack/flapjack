@@ -643,6 +643,18 @@ command :receiver do |receiver|
       end
     end
   end
+
+  receiver.desc 'HTTP API that caches and submits events'
+  receiver.command :httpbroker do |httpbroker|
+    httpbroker.passthrough = true
+    httpbroker.action do |global_options, options, args|
+      libexec = Pathname.new(__FILE__).parent.parent.parent.parent.join('libexec').expand_path
+      httpbroker  = libexec.join('httpbroker')
+      if httpbroker.exist?
+        Kernel.exec(httpbroker.to_s, *ARGV)
+      end
+    end
+  end
 end
 
 
