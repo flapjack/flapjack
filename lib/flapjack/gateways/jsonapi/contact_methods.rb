@@ -116,7 +116,7 @@ module Flapjack
               raise Flapjack::Gateways::JSONAPI::ContactsNotFound.new(requested_contacts)
             end
 
-            entity_ids = Flapjack::Data::Contact.entity_ids_for(contacts.map(&:id), :redis => redis)
+            entity_ids = contacts.empty? ? [] : Flapjack::Data::Contact.entity_ids_for(contacts.map(&:id), :redis => redis)
 
             contacts_json = contacts.collect {|contact|
               contact.to_jsonapi(:entity_ids => entity_ids[contact.id])
