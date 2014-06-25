@@ -13,9 +13,17 @@ import (
 	"github.com/go-martini/martini"
 )
 
+// State is a basic representation of a Flapjack event, with some extra field.
+// The extra fields handle state expiry.
+// Find more at https://github.com/flapjack/flapjack/wiki/DATA_STRUCTURES
+type State struct {
+	flapjack.Event
+	TTL	int64  `json:"ttl"`
+}
+
 // handler caches
-func CreateState(newState chan flapjack.Event, w http.ResponseWriter, r *http.Request) {
-	var state flapjack.Event
+func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
+	var state State
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -42,7 +50,11 @@ func CreateState(newState chan flapjack.Event, w http.ResponseWriter, r *http.Re
 		state.Type = "service"
 	}
 
-	newState <- state
+	if state.TTL == 0 {
+		state.TTL = 300
+	}
+
+	updates <- state
 
 	json, _ := json.Marshal(state)
 	message := "Caching state: %s\n"
@@ -53,15 +65,15 @@ func CreateState(newState chan flapjack.Event, w http.ResponseWriter, r *http.Re
 // cacheState stores a cache of event state to be sent to Flapjack.
 // The event state is queried later when submitting events periodically
 // to Flapjack.
-func cacheState(newState chan flapjack.Event, state map[string]flapjack.Event) {
-	for ns := range newState {
+func cacheState(updates chan State, state map[string]State) {
+	for ns := range updates {
 		key := ns.Entity + ":" + ns.Check
 		state[key] = ns
 	}
 }
 
 // submitCachedState periodically samples the cached state, sends it to Flapjack.
-func submitCachedState(states map[string]flapjack.Event, config Config) {
+func submitCachedState(states map[string]State, config Config) {
 	transport, err := flapjack.Dial(config.Server, config.Database)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
@@ -71,13 +83,21 @@ func submitCachedState(states map[string]flapjack.Event, config Config) {
 	for {
 		log.Printf("Number of cached states: %d\n", len(states))
 		for id, state := range(states) {
+			now := time.Now().Unix()
 			event := flapjack.Event{
 				Entity:  state.Entity,
 				Check:   state.Check,
 				Type:    state.Type,
 				State:   state.State,
 				Summary: state.Summary,
-				Time:    time.Now().Unix(),
+				Time:    now,
+			}
+
+			// Stale state sends UNKNOWNs
+			if now - state.Time > state.TTL {
+				log.Printf("State for %s is stale. Sending UNKNOWN.\n", id)
+				event.State = "UNKNOWN"
+				event.Summary = fmt.Sprintf("httpbroker: Cached state is stale (>%ds old)", state.TTL)
 			}
 			if config.Debug {
 				log.Printf("Sending event data for %s\n", id)
