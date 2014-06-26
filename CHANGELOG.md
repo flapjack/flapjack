@@ -1,5 +1,11 @@
 ## Flapjack Changelog
 
+# 0.9.1 - 2014-06-27
+- Bug: PATCHing blackhole properties for notification rule changes other blackholes - further fixes #504 (@ali-graham)
+- Bug: JSONAPI get all entities/contacts with empty db e3725fc (@ali-graham)
+- Bug: Decommission Check button returning a 404 #538 (@ali-graham)
+- Bug: Weekday number 7 is accepted by the jsonapi but causes Flapjack to crash #549 (@ali-graham)
+
 # 0.9.0 - 2014-05-23
 - Chore: split reports data from entities and checks in jsonapi #525 (@ali-graham)
 
