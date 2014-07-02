@@ -4,7 +4,7 @@
   current_time = Time.now
 %>
 <div class="page-header">
-  <% entity_link = u(@base_url) + "entity/" << u(@entity) %>
+  <% entity_link = @base_url + "entity/" << u(@entity) %>
   <h2><%= h @check %> on <a href="<%= entity_link %>" title="entity summary"><%= h @entity %></a></h2>
 </div>
 
