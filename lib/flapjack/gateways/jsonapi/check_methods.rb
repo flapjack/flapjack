@@ -31,6 +31,38 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::Helpers
           app.helpers Flapjack::Gateways::JSONAPI::CheckMethods::Helpers
 
+          app.get %r{^/checks(?:/)?(.+)?$} do
+            requested_checks = if params[:captures] && params[:captures][0]
+              params[:captures][0].split(',').uniq
+            else
+              nil
+            end
+
+            checks = if requested_checks
+              requested_checks.collect do|req_check|
+                Flapjack::Data::EntityCheck.for_event_id(req_check, :logger => logger, :redis => redis)
+              end
+            else
+              Flapjack::Data::EntityCheck.find_all(:redis => redis)
+            end
+            checks.compact!
+
+            if requested_checks && checks.empty?
+              raise Flapjack::Gateways::JSONAPI::ChecksNotFound.new(requested_checks)
+            end
+
+            linked_entity_ids = checks.empty? ? [] : checks.inject({}) do |memo, check|
+              memo[check.key] = check.entity.id
+              memo
+            end
+
+            checks_json = checks.collect {|check|
+              check.to_jsonapi(:entity_ids => linked_entity_ids[check.key])
+            }.join(",")
+
+            '{"checks":[' + checks_json + ']}'
+          end
+
           app.patch %r{^/checks/(.+)$} do
             checks_for_check_names(params[:captures][0].split(',')).each do |check|
               apply_json_patch('checks') do |op, property, linked, value|

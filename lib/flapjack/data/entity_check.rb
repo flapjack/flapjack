@@ -661,6 +661,16 @@ module Flapjack
         @ack_hash
       end
 
+      def to_jsonapi(opts = {})
+        {
+          "name"        => @check,
+          "entity_name" => @entity.name,
+          "links"       => {
+            :entities     => opts[:entity_ids] || [],
+          }
+        }.to_json
+      end
+
     private
 
       def initialize(entity, check, options = {})
