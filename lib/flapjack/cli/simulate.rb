@@ -1,6 +1,9 @@
 #!/usr/bin/env ruby
 
+require 'eventmachine'
+require 'em-synchrony'
 require 'redis'
+require 'redis/connection/synchrony'
 
 require 'flapjack/configuration'
 require 'flapjack/data/event'
@@ -66,25 +69,29 @@ module Flapjack
         recovery = event.merge('state' => 'ok',  'summary' => 'Simulated check output (test by operator)')
         key = "#{event['entity']}:#{event['check']}"
 
-        puts "#{Time.now}: sending failure event (#{state}) for #{key}"
-        Flapjack::Data::Event.add(failure, :redis => redis)
+        EM.synchrony do
 
-        EM.run do
+          puts "#{Time.now}: sending failure event (#{state}) for #{key}"
+          Flapjack::Data::Event.add(failure, :redis => redis)
 
           EM.add_timer(stop_after) do
             puts "#{Time.now}: stopping"
             if recover
-              puts "#{Time.now}: sending recovery event for #{key}"
-              Flapjack::Data::Event.add(recovery.merge('time' => Time.now.to_i),
-                :redis => redis)
+              EM.synchrony do
+                puts "#{Time.now}: sending recovery event for #{key}"
+                Flapjack::Data::Event.add(recovery.merge('time' => Time.now.to_i),
+                  :redis => redis)
+              end
             end
             EM.stop
           end
 
           EM.add_periodic_timer(opts[:interval]) do
-            puts "#{Time.now}: sending failure event (#{state}) for #{key}"
-            Flapjack::Data::Event.add(failure.merge('time' => Time.now.to_i),
-              :redis => redis)
+            EM.synchrony do
+              puts "#{Time.now}: sending failure event (#{state}) for #{key}"
+              Flapjack::Data::Event.add(failure.merge('time' => Time.now.to_i),
+                :redis => redis)
+            end
           end
 
         end
