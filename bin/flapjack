@@ -12,7 +12,7 @@ program_desc 'Flexible monitoring notification routing system'
 version Flapjack::VERSION
 
 desc 'Configuration file to use'
-default_value '/etc/flapjack/flapjack.yaml'
+default_value '/etc/flapjack/flapjack_config.yaml'
 arg_name '/path/to/flapjack.yaml'
 flag [:c,:config]
 
@@ -38,3 +38,4 @@ on_error do |exception|
 end
 
 exit run(ARGV)
+
