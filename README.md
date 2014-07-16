@@ -17,7 +17,7 @@ Flapjack will be immediately useful to you if:
 
 ### Try it out with the Quickstart Guide
 
-The [Quickstart](http://flapjack.io/quickstart/) guide will get Flapjack up and running in a VM locally using Vagrant and VirtualBox.
+The [Quickstart](http://flapjack.io/quickstart/) guide will help you get Flapjack up and running in a VM locally using Vagrant and VirtualBox.
 
 ### The technical low-down
 
