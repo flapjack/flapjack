@@ -1,7 +1,7 @@
 
 ## Building
 
-From your checkout of the [Flapjack repository](https://github.com/flpjck/flapjack):
+From your checkout of the [Flapjack repository](https://github.com/flapjack/flapjack):
 
 ``` bash
 git checkout gh-pages
@@ -23,7 +23,7 @@ This will copy slate documentation from `../slate/build` if it's available.
 
 ### JSONAPI documentation
 
-JSONAPI documentation is in a [separate repository](https://github.com/flpjck/slate).
+JSONAPI documentation is in a [separate repository](https://github.com/flapjack/slate).
 
 There is a task to pull a built copy of the documentation into the Jekyll site:
 

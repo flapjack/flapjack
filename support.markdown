@@ -11,9 +11,9 @@ Ask questions on the [Flapjack mailing list](https://groups.google.com/forum/#!f
 
 ## GitHub issues
 
-Report bugs + request features on our [issue tracker](https://github.com/flpjck/flapjack/issues).
+Report bugs + request features on our [issue tracker](https://github.com/flapjack/flapjack/issues).
 
-We also have issue trackers for the [Vagrant box](https://github.com/flpjck/vagrant-flapjack/issues), [packages](https://github.com/flpjck/omnibus-flapjack/issues), and [Ruby API client](https://github.com/flpjck/flapjack-diner/issues)
+We also have issue trackers for the [Vagrant box](https://github.com/flapjack/vagrant-flapjack/issues), [packages](https://github.com/flapjack/omnibus-flapjack/issues), and [Ruby API client](https://github.com/flapjack/flapjack-diner/issues)
 
 ## IRC
 
@@ -27,4 +27,4 @@ Ping [@auxesis](https://twitter.com/auxesis) (Lindsay Holmwood) or [@jessereynol
 
 We try to cover as much as possible in the [documentation]({ site.url }/docs).
 
-If you find the Flapjack documentation lacking, we consider that a bug! Please create a [GitHub issue](https://github.com/flpjck/flapjack/issues/new) and we'll get it fixed ASAP.
+If you find the Flapjack documentation lacking, we consider that a bug! Please create a [GitHub issue](https://github.com/flapjack/flapjack/issues/new) and we'll get it fixed ASAP.
