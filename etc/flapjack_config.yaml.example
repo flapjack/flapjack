@@ -90,6 +90,8 @@ production:
       jabberid: "flapjack@jabber.example.com"
       password: "good-password"
       alias: "flapjack"
+      identifiers:
+        - "@flapjack"
       rooms:
         - "gimp@conference.jabber.example.com"
         - "log@conference.jabber.example.com"
