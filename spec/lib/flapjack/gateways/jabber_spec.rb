@@ -3,13 +3,14 @@ require 'flapjack/gateways/jabber'
 
 describe Flapjack::Gateways::Jabber, :logger => true do
 
-  let(:config) { {'queue'    => 'jabber_notifications',
-                  'server'   => 'example.com',
-                  'port'     => '5222',
-                  'jabberid' => 'flapjack@example.com',
-                  'password' => 'password',
-                  'alias'    => 'flapjack',
-                  'rooms'    => ['flapjacktest@conference.example.com']
+  let(:config) { {'queue'       => 'jabber_notifications',
+                  'server'      => 'example.com',
+                  'port'        => '5222',
+                  'jabberid'    => 'flapjack@example.com',
+                  'password'    => 'password',
+                  'alias'       => 'flapjack',
+                  'identifiers' => ['@flapjack'],
+                  'rooms'       => ['flapjacktest@conference.example.com']
                  }
   }
 
@@ -26,10 +27,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     expect(fj).to receive(:register_handler).with(:ready).and_yield(stanza)
     expect(fj).to receive(:on_ready).with(stanza)
 
-    expect(fj).to receive(:register_handler).with(:message, :groupchat?, :body => /^flapjack:\s+/).and_yield(stanza)
+    body_matchers = [{:body => /^@flapjack[:\s]/}, {:body => /^flapjack[:\s]/}]
+    expect(fj).to receive(:register_handler).with(:message, :groupchat?, body_matchers).and_yield(stanza)
     expect(fj).to receive(:on_groupchat).with(stanza)
 
-    expect(fj).to receive(:register_handler).with(:message, :chat?).and_yield(stanza)
+    expect(fj).to receive(:register_handler).with(:message, :chat?, :body).and_yield(stanza)
     expect(fj).to receive(:on_chat).with(stanza)
 
     expect(fj).to receive(:register_handler).with(:disconnected).and_yield(stanza)
@@ -52,11 +54,14 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   end
 
   it "receives an acknowledgement message" do
-    expect(stanza).to receive(:body).and_return('flapjack: ACKID 1f8ac10f fixing now duration: 90m')
+    expect(stanza).to receive(:body).twice.and_return('flapjack: ACKID 1f8ac10f fixing now duration: 90m')
     from = double('from')
-    expect(from).to receive(:resource).and_return('sender')
+    #expect(from).to receive(:resource).and_return('sender')
     expect(from).to receive(:stripped).and_return('sender')
     expect(stanza).to receive(:from).and_return(from)
+
+    #identifiers = double('identifiers')
+    #expect(identifiers).to receive
 
     redis = double('redis')
     expect(redis).to receive(:hget).with('checks_by_hash', '1f8ac10f').
@@ -85,12 +90,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   end
 
   it "strips XML tags from the received message" do
-    expect(stanza).to receive(:body).
+    expect(stanza).to receive(:body).twice.
       and_return('flapjack: tell me about <span style="text-decoration: underline;">' +
                  '<a href="http://example.org/">example.org</a></span>')
 
     from = double('from')
-    expect(from).to receive(:resource).and_return('sender')
     expect(from).to receive(:stripped).and_return('sender')
     expect(stanza).to receive(:from).and_return(from)
 
@@ -119,11 +123,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   end
 
   it "handles a message with a newline in it" do
-    expect(stanza).to receive(:body).
+    expect(stanza).to receive(:body).twice.
       and_return("flapjack: tell me about \nexample.com")
 
     from = double('from')
-    expect(from).to receive(:resource).and_return('sender')
     expect(from).to receive(:stripped).and_return('sender')
     expect(stanza).to receive(:from).and_return(from)
 
@@ -152,9 +155,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   end
 
   it "receives a message it doesn't understand" do
-    expect(stanza).to receive(:body).once.and_return('flapjack: hello!')
+    expect(stanza).to receive(:body).twice.and_return('flapjack: hello!')
     from = double('from')
-    expect(from).to receive(:resource).and_return('sender')
     expect(from).to receive(:stripped).and_return('sender')
     expect(stanza).to receive(:from).and_return(from)
 
