@@ -41,4 +41,5 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'rbtrace'
   gem.add_dependency 'rake'
   gem.add_dependency 'gli'
+  gem.add_dependency 'terminal-table'
 end
