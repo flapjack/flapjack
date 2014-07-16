@@ -15,6 +15,10 @@ Flapjack will be immediately useful to you if:
 * Your monitoring infrastructure is **multitenant**, and each customer has a **bespoke alerting strategy**.
 * You want to dip your toe in the water and try alternative check execution engines like Sensu, Icinga, or cron in parallel to Nagios.
 
+### Try it out with the Quickstart Guide
+
+The [Quickstart](http://flapjack.io/quickstart/) guide will get Flapjack up and running in a VM locally using Vagrant and VirtualBox.
+
 ### The technical low-down
 
 Flapjack provides a scalable method for dealing with events representing changes in system state (OK -> WARNING -> CRITICAL transitions) and alerting appropriate people as necessary.
