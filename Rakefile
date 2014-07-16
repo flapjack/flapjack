@@ -18,7 +18,7 @@ task :slate do
       Please ensure you have:
 
        - A checkout of Flapjack's slate documentation at #{source.parent}
-         (Grab the repo from https://github.com/flpjck/slate)
+         (Grab the repo from https://github.com/flapjack/slate)
        - Built a standalone local copy of the slate documentation with a `rake build`.
     ERROR
 

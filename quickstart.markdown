@@ -13,7 +13,7 @@ You'll also learn the basics of how to:
 - Simulate a failure of a monitored service
 - Integrate Flapjack with Nagios (or Icinga), so Flapjack takes over alerting
 
-To skip this tutorial and jump straight to the code, view the project on [GitHub](https://github.com/flpjck/flapjack).
+To skip this tutorial and jump straight to the code, view the project on [GitHub](https://github.com/flapjack/flapjack).
 
 ## Getting Flapjack running
 
@@ -29,7 +29,7 @@ To skip this tutorial and jump straight to the code, view the project on [GitHub
 Get the repo, and build your Vagrant box:
 
 ```
-git clone https://github.com/flpjck/vagrant-flapjack.git
+git clone https://github.com/flapjack/vagrant-flapjack.git
 cd vagrant-flapjack
 vagrant up
 ```
@@ -42,7 +42,7 @@ vagrant up --provider=vmware_fusion
 
 <div class="alert alert-info">
 <strong>More information:</strong>
-Check out the <a class="alert-link" href="https://github.com/flpjck/vagrant-flapjack">vagrant-flapjack</a> project on GitHub.
+Check out the <a class="alert-link" href="https://github.com/flapjack/vagrant-flapjack">vagrant-flapjack</a> project on GitHub.
 </div>
 
 ### Verify
@@ -101,7 +101,7 @@ simulate-failed-check --help
 ```
 
 <div class="alert alert-info">
-Details of these commands are available <a class="alert-link" href="https://github.com/flpjck/flapjack/wiki/USING#running">on the Flapjack wiki</a>.
+Details of these commands are available <a class="alert-link" href="https://github.com/flapjack/flapjack/wiki/USING#running">on the Flapjack wiki</a>.
 </div>
 
 ![CLI](/images/quickstart/term-flapjack-help.png)
@@ -145,7 +145,7 @@ All that remains is to configure `flapjack-nagios-receiver` to read from this na
 sudo /etc/init.d/flapjack-nagios-receiver start
 ```
 
-More details on configuration are avilable [on the wiki](https://github.com/flpjck/flapjack/wiki/USING#configuring-components).
+More details on configuration are avilable [on the wiki](https://github.com/flapjack/flapjack/wiki/USING#configuring-components).
 
 ### Verify
 
@@ -155,13 +155,13 @@ Reload the Flapjack web interface and you should now see the checks from Icinga 
 
 ## Create some contacts and Entities
 
-Currently Flapjack does not include a friendly web interface for managing contacts and entities, so for now we use json, curl, and the [Flapjack API](https://github.com/flpjck/flapjack/wiki/API).
+Currently Flapjack does not include a friendly web interface for managing contacts and entities, so for now we use json, curl, and the [Flapjack API](https://github.com/flapjack/flapjack/wiki/API).
 
-The vagrant-flapjack project ships with [example json files](https://github.com/flpjck/vagrant-flapjack/tree/master/examples) that you can use in this tutorial, or you can copy and paste the longform curl commands below that include the json.
+The vagrant-flapjack project ships with [example json files](https://github.com/flapjack/vagrant-flapjack/tree/master/examples) that you can use in this tutorial, or you can copy and paste the longform curl commands below that include the json.
 
 ### Create Contacts Ada and Charles
 
-We'll be using the [POST /contacts](https://github.com/flpjck/flapjack/wiki/API#wiki-post_contacts) API call to create two contacts.
+We'll be using the [POST /contacts](https://github.com/flapjack/flapjack/wiki/API#wiki-post_contacts) API call to create two contacts.
 
 Run the following from your workstation, cd'd into the vagrant-flapjack directory:
 
@@ -236,7 +236,7 @@ Selecting [Ada](http://localhost:3080/contacts/21) should give you something lik
 
 ### Create entities foo-app-01 and foo-db-01 (.example.com)
 
-We'll be using the [POST /entities](https://github.com/flpjck/flapjack/wiki/API#wiki-post_entities) api call to create two entities.
+We'll be using the [POST /entities](https://github.com/flapjack/flapjack/wiki/API#wiki-post_entities) api call to create two entities.
 
 We're going to assign both Ada and Charles to foo-app-01, and just Ada to foo-db-01.
 
@@ -289,7 +289,7 @@ Visit [foo-app-01](http://localhost:3080/entity/foo-app-01.example.com) in the w
 
 ## Feedback?
 
-Found an error in the above? Please [submit a bug report](https://github.com/flpjck/flapjack/issues/new) and/or a pull request against the [gh-pages branch](https://github.com/flpjck/flapjack/tree/gh-pages) with the fix.
+Found an error in the above? Please [submit a bug report](https://github.com/flapjack/flapjack/issues/new) and/or a pull request against the [gh-pages branch](https://github.com/flapjack/flapjack/tree/gh-pages) with the fix.
 
 Something not clear? That's a bug too!
 
@@ -305,6 +305,6 @@ Stay tuned for more info on how to configure:
 
 In the mean time, check out:
 
- - [Documentation](https://github.com/flpjck/flapjack/wiki/IMPORTING) on **how to import contacts and entities**
+ - [Documentation](https://github.com/flapjack/flapjack/wiki/IMPORTING) on **how to import contacts and entities**
  - **[JSONAPI documentation](/docs/jsonapi)** for working with individual contacts and entities
 
