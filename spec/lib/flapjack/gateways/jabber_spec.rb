@@ -56,12 +56,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   it "receives an acknowledgement message" do
     expect(stanza).to receive(:body).twice.and_return('flapjack: ACKID 1f8ac10f fixing now duration: 90m')
     from = double('from')
-    #expect(from).to receive(:resource).and_return('sender')
     expect(from).to receive(:stripped).and_return('sender')
     expect(stanza).to receive(:from).and_return(from)
-
-    #identifiers = double('identifiers')
-    #expect(identifiers).to receive
 
     redis = double('redis')
     expect(redis).to receive(:hget).with('checks_by_hash', '1f8ac10f').

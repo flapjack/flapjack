@@ -3,7 +3,6 @@
 require 'em-hiredis'
 
 require 'socket'
-require 'set'
 
 require 'blather/client/client'
 require 'chronic_duration'
@@ -553,7 +552,7 @@ module Flapjack
 
       def on_groupchat(stanza)
         return if @should_quit
-        #@logger.debug("groupchat message received: #{stanza.inspect}")
+        @logger.debug("groupchat message received: #{stanza.inspect}")
 
         the_command = nil
         @identifiers.each do |identifier|
