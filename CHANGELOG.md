@@ -1,5 +1,20 @@
 ## Flapjack Changelog
 
+# 1.0.0rc2 - 2014-07-17
+- Feature: jsonapi GET /checks badab0d (@ali-graham)
+- Feature: Add HTTP broker, one-off event submitter, general Go support #553 (@auxesis)
+- Feature: Add ability to disable check via JSON API #529 (@ali-graham)
+- Feature: Jabber - Resource in JID should be supported in the config #557 (@jessereynolds)
+- Feature: Jabber - add an 'identifiers' list to the config #558 (@jessereynolds)
+- Feature: Jabber - handle HipChat style status updates as per XEP-0085 #559 (@jessereynolds)
+- Feature: auto generate entity ID on creation if none supplied #568 (@jessereynolds)
+- Feature: Use friendly help if you run the server with old syntax #564 (@Hobbsee)
+- Bug: Decommission Check button returning a 404 #538 (@ali-graham)
+- Bug: incorrect default config path in flapjack gli #554 (@jessereynolds)
+- Bug: make sure that base_url isn't escaped so that links work correctly #556 (@mattdelves)
+- Chore: Update development section of example config file #546 (@Hobbsee)
+
+
 # 1.0.0rc1 - 2014-06-25
 - Feature: Allow ncsm to be skipped using a configured whitelist #485 (@StephenWeber)
 - Feature: GLI the CLI (one command to rule them all) #478 (@auxesis, @ali-graham)
