@@ -22,5 +22,4 @@ group :test do
   gem 'simplecov', :require => false
   gem 'debugger-ruby_core_source', '>= 1.3.4' # required for perftools
   gem 'perftools.rb'
-  gem 'pry'
 end
