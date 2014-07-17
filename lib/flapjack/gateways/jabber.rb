@@ -50,9 +50,17 @@ module Flapjack
         @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
 
         @logger = opts[:logger]
+        @logger.debug("Jabber Initializing")
 
         @buffer = []
         @hostname = Socket.gethostname
+
+        # FIXME: i suspect the following should be in #setup so a config reload updates @identifiers
+        # I moved it here so the rspec passes :-/
+        @alias = @config['alias'] || 'flapjack'
+        @identifiers = ((@config['identifiers'] || []) + [@alias]).uniq
+        @logger.debug("I will respond to the following identifiers: #{@identifiers.join(', ')}")
+
         super()
       end
 
@@ -65,7 +73,9 @@ module Flapjack
       end
 
       def setup
-        @flapjack_jid = Blather::JID.new((@config['jabberid'] || 'flapjack') + '/' + @hostname)
+        jid = @config['jabberid'] || 'flapjack'
+        jid += '/' + @hostname unless jid.include?('/')
+        @flapjack_jid = Blather::JID.new(jid)
 
         super(@flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
 
@@ -80,13 +90,19 @@ module Flapjack
           end
         end
 
-        register_handler :message, :groupchat?, :body => /^#{@config['alias']}:\s+/ do |stanza|
+        body_matchers = @identifiers.inject([]) do |memo, identifier|
+          @logger.debug("identifier: #{identifier}, memo: #{memo}")
+          memo << {:body => /^#{identifier}[:\s]/}
+          memo
+        end
+        @logger.debug("body_matchers: #{body_matchers}")
+        register_handler :message, :groupchat?, body_matchers do |stanza|
           EventMachine::Synchrony.next_tick do
             on_groupchat(stanza)
           end
         end
 
-        register_handler :message, :chat? do |stanza|
+        register_handler :message, :chat?, :body do |stanza|
           EventMachine::Synchrony.next_tick do
             on_chat(stanza)
           end
@@ -111,11 +127,11 @@ module Flapjack
             @logger.info("Joining room #{room}")
             presence = Blather::Stanza::Presence.new
             presence.from = @flapjack_jid
-            presence.to = Blather::JID.new("#{room}/#{@config['alias']}")
+            presence.to = Blather::JID.new("#{room}/#{@alias}")
             presence << "<x xmlns='http://jabber.org/protocol/muc'><history maxstanzas='0'></x>"
             EventMachine::Synchrony.next_tick do
               write presence
-              say(room, "flapjack jabber gateway started at #{Time.now}, hello!", :groupchat)
+              say(room, "flapjack jabber gateway started at #{Time.now}, hello! Try typing 'help'.", :groupchat)
             end
           end
         end
@@ -160,7 +176,7 @@ module Flapjack
         out
       end
 
-      def interpreter(command_raw,from)
+      def interpreter(command_raw, from)
         msg          = nil
         action       = nil
         entity_check = nil
@@ -239,7 +255,8 @@ module Flapjack
           t    = Process.times
           fqdn = `/bin/hostname -f`.chomp
           pid  = Process.pid
-          msg  = "Flapjack #{Flapjack::VERSION} process #{pid} on #{fqdn} \n" +
+          msg  = "Flapjack #{Flapjack::VERSION} process #{pid} on #{fqdn}\n" +
+                 "Identifiers: #{@identifiers.join(', ')}\n" +
                  "Boot time: #{@boot_time}\n" +
                  "User CPU Time: #{t.utime}\n" +
                  "System CPU Time: #{t.stime}\n" +
@@ -537,18 +554,23 @@ module Flapjack
         return if @should_quit
         @logger.debug("groupchat message received: #{stanza.inspect}")
 
-        if stanza.body =~ /^#{@config['alias']}:\s+(.*)/m
-          command  = $1
+        the_command = nil
+        @identifiers.each do |identifier|
+          if stanza.body =~ /^#{identifier}:?\s*(.*)/m
+            the_command  = $1
+            @logger.debug("matched identifier: #{identifier}, command: #{the_command.inspect}")
+            break
+          end
         end
 
         from = stanza.from
 
         begin
-          results = interpreter(command, from.resource.to_s)
+          results = interpreter(the_command, from.to_s)
           msg     = results[:msg]
           action  = results[:action]
         rescue => e
-          @logger.error("Exception when interpreting command '#{command}' - #{e.class}, #{e.message}")
+          @logger.debug("Exception when interpreting command '#{the_command}' - #{e.class}, #{e.message}")
           msg = "Oops, something went wrong processing that command (#{e.class}, #{e.message})"
         end
 
@@ -571,8 +593,10 @@ module Flapjack
           command = stanza.body
         end
 
+        from = stanza.from
+
         begin
-          results = interpreter(command)
+          results = interpreter(command, from.resource.to_s)
           msg     = results[:msg]
           action  = results[:action]
         rescue => e
