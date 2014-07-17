@@ -11,7 +11,7 @@ describe Flapjack::Data::Entity, :redis => true do
 
     expect(entity).not_to be_nil
     expect(entity.name).to eq(name)
-    expect(@redis.get("entity_id:#{name}")).to match(/\S+/)
+    expect(@redis.get("entity_id:#{name}")).to match(/^\S+$/)
   end
 
   it "adds a registered contact with an entity" do
