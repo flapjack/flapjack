@@ -1,5 +1,11 @@
 ## Flapjack Changelog
 
+# 0.9.2 - 2014-07-17
+- Feature: Add ability to disable check via JSON API #529 (@ali-graham)
+- Feature: Jabber - Resource in JID should be supported in the config #557 (@jessereynolds)
+- Feature: Jabber - add an 'identifiers' list to the config #558 (@jessereynolds)
+- Feature: Jabber - handle HipChat style status updates as per XEP-0085 #559 (@jessereynolds)
+
 # 0.9.1 - 2014-06-27
 - Bug: PATCHing blackhole properties for notification rule changes other blackholes - further fixes #504 (@ali-graham)
 - Bug: JSONAPI get all entities/contacts with empty db e3725fc (@ali-graham)
