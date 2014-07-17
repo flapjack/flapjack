@@ -74,7 +74,7 @@ module Flapjack
 
       def setup
         jid = @config['jabberid'] || 'flapjack'
-        jid += '/' + @hostname unless /\// =~ jid
+        jid += '/' + @hostname unless jid.include?('/')
         @flapjack_jid = Blather::JID.new(jid)
 
         super(@flapjack_jid, @config['password'], @config['server'], @config['port'].to_i)
