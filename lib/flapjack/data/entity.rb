@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'securerandom'
+
 require 'flapjack/data/contact'
 require 'flapjack/data/tag'
 require 'flapjack/data/tag_set'
