@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'securerandom'
+
 require 'flapjack/data/contact'
 require 'flapjack/data/tag'
 require 'flapjack/data/tag_set'
@@ -34,28 +36,22 @@ module Flapjack
 
         #FIXME: should probably raise an exception if trying to create a new entity with the
         # same name or id as an existing entity. (Go away and use update instead.)
-        if entity['id']
-          existing_name = redis.hget("entity:#{entity['id']}", 'name')
-          redis.del("entity_id:#{existing_name}") unless existing_name == entity['name']
-          redis.set("entity_id:#{entity['name']}", entity['id'])
-          redis.hset("entity:#{entity['id']}", 'name', entity['name'])
+        entity_id = entity['id'] ? entity['id'] : SecureRandom.uuid
+        existing_name = redis.hget("entity:#{entity_id}", 'name')
+        redis.del("entity_id:#{existing_name}") unless existing_name == entity['name']
+        redis.set("entity_id:#{entity['name']}", entity_id)
+        redis.hset("entity:#{entity_id}", 'name', entity['name'])
 
-          redis.del("contacts_for:#{entity['id']}")
-          if entity['contacts'] && entity['contacts'].respond_to?(:each)
-            entity['contacts'].each {|contact_id|
-              next if Flapjack::Data::Contact.find_by_id(contact_id, :redis => redis).nil?
-              redis.sadd("contacts_for:#{entity['id']}", contact_id)
-            }
-          end
-          self.new(:name  => entity['name'],
-                   :id    => entity['id'],
-                   :redis => redis)
-        else
-          # empty string is the redis equivalent of a Ruby nil, i.e. key with
-          # no value
-          redis.set("entity_id:#{entity['name']}", '')
-          nil
+        redis.del("contacts_for:#{entity_id}")
+        if entity['contacts'] && entity['contacts'].respond_to?(:each)
+          entity['contacts'].each {|contact_id|
+            next if Flapjack::Data::Contact.find_by_id(contact_id, :redis => redis).nil?
+            redis.sadd("contacts_for:#{entity_id}", contact_id)
+          }
         end
+        self.new(:name  => entity['name'],
+                 :id    => entity_id,
+                 :redis => redis)
       end
 
       def self.find_by_name(entity_name, options = {})
