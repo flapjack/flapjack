@@ -34,8 +34,20 @@ post do |global,command,options,args|
 end
 
 on_error do |exception|
-  true
+  # We've changed the commands to control the flapjack server.  If we detect
+  # the user has tried one of the old commands, show them what they should
+  # have used instead.
+  SERVER_COMMANDS = %w(start stop restart reload status)
+  message = exception.message
+  input = message.split("'").last.downcase
+  old_command = message.start_with?('Unknown command') && SERVER_COMMANDS.include?(input)
+  if old_command
+    puts exception.message
+    puts "\nDid you mean: #{$PROGRAM_NAME} server #{input}?"
+    puts "\nTry #{$PROGRAM_NAME} help"
+  end
+  # If this wasn't an old server command, return true to show the standard error dialog
+  !old_command
 end
 
 exit run(ARGV)
-
