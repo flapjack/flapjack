@@ -244,11 +244,10 @@ curl http://localhost:3081/entities/17,25
 <h2 id="update-entities">Update entities</h2>
 
 <p>Update one or more attributes for one or more entity resources.</p>
+
+<p>NB: The entity name cannot be changed in Flapjack v1.x due to limitations in the underlying data storage model. This will be addressed in future Flapjack releases.</p>
 <pre class="highlight shell">curl -w <span class="s1">'response: %{http_code} \n'</span> -X PATCH -H <span class="s2">"Content-Type: application/json-patch+json"</span> -d <span class="se">\</span>
 <span class="s1">'[
-  {"op"    : "replace",
-   "path"  : "/entities/0/name",
-   "value" : "www.example.com"},
   {"op"    : "add",
    "path"  : "/entities/0/linked/contacts",
    "value" : '</span>352<span class="s1">'}
@@ -326,9 +325,13 @@ curl http://localhost:3081/entities/17,25
 <h2 id="create-scheduled-maintenance-periods-on-entities">Create scheduled maintenance periods on entities</h2>
 <pre class="highlight shell">curl -w <span class="s1">'response: %{http_code} \n'</span> -X POST -H <span class="s2">"Content-type: application/vnd.api+json"</span> -d <span class="se">\</span>
  <span class="s1">'{
-    "start_time" : "2014-04-09T16:03:25+09:30",
-    "duration" : 3600,
-    "summary" : "memory replacement"
+    "scheduled_maintenances": [
+      {
+        "start_time" : "2014-04-09T16:03:25+09:30",
+        "duration" : 3600,
+        "summary" : "memory replacement"
+      }
+    ]
   }'</span> <span class="se">\</span>
  http://localhost:3081/scheduled_maintenances/entities/825
 </pre>
@@ -457,8 +460,12 @@ curl http://localhost:3081/entities/17,25
 <h2 id="create-unscheduled-maintenance-periods-on-entities">Create unscheduled maintenance periods on entities</h2>
 <pre class="highlight shell">curl -w <span class="s1">'response: %{http_code} \n'</span> -X POST -H <span class="s2">"Content-type: application/vnd.api+json"</span> -d <span class="se">\</span>
  <span class="s1">'{
-    "duration" : 3600,
-    "summary" : "fixing now"
+    "unscheduled_maintenances": [
+      {
+        "duration" : 3600,
+        "summary" : "fixing now"
+      }
+    ]
   }'</span> <span class="se">\</span>
  http://localhost:3081/unscheduled_maintenances/entities/825
 </pre>
@@ -593,8 +600,12 @@ curl http://localhost:3081/entities/17,25
 
 <h2 id="create-test-notifications-on-entities">Create test notifications on entities</h2>
 <pre class="highlight shell">curl -w <span class="s1">'response: %{http_code} \n'</span> -X POST -H <span class="s2">"Content-type: application/vnd.api+json"</span> -d <span class="se">\</span>
- <span class="s1">'{
-    "summary" : "testing, testing, 1, 2, 3"
+  <span class="s1">'{
+    "test_notifications": [
+      {
+        "summary" : "testing, testing, 1, 2, 3"
+      }
+    ]
   }'</span> <span class="se">\</span>
  http://localhost:3081/test_notifications/entities/825
 </pre>

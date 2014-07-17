@@ -58,12 +58,99 @@
       <div class="content">
         <h1 id="checks">Checks</h1>
 
+<h2 id="disable-a-check">Disable a check</h2>
+
+<p>Disable a check (by setting its enabled attribute to false). This is currently
+the only supported check property for updates via the JSONAPI, due to
+limitations in the underlying data storage model. This will be addressed in
+future Flapjack releases.</p>
+
+<p>(Checks are re-enabled when new events are generated for them.)</p>
+<pre class="highlight shell">curl -w <span class="s1">'response: %{http_code} \n'</span> -X PATCH -H <span class="s2">"Content-Type: application/json-patch+json"</span> -d <span class="se">\</span>
+<span class="s1">'[
+  {"op"    : "replace",
+   "path"  : "/checks/0/enabled",
+   "value" : false}
+]'</span> <span class="se">\</span>
+ <span class="s1">'http://localhost:3081/checks/www.example.com%3APING'</span>
+</pre>
+<pre class="highlight ruby"><span class="nb">require</span> <span class="s1">'flapjack-diner'</span>
+<span class="no">Flapjack</span><span class="o">::</span><span class="no">Diner</span><span class="p">.</span><span class="nf">base_uri</span><span class="p">(</span><span class="s1">'localhost:3081'</span><span class="p">)</span>
+
+<span class="no">Flapjack</span><span class="o">::</span><span class="no">Diner</span><span class="p">.</span><span class="nf">update_checks</span><span class="p">(</span>
+  <span class="s1">'www.example.com:PING'</span><span class="p">,</span>
+  <span class="ss">:enabled</span> <span class="o">=&gt;</span> <span class="kp">false</span>
+<span class="p">)</span>
+</pre>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">PATCH /checks/ID[,ID,ID...]</code></p>
+
+<h3 id="query-parameters">Query Parameters</h3>
+
+<p>Parameters sent for check updates must form a valid <a href="http://tools.ietf.org/html/rfc6902">JSON Patch (RFC 6902)</a> document. This is comprised of a bare JSON array of JSON-Patch operation objects, which have three members:</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>op</td>
+<td>String</td>
+<td>&ldquo;replace&rdquo;</td>
+</tr>
+<tr>
+<td>path</td>
+<td>String</td>
+<td>&ldquo;/checks/0/enabled&rdquo;</td>
+</tr>
+<tr>
+<td>value</td>
+<td>Boolean</td>
+<td>true or false</td>
+</tr>
+</tbody></table>
+
+<h3 id="http-return-codes">HTTP Return Codes</h3>
+
+<table><thead>
+<tr>
+<th>Return code</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>204</td>
+<td>The check(s) were updated successfully.</td>
+</tr>
+<tr>
+<td>404</td>
+<td><strong>Error</strong> No matching checks were found.</td>
+</tr>
+<tr>
+<td>405</td>
+<td><strong>Error</strong> The submitted check data was not sent with the JSON-Patch MIME type <code class="prettyprint">application/json-patch+json</code>.</td>
+</tr>
+<tr>
+<td>422</td>
+<td><strong>Error</strong> The submitted check data did not conform to the provided specification.</td>
+</tr>
+</tbody></table>
+
 <h2 id="create-scheduled-maintenance-periods-on-checks">Create scheduled maintenance periods on checks</h2>
 <pre class="highlight shell">curl -w <span class="s1">'response: %{http_code} \n'</span> -X POST -H <span class="s2">"Content-type: application/vnd.api+json"</span> -d <span class="se">\</span>
  <span class="s1">'{
-    "start_time" : "2014-04-09T16:03:25+09:30",
-    "duration" : 3600,
-    "summary" : "memory replacement"
+    "scheduled_maintenances": [
+      {
+        "start_time" : "2014-04-09T16:03:25+09:30",
+        "duration" : 3600,
+        "summary" : "memory replacement"
+      }
+    ]
   }'</span> <span class="se">\</span>
  http://localhost:3081/scheduled_maintenances/checks/example.com:SSH
 </pre>
@@ -192,8 +279,12 @@
 <h2 id="create-unscheduled-maintenance-periods-on-checks">Create unscheduled maintenance periods on checks</h2>
 <pre class="highlight shell">curl -w <span class="s1">'response: %{http_code} \n'</span> -X POST -H <span class="s2">"Content-type: application/vnd.api+json"</span> -d <span class="se">\</span>
  <span class="s1">'{
-    "duration" : 3600,
-    "summary" : "fixing now"
+    "unscheduled_maintenances": [
+      {
+        "duration" : 3600,
+        "summary" : "fixing now"
+      }
+    ]
   }'</span> <span class="se">\</span>
  http://localhost:3081/unscheduled_maintenances/checks/example.com:HOST
 </pre>
@@ -329,7 +420,11 @@
 <h2 id="create-test-notifications-on-checks">Create test notifications on checks</h2>
 <pre class="highlight shell">curl -w <span class="s1">'response: %{http_code} \n'</span> -X POST -H <span class="s2">"Content-type: application/vnd.api+json"</span> -d <span class="se">\</span>
  <span class="s1">'{
-    "summary" : "testing, testing, 1, 2, 3"
+    "test_notifications": [
+      {
+        "summary" : "testing, testing, 1, 2, 3"
+      }
+    ]
   }'</span> <span class="se">\</span>
  http://localhost:3081/test_notifications/checks/example.com:HOST
 </pre>
