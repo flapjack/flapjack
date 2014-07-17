@@ -145,7 +145,7 @@ All that remains is to configure `flapjack-nagios-receiver` to read from this na
 sudo /etc/init.d/flapjack-nagios-receiver start
 ```
 
-More details on configuration are avilable [on the wiki](https://github.com/flapjack/flapjack/wiki/USING#configuring-components).
+More details on configuration are available [on the wiki](https://github.com/flapjack/flapjack/wiki/USING#configuring-components).
 
 ### Verify
 
@@ -242,7 +242,7 @@ We're going to assign both Ada and Charles to foo-app-01, and just Ada to foo-db
 
 ```
 curl -w 'response: %{http_code} \n' -X POST -H "Content-type: application/json" \
-  -d @examples/entities_foo-app-01_and_foo-db-01.json \
+  -d @examples/entities_my-app-01_and_my-db-01.json \
   http://localhost:3081/entities
 ```
 
@@ -254,24 +254,24 @@ curl -w 'response: %{http_code} \n' -X POST -H "Content-type: application/json" 
     "entities": [
       {
         "id": "801",
-        "name": "foo-app-01.example.com",
+        "name": "my-app-01.example.com",
         "contacts": [
           "21",
           "22"
         ],
         "tags": [
-          "foo",
+          "my",
           "app"
         ]
       },
       {
         "id": "802",
-        "name": "foo-app-02.example.com",
+        "name": "my-db-01.example.com",
         "contacts": [
           "21"
         ],
         "tags": [
-          "foo",
+          "my",
           "db"
         ]
       }
@@ -283,9 +283,9 @@ curl -w 'response: %{http_code} \n' -X POST -H "Content-type: application/json" 
 
 #### Verify
 
-Visit [foo-app-01](http://localhost:3080/entity/foo-app-01.example.com) in the web UI and you should see something like:
+Visit [my-app-01](http://localhost:3080/entity/my-app-01.example.com) in the web UI and you should see something like:
 
-![Entity - foo-app-01.example.com](/images/quickstart/entity-foo-app-01-no-checks.png)
+![Entity - my-app-01.example.com](/images/quickstart/entity-my-app-01-no-checks.png)
 
 ## Feedback?
 
@@ -307,4 +307,3 @@ In the mean time, check out:
 
  - [Documentation](https://github.com/flapjack/flapjack/wiki/IMPORTING) on **how to import contacts and entities**
  - **[JSONAPI documentation](/docs/jsonapi)** for working with individual contacts and entities
-
