@@ -47,8 +47,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckPresenter' do
     ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
     outages = ecp.outage(time - (5 * 60 * 60), time - (2 * 60 * 60))
     expect(outages).not_to be_nil
-    expect(outages).to be_an(Array)
-    expect(outages.size).to eq(4)
+    expect(outages).to be_a(Hash)
+    expect(outages).to have_key(:outages)
+    expect(outages[:outages]).to be_an(Array)
+    expect(outages[:outages].size).to eq(4)
 
     # TODO check the data in those hashes
   end
@@ -63,8 +65,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckPresenter' do
     ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
     outages = ecp.outage(nil, nil)
     expect(outages).not_to be_nil
-    expect(outages).to be_an(Array)
-    expect(outages.size).to eq(4)
+    expect(outages).to be_a(Hash)
+    expect(outages).to have_key(:outages)
+    expect(outages[:outages]).to be_an(Array)
+    expect(outages[:outages].size).to eq(4)
 
     # TODO check the data in those hashes
   end
@@ -82,8 +86,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckPresenter' do
     ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
     outages = ecp.outage(nil, nil)
     expect(outages).not_to be_nil
-    expect(outages).to be_an(Array)
-    expect(outages.size).to eq(3)
+    expect(outages).to be_a(Hash)
+    expect(outages).to have_key(:outages)
+    expect(outages[:outages]).to be_an(Array)
+    expect(outages[:outages].size).to eq(3)
   end
 
   it "returns a (small) outage hash for a single state change" do
@@ -95,8 +101,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckPresenter' do
     ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
     outages = ecp.outage(nil, nil)
     expect(outages).not_to be_nil
-    expect(outages).to be_an(Array)
-    expect(outages.size).to eq(1)
+    expect(outages).to be_a(Hash)
+    expect(outages).to have_key(:outages)
+    expect(outages[:outages]).to be_an(Array)
+    expect(outages[:outages].size).to eq(1)
   end
 
   it "a list of unscheduled maintenances for an entity check" do

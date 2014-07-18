@@ -81,7 +81,7 @@ module Flapjack
                       }
           end
 
-          result
+          {:outages => result}
         end
 
         def unscheduled_maintenance(start_time, end_time)
@@ -120,9 +120,7 @@ module Flapjack
         #
         # TODO test performance with larger data sets
         def downtime(start_time, end_time)
-          sched_maintenances = scheduled_maintenance(start_time, end_time)
-
-          outs = outage(start_time, end_time)
+          outs = outage(start_time, end_time)[:outages]
 
           total_secs  = {}
           percentages = {}
@@ -138,6 +136,8 @@ module Flapjack
             # maintenance period is fully covered by an outage period.
             # We then create two new outage periods to cover the time around
             # the scheduled maintenance period, and remove the original.
+
+            sched_maintenances = scheduled_maintenance(start_time, end_time)
 
             sched_maintenances.each do |sm|
 
