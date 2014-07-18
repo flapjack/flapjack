@@ -81,7 +81,7 @@ module Flapjack
                       }
           end
 
-          result
+          {:outages => result}
         end
 
         def unscheduled_maintenance(start_time, end_time)
@@ -120,7 +120,7 @@ module Flapjack
         #
         # TODO test performance with larger data sets
         def downtime(start_time, end_time)
-          outs = outage(start_time, end_time)
+          outs = outage(start_time, end_time)[:outages]
 
           total_secs  = {}
           percentages = {}
