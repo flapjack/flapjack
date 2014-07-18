@@ -117,8 +117,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckPresenter' do
     ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
     unsched_maint = ecp.unscheduled_maintenance(time - (12 * 60 * 60), time)
 
-    expect(unsched_maint).to be_an(Array)
-    expect(unsched_maint.size).to eq(4)
+    expect(unsched_maint).to be_a(Hash)
+    expect(unsched_maint).to have_key(:unscheduled_maintenances)
+    expect(unsched_maint[:unscheduled_maintenances]).to be_an(Array)
+    expect(unsched_maint[:unscheduled_maintenances].size).to eq(4)
 
     # TODO check the data in those hashes
   end
@@ -133,8 +135,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckPresenter' do
     ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(entity_check)
     sched_maint = ecp.scheduled_maintenance(time - (12 * 60 * 60), time)
 
-    expect(sched_maint).to be_an(Array)
-    expect(sched_maint.size).to eq(4)
+    expect(sched_maint).to be_a(Hash)
+    expect(sched_maint).to have_key(:scheduled_maintenances)
+    expect(sched_maint[:scheduled_maintenances]).to be_an(Array)
+    expect(sched_maint[:scheduled_maintenances].size).to eq(4)
 
     # TODO check the data in those hashes
   end
