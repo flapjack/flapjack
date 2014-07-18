@@ -131,7 +131,9 @@ module Flapjack
             presence << "<x xmlns='http://jabber.org/protocol/muc'><history maxstanzas='0'></x>"
             EventMachine::Synchrony.next_tick do
               write presence
-              say(room, "flapjack jabber gateway started at #{Time.now}, hello! Try typing 'help'.", :groupchat)
+              unless @config['chatbot_announce'] =~ /(false|off|disable)/
+                say(room, "flapjack jabber gateway started at #{Time.now}, hello! Try typing 'help'.", :groupchat)
+              end
             end
           end
         end
