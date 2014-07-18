@@ -27,7 +27,9 @@ module Flapjack
             end
 
             checks = if event_ids.nil?
-              Flapjack::Data::EntityCheck.find_all(:redis => redis)
+              Flapjack::Data::EntityCheck.find_all(:redis => redis).collect {|check_name|
+                find_entity_check_by_name(*check_name.split(':', 2))
+              }
             elsif !event_ids.empty?
               event_ids.collect {|event_id| find_entity_check_by_name(*event_id.split(':', 2)) }
             else
