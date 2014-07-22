@@ -395,7 +395,7 @@ Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules
 end
 
 Then /^all alert dropping keys for user (\S+) should have expired$/ do |contact_id|
-  expect(@redis.keys("drop_alerts_for_contact:#{contact_id}*")).to be_empty
+  expect(@redis.keys("drop_alerts_for_contact:#{contact_id}:*")).to be_empty
 end
 
 Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))? should be queued for (.*)$/ do |num_queued, media, notification_type, rollup, address|
@@ -408,13 +408,12 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
   queue = Resque.peek("#{media}_notifications", 0, 30)
   queued_length = queue.find_all {|n|
     type_ok = notification_type ? ( n['args'].first['notification_type'] == notification_type ) : true
-    rollup_ok = true
-    if rollup
-      if rollup == 'none'
-        rollup_ok = n['args'].first['rollup'].nil?
-      else
-        rollup_ok = n['args'].first['rollup'] == rollup
-      end
+    rollup_ok = if 'none'.eql?(rollup)
+      n['args'].first['rollup'].nil?
+    elsif !rollup.nil?
+      n['args'].first['rollup'] == rollup
+    else
+      true
     end
     type_ok && rollup_ok && ( n['args'].first['address'] == address )
   }.length

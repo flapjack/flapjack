@@ -224,6 +224,7 @@ module Flapjack
             unless ['pagerduty'].include?(media)
               alerting_checks  = contact.count_alerting_checks_for_media(media)
               rollup_threshold = contact.rollup_threshold_for_media(media)
+
               case
               when rollup_threshold.nil?
                 # back away slowly
@@ -231,8 +232,9 @@ module Flapjack
                 next ret if contact.drop_rollup_notifications_for_media?(media)
                 contact.update_sent_rollup_alert_keys_for_media(media, :delete => ok?)
                 rollup_type = 'problem'
-              when (alerting_checks + cleaned >= rollup_threshold)
+              when (alerting_checks + cleaned) >= rollup_threshold
                 # alerting checks was just cleaned such that it is now below the rollup threshold
+                contact.update_sent_rollup_alert_keys_for_media(media, :delete => true)
                 rollup_type = 'recovery'
               end
               logger.debug "rollup decisions: #{@event_id} #{@state} #{media} #{address} rollup_type: #{rollup_type}"
