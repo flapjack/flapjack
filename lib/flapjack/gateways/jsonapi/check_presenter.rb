@@ -94,7 +94,7 @@ module Flapjack
             result << outage
           end
 
-          result
+          {:outages => result}
         end
 
         # TODO check that this doesn't double up if an unscheduled maintenance starts exactly
@@ -111,7 +111,7 @@ module Flapjack
               pu.end_time >= start_time
             }
 
-          start_in_unsched + unsched_maintenances
+          {:unscheduled_maintenances => (start_in_unsched + unsched_maintenances)}
         end
 
         def scheduled_maintenances(start_time, end_time)
@@ -126,7 +126,7 @@ module Flapjack
               ps.end_time >= start_time
             }
 
-          start_in_sched + sched_maintenances
+          {:scheduled_maintenances => (start_in_sched + sched_maintenances)}
         end
 
         # TODO test whether the below overlapping logic is prone to off-by-one
@@ -135,9 +135,7 @@ module Flapjack
         #
         # TODO test performance with larger data sets
         def downtime(start_time, end_time)
-          sched_maintenances = scheduled_maintenances(start_time, end_time)
-
-          outs = outages(start_time, end_time)
+          outs = outages(start_time, end_time)[:outages]
 
           total_secs  = {}
           percentages = {}
@@ -155,6 +153,7 @@ module Flapjack
             # the scheduled maintenance period, and remove the original.
 
             delete_outs = []
+            sched_maintenances = scheduled_maintenances(start_time, end_time)[:scheduled_maintenances]
 
             sched_maintenances.each do |sm|
 

@@ -5,9 +5,66 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
 
   include_context "jsonapi"
 
+  let(:entity)   { double(Flapjack::Data::Entity, :id => 'efgh') }
   let(:check)    { double(Flapjack::Data::Check, :id => '5678') }
 
+  let(:check_data)   {
+    {'id'          => check.id,
+     'entity_name' => 'www.example.com',
+     'name'        => 'SSH'
+    }
+   }
+
   let(:check_presenter) { double(Flapjack::Gateways::JSONAPI::CheckPresenter) }
+
+  it "retrieves all checks" do
+    expect(check).to receive(:entity).and_return(entity)
+    expect(check).to receive(:as_json).and_return(check_data)
+    expect(Flapjack::Data::Check).to receive(:all).and_return([check])
+
+    get '/checks'
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq({:checks => [check_data]}.to_json)
+  end
+
+  it "retrieves one check" do
+    expect(check).to receive(:entity).and_return(entity)
+    expect(check).to receive(:as_json).and_return(check_data)
+    expect(Flapjack::Data::Check).to receive(:find_by_ids!).
+      with([check.id]).and_return([check])
+
+    get "/checks/#{check.id}"
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq({:checks => [check_data]}.to_json)
+  end
+
+  it "retrieves several checks" do
+    check_2 = double(Flapjack::Data::Check, :id => 'abcd')
+    check_data_2 = {'entity_name' => 'www.example.com', 'name' => 'PING', 'id' => check_2.id}
+
+    expect(check).to receive(:entity).and_return(entity)
+    expect(check).to receive(:as_json).and_return(check_data)
+    expect(check_2).to receive(:entity).and_return(entity)
+    expect(check_2).to receive(:as_json).and_return(check_data_2)
+    expect(Flapjack::Data::Check).to receive(:find_by_ids!).
+      with([check.id, check_2.id]).and_return([check, check_2])
+
+    get "/checks/#{check.id},#{check_2.id}"
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq({:checks => [check_data, check_data_2]}.to_json)
+  end
+
+  it 'disables a check' do
+    expect(Flapjack::Data::Check).to receive(:find_by_ids!).
+      with([check.id]).and_return([check])
+
+    expect(check).to receive(:disable!)
+
+    patch "/checks/#{check.id}",
+      [{:op => 'replace', :path => '/checks/0/enabled', :value => false}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
 
   it "creates an acknowledgement for a check" do
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).

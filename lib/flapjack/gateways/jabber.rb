@@ -86,7 +86,7 @@ module Flapjack
           @ack_str = if state.eql?('ok') || ['test', 'acknowledgement'].include?(alert.type)
             nil
           else
-            "#{@config['alias']}: ACKID #{alert.event_hash}"
+            "#{@bot.alias}: ACKID #{alert.event_hash}"
           end
 
           message_type = alert.rollup ? 'rollup' : 'alert'
@@ -145,6 +145,9 @@ module Flapjack
           Sandstorm.redis = Flapjack.redis
 
           @lock.synchronize do
+
+            @bot = self.siblings ? self.siblings.detect {|sib| sib.respond_to?(:announce)} : nil
+
             until @messages.empty? && @should_quit
               while msg = @messages.pop
                 @logger.info "interpreter received #{msg.inspect}"
@@ -211,7 +214,7 @@ module Flapjack
               dur   = nil
 
               if comment.nil? || (comment.length == 0)
-                error = "please provide a comment, eg \"#{@config['alias']}: ACKID #{$1} AL looking\""
+                error = "please provide a comment, eg \"#{@bot.alias}: ACKID #{$1} AL looking\""
               elsif duration_str
                 # a fairly liberal match above, we'll let chronic_duration do the heavy lifting
                 dur = ChronicDuration.parse(duration_str)
@@ -265,6 +268,7 @@ module Flapjack
               fqdn = `/bin/hostname -f`.chomp
               pid  = Process.pid
               msg  = "Flapjack #{Flapjack::VERSION} process #{pid} on #{fqdn} \n" +
+                     "Identifiers: #{@bot.identifiers.join(', ')}\n" +
                      "Boot time: #{@boot_time}\n" +
                      "User CPU Time: #{t.utime}\n" +
                      "System CPU Time: #{t.stime}\n" +
@@ -581,6 +585,7 @@ module Flapjack
           rescue => e
             @logger.error("Exception when interpreting command '#{command}' - #{e.class}, #{e.message}")
             msg = "Oops, something went wrong processing that command (#{e.class}, #{e.message})"
+            puts e.backtrace.join("\n")
           end
 
           @bot ||= @siblings && @siblings.detect {|sib| sib.respond_to?(:announce) }
@@ -618,7 +623,27 @@ module Flapjack
           @announce_buffer = []
           @hostname = Socket.gethostname
 
+          @alias = @config['alias'] || 'flapjack'
+          @identifiers = ((@config['identifiers'] || []) + [@alias]).uniq
+          @logger.debug("I will respond to the following identifiers: #{@identifiers.join(', ')}")
+
           @state_buffer = []
+        end
+
+        def alias
+          ret = nil
+          @lock.synchronize do
+            ret = @alias
+          end
+          ret
+        end
+
+        def identifiers
+          ret = nil
+          @lock.synchronize do
+            ret = @identifiers
+          end
+          ret
         end
 
         def start
@@ -631,8 +656,8 @@ module Flapjack
             # ::Jabber::debug = true
 
             jabber_id = @config['jabberid'] || 'flapjack'
-
-            flapjack_jid = ::Jabber::JID.new(jabber_id + '/' + @hostname)
+            jabber_id += '/' + @hostname unless jabber_id.include?('/')
+            flapjack_jid = ::Jabber::JID.new(jabber_id)
             client = ::Jabber::Client.new(flapjack_jid)
 
             client.on_exception do |exc, stream, loc|
@@ -706,11 +731,12 @@ module Flapjack
               muc_client.on_message do |time, nick, text|
                 next if nick == jabber_id
 
-                if check_xml.call(text) =~ /^#{@config['alias']}:\s+(.*)/m
-                  command = $1
-
+                identifier = @identifiers.detect {|id| check_xml.call(text) === /^#{id}:\s*(.*)/m }
+                unless identifier.nil?
+                  the_command = $1
+                  @logger.debug("matched identifier: #{identifier}, command: #{the_command.inspect}")
                   if interpreter
-                    interpreter.receive_message(room, nick, time, command)
+                    interpreter.receive_message(room, nick, time, the_command)
                   end
                 end
               end
@@ -838,10 +864,10 @@ module Flapjack
               unless sq
                 attempts_remaining -= 1
                 begin
-                  muc_client.join(room + '/' + @config['alias'], nil, :history => false)
+                  muc_client.join(room + '/' + @alias, nil, :history => false)
                   t = Time.now
                   msg = opts[:rejoin] ? "flapjack jabber gateway rejoining at #{t}, hello again!" :
-                                        "flapjack jabber gateway started at #{t}, hello!"
+                                        "flapjack jabber gateway started at #{t}, hello! Try typing 'help'."
                   muc_client.say(msg)
                   joined = true
                 rescue Errno::ECONNREFUSED, ::Jabber::JabberError => muc_je

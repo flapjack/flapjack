@@ -85,10 +85,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckPresenter' do
     check_presenter = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
     outages = check_presenter.outages(time - (5 * 60 * 60), time - (2 * 60 * 60))
     expect(outages).not_to be_nil
-    expect(outages).to be_an(Array)
-    expect(outages.size).to eq(4)
-
-    # TODO check the data in those hashes
+    expect(outages).to be_a(Hash)
+    expect(outages).to have_key(:outages)
+    expect(outages[:outages]).to be_an(Array)
+    expect(outages[:outages].size).to eq(4)
   end
 
   it "returns a list of outage hashes with no start and end time set" do
@@ -103,10 +103,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckPresenter' do
     check_presenter = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
     outages = check_presenter.outages(nil, nil)
     expect(outages).not_to be_nil
-    expect(outages).to be_an(Array)
-    expect(outages.size).to eq(4)
-
-    # TODO check the data in those hashes
+    expect(outages).to be_a(Hash)
+    expect(outages).to have_key(:outages)
+    expect(outages[:outages]).to be_an(Array)
+    expect(outages[:outages].size).to eq(4)
   end
 
   it "returns a consolidated list of outage hashes with repeated state events" do
@@ -128,8 +128,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckPresenter' do
     check_presenter = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
     outages = check_presenter.outages(nil, nil)
     expect(outages).not_to be_nil
-    expect(outages).to be_an(Array)
-    expect(outages.size).to eq(3)
+    expect(outages).to be_a(Hash)
+    expect(outages).to have_key(:outages)
+    expect(outages[:outages]).to be_an(Array)
+    expect(outages[:outages].size).to eq(3)
   end
 
   it "returns a (small) outage hash for a single state change" do
@@ -147,8 +149,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckPresenter' do
     ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
     outages = ecp.outages(nil, nil)
     expect(outages).not_to be_nil
-    expect(outages).to be_an(Array)
-    expect(outages.size).to eq(1)
+    expect(outages).to be_a(Hash)
+    expect(outages).to have_key(:outages)
+    expect(outages[:outages]).to be_an(Array)
+    expect(outages[:outages].size).to eq(1)
   end
 
   it "a list of unscheduled maintenances for an entity check" do
@@ -165,11 +169,11 @@ describe 'Flapjack::Gateways::JSONAPI::CheckPresenter' do
 
     check_presenter = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
     unsched_maint = check_presenter.unscheduled_maintenances(time - (12 * 60 * 60), time)
-
-    expect(unsched_maint).to be_an(Array)
-    expect(unsched_maint.size).to eq(4)
-
-    # TODO check the data in those hashes
+    expect(unsched_maint).not_to be_nil
+    expect(unsched_maint).to be_a(Hash)
+    expect(unsched_maint).to have_key(:unscheduled_maintenances)
+    expect(unsched_maint[:unscheduled_maintenances]).to be_an(Array)
+    expect(unsched_maint[:unscheduled_maintenances].size).to eq(4)
   end
 
   it "a list of scheduled maintenances for an entity check" do
@@ -185,12 +189,12 @@ describe 'Flapjack::Gateways::JSONAPI::CheckPresenter' do
     expect(check).to receive(:scheduled_maintenances_by_start).twice.and_return(sched_assoc)
 
     check_presenter = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
-    unsched_maint = check_presenter.scheduled_maintenances(time - (12 * 60 * 60), time)
-
-    expect(unsched_maint).to be_an(Array)
-    expect(unsched_maint.size).to eq(4)
-
-    # TODO check the data in those hashes
+    sched_maint = check_presenter.scheduled_maintenances(time - (12 * 60 * 60), time)
+    expect(sched_maint).not_to be_nil
+    expect(sched_maint).to be_a(Hash)
+    expect(sched_maint).to have_key(:scheduled_maintenances)
+    expect(sched_maint[:scheduled_maintenances]).to be_an(Array)
+    expect(sched_maint[:scheduled_maintenances].size).to eq(4)
   end
 
   it "returns downtime and percentage for a downtime check" do

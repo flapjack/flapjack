@@ -44,8 +44,18 @@ module Flapjack
         end
       end
 
+      class RecordsNotFound < RuntimeError
+        attr_reader :klass, :ids
+        def initialize(k, i)
+          @klass = k
+          @ids   = i
+        end
+      end
+
       set :raise_errors, true
       set :show_exceptions, false
+
+      set :protection, :except => :path_traversal
 
       use ::Rack::MethodOverride
       use Flapjack::Gateways::JSONAPI::Rack::JsonParamsParser

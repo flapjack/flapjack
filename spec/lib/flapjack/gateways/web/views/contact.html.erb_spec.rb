@@ -3,6 +3,8 @@ require 'spec_helper'
 describe 'web/views/contact.html.erb', :erb_view => true do
 
   it "should escape unsafe check characters in URI parameters" do
+    @base_url = 'http://www.example.com/flapjack/'
+
     @contact = double('contact')
 
     expect(@contact).to receive(:name).and_return('Aeschylus')

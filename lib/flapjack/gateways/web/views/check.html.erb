@@ -3,7 +3,7 @@
   check_path_escaped = u(@entity_name) << '/' << u(@check_name)
 %>
 <div class="page-header">
-  <% entity_link = "/entity/" + u(@entity) %>
+  <% entity_link = @base_url + "entity/" << u(@entity) %>
   <h2><%= h @check_name %> on <a href="<%= entity_link %>" title="entity summary"><%= h @entity_name %></a></h2>
 </div>
 
@@ -61,7 +61,7 @@
   <% if @current_unscheduled_maintenance %>
     <div class="alert alert-warning">
 
-      <form action="/end_unscheduled_maintenance/<%= check_path_escaped %>" method="post" class="form-horizontal" role="form">
+      <form action="<%= @base_url %>end_unscheduled_maintenance/<%= check_path_escaped %>" method="post" class="form-horizontal" role="form">
 
         <div class="form-group">
           <label class="col-md-3 control-label">State</label>
@@ -131,7 +131,7 @@
     <div class="alert alert-warning">
       <% action = @current_unscheduled_maintenance ? "Re-acknowledge" : "Acknowledge" %>
       <h4><%= action %> alert</h4>
-      <form action="/acknowledgements/<%= check_path_escaped %>" method="post" class="form-horizontal">
+      <form action="<%= @base_url %>acknowledgements/<%= check_path_escaped %>" method="post" class="form-horizontal">
         <div class="form-group">
           <div class="col-sm-12 text-left">
             <label class="col-sm-3 control-label" for="summary">Summary</label>
@@ -306,7 +306,7 @@
         <td>
         <% if end_time > @current_time %>
           <% label = (start_time > @current_time) ? 'Delete' : 'End Now' %>
-            <form action="/scheduled_maintenances/<%= check_path_escaped %>" method="post">
+            <form action="<%= @base_url %>scheduled_maintenances/<%= check_path_escaped %>" method="post">
               <input type="hidden" name="_method" value="delete">
               <input type="hidden" name="start_time" value="<%= start_time %>">
               <button type="submit" class="btn btn-danger"><%= label %></button>
@@ -332,7 +332,7 @@
         <h3 class="panel-title">Add Scheduled Maintenance</h4>
       </div>
       <div class="panel-body">
-        <form action="/scheduled_maintenances/<%= check_path_escaped %>" method="post" role="form" class="form-horizontal">
+        <form action="<%= @base_url %>scheduled_maintenances/<%= check_path_escaped %>" method="post" role="form" class="form-horizontal">
 
           <div class="form-group">
             <label class="col-sm-2 control-label" for="start_time">Start time:</label>
@@ -393,7 +393,7 @@
         </tr>
         <% @contacts.sort_by {|c| [c.first_name, c.last_name] }.each do |contact| %>
           <tr>
-            <td><a href="/contacts/<%= contact.id %>" title="contact details"><%= h contact.name %></a></td>
+            <td><a href="<%= @base_url %>contacts/<%= contact.id %>" title="contact details"><%= h contact.name %></a></td>
             <td>
               <% if contact.media && !contact.media.empty? %>
                 <p><%= h contact.media.keys.collect(&:capitalize).join(", ") %></p>
@@ -422,7 +422,7 @@
       <div class="panel-body">
       <% if @check_enabled %>
         <h4>Decommission check</h4>
-        <form action="/checks/<%= check_path_escaped %>" method="post" style="display:inline-block" class="pull-right">
+        <form action="<%= @base_url %>checks/<%= check_path_escaped %>" method="post" style="display:inline-block" class="pull-right">
           <input type='hidden' name='_method' value='delete'>
           <button type='submit' class="btn btn-danger decommission-check">Decommission Check</button>
         </form>

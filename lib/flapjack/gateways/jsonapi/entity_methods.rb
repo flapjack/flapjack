@@ -6,7 +6,7 @@ require 'flapjack/data/check'
 require 'flapjack/data/entity'
 require 'flapjack/data/event'
 
-require 'flapjack/gateways/jsonapi/entity_check_methods_helpers'
+require 'flapjack/gateways/jsonapi/check_methods_helpers'
 
 module Flapjack
 
@@ -16,13 +16,9 @@ module Flapjack
 
       module EntityMethods
 
-        module Helpers
-        end
-
         def self.registered(app)
           app.helpers Flapjack::Gateways::JSONAPI::Helpers
-          # app.helpers Flapjack::Gateways::JSONAPI::EntityMethods::Helpers
-          app.helpers Flapjack::Gateways::JSONAPI::EntityCheckMethods::Helpers
+          app.helpers Flapjack::Gateways::JSONAPI::CheckMethods::Helpers
 
           app.post '/entities' do
             entities_data = wrapped_params('entities')
@@ -80,6 +76,10 @@ module Flapjack
               Flapjack::Data::Entity.find_by_ids!(requested_entities)
             else
               Flapjack::Data::Entity.all
+            end
+
+            if requested_entities && entities.empty?
+              raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Entity, requested_entities)
             end
 
             entities_ids = entities.map(&:id)

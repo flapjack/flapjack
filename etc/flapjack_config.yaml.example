@@ -18,6 +18,8 @@ production:
     archive_events: true
     events_archive_maxage: 10800
     new_check_scheduled_maintenance_duration: 100 years
+    new_check_scheduled_maintenance_ignore_tags:
+      - bypass_ncsm
     logger:
       level: INFO
       syslog_errors: yes
@@ -49,7 +51,8 @@ production:
         level: INFO
         syslog_errors: yes
       smtp_config:
-        #from: "flapjack@noreply.example"
+        # from: "Flapjack Example <flapjack@noreply.example>"
+        # reply_to: "flapjack@support.example"
         host: 127.0.0.1
         # 1025 is the default port for http://mailcatcher.me
         port: 1025
@@ -87,6 +90,8 @@ production:
       jabberid: "flapjack@jabber.example.com"
       password: "good-password"
       alias: "flapjack"
+      identifiers:
+        - "@flapjack"
       rooms:
         - "gimp@conference.jabber.example.com"
         - "log@conference.jabber.example.com"
@@ -112,6 +117,7 @@ production:
       timeout: 300
       access_log: "/var/log/flapjack/web_access.log"
       api_url: "http://localhost:3081/"
+      #logo_image_path: "/etc/flapjack/web/custom_logo/flapjack-2013-notext-transparent-300-300.png"
       logger:
         level: INFO
         syslog_errors: yes
@@ -148,7 +154,7 @@ development:
   log_file: log/flapjack.log
   daemonize: yes
   logger:
-    level: INFO
+    level: DEBUG
     syslog_errors: yes
   redis:
     host: 127.0.0.1
@@ -161,6 +167,8 @@ development:
     archive_events: true
     events_archive_maxage: 10800
     new_check_scheduled_maintenance_duration: 100 years
+    new_check_scheduled_maintenance_ignore_tags:
+      - bypass_ncsm
     logger:
       level: DEBUG
       syslog_errors: yes
@@ -177,19 +185,25 @@ development:
       level: DEBUG
       syslog_errors: yes
   nagios-receiver:
-    fifo: "/usr/local/var/lib/nagios/event_stream.fifo"
+    fifo: "/var/cache/nagios3/event_stream.fifo"
     pid_file: "tmp/pids/flapjack-nagios-receiver.pid"
     log_file: "log/flapjack-nagios-receiver.log"
+  nsca-receiver:
+    fifo: "/var/lib/nagios3/rw/nagios.cmd"
+    pid_file: "/var/run/flapjack/flapjack-nsca-receiver.pid"
+    log_file: "/var/log/flapjack/flapjack-nsca-receiver.log"
   gateways:
     email:
-      enabled: yes
+      enabled: no
       queue: email_notifications
       logger:
-        level: INFO
+        level: DEBUG
         syslog_errors: yes
       smtp_config:
-        # port 1025 is the default port for http://mailcatcher.me
+        # from: "Flapjack Example <flapjack@noreply.example>"
+        # reply_to: "flapjack@support.example"
         host: 127.0.0.1
+        # 1025 is the default port for http://mailcatcher.me
         port: 1025
         starttls: false
         #auth:
@@ -205,15 +219,13 @@ development:
       #  rollup.html: '/etc/flapjack/templates/email/rollup.html.erb'
       #  alert.html: '/etc/flapjack/templates/email/alert.html.erb'
     sms:
-      enabled: yes
+      enabled: no
       queue: sms_notifications
-      # if you run up something like 200ok locally you can then view the
-      # sms messages being emitted
-      endpoint: 'http://localhost:9292/FakeMessagenetAPI.aspx'
-      username: "gretta"
+      endpoint: 'https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage'
+      username: "ermahgerd"
       password: "xxxx"
       logger:
-        level: INFO
+        level: DEBUG
         syslog_errors: yes
       # location of custom alert templates
       #templates:
@@ -225,13 +237,13 @@ development:
       server: "jabber.example.com"
       port: 5222
       jabberid: "flapjack@jabber.example.com"
-      password: "xxxx"
+      password: "good-password"
       alias: "flapjack"
       rooms:
         - "gimp@conference.jabber.example.com"
         - "log@conference.jabber.example.com"
       logger:
-        level: INFO
+        level: DEBUG
         syslog_errors: yes
       # location of custom alert templates
       #templates:
@@ -248,11 +260,22 @@ development:
       #  alert.text: '/etc/flapjack/templates/pagerduty/alert.text.erb'
     web:
       enabled: yes
-      port: 4080
+      port: 3080
       timeout: 300
       access_log: "log/web_access.log"
+      api_url: "http://localhost:3081/"
+      #logo_image_path: "/etc/flapjack/web/custom_logo/flapjack-2013-notext-transparent-300-300.png"
       logger:
-        level: INFO
+        level: DEBUG
+        syslog_errors: yes
+    jsonapi:
+      enabled: yes
+      port: 3081
+      timeout: 300
+      access_log: "log/jsonapi_access.log"
+      base_url: "http://localhost:3081/"
+      logger:
+        level: DEBUG
         syslog_errors: yes
     oobetet:
       enabled: no
@@ -270,7 +293,7 @@ development:
         - "gimp@conference.jabber.example.com"
         - "log@conference.jabber.example.com"
       logger:
-        level: INFO
+        level: DEBUG
         syslog_errors: yes
 
 test:

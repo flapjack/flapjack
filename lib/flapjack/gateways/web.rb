@@ -39,23 +39,49 @@ module Flapjack
             end
 
             use Rack::CommonLogger, ::Logger.new(@config['access_log'])
+          end
 
-            @api_url = @config['api_url']
-            if @api_url
-              if (@api_url =~ /^#{URI::regexp(%w(http https))}$/).nil?
-                @logger.error "api_url is not a valid http or https URI (#{@api_url})"
-                @api_url = nil
-              end
-            end
-
-            unless @api_url
-              @logger.error "api_url is not configured, parts of the web interface will be broken"
+          @api_url = @config['api_url']
+          if @api_url
+            if (@api_url =~ /^#{URI::regexp(%w(http https))}$/).nil?
+              @logger.error "api_url is not a valid http or https URI (#{@api_url})"
+              @api_url = nil
             end
           end
+
+          unless @api_url
+            @logger.error "api_url is not configured, parts of the web interface will be broken"
+          end
+
+          @base_url = @config['base_url']
+          if @base_url
+            @base_url = $1 if @base_url.match(/^(.+\/)$/)
+          else
+           dummy_url = "/"
+            @logger.error "base_url must contain trailing '/', setting it to safe default (#{dummy_url})"
+            @base_url = dummy_url
+          end
+
+          # constants won't be exposed to eRb scope
+          @default_logo_url = "img/flapjack-2013-notext-transparent-300-300.png"
+          @logo_image_file  = nil
+          @logo_image_ext   = nil
+
+          if logo_image_path = @config['logo_image_path']
+            if File.file?(logo_image_path)
+              @logo_image_file = logo_image_path
+              @logo_image_ext  = File.extname(logo_image_path)
+            else
+              @logger.error "logo_image_path '#{logo_image_path}'' does not point to a valid file."
+            end
+          end
+
         end
       end
 
       include Flapjack::Utility
+
+      set :protection, :except => :path_traversal
 
       helpers do
         def h(text)
@@ -78,13 +104,19 @@ module Flapjack
         end
       end
 
-      def api_url
-        self.class.instance_variable_get('@api_url')
-      end
-
       before do
         Sandstorm.redis ||= Flapjack.redis
+        @api_url          = self.class.instance_variable_get('@api_url')
+        @base_url         = self.class.instance_variable_get('@base_url')
+        @default_logo_url = self.class.instance_variable_get('@default_logo_url')
+        @logo_image_file  = self.class.instance_variable_get('@logo_image_file')
+        @logo_image_ext   = self.class.instance_variable_get('@logo_image_ext')
       end
+
+      get '/img/branding.*' do
+        halt(404) unless @logo_image_file && params[:splat].first.eql?(@logo_image_ext[1..-1])
+        send_file(@logo_image_file)
+       end
 
       get '/' do
         check_stats
@@ -350,7 +382,6 @@ module Flapjack
       end
 
       get '/edit_contacts' do
-        @api_url = api_url
         erb 'edit_contacts.html'.to_sym
       end
 
@@ -415,7 +446,6 @@ module Flapjack
       def self_stats(time)
         @fqdn    = `/bin/hostname -f`.chomp
         @pid     = Process.pid
-        @api_url = api_url
         @dbsize              = Flapjack.redis.dbsize
         @executive_instances = Flapjack.redis.keys("executive_instance:*").inject({}) do |memo, i|
           instance_id    = i.match(/executive_instance:(.*)/)[1]
@@ -487,14 +517,14 @@ module Flapjack
       def include_required_js
         return "" if @required_js.nil?
         @required_js.map { |filename|
-          "<script type='text/javascript' src='#{link_to("/js/#{filename}.js")}'></script>"
+          "<script type='text/javascript' src='#{link_to("js/#{filename}.js")}'></script>"
         }.join("\n    ")
       end
 
       def include_required_css
         return "" if @required_css.nil?
         @required_css.map { |filename|
-          %(<link rel="stylesheet" href="#{link_to("/css/#{filename}.css")}" media="screen">)
+          %(<link rel="stylesheet" href="#{link_to("css/#{filename}.css")}" media="screen">)
         }.join("\n    ")
       end
 
@@ -502,7 +532,7 @@ module Flapjack
       def link_to(url_fragment, mode=:path_only)
         case mode
         when :path_only
-          base = request.script_name
+          base = @base_url
         when :full_url
           if (request.scheme == 'http' && request.port == 80 ||
               request.scheme == 'https' && request.port == 443)

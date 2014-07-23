@@ -1,6 +1,35 @@
 ## Flapjack Changelog
 
+# 1.0.0rc2 - 2014-07-17
+- Feature: jsonapi GET /checks badab0d (@ali-graham)
+- Feature: Add HTTP broker, one-off event submitter, general Go support #553 (@auxesis)
+- Feature: Add ability to disable check via JSON API #529 (@ali-graham)
+- Feature: Jabber - Resource in JID should be supported in the config #557 (@jessereynolds)
+- Feature: Jabber - add an 'identifiers' list to the config #558 (@jessereynolds)
+- Feature: Jabber - handle HipChat style status updates as per XEP-0085 #559 (@jessereynolds)
+- Feature: auto generate entity ID on creation if none supplied #568 (@jessereynolds)
+- Feature: Use friendly help if you run the server with old syntax #564 (@Hobbsee)
+- Bug: Decommission Check button returning a 404 #538 (@ali-graham)
+- Bug: incorrect default config path in flapjack gli #554 (@jessereynolds)
+- Bug: make sure that base_url isn't escaped so that links work correctly #556 (@mattdelves)
+- Chore: Update development section of example config file #546 (@Hobbsee)
+
+
+# 1.0.0rc1 - 2014-06-25
+- Feature: Allow ncsm to be skipped using a configured whitelist #485 (@StephenWeber)
+- Feature: GLI the CLI (one command to rule them all) #478 (@auxesis, @ali-graham)
+- Feature: Remove the original HTTP API #526 (@ali-graham)
+- Feature: connecting to an password protected redis server is a good idea #533 (@mattdelves)
+- Feature: Add option to pass tags to simulate-failed-check command. #537 (@jwoods)
+- Feature: Dockerfile that runs flapjack #541 (@michaelneale)
+- Feature: allow customistion of email from reply to #543 (@ferrisoxide)
+- Feature: Allow custom Flapjack branding. #544 (@ferrisoxide)
+- Feature: Add base_url functionality to the web gateway. #539 (@pieterlange)
+- Bug: PATCHing blackhole properties for notification rule changes other blackholes - further fixes #504 (@ali-graham)
+- Bug: JSONAPI get all entities/contacts with empty db e3725fc (@ali-graham)
+
 # 0.9.0 - 2014-05-23
+- Feature: create 0.9.x series - the last to contain the original API
 - Chore: split reports data from entities and checks in jsonapi #525 (@ali-graham)
 
 # 0.8.12 - 2014-05-21

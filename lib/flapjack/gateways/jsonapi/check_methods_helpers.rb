@@ -12,7 +12,7 @@ module Flapjack
 
     class JSONAPI < Sinatra::Base
 
-      module EntityCheckMethods
+      module CheckMethods
 
         module Helpers
 

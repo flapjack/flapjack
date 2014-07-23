@@ -45,6 +45,8 @@ module Flapjack
                         :port => (redis['port'] || 6379)})
       )
 
+      redis_config[:password] = redis["password"] if redis["password"]
+
       redis_config
     end
 

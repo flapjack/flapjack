@@ -103,6 +103,10 @@ module Flapjack
               Flapjack::Data::Contact.all
             end
 
+            if requested_contacts && contacts.empty?
+              raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Contact, requested_contacts)
+            end
+
             contacts_ids = contacts.map(&:id)
             linked_entity_ids = Flapjack::Data::Contact.associated_ids_for_entities(contacts_ids)
             linked_medium_ids = Flapjack::Data::Contact.associated_ids_for_media(contacts_ids)

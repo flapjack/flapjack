@@ -159,7 +159,7 @@ When /^the SMS notification handler fails to send an SMS$/ do
 end
 
 When /^the email notification handler runs successfully$/ do
-  @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}}, :logger => @logger)
+  @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525, 'from' => 'flapjacl@example.com'}}, :logger => @logger)
   @email.send(:handle_alert, @alert)
 end
 
@@ -171,7 +171,7 @@ When /^the email notification handler fails to send an email$/ do
     end
   end
 
-  @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}}, :logger => @logger)
+  @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525, 'from' => 'flapjacl@example.com'}}, :logger => @logger)
   begin
     @email.send(:handle_alert, @alert)
   rescue RuntimeError

@@ -32,13 +32,13 @@ module Flapjack
         @queue = Flapjack::RecordQueue.new(@config['queue'] || 'email_notifications',
                    Flapjack::Data::Alert)
 
-        if smtp_config = @config['smtp_config']
-          @host = smtp_config['host'] || 'localhost'
-          @port = smtp_config['port'] || 25
+        if @smtp_config = @config['smtp_config']
+          @host = @smtp_config['host'] || 'localhost'
+          @port = @smtp_config['port'] || 25
 
           # NB: needs testing
-          if smtp_config['authentication'] && smtp_config['username'] &&
-            smtp_config['password']
+          if @smtp_config['authentication'] && @smtp_config['username'] &&
+            @smtp_config['password']
 
             @auth = {:authentication => smtp_config['authentication'],
                      :username => smtp_config['username'],
@@ -87,6 +87,7 @@ module Flapjack
           port = @smtp_config['port']
           starttls = !!@smtp_config['starttls']
           m_from = @smtp_config['from']
+          m_reply_to = (@smtp_config['reply_to'] || m_from || "flapjack@#{@fqdn}")
           if auth_config = @smtp_config['auth']
             auth = {}
             auth[:type] = auth_config['type'].to_sym || :plain
@@ -97,12 +98,13 @@ module Flapjack
           host = nil
           port = nil
           starttls = nil
-          m_from = "flapjack@#{@fqdn}"
+          m_reply_to = m_from = "flapjack@#{@fqdn}"
         end
 
         @logger.debug("flapjack_mailer: set from to #{m_from}")
 
         mail = prepare_email(:from => m_from,
+                             :reply_to => m_reply_to,
                              :to => alert.medium.address,
                              :message_id => "<#{alert.id}@#{@fqdn}>",
                              :alert => alert)
@@ -129,6 +131,7 @@ module Flapjack
       def prepare_email(opts = {})
         from = opts[:from]
         to = opts[:to]
+        reply_to = opts[:reply_to]
         message_id = opts[:message_id]
         alert = opts[:alert]
 
@@ -183,7 +186,7 @@ module Flapjack
           from from
           to to
           subject subject
-          reply_to from
+          reply_to reply_to
           message_id message_id
 
           text_part do
