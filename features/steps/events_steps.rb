@@ -408,12 +408,13 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
   queue = Resque.peek("#{media}_notifications", 0, 30)
   queued_length = queue.find_all {|n|
     type_ok = notification_type ? ( n['args'].first['notification_type'] == notification_type ) : true
-    rollup_ok = if 'none'.eql?(rollup)
+    rollup_ok = case rollup
+    when 'none'
       n['args'].first['rollup'].nil?
-    elsif !rollup.nil?
-      n['args'].first['rollup'] == rollup
-    else
+    when nil, n['args'].first['rollup']
       true
+    else
+      false
     end
     type_ok && rollup_ok && ( n['args'].first['address'] == address )
   }.length
