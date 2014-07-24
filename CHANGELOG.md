@@ -3,6 +3,7 @@
 # 1.0.0rc3 - 2014-07-24
 - Bug: fix jsonapi methods for report checks/methods, maintenance reports, outage reports (@ali-graham)
 - Bug: improve tests around notification rules and rollup, tweak rollup behaviour on recovery (@ali-graham)
+- Bug: fix handling of base_url config warnings in web gateway #560 (@jessereynolds)
 
 # 1.0.0rc2 - 2014-07-17
 - Feature: jsonapi GET /checks badab0d (@ali-graham)
