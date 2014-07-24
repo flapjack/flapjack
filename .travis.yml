@@ -18,7 +18,7 @@ notifications:
     channels:
       - 'irc.freenode.net#flapjack'
     template:
-      - '%{message} for %{repository}#%{build_number} (%{branch} - %{commit} : %{author})'
+      - '%{message} %{repository}#%{build_number} (%{branch} - %{commit} : %{author})'
   hipchat:
     template:
       - '%{repository}#%{build_number} (%{branch} - %{commit} : %{author}): %{message}
