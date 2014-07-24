@@ -68,12 +68,14 @@ module Flapjack
           end
 
           @base_url = @config['base_url']
-          if @base_url
-            @base_url = $1 if @base_url.match(/^(.+\/)$/)
-          else
-	          dummy_url = "/"
-            @logger.error "base_url must contain trailing '/', setting it to safe default (#{dummy_url})"
-            @base_url = dummy_url
+          unless @base_url
+            @logger.info "base_url is not configured, setting to '/'"
+            @base_url = '/'
+          end
+
+          unless @base_url.match(/^.*\/$/)
+            @logger.warn "base_url must end with a trailing '/', setting to '#{@base_url}/'"
+            @base_url = "#{@base_url}/"
           end
 
           # constants won't be exposed to eRb scope
