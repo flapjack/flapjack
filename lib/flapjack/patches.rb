@@ -147,12 +147,13 @@ module GLI
           next_command_name               = arguments.shift
 
           gli_major_version, gli_minor_version = GLI::VERSION.split('.')
-          case
+          required_options = case
           when gli_major_version.to_i == 2 && gli_minor_version.to_i <= 10
-            verify_required_options!(command.flags, parsed_command_options[command])
-          when
-            verify_required_options!(command.flags, parsing_result.command, parsed_command_options[command])
+            [command.flags, parsed_command_options[command]]
+          else
+            [command.flags, parsing_result.command, parsed_command_options[command]]
           end
+          verify_required_options!(*required_options)
 
           begin
             command = command_finder.find_command(next_command_name)
