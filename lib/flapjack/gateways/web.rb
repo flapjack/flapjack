@@ -58,8 +58,12 @@ module Flapjack
           @api_url = @config['api_url']
           if @api_url
             if (@api_url =~ /^#{URI::regexp(%w(http https))}$/).nil?
-              @logger.error "api_url is not a valid http or https URI (#{@api_url})"
+              @logger.error "api_url is not a valid http or https URI (#{@api_url}), discarding"
               @api_url = nil
+            end
+            unless @api_url.match(/^.*\/$/)
+              @logger.info "api_url must end with a trailing '/', setting to '#{@api_url}/'"
+              @api_url = "#{@api_url}/"
             end
           end
 
