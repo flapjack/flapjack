@@ -97,8 +97,8 @@ production:
         syslog_errors: yes
       # location of custom alert templates
       #templates:
-      #  rollup.text: '/etc/flapjack/templates/jabber/rollup.text.erb' 
-      #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb' 
+      #  rollup.text: '/etc/flapjack/templates/jabber/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb'
     pagerduty:
       enabled: no
       queue: pagerduty_notifications
@@ -107,7 +107,7 @@ production:
         syslog_errors: yes
       # location of custom alert templates
       #templates:
-      #  alert.text: '/etc/flapjack/templates/pagerduty/alert.text.erb' 
+      #  alert.text: '/etc/flapjack/templates/pagerduty/alert.text.erb'
     web:
       enabled: yes
       port: 3080
@@ -245,8 +245,8 @@ development:
         syslog_errors: yes
       # location of custom alert templates
       #templates:
-      #  rollup.text: '/etc/flapjack/templates/jabber/rollup.text.erb' 
-      #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb' 
+      #  rollup.text: '/etc/flapjack/templates/jabber/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb'
     pagerduty:
       enabled: no
       queue: pagerduty_notifications
@@ -255,12 +255,14 @@ development:
         syslog_errors: yes
       # location of custom alert templates
       #templates:
-      #  alert.text: '/etc/flapjack/templates/pagerduty/alert.text.erb' 
+      #  alert.text: '/etc/flapjack/templates/pagerduty/alert.text.erb'
     web:
       enabled: yes
       port: 4080
       timeout: 300
       access_log: "log/web_access.log"
+      api_url: "http://localhost:4082/"
+      base_url: "/"
       logger:
         level: INFO
         syslog_errors: yes
@@ -269,6 +271,15 @@ development:
       port: 4081
       timeout: 300
       access_log: "log/api_access.log"
+      logger:
+        level: INFO
+        syslog_errors: yes
+    jsonapi:
+      enabled: yes
+      port: 4082
+      timeout: 300
+      access_log: "log/jsonapi_access.log"
+      base_url: "http://localhost:4082/"
       logger:
         level: INFO
         syslog_errors: yes
