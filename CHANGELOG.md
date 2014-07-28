@@ -1,5 +1,10 @@
 ## Flapjack Changelog
 
+# 0.9.3 - 2014-07-28
+- Bug: fix outage reports in jsonapi c8e09f7 (@ali-graham)
+- Bug: fix maintenance reports in jsonapi 234ce48 (@ali-graham)
+- Bug: simplify checks reports in jsonapi 3eda22e (@ali-graham)
+
 # 0.9.2 - 2014-07-17
 - Feature: Add ability to disable check via JSON API #529 (@ali-graham)
 - Feature: Jabber - Resource in JID should be supported in the config #557 (@jessereynolds)
