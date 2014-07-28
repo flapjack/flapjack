@@ -453,7 +453,7 @@ command :receiver do |receiver|
     #   host_perfdata_file_mode=p
     #   service_perfdata_file_mode=p
 
-    # Details on the wiki: https://github.com/flapjack/flapjack/wiki/USING#configuring-nagios
+    # Details on the wiki: http://flapjack.io/docs/1.0/usage/USING#configuring-nagios
     # '
 
     nagios.command :start do |start|
@@ -535,7 +535,7 @@ command :receiver do |receiver|
       # The Nsca daemon is optionally writing to a tempfile if the named pipe does
       # not exist.
 
-      # Details on the wiki: https://github.com/flapjack/flapjack/wiki/USING#XXX
+      # Details on the wiki: http://flapjack.io/docs/1.0/usage/USING#XXX
       # '
 
       start.switch [:d, 'daemonize'], :desc => 'Daemonize',

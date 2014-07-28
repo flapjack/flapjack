@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/flapjack/flapjack.png)](https://travis-ci.org/flapjack/flapjack)
 
-Please see the [Contributing to Flapjack](https://github.com/flapjack/flapjack/wiki/DEVELOPING) section of the Flapjack wiki.
+Please see the [Contributing to Flapjack](http://flapjack.io/docs/1.0/development/DEVELOPING) section of the Flapjack wiki.
 
 > Flapjack is, and will continue to be, well tested. Monitoring is like continuous integration for production apps, so why shouldn't your monitoring system have tests?
 

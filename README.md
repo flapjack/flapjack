@@ -25,7 +25,7 @@ Flapjack provides a scalable method for dealing with events representing changes
 
 At its core, Flapjack processes events received from external check execution engines, such as Nagios. Nagios provides a 'perfdata' event output channel, which writes to a named pipe. `flapjack-nagios-receiver` then reads from this named pipe, converts each line to JSON and adds them to the events queue.
 
-Flapjack sits downstream of check execution engines (like Nagios, Sensu, Icinga, or cron), processing events to determine: 
+Flapjack sits downstream of check execution engines (like Nagios, Sensu, Icinga, or cron), processing events to determine:
 
  * if a problem has been detected
  * who should know about the problem
@@ -81,7 +81,7 @@ You'll also need Redis >= 2.6.12.
 
 ## Configuring
 
-Have a look at the default config file and modify things as required. See the [Configuring Components](https://github.com/flapjack/flapjack/wiki/USING#wiki-configuring_components) section on the wiki for more details.
+Have a look at the default config file and modify things as required. See the [Configuring Components](http://flapjack.io/docs/1.0/usage/USING#wiki-configuring_components) section on the wiki for more details.
 
 ``` bash
 # hack the config
@@ -128,11 +128,11 @@ sudo /etc/init.d/flapjack start
 
 ## Using - Details
 
-For more information, including full specification of the configuration file and the data import formats, please refer to the [USING](https://github.com/flapjack/flapjack/wiki/USING) section of the Flapjack wiki
+For more information, including full specification of the configuration file and the data import formats, please refer to the [USING](http://flapjack.io/docs/1.0/usage/USING) section of the Flapjack wiki
 
 ## Developing Flapjack
 
-Information on developing more Flapjack components or contributing to core Flapjack development can be found in the [DEVELOPING](https://github.com/flapjack/flapjack/wiki/DEVELOPING) section of the Flapjack wiki
+Information on developing more Flapjack components or contributing to core Flapjack development can be found in the [DEVELOPING](http://flapjack.io/docs/1.0/developing/DEVELOPING) section of the Flapjack wiki
 
 ## Documentation Submodule
 
@@ -151,14 +151,4 @@ If you make changes to the documentation locally, here's how to publish them:
 
 ## More on the wiki
 
-[The Flapjack wiki](https://github.com/flapjack/flapjack/wiki) has even more goodies:
-
-- [Using Flapjack](https://github.com/flapjack/flapjack/wiki/USING)
-- [Developing Flapjack](https://github.com/flapjack/flapjack/wiki/DEVELOPING)
-- [Redis Data Structure](https://github.com/flapjack/flapjack/wiki/DATA_STRUCTURES)
-- [API](https://github.com/flapjack/flapjack/wiki/API)
-- [Importing](https://github.com/flapjack/flapjack/wiki/IMPORTING)
-- [Debugging Flapjack](https://github.com/flapjack/flapjack/wiki/DEBUGGING)
-- [Flapjack Glossary](https://github.com/flapjack/flapjack/wiki/GLOSSARY)
-
-
+[The Flapjack wiki](http://flapjack.io/docs/1.0/wiki/) has even more goodies
