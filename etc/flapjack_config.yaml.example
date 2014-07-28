@@ -46,10 +46,13 @@ production:
   gateways:
     email:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: email_notifications
       logger:
         level: INFO
         syslog_errors: yes
+      # these values are passed directly through to EventMachine::Protocols::SmtpClient configuration,
+      # and can be omitted if the defaults are acceptable
       smtp_config:
         # from: "Flapjack Example <flapjack@noreply.example>"
         # reply_to: "flapjack@support.example"
@@ -71,6 +74,7 @@ production:
       #  alert.html: '/etc/flapjack/templates/email/alert.html.erb'
     sms:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: sms_notifications
       endpoint: 'https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage'
       username: "ermahgerd"
@@ -84,14 +88,17 @@ production:
       #  alert.text: '/etc/flapjack/templates/sms/alert.text.erb'
     jabber:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: jabber_notifications
       server: "jabber.example.com"
       port: 5222
       jabberid: "flapjack@jabber.example.com"
       password: "good-password"
       alias: "flapjack"
+      # List of strings that this pikelet user will respond to
       identifiers:
         - "@flapjack"
+      # the Multi-User Chats the pikelet should join and announce to
       rooms:
         - "gimp@conference.jabber.example.com"
         - "log@conference.jabber.example.com"
@@ -104,6 +111,7 @@ production:
       #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb'
     pagerduty:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: pagerduty_notifications
       logger:
         level: INFO
@@ -134,6 +142,7 @@ production:
       enabled: no
       server: "jabber.example.com"
       port: 5222
+      # jabberid, password, alias, rooms: see the jabber pikelet
       jabberid: "flapjacktest@jabber.example.com"
       password: "nuther-good-password"
       alias: "flapjacktest"
@@ -195,10 +204,13 @@ development:
   gateways:
     email:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: email_notifications
       logger:
         level: DEBUG
         syslog_errors: yes
+      # these values are passed directly through to EventMachine::Protocols::SmtpClient configuration,
+      # and can be omitted if the defaults are acceptable
       smtp_config:
         # from: "Flapjack Example <flapjack@noreply.example>"
         # reply_to: "flapjack@support.example"
@@ -220,6 +232,7 @@ development:
       #  alert.html: '/etc/flapjack/templates/email/alert.html.erb'
     sms:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: sms_notifications
       endpoint: 'https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage'
       username: "ermahgerd"
@@ -233,12 +246,17 @@ development:
       #  alert.text: '/etc/flapjack/templates/sms/alert.text.erb'
     jabber:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: jabber_notifications
       server: "jabber.example.com"
       port: 5222
       jabberid: "flapjack@jabber.example.com"
       password: "good-password"
       alias: "flapjack"
+      # List of strings that this pikelet user will respond to
+      identifiers:
+        - "@flapjack"
+      # the Multi-User Chats the pikelet should join and announce to
       rooms:
         - "gimp@conference.jabber.example.com"
         - "log@conference.jabber.example.com"
@@ -251,6 +269,7 @@ development:
       #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb'
     pagerduty:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: pagerduty_notifications
       logger:
         level: INFO
@@ -281,6 +300,7 @@ development:
       enabled: no
       server: "jabber.example.com"
       port: 5222
+      # jabberid, password, alias, rooms: see the jabber pikelet
       jabberid: "flapjacktest@jabber.example.com"
       password: "nuther-good-password"
       alias: "flapjacktest"
