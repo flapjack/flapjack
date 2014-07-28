@@ -3,7 +3,7 @@ package flapjack
 import "errors"
 
 // Event is a basic representation of a Flapjack event.
-// Find more at https://github.com/flapjack/flapjack/wiki/DATA_STRUCTURES
+// Find more at http://flapjack.io/docs/1.0/development/DATA_STRUCTURES
 type Event struct {
 	Entity	string `json:"entity"`
 	Check	string `json:"check"`

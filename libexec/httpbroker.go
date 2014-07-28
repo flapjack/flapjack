@@ -15,7 +15,7 @@ import (
 
 // State is a basic representation of a Flapjack event, with some extra field.
 // The extra fields handle state expiry.
-// Find more at https://github.com/flapjack/flapjack/wiki/DATA_STRUCTURES
+// Find more at http://flapjack.io/docs/1.0/development/DATA_STRUCTURES
 type State struct {
 	flapjack.Event
 	TTL	int64  `json:"ttl"`
