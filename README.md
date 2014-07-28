@@ -1,4 +1,4 @@
-# ![Flapjack](https://raw.github.com/flapjack/flapjack/gh-pages/images/flapjack-2013-notext-transparent-50-50.png "Flapjack") Flapjack
+# ![Flapjack](http://flapjack.io/images/flapjack-2013-notext-transparent-50-50.png "Flapjack") Flapjack
 
 [![Build Status](https://travis-ci.org/flapjack/flapjack.png)](https://travis-ci.org/flapjack/flapjack)
 
