@@ -17,6 +17,12 @@ production:
     notifier_queue: notifications
     archive_events: true
     events_archive_maxage: 10800
+    # Flapjack sets scheduled maintenance on new check results so contacts aren't
+    # notified as soon as Flapjack becomes aware of an entity to notify on.
+    # This is useful is cases where your monitoring starts checking something
+    # before it is completely provisioned
+    # Value parsed by https://github.com/hpoydar/chronic_duration
+    # You can disable this setting by specifying 0 seconds.
     new_check_scheduled_maintenance_duration: 100 years
     new_check_scheduled_maintenance_ignore_tags:
       - bypass_ncsm
@@ -180,6 +186,12 @@ development:
     notifier_queue: notifications
     archive_events: true
     events_archive_maxage: 10800
+    # Flapjack sets scheduled maintenance on new check results so contacts aren't
+    # notified as soon as Flapjack becomes aware of an entity to notify on.
+    # This is useful is cases where your monitoring starts checking something
+    # before it is completely provisioned
+    # Value parsed by https://github.com/hpoydar/chronic_duration
+    # You can disable this setting by specifying 0 seconds.
     new_check_scheduled_maintenance_duration: 100 years
     new_check_scheduled_maintenance_ignore_tags:
       - bypass_ncsm
