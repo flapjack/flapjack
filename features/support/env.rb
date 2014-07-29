@@ -120,7 +120,7 @@ end
 
 config = Flapjack::Configuration.new
 redis_opts = config.load(FLAPJACK_CONFIG) ?
-             config.for_redis :
+             config.for_redis.merge(:driver => :ruby) :
              {:db => 14, :driver => :ruby}
 redis = ::Redis.new(redis_opts)
 redis.flushdb
