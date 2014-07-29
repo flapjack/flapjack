@@ -1,0 +1,43 @@
+[
+  {
+    "id": "362",
+    "first_name": "John",
+    "last_name": "Johnson",
+    "email": "johnj@example.com",
+    "media": {
+      "sms": "+61412345678",
+      "email": "johnj@example.com"
+    },
+    "tags": [
+      "source:titanium",
+      "foo"
+    ]
+  },
+  {
+    "id": "363",
+    "first_name": "Jane",
+    "last_name": "Janeley",
+    "email": "janej@example.com",
+    "media": {
+      "email": "janej@example.com"
+    },
+    "tags": [
+      "source:titanium",
+      "bar"
+    ]
+  },
+  {
+    "id": "364",
+    "first_name": "Roger",
+    "last_name": "Wilco",
+    "email": "rogerw@example.com",
+    "media": {
+      "jabber": "roger@conference.example.com"
+    },
+    "tags": [
+      "source:titanium",
+      "bar",
+      "foo"
+    ]
+  }
+]
