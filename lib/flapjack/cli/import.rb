@@ -72,7 +72,7 @@ module Flapjack
   end
 end
 
-desc 'Bulk import data from an external source'
+desc 'Bulk import data from an external source, reading from JSON formatted data files'
 command :import do |import|
 
   import.desc 'Import contacts'

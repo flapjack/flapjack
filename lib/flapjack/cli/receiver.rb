@@ -422,7 +422,7 @@ module Flapjack
   end
 end
 
-desc 'Receive events from external systems and send them to Flapjack'
+desc 'Receive events from external systems and sends them to Flapjack'
 arg_name 'receiver'
 command :receiver do |receiver|
 

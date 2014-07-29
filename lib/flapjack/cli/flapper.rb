@@ -114,7 +114,7 @@ module Flapjack
 end
 
 
-desc 'Artificial service that oscillates up and down'
+desc 'Artificial service that oscillates up and down, for use in http://flapjack.io/docs/1.0/usage/oobetet'
 command :flapper do |flapper|
 
   flapper.desc 'start flapper'
