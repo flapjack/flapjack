@@ -65,7 +65,7 @@ module Flapjack
       private
 
       def redis
-        @redis ||= Redis.new(@redis_options)
+        @redis ||= Redis.new(@redis_options.merge(:driver => :ruby))
       end
 
     end
