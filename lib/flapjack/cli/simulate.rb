@@ -101,7 +101,7 @@ module Flapjack
   end
 end
 
-desc 'Simulates a check by creating a stream of events for flapjack to process'
+desc 'Simulates a check by creating a stream of events for Flapjack to process'
 command :simulate do |simulate|
 
   simulate.desc 'Generate a stream of failure events'
