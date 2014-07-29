@@ -25,6 +25,5 @@ tmp/spec*
 tmp/profiles
 flapjack-*.gem
 _site/*
-.ruby-version
 .rvmrc
 artifacts/*
