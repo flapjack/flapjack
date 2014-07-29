@@ -146,10 +146,15 @@ production:
       jabberid: "flapjacktest@jabber.example.com"
       password: "nuther-good-password"
       alias: "flapjacktest"
+      # The check oobetet should watch for the state change
       watched_check: "PING"
+      # The entitiy that the check should be associated with
       watched_entity: "foo.example.com"
+      # The maximum amount of time allowed to pass between state changes on that check
       max_latency: 300
+      # The API key for a service in PagerDuty that the oobetet will use to alert you
       pagerduty_contact: "11111111111111111111111111111111"
+      # Jabber rooms to join
       rooms:
         - "flapjacktest@conference.jabber.example.com"
         - "gimp@conference.jabber.example.com"
@@ -304,10 +309,15 @@ development:
       jabberid: "flapjacktest@jabber.example.com"
       password: "nuther-good-password"
       alias: "flapjacktest"
+      # The check oobetet should watch for the state change
       watched_check: "PING"
+      # The entitiy that the check should be associated with
       watched_entity: "foo.example.com"
+      # The maximum amount of time allowed to pass between state changes on that check
       max_latency: 300
+      # The API key for a service in PagerDuty that the oobetet will use to alert you
       pagerduty_contact: "11111111111111111111111111111111"
+      # Jabber rooms to join
       rooms:
         - "flapjacktest@conference.jabber.example.com"
         - "gimp@conference.jabber.example.com"
