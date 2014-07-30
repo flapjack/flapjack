@@ -132,6 +132,21 @@ module Flapjack
         result
       end
 
+      def self.find_all_maintenance(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        d = {}
+        type = options[:type]
+        keys = redis.keys('*scheduled_maintenances')
+        keys.each do |k|
+          entity = k.split(':')[0]
+          check = k.split(':')[1]
+          ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
+          d["#{entity}:#{check}"] = ec.maintenances(nil, nil, type.to_sym => true)
+          d["#{entity}:#{check}"] << { :state => ec.state }
+        end
+        d
+      end
+
       def self.in_unscheduled_maintenance_for_event_id?(event_id, options)
         raise "Redis connection not set" unless redis = options[:redis]
         redis.exists("#{event_id}:unscheduled_maintenance")

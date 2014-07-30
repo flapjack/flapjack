@@ -359,7 +359,63 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                         :summary    => "second"})
     end
 
+  it "finds current scheduled maintenance period for all entities" do
+    t = Time.now.to_i
+    five_hours_ago = t - (60 * 60 * 5)
+    three_hours_ago = t - (60 * 60 * 3)
+
+    ec = nil
+
+    %w(foo bar baz).each do |entity|
+      Flapjack::Data::Entity.add({ 'name' => entity}, :redis => @redis)
+
+      ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+      ec.create_scheduled_maintenance(five_hours_ago, half_an_hour, :summary => "Test scheduled maintenance for #{entity}")
+    end
+
+
+    smp = Flapjack::Data::EntityCheck.find_all_maintenance({:redis => @redis, :type => 'scheduled'})
+    expect(smp).not_to be_nil
+    expect(smp).to be_an(Hash)
+    expect(smp.size).to eq(3)
+
+    %w(foo bar baz).each do |entity|
+    expect(smp["#{entity}:ping"].first).to eq({:start_time => five_hours_ago,
+                                              :end_time   => five_hours_ago + half_an_hour,
+                                              :duration   => half_an_hour,
+                                              :summary    => "Test scheduled maintenance for #{entity}"})
+    end
   end
+
+  it "finds current unscheduled maintenance period for all entities" do
+    t = Time.now.to_i
+    five_hours_ago = t - (60 * 60 * 5)
+    three_hours_ago = t - (60 * 60 * 3)
+
+    ec = nil
+
+    %w(foo bar baz).each do |entity|
+      Flapjack::Data::Entity.add({ 'name' => entity}, :redis => @redis)
+
+      ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+      ec.create_unscheduled_maintenance(five_hours_ago, half_an_hour, :summary => "Test unscheduled maintenance for #{entity}")
+    end
+
+
+    smp = Flapjack::Data::EntityCheck.find_all_maintenance({:redis => @redis, :type => 'unscheduled'})
+    expect(smp).not_to be_nil
+    expect(smp).to be_an(Hash)
+    expect(smp.size).to eq(3)
+
+    %w(foo bar baz).each do |entity|
+    expect(smp["#{entity}:ping"].first).to eq({:start_time => five_hours_ago,
+                                              :end_time   => five_hours_ago + half_an_hour,
+                                              :duration   => half_an_hour,
+                                              :summary    => "Test unscheduled maintenance for #{entity}"})
+    end
+  end
+
+end
 
   it "returns its state" do
     @redis.hset("check:#{name}:#{check}", 'state', 'ok')
