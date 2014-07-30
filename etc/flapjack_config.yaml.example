@@ -371,3 +371,4 @@ development:
 test:
   redis:
     db: 14
+    driver: ruby
