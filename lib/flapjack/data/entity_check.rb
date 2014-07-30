@@ -134,15 +134,21 @@ module Flapjack
 
       def self.find_all_maintenance(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        d = {}
+        d = []
         type = options[:type]
         keys = redis.keys('*scheduled_maintenances')
         keys.each do |k|
           entity = k.split(':')[0]
           check = k.split(':')[1]
           ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
-          d["#{entity}:#{check}"] = ec.maintenances(nil, nil, type.to_sym => true)
-          d["#{entity}:#{check}"] << { :state => ec.state }
+          entry = { :name => "#{entity}:#{check}",
+                    :state => ec.state
+          }
+          windows = ec.maintenances(nil, nil, type.to_sym => true)
+          windows.each do |window|
+            entry.merge!(window)
+            d.push(entry)
+          end
         end
         d
       end

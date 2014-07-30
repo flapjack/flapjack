@@ -366,24 +366,26 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
     ec = nil
 
-    %w(foo bar baz).each do |entity|
+    %w(alpha bravo lima).each do |entity|
       Flapjack::Data::Entity.add({ 'name' => entity}, :redis => @redis)
 
       ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
       ec.create_scheduled_maintenance(five_hours_ago, half_an_hour, :summary => "Test scheduled maintenance for #{entity}")
     end
 
+    smp = Flapjack::Data::EntityCheck.find_all_maintenance({:redis => @redis, :type => 'scheduled'}).sort_by { |k| k[:name]}
 
-    smp = Flapjack::Data::EntityCheck.find_all_maintenance({:redis => @redis, :type => 'scheduled'})
-    expect(smp).not_to be_nil
-    expect(smp).to be_an(Hash)
+    expect(smp).to be_an(Array)
     expect(smp.size).to eq(3)
-
-    %w(foo bar baz).each do |entity|
-    expect(smp["#{entity}:ping"].first).to eq({:start_time => five_hours_ago,
-                                              :end_time   => five_hours_ago + half_an_hour,
-                                              :duration   => half_an_hour,
-                                              :summary    => "Test scheduled maintenance for #{entity}"})
+    %w(alpha bravo lima).each_with_index do |entity, index|
+    expect(smp[index]).to eq({:name       => "#{entity}:ping",
+                              # The state here is nil due to no check having gone
+                              # through for this item.  This is normally 'critical' or 'ok'
+                              :state      => nil,
+                              :start_time => five_hours_ago,
+                              :end_time   => five_hours_ago + half_an_hour,
+                              :duration   => half_an_hour,
+                              :summary    => "Test scheduled maintenance for #{entity}"})
     end
   end
 
@@ -394,24 +396,27 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
     ec = nil
 
-    %w(foo bar baz).each do |entity|
+    %w(alpha bravo lima).each do |entity|
       Flapjack::Data::Entity.add({ 'name' => entity}, :redis => @redis)
 
       ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
       ec.create_unscheduled_maintenance(five_hours_ago, half_an_hour, :summary => "Test unscheduled maintenance for #{entity}")
     end
 
+    ump = Flapjack::Data::EntityCheck.find_all_maintenance({:redis => @redis, :type => 'unscheduled'}).sort_by { |k| k[:name]}
 
-    smp = Flapjack::Data::EntityCheck.find_all_maintenance({:redis => @redis, :type => 'unscheduled'})
-    expect(smp).not_to be_nil
-    expect(smp).to be_an(Hash)
-    expect(smp.size).to eq(3)
-
-    %w(foo bar baz).each do |entity|
-    expect(smp["#{entity}:ping"].first).to eq({:start_time => five_hours_ago,
-                                              :end_time   => five_hours_ago + half_an_hour,
-                                              :duration   => half_an_hour,
-                                              :summary    => "Test unscheduled maintenance for #{entity}"})
+    expect(ump).not_to be_nil
+    expect(ump).to be_an(Array)
+    expect(ump.size).to eq(3)
+    %w(alpha bravo lima).each_with_index do |entity, index|
+    expect(ump[index]).to eq({:name       => "#{entity}:ping",
+                              # The state here is nil due to no check having gone
+                              # through for this item.  This is normally 'critical' or 'ok'
+                              :state      => nil,
+                              :start_time => five_hours_ago,
+                              :end_time   => five_hours_ago + half_an_hour,
+                              :duration   => half_an_hour,
+                              :summary    => "Test unscheduled maintenance for #{entity}"})
     end
   end
 
