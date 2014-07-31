@@ -463,7 +463,7 @@ it "finds current unscheduled maintenance period for entities over multiple host
     ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Scheduled maintenance started 3 hours ago")
     ec.create_scheduled_maintenance(four_hours_ago, seven_hours, :summary => "Scheduled maintenance started 4 hours ago")
 
-    smp = Flapjack::Data::EntityCheck.find_maintenance({:redis => @redis, :type => 'scheduled', 'unix_start' => {:direction=>">", :time=>three_hours_ago}}).sort_by { |k| k[:name]}
+    smp = Flapjack::Data::EntityCheck.find_maintenance({:redis => @redis, :type => 'scheduled', 'unix_start' => {:direction=>"<", :time=>three_hours_ago}}).sort_by { |k| k[:name]}
     pp smp
 
     expect(smp).to be_an(Array)
@@ -497,7 +497,7 @@ it "finds current unscheduled maintenance period for entities over multiple host
     ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Scheduled maintenance started 3 hours ago")
     ec.create_scheduled_maintenance(four_hours_ago, seven_hours, :summary => "Scheduled maintenance started 4 hours ago")
 
-    smp = Flapjack::Data::EntityCheck.find_maintenance({:redis => @redis, :type => 'scheduled', 'unix_start' => {:direction=>"<", :time=>four_hours_ago}}).sort_by { |k| k[:name]}
+    smp = Flapjack::Data::EntityCheck.find_maintenance({:redis => @redis, :type => 'scheduled', 'unix_start' => {:direction=>">", :time=>four_hours_ago}}).sort_by { |k| k[:name]}
     pp smp
 
     expect(smp).to be_an(Array)
