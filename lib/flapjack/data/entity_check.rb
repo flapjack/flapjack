@@ -132,7 +132,7 @@ module Flapjack
         result
       end
 
-      def self.find_all_maintenance(options = {})
+      def self.find_maintenance(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         d = []
         type = options[:type]
@@ -141,16 +141,34 @@ module Flapjack
           entity = k.split(':')[0]
           check = k.split(':')[1]
           ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
-          entry = { :name => "#{entity}:#{check}",
-                    :state => ec.state
-          }
+          # Only return entries where the state matches the one passed in
+          next unless options[:state] == ec.state
           windows = ec.maintenances(nil, nil, type.to_sym => true)
           windows.each do |window|
-            entry.merge!(window)
-            d.push(entry)
+            entry = { :name => "#{entity}:#{check}",
+                      :state => ec.state
+            }
+            # Only return entries where the summary matches the one passed in
+            next if options[:reason] && options[:reason] != window[:summary]
+            # Only return entries where the maintenance start and end times are in the bounds of the input
+            d.push(entry.merge!(window)) if self.check_timestamp(options['unix_start'], window[:start_time]) && self.check_timestamp(options['unix_finish'], window[:end_time])
           end
         end
         d
+      end
+
+      def self.check_timestamp(input, from_window)
+        # puts "#{input[:time]} #{input[:direction]} #{from_window}"
+        # If no time was specified, give back all results
+        return true if not input
+
+        if input[:direction] == '<'
+          return from_window < input[:time]
+        elsif input[:direction] == '='
+          return from_window == input[:time]
+        elsif input[:direction] == '>'
+          return from_window > input[:time]
+        end
       end
 
       def self.in_unscheduled_maintenance_for_event_id?(event_id, options)
