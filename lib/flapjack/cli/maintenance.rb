@@ -51,6 +51,13 @@ module Flapjack
           rows.push(row)
         end
         puts Terminal::Table.new :headings => ['Name', 'State', 'Start', 'Duration (s)', 'Reason', 'End'], :rows => rows
+        maintenances
+      end
+
+      def delete
+        maintenances = show
+        exit_now!('The following maintenances would be deleted.  Run this command again with --apply true to remove them.') unless @options['apply']
+        exit_now!('Failed to delete maintenances') unless Flapjack::Data::EntityCheck.delete_maintenance(@options)
       end
 
       private
@@ -69,7 +76,6 @@ command :maintenance do |maintenance|
   maintenance.desc 'Show a list of maintenance windows matching a given regex'
   maintenance.command :show do |show|
 
-    # FIXME: Set good defaults
     show.flag [:r, 'reason'],
       :desc => 'The reason for the maintenance window to occur.  This can be a ruby regex of the form /foo/ or /[[:lower:]]/'
 
@@ -93,6 +99,38 @@ command :maintenance do |maintenance|
     show.action do |global_options,options,args|
       maintenance = Flapjack::CLI::Maintenance.new(global_options, options)
       maintenance.show
+    end
+  end
+
+  maintenance.command :delete do |delete|
+
+    delete.flag [:a, 'apply'],
+      :desc => 'Whether this deletion should occur',
+      :default_value => false
+
+    delete.flag [:r, 'reason'],
+      :desc => 'The reason for the maintenance window to occur.  This can be a ruby regex of the form /foo/ or /[[:lower:]]/'
+
+    delete.flag [:s, 'started'],
+      :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after"'
+
+    delete.flag [:d, 'duration'],
+      :desc => 'The total duration of the maintenance window. This should be prefixed with "more than", "less than", or "equal to", and should be an interval'
+
+    delete.flag [:e, 'finishing', 'remaining'],
+      :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after"'
+
+    delete.flag [:st, 'state'],
+      :desc => 'STATE that alerts are in ("critical")',
+      :default_value => 'critical'
+
+    delete.flag [:t, 'type'],
+      :desc => 'TYPE of maintenance scheduled ("scheduled")',
+      :default_value => 'scheduled'
+
+    delete.action do |global_options,options,args|
+      maintenance = Flapjack::CLI::Maintenance.new(global_options, options)
+      maintenance.delete
     end
   end
 end

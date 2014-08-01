@@ -480,7 +480,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         # Maintenance started in the past, still running
         ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Scheduled maintenance started 3 hours ago for 7 hours")
         ec.create_scheduled_maintenance(five_hours_ago, seven_hours, :summary => "Scheduled maintenance started 5 hours ago")
-        # Currnt maintenance
+        # Current maintenance
         ec.create_scheduled_maintenance(t, half_an_hour, :summary => "Scheduled maintenance started now")
         # Future maintenance
         ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
@@ -525,7 +525,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         # Maintenance started in the past, still running
         ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Scheduled maintenance started 3 hours ago for 7 hours")
         ec.create_scheduled_maintenance(five_hours_ago, seven_hours, :summary => "Scheduled maintenance started 5 hours ago")
-        # Currnt maintenance
+        # Current maintenance
         ec.create_scheduled_maintenance(t, half_an_hour, :summary => "Scheduled maintenance started now")
         # Future maintenance
         ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
@@ -553,7 +553,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       # Maintenance started in the past, still running
       ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Scheduled maintenance started 3 hours ago for 7 hours")
       ec.create_scheduled_maintenance(five_hours_ago, seven_hours, :summary => "Scheduled maintenance started 5 hours ago")
-      # Currnt maintenance
+      # Current maintenance
       ec.create_scheduled_maintenance(t, half_an_hour, :summary => "Scheduled maintenance started now")
       # Future maintenance
       ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
@@ -596,7 +596,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       # Maintenance started in the past, still running
       ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Scheduled maintenance started 3 hours ago for 7 hours")
       ec.create_scheduled_maintenance(five_hours_ago, seven_hours, :summary => "Scheduled maintenance started 5 hours ago")
-      # Currnt maintenance
+      # Current maintenance
       ec.create_scheduled_maintenance(t, half_an_hour, :summary => "Scheduled maintenance started now")
       # Future maintenance
       ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
@@ -639,7 +639,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       # Maintenance started in the past, still running
       ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Scheduled maintenance started 3 hours ago for 7 hours")
       ec.create_scheduled_maintenance(five_hours_ago, seven_hours, :summary => "Scheduled maintenance started 5 hours ago")
-      # Currnt maintenance
+      # Current maintenance
       ec.create_scheduled_maintenance(t, half_an_hour, :summary => "Scheduled maintenance started now")
       # Future maintenance
       ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
@@ -672,7 +672,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
       # Maintenance started in the past, still running
       ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Bring me a shrubbery!")
-      # Currnt maintenance
+      # Current maintenance
       ec.create_scheduled_maintenance(t, half_an_hour, :summary => "Bring me a shrubbery!")
       # Future maintenance
       ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
@@ -705,7 +705,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
       # Maintenance started in the past, still running
       ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Bring me a shrubbery!")
-      # Currnt maintenance
+      # Current maintenance
       ec.create_scheduled_maintenance(t, half_an_hour, :summary => "Bring me a shrubbery!")
       # Future maintenance
       ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
@@ -731,6 +731,62 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :end_time   => t + half_an_hour,
                            :duration   => half_an_hour,
                            :summary    => "Bring me a shrubbery!")
+    end
+
+    it "deletes scheduled maintenance from list" do
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      # Current maintenance
+      ec.create_scheduled_maintenance(two_hours_ago, seven_hours, :summary => "Scheduled maintenance started 2 hours ago")
+      ec.create_scheduled_maintenance(t + half_an_hour, half_an_hour, :summary => "Scheduled maintenance starting in half an hour")
+      # Future maintenance
+      ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
+
+      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled').sort_by { |k| k[:name] }
+
+      expect(smp).to be_an(Array)
+      expect(smp.size).to eq(3)
+
+      expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+                           # The state here is nil due to no check having gone
+                           # through for this item.  This is normally 'critical' or 'ok'
+                           :state      => nil,
+                           :start_time => two_hours_ago,
+                           :end_time   => two_hours_ago + seven_hours,
+                           :duration   => seven_hours,
+                           :summary    => "Scheduled maintenance started 2 hours ago")
+      expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+                           # The state here is nil due to no check having gone
+                           # through for this item.  This is normally 'critical' or 'ok'
+                           :state      => nil,
+                           :start_time => t + five_minutes,
+                           :end_time   => t + five_minutes + half_an_hour,
+                           :duration   => half_an_hour,
+                           :summary    => "Scheduled maintenance starting in 5 minutes")
+      expect(smp[2]).to eq(:name       => "#{name}:#{check}",
+                           # The state here is nil due to no check having gone
+                           # through for this item.  This is normally 'critical' or 'ok'
+                           :state      => nil,
+                           :start_time => t + half_an_hour,
+                           :end_time   => t + half_an_hour + half_an_hour,
+                           :duration   => half_an_hour,
+                           :summary    => "Scheduled maintenance starting in half an hour")
+
+      delete = Flapjack::Data::EntityCheck.delete_maintenance(:redis => @redis, :type => 'scheduled', 'duration' => '30 minutes' )
+      expect(delete).to eq(true)
+
+      remain = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled').sort_by { |k| k[:name] }
+
+      expect(remain).to be_an(Array)
+      expect(remain.size).to eq(1)
+
+      expect(remain[0]).to eq(:name       => "#{name}:#{check}",
+                              # The state here is nil due to no check having gone
+                              # through for this item.  This is normally 'critical' or 'ok'
+                              :state      => nil,
+                              :start_time => two_hours_ago,
+                              :end_time   => two_hours_ago + seven_hours,
+                              :duration   => seven_hours,
+                              :summary    => "Scheduled maintenance started 2 hours ago")
     end
   end
 

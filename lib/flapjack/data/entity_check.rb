@@ -157,6 +157,28 @@ module Flapjack
         d
       end
 
+      def self.delete_maintenance(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        entries = find_maintenance(options)
+        success = true
+        entries.each do |entry|
+          puts "Entry can't be deleted as it finished in the past: #{entry}"; success = false if entry[:end_time] < Time.now.to_i
+          if success
+            name = entry[:name]
+            entity = name.split(':')[0]
+            check = name.split(':')[1]
+
+            ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
+            success = ec.end_scheduled_maintenance(entry[:start_time]) if options[:type] == 'scheduled'
+            success = ec.end_unscheduled_maintenance(entry[:end_time]) if options[:type] == 'unscheduled'
+
+            puts "The following entry failed to delete: #{entry}" unless success
+          end
+        end
+        success
+      end
+
+
       def self.check_interval(input, maintenance_duration)
         # If no duration was specified, give back all results
         return true unless input
@@ -321,6 +343,7 @@ module Flapjack
 
         summary    = opts[:summary]
         time_remaining = (start_time + duration) - Time.now.to_i
+
         if time_remaining > 0
           end_unscheduled_maintenance(start_time) if in_unscheduled_maintenance?
           @redis.setex("#{@key}:unscheduled_maintenance", time_remaining, start_time)
@@ -341,6 +364,7 @@ module Flapjack
           @redis.del("#{@key}:unscheduled_maintenance")
           @redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start) # updates existing UM 'score'
         else
+
           @logger.debug("end_unscheduled_maintenance called for #{@key} but none found") if @logger
         end
       end
