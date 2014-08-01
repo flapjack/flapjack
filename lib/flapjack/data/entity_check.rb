@@ -162,7 +162,11 @@ module Flapjack
         entries = find_maintenance(options)
         success = true
         entries.each do |entry|
-          puts "Entry can't be deleted as it finished in the past: #{entry}"; success = false if entry[:end_time] < Time.now.to_i
+          if entry[:end_time] < Time.now.to_i
+            puts "Entry can't be deleted as it finished in the past: #{entry}"
+            success = false
+          end
+
           if success
             name = entry[:name]
             entity = name.split(':')[0]
