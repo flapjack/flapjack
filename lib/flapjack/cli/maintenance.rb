@@ -32,7 +32,7 @@ module Flapjack
         @redis_options = config.for_redis.merge(:driver => :ruby)
         @options[:redis] = redis
 
-        @options['reason'] = @options['reason'].to_s unless @options['reason'] == nil || @options['reason'].is_a?(String)
+        @options['reason'] = @options['reason'].to_s unless @options['reason'].nil? || @options['reason'].is_a?(String)
         exit_now!("state must be one of 'ok', 'warning', 'critical', 'unknown'") unless %w(ok warning critical unknown).include?(@options['state'].downcase)
         exit_now!("type must be one of 'scheduled', 'unscheduled'") unless %w(scheduled unscheduled).include?(@options['type'].downcase)
         %w(started finishing).each do |time|
@@ -71,7 +71,7 @@ command :maintenance do |maintenance|
 
     # FIXME: Set good defaults
     show.flag [:r, 'reason'],
-      :desc => "The reason for the maintenance window to occur"
+      :desc => 'The reason for the maintenance window to occur'
 
     show.flag [:s, 'started'],
       :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after"'
@@ -83,11 +83,11 @@ command :maintenance do |maintenance|
       :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after"'
 
     show.flag [:st, 'state'],
-      :desc => "STATE that alerts are in ('critical')",
+      :desc => 'STATE that alerts are in ("critical")',
       :default_value => 'critical'
 
     show.flag [:t, 'type'],
-      :desc => "TYPE of maintenance scheduled ('scheduled')",
+      :desc => 'TYPE of maintenance scheduled ("scheduled")',
       :default_value => 'scheduled'
 
     show.action do |global_options,options,args|

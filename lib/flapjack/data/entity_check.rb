@@ -151,7 +151,7 @@ module Flapjack
             # Only return entries where the summary matches the one passed in
             next if options[:reason] && options[:reason] != window[:summary]
             # Only return entries where the maintenance start and end times are in the bounds of the input
-            d.push(entry.merge!(window)) if self.check_timestamp(options['started'], window[:start_time]) && self.check_timestamp(options['finishing'], window[:end_time]) && self.check_interval(options['duration'], window[:duration])
+            d.push(entry.merge!(window)) if check_timestamp(options['started'], window[:start_time]) && check_timestamp(options['finishing'], window[:end_time]) && check_interval(options['duration'], window[:duration])
           end
         end
         d
@@ -159,8 +159,8 @@ module Flapjack
 
       def self.check_interval(input, maintenance_duration)
         # If no duration was specified, give back all results
-        return true if not input
-        #FIXME: Require chronic_duration in the proper place
+        return true unless input
+        # FIXME: Require chronic_duration in the proper place
         require 'chronic_duration'
 
         ctime = input
@@ -169,17 +169,16 @@ module Flapjack
         ['more than', 'less than'].each { |prefix| ctime = input.gsub(prefix, '') if input.start_with?(prefix) }
         input_duration = ChronicDuration.parse(ctime, :keep_zero => true)
 
-        abort("Failed to parse time: #{input}") if input_duration == nil
+        abort("Failed to parse time: #{input}") if input_duration.nil?
 
         return maintenance_duration < input_duration if input.start_with?('less than')
         return maintenance_duration > input_duration if input.start_with?('more than')
-        return maintenance_duration == input_duration
+        maintenance_duration == input_duration
       end
-
 
       def self.check_timestamp(input, maintenance_timestamp)
         # If no time was specified, give back all results
-        return true if not input
+        return true unless input
 
         ctime = input
         # Chronic can't parse timestamps for strings starting with before or after.
@@ -198,7 +197,7 @@ module Flapjack
         return maintenance_timestamp < input_timestamp if input.start_with?('before')
         return maintenance_timestamp > input_timestamp if input.start_with?('after')
         # FIXME: How should we handle equality here?
-        return maintenance_timestamp == input_timestamp if input.start_with?('on')
+        maintenance_timestamp == input_timestamp if input.start_with?('on')
       end
 
       def self.in_unscheduled_maintenance_for_event_id?(event_id, options)
