@@ -38,7 +38,7 @@ module Flapjack
         %w(started finishing).each do |time|
           exit_now!("#{time.upcase} time must start with 'more than', 'less than', 'on', 'before', or 'after'") if @options[time] && !@options[time].start_with?('more than', 'less than', 'on', 'before', 'after')
         end
-        @options['duration'] ||= 'more than 0 seconds'
+        @options['finishing'] ||= 'after now'
       end
 
       def show
