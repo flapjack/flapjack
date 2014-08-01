@@ -71,7 +71,7 @@ command :maintenance do |maintenance|
 
     # FIXME: Set good defaults
     show.flag [:r, 'reason'],
-      :desc => 'The reason for the maintenance window to occur'
+      :desc => 'The reason for the maintenance window to occur.  This can be a ruby regex of the form /foo/ or /[[:lower:]]/'
 
     show.flag [:s, 'started'],
       :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after"'
