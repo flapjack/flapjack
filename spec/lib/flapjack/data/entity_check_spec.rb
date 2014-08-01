@@ -476,7 +476,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       ['less than two hours', 'before 2 hours'].each do |input|
         ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
         # Maintenance in the past, now ended
-        ec.create_scheduled_maintenance(two_hours_ago, half_an_hour, :summary => "Scheduled maintenance started 3 hours ago")
+        ec.create_scheduled_maintenance(two_hours_ago + five_minutes, half_an_hour, :summary => "Scheduled maintenance started 3 hours ago")
         # Maintenance started in the past, still running
         ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Scheduled maintenance started 3 hours ago for 7 hours")
         ec.create_scheduled_maintenance(five_hours_ago, seven_hours, :summary => "Scheduled maintenance started 5 hours ago")
@@ -494,8 +494,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
-                             :start_time => two_hours_ago,
-                             :end_time   => two_hours_ago + half_an_hour,
+                             :start_time => two_hours_ago + five_minutes,
+                             :end_time   => two_hours_ago + five_minutes + half_an_hour,
                              :duration   => half_an_hour,
                              :summary    => "Scheduled maintenance started 3 hours ago")
         expect(smp[1]).to eq(:name       => "#{name}:#{check}",
