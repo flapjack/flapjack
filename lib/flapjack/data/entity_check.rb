@@ -136,7 +136,7 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
         d = []
         type = options[:type]
-        keys = redis.keys('*scheduled_maintenances')
+        keys = redis.keys("*:#{type}_maintenances")
         keys.each do |k|
           entity = k.split(':')[0]
           check = k.split(':')[1]
