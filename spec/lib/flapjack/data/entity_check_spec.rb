@@ -699,6 +699,39 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :duration   => half_an_hour,
                            :summary    => "Bring me a shrubbery!")
     end
+
+    it "finds all scheduled maintenance with a summary regex" do
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+
+      # Maintenance started in the past, still running
+      ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Bring me a shrubbery!")
+      # Currnt maintenance
+      ec.create_scheduled_maintenance(t, half_an_hour, :summary => "Bring me a shrubbery!")
+      # Future maintenance
+      ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
+
+      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :reason => /shrubbery!/).sort_by { |k| k[:name] }
+
+      expect(smp).to be_an(Array)
+      expect(smp.size).to eq(2)
+
+      expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+                           # The state here is nil due to no check having gone
+                           # through for this item.  This is normally 'critical' or 'ok'
+                           :state      => nil,
+                           :start_time => three_hours_ago,
+                           :end_time   => three_hours_ago + seven_hours,
+                           :duration   => seven_hours,
+                           :summary    => "Bring me a shrubbery!")
+      expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+                           # The state here is nil due to no check having gone
+                           # through for this item.  This is normally 'critical' or 'ok'
+                           :state      => nil,
+                           :start_time => t,
+                           :end_time   => t + half_an_hour,
+                           :duration   => half_an_hour,
+                           :summary    => "Bring me a shrubbery!")
+    end
   end
 
   it "returns its state" do
