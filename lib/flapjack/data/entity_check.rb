@@ -149,7 +149,7 @@ module Flapjack
                       :state => ec.state
             }
             # Only return entries where the summary matches the reason passed in, or the reason isn't set
-            next unless options[:reason].nil? || options[:reason].match(window[:summary])
+            next unless options[:reason].nil? || Regexp.new(options[:reason]).match(window[:summary])
             # Only return entries where the maintenance start and end times are in the bounds of the input
             d.push(entry.merge!(window)) if check_timestamp(options['started'], window[:start_time]) && check_timestamp(options['finishing'], window[:end_time]) && check_interval(options['duration'], window[:duration])
           end
@@ -186,6 +186,7 @@ module Flapjack
       def self.check_interval(input, maintenance_duration)
         # If no duration was specified, give back all results
         return true unless input
+        input.downcase!
         # FIXME: Require chronic_duration in the proper place
         require 'chronic_duration'
 
@@ -205,6 +206,27 @@ module Flapjack
       def self.check_timestamp(input, maintenance_timestamp)
         # If no time was specified, give back all results
         return true unless input
+        input.downcase!
+
+        if input.start_with?('between')
+          # Between 3 and 4 hours ago translates to more than 3 hours ago, less than 4 hours ago
+          # Get words Between / / and / / (ago/from now)
+          # Between 3 and 4 hours ago => Chronic can't parse, add hours and reparse
+          # Between 3 hours and 4 hours ago
+          # Between monday and tuesday
+          first_time, second_time = input.match(/between (.*) and (.*)/).captures
+          suffix = second_time.match(/\w (.*)/).captures.first
+
+          # HACK: if the first time only contains only a single word, the unit (and past/future) is
+          # most likely directly after the first word of the the second time
+          # eg between 3 and 4 hours ago
+          first_time = "#{first_time} #{suffix}" unless / /.match(first_time)
+
+          first_time += ' from now' unless Chronic.parse(first_time)
+          second_time += ' from now' unless Chronic.parse(second_time)
+          (first_time, second_time = second_time, first_time) if Chronic.parse(first_time) > Chronic.parse(second_time)
+          return check_timestamp("after #{first_time}", maintenance_timestamp) && check_timestamp("before #{second_time}", maintenance_timestamp)
+        end
 
         ctime = input
         # Chronic can't parse timestamps for strings starting with before or after.
@@ -224,6 +246,7 @@ module Flapjack
         return maintenance_timestamp > input_timestamp if input.start_with?('after')
         # FIXME: How should we handle equality here?
         maintenance_timestamp == input_timestamp if input.start_with?('on')
+        # Handle "on tuesday"
       end
 
       def self.in_unscheduled_maintenance_for_event_id?(event_id, options)

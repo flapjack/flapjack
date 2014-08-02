@@ -11,12 +11,15 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
   let(:half_an_hour) { 30 * 60 }
   let(:t) { Time.now.to_i }
+  let(:five_minutes) { 60 * 5 }
   let(:five_hours_ago) { t.to_i - (60 * 60 * 5) }
   let(:four_hours_ago) { t.to_i - (60 * 60 * 4) }
   let(:three_hours_ago) { t.to_i - (60 * 60 * 3) }
   let(:two_hours_ago) { t.to_i - (60 * 60 * 2) }
+  let(:one_hour) { 60 * 60 }
   let(:two_hours) { 60 * 60 * 2 }
-  let(:five_minutes) { 60 * 5 }
+  let(:three_hours) { 60 * 60 * 3 }
+  let(:five_hours) { 60 * 60 * 5 }
   let(:seven_hours) { 60 * 60 * 7 }
 
   before(:each) do
@@ -517,6 +520,72 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       end
     end
 
+    it "finds all scheduled maintenance between two given end times (1 hour ago - 2 hours ago)" do
+        ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+        # Maintenance in the past, now ended
+        ec.create_scheduled_maintenance(two_hours_ago + five_minutes, half_an_hour, :summary => "Scheduled maintenance started 1 hour, 55 minutes ago")
+        # Maintenance started in the past, still running
+        ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Scheduled maintenance started 3 hours ago for 7 hours")
+        ec.create_scheduled_maintenance(five_hours_ago, three_hours + five_minutes, :summary => "Scheduled maintenance started 5 hours ago")
+        # Future maintenance
+        ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
+
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', 'finishing' => 'between one and two hours ago').sort_by { |k| k[:name] }
+
+        expect(smp).to be_an(Array)
+        expect(smp.size).to eq(2)
+
+        expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+                             # The state here is nil due to no check having gone
+                             # through for this item.  This is normally 'critical' or 'ok'
+                             :state      => nil,
+                             :start_time => five_hours_ago,
+                             :end_time   => five_hours_ago + three_hours + five_minutes,
+                             :duration   => three_hours + five_minutes,
+                             :summary    => "Scheduled maintenance started 5 hours ago")
+        expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+                             # The state here is nil due to no check having gone
+                             # through for this item.  This is normally 'critical' or 'ok'
+                             :state      => nil,
+                             :start_time => two_hours_ago + five_minutes,
+                             :end_time   => two_hours_ago + five_minutes + half_an_hour,
+                             :duration   => half_an_hour,
+                             :summary    => "Scheduled maintenance started 1 hour, 55 minutes ago")
+    end
+
+    it "finds all scheduled maintenance between two given end times (1 hour from now - 2 hours from now)" do
+        ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+        # Maintenance in the past, now ended
+        ec.create_scheduled_maintenance(two_hours_ago + five_minutes, half_an_hour, :summary => "Scheduled maintenance started 1 hour, 55 minutes ago")
+        # Maintenance started in the past, still running
+        ec.create_scheduled_maintenance(three_hours_ago, five_hours - five_minutes, :summary => "Scheduled maintenance started 3 hours ago for 4 hours, 25 minutes")
+        ec.create_scheduled_maintenance(five_hours_ago, three_hours + five_minutes, :summary => "Scheduled maintenance started 5 hours ago")
+        # Future maintenance
+        ec.create_scheduled_maintenance(t + five_minutes, one_hour, :summary => "Scheduled maintenance starting in 5 minutes")
+
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', 'finishing' => 'between one and two hours').sort_by { |k| k[:name] }
+
+        expect(smp).to be_an(Array)
+        expect(smp.size).to eq(2)
+
+        expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+                             # The state here is nil due to no check having gone
+                             # through for this item.  This is normally 'critical' or 'ok'
+                             :state      => nil,
+                             :start_time => three_hours_ago,
+                             :end_time   => three_hours_ago + five_hours - five_minutes,
+                             :duration   => five_hours - five_minutes,
+                             :summary    => "Scheduled maintenance started 3 hours ago for 4 hours, 25 minutes")
+        expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+                             # The state here is nil due to no check having gone
+                             # through for this item.  This is normally 'critical' or 'ok'
+                             :state      => nil,
+                             :start_time => t + five_minutes,
+                             :end_time   => t + five_minutes + one_hour,
+                             :duration   => one_hour,
+                             :summary    => "Scheduled maintenance starting in 5 minutes")
+    end
+
     it "finds all scheduled maintenance after a given end time (more than 2 hours)" do
       ['more than two hours', 'after 2 hours'].each do |input|
         ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
@@ -710,7 +779,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       # Future maintenance
       ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
 
-      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :reason => /shrubbery!/).sort_by { |k| k[:name] }
+      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :reason => '.* shrubbery!').sort_by { |k| k[:name] }
 
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(2)

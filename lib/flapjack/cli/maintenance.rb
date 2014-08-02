@@ -36,7 +36,7 @@ module Flapjack
         exit_now!("state must be one of 'ok', 'warning', 'critical', 'unknown'") unless %w(ok warning critical unknown).include?(@options['state'].downcase)
         exit_now!("type must be one of 'scheduled', 'unscheduled'") unless %w(scheduled unscheduled).include?(@options['type'].downcase)
         %w(started finishing).each do |time|
-          exit_now!("#{time.upcase} time must start with 'more than', 'less than', 'on', 'before', or 'after'") if @options[time] && !@options[time].start_with?('more than', 'less than', 'on', 'before', 'after')
+          exit_now!("#{time.upcase} time must start with 'more than', 'less than', 'on', 'before', 'after' or between") if @options[time] && !@options[time].downcase.start_with?('more than', 'less than', 'on', 'before', 'after', 'between')
         end
         @options['finishing'] ||= 'after now'
       end
@@ -73,20 +73,21 @@ end
 desc 'Show, create and delete maintenance windows'
 command :maintenance do |maintenance|
 
-  maintenance.desc 'Show a list of maintenance windows matching a given regex'
+
+  maintenance.desc 'Show maintenance windows according to criteria (default: all ongoing maintenance)'
   maintenance.command :show do |show|
 
     show.flag [:r, 'reason'],
-      :desc => 'The reason for the maintenance window to occur.  This can be a ruby regex of the form /foo/ or /[[:lower:]]/'
+      :desc => 'The reason for the maintenance window to occur.  This can be a ruby regex of the form \'Downtime for *\' or \'[[:lower:]]\''
 
     show.flag [:s, 'started'],
-      :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after"'
+      :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between times and time"'
 
     show.flag [:d, 'duration'],
-      :desc => 'The total duration of the maintenance window. This should be prefixed with "more than", "less than", or "equal to", and should be an interval'
+      :desc => 'The total duration of the maintenance window. This should be prefixed with "more than", "less than", or "equal to", or or of the form "between time and time".  This should be an interval'
 
     show.flag [:e, 'finishing', 'remaining'],
-      :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after"'
+      :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between time and time"'
 
     show.flag [:st, 'state'],
       :desc => 'STATE that alerts are in ("critical")',
@@ -102,6 +103,7 @@ command :maintenance do |maintenance|
     end
   end
 
+  maintenance.desc 'Delete maintenance windows according to criteria (default: all ongoing maintenance)'
   maintenance.command :delete do |delete|
 
     delete.flag [:a, 'apply'],
@@ -109,16 +111,16 @@ command :maintenance do |maintenance|
       :default_value => false
 
     delete.flag [:r, 'reason'],
-      :desc => 'The reason for the maintenance window to occur.  This can be a ruby regex of the form /foo/ or /[[:lower:]]/'
+      :desc => 'The reason for the maintenance window to occur.  This can be a ruby regex of the form \'Downtime for *\' or \'[[:lower:]]\''
 
     delete.flag [:s, 'started'],
-      :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after"'
+      :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between times and time"'
 
     delete.flag [:d, 'duration'],
-      :desc => 'The total duration of the maintenance window. This should be prefixed with "more than", "less than", or "equal to", and should be an interval'
+      :desc => 'The total duration of the maintenance window. This should be prefixed with "more than", "less than", or "equal to", or or of the form "between time and time".  This should be an interval'
 
     delete.flag [:e, 'finishing', 'remaining'],
-      :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after"'
+      :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between time and time"'
 
     delete.flag [:st, 'state'],
       :desc => 'STATE that alerts are in ("critical")',
