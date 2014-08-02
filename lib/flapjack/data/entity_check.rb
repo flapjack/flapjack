@@ -190,6 +190,20 @@ module Flapjack
         # FIXME: Require chronic_duration in the proper place
         require 'chronic_duration'
 
+        if input.start_with?('between')
+          # Between 3 hours and 4 hours translates to more than 3 hours, less than 4 hours
+          first_duration, second_duration = input.match(/between (.*) and (.*)/).captures
+          suffix = second_duration.match(/\w (.*)/).captures.first
+
+          # If the first interval only contains only a single word, the unit is
+          # most likely directly after the first word of the the second interval
+          # eg between 3 and 4 hours
+          first_duration = "#{first_duration} #{suffix}" unless / /.match(first_duration)
+
+          (first_duration, second_duration = second_duration, first_duration) if ChronicDuration.parse(first_duration) > ChronicDuration.parse(second_duration)
+          return check_interval("more than #{first_duration}", maintenance_duration) && check_interval("less than #{second_duration}", maintenance_duration)
+        end
+
         ctime = input
         # ChronicDuration can't parse timestamps for strings starting with before or after.
         # Strip the before or after for the conversion only, but use it for the comparison later
@@ -210,14 +224,11 @@ module Flapjack
 
         if input.start_with?('between')
           # Between 3 and 4 hours ago translates to more than 3 hours ago, less than 4 hours ago
-          # Get words Between / / and / / (ago/from now)
-          # Between 3 and 4 hours ago => Chronic can't parse, add hours and reparse
-          # Between 3 hours and 4 hours ago
-          # Between monday and tuesday
+          # FIXME: Test 'Between monday and tuesday'
           first_time, second_time = input.match(/between (.*) and (.*)/).captures
           suffix = second_time.match(/\w (.*)/).captures.first
 
-          # HACK: if the first time only contains only a single word, the unit (and past/future) is
+          # If the first time only contains only a single word, the unit (and past/future) is
           # most likely directly after the first word of the the second time
           # eg between 3 and 4 hours ago
           first_time = "#{first_time} #{suffix}" unless / /.match(first_time)
