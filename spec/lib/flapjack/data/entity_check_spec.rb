@@ -428,7 +428,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(3)
-      %w(alpha lima bravo).each_with_index do |entity, index|
+      %w(alpha bravo lima).each_with_index do |entity, index|
       expect(smp[index]).to eq(:entity     => entity,
                                :check      => "ping",
                                # The state here is nil due to no check having gone
