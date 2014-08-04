@@ -424,7 +424,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         ec.create_scheduled_maintenance(five_hours_ago, seven_hours, :summary => "Test scheduled maintenance for #{entity}")
       end
 
-      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :finishing => 'more than 0 minutes from now').sort_by { |k| k[:name] }
+      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :finishing => 'more than 0 minutes from now').sort_by { |k| k[:entity] }
 
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(3)
@@ -451,7 +451,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         ec.create_unscheduled_maintenance(five_hours_ago, seven_hours, :summary => "Test unscheduled maintenance for #{entity}")
       end
 
-      ump = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled', :finishing => 'more than 0 minutes from now').sort_by { |k| k[:name] }
+      ump = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled', :finishing => 'more than 0 minutes from now').sort_by { |k| k[:entity] }
 
       expect(ump).not_to be_nil
       expect(ump).to be_an(Array)
@@ -479,7 +479,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Scheduled maintenance started 3 hours ago")
         ec.create_scheduled_maintenance(four_hours_ago, seven_hours, :summary => "Scheduled maintenance started 4 hours ago")
 
-        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :started => input).sort_by { |k| k[:name] }
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :started => input).sort_by { |k| k[:entity] }
 
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(2)
@@ -515,7 +515,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Scheduled maintenance started 3 hours ago")
         ec.create_scheduled_maintenance(four_hours_ago, seven_hours, :summary => "Scheduled maintenance started 4 hours ago")
 
-        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :started => input).sort_by { |k| k[:name] }
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :started => input).sort_by { |k| k[:entity] }
 
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(1)
@@ -545,7 +545,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         # Future maintenance
         ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
 
-        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :finishing => input).sort_by { |k| k[:name] }
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :finishing => input).sort_by { |k| k[:entity] }
 
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(3)
@@ -590,7 +590,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         # Future maintenance
         ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
 
-        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :finishing => 'between one and two hours ago').sort_by { |k| k[:name] }
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :finishing => 'between one and two hours ago').sort_by { |k| k[:entity] }
 
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(2)
@@ -625,7 +625,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         # Future maintenance
         ec.create_scheduled_maintenance(t + five_minutes, one_hour, :summary => "Scheduled maintenance starting in 5 minutes")
 
-        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :finishing => 'between one and two hours').sort_by { |k| k[:name] }
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :finishing => 'between one and two hours').sort_by { |k| k[:entity] }
 
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(2)
@@ -663,7 +663,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         # Future maintenance
         ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
 
-        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :finishing => input).sort_by { |k| k[:name] }
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :finishing => input).sort_by { |k| k[:entity] }
 
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(1)
@@ -692,7 +692,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       # Future maintenance
       ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
 
-      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :duration => 'less than one hour').sort_by { |k| k[:name] }
+      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :duration => 'less than one hour').sort_by { |k| k[:entity] }
 
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(3)
@@ -738,7 +738,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       # Future maintenance
       ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
 
-      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :duration => '30 minutes').sort_by { |k| k[:name] }
+      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :duration => '30 minutes').sort_by { |k| k[:entity] }
 
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(3)
@@ -784,7 +784,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       # Future maintenance
       ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
 
-      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :duration => 'between 15 and 65 minutes').sort_by { |k| k[:name] }
+      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :duration => 'between 15 and 65 minutes').sort_by { |k| k[:entity] }
 
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(4)
@@ -839,7 +839,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       # Future maintenance
       ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
 
-      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :duration => 'more than one hour').sort_by { |k| k[:name] }
+      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :duration => 'more than one hour').sort_by { |k| k[:entity] }
 
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(2)
@@ -873,7 +873,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
           ec.create_scheduled_maintenance(five_hours_ago, seven_hours, :summary => "Test scheduled maintenance for #{entity}")
         end
 
-        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :entity => input ).sort_by { |k| k[:name] }
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :entity => input ).sort_by { |k| k[:entity] }
 
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(1)
@@ -896,7 +896,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
           ec.create_scheduled_maintenance(five_hours_ago, seven_hours, :summary => "Test scheduled maintenance for #{check}")
         end
 
-        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :check => input ).sort_by { |k| k[:name] }
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :check => input ).sort_by { |k| k[:entity] }
 
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(1)
@@ -922,7 +922,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       # Future maintenance
       ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
 
-      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :reason => "Bring me a shrubbery!").sort_by { |k| k[:name] }
+      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :reason => "Bring me a shrubbery!").sort_by { |k| k[:entity] }
 
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(2)
@@ -957,7 +957,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       # Future maintenance
       ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
 
-      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :reason => '.* shrubbery!').sort_by { |k| k[:name] }
+      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :reason => '.* shrubbery!').sort_by { |k| k[:entity] }
 
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(2)
@@ -990,7 +990,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       # Future maintenance
       ec.create_scheduled_maintenance(t + five_minutes, half_an_hour, :summary => "Scheduled maintenance starting in 5 minutes")
 
-      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled').sort_by { |k| k[:name] }
+      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled').sort_by { |k| k[:entity] }
 
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(3)
@@ -1026,7 +1026,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       delete = Flapjack::Data::EntityCheck.delete_maintenance(:redis => @redis, :type => 'scheduled', :duration => '30 minutes' )
       expect(delete).to eq(true)
 
-      remain = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled').sort_by { |k| k[:name] }
+      remain = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled').sort_by { |k| k[:entity] }
 
       expect(remain).to be_an(Array)
       expect(remain.size).to eq(1)
@@ -1050,14 +1050,14 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     #   # Future maintenance
     #   ec.create_unscheduled_maintenance(t + two_hours, half_an_hour, :summary => "Unscheduled maintenance starting in 2 hours")
     #
-    #   ump = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled').sort_by { |k| k[:name] }
+    #   ump = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled').sort_by { |k| k[:entity] }
     #
     #   expect(ump).to be_an(Array)
     #   expect(ump.size).to eq(3)
     #
-    #   Flapjack::Data::EntityCheck.delete_maintenance(:redis => @redis, :type => 'unscheduled', 'start_time' => 'less than two hours' ).sort_by { |k| k[:name] }
+    #   Flapjack::Data::EntityCheck.delete_maintenance(:redis => @redis, :type => 'unscheduled', 'start_time' => 'less than two hours' ).sort_by { |k| k[:entity] }
     #
-    #   remain = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled').sort_by { |k| k[:name] }
+    #   remain = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled').sort_by { |k| k[:entity] }
     #
     #   expect(remain).to be_an(Array)
     #   expect(remain.size).to eq(1)
