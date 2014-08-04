@@ -541,7 +541,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         ec.create_scheduled_maintenance(two_hours_ago + five_minutes, half_an_hour, :summary => "Scheduled maintenance started 3 hours ago")
         # Maintenance started in the past, still running
         ec.create_scheduled_maintenance(three_hours_ago, seven_hours, :summary => "Scheduled maintenance started 3 hours ago for 7 hours")
-        ec.create_scheduled_maintenance(five_hours_ago, seven_hours, :summary => "Scheduled maintenance started 5 hours ago")
+        ec.create_scheduled_maintenance(five_hours_ago, seven_hours + five_minutes, :summary => "Scheduled maintenance started 5 hours ago")
         # Current maintenance
         ec.create_scheduled_maintenance(t, half_an_hour, :summary => "Scheduled maintenance started now")
         # Future maintenance
