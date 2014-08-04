@@ -56,6 +56,7 @@ module Flapjack
         maintenances = show
         exit_now!('The following maintenances would be deleted.  Run this command again with --apply true to remove them.') unless @options[:apply]
         exit_now!('Failed to delete maintenances') unless Flapjack::Data::EntityCheck.delete_maintenance(@options)
+        puts "The maintenances above have been deleted"
       end
 
       def create
@@ -67,6 +68,7 @@ module Flapjack
             ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
             abort('Failed to create scheduled maintenance') unless ec.create_scheduled_maintenance(@options[:started], @options[:duration], :summary => @options[:reason]) if @options[:type] == 'scheduled'
             abort('Failed to create unscheduled maintenance') unless ec.create_unscheduled_maintenance(@options[:started], @options[:duration], :summary => @options[:reason]) if @options[:type] == 'unscheduled'
+            puts "Maintenance for #{check} on #{entity} has been created"
           end
         end
       end
@@ -107,8 +109,7 @@ command :maintenance do |maintenance|
       :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between time and time"'
 
     show.flag [:st, 'state'],
-      :desc => 'The state that alerts are in ("critical")',
-      :default_value => 'critical'
+      :desc => 'The state that alerts are in ("critical")'
 
     show.flag [:t, 'type'],
       :desc => 'The type of maintenance scheduled ("scheduled")',
@@ -146,8 +147,7 @@ command :maintenance do |maintenance|
       :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between time and time"'
 
     delete.flag [:st, 'state'],
-      :desc => 'The state that alerts are in ("critical")',
-      :default_value => 'critical'
+      :desc => 'The state that alerts are in ("critical")'
 
     delete.flag [:t, 'type'],
       :desc => 'The type of maintenance scheduled ("scheduled")',
