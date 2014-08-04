@@ -145,7 +145,8 @@ module Flapjack
           next unless options[:state] == ec.state
           windows = ec.maintenances(nil, nil, type.to_sym => true)
           windows.each do |window|
-            entry = { :name => "#{entity}:#{check}",
+            entry = { :entity => entity,
+                      :check => check,
                       :state => ec.state
             }
             # Only return entries where the summary matches the reason passed in, or the reason isn't set
@@ -169,9 +170,8 @@ module Flapjack
             puts "Entry can't be deleted as it finished in the past: #{entry}"
             success = false
           else
-            name = entry[:name]
-            entity = name.split(':')[0]
-            check = name.split(':')[1]
+            entity = entry[:entity]
+            check = entry[:check]
 
             ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
             success = ec.end_scheduled_maintenance(entry[:start_time]) if options[:type] == 'scheduled' && success

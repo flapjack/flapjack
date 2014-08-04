@@ -50,7 +50,7 @@ module Flapjack
           m.each { |k, v| row.push(k.to_s.end_with?('time') ? Time.at(v) : v) }
           rows.push(row)
         end
-        puts Terminal::Table.new :headings => ['Name', 'State', 'Start', 'Duration (s)', 'Reason', 'End'], :rows => rows
+        puts Terminal::Table.new :headings => ['Entity', 'Check', 'State', 'Start', 'Duration (s)', 'Reason', 'End'], :rows => rows
         maintenances
       end
 
@@ -92,7 +92,7 @@ command :maintenance do |maintenance|
     show.flag [:d, 'duration'],
       :desc => 'The total duration of the maintenance window. This should be prefixed with "more than", "less than", or "equal to", or or of the form "between 3 and 4 hours".  This should be an interval'
 
-    show.flag [:e, 'finishing', 'remaining'],
+    show.flag [:f, 'finishing', 'remaining'],
       :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between time and time"'
 
     show.flag [:st, 'state'],
@@ -131,7 +131,7 @@ command :maintenance do |maintenance|
     delete.flag [:d, 'duration'],
       :desc => 'The total duration of the maintenance window. This should be prefixed with "more than", "less than", or "equal to", or or of the form "between 3 and 4 hours".  This should be an interval'
 
-    delete.flag [:e, 'finishing', 'remaining'],
+    delete.flag [:f, 'finishing', 'remaining'],
       :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between time and time"'
 
     delete.flag [:st, 'state'],

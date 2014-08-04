@@ -365,7 +365,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     it "finds current scheduled maintenance period for entities over multiple hosts" do
       ec = nil
 
-      %w(alpha bravo lima).each do |entity|
+      %w(alpha lima bravo).each do |entity|
         Flapjack::Data::Entity.add({ 'name' => entity }, :redis => @redis)
 
         ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
@@ -376,8 +376,9 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(3)
-      %w(alpha bravo lima).each_with_index do |entity, index|
-      expect(smp[index]).to eq(:name       => "#{entity}:ping",
+      %w(alpha lima bravo).each_with_index do |entity, index|
+      expect(smp[index]).to eq(:entity     => entity,
+                               :check      => "ping",
                                # The state here is nil due to no check having gone
                                # through for this item.  This is normally 'critical' or 'ok'
                                :state      => nil,
@@ -404,7 +405,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(ump).to be_an(Array)
       expect(ump.size).to eq(3)
       %w(alpha bravo lima).each_with_index do |entity, index|
-      expect(ump[index]).to eq(:name       => "#{entity}:ping",
+      expect(ump[index]).to eq(:entity     => entity,
+                               :check      => "ping",
                                # The state here is nil due to no check having gone
                                # through for this item.  This is normally 'critical' or 'ok'
                                :state      => nil,
@@ -430,7 +432,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(2)
 
-        expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+        expect(smp[0]).to eq(:entity     => name,
+                             :check      => check,
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
@@ -438,7 +441,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                              :end_time   => five_hours_ago + half_an_hour,
                              :duration   => half_an_hour,
                              :summary    => "30 minute maintenance")
-        expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+        expect(smp[1]).to eq(:entity     => name,
+                             :check      => check,
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
@@ -464,7 +468,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(1)
 
-        expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+        expect(smp[0]).to eq(:entity     => name,
+                             :check      => check,
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
@@ -493,7 +498,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(3)
 
-        expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+        expect(smp[0]).to eq(:entity     => name,
+                             :check      => check,
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
@@ -501,7 +507,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                              :end_time   => two_hours_ago + five_minutes + half_an_hour,
                              :duration   => half_an_hour,
                              :summary    => "Scheduled maintenance started 3 hours ago")
-        expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+        expect(smp[1]).to eq(:entity     => name,
+                             :check      => check,
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
@@ -509,7 +516,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                              :end_time   => t + half_an_hour,
                              :duration   => half_an_hour,
                              :summary    => "Scheduled maintenance started now")
-        expect(smp[2]).to eq(:name       => "#{name}:#{check}",
+        expect(smp[2]).to eq(:entity     => name,
+                             :check      => check,
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
@@ -535,7 +543,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(2)
 
-        expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+        expect(smp[0]).to eq(:entity     => name,
+                             :check      => check,
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
@@ -543,7 +552,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                              :end_time   => five_hours_ago + three_hours + five_minutes,
                              :duration   => three_hours + five_minutes,
                              :summary    => "Scheduled maintenance started 5 hours ago")
-        expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+        expect(smp[1]).to eq(:entity     => name,
+                             :check      => check,
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
@@ -568,7 +578,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(2)
 
-        expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+        expect(smp[0]).to eq(:entity     => name,
+                             :check      => check,
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
@@ -576,7 +587,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                              :end_time   => three_hours_ago + five_hours - five_minutes,
                              :duration   => five_hours - five_minutes,
                              :summary    => "Scheduled maintenance started 3 hours ago for 4 hours, 25 minutes")
-        expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+        expect(smp[1]).to eq(:entity     => name,
+                             :check      => check,
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
@@ -604,7 +616,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(1)
 
-        expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+        expect(smp[0]).to eq(:entity     => name,
+                             :check      => check,
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
@@ -632,7 +645,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(3)
 
-      expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[0]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -640,7 +654,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :end_time   => two_hours_ago + half_an_hour,
                            :duration   => half_an_hour,
                            :summary    => "Scheduled maintenance started 3 hours ago")
-      expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[1]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -648,7 +663,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :end_time   => t + half_an_hour,
                            :duration   => half_an_hour,
                            :summary    => "Scheduled maintenance started now")
-      expect(smp[2]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[2]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -675,7 +691,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(3)
 
-      expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[0]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -683,7 +700,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :end_time   => two_hours_ago + half_an_hour,
                            :duration   => half_an_hour,
                            :summary    => "Scheduled maintenance started 3 hours ago")
-      expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[1]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -691,7 +709,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :end_time   => t + half_an_hour,
                            :duration   => half_an_hour,
                            :summary    => "Scheduled maintenance started now")
-      expect(smp[2]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[2]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -718,7 +737,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(4)
 
-      expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[1]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -726,7 +746,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :end_time   => two_hours_ago + half_an_hour,
                            :duration   => half_an_hour,
                            :summary    => "Scheduled maintenance started 3 hours ago")
-      expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[0]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -734,7 +755,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :end_time   => five_hours_ago + one_hour,
                            :duration   => one_hour,
                            :summary    => "Scheduled maintenance started 5 hours ago")
-      expect(smp[2]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[2]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -742,7 +764,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :end_time   => t + half_an_hour,
                            :duration   => half_an_hour,
                            :summary    => "Scheduled maintenance started now")
-      expect(smp[3]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[3]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -769,7 +792,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(2)
 
-      expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[0]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -777,7 +801,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :end_time   => five_hours_ago + seven_hours,
                            :duration   => seven_hours,
                            :summary    => "Scheduled maintenance started 5 hours ago")
-      expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[1]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -800,7 +825,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(1)
-        expect(smp[0]).to eq(:name       => "bravo:ping",
+        expect(smp[0]).to eq(:entity     => "bravo",
+                             :check      => check,
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
@@ -822,7 +848,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
 
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(1)
-        expect(smp[0]).to eq(:name       => "#{name}:http",
+        expect(smp[0]).to eq(:entity     => name,
+                             :check      => "http",
                              # The state here is nil due to no check having gone
                              # through for this item.  This is normally 'critical' or 'ok'
                              :state      => nil,
@@ -848,7 +875,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(2)
 
-      expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[0]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -856,7 +884,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :end_time   => three_hours_ago + seven_hours,
                            :duration   => seven_hours,
                            :summary    => "Bring me a shrubbery!")
-      expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[1]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -881,7 +910,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(2)
 
-      expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[0]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -889,7 +919,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :end_time   => three_hours_ago + seven_hours,
                            :duration   => seven_hours,
                            :summary    => "Bring me a shrubbery!")
-      expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[1]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -912,7 +943,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(3)
 
-      expect(smp[0]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[0]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -920,7 +952,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :end_time   => two_hours_ago + seven_hours,
                            :duration   => seven_hours,
                            :summary    => "Scheduled maintenance started 2 hours ago")
-      expect(smp[1]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[1]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -928,7 +961,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :end_time   => t + five_minutes + half_an_hour,
                            :duration   => half_an_hour,
                            :summary    => "Scheduled maintenance starting in 5 minutes")
-      expect(smp[2]).to eq(:name       => "#{name}:#{check}",
+      expect(smp[2]).to eq(:entity     => name,
+                           :check      => check,
                            # The state here is nil due to no check having gone
                            # through for this item.  This is normally 'critical' or 'ok'
                            :state      => nil,
@@ -945,7 +979,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(remain).to be_an(Array)
       expect(remain.size).to eq(1)
 
-      expect(remain[0]).to eq(:name       => "#{name}:#{check}",
+      expect(remain[0]).to eq(:entity     => name,
+                              :check      => check,
                               # The state here is nil due to no check having gone
                               # through for this item.  This is normally 'critical' or 'ok'
                               :state      => nil,
