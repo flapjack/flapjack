@@ -160,28 +160,25 @@ module Flapjack
       def self.delete_maintenance(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         entries = find_maintenance(options)
+        # Try to delete all entries passed in, but return false if any entries failed
         success = true
         entries.each do |entry|
           if entry[:end_time] < Time.now.to_i
             puts "Entry can't be deleted as it finished in the past: #{entry}"
             success = false
-          end
-
-          if success
+          else
             name = entry[:name]
             entity = name.split(':')[0]
             check = name.split(':')[1]
 
             ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
-            success = ec.end_scheduled_maintenance(entry[:start_time]) if options[:type] == 'scheduled'
-            success = ec.end_unscheduled_maintenance(entry[:end_time]) if options[:type] == 'unscheduled'
-
+            success = ec.end_scheduled_maintenance(entry[:start_time]) if options[:type] == 'scheduled' && success
+            success = ec.end_unscheduled_maintenance(entry[:end_time]) if options[:type] == 'unscheduled' && success
             puts "The following entry failed to delete: #{entry}" unless success
           end
         end
         success
       end
-
 
       def self.check_interval(input, maintenance_duration)
         # If no duration was specified, give back all results
@@ -192,22 +189,21 @@ module Flapjack
 
         if input.start_with?('between')
           # Between 3 hours and 4 hours translates to more than 3 hours, less than 4 hours
-          first_duration, second_duration = input.match(/between (.*) and (.*)/).captures
-          suffix = second_duration.match(/\w (.*)/).captures.first
+          first, second = input.match(/between (.*) and (.*)/).captures
+          suffix = second.match(/\w (.*)/) ? second.match(/\w (.*)/)[0] : ''
 
-          # If the first interval only contains only a single word, the unit is
-          # most likely directly after the first word of the the second interval
+          # If the first duration only contains only a single word, the unit is
+          # most likely directly after the first word of the the second duration
           # eg between 3 and 4 hours
-          first_duration = "#{first_duration} #{suffix}" unless / /.match(first_duration)
+          first = "#{first} #{suffix}" unless / /.match(first)
 
-          (first_duration, second_duration = second_duration, first_duration) if ChronicDuration.parse(first_duration) > ChronicDuration.parse(second_duration)
-          return check_interval("more than #{first_duration}", maintenance_duration) && check_interval("less than #{second_duration}", maintenance_duration)
+          (first, second = second, first) if ChronicDuration.parse(first) > ChronicDuration.parse(second)
+          return check_interval("more than #{first}", maintenance_duration) && check_interval("less than #{second}", maintenance_duration)
         end
 
-        ctime = input.gsub(/^(more than|less than)/, '')
         # ChronicDuration can't parse timestamps for strings starting with before or after.
         # Strip the before or after for the conversion only, but use it for the comparison later
-        ['more than', 'less than'].each { |prefix| ctime = input.gsub(prefix, '') if input.start_with?(prefix) }
+        ctime = input.gsub(/^(more than|less than)/, '')
         input_duration = ChronicDuration.parse(ctime, :keep_zero => true)
 
         abort("Failed to parse time: #{input}") if input_duration.nil?
@@ -228,18 +224,18 @@ module Flapjack
 
         # Between 3 and 4 hours ago translates to more than 3 hours ago, less than 4 hours ago
         if input.start_with?('between')
-          first_time, second_time = input.match(/between (.*) and (.*)/).captures
-          suffix = second_time.match(/\w (.*)/).captures.first
+          first, last = input.match(/between (.*) and (.*)/).captures
 
           # If the first time only contains only a single word, the unit (and past/future) is
           # most likely directly after the first word of the the second time
           # eg between 3 and 4 hours ago
-          first_time = "#{first_time} #{suffix}" unless / /.match(first_time)
+          suffix = last.match(/\w (.*)/) ? last.match(/\w (.*)/)[0] : ''
+          first = "#{first} #{suffix}" unless / /.match(first)
 
-          first_time += ' from now' unless Chronic.parse(first_time)
-          second_time += ' from now' unless Chronic.parse(second_time)
-          (first_time, second_time = second_time, first_time) if Chronic.parse(first_time) > Chronic.parse(second_time)
-          return check_timestamp("after #{first_time}", maintenance_timestamp) && check_timestamp("before #{second_time}", maintenance_timestamp)
+          first += ' from now' unless Chronic.parse(first)
+          last += ' from now' unless Chronic.parse(last)
+          (first, last = last, first) if Chronic.parse(first) > Chronic.parse(last)
+          return check_timestamp("after #{first}", maintenance_timestamp) && check_timestamp("before #{last}", maintenance_timestamp)
         # On 1/1/15.  We use Chronic to work out the minimum and maximum timestamp, and use the same behaviour as between.
         elsif input.start_with?('on')
           first = Chronic.parse(ctime, :guess => false).first
