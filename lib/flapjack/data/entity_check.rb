@@ -30,10 +30,23 @@ module Flapjack
       def self.for_event_id(event_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         entity_name, check_name = event_id.split(':', 2)
-        create_entity = options[:create_entity]
         logger = options[:logger]
+        if logger
+          logger.debug("Flapjack::Data::EntityCheck#self.for_event_id called for event_id: #{event_id}")
+          logger.debug("Flapjack::Data::EntityCheck#self.for_event_id found entity_name: #{entity_name}, check_name: #{check_name}")
+        end
+        create_entity = options[:create_entity]
         entity = Flapjack::Data::Entity.find_by_name(entity_name,
           :create => create_entity, :logger => logger, :redis => redis)
+        if logger
+          logger.debug("Flapjack::Data::EntityCheck#self.for_event_id found entity by name(#{entity_name}): #{entity.inspect}")
+        end
+        unless entity
+          if logger
+            logger.error("entity can't be instantiated for #{entity_name}!")
+          end
+          return nil
+        end
         self.new(entity, check_name, :logger => logger, :redis => redis)
       end
 
@@ -114,11 +127,12 @@ module Flapjack
 
       def self.unacknowledged_failing(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
+        logger = options[:logger]
 
         redis.zrange('failed_checks', '0', '-1').reject {|entity_check|
           redis.exists(entity_check + ':unscheduled_maintenance')
         }.collect {|entity_check|
-          Flapjack::Data::EntityCheck.for_event_id(entity_check, :redis => redis)
+          Flapjack::Data::EntityCheck.for_event_id(entity_check, :redis => redis, :logger => logger)
         }
       end
 
