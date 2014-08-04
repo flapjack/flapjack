@@ -7,6 +7,8 @@ require 'flapjack/patches'
 require 'flapjack/data/contact'
 require 'flapjack/data/event'
 require 'flapjack/data/entity'
+#FIXME: Require chronic_duration in the correct place
+require 'chronic_duration'
 
 # TODO might want to split the class methods out to a separate class, DAO pattern
 # ( http://en.wikipedia.org/wiki/Data_access_object ).
@@ -187,8 +189,6 @@ module Flapjack
         # If no duration was specified, give back all results
         return true unless input
         input.downcase!
-        # FIXME: Require chronic_duration in the proper place
-        require 'chronic_duration'
 
         if input.start_with?('between')
           # Between 3 hours and 4 hours translates to more than 3 hours, less than 4 hours
@@ -375,8 +375,17 @@ module Flapjack
       end
 
       def create_unscheduled_maintenance(start_time, duration, opts = {})
-        raise ArgumentError, 'start time must be provided as a Unix timestamp' unless start_time && start_time.is_a?(Integer)
-        raise ArgumentError, 'duration in seconds must be provided' unless duration && duration.is_a?(Integer) && (duration > 0)
+        raise ArgumentError, "start time must be provided" if start_time.nil?
+        raise ArgumentError, "duration must be provided" if duration.nil?
+        if !start_time.is_a?(Integer)
+          start_time = Chronic.parse(start_time).to_i
+          raise ArgumentError, 'Failed to parse start time' if start_time == 0
+        end
+
+        if !duration.is_a?(Integer)
+          duration = ChronicDuration.parse(duration).to_i
+          raise ArgumentError, 'Failed to parse duration' unless duration > 0
+        end
 
         summary    = opts[:summary]
         time_remaining = (start_time + duration) - Time.now.to_i
@@ -411,8 +420,16 @@ module Flapjack
       # eg start_time is a believable unix timestamp (not in the past and not too
       # far in the future), duration is within some bounds...
       def create_scheduled_maintenance(start_time, duration, opts = {})
-        raise ArgumentError, 'start time must be provided as a Unix timestamp' unless start_time && start_time.is_a?(Integer)
-        raise ArgumentError, 'duration in seconds must be provided' unless duration && duration.is_a?(Integer) && (duration > 0)
+        raise ArgumentError, "start time must be provided" if start_time.nil?
+        raise ArgumentError, "duration must be provided" if duration.nil?
+        if !start_time.is_a?(Integer)
+          start_time = Chronic.parse(start_time).to_i
+          raise ArgumentError, 'Failed to parse start time' if start_time == 0
+        end
+        if !duration.is_a?(Integer)
+          duration = ChronicDuration.parse(duration).to_i
+          raise ArgumentError, 'Failed to parse duration' unless duration > 0
+        end
 
         summary = opts[:summary]
         @redis.zadd("#{@key}:scheduled_maintenances", duration, start_time)

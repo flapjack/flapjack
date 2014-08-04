@@ -191,6 +191,33 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(duration_curr).to eq(half_an_hour)
     end
 
+    it "creates an unscheduled maintenance period from a human readable time" do
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_unscheduled_maintenance('14/3/2027 3pm', '30 minutes', :summary => 'oops')
+
+      expect(ec).to be_in_unscheduled_maintenance
+
+      umps = ec.maintenances(nil, nil, :scheduled => false)
+      expect(umps).not_to be_nil
+      expect(umps).to be_an(Array)
+      expect(umps.size).to eq(1)
+      expect(umps[0]).to be_a(Hash)
+
+      start_time = umps[0][:start_time]
+      expect(start_time).not_to be_nil
+      expect(start_time).to be_an(Integer)
+      expect(start_time).to eq(1804996800)
+
+      duration = umps[0][:duration]
+      expect(duration).not_to be_nil
+      expect(duration).to be_a(Float)
+      expect(duration).to eq(1800.0)
+
+      summary = @redis.get("#{name}:#{check}:#{1804996800}:unscheduled_maintenance:summary")
+      expect(summary).not_to be_nil
+      expect(summary).to eq('oops')
+    end
+
     it "ends an unscheduled maintenance period", :time => true do
       t = Time.now.to_i
       later_t = t + (15 * 60)
@@ -266,6 +293,31 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(duration).not_to be_nil
       expect(duration).to be_a(Float)
       expect(duration).to eq(2 * (60 * 60))
+    end
+
+    it "creates an scheduled maintenance period from a human readable time" do
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_scheduled_maintenance('14/3/2027 3pm', '30 minutes', :summary => 'oops')
+
+      smps = ec.maintenances(nil, nil, :scheduled => true)
+      expect(smps).not_to be_nil
+      expect(smps).to be_an(Array)
+      expect(smps.size).to eq(1)
+      expect(smps[0]).to be_a(Hash)
+
+      start_time = smps[0][:start_time]
+      expect(start_time).not_to be_nil
+      expect(start_time).to be_an(Integer)
+      expect(start_time).to eq(1804996800)
+
+      duration = smps[0][:duration]
+      expect(duration).not_to be_nil
+      expect(duration).to be_a(Float)
+      expect(duration).to eq(1800.0)
+
+      summary = @redis.get("#{name}:#{check}:#{1804996800}:scheduled_maintenance:summary")
+      expect(summary).not_to be_nil
+      expect(summary).to eq('oops')
     end
 
     it "removes a scheduled maintenance period for a future time" do
@@ -989,6 +1041,37 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                               :duration   => seven_hours,
                               :summary    => "Scheduled maintenance started 2 hours ago")
     end
+
+    it "deletes unscheduled maintenance from list" #do
+    #   ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+    #   # Current maintenance
+    #   ec.create_unscheduled_maintenance(t + five_minutes, five_minutes, :summary => "Unscheduled maintenance starting in 5 minutes")
+    #   ec.create_unscheduled_maintenance(t + half_an_hour, half_an_hour, :summary => "Unscheduled maintenance starting in half an hour")
+    #   # Future maintenance
+    #   ec.create_unscheduled_maintenance(t + two_hours, half_an_hour, :summary => "Unscheduled maintenance starting in 2 hours")
+    #
+    #   ump = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled').sort_by { |k| k[:name] }
+    #
+    #   expect(ump).to be_an(Array)
+    #   expect(ump.size).to eq(3)
+    #
+    #   Flapjack::Data::EntityCheck.delete_maintenance(:redis => @redis, :type => 'unscheduled', 'start_time' => 'less than two hours' ).sort_by { |k| k[:name] }
+    #
+    #   remain = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled').sort_by { |k| k[:name] }
+    #
+    #   expect(remain).to be_an(Array)
+    #   expect(remain.size).to eq(1)
+    #
+    #   expect(remain[0]).to eq(:entity     => name,
+    #                           :check      => check,
+    #                           # The state here is nil due to no check having gone
+    #                           # through for this item.  This is normally 'critical' or 'ok'
+    #                           :state      => nil,
+    #                           :start_time => t + five_minutes,
+    #                           :end_time   => t + five_minutes + five_minutes,
+    #                           :duration   => t + five_minutes,
+    #                           :summary    => "Unscheduled maintenance started 2 hours ago")
+    # end
   end
 
   it "returns its state" do
