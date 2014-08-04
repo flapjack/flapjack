@@ -59,13 +59,14 @@ module Flapjack
       end
 
       def create
-        exit_now!("Entity & check must be supplied to create a check") if @options[:entity].nil? || @options[:check].nil?
-        e = Flapjack::Data::Entity.find_by_name(@options[:entity], :redis => @redis, :create => true)
-        ec = Flapjack::Data::EntityCheck.for_entity_name(@options[:entity], @options[:check], :redis => @redis)
-        if @options[:type] == 'scheduled'
-          abort('Failed to create maintenance') unless ec.create_scheduled_maintenance(@options[:started], @options[:duration], :summary => @options[:summary])
-        else
-          abort('Failed to create maintenance') unless ec.create_unscheduled_maintenance(@options[:started], @options[:duration], :summary => @options[:summary])
+        exit_now!("Entity & check must be supplied to create a maintenance period") if @options[:entity].nil? || @options[:check].nil?
+        @options[:entity].each do |entity|
+          e = Flapjack::Data::Entity.find_by_name(entity, :redis => @redis, :create => true)
+          @options[:check].each do |check|
+            ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+            abort('Failed to create scheduled maintenance') unless ec.create_scheduled_maintenance(@options[:started], @options[:duration], :summary => @options[:reason]) if @options[:type] == 'scheduled'
+            abort('Failed to create unscheduled maintenance') unless ec.create_unscheduled_maintenance(@options[:started], @options[:duration], :summary => @options[:reason]) if @options[:type] == 'unscheduled'
+          end
         end
       end
 
@@ -161,19 +162,21 @@ command :maintenance do |maintenance|
   maintenance.command :create do |create|
 
     create.flag [:e, 'entity'],
-      :desc => 'The entity for the maintenance window to occur on.  This can be a string, or a ruby regex of the form \'db*\' or \'[[:lower:]]\''
+      :desc => 'The entity for the maintenance window to occur on.  This can be a comma separated list',
+      :type => Array
 
     create.flag [:c, 'check'],
-      :desc => 'The check for the maintenance window to occur on.  This can be a string, or a ruby regex of the form \'http*\' or \'[[:lower:]]\''
+      :desc => 'The check for the maintenance window to occur on.  This can be a comma separated list',
+      :type => Array
 
     create.flag [:r, 'reason'],
-      :desc => 'The reason for the maintenance window to occur.  This can be a string, or a ruby regex of the form \'Downtime for *\' or \'[[:lower:]]\''
+      :desc => 'The reason for the maintenance window to occur'
 
     create.flag [:s, 'started'],
-      :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between times and time"'
+      :desc => 'The start time for the maintenance window'
 
     create.flag [:d, 'duration'],
-      :desc => 'The total duration of the maintenance window. This should be prefixed with "more than", "less than", or "equal to", or or of the form "between 3 and 4 hours".  This should be an interval'
+      :desc => 'The total duration of the maintenance window.  This should be an interval'
 
     create.flag [:t, 'type'],
       :desc => 'The type of maintenance scheduled ("scheduled")',
