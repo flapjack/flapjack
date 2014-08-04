@@ -204,7 +204,7 @@ module Flapjack
           return check_interval("more than #{first_duration}", maintenance_duration) && check_interval("less than #{second_duration}", maintenance_duration)
         end
 
-        ctime = input
+        ctime = input.gsub(/^(more than|less than)/, '')
         # ChronicDuration can't parse timestamps for strings starting with before or after.
         # Strip the before or after for the conversion only, but use it for the comparison later
         ['more than', 'less than'].each { |prefix| ctime = input.gsub(prefix, '') if input.start_with?(prefix) }
@@ -222,9 +222,12 @@ module Flapjack
         return true unless input
         input.downcase!
 
+        # Chronic can't parse timestamps for strings starting with before, after or in some cases, on.
+        # Strip the before or after for the conversion only, but use it for the comparison later
+        ctime = input.gsub(/^(on|before|after)/, '')
+
+        # Between 3 and 4 hours ago translates to more than 3 hours ago, less than 4 hours ago
         if input.start_with?('between')
-          # Between 3 and 4 hours ago translates to more than 3 hours ago, less than 4 hours ago
-          # FIXME: Test 'Between monday and tuesday'
           first_time, second_time = input.match(/between (.*) and (.*)/).captures
           suffix = second_time.match(/\w (.*)/).captures.first
 
@@ -237,27 +240,24 @@ module Flapjack
           second_time += ' from now' unless Chronic.parse(second_time)
           (first_time, second_time = second_time, first_time) if Chronic.parse(first_time) > Chronic.parse(second_time)
           return check_timestamp("after #{first_time}", maintenance_timestamp) && check_timestamp("before #{second_time}", maintenance_timestamp)
+        # On 1/1/15.  We use Chronic to work out the minimum and maximum timestamp, and use the same behaviour as between.
+        elsif input.start_with?('on')
+          first = Chronic.parse(ctime, :guess => false).first
+          last = Chronic.parse(ctime, :guess => false).last
+          return (check_timestamp("after #{first}", maintenance_timestamp) && check_timestamp("before #{last}", maintenance_timestamp))
+        else
+          # We assume timestamps are rooted against the current time.
+          # Chronic doesn't always handle this correctly, so we need to handhold it a little
+          input_timestamp = Chronic.parse(ctime, :keep_zero => true).to_i
+          input_timestamp = Chronic.parse(ctime + ' from now', :keep_zero => true).to_i if input_timestamp == 0
+
+          abort("Failed to parse time: #{input}") if input_timestamp == 0
+
+          return (input_timestamp < Time.now.to_i ? maintenance_timestamp > input_timestamp : maintenance_timestamp < input_timestamp) if input.start_with?('less than')
+          return (input_timestamp < Time.now.to_i ? maintenance_timestamp < input_timestamp : maintenance_timestamp > input_timestamp) if input.start_with?('more than')
+          return maintenance_timestamp < input_timestamp if input.start_with?('before')
+          return maintenance_timestamp > input_timestamp if input.start_with?('after')
         end
-
-        ctime = input
-        # Chronic can't parse timestamps for strings starting with before or after.
-        # Strip the before or after for the conversion only, but use it for the comparison later
-        %w(before after).each { |prefix| ctime = input.gsub(prefix, '') if input.start_with?(prefix) }
-
-        # We assume timestamps are rooted against the current time.
-        # Chronic doesn't always handle this correctly, so we need to handhold it a little
-        input_timestamp = Chronic.parse(ctime, :keep_zero => true).to_i
-        input_timestamp = Chronic.parse(ctime + ' from now', :keep_zero => true).to_i if input_timestamp == 0
-
-        abort("Failed to parse time: #{input}") if input_timestamp == 0
-
-        return (input_timestamp < Time.now.to_i ? maintenance_timestamp > input_timestamp : maintenance_timestamp < input_timestamp) if input.start_with?('less than')
-        return (input_timestamp < Time.now.to_i ? maintenance_timestamp < input_timestamp : maintenance_timestamp > input_timestamp) if input.start_with?('more than')
-        return maintenance_timestamp < input_timestamp if input.start_with?('before')
-        return maintenance_timestamp > input_timestamp if input.start_with?('after')
-        # FIXME: How should we handle equality here?
-        maintenance_timestamp == input_timestamp if input.start_with?('on')
-        # Handle "on tuesday"
       end
 
       def self.in_unscheduled_maintenance_for_event_id?(event_id, options)
