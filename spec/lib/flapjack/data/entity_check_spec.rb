@@ -194,6 +194,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     it "creates an unscheduled maintenance period from a human readable time" do
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
       ec.create_unscheduled_maintenance('14/3/2027 3pm', '30 minutes', :summary => 'oops')
+      t = Time.local(2027, 3, 14, 15, 0).to_i
 
       expect(ec).to be_in_unscheduled_maintenance
 
@@ -206,14 +207,14 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       start_time = umps[0][:start_time]
       expect(start_time).not_to be_nil
       expect(start_time).to be_an(Integer)
-      expect(start_time).to eq(1804996800)
+      expect(start_time).to eq(t)
 
       duration = umps[0][:duration]
       expect(duration).not_to be_nil
       expect(duration).to be_a(Float)
       expect(duration).to eq(1800.0)
 
-      summary = @redis.get("#{name}:#{check}:#{1804996800}:unscheduled_maintenance:summary")
+      summary = @redis.get("#{name}:#{check}:#{t}:unscheduled_maintenance:summary")
       expect(summary).not_to be_nil
       expect(summary).to eq('oops')
     end
@@ -298,6 +299,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     it "creates an scheduled maintenance period from a human readable time" do
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
       ec.create_scheduled_maintenance('14/3/2027 3pm', '30 minutes', :summary => 'oops')
+      t = Time.local(2027, 3, 14, 15, 0).to_i
 
       smps = ec.maintenances(nil, nil, :scheduled => true)
       expect(smps).not_to be_nil
@@ -308,14 +310,14 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       start_time = smps[0][:start_time]
       expect(start_time).not_to be_nil
       expect(start_time).to be_an(Integer)
-      expect(start_time).to eq(1804996800)
+      expect(start_time).to eq(t)
 
       duration = smps[0][:duration]
       expect(duration).not_to be_nil
       expect(duration).to be_a(Float)
       expect(duration).to eq(1800.0)
 
-      summary = @redis.get("#{name}:#{check}:#{1804996800}:scheduled_maintenance:summary")
+      summary = @redis.get("#{name}:#{check}:#{t}:scheduled_maintenance:summary")
       expect(summary).not_to be_nil
       expect(summary).to eq('oops')
     end
