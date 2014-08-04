@@ -787,6 +787,52 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :summary    => "Scheduled maintenance started 3 hours ago for 7 hours")
     end
 
+    it "finds all scheduled maintenance with a particular entity name" do
+      ['bravo', 'br.*'].each do |input|
+        %w(alpha bravo lima).each do |entity|
+          Flapjack::Data::Entity.add({ 'name' => entity }, :redis => @redis)
+
+          ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+          ec.create_scheduled_maintenance(five_hours_ago, seven_hours, :summary => "Test scheduled maintenance for #{entity}")
+        end
+
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', 'entity' => input ).sort_by { |k| k[:name] }
+
+        expect(smp).to be_an(Array)
+        expect(smp.size).to eq(1)
+        expect(smp[0]).to eq(:name       => "bravo:ping",
+                             # The state here is nil due to no check having gone
+                             # through for this item.  This is normally 'critical' or 'ok'
+                             :state      => nil,
+                             :start_time => five_hours_ago,
+                             :end_time   => five_hours_ago + seven_hours,
+                             :duration   => seven_hours,
+                             :summary    => "Test scheduled maintenance for bravo")
+      end
+    end
+
+    it "finds all scheduled maintenance with a particular check name" do
+      ['http', 'ht.*'].each do |input|
+        %w(ping http ssh).each do |check|
+          ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+          ec.create_scheduled_maintenance(five_hours_ago, seven_hours, :summary => "Test scheduled maintenance for #{check}")
+        end
+
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', 'check' => input ).sort_by { |k| k[:name] }
+
+        expect(smp).to be_an(Array)
+        expect(smp.size).to eq(1)
+        expect(smp[0]).to eq(:name       => "#{name}:http",
+                             # The state here is nil due to no check having gone
+                             # through for this item.  This is normally 'critical' or 'ok'
+                             :state      => nil,
+                             :start_time => five_hours_ago,
+                             :end_time   => five_hours_ago + seven_hours,
+                             :duration   => seven_hours,
+                             :summary    => "Test scheduled maintenance for http")
+      end
+    end
+
     it "finds all scheduled maintenance with a particular summary" do
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
 

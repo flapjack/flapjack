@@ -77,8 +77,14 @@ command :maintenance do |maintenance|
   maintenance.desc 'Show maintenance windows according to criteria (default: all ongoing maintenance)'
   maintenance.command :show do |show|
 
+    show.flag [:e, 'entity'],
+      :desc => 'The entity for the maintenance window to occur on.  This can be a string, or a ruby regex of the form \'db*\' or \'[[:lower:]]\''
+
+    show.flag [:c, 'check'],
+      :desc => 'The check for the maintenance window to occur on.  This can be a string, or a ruby regex of the form \'http*\' or \'[[:lower:]]\''
+
     show.flag [:r, 'reason'],
-      :desc => 'The reason for the maintenance window to occur.  This can be a ruby regex of the form \'Downtime for *\' or \'[[:lower:]]\''
+      :desc => 'The reason for the maintenance window to occur.  This can be a string, or a ruby regex of the form \'Downtime for *\' or \'[[:lower:]]\''
 
     show.flag [:s, 'started'],
       :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between times and time"'
@@ -90,11 +96,11 @@ command :maintenance do |maintenance|
       :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between time and time"'
 
     show.flag [:st, 'state'],
-      :desc => 'STATE that alerts are in ("critical")',
+      :desc => 'The state that alerts are in ("critical")',
       :default_value => 'critical'
 
     show.flag [:t, 'type'],
-      :desc => 'TYPE of maintenance scheduled ("scheduled")',
+      :desc => 'The type of maintenance scheduled ("scheduled")',
       :default_value => 'scheduled'
 
     show.action do |global_options,options,args|
@@ -110,8 +116,14 @@ command :maintenance do |maintenance|
       :desc => 'Whether this deletion should occur',
       :default_value => false
 
+    delete.flag [:e, 'entity'],
+      :desc => 'The entity for the maintenance window to occur on.  This can be a string, or a ruby regex of the form \'db*\' or \'[[:lower:]]\''
+
+    delete.flag [:c, 'check'],
+      :desc => 'The check for the maintenance window to occur on.  This can be a string, or a ruby regex of the form \'http*\' or \'[[:lower:]]\''
+
     delete.flag [:r, 'reason'],
-      :desc => 'The reason for the maintenance window to occur.  This can be a ruby regex of the form \'Downtime for *\' or \'[[:lower:]]\''
+      :desc => 'The reason for the maintenance window to occur.  This can be a string, or a ruby regex of the form \'Downtime for *\' or \'[[:lower:]]\''
 
     delete.flag [:s, 'started'],
       :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between times and time"'
@@ -123,11 +135,11 @@ command :maintenance do |maintenance|
       :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between time and time"'
 
     delete.flag [:st, 'state'],
-      :desc => 'STATE that alerts are in ("critical")',
+      :desc => 'The state that alerts are in ("critical")',
       :default_value => 'critical'
 
     delete.flag [:t, 'type'],
-      :desc => 'TYPE of maintenance scheduled ("scheduled")',
+      :desc => 'The type of maintenance scheduled ("scheduled")',
       :default_value => 'scheduled'
 
     delete.action do |global_options,options,args|
