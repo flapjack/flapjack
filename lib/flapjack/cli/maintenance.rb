@@ -32,13 +32,12 @@ module Flapjack
         @redis_options = config.for_redis.merge(:driver => :ruby)
         @options[:redis] = redis
 
-        @options['reason'] = @options['reason'].to_s unless @options['reason'].nil? || @options['reason'].is_a?(String)
-        exit_now!("state must be one of 'ok', 'warning', 'critical', 'unknown'") unless %w(ok warning critical unknown).include?(@options['state'].downcase)
-        exit_now!("type must be one of 'scheduled', 'unscheduled'") unless %w(scheduled unscheduled).include?(@options['type'].downcase)
+        exit_now!("state must be one of 'ok', 'warning', 'critical', 'unknown'") unless @options[:state].nil? || %w(ok warning critical unknown).include?(@options[:state].downcase)
+        exit_now!("type must be one of 'scheduled', 'unscheduled'") unless %w(scheduled unscheduled).include?(@options[:type].downcase)
         %w(started finishing).each do |time|
           exit_now!("#{time.upcase} time must start with 'more than', 'less than', 'on', 'before', 'after' or between") if @options[time] && !@options[time].downcase.start_with?('more than', 'less than', 'on', 'before', 'after', 'between')
         end
-        @options['finishing'] ||= 'after now'
+        @options[:finishing] ||= 'after now'
       end
 
       def show
