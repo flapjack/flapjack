@@ -251,8 +251,8 @@ module Flapjack
 
         abort("Failed to parse time: #{input}") if input_timestamp == 0
 
-        return (input.end_with?('ago') ? maintenance_timestamp > input_timestamp : maintenance_timestamp < input_timestamp) if input.start_with?('less than')
-        return (input.end_with?('ago') ? maintenance_timestamp < input_timestamp : maintenance_timestamp > input_timestamp) if input.start_with?('more than')
+        return (input_timestamp < Time.now.to_i ? maintenance_timestamp > input_timestamp : maintenance_timestamp < input_timestamp) if input.start_with?('less than')
+        return (input_timestamp < Time.now.to_i ? maintenance_timestamp < input_timestamp : maintenance_timestamp > input_timestamp) if input.start_with?('more than')
         return maintenance_timestamp < input_timestamp if input.start_with?('before')
         return maintenance_timestamp > input_timestamp if input.start_with?('after')
         # FIXME: How should we handle equality here?
