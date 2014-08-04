@@ -37,7 +37,7 @@ module Flapjack
         exit_now!("state must be one of 'ok', 'warning', 'critical', 'unknown'") unless @options[:state].nil? || %w(ok warning critical unknown).include?(@options[:state].downcase)
         exit_now!("type must be one of 'scheduled', 'unscheduled'") unless %w(scheduled unscheduled).include?(@options[:type].downcase)
         %w(started finishing).each do |time|
-          exit_now!("#{time.upcase} time must start with 'more than', 'less than', 'on', 'before', 'after' or between") if @options[time] && !@options[time].downcase.start_with?('more than', 'less than', 'on', 'before', 'after', 'between')
+          exit_now!("#{time.capitalize} time must start with 'more than', 'less than', 'on', 'before', 'after' or between") if @options[time] && !@options[time].downcase.start_with?('more than', 'less than', 'on', 'before', 'after', 'between')
         end
         @options[:finishing] ||= 'after now'
         maintenances = Flapjack::Data::EntityCheck.find_maintenance(@options)
@@ -99,20 +99,20 @@ command :maintenance do |maintenance|
     show.flag [:r, 'reason'],
       :desc => 'The reason for the maintenance window to occur.  This can be a string, or a ruby regex of the form \'Downtime for *\' or \'[[:lower:]]\''
 
-    show.flag [:s, 'started'],
+    show.flag [:s, 'start', 'started', 'starting'],
       :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between times and time"'
 
     show.flag [:d, 'duration'],
       :desc => 'The total duration of the maintenance window. This should be prefixed with "more than", "less than", or "equal to", or or of the form "between 3 and 4 hours".  This should be an interval'
 
-    show.flag [:f, 'finishing', 'remaining'],
+    show.flag [:f, 'finish', 'finished', 'finishing', 'remain', 'remained', 'remaining', 'end'],
       :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between time and time"'
 
     show.flag [:st, 'state'],
-      :desc => 'The state that alerts are in ("critical")'
+      :desc => 'The state that the check is currently in'
 
     show.flag [:t, 'type'],
-      :desc => 'The type of maintenance scheduled ("scheduled")',
+      :desc => 'The type of maintenance scheduled',
       :default_value => 'scheduled'
 
     show.action do |global_options,options,args|
@@ -137,20 +137,20 @@ command :maintenance do |maintenance|
     delete.flag [:r, 'reason'],
       :desc => 'The reason for the maintenance window to occur.  This can be a string, or a ruby regex of the form \'Downtime for *\' or \'[[:lower:]]\''
 
-    delete.flag [:s, 'started'],
+    delete.flag [:s, 'start', 'started', 'starting'],
       :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between times and time"'
 
     delete.flag [:d, 'duration'],
       :desc => 'The total duration of the maintenance window. This should be prefixed with "more than", "less than", or "equal to", or or of the form "between 3 and 4 hours".  This should be an interval'
 
-    delete.flag [:f, 'finishing', 'remaining'],
+    delete.flag [:f, 'finish', 'finished', 'finishing', 'remain', 'remained', 'remaining', 'end'],
       :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between time and time"'
 
     delete.flag [:st, 'state'],
-      :desc => 'The state that alerts are in ("critical")'
+      :desc => 'The state that the check is currently in'
 
     delete.flag [:t, 'type'],
-      :desc => 'The type of maintenance scheduled ("scheduled")',
+      :desc => 'The type of maintenance scheduled',
       :default_value => 'scheduled'
 
     delete.action do |global_options,options,args|
@@ -173,7 +173,7 @@ command :maintenance do |maintenance|
     create.flag [:r, 'reason'],
       :desc => 'The reason for the maintenance window to occur'
 
-    create.flag [:s, 'started'],
+    create.flag [:s, 'start', 'started', 'starting'],
       :desc => 'The start time for the maintenance window'
 
     create.flag [:d, 'duration'],
