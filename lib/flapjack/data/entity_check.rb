@@ -406,8 +406,13 @@ module Flapjack
         if (um_start = @redis.get("#{@key}:unscheduled_maintenance"))
           duration = end_time - um_start.to_i
           @logger.debug("ending unscheduled downtime for #{@key} at #{Time.at(end_time).to_s}") if @logger
-          @redis.del("#{@key}:unscheduled_maintenance")
+
+          if @redis.exists("#{@key}:unscheduled_maintenances")
+            value = @redis.zscore("#{@key}:unscheduled_maintenances", um_start.to_i)
+            @logger.debug("#{@key}:unscheduled_maintenance already exists: #{value}") if @logger
+          end
           @redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start) # updates existing UM 'score'
+          @redis.del("#{@key}:unscheduled_maintenance") == 1
         else
 
           @logger.debug("end_unscheduled_maintenance called for #{@key} but none found") if @logger

@@ -1044,36 +1044,43 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                               :summary    => "Scheduled maintenance started 2 hours ago")
     end
 
-    it "deletes unscheduled maintenance from list" #do
-    #   ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-    #   # Current maintenance
-    #   ec.create_unscheduled_maintenance(t + five_minutes, five_minutes, :summary => "Unscheduled maintenance starting in 5 minutes")
-    #   ec.create_unscheduled_maintenance(t + half_an_hour, half_an_hour, :summary => "Unscheduled maintenance starting in half an hour")
-    #   # Future maintenance
-    #   ec.create_unscheduled_maintenance(t + two_hours, half_an_hour, :summary => "Unscheduled maintenance starting in 2 hours")
-    #
-    #   ump = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled').sort_by { |k| k[:entity] }
-    #
-    #   expect(ump).to be_an(Array)
-    #   expect(ump.size).to eq(3)
-    #
-    #   Flapjack::Data::EntityCheck.delete_maintenance(:redis => @redis, :type => 'unscheduled', 'start_time' => 'less than two hours' ).sort_by { |k| k[:entity] }
-    #
-    #   remain = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled').sort_by { |k| k[:entity] }
-    #
-    #   expect(remain).to be_an(Array)
-    #   expect(remain.size).to eq(1)
-    #
-    #   expect(remain[0]).to eq(:entity     => name,
-    #                           :check      => check,
-    #                           # The state here is nil due to no check having gone
-    #                           # through for this item.  This is normally 'critical' or 'ok'
-    #                           :state      => nil,
-    #                           :start_time => t + five_minutes,
-    #                           :end_time   => t + five_minutes + five_minutes,
-    #                           :duration   => t + five_minutes,
-    #                           :summary    => "Unscheduled maintenance started 2 hours ago")
-    # end
+    it "deletes unscheduled maintenance from list" do
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_unscheduled_maintenance(t, half_an_hour, :summary => "Unscheduled maintenance starting now")
+
+      ump = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled').sort_by { |k| k[:entity] }
+      expect(ump).to be_an(Array)
+      expect(ump.size).to eq(1)
+
+      expect(ump[0]).to eq(:entity     => name,
+                              :check      => check,
+                              # The state here is nil due to no check having gone
+                              # through for this item.  This is normally 'critical' or 'ok'
+                              :state      => nil,
+                              :start_time => t,
+                              :duration   => half_an_hour,
+                              :end_time   => t + half_an_hour,
+                              :summary    => "Unscheduled maintenance starting now")
+
+      later_t = t + (15 * 60)
+      Delorean.time_travel_to(Time.at(later_t))
+
+      Flapjack::Data::EntityCheck.delete_maintenance(:redis => @redis, :type => 'unscheduled', :duration => '30 minutes')
+
+      remain = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled').sort_by { |k| k[:entity] }
+      expect(remain).to be_an(Array)
+      expect(remain.size).to eq(1)
+
+      expect(remain[0]).to eq(:entity     => name,
+                              :check      => check,
+                              # The state here is nil due to no check having gone
+                              # through for this item.  This is normally 'critical' or 'ok'
+                              :state      => nil,
+                              :start_time => t,
+                              :duration   => half_an_hour,
+                              :end_time   => t + half_an_hour,
+                              :summary    => "Unscheduled maintenance starting now")
+    end
   end
 
   it "returns its state" do
