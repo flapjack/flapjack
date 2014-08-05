@@ -1,0 +1,20 @@
+{
+
+  "monitors": [
+    {
+      "type": "http-status",
+      "url": "http://localhost:8000",
+      "name": "My website healthcheck",
+      "freq": "10s",
+      "timeout": "2s"
+    }
+
+  ],
+  
+  "notifiers": [
+    {
+      "type": "flapjack",
+      "address" : "boot2docker:6380"
+    }
+  ]
+}
