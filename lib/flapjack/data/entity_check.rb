@@ -388,7 +388,6 @@ module Flapjack
 
         summary    = opts[:summary]
         time_remaining = (start_time + duration) - Time.now.to_i
-
         if time_remaining > 0
           end_unscheduled_maintenance(start_time) if in_unscheduled_maintenance?
           @redis.setex("#{@key}:unscheduled_maintenance", time_remaining, start_time)
@@ -406,15 +405,9 @@ module Flapjack
         if (um_start = @redis.get("#{@key}:unscheduled_maintenance"))
           duration = end_time - um_start.to_i
           @logger.debug("ending unscheduled downtime for #{@key} at #{Time.at(end_time).to_s}") if @logger
-
-          if @redis.exists("#{@key}:unscheduled_maintenances")
-            value = @redis.zscore("#{@key}:unscheduled_maintenances", um_start.to_i)
-            @logger.debug("#{@key}:unscheduled_maintenance already exists: #{value}") if @logger
-          end
           @redis.zadd("#{@key}:unscheduled_maintenances", duration, um_start) # updates existing UM 'score'
           @redis.del("#{@key}:unscheduled_maintenance") == 1
         else
-
           @logger.debug("end_unscheduled_maintenance called for #{@key} but none found") if @logger
         end
       end

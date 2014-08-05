@@ -9,8 +9,6 @@ require 'flapjack/configuration'
 require 'flapjack/data/event'
 require 'flapjack/data/entity_check'
 require 'terminal-table'
-require 'pp'
-require 'pry'
 
 module Flapjack
   module CLI
