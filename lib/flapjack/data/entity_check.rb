@@ -205,13 +205,13 @@ module Flapjack
 
         # ChronicDuration can't parse timestamps for strings starting with before or after.
         # Strip the before or after for the conversion only, but use it for the comparison later
-        ctime = input.gsub(/^(more than|less than)/, '')
+        ctime = input.gsub(/^(more than|less than|before|after)/, '')
         input_duration = ChronicDuration.parse(ctime, :keep_zero => true)
 
         abort("Failed to parse time: #{input}") if input_duration.nil?
 
-        return maintenance_duration < input_duration if input.start_with?('less than')
-        return maintenance_duration > input_duration if input.start_with?('more than')
+        return maintenance_duration < input_duration if input.start_with?('less than', 'before')
+        return maintenance_duration > input_duration if input.start_with?('more than', 'after')
         maintenance_duration == input_duration
       end
 
