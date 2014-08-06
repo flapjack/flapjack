@@ -251,10 +251,24 @@ module Flapjack
 
           abort("Failed to parse time: #{input}") if input_timestamp == 0
 
-          return (input_timestamp < Time.now.to_i ? maintenance_timestamp > input_timestamp : maintenance_timestamp < input_timestamp) if input.start_with?('less than')
-          return (input_timestamp < Time.now.to_i ? maintenance_timestamp < input_timestamp : maintenance_timestamp > input_timestamp) if input.start_with?('more than')
-          return maintenance_timestamp < input_timestamp if input.start_with?('before')
-          return maintenance_timestamp > input_timestamp if input.start_with?('after')
+          case input
+          when /^less than/
+            if input_timestamp < Time.now.to_i
+              return maintenance_timestamp > input_timestamp
+            else
+              return  maintenance_timestamp < input_timestamp
+            end
+          when /^more than/
+            if input_timestamp < Time.now.to_i
+              return maintenance_timestamp < input_timestamp
+            else
+              return  maintenance_timestamp > input_timestamp
+            end
+          when /^before/
+            return maintenance_timestamp < input_timestamp
+          when /^after/
+            return maintenance_timestamp > input_timestamp
+          end
         end
       end
 

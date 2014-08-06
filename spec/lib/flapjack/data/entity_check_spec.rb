@@ -12,10 +12,10 @@ describe Flapjack::Data::EntityCheck, :redis => true do
   let(:half_an_hour) { 30 * 60 }
   let(:t) { Time.now.to_i }
   let(:five_minutes) { 60 * 5 }
-  let(:five_hours_ago) { t.to_i - (60 * 60 * 5) }
-  let(:four_hours_ago) { t.to_i - (60 * 60 * 4) }
-  let(:three_hours_ago) { t.to_i - (60 * 60 * 3) }
-  let(:two_hours_ago) { t.to_i - (60 * 60 * 2) }
+  let(:five_hours_ago) { t - (60 * 60 * 5) }
+  let(:four_hours_ago) { t - (60 * 60 * 4) }
+  let(:three_hours_ago) { t - (60 * 60 * 3) }
+  let(:two_hours_ago) { t - (60 * 60 * 2) }
   let(:one_hour) { 60 * 60 }
   let(:two_hours) { 60 * 60 * 2 }
   let(:three_hours) { 60 * 60 * 3 }
@@ -416,7 +416,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :summary    => "second")
     end
 
-    it "finds current scheduled maintenance period for entities over multiple hosts" do
+    it "finds current scheduled maintenance periods for multiple entities" do
       ec = nil
 
       %w(alpha lima bravo).each do |entity|
@@ -443,7 +443,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       end
     end
 
-    it "finds current unscheduled maintenance period for entities over multiple hosts" do
+  it "finds current unscheduled maintenance periods for multiple entities" do
       ec = nil
 
       %w(alpha bravo lima).each do |entity|
@@ -471,7 +471,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       end
     end
 
-    it "finds all scheduled maintenance before a given start time (more than 3 hours ago)" do
+    it "finds all scheduled maintenance starting more than 3 hours ago" do
       ['more than three hours ago', 'before 3 hours ago'].each do |input|
         ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
 
@@ -507,7 +507,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       end
     end
 
-    it "finds all scheduled maintenance after a given start time (less than 4 hours ago)" do
+    it "finds all scheduled maintenance starting within the next four hours" do
       ['less than four hours ago', 'after 4 hours ago'].each do |input|
         ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
 
@@ -534,7 +534,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       end
     end
 
-    it "finds all scheduled maintenance before a given end time (less than now + 2 hours)" do
+    it "finds all scheduled maintenance ending within the next two hours" do
       ['less than two hours', 'before 2 hours'].each do |input|
         ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
         # Maintenance in the past, now ended
@@ -582,7 +582,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       end
     end
 
-    it "finds all scheduled maintenance between two given end times (1 hour ago - 2 hours ago)" do
+    it "finds all scheduled maintenance ending between two times (1 hour ago - 2 hours ago)" do
         ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
         # Maintenance in the past, now ended
         ec.create_scheduled_maintenance(two_hours_ago + five_minutes, half_an_hour, :summary => "Scheduled maintenance started 1 hour, 55 minutes ago")
@@ -617,7 +617,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                              :summary    => "Scheduled maintenance started 1 hour, 55 minutes ago")
     end
 
-    it "finds all scheduled maintenance between two given end times (1 hour from now - 2 hours from now)" do
+    it "finds all scheduled maintenance ending between two times (1 hour from now - 2 hours from now)" do
         ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
         # Maintenance in the past, now ended
         ec.create_scheduled_maintenance(two_hours_ago + five_minutes, half_an_hour, :summary => "Scheduled maintenance started 1 hour, 55 minutes ago")
@@ -652,7 +652,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                              :summary    => "Scheduled maintenance starting in 5 minutes")
     end
 
-    it "finds all scheduled maintenance after a given end time (more than 2 hours)" do
+    it "finds all scheduled maintenance ending in more than two hours" do
       ['more than two hours', 'after 2 hours'].each do |input|
         ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
         # Maintenance in the past, now ended
@@ -682,7 +682,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       end
     end
 
-    it "finds all scheduled maintenance of less than one hour" do
+    it "finds all scheduled maintenance with a duration of less than one hour" do
       ['less than', 'before'].each do |input|
         ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
         # Maintenance in the past, now ended
@@ -730,7 +730,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       end
     end
 
-    it "finds all scheduled maintenance of 30 minutes" do
+    it "finds all scheduled maintenance with a duration of 30 minutes" do
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
       # Maintenance in the past, now ended
       ec.create_scheduled_maintenance(two_hours_ago, half_an_hour, :summary => "Scheduled maintenance started 3 hours ago")
@@ -776,7 +776,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :summary    => "Scheduled maintenance starting in 5 minutes")
     end
 
-    it "finds all scheduled maintenance of between 15 and 65 minutes" do
+    it "finds all scheduled maintenance with a duration of between 15 and 65 minutes" do
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
       # Maintenance in the past, now ended
       ec.create_scheduled_maintenance(two_hours_ago, half_an_hour, :summary => "Scheduled maintenance started 3 hours ago")
@@ -831,7 +831,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :summary    => "Scheduled maintenance starting in 5 minutes")
     end
 
-    it "finds all scheduled maintenance of more than one hour" do
+    it "finds all scheduled maintenance with a duration of more than one hour" do
       ['more than, after'].each do |input|
         ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
         # Maintenance in the past, now ended
