@@ -53,7 +53,8 @@ module Flapjack
       def delete
         maintenances = show
         exit_now!('The following maintenances would be deleted.  Run this command again with --apply true to remove them.') unless @options[:apply]
-        exit_now!('Failed to delete maintenances') unless Flapjack::Data::EntityCheck.delete_maintenance(@options)
+        errors = Flapjack::Data::EntityCheck.delete_maintenance(@options)
+        (errors.each { |k, v| puts "#{k}: #{v}" }; exit_now!('Failed to delete maintenances')) if errors.length > 0
         puts "The maintenances above have been deleted"
       end
 

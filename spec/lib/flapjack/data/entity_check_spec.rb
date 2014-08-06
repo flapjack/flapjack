@@ -1026,7 +1026,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                            :summary    => "Scheduled maintenance starting in half an hour")
 
       delete = Flapjack::Data::EntityCheck.delete_maintenance(:redis => @redis, :type => 'scheduled', :duration => '30 minutes' )
-      expect(delete).to eq(true)
+      expect(delete).to eq({})
 
       remain = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled').sort_by { |k| k[:entity] }
 
@@ -1065,7 +1065,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       later_t = t + (15 * 60)
       Delorean.time_travel_to(Time.at(later_t))
 
-      Flapjack::Data::EntityCheck.delete_maintenance(:redis => @redis, :type => 'unscheduled', :duration => '30 minutes')
+      delete = Flapjack::Data::EntityCheck.delete_maintenance(:redis => @redis, :type => 'unscheduled', :duration => '30 minutes')
+      expect(delete).to eq({})
 
       remain = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled').sort_by { |k| k[:entity] }
       expect(remain).to be_an(Array)
@@ -1080,6 +1081,29 @@ describe Flapjack::Data::EntityCheck, :redis => true do
                               :duration   => half_an_hour,
                               :end_time   => t + half_an_hour,
                               :summary    => "Unscheduled maintenance starting now")
+    end
+
+    it "shows errors when deleting maintenance in the past" do
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
+      ec.create_unscheduled_maintenance('14/3/1927 3pm', half_an_hour, :summary => "Unscheduled maintenance")
+      t = Time.local(1927, 3, 14, 15, 0).to_i
+
+      ump = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled').sort_by { |k| k[:entity] }
+      expect(ump).to be_an(Array)
+      expect(ump.size).to eq(1)
+
+      expect(ump[0]).to eq(:entity     => name,
+                           :check      => check,
+                           # The state here is nil due to no check having gone
+                           # through for this item.  This is normally 'critical' or 'ok'
+                           :state      => nil,
+                           :start_time => t,
+                           :duration   => half_an_hour,
+                           :end_time   => t + half_an_hour,
+                           :summary    => "Unscheduled maintenance")
+
+      delete = Flapjack::Data::EntityCheck.delete_maintenance(:redis => @redis, :type => 'unscheduled', :duration => '30 minutes')
+      expect(delete).to eq({"abc-123:ping:#{t}"=>"Maintenance can't be deleted as it finished in the past"})
     end
   end
 

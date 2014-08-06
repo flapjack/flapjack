@@ -166,22 +166,22 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
         entries = find_maintenance(options)
         # Try to delete all entries passed in, but return false if any entries failed
-        success = true
+        errors = {}
         entries.each do |entry|
+          identifier = "#{entry[:entity]}:#{entry[:check]}:#{entry[:start_time]}"
           if entry[:end_time] < Time.now.to_i
-            puts "Entry can't be deleted as it finished in the past: #{entry}"
-            success = false
+            errors[identifier] = "Maintenance can't be deleted as it finished in the past"
           else
             entity = entry[:entity]
             check = entry[:check]
 
             ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
-            success = ec.end_scheduled_maintenance(entry[:start_time]) if options[:type] == 'scheduled' && success
-            success = ec.end_unscheduled_maintenance(entry[:end_time]) if options[:type] == 'unscheduled' && success
-            puts "The following entry failed to delete: #{entry}" unless success
+            success = ec.end_scheduled_maintenance(entry[:start_time]) if options[:type] == 'scheduled'
+            success = ec.end_unscheduled_maintenance(entry[:end_time]) if options[:type] == 'unscheduled'
+            errors[identifier] = "The following entry failed to delete: #{entry}" unless success
           end
         end
-        success
+        errors
       end
 
       def self.check_interval(input, maintenance_duration)
