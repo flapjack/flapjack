@@ -51,9 +51,6 @@ module Flapjack
 
           alerting_check_keys = redis.keys("contact_alerting_checks:*")
 
-          # TODO use something that will cover disabled checks too
-          checks = redis.zrange("current_checks:#{existing_name}", 0, -1)
-
           failed_checks    = {}
           hashes_to_remove = []
           hashes_to_add    = {}
@@ -62,6 +59,11 @@ module Flapjack
           alerting_to_add    = {}
 
           sha1 = Digest::SHA1.new
+
+          checks = check_state_keys.collect do |state_key|
+            state_key =~ /^check:#{Regexp.escape(existing_name)}:(.+)$/
+            $1
+          end
 
           checks.each do |ch|
             existing_check = "#{existing_name}:#{ch}"

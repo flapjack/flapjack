@@ -348,7 +348,9 @@ describe Flapjack::Data::Entity, :redis => true do
     end
 
     it 'renames entries in the sorted set of failing checks' do
-      @redis.zadd('current_checks:name1', time_i, 'PING')
+      data = {'state' => 'critical', 'last_change' => time_i.to_s, 'last_update' => time_i.to_s}
+      @redis.mapped_hmset('check:name1:PING', data)
+
       @redis.zadd('failed_checks', time_i, 'name1:PING')
 
       do_rename
@@ -482,7 +484,9 @@ describe Flapjack::Data::Entity, :redis => true do
     end
 
     it "updates the check hash set" do
-      @redis.zadd('current_checks:name1', time_i, 'PING')
+      data = {'state' => 'critical', 'last_change' => time_i.to_s, 'last_update' => time_i.to_s}
+      @redis.mapped_hmset('check:name1:PING', data)
+
       @redis.hset('checks_by_hash', hash_name1, 'name1:PING')
 
       do_rename
@@ -556,7 +560,9 @@ describe Flapjack::Data::Entity, :redis => true do
     # end
 
     it 'renames entries within alerting checks' do
-      @redis.zadd('current_checks:name1', time_i, 'PING')
+      data = {'state' => 'critical', 'last_change' => time_i.to_s, 'last_update' => time_i.to_s}
+      @redis.mapped_hmset('check:name1:PING', data)
+
       @redis.zadd('contact_alerting_checks:362:media:email', time_i, 'name1:PING')
 
       do_rename
