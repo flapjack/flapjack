@@ -136,32 +136,37 @@ module Flapjack
 
       def self.find_maintenance(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        d = []
         type = options[:type]
         keys = redis.keys("*:#{type}_maintenances")
-        keys.each do |k|
+        keys.map { |k|
           entity = k.split(':')[0]
           check = k.split(':')[1]
           ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
 
           # Only return entries which match what was passed in
-          next unless options[:state].nil? || options[:state] != ec.state
-          next unless options[:entity].nil? || Regexp.new(options[:entity]).match(entity)
-          next unless options[:check].nil? || Regexp.new(options[:check]).match(check)
-          windows = ec.maintenances(nil, nil, type.to_sym => true)
-          windows.each do |window|
-            entry = { :entity => entity,
-                      :check => check,
-                      :state => ec.state
-            }
-            # Only return entries where the summary matches the reason passed in, or the reason isn't set
-            next unless options[:reason].nil? || Regexp.new(options[:reason]).match(window[:summary])
-
-            # Only return entries where the maintenance start and end times are in the bounds of the input
-            d.push(entry.merge!(window)) if check_timestamp(options[:started], window[:start_time]) && check_timestamp(options[:finishing], window[:end_time]) && check_interval(options[:duration], window[:duration])
+          case
+          when options[:state] && options[:state] != ec.state
+            nil
+          when options[:entity] && !Regexp.new(options[:entity]).match(entity)
+            nil
+          when options[:check] && !Regexp.new(options[:check]).match(check)
+            nil
+          else
+            windows = ec.maintenances(nil, nil, type.to_sym => true)
+            windows.map { |window|
+              entry = { :entity => entity,
+                        :check => check,
+                        :state => ec.state
+              }
+              if (options[:reason].nil? || Regexp.new(options[:reason]).match(window[:summary])) &&
+                check_timestamp(options[:started], window[:start_time]) &&
+                check_timestamp(options[:finishing], window[:end_time]) &&
+                check_interval(options[:duration], window[:duration])
+                entry.merge!(window)
+              end
+            }.compact
           end
-        end
-        d
+        }.compact.flatten(1)
       end
 
       def self.delete_maintenance(options = {})
