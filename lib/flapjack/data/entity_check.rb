@@ -143,8 +143,11 @@ module Flapjack
           entity = k.split(':')[0]
           check = k.split(':')[1]
           ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
-          # Only return entries where the state matches the one passed in
+
+          # Only return entries which match what was passed in
           next unless options[:state].nil? || options[:state] != ec.state
+          next unless options[:entity].nil? || Regexp.new(options[:entity]).match(entity)
+          next unless options[:check].nil? || Regexp.new(options[:check]).match(check)
           windows = ec.maintenances(nil, nil, type.to_sym => true)
           windows.each do |window|
             entry = { :entity => entity,
@@ -153,8 +156,7 @@ module Flapjack
             }
             # Only return entries where the summary matches the reason passed in, or the reason isn't set
             next unless options[:reason].nil? || Regexp.new(options[:reason]).match(window[:summary])
-            next unless options[:entity].nil? || Regexp.new(options[:entity]).match(entity)
-            next unless options[:check].nil? || Regexp.new(options[:check]).match(check)
+
             # Only return entries where the maintenance start and end times are in the bounds of the input
             d.push(entry.merge!(window)) if check_timestamp(options[:started], window[:start_time]) && check_timestamp(options[:finishing], window[:end_time]) && check_interval(options[:duration], window[:duration])
           end
