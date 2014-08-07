@@ -192,10 +192,10 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     end
 
     it "creates an unscheduled maintenance period from a human readable time" do
-      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-      ec.create_unscheduled_maintenance('14/3/2027 3pm', '30 minutes', :summary => 'oops')
+      Flapjack::Data::EntityCheck.create_maintenance(:redis => @redis, :entity => name, :check => check, :type => 'unscheduled', :started => '14/3/2027 3pm', :duration => '30 minutes', :reason => 'oops')
       t = Time.local(2027, 3, 14, 15, 0).to_i
 
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
       expect(ec).to be_in_unscheduled_maintenance
 
       umps = ec.maintenances(nil, nil, :scheduled => false)
@@ -297,9 +297,9 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     end
 
     it "creates an scheduled maintenance period from a human readable time" do
-      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-      ec.create_scheduled_maintenance('14/3/2027 3pm', '30 minutes', :summary => 'oops')
+      Flapjack::Data::EntityCheck.create_maintenance(:redis => @redis, :entity => name, :check => check, :type => 'scheduled', :started => '14/3/2027 3pm', :duration => '30 minutes', :reason => 'oops')
       t = Time.local(2027, 3, 14, 15, 0).to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
 
       smps = ec.maintenances(nil, nil, :scheduled => true)
       expect(smps).not_to be_nil
@@ -1088,9 +1088,9 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     end
 
     it "shows errors when deleting maintenance in the past" do
-      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-      ec.create_unscheduled_maintenance('14/3/1927 3pm', half_an_hour, :summary => "Unscheduled maintenance")
+      Flapjack::Data::EntityCheck.create_maintenance(:redis => @redis, :entity => name, :check => check, :type => 'unscheduled', :started => '14/3/1927 3pm', :duration => '30 minutes', :reason => 'Unscheduled maintenance')
       t = Time.local(1927, 3, 14, 15, 0).to_i
+      ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
 
       ump = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'unscheduled').sort_by { |k| k[:entity] }
       expect(ump).to be_an(Array)

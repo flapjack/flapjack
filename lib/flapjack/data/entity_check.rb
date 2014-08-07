@@ -184,6 +184,31 @@ module Flapjack
         errors
       end
 
+      def self.create_maintenance(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        errors = {}
+        entities = options[:entity].is_a?(String) ? options[:entity].split(',') : options[:entity]
+        checks = options[:check].is_a?(String) ? options[:check].split(',') : options[:check]
+        entities.each do |entity|
+          # Create the entity if it doesn't exist, so we can schedule maintenance against it
+          Flapjack::Data::Entity.find_by_name(entity, :redis => redis, :create => true)
+          checks.each do |check|
+            ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
+            started = Chronic.parse(options[:started]).to_i
+            duration = ChronicDuration.parse(options[:duration]).to_i
+            abort("Failed to parse start time #{options[:started]}") if started == 0
+            abort("Failed to parse duration #{options[:duration]}") if duration == 0
+
+            success = ec.create_scheduled_maintenance(started, duration, :summary => options[:reason]) if options[:type] == 'scheduled'
+            success = ec.create_unscheduled_maintenance(started, duration, :summary => options[:reason]) if options[:type] == 'unscheduled'
+            identifier = "#{entity}:#{check}:#{started}"
+            errors[identifier] = "The following check failed to create: #{identifier}" unless success
+          end
+        end
+        errors
+      end
+
+
       def self.check_interval(input, maintenance_duration)
         # If no duration was specified, give back all results
         return true unless input
@@ -388,17 +413,8 @@ module Flapjack
       end
 
       def create_unscheduled_maintenance(start_time, duration, opts = {})
-        raise ArgumentError, "start time must be provided" if start_time.nil?
-        raise ArgumentError, "duration must be provided" if duration.nil?
-        if !start_time.is_a?(Integer)
-          start_time = Chronic.parse(start_time).to_i
-          raise ArgumentError, 'Failed to parse start time' if start_time == 0
-        end
-
-        if !duration.is_a?(Integer)
-          duration = ChronicDuration.parse(duration).to_i
-          raise ArgumentError, 'Failed to parse duration' unless duration > 0
-        end
+        raise ArgumentError, 'start time must be provided as a Unix timestamp' unless start_time && start_time.is_a?(Integer)
+        raise ArgumentError, 'duration in seconds must be provided' unless duration && duration.is_a?(Integer) && (duration > 0)
 
         summary    = opts[:summary]
         time_remaining = (start_time + duration) - Time.now.to_i
@@ -431,16 +447,8 @@ module Flapjack
       # eg start_time is a believable unix timestamp (not in the past and not too
       # far in the future), duration is within some bounds...
       def create_scheduled_maintenance(start_time, duration, opts = {})
-        raise ArgumentError, "start time must be provided" if start_time.nil?
-        raise ArgumentError, "duration must be provided" if duration.nil?
-        if !start_time.is_a?(Integer)
-          start_time = Chronic.parse(start_time).to_i
-          raise ArgumentError, 'Failed to parse start time' if start_time == 0
-        end
-        if !duration.is_a?(Integer)
-          duration = ChronicDuration.parse(duration).to_i
-          raise ArgumentError, 'Failed to parse duration' unless duration > 0
-        end
+        raise ArgumentError, 'start time must be provided as a Unix timestamp' unless start_time && start_time.is_a?(Integer)
+        raise ArgumentError, 'duration in seconds must be provided' unless duration && duration.is_a?(Integer) && (duration > 0)
 
         summary = opts[:summary]
         @redis.zadd("#{@key}:scheduled_maintenances", duration, start_time)

@@ -60,16 +60,9 @@ module Flapjack
 
       def create
         exit_now!("Entity & check must be supplied to create a maintenance period") if @options[:entity].nil? || @options[:check].nil?
-        @options[:entity].each do |entity|
-          # Create the entity if it doesn't exist, so we can schedule maintenance against it
-          Flapjack::Data::Entity.find_by_name(entity, :redis => @redis, :create => true)
-          @options[:check].each do |check|
-            ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
-            abort('Failed to create scheduled maintenance') unless ec.create_scheduled_maintenance(@options[:started], @options[:duration], :summary => @options[:reason]) if @options[:type] == 'scheduled'
-            abort('Failed to create unscheduled maintenance') unless ec.create_unscheduled_maintenance(@options[:started], @options[:duration], :summary => @options[:reason]) if @options[:type] == 'unscheduled'
-            puts "Maintenance for #{check} on #{entity} has been created"
-          end
-        end
+        errors = Flapjack::Data::EntityCheck.create_maintenance(@options)
+        (errors.each { |k, v| puts "#{k}: #{v}" }; exit_now!('Failed to create maintenances')) if errors.length > 0
+        puts "The maintenances specified have been created"
       end
 
       private
