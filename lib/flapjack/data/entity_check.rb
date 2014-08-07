@@ -159,9 +159,9 @@ module Flapjack
                         :state => ec.state
               }
               if (options[:reason].nil? || Regexp.new(options[:reason]).match(window[:summary])) &&
-                check_timestamp(options[:started], window[:start_time]) &&
-                check_timestamp(options[:finishing], window[:end_time]) &&
-                check_interval(options[:duration], window[:duration])
+                check_maintenance_timestamp(options[:started], window[:start_time]) &&
+                check_maintenance_timestamp(options[:finishing], window[:end_time]) &&
+                check_maintenance_interval(options[:duration], window[:duration])
                 entry.merge!(window)
               end
             }.compact
@@ -216,7 +216,7 @@ module Flapjack
       end
 
 
-      def self.check_interval(input, maintenance_duration)
+      def self.check_maintenance_interval(input, maintenance_duration)
         # If no duration was specified, give back all results
         return true unless input
         input.downcase!
@@ -232,7 +232,7 @@ module Flapjack
           first = "#{first} #{suffix}" unless / /.match(first)
 
           (first, second = second, first) if ChronicDuration.parse(first) > ChronicDuration.parse(second)
-          return check_interval("more than #{first}", maintenance_duration) && check_interval("less than #{second}", maintenance_duration)
+          return check_maintenance_interval("more than #{first}", maintenance_duration) && check_maintenance_interval("less than #{second}", maintenance_duration)
         end
 
         # ChronicDuration can't parse timestamps for strings starting with before or after.
@@ -247,7 +247,7 @@ module Flapjack
         maintenance_duration == input_duration
       end
 
-      def self.check_timestamp(input, maintenance_timestamp)
+      def self.check_maintenance_timestamp(input, maintenance_timestamp)
         # If no time was specified, give back all results
         return true unless input
         input.downcase!
@@ -269,12 +269,12 @@ module Flapjack
           first += ' from now' unless Chronic.parse(first)
           last += ' from now' unless Chronic.parse(last)
           (first, last = last, first) if Chronic.parse(first) > Chronic.parse(last)
-          return check_timestamp("after #{first}", maintenance_timestamp) && check_timestamp("before #{last}", maintenance_timestamp)
+          return check_maintenance_timestamp("after #{first}", maintenance_timestamp) && check_maintenance_timestamp("before #{last}", maintenance_timestamp)
         # On 1/1/15.  We use Chronic to work out the minimum and maximum timestamp, and use the same behaviour as between.
         elsif input.start_with?('on')
           first = Chronic.parse(ctime, :guess => false).first
           last = Chronic.parse(ctime, :guess => false).last
-          return (check_timestamp("after #{first}", maintenance_timestamp) && check_timestamp("before #{last}", maintenance_timestamp))
+          return (check_maintenance_timestamp("after #{first}", maintenance_timestamp) && check_maintenance_timestamp("before #{last}", maintenance_timestamp))
         else
           # We assume timestamps are rooted against the current time.
           # Chronic doesn't always handle this correctly, so we need to handhold it a little
