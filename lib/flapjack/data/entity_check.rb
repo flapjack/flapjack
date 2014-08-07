@@ -138,7 +138,7 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
         type = options[:type]
         keys = redis.keys("*:#{type}_maintenances")
-        keys.map { |k|
+        keys.flat_map { |k|
           entity = k.split(':')[0]
           check = k.split(':')[1]
           ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
@@ -166,7 +166,7 @@ module Flapjack
               end
             }.compact
           end
-        }.compact.flatten(1)
+        }.compact
       end
 
       def self.delete_maintenance(options = {})
@@ -223,16 +223,18 @@ module Flapjack
 
         if input.start_with?('between')
           # Between 3 hours and 4 hours translates to more than 3 hours, less than 4 hours
-          first, second = input.match(/between (.*) and (.*)/).captures
-          suffix = second.match(/\w (.*)/) ? second.match(/\w (.*)/)[0] : ''
+          first, last = input.match(/between (.*) and (.*)/).captures
+          suffix = last.match(/\w (.*)/) ? last.match(/\w (.*)/).captures.first : ''
 
           # If the first duration only contains only a single word, the unit is
           # most likely directly after the first word of the the second duration
           # eg between 3 and 4 hours
           first = "#{first} #{suffix}" unless / /.match(first)
+          abort("Failed to parse #{first}") unless ChronicDuration.parse(first)
+          abort("Failed to parse #{last}") unless ChronicDuration.parse(last)
 
-          (first, second = second, first) if ChronicDuration.parse(first) > ChronicDuration.parse(second)
-          return check_maintenance_interval("more than #{first}", maintenance_duration) && check_maintenance_interval("less than #{second}", maintenance_duration)
+          (first, last = last, first) if ChronicDuration.parse(first) > ChronicDuration.parse(last)
+          return check_maintenance_interval("more than #{first}", maintenance_duration) && check_maintenance_interval("less than #{last}", maintenance_duration)
         end
 
         # ChronicDuration can't parse timestamps for strings starting with before or after.
@@ -263,11 +265,14 @@ module Flapjack
           # If the first time only contains only a single word, the unit (and past/future) is
           # most likely directly after the first word of the the second time
           # eg between 3 and 4 hours ago
-          suffix = last.match(/\w (.*)/) ? last.match(/\w (.*)/)[0] : ''
+          suffix = last.match(/\w (.*)/) ? last.match(/\w (.*)/).captures.first : ''
           first = "#{first} #{suffix}" unless / /.match(first)
 
           first += ' from now' unless Chronic.parse(first)
           last += ' from now' unless Chronic.parse(last)
+          abort("Failed to parse #{first}") unless ChronicDuration.parse(first)
+          abort("Failed to parse #{last}") unless ChronicDuration.parse(last)
+
           (first, last = last, first) if Chronic.parse(first) > Chronic.parse(last)
           return check_maintenance_timestamp("after #{first}", maintenance_timestamp) && check_maintenance_timestamp("before #{last}", maintenance_timestamp)
         # On 1/1/15.  We use Chronic to work out the minimum and maximum timestamp, and use the same behaviour as between.
