@@ -2,36 +2,40 @@ require 'redis'
 require 'oj'
 require 'time'
 
+# add lib to the default include path
+unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+  $: << File.dirname(__FILE__) + '/../lib'
+end
+
+require 'flapjack/configuration'
+require 'flapjack/data/event'
+require 'flapjack/data/entity_check'
+require 'flapjack/version'
+
 namespace :benchmarks do
 
-  # add lib to the default include path
-  unless $:.include?(File.dirname(__FILE__) + '/../lib/')
-    $: << File.dirname(__FILE__) + '/../lib'
+  def redis
+    @redis ||= Redis.new(@redis_config)
   end
 
-  require 'flapjack/configuration'
-  require 'flapjack/data/event'
-  require 'flapjack/data/entity_check'
-  require 'flapjack/version'
+  task :setup do
+    FLAPJACK_ENV = 'test'
+    config_file = File.join('tasks', 'support', 'flapjack_config_benchmark.yaml')
 
-  FLAPJACK_ENV = 'test'
-  config_file = File.join('tasks', 'support', 'flapjack_config_benchmark.yaml')
+    config = Flapjack::Configuration.new
+    config.load( config_file )
 
-  config = Flapjack::Configuration.new
-  config.load( config_file )
+    @config_env = config.all
+    @redis_config = config.for_redis
 
-  @config_env = config.all
-  @redis_config = config.for_redis
-
-  if @config_env.nil? || @config_env.empty?
-    puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{config_file}'"
-    exit(false)
+    if @config_env.nil? || @config_env.empty?
+      puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{config_file}'"
+      exit(false)
+    end
   end
-
-  redis = Redis.new(@redis_config)
 
   desc "nukes the redis db, generates the events, runs and shuts down flapjack, generates perftools reports"
-  task :run => [:reset_redis, :benchmark, :run_flapjack, :reports] do
+  task :run => [:setup, :reset_redis, :benchmark, :run_flapjack, :reports] do
     puts Oj.dump(@benchmark_data, :indent => 2)
   end
 
