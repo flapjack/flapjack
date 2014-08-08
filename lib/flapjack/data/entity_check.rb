@@ -183,8 +183,12 @@ module Flapjack
             check = entry[:check]
 
             ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
-            success = ec.end_scheduled_maintenance(entry[:start_time]) if options[:type] == 'scheduled'
-            success = ec.end_unscheduled_maintenance(entry[:end_time]) if options[:type] == 'unscheduled'
+            success = case options[:type]
+            when 'scheduled'
+              ec.end_scheduled_maintenance(entry[:start_time])
+            when 'unscheduled'
+              ec.end_unscheduled_maintenance(entry[:end_time])
+            end
             errors[identifier] = "The following entry failed to delete: #{entry}" unless success
           end
         end
@@ -203,11 +207,15 @@ module Flapjack
             ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
             started = Chronic.parse(options[:started]).to_i
             duration = ChronicDuration.parse(options[:duration]).to_i
-            abort("Failed to parse start time #{options[:started]}") if started == 0
-            abort("Failed to parse duration #{options[:duration]}") if duration == 0
+            raise "Failed to parse start time #{options[:started]}" if started == 0
+            raise"Failed to parse duration #{options[:duration]}" if duration == 0
 
-            success = ec.create_scheduled_maintenance(started, duration, :summary => options[:reason]) if options[:type] == 'scheduled'
-            success = ec.create_unscheduled_maintenance(started, duration, :summary => options[:reason]) if options[:type] == 'unscheduled'
+            success = case options[:type]
+            when 'scheduled'
+              ec.create_scheduled_maintenance(started, duration, :summary => options[:reason])
+            when 'unscheduled'
+              ec.create_unscheduled_maintenance(started, duration, :summary => options[:reason])
+            end
             identifier = "#{entity}:#{check}:#{started}"
             errors[identifier] = "The following check failed to create: #{identifier}" unless success
           end
@@ -219,19 +227,19 @@ module Flapjack
       def self.check_maintenance_interval(input, maintenance_duration)
         # If no duration was specified, give back all results
         return true unless input
-        input.downcase!
+        inp = input.downcase
 
-        if input.start_with?('between')
+        if inp.start_with?('between')
           # Between 3 hours and 4 hours translates to more than 3 hours, less than 4 hours
-          first, last = input.match(/between (.*) and (.*)/).captures
+          first, last = inp.match(/between (.*) and (.*)/).captures
           suffix = last.match(/\w (.*)/) ? last.match(/\w (.*)/).captures.first : ''
 
           # If the first duration only contains only a single word, the unit is
           # most likely directly after the first word of the the second duration
           # eg between 3 and 4 hours
           first = "#{first} #{suffix}" unless / /.match(first)
-          abort("Failed to parse #{first}") unless ChronicDuration.parse(first)
-          abort("Failed to parse #{last}") unless ChronicDuration.parse(last)
+          raise "Failed to parse #{first}" unless ChronicDuration.parse(first)
+          raise "Failed to parse #{last}" unless ChronicDuration.parse(last)
 
           (first, last = last, first) if ChronicDuration.parse(first) > ChronicDuration.parse(last)
           return check_maintenance_interval("more than #{first}", maintenance_duration) && check_maintenance_interval("less than #{last}", maintenance_duration)
@@ -239,28 +247,34 @@ module Flapjack
 
         # ChronicDuration can't parse timestamps for strings starting with before or after.
         # Strip the before or after for the conversion only, but use it for the comparison later
-        ctime = input.gsub(/^(more than|less than|before|after)/, '')
+        ctime = inp.gsub(/^(more than|less than|before|after)/, '')
         input_duration = ChronicDuration.parse(ctime, :keep_zero => true)
 
-        abort("Failed to parse time: #{input}") if input_duration.nil?
+        raise "Failed to parse time: #{input}" if input_duration.nil?
 
-        return maintenance_duration < input_duration if input.start_with?('less than', 'before')
-        return maintenance_duration > input_duration if input.start_with?('more than', 'after')
-        maintenance_duration == input_duration
+        case inp
+        when /^(less than|before)/
+          maintenance_duration < input_duration
+        when /^(more than|after)/
+          maintenance_duration > input_duration
+        else
+          maintenance_duration == input_duration
+        end
       end
 
       def self.check_maintenance_timestamp(input, maintenance_timestamp)
         # If no time was specified, give back all results
         return true unless input
-        input.downcase!
+        inp = input.downcase
 
         # Chronic can't parse timestamps for strings starting with before, after or in some cases, on.
         # Strip the before or after for the conversion only, but use it for the comparison later
-        ctime = input.gsub(/^(on|before|after)/, '')
+        ctime = inp.gsub(/^(on|before|after)/, '')
 
+        case inp
         # Between 3 and 4 hours ago translates to more than 3 hours ago, less than 4 hours ago
-        if input.start_with?('between')
-          first, last = input.match(/between (.*) and (.*)/).captures
+        when /^between/
+          first, last = inp.match(/between (.*) and (.*)/).captures
 
           # If the first time only contains only a single word, the unit (and past/future) is
           # most likely directly after the first word of the the second time
@@ -270,13 +284,13 @@ module Flapjack
 
           first += ' from now' unless Chronic.parse(first)
           last += ' from now' unless Chronic.parse(last)
-          abort("Failed to parse #{first}") unless ChronicDuration.parse(first)
-          abort("Failed to parse #{last}") unless ChronicDuration.parse(last)
+          raise "Failed to parse #{first}" unless ChronicDuration.parse(first)
+          raise "Failed to parse #{last}" unless ChronicDuration.parse(last)
 
           (first, last = last, first) if Chronic.parse(first) > Chronic.parse(last)
           return check_maintenance_timestamp("after #{first}", maintenance_timestamp) && check_maintenance_timestamp("before #{last}", maintenance_timestamp)
         # On 1/1/15.  We use Chronic to work out the minimum and maximum timestamp, and use the same behaviour as between.
-        elsif input.start_with?('on')
+        when /^on/
           first = Chronic.parse(ctime, :guess => false).first
           last = Chronic.parse(ctime, :guess => false).last
           return (check_maintenance_timestamp("after #{first}", maintenance_timestamp) && check_maintenance_timestamp("before #{last}", maintenance_timestamp))
@@ -286,25 +300,25 @@ module Flapjack
           input_timestamp = Chronic.parse(ctime, :keep_zero => true).to_i
           input_timestamp = Chronic.parse(ctime + ' from now', :keep_zero => true).to_i if input_timestamp == 0
 
-          abort("Failed to parse time: #{input}") if input_timestamp == 0
+          raise "Failed to parse time: #{input}" if input_timestamp == 0
 
-          case input
+          case inp
           when /^less than/
             if input_timestamp < Time.now.to_i
-              return maintenance_timestamp > input_timestamp
+              maintenance_timestamp > input_timestamp
             else
-              return  maintenance_timestamp < input_timestamp
+              maintenance_timestamp < input_timestamp
             end
           when /^more than/
             if input_timestamp < Time.now.to_i
-              return maintenance_timestamp < input_timestamp
+              maintenance_timestamp < input_timestamp
             else
-              return  maintenance_timestamp > input_timestamp
+              maintenance_timestamp > input_timestamp
             end
           when /^before/
-            return maintenance_timestamp < input_timestamp
+            maintenance_timestamp < input_timestamp
           when /^after/
-            return maintenance_timestamp > input_timestamp
+            maintenance_timestamp > input_timestamp
           end
         end
       end
