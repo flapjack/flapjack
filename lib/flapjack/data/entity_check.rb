@@ -7,6 +7,8 @@ require 'flapjack/patches'
 require 'flapjack/data/contact'
 require 'flapjack/data/event'
 require 'flapjack/data/entity'
+#FIXME: Require chronic_duration in the correct place
+require 'chronic_duration'
 
 # TODO might want to split the class methods out to a separate class, DAO pattern
 # ( http://en.wikipedia.org/wiki/Data_access_object ).
@@ -130,6 +132,195 @@ module Flapjack
           }
         }
         result
+      end
+
+      def self.find_maintenance(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        type = options[:type]
+        keys = redis.keys("*:#{type}_maintenances")
+        keys.flat_map { |k|
+          entity = k.split(':')[0]
+          check = k.split(':')[1]
+          ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
+
+          # Only return entries which match what was passed in
+          case
+          when options[:state] && options[:state] != ec.state
+            nil
+          when options[:entity] && !Regexp.new(options[:entity]).match(entity)
+            nil
+          when options[:check] && !Regexp.new(options[:check]).match(check)
+            nil
+          else
+            windows = ec.maintenances(nil, nil, type.to_sym => true)
+            windows.map { |window|
+              entry = { :entity => entity,
+                        :check => check,
+                        :state => ec.state
+              }
+              if (options[:reason].nil? || Regexp.new(options[:reason]).match(window[:summary])) &&
+                check_maintenance_timestamp(options[:started], window[:start_time]) &&
+                check_maintenance_timestamp(options[:finishing], window[:end_time]) &&
+                check_maintenance_interval(options[:duration], window[:duration])
+                entry.merge!(window)
+              end
+            }.compact
+          end
+        }.compact
+      end
+
+      def self.delete_maintenance(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        entries = find_maintenance(options)
+        # Try to delete all entries passed in, but return false if any entries failed
+        errors = {}
+        entries.each do |entry|
+          identifier = "#{entry[:entity]}:#{entry[:check]}:#{entry[:start_time]}"
+          if entry[:end_time] < Time.now.to_i
+            errors[identifier] = "Maintenance can't be deleted as it finished in the past"
+          else
+            entity = entry[:entity]
+            check = entry[:check]
+
+            ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
+            success = case options[:type]
+            when 'scheduled'
+              ec.end_scheduled_maintenance(entry[:start_time])
+            when 'unscheduled'
+              ec.end_unscheduled_maintenance(entry[:end_time])
+            end
+            errors[identifier] = "The following entry failed to delete: #{entry}" unless success
+          end
+        end
+        errors
+      end
+
+      def self.create_maintenance(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        errors = {}
+        entities = options[:entity].is_a?(String) ? options[:entity].split(',') : options[:entity]
+        checks = options[:check].is_a?(String) ? options[:check].split(',') : options[:check]
+        entities.each do |entity|
+          # Create the entity if it doesn't exist, so we can schedule maintenance against it
+          Flapjack::Data::Entity.find_by_name(entity, :redis => redis, :create => true)
+          checks.each do |check|
+            ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
+            started = Chronic.parse(options[:started]).to_i
+            duration = ChronicDuration.parse(options[:duration]).to_i
+            raise "Failed to parse start time #{options[:started]}" if started == 0
+            raise"Failed to parse duration #{options[:duration]}" if duration == 0
+
+            success = case options[:type]
+            when 'scheduled'
+              ec.create_scheduled_maintenance(started, duration, :summary => options[:reason])
+            when 'unscheduled'
+              ec.create_unscheduled_maintenance(started, duration, :summary => options[:reason])
+            end
+            identifier = "#{entity}:#{check}:#{started}"
+            errors[identifier] = "The following check failed to create: #{identifier}" unless success
+          end
+        end
+        errors
+      end
+
+
+      def self.check_maintenance_interval(input, maintenance_duration)
+        # If no duration was specified, give back all results
+        return true unless input
+        inp = input.downcase
+
+        if inp.start_with?('between')
+          # Between 3 hours and 4 hours translates to more than 3 hours, less than 4 hours
+          first, last = inp.match(/between (.*) and (.*)/).captures
+          suffix = last.match(/\w (.*)/) ? last.match(/\w (.*)/).captures.first : ''
+
+          # If the first duration only contains only a single word, the unit is
+          # most likely directly after the first word of the the second duration
+          # eg between 3 and 4 hours
+          first = "#{first} #{suffix}" unless / /.match(first)
+          raise "Failed to parse #{first}" unless ChronicDuration.parse(first)
+          raise "Failed to parse #{last}" unless ChronicDuration.parse(last)
+
+          (first, last = last, first) if ChronicDuration.parse(first) > ChronicDuration.parse(last)
+          return check_maintenance_interval("more than #{first}", maintenance_duration) && check_maintenance_interval("less than #{last}", maintenance_duration)
+        end
+
+        # ChronicDuration can't parse timestamps for strings starting with before or after.
+        # Strip the before or after for the conversion only, but use it for the comparison later
+        ctime = inp.gsub(/^(more than|less than|before|after)/, '')
+        input_duration = ChronicDuration.parse(ctime, :keep_zero => true)
+
+        raise "Failed to parse time: #{input}" if input_duration.nil?
+
+        case inp
+        when /^(less than|before)/
+          maintenance_duration < input_duration
+        when /^(more than|after)/
+          maintenance_duration > input_duration
+        else
+          maintenance_duration == input_duration
+        end
+      end
+
+      def self.check_maintenance_timestamp(input, maintenance_timestamp)
+        # If no time was specified, give back all results
+        return true unless input
+        inp = input.downcase
+
+        # Chronic can't parse timestamps for strings starting with before, after or in some cases, on.
+        # Strip the before or after for the conversion only, but use it for the comparison later
+        ctime = inp.gsub(/^(on|before|after)/, '')
+
+        case inp
+        # Between 3 and 4 hours ago translates to more than 3 hours ago, less than 4 hours ago
+        when /^between/
+          first, last = inp.match(/between (.*) and (.*)/).captures
+
+          # If the first time only contains only a single word, the unit (and past/future) is
+          # most likely directly after the first word of the the second time
+          # eg between 3 and 4 hours ago
+          suffix = last.match(/\w (.*)/) ? last.match(/\w (.*)/).captures.first : ''
+          first = "#{first} #{suffix}" unless / /.match(first)
+
+          first += ' from now' unless Chronic.parse(first)
+          last += ' from now' unless Chronic.parse(last)
+          raise "Failed to parse #{first}" unless ChronicDuration.parse(first)
+          raise "Failed to parse #{last}" unless ChronicDuration.parse(last)
+
+          (first, last = last, first) if Chronic.parse(first) > Chronic.parse(last)
+          return check_maintenance_timestamp("after #{first}", maintenance_timestamp) && check_maintenance_timestamp("before #{last}", maintenance_timestamp)
+        # On 1/1/15.  We use Chronic to work out the minimum and maximum timestamp, and use the same behaviour as between.
+        when /^on/
+          first = Chronic.parse(ctime, :guess => false).first
+          last = Chronic.parse(ctime, :guess => false).last
+          return (check_maintenance_timestamp("after #{first}", maintenance_timestamp) && check_maintenance_timestamp("before #{last}", maintenance_timestamp))
+        else
+          # We assume timestamps are rooted against the current time.
+          # Chronic doesn't always handle this correctly, so we need to handhold it a little
+          input_timestamp = Chronic.parse(ctime, :keep_zero => true).to_i
+          input_timestamp = Chronic.parse(ctime + ' from now', :keep_zero => true).to_i if input_timestamp == 0
+
+          raise "Failed to parse time: #{input}" if input_timestamp == 0
+
+          case inp
+          when /^less than/
+            if input_timestamp < Time.now.to_i
+              maintenance_timestamp > input_timestamp
+            else
+              maintenance_timestamp < input_timestamp
+            end
+          when /^more than/
+            if input_timestamp < Time.now.to_i
+              maintenance_timestamp < input_timestamp
+            else
+              maintenance_timestamp > input_timestamp
+            end
+          when /^before/
+            maintenance_timestamp < input_timestamp
+          when /^after/
+            maintenance_timestamp > input_timestamp
+          end
+        end
       end
 
       def self.in_unscheduled_maintenance_for_event_id?(event_id, options)

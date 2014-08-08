@@ -34,6 +34,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'blather', '~> 0.8.3'
   gem.add_dependency 'chronic'
   gem.add_dependency 'chronic_duration'
+  gem.add_dependency 'terminal-table'
   gem.add_dependency 'activesupport', '~> 3.2.14'
   gem.add_dependency 'ice_cube'
   gem.add_dependency 'tzinfo', '~> 1.0.1'
