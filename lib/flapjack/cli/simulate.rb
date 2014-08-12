@@ -21,8 +21,7 @@ module Flapjack
         @config_env = config.all
 
         if @config_env.nil? || @config_env.empty?
-          puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
-          exit 1
+          exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
         end
 
         @redis_options = config.for_redis

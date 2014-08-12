@@ -25,8 +25,7 @@ module Flapjack
         @config_env = config.all
 
         if @config_env.nil? || @config_env.empty?
-          puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
-          exit 1
+          exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
         end
 
         @redis_options = config.for_redis
@@ -45,8 +44,7 @@ module Flapjack
 
       def nagios_start
         if runner('nagios').daemon_running?
-          puts "nagios-receiver is already running."
-          exit 1
+          exit_now! "nagios-receiver is already running."
         else
           print "nagios-receiver starting..."
           runner('nagios').execute(:daemonize => @options[:daemonize]) do
@@ -67,8 +65,7 @@ module Flapjack
           runner('nagios').execute(:kill => true)
           puts " done."
         else
-          puts "nagios-receiver is not running."
-          exit 1
+          exit_now! "nagios-receiver is not running."
         end
       end
 
@@ -88,15 +85,13 @@ module Flapjack
         if runner('nagios').daemon_running?
           puts "nagios-receiver is running: #{uptime}"
         else
-          puts "nagios-receiver is not running"
-          exit 3
+          exit_now! "nagios-receiver is not running"
         end
       end
 
       def nsca_start
         if runner('nsca').daemon_running?
-          puts "nsca-receiver is already running."
-          exit 1
+          exit_now! "nsca-receiver is already running."
         else
           print "nsca-receiver starting..."
           runner('nsca').execute(:daemonize => @options[:daemonize]) do
@@ -112,8 +107,7 @@ module Flapjack
           runner('nsca').execute(:kill => true)
           puts " done."
         else
-          puts "nsca-receiver is not running."
-          exit 1
+          exit_now! "nsca-receiver is not running."
         end
       end
 
@@ -135,8 +129,7 @@ module Flapjack
         if runner('nsca').daemon_running?
           puts "nsca-receiver is running: #{uptime}"
         else
-          puts "nsca-receiver is not running"
-          exit 3
+          exit_now! "nsca-receiver is not running"
         end
       end
 
@@ -319,8 +312,7 @@ module Flapjack
         input = if opts[:from]
           File.open(opts[:from]) # Explodes if file does not exist.
         elsif $stdin.tty?
-          puts "No file provided, and STDIN is from terminal! Exiting..."
-          exit(1)
+          exit_now! "No file provided, and STDIN is from terminal! Exiting..."
         else
           $stdin
         end
@@ -349,8 +341,7 @@ module Flapjack
 
       def mirror_receive(opts)
         unless opts[:follow] || opts[:all]
-          puts "one or both of --follow or --all is required"
-          exit 1
+          exit_now! "one or both of --follow or --all is required"
         end
 
         source_redis = Redis.new(:url => opts[:source])

@@ -27,8 +27,7 @@ module Flapjack
 
       def start
         if runner.daemon_running?
-          puts "flapper is already running."
-          exit 1
+          exit_now! "flapper is already running."
         else
           print "flapper starting..."
           runner.execute(:daemonize => @options[:daemonize]) do
@@ -44,8 +43,7 @@ module Flapjack
           runner.execute(:kill => true)
           puts " done."
         else
-          puts "flapper is not running."
-          exit 1
+          exit_now! "flapper is not running."
         end
       end
 
@@ -62,8 +60,7 @@ module Flapjack
         if runner.daemon_running?
           puts "flapper is running: #{uptime}"
         else
-          puts "flapper is not running"
-          exit 3
+          exit_now! "flapper is not running"
         end
       end
 

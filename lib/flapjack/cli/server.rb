@@ -22,8 +22,7 @@ module Flapjack
         @config_env = @config.all
 
         if @config_env.nil? || @config_env.empty?
-          puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
-          exit 1
+          exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
         end
 
         if options[:rbtrace]
@@ -42,7 +41,7 @@ module Flapjack
             return_value = start_server
           }
           puts " done."
-          exit(return_value) unless return_value.nil?
+          exit_now!(return_value) unless return_value.nil?
         end
       end
 
@@ -54,7 +53,7 @@ module Flapjack
         else
           puts "Flapjack is not running."
         end
-        exit 1 unless wait_pid_gone(get_pid)
+        exit_now! unless wait_pid_gone(get_pid)
       end
 
       def restart
@@ -63,7 +62,7 @@ module Flapjack
           runner.execute(:kill => true)
           puts " done."
         end
-        exit 1 unless wait_pid_gone(get_pid)
+        exit_now! unless wait_pid_gone(get_pid)
 
         @runner = nil
 
@@ -85,8 +84,7 @@ module Flapjack
             puts " couldn't send HUP to pid '#{pid}'."
           end
         else
-          puts "Flapjack is not running daemonized."
-          exit 1
+          exit_now! "Flapjack is not running daemonized."
         end
       end
 
@@ -99,8 +97,7 @@ module Flapjack
           pid = get_pid
           puts "Flapjack is running: pid #{pid}, uptime #{uptime}"
         else
-          puts "Flapjack is not running"
-          exit 3
+          exit_now! "Flapjack is not running"
         end
       end
 
@@ -252,5 +249,3 @@ command :server do |server|
   end
 
 end
-
-
