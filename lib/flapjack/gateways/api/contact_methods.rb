@@ -165,7 +165,9 @@ module Flapjack
             logger.debug(params.inspect)
 
             rule = find_rule(params[:id])
-            contact = find_contact(rule.contact_id)
+
+            # previous bug may have led to rule's contact_id being wiped :(
+            contact = find_contact(rule.contact_id || params[:contact_id])
 
             rule_data = hashify(:entities, :regex_entities, :tags, :regex_tags,
               :unknown_media, :warning_media, :critical_media, :time_restrictions,

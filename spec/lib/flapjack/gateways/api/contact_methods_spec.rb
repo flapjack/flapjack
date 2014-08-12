@@ -318,6 +318,29 @@ describe 'Flapjack::Gateways::API::ContactMethods', :sinatra => true, :logger =>
     expect(last_response).to be_forbidden
   end
 
+  it 'uses the contact_id param if the rule being updated lacks that data' do
+    nr_nil = double(Flapjack::Data::NotificationRule, :id => '1', :contact_id => nil)
+
+    expect(Flapjack::Data::Contact).to receive(:find_by_id).
+      with(contact.id, {:redis => redis, :logger => @logger}).and_return(contact)
+    expect(nr_nil).to receive(:to_json).and_return('"rule_1"')
+    expect(Flapjack::Data::NotificationRule).to receive(:find_by_id).
+      with(nr_nil.id, {:redis => redis, :logger => @logger}).and_return(nr_nil)
+
+    # symbolize the keys
+    notification_rule_data_sym = notification_rule_data.inject({}){|memo,(k,v)|
+      memo[k.to_sym] = v; memo
+    }
+    notification_rule_data_sym.delete(:contact_id)
+
+    expect(nr_nil).to receive(:update).with(notification_rule_data_sym, :logger => @logger).and_return(nil)
+
+    aput "/notification_rules/#{nr_nil.id}", notification_rule_data.to_json,
+      {'CONTENT_TYPE' => 'application/json'}
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq('"rule_1"')
+  end
+
   # DELETE /notification_rules/RULE_ID
   it "deletes a notification rule" do
     expect(notification_rule).to receive(:contact_id).and_return(contact.id)
