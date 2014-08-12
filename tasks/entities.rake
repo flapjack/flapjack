@@ -91,13 +91,12 @@ namespace :entities do
 
       old_entities.each_pair do |id, old_entities_for_id|
         old_entities_for_id.each do |old_entity|
-          puts "Re-parenting '#{old_entity}' data to '#{entities[id]}'"
-          Flapjack::Data::Entity.rename(old_entity, entities[id])
+          # puts "Re-parenting '#{old_entity}' data to '#{entities[id]}'"
+          # Flapjack::Data::Entity.merge(old_entity, entities[id], :redis => redis)
         end
       end
     }
 
   end
-
 
 end

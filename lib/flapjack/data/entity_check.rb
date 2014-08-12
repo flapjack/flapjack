@@ -392,6 +392,7 @@ module Flapjack
           end
 
           # Retain event data for entity:check pair
+          # NB (appending to tail as far as Redis is concerned)
           @redis.rpush("#{@key}:states", timestamp)
           @redis.set("#{@key}:#{timestamp}:state", new_state)
           @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
