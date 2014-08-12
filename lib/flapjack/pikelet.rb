@@ -25,6 +25,7 @@ require 'flapjack/gateways/oobetet'
 require 'flapjack/gateways/pagerduty'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
+require 'flapjack/gateways/aws_sns'
 require 'flapjack/gateways/web'
 require 'flapjack/logger'
 require 'thin/version'
@@ -156,7 +157,8 @@ module Flapjack
     class Resque < Flapjack::Pikelet::Base
 
       PIKELET_TYPES = {'email' => Flapjack::Gateways::Email,
-                       'sms'   => Flapjack::Gateways::SmsMessagenet}
+                       'sms'   => Flapjack::Gateways::SmsMessagenet,
+                       'sns'   => Flapjack::Gateways::AwsSns}
 
       def self.create(type, opts = {})
         self.new(type, PIKELET_TYPES[type], :config => opts[:config],

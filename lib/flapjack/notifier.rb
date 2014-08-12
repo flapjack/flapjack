@@ -15,6 +15,7 @@ require 'flapjack/utility'
 
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
+require 'flapjack/gateways/aws_sns'
 
 module Flapjack
 
@@ -165,6 +166,8 @@ module Flapjack
         when :email
           # FIXME(@auxesis): change Resque jobs to use raw blpop
           Resque.enqueue_to(@queues['email'], Flapjack::Gateways::Email, contents)
+        when :sns
+          Resque.enqueue_to(@queues['sns'], Flapjack::Gateways::AwsSns, contents)
         else
           @redis.rpush(@queues[media_type.to_s], Oj.dump(contents))
         end

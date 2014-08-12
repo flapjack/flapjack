@@ -39,6 +39,7 @@ production:
     queue: notifications
     email_queue: email_notifications
     sms_queue: sms_notifications
+    sns_queue: sns_notifications
     jabber_queue: jabber_notifications
     pagerduty_queue: pagerduty_notifications
     notification_log_file: /var/log/flapjack/notification.log
@@ -99,6 +100,14 @@ production:
       #templates:
       #  rollup.text: '/etc/flapjack/templates/sms/rollup.text.erb'
       #  alert.text: '/etc/flapjack/templates/sms/alert.text.erb'
+    # Generates SNS notifications
+    sns:
+      enabled: no
+      queue: sns_notifications
+      #region_name: us-east-1
+      # Don't forget to use an IAM user's credentials here so revocation is easy!
+      access_key: AKIAIOSFODNN7EXAMPLE
+      secret_key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
     # Connects to an XMPP (jabber) server, sends notifications (to rooms and individuals),
     # handles acknowledgements from jabber users and other commands.
     jabber:

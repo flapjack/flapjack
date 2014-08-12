@@ -92,7 +92,7 @@ SHIFT_TTLS
 
   def self.before_all(options = {})
     redis = options[:redis]
-    @shift_ttls_sha = redis.script(:load, ShiftTTLsScript)
+#    @shift_ttls_sha = redis.script(:load, ShiftTTLsScript)
   end
 
   def self.before_each(options = {})
@@ -162,6 +162,7 @@ Before('@notifier') do
     :redis_config => redis_opts,
     :config => {'email_queue' => 'email_notifications',
                 'sms_queue' => 'sms_notifications',
+                'sns_queue' => 'sns_notifications',
                 'default_contact_timezone' => 'America/New_York'})
   @notifier_redis = @notifier.instance_variable_get('@redis')
 end
