@@ -92,7 +92,7 @@ SHIFT_TTLS
 
   def self.before_all(options = {})
     redis = options[:redis]
-#    @shift_ttls_sha = redis.script(:load, ShiftTTLsScript)
+    @shift_ttls_sha = redis.script(:load, ShiftTTLsScript)
   end
 
   def self.before_each(options = {})
