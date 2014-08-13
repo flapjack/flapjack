@@ -22,13 +22,20 @@ module Flapjack
         @config_env = @config.all
 
         if @config_env.nil? || @config_env.empty?
-          puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
-          exit 1
+          exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
         end
 
         if options[:rbtrace]
           require 'rbtrace'
         end
+
+        @pidfile = @options[:pidfile].nil? ?
+                    (@config_env['pid_file'] || "/var/run/flapjack/flapjack.pid") :
+                    @options[:pidfile]
+
+        @logfile = @options[:logfile].nil? ?
+                    (@config_env['log_file'] || "/var/log/flapjack/flapjack.log") :
+                    @options[:logfile]
       end
 
       def start
@@ -42,11 +49,12 @@ module Flapjack
             return_value = start_server
           }
           puts " done."
-          exit(return_value) unless return_value.nil?
+          exit_now!(return_value) unless return_value.nil?
         end
       end
 
       def stop
+        pid = get_pid
         if runner.daemon_running?
           print "Flapjack stopping..."
           runner.execute(:kill => true)
@@ -54,16 +62,17 @@ module Flapjack
         else
           puts "Flapjack is not running."
         end
-        exit 1 unless wait_pid_gone(get_pid)
+        exit_now! unless wait_pid_gone(pid)
       end
 
       def restart
+        pid = get_pid
         if runner.daemon_running?
           print "Flapjack stopping..."
           runner.execute(:kill => true)
           puts " done."
         end
-        exit 1 unless wait_pid_gone(get_pid)
+        exit_now! unless wait_pid_gone(pid)
 
         @runner = nil
 
@@ -85,22 +94,17 @@ module Flapjack
             puts " couldn't send HUP to pid '#{pid}'."
           end
         else
-          puts "Flapjack is not running daemonized."
-          exit 1
+          exit_now! "Flapjack is not running daemonized."
         end
       end
 
       def status
-        pidfile = @options[:pidfile] || @config_env['pid_file'] ||
-          "/var/run/flapjack/flapjack.pid"
-
-        uptime = (runner.daemon_running?) ? Time.now - File.stat(pidfile).ctime : 0
+        uptime = (runner.daemon_running?) ? Time.now - File.stat(@pidfile).ctime : 0
         if runner.daemon_running?
           pid = get_pid
           puts "Flapjack is running: pid #{pid}, uptime #{uptime}"
         else
-          puts "Flapjack is not running"
-          exit 3
+          exit_now! "Flapjack is not running"
         end
       end
 
@@ -111,16 +115,8 @@ module Flapjack
 
         self.class.skip_dante_traps
 
-        pidfile = @options[:pidfile].nil? ?
-                    (@config_env['pid_file'] || "/var/run/flapjack/flapjack.pid") :
-                    @options[:pidfile]
-
-        logfile = @options[:logfile].nil? ?
-                    (@config_env['log_file'] || "/var/log/flapjack/flapjack.log") :
-                    @options[:logfile]
-
-        @runner = Dante::Runner.new('flapjack', :pid_path => pidfile,
-          :log_path => logfile)
+        @runner = Dante::Runner.new('flapjack', :pid_path => @pidfile,
+          :log_path => @logfile)
         @runner
       end
 
@@ -166,7 +162,7 @@ module Flapjack
       end
 
       def get_pid
-        IO.read(pidfile).chomp.to_i
+        IO.read(@pidfile).chomp.to_i
       rescue StandardError
         pid = nil
       end
@@ -252,5 +248,3 @@ command :server do |server|
   end
 
 end
-
-

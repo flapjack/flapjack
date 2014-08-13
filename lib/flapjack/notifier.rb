@@ -50,7 +50,7 @@ module Flapjack
         tz = ActiveSupport::TimeZone.new(tz_string)
       rescue ArgumentError
         logger.error("Invalid timezone string specified in default_contact_timezone or TZ (#{tz_string})")
-        exit 1
+        exit_now!
       end
       @default_contact_timezone = tz
     end
