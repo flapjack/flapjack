@@ -15,22 +15,6 @@
   cursor: not-allowed;
 }
 
-.tablesorter-filter-row.hideme td {
-  padding: 2px;
-  margin: 0;
-  line-height: 0;
-  cursor: pointer;
-}
-.tablesorter-filter-row.hideme .tablesorter-filter {
-  height: 1px;
-  min-height: 0;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  opacity: 0;
-  filter: alpha(opacity=0);
-}
-
 .tablesorter-filter {
   width: 95%;
   height: inherit;
