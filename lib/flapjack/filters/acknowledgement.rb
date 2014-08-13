@@ -32,7 +32,7 @@ module Flapjack
         end
 
         unless Flapjack::Data::CheckState.failing_states.include?(check.state)
-          @logger.debug("#{label} blocking because check '#{check.name}' on entity '#{check.entity_name}' is not failing")
+          @logger.debug("#{label} blocking because check '#{check.name}' on entity '#{check.entity.name}' is not failing")
           return true
         end
 

@@ -8,7 +8,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   let(:entity_name)     { 'example.com'}
-  let(:entity_name_esc) { CGI.escape(entity_name) }
   let(:check_name)      { 'ping' }
 
   let(:entity) { double(Flapjack::Data::Entity) }
@@ -108,7 +107,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
         ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
-      expect(check).to receive(:entity_name).and_return('foo')
+      expect(entity).to receive(:name).and_return('foo')
+      expect(check).to receive(:entity).and_return(entity)
 
       logo_image_tag = '<img alt="Flapjack" class="logo" src="/img/branding.png">'
 
@@ -128,7 +128,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
         ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
-      expect(check).to receive(:entity_name).and_return('foo')
+      expect(entity).to receive(:name).and_return('foo')
+      expect(check).to receive(:entity).and_return(entity)
 
       logo_image_tag = '<img alt="Flapjack" class="logo" src="/img/flapjack-2013-notext-transparent-300-300.png">'
 
@@ -199,7 +200,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
         ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
-      expect(check).to receive(:entity_name).and_return('foo')
+      expect(entity).to receive(:name).and_return('foo')
+      expect(check).to receive(:entity).and_return(entity)
 
       get '/self_stats'
       expect(last_response).to be_ok

@@ -5,6 +5,8 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
 
   let(:event)   { double(Flapjack::Data::Event) }
 
+  let(:entity)  { double(Flapjack::Data::Entity) }
+
   let(:check)       { double(Flapjack::Data::Check) }
   let(:check_state) { double(Flapjack::Data::CheckState) }
 
@@ -27,7 +29,8 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
     expect(notification).to receive(:check).exactly(5).times.and_return(check)
 
     expect(check).to receive(:id).twice.and_return('abcde')
-    expect(check).to receive(:entity_name).exactly(3).times.and_return('example.com')
+    expect(entity).to receive(:name).exactly(3).times.and_return('example.com')
+    expect(check).to receive(:entity).exactly(3).times.and_return(entity)
     expect(check).to receive(:name).twice.and_return('ping')
 
     state = double(Flapjack::Data::CheckState)

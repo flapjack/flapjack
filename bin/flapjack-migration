@@ -659,15 +659,14 @@ def find_or_create_check(entity_name, check_name)
   check = @check_name_cache[cache_key]
   return check unless check.nil?
 
-  check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
-    :name => check_name).all.first
+  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
+  raise "No entity found for name '#{entity_name}'" if entity.nil?
+
+  check = entity.check.intersect(:name => check_name).all.first
 
   if check.nil?
     # check doesn't already exist
-    entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-    raise "No entity found for name '#{entity_name}'" if entity.nil?
-
-    check = Flapjack::Data::Check.new(:entity_name => entity_name, :name => check_name)
+    check = Flapjack::Data::Check.new(:name => check_name)
     check.save
     raise check.errors.full_messages.join(", ") unless check.persisted?
   end

@@ -63,7 +63,7 @@ module Flapjack
 
         def handle_alert(alert)
           check = alert.check
-          entity_name = check.entity_name
+          entity_name = check.entity.name
           check_name  = check.name
 
           address = alert.address
@@ -203,7 +203,7 @@ module Flapjack
 
           @logger.debug "found unacknowledged failing checks as follows: " +
             unacked_failing_checks.collect {|ec|
-              ec.entity_name + ":" + ec.name
+              ec.entity.name + ":" + ec.name
             }.join(', ')
 
           unacked_failing_checks.each do |check|
@@ -217,7 +217,7 @@ module Flapjack
               ret
             }
 
-            entity_name = check.entity_name
+            entity_name = check.entity.name
             check_name = check.name
 
             event_id = "#{entity_name}:#{check_name}"

@@ -145,7 +145,7 @@ module Flapjack
       def self.create_acknowledgement(queue, check, opts = {})
         data = { 'type'               => 'action',
                  'state'              => 'acknowledgement',
-                 'entity'             => check.entity_name,
+                 'entity'             => check.entity.name,
                  'check'              => check.name,
                  'summary'            => opts[:summary],
                  'duration'           => opts[:duration],
@@ -159,7 +159,7 @@ module Flapjack
         raise "Entity must be provided" if entity.nil?
         data = { 'type'               => 'action',
                  'state'              => 'test_notifications',
-                 'entity'             => (check ? check.entity_name : (entity ? entity.name : nil)),
+                 'entity'             => (check ? check.entity.name : (entity ? entity.name : nil)),
                  'check'              => (check ? check.name : 'test'),
                  'summary'            => opts[:summary],
                  'details'            => opts[:details]

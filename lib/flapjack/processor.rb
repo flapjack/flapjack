@@ -166,8 +166,13 @@ module Flapjack
       timestamp = Time.now.to_i
 
       entity_name, check_name = event.id.split(':', 2);
-      check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
-        :name => check_name).all.first
+
+      entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
+      check  = nil
+
+      unless entity.nil?
+        check = entity.checks.intersect(:name => check_name).all.first
+      end
 
       entity_for_check = nil
 
@@ -177,8 +182,7 @@ module Flapjack
           entity_for_check.save
         end
 
-        check = Flapjack::Data::Check.new(:entity_name => entity_name,
-          :name => check_name)
+        check = Flapjack::Data::Check.new(:name => check_name)
 
         # not saving yet as check state isn't set, requires that for validation
         # TODO maybe change that?

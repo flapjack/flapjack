@@ -72,7 +72,7 @@ module Flapjack
           end
 
           check = alert.check
-          entity_name = check.entity_name
+          entity_name = check.entity.name
           check_name = check.name
 
           address = alert.address
@@ -228,7 +228,7 @@ module Flapjack
               if check.nil?
                 msg = "ERROR - couldn't ACK #{ackid} - not found"
               else
-                entity_name = check.entity_name
+                entity_name = check.entity.name
                 check_name = check.name
 
                 details = "#{check_name} on #{entity_name} (#{ackid})"
@@ -312,9 +312,7 @@ module Flapjack
                 checks = if check_name.nil?
                   entity.checks.all.sort_by(&:name)
                 else
-                  [Flapjack::Data::Check.
-                    intersect(:entity_name => entity_name, :name => check_name).
-                      all.first].compact
+                  [entity.checks.intersect(:name => check_name).all.first].compact
                 end
 
                 if checks.empty?

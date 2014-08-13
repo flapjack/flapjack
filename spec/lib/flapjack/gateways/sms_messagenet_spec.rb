@@ -17,7 +17,8 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
   let(:queue) { double(Flapjack::RecordQueue) }
   let(:alert) { double(Flapjack::Data::Alert) }
 
-  let(:check) { double(Flapjack::Data::Check) }
+  let(:entity) { double(Flapjack::Data::Entity) }
+  let(:check)  { double(Flapjack::Data::Check) }
 
   before(:each) do
     allow(Flapjack).to receive(:redis).and_return(redis)
@@ -49,7 +50,8 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
     expect(alert).to receive(:state_title_case).and_return('OK')
     expect(alert).to receive(:time).and_return(time.to_i)
 
-    expect(check).to receive(:entity_name).and_return('example.com')
+    expect(entity).to receive(:name).and_return('example.com')
+    expect(check).to receive(:entity).and_return(entity)
     expect(check).to receive(:name).and_return('ping')
     expect(alert).to receive(:check).and_return(check)
 
@@ -96,7 +98,8 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
     expect(alert).to receive(:state_title_case).and_return('OK')
     expect(alert).to receive(:time).and_return(time.to_i)
 
-    expect(check).to receive(:entity_name).and_return('example.com')
+    expect(entity).to receive(:name).and_return('example.com')
+    expect(check).to receive(:entity).and_return(entity)
     expect(check).to receive(:name).and_return('ping')
     expect(alert).to receive(:check).and_return(check)
 
@@ -135,7 +138,8 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
     expect(alert).to receive(:state_title_case).and_return('OK')
     expect(alert).to receive(:time).and_return(time.to_i)
 
-    expect(check).to receive(:entity_name).and_return('example.com')
+    expect(entity).to receive(:name).and_return('example.com')
+    expect(check).to receive(:entity).and_return(entity)
     expect(check).to receive(:name).and_return('ping')
     expect(alert).to receive(:check).and_return(check)
 

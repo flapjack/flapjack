@@ -30,7 +30,7 @@ def find_or_create_entity(entity_data)
       :name => entity_data['name'])
     expect(entity.save).to be true
 
-    check = Flapjack::Data::Check.new(:entity_name => entity.name, :name => 'ping')
+    check = Flapjack::Data::Check.new(:name => 'ping')
     expect(check.save).to be true
 
     entity.checks << check
@@ -74,9 +74,11 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_
                                     'check'   => 'ping',
                                     'time'    => timestamp)
 
-  check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
-    :name => 'ping').all.first
+  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
+  expect(entity).not_to be_nil
+  check = entity.checks.intersect(:name => 'ping').all.first
   expect(check).not_to be_nil
+
   check.state = 'critical'
   check.last_update = timestamp
   expect(check.save).to be true
@@ -111,13 +113,14 @@ end
 
 Then /^an (SMS|email) notification for entity '([\w\.\-]+)' should( not)? be queued$/ do |medium, entity_name, neg|
   queue = redis_peek("#{medium.downcase}_notifications", Flapjack::Data::Alert)
-  expect(queue.select {|n| n.check.entity_name =~ /#{entity_name}/ }).
+  expect(queue.select {|n| n.check.entity.name =~ /#{entity_name}/ }).
         send((neg ? :to : :not_to), be_empty)
 end
 
 Given /^an (SMS|email) notification has been queued for entity '([\w\.\-]+)'$/ do |media_type, entity_name|
-  check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
-    :name => 'ping').all.first
+  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
+  expect(entity).not_to be_nil
+  check = entity.checks.intersect(:name => 'ping').all.first
   expect(check).not_to be_nil
 
   check.state = 'critical'

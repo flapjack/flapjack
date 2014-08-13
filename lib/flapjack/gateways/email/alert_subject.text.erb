@@ -1,5 +1,5 @@
 <% check = @alert.check -%>
-<%= @alert.type_sentence_case %>: '<%= check.name %>' on <%= check.entity_name -%>
+<%= @alert.type_sentence_case %>: '<%= check.name %>' on <%= check.entity.name -%>
 <% unless ['acknowledgement', 'test'].include?(@alert.notification_type) -%>
  is <%= @alert.state_title_case -%>
 <% end -%>

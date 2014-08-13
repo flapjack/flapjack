@@ -31,7 +31,7 @@
       duration = (ChronicDuration.output(rollup_alert.duration, :keep_zero => true) || '0 secs') -%>
       <tr>
         <td><%= check.name %></td>
-        <td><%= check.entity_name %></td>
+        <td><%= check.entity.name %></td>
         <td><%= ['ok'].include?(state) ? state.upcase : state.titleize %></td>
         <td><%= duration %></td>
       </tr>

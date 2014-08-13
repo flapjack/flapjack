@@ -90,7 +90,7 @@ module Flapjack
       contacts    = check.contacts.all + check.entity.contacts.all
 
       check_name  = check.name
-      entity_name = check.entity_name
+      entity_name = check.entity.name
 
       if contacts.empty?
         @logger.debug("No contacts for '#{entity_name}:#{check_name}'")

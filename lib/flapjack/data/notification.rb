@@ -112,7 +112,7 @@ module Flapjack
         rules = contact.notification_rules
 
         check = options[:check]
-        entity_name = check.entity_name
+        entity_name = check.entity.name
 
         log_rules(rules, "initial")
 
@@ -201,7 +201,7 @@ module Flapjack
         end
 
         alert_check = opts[:check]
-        entity_name = check.entity_name
+        entity_name = check.entity.name
         check_name = check.name
 
         unless (['ok', 'acknowledgement', 'test'].include?(state_or_ack)) ||

@@ -24,6 +24,9 @@ describe Flapjack::Data::Event do
 
   context 'class' do
 
+    let(:entity) { double(Flapjack::Data::Entity) }
+    let(:check) { double(Flapjack::Data::Check) }
+
     before(:each) do
       allow(Flapjack).to receive(:redis).and_return(redis)
     end
@@ -37,9 +40,8 @@ describe Flapjack::Data::Event do
     end
 
     it "creates a notification testing event" do
-      entity = double(Flapjack::Data::Entity)
-      check = double(Flapjack::Data::Check)
-      expect(check).to receive(:entity_name).and_return(entity_name)
+      expect(entity).to receive(:name).and_return(entity_name)
+      expect(check).to receive(:entity).and_return(entity)
       expect(check).to receive(:name).and_return(check_name)
 
       expect(Time).to receive(:now).and_return(time)
@@ -52,8 +54,8 @@ describe Flapjack::Data::Event do
     end
 
     it "creates an acknowledgement event" do
-      check = double(Flapjack::Data::Check)
-      expect(check).to receive(:entity_name).and_return(entity_name)
+      expect(entity).to receive(:name).and_return(entity_name)
+      expect(check).to receive(:entity).and_return(entity)
       expect(check).to receive(:name).and_return(check_name)
 
       expect(Time).to receive(:now).and_return(time)

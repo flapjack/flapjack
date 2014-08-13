@@ -21,7 +21,6 @@ module Flapjack
       # and last_update can change without a new check_state being added though
 
       define_attributes :name               => :string,
-                        :entity_name        => :string,
                         :state              => :string,
                         :summary            => :string,
                         :perfdata_json      => :string,
@@ -31,10 +30,10 @@ module Flapjack
                         :enabled            => :boolean,
                         :ack_hash           => :string
 
-      index_by :entity_name, :name, :enabled, :state
+      index_by :name, :enabled, :state
       unique_index_by :ack_hash
 
-      belongs_to :entity, :class_name => 'Flapjack::Data::Entity'
+      belongs_to :entity, :class_name => 'Flapjack::Data::Entity', :inverse_of => :checks
 
       has_many :contacts, :class_name => 'Flapjack::Data::Contact'
 
@@ -64,10 +63,9 @@ module Flapjack
       has_many :alerts, :class_name => 'Flapjack::Data::Alert'
       has_many :rollup_alerts, :class_name => 'Flapjack::Data::RollupAlert'
 
-      # TODO validate uniqueness of :name, :scope => :entity_name
+      # TODO validate uniqueness of :name, :scope => :entity
 
       validates :name, :presence => true
-      validates :entity_name, :presence => true
       validates :state,
         :inclusion => {:in => Flapjack::Data::CheckState.all_states, :allow_blank => true }
 
@@ -110,13 +108,9 @@ module Flapjack
         self.perfdata_json = @perfdata.nil? ? nil : @perfdata.to_json
       end
 
-      def entity
-        @entity ||= Flapjack::Data::Entity.intersect(:name => self.entity_name).all.first
-      end
-
       def self.hash_by_entity_name(checks)
         checks.inject({}) {|memo, check|
-          en = check.entity_name
+          en = check.entity.name
           memo[en] = [] unless memo.has_key?(en)
           memo[en] << check
           memo
@@ -166,10 +160,10 @@ module Flapjack
           check_age = start_time.to_i - check.last_update
           check_age = 0 unless check_age > 0
           if check_age >= ages.last
-            memo[ages.last] << "#{check.entity_name}:#{check.name}"
+            memo[ages.last] << "#{check.entity.name}:#{check.name}"
           else
             age_range = age_ranges.detect {|a, b| check_age < a && check_age >= b }
-            memo[age_range.last] << "#{check.entity_name}:#{check.name}" unless age_range.nil?
+            memo[age_range.last] << "#{check.entity.name}:#{check.name}" unless age_range.nil?
           end
           memo
         end
@@ -336,13 +330,13 @@ module Flapjack
       end
 
       def tags
-        @tags ||= Set.new(self.entity_name.split('.', 2).map(&:downcase) +
+        @tags ||= Set.new(self.entity.name.split('.', 2).map(&:downcase) +
                           self.name.split(' ').map(&:downcase))
       end
 
       private
 
-      # would need to be "#{entity_name}:#{name}" to be compatible with v1, but
+      # would need to be "#{entity.name}:#{name}" to be compatible with v1, but
       # to support name changes it must be something invariant
       def create_ack_hash
         return unless self.id.nil? # :on => :create isn't working
