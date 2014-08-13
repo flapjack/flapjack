@@ -43,9 +43,9 @@ module Flapjack
           puts "Flapjack is already running."
         else
           print "Flapjack starting..."
-          print "\n" unless @options[:daemonize]
+          print "\n" unless @options[:debug]
           return_value = nil
-          runner.execute(:daemonize => @options[:daemonize]) {
+          runner.execute(:daemonize => !@options[:debug]) {
             return_value = start_server
           }
           puts " done."
@@ -124,7 +124,7 @@ module Flapjack
         return if Dante::Runner.respond_to?(:orig_start)
         Dante::Runner.send(:alias_method, :orig_start, :start)
         Dante::Runner.send(:define_method, :start) do
-          if log_path = options[:log_path] && options[:daemonize].nil?
+          if log_path = options[:log_path] && !options[:debug]
              redirect_output!
           end
 
@@ -178,8 +178,7 @@ command :server do |server|
 
   server.command :start do |start|
 
-    start.switch [:d, 'daemonize'], :desc => 'Daemonize',
-      :default_value => true
+    start.switch [:d, 'debug'], :desc => 'Runs in debug (non-daemonized) mode'
 
     start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
 
