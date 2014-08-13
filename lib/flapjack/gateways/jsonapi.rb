@@ -36,22 +36,6 @@ module Flapjack
       # http://tools.ietf.org/html/rfc6902
       JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
 
-      class RecordNotFound < RuntimeError
-        attr_reader :klass, :id
-        def initialize(k, i)
-          @klass = k
-          @id    = i
-        end
-      end
-
-      class RecordsNotFound < RuntimeError
-        attr_reader :klass, :ids
-        def initialize(k, i)
-          @klass = k
-          @ids   = i
-        end
-      end
-
       set :raise_errors, true
       set :show_exceptions, false
 

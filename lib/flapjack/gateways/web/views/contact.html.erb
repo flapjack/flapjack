@@ -81,10 +81,9 @@
           <td><%= h media.capitalize %></td>
           <td>
             <% checks.each do |check| %>
-              <% check_link = "<a href=\"#{@base_url}check?entity=#{u(check.entity_name)}&amp;check=#{u(check.name)}\" title=\"check status\">" +
-                 h(check.name) + "</a>"%>
-              <a href="<%= @base_url %>entity/<%= u(check.entity_name) %>" title="entity status"><%= h check.entity_name %></a> ::
-              <%= check_link %> <br />
+              <% entity = check.entity %>
+              <a href="<%= @base_url %>entities/<%= u(entity.id) %>" title="entity status"><%= h(entity.name) %></a> ::
+              <a href="<%= @base_url %>checks/<%= u(check.id) %>" title="check status"><%= h(check.name) %></a><br />
             <% end %>
           </td>
         </tr>
@@ -142,10 +141,10 @@
     <% entities.each do |entity| %>
       <% checks = entity.checks.all.sort_by(&:name) %>
       <tr>
-        <td><a href="<%= @base_url %>entity/<%= u(entity.name) %>" title="entity status"><%= h entity.name %></a></td>
+        <td><a href="<%= @base_url %>entities/<%= u(entity.id) %>" title="entity status"><%= h entity.name %></a></td>
         <td>
           <% checks.each do |check| %>
-            <a href="<%= @base_url %>check?entity=<%= u(entity.name) %>&amp;check=<%= u(check.name) %>" title="check status"><%= h check.name %></a>
+            <a href="<%= @base_url %>checks/<%= u(check.id) %>" title="check status"><%= h check.name %></a>
           <% end %>
         </td>
       </tr>

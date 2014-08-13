@@ -16,7 +16,7 @@
   <tbody>
     <% @entity_names.sort.each do |entity_name| %>
       <tr>
-        <td><a href="<%= @base_url %>entity/<%= CGI.escape(entity_name) %>"><%= h entity_name %></a>
+        <td><a href="<%= @base_url %>entities/<%= u(entity.id) %>"><%= h entity_name %></a>
         </td>
       </tr>
     <% end %>

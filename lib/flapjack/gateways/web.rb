@@ -125,40 +125,6 @@ module Flapjack
         erb 'index.html'.to_sym
       end
 
-      get '/checks_all' do
-        check_stats
-        @adjective = 'all'
-        time = Time.now
-
-        checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( Flapjack::Data::Check.all )
-        @entity_names_sorted = checks_by_entity.keys.sort
-        @states = checks_by_entity.inject({}) {|result, (entity_name, checks)|
-          result[entity_name] = checks.sort_by(&:name).map {|check|
-            [check.name] + check_state(check, time)
-          }
-          result
-        }
-
-        erb 'checks.html'.to_sym
-      end
-
-      get '/checks_failing' do
-        check_stats
-        @adjective = 'failing'
-        time = Time.now
-
-        checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( failing_checks.all )
-        @entity_names_sorted = checks_by_entity.keys.sort
-        @states = checks_by_entity.inject({}) {|result, (entity_name, checks)|
-          result[entity_name] = checks.sort_by(&:name).map {|check|
-            [check.name] + check_state(check, time)
-          }
-          result
-        }
-
-        erb 'checks.html'.to_sym
-      end
-
       get '/self_stats' do
         @current_time = Time.now
 
@@ -198,74 +164,97 @@ module Flapjack
         }.to_json
       end
 
-      get '/entities_all' do
+      get '/entities' do
         entity_stats
-        @adjective = 'all'
-        @entity_names = Flapjack::Data::Entity.intersect(:enabled => true).all.
-          map(&:name).sort
+
+        if 'failing'.eql?(params[:type])
+          @adjective = 'failing'
+          failing_checks = Flapjack::Data::Check.
+            intersect(:state => Flapjack::Data::CheckState.failing_states).all
+
+          checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( failing_checks )
+
+          @entity_names = checks_by_entity.keys.sort
+        else
+          @adjective = 'all'
+          @entity_names = Flapjack::Data::Entity.intersect(:enabled => true).all.
+            map(&:name).sort
+        end
 
         erb 'entities.html'.to_sym
       end
 
-      get '/entities_failing' do
-        entity_stats
-        @adjective = 'failing'
-        failing_checks = Flapjack::Data::Check.
-          intersect(:state => Flapjack::Data::CheckState.failing_states).all
-
-        checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( failing_checks )
-
-        @entity_names = checks_by_entity.keys.sort
-
-        erb 'entities.html'.to_sym
-      end
-
-      get '/entity/:entity' do
-        @entity_name = params[:entity]
+      get '/entities/:id' do
+        entity_id = params[:id]
         entity_stats
         time = Time.now
 
-        @states = Flapjack::Data::Check.intersect(:entity_name => @entity_name).
-          all.sort_by(&:name).map {|check|
+        @entity = Flapjack::Data::Entity.find_by_id(@entity_id)
+        return 404 if @entity.nil?
+
+        @states = @entity.checks.all.sort_by(&:name).map {|check|
             [check.name] + check_state(check, time)
           }.sort_by {|parts| parts }
 
         erb 'entity.html'.to_sym
       end
 
-      get '/check' do
-        @entity_name = params[:entity]
-        @check_name  = params[:check]
+      get '/checks' do
+        check_stats
+        time = Time.now
+
+        @adjective, checks = if 'failing'.eql?(params[:type])
+          ['failing', failing_checks.all]
+        else
+          ['all', Flapjack::Data::Check.all]
+        end
+
+        checks_by_entity_name = Flapjack::Data::Check.hash_by_entity_name(checks)
+        @states = checks_by_entity_name.inject({}) {|result, (entity_name, checks)|
+          entity = checks.first.entity
+          result[entity] = checks.sort_by(&:name).map {|check|
+            [check] + check_state(check, time)
+          }
+          result
+        }
+        @entities = @states.keys
+
+        erb 'checks.html'.to_sym
+      end
+
+      get '/checks/:id' do
+        check_id  = params[:id]
 
         @current_time = Time.now
 
-        check = Flapjack::Data::Check.intersect(:entity_name => @entity_name,
-          :name => @check_name).all.first
-        return 404 if check.nil?
+        @check = Flapjack::Data::Check.find_by_id(check_id)
+        return 404 if @check.nil?
+
+        @entity = @check.entity
 
         check_stats
-        states = check.states
+        states = @check.states
 
         last_change = states.last
-        last_update = check.last_update
+        last_update = @check.last_update
 
-        @check_state            = check.state
-        @check_enabled          = !!check.enabled
+        @check_state            = @check.state
+        @check_enabled          = !!@check.enabled
         @check_last_update      = last_update
         @check_last_change      = last_change ? last_change.timestamp : nil
-        @check_summary          = check.summary
-        @check_details          = check.details
-        @check_perfdata         = check.perfdata
+        @check_summary          = @check.summary
+        @check_details          = @check.details
+        @check_perfdata         = @check.perfdata
 
-        @last_notifications     = last_notification_data(check, @current_time)
+        @last_notifications     = last_notification_data(@check, @current_time)
 
-        @scheduled_maintenances = check.scheduled_maintenances_by_start.all
-        @acknowledgement_id     = Flapjack::Data::CheckState.failing_states.include?(check.state) ? check.ack_hash : nil
+        @scheduled_maintenances = @check.scheduled_maintenances_by_start.all
+        @acknowledgement_id     = Flapjack::Data::CheckState.failing_states.include?(@check.state) ? @check.ack_hash : nil
 
-        @current_scheduled_maintenance   = check.scheduled_maintenance_at(@current_time)
-        @current_unscheduled_maintenance = check.unscheduled_maintenance_at(@current_time)
+        @current_scheduled_maintenance   = @check.scheduled_maintenance_at(@current_time)
+        @current_unscheduled_maintenance = @check.unscheduled_maintenance_at(@current_time)
 
-        @contacts                   = check.contacts.all
+        @contacts               = @check.contacts.all
 
         @state_changes = states.intersect_range(nil, @current_time.to_i,
                            :order => 'desc', :limit => 20, :by_score => true).all
@@ -273,17 +262,15 @@ module Flapjack
         erb 'check.html'.to_sym
       end
 
-      post '/acknowledgements/:entity/:check' do
-        entity_name        = params[:entity]
-        check_name         = params[:check]
+      post "/unscheduled_maintenances/checks/:id" do
+        check_id           = params[:id]
         summary            = params[:summary]
         acknowledgement_id = params[:acknowledgement_id]
 
         dur = ChronicDuration.parse(params[:duration] || '')
         duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
-        check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
-          :name => check_name).all.first
+        check = Flapjack::Data::Check.find_by_id(check_id)
         return 404 if check.nil?
 
         ack = Flapjack::Data::Event.create_acknowledgement(
@@ -297,14 +284,10 @@ module Flapjack
         redirect back
       end
 
-      # FIXME: there is bound to be a more idiomatic / restful way of doing this
-      # (probably using 'delete' or 'patch')
-      post '/end_unscheduled_maintenance/:entity/:check' do
-        entity_name = params[:entity]
-        check_name  = params[:check]
+      patch '/unscheduled_maintenance/checks/:id' do
+        check_id  = params[:id]
 
-        check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
-          :name => check_name).all.first
+        check = Flapjack::Data::Check.find_by_id(check_id)
         return 404 if check.nil?
 
         check.end_unscheduled_maintenance(Time.now.to_i)
@@ -313,17 +296,15 @@ module Flapjack
       end
 
       # create scheduled maintenance
-      post '/scheduled_maintenances/:entity/:check' do
-        entity_name = params[:entity]
-        check_name  = params[:check]
+      post '/scheduled_maintenances/checks/:id' do
+        check_id  = params[:id]
 
         start_time = Chronic.parse(params[:start_time]).to_i
         raise ArgumentError, "start time parsed to zero" unless start_time > 0
         duration   = ChronicDuration.parse(params[:duration])
         summary    = params[:summary]
 
-        check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
-          :name => check_name).all.first
+        check = Flapjack::Data::Check.find_by_id(check_id)
         return 404 if check.nil?
 
         sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => start_time,
@@ -335,42 +316,24 @@ module Flapjack
       end
 
       # delete a scheduled maintenance
-      delete '/scheduled_maintenances/:entity/:check' do
-        entity_name = params[:entity]
-        check_name  = params[:check]
-
-        check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
-          :name => check_name).all.first
-
-        return 404 if check.nil?
+      delete '/scheduled_maintenances/checks/:id' do
+        check_id  = params[:id]
 
         # TODO better error checking on this param?
         start_time = Time.parse(params[:start_time])
+
+        check = Flapjack::Data::Check.find_by_id(check_id)
+        return 404 if check.nil?
 
         # TODO maybe intersect_range should auto-coerce for timestamp fields?
         # (actually, this should just pass sched maint ID in now that it can)
         sched_maints = check.scheduled_maintenances_by_start.
           intersect_range(start_time.to_i, start_time.to_i, :by_score => true).all
-
         return 404 if sched_maints.empty?
 
         sched_maints.each do |sched_maint|
           check.end_scheduled_maintenance(sched_maint, Time.now)
         end
-        redirect back
-      end
-
-      # delete a check (actually just disables it)
-      delete '/checks/:entity/:check' do
-        entity_name = params[:entity]
-        check_name  = params[:check]
-
-        check = Flapjack::Data::Check.intersect(:entity_name => entity_name,
-          :name => check_name).all.first
-        return 404 if check.nil?
-
-        check.enabled = false
-        check.save
 
         redirect back
       end
@@ -385,10 +348,10 @@ module Flapjack
         erb 'edit_contacts.html'.to_sym
       end
 
-      get "/contacts/:contact" do
-        if contact_id = params[:contact]
-          @contact = Flapjack::Data::Contact.find_by_id(contact_id)
-        end
+      get "/contacts/:id" do
+        contact_id = params[:id]
+
+        @contact = Flapjack::Data::Contact.find_by_id(contact_id)
         return 404 if @contact.nil?
 
         @contact_media = @contact.media.all
