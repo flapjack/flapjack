@@ -25,17 +25,17 @@ module Flapjack
           exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
         end
 
-        if options[:rbtrace]
-          require 'rbtrace'
-        end
-
         @pidfile = @options[:pidfile].nil? ?
-                    (@config_env['pid_file'] || "/var/run/flapjack/flapjack.pid") :
+                    (@config_env['pid_dir'] + 'flapjack.pid' || "/var/run/flapjack/flapjack.pid") :
                     @options[:pidfile]
 
         @logfile = @options[:logfile].nil? ?
-                    (@config_env['log_file'] || "/var/log/flapjack/flapjack.log") :
+                    (@config_env['log_dir'] + 'flapjack.log' || "/var/log/flapjack/flapjack.log") :
                     @options[:logfile]
+
+        if options[:rbtrace]
+          require 'rbtrace'
+        end
       end
 
       def start
@@ -99,9 +99,9 @@ module Flapjack
       end
 
       def status
-        uptime = (runner.daemon_running?) ? Time.now - File.stat(@pidfile).ctime : 0
         if runner.daemon_running?
           pid = get_pid
+          uptime = Time.now - File.stat(@pidfile).ctime
           puts "Flapjack is running: pid #{pid}, uptime #{uptime}"
         else
           exit_now! "Flapjack is not running"
