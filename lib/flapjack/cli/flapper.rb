@@ -32,13 +32,23 @@ module Flapjack
           exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
         end
 
-        @pidfile = @options[:pidfile].nil? ?
-                    (@config_env['pid_dir'] + 'flapper.pid' || "/var/run/flapjack/flapper.pid") :
-                    @options[:pidfile]
+        @pidfile = case
+        when !@options[:pidfile].nil?
+          @options[:pidfile]
+        when !@config_env['pid_dir'].nil?
+          @config_env['pid_dir'] + 'flapper.pid'
+        else
+          "/var/run/flapjack/flapper.pid"
+        end
 
-        @logfile = @options[:logfile].nil? ?
-                    (@config_env['log_dir'] + 'flapper.log' || "/var/log/flapjack/flapper.log") :
-                    @options[:logfile]
+        @logfile = case
+        when !@options[:logfile].nil?
+          @options[:logfile]
+        when !@config_env['log_dir'].nil?
+          @config_env['log_dir'] + 'flapper.log'
+        else
+          "/var/run/flapjack/flapper.log"
+        end
       end
 
       def start

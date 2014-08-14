@@ -369,6 +369,8 @@ development:
         syslog_errors: yes
 
 test:
+  pid_dir: tmp/pids/
+  log_dir: log/
   redis:
     db: 14
     driver: ruby

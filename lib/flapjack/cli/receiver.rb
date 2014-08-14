@@ -30,13 +30,23 @@ module Flapjack
 
         @config_runner = @config_env["#{@options[:type]}-receiver"] || {}
 
-        @pidfile = @options[:pidfile].nil? ?
-                    (@config_runner['pid_dir'] + "#{@options[:type]}-receiver.pid"|| "/var/run/flapjack/#{@options[:type]}-receiver.pid") :
-                    @options[:pidfile]
+        @pidfile = case
+        when !@options[:pidfile].nil?
+          @options[:pidfile]
+        when !@config_env['pid_dir'].nil?
+          @config_env['pid_dir'] + "#{@options[:type]}-receiver.pid"
+        else
+          "/var/run/flapjack/#{@options[:type]}-receiver.pid"
+        end
 
-        @logfile = @options[:logfile].nil? ?
-                    (@config_runner['log_dir'] + "#{@options[:type]}-receiver.log" || "/var/log/flapjack/#{@options[:type]}-receiver.log") :
-                    @options[:logfile]
+        @logfile = case
+        when !@options[:logfile].nil?
+          @options[:logfile]
+        when !@config_env['log_dir'].nil?
+          @config_env['log_dir'] + "#{@options[:type]}-receiver.log"
+        else
+          "/var/run/flapjack/#{@options[:type]}-receiver.log"
+        end
 
         @redis_options = @config.for_redis
       end

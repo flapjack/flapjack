@@ -25,13 +25,23 @@ module Flapjack
           exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
         end
 
-        @pidfile = @options[:pidfile].nil? ?
-                    (@config_env['pid_dir'] + 'flapjack.pid' || "/var/run/flapjack/flapjack.pid") :
-                    @options[:pidfile]
+        @pidfile = case
+        when !@options[:pidfile].nil?
+          @options[:pidfile]
+        when !@config_env['pid_dir'].nil?
+          @config_env['pid_dir'] + 'flapjack.pid'
+        else
+          "/var/run/flapjack/flapjack.pid"
+        end
 
-        @logfile = @options[:logfile].nil? ?
-                    (@config_env['log_dir'] + 'flapjack.log' || "/var/log/flapjack/flapjack.log") :
-                    @options[:logfile]
+        @logfile = case
+        when !@options[:logfile].nil?
+          @options[:logfile]
+        when !@config_env['log_dir'].nil?
+          @config_env['log_dir'] + 'flapjack.log'
+        else
+          "/var/run/flapjack/flapjack.log"
+        end
 
         if options[:rbtrace]
           require 'rbtrace'
@@ -62,7 +72,7 @@ module Flapjack
         else
           puts "Flapjack is not running."
         end
-        exit_now! unless wait_pid_gone(pid)
+        exit_now! "Failed to stop Flapjack #{pid}" unless wait_pid_gone(pid)
       end
 
       def restart
@@ -72,7 +82,7 @@ module Flapjack
           runner.execute(:kill => true)
           puts " done."
         end
-        exit_now! unless wait_pid_gone(pid)
+        exit_now! "Failed to stop Flapjack #{pid}" unless wait_pid_gone(pid)
 
         @runner = nil
 
