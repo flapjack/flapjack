@@ -47,7 +47,7 @@ module Flapjack
           exit_now! "nagios-receiver is already running."
         else
           print "nagios-receiver starting..."
-          runner('nagios').execute(:daemonize => @options[:daemonize]) do
+          runner('nagios').execute(:daemonize => !@options[:debug]) do
             begin
               main(:fifo => @options[:fifo], :nagios => true)
             rescue Exception => e
@@ -94,7 +94,7 @@ module Flapjack
           exit_now! "nsca-receiver is already running."
         else
           print "nsca-receiver starting..."
-          runner('nsca').execute(:daemonize => @options[:daemonize]) do
+          runner('nsca').execute(:daemonize => !@options[:debug]) do
             main(:fifo => @options[:fifo], :nsca => true)
           end
           puts " done."
@@ -449,8 +449,7 @@ command :receiver do |receiver|
 
     nagios.command :start do |start|
 
-      start.switch [:d, 'daemonize'], :desc => 'Daemonize',
-        :default_value => true
+      start.switch [:d, 'debug'], :desc => 'Runs in debug (non-daemonized) mode'
 
       start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
 
@@ -529,8 +528,7 @@ command :receiver do |receiver|
       # Details on the wiki: http://flapjack.io/docs/1.0/usage/USING#XXX
       # '
 
-      start.switch [:d, 'daemonize'], :desc => 'Daemonize',
-        :default_value => true
+      start.switch [:d, 'debug'], :desc => 'Runs in debug (non-daemonized) mode'
 
       start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
 

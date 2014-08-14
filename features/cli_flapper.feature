@@ -11,16 +11,16 @@ Feature: Flapper command line
     And  the output should contain "[-b arg|--bind-ip arg]"
 
   Scenario: Starting flapper
-    When I start flapper (via bundle exec) with `flapjack flapper start --no-daemonize`
+    When I start flapper (via bundle exec) with `flapjack flapper start`
     Then flapper should start within 15 seconds
 
   Scenario: Stopping flapper via SIGINT
-    When I start flapper (via bundle exec) with `flapjack flapper start --no-daemonize`
+    When I start flapper (via bundle exec) with `flapjack flapper start`
     Then flapper should start within 15 seconds
     When I send a SIGINT to the flapper process
     Then flapper should stop within 15 seconds
 
-  Scenario: Starting, status, and stopping flapper, daemonized
+  Scenario: Starting, status, and stopping flapper, in debug mode
     When I start flapper (daemonised) (via bundle exec) with `flapjack flapper start -d -p tmp/cucumber_cli/flapper_d.pid -l tmp/cucumber_cli/flapper_d.log`
     Then flapper should start within 15 seconds
     When I run `bundle exec bin/flapjack flapper status -p tmp/cucumber_cli/flapper_d.pid`
@@ -29,7 +29,7 @@ Feature: Flapper command line
     When I stop flapper (via bundle exec) with `flapjack flapper stop -p tmp/cucumber_cli/flapper_d.pid`
     Then flapper should stop within 15 seconds
 
-  Scenario: Starting, restarting and stopping flapper, daemonized
+  Scenario: Starting, restarting and stopping flapper, in debug mode
     When I start flapper (daemonised) (via bundle exec) with `flapjack flapper start -d -p tmp/cucumber_cli/flapper_d.pid -l tmp/cucumber_cli/flapper_d.log`
     Then flapper should start within 15 seconds
     When I restart flapper (daemonised) (via bundle exec) with `flapjack flapper restart -p tmp/cucumber_cli/flapper_d.pid -l tmp/cucumber_cli/flapper_d.log`
@@ -41,5 +41,3 @@ Feature: Flapper command line
     When I run `bundle exec bin/flapjack flapper status -p tmp/cucumber_cli/flapper_d.pid`
     Then the exit status should not be 0
     And  the output should contain "flapper is not running"
-
-

@@ -30,7 +30,7 @@ module Flapjack
           exit_now! "flapper is already running."
         else
           print "flapper starting..."
-          runner.execute(:daemonize => @options[:daemonize]) do
+          runner.execute(:daemonize => !@options[:debug]) do
             main(@options['bind-ip'], @options['bind-port'].to_i, @options[:frequency])
           end
           puts " done."
@@ -117,8 +117,7 @@ command :flapper do |flapper|
   flapper.desc 'start flapper'
   flapper.command :start do |start|
 
-    start.switch [:d, 'daemonize'], :desc => 'Daemonize',
-      :default_value => true
+    start.switch [:d, 'debug'], :desc => 'Runs in debug (non-daemonized) mode'
 
     start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to',
       :default_value =>  "/var/run/flapjack/flapper.pid"
