@@ -48,12 +48,12 @@ production:
       syslog_errors: yes
   nagios-receiver:
     fifo: "/var/cache/nagios3/event_stream.fifo"
-    pid_dir: "/var/run/flapjack/flapjack-nagios-receiver.pid"
-    log_dir: "/var/log/flapjack/flapjack-nagios-receiver.log"
+    pid_dir: "/var/run/flapjack/"
+    log_dir: "/var/log/flapjack/"
   nsca-receiver:
     fifo: "/var/lib/nagios3/rw/nagios.cmd"
-    pid_dir: "/var/run/flapjack/flapjack-nsca-receiver.pid"
-    log_dir: "/var/log/flapjack/flapjack-nsca-receiver.log"
+    pid_dir: "/var/run/flapjack/"
+    log_dir: "/var/log/flapjack/"
   gateways:
     # Generates email notifications
     email:
@@ -232,12 +232,12 @@ development:
       syslog_errors: yes
   nagios-receiver:
     fifo: "/var/cache/nagios3/event_stream.fifo"
-    pid_dir: "tmp/pids/flapjack-nagios-receiver.pid"
-    log_dir: "log/flapjack-nagios-receiver.log"
+    pid_dir: "tmp/pids/"
+    log_dir: "log/"
   nsca-receiver:
     fifo: "/var/lib/nagios3/rw/nagios.cmd"
-    pid_dir: "tmp/pids/flapjack-nsca-receiver.pid"
-    log_dir: "log/flapjack-nsca-receiver.log"
+    pid_dir: "tmp/pids/"
+    log_dir: "log/"
   gateways:
     # Generates email notifications
     email:
