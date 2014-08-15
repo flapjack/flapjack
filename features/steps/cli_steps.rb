@@ -24,7 +24,7 @@ When /^I ((?:re)?start|stop) (\S+)( \(daemonised\))?( \(via bundle exec\))? with
   case start_stop_restart
   when 'start'
     @process_h = spawn_process(command,
-                  :daemon_pidfile => (daemonise.nil? || daemonise.empty?) ? nil : "tmp/cucumber_cli/#{exe}_d.pid")
+                  :daemon_pidfile => (daemonise.nil? || daemonise.empty?) ? nil : "tmp/cucumber_cli/#{exe}.pid")
   when 'stop', 'restart'
     @daemons_output << `#{command}`
     @daemons_exit_status << $?
@@ -88,7 +88,7 @@ Then /^(\S+) should ((?:re)?start|stop) within (\d+) seconds$/ do |exe, start_st
   when 'restart'
     read_pid = nil
     while attempts < max_attempts
-      time_and_pid = time_and_pid_from_file("tmp/cucumber_cli/#{exe}_d.pid")
+      time_and_pid = time_and_pid_from_file("tmp/cucumber_cli/#{exe}.pid")
       read_pid = time_and_pid.last
       break if read_pid != pid
       attempts += 1; sleep 0.1

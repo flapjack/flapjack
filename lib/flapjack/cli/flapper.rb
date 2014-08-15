@@ -23,13 +23,40 @@ module Flapjack
       def initialize(global_options, options)
         @global_options = global_options
         @options = options
+
+        @config = Flapjack::Configuration.new
+        @config.load(global_options[:config])
+        @config_env = @config.all
+
+        if @config_env.nil? || @config_env.empty?
+          exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
+        end
+
+        @pidfile = case
+        when !@options[:pidfile].nil?
+          @options[:pidfile]
+        when !@config_env['pid_dir'].nil?
+          @config_env['pid_dir'] + 'flapper.pid'
+        else
+          "/var/run/flapjack/flapper.pid"
+        end
+
+        @logfile = case
+        when !@options[:logfile].nil?
+          @options[:logfile]
+        when !@config_env['log_dir'].nil?
+          @config_env['log_dir'] + 'flapper.log'
+        else
+          "/var/run/flapjack/flapper.log"
+        end
       end
 
       def start
         if runner.daemon_running?
-          exit_now! "flapper is already running."
+          puts "flapper is already running."
         else
           print "flapper starting..."
+          print "\n" unless @options[:daemonize]
           runner.execute(:daemonize => @options[:daemonize]) do
             main(@options['bind-ip'], @options['bind-port'].to_i, @options[:frequency])
           end
@@ -38,13 +65,15 @@ module Flapjack
       end
 
       def stop
+        pid = get_pid
         if runner.daemon_running?
           print "flapper stopping..."
           runner.execute(:kill => true)
           puts " done."
         else
-          exit_now! "flapper is not running."
+          puts "flapper is not running."
         end
+        exit_now! unless wait_pid_gone(pid)
       end
 
       def restart
@@ -56,9 +85,10 @@ module Flapjack
       end
 
       def status
-        uptime = (runner.daemon_running?) ? (Time.now - File.stat(@options[:pidfile]).ctime) : 0
         if runner.daemon_running?
-          puts "flapper is running: #{uptime}"
+          pid = get_pid
+          uptime = Time.now - File.stat(@pidfile).ctime
+          puts "flapper is running: pid #{pid}, uptime #{uptime}"
         else
           exit_now! "flapper is not running"
         end
@@ -76,8 +106,8 @@ module Flapjack
       def runner
         return @runner if @runner
 
-        @runner = Dante::Runner.new('flapper', :pid_path => @options[:pidfile],
-          :log_path => @options[:logfile])
+        @runner = Dante::Runner.new('flapper', :pid_path => @pidfile,
+          :log_path => @logfile)
         @runner
       end
 
@@ -106,6 +136,36 @@ module Flapjack
         end
       end
 
+      def process_exists(pid)
+        return unless pid
+        begin
+          Process.kill(0, pid)
+          return true
+        rescue Errno::ESRCH
+          return false
+        end
+      end
+
+      # wait until the specified pid no longer exists, or until a timeout is reached
+      def wait_pid_gone(pid, timeout = 30)
+        print "waiting for a max of #{timeout} seconds for process #{pid} to exit" if process_exists(pid)
+        started_at = Time.now.to_i
+        while process_exists(pid)
+          break unless (Time.now.to_i - started_at < timeout)
+          print '.'
+          sleep 1
+        end
+        puts ''
+        !process_exists(pid)
+      end
+
+      def get_pid
+        IO.read(@pidfile).chomp.to_i
+      rescue StandardError
+        pid = nil
+      end
+
+
     end
   end
 end
@@ -120,11 +180,9 @@ command :flapper do |flapper|
     start.switch [:d, 'daemonize'], :desc => 'Daemonize',
       :default_value => true
 
-    start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to',
-      :default_value =>  "/var/run/flapjack/flapper.pid"
+    start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
 
-    start.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to',
-      :default_value =>  "/var/log/flapjack/flapper.log"
+    start.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
     start.flag   [:b, 'bind-ip'],   :desc => 'ADDRESS (IPv4 or IPv6) for flapper to bind to',
       :default_value => Flapjack::CLI::Flapper.local_ip
@@ -144,11 +202,9 @@ command :flapper do |flapper|
   flapper.desc 'stop flapper'
   flapper.command :stop do |stop|
 
-    stop.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to',
-      :default_value =>  "/var/run/flapjack/flapper.pid"
+    stop.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
 
-    stop.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to',
-      :default_value =>  "/var/log/flapjack/flapper.log"
+    stop.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
     stop.action do |global_options, options, args|
       cli_flapper = Flapjack::CLI::Flapper.new(global_options, options)
@@ -159,11 +215,9 @@ command :flapper do |flapper|
   flapper.desc 'restart flapper'
   flapper.command :restart do |restart|
 
-    restart.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to',
-      :default_value =>  "/var/run/flapjack/flapper.pid"
+    restart.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
 
-    restart.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to',
-      :default_value =>  "/var/log/flapjack/flapper.log"
+    restart.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
     restart.flag   [:b, 'bind-ip'],   :desc => 'ADDRESS (IPv4 or IPv6) for flapper to bind to',
       :default_value => Flapjack::CLI::Flapper.local_ip
@@ -183,11 +237,9 @@ command :flapper do |flapper|
   flapper.desc 'flapper status'
   flapper.command :status do |status|
 
-    status.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to',
-      :default_value =>  "/var/run/flapjack/flapper.pid"
+    status.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
 
-    status.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to',
-      :default_value =>  "/var/log/flapjack/flapper.log"
+    status.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
     status.action do |global_options, options, args|
       cli_flapper = Flapjack::CLI::Flapper.new(global_options, options)
