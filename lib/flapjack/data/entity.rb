@@ -397,18 +397,40 @@ module Flapjack
         entity_name = entity['name']
         raise "Entity name not provided" if entity_name.nil? || entity_name.empty?
 
-        entity_id = entity['id'] ? entity['id'] : SecureRandom.uuid
-        existing_name = redis.hget("entity:#{entity_id}", 'name')
+        entity_id = entity['id']
 
-        if existing_name.nil?
-          redis.set("entity_id:#{entity_name}", entity_id)
-          redis.hset("entity:#{entity_id}", 'name', entity_name)
-        elsif (existing_name != entity_name) &&
-          redis.renamenx("entity_id:#{existing_name}", "entity_id:#{entity_name}")
+        if entity_id.nil?
+          # likely to be from monitoring data
 
-          rename(existing_name, entity_name, :redis => redis) {
+          # if an entity exists with the same name as the incoming data,
+          # use its id; failing that allocate a random one
+          entity_id = redis.get("entity_id:#{entity_name}")
+
+          if entity_id.nil?
+            entity_id = SecureRandom.uuid
+            redis.set("entity_id:#{entity_name}", entity_id)
             redis.hset("entity:#{entity_id}", 'name', entity_name)
-          }
+          end
+        else
+          # most likely from API import
+          existing_name = redis.hget("entity:#{entity_id}", 'name')
+
+          if existing_name.nil?
+
+            # if there's an entity with a matching name, this will change its
+            # id; if no entity exists it creates a new one
+            redis.set("entity_id:#{entity_name}", entity_id)
+            redis.hset("entity:#{entity_id}", 'name', entity_name)
+
+          elsif existing_name != entity_name
+            if redis.renamenx("entity_id:#{existing_name}", "entity_id:#{entity_name}")
+              rename(existing_name, entity_name, :redis => redis) {
+                redis.hset("entity:#{entity_id}", 'name', entity_name)
+              }
+            else
+              merge(existing_name, entity_name, :redis => redis)
+            end
+          end
         end
 
         redis.del("contacts_for:#{entity_id}")
