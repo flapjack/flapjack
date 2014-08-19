@@ -398,7 +398,7 @@ module Flapjack
             when number_found == 0
               msg = "found no entities matching /#{entity_pattern}/"
             when number_found >= 1
-              failing_list = Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => @redis)
+              failing_list = Flapjack::Data::EntityCheck.find_current_failing_by_entity(:redis => @redis)
               entities = failing_list.select {|k,v| v.count >= 1 && entity_list.include?(k) }
               if entities.length >= 1
                 entities.each_pair do |entity,check_list|
@@ -474,7 +474,7 @@ module Flapjack
               msg = "found no entities matching /#{entity_pattern}/"
             when number_found >= 1
 
-              failing_list = Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => @redis)
+              failing_list = Flapjack::Data::EntityCheck.find_current_failing_by_entity(:redis => @redis)
 
               my_failing_checks = Hash[failing_list.map do |k,v|
                 if entity_list.include?(k)

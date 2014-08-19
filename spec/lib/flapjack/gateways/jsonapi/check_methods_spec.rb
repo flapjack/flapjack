@@ -22,7 +22,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(entity_check).to receive(:entity).and_return(entity)
     expect(entity_check).to receive(:key).twice.and_return('PING')
     expect(entity_check).to receive(:to_jsonapi).and_return(check_data.to_json)
-    expect(Flapjack::Data::EntityCheck).to receive(:find_all).with(:redis => redis).
+    expect(Flapjack::Data::EntityCheck).to receive(:find_current).with(:redis => redis).
       and_return([entity_check])
 
     aget '/checks'

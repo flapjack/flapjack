@@ -22,7 +22,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Entity).to receive(:contact_ids_for).
       with([entity_core['id']], :redis => redis).and_return({})
     expect(entity).to receive(:to_jsonapi).and_return(entity_core.to_json)
-    expect(Flapjack::Data::Entity).to receive(:all).with(:redis => redis).
+    expect(Flapjack::Data::Entity).to receive(:all).with(:enabled => nil, :redis => redis).
       and_return([entity])
 
     aget '/entities'
@@ -38,7 +38,7 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
       with([entity_core['id']], :redis => redis).and_return({})
     expect(entity).to receive(:to_jsonapi).and_return(entity_core.to_json)
     expect(idless_entity).not_to receive(:to_jsonapi)
-    expect(Flapjack::Data::Entity).to receive(:all).with(:redis => redis).
+    expect(Flapjack::Data::Entity).to receive(:all).with(:enabled => nil, :redis => redis).
       and_return([entity, idless_entity])
 
     aget '/entities'

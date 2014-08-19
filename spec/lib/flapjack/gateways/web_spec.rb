@@ -7,7 +7,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     Flapjack::Gateways::Web
   end
 
-  let(:entity_name)     { 'example.com'}
+  let(:entity_name)     { 'foo-app-01.example.com'}
   let(:entity_name_esc) { CGI.escape(entity_name) }
   let(:check)           { 'ping' }
 
@@ -30,20 +30,20 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     expect(redis).to receive(:hgetall).twice.and_return({'all' => '8001', 'ok' => '8002'},
       {'all' => '9001', 'ok' => '9002'})
     expect(redis).to receive(:llen).with('events')
-    expect(redis).to receive(:zrange).with('current_entities', 0, -1).and_return(['foo-app-01.example.com'])
-    expect(redis).to receive(:zrange).with('current_checks:foo-app-01.example.com', 0, -1, {:withscores => true}).and_return([['ping', 1382329923.0]])
+    expect(Flapjack::Data::EntityCheck).to receive(:find_all_split_by_freshness).
+      and_return(30 => 3)
   end
 
   def expect_check_stats
-    expect(Flapjack::Data::EntityCheck).to receive(:count_all).
+    expect(Flapjack::Data::EntityCheck).to receive(:count_current).
       with(:redis => redis).and_return(1)
-    expect(Flapjack::Data::EntityCheck).to receive(:count_all_failing).
+    expect(Flapjack::Data::EntityCheck).to receive(:count_current_failing).
       with(:redis => redis).and_return(1)
   end
 
   def expect_entity_stats
-    expect(Flapjack::Data::Entity).to receive(:find_all_with_checks).
-      with(:redis => redis).and_return([entity_name])
+    expect(Flapjack::Data::Entity).to receive(:all).
+      with(:enabled => true, :redis => redis).and_return([entity_name])
     expect(Flapjack::Data::Entity).to receive(:find_all_with_failing_checks).
       with(:redis => redis).and_return([entity_name])
   end
@@ -87,7 +87,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       logo_image_tag = '<img alt="Flapjack" class="logo" src="/img/branding.png">'
 
       aget '/self_stats'
-
       expect( last_response.body ).to include(logo_image_tag)
     end
 
@@ -121,7 +120,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     it "shows a page listing all checks" do
       #redis.should_receive(:keys).with('*:*:states').and_return(["#{entity_name}:#{check}"])
-      expect(Flapjack::Data::EntityCheck).to receive(:find_all_by_entity).
+      expect(Flapjack::Data::EntityCheck).to receive(:find_current_by_entity).
         with(:redis => redis).and_return({entity_name => [check]})
       expect_check_stats
 
@@ -147,7 +146,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(Flapjack::Data::Entity).to receive(:find_by_name).
         with(entity_name, :redis => redis).and_return(entity)
 
-      expect(Flapjack::Data::EntityCheck).to receive(:find_all_failing_by_entity).
+      expect(Flapjack::Data::EntityCheck).to receive(:find_current_failing_by_entity).
         with(:redis => redis).and_return({entity_name => [check]})
 
       expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
@@ -164,6 +163,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect_entity_stats
 
       aget '/self_stats'
+      # p @logger.messages
       expect(last_response).to be_ok
     end
 

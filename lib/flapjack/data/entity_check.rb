@@ -63,17 +63,17 @@ module Flapjack
         self.new(entity, check, :logger => logger, :redis => redis)
       end
 
-      def self.find_all_for_entity_name(entity_name, options = {})
+      def self.find_current_for_entity_name(entity_name, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.zrange("current_checks:#{entity_name}", 0, -1)
       end
 
-      def self.find_all(options = {})
+      def self.find_current(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        self.conflate_to_keys(self.find_all_by_entity(:redis => redis))
+        self.conflate_to_keys(self.find_current_by_entity(:redis => redis))
       end
 
-      def self.find_all_by_entity(options = {})
+      def self.find_current_by_entity(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         d = {}
         redis.zrange("current_entities", 0, -1).each {|entity|
@@ -82,19 +82,19 @@ module Flapjack
         d
       end
 
-      def self.count_all(options = {})
+      def self.count_current(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.zrange("current_entities", 0, -1).inject(0) {|memo, entity|
           memo + redis.zcount("current_checks:#{entity}", '-inf', '+inf')
         }
       end
 
-      def self.find_all_failing(options = {})
+      def self.find_current_failing(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        self.conflate_to_keys(self.find_all_failing_by_entity(:redis => redis))
+        self.conflate_to_keys(self.find_current_failing_by_entity(:redis => redis))
       end
 
-      def self.find_all_failing_by_entity(options = {})
+      def self.find_current_failing_by_entity(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.zrange("failed_checks", 0, -1).inject({}) do |memo, key|
           entity, check = key.split(':', 2)
@@ -106,7 +106,7 @@ module Flapjack
         end
       end
 
-      def self.count_all_failing(options = {})
+      def self.count_current_failing(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.zrange("failed_checks", 0, -1).count do |key|
           entity, check = key.split(':', 2)
@@ -375,10 +375,9 @@ module Flapjack
 
         checks = []
         # get all the current checks, with last update time
-        Flapjack::Data::Entity.find_all_current(:redis => redis).each do |entity|
-          redis.zrange("current_checks:#{entity}", 0, -1, {:withscores => true}).each do |check|
-            check[0] = "#{entity}:#{check[0]}"
-            checks << check
+        Flapjack::Data::Entity.all(:enabled => true, :redis => redis).each do |entity|
+          redis.zrange("current_checks:#{entity}", 0, -1, :withscores => true).each do |check, score|
+            checks << ["#{entity}:#{check}", score]
           end
         end
 
@@ -584,6 +583,7 @@ module Flapjack
           end
 
           # Retain event data for entity:check pair
+          # NB (appending to tail as far as Redis is concerned)
           @redis.rpush("#{@key}:states", timestamp)
           @redis.set("#{@key}:#{timestamp}:state", new_state)
           @redis.set("#{@key}:#{timestamp}:summary", summary) if summary

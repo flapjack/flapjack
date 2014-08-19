@@ -43,7 +43,7 @@ module Flapjack
                 Flapjack::Data::EntityCheck.for_event_id(req_check, :logger => logger, :redis => redis)
               end
             else
-              Flapjack::Data::EntityCheck.find_all(:redis => redis)
+              Flapjack::Data::EntityCheck.find_current(:redis => redis)
             end
             checks.compact!
 
