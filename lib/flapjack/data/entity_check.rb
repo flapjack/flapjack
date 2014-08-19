@@ -310,6 +310,8 @@ module Flapjack
               maintenance_timestamp < input_timestamp
             end
           when /^more than/
+            # FIXME: and here is the race condition. input timestamp could be in the previous second
+            # to Time.now due to code execution time:
             if input_timestamp < Time.now.to_i
               maintenance_timestamp < input_timestamp
             else
