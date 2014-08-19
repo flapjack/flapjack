@@ -1,5 +1,20 @@
 ## Flapjack Changelog
 
+# 1.0.0rc4 - 2014-08-19
+- Feature: Add maintenance to the CLI #597 (@Hobbsee)
+- Feature: Always show the search bar #604 (@Hobbsee)
+- Feature: Allow custom Flapjack branding #505 (@ferrisoxide)
+- Feature: Rename state with entity, and reparent orphaned entity data #600 (@ali-graham)
+- Feature: Added AWS SNS Notification Gateway #602 (@clarkf)
+- Feature: httpchecker binary from pandik project #601 (@michaelneale)
+- Feature: Add id labels to media boxes to make testing easier #610 (@Hobbsee)
+- Bug: gli 2.11 incompatability #585 (@jessereynolds)
+- Bug: web ui: editing contacts doesn't work with included example config #588 (@jessereynolds)
+- Bug: Add return code if the end unscheduled maintenance was successful #596 (@Hobbsee)
+- Bug: Pid fixes, handle exit codes correctly with GLI #603 (@Hobbsee)
+- Bug: PID and consistency fixes #606 (@Hobbsee)
+- Chore: Fix links to refer to our new flapjack documentation #590 (@Hobbsee)
+
 # 1.0.0rc3 - 2014-07-24
 - Bug: fix jsonapi methods for report checks/methods, maintenance reports, outage reports (@ali-graham)
 - Bug: improve tests around notification rules and rollup, tweak rollup behaviour on recovery (@ali-graham)
