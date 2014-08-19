@@ -292,7 +292,7 @@ describe Flapjack::Data::Entity, :redis => true do
         add_name1
       end
 
-      it 'renames the entity name to id lookup and the name in the entity hash by id' do
+      it 'renames the "entity name to id lookup" and the name in the "entity hash by id"' do
         expect(@redis.get('entity_id:name1')).to eq('5000')
         expect(@redis.hget('entity:5000', 'name')).to eq('name1')
 
@@ -303,7 +303,7 @@ describe Flapjack::Data::Entity, :redis => true do
         expect(@redis.hget('entity:5000', 'name')).to eq('name2')
       end
 
-      it 'does not rename an entity of an entity with the new name already exists' do
+      it 'does not rename an entity if an entity with the new name already exists' do
         Flapjack::Data::Entity.add({'id'   => '5001',
                                     'name' => 'name2',
                                     'contacts' => []},
