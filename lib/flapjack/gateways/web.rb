@@ -151,7 +151,7 @@ module Flapjack
         check_stats
         @adjective = 'all'
 
-        checks_by_entity = Flapjack::Data::EntityCheck.find_all_by_entity(:redis => redis)
+        checks_by_entity = Flapjack::Data::EntityCheck.find_current_by_entity(:redis => redis)
         @states = checks_by_entity.keys.inject({}) {|result, entity|
           result[entity] = checks_by_entity[entity].sort.map {|check|
             [check] + entity_check_state(entity, check)
@@ -167,7 +167,7 @@ module Flapjack
         check_stats
         @adjective = 'failing'
 
-        checks_by_entity = Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => redis)
+        checks_by_entity = Flapjack::Data::EntityCheck.find_current_failing_by_entity(:redis => redis)
         @states = checks_by_entity.keys.inject({}) {|result, entity|
           result[entity] = checks_by_entity[entity].sort.map {|check|
             [check] + entity_check_state(entity, check)
@@ -193,9 +193,9 @@ module Flapjack
         check_stats
         {
           'events_queued'       => @events_queued,
-          'all_entities'        => @count_all_entities,
+          'all_entities'        => @count_current_entities,
           'failing_entities'    => @count_failing_entities,
-          'all_checks'          => @count_all_checks,
+          'all_checks'          => @count_current_checks,
           'failing_checks'      => @count_failing_checks,
           'processed_events' => {
             'all_time' => {
@@ -214,10 +214,19 @@ module Flapjack
         }.to_json
       end
 
-      get '/entities_all' do
+      get '/entities' do
+        @entities = Flapjack::Data::Entity.all(:enabled => true, :redis => redis)
+
+        entity_stats(@entities)
+        @adjective = 'enabled'
+
+        erb 'entities.html'.to_sym
+      end
+
+      get '/entities_decommissioned' do
         entity_stats
-        @adjective = 'all'
-        @entities = Flapjack::Data::Entity.find_all_with_checks(:redis => redis)
+        @adjective = 'decommissioned'
+        @entities = Flapjack::Data::Entity.all(:enabled => false, :redis => redis)
 
         erb 'entities.html'.to_sym
       end
@@ -233,7 +242,7 @@ module Flapjack
       get '/entity/:entity' do
         @entity = params[:entity]
         entity_stats
-        @states = Flapjack::Data::EntityCheck.find_all_for_entity_name(@entity, :redis => redis).sort.map { |check|
+        @states = Flapjack::Data::EntityCheck.find_current_for_entity_name(@entity, :redis => redis).sort.map { |check|
           [check] + entity_check_state(@entity, check)
         }.sort_by {|parts| parts }
 
@@ -451,15 +460,14 @@ module Flapjack
         @current_checks_ages = Flapjack::Data::EntityCheck.find_all_split_by_freshness([0, 60, 300, 900, 3600], {:redis => redis, :counts => true } )
       end
 
-      def entity_stats
-        @count_all_entities      = Flapjack::Data::Entity.find_all_with_checks(:redis => redis).length
+      def entity_stats(entities = nil)
+        @count_current_entities  = (entities || Flapjack::Data::Entity.all(:enabled => true, :redis => redis)).length
         @count_failing_entities  = Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis).length
       end
 
       def check_stats
-        # FIXME: move this logic to Flapjack::Data::EntityCheck
-        @count_all_checks        = Flapjack::Data::EntityCheck.count_all(:redis => redis)
-        @count_failing_checks    = Flapjack::Data::EntityCheck.count_all_failing(:redis => redis)
+        @count_current_checks    = Flapjack::Data::EntityCheck.count_current(:redis => redis)
+        @count_failing_checks    = Flapjack::Data::EntityCheck.count_current_failing(:redis => redis)
       end
 
       def last_notification_data(entity_check)

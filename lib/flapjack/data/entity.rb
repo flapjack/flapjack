@@ -18,12 +18,24 @@ module Flapjack
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
+
+        current_entity_names = (options.has_key?(:enabled) && !options[:enabled].nil?) ?
+          Flapjack::Data::Entity.current_names : nil
+
         keys = redis.keys("entity_id:*")
         return [] unless keys.any?
         ids = redis.mget(keys)
-        keys.collect {|k|
-          k =~ /^entity_id:(.+)$/; entity_name = $1
-          self.new(:name => entity_name, :id => ids.shift, :redis => redis)
+        keys.inject([]) {|memo, k|
+          k =~ /^entity_id:(.+)$/; entity_name = $1; entity_id = ids.shift
+
+          if options[:enabled].nil? ||
+            (options[:enabled].is_a?(TrueClass) && current_entity_names.include?(entity_name) ) ||
+            (options[:enabled].is_a(FalseClass) && !current_entity_names.include?(entity_name))
+
+            memo << self.new(:name => entity_name, :id => entity_id, :redis => redis)
+          end
+
+          memo
         }.sort_by(&:name)
       end
 
@@ -389,9 +401,9 @@ module Flapjack
         redis.exec
       end
 
-      # NB: should probably be called in the context of a Redis multi block; not doing so
-      # here as calling classes may well be adding/updating multiple records in the one
-      # operation
+      # NB: If entities are renamed in imported data before they are
+      # renamed in monitoring sources, data for old entities may still
+      # arrive and be stored under those names.
       def self.add(entity, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         entity_name = entity['name']
@@ -507,24 +519,14 @@ module Flapjack
         }.compact
       end
 
-      def self.find_all_with_checks(options)
-        raise "Redis connection not set" unless redis = options[:redis]
-        redis.zrange("current_entities", 0, -1)
-      end
-
-      def self.find_all_with_failing_checks(options)
-        raise "Redis connection not set" unless redis = options[:redis]
-        Flapjack::Data::EntityCheck.find_all_failing_by_entity(:redis => redis).keys
-      end
-
-      def self.find_all_current(options)
+      def self.current_names(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.zrange('current_entities', 0, -1)
       end
 
-      def self.find_all_current_with_last_update(options)
+      def self.find_all_with_failing_checks(options)
         raise "Redis connection not set" unless redis = options[:redis]
-        redis.zrange('current_entities', 0, -1, {:withscores => true})
+        Flapjack::Data::EntityCheck.find_current_failing_by_entity(:redis => redis).keys
       end
 
       def contacts

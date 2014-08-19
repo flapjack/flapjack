@@ -44,7 +44,21 @@ module Flapjack
             entities = if requested_entities
               Flapjack::Data::Entity.find_by_ids(requested_entities, :logger => logger, :redis => redis)
             else
-              Flapjack::Data::Entity.all(:redis => redis).reject {|e| e.id.nil? || e.id.empty? }
+              enabled = if params.has_key?(:enabled)
+                case params[:enabled].downcase
+                when '0', 'f', 'false', 'n', 'no'
+                  false
+                when '1', 't', 'true', 'y', 'yes'
+                  true
+                else
+                  nil
+                end
+              else
+                nil
+              end
+
+              Flapjack::Data::Entity.all(:enabled => enabled,
+                :redis => redis).reject {|e| e.id.nil? || e.id.empty? }
             end
             entities.compact!
 

@@ -48,15 +48,16 @@ module Flapjack
 
           def entities
             {
-              'all'     => Flapjack::Data::Entity.find_all_with_checks(:redis => redis).length,
+              'all'     => Flapjack::Data::Entity.all(:redis => redis).length,
+              'enabled' => Flapjack::Data::Entity.all(:enabled => true, :redis => redis).length,
               'failing' => Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis).length,
             }
           end
 
           def checks
             {
-              'all'     => Flapjack::Data::EntityCheck.count_all(:redis => redis),
-              'failing' => Flapjack::Data::EntityCheck.count_all_failing(:redis => redis),
+              'all'     => Flapjack::Data::EntityCheck.count_current(:redis => redis),
+              'failing' => Flapjack::Data::EntityCheck.count_current_failing(:redis => redis),
             }
           end
 
