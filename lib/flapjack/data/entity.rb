@@ -418,7 +418,7 @@ module Flapjack
           # use its id; failing that allocate a random one
           entity_id = redis.get("entity_id:#{entity_name}")
 
-          if entity_id.nil?
+          if entity_id.nil? || entity_id.empty?
             entity_id = SecureRandom.uuid
             redis.set("entity_id:#{entity_name}", entity_id)
             redis.hset("entity:#{entity_id}", 'name', entity_name)
