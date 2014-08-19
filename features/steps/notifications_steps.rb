@@ -26,6 +26,18 @@ Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ d
                              :redis => @redis )
 end
 
+Given /^the user wants to receive SNS notifications for entity '([\w\.\-]+)'$/ do |entity|
+  add_contact( 'id'         => '0999',
+               'first_name' => 'John',
+               'last_name'  => 'Smith',
+               'email'      => 'johns@example.dom',
+               'media'      => {'sns' => 'arn:aws:sns:us-east-1:698519295917:My-Topic'} )
+  Flapjack::Data::Entity.add({'id'       => '5000',
+                              'name'     => entity,
+                              'contacts' => ["0999"]},
+                              :redis => @redis )
+end
+
 Given /^the user wants to receive email notifications for entity '([\w\.\-]+)'$/ do |entity|
   add_contact( 'id'         => '0999',
                'first_name' => 'John',
@@ -87,6 +99,11 @@ Then /^an SMS notification for entity '([\w\.\-]+)' should be queued for the use
   expect(queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
 end
 
+Then /^an SNS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
+  queue = ResqueSpec.peek('sns_notifications')
+  expect(queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
+end
+
 Then /^an email notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
   queue = ResqueSpec.peek('email_notifications')
   expect(queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
@@ -114,6 +131,23 @@ Given /^a user SMS notification has been queued for entity '([\w\.\-]+)'$/ do |e
                        'time'               => Time.now.to_i,
                        'event_id'           => "#{entity}:ping",
                        'address'            => '+61412345678',
+                       'id'                 => 1,
+                       'state_duration'     => 30,
+                       'duration'           => 45}
+end
+
+Given /^a user SNS notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
+  Flapjack::Data::Entity.add({'id'   => '5000',
+                              'name' => entity},
+                             :redis => @redis )
+  @sms_notification = {'notification_type'  => 'problem',
+                       'contact_first_name' => 'John',
+                       'contact_last_name'  => 'Smith',
+                       'state'              => 'critical',
+                       'summary'            => 'Socket timeout after 10 seconds',
+                       'time'               => Time.now.to_i,
+                       'event_id'           => "#{entity}:ping",
+                       'address'            => 'arn:aws:sns:us-east-1:698519295917:My-Topic',
                        'id'                 => 1,
                        'state_duration'     => 30,
                        'duration'           => 45}
@@ -150,6 +184,20 @@ When /^the SMS notification handler runs successfully$/ do
   Flapjack::Gateways::SmsMessagenet.perform(@sms_notification)
 end
 
+When /^the SNS notification handler runs successfully$/ do
+  @request = stub_request(:post, /amazonaws\.com/)
+
+  Flapjack::Gateways::AwsSns.instance_variable_set('@config', {
+    'access_key' => "AKIAIOSFODNN7EXAMPLE",
+    'secret_key' => "secret"
+  })
+  Flapjack::Gateways::AwsSns.instance_variable_set('@redis', @redis)
+  Flapjack::Gateways::AwsSns.instance_variable_set('@logger', @logger)
+  Flapjack::Gateways::AwsSns.start
+
+  Flapjack::Gateways::AwsSns.perform(@sms_notification)
+end
+
 When /^the SMS notification handler fails to send an SMS$/ do
   @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_DEFAULT_URL)}/).to_return(:status => [500, "Internal Server Error"])
   Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
@@ -158,6 +206,19 @@ When /^the SMS notification handler fails to send an SMS$/ do
   Flapjack::Gateways::SmsMessagenet.start
 
   Flapjack::Gateways::SmsMessagenet.perform(@sms_notification)
+end
+
+When /^the SNS notification handler fails to send an SMS$/ do
+  @request = stub_request(:post, /amazonaws\.com/).to_return(:status => [500, "Internal Server Error"])
+  Flapjack::Gateways::AwsSns.instance_variable_set('@config', {
+    'access_key' => "AKIAIOSFODNN7EXAMPLE",
+    'secret_key' => "secret"
+  })
+  Flapjack::Gateways::AwsSns.instance_variable_set('@redis', @redis)
+  Flapjack::Gateways::AwsSns.instance_variable_set('@logger', @logger)
+  Flapjack::Gateways::AwsSns.start
+
+  Flapjack::Gateways::AwsSns.perform(@sms_notification)
 end
 
 When /^the email notification handler runs successfully$/ do
@@ -203,6 +264,11 @@ Then /^the user should receive an SMS notification$/ do
   expect(Flapjack::Gateways::SmsMessagenet.instance_variable_get('@sent')).to eq(1)
 end
 
+Then /^the user should receive an SNS notification$/ do
+  expect(@request).to have_been_requested
+  expect(Flapjack::Gateways::AwsSns.instance_variable_get('@sent')).to eq(1)
+end
+
 Then /^the user should receive an email notification$/ do
   expect(Flapjack::Gateways::Email.instance_variable_get('@sent')).to eq(1)
 end
@@ -210,6 +276,11 @@ end
 Then /^the user should not receive an SMS notification$/ do
   expect(@request).to have_been_requested
   expect(Flapjack::Gateways::SmsMessagenet.instance_variable_get('@sent')).to eq(0)
+end
+
+Then /^the user should not receive an SNS notification$/ do
+  expect(@request).to have_been_requested
+  expect(Flapjack::Gateways::AwsSns.instance_variable_get('@sent')).to eq(0)
 end
 
 Then /^the user should not receive an email notification$/ do

@@ -27,6 +27,7 @@ flapjack-*.gem
 _site/*
 .rvmrc
 artifacts/*
+libexec/httpchecker*
 libexec/httpbroker
 libexec/httpbroker.linux_386
 libexec/httpbroker.linux_amd64
