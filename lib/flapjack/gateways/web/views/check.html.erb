@@ -129,7 +129,7 @@
   <% end %>
 
   <% if (['warning', 'critical', 'unknown'].include?(@check_state) and !@current_scheduled_maintenance) %>
-    <div id="no-unscheduled-maintenance" class="alert alert-warning">
+    <div id="re-acknowledge-unscheduled-maintenance" class="alert alert-warning">
       <% action = @current_unscheduled_maintenance ? "Re-acknowledge" : "Acknowledge" %>
       <h4><%= action %> alert</h4>
       <form action="<%= @base_url %>acknowledgements/<%= check_path_escaped %>" method="post" class="form-horizontal">
