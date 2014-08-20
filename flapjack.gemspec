@@ -2,7 +2,7 @@
 require File.expand_path('../lib/flapjack/version', __FILE__)
 
 Gem::Specification.new do |gem|
-  gem.authors       = [ "Lindsay Holmwood", "Jesse Reynolds", "Ali Graham" ]
+  gem.authors       = [ "Lindsay Holmwood", "Jesse Reynolds", "Ali Graham", "Sarah Kowalik" ]
   gem.email         = "lindsay@holmwood.id.au"
   gem.description   = "Flapjack is a distributed monitoring notification system that provides a scalable method for processing streams of events from Nagios and deciding who should be notified"
   gem.summary       = "Intelligent, scalable, distributed monitoring notification system."
