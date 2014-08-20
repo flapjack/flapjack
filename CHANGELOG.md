@@ -1,5 +1,10 @@
 ## Flapjack Changelog
 
+# 1.0.0rc5 - 2014-08-20
+- Bug: Fix fatal web UI errors #611 (@jessereynolds)
+- Bug: use same base time for Chronic, time comparison #615 (@ali-graham)
+- Feature: Add more ids for capybara testing #617 (@Hobbsee)
+
 # 1.0.0rc4 - 2014-08-19
 - Feature: Add maintenance to the CLI #597 (@Hobbsee)
 - Feature: Always show the search bar #604 (@Hobbsee)

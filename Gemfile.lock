@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    flapjack (1.0.0rc4)
+    flapjack (1.0.0rc5)
       activesupport (~> 3.2.14)
       blather (~> 0.8.3)
       chronic
@@ -199,7 +199,7 @@ GEM
     timers (1.1.0)
     trollop (2.0)
     tzinfo (1.0.1)
-    tzinfo-data (1.2014.5)
+    tzinfo-data (1.2014.6)
       tzinfo (>= 1.0.0)
     vegas (0.1.11)
       rack (>= 1.0.0)
