@@ -174,7 +174,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     expect(EventMachine::Synchrony).to receive(:sleep).with(5).exactly(1).times
     expect(EventMachine::Synchrony).to receive(:sleep).with(2).exactly(3).times
-    expect(fj).to receive(:connect).exactly(4).times.and_return {
+    expect(fj).to receive(:connect).exactly(4).times {
       attempts +=1
       raise StandardError.new unless attempts > 3
     }
