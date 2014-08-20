@@ -152,9 +152,10 @@ module Flapjack
         @adjective = 'all'
 
         checks_by_entity = Flapjack::Data::EntityCheck.find_current_by_entity(:redis => redis)
-        @states = checks_by_entity.keys.inject({}) {|result, entity|
-          result[entity] = checks_by_entity[entity].sort.map {|check|
-            [check] + entity_check_state(entity, check)
+        @states = checks_by_entity.keys.inject({}) {|result, entity_name|
+          Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis, :create => true)
+          result[entity_name] = checks_by_entity[entity_name].sort.map {|check|
+            [check] + entity_check_state(entity_name, check)
           }
           result
         }
@@ -214,11 +215,15 @@ module Flapjack
         }.to_json
       end
 
+      get '/entities_all' do
+        redirect '/entities'
+      end
+
       get '/entities' do
-        @entities = Flapjack::Data::Entity.all(:enabled => true, :redis => redis)
+        @entities = Flapjack::Data::Entity.all(:enabled => true, :redis => redis).map {|e| e.name}
 
         entity_stats(@entities)
-        @adjective = 'enabled'
+        @adjective = ''
 
         erb 'entities.html'.to_sym
       end
@@ -250,10 +255,12 @@ module Flapjack
       end
 
       get '/check' do
+
         @entity = params[:entity]
         @check  = params[:check]
 
         entity_check = get_entity_check(@entity, @check)
+
         return 404 if entity_check.nil?
 
         check_stats

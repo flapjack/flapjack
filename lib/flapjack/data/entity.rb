@@ -20,7 +20,7 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
 
         current_entity_names = (options.has_key?(:enabled) && !options[:enabled].nil?) ?
-          Flapjack::Data::Entity.current_names : nil
+          Flapjack::Data::Entity.current_names(:redis => redis) : nil
 
         keys = redis.keys("entity_id:*")
         return [] unless keys.any?
@@ -30,7 +30,7 @@ module Flapjack
 
           if options[:enabled].nil? ||
             (options[:enabled].is_a?(TrueClass) && current_entity_names.include?(entity_name) ) ||
-            (options[:enabled].is_a(FalseClass) && !current_entity_names.include?(entity_name))
+            (options[:enabled].is_a?(FalseClass) && !current_entity_names.include?(entity_name))
 
             memo << self.new(:name => entity_name, :id => entity_id, :redis => redis)
           end
@@ -418,7 +418,7 @@ module Flapjack
           # use its id; failing that allocate a random one
           entity_id = redis.get("entity_id:#{entity_name}")
 
-          if entity_id.nil?
+          if entity_id.nil? || entity_id.empty?
             entity_id = SecureRandom.uuid
             redis.set("entity_id:#{entity_name}", entity_id)
             redis.hset("entity:#{entity_id}", 'name', entity_name)
