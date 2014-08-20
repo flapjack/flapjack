@@ -31,7 +31,11 @@
           <td></td>
           <td></td>
         <% else %>
-          <td><%= h mk.capitalize %></td>
+          <% if 'sms'.eql?(mk) %>
+            <td><%= h mk.upcase %></td>
+          <% else %>
+              <td><%= h mk.capitalize %></td>
+          <% end %>
           <td><%= h mv %></td>
           <td>
             <% if @contact.media_intervals[mk] %>
