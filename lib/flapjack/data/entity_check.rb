@@ -271,6 +271,8 @@ module Flapjack
         # Strip the before or after for the conversion only, but use it for the comparison later
         ctime = inp.gsub(/^(on|before|after)/, '')
 
+        base_time = Time.now
+
         case inp
         # Between 3 and 4 hours ago translates to more than 3 hours ago, less than 4 hours ago
         when /^between/
@@ -282,29 +284,31 @@ module Flapjack
           suffix = last.match(/\w (.*)/) ? last.match(/\w (.*)/).captures.first : ''
           first = "#{first} #{suffix}" unless / /.match(first)
 
-          first += ' from now' unless Chronic.parse(first)
-          last += ' from now' unless Chronic.parse(last)
+          first += ' from now' unless Chronic.parse(first, :now => base_time)
+          last += ' from now' unless Chronic.parse(last, :now => base_time)
           raise "Failed to parse #{first}" unless ChronicDuration.parse(first)
           raise "Failed to parse #{last}" unless ChronicDuration.parse(last)
 
-          (first, last = last, first) if Chronic.parse(first) > Chronic.parse(last)
-          return check_maintenance_timestamp("after #{first}", maintenance_timestamp) && check_maintenance_timestamp("before #{last}", maintenance_timestamp)
+          (first, last = last, first) if Chronic.parse(first, :now => base_time) > Chronic.parse(last, :now => base_time)
+          (check_maintenance_timestamp("after #{first}", maintenance_timestamp) &&
+            check_maintenance_timestamp("before #{last}", maintenance_timestamp))
         # On 1/1/15.  We use Chronic to work out the minimum and maximum timestamp, and use the same behaviour as between.
         when /^on/
-          first = Chronic.parse(ctime, :guess => false).first
-          last = Chronic.parse(ctime, :guess => false).last
-          return (check_maintenance_timestamp("after #{first}", maintenance_timestamp) && check_maintenance_timestamp("before #{last}", maintenance_timestamp))
+          first = Chronic.parse(ctime, :guess => false, :now => base_time).first
+          last = Chronic.parse(ctime, :guess => false, :now => base_time).last
+          (check_maintenance_timestamp("after #{first}", maintenance_timestamp) &&
+            check_maintenance_timestamp("before #{last}", maintenance_timestamp))
         else
           # We assume timestamps are rooted against the current time.
           # Chronic doesn't always handle this correctly, so we need to handhold it a little
-          input_timestamp = Chronic.parse(ctime, :keep_zero => true).to_i
-          input_timestamp = Chronic.parse(ctime + ' from now', :keep_zero => true).to_i if input_timestamp == 0
+          input_timestamp = Chronic.parse(ctime, :keep_zero => true, :now => base_time).to_i
+          input_timestamp = Chronic.parse(ctime + ' from now', :keep_zero => true, :now => base_time).to_i if input_timestamp == 0
 
           raise "Failed to parse time: #{input}" if input_timestamp == 0
 
           case inp
           when /^less than/
-            if input_timestamp < Time.now.to_i
+            if input_timestamp < base_time.to_i
               maintenance_timestamp > input_timestamp
             else
               maintenance_timestamp < input_timestamp
@@ -312,7 +316,7 @@ module Flapjack
           when /^more than/
             # FIXME: and here is the race condition. input timestamp could be in the previous second
             # to Time.now due to code execution time:
-            if input_timestamp < Time.now.to_i
+            if input_timestamp < base_time.to_i
               maintenance_timestamp < input_timestamp
             else
               maintenance_timestamp > input_timestamp
