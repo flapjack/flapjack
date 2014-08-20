@@ -149,7 +149,7 @@ module Flapjack
 
       get '/checks_all' do
         check_stats
-        @adjective = 'all'
+        @adjective = ''
 
         checks_by_entity = Flapjack::Data::EntityCheck.find_current_by_entity(:redis => redis)
         @states = checks_by_entity.keys.inject({}) {|result, entity_name|
