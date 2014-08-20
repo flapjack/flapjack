@@ -37,7 +37,7 @@
        !@current_unscheduled_maintenance and
        !(['warning', 'critical', 'unknown'].include?(@check_state))
     %>
-    <div id="no-maintenance" class="alert alert-info">
+    <div id="no-maintenance-summary" class="alert alert-info">
       <form class="form-horizontal" role="form">
         <div class="form-group">
           <label class="col-md-2 control-label">State</label>
@@ -60,7 +60,7 @@
   <% end %>
 
   <% if @current_unscheduled_maintenance %>
-    <div id="unscheduled-maintenance" class="alert alert-warning">
+    <div id="unscheduled-maintenance-summary" class="alert alert-warning">
 
       <form action="<%= @base_url %>end_unscheduled_maintenance/<%= check_path_escaped %>" method="post" class="form-horizontal" role="form">
 
@@ -129,7 +129,7 @@
   <% end %>
 
   <% if (['warning', 'critical', 'unknown'].include?(@check_state) and !@current_scheduled_maintenance) %>
-    <div id="re-acknowledge-unscheduled-maintenance" class="alert alert-warning">
+    <div id="add-unscheduled-maintenance" class="alert alert-warning">
       <% action = @current_unscheduled_maintenance ? "Re-acknowledge" : "Acknowledge" %>
       <h4><%= action %> alert</h4>
       <form action="<%= @base_url %>acknowledgements/<%= check_path_escaped %>" method="post" class="form-horizontal">
@@ -169,7 +169,7 @@
   <% end %>
 
   <% if @current_scheduled_maintenance %>
-    <div id="scheduled-maintenance" class="alert alert-warning">
+    <div id="scheduled-maintenance-summary" class="alert alert-warning">
       <div class="row">
         <div class="col-md-3 text-right">State</div>
         <div class="col-md-9">
