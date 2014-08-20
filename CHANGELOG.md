@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 1.0.0rc6 - 2014-08-20
+- Chore: rename 'All Checks' to 'Checks' in the web UI for consistency with 'Entities' (@Hobbsee)
+
 # 1.0.0rc5 - 2014-08-20
 - Bug: Fix fatal web UI errors #611 (@jessereynolds)
 - Bug: use same base time for Chronic, time comparison #615 (@ali-graham)
