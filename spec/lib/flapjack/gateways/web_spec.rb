@@ -127,7 +127,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect_entity_check_status(entity_check)
 
       expect(Flapjack::Data::Entity).to receive(:find_by_name).
-        with(entity_name, :redis => redis).and_return(entity)
+        with(entity_name, hash_including(:redis => redis)).twice.and_return(entity)
 
       expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
         with(entity, 'ping', :redis => redis).and_return(entity_check)

@@ -152,11 +152,10 @@ module Flapjack
         @adjective = 'all'
 
         checks_by_entity = Flapjack::Data::EntityCheck.find_current_by_entity(:redis => redis)
-        @states = checks_by_entity.keys.inject({}) {|result, entity|
-          entity_object = Flapjack::Data::Entity.find_by_name(entity, :redis => redis, :create => true)
-          logger.debug("/check_all : entity: #{entity}, entity_object: #{entity_object.inspect}")
-          result[entity] = checks_by_entity[entity].sort.map {|check|
-            [check] + entity_check_state(entity, check)
+        @states = checks_by_entity.keys.inject({}) {|result, entity_name|
+          Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis, :create => true)
+          result[entity_name] = checks_by_entity[entity_name].sort.map {|check|
+            [check] + entity_check_state(entity_name, check)
           }
           result
         }
