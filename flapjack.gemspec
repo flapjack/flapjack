@@ -41,6 +41,6 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'tzinfo-data'
   gem.add_dependency 'rbtrace'
   gem.add_dependency 'rake'
-  gem.add_dependency 'gli'
+  gem.add_dependency 'gli', '= 2.12.0'
   gem.add_dependency 'nokogiri', '= 1.6.2.1'
 end

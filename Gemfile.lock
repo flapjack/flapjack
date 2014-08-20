@@ -11,7 +11,7 @@ PATH
       em-resque
       em-synchrony (~> 1.0.2)
       eventmachine (~> 1.0.0)
-      gli
+      gli (= 2.12.0)
       hiredis
       ice_cube
       mail
@@ -93,7 +93,7 @@ GEM
     girl_friday (0.11.2)
       connection_pool (~> 1.0)
       rubinius-actor
-    gli (2.11.0)
+    gli (2.12.0)
     guard (2.2.5)
       formatador (>= 0.2.4)
       listen (~> 2.1)
