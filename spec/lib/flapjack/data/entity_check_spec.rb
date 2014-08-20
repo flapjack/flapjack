@@ -423,10 +423,12 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         Flapjack::Data::Entity.add({ 'name' => entity }, :redis => @redis)
 
         ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
-        ec.create_scheduled_maintenance(five_hours_ago, seven_hours, :summary => "Test scheduled maintenance for #{entity}")
+        ec.create_scheduled_maintenance(five_hours_ago, seven_hours,
+          :summary => "Test scheduled maintenance for #{entity}")
       end
 
-      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :finishing => 'more than 0 minutes from now').sort_by { |k| k[:entity] }
+      smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis,
+        :type => 'scheduled', :finishing => 'more than 0 minutes from now').sort_by { |k| k[:entity] }
 
       expect(smp).to be_an(Array)
       expect(smp.size).to eq(3)
