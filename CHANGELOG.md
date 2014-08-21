@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 1.0.0 - 2014-08-21
+- No changes
+
 # 1.0.0rc6 - 2014-08-20
 - Chore: rename 'All Checks' to 'Checks' in the web UI for consistency with 'Entities' (@Hobbsee)
 
