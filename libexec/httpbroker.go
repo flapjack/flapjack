@@ -1,16 +1,16 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"os"
-	"io/ioutil"
-	"time"
-	"net/http"
-	"flapjack"
 	"encoding/json"
-	"gopkg.in/alecthomas/kingpin.v1"
+	"flapjack"
+	"fmt"
 	"github.com/go-martini/martini"
+	"gopkg.in/alecthomas/kingpin.v1"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"time"
 )
 
 // State is a basic representation of a Flapjack event, with some extra field.
@@ -18,7 +18,7 @@ import (
 // Find more at http://flapjack.io/docs/1.0/development/DATA_STRUCTURES
 type State struct {
 	flapjack.Event
-	TTL	int64  `json:"ttl"`
+	TTL int64 `json:"ttl"`
 }
 
 // handler caches
@@ -82,7 +82,7 @@ func submitCachedState(states map[string]State, config Config) {
 
 	for {
 		log.Printf("Number of cached states: %d\n", len(states))
-		for id, state := range(states) {
+		for id, state := range states {
 			now := time.Now().Unix()
 			event := flapjack.Event{
 				Entity:  state.Entity,
@@ -110,19 +110,19 @@ func submitCachedState(states map[string]State, config Config) {
 }
 
 var (
-	port		= kingpin.Flag("port", "Address to bind HTTP server (default 3090)").Default("3090").OverrideDefaultFromEnvar("PORT").String()
-	server		= kingpin.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
-	database	= kingpin.Flag("database", "Redis database to connect to (default 0)").Int() // .Default("13").Int()
-	interval	= kingpin.Flag("interval", "How often to submit events (default 10s)").Default("10s").Duration()
-	debug		= kingpin.Flag("debug", "Enable verbose output (default false)").Bool()
+	port     = kingpin.Flag("port", "Address to bind HTTP server (default 3090)").Default("3090").OverrideDefaultFromEnvar("PORT").String()
+	server   = kingpin.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
+	database = kingpin.Flag("database", "Redis database to connect to (default 0)").Int() // .Default("13").Int()
+	interval = kingpin.Flag("interval", "How often to submit events (default 10s)").Default("10s").Duration()
+	debug    = kingpin.Flag("debug", "Enable verbose output (default false)").Bool()
 )
 
 type Config struct {
-	Port		string
-	Server		string
-	Database	int
-	Interval	time.Duration
-	Debug		bool
+	Port     string
+	Server   string
+	Database int
+	Interval time.Duration
+	Debug    bool
 }
 
 func main() {
@@ -130,11 +130,11 @@ func main() {
 	kingpin.Parse()
 
 	config := Config{
-		Server: 	*server,
-		Database: 	*database,
-		Interval: 	*interval,
-		Debug:		*debug,
-		Port: 		":" + *port,
+		Server:   *server,
+		Database: *database,
+		Interval: *interval,
+		Debug:    *debug,
+		Port:     ":" + *port,
 	}
 	if config.Debug {
 		log.Printf("Booting with config: %+v\n", config)

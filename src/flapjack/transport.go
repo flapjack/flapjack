@@ -7,13 +7,13 @@ import (
 
 // Transport is a representation of a Redis connection.
 type Transport struct {
-	Address		string
-	Database	int
-	Connection	redis.Conn
+	Address    string
+	Database   int
+	Connection redis.Conn
 }
 
 // Dial establishes a connection to Redis, wrapped in a Transport.
-func Dial(address string, database int) (Transport,error) {
+func Dial(address string, database int) (Transport, error) {
 	// Connect to Redis
 	conn, err := redis.Dial("tcp", address)
 	if err != nil {
@@ -24,9 +24,9 @@ func Dial(address string, database int) (Transport,error) {
 	conn.Do("SELECT", database)
 
 	transport := Transport{
-		Address: 	address,
-		Database: 	database,
-		Connection:	conn,
+		Address:    address,
+		Database:   database,
+		Connection: conn,
 	}
 	return transport, nil
 }
@@ -46,4 +46,3 @@ func (t Transport) Send(event Event) (interface{}, error) {
 		return nil, err
 	}
 }
-

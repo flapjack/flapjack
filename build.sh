@@ -15,20 +15,18 @@ go test flapjack
 go build -x -o libexec/httpbroker libexec/httpbroker.go
 go build -x -o libexec/oneoff libexec/oneoff.go
 
-
 if [ ! -z "$CROSSCOMPILE" ]; then
   for command in httpbroker oneoff; do
     GOOS=linux GOARCH=amd64 CGOENABLED=0 go build -x -o libexec/$command.linux_amd64 libexec/$command.go
     GOOS=linux GOARCH=386 CGOENABLED=0 go build -x -o libexec/$command.linux_386 libexec/$command.go
-  done 
-  
+  done
+
   pushd src/github.com/oguzbilgic/pandik
-  GOOS=linux GOARCH=amd64 CGOENABLED=0 go build -x -o httpchecker.linux_amd64 
-  GOOS=linux GOARCH=386 CGOENABLED=0 go build -x -o httpchecker.linux_386 
-  popd 
+  GOOS=linux GOARCH=amd64 CGOENABLED=0 go build -x -o httpchecker.linux_amd64
+  GOOS=linux GOARCH=386 CGOENABLED=0 go build -x -o httpchecker.linux_386
+  popd
   mv src/github.com/oguzbilgic/pandik/httpchecker.linux_amd64 libexec/httpchecker.linux_amd64
   mv src/github.com/oguzbilgic/pandik/httpchecker.linux_386 libexec/httpchecker.linux_386
-
 fi
 
 
