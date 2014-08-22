@@ -67,8 +67,9 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
         # TODO: code
         puts "getting check keys"
-        checks = redis.keys('check:*')
+        checks = redis.keys('check:*').map {|c| c.match(/^check:(.*)$/) ; $1}
         puts "checks: #{checks.inspect}"
+        checks
       end
 
       def self.find_current_for_entity_name(entity_name, options = {})
@@ -870,9 +871,24 @@ module Flapjack
       def purge_history(opts = {})
         t = Time.now
         older_than  = opts[:older_than]  # purge older than this number of seconds ago
-        keep_states = opts[:keep_states] # purge except for the newest keep_states
+        #keep_states = opts[:keep_states] # purge except for the newest keep_states
+        raise ":older_than must be supplied" unless older_than
 
-        states = historical_states(-1, -1)
+        states = @redis.zrangebyscore("#{@key}:sorted_state_timestamps", "-inf", "+inf")
+        puts states.inspect
+
+        purge_states = case
+                       when states.empty?
+                         []
+                       when (t.to_i - older_than) <= states.first.to_i
+                         []
+                       when (t.to_i - older_than) > states.last.to_i
+                         []
+                       else
+                         # TODO: find where in the array to split it up
+                       end
+        puts "purge_states: #{purge_states.inspect}"
+
         # TODO: code
       end
 
