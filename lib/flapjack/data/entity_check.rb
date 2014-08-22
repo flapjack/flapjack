@@ -63,6 +63,14 @@ module Flapjack
         self.new(entity, check, :logger => logger, :redis => redis)
       end
 
+      def self.all(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        # TODO: code
+        puts "getting check keys"
+        checks = redis.keys('check:*')
+        puts "checks: #{checks.inspect}"
+      end
+
       def self.find_current_for_entity_name(entity_name, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.zrange("current_checks:#{entity_name}", 0, -1)
@@ -857,6 +865,15 @@ module Flapjack
           @redis.hset("checks_by_hash", @ack_hash, @key)
         end
         @ack_hash
+      end
+
+      def purge_history(opts = {})
+        t = Time.now
+        older_than  = opts[:older_than]  # purge older than this number of seconds ago
+        keep_states = opts[:keep_states] # purge except for the newest keep_states
+
+        states = historical_states(-1, -1)
+        # TODO: code
       end
 
       def to_jsonapi(opts = {})
