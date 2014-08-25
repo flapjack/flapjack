@@ -370,6 +370,7 @@ module Flapjack
       #
       def self.find_all_split_by_freshness(ages, options)
         raise "Redis connection not set" unless redis = options[:redis]
+        logger = options[:logger]
 
         raise "ages does not respond_to? :each and :each_with_index" unless ages.respond_to?(:each) && ages.respond_to?(:each_with_index)
         raise "age values must respond_to? :to_i" unless ages.all? {|age| age.respond_to?(:to_i) }
@@ -382,8 +383,10 @@ module Flapjack
         checks = []
         # get all the current checks, with last update time
         Flapjack::Data::Entity.all(:enabled => true, :redis => redis).each do |entity|
-          redis.zrange("current_checks:#{entity}", 0, -1, :withscores => true).each do |check, score|
-            checks << ["#{entity}:#{check}", score]
+          logger.debug "enabled entity: #{entity.name}" if logger
+          redis.zrange("current_checks:#{entity.name}", 0, -1, :withscores => true).each do |check, score|
+            logger.debug "  #{check}, #{score}" if logger
+            checks << ["#{entity.name}:#{check}", score]
           end
         end
 
