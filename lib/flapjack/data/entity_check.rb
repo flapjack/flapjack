@@ -65,10 +65,7 @@ module Flapjack
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        # TODO: code
-        puts "getting check keys"
         checks = redis.keys('check:*').map {|c| c.match(/^check:(.*)$/) ; $1}
-        puts "checks: #{checks.inspect}"
         checks
       end
 
@@ -875,21 +872,18 @@ module Flapjack
         raise ":older_than must be supplied" unless older_than
 
         states = @redis.zrangebyscore("#{@key}:sorted_state_timestamps", "-inf", "+inf")
-        puts states.inspect
 
-        purge_states = case
-                       when states.empty?
-                         []
-                       when (t.to_i - older_than) <= states.first.to_i
-                         []
-                       when (t.to_i - older_than) > states.last.to_i
-                         []
-                       else
-                         # TODO: find where in the array to split it up
-                       end
-        puts "purge_states: #{purge_states.inspect}"
+        purge_stamps = historical_states(-1, t.to_i - older_than).map {|s| s[:timestamp]}
 
-        # TODO: code
+        purge_stamps.each do |timestamp|
+          @redis.del("#{@key}:#{timestamp}:state")
+          @redis.del("#{@key}:#{timestamp}:summary")
+          @redis.del("#{@key}:#{timestamp}:count")
+          @redis.del("#{@key}:#{timestamp}:check_latency")
+          @redis.zrem("#{@key}:sorted_state_timestamps", timestamp.to_s)
+          @redis.lrem("#{@key}:states", 0, timestamp.to_s)
+        end
+        purge_stamps.length
       end
 
       def to_jsonapi(opts = {})
