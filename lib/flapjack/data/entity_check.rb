@@ -383,12 +383,11 @@ module Flapjack
         checks = []
         # get all the current checks, with last update time
         Flapjack::Data::Entity.all(:enabled => true, :redis => redis).each do |entity|
-          logger.debug "enabled entity: #{entity.name}" if logger
           redis.zrange("current_checks:#{entity.name}", 0, -1, :withscores => true).each do |check, score|
-            logger.debug "  #{check}, #{score}" if logger
             checks << ["#{entity.name}:#{check}", score]
           end
         end
+        logger.debug("found #{checks.length} current checks on enabled entities") if logger
 
         skeleton = ages.inject({}) {|memo, age| memo[age] = [] ; memo }
         age_ranges = ages.reverse.each_cons(2)

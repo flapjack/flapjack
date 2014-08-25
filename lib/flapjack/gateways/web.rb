@@ -181,7 +181,7 @@ module Flapjack
         check_stats
         @adjective = 'failing'
 
-        checks_by_entity = Flapjack::Data::EntityCheck.find_current_failing_by_entity(:redis => redis, :logger => logger)
+        checks_by_entity = Flapjack::Data::EntityCheck.find_current_failing_by_entity(:redis => redis)
         @states = checks_by_entity.keys.inject({}) {|result, entity|
           result[entity] = checks_by_entity[entity].sort.map {|check|
             [check] + entity_check_state(entity, check)
