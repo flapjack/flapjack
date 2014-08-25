@@ -36,7 +36,7 @@ module Flapjack
         when !@options[:pidfile].nil?
           @options[:pidfile]
         when !@config_env['pid_dir'].nil?
-          @config_env['pid_dir'] + 'flapper.pid'
+          File.join(@config_env['pid_dir'], 'flapper.pid')
         else
           "/var/run/flapjack/flapper.pid"
         end
@@ -45,7 +45,7 @@ module Flapjack
         when !@options[:logfile].nil?
           @options[:logfile]
         when !@config_env['log_dir'].nil?
-          @config_env['log_dir'] + 'flapper.log'
+          File.join(@config_env['log_dir'], 'flapper.log')
         else
           "/var/run/flapjack/flapper.log"
         end
