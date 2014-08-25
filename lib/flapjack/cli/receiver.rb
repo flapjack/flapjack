@@ -34,7 +34,7 @@ module Flapjack
         when !@options[:pidfile].nil?
           @options[:pidfile]
         when !@config_env['pid_dir'].nil?
-          @config_env['pid_dir'] + "#{@options[:type]}-receiver.pid"
+          File.join(@config_env['pid_dir'], "#{@options[:type]}-receiver.pid")
         else
           "/var/run/flapjack/#{@options[:type]}-receiver.pid"
         end
@@ -43,7 +43,7 @@ module Flapjack
         when !@options[:logfile].nil?
           @options[:logfile]
         when !@config_env['log_dir'].nil?
-          @config_env['log_dir'] + "#{@options[:type]}-receiver.log"
+          File.join(@config_env['log_dir'], "#{@options[:type]}-receiver.log")
         else
           "/var/run/flapjack/#{@options[:type]}-receiver.log"
         end
