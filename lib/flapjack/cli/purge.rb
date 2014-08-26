@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'redis'
+require 'hiredis'
 require 'flapjack/configuration'
 
 module Flapjack

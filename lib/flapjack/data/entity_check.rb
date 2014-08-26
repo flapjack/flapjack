@@ -870,20 +870,32 @@ module Flapjack
       def purge_history(opts = {})
         t = Time.now
         older_than  = opts[:older_than]  # purge older than this number of seconds ago
-        #keep_states = opts[:keep_states] # purge except for the newest keep_states
         raise ":older_than must be supplied" unless older_than
 
-        states = @redis.zrangebyscore("#{@key}:sorted_state_timestamps", "-inf", "+inf")
-
         purge_stamps = historical_states(-1, t.to_i - older_than).map {|s| s[:timestamp]}
-
-        purge_stamps.each do |timestamp|
-          @redis.del("#{@key}:#{timestamp}:state")
-          @redis.del("#{@key}:#{timestamp}:summary")
-          @redis.del("#{@key}:#{timestamp}:count")
-          @redis.del("#{@key}:#{timestamp}:check_latency")
-          @redis.zrem("#{@key}:sorted_state_timestamps", timestamp.to_s)
-          @redis.lrem("#{@key}:states", 0, timestamp.to_s)
+        unless purge_stamps.empty?
+          puts "purging #{purge_stamps.length} states from #{@key}"
+          deletees = []
+          purge_stamps.each do |timestamp|
+            deletees << "#{@key}:#{timestamp}:state"
+            deletees << "#{@key}:#{timestamp}:summary"
+            deletees << "#{@key}:#{timestamp}:count"
+            deletees << "#{@key}:#{timestamp}:check_latency"
+          end
+          puts "  deleting a bunch of keys 100 at a time..."
+          deletees.each_slice(100) do |batch|
+            @redis.del(batch)
+          end
+          puts "  removing a range of items from the #{@key}:sorted_state_timestamps sorted set"
+          @redis.zremrangebyscore("#{@key}:sorted_state_timestamps", '-inf', t.to_i - older_than)
+          puts "  getting the #{@key}:states list"
+          states = @redis.lrange("#{@key}:states", 0, -1)
+          index = 0
+          while states[index].to_i < older_than do
+            index += 1
+          end
+          puts "  trimming the #{@key}:states from #{index}, length #{states.length}"
+          @redis.ltrim("#{@key}:states", index, -1)
         end
         purge_stamps.length
       end
