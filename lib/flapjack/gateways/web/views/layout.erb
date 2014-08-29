@@ -38,18 +38,6 @@
               Summary
             </a>
           </li>
-          <li<%= include_active?('entities_all') %>>
-            <a title="All Entities" href="<%= @base_url %>entities">
-              <i class="fa fa-bullseye fa-lg"></i>
-              All Entities
-            </a>
-          </li>
-          <li<%= include_active?('entities_failing') %>>
-            <a title="Failing Entities" href="<%= @base_url %>entities?type=failing">
-              <i class="fa fa-bullhorn fa-lg"></i>
-              Failing Entities
-            </a>
-          </li>
           <li<%= include_active?('checks_all') %>>
             <a title="All Checks" href="<%= @base_url %>checks">
               <i class="fa fa-check-circle-o fa-lg"></i>

@@ -36,10 +36,6 @@ module Flapjack
               else
                 notification_rules = notification_rules_data.collect do |notification_rule_data|
                   Flapjack::Data::NotificationRule.new(:id => notification_rule_data['id'],
-                    :entities => notification_rule_data['entities'],
-                    :regex_entities => notification_rule_data['regex_entities'],
-                    :tags => notification_rule_data['tags'],
-                    :regex_tags => notification_rule_data['regex_tags'],
                     :time_restrictions => notification_rule_data['time_restrictions'])
                 end
 
@@ -95,10 +91,28 @@ module Flapjack
           app.patch '/notification_rules/:id' do
             Flapjack::Data::NotificationRule.find_by_ids!(params[:id].split(',')).each do |notification_rule|
               apply_json_patch('notification_rules') do |op, property, linked, value|
-                if 'replace'.eql?(op)
-                  if ['entities', 'regex_entities', 'tags', 'regex_tags',
-                      'time_restrictions'].include?(property)
+                case op
+                when 'replace'
+                  if ['time_restrictions'].include?(property)
                     notification_rule.send("#{property}=".to_sym, value)
+                  end
+                when 'add'
+                  case linked
+                  when 'checks'
+                    check = Flapjack::Data::Check.find_by_id(value)
+                    notification_rule.checks << check unless check.nil?
+                  when 'tags'
+                    tag = Flapjack::Data::Tag.find_by_id(value)
+                    notification_rule.tags << tag unless tag.nil?
+                  end
+                when 'remove'
+                  case linked
+                  when 'checks'
+                    check = Flapjack::Data::Check.find_by_id(value)
+                    notification_rule.delete(check) unless check.nil?
+                  when 'tags'
+                    tag = Flapjack::Data::Tag.find_by_id(value)
+                    notification_rule.delete(tag) unless tag.nil?
                   end
                 end
               end

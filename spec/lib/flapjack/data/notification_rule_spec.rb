@@ -13,16 +13,7 @@ describe Flapjack::Data::NotificationRule, :redis => true do
   }
 
   let(:rule_data) {
-    {:tags               => Set.new(["database","physical"]),
-     :entities           => Set.new(["foo-app-01.example.com"]),
-     :time_restrictions  => [ weekdays_8_18 ],
-    }
-  }
-
-  let(:regex_rule_data) {
-    {:regex_tags         => ["^data.*$","^(physical|bare_metal)$"],
-     :regex_entities     => ["^foo-\S{3}-\d{2}.example.com$"],
-     :time_restrictions  => [ weekdays_8_18 ],
+    {:time_restrictions  => [ weekdays_8_18 ],
     }
   }
 
@@ -32,32 +23,6 @@ describe Flapjack::Data::NotificationRule, :redis => true do
     sched = Flapjack::Data::NotificationRule.
               time_restriction_to_icecube_schedule(weekdays_8_18, timezone)
     expect(sched).not_to be_nil
-  end
-
-  it "checks whether entity names match" do
-    rule = Flapjack::Data::NotificationRule.new(rule_data)
-
-    expect(rule.match_entity?('foo-app-01.example.com')).to be_truthy
-    expect(rule.match_entity?('foo-app-02.example.com')).to be_falsey
-  end
-
-  it "checks whether entity tags match" do
-    rule = Flapjack::Data::NotificationRule.new(rule_data)
-
-    expect(rule.match_tags?(['database', 'physical'])).to be_truthy
-    expect(rule.match_tags?(['database', 'physical', 'beetroot'])).to be_truthy
-    expect(rule.match_tags?(['database'])).to be_falsey
-    expect(rule.match_tags?(['virtual'])).to be_falsey
-  end
-
-  it "checks whether entity tags match a regex" do
-    rule = Flapjack::Data::NotificationRule.new(regex_rule_data)
-
-    # FIXME check intended functionality of regex_*
-    expect(rule.match_regex_tags?(['database', 'physical'])).to be_truthy
-    expect(rule.match_regex_tags?(['database', 'physical', 'beetroot'])).to be_falsey
-    expect(rule.match_regex_tags?(['database'])).to be_truthy
-    expect(rule.match_regex_tags?(['virtual'])).to be_falsey
   end
 
 end

@@ -3,7 +3,6 @@
 require 'sinatra/base'
 
 require 'flapjack/data/check'
-require 'flapjack/data/entity'
 
 module Flapjack
 
@@ -45,14 +44,6 @@ module Flapjack
             Flapjack::Data::Check.intersect(:state => Flapjack::Data::CheckState.failing_states)
           end
 
-          def entities
-            {
-              'all'     => Flapjack::Data::Entity.intersect(:enabled => true).count,
-              'failing' => Flapjack::Data::Check.hash_by_entity_name(
-                             failing_checks.intersect(:enabled => true).all).keys.size,
-            }
-          end
-
           def checks
             {
               'all'     => Flapjack::Data::Check.count,
@@ -78,7 +69,7 @@ module Flapjack
           app.get %r{^/metrics} do
             filter = params[:filter] ? filter_query(params[:filter]) : 'all'
 
-            keys = %w(fqdn pid total_keys processed_events event_queue_length check_freshness entities checks)
+            keys = %w(fqdn pid total_keys processed_events event_queue_length check_freshness checks)
             keys = keys.find_all {|m| filter.include?(m) } unless filter == 'all'
 
             metrics = {}

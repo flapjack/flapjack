@@ -29,10 +29,10 @@ module Flapjack
 
           @hostname = Socket.gethostname
 
-          unless @config['watched_check'] && @config['watched_entity']
-            raise RuntimeError, 'Flapjack::Oobetet: watched_check and watched_entity must be defined in the config'
+          unless @config['watched_check']
+            raise RuntimeError, 'Flapjack::Oobetet: watched_check must be defined in the config'
           end
-          @check_matcher = '"' + @config['watched_check'] + '" on ' + @config['watched_entity']
+          @check_matcher = '"' + @config['watched_check'] + '"'
 
           @flapjack_ok = true
           @last_alert = nil
@@ -214,10 +214,10 @@ module Flapjack
 
           @hostname = Socket.gethostname
 
-          unless @config['watched_check'] && @config['watched_entity']
-            raise RuntimeError, 'Flapjack::Oobetet: watched_check and watched_entity must be defined in the config'
+          unless @config['watched_check']
+            raise RuntimeError, 'Flapjack::Oobetet: watched_check must be defined in the config'
           end
-          @check_matcher = '"' + @config['watched_check'] + '" on ' + @config['watched_entity']
+          @check_matcher = '"' + @config['watched_check'] + '"'
 
           @logger.debug("new oobetet pikelet with the following options: #{@config.inspect}")
         end

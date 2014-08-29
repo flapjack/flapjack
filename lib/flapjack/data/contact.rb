@@ -9,11 +9,11 @@ require 'ice_cube'
 require 'sandstorm/record'
 
 require 'flapjack/data/check_state'
-require 'flapjack/data/entity'
 require 'flapjack/data/medium'
 require 'flapjack/data/notification_block'
 require 'flapjack/data/notification_rule'
 require 'flapjack/data/notification_rule_state'
+require 'flapjack/data/tag'
 
 require 'securerandom'
 
@@ -30,10 +30,12 @@ module Flapjack
       define_attributes :first_name            => :string,
                         :last_name             => :string,
                         :email                 => :string,
-                        :timezone              => :string,
-                        :tags                  => :set
+                        :timezone              => :string
 
-      has_and_belongs_to_many :entities, :class_name => 'Flapjack::Data::Entity',
+      has_and_belongs_to_many :checks, :class_name => 'Flapjack::Data::Check',
+        :inverse_of => :contacts
+
+      has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
         :inverse_of => :contacts
 
       has_many :media, :class_name => 'Flapjack::Data::Medium'
@@ -63,10 +65,6 @@ module Flapjack
           end
 
           rule = Flapjack::Data::NotificationRule.new(
-            :entities           => Set.new,
-            :regex_entities     => Set.new,
-            :tags               => Set.new,
-            :regex_tags         => Set.new,
             :time_restrictions  => []
           )
           rule.save
@@ -110,10 +108,11 @@ module Flapjack
       def as_json(opts = {})
         self.attributes.merge(
           :links => {
-            :entities              => opts[:entity_ids] || [],
+            :checks                => opts[:check_ids] || [],
             :media                 => opts[:medium_ids] || [],
             :pagerduty_credentials => opts[:pagerduty_credentials_ids] || [],
             :notification_rules    => opts[:notification_rule_ids] || [],
+            :tags                  => opts[:tag_ids] || [],
           }
         )
       end

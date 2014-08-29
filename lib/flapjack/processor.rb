@@ -165,44 +165,20 @@ module Flapjack
 
       timestamp = Time.now.to_i
 
-      entity_name, check_name = event.id.split(':', 2);
-
-      entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-      check  = nil
-
-      unless entity.nil?
-        check = entity.checks.intersect(:name => check_name).all.first
-      end
-
-      entity_for_check = nil
-
-      if check.nil?
-        unless entity_for_check = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-          entity_for_check = Flapjack::Data::Entity.new(:name => entity_name, :enabled => true)
-          entity_for_check.save
-        end
-
-        check = Flapjack::Data::Check.new(:name => check_name)
-
-        # not saving yet as check state isn't set, requires that for validation
-        # TODO maybe change that?
-      end
+      check = Flapjack::Data::Check.intersect(:name => event.id).all.first ||
+        Flapjack::Data::Check.new(:name => event.id)
 
       should_notify, previous_state, action = update_keys(event, check, timestamp)
 
+      # save before adding, as the check will not have been saved if it was
+      # created above, and associations require the check to have an id
       check.save
+      check.actions << action
 
       if @ncsm_sched_maint
         @ncsm_sched_maint.save
         check.add_scheduled_maintenance(@ncsm_sched_maint)
         @ncsm_sched_maint = nil
-      end
-
-      unless entity_for_check.nil?
-        # action won't have been added to the check's actions set yet
-        check.actions << action
-        # created a new check, so add it to the entity's check list
-        entity_for_check.checks << check
       end
 
       if !should_notify
@@ -223,6 +199,7 @@ module Flapjack
 
       result = true
       previous_state = nil
+      action = nil
 
       event.counter = Flapjack.redis.hincrby('event_counters', 'all', 1)
       Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
@@ -284,7 +261,6 @@ module Flapjack
         action = Flapjack::Data::Action.new(:action => event.state,
           :timestamp => timestamp)
         action.save
-        check.actions << action if check.persisted?
 
         Flapjack.redis.multi
         Flapjack.redis.hincrby('event_counters', 'action', 1)

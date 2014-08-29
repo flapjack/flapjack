@@ -17,7 +17,6 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
   let(:queue) { double(Flapjack::RecordQueue) }
   let(:alert) { double(Flapjack::Data::Alert) }
 
-  let(:entity) { double(Flapjack::Data::Entity) }
   let(:check)  { double(Flapjack::Data::Check) }
 
   before(:each) do
@@ -29,7 +28,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
       with(:query => {'PhoneNumber' => '555-555555',
                       'Username' => 'user',
                       'Pwd' => 'password',
-                      'PhoneMessage' => "Recovery: 'ping' on example.com is OK at #{time_str}, smile"}).
+                      'PhoneMessage' => "Recovery: 'example.com:ping' is OK at #{time_str}, smile"}).
       to_return(:status => 200)
 
     expect(Flapjack::RecordQueue).to receive(:new).with('sms_notifications',
@@ -50,9 +49,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
     expect(alert).to receive(:state_title_case).and_return('OK')
     expect(alert).to receive(:time).and_return(time.to_i)
 
-    expect(entity).to receive(:name).and_return('example.com')
-    expect(check).to receive(:entity).and_return(entity)
-    expect(check).to receive(:name).and_return('ping')
+    expect(check).to receive(:name).and_return('example.com:ping')
     expect(alert).to receive(:check).and_return(check)
 
     expect(lock).to receive(:synchronize).and_yield
@@ -77,7 +74,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
       with(:query => {'PhoneNumber' => '555-555555',
                       'Username' => 'user',
                       'Pwd' => 'password',
-                      'PhoneMessage' => "Recovery: 'ping' on example.com is " +
+                      'PhoneMessage' => "Recovery: 'example.com:ping' is " +
                         "OK at #{time_str}, Four score and seven years ago " +
                         'our fathers brought forth on this continent, a new ' +
                         'nation, conceived i...'}).
@@ -98,9 +95,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
     expect(alert).to receive(:state_title_case).and_return('OK')
     expect(alert).to receive(:time).and_return(time.to_i)
 
-    expect(entity).to receive(:name).and_return('example.com')
-    expect(check).to receive(:entity).and_return(entity)
-    expect(check).to receive(:name).and_return('ping')
+    expect(check).to receive(:name).and_return('example.com:ping')
     expect(alert).to receive(:check).and_return(check)
 
     expect(Flapjack::RecordQueue).to receive(:new).with('sms_notifications',
@@ -138,9 +133,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
     expect(alert).to receive(:state_title_case).and_return('OK')
     expect(alert).to receive(:time).and_return(time.to_i)
 
-    expect(entity).to receive(:name).and_return('example.com')
-    expect(check).to receive(:entity).and_return(entity)
-    expect(check).to receive(:name).and_return('ping')
+    expect(check).to receive(:name).and_return('example.com:ping')
     expect(alert).to receive(:check).and_return(check)
 
     expect(lock).to receive(:synchronize).and_yield

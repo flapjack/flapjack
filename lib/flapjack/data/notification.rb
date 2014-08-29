@@ -24,10 +24,12 @@ module Flapjack
                         :type           => :string,
                         :time           => :timestamp,
                         :duration       => :integer,
-                        :tags           => :set,
                         :event_hash     => :string
 
       belongs_to :check, :class_name => 'Flapjack::Data::Check',
+        :inverse_of => :notifications
+
+      has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
         :inverse_of => :notifications
 
       # state association will not be set for notification tests
@@ -112,19 +114,16 @@ module Flapjack
         rules = contact.notification_rules
 
         check = options[:check]
-        entity_name = check.entity.name
 
         log_rules(rules, "initial")
 
         matchers = rules.select do |rule|
-          (!rule.is_specific? ||
-           (rule.match_tags?(self.tags) && rule.match_regex_tags?(self.tags) &&
-            rule.match_entity?(entity_name) && rule.match_regex_entities?(entity_name))) &&
-          rule.is_occurring_now?(:contact => contact,
-            :default_timezone => options[:default_timezone])
+          rule.is_match?(self.check, self.tags) &&
+            rule.is_occurring_now?(:contact => contact,
+              :default_timezone => options[:default_timezone])
         end
 
-        log_rules(matchers, "after time, entity and tags") if matchers.count != rules.count
+        log_rules(matchers, "after time, check and tags") if matchers.count != rules.count
 
         # delete any general matchers if there are more specific matchers left
         if matchers.any? {|matcher| matcher.is_specific? }
@@ -201,8 +200,6 @@ module Flapjack
         end
 
         alert_check = opts[:check]
-        entity_name = check.entity.name
-        check_name = check.name
 
         unless (['ok', 'acknowledgement', 'test'].include?(state_or_ack)) ||
           medium.alerting_checks.exists?(alert_check.id)
@@ -240,7 +237,7 @@ module Flapjack
         end
 
         unless logger.nil?
-          logger.debug "rollup decisions: #{entity_name}:#{check_name} " +
+          logger.debug "rollup decisions: #{check.name} " +
             "#{state_or_ack} #{media_type} #{medium.address} " +
             "rollup_type: #{rollup_type}"
         end

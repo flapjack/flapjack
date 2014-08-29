@@ -108,14 +108,12 @@ module Flapjack
             end
 
             contacts_ids = contacts.map(&:id)
-            linked_entity_ids = Flapjack::Data::Contact.associated_ids_for_entities(contacts_ids)
             linked_medium_ids = Flapjack::Data::Contact.associated_ids_for_media(contacts_ids)
             linked_pagerduty_credentials_ids = Flapjack::Data::Contact.associated_ids_for_pagerduty_credentials(contacts_ids)
             linked_notification_rule_ids = Flapjack::Data::Contact.associated_ids_for_notification_rules(contacts_ids)
 
             contacts_json = contacts.collect {|contact|
-              contact.as_json(:entity_ids => linked_entity_ids[contact.id],
-                :medium_ids => linked_medium_ids[contact.id],
+              contact.as_json(:medium_ids => linked_medium_ids[contact.id],
                 :pagerduty_credentials_ids => linked_pagerduty_credentials_ids[contact.id],
                 :notification_rule_ids => linked_notification_rule_ids[contact.id]).to_json
             }.join(", ")
@@ -134,9 +132,6 @@ module Flapjack
                     end
                   when 'add'
                     case linked
-                    when 'entities'
-                      entity = Flapjack::Data::Entity.find_by_id(value)
-                      contact.entities << entity unless entity.nil?
                     when 'media'
                       Flapjack::Data::Medium.send(:lock) do
                         medium = Flapjack::Data::Medium.find_by_id(value)
@@ -154,9 +149,6 @@ module Flapjack
                     end
                   when 'remove'
                     case linked
-                    when 'entities'
-                      entity = Flapjack::Data::Entity.find_by_id(value)
-                      contact.entities.delete(entity) unless entity.nil?
                     when 'media'
                       medium = Flapjack::Data::Medium.find_by_id(value)
                       contact.media.delete(medium) unless medium.nil?

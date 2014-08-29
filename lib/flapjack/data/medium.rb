@@ -2,6 +2,8 @@
 
 require 'sandstorm/record'
 
+require 'flapjack/data/check'
+
 module Flapjack
 
   module Data
@@ -122,14 +124,13 @@ module Flapjack
         self.class.send(:lock, Flapjack::Data::Check,
           Flapjack::Data::ScheduledMaintenance,
           Flapjack::Data::UnscheduledMaintenance,
-          Flapjack::Data::Entity,
           Flapjack::Data::Contact) do
 
           checks_to_remove = alerting_checks.select do |check|
             Flapjack::Data::CheckState.ok_states.include?(check.state) ||
             check.in_unscheduled_maintenance? ||
-            check.in_scheduled_maintenance? ||
-            !check.entity.contacts.ids.include?(self.contact.id)
+            check.in_scheduled_maintenance? # ||
+            # !check.entity.contacts.ids.include?(self.contact.id)
           end
 
           if checks_to_remove.empty?

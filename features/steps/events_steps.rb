@@ -20,9 +20,7 @@ def submit_event(event)
 end
 
 def set_scheduled_maintenance(entity_name, check_name, duration)
-  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  expect(entity).not_to be_nil
-  check = entity.checks.intersect(:name => check_name).all.first
+  check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   expect(check).not_to be_nil
 
   t = Time.now
@@ -33,9 +31,7 @@ def set_scheduled_maintenance(entity_name, check_name, duration)
 end
 
 def remove_scheduled_maintenance(entity_name, check_name)
-  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  expect(entity).not_to be_nil
-  check = entity.checks.intersect(:name => check_name).all.first
+  check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   expect(check).not_to be_nil
 
   t = Time.now
@@ -47,9 +43,7 @@ def remove_scheduled_maintenance(entity_name, check_name)
 end
 
 def set_unscheduled_maintenance(entity_name, check_name, duration)
-  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  expect(entity).not_to be_nil
-  check = entity.checks.intersect(:name => check_name).all.first
+  check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   expect(check).not_to be_nil
 
   t = Time.now
@@ -60,18 +54,14 @@ def set_unscheduled_maintenance(entity_name, check_name, duration)
 end
 
 def clear_unscheduled_maintenance(entity_name, check_name)
-  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  expect(entity).not_to be_nil
-  check = entity.checks.intersect(:name => check_name).all.first
+  check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   expect(check).not_to be_nil
 
   check.clear_unscheduled_maintenance(Time.now)
 end
 
 def set_state(entity_name, check_name, state, last_update)
-  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  expect(entity).not_to be_nil
-  check = entity.checks.intersect(:name => check_name).all.first
+  check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   expect(check).not_to be_nil
 
   check.state = state
@@ -84,8 +74,7 @@ def submit_ok(entity_name, check_name)
     'type'    => 'service',
     'state'   => 'ok',
     'summary' => '0% packet loss',
-    'entity'  => entity_name,
-    'check'   => check_name,
+    'check'   => "#{entity_name}:#{check_name}",
   }
   submit_event(event)
 end
@@ -95,8 +84,7 @@ def submit_warning(entity_name, check_name)
     'type'    => 'service',
     'state'   => 'warning',
     'summary' => '25% packet loss',
-    'entity'  => entity_name,
-    'check'   => check_name,
+    'check'   => "#{entity_name}:#{check_name}",
   }
   submit_event(event)
 end
@@ -106,8 +94,7 @@ def submit_critical(entity_name, check_name)
     'type'    => 'service',
     'state'   => 'critical',
     'summary' => '100% packet loss',
-    'entity'  => entity_name,
-    'check'   => check_name,
+    'check'   => "#{entity_name}:#{check_name}",
   }
   submit_event(event)
 end
@@ -117,30 +104,27 @@ def submit_unknown(entity_name, check_name)
     'type'    => 'service',
     'state'   => 'unknown',
     'summary' => 'check execution error',
-    'entity'  => entity_name,
-    'check'   => check_name,
+    'check'   => "#{entity_name}:#{check_name}",
   }
   submit_event(event)
 end
 
 def submit_acknowledgement(entity_name, check_name)
   event = {
-    'type'               => 'action',
-    'state'              => 'acknowledgement',
-    'summary'            => "I'll have this fixed in a jiffy, saw the same thing yesterday",
-    'entity'             => entity_name,
-    'check'              => check_name,
+    'type'    => 'action',
+    'state'   => 'acknowledgement',
+    'summary' => "I'll have this fixed in a jiffy, saw the same thing yesterday",
+    'check'   => "#{entity_name}:#{check_name}",
   }
   submit_event(event)
 end
 
 def submit_test(entity_name, check_name)
   event = {
-    'type'               => 'action',
-    'state'              => 'test_notifications',
-    'summary'            => "test notification for all contacts interested in #{entity_name}",
-    'entity'             => entity_name,
-    'check'              => check_name,
+    'type'    => 'action',
+    'state'   => 'test_notifications',
+    'summary' => "test notification for all contacts interested in #{entity_name}",
+    'check'   => "#{entity_name}:#{check_name}",
   }
   submit_event(event)
 end
@@ -164,22 +148,10 @@ def stringify(obj)
   obj
 end
 
-Given /^an entity '([\w\.\-]+)' exists$/ do |entity_name|
-  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  if entity.nil?
-    entity = Flapjack::Data::Entity.new(:id   => '5000',
-                                        :name => entity_name)
-    expect(entity.save).to be true
-  end
-end
-
 Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check_name, entity_name|
-  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  expect(entity).not_to be_nil
-
-  check = entity.checks.intersect(:name => check_name).all.first
+  check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   if check.nil?
-    check = Flapjack::Data::Check.new(:name => check_name)
+    check = Flapjack::Data::Check.new(:name => "#{entity_name}:#{check_name}")
     expect(check.save).to be true
   end
   entity.checks << check
@@ -278,9 +250,7 @@ Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on enti
   check_name  ||= @check_name
   entity_name ||= @entity_name
 
-  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  expect(entity).not_to be_nil
-  check = entity.checks.intersect(:name => check_name).all.first
+  check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   expect(check).not_to be_nil
 
   if last_notification = check.last_notification
@@ -293,9 +263,7 @@ Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '
   check_name  ||= @check_name
   entity_name ||= @entity_name
 
-  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  expect(entity).not_to be_nil
-  check = entity.checks.intersect(:name => check_name).all.first
+  check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   expect(check).not_to be_nil
 
   last_notification = check.last_notification
@@ -308,9 +276,7 @@ Then /^(un)?scheduled maintenance should be generated(?: for check '([\w\.\-]+)'
   check_name  ||= @check_name
   entity_name ||= @entity_name
 
-  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  expect(entity).not_to be_nil
-  check = entity.checks.intersect(:name => check_name).all.first
+  check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   expect(check).not_to be_nil
 
   expect(check).to (unsched ? be_in_unscheduled_maintenance : be_in_scheduled_maintenance)
@@ -330,19 +296,19 @@ Then /^dump notification rules for user (\S+)$/ do |contact|
   }
 end
 
-# added for notification rules:
-Given /^the following entities exist:$/ do |entities|
-  entities.hashes.each do |entity_data|
-    entity = find_or_create_entity(entity_data)
+# # added for notification rules:
+# Given /^the following entities exist:$/ do |entities|
+#   entities.hashes.each do |entity_data|
+#     entity = find_or_create_entity(entity_data)
 
-    next if entity_data['contacts'].nil?
-    entity_data['contacts'].split(',').map(&:strip).each do |contact_id|
-      contact = Flapjack::Data::Contact.find_by_id(contact_id)
-      expect(contact).not_to be_nil
-      entity.contacts << contact
-    end
-  end
-end
+#     next if entity_data['contacts'].nil?
+#     entity_data['contacts'].split(',').map(&:strip).each do |contact_id|
+#       contact = Flapjack::Data::Contact.find_by_id(contact_id)
+#       expect(contact).not_to be_nil
+#       entity.contacts << contact
+#     end
+#   end
+# end
 
 Given /^the following users exist:$/ do |contacts|
   contacts.hashes.each do |contact_data|
@@ -473,11 +439,11 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
   expect(queued_length).to eq(num_queued.to_i)
 end
 
-When(/^user (\S+) ceases to be a contact of entity '(.*)'$/) do |contact_id, entity_name|
-  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  expect(entity).not_to be_nil
+When(/^user (\S+) ceases to be a contact of check '(.*)'$/) do |contact_id, check_name|
+  check = Flapjack::Data::Check.intersect(:name => "#{check_name}").all.first
+  expect(check).not_to be_nil
   contact = Flapjack::Data::Contact.find_by_id(contact_id)
   expect(contact).not_to be_nil
 
-  entity.contacts.delete(contact)
+  check.contacts.delete(contact)
 end

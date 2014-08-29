@@ -23,60 +23,53 @@ def find_or_create_contact(contact_data)
   contact
 end
 
-def find_or_create_entity(entity_data)
-  entity = Flapjack::Data::Entity.find_by_id(entity_data['id'])
-  if entity.nil?
-    entity = Flapjack::Data::Entity.new(:id => entity_data['id'],
-      :name => entity_data['name'])
-    expect(entity.save).to be true
+def find_or_create_check(check_data)
+  check = Flapjack::Data::Check.find_by_id(check_data[:id])
 
-    check = Flapjack::Data::Check.new(:name => 'ping')
+  if check.nil?
+    check = Flapjack::Data::Check.new(:id => check_data[:id],
+      :name => check_data[:name])
     expect(check.save).to be true
-
-    entity.checks << check
   end
 
-  entity
+  check
 end
 
-Given /^(?:a|the) user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ do |entity_name|
+Given /^(?:a|the) user wants to receive SMS notifications for check '(.+)'$/ do |check_name|
   contact = find_or_create_contact( 'id'         => '0999',
                                     'first_name' => 'John',
                                     'last_name'  => 'Smith',
                                     'email'      => 'johns@example.dom',
                                     'media'      => {'sms' => '+61888888888'} )
-  entity = find_or_create_entity('id'       => '5000',
-                                 'name'     => entity_name)
-  entity.contacts << contact
+  check = find_or_create_check(:id   => '5000',
+                               :name => check_name)
+  check.contacts << contact
 end
 
-Given /^(?:a|the) user wants to receive email notifications for entity '([\w\.\-]+)'$/ do |entity_name|
+Given /^(?:a|the) user wants to receive email notifications for check '(.+)'$/ do |check_name|
   contact = find_or_create_contact( 'id'         => '1000',
                                     'first_name' => 'Jane',
                                     'last_name'  => 'Smith',
                                     'email'      => 'janes@example.dom',
                                     'media'      => {'email' => 'janes@example.dom'} )
 
-  entity = find_or_create_entity('id'       => '5001',
-                                 'name'     => entity_name)
-  entity.contacts << contact
+  check = find_or_create_check(:id   => '5000',
+                               :name => check_name)
+  check.contacts << contact
 end
 
 # TODO create the notification object in redis, flag the relevant operation as
 # only needing that part running, split up the before block that covers these
-When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_name|
+When /^an event notification is generated for check '(.+)'$/ do |check_name|
   timestamp = Time.now.to_i
 
   event = Flapjack::Data::Event.new('type'    => 'service',
                                     'state'   => 'critical',
                                     'summary' => '100% packet loss',
-                                    'entity'  => entity_name,
-                                    'check'   => 'ping',
+                                    'check'   => check_name,
                                     'time'    => timestamp)
 
-  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  expect(entity).not_to be_nil
-  check = entity.checks.intersect(:name => 'ping').all.first
+  check = Flapjack::Data::Check.intersect(:name => check_name).all.first
   expect(check).not_to be_nil
 
   check.state = 'critical'
@@ -111,16 +104,14 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_
   drain_notifications
 end
 
-Then /^an (SMS|email) notification for entity '([\w\.\-]+)' should( not)? be queued$/ do |medium, entity_name, neg|
+Then /^an (SMS|email) notification for check '(.+)' should( not)? be queued$/ do |medium, check_name, neg|
   queue = redis_peek("#{medium.downcase}_notifications", Flapjack::Data::Alert)
-  expect(queue.select {|n| n.check.entity.name =~ /#{entity_name}/ }).
+  expect(queue.select {|n| n.check.name == check_name }).
         send((neg ? :to : :not_to), be_empty)
 end
 
-Given /^an (SMS|email) notification has been queued for entity '([\w\.\-]+)'$/ do |media_type, entity_name|
-  entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-  expect(entity).not_to be_nil
-  check = entity.checks.intersect(:name => 'ping').all.first
+Given /^an (SMS|email) notification has been queued for entity '([\w\.\-]+)'$/ do |media_type, check_name|
+  check = Flapjack::Data::Check.intersect(:name => check_name).all.first
   expect(check).not_to be_nil
 
   check.state = 'critical'
@@ -138,7 +129,7 @@ Given /^an (SMS|email) notification has been queued for entity '([\w\.\-]+)'$/ d
     raise "Couldn't save alert: #{@alert.errors.full_messages.inspect}"
   end
 
-  contact = check.entity.contacts.all.first
+  contact = check.contacts.all.first
   expect(contact).not_to be_nil
 
   medium = contact.media.intersect(:type => media_type.downcase).all.first
@@ -162,7 +153,7 @@ When /^the SMS notification handler fails to send an SMS$/ do
 end
 
 When /^the email notification handler runs successfully$/ do
-  @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525, 'from' => 'flapjacl@example.com'}}, :logger => @logger)
+  @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525, 'from' => 'flapjack@example.com'}}, :logger => @logger)
   @email.send(:handle_alert, @alert)
 end
 
@@ -174,7 +165,7 @@ When /^the email notification handler fails to send an email$/ do
     end
   end
 
-  @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525, 'from' => 'flapjacl@example.com'}}, :logger => @logger)
+  @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525, 'from' => 'flapjack@example.com'}}, :logger => @logger)
   begin
     @email.send(:handle_alert, @alert)
   rescue RuntimeError

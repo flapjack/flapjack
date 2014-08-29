@@ -8,7 +8,7 @@ You have <%= rollup_alerts_count %> alerting check<%= rollup_alerts_count == 1 ?
       check    = rollup_alert.check
       state    = rollup_alert.state
       duration = (ChronicDuration.output(rollup_alert.duration, :keep_zero => true) || '0 secs') -%>
-  * <%= check.name %> on <%= check.entity.name %> is <%= ['ok'].include?(state) ? state.upcase : state.titleize %> (<%= duration %>)
+  * <%= check.name %> is <%= ['ok'].include?(state) ? state.upcase : state.titleize %> (<%= duration %>)
 <% end -%>
 
 <% rollup_threshold = @alert.medium.rollup_threshold -%>

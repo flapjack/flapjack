@@ -47,8 +47,6 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   end
 
   it "returns all the contacts" do
-    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_entities).
-      with([contact.id]).and_return({})
     expect(Flapjack::Data::Contact).to receive(:associated_ids_for_media).
       with([contact.id]).and_return({})
     expect(Flapjack::Data::Contact).to receive(:associated_ids_for_pagerduty_credentials).
@@ -64,8 +62,6 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   end
 
   it "returns the core information of a specified contact" do
-    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_entities).
-      with([contact.id]).and_return({})
     expect(Flapjack::Data::Contact).to receive(:associated_ids_for_media).
       with([contact.id]).and_return({})
     expect(Flapjack::Data::Contact).to receive(:associated_ids_for_pagerduty_credentials).

@@ -25,26 +25,25 @@ module Factory
     redis.exec
   end
 
-  def self.entity(attrs = {})
+  def self.tag(attrs = {})
     redis.multi
-    redis.hmset("entity:#{attrs[:id]}:attrs", {'name' => attrs[:name]}.flatten)
-    redis.sadd('entity::ids', attrs[:id])
-    redis.hset("entity::by_name", attrs[:name], attrs[:id])
+    redis.hmset("tag:#{attrs[:id]}:attrs", {'name' => attrs[:name]}.flatten)
+    redis.sadd('tag::ids', attrs[:id])
+    redis.hset("tag::by_name", attrs[:name], attrs[:id])
+
     redis.exec
   end
 
-  def self.check(entity, attrs = {})
+  def self.check(attrs = {})
     attrs[:state] ||= 'ok'
     redis.multi
     redis.hmset("check:#{attrs[:id]}:attrs", {'name' => attrs[:name],
       'state' => attrs[:state], 'enabled' => (!!attrs[:enabled]).to_s}.flatten)
     redis.sadd('check::ids', attrs[:id])
-    redis.sadd("check::by_name:#{attrs[:name]}", attrs[:id])
+    redis.hset("check::by_name", attrs[:name], attrs[:id])
     redis.sadd("check::by_state:#{attrs[:state]}", attrs[:id])
     redis.sadd("check::by_enabled:#{!!attrs[:enabled]}", attrs[:id])
 
-    redis.hset("check:#{attrs[:id]}:belongs_to", 'entity_id', entity.id)
-    redis.sadd("entity:#{entity.id}:checks_ids", attrs[:id].to_s)
     redis.exec
   end
 

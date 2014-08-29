@@ -7,10 +7,7 @@ describe Flapjack::Data::Medium, :redis => true do
   it "clears expired notification blocks" do
     t = Time.now
 
-    Factory.entity(:name => 'foo.example.com', :id => '5')
-    entity = Flapjack::Data::Entity.find_by_id('5')
-
-    Factory.check(entity, :entity_name => entity.name, :name => 'PING',
+    Factory.check(:name => 'foo.example.com:PING',
       :id => 1, :enabled => true)
     check = Flapjack::Data::Check.find_by_id('1')
 

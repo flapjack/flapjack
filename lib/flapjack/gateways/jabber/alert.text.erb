@@ -2,7 +2,7 @@
 <% type = @alert.type -%>
 <%= @alert.type_sentence_case -%>
 : <% if @ack_str %><%= @ack_str %>, <% end -%>
-"<%= check.name %>" on <%= check.entity.name -%>
+<%= '"' + check.name + '"' -%>
 <% unless ['acknowledgement', 'test'].include?(type) -%>
  is <%= @alert.state_title_case -%>
 <% end -%>

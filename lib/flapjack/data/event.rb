@@ -9,7 +9,7 @@ module Flapjack
 
       attr_accessor :counter, :id_hash, :tags
 
-      attr_reader :check_name, :summary, :details, :acknowledgement_id, :perfdata
+      attr_reader :id, :summary, :details, :acknowledgement_id, :perfdata
 
       REQUIRED_KEYS = ['type', 'state', 'entity', 'check', 'summary']
       OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration', 'tags', 'perfdata']
@@ -116,7 +116,7 @@ module Flapjack
       #   'details'   => check_long_output,
       #   'perfdata'  => perf_data,
       #   'time'      => timestamp
-      def self.push(queue, event, opts = {})
+      def self.push(queue, event)
         event['time'] = Time.now.to_i if event['time'].nil?
 
         begin
@@ -141,58 +141,45 @@ module Flapjack
         Flapjack.redis.llen(queue)
       end
 
-      # TODO maybe pass check.id instead, and not use main queue?
-      def self.create_acknowledgement(queue, check, opts = {})
-        data = { 'type'               => 'action',
-                 'state'              => 'acknowledgement',
-                 'entity'             => check.entity.name,
-                 'check'              => check.name,
-                 'summary'            => opts[:summary],
-                 'duration'           => opts[:duration],
-                 'acknowledgement_id' => opts[:acknowledgement_id]
-               }
-        self.push(queue, data, opts)
+      def self.create_acknowledgements(queue, checks, opts = {})
+        raise "Check(s) must be provided" if checks.nil?
+        checks = [checks] unless checks.is_a?(Array)
+        checks.each do |check|
+          self.push(queue, 'type'               => 'action',
+                           'state'              => 'acknowledgement',
+                           'check'              => check.name,
+                           'summary'            => opts[:summary],
+                           'duration'           => opts[:duration],
+                           'acknowledgement_id' => opts[:acknowledgement_id])
+        end
       end
 
-      # TODO maybe pass check.id instead, and not use main queue?
-      def self.test_notifications(queue, entity, check, opts = {})
-        raise "Entity must be provided" if entity.nil?
-        data = { 'type'               => 'action',
-                 'state'              => 'test_notifications',
-                 'entity'             => (check ? check.entity.name : (entity ? entity.name : nil)),
-                 'check'              => (check ? check.name : 'test'),
-                 'summary'            => opts[:summary],
-                 'details'            => opts[:details]
-               }
-        self.push(queue, data, opts)
+      def self.test_notifications(queue, checks, opts = {})
+        raise "Check(s) must be provided" if checks.nil?
+        checks = [checks] unless checks.is_a?(Array)
+        checks.each do |check|
+          self.push(queue, 'type'               => 'action',
+                           'state'              => 'test_notifications',
+                           'check'              => check.name,
+                           'summary'            => opts[:summary],
+                           'details'            => opts[:details])
+        end
       end
 
       def initialize(attrs = {})
-        [:type, :state, :entity, :check, :time, :summary,
+        @id = "#{attrs['entity']}:#{attrs['check']}"
+        [:type, :state, :time, :summary,
          :perfdata, :details, :acknowledgement_id, :duration, :tags].each do |key|
-          case key
-          when :entity
-            @entity_name = attrs['entity']
-          when :check
-            @check_name = attrs['check']
-          else
-            instance_variable_set("@#{key.to_s}", attrs[key.to_s])
-          end
+          instance_variable_set("@#{key.to_s}", attrs[key.to_s])
         end
-        # details is optional. set it to nil if it only contains whitespace
+        # details and perfdata are optional. set to nil if they only contain whitespace
         @details = (@details.is_a?(String) && ! @details.strip.empty?) ? @details.strip : nil
-        # perfdata is optional. set it to nil if it only contains whitespace
         @perfdata = (@perfdata.is_a?(String) && ! @perfdata.strip.empty?) ? @perfdata.strip : nil
       end
 
       def state
         return unless @state
         @state.downcase
-      end
-
-      def entity_name
-        return unless @entity_name
-        @entity_name.downcase
       end
 
       def duration
@@ -203,10 +190,6 @@ module Flapjack
       def time
         return unless @time
         @time.to_i
-      end
-
-      def id
-        (entity_name || '-') + ':' + (check_name || '-')
       end
 
       def type

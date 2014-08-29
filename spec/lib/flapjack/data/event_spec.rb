@@ -24,7 +24,6 @@ describe Flapjack::Data::Event do
 
   context 'class' do
 
-    let(:entity) { double(Flapjack::Data::Entity) }
     let(:check) { double(Flapjack::Data::Check) }
 
     before(:each) do
@@ -40,8 +39,6 @@ describe Flapjack::Data::Event do
     end
 
     it "creates a notification testing event" do
-      expect(entity).to receive(:name).and_return(entity_name)
-      expect(check).to receive(:entity).and_return(entity)
       expect(check).to receive(:name).and_return(check_name)
 
       expect(Time).to receive(:now).and_return(time)
@@ -49,13 +46,11 @@ describe Flapjack::Data::Event do
       expect(redis).to receive(:lpush).with('events', /"testing"/ )
       expect(redis).to receive(:lpush).with('events_actions', anything)
 
-      Flapjack::Data::Event.test_notifications('events', entity, check,
+      Flapjack::Data::Event.test_notifications('events', [check],
         :summary => 'test', :details => 'testing')
     end
 
     it "creates an acknowledgement event" do
-      expect(entity).to receive(:name).and_return(entity_name)
-      expect(check).to receive(:entity).and_return(entity)
       expect(check).to receive(:name).and_return(check_name)
 
       expect(Time).to receive(:now).and_return(time)
@@ -63,7 +58,7 @@ describe Flapjack::Data::Event do
       expect(redis).to receive(:lpush).with('events', /"acking"/ )
       expect(redis).to receive(:lpush).with('events_actions', anything)
 
-      Flapjack::Data::Event.create_acknowledgement('events', check,
+      Flapjack::Data::Event.create_acknowledgements('events', [check],
         :summary => 'acking', :time => time.to_i)
     end
 
@@ -73,7 +68,6 @@ describe Flapjack::Data::Event do
     let(:event) { Flapjack::Data::Event.new(event_data) }
 
     it "matches the data it is initialised with" do
-      expect(event.entity_name).to eq(event_data['entity'])
       expect(event.state).to eq(event_data['state'])
       expect(event.duration).to eq(event_data['duration'])
       expect(event.time).to eq(event_data['time'])

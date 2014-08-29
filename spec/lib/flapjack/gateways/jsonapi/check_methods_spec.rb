@@ -5,7 +5,6 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
 
   include_context "jsonapi"
 
-  let(:entity)   { double(Flapjack::Data::Entity, :id => 'efgh') }
   let(:check)    { double(Flapjack::Data::Check, :id => '5678') }
 
   let(:check_data)   {
@@ -18,7 +17,6 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
   let(:check_presenter) { double(Flapjack::Gateways::JSONAPI::CheckPresenter) }
 
   it "retrieves all checks" do
-    expect(check).to receive(:entity).and_return(entity)
     expect(check).to receive(:as_json).and_return(check_data)
     expect(Flapjack::Data::Check).to receive(:all).and_return([check])
 
@@ -28,7 +26,6 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
   end
 
   it "retrieves one check" do
-    expect(check).to receive(:entity).and_return(entity)
     expect(check).to receive(:as_json).and_return(check_data)
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
       with([check.id]).and_return([check])
@@ -40,11 +37,9 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
 
   it "retrieves several checks" do
     check_2 = double(Flapjack::Data::Check, :id => 'abcd')
-    check_data_2 = {'entity_name' => 'www.example.com', 'name' => 'PING', 'id' => check_2.id}
+    check_data_2 = {'name' => 'www.example.com:PING', 'id' => check_2.id}
 
-    expect(check).to receive(:entity).and_return(entity)
     expect(check).to receive(:as_json).and_return(check_data)
-    expect(check_2).to receive(:entity).and_return(entity)
     expect(check_2).to receive(:as_json).and_return(check_data_2)
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
       with([check.id, check_2.id]).and_return([check, check_2])
@@ -70,8 +65,8 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
       with([check.id]).and_return([check])
 
-    expect(Flapjack::Data::Event).to receive(:create_acknowledgement).
-      with('events', check, :duration => (4 * 60 * 60))
+    expect(Flapjack::Data::Event).to receive(:create_acknowledgements).
+      with('events', [check], :duration => (4 * 60 * 60))
 
     post "/unscheduled_maintenances/checks/#{check.id}", {}, jsonapi_post_env
     expect(last_response.status).to eq(204)
@@ -189,10 +184,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
       with([check.id]).and_return([check])
 
-    expect(check).to receive(:entity_name).and_return('www.example.com')
+    expect(check).to receive(:name).and_return('www.example.com:PING')
 
     expect(Flapjack::Data::Event).to receive(:test_notifications).
-      with('events', check, an_instance_of(Hash))
+      with('events', [check], an_instance_of(Hash))
 
     post "/test_notifications/checks/#{check.id}"
     expect(last_response.status).to eq(204)

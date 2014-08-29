@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+
+require 'sandstorm/record'
+
+require 'flapjack/data/check'
+require 'flapjack/data/contact'
+
+module Flapjack
+
+  module Data
+
+    class Tag
+
+      include Sandstorm::Record
+
+      define_attributes :name => :string
+
+      has_and_belongs_to_many :checks,
+        :class_name => 'Flapjack::Data::Check', :inverse_of => :tags
+
+      has_and_belongs_to_many :contacts,
+        :class_name => 'Flapjack::Data::Contact', :inverse_of => :tags
+
+      has_and_belongs_to_many :notification_rules,
+        :class_name => 'Flapjack::Data::NotificationRule', :inverse_of => :tags
+
+      has_and_belongs_to_many :notifications,
+        :class_name => 'Flapjack::Data::Notification', :inverse_of => :tags
+
+      unique_index_by :name
+
+      # TODO validate uniqueness of name
+
+    end
+  end
+end

@@ -120,7 +120,6 @@ module Flapjack
 
       get '/' do
         check_stats
-        entity_stats
 
         erb 'index.html'.to_sym
       end
@@ -129,7 +128,6 @@ module Flapjack
         @current_time = Time.now
 
         self_stats(@current_time)
-        entity_stats
         check_stats
 
         erb 'self_stats.html'.to_sym
@@ -139,12 +137,9 @@ module Flapjack
         time = Time.now
 
         self_stats(time)
-        entity_stats
         check_stats
         {
           'events_queued'       => @events_queued,
-          'all_entities'        => @count_all_entities,
-          'failing_entities'    => @count_failing_entities,
           'all_checks'          => @count_all_checks,
           'failing_checks'      => @count_failing_checks,
           'processed_events' => {
@@ -164,60 +159,20 @@ module Flapjack
         }.to_json
       end
 
-      get '/entities' do
-        entity_stats
-
-        if 'failing'.eql?(params[:type])
-          @adjective = 'failing'
-          failing_checks = Flapjack::Data::Check.
-            intersect(:state => Flapjack::Data::CheckState.failing_states).all
-
-          checks_by_entity = Flapjack::Data::Check.hash_by_entity_name( failing_checks )
-
-          @entity_names = checks_by_entity.keys.sort
-        else
-          @adjective = 'all'
-          @entity_names = Flapjack::Data::Entity.intersect(:enabled => true).all.
-            map(&:name).sort
-        end
-
-        erb 'entities.html'.to_sym
-      end
-
-      get '/entities/:id' do
-        entity_id = params[:id]
-        entity_stats
-        time = Time.now
-
-        @entity = Flapjack::Data::Entity.find_by_id(@entity_id)
-        return 404 if @entity.nil?
-
-        @states = @entity.checks.all.sort_by(&:name).map {|check|
-            [check.name] + check_state(check, time)
-          }.sort_by {|parts| parts }
-
-        erb 'entity.html'.to_sym
-      end
-
       get '/checks' do
         check_stats
         time = Time.now
 
-        @adjective, checks = if 'failing'.eql?(params[:type])
+        @adjective, @checks = if 'failing'.eql?(params[:type])
           ['failing', failing_checks.all]
         else
           ['all', Flapjack::Data::Check.all]
         end
 
-        checks_by_entity_name = Flapjack::Data::Check.hash_by_entity_name(checks)
-        @states = checks_by_entity_name.inject({}) {|result, (entity_name, checks)|
-          entity = checks.first.entity
-          result[entity] = checks.sort_by(&:name).map {|check|
-            [check] + check_state(check, time)
-          }
-          result
-        }
-        @entities = @states.keys
+        @states = @checks.inject({}) do |memo, check|
+          memo[check] = check_state(check, time)
+          memo
+        end
 
         erb 'checks.html'.to_sym
       end
@@ -229,8 +184,6 @@ module Flapjack
 
         @check = Flapjack::Data::Check.find_by_id(check_id)
         return 404 if @check.nil?
-
-        @entity = @check.entity
 
         check_stats
         states = @check.states
@@ -273,9 +226,9 @@ module Flapjack
         check = Flapjack::Data::Check.find_by_id(check_id)
         return 404 if check.nil?
 
-        ack = Flapjack::Data::Event.create_acknowledgement(
+        ack = Flapjack::Data::Event.create_acknowledgements(
           config['processor_queue'] || 'events',
-          check,
+          [check],
           :summary => (summary || ''),
           :acknowledgement_id => acknowledgement_id,
           :duration => duration,
@@ -437,13 +390,6 @@ module Flapjack
       def failing_checks
         @failing_checks ||= Flapjack::Data::Check.intersect(:state =>
                               Flapjack::Data::CheckState.failing_states)
-      end
-
-      def entity_stats
-        @count_all_entities      = Flapjack::Data::Entity.intersect(:enabled => true).count
-        failing_enabled_checks   = failing_checks.intersect(:enabled => true).all
-        @count_failing_entities  = Flapjack::Data::Check.hash_by_entity_name(
-          failing_enabled_checks).keys.size
       end
 
       def check_stats

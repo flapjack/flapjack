@@ -11,7 +11,6 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
   let(:redis) { double(Redis) }
   let(:lock)  { double(Monitor) }
 
-  let(:entity) { double(Flapjack::Data::Entity) }
   let(:check) { double(Flapjack::Data::Check) }
 
   before(:each) do
@@ -63,12 +62,10 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
          with(:body => {'service_key'  => 'pdservicekey',
                         'incident_key' => 'app-02:ping',
                         'event_type'   => 'trigger',
-                        'description'  => 'Problem: "ping" on app-02 is Critical'}.to_json).
+                        'description'  => 'Problem: "app-02:ping" is Critical'}.to_json).
          to_return(:status => 200, :body => {'status' => 'success'}.to_json)
 
-      expect(entity).to receive(:name).twice.and_return('app-02')
-      expect(check).to receive(:entity).twice.and_return(entity)
-      expect(check).to receive(:name).twice.and_return('ping')
+      expect(check).to receive(:name).twice.and_return('app-02:ping')
 
       expect(alert).to receive(:address).and_return('pdservicekey')
       expect(alert).to receive(:check).twice.and_return(check)
@@ -123,18 +120,15 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       contacts_all = double(:contacts, :all => [contact])
       expect(check).to receive(:contacts).and_return(contacts_all)
-
-      expect(entity).to receive(:name).twice.and_return('foo-app-01.bar.net')
-      expect(check).to receive(:entity).twice.and_return(entity)
-      expect(check).to receive(:name).twice.and_return('PING')
+      expect(check).to receive(:name).twice.and_return('app-02:ping')
       expect(check).to receive(:in_unscheduled_maintenance?).and_return(false)
 
       failing_checks = double('failing_checks', :all => [check])
       expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
         ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
-      expect(Flapjack::Data::Event).to receive(:create_acknowledgement).with('events',
-        check,
+      expect(Flapjack::Data::Event).to receive(:create_acknowledgements).with('events',
+        [check],
         :summary => 'Acknowledged on PagerDuty by John Smith',
         :duration => 14400)
 

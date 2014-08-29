@@ -36,14 +36,7 @@ module Flapjack
               raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Check, requested_checks)
             end
 
-            linked_entity_ids = checks.empty? ? [] : checks.inject({}) do |memo, check|
-              memo[check.id] = check.entity.id
-              memo
-            end
-
-            checks_json = checks.collect {|check|
-              check.to_json(:entity_ids => linked_entity_ids[check.id])
-            }.join(",")
+            checks_json = checks.collect {|check| check.to_json}.join(",")
 
             '{"checks":[' + checks_json + ']}'
           end

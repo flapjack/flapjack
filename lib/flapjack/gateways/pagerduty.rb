@@ -63,12 +63,11 @@ module Flapjack
 
         def handle_alert(alert)
           check = alert.check
-          entity_name = check.entity.name
           check_name  = check.name
 
           address = alert.address
 
-          @logger.debug("processing pagerduty notification service_key: #{address}, entity: #{entity_name}, " +
+          @logger.debug("processing pagerduty notification service_key: #{address}, " +
                         "check: '#{check_name}', state: #{alert.state}, summary: #{alert.summary}")
 
           pagerduty_dir = File.join(File.dirname(__FILE__), 'pagerduty')
@@ -105,7 +104,7 @@ module Flapjack
           end
 
           send_pagerduty_event(:service_key  => address,
-                               :incident_key => "#{entity_name}:#{check_name}",
+                               :incident_key => check_name,
                                :event_type   => pagerduty_type,
                                :description  => msg)
 
@@ -202,9 +201,7 @@ module Flapjack
             all.reject {|ec| ec.in_unscheduled_maintenance? }
 
           @logger.debug "found unacknowledged failing checks as follows: " +
-            unacked_failing_checks.collect {|ec|
-              ec.entity.name + ":" + ec.name
-            }.join(', ')
+            unacked_failing_checks.map(&:name).join(', ')
 
           unacked_failing_checks.each do |check|
 
@@ -217,10 +214,8 @@ module Flapjack
               ret
             }
 
-            entity_name = check.entity.name
             check_name = check.name
-
-            event_id = "#{entity_name}:#{check_name}"
+            event_id = check_name
 
             if ec_credentials.empty?
               @logger.debug("No pagerduty credentials found for #{event_id}, skipping")
@@ -246,9 +241,9 @@ module Flapjack
             # FIXME: decide where the default acknowledgement period should reside and use it
             # everywhere ... a case for moving configuration into redis (from config file) perhaps?
             four_hours = 4 * 60 * 60
-            Flapjack::Data::Event.create_acknowledgement(
+            Flapjack::Data::Event.create_acknowledgements(
               @config['processor_queue'] || 'events',
-              check,
+              [check],
               :summary  => "Acknowledged on PagerDuty" + who_text,
               :duration => four_hours)
           end

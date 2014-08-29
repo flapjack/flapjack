@@ -17,22 +17,20 @@ module Flapjack
 
       include Sandstorm::Record
 
-      define_attributes :entities                => :set,
-                        :regex_entities          => :set,
-                        :tags                    => :set,
-                        :regex_tags              => :set,
-                        :time_restrictions_json  => :string
+      # I've removed regex_* properties as they encourage loose binding against
+      # names, which may change.
+
+      define_attributes :time_restrictions_json => :string
+
+      has_and_belongs_to_many :checks, :class_name => 'Flapjack::Data::Check',
+        :inverse_of => :notification_rules
+
+      has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
+        :inverse_of => :notification_rules
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact'
 
       has_many :states, :class_name => 'Flapjack::Data::NotificationRuleState'
-
-      validates_each :entities, :regex_entities, :tags, :regex_tags,
-        :allow_blank => true do |record, att, value|
-        if value.is_a?(Set) && value.any? {|vs| !vs.is_a?(String) }
-          record.errors.add(att, 'must only contain strings')
-        end
-      end
 
       validates_each :time_restrictions_json do |record, att, value|
         unless value.nil?
@@ -79,29 +77,13 @@ module Flapjack
         IceCube::Schedule.from_hash(tr)
       end
 
-      def match_entity?(entity)
-        !entities.present? || entities.include?(entity)
-      end
-
-      def match_regex_entities?(entity)
-        !regex_entities.present? ||
-          regex_entities.any? {|regex_entity| /#{regex_entity}/ === entity }
-      end
-
-      def match_tags?(event_tags)
-        !tags.present? || tags.subset?(event_tags.to_set)
-      end
-
-      def match_regex_tags?(event_tags)
-        !regex_tags.present? ||
-          event_tags.all? do |event_tag|
-            regex_tags.any? {|regex_tag| /#{regex_tag}/ === event_tag }
-          end
-      end
-
       def is_specific?
-        entities.present? || regex_entities.present? ||
-          tags.present? || regex_tags.present?
+        !checks.empty? || !tags.empty?
+      end
+
+      def is_match?(check, match_tags = [])
+        (self.checks.empty? || self.checks.ids.include?(check.id)) &&
+        (self.tags.empty? || (match_tags.ids - self.tags.ids).empty? )
       end
 
       # nil time_restrictions matches
@@ -129,7 +111,8 @@ module Flapjack
           :time_restrictions        => @time_restrictions,
           :links => {
             :contact                  => [opts[:contact_id]].compact,
-            :notification_rule_states => opts[:states_ids] || []
+            :notification_rule_states => opts[:states_ids] || [],
+            :tags                     => opts[:tag_ids] || [],
           }
         )
       end

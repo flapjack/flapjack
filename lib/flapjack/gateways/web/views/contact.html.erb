@@ -81,8 +81,6 @@
           <td><%= h media.capitalize %></td>
           <td>
             <% checks.each do |check| %>
-              <% entity = check.entity %>
-              <a href="<%= @base_url %>entities/<%= u(entity.id) %>" title="entity status"><%= h(entity.name) %></a> ::
               <a href="<%= @base_url %>checks/<%= u(check.id) %>" title="check status"><%= h(check.name) %></a><br />
             <% end %>
           </td>
@@ -100,10 +98,7 @@
   <table class="table table-bordered table-hover table-condensed">
     <tr>
       <th>ID</th>
-      <th>Entities</th>
-      <th>Entities Regex</th>
       <th>Tags</th>
-      <th>Tags Regex</th>
       <th>Warning Media</th>
       <th>Critical Media</th>
       <th>Time Restrictions</th>
@@ -112,10 +107,7 @@
     <% rules.each do |rule| %>
       <tr>
         <td><%= h rule.id %></td>
-        <td><%= h( (rule.entities && !rule.entities.empty?) ? rule.entities.join(', ') : '-') %></td>
-        <td><%= h( (rule.regex_entities && !rule.regex_entities.empty?) ? rule.regex_entities.join(', ') : '-') %></td>
-        <td><%= h( (rule.tags && !rule.tags.empty?) ? rule.tags.join(', ') : '-') %></td>
-        <td><%= h( (rule.regex_tags && !rule.regex_tags.empty?) ? rule.regex_tags.join(', ') : '-') %></td>
+        <td><%= h( !rule.tags.empty? ? rule.tags.map(&:name).join(', ') : '-') %></td>
         <td><%= h( (rule.warning_media && !rule.warning_media.empty?) ? rule.warning_media.join(', ') : '-')%></td>
         <td><%= h( (rule.critical_media && !rule.critical_media.empty?) ? rule.critical_media.join(', ') : '-') %></td>
         <td><%= h(rule.time_restrictions) %></td>
@@ -128,26 +120,21 @@
   </table>
 <% end %>
 
-<h3>All Entities and Checks</h3>
-<% entities = @contact.entities.all %>
-<% if entities.empty? %>
-  <p>No entities</p>
+<h3>All Checks</h3>
+<% checks = @contact.checks.all.sort_by(&:name) %>
+<% if checks.empty? %>
+  <p>No checks</p>
 <% else %>
   <table class="table table-bordered table-hover table-condensed">
     <tr>
-      <th>Entity</th>
       <th>Checks</th>
     </tr>
-    <% entities.each do |entity| %>
-      <% checks = entity.checks.all.sort_by(&:name) %>
-      <tr>
-        <td><a href="<%= @base_url %>entities/<%= u(entity.id) %>" title="entity status"><%= h entity.name %></a></td>
-        <td>
-          <% checks.each do |check| %>
-            <a href="<%= @base_url %>checks/<%= u(check.id) %>" title="check status"><%= h check.name %></a>
-          <% end %>
-        </td>
-      </tr>
-    <% end %>
+    <tr>
+      <td>
+        <% checks.each do |check| %>
+          <a href="<%= @base_url %>checks/<%= u(check.id) %>" title="check status"><%= h check.name %></a>
+        <% end %>
+      </td>
+    </tr>
   </table>
 <% end %>

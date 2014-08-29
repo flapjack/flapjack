@@ -102,7 +102,7 @@ module Flapjack
 
         errors = []
 
-        safe_message = truncate(message, 159)
+        safe_message = truncate(message, 156)
 
         [[username, "Messagenet username is missing"],
          [password, "Messagenet password is missing"],

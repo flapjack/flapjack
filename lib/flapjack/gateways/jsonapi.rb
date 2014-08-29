@@ -14,7 +14,6 @@ require 'flapjack/gateways/jsonapi/rack/json_params_parser'
 
 require 'flapjack/gateways/jsonapi/check_methods'
 require 'flapjack/gateways/jsonapi/contact_methods'
-require 'flapjack/gateways/jsonapi/entity_methods'
 require 'flapjack/gateways/jsonapi/medium_methods'
 require 'flapjack/gateways/jsonapi/metrics_methods'
 require 'flapjack/gateways/jsonapi/notification_rule_methods'
@@ -256,7 +255,6 @@ module Flapjack
 
       register Flapjack::Gateways::JSONAPI::CheckMethods
       register Flapjack::Gateways::JSONAPI::ContactMethods
-      register Flapjack::Gateways::JSONAPI::EntityMethods
       register Flapjack::Gateways::JSONAPI::MediumMethods
       register Flapjack::Gateways::JSONAPI::MetricsMethods
       register Flapjack::Gateways::JSONAPI::NotificationRuleMethods

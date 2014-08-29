@@ -5,8 +5,6 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
 
   let(:event)   { double(Flapjack::Data::Event) }
 
-  let(:entity)  { double(Flapjack::Data::Entity) }
-
   let(:check)       { double(Flapjack::Data::Check) }
   let(:check_state) { double(Flapjack::Data::CheckState) }
 
@@ -22,16 +20,13 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
       :severity          => 'critical',
       :type              => 'problem',
       :time              => Time.now,
-      :duration          => nil,
-      :tags              => Set.new
+      :duration          => nil
     )
     expect(notification.save).to be_truthy
-    expect(notification).to receive(:check).exactly(5).times.and_return(check)
+    expect(notification).to receive(:check).exactly(3).times.and_return(check)
 
     expect(check).to receive(:id).twice.and_return('abcde')
-    expect(entity).to receive(:name).exactly(3).times.and_return('example.com')
-    expect(check).to receive(:entity).exactly(3).times.and_return(entity)
-    expect(check).to receive(:name).twice.and_return('ping')
+    expect(check).to receive(:name).twice.and_return('example.com:ping')
 
     state = double(Flapjack::Data::CheckState)
     expect(state).to receive(:state).exactly(6).times.and_return('critical')

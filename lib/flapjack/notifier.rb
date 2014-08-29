@@ -87,14 +87,14 @@ module Flapjack
 
       timestamp   = Time.now
       check       = notification.check
-      contacts    = check.contacts.all + check.entity.contacts.all
+      contacts    = [] # check.contacts.all + check.entity.contacts.all
 
       check_name  = check.name
-      entity_name = check.entity.name
+      # entity_name = check.entity.name
 
       if contacts.empty?
-        @logger.debug("No contacts for '#{entity_name}:#{check_name}'")
-        @notifylog.info("#{entity_name}:#{check_name} | #{notification.type} | NO CONTACTS")
+        @logger.debug("No contacts for '#{check_name}'")
+        @notifylog.info("#{check_name} | #{notification.type} | NO CONTACTS")
         return
       end
 
@@ -114,11 +114,11 @@ module Flapjack
 
         address = medium.address
 
-        @notifylog.info("#{entity_name}:#{check_name} | " +
+        @notifylog.info("#{check_name} | " +
           "#{notification.type} | #{medium.contact.id} | #{medium.type} | #{medium.address}")
 
         @logger.info("Enqueueing #{medium.type} alert for " +
-          "#{entity_name}:#{check_name} to #{medium.address} " +
+          "#{check_name} to #{medium.address} " +
           " type: #{notification.type} rollup: #{alert.rollup || '-'}")
 
         Flapjack::Data::Check.send(:lock, Flapjack::Data::CheckState,

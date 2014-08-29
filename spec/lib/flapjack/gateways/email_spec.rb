@@ -25,11 +25,8 @@ describe Flapjack::Gateways::Email, :logger => true do
     expect(queue).to receive(:foreach).and_yield(alert)
     expect(queue).to receive(:wait).and_raise(Flapjack::PikeletStop)
 
-    entity = double(Flapjack::Data::Entity)
     check = double(Flapjack::Data::Check)
-    expect(entity).to receive(:name).exactly(3).times.and_return('example.com')
-    expect(check).to receive(:entity).exactly(3).times.and_return(entity)
-    expect(check).to receive(:name).exactly(3).times.and_return('ping')
+    expect(check).to receive(:name).exactly(3).times.and_return('example.com:ping')
 
     contact = double(Flapjack::Data::Contact)
     expect(contact).to receive(:first_name).twice.and_return('John')
@@ -79,11 +76,8 @@ describe Flapjack::Gateways::Email, :logger => true do
     expect(queue).to receive(:foreach).and_yield(alert)
     expect(queue).to receive(:wait).and_raise(Flapjack::PikeletStop)
 
-    entity = double(Flapjack::Data::Entity)
     check = double(Flapjack::Data::Check)
-    expect(entity).to receive(:name).exactly(3).times.and_return('example.com')
-    expect(check).to receive(:entity).exactly(3).times.and_return(entity)
-    expect(check).to receive(:name).exactly(3).times.and_return('ping')
+    expect(check).to receive(:name).exactly(3).times.and_return('example.com:ping')
 
     contact = double(Flapjack::Data::Contact)
     expect(contact).to receive(:first_name).twice.and_return('John')
@@ -135,11 +129,8 @@ describe Flapjack::Gateways::Email, :logger => true do
     expect(queue).to receive(:foreach).and_yield(alert)
     expect(queue).to receive(:wait).and_raise(Flapjack::PikeletStop)
 
-    entity = double(Flapjack::Data::Entity)
     check = double(Flapjack::Data::Check)
-    expect(entity).to receive(:name).exactly(3).times.and_return('example.com')
-    expect(check).to receive(:entity).exactly(3).times.and_return(entity)
-    expect(check).to receive(:name).exactly(3).times.and_return('ping')
+    expect(check).to receive(:name).exactly(3).times.and_return('example.com:ping')
 
     contact = double(Flapjack::Data::Contact)
     expect(contact).to receive(:first_name).twice.and_return('John')
@@ -191,11 +182,8 @@ describe Flapjack::Gateways::Email, :logger => true do
     expect(queue).to receive(:foreach).and_yield(alert)
     expect(queue).to receive(:wait).and_raise(Flapjack::PikeletStop)
 
-    entity = double(Flapjack::Data::Entity)
     check = double(Flapjack::Data::Check)
-    expect(entity).to receive(:name).exactly(3).times.and_return('example.com')
-    expect(check).to receive(:entity).exactly(3).times.and_return(entity)
-    expect(check).to receive(:name).exactly(3).times.and_return('ping')
+    expect(check).to receive(:name).exactly(3).times.and_return('example.com:ping')
 
     contact = double(Flapjack::Data::Contact)
     expect(contact).to receive(:first_name).twice.and_return('John')

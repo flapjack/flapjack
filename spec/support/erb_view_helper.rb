@@ -8,7 +8,7 @@ module ErbViewHelper
   include Flapjack::Utility
 
   def render_erb(file, bind)
-    erb = ERB.new(File.read(TEMPLATE_PATH + file))
+    erb = ERB.new(File.read(TEMPLATE_PATH + file), nil, '-')
     erb.result(bind)
   end
 

@@ -61,18 +61,18 @@ module Flapjack
           def create_unscheduled_maintenances(check_ids)
             unsched_maint_params = wrapped_params('unscheduled_maintenances', false)
 
-            unsched_maints = Flapjack::Data::Check.find_by_ids!(check_ids).each do |check|
-              unsched_maint_params.collect do |wp|
-                dur = wp['duration'] ? wp['duration'].to_i : nil
-                duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
-                summary = wp['summary']
+            checks = Flapjack::Data::Check.find_by_ids!(check_ids)
 
-                opts = {:duration => duration}
-                opts[:summary] = summary if summary
+            unsched_maints = unsched_maint_params.collect do |wp|
+              dur = wp['duration'] ? wp['duration'].to_i : nil
+              duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
+              summary = wp['summary']
 
-                Flapjack::Data::Event.create_acknowledgement(
-                  config['processor_queue'] || 'events', check, opts)
-              end
+              opts = {:duration => duration}
+              opts[:summary] = summary if summary
+
+              Flapjack::Data::Event.create_acknowledgements(
+                config['processor_queue'] || 'events', checks, opts)
             end
 
             status 204
@@ -105,14 +105,14 @@ module Flapjack
 
           def create_test_notifications(check_ids)
             test_notifications = wrapped_params('test_notifications', false)
-            Flapjack::Data::Check.find_by_ids!(check_ids).each do |check|
-              test_notifications.each do |wp|
-                summary = wp['summary'] ||
-                          "Testing notifications to all contacts interested in entity #{check.entity_name}"
-                Flapjack::Data::Event.test_notifications(
-                  config['processor_queue'] || 'events',
-                  check, :summary => summary)
-              end
+
+            checks = Flapjack::Data::Check.find_by_ids!(check_ids)
+            test_notifications.each do |wp|
+              summary = wp['summary'] ||
+                        "Testing notifications to all contacts interested in #{checks.map(&:name).join(', ')}"
+              Flapjack::Data::Event.test_notifications(
+                config['processor_queue'] || 'events',
+                checks, :summary => summary)
             end
             status 204
           end
