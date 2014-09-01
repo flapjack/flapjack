@@ -39,31 +39,12 @@ test:
   }
 ]
 """
-    And  a file named "flapjack-populator-entities.json" with:
-"""
-[
-  {
-    "id": "10001",
-    "name": "clientx-app-01",
-    "contacts": [
-      "362",
-      "363",
-      "364"
-    ],
-    "tags": [
-      "source:titanium",
-      "foo"
-    ]
-  }
-]
-"""
 
   Scenario: Running with --help shows usage information
     When I run `bundle exec bin/flapjack import --help`
     Then the exit status should be 0
     And  the output should contain "Bulk import data from an external source"
     And  the output should contain "import contacts"
-    And  the output should contain "import entities"
     And  the output should contain "[-f arg|--from arg]"
 
   Scenario: Running flapjack-populator with no arguments exits uncleanly and shows usage
@@ -75,10 +56,6 @@ test:
     When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack-populator.yaml import contacts --from tmp/cucumber_cli/flapjack-populator-contacts.json`
     Then the exit status should be 0
 
-  Scenario: Importing entities
-    When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack-populator.yaml import entities --from tmp/cucumber_cli/flapjack-populator-entities.json`
-    Then the exit status should be 0
-
   Scenario Outline: Running an flapjack-populator import command with a missing '--from' exits uncleanly and shows usage
     When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack-populator.yaml import <Type> example.json`
     Then the exit status should not be 0
@@ -86,5 +63,4 @@ test:
     And  the output should contain "Bulk import data from an external source"
     Examples:
       | Type     |
-      | entities |
       | contacts |

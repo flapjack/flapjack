@@ -67,6 +67,9 @@ module Flapjack
       has_many :alerts, :class_name => 'Flapjack::Data::Alert'
       has_many :rollup_alerts, :class_name => 'Flapjack::Data::RollupAlert'
 
+      has_and_belongs_to_many :notification_rules, :class_name => 'Flapjack::Data::Check',
+        :inverse_of => :checks
+
       validates :name, :presence => true
       validates :state,
         :inclusion => {:in => Flapjack::Data::CheckState.all_states, :allow_blank => true }
@@ -327,8 +330,8 @@ module Flapjack
       # would need to be "#{entity.name}:#{name}" to be compatible with v1, but
       # to support name changes it must be something invariant
       def create_ack_hash
-        return unless self.id.nil? # :on => :create isn't working
-        self.id = self.class.generate_id
+        return unless self.ack_hash.nil? # :on => :create isn't working
+        self.id = self.class.generate_id if self.id.nil?
         self.ack_hash = Digest.hexencode(Digest::SHA1.new.digest(self.id))[0..7].downcase
       end
 

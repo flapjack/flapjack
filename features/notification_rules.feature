@@ -11,14 +11,16 @@ Feature: Notification rules on a per contact basis
       | c5  | Wang Fang  | Wong      | fang@example.com  | +61400000005 | Asia/Shanghai       |
       | c6  | Jive       | Smith     | jive@example.com  | +61400000006 | America/Los_Angeles |
 
-    And the following entities exist:
-      | id  | name           | contacts |
-      | 1   | foo            | c1       |
-      | 2   | bar            | c1,c2,c3 |
-      | 3   | baz            | c1,c3    |
-      | 4   | buf            | c1,c2,c3 |
-      | 5   | foo-app-01.xyz | c4,c6    |
-      | 6   | blakes7        | c2       |
+    And the following checks exist:
+      | id  | name                       | contacts |
+      | 1   | foo:ping                   | c1       |
+      | 2   | bar:ping                   | c1,c2,c3 |
+      | 3   | baz:ping                   | c1,c3    |
+      | 4   | buf:ping                   | c1,c2,c3 |
+      | 5   | foo-app-01.xyz:Disk / Util | c4,c6    |
+      | 6   | foo-app-01.xyz:Memory Util | c4,c6    |
+      | 7   | foo-app-01.xyz:ping        | c4,c6    |
+      | 8   | blakes7:ping               | c2       |
 
     And user c1 has the following notification intervals:
       | email | sms |
@@ -37,26 +39,26 @@ Feature: Notification rules on a per contact basis
       | 15    | 60  |
 
     And user c1 has the following notification rules:
-      | entities | unknown_media | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
-      |          |               | email         | sms,email        | true              | true               |                   |
-      | foo      |               | email         | sms,email        |                   |                    | 8-18 weekdays     |
-      | bar      | email         |               | sms,email        | true              |                    |                   |
-      | baz      |               | email         | sms,email        |                   |                    |                   |
+      | checks    | unknown_media | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
+      |           |               | email         | sms,email        | true              | true               |                   |
+      | foo:ping  |               | email         | sms,email        |                   |                    | 8-18 weekdays     |
+      | bar:ping  | email         |               | sms,email        | true              |                    |                   |
+      | baz:ping  |               | email         | sms,email        |                   |                    |                   |
 
     And user c2 has the following notification rules:
-      | entities    | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole |
-      |             |      | email         | email            |                   |                    |
-      |             |      | sms           | sms              |                   |                    |
-      | bar,blakes7 |      | email         | email,sms        |                   |                    |
-      | bar,blakes7 | wags |               |                  | true              | true               |
+      | checks                | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole |
+      |                       |      | email         | email            |                   |                    |
+      |                       |      | sms           | sms              |                   |                    |
+      | bar:ping,blakes7:ping |      | email         | email,sms        |                   |                    |
+      | bar:ping,blakes7:ping | wags |               |                  | true              | true               |
 
     And user c3 has the following notification rules:
-      | entities | warning_media | critical_media   | warning_blackhole | critical_blackhole |
-      |          | email         | email            |                   |                    |
-      | baz      | sms           | sms              |                   |                    |
-      | buf      | email         | email            |                   |                    |
-      | buf      | sms           | sms              |                   |                    |
-      | bar      | email         | email            | true              | true               |
+      | checks    | warning_media | critical_media   | warning_blackhole | critical_blackhole |
+      |           | email         | email            |                   |                    |
+      | baz:ping  | sms           | sms              |                   |                    |
+      | buf:ping  | email         | email            |                   |                    |
+      | buf:ping  | sms           | sms              |                   |                    |
+      | bar:ping  | email         | email            | true              | true               |
 
     And user c4 has the following notification rules:
       | tags            | warning_media | critical_media   | time_restrictions |
@@ -69,15 +71,14 @@ Feature: Notification rules on a per contact basis
       | email         | email, sms     |
 
     And user c6 has the following notification rules:
-      | entities       | tags            | warning_media | critical_media   |
-      |                |                 |               |                  |
-      | foo-app-01.xyz | check_disk      | email         | email            |
+      | checks              | tags            | warning_media | critical_media   |
+      |                     |                 |               |                  |
+      | foo-app-01.xyz:ping | check_disk      | email         | email            |
 
   @time_restrictions @time
   Scenario: Alerts only during specified time restrictions
     Given the timezone is Asia/Baghdad
     And   the time is February 1 2013 6:59
-    And   an entity 'foo' exists
     And   the check is check 'ping' on entity 'foo'
     And   the check is in an ok state
     And   a critical event is received
@@ -105,8 +106,7 @@ Feature: Notification rules on a per contact basis
 
   @severity @time
   Scenario: Don't alert when media,severity does not match any matching rule's severity's media
-    Given an entity 'bar' exists
-    And   the check is check 'ping' on entity 'bar'
+    Given the check is check 'ping' on entity 'bar'
     And   the check is in an ok state
     When  a warning event is received
     And   60 minutes passes

@@ -28,7 +28,8 @@ module Flapjack
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
         :inverse_of => :notification_rules
 
-      belongs_to :contact, :class_name => 'Flapjack::Data::Contact'
+      belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
+        :inverse_of => :notification_rules
 
       has_many :states, :class_name => 'Flapjack::Data::NotificationRuleState'
 
@@ -81,9 +82,9 @@ module Flapjack
         !checks.empty? || !tags.empty?
       end
 
-      def is_match?(check, match_tags = [])
+      def is_match?(check)
         (self.checks.empty? || self.checks.ids.include?(check.id)) &&
-        (self.tags.empty? || (match_tags.ids - self.tags.ids).empty? )
+        (self.tags.empty? || (self.tags.ids - check.tags.ids).empty? )
       end
 
       # nil time_restrictions matches

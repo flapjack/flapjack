@@ -24,12 +24,26 @@ def find_or_create_contact(contact_data)
 end
 
 def find_or_create_check(check_data)
-  check = Flapjack::Data::Check.find_by_id(check_data[:id])
+  check = Flapjack::Data::Check.find_by_id(check_data['id'])
 
   if check.nil?
-    check = Flapjack::Data::Check.new(:id => check_data[:id],
-      :name => check_data[:name])
+    check = Flapjack::Data::Check.new(:id => check_data['id'],
+      :name => check_data['name'])
     expect(check.save).to be true
+
+    entity_name, check_name = check_data['name'].split(':', 2)
+
+    tags = entity_name.split('.', 2).map(&:downcase) +
+      check_name.split(' ').map(&:downcase)
+
+    tags.each do |tag_name|
+      tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+      if tag.nil?
+        tag = Flapjack::Data::Tag.new(:name => tag_name)
+        expect(tag.save).to be true
+      end
+      check.tags << tag
+    end
   end
 
   check
@@ -41,8 +55,8 @@ Given /^(?:a|the) user wants to receive SMS notifications for check '(.+)'$/ do 
                                     'last_name'  => 'Smith',
                                     'email'      => 'johns@example.dom',
                                     'media'      => {'sms' => '+61888888888'} )
-  check = find_or_create_check(:id   => '5000',
-                               :name => check_name)
+  check = find_or_create_check('id'   => '5000',
+                               'name' => check_name)
   check.contacts << contact
 end
 
@@ -53,8 +67,8 @@ Given /^(?:a|the) user wants to receive email notifications for check '(.+)'$/ d
                                     'email'      => 'janes@example.dom',
                                     'media'      => {'email' => 'janes@example.dom'} )
 
-  check = find_or_create_check(:id   => '5000',
-                               :name => check_name)
+  check = find_or_create_check('id'   => '5001',
+                               'name' => check_name)
   check.contacts << contact
 end
 
@@ -66,7 +80,8 @@ When /^an event notification is generated for check '(.+)'$/ do |check_name|
   event = Flapjack::Data::Event.new('type'    => 'service',
                                     'state'   => 'critical',
                                     'summary' => '100% packet loss',
-                                    'check'   => check_name,
+                                    'check'   => check_name.split(':', 2).first,
+                                    'check'   => check_name.split(':', 2).last,
                                     'time'    => timestamp)
 
   check = Flapjack::Data::Check.intersect(:name => check_name).all.first
@@ -89,12 +104,13 @@ When /^an event notification is generated for check '(.+)'$/ do |check_name|
     :type              => event.notification_type,
     :time              => event.time,
     :duration          => event.duration,
-    :tags              => check.tags,
   )
 
   unless notification.save
     raise "Couldn't save notification: #{@notification.errors.full_messages.inspect}"
   end
+
+  notification.tags.add(*check.tags.all) unless check.tags.empty?
 
   check.notifications << notification
   current_state.current_notifications << notification
@@ -110,7 +126,7 @@ Then /^an (SMS|email) notification for check '(.+)' should( not)? be queued$/ do
         send((neg ? :to : :not_to), be_empty)
 end
 
-Given /^an (SMS|email) notification has been queued for entity '([\w\.\-]+)'$/ do |media_type, check_name|
+Given /^an (SMS|email) notification has been queued for check '(.+)'$/ do |media_type, check_name|
   check = Flapjack::Data::Check.intersect(:name => check_name).all.first
   expect(check).not_to be_nil
 

@@ -201,7 +201,7 @@ After('@process') do
    'tmp/cucumber_cli/flapjack-populator-entities.json',
   ].each do |file|
     next unless File.exists?(file)
-    File.unlink(file)
+    # File.unlink(file)
   end
 end
 

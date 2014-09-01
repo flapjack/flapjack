@@ -173,7 +173,8 @@ module Flapjack
       # save before adding, as the check will not have been saved if it was
       # created above, and associations require the check to have an id
       check.save
-      check.actions << action
+
+      check.actions << action unless action.nil?
 
       if @ncsm_sched_maint
         @ncsm_sched_maint.save
@@ -313,10 +314,16 @@ module Flapjack
         :type              => event.notification_type,
         :time              => event.time,
         :duration          => event.duration,
-        :tags              => check.tags,
       )
 
       notification.save
+
+      unless event.tags.blank?
+        event_tags = Flapjack::Data::Tag.intersect(:name => event.tags)
+        notification.tags.add(*event_tags.all) unless event_tags.empty?
+      end
+
+      notification.tags.add(*check.tags.all) unless check.tags.empty?
 
       check.notifications << notification
       current_state.current_notifications << notification unless current_state.nil?

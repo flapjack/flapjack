@@ -6,10 +6,10 @@ Feature: Rollup on a per contact, per media basis
       | id  | first_name | last_name | email             | sms          | timezone         |
       | 1   | Malak      | Al-Musawi | malak@example.com | +61400000001 | Asia/Baghdad     |
 
-    And the following entities exist:
-      | id  | name           | contacts |
-      | 1   | foo            | 1        |
-      | 2   | baz            | 1        |
+    And the following checks exist:
+      | id  | name     | contacts |
+      | 1   | foo:ping | 1        |
+      | 2   | baz:ping | 1        |
 
     And user 1 has the following notification intervals:
       | email | sms |
@@ -20,8 +20,8 @@ Feature: Rollup on a per contact, per media basis
       | 1     | 2   |
 
     And user 1 has the following notification rules:
-      | entities | unknown_media | warning_media | critical_media   |
-      |          |               | email         | sms,email        |
+      | checks | unknown_media | warning_media | critical_media   |
+      |        |               | email         | sms,email        |
 
   @time
   Scenario: Rollup threshold of 1 means first alert is a rollup
@@ -192,7 +192,7 @@ Feature: Rollup on a per contact, per media basis
     And   1 sms alerts of type problem and rollup none should be queued for +61400000001
     And   2 sms alerts should be queued for +61400000001
     When  20 minute passes
-    And   user 1 ceases to be a contact of entity 'foo'
+    And   user 1 ceases to be a contact of check 'foo:ping'
     And   a critical event is received for check 'ping' on entity 'baz'
     Then  1 sms alert of rollup recovery should be queued for +61400000001
 
@@ -205,7 +205,7 @@ Feature: Rollup on a per contact, per media basis
     And   a critical event is received for check 'ping' on entity 'foo'
     Then  1 sms alert of type problem and rollup none should be queued for +61400000001
     When  1 minute passes
-    And   a test event is received for check 'sausage' on entity 'foo'
+    And   a test event is received for check 'ping' on entity 'foo'
     Then  1 sms alert of type problem and rollup none should be queued for +61400000001
     And   1 sms alert of type test and rollup none should be queued for +61400000001
     And   2 sms alerts should be queued for +61400000001

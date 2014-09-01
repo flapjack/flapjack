@@ -74,7 +74,8 @@ def submit_ok(entity_name, check_name)
     'type'    => 'service',
     'state'   => 'ok',
     'summary' => '0% packet loss',
-    'check'   => "#{entity_name}:#{check_name}",
+    'entity'  => entity_name,
+    'check'   => check_name,
   }
   submit_event(event)
 end
@@ -84,7 +85,8 @@ def submit_warning(entity_name, check_name)
     'type'    => 'service',
     'state'   => 'warning',
     'summary' => '25% packet loss',
-    'check'   => "#{entity_name}:#{check_name}",
+    'entity'  => entity_name,
+    'check'   => check_name,
   }
   submit_event(event)
 end
@@ -94,7 +96,8 @@ def submit_critical(entity_name, check_name)
     'type'    => 'service',
     'state'   => 'critical',
     'summary' => '100% packet loss',
-    'check'   => "#{entity_name}:#{check_name}",
+    'entity'  => entity_name,
+    'check'   => check_name,
   }
   submit_event(event)
 end
@@ -104,7 +107,8 @@ def submit_unknown(entity_name, check_name)
     'type'    => 'service',
     'state'   => 'unknown',
     'summary' => 'check execution error',
-    'check'   => "#{entity_name}:#{check_name}",
+    'entity'  => entity_name,
+    'check'   => check_name,
   }
   submit_event(event)
 end
@@ -114,7 +118,8 @@ def submit_acknowledgement(entity_name, check_name)
     'type'    => 'action',
     'state'   => 'acknowledgement',
     'summary' => "I'll have this fixed in a jiffy, saw the same thing yesterday",
-    'check'   => "#{entity_name}:#{check_name}",
+    'entity'  => entity_name,
+    'check'   => check_name,
   }
   submit_event(event)
 end
@@ -124,7 +129,8 @@ def submit_test(entity_name, check_name)
     'type'    => 'action',
     'state'   => 'test_notifications',
     'summary' => "test notification for all contacts interested in #{entity_name}",
-    'check'   => "#{entity_name}:#{check_name}",
+    'entity'  => entity_name,
+    'check'   => check_name,
   }
   submit_event(event)
 end
@@ -154,7 +160,6 @@ Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check_name, enti
     check = Flapjack::Data::Check.new(:name => "#{entity_name}:#{check_name}")
     expect(check.save).to be true
   end
-  entity.checks << check
 
   @check_name  = check_name
   @entity_name = entity_name
@@ -296,19 +301,19 @@ Then /^dump notification rules for user (\S+)$/ do |contact|
   }
 end
 
-# # added for notification rules:
-# Given /^the following entities exist:$/ do |entities|
-#   entities.hashes.each do |entity_data|
-#     entity = find_or_create_entity(entity_data)
+# added for notification rules:
+Given /^the following checks exist:$/ do |checks|
+  checks.hashes.each do |check_data|
+    check = find_or_create_check(check_data)
 
-#     next if entity_data['contacts'].nil?
-#     entity_data['contacts'].split(',').map(&:strip).each do |contact_id|
-#       contact = Flapjack::Data::Contact.find_by_id(contact_id)
-#       expect(contact).not_to be_nil
-#       entity.contacts << contact
-#     end
-#   end
-# end
+    next if check_data['contacts'].nil?
+    check_data['contacts'].split(',').map(&:strip).each do |contact_id|
+      contact = Flapjack::Data::Contact.find_by_id(contact_id)
+      expect(contact).not_to be_nil
+      check.contacts << contact
+    end
+  end
+end
 
 Given /^the following users exist:$/ do |contacts|
   contacts.hashes.each do |contact_data|
@@ -366,8 +371,8 @@ Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules
   end
 
   rules.hashes.each do |rule|
-    entities           = rule['entities']      ? rule['entities'].split(',').map(&:strip)       : []
-    tags               = rule['tags']          ? rule['tags'].split(',').map(&:strip)           : []
+    checks           = rule['checks']      ? rule['checks'].split(',').map(&:strip)       : []
+    tags             = rule['tags']        ? rule['tags'].split(',').map(&:strip)         : []
     media = {
       :unknown  => (rule['unknown_media']      ? rule['unknown_media'].split(',').map(&:strip)  : []),
       :warning  => (rule['warning_media']      ? rule['warning_media'].split(',').map(&:strip)  : []),
@@ -390,11 +395,27 @@ Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules
 
     state_data = {:media => media, :blackhole => blackhole}
 
-    rule_data = {:entities           => Set.new(entities),
-                 :tags               => Set.new(tags),
-                 :time_restrictions  => time_restrictions}
+    rule_data = {:time_restrictions  => time_restrictions}
     new_rule = Flapjack::Data::NotificationRule.new(rule_data)
     expect(new_rule.save).to be true
+
+    checks.each do |check_name|
+      check = Flapjack::Data::Check.intersect(:name => check_name).all.first
+      if check.nil?
+        check = Flapjack::Data::Check.new(:name => check_name)
+        expect(check.save).to be true
+      end
+      new_rule.checks << check
+    end
+
+    tags.each do |tag_name|
+      tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+      if tag.nil?
+        tag = Flapjack::Data::Tag.new(:name => tag_name)
+        expect(tag.save).to be true
+      end
+      new_rule.tags << tag
+    end
 
     nr_fail_states = Flapjack::Data::CheckState.failing_states.collect do |fail_state|
       state = Flapjack::Data::NotificationRuleState.new(:state => fail_state,

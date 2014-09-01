@@ -4,8 +4,7 @@ Feature: events
   flapjack-executive must process events correctly
 
   Background:
-    Given an entity 'foo-app-01.example.com' exists
-    And the check is check 'HTTP Port 80' on entity 'foo-app-01.example.com'
+    Given the check is check 'HTTP Port 80' on entity 'foo-app-01.example.com'
 
   Scenario: Check ok to ok
     Given the check is in an ok state

@@ -87,10 +87,9 @@ module Flapjack
 
       timestamp   = Time.now
       check       = notification.check
-      contacts    = [] # check.contacts.all + check.entity.contacts.all
+      contacts    = check.contacts.all
 
       check_name  = check.name
-      # entity_name = check.entity.name
 
       if contacts.empty?
         @logger.debug("No contacts for '#{check_name}'")

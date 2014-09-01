@@ -7,7 +7,6 @@ require 'redis'
 
 require 'flapjack/configuration'
 require 'flapjack/data/contact'
-require 'flapjack/data/entity'
 
 module Flapjack
   module CLI
@@ -43,6 +42,7 @@ module Flapjack
               next
             end
             media_data = contact_data.delete('media')
+            tag_data   = contact_data.delete('tags')
             contact = Flapjack::Data::Contact.new(contact_data)
             contact.save
 
@@ -57,28 +57,17 @@ module Flapjack
               end
             end
 
-          end
-        end
-
-      end
-
-      def entities
-        ents = Oj.load(File.new(@options[:from]))
-
-        if ents && ents.is_a?(Enumerable) && ents.any? {|e| !e['id'].nil?}
-          ents.each do |entity_data|
-            unless entity_data['id']
-              puts "Entity not imported as it has no id: " + entity_data.inspect
-              next
+            unless tag_data.nil? || tag_data.empty?
+              tag_data.each do |tag_name|
+                tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+                if tag.nil?
+                  tag = Flapjack::Data::Tag.new(:name => tag_name)
+                  tag.save
+                end
+                contact.tags << tag
+              end
             end
-            contact_ids = entity_data.delete('contacts')
-            entity = Flapjack::Data::Entity.new(entity_data)
-            entity.save
 
-            unless contact_ids.nil? || contact_ids.empty?
-              contacts = Flapjack::Data::Contact.find_by_ids(contact_ids)
-              entity.contacts.add(*contacts) unless contacts.empty?
-            end
           end
         end
 
@@ -106,18 +95,6 @@ command :import do |import|
     contacts.action do |global_options,options,args|
       import = Flapjack::CLI::Import.new(global_options, options)
       import.contacts
-    end
-  end
-
-  import.desc 'Import entities'
-  import.command :entities do |entities|
-
-    entities.flag [:f, 'from'],     :desc => 'PATH of the entities JSON file to import',
-      :required => true
-
-    entities.action do |global_options,options,args|
-      import = Flapjack::CLI::Import.new(global_options, options)
-      import.entities
     end
   end
 

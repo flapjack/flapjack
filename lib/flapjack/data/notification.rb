@@ -111,14 +111,14 @@ module Flapjack
       end
 
       def matching_rules_for_contact(contact, options = {})
-        rules = contact.notification_rules
+        rules = contact.notification_rules.all
 
         check = options[:check]
 
         log_rules(rules, "initial")
 
         matchers = rules.select do |rule|
-          rule.is_match?(self.check, self.tags) &&
+          rule.is_match?(self.check) &&
             rule.is_occurring_now?(:contact => contact,
               :default_timezone => options[:default_timezone])
         end

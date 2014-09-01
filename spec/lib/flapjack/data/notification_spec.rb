@@ -85,8 +85,9 @@ describe Flapjack::Data::Notification, :redis => true, :logger => true do
     expect(check_alerts).to receive(:<<).with(alert_2)
     expect(check).to receive(:alerts).twice.and_return(check_alerts)
 
+    no_rules = double('no_rules', :all => [])
     expect(contact).to receive(:id).and_return('23')
-    expect(contact).to receive(:notification_rules).and_return([])
+    expect(contact).to receive(:notification_rules).and_return(no_rules)
     all_media = double('all_media', :all => [medium_1, medium_2], :empty? => false)
     expect(all_media).to receive(:each).and_yield(medium_1).
                                     and_yield(medium_2).
