@@ -1,3 +1,6 @@
+<% if @auto_refresh %>
+<meta http-equiv="refresh" content="<%= @auto_refresh %>" >
+<% end %>
 <% page_title "#{h(@entity)} (entity)" %>
 
 <div class="page-header">

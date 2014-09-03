@@ -95,6 +95,8 @@ module Flapjack
               @logger.error "logo_image_path '#{logo_image_path}'' does not point to a valid file."
             end
           end
+
+          @auto_refresh = @config['auto_refresh'].respond_to?('to_i') && @config['auto_refresh'].to_i > 0 ? @config['auto_refresh'].to_i : false
         end
       end
 
@@ -133,6 +135,7 @@ module Flapjack
         @default_logo_url = self.class.instance_variable_get('@default_logo_url')
         @logo_image_file  = self.class.instance_variable_get('@logo_image_file')
         @logo_image_ext   = self.class.instance_variable_get('@logo_image_ext')
+        @auto_refresh     = self.class.instance_variable_get('@auto_refresh')
 
         input = nil
         query_string = (request.query_string.respond_to?(:length) &&

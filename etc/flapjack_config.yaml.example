@@ -150,6 +150,8 @@ production:
       enabled: yes
       port: 3080
       timeout: 300
+      # Seconds between auto_refresh of entities/checks pages.  Set to 0 to disable
+      auto_refresh: 120
       access_log: "/var/log/flapjack/web_access.log"
       api_url: "http://localhost:3081/"
       # Full path to location of logo file, e.g. /etc/flapjack/custom_logo.png
@@ -335,6 +337,8 @@ development:
       enabled: yes
       port: 3080
       timeout: 300
+      # Seconds between auto_refresh of entities/checks pages.  Set to 0 to disable
+      auto_refresh: 120
       access_log: "log/web_access.log"
       api_url: "http://localhost:3081/"
       # Full path to location of logo file, e.g. /etc/flapjack/custom_logo.png
