@@ -1,4 +1,4 @@
-#Contributing to ![Flapjack](http:////flapjack.io/images/flapjack-2013-notext-transparent-50-50.png "Flapjack") Flapjack
+#Contributing to ![Flapjack](http://flapjack.io/images/flapjack-2013-notext-transparent-50-50.png "Flapjack") Flapjack
 
 [![Build Status](https://travis-ci.org/flapjack/flapjack.png)](https://travis-ci.org/flapjack/flapjack)
 

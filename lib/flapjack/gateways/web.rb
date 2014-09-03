@@ -136,6 +136,19 @@ module Flapjack
         @logo_image_file  = self.class.instance_variable_get('@logo_image_file')
         @logo_image_ext   = self.class.instance_variable_get('@logo_image_ext')
         @auto_refresh     = self.class.instance_variable_get('@auto_refresh')
+
+        input = nil
+        query_string = (request.query_string.respond_to?(:length) &&
+                        request.query_string.length > 0) ? "?#{request.query_string}" : ""
+        if logger.debug?
+          input = env['rack.input'].read
+          logger.debug("#{request.request_method} #{request.path_info}#{query_string} #{input}")
+        elsif logger.info?
+          input = env['rack.input'].read
+          input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
+          logger.info("#{request.request_method} #{request.path_info}#{query_string} #{input_short[0..80]}")
+        end
+        env['rack.input'].rewind unless input.nil?
       end
 
       get '/img/branding.*' do
@@ -184,8 +197,11 @@ module Flapjack
       end
 
       get '/self_stats' do
+        logger.debug "calculating self_stats"
         self_stats
+        logger.debug "calculating entity_stats"
         entity_stats
+        logger.debug "calculating check_stats"
         check_stats
 
         erb 'self_stats.html'.to_sym
@@ -467,7 +483,7 @@ module Flapjack
         end
         @event_counters = redis.hgetall('event_counters')
         @events_queued  = redis.llen('events')
-        @current_checks_ages = Flapjack::Data::EntityCheck.find_all_split_by_freshness([0, 60, 300, 900, 3600], {:redis => redis, :counts => true } )
+        @current_checks_ages = Flapjack::Data::EntityCheck.find_all_split_by_freshness([0, 60, 300, 900, 3600], {:redis => redis, :logger => logger, :counts => true } )
       end
 
       def entity_stats(entities = nil)
