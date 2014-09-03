@@ -42,24 +42,26 @@ module Flapjack
           end
 
           @api_url = @config['api_url']
-          if @api_url
-            if (@api_url =~ /^#{URI::regexp(%w(http https))}$/).nil?
-              @logger.error "api_url is not a valid http or https URI (#{@api_url})"
-              @api_url = nil
-            end
-          end
-
-          unless @api_url
-            @logger.error "api_url is not configured, parts of the web interface will be broken"
-          end
+           if @api_url
+             if (@api_url =~ /^#{URI::regexp(%w(http https))}$/).nil?
+               @logger.error "api_url is not a valid http or https URI (#{@api_url}), discarding"
+               @api_url = nil
+             end
+             unless @api_url.match(/^.*\/$/)
+               @logger.info "api_url must end with a trailing '/', setting to '#{@api_url}/'"
+               @api_url = "#{@api_url}/"
+             end
+           end
 
           @base_url = @config['base_url']
-          if @base_url
-            @base_url = $1 if @base_url.match(/^(.+\/)$/)
-          else
-           dummy_url = "/"
-            @logger.error "base_url must contain trailing '/', setting it to safe default (#{dummy_url})"
-            @base_url = dummy_url
+          unless @base_url
+            @logger.info "base_url is not configured, setting to '/'"
+            @base_url = '/'
+          end
+
+          unless @base_url.match(/^.*\/$/)
+            @logger.warn "base_url must end with a trailing '/', setting to '#{@base_url}/'"
+            @base_url = "#{@base_url}/"
           end
 
           # constants won't be exposed to eRb scope
@@ -143,9 +145,9 @@ module Flapjack
         check_stats
         {
           'events_queued'       => @events_queued,
-          'all_entities'        => @count_all_entities,
+          'all_entities'        => @count_enabled_entities,
           'failing_entities'    => @count_failing_entities,
-          'all_checks'          => @count_all_checks,
+          'all_checks'          => @count_enabled_checks,
           'failing_checks'      => @count_failing_checks,
           'processed_events' => {
             'all_time' => {
@@ -440,14 +442,14 @@ module Flapjack
       end
 
       def entity_stats
-        @count_all_entities      = Flapjack::Data::Entity.intersect(:enabled => true).count
+        @count_current_entities  = Flapjack::Data::Entity.intersect(:enabled => true).count
         failing_enabled_checks   = failing_checks.intersect(:enabled => true).all
         @count_failing_entities  = Flapjack::Data::Check.hash_by_entity_name(
           failing_enabled_checks).keys.size
       end
 
       def check_stats
-        @count_all_checks        = Flapjack::Data::Check.count
+        @count_enabled_checks    = Flapjack::Data::Check.intersect(:enabled => true).count
         @count_failing_checks    = failing_checks.count
       end
 

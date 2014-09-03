@@ -29,8 +29,6 @@ describe Flapjack::Pikelet, :logger => true do
       :logger => @logger).and_return(processor)
 
     expect(Thread).to receive(:new).and_yield.and_return(thread)
-    expect(thread).to receive(:abort_on_exception=).with(true)
-    expect(Thread).to receive(:current).and_return(thread)
 
     pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config,
       :logger => @logger)
@@ -61,8 +59,6 @@ describe Flapjack::Pikelet, :logger => true do
       :logger => @logger).and_return(processor)
 
     expect(Thread).to receive(:new).and_yield.and_return(thread)
-    expect(thread).to receive(:abort_on_exception=).with(true)
-    expect(Thread).to receive(:current).and_return(thread)
 
    expect(shutdown).to receive(:call)
 
@@ -104,8 +100,6 @@ describe Flapjack::Pikelet, :logger => true do
       with('@logger', @logger)
 
     expect(Thread).to receive(:new).and_yield.and_return(thread)
-    expect(thread).to receive(:abort_on_exception=).with(true)
-    expect(Thread).to receive(:current).and_return(thread)
 
     expect(Flapjack::Gateways::Web).to receive(:start)
 
@@ -148,8 +142,6 @@ describe Flapjack::Pikelet, :logger => true do
       with('@logger', @logger)
 
     expect(Thread).to receive(:new).and_yield.and_return(thread)
-    expect(thread).to receive(:abort_on_exception=).with(true)
-    expect(Thread).to receive(:current).and_return(thread)
 
     expect(shutdown).to receive(:call)
 

@@ -20,39 +20,49 @@ module Flapjack
         @global_options = global_options
         @options = options
 
-        config = Flapjack::Configuration.new
-        config.load(global_options[:config])
-        @config_env = config.all
+        @config = Flapjack::Configuration.new
+        @config.load(global_options[:config])
+        @config_env = @config.all
 
         if @config_env.nil? || @config_env.empty?
-          puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
-          exit 1
+          exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
         end
 
-        Flapjack::RedisProxy.config = config.for_redis
+        Flapjack::RedisProxy.config = @config.for_redis
         Sandstorm.redis = Flapjack.redis
+
+        @config_runner = @config_env["#{@options[:type]}-receiver"] || {}
+
+        @pidfile = case
+        when !@options[:pidfile].nil?
+          @options[:pidfile]
+        when !@config_env['pid_dir'].nil?
+          File.join(@config_env['pid_dir'], "#{@options[:type]}-receiver.pid")
+        else
+          "/var/run/flapjack/#{@options[:type]}-receiver.pid"
+        end
+
+        @logfile = case
+        when !@options[:logfile].nil?
+          @options[:logfile]
+        when !@config_env['log_dir'].nil?
+          File.join(@config_env['log_dir'], "#{@options[:type]}-receiver.log")
+        else
+          "/var/run/flapjack/#{@options[:type]}-receiver.log"
+        end
+
+        @redis_options = @config.for_redis
       end
 
-      # For nagios-receiver:
-      #
-      # nagios.cfg must contain the following perfdata templates for host and service data (modified from the default
-      # to include hoststate / servicestate, and a fake service 'HOST' for hostperfdata, so that the
-      # fields match up:
-      #
-      #   host_perfdata_file_template=[HOSTPERFDATA]\t$TIMET$\t$HOSTNAME$\tHOST\t$HOSTSTATE$\t$HOSTEXECUTIONTIME$\t$HOSTLATENCY$\t$HOSTOUTPUT$\t$HOSTPERFDATA$
-      #
-      #   service_perfdata_file_template=[SERVICEPERFDATA]\t$TIMET$\t$HOSTNAME$\t$SERVICEDESC$\t$SERVICESTATE$\t$SERVICEEXECUTIONTIME$\t$SERVICELATENCY$\t$SERVICEOUTPUT$\t$SERVICEPERFDATA$
-      #
-
-      def nagios_start
-        if runner('nagios').daemon_running?
-          puts "nagios-receiver is already running."
-          exit 1
+      def start
+        if runner(@options[:type]).daemon_running?
+          puts "#{@options[:type]}-receiver is already running."
         else
-          print "nagios-receiver starting..."
-          runner('nagios').execute(:daemonize => @options[:daemonize]) do
+          print "#{@options[:type]}-receiver starting..."
+          print "\n" unless @options[:daemonize]
+          runner(@options[:type]).execute(:daemonize => @options[:daemonize]) do
             begin
-              main(:fifo => @options[:fifo], :nagios => true)
+              main(:fifo => @options[:fifo], :type => @options[:type])
             rescue Exception => e
               p e.message
               puts e.backtrace.join("\n")
@@ -62,82 +72,38 @@ module Flapjack
         end
       end
 
-      def nagios_stop
-        if runner('nagios').daemon_running?
-          print "nagios-receiver stopping..."
-          runner('nagios').execute(:kill => true)
+      def stop
+        pid = get_pid
+        if runner(@options[:type]).daemon_running?
+          print "#{@options[:type]}-receiver stopping..."
+          runner(@options[:type]).execute(:kill => true)
           puts " done."
         else
-          puts "nagios-receiver is not running."
-          exit 1
+          puts "#{@options[:type]}-receiver is not running."
         end
+        exit_now! unless wait_pid_gone(pid)
       end
 
-      def nagios_restart
-        print "nagios-receiver restarting..."
-        runner('nagios').execute(:daemonize => true, :restart => true) do
-          main(:fifo => @options[:fifo], :nagios => true)
-        end
-        puts " done."
-      end
-
-      def nagios_status
-        config_runner = @config_env["nagios-receiver"] || {}
-        pidfile = @options[:pidfile] || config_runner['pid_file'] ||
-          "/var/run/flapjack/nagios-receiver.pid"
-        uptime = (runner('nagios').daemon_running?) ? (Time.now - File.stat(pidfile).ctime) : 0
-        if runner('nagios').daemon_running?
-          puts "nagios-receiver is running: #{uptime}"
-        else
-          puts "nagios-receiver is not running"
-          exit 3
-        end
-      end
-
-      def nsca_start
-        if runner('nsca').daemon_running?
-          puts "nsca-receiver is already running."
-          exit 1
-        else
-          print "nsca-receiver starting..."
-          runner('nsca').execute(:daemonize => @options[:daemonize]) do
-            main(:fifo => @options[:fifo], :nsca => true)
+      def restart
+        print "#{@options[:type]}-receiver restarting..."
+        runner(@options[:type]).execute(:daemonize => true, :restart => true) do
+          begin
+            main(:fifo => @options[:fifo], :type => @options[:type])
+          rescue Exception => e
+            p e.message
+            puts e.backtrace.join("\n")
           end
-          puts " done."
-        end
-      end
-
-      def nsca_stop
-        if runner('nsca').daemon_running?
-          print "nsca-receiver stopping..."
-          runner('nsca').execute(:kill => true)
-          puts " done."
-        else
-          puts "nsca-receiver is not running."
-          exit 1
-        end
-      end
-
-      def nsca_restart
-        print "nsca-receiver restarting..."
-        runner('nsca').execute(:daemonize => true, :restart => true) do
-          main(:fifo => @options[:fifo], :nsca => true)
         end
         puts " done."
       end
 
-      def nsca_status
-        config_runner = @config_env["nsca-receiver"] || {}
-
-        pidfile = @options[:pidfile] || config_runner['pid_file'] ||
-          "/var/run/flapjack/nsca-receiver.pid"
-
-        uptime = (runner('nsca').daemon_running?) ? (Time.now - File.stat(pidfile).ctime) : 0
-        if runner('nsca').daemon_running?
-          puts "nsca-receiver is running: #{uptime}"
+      def status
+        if runner(@options[:type]).daemon_running?
+          pid = get_pid
+          uptime = Time.now - File.stat(@pidfile).ctime
+          puts "#{@options[:type]}-receiver is running: pid #{pid}, uptime #{uptime}"
         else
-          puts "nsca-receiver is not running"
-          exit 3
+          exit_now! "#{@options[:type]}-receiver is not running"
         end
       end
 
@@ -160,25 +126,16 @@ module Flapjack
       def runner(type)
         return @runner if @runner
 
-        config_runner = @config_env["#{type}-receiver"] || {}
-
-        pidfile = @options[:pidfile].nil? ?
-                    (config_runner['pid_file'] || "/var/run/flapjack/#{type}-receiver.pid") :
-                    @options[:pidfile]
-
-        logfile = @options[:logfile].nil? ?
-                    (config_runner['log_file'] || "/var/log/flapjack/#{type}-receiver.log") :
-                    @options[:logfile]
-
-        @runner = Dante::Runner.new("#{type}-receiver", :pid_path => pidfile,
-          :log_path => logfile)
+        @runner = Dante::Runner.new("#{@options[:type]}-receiver", :pid_path => @pidfile,
+          :log_path => @logfile)
         @runner
       end
 
       def process_input(opts)
-        config_rec = if opts[:nagios]
+        config_rec = case opts[:type]
+        when /nagios/
           @config_env['nagios-receiver'] || {}
-        elsif opts[:nsca]
+        when /nsca/
           @config_env['nsca-receiver'] || {}
         else
           raise "Unknown receiver type"
@@ -205,8 +162,8 @@ module Flapjack
               check_latency, check_output, check_perfdata, check_long_output =
                [nil] * 10
 
-            if opts[:nagios]
-
+            case opts[:type]
+            when /nagios/
               object_type, timestamp, entity, check, state, check_time,
                 check_latency, check_output, check_perfdata, check_long_output = split_line
 
@@ -222,7 +179,7 @@ module Flapjack
                 next
               end
 
-            elsif opts[:nsca]
+            when /nsca/
 
               timestamp, passivecheck = split_line
               split_passive = passivecheck.split(";")
@@ -270,12 +227,40 @@ module Flapjack
       def main(opts)
         fifo = opts[:fifo]
         while true
-          process_input(:fifo => fifo, :nagios => opts[:nagios], :nsca => opts[:nsca])
+          process_input(:fifo => fifo, :type => opts[:type])
           puts "Whoops with the fifo, restarting main loop in 10 seconds"
           sleep 10
         end
       end
 
+      def process_exists(pid)
+        return unless pid
+        begin
+          Process.kill(0, pid)
+          return true
+        rescue Errno::ESRCH
+          return false
+        end
+      end
+
+      # wait until the specified pid no longer exists, or until a timeout is reached
+      def wait_pid_gone(pid, timeout = 30)
+        print "waiting for a max of #{timeout} seconds for process #{pid} to exit" if process_exists(pid)
+        started_at = Time.now.to_i
+        while process_exists(pid)
+          break unless (Time.now.to_i - started_at < timeout)
+          print '.'
+          sleep 1
+        end
+        puts ''
+        !process_exists(pid)
+      end
+
+      def get_pid
+        IO.read(@pidfile).chomp.to_i
+      rescue StandardError
+        pid = nil
+      end
 
       class EventFeedHandler < Oj::ScHandler
 
@@ -320,8 +305,7 @@ module Flapjack
         input = if opts[:from]
           File.open(opts[:from]) # Explodes if file does not exist.
         elsif $stdin.tty?
-          puts "No file provided, and STDIN is from terminal! Exiting..."
-          exit(1)
+          exit_now! "No file provided, and STDIN is from terminal! Exiting..."
         else
           $stdin
         end
@@ -350,8 +334,7 @@ module Flapjack
 
       def mirror_receive(opts)
         unless opts[:follow] || opts[:all]
-          puts "one or both of --follow or --all is required"
-          exit 1
+          exit_now! "one or both of --follow or --all is required"
         end
 
         source_redis = Redis.new(:url => opts[:source])
@@ -423,7 +406,7 @@ module Flapjack
   end
 end
 
-desc 'Receive events from external systems and send them to Flapjack'
+desc 'Receive events from external systems and sends them to Flapjack'
 arg_name 'receiver'
 command :receiver do |receiver|
 
@@ -454,7 +437,7 @@ command :receiver do |receiver|
     #   host_perfdata_file_mode=p
     #   service_perfdata_file_mode=p
 
-    # Details on the wiki: https://github.com/flapjack/flapjack/wiki/USING#configuring-nagios
+    # Details on the wiki: http://flapjack.io/docs/1.0/usage/USING#configuring-nagios
     # '
 
     nagios.command :start do |start|
@@ -469,8 +452,9 @@ command :receiver do |receiver|
       start.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
 
       start.action do |global_options,options,args|
+        options.merge!(:type => 'nagios')
         receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.nagios_start
+        receiver.start
       end
     end
 
@@ -481,8 +465,9 @@ command :receiver do |receiver|
       stop.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
       stop.action do |global_options,options,args|
+        options.merge!(:type => 'nagios')
         receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.nagios_stop
+        receiver.stop
       end
     end
 
@@ -495,8 +480,9 @@ command :receiver do |receiver|
       restart.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
 
       restart.action do |global_options,options,args|
+        options.merge!(:type => 'nagios')
         receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.nagios_restart
+        receiver.restart
       end
     end
 
@@ -507,8 +493,9 @@ command :receiver do |receiver|
       status.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
       status.action do |global_options,options,args|
+        options.merge!(:type => 'nagios')
         receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.nagios_status
+        receiver.status
       end
     end
 
@@ -536,7 +523,7 @@ command :receiver do |receiver|
       # The Nsca daemon is optionally writing to a tempfile if the named pipe does
       # not exist.
 
-      # Details on the wiki: https://github.com/flapjack/flapjack/wiki/USING#XXX
+      # Details on the wiki: http://flapjack.io/docs/1.0/usage/USING#XXX
       # '
 
       start.switch [:d, 'daemonize'], :desc => 'Daemonize',
@@ -549,8 +536,9 @@ command :receiver do |receiver|
       start.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
 
       start.action do |global_options,options,args|
+        options.merge!(:type => 'nsca')
         receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.nsca_start
+        receiver.start
       end
     end
 
@@ -561,8 +549,9 @@ command :receiver do |receiver|
       stop.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
       stop.action do |global_options,options,args|
+        options.merge!(:type => 'nsca')
         receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.nsca_stop
+        receiver.stop
       end
     end
 
@@ -575,8 +564,9 @@ command :receiver do |receiver|
       restart.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
 
       restart.action do |global_options,options,args|
+        options.merge!(:type => 'nsca')
         receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.nsca_restart
+        receiver.restart
       end
     end
 
@@ -587,8 +577,9 @@ command :receiver do |receiver|
       status.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
       status.action do |global_options,options,args|
+        options.merge!(:type => 'nsca')
         receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.nsca_status
+        receiver.status
       end
     end
 

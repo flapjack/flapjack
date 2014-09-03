@@ -18,8 +18,7 @@ module Flapjack
         @config_env = config.all
 
         if @config_env.nil? || @config_env.empty?
-          puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
-          exit 1
+          exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
         end
 
         Flapjack::RedisProxy.config = config.for_redis
@@ -105,7 +104,7 @@ module Flapjack
   end
 end
 
-desc 'Generate streams of events in various states'
+desc 'Simulates a check by creating a stream of events for Flapjack to process'
 command :simulate do |simulate|
 
   simulate.desc 'Generate a stream of failure events'

@@ -1,4 +1,4 @@
-
+require 'flapjack/gateways/aws_sns'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 
@@ -62,6 +62,17 @@ Given /^(?:a|the) user wants to receive email notifications for entity '([\w\.\-
   entity.contacts << contact
 end
 
+Given /^(?:a|the) user wants to receive SNS notifications for entity '([\w\.\-]+)'$/ do |entity_name|
+  contact = find_or_create_contact( 'id'         => '1001',
+                                    'first_name' => 'James',
+                                    'last_name'  => 'Smithson',
+                                    'email'      => 'jamess@example.dom',
+                                    'media' => {'sns' => 'arn:aws:sns:us-east-1:698519295917:My-Topic'} )
+  entity = find_or_create_entity('id'       => '5002',
+                                 'name'     => entity_name)
+  entity.contacts << contact
+end
+
 # TODO create the notification object in redis, flag the relevant operation as
 # only needing that part running, split up the before block that covers these
 When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_name|
@@ -111,13 +122,13 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity_
   drain_notifications
 end
 
-Then /^an (SMS|email) notification for entity '([\w\.\-]+)' should( not)? be queued$/ do |medium, entity_name, neg|
+Then /^an (SMS|SNS|email) notification for entity '([\w\.\-]+)' should( not)? be queued$/ do |medium, entity_name, neg|
   queue = redis_peek("#{medium.downcase}_notifications", Flapjack::Data::Alert)
   expect(queue.select {|n| n.check.entity.name =~ /#{entity_name}/ }).
         send((neg ? :to : :not_to), be_empty)
 end
 
-Given /^an (SMS|email) notification has been queued for entity '([\w\.\-]+)'$/ do |media_type, entity_name|
+Given /^an (SMS|SNS|email) notification has been queued for entity '([\w\.\-]+)'$/ do |media_type, entity_name|
   entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
   expect(entity).not_to be_nil
   check = entity.checks.intersect(:name => 'ping').all.first
@@ -187,9 +198,30 @@ When /^the email notification handler fails to send an email$/ do
   end
 end
 
+When /^the SNS notification handler runs successfully$/ do
+  @request = stub_request(:post, /amazonaws\.com/)
+  @sns = Flapjack::Gateways::AwsSns.new(:config => {
+    'access_key' => "AKIAIOSFODNN7EXAMPLE",
+    'secret_key' => "secret"}, :logger => @logger)
+  @sns.send(:handle_alert, @alert)
+end
+
+When /^the SNS notification handler fails to send an SMS$/ do
+  @request = stub_request(:post, /amazonaws\.com/).to_return(:status => [500, "Internal Server Error"])
+  @sns = Flapjack::Gateways::AwsSns.new(:config => {
+    'access_key' => "AKIAIOSFODNN7EXAMPLE",
+    'secret_key' => "secret"}, :logger => @logger)
+  @sns.send(:handle_alert, @alert)
+end
+
 Then /^the user should receive an SMS notification$/ do
   expect(@request).to have_been_requested
   expect(@sms.sent).to eq(1)
+end
+
+Then /^the user should receive an SNS notification$/ do
+  expect(@request).to have_been_requested
+  expect(@sns.sent).to eq(1)
 end
 
 Then /^the user should receive an email notification$/ do
@@ -200,6 +232,11 @@ end
 Then /^the user should not receive an SMS notification$/ do
   expect(@request).to have_been_requested
   expect(@sms.sent).to eq(0)
+end
+
+Then /^the user should not receive an SNS notification$/ do
+  expect(@request).to have_been_requested
+  expect(@sns.sent).to eq(0)
 end
 
 Then /^the user should not receive an email notification$/ do

@@ -75,7 +75,21 @@ module Flapjack
             entities = if requested_entities
               Flapjack::Data::Entity.find_by_ids!(requested_entities)
             else
-              Flapjack::Data::Entity.all
+              enabled = if params.has_key?(:enabled)
+                case params[:enabled].downcase
+                when '0', 'f', 'false', 'n', 'no'
+                  false
+                when '1', 't', 'true', 'y', 'yes'
+                  true
+                else
+                  nil
+                end
+              else
+                nil
+              end
+
+              Flapjack::Data::Entity.intersect(:enabled => enabled).all.
+                reject {|e| e.id.nil? || e.id.empty? }
             end
 
             if requested_entities && entities.empty?

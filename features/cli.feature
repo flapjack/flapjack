@@ -8,8 +8,8 @@ Feature: command line utility
     Given a file named "flapjack_cfg.yaml" with:
 """
 test:
-  pid_file: tmp/cucumber_cli/flapjack_d.pid
-  log_file: tmp/cucumber_cli/flapjack_d.log
+  pid_dir: tmp/cucumber_cli/
+  log_dir: tmp/cucumber_cli/
   redis:
     db: 14
   processor:
@@ -20,8 +20,8 @@ test:
     And a file named "flapjack_cfg_d.yaml" with:
 """
 test:
-  pid_file: tmp/cucumber_cli/flapjack_d.pid
-  log_file: tmp/cucumber_cli/flapjack_d.log
+  pid_dir: tmp/cucumber_cli/
+  log_dir: tmp/cucumber_cli/
   redis:
     db: 14
   processor:
@@ -53,7 +53,7 @@ test:
     Then flapjack should stop within 15 seconds
 
   Scenario: Starting, status and stopping flapjack, daemonized
-    When I start flapjack (daemonised) (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.yaml server start -d`
+    When I start flapjack (daemonised) (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.yaml server start`
     Then flapjack should start within 15 seconds
     When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.yaml server status`
     Then the exit status should be 0
@@ -62,7 +62,7 @@ test:
     Then flapjack should stop within 15 seconds
 
   Scenario: Starting, restarting and stopping flapjack, daemonized
-    When I start flapjack (daemonised) (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.yaml server start -d`
+    When I start flapjack (daemonised) (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.yaml server start`
     Then flapjack should start within 15 seconds
     When I restart flapjack (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.yaml server restart`
     Then flapjack should restart within 15 seconds
@@ -76,6 +76,8 @@ test:
     Given a file named "flapjack_cfg.yaml" with:
 """
 test:
+  pid_dir: tmp/cucumber_cli/
+  log_dir: tmp/cucumber_cli/
   redis:
     db: 14
   processor:
@@ -85,5 +87,3 @@ test:
     # TODO how to test for config file change?
     When I stop flapjack (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.yaml server stop`
     Then flapjack should stop within 15 seconds
-
-

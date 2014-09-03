@@ -16,6 +16,7 @@ require 'flapjack'
 
 require 'flapjack/notifier'
 require 'flapjack/processor'
+require 'flapjack/gateways/aws_sns'
 require 'flapjack/gateways/jsonapi'
 require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
@@ -56,8 +57,6 @@ module Flapjack
         @pikelet.siblings = @siblings.map(&:pikelet) if @pikelet.respond_to?(:siblings=)
 
         @thread = Thread.new do
-          Thread.current.abort_on_exception = true
-
           # TODO rename this, it's only relevant in the error case
           max_runs = @config['max_runs'] || 1
           runs = 0
@@ -137,7 +136,7 @@ module Flapjack
     class Generic < Flapjack::Pikelet::Base
 
      TYPES = ['notifier', 'processor', 'jabber', 'pagerduty', 'oobetet',
-              'email', 'sms']
+              'email', 'sms', 'aws_sns']
 
       def start
         super do
@@ -213,6 +212,7 @@ module Flapjack
              'pagerduty'  => [Flapjack::Gateways::Pagerduty::Notifier,
                               Flapjack::Gateways::Pagerduty::AckFinder],
              'sms'        => [Flapjack::Gateways::SmsMessagenet],
+             'aws_sns'    => [Flapjack::Gateways::AwsSns],
              'web'        => [Flapjack::Gateways::Web],
             }
 

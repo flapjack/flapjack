@@ -10,7 +10,7 @@ module Flapjack
 
       include Sandstorm::Record
 
-      TYPES = ['email', 'sms', 'jabber', 'pagerduty']
+      TYPES = ['email', 'sms', 'jabber', 'pagerduty', 'sns']
 
       define_attributes :type             => :string,
                         :address          => :string,

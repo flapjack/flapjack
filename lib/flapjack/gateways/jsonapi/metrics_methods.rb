@@ -47,7 +47,8 @@ module Flapjack
 
           def entities
             {
-              'all'     => Flapjack::Data::Entity.intersect(:enabled => true).count,
+              'all'     => Flapjack::Data::Entity.count,
+              'enabled' => Flapjack::Data::Entity.intersect(:enabled => true).count,
               'failing' => Flapjack::Data::Check.hash_by_entity_name(
                              failing_checks.intersect(:enabled => true).all).keys.size,
             }

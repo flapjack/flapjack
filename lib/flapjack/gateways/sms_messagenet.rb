@@ -31,8 +31,6 @@ module Flapjack
         @config = opts[:config]
         @logger = opts[:logger]
 
-        @notifications_queue = @config['queue'] || 'sms_notifications'
-
         # TODO support for config reloading
         @queue = Flapjack::RecordQueue.new(@config['queue'] || 'sms_notifications',
                    Flapjack::Data::Alert)

@@ -328,8 +328,8 @@ module Flapjack
               end
 
             when /^(?:find )?checks(?:\s+matching\s+\/(.+)\/)?\s+on\s+(?:entities matching\s+\/(.+)\/|([a-z0-9\-\.]+))/im
-              check_pattern = $1 ? $1.chomp.strip : nil
-              entity_pattern = $2 ? $2.chomp.strip : nil
+              check_pattern = $1 ? $1.strip : nil
+              entity_pattern = $2 ? $2.strip : nil
               entity_name = $3
 
               entity_names = if entity_name
@@ -381,7 +381,7 @@ module Flapjack
               end
 
             when /^(?:find\s+)?entities\s+matching\s+\/(.*)\/.*$/im
-              entity_pattern = $1.chomp.strip
+              entity_pattern = $1.strip
 
               entity_names = begin
                 Flapjack::Data::Entity.send(:name_index, nil).attributes_matching(entity_pattern)
@@ -407,9 +407,9 @@ module Flapjack
               end
 
             when /^(?:ack )?entities\s+\/(.+)\/(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
-              entity_pattern = $1.chomp.strip
-              comment        = $2 ? $2.chomp.strip : nil
-              duration_str   = $3 ? $3.chomp.strip : '1 hour'
+              entity_pattern = $1.strip
+              comment        = $2 ? $2.strip : nil
+              duration_str   = $3 ? $3.strip : '1 hour'
               duration       = ChronicDuration.parse(duration_str)
 
               entity_names = begin
@@ -454,7 +454,7 @@ module Flapjack
               end
 
             when /^(?:status )?entities\s+\/(.+)\/.*$/im
-              entity_pattern  = $1 ? $1.chomp.strip : nil
+              entity_pattern  = $1 ? $1.strip : nil
               entity_names = begin
                 Flapjack::Data::Entity.send(:name_index, nil).attributes_matching(entity_pattern)
               rescue RegexpError
@@ -481,10 +481,10 @@ module Flapjack
               end
 
             when /^(?:ack )?checks\s+\/(.+)\/\s+on\s+\/(.+)\/(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
-              check_pattern  = $1.chomp.strip
-              entity_pattern = $2.chomp.strip
-              comment        = $3 ? $3.chomp.strip : nil
-              duration_str   = $4 ? $4.chomp.strip : '1 hour'
+              check_pattern  = $1.strip
+              entity_pattern = $2.strip
+              comment        = $3 ? $3.strip : nil
+              duration_str   = $4 ? $4.strip : '1 hour'
               duration       = ChronicDuration.parse(duration_str)
 
               entity_names = begin
@@ -537,8 +537,8 @@ module Flapjack
               end
 
             when /^(?:status )checks\s+\/(.+?)\/(?:\s+on\s+)?(?:\/(.+)?\/)?/im
-              check_pattern  = $1 ? $1.chomp.strip : nil
-              entity_pattern = $2 ? $2.chomp.strip : '.*'
+              check_pattern  = $1 ? $1.strip : nil
+              entity_pattern = $2 ? $2.strip : '.*'
 
               entity_names = begin
                 Flapjack::Data::Entity.send(:name_index, nil).attributes_matching(entity_pattern)

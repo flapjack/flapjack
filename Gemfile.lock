@@ -1,13 +1,4 @@
 GIT
-  remote: git://github.com/eagletmt/fuubar.git
-  revision: 43d1b46e00137c4509f713d29601c233c63f0ef9
-  branch: rspec-300-rc1
-  specs:
-    fuubar (2.0.0.beta2)
-      rspec (~> 3.0.0.rc1)
-      ruby-progressbar (~> 1.4)
-
-GIT
   remote: git://github.com/flapjack/sandstorm.git
   revision: fa2f8d4876668038b9236f785c6e42a5e0a89a03
   branch: master
@@ -19,18 +10,20 @@ GIT
 PATH
   remote: .
   specs:
-    flapjack (1.0.0rc2)
-      activesupport (~> 3.2.18)
+    flapjack (1.0.0)
+      activesupport (~> 3.2.19)
       chronic
       chronic_duration
       dante
-      gli
+      gli (= 2.12.0)
       hiredis
       ice_cube
       mail
       oj (>= 2.9.0)
+      rbtrace
       redis (~> 3.0.6)
       sinatra
+      terminal-table
       tzinfo (~> 1.0.1)
       tzinfo-data
       xmpp4r (>= 0.5.5)
@@ -38,89 +31,90 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    activemodel (3.2.18)
-      activesupport (= 3.2.18)
+    activemodel (3.2.19)
+      activesupport (= 3.2.19)
       builder (~> 3.0.0)
-    activesupport (3.2.18)
+    activesupport (3.2.19)
       i18n (~> 0.6, >= 0.6.4)
       multi_json (~> 1.0)
     addressable (2.3.6)
     builder (3.0.4)
-    chronic (0.10.1)
-    chronic_duration (0.10.4)
+    chronic (0.10.2)
+    chronic_duration (0.10.5)
       numerizer (~> 0.1.1)
     crack (0.4.2)
       safe_yaml (~> 1.0.0)
-    cucumber (1.3.6)
+    cucumber (1.3.16)
       builder (>= 2.1.2)
       diff-lcs (>= 1.1.3)
-      gherkin (~> 2.12.0)
-      multi_json (~> 1.7.5)
-      multi_test (>= 0.0.2)
+      gherkin (~> 2.12)
+      multi_json (>= 1.7.5, < 2.0)
+      multi_test (>= 0.1.1)
     dante (0.2.0)
     debugger-ruby_core_source (1.3.5)
     delorean (2.1.0)
       chronic
     diff-lcs (1.2.5)
+    docile (1.1.5)
     ffi (1.9.3)
-    gherkin (2.12.1)
+    fuubar (2.0.0)
+      rspec (~> 3.0)
+      ruby-progressbar (~> 1.4)
+    gherkin (2.12.2)
       multi_json (~> 1.3)
-    gli (2.10.0)
+    gli (2.12.0)
     hiredis (0.5.2)
-    i18n (0.6.9)
-    ice_cube (0.12.0)
-    mail (2.5.4)
-      mime-types (~> 1.16)
-      treetop (~> 1.4.8)
-    mime-types (1.25.1)
+    i18n (0.6.11)
+    ice_cube (0.12.1)
+    mail (2.6.1)
+      mime-types (>= 1.16, < 3)
+    mime-types (2.3)
     msgpack (0.5.8)
-    multi_json (1.7.9)
-    multi_test (0.0.2)
+    multi_json (1.10.1)
+    multi_test (0.1.1)
     numerizer (0.1.1)
-    oj (2.9.3)
+    oj (2.10.2)
     perftools.rb (2.0.1)
-    polyglot (0.3.4)
     rack (1.5.2)
     rack-protection (1.5.3)
       rack
     rack-test (0.6.2)
       rack (>= 1.0)
-    rake (10.3.1)
-    rbtrace (0.4.3)
+    rake (10.3.2)
+    rbtrace (0.4.4)
       ffi (>= 1.0.6)
       msgpack (>= 0.4.3)
       trollop (>= 1.16.2)
     redis (3.0.7)
-    rspec (3.0.0.rc1)
-      rspec-core (= 3.0.0.rc1)
-      rspec-expectations (= 3.0.0.rc1)
-      rspec-mocks (= 3.0.0.rc1)
-    rspec-core (3.0.0.rc1)
-      rspec-support (= 3.0.0.rc1)
-    rspec-expectations (3.0.0.rc1)
+    rspec (3.0.0)
+      rspec-core (~> 3.0.0)
+      rspec-expectations (~> 3.0.0)
+      rspec-mocks (~> 3.0.0)
+    rspec-core (3.0.4)
+      rspec-support (~> 3.0.0)
+    rspec-expectations (3.0.4)
       diff-lcs (>= 1.2.0, < 2.0)
-      rspec-support (= 3.0.0.rc1)
-    rspec-mocks (3.0.0.rc1)
-      rspec-support (= 3.0.0.rc1)
-    rspec-support (3.0.0.rc1)
-    ruby-prof (0.13.0)
+      rspec-support (~> 3.0.0)
+    rspec-mocks (3.0.4)
+      rspec-support (~> 3.0.0)
+    rspec-support (3.0.4)
+    ruby-prof (0.15.1)
     ruby-progressbar (1.5.1)
     safe_yaml (1.0.3)
-    simplecov (0.7.1)
-      multi_json (~> 1.0)
-      simplecov-html (~> 0.7.1)
-    simplecov-html (0.7.1)
+    simplecov (0.9.0)
+      docile (~> 1.1.0)
+      multi_json
+      simplecov-html (~> 0.8.0)
+    simplecov-html (0.8.0)
     sinatra (1.4.5)
       rack (~> 1.4)
       rack-protection (~> 1.4)
       tilt (~> 1.3, >= 1.3.4)
+    terminal-table (1.4.5)
     tilt (1.4.1)
-    treetop (1.4.15)
-      polyglot
-      polyglot (>= 0.3.1)
     trollop (2.0)
     tzinfo (1.0.1)
-    tzinfo-data (1.2014.3)
+    tzinfo-data (1.2014.7)
       tzinfo (>= 1.0.0)
     webmock (1.18.0)
       addressable (>= 2.3.6)
@@ -135,12 +129,11 @@ DEPENDENCIES
   debugger-ruby_core_source (>= 1.3.5)
   delorean
   flapjack!
-  fuubar!
+  fuubar
   perftools.rb
   rack-test
   rake
-  rbtrace
-  rspec (~> 3.0.0.rc1)
+  rspec
   ruby-prof
   sandstorm!
   simplecov

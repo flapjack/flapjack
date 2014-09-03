@@ -50,7 +50,9 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Entity).to receive(:associated_ids_for_checks).
       with([entity.id]).and_return({})
     expect(entity).to receive(:as_json).and_return(entity_data)
-    expect(Flapjack::Data::Entity).to receive(:all).and_return([entity])
+    all_entities = double('all_entities', :all => [entity])
+    expect(Flapjack::Data::Entity).to receive(:intersect).
+      with(:enabled => nil).and_return(all_entities)
 
     get '/entities'
     expect(last_response).to be_ok

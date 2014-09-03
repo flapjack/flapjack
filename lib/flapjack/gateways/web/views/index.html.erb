@@ -4,5 +4,5 @@
   <h2>Summary</h2>
 </div> <!-- page header -->
 
-<h4><a href="<% @base_url %>entities?type=failing" title="failing entities"><%= h @count_failing_entities %></a> out of <a href="<% @base_url %>entities" title="all entities"><%= h @count_all_entities %></a> entities have failing checks</h4>
-<h4><a href="<% @base_url %>checks?type=failing" title="failing checks"><%= h @count_failing_checks %></a> out of <a href="<% @base_url %>checks" title="all checks"><%= h @count_all_checks %></a> checks are failing</h4>
+<h4><a href="<% @base_url %>entities?type=failing" title="failing entities"><%= h @count_failing_entities %></a> out of <a href="<% @base_url %>entities" title="all entities"><%= h @count_current_entities %></a> entities have failing checks</h4>
+<h4><a href="<% @base_url %>checks?type=failing" title="failing checks"><%= h @count_failing_checks %></a> out of <a href="<% @base_url %>checks" title="all checks"><%= h @count_current_checks %></a> checks are failing</h4>

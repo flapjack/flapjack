@@ -11,6 +11,12 @@ Feature: notifications
     Then an SMS notification for entity 'example.com' should be queued
     And an email notification for entity 'example.com' should not be queued
 
+  Scenario: Queue an SNS notification
+    Given the user wants to receive SNS notifications for entity 'example.com'
+    When an event notification is generated for entity 'example.com'
+    Then an SNS notification for entity 'example.com' should be queued
+    And an email notification for entity 'example.com' should not be queued
+
   Scenario: Queue an email notification
     Given the user wants to receive email notifications for entity 'example.com'
     When an event notification is generated for entity 'example.com'
@@ -33,11 +39,23 @@ Feature: notifications
     When the SMS notification handler runs successfully
     Then the user should receive an SMS notification
 
+  Scenario: Send a queued SNS notification
+    Given a user wants to receive SNS notifications for entity 'example.com'
+    And an SNS notification has been queued for entity 'example.com'
+    When the SNS notification handler runs successfully
+    Then the user should receive an SNS notification
+
   Scenario: Handle a failure to send a queued SMS notification
     Given a user wants to receive SMS notifications for entity 'example.com'
     And an SMS notification has been queued for entity 'example.com'
     When the SMS notification handler fails to send an SMS
     Then the user should not receive an SMS notification
+
+  Scenario: Handle a failure to send a queued SNS notification
+    Given a user wants to receive SNS notifications for entity 'example.com'
+    And an SNS notification has been queued for entity 'example.com'
+    When the SNS notification handler fails to send an SMS
+    Then the user should not receive an SNS notification
 
   Scenario: Send a queued email notification
     Given a user wants to receive email notifications for entity 'example.com'
