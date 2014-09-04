@@ -200,7 +200,7 @@ module Flapjack
 
       unless entity_for_check.nil?
         # action won't have been added to the check's actions set yet
-        check.actions << action
+        check.actions << action unless action.nil?
         # created a new check, so add it to the entity's check list
         entity_for_check.checks << check
       end

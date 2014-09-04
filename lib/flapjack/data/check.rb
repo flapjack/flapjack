@@ -202,14 +202,10 @@ module Flapjack
         if self.changed.include?('enabled')
           entity = self.entity
 
-          if self.enabled
-            entity.enabled = true
+          if !entity.nil?
+            entity.enabled = self.enabled ||
+              !entity.checks.intersect(:enabled => true).empty?
             entity.save
-          else
-            if entity.checks.intersect(:enabled => true).empty?
-              entity.enabled = false
-              entity.save
-            end
           end
         end
 
