@@ -132,14 +132,7 @@ module Flapjack
 
         query['Signature'] = self.class.get_signature(secret_key, string_sign)
 
-        uri = URI(endpoint)
-
-        req = Net::HTTP::Post.new(uri)
-        req.set_form_data(query)
-
-        http_response = Net::HTTP.start(uri.hostname, uri.port) do |http|
-          http.request(req)
-        end
+        http_response = Net::HTTP.post_form(URI(endpoint), query)
 
         @logger.debug "server response: #{http_response.inspect}"
 
