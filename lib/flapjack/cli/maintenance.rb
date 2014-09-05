@@ -74,10 +74,8 @@ module Flapjack
         finish_time_begin = finish_time_begin.to_i unless finish_time_begin.nil?
         finish_time_end = finish_time_end.to_i unless finish_time_end.nil?
 
-        # TODO duration parsing as-yet unhandled
-
-        # duration_range = @options[:duration] ? self.class.extract_time_range(
-        #   @options[:duration], base_time) : nil
+        duration_range = @options[:duration] ? self.class.extract_duration_range(
+          @options[:duration]) : nil
 
         maintenances = case @options[:type].downcase
         when 'scheduled'
@@ -91,12 +89,13 @@ module Flapjack
             included_ids = start_ids & end_ids
 
             unless included_ids.empty?
-              maints = Flapjack::Data::ScheduledMaintenance.find_by_ids(included_ids)
+              maints   = Flapjack::Data::ScheduledMaintenance.find_by_ids(included_ids)
 
-              # if duration_range
-              # end
-
-              memo += maints
+              if !maints.empty?
+                filtered = duration_range.nil? ? maints :
+                  self.class.filter_duration(maints, duration_range)
+                memo += filtered
+              end
             end
 
             memo
@@ -112,7 +111,13 @@ module Flapjack
             included_ids = start_ids & end_ids
 
             unless included_ids.empty?
-              memo += Flapjack::Data::UnscheduledMaintenance.find_by_ids(included_ids)
+              maints   = Flapjack::Data::UnscheduledMaintenance.find_by_ids(included_ids)
+
+              if !maints.empty?
+                filtered = duration_range.nil? ? maints :
+                  self.class.filter_duration(maints, duration_range)
+                memo += filtered
+              end
             end
 
             memo
@@ -226,6 +231,47 @@ module Flapjack
 
       private
 
+      def self.filter_duration(maints, duration_range)
+        maints.select do |maint|
+          dur = maint.duration
+          lower = duration_range.first
+          upper = duration_range.last
+
+          (lower.nil? && upper.nil?) || ((lower.nil? || (dur >= lower)) &&
+                                         (upper.nil? || (dur <  upper)))
+        end
+      end
+
+      def self.extract_duration_range(duration_in_words)
+        return nil if duration_in_words.nil?
+
+        dur_words = duration_in_words.downcase
+
+        case dur_words
+        when /^(?:equal to|less than|more than)/
+          cdur_words = dur_words.gsub(/^(equal to|less than|more than) /, '')
+          parsed_dur = ChronicDuration.parse(cdur_words)
+          case dur_words
+          when /^equal to/
+            [parsed_dur, parsed_dur + 1]
+          when /^less than/
+            [nil, parsed_dur]
+          when /^more than/
+            [parsed_dur, nil]
+          end
+        when /^between/
+          first, second = dur_words.match(/between (.*) and (.*)/).captures
+
+          # If the first time only contains only a single word, the unit (and past/future) is
+          # most likely directly after the first word of the the second time
+          # eg between 3 and 4 hours
+          suffix = second.match(/\w (.*)/) ? second.match(/\w (.*)/).captures.first : ''
+          first = "#{first} #{suffix}" unless / /.match(first)
+
+          [ChronicDuration.parse(first), ChronicDuration.parse(second)].sort
+        end
+      end
+
       # returns two timestamps, the start and end of the calculated time range. if
       # either one is nil that indicates that the range is unbounded at that end.
       # Start is inclusive of that second, end is exclusive.
@@ -289,28 +335,26 @@ def common_arguments(cmd_type, gli_cmd)
         'be a string, or a Ruby regex of the form \'Downtime for *\' or ' +
         '\'[[:lower:]]\''
 
-    # TODO must_match regexp isn't working properly
     gli_cmd.flag [:s, 'start', 'started', 'starting'],
       :desc => 'The start time for the maintenance window. This should ' +
                'be prefixed with "more than", "less than", "on", "before", ' +
-               'or "after", or of the form "between T1 and T2"' #,
-      # :must_match => /^(?:more than|less than|on|before|after|between)/
+               'or "after", or of the form "between T1 and T2"',
+      :must_match => /^(?:more than|less than|on|before|after|between)\s+.+$/
 
     gli_cmd.flag [:d, 'duration'],
       :desc => 'The total duration of the maintenance window. This should ' +
-               'be prefixed with "more than", "less than", "before, "after" ' +
-               'or "equal to", or of the form "between 3 and 4 hours". ' +
-               'This should be an interval',
-      :must_match => /^(?:more than|less than|on|before|after|between)/
+               'be prefixed with "more than", "less than", or "equal to", ' +
+               'or of the form "between M and N hours". This should be an ' +
+               ' interval',
+      :must_match => /^(?:more than|less than|equal to|between)\s+.+$/
   end
 
   if [:show, :delete].include?(cmd_type)
-    # TODO must_match regexp isn't working properly
     gli_cmd.flag [:f, 'finish', 'finished', 'finishing', 'remain', 'remained', 'remaining', 'end'],
       :desc => 'The finishing time for the maintenance window. This should ' +
                'prefixed with "more than", "less than", "on", "before", or ' +
-               '"after", or of the form "between T1 and T2"' # ,
-      # :must_match => /^(?:more than|less than|on|before|after|between)/
+               '"after", or of the form "between T1 and T2"' ,
+      :must_match => /^(?:more than|less than|on|before|after|between)\s+.+$/
 
     gli_cmd.flag [:st, 'state'],
       :desc => 'The state that the check is currently in',
