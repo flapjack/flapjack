@@ -1,9 +1,6 @@
 #!/usr/bin/env ruby
 
-# require 'eventmachine'
-# require 'em-synchrony'
 require 'redis'
-# require 'redis/connection/synchrony'
 
 require 'flapjack/configuration'
 require 'flapjack/data/event'
