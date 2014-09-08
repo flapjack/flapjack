@@ -874,7 +874,7 @@ module Flapjack
 
         purge_stamps = historical_states(-1, t.to_i - older_than).map {|s| s[:timestamp]}
         unless purge_stamps.empty?
-          puts "purging #{purge_stamps.length} states from #{@key}"
+          @logger.info "purging #{purge_stamps.length} states from #{@key}" if @logger
           deletees = []
           purge_stamps.each do |timestamp|
             deletees << "#{@key}:#{timestamp}:state"
@@ -882,19 +882,19 @@ module Flapjack
             deletees << "#{@key}:#{timestamp}:count"
             deletees << "#{@key}:#{timestamp}:check_latency"
           end
-          puts "  deleting a bunch of keys 100 at a time..."
+          @logger.info "  deleting a bunch of keys 100 at a time..." if @logger
           deletees.each_slice(100) do |batch|
             @redis.del(batch)
           end
-          puts "  removing a range of items from the #{@key}:sorted_state_timestamps sorted set"
+          @logger.info "  removing a range of items from the #{@key}:sorted_state_timestamps sorted set" if @logger
           @redis.zremrangebyscore("#{@key}:sorted_state_timestamps", '-inf', t.to_i - older_than)
-          puts "  getting the #{@key}:states list"
+          @logger.info "  getting the #{@key}:states list"
           states = @redis.lrange("#{@key}:states", 0, -1)
           index = 0
           while states[index].to_i < older_than do
             index += 1
           end
-          puts "  trimming the #{@key}:states from #{index}, length #{states.length}"
+          @logger.info "  trimming the #{@key}:states from #{index}, length #{states.length}" if @logger
           @redis.ltrim("#{@key}:states", index, -1)
         end
         purge_stamps.length
