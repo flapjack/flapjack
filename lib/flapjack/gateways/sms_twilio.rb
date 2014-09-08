@@ -17,8 +17,6 @@ module Flapjack
       # --data-urlencode 'Body=Sausage' \
       # -u [AccountSid]:[AuthToken]
 
-      #MESSAGENET_DEFAULT_URL = 'https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage'
-
       class << self
 
         include Flapjack::Utility
