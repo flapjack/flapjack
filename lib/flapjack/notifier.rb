@@ -15,6 +15,7 @@ require 'flapjack/utility'
 
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
+require 'flapjack/gateways/sms_twilio'
 require 'flapjack/gateways/aws_sns'
 
 module Flapjack
@@ -159,12 +160,13 @@ module Flapjack
         contents_tags = contents['tags']
         contents['tags'] = contents_tags.is_a?(Set) ? contents_tags.to_a : contents_tags
 
+        # FIXME(@auxesis): change Resque jobs to use raw blpop
         case media_type.to_sym
         when :sms
-          # FIXME(@auxesis): change Resque jobs to use raw blpop
           Resque.enqueue_to(@queues['sms'], Flapjack::Gateways::SmsMessagenet, contents)
+        when :sms_twilio
+          Resque.enqueue_to(@queues['sms_twilio'], Flapjack::Gateways::SmsTwilio, contents)
         when :email
-          # FIXME(@auxesis): change Resque jobs to use raw blpop
           Resque.enqueue_to(@queues['email'], Flapjack::Gateways::Email, contents)
         when :sns
           Resque.enqueue_to(@queues['sns'], Flapjack::Gateways::AwsSns, contents)

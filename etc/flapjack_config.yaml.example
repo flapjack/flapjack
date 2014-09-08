@@ -39,6 +39,7 @@ production:
     queue: notifications
     email_queue: email_notifications
     sms_queue: sms_notifications
+    sms_twilio_queue: sms_twilio_notifications
     sns_queue: sns_notifications
     jabber_queue: jabber_notifications
     pagerduty_queue: pagerduty_notifications
@@ -85,7 +86,7 @@ production:
       #  alert.text: '/etc/flapjack/templates/email/alert.text.erb'
       #  rollup.html: '/etc/flapjack/templates/email/rollup.html.erb'
       #  alert.html: '/etc/flapjack/templates/email/alert.html.erb'
-    # Generates sms notifications
+    # Sends SMS notifications via MessageNet (Australia only)
     sms:
       enabled: no
       # the redis queue this pikelet will look for notifications on
@@ -100,6 +101,21 @@ production:
       #templates:
       #  rollup.text: '/etc/flapjack/templates/sms/rollup.text.erb'
       #  alert.text: '/etc/flapjack/templates/sms/alert.text.erb'
+    # Sends SMS notifications via Twilio
+    sms_twilio:
+      enabled: no
+      queue: sms_twilio_notifications
+      account_sid: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      auth_token: "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      from: "+1xxxxxxxxxx"
+      logger:
+        level: INFO
+        syslog_errors: yes
+      # location of custom alert templates
+      # location of custom alert templates
+      #templates:
+      #  rollup.text: '/etc/flapjack/templates/sms_twilio/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/sms_twilio/alert.text.erb'
     # Generates SNS notifications
     sns:
       enabled: no
@@ -150,6 +166,8 @@ production:
       enabled: yes
       port: 3080
       timeout: 300
+      # Seconds between auto_refresh of entities/checks pages.  Set to 0 to disable
+      auto_refresh: 120
       access_log: "/var/log/flapjack/web_access.log"
       api_url: "http://localhost:3081/"
       # Full path to location of logo file, e.g. /etc/flapjack/custom_logo.png
@@ -233,6 +251,7 @@ development:
     queue: notifications
     email_queue: email_notifications
     sms_queue: sms_notifications
+    sms_twilio_queue: sms_twilio_notifications
     jabber_queue: jabber_notifications
     pagerduty_queue: pagerduty_notifications
     notification_log_file: log/notification.log
@@ -293,6 +312,22 @@ development:
       #templates:
       #  rollup.text: '/etc/flapjack/templates/sms/rollup.text.erb'
       #  alert.text: '/etc/flapjack/templates/sms/alert.text.erb'
+    # Sends SMS messages via Twilio
+    sms_twilio:
+      enabled: no
+      queue: sms_twilio_notifications
+      account_sid: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      auth_token: "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      from: "+1xxxxxxxxxx"
+      logger:
+        level: INFO
+        syslog_errors: yes
+      # location of custom alert templates
+      # location of custom alert templates
+      #templates:
+      #  rollup.text: '/etc/flapjack/templates/sms_twilio/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/sms_twilio/alert.text.erb'
+    # Generates SNS notifications
     # Connects to an XMPP (jabber) server, sends notifications (to rooms and individuals),
     # handles acknowledgements from jabber users and other commands.
     jabber:
@@ -335,6 +370,8 @@ development:
       enabled: yes
       port: 3080
       timeout: 300
+      # Seconds between auto_refresh of entities/checks pages.  Set to 0 to disable
+      auto_refresh: 120
       access_log: "log/web_access.log"
       api_url: "http://localhost:3081/"
       # Full path to location of logo file, e.g. /etc/flapjack/custom_logo.png
