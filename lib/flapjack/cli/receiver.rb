@@ -633,6 +633,19 @@ command :receiver do |receiver|
     end
   end
 
+  receiver.desc 'HTTP checker for availability checking of services'
+  receiver.command :httpchecker do |httpchecker|
+    httpchecker.passthrough = true
+    httpchecker.action do |global_options, options, args|
+      libexec = Pathname.new(__FILE__).parent.parent.parent.parent.join('libexec').expand_path
+      httpchecker  = libexec.join('httpchecker')
+      if httpchecker.exist?
+        Kernel.exec(httpchecker.to_s, *ARGV)
+      end
+    end
+  end
+
+
   receiver.desc 'HTTP API that caches and submits events'
   receiver.command :httpbroker do |httpbroker|
     httpbroker.passthrough = true
