@@ -50,16 +50,15 @@ describe Flapjack::Gateways::SmsTwilio, :logger => true do
       'fathers brought forth on this continent, a new nation, conceived in ' +
       'Liberty, and dedicated to the proposition that all men are created equal.')
 
-    encoded_body = URI::encode_www_form(
-      {'To'   => '555-555555',
-        'From' => 'the_from_address',
-        'Body' => "Recovery: 'ping' on example.com is " +
-                  "OK at #{time_str}, Four score and seven years ago " +
-                  'our fathers brought forth on this continent, a new ' +
-                  'nation, conceived i...'}).gsub(/\+/, '%20')
-
-      req = stub_request(:post, "https://api.twilio.com/2010-04-01/Accounts/the_account_sid/Messages.json").
-      with(:body  => encoded_body).
+    body = {
+      'To'   => '555-555555',
+      'From' => 'the_from_address',
+      'Body' => "Recovery: 'ping' on example.com is " +
+                "OK at #{time_str}, Four score and seven years ago " +
+                'our fathers brought forth on this continent, a new ' +
+                'nation, conceived i...'}
+    req = stub_request(:post, "https://api.twilio.com/2010-04-01/Accounts/the_account_sid/Messages.json").
+      with(:body  => body).
       with(:headers => {'Authorization'=>['the_account_sid', 'the_auth_token']}).
       to_return(:status => 200)
 
