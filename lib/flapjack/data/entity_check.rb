@@ -34,20 +34,20 @@ module Flapjack
       def self.add(check_data, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
-        entity_id  = check['entity_id']
+        entity_id  = check_data['entity_id']
         raise "Entity id not provided" if entity_id.nil? || entity_id.empty?
 
-        check_name = check['name']
+        check_name = check_data['name']
         raise "Name not provided" if check_name.nil? || check_name.empty?
 
-        ent = Flapjack::Data::Entity.find_by_id(entity_id)
+        ent = Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis)
 
         raise "Entity not found for id '#{entity_id}'" if ent.nil?
 
         logger = options[:logger]
         timestamp = Time.now.to_i
 
-        redis.zadd("current_checks:#{ent.name}", timestamp, check)
+        redis.zadd("current_checks:#{ent.name}", timestamp, check_name)
         redis.zadd('current_entities', timestamp, ent.name)
 
         self.new(ent, check_name, :logger  => logger,

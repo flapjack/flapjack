@@ -88,8 +88,18 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     }.to raise_error
   end
 
-  it 'registers with current_checks and current_entities if explicitly added' # do
-  # end
+  it 'registers with current_checks and current_entities if explicitly added' do
+    expect(@redis.zrange("current_checks:#{name}", 0, -1)).to eq([])
+    expect(@redis.zrange("current_entities", 0, -1)).to eq([])
+
+    check_data = {'entity_id' => '5000',
+                  'name'      => 'ssh'}
+
+    Flapjack::Data::EntityCheck.add(check_data, :redis => @redis)
+
+    expect(@redis.zrange("current_checks:#{name}", 0, -1)).to eq(["ssh"])
+    expect(@redis.zrange("current_entities", 0, -1)).to eq([name])
+  end
 
   it "adds tags to checks" do
     entity_check = Flapjack::Data::EntityCheck.for_entity_name(name, 'ping', :redis => @redis)
