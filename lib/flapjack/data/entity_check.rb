@@ -27,7 +27,32 @@ module Flapjack
       NOTIFICATION_STATES = [:problem, :warning, :critical, :unknown,
                              :recovery, :acknowledgement]
 
+      TAG_PREFIX = 'check_tag'
+
       attr_accessor :entity, :check
+
+      def self.add(check_data, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        entity_id  = check['entity_id']
+        raise "Entity id not provided" if entity_id.nil? || entity_id.empty?
+
+        check_name = check['name']
+        raise "Name not provided" if check_name.nil? || check_name.empty?
+
+        ent = Flapjack::Data::Entity.find_by_id(entity_id)
+
+        raise "Entity not found for id '#{entity_id}'" if ent.nil?
+
+        logger = options[:logger]
+        timestamp = Time.now.to_i
+
+        redis.zadd("current_checks:#{ent.name}", timestamp, check)
+        redis.zadd('current_entities', timestamp, ent.name)
+
+        self.new(ent, check_name, :logger  => logger,
+                 :redis => redis)
+      end
 
       def self.for_event_id(event_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
@@ -123,6 +148,18 @@ module Flapjack
           Flapjack::Data::EntityCheck.for_event_id(entity_check, :redis => redis)
         }
       end
+
+      # # Not used anywhere
+      # def self.find_all_with_tags(tags, options = {})
+      #   raise "Redis connection not set" unless redis = options[:redis]
+      #   tags_prefixed = tags.collect {|tag|
+      #     "#{TAG_PREFIX}:#{tag}"
+      #   }
+      #   logger.debug "tags_prefixed: #{tags_prefixed.inspect}" if logger = options[:logger]
+      #   Flapjack::Data::Tag.find_intersection(tags_prefixed, :redis => redis).collect {|event_id|
+      #     Flapjack::Data::EntityCheck.find_by_id(event_id, :redis => redis)
+      #   }.compact
+      # end
 
       def self.conflate_to_keys(entity_checks_hash)
         result = []
@@ -845,10 +882,33 @@ module Flapjack
       end
 
       def tags
-        entity, check = @key.split(":", 2)
-        ta = Flapjack::Data::TagSet.new([])
-        ta += entity.split('.', 2).map {|x| x.downcase}
-        ta += check.split(' ').map {|x| x.downcase}
+        @tags ||= Flapjack::Data::TagSet.new( @redis.keys("#{TAG_PREFIX}:*").inject([]) {|memo, check_tag|
+          if Flapjack::Data::Tag.find(check_tag, :redis => @redis).include?(@key)
+            memo << check_tag.sub(/^#{TAG_PREFIX}:/, '')
+          end
+          memo
+        } )
+
+        # ensure that returned tags include split entity and check words
+        @tags += @entity.name.split('.', 2).map {|x| x.downcase} +
+          @check.split(' ').map {|x| x.downcase}
+
+        @tags
+      end
+
+      def add_tags(*enum)
+        enum.each do |t|
+          Flapjack::Data::Tag.create("#{TAG_PREFIX}:#{t}", [@key], :redis => @redis)
+          tags.add(t)
+        end
+      end
+
+      def delete_tags(*enum)
+        enum.each do |t|
+          tag = Flapjack::Data::Tag.find("#{TAG_PREFIX}:#{t}", :redis => @redis)
+          tag.delete(@key)
+          tags.delete(t)
+        end
       end
 
       def ack_hash

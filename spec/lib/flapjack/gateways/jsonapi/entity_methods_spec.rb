@@ -152,6 +152,19 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(last_response.status).to eq(204)
   end
 
+  it "sets tags on an entity" do
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with('1234', :redis => redis).and_return(entity)
+
+    expect(entity).to receive(:update).
+      with('tags' => ['database', 'virtualised'])
+
+    apatch "/entities/1234",
+      [{:op => 'replace', :path => '/entities/0/tags', :value => ['database', 'virtualised']}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
+
   it "creates acknowledgements for all checks on an entity" do
     expect(entity).to receive(:check_list).and_return([check])
     expect(Flapjack::Data::Entity).to receive(:find_by_id).

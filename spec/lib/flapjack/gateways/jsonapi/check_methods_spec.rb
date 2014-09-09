@@ -71,6 +71,36 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(last_response.body).to eq({:checks => [check_data, check_data_2]}.to_json)
   end
 
+  it "creates checks from a submitted list" do
+    checks = {'checks' =>
+      [
+       {"entity_id" => "10001",
+        "name" => "PING"
+       },
+       {"entity_id" => "10001",
+        "name" => "SSH"
+       }
+      ]
+    }
+
+    entity_check_2 = double(Flapjack::Data::EntityCheck)
+    expect(entity).to receive(:name).twice.and_return('example.com')
+
+    expect(entity_check).to receive(:entity).and_return(entity)
+    expect(entity_check_2).to receive(:entity).and_return(entity)
+
+    expect(entity_check).to receive(:check).and_return('PING')
+    expect(entity_check_2).to receive(:check).and_return('SSH')
+
+    expect(Flapjack::Data::EntityCheck).to receive(:add).twice.
+      and_return(entity_check, entity_check_2)
+
+    apost "/checks", checks.to_json, jsonapi_post_env
+    expect(last_response.status).to eq(201)
+    expect(last_response.headers['Location']).to eq("http://example.org/checks/example.com:PING,example.com:SSH")
+    expect(last_response.body).to eq('["example.com:PING","example.com:SSH"]')
+  end
+
   it 'disables a check' do
     expect(Flapjack::Data::Entity).to receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
@@ -83,7 +113,21 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
       [{:op => 'replace', :path => '/checks/0/enabled', :value => false}].to_json,
       jsonapi_patch_env
     expect(last_response.status).to eq(204)
+  end
 
+  it "sets tags on a check" do
+    expect(Flapjack::Data::Entity).to receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+
+    expect(entity_check).to receive(:update).
+      with('tags' => ['database', 'virtualised'])
+
+    apatch "/checks/#{check_esc}",
+      [{:op => 'replace', :path => '/checks/0/tags', :value => ['database', 'virtualised']}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
   end
 
   it "creates an acknowledgement for an entity check" do

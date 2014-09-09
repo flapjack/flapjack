@@ -182,73 +182,74 @@ describe Flapjack::Data::Entity, :redis => true do
 
   end
 
-  it "finds entities by tag" do
-    entity0 = Flapjack::Data::Entity.add({'id'       => '5000',
-                                          'name'     => 'abc-123',
-                                          'contacts' => []},
-                                         :redis => @redis)
+  # # Not used anywhere
+  # it "finds entities by tag" do
+  #   entity0 = Flapjack::Data::Entity.add({'id'       => '5000',
+  #                                         'name'     => 'abc-123',
+  #                                         'contacts' => []},
+  #                                        :redis => @redis)
 
-    entity1 = Flapjack::Data::Entity.add({'id'       => '5001',
-                                          'name'     => 'def-456',
-                                          'contacts' => []},
-                                         :redis => @redis)
+  #   entity1 = Flapjack::Data::Entity.add({'id'       => '5001',
+  #                                         'name'     => 'def-456',
+  #                                         'contacts' => []},
+  #                                        :redis => @redis)
 
-    entity0.add_tags('source:foobar', 'abc')
-    entity1.add_tags('source:foobar', 'def')
+  #   entity0.add_tags('source:foobar', 'abc')
+  #   entity1.add_tags('source:foobar', 'def')
 
-    expect(entity0).not_to be_nil
-    expect(entity0).to be_an(Flapjack::Data::Entity)
-    expect(entity0.tags).to include("source:foobar")
-    expect(entity0.tags).to include("abc")
-    expect(entity0.tags).not_to include("def")
-    expect(entity1).not_to be_nil
-    expect(entity1).to be_an(Flapjack::Data::Entity)
-    expect(entity1.tags).to include("source:foobar")
-    expect(entity1.tags).to include("def")
-    expect(entity1.tags).not_to include("abc")
+  #   expect(entity0).not_to be_nil
+  #   expect(entity0).to be_an(Flapjack::Data::Entity)
+  #   expect(entity0.tags).to include("source:foobar")
+  #   expect(entity0.tags).to include("abc")
+  #   expect(entity0.tags).not_to include("def")
+  #   expect(entity1).not_to be_nil
+  #   expect(entity1).to be_an(Flapjack::Data::Entity)
+  #   expect(entity1.tags).to include("source:foobar")
+  #   expect(entity1.tags).to include("def")
+  #   expect(entity1.tags).not_to include("abc")
 
-    entities = Flapjack::Data::Entity.find_all_with_tags(['abc'], :redis => @redis)
-    expect(entities).to be_an(Array)
-    expect(entities.size).to eq(1)
-    expect(entities.first).to eq('abc-123')
+  #   entities = Flapjack::Data::Entity.find_all_with_tags(['abc'], :redis => @redis)
+  #   expect(entities).to be_an(Array)
+  #   expect(entities.size).to eq(1)
+  #   expect(entities.first).to eq('abc-123')
 
-    entities = Flapjack::Data::Entity.find_all_with_tags(['donkey'], :redis => @redis)
-    expect(entities).to be_an(Array)
-    expect(entities).to be_empty
-  end
+  #   entities = Flapjack::Data::Entity.find_all_with_tags(['donkey'], :redis => @redis)
+  #   expect(entities).to be_an(Array)
+  #   expect(entities).to be_empty
+  # end
 
-  it "finds entities with several tags" do
-    entity0 = Flapjack::Data::Entity.add({'id'       => '5000',
-                                         'name'     => 'abc-123',
-                                         'contacts' => []},
-                                        :redis => @redis)
+  # it "finds entities with several tags" do
+  #   entity0 = Flapjack::Data::Entity.add({'id'       => '5000',
+  #                                        'name'     => 'abc-123',
+  #                                        'contacts' => []},
+  #                                       :redis => @redis)
 
-    entity1 = Flapjack::Data::Entity.add({'id'       => '5001',
-                                         'name'     => 'def-456',
-                                         'contacts' => []},
-                                        :redis => @redis)
+  #   entity1 = Flapjack::Data::Entity.add({'id'       => '5001',
+  #                                        'name'     => 'def-456',
+  #                                        'contacts' => []},
+  #                                       :redis => @redis)
 
-    entity0.add_tags('source:foobar', 'abc')
-    entity1.add_tags('source:foobar', 'def')
+  #   entity0.add_tags('source:foobar', 'abc')
+  #   entity1.add_tags('source:foobar', 'def')
 
-    expect(entity0).not_to be_nil
-    expect(entity0).to be_an(Flapjack::Data::Entity)
-    expect(entity0.tags).to include("source:foobar")
-    expect(entity0.tags).to include("abc")
-    expect(entity1).not_to be_nil
-    expect(entity1).to be_an(Flapjack::Data::Entity)
-    expect(entity1.tags).to include("source:foobar")
-    expect(entity1.tags).to include("def")
+  #   expect(entity0).not_to be_nil
+  #   expect(entity0).to be_an(Flapjack::Data::Entity)
+  #   expect(entity0.tags).to include("source:foobar")
+  #   expect(entity0.tags).to include("abc")
+  #   expect(entity1).not_to be_nil
+  #   expect(entity1).to be_an(Flapjack::Data::Entity)
+  #   expect(entity1.tags).to include("source:foobar")
+  #   expect(entity1.tags).to include("def")
 
-    entities = Flapjack::Data::Entity.find_all_with_tags(['source:foobar'], :redis => @redis)
-    expect(entities).to be_an(Array)
-    expect(entities.size).to eq(2)
+  #   entities = Flapjack::Data::Entity.find_all_with_tags(['source:foobar'], :redis => @redis)
+  #   expect(entities).to be_an(Array)
+  #   expect(entities.size).to eq(2)
 
-    entities = Flapjack::Data::Entity.find_all_with_tags(['source:foobar', 'def'], :redis => @redis)
-    expect(entities).to be_an(Array)
-    expect(entities.size).to eq(1)
-    expect(entities.first).to eq('def-456')
-  end
+  #   entities = Flapjack::Data::Entity.find_all_with_tags(['source:foobar', 'def'], :redis => @redis)
+  #   expect(entities).to be_an(Array)
+  #   expect(entities.size).to eq(1)
+  #   expect(entities.first).to eq('def-456')
+  # end
 
   context 'renaming and merging' do
 

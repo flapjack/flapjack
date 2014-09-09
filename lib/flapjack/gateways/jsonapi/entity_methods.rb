@@ -96,9 +96,10 @@ module Flapjack
               apply_json_patch('entities') do |op, property, linked, value|
                 case op
                 when 'replace'
-                  if ['name'].include?(property)
-                    # # Name change not supported in Flapjack v1.x, too many changes required
-                    # entity.update(property => value)
+                  case property
+                  when 'name', 'tags'
+                    # Name change not yet supported, https://github.com/flapjack/flapjack/issues/628
+                    entity.update(property => value) unless 'name'.eql?('property')
                   end
                 when 'add'
                   if 'contacts'.eql?(linked)

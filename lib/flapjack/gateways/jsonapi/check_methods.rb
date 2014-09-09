@@ -63,14 +63,30 @@ module Flapjack
             '{"checks":[' + checks_json + ']}'
           end
 
+          app.post '/checks' do
+            checks = wrapped_params('checks')
+
+            check_names = checks.collect{|check_data|
+              check = Flapjack::Data::EntityCheck.add(check_data, :redis => redis)
+              "#{check.entity.name}:#{check.check}"
+            }
+
+            response.headers['Location'] = "#{request.base_url}/checks/#{check_names.join(',')}"
+            status 201
+            check_names.to_json
+          end
+
           app.patch %r{^/checks/(.+)$} do
             checks_for_check_names(params[:captures][0].split(',')).each do |check|
               apply_json_patch('checks') do |op, property, linked, value|
                 case op
                 when 'replace'
-                  if ['enabled'].include?(property)
+                  case property
+                  when 'enabled'
                     # explicitly checking for false being passed in
                     check.disable! if value.is_a?(FalseClass)
+                  when 'tags'
+                    check.update('tags' => value)
                   end
                 end
               end
