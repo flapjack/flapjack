@@ -233,7 +233,6 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(duration).to eq(half_an_hour)
     end
 
-    # TODO this should probably enforce that it starts in the future
     it "creates a scheduled maintenance period covering the current time" do
       t = Time.now.to_i
       ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
@@ -255,6 +254,11 @@ describe Flapjack::Data::EntityCheck, :redis => true do
       expect(duration).not_to be_nil
       expect(duration).to be_a(Float)
       expect(duration).to eq(2 * (60 * 60))
+
+      ttl = @redis.ttl("#{name}:#{check}:scheduled_maintenance")
+      expect(ttl).to be_within(20).of(60 * 60) # 20-second margin of error,
+      # should be large enough for a slow machine running the test -- duration
+      # is considered to start at the begininng of the period
     end
 
     it "removes a scheduled maintenance period for a future time" do
