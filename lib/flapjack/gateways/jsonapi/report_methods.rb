@@ -17,10 +17,11 @@ module Flapjack
         module Helpers
 
           def load_api_data(check_ids, &block)
+
             checks = if check_ids.nil?
               Flapjack::Data::Check.all
             elsif !check_ids.empty?
-              Flapjack::Data::Check.find_by_ids!(check_ids)
+              Flapjack::Data::Check.find_by_ids!(*check_ids)
             else
               []
             end

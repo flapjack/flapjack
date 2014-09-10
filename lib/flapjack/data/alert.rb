@@ -2,7 +2,7 @@
 
 require 'active_support/inflector'
 
-require 'sandstorm/record'
+require 'sandstorm/records/redis_record'
 
 require 'flapjack/utility'
 
@@ -14,7 +14,7 @@ module Flapjack
     class Alert
 
       include Flapjack::Utility
-      include Sandstorm::Record
+      include Sandstorm::Records::RedisRecord
 
       define_attributes :state        => :string,
                         :summary      => :string,

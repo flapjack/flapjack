@@ -19,7 +19,7 @@ module Flapjack
           def create_scheduled_maintenances(check_ids)
             sched_maint_params = wrapped_params('scheduled_maintenances')
 
-            sched_maints = Flapjack::Data::Check.find_by_ids!(check_ids).inject({}) do |memo, check|
+            sched_maints = Flapjack::Data::Check.find_by_ids!(*check_ids).inject({}) do |memo, check|
               memo[check] = []
               sched_maint_params.collect do |wp|
                 start_time = validate_and_parsetime(wp['start_time'])
@@ -32,7 +32,9 @@ module Flapjack
 
             errs = nil
 
-            Flapjack::Data::Check.send(:lock, Flapjack::Data::ScheduledMaintenance) do
+            Flapjack::Data::Check.backend.lock(Flapjack::Data::Check,
+              Flapjack::Data::ScheduledMaintenance) do
+
               invalid_maint = nil
 
               sched_maints.detect do |check, maints|
@@ -61,7 +63,7 @@ module Flapjack
           def create_unscheduled_maintenances(check_ids)
             unsched_maint_params = wrapped_params('unscheduled_maintenances', false)
 
-            checks = Flapjack::Data::Check.find_by_ids!(check_ids)
+            checks = Flapjack::Data::Check.find_by_ids!(*check_ids)
 
             unsched_maints = unsched_maint_params.collect do |wp|
               dur = wp['duration'] ? wp['duration'].to_i : nil
@@ -79,7 +81,7 @@ module Flapjack
           end
 
           def update_unscheduled_maintenances(check_ids)
-            Flapjack::Data::Check.find_by_ids!(check_ids).each do |check|
+            Flapjack::Data::Check.find_by_ids!(*check_ids).each do |check|
               apply_json_patch('unscheduled_maintenances') do |op, property, linked, value|
                 case op
                 when 'replace'
@@ -95,7 +97,7 @@ module Flapjack
           end
 
           def delete_scheduled_maintenances(start_time, check_ids)
-            Flapjack::Data::Check.find_by_ids!(check_ids).each do |check|
+            Flapjack::Data::Check.find_by_ids!(*check_ids).each do |check|
               next unless sched_maint = check.scheduled_maintenances_by_start.
                 intersect_range(start_time.to_i, start_time.to_i, :by_score => true).all.first
               check.end_scheduled_maintenance(sched_maint, Time.now)
@@ -106,7 +108,7 @@ module Flapjack
           def create_test_notifications(check_ids)
             test_notifications = wrapped_params('test_notifications', false)
 
-            checks = Flapjack::Data::Check.find_by_ids!(check_ids)
+            checks = Flapjack::Data::Check.find_by_ids!(*check_ids)
             test_notifications.each do |wp|
               summary = wp['summary'] ||
                         "Testing notifications to all contacts interested in #{checks.map(&:name).join(', ')}"

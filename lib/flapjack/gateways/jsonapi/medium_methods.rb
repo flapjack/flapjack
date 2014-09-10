@@ -27,7 +27,9 @@ module Flapjack
             media_ids = nil
             media = nil
 
-            Flapjack::Data::Contact.send(:lock, Flapjack::Data::Medium) do
+            Flapjack::Data::Contact.backend.lock(Flapjack::Data::Contact,
+              Flapjack::Data::Medium) do
+
               contact = Flapjack::Data::Contact.find_by_id(params[:contact_id])
 
               if contact.nil?
@@ -76,7 +78,7 @@ module Flapjack
             end
 
             media = if requested_media
-              Flapjack::Data::Medium.find_by_ids!(requested_media)
+              Flapjack::Data::Medium.find_by_ids!(*requested_media)
             else
               Flapjack::Data::Medium.all
             end
@@ -92,7 +94,7 @@ module Flapjack
           end
 
           app.patch '/media/:id' do
-            Flapjack::Data::Medium.find_by_ids!(params[:id].split(',')).each do |medium|
+            Flapjack::Data::Medium.find_by_ids!(*params[:id].split(',')).each do |medium|
               apply_json_patch('media') do |op, property, linked, value|
                 case op
 
@@ -104,7 +106,8 @@ module Flapjack
                 when 'add'
                   case linked
                   when 'notification_rule_state'
-                    Flapjack::Data::Medium.send(:lock) do
+
+                    Flapjack::Data::Medium.backend.lock(Flapjack::Data::Medium) do
                       notification_rule_state = Flapjack::Data::NotificationRuleState.find_by_id(value)
                       unless notification_rule_state.nil?
                         if existing_medium = notification_rule_state.media.intersect(:type => medium.type).all.first
@@ -130,7 +133,7 @@ module Flapjack
           end
 
           app.delete '/media/:id' do
-            Flapjack::Data::Medium.find_by_ids!(params[:id].split(',')).map(&:destroy)
+            Flapjack::Data::Medium.find_by_ids!(*params[:id].split(',')).map(&:destroy)
 
             status 204
           end

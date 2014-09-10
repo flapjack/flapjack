@@ -28,7 +28,9 @@ module Flapjack
             notification_rule_ids = nil
             notification_rules = nil
 
-            Flapjack::Data::Contact.send(:lock, Flapjack::Data::NotificationRule) do
+            Flapjack::Data::Contact.backend.lock(Flapjack::Data::Contact,
+              Flapjack::Data::NotificationRule) do
+
               contact = Flapjack::Data::Contact.find_by_id(params[:contact_id])
 
               if contact.nil?
@@ -69,7 +71,7 @@ module Flapjack
             end
 
             notification_rules = if requested_notification_rules
-              Flapjack::Data::NotificationRule.find_by_ids!(requested_notification_rules)
+              Flapjack::Data::NotificationRule.find_by_ids!(*requested_notification_rules)
             else
               Flapjack::Data::NotificationRule.all
             end
@@ -89,7 +91,7 @@ module Flapjack
           # NB notification rules can't add/remove NotitifcationRuleStates, they're
           # created with the default set and possess them for as long as they exist
           app.patch '/notification_rules/:id' do
-            Flapjack::Data::NotificationRule.find_by_ids!(params[:id].split(',')).each do |notification_rule|
+            Flapjack::Data::NotificationRule.find_by_ids!(*params[:id].split(',')).each do |notification_rule|
               apply_json_patch('notification_rules') do |op, property, linked, value|
                 case op
                 when 'replace'
@@ -123,7 +125,7 @@ module Flapjack
           end
 
           app.delete '/notification_rules/:id' do
-            Flapjack::Data::NotificationRule.find_by_ids!(params[:id].split(',')).map(&:destroy)
+            Flapjack::Data::NotificationRule.find_by_ids!(*params[:id].split(',')).map(&:destroy)
 
             status 204
           end

@@ -33,7 +33,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleStateMethods', :sinatra =
 
   it "gets a single notification rule state" do
     expect(Flapjack::Data::NotificationRuleState).to receive(:find_by_ids!).
-      with([notification_rule_state.id]).and_return([notification_rule_state])
+      with(notification_rule_state.id).and_return([notification_rule_state])
 
     expect(notification_rule_state).to receive(:as_json).and_return(notification_rule_state_data)
     expect(Flapjack::Data::NotificationRuleState).to receive(:associated_ids_for_notification_rule).
@@ -46,8 +46,8 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleStateMethods', :sinatra =
 
   it "does not get a notification rule state that does not exist" do
     expect(Flapjack::Data::NotificationRuleState).to receive(:find_by_ids!).
-      with([notification_rule_state.id]).
-      and_raise(Sandstorm::Errors::RecordsNotFound.new(Flapjack::Data::NotificationRuleState, [notification_rule_state.id]))
+      with(notification_rule_state.id).
+      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::NotificationRuleState, [notification_rule_state.id]))
 
     get "/notification_rule_states/#{notification_rule_state.id}"
     expect(last_response).to be_not_found
@@ -55,7 +55,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleStateMethods', :sinatra =
 
   it "updates a notification rule state" do
     expect(Flapjack::Data::NotificationRuleState).to receive(:find_by_ids!).
-      with([notification_rule_state.id]).and_return([notification_rule_state])
+      with(notification_rule_state.id).and_return([notification_rule_state])
 
     expect(notification_rule_state).to receive(:blackhole=).with(true)
     expect(notification_rule_state).to receive(:save).and_return(true)
@@ -69,7 +69,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleStateMethods', :sinatra =
   it "updates multiple notification rule states" do
     notification_rule_state_2 = double(Flapjack::Data::NotificationRuleState, :id => 'uiop')
     expect(Flapjack::Data::NotificationRuleState).to receive(:find_by_ids!).
-      with([notification_rule_state.id, notification_rule_state_2.id]).and_return([notification_rule_state, notification_rule_state_2])
+      with(notification_rule_state.id, notification_rule_state_2.id).and_return([notification_rule_state, notification_rule_state_2])
 
     expect(notification_rule_state).to receive(:blackhole=).with(true)
     expect(notification_rule_state).to receive(:save).and_return(true)
@@ -84,8 +84,9 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleStateMethods', :sinatra =
   end
 
   it "does not update a notification rule state that does not exist" do
-    expect(Flapjack::Data::NotificationRuleState).to receive(:find_by_ids!).with([notification_rule_state.id]).
-      and_raise(Sandstorm::Errors::RecordsNotFound.new(Flapjack::Data::NotificationRuleState, [notification_rule_state.id]))
+    expect(Flapjack::Data::NotificationRuleState).to receive(:find_by_ids!).
+      with(notification_rule_state.id).
+      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::NotificationRuleState, [notification_rule_state.id]))
 
     patch "/notification_rule_states/#{notification_rule_state.id}",
       [{:op => 'replace', :path => '/notification_rule_states/0/blackhole', :value => true}].to_json,

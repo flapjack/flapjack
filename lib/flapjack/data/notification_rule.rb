@@ -7,7 +7,7 @@ require 'ice_cube'
 
 require 'flapjack/utility'
 
-require 'sandstorm/record'
+require 'sandstorm/records/redis_record'
 
 module Flapjack
   module Data
@@ -15,7 +15,7 @@ module Flapjack
 
       extend Flapjack::Utility
 
-      include Sandstorm::Record
+      include Sandstorm::Records::RedisRecord
 
       # I've removed regex_* properties as they encourage loose binding against
       # names, which may change.

@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'sandstorm/record'
+require 'sandstorm/records/redis_record'
 
 require 'flapjack/data/check_state'
 
@@ -8,7 +8,7 @@ module Flapjack
   module Data
     class NotificationBlock
 
-      include Sandstorm::Record
+      include Sandstorm::Records::RedisRecord
 
       define_attributes :expire_at        => :timestamp,
                         :rollup           => :boolean,

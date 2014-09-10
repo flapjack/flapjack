@@ -56,8 +56,6 @@ module Flapjack
         @pikelet.siblings = @siblings.map(&:pikelet) if @pikelet.respond_to?(:siblings=)
 
         @thread = Thread.new do
-          Thread.current.abort_on_exception = true
-
           # TODO rename this, it's only relevant in the error case
           max_runs = @config['max_runs'] || 1
           runs = 0

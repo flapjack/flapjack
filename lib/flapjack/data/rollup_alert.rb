@@ -4,7 +4,7 @@ module Flapjack
   module Data
     class RollupAlert
 
-      include Sandstorm::Record
+      include Sandstorm::Records::RedisRecord
 
       define_attributes :state    => :string,
                         :duration => :integer

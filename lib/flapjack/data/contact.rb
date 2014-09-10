@@ -6,7 +6,7 @@
 require 'set'
 require 'ice_cube'
 
-require 'sandstorm/record'
+require 'sandstorm/records/redis_record'
 
 require 'flapjack/data/check_state'
 require 'flapjack/data/medium'
@@ -23,7 +23,7 @@ module Flapjack
 
     class Contact
 
-      include Sandstorm::Record
+      include Sandstorm::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
 

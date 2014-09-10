@@ -5,6 +5,8 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
 
   include_context "jsonapi"
 
+  let(:backend) { double(Sandstorm::Backends::Base) }
+
   let (:notification_rule) {
     double(Flapjack::Data::NotificationRule, :id => '1')
   }
@@ -16,8 +18,10 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
   let(:contact)      { double(Flapjack::Data::Contact, :id => '21') }
 
   it "creates a notification_rule" do
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::NotificationRule).and_yield
+    expect(Flapjack::Data::Contact).to receive(:backend).and_return(backend)
+    expect(backend).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::NotificationRule).and_yield
+
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id).and_return(contact)
 
@@ -36,8 +40,10 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
   end
 
   it "does not create a notification_rule if the data is improperly formatted" do
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::NotificationRule).and_yield
+    expect(Flapjack::Data::Contact).to receive(:backend).and_return(backend)
+    expect(backend).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::NotificationRule).and_yield
+
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id).and_return(contact)
 
@@ -53,8 +59,10 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
   end
 
   it "does not create a notification_rule if the contact doesn't exist" do
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::NotificationRule).and_yield
+    expect(Flapjack::Data::Contact).to receive(:backend).and_return(backend)
+    expect(backend).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::NotificationRule).and_yield
+
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id).and_return(nil)
 
@@ -79,7 +87,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
 
   it "gets a single notification rule" do
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_ids!).
-      with([notification_rule.id]).and_return([notification_rule])
+      with(notification_rule.id).and_return([notification_rule])
 
     expect(notification_rule).to receive(:as_json).and_return(notification_rule_data)
     expect(Flapjack::Data::NotificationRule).to receive(:associated_ids_for_contact).
@@ -94,8 +102,8 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
 
   it "does not get a notification rule that does not exist" do
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_ids!).
-      with([notification_rule.id]).
-      and_raise(Sandstorm::Errors::RecordsNotFound.new(Flapjack::Data::NotificationRule, [notification_rule.id]))
+      with(notification_rule.id).
+      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::NotificationRule, [notification_rule.id]))
 
     get "/notification_rules/#{notification_rule.id}"
     expect(last_response).to be_not_found
@@ -103,7 +111,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
 
   it "updates a notification rule" do
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_ids!).
-      with([notification_rule.id]).and_return([notification_rule])
+      with(notification_rule.id).and_return([notification_rule])
 
     expect(notification_rule).to receive(:time_restrictions=).with([])
     expect(notification_rule).to receive(:save).and_return(true)
@@ -117,7 +125,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
   it "updates multiple notification rules" do
     notification_rule_2 = double(Flapjack::Data::NotificationRule, :id => 'uiop')
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_ids!).
-      with([notification_rule.id, notification_rule_2.id]).and_return([notification_rule, notification_rule_2])
+      with(notification_rule.id, notification_rule_2.id).and_return([notification_rule, notification_rule_2])
 
     expect(notification_rule).to receive(:time_restrictions=).with([])
     expect(notification_rule).to receive(:save).and_return(true)
@@ -132,8 +140,9 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
   end
 
   it "does not update a notification rule that does not exist" do
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_ids!).with([notification_rule.id]).
-      and_raise(Sandstorm::Errors::RecordsNotFound.new(Flapjack::Data::NotificationRule, [notification_rule.id]))
+    expect(Flapjack::Data::NotificationRule).to receive(:find_by_ids!).
+      with(notification_rule.id).
+      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::NotificationRule, [notification_rule.id]))
 
     patch "/notification_rules/#{notification_rule.id}",
       [{:op => 'replace', :path => '/notification_rules/0/time_restrictions', :value => []}].to_json,
@@ -143,7 +152,7 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
 
   it "deletes a notification rule" do
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_ids!).
-      with([notification_rule.id]).and_return([notification_rule])
+      with(notification_rule.id).and_return([notification_rule])
 
     expect(notification_rule).to receive(:destroy)
 
@@ -154,7 +163,8 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
   it "deletes multiple notification rules" do
     notification_rule_2 = double(Flapjack::Data::NotificationRule, :id => 'uiop')
     expect(Flapjack::Data::NotificationRule).to receive(:find_by_ids!).
-      with([notification_rule.id, notification_rule_2.id]).and_return([notification_rule, notification_rule_2])
+      with(notification_rule.id, notification_rule_2.id).
+      and_return([notification_rule, notification_rule_2])
 
     expect(notification_rule).to receive(:destroy)
     expect(notification_rule_2).to receive(:destroy)
@@ -164,8 +174,9 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
   end
 
   it "does not delete a notification rule that does not exist" do
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_ids!).with([notification_rule.id]).
-      and_raise(Sandstorm::Errors::RecordsNotFound.new(Flapjack::Data::NotificationRule, [notification_rule.id]))
+    expect(Flapjack::Data::NotificationRule).to receive(:find_by_ids!).
+      with(notification_rule.id).
+      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::NotificationRule, [notification_rule.id]))
 
     delete "/notification_rules/#{notification_rule.id}"
     expect(last_response).to be_not_found

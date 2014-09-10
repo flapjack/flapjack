@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'sandstorm/record'
+require 'sandstorm/records/redis_record'
 
 require 'flapjack/data/check'
 require 'flapjack/data/contact'
@@ -11,7 +11,7 @@ module Flapjack
 
     class Tag
 
-      include Sandstorm::Record
+      include Sandstorm::Records::RedisRecord
 
       define_attributes :name => :string
 

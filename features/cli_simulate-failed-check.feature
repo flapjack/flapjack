@@ -25,7 +25,7 @@ test:
     And  the output should contain "Generate streams of events in various states"
 
   Scenario: Simulate a failed check
-    When I run `bundle exec bin/flapjack -n test -c tmp/cucumber_cli/simulate-failed-check.yaml simulate fail -t 0 -i 0.1 -e 'test' -k 'PING'`
+    When I run `bundle exec bin/flapjack -n test -c tmp/cucumber_cli/simulate-failed-check.yaml simulate fail -t 0.05 -i 0.05 -e 'test' -k 'PING'`
     Then the exit status should be 0
     And  the output should contain "sending failure event"
     And  the output should contain "stopping"

@@ -149,11 +149,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => ['example.com:ping']).and_return(all_checks)
 
-      name_index = double('name_index')
-      expect(name_index).to receive(:attributes_matching).
+      expect(Flapjack::Data::Check).to receive(:attributes_matching_name).
         with("example").and_return(['example.com:ping'])
-      expect(Flapjack::Data::Check).to receive(:name_index).
-        with(nil).and_return(name_index)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@bot', bot)
@@ -163,11 +160,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "interprets a received find command (with an invalid regex)" do
       expect(bot).to receive(:announce).with('room1', 'Error parsing /(example/')
 
-      name_index = double('name_index')
-      expect(name_index).to receive(:attributes_matching).
+      expect(Flapjack::Data::Check).to receive(:attributes_matching_name).
         with("(example").and_raise(RegexpError.new)
-      expect(Flapjack::Data::Check).to receive(:name_index).
-        with(nil).and_return(name_index)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@bot', bot)
@@ -230,11 +224,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => ['example.com:ping']).and_return(all_checks)
 
-      name_index = double('name_index')
-      expect(name_index).to receive(:attributes_matching).
+      expect(Flapjack::Data::Check).to receive(:attributes_matching_name).
         with("^example.com:p").and_return(['example.com:ping'])
-      expect(Flapjack::Data::Check).to receive(:name_index).
-        with(nil).and_return(name_index)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@bot', bot)
@@ -295,11 +286,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => ['example.com:ping']).and_return(all_checks)
 
-      name_index = double('name_index')
-      expect(name_index).to receive(:attributes_matching).
+      expect(Flapjack::Data::Check).to receive(:attributes_matching_name).
         with("^example.com:p").and_return(['example.com:ping'])
-      expect(Flapjack::Data::Check).to receive(:name_index).
-        with(nil).and_return(name_index)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@bot', bot)
@@ -355,11 +343,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => ['example.com:ping']).and_return(all_checks)
 
-      name_index = double('name_index')
-      expect(name_index).to receive(:attributes_matching).
+      expect(Flapjack::Data::Check).to receive(:attributes_matching_name).
         with("^example.com:p").and_return(['example.com:ping'])
-      expect(Flapjack::Data::Check).to receive(:name_index).
-        with(nil).and_return(name_index)
 
       expect(Flapjack::Data::Event).to receive(:create_acknowledgements).
         with('events', [check],
@@ -407,11 +392,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
      expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => ['example.com:ping']).and_return(all_checks)
 
-      name_index = double('name_index')
-      expect(name_index).to receive(:attributes_matching).
+      expect(Flapjack::Data::Check).to receive(:attributes_matching_name).
         with("^example.com:p").and_return(['example.com:ping'])
-      expect(Flapjack::Data::Check).to receive(:name_index).
-        with(nil).and_return(name_index)
 
       expect(Flapjack::Data::Event).to receive(:test_notifications).
         with('events', [check], an_instance_of(Hash))

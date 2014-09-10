@@ -202,8 +202,7 @@ module Flapjack
           if !pattern.nil? && !pattern.strip.empty?
 
             check_names = begin
-              Flapjack::Data::Check.send(:name_index, nil).
-                attributes_matching(pattern.strip)
+              Flapjack::Data::Check.attributes_matching_name(pattern.strip)
             rescue RegexpError
               nil
             end

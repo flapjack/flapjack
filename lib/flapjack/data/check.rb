@@ -2,7 +2,7 @@
 
 require 'digest'
 
-require 'sandstorm/record'
+require 'sandstorm/records/redis_record'
 
 require 'flapjack/data/check_state'
 require 'flapjack/data/contact'
@@ -15,7 +15,7 @@ module Flapjack
 
     class Check
 
-      include Sandstorm::Record
+      include Sandstorm::Records::RedisRecord
 
       # NB: state could be retrieved from states.last instead -- summary, details
       # and last_update can change without a new check_state being added though
