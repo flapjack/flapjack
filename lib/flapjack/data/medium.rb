@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'sandstorm/record'
+require 'sandstorm/records/redis_record'
 
 module Flapjack
 
@@ -8,7 +8,7 @@ module Flapjack
 
     class Medium
 
-      include Sandstorm::Record
+      include Sandstorm::Records::RedisRecord
 
       TYPES = ['email', 'sms', 'jabber', 'pagerduty', 'sns']
 
@@ -119,7 +119,7 @@ module Flapjack
       end
 
       def clean_alerting_checks
-        self.class.send(:lock, Flapjack::Data::Check,
+        backend.lock(Flapjack::Data::Medium, Flapjack::Data::Check,
           Flapjack::Data::ScheduledMaintenance,
           Flapjack::Data::UnscheduledMaintenance,
           Flapjack::Data::Entity,

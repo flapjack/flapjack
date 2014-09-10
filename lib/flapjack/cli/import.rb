@@ -75,7 +75,7 @@ module Flapjack
             entity.save
 
             unless contact_ids.nil? || contact_ids.empty?
-              contacts = Flapjack::Data::Contact.find_by_ids(contact_ids)
+              contacts = Flapjack::Data::Contact.find_by_ids(*contact_ids)
               entity.contacts.add(*contacts) unless contacts.empty?
             end
           end

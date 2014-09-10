@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'sandstorm/record'
+require 'sandstorm/records/redis_record'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/check'
@@ -13,7 +13,7 @@ module Flapjack
 
       # TODO how to integrate contacts_for:ALL ?
 
-      include Sandstorm::Record
+      include Sandstorm::Records::RedisRecord
 
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false

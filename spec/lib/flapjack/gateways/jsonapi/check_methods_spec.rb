@@ -31,7 +31,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(check).to receive(:entity).and_return(entity)
     expect(check).to receive(:as_json).and_return(check_data)
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
-      with([check.id]).and_return([check])
+      with(check.id).and_return([check])
 
     get "/checks/#{check.id}"
     expect(last_response).to be_ok
@@ -47,7 +47,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(check_2).to receive(:entity).and_return(entity)
     expect(check_2).to receive(:as_json).and_return(check_data_2)
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
-      with([check.id, check_2.id]).and_return([check, check_2])
+      with(check.id, check_2.id).and_return([check, check_2])
 
     get "/checks/#{check.id},#{check_2.id}"
     expect(last_response).to be_ok
@@ -56,7 +56,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
 
   it 'disables a check' do
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
-      with([check.id]).and_return([check])
+      with(check.id).and_return([check])
 
     expect(check).to receive(:disable!)
 
@@ -68,7 +68,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
 
   it "creates an acknowledgement for a check" do
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
-      with([check.id]).and_return([check])
+      with(check.id).and_return([check])
 
     expect(Flapjack::Data::Event).to receive(:create_acknowledgement).
       with('events', check, :duration => (4 * 60 * 60))
@@ -82,7 +82,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(check).to receive(:clear_unscheduled_maintenance).with(end_time.to_i)
 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
-      with([check.id]).and_return([check])
+      with(check.id).and_return([check])
 
     patch "/unscheduled_maintenances/checks/#{check.id}",
       [{:op => 'replace', :path => '/unscheduled_maintenances/0/end_time', :value => end_time.iso8601}].to_json,
@@ -94,11 +94,13 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     start = Time.now + (60 * 60) # an hour from now
     duration = (2 * 60 * 60)     # two hours
 
-    expect(Flapjack::Data::Check).to receive(:lock).
-      with(Flapjack::Data::ScheduledMaintenance).and_yield
+    backend = double(Sandstorm::Backends::Base)
+    expect(Flapjack::Data::Check).to receive(:backend).and_return(backend)
+    expect(backend).to receive(:lock).
+      with(Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance).and_yield
 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
-      with([check.id]).and_return([check])
+      with(check.id).and_return([check])
 
     sched_maint = double(Flapjack::Data::ScheduledMaintenance)
     expect(sched_maint).to receive(:invalid?).and_return(false)
@@ -138,7 +140,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(check).to receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Time))
 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
-      with([check.id]).and_return([check])
+      with(check.id).and_return([check])
 
     delete "/scheduled_maintenances/checks/#{check.id}",
       :start_time => start_time.iso8601
@@ -178,7 +180,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(check_2).to receive(:end_scheduled_maintenance).with(sched_maint_2, an_instance_of(Time))
 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
-      with([check.id, check_2.id]).and_return([check, check_2])
+      with(check.id, check_2.id).and_return([check, check_2])
 
     delete "/scheduled_maintenances/checks/#{check.id},#{check_2.id}",
       :start_time => start_time.iso8601
@@ -187,7 +189,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
 
   it "creates a test notification event for a check" do
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
-      with([check.id]).and_return([check])
+      with(check.id).and_return([check])
 
     expect(check).to receive(:entity_name).and_return('www.example.com')
 

@@ -27,7 +27,7 @@ module Flapjack
             end
 
             checks = if requested_checks
-              Flapjack::Data::Check.find_by_ids!(requested_checks)
+              Flapjack::Data::Check.find_by_ids!(*requested_checks)
             else
               Flapjack::Data::Check.all
             end
@@ -50,7 +50,7 @@ module Flapjack
 
           app.patch %r{^/checks/(.+)$} do
             requested_checks = params[:captures][0].split(',').uniq
-            checks = Flapjack::Data::Check.find_by_ids!(requested_checks)
+            checks = Flapjack::Data::Check.find_by_ids!(*requested_checks)
             if checks.empty?
               raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Check, requested_checks)
             end

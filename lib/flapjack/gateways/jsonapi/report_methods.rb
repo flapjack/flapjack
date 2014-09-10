@@ -21,7 +21,7 @@ module Flapjack
             entities = if entity_ids.nil?
               Flapjack::Data::Entity.all
             elsif !entity_ids.empty?
-              Flapjack::Data::Entity.find_by_ids!(entity_ids)
+              Flapjack::Data::Entity.find_by_ids!(*entity_ids)
             else
               []
             end
@@ -29,7 +29,7 @@ module Flapjack
             checks = if check_ids.nil?
               Flapjack::Data::Check.all
             elsif !check_ids.empty?
-              Flapjack::Data::Check.find_by_ids!(check_ids)
+              Flapjack::Data::Check.find_by_ids!(*check_ids)
             else
               []
             end

@@ -24,8 +24,8 @@ module Flapjack
 
           def bulk_contact_operation(contact_ids, &block)
             missing_ids = nil
-            Flapjack::Data::Contact.send(:lock) do
-              contacts = Flapjack::Data::Contact.find_by_ids(contact_ids)
+            Flapjack::Data::Contact.backend.lock(Flapjack::Data::Contact) do
+              contacts = Flapjack::Data::Contact.find_by_ids(*contact_ids)
               missing_ids = contact_ids - contacts.map(&:id)
               block.call(contacts) if missing_ids.empty?
             end
@@ -51,7 +51,7 @@ module Flapjack
             contact_ids = nil
             contacts    = nil
 
-            Flapjack::Data::Contact.send(:lock) do
+            Flapjack::Data::Contact.backend.lock(Flapjack::Data::Contact) do
 
               # TODO should these overwrite instead?
               conflicted_ids = data_ids.select {|id|
@@ -98,7 +98,7 @@ module Flapjack
             end
 
             contacts = if requested_contacts
-              Flapjack::Data::Contact.find_by_ids!(requested_contacts)
+              Flapjack::Data::Contact.find_by_ids!(*requested_contacts)
             else
               Flapjack::Data::Contact.all
             end
@@ -138,7 +138,7 @@ module Flapjack
                       entity = Flapjack::Data::Entity.find_by_id(value)
                       contact.entities << entity unless entity.nil?
                     when 'media'
-                      Flapjack::Data::Medium.send(:lock) do
+                      Flapjack::Data::Medium.backend.lock(Flapjack::Data::Medium) do
                         medium = Flapjack::Data::Medium.find_by_id(value)
                         unless medium.nil?
                           if existing_medium = contact.media.intersect(:type => medium.type).all.first

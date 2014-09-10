@@ -5,6 +5,8 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
 
   include_context "jsonapi"
 
+  let(:backend) { double(Sandstorm::Backends::Base) }
+
   let(:medium) { double(Flapjack::Data::Medium, :id => "ab12") }
 
   let(:medium_data) {
@@ -18,8 +20,10 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
   let(:contact)      { double(Flapjack::Data::Contact, :id => '21') }
 
   it "creates a medium" do
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium).and_yield
+    expect(Flapjack::Data::Contact).to receive(:backend).and_return(backend)
+    expect(backend).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Medium).and_yield
+
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id).and_return(contact)
 
@@ -44,8 +48,10 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
   end
 
   it "does not create a medium if the data is improperly formatted" do
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium).and_yield
+    expect(Flapjack::Data::Contact).to receive(:backend).and_return(backend)
+    expect(backend).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Medium).and_yield
+
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id).and_return(contact)
 
@@ -61,8 +67,10 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
   end
 
   it "does not create a medium if the contact doesn't exist" do
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium).and_yield
+    expect(Flapjack::Data::Contact).to receive(:backend).and_return(backend)
+    expect(backend).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Medium).and_yield
+
     expect(Flapjack::Data::Contact).to receive(:find_by_id).
       with(contact.id).and_return(nil)
 
@@ -72,7 +80,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
 
   it "returns a single medium" do
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with([medium.id]).and_return([medium])
+      with(medium.id).and_return([medium])
 
     expect(medium).to receive(:as_json).and_return(medium_data)
     expect(Flapjack::Data::Medium).to receive(:associated_ids_for_contact).
@@ -96,8 +104,8 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
   end
 
   it "does not return a medium if the medium is not present" do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with([medium.id]).
-      and_raise(Sandstorm::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
+    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
+      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
 
     get "/media/#{medium.id}"
     expect(last_response).to be_not_found
@@ -105,7 +113,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
 
   it "updates a medium" do
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with([medium.id]).and_return([medium])
+      with(medium.id).and_return([medium])
 
     expect(medium).to receive(:address=).with('12345')
     expect(medium).to receive(:save).and_return(true)
@@ -119,7 +127,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
   it "updates multiple media" do
     medium_2 = double(Flapjack::Data::Medium, :id => 'uiop')
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with([medium.id, medium_2.id]).and_return([medium, medium_2])
+      with(medium.id, medium_2.id).and_return([medium, medium_2])
 
     expect(medium).to receive(:interval=).with(80)
     expect(medium).to receive(:save).and_return(true)
@@ -134,8 +142,8 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
   end
 
   it "does not update a medium that's not present" do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with([medium.id]).
-      and_raise(Sandstorm::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
+    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
+      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
 
     patch "/media/#{medium.id}",
       [{:op => 'replace', :path => '/media/0/address', :value => 'xyz@example.com'}].to_json,
@@ -145,7 +153,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
 
   it "deletes a medium" do
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with([medium.id]).and_return([medium])
+      with(medium.id).and_return([medium])
 
     expect(medium).to receive(:destroy)
 
@@ -156,7 +164,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
   it "deletes multiple media" do
     medium_2 = double(Flapjack::Data::Medium, :id => 'uiop')
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with([medium.id, medium_2.id]).and_return([medium, medium_2])
+      with(medium.id, medium_2.id).and_return([medium, medium_2])
 
     expect(medium).to receive(:destroy)
     expect(medium_2).to receive(:destroy)
@@ -166,8 +174,8 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
   end
 
   it "does not delete a medium that's not found" do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with([medium.id]).
-      and_raise(Sandstorm::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
+    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
+      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
 
     delete "/media/#{medium.id}"
     expect(last_response).to be_not_found

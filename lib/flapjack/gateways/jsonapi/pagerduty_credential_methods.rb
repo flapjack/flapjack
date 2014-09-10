@@ -27,7 +27,9 @@ module Flapjack
             pagerduty_credentials_id = nil
             pagerduty_credentials = nil
 
-            Flapjack::Data::Contact.send(:lock, Flapjack::Data::PagerdutyCredentials) do
+            Flapjack::Data::Contact.backend.lock(Flapjack::Data::Contact,
+              Flapjack::Data::PagerdutyCredentials) do
+
               contact = Flapjack::Data::Contact.find_by_id(params[:contact_id])
 
               if contact.nil?
@@ -72,7 +74,7 @@ module Flapjack
             end
 
             pagerduty_credentials = if requested_pagerduty_credentials
-              Flapjack::Data::PagerdutyCredentials.find_by_ids!(requested_pagerduty_credentials)
+              Flapjack::Data::PagerdutyCredentials.find_by_ids!(*requested_pagerduty_credentials)
             else
               Flapjack::Data::PagerdutyCredentials.all
             end
@@ -88,7 +90,7 @@ module Flapjack
           end
 
           app.patch '/pagerduty_credentials/:id' do
-            Flapjack::Data::PagerdutyCredentials.find_by_ids!(params[:id].split(',')).
+            Flapjack::Data::PagerdutyCredentials.find_by_ids!(*params[:id].split(',')).
               each do |pagerduty_credentials|
 
               apply_json_patch('pagerduty_credentials') do |op, property, linked, value|
@@ -105,7 +107,7 @@ module Flapjack
           end
 
           app.delete '/pagerduty_credentials/:id' do
-            Flapjack::Data::PagerdutyCredentials.find_by_ids!(params[:id].split(',')).
+            Flapjack::Data::PagerdutyCredentials.find_by_ids!(*params[:id].split(',')).
               map(&:destroy)
 
             status 204

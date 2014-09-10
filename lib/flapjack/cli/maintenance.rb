@@ -86,7 +86,7 @@ module Flapjack
             included_ids = start_ids & end_ids
 
             unless included_ids.empty?
-              maints   = Flapjack::Data::ScheduledMaintenance.find_by_ids(included_ids)
+              maints   = Flapjack::Data::ScheduledMaintenance.find_by_ids(*included_ids)
 
               if !maints.empty?
                 filtered = duration_range.nil? ? maints :
@@ -108,7 +108,7 @@ module Flapjack
             included_ids = start_ids & end_ids
 
             unless included_ids.empty?
-              maints   = Flapjack::Data::UnscheduledMaintenance.find_by_ids(included_ids)
+              maints   = Flapjack::Data::UnscheduledMaintenance.find_by_ids(*included_ids)
 
               if !maints.empty?
                 filtered = duration_range.nil? ? maints :

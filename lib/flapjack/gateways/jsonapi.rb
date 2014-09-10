@@ -272,13 +272,13 @@ module Flapjack
         # TODO
       end
 
-      error Sandstorm::Errors::RecordNotFound do
+      error Sandstorm::Records::Errors::RecordNotFound do
         e = env['sinatra.error']
         type = e.klass.name.split('::').last
         err(404, "could not find #{type} record, id: '#{e.id}'")
       end
 
-      error Sandstorm::Errors::RecordsNotFound do
+      error Sandstorm::Records::Errors::RecordsNotFound do
         e = env['sinatra.error']
         type = e.klass.name.split('::').last
         err(404, "could not find #{type} records, ids: '#{e.ids.join(',')}'")

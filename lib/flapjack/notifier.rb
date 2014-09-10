@@ -121,8 +121,9 @@ module Flapjack
           "#{entity_name}:#{check_name} to #{medium.address} " +
           " type: #{notification.type} rollup: #{alert.rollup || '-'}")
 
-        Flapjack::Data::Check.send(:lock, Flapjack::Data::CheckState,
-          Flapjack::Data::Alert, Flapjack::Data::RollupAlert) do
+        Flapjack::Data::Check.backend.lock(Flapjack::Data::Check,
+          Flapjack::Data::CheckState, Flapjack::Data::Alert,
+          Flapjack::Data::RollupAlert) do
 
           medium.alerting_checks.each do |alert_check|
             last_state  = alert_check.states.last

@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'sandstorm/record'
+require 'sandstorm/records/redis_record'
 
 module Flapjack
 
@@ -8,7 +8,7 @@ module Flapjack
 
     class PagerdutyCredentials
 
-      include Sandstorm::Record
+      include Sandstorm::Records::RedisRecord
 
        define_attributes :service_key  => :string,
                          :subdomain    => :string,

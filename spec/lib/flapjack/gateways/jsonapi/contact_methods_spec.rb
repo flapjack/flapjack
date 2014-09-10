@@ -5,7 +5,9 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
 
   include_context "jsonapi"
 
-  let(:contact)      { double(Flapjack::Data::Contact, :id => '21') }
+  let(:contact) { double(Flapjack::Data::Contact, :id => '21') }
+
+  let(:backend) { double(Sandstorm::Backends::Base) }
 
   let(:contact_data) {
     {:id         => contact.id,
@@ -18,7 +20,9 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   }
 
   it "creates a contact" do
-    expect(Flapjack::Data::Contact).to receive(:lock).and_yield
+    expect(Flapjack::Data::Contact).to receive(:backend).and_return(backend)
+    expect(backend).to receive(:lock).with(Flapjack::Data::Contact).and_yield
+
     expect(Flapjack::Data::Contact).to receive(:exists?).with(contact.id).and_return(false)
 
     expect(contact).to receive(:invalid?).and_return(false)
@@ -32,7 +36,9 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   end
 
   it "does not create a contact if the data is improperly formatted" do
-    expect(Flapjack::Data::Contact).to receive(:lock).and_yield
+    expect(Flapjack::Data::Contact).to receive(:backend).and_return(backend)
+    expect(backend).to receive(:lock).with(Flapjack::Data::Contact).and_yield
+
     expect(Flapjack::Data::Contact).not_to receive(:exists?)
 
     errors = double('errors', :full_messages => ['err'])
@@ -74,7 +80,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
       with([contact.id]).and_return({})
     expect(contact).to receive(:as_json).and_return(contact_data)
     expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
-      with([contact.id]).and_return([contact])
+      with(contact.id).and_return([contact])
 
     get "/contacts/#{contact.id}"
     expect(last_response).to be_ok
@@ -83,7 +89,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
 
   it "does not return information for a contact that does not exist" do
     expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
-      with([contact.id]).and_raise(Sandstorm::Errors::RecordsNotFound.new(Flapjack::Data::Contact, [contact.id]))
+      with(contact.id).and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Contact, [contact.id]))
 
     get "/contacts/#{contact.id}"
     expect(last_response.status).to eq(404)
@@ -91,12 +97,13 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
 
   it "updates a contact" do
     expect(Flapjack::Data::Contact).to receive(:find_by_ids).
-      with([contact.id]).and_return([contact])
+      with(contact.id).and_return([contact])
 
     expect(contact).to receive(:first_name=).with('Elias')
     expect(contact).to receive(:save).and_return(true)
 
-    expect(Flapjack::Data::Contact).to receive(:lock).and_yield
+    expect(Flapjack::Data::Contact).to receive(:backend).and_return(backend)
+    expect(backend).to receive(:lock).with(Flapjack::Data::Contact).and_yield
 
     patch "/contacts/#{contact.id}",
       [{:op => 'replace', :path => '/contacts/0/first_name', :value => 'Elias'}].to_json,
@@ -106,10 +113,11 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
 
   it "deletes a contact" do
     expect(Flapjack::Data::Contact).to receive(:find_by_ids).
-      with([contact.id]).and_return([contact])
+      with(contact.id).and_return([contact])
     expect(contact).to receive(:destroy)
 
-    expect(Flapjack::Data::Contact).to receive(:lock).and_yield
+    expect(Flapjack::Data::Contact).to receive(:backend).and_return(backend)
+    expect(backend).to receive(:lock).with(Flapjack::Data::Contact).and_yield
 
     delete "/contacts/#{contact.id}"
     expect(last_response.status).to eq(204)
