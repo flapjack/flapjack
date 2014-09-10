@@ -520,8 +520,11 @@ module Flapjack
         # if multiple scheduled maintenances found, find the end_time furthest in the future
         most_futuristic = current_sched_ms.max {|sm| sm[:end_time] }
         start_time = most_futuristic[:start_time]
-        duration   = most_futuristic[:duration]
-        @redis.setex("#{@key}:scheduled_maintenance", duration.to_i, start_time)
+
+        duration = most_futuristic[:end_time] - current_time
+        if duration > 0
+          @redis.setex("#{@key}:scheduled_maintenance", duration.to_i, start_time)
+        end
       end
 
       # TODO allow summary to be changed as part of the termination
