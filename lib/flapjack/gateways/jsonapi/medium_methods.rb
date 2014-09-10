@@ -36,8 +36,9 @@ module Flapjack
 
             contact_cache = {}
 
+            known_media_identifiers = Flapjack::Data::Contact::ALL_MEDIA.reject{|m| m == 'pagerduty'}.join('|')
             media_ids.split(',').uniq.collect do |m_id|
-              m_id =~ /\A(.+)_(email|sms|jabber)\z/
+              m_id =~ /\A(.+)_(#{known_media_identifiers})\z/
 
               contact_id = $1
               media_type = $2
