@@ -1,5 +1,17 @@
 ## Flapjack Changelog
 
+# 1.1.0 - 2014-09-10
+- Feature: Add autorefresh for the web GUI (Closes: #494) #607 (@Hobbsee)
+- Feature: twilio sms sending #633 (@jessereynolds)
+- Feature: Flapjack command for httpchecker check engine #631 (@michaelneale)
+- Feature: Purge historical check states cli #625 (@jessereynolds)
+- Chore: bump Dockerfile to trusty and flapjack 1.0 #630 (@jessereynolds)
+- Bug: Check freshness metrics appear to be broken #626 (@jessereynolds)
+- Bug: Fix CMD to start flapjack with new cli format (Dockerfile) #629 (@auxesis)
+- Bug: set key expiry properly for scheduled maintenance spanning current time #634 (@ali-graham)
+- Bug: GET /media/id works for sms_twilio now #638 (@jessereynolds)
+- Bug: expose newer media types in /edit_contacts #640 (@jessereynolds)
+
 # 1.0.0 - 2014-08-21
 - No changes
 
