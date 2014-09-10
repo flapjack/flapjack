@@ -66,7 +66,9 @@ module Flapjack
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         checks = redis.keys('check:*').map {|c| c.match(/^check:(.*)$/) ; $1}
-        checks
+        checks.map {|ec|
+          self.for_entity_id(ec, options)
+        }
       end
 
       def self.find_current_for_entity_name(entity_name, options = {})
@@ -891,7 +893,7 @@ module Flapjack
           end
           @logger.info "  removing a range of items from the #{@key}:sorted_state_timestamps sorted set" if @logger
           @redis.zremrangebyscore("#{@key}:sorted_state_timestamps", '-inf', t.to_i - older_than)
-          @logger.info "  getting the #{@key}:states list"
+          @logger.info "  getting the #{@key}:states list" if @logger
           states = @redis.lrange("#{@key}:states", 0, -1)
           index = 0
           while states[index].to_i < older_than do

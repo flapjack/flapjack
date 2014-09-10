@@ -31,14 +31,15 @@ module Flapjack
           raise "days must be resolveable to an integer" unless @options[:days].to_i.to_s == @options[:days]
         end
         checks = if @options[:check]
-          [@options[:check]]
+          [Flapjack::Data::EntityCheck.for_event_id(@options[:check], :redis => redis, :create_entity => true)]
         else
-          Flapjack::Data::EntityCheck.all(:redis => redis)
+          Flapjack::Data::EntityCheck.all(:redis => redis, :create_entity => true)
         end
         purged = checks.map do |check|
-          ec = Flapjack::Data::EntityCheck.for_event_id(check, :redis => redis, :create_entity => true)
-          ec.purge_history(options)
-        end.map {|p| p == 0 ? nil : p}.compact
+          p = check.purge_history(options)
+          p == 0 ? nil : p
+        end.compact
+
         if purged.empty?
           puts "Nothing to do"
         else
