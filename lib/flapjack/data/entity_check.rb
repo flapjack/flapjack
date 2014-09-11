@@ -71,17 +71,17 @@ module Flapjack
         }
       end
 
-      def self.find_current_for_entity_name(entity_name, options = {})
+      def self.find_current_names_for_entity_name(entity_name, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.zrange("current_checks:#{entity_name}", 0, -1)
       end
 
-      def self.find_current(options = {})
+      def self.find_current_names(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        self.conflate_to_keys(self.find_current_by_entity(:redis => redis))
+        self.conflate_to_keys(self.find_current_names_by_entity(:redis => redis))
       end
 
-      def self.find_current_by_entity(options = {})
+      def self.find_current_names_by_entity(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         d = {}
         redis.zrange("current_entities", 0, -1).each {|entity|
@@ -97,12 +97,12 @@ module Flapjack
         }
       end
 
-      def self.find_current_failing(options = {})
+      def self.find_current_names_failing(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        self.conflate_to_keys(self.find_current_failing_by_entity(:redis => redis))
+        self.conflate_to_keys(self.find_current_names_failing_by_entity(:redis => redis))
       end
 
-      def self.find_current_failing_by_entity(options = {})
+      def self.find_current_names_failing_by_entity(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.zrange("failed_checks", 0, -1).inject({}) do |memo, key|
           entity, check = key.split(':', 2)

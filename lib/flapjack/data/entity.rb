@@ -524,9 +524,9 @@ module Flapjack
         redis.zrange('current_entities', 0, -1)
       end
 
-      def self.find_all_with_failing_checks(options)
+      def self.find_all_names_with_failing_checks(options)
         raise "Redis connection not set" unless redis = options[:redis]
-        Flapjack::Data::EntityCheck.find_current_failing_by_entity(:redis => redis).keys
+        Flapjack::Data::EntityCheck.find_current_names_failing_by_entity(:redis => redis).keys
       end
 
       def contacts

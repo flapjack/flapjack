@@ -50,7 +50,7 @@ module Flapjack
             {
               'all'     => Flapjack::Data::Entity.all(:redis => redis).length,
               'enabled' => Flapjack::Data::Entity.all(:enabled => true, :redis => redis).length,
-              'failing' => Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis).length,
+              'failing' => Flapjack::Data::Entity.find_all_names_with_failing_checks(:redis => redis).length,
             }
           end
 
