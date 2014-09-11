@@ -18,12 +18,16 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
 
   it "retrieves all checks" do
     expect(entity).to receive(:id).and_return('23')
+    expect(entity).to receive(:name).twice.and_return('www.example.net')
 
-    expect(entity_check).to receive(:entity).and_return(entity)
-    expect(entity_check).to receive(:key).twice.and_return('PING')
+    expect(entity_check).to receive(:entity).twice.and_return(entity)
+    expect(entity_check).to receive(:check).twice.and_return('PING')
     expect(entity_check).to receive(:to_jsonapi).and_return(check_data.to_json)
-    expect(Flapjack::Data::EntityCheck).to receive(:find_current).with(:redis => redis).
-      and_return([entity_check])
+    expect(Flapjack::Data::EntityCheck).to receive(:for_event_id).
+      with('www.example.net:PING', :logger => @logger, :redis => redis).
+      and_return(entity_check)
+    expect(Flapjack::Data::EntityCheck).to receive(:find_current_names).
+      with(:redis => redis).and_return(['www.example.net:PING'])
 
     aget '/checks'
     expect(last_response).to be_ok
@@ -32,9 +36,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
 
   it "retrieves one check" do
     expect(entity).to receive(:id).and_return('23')
+    expect(entity).to receive(:name).twice.and_return('www.example.net')
 
-    expect(entity_check).to receive(:entity).and_return(entity)
-    expect(entity_check).to receive(:key).twice.and_return('PING')
+    expect(entity_check).to receive(:entity).twice.and_return(entity)
+    expect(entity_check).to receive(:check).twice.and_return('PING')
     expect(entity_check).to receive(:to_jsonapi).and_return(check_data.to_json)
     expect(Flapjack::Data::EntityCheck).to receive(:for_event_id).
       with('www.example.com:PING', :logger => @logger, :redis => redis).
@@ -51,16 +56,17 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
                     'entity_name' => 'www.example.com'}
 
     expect(entity).to receive(:id).twice.and_return('23')
+    expect(entity).to receive(:name).exactly(4).times.and_return('www.example.net')
 
-    expect(entity_check).to receive(:entity).and_return(entity)
-    expect(entity_check).to receive(:key).twice.and_return('PING')
+    expect(entity_check).to receive(:entity).twice.and_return(entity)
+    expect(entity_check).to receive(:check).twice.and_return('PING')
     expect(entity_check).to receive(:to_jsonapi).and_return(check_data.to_json)
     expect(Flapjack::Data::EntityCheck).to receive(:for_event_id).
       with('www.example.com:PING', :logger => @logger, :redis => redis).
       and_return(entity_check)
 
-    expect(entity_check_2).to receive(:entity).and_return(entity)
-    expect(entity_check_2).to receive(:key).twice.and_return('SSH')
+    expect(entity_check_2).to receive(:entity).twice.and_return(entity)
+    expect(entity_check_2).to receive(:check).twice.and_return('SSH')
     expect(entity_check_2).to receive(:to_jsonapi).and_return(check_data_2.to_json)
     expect(Flapjack::Data::EntityCheck).to receive(:for_event_id).
       with('www.example.com:SSH', :logger => @logger, :redis => redis).

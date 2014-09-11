@@ -167,7 +167,7 @@ module Flapjack
         check_stats
         @adjective = ''
 
-        checks_by_entity = Flapjack::Data::EntityCheck.find_current_by_entity(:redis => redis)
+        checks_by_entity = Flapjack::Data::EntityCheck.find_current_names_by_entity(:redis => redis)
         @states = checks_by_entity.keys.inject({}) {|result, entity_name|
           Flapjack::Data::Entity.find_by_name(entity_name, :redis => redis, :create => true)
           result[entity_name] = checks_by_entity[entity_name].sort.map {|check|
@@ -184,7 +184,7 @@ module Flapjack
         check_stats
         @adjective = 'failing'
 
-        checks_by_entity = Flapjack::Data::EntityCheck.find_current_failing_by_entity(:redis => redis)
+        checks_by_entity = Flapjack::Data::EntityCheck.find_current_names_failing_by_entity(:redis => redis)
         @states = checks_by_entity.keys.inject({}) {|result, entity|
           result[entity] = checks_by_entity[entity].sort.map {|check|
             [check] + entity_check_state(entity, check)
@@ -258,7 +258,7 @@ module Flapjack
       get '/entities_failing' do
         entity_stats
         @adjective = 'failing'
-        @entities = Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis)
+        @entities = Flapjack::Data::Entity.find_all_names_with_failing_checks(:redis => redis)
 
         erb 'entities.html'.to_sym
       end
@@ -266,7 +266,7 @@ module Flapjack
       get '/entity/:entity' do
         @entity = params[:entity]
         entity_stats
-        @states = Flapjack::Data::EntityCheck.find_current_for_entity_name(@entity, :redis => redis).sort.map { |check|
+        @states = Flapjack::Data::EntityCheck.find_current_names_for_entity_name(@entity, :redis => redis).sort.map { |check|
           [check] + entity_check_state(@entity, check)
         }.sort_by {|parts| parts }
 
@@ -488,7 +488,7 @@ module Flapjack
 
       def entity_stats(entities = nil)
         @count_current_entities  = (entities || Flapjack::Data::Entity.all(:enabled => true, :redis => redis)).length
-        @count_failing_entities  = Flapjack::Data::Entity.find_all_with_failing_checks(:redis => redis).length
+        @count_failing_entities  = Flapjack::Data::Entity.find_all_names_with_failing_checks(:redis => redis).length
       end
 
       def check_stats
