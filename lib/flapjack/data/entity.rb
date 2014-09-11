@@ -452,9 +452,14 @@ module Flapjack
             redis.sadd("contacts_for:#{entity_id}", contact_id)
           }
         end
-        self.new(:name  => entity_name,
-                 :id    => entity_id,
-                 :redis => redis)
+
+        e = self.new(:name  => entity_name,
+                     :id    => entity_id,
+                     :redis => redis)
+        if entity['tags'] && entity['tags'].respond_to?(:each)
+          e.add_tags(*entity['tags'])
+        end
+        e
       end
 
       def self.find_by_name(entity_name, options = {})

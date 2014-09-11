@@ -50,8 +50,12 @@ module Flapjack
         redis.zadd("current_checks:#{ent.name}", timestamp, check_name)
         redis.zadd('current_entities', timestamp, ent.name)
 
-        self.new(ent, check_name, :logger  => logger,
-                 :redis => redis)
+        c = self.new(ent, check_name, :logger  => logger,
+                     :redis => redis)
+        if check_data['tags'] && check_data['tags'].respond_to?(:each)
+          c.add_tags(*check_data['tags'])
+        end
+        c
       end
 
       def self.for_event_id(event_id, options = {})

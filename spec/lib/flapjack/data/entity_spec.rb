@@ -14,6 +14,17 @@ describe Flapjack::Data::Entity, :redis => true do
     expect(@redis.get("entity_id:#{name}")).to match(/^\S+$/)
   end
 
+  it 'creates tags if passed when added' do
+    Flapjack::Data::Entity.add({'id'   => '5000',
+                                'name' => name,
+                                'tags' => ['database', 'virtual']},
+                                :redis => @redis)
+
+    entity = Flapjack::Data::Entity.find_by_id('5000', :redis => @redis)
+    expect(entity).not_to be_nil
+    expect(entity.tags).to eq(Set.new(['database', 'virtual']))
+  end
+
   it "adds a registered contact with an entity" do
     Flapjack::Data::Contact.add({'id'         => '362',
                                  'first_name' => 'John',
