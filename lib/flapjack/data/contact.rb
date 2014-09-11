@@ -22,7 +22,7 @@ module Flapjack
         :media_intervals, :media_rollup_thresholds, :pagerduty_credentials
 
       TAG_PREFIX = 'contact_tag'
-      ALL_MEDIA  = ['email', 'sms', 'jabber', 'pagerduty', 'sns']
+      ALL_MEDIA  = ['email', 'sms', 'sms_twilio', 'jabber', 'pagerduty', 'sns']
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]

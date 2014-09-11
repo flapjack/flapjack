@@ -88,6 +88,14 @@ module Flapjack
         self.new(entity, check, :logger => logger, :redis => redis)
       end
 
+      def self.all(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        checks = redis.keys('check:*').map {|c| c.match(/^check:(.*)$/) ; $1}
+        checks.map {|ec|
+          self.for_entity_id(ec, options)
+        }
+      end
+
       def self.find_current_for_entity_name(entity_name, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.zrange("current_checks:#{entity_name}", 0, -1)
@@ -551,8 +559,11 @@ module Flapjack
         # if multiple scheduled maintenances found, find the end_time furthest in the future
         most_futuristic = current_sched_ms.max {|sm| sm[:end_time] }
         start_time = most_futuristic[:start_time]
-        duration   = most_futuristic[:duration]
-        @redis.setex("#{@key}:scheduled_maintenance", duration.to_i, start_time)
+
+        duration = most_futuristic[:end_time] - current_time
+        if duration > 0
+          @redis.setex("#{@key}:scheduled_maintenance", duration.to_i, start_time)
+        end
       end
 
       # TODO allow summary to be changed as part of the termination
@@ -919,6 +930,39 @@ module Flapjack
           @redis.hset("checks_by_hash", @ack_hash, @key)
         end
         @ack_hash
+      end
+
+      def purge_history(opts = {})
+        t = Time.now
+        older_than  = opts[:older_than]  # purge older than this number of seconds ago
+        raise ":older_than must be supplied" unless older_than
+
+        purge_stamps = historical_states(-1, t.to_i - older_than).map {|s| s[:timestamp]}
+        unless purge_stamps.empty?
+          @logger.info "purging #{purge_stamps.length} states from #{@key}" if @logger
+          deletees = []
+          purge_stamps.each do |timestamp|
+            deletees << "#{@key}:#{timestamp}:state"
+            deletees << "#{@key}:#{timestamp}:summary"
+            deletees << "#{@key}:#{timestamp}:count"
+            deletees << "#{@key}:#{timestamp}:check_latency"
+          end
+          @logger.info "  deleting a bunch of keys 100 at a time..." if @logger
+          deletees.each_slice(100) do |batch|
+            @redis.del(batch)
+          end
+          @logger.info "  removing a range of items from the #{@key}:sorted_state_timestamps sorted set" if @logger
+          @redis.zremrangebyscore("#{@key}:sorted_state_timestamps", '-inf', t.to_i - older_than)
+          @logger.info "  getting the #{@key}:states list" if @logger
+          states = @redis.lrange("#{@key}:states", 0, -1)
+          index = 0
+          while states[index].to_i < older_than do
+            index += 1
+          end
+          @logger.info "  trimming the #{@key}:states from #{index}, length #{states.length}" if @logger
+          @redis.ltrim("#{@key}:states", index, -1)
+        end
+        purge_stamps.length
       end
 
       def to_jsonapi(opts = {})
