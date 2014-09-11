@@ -335,7 +335,7 @@ module Flapjack
               entity_names = if entity_name
                 [entity_name]
               elsif entity_pattern
-                Flapjack::Data::Entity.send(:name_index, nil).attributes_matching(entity_pattern)
+                Flapjack::Data::Entity.attributes_matching_name(entity_pattern)
               else
                 []
               end
@@ -384,7 +384,7 @@ module Flapjack
               entity_pattern = $1.strip
 
               entity_names = begin
-                Flapjack::Data::Entity.send(:name_index, nil).attributes_matching(entity_pattern)
+                Flapjack::Data::Entity.attributes_matching_name(entity_pattern)
               rescue RegexpError
                 nil
               end
@@ -413,7 +413,7 @@ module Flapjack
               duration       = ChronicDuration.parse(duration_str)
 
               entity_names = begin
-                Flapjack::Data::Entity.send(:name_index, nil).attributes_matching(entity_pattern)
+                Flapjack::Data::Entity.attributes_matching_name(entity_pattern)
               rescue RegexpError
                 nil
               end
@@ -456,7 +456,7 @@ module Flapjack
             when /^(?:status )?entities\s+\/(.+)\/.*$/im
               entity_pattern  = $1 ? $1.strip : nil
               entity_names = begin
-                Flapjack::Data::Entity.send(:name_index, nil).attributes_matching(entity_pattern)
+                Flapjack::Data::Entity.attributes_matching_name(entity_pattern)
               rescue RegexpError
                 nil
               end
@@ -488,7 +488,7 @@ module Flapjack
               duration       = ChronicDuration.parse(duration_str)
 
               entity_names = begin
-                Flapjack::Data::Entity.send(:name_index, nil).attributes_matching(entity_pattern)
+                Flapjack::Data::Entity.attributes_matching_name(entity_pattern)
               rescue RegexpError
                 nil
               end
@@ -499,7 +499,7 @@ module Flapjack
                 "found no entities matching /#{entity_pattern}/"
               else
                 check_names = begin
-                  Flapjack::Data::Check.send(:name_index, nil).attributes_matching(check_pattern)
+                Flapjack::Data::Check.attributes_matching_name(check_pattern)
                 rescue RegexpError
                   nil
                 end
@@ -541,7 +541,7 @@ module Flapjack
               entity_pattern = $2 ? $2.strip : '.*'
 
               entity_names = begin
-                Flapjack::Data::Entity.send(:name_index, nil).attributes_matching(entity_pattern)
+                Flapjack::Data::Entity.attributes_matching_name(entity_pattern)
               rescue RegexpError
                 nil
               end

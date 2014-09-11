@@ -201,9 +201,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "interprets a received entity search command" do
       expect(bot).to receive(:announce).with('room1', "found 1 entity matching /example/ ... \nexample.com")
 
-      name_index = double('index')
-      expect(Flapjack::Data::Entity).to receive(:name_index).and_return(name_index)
-      expect(name_index).to receive(:attributes_matching).with("example").and_return(['example.com'])
+      expect(Flapjack::Data::Entity).to receive(:attributes_matching_name).
+        with("example").and_return(['example.com'])
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@bot', bot)
@@ -213,9 +212,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "interprets a received entity search command (with an invalid pattern)" do
       expect(bot).to receive(:announce).with('room1', 'that doesn\'t seem to be a valid pattern - /(example/')
 
-      name_index = double('index')
-      expect(Flapjack::Data::Entity).to receive(:name_index).and_return(name_index)
-      expect(name_index).to receive(:attributes_matching).with("(example").and_return(nil)
+      expect(Flapjack::Data::Entity).to receive(:attributes_matching_name).
+        with("(example").and_raise(RegexpError.new)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@bot', bot)
