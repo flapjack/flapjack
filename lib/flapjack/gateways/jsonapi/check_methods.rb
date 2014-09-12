@@ -88,8 +88,18 @@ module Flapjack
                   when 'enabled'
                     # explicitly checking for false being passed in
                     check.disable! if value.is_a?(FalseClass)
+                  end
+                when 'add'
+                  case linked
                   when 'tags'
-                    check.update('tags' => value)
+                    value.respond_to?(:each) ? check.add_tags(*value) :
+                                               check.add_tags(value)
+                  end
+                when 'remove'
+                  case linked
+                  when 'tags'
+                    value.respond_to?(:each) ? check.delete_tags(*value) :
+                                               check.delete_tags(value)
                   end
                 end
               end

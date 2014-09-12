@@ -152,15 +152,28 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(last_response.status).to eq(204)
   end
 
-  it "sets tags on an entity" do
+  it "adds tags to an entity" do
     expect(Flapjack::Data::Entity).to receive(:find_by_id).
       with('1234', :redis => redis).and_return(entity)
 
-    expect(entity).to receive(:update).
-      with('tags' => ['database', 'virtualised'])
+    expect(entity).to receive(:add_tags).with('database')
 
     apatch "/entities/1234",
-      [{:op => 'replace', :path => '/entities/0/tags', :value => ['database', 'virtualised']}].to_json,
+      [{:op => 'add', :path => '/entities/0/links/tags', :value => 'database'}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it "removes tags from an entity" do
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with('1234', :redis => redis).and_return(entity)
+
+    expect(entity).to receive(:delete_tags).with('database')
+    expect(entity).to receive(:delete_tags).with('virtualised')
+
+    apatch "/entities/1234",
+      [{:op => 'remove', :path => '/entities/0/links/tags/database'},
+       {:op => 'remove', :path => '/entities/0/links/tags/virtualised'}].to_json,
       jsonapi_patch_env
     expect(last_response.status).to eq(204)
   end

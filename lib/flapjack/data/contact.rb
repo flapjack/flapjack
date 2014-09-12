@@ -18,10 +18,11 @@ module Flapjack
 
     class Contact
 
+      include Tagged
+
       attr_accessor :id, :first_name, :last_name, :email, :media,
         :media_intervals, :media_rollup_thresholds, :pagerduty_credentials
 
-      TAG_PREFIX = 'contact_tag'
       ALL_MEDIA  = ['email', 'sms', 'sms_twilio', 'jabber', 'pagerduty', 'sns']
 
       def self.all(options = {})
@@ -75,9 +76,16 @@ module Flapjack
         end
 
         self.add_or_update(contact_id, contact_data, :redis => redis)
-        if contact = self.find_by_id(contact_id, :redis => redis)
+        contact = self.find_by_id(contact_id, :redis => redis)
+
+        unless contact.nil?
+          if contact_data['tags'] && contact_data['tags'].respond_to?(:each)
+            contact.add_tags(*contact_data['tags'])
+          end
+
           contact.notification_rules # invoke to create general rule
         end
+
         contact
       end
 
@@ -108,6 +116,12 @@ module Flapjack
 
       def update(contact_data)
         self.class.add_or_update(@id, contact_data, :redis => @redis)
+
+        if contact_data['tags'] && contact_data['tags'].respond_to?(:each)
+          self.delete_tags(*self.tags.to_a)
+          self.add_tags(*contact_data['tags'])
+        end
+
         self.refresh
       end
 
@@ -415,37 +429,6 @@ module Flapjack
         @redis.zcard("contact_alerting_checks:#{self.id}:media:#{media}")
       end
 
-      # FIXME
-      # do a mixin with the following tag methods, they will be the same
-      # across all objects we allow tags on
-
-      # return the set of tags for this contact
-      def tags
-        @tags ||= Flapjack::Data::TagSet.new( @redis.keys("#{TAG_PREFIX}:*").inject([]) {|memo, tag|
-          if Flapjack::Data::Tag.find(tag, :redis => @redis).include?(@id.to_s)
-            memo << tag.sub(/^#{TAG_PREFIX}:/, '')
-          end
-          memo
-        } )
-      end
-
-      # adds tags to this contact
-      def add_tags(*enum)
-        enum.each do |t|
-          Flapjack::Data::Tag.create("#{TAG_PREFIX}:#{t}", [@id], :redis => @redis)
-          tags.add(t)
-        end
-      end
-
-      # removes tags from this contact
-      def delete_tags(*enum)
-        enum.each do |t|
-          tag = Flapjack::Data::Tag.find("#{TAG_PREFIX}:#{t}", :redis => @redis)
-          tag.delete(@id)
-          tags.delete(t)
-        end
-      end
-
       # return a list of media enabled for this contact
       # eg [ 'email', 'sms' ]
       def media_list
@@ -535,12 +518,6 @@ module Flapjack
         end.flatten(1)
 
         redis.hmset("contact:#{contact_id}", *attrs) unless attrs.empty?
-
-        if ( ! contact_data['tags'].nil? && contact_data['tags'].is_a?(Enumerable))
-          contact_data['tags'].each do |t|
-            Flapjack::Data::Tag.create("#{TAG_PREFIX}:#{t}", [contact_id], :redis => redis)
-          end
-        end
 
         unless contact_data['media'].nil?
           redis.del("contact_media:#{contact_id}")

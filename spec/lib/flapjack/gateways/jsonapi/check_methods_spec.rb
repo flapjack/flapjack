@@ -121,17 +121,30 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(last_response.status).to eq(204)
   end
 
-  it "sets tags on a check" do
+  it "adds tags to a check" do
     expect(Flapjack::Data::Entity).to receive(:find_by_name).
       with(entity_name, :redis => redis).and_return(entity)
     expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
       with(entity, check, :redis => redis).and_return(entity_check)
 
-    expect(entity_check).to receive(:update).
-      with('tags' => ['database', 'virtualised'])
+    expect(entity_check).to receive(:add_tags).with('database', 'virtualised')
 
     apatch "/checks/#{check_esc}",
-      [{:op => 'replace', :path => '/checks/0/tags', :value => ['database', 'virtualised']}].to_json,
+      [{:op => 'add', :path => '/checks/0/links/tags', :value => ['database', 'virtualised']}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it "removes tags from a check" do
+    expect(Flapjack::Data::Entity).to receive(:find_by_name).
+      with(entity_name, :redis => redis).and_return(entity)
+    expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
+      with(entity, check, :redis => redis).and_return(entity_check)
+
+    expect(entity_check).to receive(:delete_tags).with('database')
+
+    apatch "/checks/#{check_esc}",
+      [{:op => 'remove', :path => '/checks/0/links/tags/database'}].to_json,
       jsonapi_patch_env
     expect(last_response.status).to eq(204)
   end

@@ -2,9 +2,9 @@
 
 require 'securerandom'
 
+require 'flapjack/tagged'
+
 require 'flapjack/data/contact'
-require 'flapjack/data/tag'
-require 'flapjack/data/tag_set'
 
 module Flapjack
 
@@ -14,7 +14,7 @@ module Flapjack
 
       attr_accessor :name, :id
 
-      TAG_PREFIX = 'entity_tag'
+      include Tagged
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
@@ -566,30 +566,6 @@ module Flapjack
         checks = check_list
         return if checks.nil?
         checks.length
-      end
-
-      def tags
-        @tags ||= Flapjack::Data::TagSet.new( @redis.keys("#{TAG_PREFIX}:*").inject([]) {|memo, entity_tag|
-          if Flapjack::Data::Tag.find(entity_tag, :redis => @redis).include?(@id.to_s)
-            memo << entity_tag.sub(/^#{TAG_PREFIX}:/, '')
-          end
-          memo
-        } )
-      end
-
-      def add_tags(*enum)
-        enum.each do |t|
-          Flapjack::Data::Tag.create("#{TAG_PREFIX}:#{t}", [@id], :redis => @redis)
-          tags.add(t)
-        end
-      end
-
-      def delete_tags(*enum)
-        enum.each do |t|
-          tag = Flapjack::Data::Tag.find("#{TAG_PREFIX}:#{t}", :redis => @redis)
-          tag.delete(@id)
-          tags.delete(t)
-        end
       end
 
       def as_json(*args)

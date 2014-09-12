@@ -97,19 +97,27 @@ module Flapjack
                 case op
                 when 'replace'
                   case property
-                  when 'name', 'tags'
-                    # Name change not yet supported, https://github.com/flapjack/flapjack/issues/628
-                    entity.update(property => value) unless 'name'.eql?('property')
+                  when 'name'
+                    # # Name change not yet supported, https://github.com/flapjack/flapjack/issues/628
+                    # entity.update(property => value)
                   end
                 when 'add'
-                  if 'contacts'.eql?(linked)
+                  case linked
+                  when 'contacts'
                     contact = Flapjack::Data::Contact.find_by_id(value, :redis => redis)
                     contact.add_entity(entity) unless contact.nil?
+                  when 'tags'
+                    value.respond_to?(:each) ? entity.add_tags(*value) :
+                                               entity.add_tags(value)
                   end
                 when 'remove'
-                  if 'contacts'.eql?(linked)
+                  case linked
+                  when 'contacts'
                     contact = Flapjack::Data::Contact.find_by_id(value, :redis => redis)
                     contact.remove_entity(entity) unless contact.nil?
+                  when 'tags'
+                    value.respond_to?(:each) ? entity.delete_tags(*value) :
+                                               entity.delete_tags(value)
                   end
                 end
               end
