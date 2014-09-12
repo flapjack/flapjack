@@ -201,18 +201,17 @@ module Flapjack
 
           if !pattern.nil? && !pattern.strip.empty?
 
-            check_names = begin
-              Flapjack::Data::Check.attributes_matching_name(pattern.strip)
+            checks = begin
+              Flapjack::Data::Check.intersect(:name => Regexp.new(pattern.strip)).all
             rescue RegexpError
               nil
             end
 
-            if check_names.nil?
+            if checks.nil?
               "Error parsing /#{pattern.strip}/"
-            elsif check_names.empty?
+            elsif checks.empty?
               "No checks match /#{pattern.strip}/"
             else
-              checks = Flapjack::Data::Check.intersect(:name => check_names).all
               yield(checks, "matching /#{pattern.strip}/") if block_given?
             end
 

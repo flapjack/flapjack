@@ -146,11 +146,9 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(bot).to receive(:announce).with('room1', "Checks matching /example/:\nexample.com:ping")
 
       expect(check).to receive(:name).and_return('example.com:ping')
-      expect(Flapjack::Data::Check).to receive(:intersect).
-        with(:name => ['example.com:ping']).and_return(all_checks)
 
-      expect(Flapjack::Data::Check).to receive(:attributes_matching_name).
-        with("example").and_return(['example.com:ping'])
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:name => Regexp.new("example")).and_return(all_checks)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@bot', bot)
@@ -160,8 +158,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "interprets a received find command (with an invalid regex)" do
       expect(bot).to receive(:announce).with('room1', 'Error parsing /(example/')
 
-      expect(Flapjack::Data::Check).to receive(:attributes_matching_name).
-        with("(example").and_raise(RegexpError.new)
+      expect(Flapjack::Data::Check).not_to receive(:intersect)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@bot', bot)
@@ -222,10 +219,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:state).and_return('ok')
 
       expect(Flapjack::Data::Check).to receive(:intersect).
-        with(:name => ['example.com:ping']).and_return(all_checks)
-
-      expect(Flapjack::Data::Check).to receive(:attributes_matching_name).
-        with("^example.com:p").and_return(['example.com:ping'])
+        with(:name => Regexp.new("^example.com:p")).and_return(all_checks)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@bot', bot)
@@ -284,10 +278,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
 
       expect(Flapjack::Data::Check).to receive(:intersect).
-        with(:name => ['example.com:ping']).and_return(all_checks)
-
-      expect(Flapjack::Data::Check).to receive(:attributes_matching_name).
-        with("^example.com:p").and_return(['example.com:ping'])
+        with(:name => Regexp.new("^example.com:p")).and_return(all_checks)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
       fji.instance_variable_set('@bot', bot)
@@ -341,10 +332,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:name).and_return('example.com:ping')
 
       expect(Flapjack::Data::Check).to receive(:intersect).
-        with(:name => ['example.com:ping']).and_return(all_checks)
-
-      expect(Flapjack::Data::Check).to receive(:attributes_matching_name).
-        with("^example.com:p").and_return(['example.com:ping'])
+        with(:name => Regexp.new("^example.com:p")).and_return(all_checks)
 
       expect(Flapjack::Data::Event).to receive(:create_acknowledgements).
         with('events', [check],
@@ -389,11 +377,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "interprets a received test notifications command (with regex)" do
       expect(bot).to receive(:announce).with('room1', /Testing notifications for check matching \/\^example.com:p\//)
 
-     expect(Flapjack::Data::Check).to receive(:intersect).
-        with(:name => ['example.com:ping']).and_return(all_checks)
-
-      expect(Flapjack::Data::Check).to receive(:attributes_matching_name).
-        with("^example.com:p").and_return(['example.com:ping'])
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:name => Regexp.new("^example.com:p")).and_return(all_checks)
 
       expect(Flapjack::Data::Event).to receive(:test_notifications).
         with('events', [check], an_instance_of(Hash))
