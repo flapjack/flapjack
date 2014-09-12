@@ -28,33 +28,12 @@ module Flapjack
       end
 
       def show(base_time = Time.now)
-        entities = if @options[:entity]
-          entity_names = Flapjack::Data::Entity.attributes_matching_name(@options[:entity])
-          Flapjack::Data::Entity.intersect(:name => entity_names).all
-        else
-          Flapjack::Data::Entity.all
-        end
-
         state = @options[:state]
 
         checks = if @options[:check]
-          check_names = Flapjack::Data::Check.attributes_matching_name(@options[:check])
-
-          if check_names.empty?
-            []
-          else
-            entities.inject([]) do |memo, entity|
-              ch = entity.checks.intersect(:name => check_names).all
-              memo += ch unless ch.empty? || (state && (ch.state != state))
-              memo
-            end
-          end
+          Flapjack::Data::Check.intersect(:name => Regexp.new(@options[:check])).all
         else
-          entities.inject([]) do |memo, entity|
-            ch = entity.checks.all
-            memo += ch unless ch.empty? || (state && (ch.state != state))
-            memo
-          end
+          Flapjack::Data::Check.all
         end
 
         start_time_begin, start_time_end = self.class.extract_time_range(
@@ -121,11 +100,11 @@ module Flapjack
 
         rows = maintenances.collect do |maint|
           check = maint.check_by_start
-          [check.entity.name, check.name, check.state,
+          [check.name, check.state,
            Time.at(maint.start_time), maint.end_time - maint.start_time,
            maint.summary, Time.at(maint.end_time)]
         end
-        puts Terminal::Table.new :headings => ['Entity', 'Check', 'State',
+        puts Terminal::Table.new :headings => ['Check', 'State',
           'Start', 'Duration (s)', 'Reason', 'End'], :rows => rows
         maintenances
       end
@@ -143,7 +122,7 @@ module Flapjack
         errors = {}
         maintenances.each do |maint|
           check = maint.check_by_start
-          identifier = "#{check.entity.name}:#{check.name}:#{check.start}"
+          identifier = "#{check.name}:#{check.start}"
           if maint.end_time < base_time
             errors[identifier] = "Maintenance can't be deleted as it finished in the past"
           else
@@ -168,7 +147,6 @@ module Flapjack
       def create
         errors = {}
 
-        entity_names = @options[:entity].is_a?(String) ? @options[:entity].split(',') : @options[:entity]
         check_names  = @options[:check].is_a?(String) ? @options[:check].split(',') : @options[:check]
 
         started = Chronic.parse(options[:started])
@@ -177,43 +155,32 @@ module Flapjack
         duration = ChronicDuration.parse(@options[:duration])
         raise "Failed to parse duration #{@options[:duration]}" if duration.nil?
 
-        entity_names.each do |entity_name|
-          entity = Flapjack::Data::Entity.intersect(:name => entity_name).all.first
+        check_names.each do |check_name|
+          check = Flapjack::Data::Check.intersect(:name => check_names).all.first
 
-          if entity.nil?
-            # Create the entity if it doesn't exist, so we can schedule maintenance against it
-            entity = Flapjack::Data::Entity.new(:name => entity_name)
-            entity.save
+          if check.nil?
+            # Create the check if it doesn't exist, so we can schedule maintenance against it
+            check = Flapjack::Data::Check.new(:name => check_name)
+            check.save
           end
 
-          check_names.each do |check_name|
-            check = Flapjack::Data::Check.intersect(:name => check_name).all.first
+          success = case @options[:type]
+          when 'scheduled'
 
-            if check.nil?
-              # Create the check if it doesn't exist, so we can schedule maintenance against it
-              check = Flapjack::Data::Check.new(:name => check_name)
-              check.save
-              entity.checks << check
-            end
+            sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => started,
+              :end_time => started + duration, :summary => @options[:reason])
+            sched_maint.save
 
-            success = case @options[:type]
-            when 'scheduled'
+            check.add_scheduled_maintenance(sched_maint)
+          when 'unscheduled'
+            unsched_maint = Flapjack::Data::UnscheduledMaintenance.new(:start_time => started,
+              :end_time => started + duration, :summary => @options[:reason])
+            unsched_maint.save
 
-              sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => started,
-                :end_time => started + duration, :summary => @options[:reason])
-              sched_maint.save
-
-              check.add_scheduled_maintenance(sched_maint)
-            when 'unscheduled'
-              unsched_maint = Flapjack::Data::UnscheduledMaintenance.new(:start_time => started,
-                :end_time => started + duration, :summary => @options[:reason])
-              unsched_maint.save
-
-              check.set_unscheduled_maintenance(unsched_maint)
-            end
-            identifier = "#{entity_name}:#{check_name}:#{started}"
-            errors[identifier] = "The following check failed to create: #{identifier}" unless success
+            check.set_unscheduled_maintenance(unsched_maint)
           end
+          identifier = "#{check_name}:#{started}"
+          errors[identifier] = "The following check failed to create: #{identifier}" unless success
         end
 
         if errors.empty?
@@ -315,11 +282,6 @@ end
 def common_arguments(cmd_type, gli_cmd)
 
   if [:show, :delete, :create].include?(cmd_type)
-    gli_cmd.flag [:e, 'entity'],
-      :desc => 'The entity for the maintenance window to occur on. This can ' +
-        ' be a string, or a Ruby regex of the form \'db*\' or \'[[:lower:]]\'',
-        :required => :create.eql?(cmd_type)
-
     gli_cmd.flag [:c, 'check'],
       :desc => 'The check for the maintenance window to occur on. This can ' +
         'be a string, or a Ruby regex of the form \'http*\' or \'[[:lower:]]\'',
