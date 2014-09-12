@@ -29,8 +29,7 @@ module Flapjack
 
       def show(base_time = Time.now)
         entities = if @options[:entity]
-          entity_names = Flapjack::Data::Entity.attributes_matching_name(@options[:entity])
-          Flapjack::Data::Entity.intersect(:name => entity_names).all
+          Flapjack::Data::Entity.intersect(:name => Regexp.new(@options[:entity])).all
         else
           Flapjack::Data::Entity.all
         end
@@ -38,13 +37,13 @@ module Flapjack
         state = @options[:state]
 
         checks = if @options[:check]
-          check_names = Flapjack::Data::Check.attributes_matching_name(@options[:check])
+          check_ids = Flapjack::Data::Check.intersect(:name => Regexp.new(@options[:check])).ids
 
-          if check_names.empty?
+          if check_ids.empty?
             []
           else
             entities.inject([]) do |memo, entity|
-              ch = entity.checks.intersect(:name => check_names).all
+              ch = entity.checks.find_by_ids(check_ids).compact
               memo += ch unless ch.empty? || (state && (ch.state != state))
               memo
             end

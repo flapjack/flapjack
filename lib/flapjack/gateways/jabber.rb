@@ -332,10 +332,10 @@ module Flapjack
               entity_pattern = $2 ? $2.strip : nil
               entity_name = $3
 
-              entity_names = if entity_name
-                [entity_name]
+              entities = if entity_name
+                Flapjack::Data::Entity.find_by_name(name)
               elsif entity_pattern
-                Flapjack::Data::Entity.attributes_matching_name(entity_pattern)
+                Flapjack::Data::Entity.intersect(:name => Regexp.new(entity_pattern)).all
               else
                 []
               end
@@ -343,12 +343,12 @@ module Flapjack
               msg = ""
 
               # hash with entity => check_list, filtered by pattern if required
-              entities = entity_names.map {|name|
-                Flapjack::Data::Entity.find_by_name(name)
-              }.compact.inject({}) {|memo, entity|
-                memo[entity] = entity.check_list.select {|check_name|
-                  !check_pattern || (check_name =~ /#{check_pattern}/i)
-                }
+              entities = entities.inject({}) {|memo, entity|
+                memo[entity] = if check_pattern
+                  entity.checks.interset(:name => Regexp.new(check_pattern)).all
+                else
+                  entity.checks.all
+                end
                 memo
               }
 
@@ -384,7 +384,7 @@ module Flapjack
               entity_pattern = $1.strip
 
               entity_names = begin
-                Flapjack::Data::Entity.attributes_matching_name(entity_pattern)
+                Flapjack::Data::Entity.intersect(:name => Regexp.new(entity_pattern)).map(&:name)
               rescue RegexpError
                 nil
               end
@@ -412,69 +412,61 @@ module Flapjack
               duration_str   = $3 ? $3.strip : '1 hour'
               duration       = ChronicDuration.parse(duration_str)
 
-              entity_names = begin
-                Flapjack::Data::Entity.attributes_matching_name(entity_pattern)
+              entity_ids = begin
+                Flapjack::Data::Entity.intersect(:name => Regexp.new(entity_pattern)).ids
               rescue RegexpError
                 nil
               end
 
-              msg = if entity_names.nil?
+              msg = if entity_ids.nil?
                 "that doesn't seem to be a valid pattern - /#{entity_pattern}/"
-              elsif entity_names.empty?
+              elsif entity_ids.empty?
                 "found no entities matching /#{entity_pattern}/"
               else
-                failing = Flapjack::Data::Check.hash_by_entity_name(
-                  Flapjack::Data::Check.intersect(:state =>
-                    Flapjack::Data::CheckState.failing_states).all )
+                failing = Flapjack::Data::Check.intersect(:state =>
+                    Flapjack::Data::CheckState.failing_states).select {|check|
+                  entity_ids.include?(check.entity.id)
+                }
 
-                matching = failing.select do |entity_name, checks|
-                  !checks.empty? && entity_names.include?(entity_name)
-                end
-
-                if matching.empty?
+                if failing.empty?
                   "found no matching entities with failing checks"
                 else
                   comment = "#{nick}: #{comment.blank? ? 'Set via chatbot' : comment}"
 
-                  matching.each_pair do |entity_name, checks|
-                    checks.each do |check|
-                      Flapjack::Data::Event.create_acknowledgement(
-                        @config['processor_queue'] || 'events',
-                        check,
-                        :summary  => comment,
-                        :duration => duration
-                      )
-                    end
+                  failing.each do |check|
+                    Flapjack::Data::Event.create_acknowledgement(
+                      @config['processor_queue'] || 'events',
+                      check,
+                      :summary  => comment,
+                      :duration => duration
+                    )
                   end
-                  matching.inject("Ack list:\n") {|memo, (entity_name, checks)|
-                    checks.each {|check| memo << "#{entity_name}:#{check.name}\n" }
+                  failing.inject("Ack list:\n") do |memo, check|
+                    memo << "#{check.entity.name}:#{check.name}\n"
                     memo
-                  }
+                  end
                 end
               end
 
             when /^(?:status )?entities\s+\/(.+)\/.*$/im
               entity_pattern  = $1 ? $1.strip : nil
-              entity_names = begin
-                Flapjack::Data::Entity.attributes_matching_name(entity_pattern)
+              entities = begin
+                Flapjack::Data::Entity.intersect(:name => Regexp.new(entity_pattern)).all
               rescue RegexpError
                 nil
               end
 
-              msg = if entity_names.nil?
+              msg = if entities.nil?
                 "that doesn't seem to be a valid pattern - /#{pattern}/"
-              elsif entity_names.empty?
+              elsif entities.empty?
                 "found no entities matching /#{entity_pattern}/"
               else
-                entities = entity_names.map {|entity_name|
-                  Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-                }.compact.inject({}) {|memo, entity|
+                entities.inject({}) {|memo, entity|
                   memo[entity.name] = entity.checks.map {|check|
                     "#{check.name}: #{check.state}"
                   }
                   memo
-                }
-                entities.inject("Status list:\n") {|memo, (entity_name, check_statuses)|
+                }.inject("Status list:\n") {|memo, (entity_name, check_statuses)|
                   check_statuses.each {|check_status| memo << "#{entity_name}:#{check_status}\n" }
                   memo
                 }
@@ -487,51 +479,39 @@ module Flapjack
               duration_str   = $4 ? $4.strip : '1 hour'
               duration       = ChronicDuration.parse(duration_str)
 
-              entity_names = begin
-                Flapjack::Data::Entity.attributes_matching_name(entity_pattern)
+              entity_ids = begin
+                Flapjack::Data::Entity.intersect(:name => Regexp.new(entity_pattern)).ids
               rescue RegexpError
                 nil
               end
 
-              msg = if entity_names.nil?
+              msg = if entity_ids.nil?
                 "that doesn't seem to be a valid pattern - /#{entity_pattern}/"
-              elsif entity_names.empty?
+              elsif entity_ids.empty?
                 "found no entities matching /#{entity_pattern}/"
               else
-                check_names = begin
-                Flapjack::Data::Check.attributes_matching_name(check_pattern)
-                rescue RegexpError
-                  nil
-                end
+                opts = {:state => Flapjack::Data::CheckState.failing_states}
+                opts[:name] = Regexp.new(check_pattern) unless check_pattern.nil?
+                failing = Flapjack::Data::Check.intersect(opts).select {|check|
+                  entity_ids.include?(check.entity.id)
+                }
 
-                if check_names.nil?
-                  "that doesn't seem to be a valid pattern - /#{check_pattern}/"
-                elsif check_names.empty?
-                  "found no matching checks"
+                if failing.empty?
+                  "found no matching entities with failing checks"
                 else
-                  matching = Flapjack::Data::Check.hash_by_entity_name(
-                    Flapjack::Data::Check.intersect(:name => check_names, :state =>
-                      Flapjack::Data::CheckState.failing_states).all )
+                  comment = "#{nick}: #{comment.blank? ? 'Set via chatbot' : comment}"
 
-                  if matching.empty?
-                    "found no matching failing checks"
-                  else
-                    comment = "#{nick}: #{comment.blank? ? 'Set via chatbot' : comment}"
-
-                    matching.each_pair do |entity_name, checks|
-                      checks.each do |check|
-                        Flapjack::Data::Event.create_acknowledgement(
-                          @config['processor_queue'] || 'events',
-                          check,
-                          :summary  => comment,
-                          :duration => duration
-                        )
-                      end
-                    end
-                    matching.inject("Ack list:\n") {|memo, (entity_name, checks)|
-                      checks.each {|check| memo << "#{entity_name}:#{check.name}\n" }
-                      memo
-                    }
+                  failing.each do |check|
+                    Flapjack::Data::Event.create_acknowledgement(
+                      @config['processor_queue'] || 'events',
+                      check,
+                      :summary  => comment,
+                      :duration => duration
+                    )
+                  end
+                  failing.inject("Ack list:\n") do |memo, check|
+                    memo << "#{entity_name}:#{check.name}\n"
+                    memo
                   end
                 end
               end
@@ -539,6 +519,12 @@ module Flapjack
             when /^(?:status )checks\s+\/(.+?)\/(?:\s+on\s+)?(?:\/(.+)?\/)?/im
               check_pattern  = $1 ? $1.strip : nil
               entity_pattern = $2 ? $2.strip : '.*'
+
+              entities = begin
+                Flapjack::Data::Entity.intersect(:name => Regexp.new(entity_pattern)).all
+              rescue RegexpError
+                nil
+              end
 
               entity_names = begin
                 Flapjack::Data::Entity.attributes_matching_name(entity_pattern)
@@ -552,25 +538,19 @@ module Flapjack
                 nil
               end
 
-              msg = if entity_names.nil?
+              msg = if entities.nil?
                 "that doesn't seem to be a valid pattern - /#{entity_pattern}/"
-              elsif entity_names.empty?
+              elsif entities.empty?
                 "found no entities matching /#{entity_pattern}/"
               elsif check_regexp.nil?
                 "that doesn't seem to be a valid pattern - /#{check_pattern}/"
               else
-                entities = entity_names.map {|entity_name|
-                  Flapjack::Data::Entity.intersect(:name => entity_name).all.first
-                }.compact.inject({}) {|memo, entity|
-                  matching_checks = entity.checks.select {|check| check_regexp === check.name }
-                  if matching_checks.size > 0
-                    memo[entity.name] = matching_checks
-                  end
+                entities.inject({}) {|memo, entity|
+                  matching_checks = entity.checks.intersect(:name => check_regexp).all
+                  memo[entity.name] = matching_checks unless matching_checks.empty?
                   memo
-                }
-
-                entities.inject("Status list:\n") {|memo, (entity_name, checks)|
-                  checks.each {|check_status| memo << "#{entity_name}:#{check.name}: #{check.state}\n" }
+                }.inject("Status list:\n") {|memo, check|
+                  memo << "#{check.entity.name}:#{check.name}: #{check.state}\n"
                   memo
                 }
               end
