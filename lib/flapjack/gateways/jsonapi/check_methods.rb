@@ -43,7 +43,9 @@ module Flapjack
                 Flapjack::Data::EntityCheck.for_event_id(req_check, :logger => logger, :redis => redis)
               end
             else
-              Flapjack::Data::EntityCheck.find_current(:redis => redis)
+              Flapjack::Data::EntityCheck.find_current_names(:redis => redis).collect do |chk_name|
+                Flapjack::Data::EntityCheck.for_event_id(chk_name, :logger => logger, :redis => redis)
+              end
             end
             checks.compact!
 
@@ -52,12 +54,13 @@ module Flapjack
             end
 
             linked_entity_ids = checks.empty? ? [] : checks.inject({}) do |memo, check|
-              memo[check.key] = check.entity.id
+              entity = check.entity
+              memo["#{entity.name}:#{check.check}"] = entity.id
               memo
             end
 
             checks_json = checks.collect {|check|
-              check.to_jsonapi(:entity_ids => linked_entity_ids[check.key])
+              check.to_jsonapi(:entity_ids => linked_entity_ids["#{check.entity.name}:#{check.check}"])
             }.join(",")
 
             '{"checks":[' + checks_json + ']}'
