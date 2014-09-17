@@ -96,9 +96,13 @@ module Flapjack
               apply_json_patch('entities') do |op, property, linked, value|
                 case op
                 when 'replace'
-                  if ['name'].include?(property)
-                    # # Name change not supported in Flapjack v1.x, too many changes required
-                    # entity.update(property => value)
+                  if 'name'.eql?(property)
+                    name = entity.name
+                    if name != value
+                      existing = Flapjack::Data::Entity.find_by_name(value, :redis => redis)
+                      Flapjack::Data::Entity.send(existing.nil? ? :rename : :merge,
+                        name, value, :redis => redis)
+                    end
                   end
                 when 'add'
                   if 'contacts'.eql?(linked)
