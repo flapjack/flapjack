@@ -43,15 +43,17 @@ module Flapjack
                 Flapjack::Data::EntityCheck.for_event_id(req_check, :logger => logger, :redis => redis)
               end
             else
-              Flapjack::Data::EntityCheck.find_current_names(:redis => redis).collect do |chk_name|
-                Flapjack::Data::EntityCheck.for_event_id(chk_name, :logger => logger, :redis => redis)
-              end
+              Flapjack::Data::EntityCheck.all(:logger => logger, :redis => redis)
             end
             checks.compact!
 
             if requested_checks && checks.empty?
               raise Flapjack::Gateways::JSONAPI::ChecksNotFound.new(requested_checks)
             end
+
+            check_ids = checks.collect {|c| "#{c.entity.name}:#{c.check}" }
+
+            enabled_ids = Flapjack::Data::EntityCheck.enabled_for(check_ids, :redis => redis)
 
             linked_entity_ids = checks.empty? ? [] : checks.inject({}) do |memo, check|
               entity = check.entity
@@ -60,7 +62,9 @@ module Flapjack
             end
 
             checks_json = checks.collect {|check|
-              check.to_jsonapi(:entity_ids => linked_entity_ids["#{check.entity.name}:#{check.check}"])
+              check_name = "#{check.entity.name}:#{check.check}"
+              check.to_jsonapi(:enabled    => enabled_ids.include?(check_name),
+                               :entity_ids => linked_entity_ids[check_name])
             }.join(",")
 
             '{"checks":[' + checks_json + ']}'
@@ -86,8 +90,13 @@ module Flapjack
                 when 'replace'
                   case property
                   when 'enabled'
-                    # explicitly checking for false being passed in
-                    check.disable! if value.is_a?(FalseClass)
+                    # explicitly checking for true/false being passed in
+                    case value
+                    when TrueClass
+                      check.enable!
+                    when FalseClass
+                      check.disable!
+                    end
                   end
                 when 'add'
                   case linked

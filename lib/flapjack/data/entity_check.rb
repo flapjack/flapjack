@@ -96,8 +96,13 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
         checks = redis.keys('check:*').map {|c| c.match(/^check:(.*)$/) ; $1}
         checks.map {|ec|
-          self.for_entity_id(ec, options)
+          self.for_event_id(ec, options)
         }
+      end
+
+      def self.find_all_names_for_entity_name(entity_name, options = {})
+        en = Regexp.escape(entity_name)
+        redis.keys('check:*').map {|c| /^check:#{en}:(.*)$/ === c; $1}
       end
 
       def self.find_current_names_for_entity_name(entity_name, options = {})
@@ -683,11 +688,19 @@ module Flapjack
       # disables a check (removes currency)
       def disable!
         @logger.debug("disabling check [#{@key}]") if @logger
-        @redis.zrem("current_checks:#{entity.name}", check)
-        if @redis.zcount("current_checks:#{entity.name}", '-inf', '+inf') == 0
-          @redis.zrem("current_checks:#{entity.name}", check)
+        entity_name = entity.name
+        @redis.zrem("current_checks:#{entity_name}", check)
+        if @redis.zcount("current_checks:#{entity_name}", '-inf', '+inf') == 0
+          @redis.zrem("current_checks:#{entity_name}", check)
           @redis.zrem("current_entities", entity.name)
         end
+      end
+
+      def enable!
+        timestamp = Time.now.to_i
+        entity_name = entity.name
+        redis.zadd("current_checks:#{entity_name}", timestamp, check)
+        redis.zadd('current_entities', timestamp, entity_name)
       end
 
       def enabled?
@@ -969,10 +982,21 @@ module Flapjack
         purge_stamps.length
       end
 
+      def self.enabled_for(check_ids, opts = {})
+        raise "Redis connection not set" unless redis = opts[:redis]
+
+        check_ids.inject([]) do |memo, check_id|
+          entity_name, check_name = check_id.split(':', 2)
+          memo << check_id unless redis.zscore("current_checks:#{entity_name}", check_name).nil?
+          memo
+        end
+      end
+
       def to_jsonapi(opts = {})
         {
           "name"        => @check,
           "entity_name" => @entity.name,
+          "enabled"     => opts[:enabled].is_a?(TrueClass),
           "links"       => {
             :entities     => opts[:entity_ids] || [],
           }
