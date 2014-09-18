@@ -178,6 +178,55 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(last_response.status).to eq(204)
   end
 
+  it "renames an entity when an entity with the new name doesn't exist" do
+    expect(entity).to receive(:name).and_return('example.com')
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with('1234', :redis => redis).and_return(entity)
+
+    expect(Flapjack::Data::Entity).to receive(:find_by_name).
+      with('example2.com', :redis => redis).and_return(nil)
+
+    expect(Flapjack::Data::Entity).to receive(:rename).
+      with('example.com', 'example2.com', :redis => redis)
+
+    apatch "/entities/1234",
+      [{:op => 'replace', :path => '/entities/0/name', :value => 'example2.com'}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it "merges an entity when an entity with the new name exists" do
+    expect(entity).to receive(:name).and_return('example.com')
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with('1234', :redis => redis).and_return(entity)
+
+    expect(Flapjack::Data::Entity).to receive(:find_by_name).
+      with('example2.com', :redis => redis).and_return(double(Flapjack::Data::Entity))
+
+    expect(Flapjack::Data::Entity).to receive(:merge).
+      with('example.com', 'example2.com', :redis => redis)
+
+    apatch "/entities/1234",
+      [{:op => 'replace', :path => '/entities/0/name', :value => 'example2.com'}].to_json,
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it 'skips a rename if old and new names are the same' do
+    expect(entity).to receive(:name).and_return('example.com')
+    expect(Flapjack::Data::Entity).to receive(:find_by_id).
+      with('1234', :redis => redis).and_return(entity)
+
+    expect(Flapjack::Data::Entity).not_to receive(:find_by_name)
+    expect(Flapjack::Data::Entity).not_to receive(:rename)
+
+    apatch "/entities/1234",
+      [{:op => 'replace', :path => '/entities/0/name', :value => 'example.com'}].to_json,
+
+      jsonapi_patch_env
+    expect(last_response.status).to eq(204)
+  end
+
   it "creates acknowledgements for all checks on an entity" do
     expect(entity).to receive(:check_list).and_return([check])
     expect(Flapjack::Data::Entity).to receive(:find_by_id).

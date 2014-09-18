@@ -36,7 +36,7 @@ module Flapjack
         def outage(start_time, end_time, options = {})
           # hist_states is an array of hashes, with [state, timestamp, summary] keys
           hist_states = @entity_check.historical_states(start_time, end_time)
-          return hist_states if hist_states.empty?
+          return {:outages => []} if hist_states.empty?
 
           initial = @entity_check.historical_state_before(hist_states.first[:timestamp])
           hist_states.unshift(initial) if initial
