@@ -995,6 +995,7 @@ module Flapjack
 
       def to_jsonapi(opts = {})
         {
+          "id"          => @key,
           "name"        => @check,
           "entity_name" => @entity.name,
           "enabled"     => opts[:enabled].is_a?(TrueClass),
