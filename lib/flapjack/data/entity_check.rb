@@ -67,7 +67,7 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
         checks = redis.keys('check:*').map {|c| c.match(/^check:(.+)$/) ; $1}
         checks.map {|ec|
-          self.for_entity_id(ec, options)
+          self.for_event_id(ec, options)
         }
       end
 
