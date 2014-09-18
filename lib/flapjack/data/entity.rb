@@ -552,6 +552,19 @@ module Flapjack
         end
       end
 
+      def self.check_ids_for(entity_ids, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        entity_ids.inject({}) do |memo, entity_id|
+          entity_name = redis.hget("entity:#{entity_id}", 'name')
+          unless entity_name.nil? || entity_name.empty?
+            checks = Flapjack::Data::EntityCheck.find_all_names_for_entity_name(entity_name, :redis => redis)
+            memo[entity_id] = checks.collect {|check| "#{entity_name}:#{check}" }
+          end
+          memo
+        end
+      end
+
       def check_list
         @redis.zrange("current_checks:#{@name}", 0, -1)
       end
