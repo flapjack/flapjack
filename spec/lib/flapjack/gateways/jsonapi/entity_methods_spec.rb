@@ -21,6 +21,8 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
 
     expect(Flapjack::Data::Entity).to receive(:contact_ids_for).
       with([entity_core['id']], :redis => redis).and_return({})
+    expect(Flapjack::Data::Entity).to receive(:check_ids_for).
+      with([entity_core['id']], :redis => redis).and_return({})
     expect(entity).to receive(:to_jsonapi).and_return(entity_core.to_json)
     expect(Flapjack::Data::Entity).to receive(:all).with(:enabled => nil, :redis => redis).
       and_return([entity])
@@ -35,6 +37,8 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
 
     expect(entity).to receive(:id).exactly(4).times.and_return(entity_core['id'])
     expect(Flapjack::Data::Entity).to receive(:contact_ids_for).
+      with([entity_core['id']], :redis => redis).and_return({})
+    expect(Flapjack::Data::Entity).to receive(:check_ids_for).
       with([entity_core['id']], :redis => redis).and_return({})
     expect(entity).to receive(:to_jsonapi).and_return(entity_core.to_json)
     expect(idless_entity).not_to receive(:to_jsonapi)
@@ -52,6 +56,8 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
     expect(entity).to receive(:id).twice.and_return('1234')
 
     expect(Flapjack::Data::Entity).to receive(:contact_ids_for).
+      with(['1234'], :redis => redis).and_return({})
+    expect(Flapjack::Data::Entity).to receive(:check_ids_for).
       with(['1234'], :redis => redis).and_return({})
     expect(entity).to receive(:to_jsonapi).and_return(entity_core.to_json)
     expect(Flapjack::Data::Entity).to receive(:find_by_id).
@@ -71,6 +77,9 @@ describe 'Flapjack::Gateways::JSONAPI::EntityMethods', :sinatra => true, :logger
                    'name' => 'www.example2.com'}
 
     expect(Flapjack::Data::Entity).to receive(:contact_ids_for).
+      with(['1234', '5678'], :redis => redis).and_return({})
+
+    expect(Flapjack::Data::Entity).to receive(:check_ids_for).
       with(['1234', '5678'], :redis => redis).and_return({})
 
     expect(entity).to receive(:id).twice.and_return('1234')
