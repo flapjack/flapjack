@@ -611,7 +611,8 @@ module Flapjack
           "id"        => self.id,
           "name"      => self.name,
           "links"     => {
-            :contacts   => opts[:contact_ids] || [],
+            :contacts  => opts[:contact_ids] || [],
+            :checks    => opts[:check_ids]   || [],
           }
         }.to_json
       end
