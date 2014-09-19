@@ -19,6 +19,7 @@ vendor
 .bundle
 etc/*.yaml
 coverage
+tmp/pacts
 tmp/cucumber_cli
 tmp/pids/*
 tmp/spec*

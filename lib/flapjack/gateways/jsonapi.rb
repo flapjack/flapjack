@@ -89,6 +89,13 @@ module Flapjack
         end
       end
 
+      class EntityChecksNotFound < RuntimeError
+        attr_reader :entity_checks
+        def initialize(entity_checks)
+          @entity_checks = entity_checks
+        end
+      end
+
       class ResourceLocked < RuntimeError
         attr_reader :resource
         def initialize(resource)
@@ -100,37 +107,38 @@ module Flapjack
 
       set :protection, :except => :path_traversal
 
-      rescue_error = Proc.new {|status, exception, request_info, *msg|
-        if !msg || msg.empty?
-          trace = exception.backtrace.join("\n")
-          msg = "#{exception.class} - #{exception.message}"
-          msg_str = "#{msg}\n#{trace}"
-        else
-          msg_str = msg.join(", ")
-        end
-        case
-        when status < 500
-          @logger.warn "Error: #{msg_str}"
-        else
-          @logger.error "Error: #{msg_str}"
-        end
+      @rescue_exception = Proc.new {|env, e|
 
-        response_body = {:errors => msg}.to_json
+        rescue_error = Proc.new {|status, exception, request_info, *msg|
+          if !msg || msg.empty?
+            trace = exception.backtrace.join("\n")
+            msg = "#{exception.class} - #{exception.message}"
+            msg_str = "#{msg}\n#{trace}"
+          else
+            msg_str = msg.join(", ")
+          end
+          case
+          when status < 500
+            @logger.warn "Error: #{msg_str}"
+          else
+            @logger.error "Error: #{msg_str}"
+          end
 
-        query_string = (request_info[:query_string].respond_to?(:length) &&
-                        request_info[:query_string].length > 0) ? "?#{request_info[:query_string]}" : ""
-        if @logger.debug?
-          @logger.debug("Returning #{status} for #{request_info[:request_method]} " +
-            "#{request_info[:path_info]}#{query_string}, body: #{response_body}")
-        elsif @logger.info?
-          @logger.info("Returning #{status} for #{request_info[:request_method]} " +
-            "#{request_info[:path_info]}#{query_string}")
-        end
+          response_body = {:errors => msg}.to_json
 
-        [status, {}, response_body]
-      }
+          query_string = (request_info[:query_string].respond_to?(:length) &&
+                          request_info[:query_string].length > 0) ? "?#{request_info[:query_string]}" : ""
+          if @logger.debug?
+            @logger.debug("Returning #{status} for #{request_info[:request_method]} " +
+              "#{request_info[:path_info]}#{query_string}, body: #{response_body}")
+          elsif @logger.info?
+            @logger.info("Returning #{status} for #{request_info[:request_method]} " +
+              "#{request_info[:path_info]}#{query_string}")
+          end
 
-      rescue_exception = Proc.new {|env, e|
+          [status, {}, response_body]
+        }
+
         request_info = {
           :path_info      => env['REQUEST_PATH'],
           :request_method => env['REQUEST_METHOD'],
@@ -149,13 +157,16 @@ module Flapjack
           rescue_error.call(404, e, request_info, "could not find entity '#{e.entity}'")
         when Flapjack::Gateways::JSONAPI::EntityCheckNotFound
           rescue_error.call(404, e, request_info, "could not find entity check '#{e.check}'")
+        when Flapjack::Gateways::JSONAPI::EntityChecksNotFound
+          checks = "'" + e.entity_checks.join("', '") + "'"
+          rescue_error.call(404, e, request_info, "could not find entity checks: #{checks}")
         when Flapjack::Gateways::JSONAPI::ResourceLocked
           rescue_error.call(423, e, request_info, "unable to obtain lock for resource '#{e.resource}'")
         else
           rescue_error.call(500, e, request_info)
         end
       }
-      use ::Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+      use ::Rack::FiberPool, :size => 25, :rescue_exception => @rescue_exception
 
       use ::Rack::MethodOverride
       use Flapjack::Gateways::JSONAPI::Rack::JsonParamsParser
@@ -205,7 +216,7 @@ module Flapjack
       before do
         input = nil
         query_string = (request.query_string.respond_to?(:length) &&
-                        request.query_string.length > 0) ? "?#{request.query_string}" : ""
+                         (request.query_string.length > 0)) ? "?#{request.query_string}" : ""
         if logger.debug?
           input = env['rack.input'].read
           logger.debug("#{request.request_method} #{request.path_info}#{query_string} #{input}")

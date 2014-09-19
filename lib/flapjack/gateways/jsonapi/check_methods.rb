@@ -48,7 +48,7 @@ module Flapjack
             checks.compact!
 
             if requested_checks && checks.empty?
-              raise Flapjack::Gateways::JSONAPI::ChecksNotFound.new(requested_checks)
+              raise Flapjack::Gateways::JSONAPI::EntityChecksNotFound.new(requested_checks)
             end
 
             check_ids = checks.collect {|c| "#{c.entity.name}:#{c.check}" }
@@ -57,7 +57,7 @@ module Flapjack
 
             linked_entity_ids = checks.empty? ? [] : checks.inject({}) do |memo, check|
               entity = check.entity
-              memo["#{entity.name}:#{check.check}"] = entity.id
+              memo["#{entity.name}:#{check.check}"] = [entity.id]
               memo
             end
 

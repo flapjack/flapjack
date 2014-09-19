@@ -65,6 +65,7 @@ module Flapjack
         logger = options[:logger]
         entity = Flapjack::Data::Entity.find_by_name(entity_name,
           :create => create_entity, :logger => logger, :redis => redis)
+        return if entity.nil?
         self.new(entity, check_name, :logger => logger, :redis => redis)
       end
 
@@ -94,7 +95,8 @@ module Flapjack
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        checks = redis.keys('check:*').map {|c| c.match(/^check:(.+)$/) ; $1}
+        checks = redis.keys('check:*').map {|c| c.match(/^check:(.+)$/) ; $1} |
+                   find_current_names(:redis => redis)
         checks.map {|ec|
           self.for_event_id(ec, options)
         }

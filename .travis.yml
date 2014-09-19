@@ -12,7 +12,7 @@ before_script:
 before_install:
 - git submodule update --init --recursive
 - gem install bundler
-script: bundle exec rspec spec && bundle exec cucumber features
+script: bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features
 notifications:
   irc:
     channels:
