@@ -94,7 +94,8 @@ module Flapjack
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        checks = redis.keys('check:*').map {|c| c.match(/^check:(.+)$/) ; $1}
+        checks = redis.keys('check:*').map {|c| c.match(/^check:(.+)$/) ; $1} |
+                   find_current_names(:redis => redis)
         checks.map {|ec|
           self.for_event_id(ec, options)
         }
