@@ -401,7 +401,7 @@ module Flapjack
       # bare 'params' may have splat/captures for regex route, see
       # https://github.com/sinatra/sinatra/issues/453
       post '*' do
-        halt(405) unless request.params.empty? || is_json_request? || is_jsonapi_request
+        halt(405) unless request.params.empty? || is_json_request? || is_jsonapi_request?
         content_type JSONAPI_MEDIA_TYPE
         cors_headers
         pass

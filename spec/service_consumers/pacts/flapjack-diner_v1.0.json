@@ -7,81 +7,6 @@
   },
   "interactions": [
     {
-      "description": "a GET request for all checks",
-      "provider_state": "no entity exists",
-      "request": {
-        "method": "get",
-        "path": "/checks"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; charset=utf-8"
-        },
-        "body": {
-          "checks": [
-
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all checks",
-      "provider_state": "a check 'www.example.com:SSH' exists",
-      "request": {
-        "method": "get",
-        "path": "/checks"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; charset=utf-8"
-        },
-        "body": {
-          "checks": [
-            {
-              "id": "www.example.com:SSH",
-              "name": "SSH",
-              "entity_name": "www.example.com",
-              "links": {
-                "entities": [
-                  "1234"
-                ]
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for check 'www.example.com:SSH'",
-      "provider_state": "a check 'www.example.com:SSH' exists",
-      "request": {
-        "method": "get",
-        "path": "/checks/www.example.com:SSH"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; charset=utf-8"
-        },
-        "body": {
-          "checks": [
-            {
-              "id": "www.example.com:SSH",
-              "name": "SSH",
-              "entity_name": "www.example.com",
-              "links": {
-                "entities": [
-                  "1234"
-                ]
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
       "description": "a GET request for check 'www.example.com:SSH'",
       "provider_state": "no entity exists",
       "request": {
@@ -101,25 +26,78 @@
       }
     },
     {
-      "description": "a PATCH request for a single check",
+      "description": "a GET request for check 'www.example.com:SSH'",
       "provider_state": "a check 'www.example.com:SSH' exists",
       "request": {
-        "method": "patch",
-        "path": "/checks/www.example.com:SSH",
-        "headers": {
-          "Content-Type": "application/json-patch+json"
-        },
-        "body": [
-          {
-            "op": "replace",
-            "path": "/checks/0/enabled",
-            "value": false
-          }
-        ]
+        "method": "get",
+        "path": "/checks/www.example.com:SSH"
       },
       "response": {
-        "status": 204,
-        "body": ""
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; charset=utf-8"
+        },
+        "body": {
+          "checks": [
+            {
+              "id": "www.example.com:SSH",
+              "name": "SSH",
+              "entity_name": "www.example.com",
+              "links": {
+                "entities": [
+                  "1234"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all checks",
+      "provider_state": "a check 'www.example.com:SSH' exists",
+      "request": {
+        "method": "get",
+        "path": "/checks"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; charset=utf-8"
+        },
+        "body": {
+          "checks": [
+            {
+              "id": "www.example.com:SSH",
+              "name": "SSH",
+              "entity_name": "www.example.com",
+              "links": {
+                "entities": [
+                  "1234"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all checks",
+      "provider_state": "no entity exists",
+      "request": {
+        "method": "get",
+        "path": "/checks"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; charset=utf-8"
+        },
+        "body": {
+          "checks": [
+
+          ]
+        }
       }
     },
     {
@@ -149,6 +127,89 @@
             "could not find entity 'www.example.com'"
           ]
         }
+      }
+    },
+    {
+      "description": "a PATCH request for a single check",
+      "provider_state": "a check 'www.example.com:SSH' exists",
+      "request": {
+        "method": "patch",
+        "path": "/checks/www.example.com:SSH",
+        "headers": {
+          "Content-Type": "application/json-patch+json"
+        },
+        "body": [
+          {
+            "op": "replace",
+            "path": "/checks/0/enabled",
+            "value": false
+          }
+        ]
+      },
+      "response": {
+        "status": 204,
+        "body": ""
+      }
+    },
+    {
+      "description": "a POST request with two checks",
+      "provider_state": "an entity 'www.example.com' exists",
+      "request": {
+        "method": "post",
+        "path": "/checks",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "checks": [
+            {
+              "name": "SSH",
+              "entity_id": "1234"
+            },
+            {
+              "name": "PING",
+              "entity_id": "1234"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; charset=utf-8"
+        },
+        "body": [
+          "www.example.com:SSH",
+          "www.example.com:PING"
+        ]
+      }
+    },
+    {
+      "description": "a POST request with one check",
+      "provider_state": "an entity 'www.example.com' exists",
+      "request": {
+        "method": "post",
+        "path": "/checks",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "checks": [
+            {
+              "name": "PING",
+              "entity_id": "1234"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; charset=utf-8"
+        },
+        "body": [
+          "www.example.com:PING"
+        ]
       }
     }
   ],
