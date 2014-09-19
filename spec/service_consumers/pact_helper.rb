@@ -35,30 +35,32 @@ class MockLogger
   end
 end
 
-Pact.configure do |config|
-  cfg = Flapjack::Configuration.new
-  $redis_options = cfg.load(FLAPJACK_CONFIG) ?
-                   cfg.for_redis :
-                   {:db => 14, :driver => :ruby}
+Flapjack::Gateways::JSONAPI.instance_variable_get('@middleware').delete_if {|m|
+  m[0] == Rack::FiberPool
+}
 
-  Flapjack::Gateways::JSONAPI.instance_variable_set('@config', 'port' => 19081)
-
-  Flapjack::Gateways::JSONAPI.instance_variable_set('@redis_config', $redis_options)
-  Flapjack::Gateways::JSONAPI.instance_variable_set('@logger', MockLogger.new)
-
-  Flapjack::Gateways::JSONAPI.instance_variable_get('@middleware').delete_if {|m|
-    m[0] == Rack::FiberPool
-  }
-
-  Flapjack::Gateways::JSONAPI.class_eval do
-    set :show_exceptions, false
-    error do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@rescue_exception').
-        call(env, env['sinatra.error'])
-    end
+Flapjack::Gateways::JSONAPI.class_eval do
+  set :show_exceptions, false
+  set :raise_errors, false
+  error do
+    Flapjack::Gateways::JSONAPI.instance_variable_get('@rescue_exception').
+      call(env, env['sinatra.error'])
   end
+end
 
-  Flapjack::Gateways::JSONAPI.start
+cfg = Flapjack::Configuration.new
+$redis_options = cfg.load(FLAPJACK_CONFIG) ?
+                 cfg.for_redis :
+                 {:db => 14, :driver => :ruby}
+
+Flapjack::Gateways::JSONAPI.instance_variable_set('@config', 'port' => 19081)
+
+Flapjack::Gateways::JSONAPI.instance_variable_set('@redis_config', $redis_options)
+Flapjack::Gateways::JSONAPI.instance_variable_set('@logger', MockLogger.new)
+
+Flapjack::Gateways::JSONAPI.start
+
+Pact.configure do |config|
 
 end
 
