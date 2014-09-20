@@ -43,15 +43,17 @@ module Flapjack
                 Flapjack::Data::EntityCheck.for_event_id(req_check, :logger => logger, :redis => redis)
               end
             else
-              Flapjack::Data::EntityCheck.find_current_names(:redis => redis).collect do |chk_name|
-                Flapjack::Data::EntityCheck.for_event_id(chk_name, :logger => logger, :redis => redis)
-              end
+              Flapjack::Data::EntityCheck.all(:logger => logger, :redis => redis)
             end
             checks.compact!
 
             if requested_checks && checks.empty?
               raise Flapjack::Gateways::JSONAPI::ChecksNotFound.new(requested_checks)
             end
+
+            check_ids = checks.collect {|c| "#{c.entity.name}:#{c.check}" }
+
+            enabled_ids = Flapjack::Data::EntityCheck.enabled_for(check_ids, :redis => redis)
 
             linked_entity_ids = checks.empty? ? [] : checks.inject({}) do |memo, check|
               entity = check.entity
@@ -60,10 +62,25 @@ module Flapjack
             end
 
             checks_json = checks.collect {|check|
-              check.to_jsonapi(:entity_ids => linked_entity_ids["#{check.entity.name}:#{check.check}"])
+              check_name = "#{check.entity.name}:#{check.check}"
+              check.to_jsonapi(:enabled    => enabled_ids.include?(check_name),
+                               :entity_ids => linked_entity_ids[check_name])
             }.join(",")
 
             '{"checks":[' + checks_json + ']}'
+          end
+
+          app.post '/checks' do
+            checks = wrapped_params('checks')
+
+            check_names = checks.collect{|check_data|
+              check = Flapjack::Data::EntityCheck.add(check_data, :redis => redis)
+              "#{check.entity.name}:#{check.check}"
+            }
+
+            response.headers['Location'] = "#{request.base_url}/checks/#{check_names.join(',')}"
+            status 201
+            check_names.to_json
           end
 
           app.patch %r{^/checks/(.+)$} do
@@ -71,9 +88,27 @@ module Flapjack
               apply_json_patch('checks') do |op, property, linked, value|
                 case op
                 when 'replace'
-                  if ['enabled'].include?(property)
-                    # explicitly checking for false being passed in
-                    check.disable! if value.is_a?(FalseClass)
+                  case property
+                  when 'enabled'
+                    # explicitly checking for true/false being passed in
+                    case value
+                    when TrueClass
+                      check.enable!
+                    when FalseClass
+                      check.disable!
+                    end
+                  end
+                when 'add'
+                  case linked
+                  when 'tags'
+                    value.respond_to?(:each) ? check.add_tags(*value) :
+                                               check.add_tags(value)
+                  end
+                when 'remove'
+                  case linked
+                  when 'tags'
+                    value.respond_to?(:each) ? check.delete_tags(*value) :
+                                               check.delete_tags(value)
                   end
                 end
               end

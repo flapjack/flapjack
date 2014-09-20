@@ -144,6 +144,9 @@ module Flapjack
                       unless notification_rule.nil?
                         contact.grab_notification_rule(notification_rule)
                       end
+                    when 'tags'
+                      value.respond_to?(:each) ? contact.add_tags(*value) :
+                                                 contact.add_tags(value)
                     # when 'media' # not supported yet due to id brokenness
                     end
                   when 'remove'
@@ -156,6 +159,9 @@ module Flapjack
                       unless notification_rule.nil?
                         contact.delete_notification_rule(notification_rule)
                       end
+                    when 'tags'
+                      value.respond_to?(:each) ? contact.delete_tags(*value) :
+                                                 contact.delete_tags(value)
                     # when 'media' # not supported yet due to id brokenness
                     end
                   end

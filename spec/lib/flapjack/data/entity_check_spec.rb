@@ -88,6 +88,61 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     }.to raise_error
   end
 
+  it 'registers with current_checks and current_entities if explicitly added' do
+    expect(@redis.zrange("current_checks:#{name}", 0, -1)).to eq([])
+    expect(@redis.zrange("current_entities", 0, -1)).to eq([])
+
+    check_data = {'entity_id' => '5000',
+                  'name'      => 'ssh'}
+
+    Flapjack::Data::EntityCheck.add(check_data, :redis => @redis)
+
+    expect(@redis.zrange("current_checks:#{name}", 0, -1)).to eq(["ssh"])
+    expect(@redis.zrange("current_entities", 0, -1)).to eq([name])
+  end
+
+  it 'creates tags if passed when explicitly added' do
+    check_data = {'entity_id' => '5000',
+                  'name'      => 'ssh',
+                  'tags'      => ['virtual', 'staging']}
+
+    Flapjack::Data::EntityCheck.add(check_data, :redis => @redis)
+
+    entity_check = Flapjack::Data::EntityCheck.for_event_id("#{name}:ssh", :redis => @redis)
+    expect(entity_check).not_to be_nil
+    expect(entity_check.tags).to eq(Set.new(['abc-123', 'ssh', 'virtual', 'staging']))
+  end
+
+  it "adds tags to checks" do
+    entity_check = Flapjack::Data::EntityCheck.for_entity_name(name, 'ping', :redis => @redis)
+
+    entity_check.add_tags('source:foobar', 'foo')
+
+    expect(entity_check.tags).to include("source:foobar")
+    expect(entity_check.tags).to include("foo")
+
+    # and test the tags as read back from redis
+    entity_check = Flapjack::Data::EntityCheck.for_event_id("#{name}:ping", :redis => @redis)
+    expect(entity_check.tags).to include("source:foobar")
+    expect(entity_check.tags).to include("foo")
+  end
+
+  it "deletes tags from checks" do
+    entity_check = Flapjack::Data::EntityCheck.for_entity_name(name, 'ping', :redis => @redis)
+
+    entity_check.add_tags('source:foobar', 'foo')
+
+    expect(entity_check.tags).to include("source:foobar")
+    expect(entity_check.tags).to include("foo")
+
+    entity_check.delete_tags('source:foobar')
+
+    # and test the tags as read back from redis
+    entity_check = Flapjack::Data::EntityCheck.for_event_id("#{name}:ping", :redis => @redis)
+    expect(entity_check.tags).not_to include("source:foobar")
+    expect(entity_check.tags).to include("foo")
+  end
+
   context "maintenance" do
 
     it "returns that it is in unscheduled maintenance" do

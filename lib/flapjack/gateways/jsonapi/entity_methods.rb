@@ -111,14 +111,22 @@ module Flapjack
                     end
                   end
                 when 'add'
-                  if 'contacts'.eql?(linked)
+                  case linked
+                  when 'contacts'
                     contact = Flapjack::Data::Contact.find_by_id(value, :redis => redis)
                     contact.add_entity(entity) unless contact.nil?
+                  when 'tags'
+                    value.respond_to?(:each) ? entity.add_tags(*value) :
+                                               entity.add_tags(value)
                   end
                 when 'remove'
-                  if 'contacts'.eql?(linked)
+                  case linked
+                  when 'contacts'
                     contact = Flapjack::Data::Contact.find_by_id(value, :redis => redis)
                     contact.remove_entity(entity) unless contact.nil?
+                  when 'tags'
+                    value.respond_to?(:each) ? entity.delete_tags(*value) :
+                                               entity.delete_tags(value)
                   end
                 end
               end
