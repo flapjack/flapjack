@@ -1,5 +1,10 @@
 ## Flapjack Changelog
 
+# 0.9.4 - 2014-09-21
+- Bug: crash in pagerduty gateway when failing entities have no id #593 (@jessereynolds)
+- Bug: bugfix for updating rule data without contact_ids (no-issue) (@ali-graham)
+- Bug: set key expiry properly for scheduled maintenance spanning current time #634 (@ali-graham)
+
 # 0.9.3 - 2014-07-28
 - Bug: fix outage reports in jsonapi c8e09f7 (@ali-graham)
 - Bug: fix maintenance reports in jsonapi 234ce48 (@ali-graham)
