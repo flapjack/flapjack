@@ -4,7 +4,6 @@ require 'oj'
 require 'active_support/time'
 require 'ice_cube'
 require 'flapjack/utility'
-require 'flapjack/data/tag_set'
 
 module Flapjack
   module Data
@@ -203,10 +202,10 @@ module Flapjack
         rule_data[:warning_blackhole]  = rule_data[:warning_blackhole] || false
         rule_data[:critical_blackhole] = rule_data[:critical_blackhole] || false
         if rule_data[:tags].is_a?(Array)
-          rule_data[:tags] = Flapjack::Data::TagSet.new(rule_data[:tags])
+          rule_data[:tags] = Set.new(rule_data[:tags])
         end
         if rule_data[:regex_tags].is_a?(Array)
-          rule_data[:regex_tags] = Flapjack::Data::TagSet.new(rule_data[:regex_tags])
+          rule_data[:regex_tags] = Set.new(rule_data[:regex_tags])
         end
         rule_data
       end
@@ -323,13 +322,13 @@ module Flapjack
 
         proc {|d| !d.has_key?(:tags) ||
                ( d[:tags].nil? ||
-                 d[:tags].is_a?(Flapjack::Data::TagSet) &&
+                 d[:tags].is_a?(Set) &&
                  d[:tags].all? {|et| et.is_a?(String)} ) } =>
         "tags must be a tag_set of strings",
 
         proc {|d| !d.has_key?(:regex_tags) ||
                ( d[:regex_tags].nil? ||
-                 d[:regex_tags].is_a?(Flapjack::Data::TagSet) &&
+                 d[:regex_tags].is_a?(Set) &&
                  d[:regex_tags].all? {|et| et.is_a?(String)} ) } =>
         "regex_tags must be a tag_set of strings",
 
@@ -401,9 +400,9 @@ module Flapjack
 
         @contact_id         = rule_data['contact_id']
         tags                = Oj.load(rule_data['tags'] || '')
-        @tags               = tags ? Flapjack::Data::TagSet.new(tags) : nil
+        @tags               = tags ? Set.new(tags) : nil
         regex_tags          = Oj.load(rule_data['regex_tags'] || '')
-        @regex_tags         = regex_tags ? Flapjack::Data::TagSet.new(regex_tags) : nil
+        @regex_tags         = regex_tags ? Set.new(regex_tags) : nil
         @entities           = Oj.load(rule_data['entities'] || '')
         @regex_entities     = Oj.load(rule_data['regex_entities'] || '')
         @time_restrictions  = Oj.load(rule_data['time_restrictions'] || '')
