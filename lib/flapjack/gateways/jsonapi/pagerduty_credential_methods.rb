@@ -72,10 +72,14 @@ module Flapjack
             end
 
             pagerduty_credentials_data = contacts.inject([]) do |memo, contact|
-              pdc = contact.pagerduty_credentials.clone
+              pdc = contact.pagerduty_credentials
 
-              pdc['links'] = {'contacts' => [contact.id]}
-              memo << pdc
+              unless pdc.nil?
+                pd_data = pdc.clone
+                pd_data['links'] = {'contacts' => [contact.id]}
+                memo << pd_data
+              end
+
               memo
             end
 
@@ -88,21 +92,22 @@ module Flapjack
               apply_json_patch('pagerduty_credentials') do |op, property, linked, value|
                 if 'replace'.eql?(op)
 
-                  pdc = contact.pagerduty_credentials.clone
+                  pdc = contact.pagerduty_credentials
+                  pd_data = pdc.nil? ? {} : pdc.clone
 
                   case property
                   when 'service_key'
-                    pdc['service_key'] = value
-                    contact.set_pagerduty_credentials(pdc)
+                    pd_data['service_key'] = value
+                    contact.set_pagerduty_credentials(pd_data)
                   when 'subdomain'
-                    pdc['subdomain'] = value
-                    contact.set_pagerduty_credentials(pdc)
+                    pd_data['subdomain'] = value
+                    contact.set_pagerduty_credentials(pd_data)
                   when 'username'
-                    pdc['username'] = value
-                    contact.set_pagerduty_credentials(pdc)
+                    pd_data['username'] = value
+                    contact.set_pagerduty_credentials(pd_data)
                   when 'password'
-                    pdc['password'] = value
-                    contact.set_pagerduty_credentials(pdc)
+                    pd_data['password'] = value
+                    contact.set_pagerduty_credentials(pd_data)
                   end
                 end
               end
@@ -112,9 +117,11 @@ module Flapjack
           end
 
           app.delete '/pagerduty_credentials/:contact_id' do
-            params[:contact_id].split(',').uniq.collect {|c_id| find_contact(c_id) }.each do |contact|
+            params[:contact_id].split(',').uniq.collect {|c_id|
+              find_contact(c_id)
+            }.each {|contact|
               contact.delete_pagerduty_credentials
-            end
+            }
             status 204
           end
 
