@@ -162,6 +162,9 @@ module Flapjack
           rescue_error.call(404, e, request_info, "could not find notification rules '" + e.notification_rule_ids.join(', ') + "'")
         when Flapjack::Gateways::JSONAPI::EntityNotFound
           rescue_error.call(404, e, request_info, "could not find entity '#{e.entity}'")
+        when Flapjack::Gateways::JSONAPI::EntitiesNotFound
+          entity_ids = "'" + e.entity_ids.join("', '") + "'"
+          rescue_error.call(404, e, request_info, "could not find entities: #{entity_ids}")
         when Flapjack::Gateways::JSONAPI::EntityCheckNotFound
           rescue_error.call(404, e, request_info, "could not find entity check '#{e.check}'")
         when Flapjack::Gateways::JSONAPI::EntityChecksNotFound
