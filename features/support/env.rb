@@ -15,7 +15,6 @@ if ENV['COVERAGE']
     add_filter '/features/'
   end
   SimpleCov.at_exit do
-    Oj.default_options = { :mode => :compat }
     SimpleCov.result.format!
   end
 end
@@ -34,11 +33,7 @@ require 'pathname'
 require 'webmock/cucumber'
 WebMock.disable_net_connect!
 
-require 'oj'
-Oj.mimic_JSON
-Oj.default_options = { :indent => 0, :mode => :strict }
-require 'active_support/json'
-
+require 'flapjack'
 require 'flapjack/notifier'
 require 'flapjack/processor'
 require 'flapjack/patches'

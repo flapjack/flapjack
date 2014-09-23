@@ -35,10 +35,10 @@ module Flapjack
         else
           Flapjack::Data::EntityCheck.all(:redis => redis, :create_entity => true)
         end
-        purged = checks.map do |check|
-          p = check.purge_history(options)
-          p == 0 ? nil : p
-        end.compact
+        purged = checks.inject([]) do |memo, check|
+          pu = check.purge_history(options)
+          memo << pu unless pu == 0
+        end
 
         if purged.empty?
           puts "Nothing to do"

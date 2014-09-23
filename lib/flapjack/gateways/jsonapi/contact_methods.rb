@@ -93,7 +93,7 @@ module Flapjack
 
             response.headers['Location'] = "#{base_url}/contacts/#{contact_ids.join(',')}"
             status 201
-            contact_ids.to_json
+            Flapjack.dump_json(contact_ids)
           end
 
           # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contacts/2) contact(s)

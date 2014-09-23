@@ -581,22 +581,23 @@ module Flapjack
         checks.length
       end
 
-      def as_json(*args)
-        {
-          "id"    => self.id,
-          "name"  => self.name,
-        }
-      end
+      # def as_json(*args)
+      #   {
+      #     "id"    => self.id,
+      #     "name"  => self.name,
+      #   }
+      # end
 
       def to_jsonapi(opts = {})
-        {
+        json_data = {
           "id"        => self.id,
           "name"      => self.name,
           "links"     => {
             :contacts  => opts[:contact_ids] || [],
             :checks    => opts[:check_ids]   || [],
           }
-        }.to_json
+        }
+        Flapjack.dump_json(json_data)
       end
 
     private

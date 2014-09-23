@@ -4,8 +4,6 @@ require 'active_support/time'
 
 require 'em-hiredis'
 
-require 'oj'
-
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/notification'
@@ -79,7 +77,7 @@ module Flapjack
       redis_uri = @redis_config[:path] ||
         "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
       shutdown_redis = EM::Hiredis.connect(redis_uri)
-      shutdown_redis.rpush(@notifications_queue, Oj.dump('type' => 'shutdown'))
+      shutdown_redis.rpush(@notifications_queue, Flapjack.dump_json('type' => 'shutdown'))
     end
 
   private
@@ -171,7 +169,7 @@ module Flapjack
         when :sns
           Resque.enqueue_to(@queues['sns'], Flapjack::Gateways::AwsSns, contents)
         else
-          @redis.rpush(@queues[media_type.to_s], Oj.dump(contents))
+          @redis.rpush(@queues[media_type.to_s], Flapjack.dump_json(contents))
         end
       end
     end

@@ -129,7 +129,7 @@ module Flapjack
         redis_uri = @redis_config[:path] ||
           "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
         shutdown_redis = EM::Hiredis.connect(redis_uri)
-        shutdown_redis.rpush('events', Oj.dump('type' => 'noop'))
+        shutdown_redis.rpush('events', Flapjack.dump_json('type' => 'noop'))
       end
     end
 

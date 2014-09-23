@@ -2,9 +2,6 @@
 
 require 'redis'
 
-require 'oj'
-Oj.default_options = { :indent => 0, :mode => :strict }
-
 #id = "%.2d" % (1..10).to_a[rand(9)]
 
 events = []

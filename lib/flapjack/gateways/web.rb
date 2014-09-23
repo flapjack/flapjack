@@ -211,7 +211,7 @@ module Flapjack
         self_stats
         entity_stats
         check_stats
-        {
+        json_data = {
           'events_queued'       => @events_queued,
           'all_entities'        => @count_current_entities,
           'failing_entities'    => @count_failing_entities,
@@ -231,7 +231,8 @@ module Flapjack
           'boottime'            => @boot_time,
           'current_time'        => Time.now,
           'executive_instances' => @executive_instances,
-        }.to_json
+        }
+        Flapjack.dump_json(json_data)
       end
 
       get '/entities_all' do

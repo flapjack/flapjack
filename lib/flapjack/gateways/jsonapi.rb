@@ -115,7 +115,7 @@ module Flapjack
           @logger.error "Error: #{msg_str}"
         end
 
-        response_body = {:errors => msg}.to_json
+        response_body = Flapjack.dump_json(:errors => msg)
 
         query_string = (request_info[:query_string].respond_to?(:length) &&
                         request_info[:query_string].length > 0) ? "?#{request_info[:query_string]}" : ""
@@ -256,7 +256,7 @@ module Flapjack
         def err(status, *msg)
           msg_str = msg.join(", ")
           logger.info "Error: #{msg_str}"
-          [status, {}, {:errors => msg}.to_json]
+          [status, {}, Flapjack.dump_json(:errors => msg)]
         end
 
         def is_json_request?

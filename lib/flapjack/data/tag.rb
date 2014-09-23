@@ -51,10 +51,6 @@ module Flapjack
         super(o)
       end
 
-      def to_json(*a)
-        self.to_a.to_json(*a)
-      end
-
     end
   end
 end

@@ -4,7 +4,6 @@ if ENV['COVERAGE']
     add_filter '/spec/'
   end
   SimpleCov.at_exit do
-    Oj.default_options = { :mode => :compat }
     SimpleCov.result.format!
   end
 end
@@ -18,11 +17,6 @@ ENV['RACK_ENV'] = ENV["FLAPJACK_ENV"]
 
 require 'bundler'
 Bundler.require(:default, :test)
-
-require 'oj'
-Oj.default_options = { :indent => 0, :mode => :strict }
-Oj.mimic_JSON
-require 'active_support/json'
 
 require 'webmock/rspec'
 WebMock.disable_net_connect!

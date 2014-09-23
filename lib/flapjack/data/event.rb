@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
-require 'oj'
+require 'flapjack'
+
 require 'flapjack/data/tag_set'
 
 module Flapjack
@@ -120,7 +121,7 @@ module Flapjack
 
       def self.parse_and_validate(raw, opts = {})
         errors = []
-        if parsed = ::Oj.load(raw)
+        if parsed = ::Flapjack.load_json(raw)
           if parsed.is_a?(Hash)
             errors = validation_errors_for_hash(parsed, opts)
           else
@@ -177,7 +178,7 @@ module Flapjack
         raise "Redis connection not set" unless redis = opts[:redis]
 
         evt['time'] = Time.now.to_i if evt['time'].nil?
-        redis.lpush('events', ::Oj.dump(evt))
+        redis.lpush('events', ::Flapjack.dump_json(evt))
       end
 
       # Provide a count of the number of events on the queue to be processed.
