@@ -136,7 +136,14 @@ module Flapjack
               "#{request_info[:path_info]}#{query_string}")
           end
 
-          [status, {}, response_body]
+          headers = if 'DELETE'.eql?(request_info[:request_method])
+            # not set by default for delete, but the error structure is JSON
+            {'Content-Type' => JSONAPI_MEDIA_TYPE}
+          else
+            {}
+          end
+
+          [status, headers, response_body]
         }
 
         request_info = {

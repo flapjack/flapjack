@@ -480,7 +480,7 @@ module Flapjack
           "media_intervals"         => self.media_intervals,
           "media_rollup_thresholds" => self.media_rollup_thresholds,
           "timezone"                => self.timezone.name,
-          "tags"                    => self.tags.to_a
+          "tags"                    => self.tags.to_a.sort
         }.to_json
       end
 
@@ -490,7 +490,7 @@ module Flapjack
           "last_name"             => self.last_name,
           "email"                 => self.email,
           "timezone"              => self.timezone.name,
-          "tags"                  => self.tags.to_a,
+          "tags"                  => self.tags.to_a.sort,
           "links"                 => {
             :entities               => opts[:entity_ids]          || [],
             :media                  => self.media_ids             || [],
