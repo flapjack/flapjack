@@ -336,8 +336,17 @@ module Flapjack
 
         source_redis = Redis.new(:url => opts[:source])
 
+        # refresh the key name cache, avoid repeated calls to redis KEYS
+        # this cache will be updated any time a new archive bucket is created
+        archive_keys = source_redis.keys("events_archive:*").group_by do |ak|
+          (source_redis.scard(ak) > 0) ? 't' : 'f'
+        end
+
+        source_redis.srem('known_events_archive_keys', archive_keys['f']) unless archive_keys['f'].empty?
+        source_redis.sadd('known_events_archive_keys', archive_keys['t']) unless archive_keys['t'].empty?
+
         archives = mirror_get_archive_keys_stats(source_redis)
-        raise "found no archives!" unless archives && archives.length > 0
+        raise "found no archives!" if archives.empty?
 
         puts "found archives: #{archives.inspect}"
 
@@ -376,15 +385,19 @@ module Flapjack
             puts "\narchive key: #{archive_key}, cursor: #{cursor}"
             # do we need to look at the next archive bucket?
             archives = mirror_get_archive_keys_stats(source_redis)
-            i = archives.index {|a| a[:name] == archive_key }
-            if archives[i][:size] = (cursor.abs + 1)
-              if archives[i + 1]
-                archive_key = archives[i + 1][:name]
-                puts archive_key
-                cursor = -1
-                new_archive_key = true
-              else
-                return unless opts[:follow]
+
+            unless archives.empty?
+              i = archives.index {|a| a[:name] == archive_key } || 0
+
+              if ((archives[i][:size] == (cursor.abs + 1)) || (archives[i][:size] == 0))
+                if archives[i + 1].nil?
+                  return unless opts[:follow]
+                else
+                  archive_key = archives[i + 1][:name]
+                  puts archive_key
+                  cursor = -1
+                  new_archive_key = true
+                end
               end
             end
             sleep 1 unless new_archive_key
@@ -393,9 +406,9 @@ module Flapjack
       end
 
       def mirror_get_archive_keys_stats(source_redis)
-        source_redis.keys("events_archive:*").sort.map {|a|
-          { :name => a,
-            :size => source_redis.llen(a) }
+        source_redis.smembers('known_events_archive_keys').sort.map {|eak|
+          { :name => eak,
+            :size => source_redis.llen(eak) }
         }
       end
 
