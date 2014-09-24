@@ -110,10 +110,13 @@ module Flapjack
               'trigger'
             end
 
+            # Setting the HOSTNAME and the SERVICE makes them visible in the Pagerduty UI
             pagerduty_event = { 'service_key'  => alert.address,
                                 'incident_key' => alert.event_id,
                                 'event_type'   => pagerduty_type,
-                                'description'  => message }
+                                'description'  => message,
+                                'details'      => {'HOSTNAME' => alert.entity,
+                                                   'SERVICE' => alert.check}}
 
             send_pagerduty_event(pagerduty_event)
             alert.record_send_success!
@@ -163,13 +166,6 @@ module Flapjack
       end
 
       def send_pagerduty_event(event)
-        # Setting the HOSTNAME and the SERVICE makes them visible in the Pagerduty UI
-        begin
-          details = event['incident_key'].split(":")
-          event['details'] = { "HOSTNAME" => details[0], "SERVICE" => details[1] }
-        rescue
-          @logger.debug "Unable to set the keys needed for Pagerduty UI #{event.inspect}"
-        end
         options  = { :body => Oj.dump(event) }
         http = EM::HttpRequest.new(PAGERDUTY_EVENTS_API_URL).post(options)
         response = Oj.load(http.response)
