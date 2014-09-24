@@ -115,12 +115,14 @@ module Flapjack
               media_list_cache[contact.id] ||= contact.media_list
               if media_list_cache[contact.id].include?(media_type)
                 medium_id = "#{contact.id}_#{media_type}"
+                int = contact.media_intervals[media_type]
+                rut = contact.media_rollup_thresholds[media_type]
                 memo <<
                   {:id               => medium_id,
                    :type             => media_type,
                    :address          => contact.media[media_type],
-                   :interval         => contact.media_intervals[media_type],
-                   :rollup_threshold => contact.media_rollup_thresholds[media_type],
+                   :interval         => int.nil? ? nil : int.to_i,
+                   :rollup_threshold => rut.nil? ? nil : rut.to_i,
                    :links            => {:contacts => [contact.id]}}
               end
 

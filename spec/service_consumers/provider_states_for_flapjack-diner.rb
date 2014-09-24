@@ -111,6 +111,46 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
+  provider_state "a contact with id 'abc' has email and sms media" do
+    set_up do
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+      contact_data = {'id'         => 'abc',
+                      'first_name' => 'Jim',
+                      'last_name'  => 'Smith',
+                      'email'      => 'jims@example.com',
+                      'timezone'   => 'UTC',
+                      'tags'       => ['admin', 'night_shift']}
+      contact = Flapjack::Data::Contact.add(contact_data, :redis => redis)
+
+      email_data = {
+        'type'             => 'email',
+        'address'          => 'ablated@example.org',
+        'interval'         => 180,
+        'rollup_threshold' => 3
+      }
+
+      sms_data = {
+        'type'             => 'sms',
+        'address'          => '0123456789',
+        'interval'         => 300,
+        'rollup_threshold' => 5
+      }
+
+      [email_data, sms_data].each do |medium_data|
+        type = medium_data['type']
+        contact.set_address_for_media(type, medium_data['address'])
+        contact.set_interval_for_media(type, medium_data['interval'])
+        contact.set_rollup_threshold_for_media(type, medium_data['rollup_threshold'])
+      end
+    end
+
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+      redis.flushdb
+    end
+  end
+
   provider_state "a contact with id '872' exists" do
     set_up do
       redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
