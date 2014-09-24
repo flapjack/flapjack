@@ -16,12 +16,37 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
+  provider_state "no check exists" do
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+      redis.flushdb
+    end
+  end
+
   provider_state "an entity 'www.example.com' with id '1234' exists" do
     set_up do
       redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
 
       entity_data = {'id' => '1234', 'name' => 'www.example.com'}
       Flapjack::Data::Entity.add(entity_data, :redis => redis)
+    end
+
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+      redis.flushdb
+    end
+  end
+
+  provider_state "entities 'www.example.com', id '1234' and 'www2.example.com', id '5678' exist" do
+    set_up do
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+
+      entity_data = {'id' => '1234', 'name' => 'www.example.com'}
+      Flapjack::Data::Entity.add(entity_data, :redis => redis)
+      entity_data_2 = {'id' => '5678', 'name' => 'www2.example.com'}
+      Flapjack::Data::Entity.add(entity_data_2, :redis => redis)
     end
 
     tear_down do
@@ -39,6 +64,25 @@ Pact.provider_states_for "flapjack-diner" do
       Flapjack::Data::Entity.add(entity_data, :redis => redis)
       check_data = {'entity_id' => '1234', 'name' => 'SSH'}
       Flapjack::Data::EntityCheck.add(check_data, :redis => redis)
+    end
+
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+      redis.flushdb
+    end
+  end
+
+  provider_state "checks 'www.example.com:SSH' and 'www.example.com:PING' exist" do
+    set_up do
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+
+      entity_data = {'id' => '1234', 'name' => 'www.example.com'}
+      Flapjack::Data::Entity.add(entity_data, :redis => redis)
+      check_data = {'entity_id' => '1234', 'name' => 'SSH'}
+      Flapjack::Data::EntityCheck.add(check_data, :redis => redis)
+      check_data_2 = {'entity_id' => '1234', 'name' => 'PING'}
+      Flapjack::Data::EntityCheck.add(check_data_2, :redis => redis)
     end
 
     tear_down do
