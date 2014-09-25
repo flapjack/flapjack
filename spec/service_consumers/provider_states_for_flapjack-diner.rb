@@ -24,6 +24,14 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
+  provider_state "no notification rule exists" do
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+      redis.flushdb
+    end
+  end
+
   provider_state "an entity 'www.example.com' with id '1234' exists" do
     set_up do
       redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
@@ -189,5 +197,92 @@ Pact.provider_states_for "flapjack-diner" do
       redis.flushdb
     end
   end
+
+  provider_state "a contact 'abc' with generic notification rule '05983623-fcef-42da-af44-ed6990b500fa' exists" do
+    set_up do
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+
+      contact_data = {'id'         => 'abc',
+                      'first_name' => 'Jim',
+                      'last_name'  => 'Smith',
+                      'email'      => 'jims@example.com',
+                      'timezone'   => 'UTC',
+                      'tags'       => ['admin', 'night_shift']}
+      contact = Flapjack::Data::Contact.add(contact_data, :redis => redis)
+      existing_nr = contact.notification_rules.first
+
+      nr_data = {
+        :id                 => '05983623-fcef-42da-af44-ed6990b500fa',
+        :tags               => [],
+        :regex_tags         => [],
+        :entities           => [],
+        :regex_entities     => [],
+        :time_restrictions  => [],
+        :warning_media      => ["email"],
+        :critical_media     => ["sms", "email"],
+        :warning_blackhole  => false,
+        :critical_blackhole => false
+      }
+      contact.add_notification_rule(nr_data)
+      contact.delete_notification_rule(existing_nr)
+    end
+
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+      redis.flushdb
+    end
+  end
+
+  provider_state   "a contact 'abc' with generic notification rule '05983623-fcef-42da-af44-ed6990b500fa' and notification rule '20f182fc-6e32-4794-9007-97366d162c51' exists" do
+    set_up do
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+
+      contact_data = {'id'         => 'abc',
+                      'first_name' => 'Jim',
+                      'last_name'  => 'Smith',
+                      'email'      => 'jims@example.com',
+                      'timezone'   => 'UTC',
+                      'tags'       => ['admin', 'night_shift']}
+      contact = Flapjack::Data::Contact.add(contact_data, :redis => redis)
+      existing_nr = contact.notification_rules.first
+
+      nr_data = {
+        :id                 => '05983623-fcef-42da-af44-ed6990b500fa',
+        :tags               => [],
+        :regex_tags         => [],
+        :entities           => [],
+        :regex_entities     => [],
+        :time_restrictions  => [],
+        :warning_media      => ["email"],
+        :critical_media     => ["sms", "email"],
+        :warning_blackhole  => false,
+        :critical_blackhole => false
+      }
+      contact.add_notification_rule(nr_data)
+
+      nr_data_2 = {
+        :id                 => '20f182fc-6e32-4794-9007-97366d162c51',
+        :tags               => ['physical'],
+        :regex_tags         => [],
+        :entities           => ['example.com'],
+        :regex_entities     => [],
+        :time_restrictions  => [],
+        :warning_media      => ["email"],
+        :critical_media     => ["sms", "email"],
+        :warning_blackhole  => true,
+        :critical_blackhole => true
+      }
+      contact.add_notification_rule(nr_data_2)
+      contact.delete_notification_rule(existing_nr)
+    end
+
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+      redis.flushdb
+    end
+  end
+
 
 end
