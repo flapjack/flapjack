@@ -42,8 +42,8 @@ module Flapjack
 
               contact_id = $1
               media_type = $2
-              halt err(422, "Could not get contact_id from media_id") if contact_id.nil?
-              halt err(422, "Could not get media type from media_id") if media_type.nil?
+              halt err(422, "Could not get contact_id from media_id '#{m_id}'") if contact_id.nil?
+              halt err(422, "Could not get media type from media_id '#{m_id}'") if media_type.nil?
 
               contact_cache[contact_id] ||= find_contact(contact_id)
 
@@ -73,7 +73,7 @@ module Flapjack
             contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
             if contact.nil?
               semaphore.release
-              halt err(422, "Contact id:'#{params[:contact_id]}' could not be loaded")
+              halt err(422, "Contact id: '#{params[:contact_id]}' could not be loaded")
             end
 
             media_data.each do |medium_data|
