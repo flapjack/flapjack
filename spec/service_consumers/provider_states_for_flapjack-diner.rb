@@ -81,15 +81,18 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "checks 'www.example.com:SSH' and 'www.example.com:PING' exist" do
+  provider_state "checks 'www.example.com:SSH' and 'www2.example.com:PING' exist" do
     set_up do
       redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
 
       entity_data = {'id' => '1234', 'name' => 'www.example.com'}
       Flapjack::Data::Entity.add(entity_data, :redis => redis)
+      entity_data_2 = {'id' => '5678', 'name' => 'www2.example.com'}
+      Flapjack::Data::Entity.add(entity_data_2, :redis => redis)
+
       check_data = {'entity_id' => '1234', 'name' => 'SSH'}
       Flapjack::Data::EntityCheck.add(check_data, :redis => redis)
-      check_data_2 = {'entity_id' => '1234', 'name' => 'PING'}
+      check_data_2 = {'entity_id' => '5678', 'name' => 'PING'}
       Flapjack::Data::EntityCheck.add(check_data_2, :redis => redis)
     end
 
