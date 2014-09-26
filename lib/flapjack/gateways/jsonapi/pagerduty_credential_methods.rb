@@ -46,7 +46,7 @@ module Flapjack
             contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
             if contact.nil?
               semaphore.release
-              halt err(422, "Contact id '#{params[:contact_id]}' could not be loaded")
+              halt err(422, "Contact id: '#{params[:contact_id]}' could not be loaded")
             end
 
             pagerduty_credential_data = fields.inject({}) do |memo, field|
