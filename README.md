@@ -47,7 +47,7 @@ gpg -a --export 803709B6 | sudo apt-key add -
 Add the Flapjack Debian repository to your Apt sources:
 
 ``` text
-echo "deb http://packages.flapjack.io/deb/1.0 precise main" | sudo tee /etc/apt/sources.list.d/flapjack.list
+echo "deb http://packages.flapjack.io/deb/v1 precise main" | sudo tee /etc/apt/sources.list.d/flapjack.list
 ```
 
 Install the latest Flapjack package:
@@ -57,7 +57,7 @@ sudo apt-get update
 sudo apt-get install flapjack
 ```
 
-Alternatively, [download the deb](http://packages.flapjack.io/deb/1.0/pool/main/f/flapjack/) and install using `sudo dpkg -i <filename>`
+Alternatively, [download the deb](http://packages.flapjack.io/deb/v1/pool/main/f/flapjack/) and install using `sudo dpkg -i <filename>`
 
 The Flapjack package is an [Omnibus](https://github.com/opscode/omnibus) package and as such contains most dependencies under `/opt/flapjack`, including Redis.
 

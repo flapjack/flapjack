@@ -111,6 +111,10 @@ namespace :benchmarks do
   # - time to failure varies evenly between 1 hour and 1 month
   # - time to recovery varies evenly between 10 seconds and 1 week
   task :benchmark do
+    unless RUBY_VERSION.split('.')[0] == '1' && RUBY_VERSION.split('.')[1] == '8'
+      # Flapjack doesn't support 1.8 or below, so just checking for 1.9 is OK
+      raise "perftools.rb doesn't work on Ruby 2.0 or greater"
+    end
 
     num_checks_per_entity = (ENV['CHECKS_PER_ENTITY'] || 5).to_i
     num_entities          = (ENV['ENTITIES'] || 100).to_i

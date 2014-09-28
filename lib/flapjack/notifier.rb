@@ -153,6 +153,10 @@ module Flapjack
             :state => notification.state.state)
         end
 
+        # # Alert tags aren't set properly, I think
+        # contents_tags = contents['tags']
+        # contents['tags'] = contents_tags.is_a?(Set) ? contents_tags.to_a : contents_tags
+
         @queues[medium.type].push(alert)
       end
     end

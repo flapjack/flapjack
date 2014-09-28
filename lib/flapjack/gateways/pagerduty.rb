@@ -104,10 +104,13 @@ module Flapjack
             'trigger'
           end
 
+          # Setting the HOSTNAME and the SERVICE makes them visible in the Pagerduty UI
           send_pagerduty_event(:service_key  => address,
                                :incident_key => "#{entity_name}:#{check_name}",
                                :event_type   => pagerduty_type,
-                               :description  => msg)
+                               :description  => msg,
+                               :details      => {'HOSTNAME' => entity_name,
+                                                 'SERVICE'  => check_name})
 
           @logger.info "Sent alert successfully: #{alert.to_s}"
         rescue => e

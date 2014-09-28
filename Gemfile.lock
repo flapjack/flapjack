@@ -9,7 +9,7 @@ GIT
 PATH
   remote: .
   specs:
-    flapjack (1.0.0)
+    flapjack (1.1.0)
       activesupport
       chronic
       chronic_duration
@@ -50,12 +50,11 @@ GEM
       multi_json (>= 1.7.5, < 2.0)
       multi_test (>= 0.1.1)
     dante (0.2.0)
-    debugger-ruby_core_source (1.3.5)
     delorean (2.1.0)
       chronic
     diff-lcs (1.2.5)
     docile (1.1.5)
-    ffi (1.9.3)
+    ffi (1.9.5)
     fuubar (2.0.0)
       rspec (~> 3.0)
       ruby-progressbar (~> 1.4)
@@ -73,7 +72,6 @@ GEM
     multi_test (0.1.1)
     numerizer (0.1.1)
     oj (2.10.2)
-    perftools.rb (2.0.1)
     rack (1.5.2)
     rack-protection (1.5.3)
       rack
@@ -125,11 +123,9 @@ PLATFORMS
 
 DEPENDENCIES
   cucumber
-  debugger-ruby_core_source (>= 1.3.5)
   delorean
   flapjack!
   fuubar
-  perftools.rb
   rack-test
   rake
   rspec

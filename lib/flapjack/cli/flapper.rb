@@ -11,9 +11,13 @@ module Flapjack
         # turn off reverse DNS resolution temporarily
         orig, Socket.do_not_reverse_lookup = Socket.do_not_reverse_lookup, true
 
-        UDPSocket.open do |s|
-          s.connect '64.233.187.99', 1
-          s.addr.last
+        begin
+          UDPSocket.open do |s|
+            s.connect '64.233.187.99', 1
+            s.addr.last
+          end
+        rescue Errno::ENETUNREACH => e
+          '127.0.0.1'
         end
       ensure
         Socket.do_not_reverse_lookup = orig
@@ -57,7 +61,7 @@ module Flapjack
           print "flapper starting..."
           print "\n" unless @options[:daemonize]
           runner.execute(:daemonize => @options[:daemonize]) do
-            main(@options['bind-ip'], @options['bind-port'].to_i, @options[:frequency])
+            main(@options['bind-ip'] || Flapjack::CLI::Flapper.local_ip, @options['bind-port'].to_i, @options[:frequency])
           end
           puts " done."
         end
@@ -220,8 +224,7 @@ command :flapper do |flapper|
 
     start.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
-    start.flag   [:b, 'bind-ip'],   :desc => 'ADDRESS (IPv4 or IPv6) for flapper to bind to',
-      :default_value => Flapjack::CLI::Flapper.local_ip
+    start.flag   [:b, 'bind-ip'],   :desc => 'Override ADDRESS (IPv4 or IPv6) for flapper to bind to'
 
     start.flag   [:P, 'bind-port'], :desc => 'PORT for flapper to bind to (default: 12345)',
       :default_value => '12345'
@@ -255,8 +258,7 @@ command :flapper do |flapper|
 
     restart.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
-    restart.flag   [:b, 'bind-ip'],   :desc => 'ADDRESS (IPv4 or IPv6) for flapper to bind to',
-      :default_value => Flapjack::CLI::Flapper.local_ip
+    restart.flag   [:b, 'bind-ip'],   :desc => 'Override ADDRESS (IPv4 or IPv6) for flapper to bind to'
 
     restart.flag   [:P, 'bind-port'], :desc => 'PORT for flapper to bind to (default: 12345)',
       :default_value => 12345

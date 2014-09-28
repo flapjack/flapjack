@@ -37,8 +37,8 @@ module Flapjack
               }
 
               if conflicted_ids.length > 0
-                contact_err = "Entities already exist with the following ids: " +
-                                conflicted_ids.join(', ')
+                entity_err = "Entities already exist with the following ids: " +
+                             conflicted_ids.join(', ')
               else
                 entities = entities_data.collect do |ed|
                   Flapjack::Data::Entity.new(:id => ed['id'], :name => ed['name'],

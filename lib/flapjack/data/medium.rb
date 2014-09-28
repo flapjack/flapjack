@@ -10,7 +10,7 @@ module Flapjack
 
       include Sandstorm::Records::RedisRecord
 
-      TYPES = ['email', 'sms', 'jabber', 'pagerduty', 'sns']
+      TYPES = ['email', 'sms', 'jabber', 'pagerduty', 'sns', 'sms_twilio']
 
       define_attributes :type             => :string,
                         :address          => :string,

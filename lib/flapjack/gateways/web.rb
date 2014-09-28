@@ -78,6 +78,8 @@ module Flapjack
             end
           end
 
+          @auto_refresh = (@config['auto_refresh'].respond_to?('to_i') &&
+                           (@config['auto_refresh'].to_i > 0)) ? @config['auto_refresh'].to_i : false
         end
       end
 
@@ -113,6 +115,20 @@ module Flapjack
         @default_logo_url = self.class.instance_variable_get('@default_logo_url')
         @logo_image_file  = self.class.instance_variable_get('@logo_image_file')
         @logo_image_ext   = self.class.instance_variable_get('@logo_image_ext')
+        @auto_refresh     = self.class.instance_variable_get('@auto_refresh')
+
+        input = nil
+        query_string = (request.query_string.respond_to?(:length) &&
+        request.query_string.length > 0) ? "?#{request.query_string}" : ""
+        if logger.debug?
+          input = env['rack.input'].read
+          logger.debug("#{request.request_method} #{request.path_info}#{query_string} #{input}")
+        elsif logger.info?
+          input = env['rack.input'].read
+          input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
+          logger.info("#{request.request_method} #{request.path_info}#{query_string} #{input_short[0..80]}")
+        end
+        env['rack.input'].rewind unless input.nil?
       end
 
       get '/img/branding.*' do
