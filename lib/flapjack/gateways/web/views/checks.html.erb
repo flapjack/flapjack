@@ -1,10 +1,13 @@
+<% if @auto_refresh %>
+<meta http-equiv="refresh" content="<%= @auto_refresh %>" >
+<% end %>
 <% page_title "#{@adjective.capitalize} Checks" %>
 
 <div class="page-header">
   <h2><%= @adjective.capitalize %> Checks</h2>
 </div>
 
-<p><%= h @count_failing_checks %> failing out of <%= h @count_all_checks %></p>
+<p><%= h @count_failing_checks %> failing out of <%= h @count_current_checks %></p>
 
 <table class="table table-bordered table-hover table-condensed tablesorter">
   <thead>

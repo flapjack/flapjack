@@ -90,13 +90,13 @@
     <@- labels[type] @>
   </td>
   <td>
-    <input type="text" data-attr="address" class="form-control" value="<@- address @>">
+    <input type="text" id="<@- labels[type] @>-address" data-attr="address" class="form-control" value="<@- address @>">
   </td>
   <td>
-    <input type="text" data-attr="interval" class="form-control" value="<@- interval @>">
+    <input type="text" id="<@- labels[type] @>-interval" data-attr="interval" class="form-control" value="<@- interval @>">
   </td>
   <td>
-    <input type="text" data-attr="rollup_threshold" class="form-control" value="<@- rollup_threshold @>">
+    <input type="text" id="<@- labels[type] @>-rollup_threshold" data-attr="rollup_threshold" class="form-control <@- labels[type] @>-rollup_threshold" value="<@- rollup_threshold @>">
   </td>
 </script>
 
@@ -171,4 +171,3 @@
 
     </div>
 </div>
-

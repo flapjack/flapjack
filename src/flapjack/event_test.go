@@ -13,10 +13,10 @@ func TestValidationFails(t *testing.T) {
 
 func TestValidationPasses(t *testing.T) {
 	event := Event{
-		Entity:		"hello",
-		Check:		"world",
-		State:		"ok",
-		Summary:	"hello world",
+		Entity:  "hello",
+		Check:   "world",
+		State:   "ok",
+		Summary: "hello world",
 	}
 	err := event.IsValid()
 

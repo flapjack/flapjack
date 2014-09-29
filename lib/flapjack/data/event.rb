@@ -67,7 +67,7 @@ module Flapjack
           if parsed.is_a?(Hash)
             errors = validation_errors_for_hash(parsed, opts)
           else
-            errors << "Event must be a JSON hash, see https://github.com/flapjack/flapjack/wiki/DATA_STRUCTURES#event-queue"
+            errors << "Event must be a JSON hash, see http://flapjack.io/docs/1.0/development/DATA_STRUCTURES#event-queue"
           end
           return parsed if errors.empty?
         end

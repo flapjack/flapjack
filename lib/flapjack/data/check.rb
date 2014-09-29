@@ -113,15 +113,6 @@ module Flapjack
         self.perfdata_json = @perfdata.nil? ? nil : @perfdata.to_json
       end
 
-      # def self.hash_by_entity_name(checks)
-      #   checks.inject({}) {|memo, check|
-      #     en = check.entity.name
-      #     memo[en] = [] unless memo.has_key?(en)
-      #     memo[en] << check
-      #     memo
-      #   }
-      # end
-
       # takes an array of ages (in seconds) to split all checks up by
       # - age means how long since the last update
       # - 0 age is implied if not explicitly passed
@@ -319,11 +310,6 @@ module Flapjack
 
         ['critical', 'warning', 'unknown'].detect {|st| states_since_last_recovery.include?(st) }
       end
-
-      # def tags
-      #   @tags ||= Set.new(self.entity.name.split('.', 2).map(&:downcase) +
-      #                     self.name.split(' ').map(&:downcase))
-      # end
 
       private
 

@@ -62,7 +62,6 @@ module Flapjack
 
           def create_unscheduled_maintenances(check_ids)
             unsched_maint_params = wrapped_params('unscheduled_maintenances', false)
-
             checks = Flapjack::Data::Check.find_by_ids!(*check_ids)
 
             unsched_maints = unsched_maint_params.collect do |wp|
@@ -107,8 +106,8 @@ module Flapjack
 
           def create_test_notifications(check_ids)
             test_notifications = wrapped_params('test_notifications', false)
-
             checks = Flapjack::Data::Check.find_by_ids!(*check_ids)
+
             test_notifications.each do |wp|
               summary = wp['summary'] ||
                         "Testing notifications to all contacts interested in #{checks.map(&:name).join(', ')}"

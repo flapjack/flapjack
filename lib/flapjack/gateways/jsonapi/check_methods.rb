@@ -19,6 +19,49 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::Helpers
           app.helpers Flapjack::Gateways::JSONAPI::CheckMethods::Helpers
 
+          app.post '/checks' do
+            checks_data = wrapped_params('checks')
+
+            check_err = nil
+            check_ids = nil
+            checks    = nil
+
+           data_ids = checks_data.reject {|c| c['id'].nil? }.
+              map {|co| co['id'].to_s }
+
+            Flapjack::Data::Check.backend.lock(Flapjack::Data::Check) do
+
+              conflicted_ids = data_ids.select {|id|
+                Flapjack::Data::Check.exists?(id)
+              }
+
+              if conflicted_ids.length > 0
+                check_err = "Checks already exist with the following ids: " +
+                              conflicted_ids.join(', ')
+              else
+                checks = checks_data.collect do |cd|
+                  Flapjack::Data::Check.new(:id => cd['id'], :name => cd['name'],
+                    :enabled => cd['enabled'])
+                end
+              end
+
+              if invalid = checks.detect {|c| c.invalid? }
+                check_err = "Check validation failed, " + invalid.errors.full_messages.join(', ')
+              else
+                check_ids = checks.collect {|c| c.save; c.id }
+              end
+
+            end
+
+            if check_err
+              halt err(403, check_err)
+            end
+
+            status 201
+            response.headers['Location'] = "#{base_url}/checks/#{check_ids.join(',')}"
+            check_ids.to_json
+          end
+
           app.get %r{^/checks(?:/)?(.+)?$} do
             requested_checks = if params[:captures] && params[:captures][0]
               params[:captures][0].split(',').uniq

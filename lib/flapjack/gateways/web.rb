@@ -42,24 +42,26 @@ module Flapjack
           end
 
           @api_url = @config['api_url']
-          if @api_url
-            if (@api_url =~ /^#{URI::regexp(%w(http https))}$/).nil?
-              @logger.error "api_url is not a valid http or https URI (#{@api_url})"
-              @api_url = nil
-            end
-          end
-
-          unless @api_url
-            @logger.error "api_url is not configured, parts of the web interface will be broken"
-          end
+           if @api_url
+             if (@api_url =~ /^#{URI::regexp(%w(http https))}$/).nil?
+               @logger.error "api_url is not a valid http or https URI (#{@api_url}), discarding"
+               @api_url = nil
+             end
+             unless @api_url.match(/^.*\/$/)
+               @logger.info "api_url must end with a trailing '/', setting to '#{@api_url}/'"
+               @api_url = "#{@api_url}/"
+             end
+           end
 
           @base_url = @config['base_url']
-          if @base_url
-            @base_url = $1 if @base_url.match(/^(.+\/)$/)
-          else
-           dummy_url = "/"
-            @logger.error "base_url must contain trailing '/', setting it to safe default (#{dummy_url})"
-            @base_url = dummy_url
+          unless @base_url
+            @logger.info "base_url is not configured, setting to '/'"
+            @base_url = '/'
+          end
+
+          unless @base_url.match(/^.*\/$/)
+            @logger.warn "base_url must end with a trailing '/', setting to '#{@base_url}/'"
+            @base_url = "#{@base_url}/"
           end
 
           # constants won't be exposed to eRb scope
@@ -76,6 +78,8 @@ module Flapjack
             end
           end
 
+          @auto_refresh = (@config['auto_refresh'].respond_to?('to_i') &&
+                           (@config['auto_refresh'].to_i > 0)) ? @config['auto_refresh'].to_i : false
         end
       end
 
@@ -111,6 +115,20 @@ module Flapjack
         @default_logo_url = self.class.instance_variable_get('@default_logo_url')
         @logo_image_file  = self.class.instance_variable_get('@logo_image_file')
         @logo_image_ext   = self.class.instance_variable_get('@logo_image_ext')
+        @auto_refresh     = self.class.instance_variable_get('@auto_refresh')
+
+        input = nil
+        query_string = (request.query_string.respond_to?(:length) &&
+        request.query_string.length > 0) ? "?#{request.query_string}" : ""
+        if logger.debug?
+          input = env['rack.input'].read
+          logger.debug("#{request.request_method} #{request.path_info}#{query_string} #{input}")
+        elsif logger.info?
+          input = env['rack.input'].read
+          input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
+          logger.info("#{request.request_method} #{request.path_info}#{query_string} #{input_short[0..80]}")
+        end
+        env['rack.input'].rewind unless input.nil?
       end
 
       get '/img/branding.*' do
@@ -140,7 +158,7 @@ module Flapjack
         check_stats
         {
           'events_queued'       => @events_queued,
-          'all_checks'          => @count_all_checks,
+          'enabled_checks'      => @count_enabled_checks,
           'failing_checks'      => @count_failing_checks,
           'processed_events' => {
             'all_time' => {
@@ -393,7 +411,7 @@ module Flapjack
       end
 
       def check_stats
-        @count_all_checks        = Flapjack::Data::Check.count
+        @count_enabled_checks    = Flapjack::Data::Check.intersect(:enabled => true).count
         @count_failing_checks    = failing_checks.count
       end
 

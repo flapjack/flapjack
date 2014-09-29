@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 
 require 'sandstorm/records/redis_record'
-
 require 'flapjack/data/check'
 
 module Flapjack
@@ -12,7 +11,7 @@ module Flapjack
 
       include Sandstorm::Records::RedisRecord
 
-      TYPES = ['email', 'sms', 'jabber', 'pagerduty']
+      TYPES = ['email', 'sms', 'jabber', 'pagerduty', 'sns', 'sms_twilio']
 
       define_attributes :type             => :string,
                         :address          => :string,

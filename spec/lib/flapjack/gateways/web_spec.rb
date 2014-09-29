@@ -37,7 +37,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   let(:failing_checks) { double('failing_checks') }
 
   def expect_check_stats
-    expect(Flapjack::Data::Check).to receive(:count).and_return(1)
+    enabled = double('enabled', :count => 1)
+
+    expect(Flapjack::Data::Check).to receive(:intersect).
+      with(:enabled => true).and_return(enabled)
 
     expect(failing_checks).to receive(:count).and_return(1)
   end

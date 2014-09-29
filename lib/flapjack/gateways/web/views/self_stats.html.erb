@@ -41,8 +41,8 @@
         <td><%= h @events_queued %></td>
       </tr>
       <tr>
-        <td>Number of checks:</td>
-        <td><%= h @count_all_checks %></td>
+        <td>Number of enabled checks:</td>
+        <td><%= h @count_enabled_checks %></td>
       </tr>
       <tr>
         <td>Number of failing checks:</td>
@@ -119,6 +119,5 @@
 <p>
   <a class="btn btn-success" href="<% @base_url %>self_stats.json">View as JSON</a>
   Learn how to
-  <a href="https://github.com/flapjack/flapjack/wiki/Gathering-internal-statistics-with-collectd">
-    use these metrics</a>.
+  <a href="http://flapjack.io/docs/1.0/development/Gathering-internal-statistics-with-collectd"> use these metrics</a>.
 </p>

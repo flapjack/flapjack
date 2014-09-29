@@ -32,7 +32,11 @@
           <td></td>
           <td></td>
         <% else %>
-          <td><%= h media_type.capitalize %></td>
+          <% if 'sms'.eql?(media_type) %>
+            <td><%= h media_type.upcase %></td>
+          <% else %>
+              <td><%= h media_type.capitalize %></td>
+          <% end %>
           <td><%= h med.address %></td>
           <td>
             <% if med.interval %>

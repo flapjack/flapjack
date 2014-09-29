@@ -1,23 +1,23 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"time"
-	"strings"
-	"flapjack"
-	"gopkg.in/alecthomas/kingpin.v1"
 	"encoding/json"
+	"flapjack"
+	"fmt"
+	"gopkg.in/alecthomas/kingpin.v1"
+	"os"
+	"strings"
+	"time"
 )
 
 var (
-	entity 		= kingpin.Arg("entity", "Entity name").Required().String()
-	check 		= kingpin.Arg("check", "Check name").Required().String()
-	state 		= kingpin.Arg("state", "Current state").Required().String()
-	summary 	= kingpin.Arg("summary", "Summary of event").Required().String()
-	debug		= kingpin.Flag("debug", "Enable verbose output (default false)").Bool()
-	server		= kingpin.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
-	database	= kingpin.Flag("database", "Redis database to connect to (default 0)").Int()
+	entity   = kingpin.Arg("entity", "Entity name").Required().String()
+	check    = kingpin.Arg("check", "Check name").Required().String()
+	state    = kingpin.Arg("state", "Current state").Required().String()
+	summary  = kingpin.Arg("summary", "Summary of event").Required().String()
+	debug    = kingpin.Flag("debug", "Enable verbose output (default false)").Bool()
+	server   = kingpin.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
+	database = kingpin.Flag("database", "Redis database to connect to (default 0)").Int()
 )
 
 func main() {
@@ -42,12 +42,12 @@ func main() {
 	}
 
 	event := flapjack.Event{
-		Entity: 	*entity,
-		Check: 		*check,
-		Type:		"service",
-		State:		*state,
-		Summary:	*summary,
-		Time:		time.Now().Unix(),
+		Entity:  *entity,
+		Check:   *check,
+		Type:    "service",
+		State:   *state,
+		Summary: *summary,
+		Time:    time.Now().Unix(),
 	}
 
 	if *debug {

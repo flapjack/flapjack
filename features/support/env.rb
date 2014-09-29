@@ -72,51 +72,47 @@ end
 
 class RedisDelorean
 
-  ExpireAsIfAtScript = <<EXPIRE_AS_IF_AT
+  ShiftTTLsScript = <<SHIFT_TTLS
     local keys = redis.call('keys', KEYS[1])
-    local current_time = tonumber(ARGV[1])
-    local expire_as_if_at = tonumber(ARGV[2])
-    local counter = 0
+    local ttl_decrease = tonumber(ARGV[1])
+    local deleted = 0
 
     for i,k in ipairs(keys) do
       local key_ttl = redis.call('ttl', k)
 
       -- key does not have timeout if < 0
-      if ( (key_ttl >= 0) and ((current_time + key_ttl) <= expire_as_if_at) ) then
-        redis.call('del', k)
-        counter = counter + 1
+      if key_ttl >= 0 then
+        local diff = key_ttl - ttl_decrease
+        if diff <= 0 then
+          redis.call('del', k)
+          deleted = deleted + 1
+        else
+          redis.call('expire', k, diff)
+        end
       end
     end
-    return counter
-EXPIRE_AS_IF_AT
+    return deleted
+SHIFT_TTLS
 
   def self.before_all
-     @expire_as_if_at_sha = Flapjack.redis.script(:load, ExpireAsIfAtScript)
+    @shift_ttls_sha = Flapjack.redis.script(:load, ShiftTTLsScript)
   end
 
   def self.time_travel_to(dest_time)
-    #puts "travelling to #{Time.now.in_time_zone}, real time is #{Time.now_without_delorean.in_time_zone}"
     old_maybe_fake_time = Time.now.in_time_zone
-
     Delorean.time_travel_to(dest_time)
-    #puts "travelled to #{Time.now.in_time_zone}, real time is #{Time.now_without_delorean.in_time_zone}"
-    return if dest_time < old_maybe_fake_time
+    # puts "real time is #{Time.now_without_delorean.in_time_zone}"
+    # puts "old assumed time is #{old_maybe_fake_time}"
+    # puts "new assumed time is #{Time.now.in_time_zone}"
 
-    # dumps the first offset -- we're not interested in time difference from
-    # real, only with context to the fake frame of reference...
-    # This may mean all scenarios using this code should have an initial
-    #    Given it is *datetime*
-    # step
-    offsets = Delorean.send(:time_travel_offsets).dup
-    offsets.shift
-    delta = -offsets.inject(0){ |sum, val| sum + val }.floor
+    # keys_prior = @redis.keys('*')
 
-    real_time = Time.now_without_delorean.to_i
-    #puts "delta #{delta}, expire before real time #{Time.at(real_time + delta)}"
+    del = Flapjack.redis.evalsha(@shift_ttls_sha, ['*'],
+            [(dest_time - old_maybe_fake_time).to_i])
 
-    result = Flapjack.redis.evalsha(@expire_as_if_at_sha, ['*'],
-               [real_time, real_time + delta])
-    #puts "Expired #{result} key#{(result == 1) ? '' : 's'}"
+    # keys_after = @redis.keys('*')
+
+    # puts "Expired #{del} key#{(del == 1) ? '' : 's'}, #{(keys_prior - keys_after).inspect}"
   end
 
 end
@@ -168,6 +164,7 @@ Before('@notifier') do
   @notifier  = Flapjack::Notifier.new(:logger => @logger,
     :config => {'email_queue' => 'email_notifications',
                 'sms_queue' => 'sms_notifications',
+                'sns_queue' => 'sns_notifications',
                 'default_contact_timezone' => 'America/New_York'})
 end
 
@@ -187,15 +184,15 @@ After('@process') do
   ['tmp/cucumber_cli/flapjack_cfg.yaml',
    'tmp/cucumber_cli/flapjack_cfg.yaml.bak',
    'tmp/cucumber_cli/flapjack_cfg_d.yaml',
-   'tmp/cucumber_cli/flapjack_d.log',
-   'tmp/cucumber_cli/flapjack_d.pid',
+   'tmp/cucumber_cli/flapjack.log',
+   'tmp/cucumber_cli/flapjack.pid',
    'tmp/cucumber_cli/nagios_perfdata.fifo',
-   'tmp/cucumber_cli/flapjack-nagios-receiver_d.pid',
-   'tmp/cucumber_cli/flapjack-nagios-receiver_d.log',
+   'tmp/cucumber_cli/flapjack-nagios-receiver.pid',
+   'tmp/cucumber_cli/flapjack-nagios-receiver.log',
    'tmp/cucumber_cli/flapjack-nagios-receiver_d.yaml',
    'tmp/cucumber_cli/flapjack-nagios-receiver.yaml',
-   'tmp/cucumber_cli/flapper_d.pid',
-   'tmp/cucumber_cli/flapper_d.log',
+   'tmp/cucumber_cli/flapper.pid',
+   'tmp/cucumber_cli/flapper.log',
    'tmp/cucumber_cli/flapjack-populator.yaml',
    'tmp/cucumber_cli/flapjack-populator-contacts.json',
    'tmp/cucumber_cli/flapjack-populator-entities.json',

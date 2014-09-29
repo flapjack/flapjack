@@ -214,3 +214,21 @@ Feature: Rollup on a per contact, per media basis
     Then  2 sms alerts of type problem and rollup none should be queued for +61400000001
     And   3 sms alerts should be queued for +61400000001
 
+  @time
+  Scenario: Multiple notifications should not occur when in rollup
+    Given check 'ping' for entity 'foo' is in an ok state
+    And   check 'ping' for entity 'baz' is in an ok state
+    When  a critical event is received for check 'ping' on entity 'foo'
+    And   a critical event is received for check 'ping' on entity 'baz'
+    And   1 minute passes
+    And   a critical event is received for check 'ping' on entity 'foo'
+    And   a critical event is received for check 'ping' on entity 'baz'
+    And   1 minute passes
+    And   a critical event is received for check 'ping' on entity 'foo'
+    Then  1 email alert of type problem and rollup problem should be queued for malak@example.com
+    And   19 minutes passes
+    And   a critical event is received for check 'ping' on entity 'baz'
+    Then  2 email alerts of type problem and rollup problem should be queued for malak@example.com
+    And   1 minute passes
+    And   a critical event is received for check 'ping' on entity 'baz'
+    Then  2 email alerts of type problem and rollup problem should be queued for malak@example.com

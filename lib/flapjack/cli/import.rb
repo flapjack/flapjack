@@ -21,8 +21,7 @@ module Flapjack
         @config_env = config.all
 
         if @config_env.nil? || @config_env.empty?
-          puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
-          exit 1
+          exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
         end
 
         Flapjack::RedisProxy.config = config.for_redis
@@ -67,7 +66,6 @@ module Flapjack
                 contact.tags << tag
               end
             end
-
           end
         end
 
@@ -76,14 +74,14 @@ module Flapjack
       private
 
       def redis
-        @redis ||= Redis.new(@redis_options)
+        @redis ||= Redis.new(@redis_options.merge(:driver => :ruby))
       end
 
     end
   end
 end
 
-desc 'Bulk import data from an external source'
+desc 'Bulk import data from an external source, reading from JSON formatted data files'
 command :import do |import|
 
   import.desc 'Import contacts'

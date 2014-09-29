@@ -1,4 +1,4 @@
-
+require 'flapjack/gateways/aws_sns'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 
@@ -72,6 +72,17 @@ Given /^(?:a|the) user wants to receive email notifications for check '(.+)'$/ d
   check.contacts << contact
 end
 
+Given /^(?:a|the) user wants to receive SNS notifications for check '(.+)'$/ do |check_name|
+  contact = find_or_create_contact( 'id'         => '1001',
+                                    'first_name' => 'James',
+                                    'last_name'  => 'Smithson',
+                                    'email'      => 'jamess@example.dom',
+                                    'media' => {'sns' => 'arn:aws:sns:us-east-1:698519295917:My-Topic'} )
+  check = find_or_create_check('id'       => '5002',
+                               'name'     => check_name)
+  check.contacts << contact
+end
+
 # TODO create the notification object in redis, flag the relevant operation as
 # only needing that part running, split up the before block that covers these
 When /^an event notification is generated for check '(.+)'$/ do |check_name|
@@ -120,13 +131,13 @@ When /^an event notification is generated for check '(.+)'$/ do |check_name|
   drain_notifications
 end
 
-Then /^an (SMS|email) notification for check '(.+)' should( not)? be queued$/ do |medium, check_name, neg|
+Then /^an (SMS|SNS|email) notification for check '(.+)' should( not)? be queued$/ do |medium, check_name, neg|
   queue = redis_peek("#{medium.downcase}_notifications", Flapjack::Data::Alert)
   expect(queue.select {|n| n.check.name == check_name }).
         send((neg ? :to : :not_to), be_empty)
 end
 
-Given /^an (SMS|email) notification has been queued for check '(.+)'$/ do |media_type, check_name|
+Given /^an (SMS|SNS|email) notification has been queued for check '(.+)'$/ do |media_type, check_name|
   check = Flapjack::Data::Check.intersect(:name => check_name).all.first
   expect(check).not_to be_nil
 
@@ -194,9 +205,30 @@ When /^the email notification handler fails to send an email$/ do
   end
 end
 
+When /^the SNS notification handler runs successfully$/ do
+  @request = stub_request(:post, /amazonaws\.com/)
+  @sns = Flapjack::Gateways::AwsSns.new(:config => {
+    'access_key' => "AKIAIOSFODNN7EXAMPLE",
+    'secret_key' => "secret"}, :logger => @logger)
+  @sns.send(:handle_alert, @alert)
+end
+
+When /^the SNS notification handler fails to send an SMS$/ do
+  @request = stub_request(:post, /amazonaws\.com/).to_return(:status => [500, "Internal Server Error"])
+  @sns = Flapjack::Gateways::AwsSns.new(:config => {
+    'access_key' => "AKIAIOSFODNN7EXAMPLE",
+    'secret_key' => "secret"}, :logger => @logger)
+  @sns.send(:handle_alert, @alert)
+end
+
 Then /^the user should receive an SMS notification$/ do
   expect(@request).to have_been_requested
   expect(@sms.sent).to eq(1)
+end
+
+Then /^the user should receive an SNS notification$/ do
+  expect(@request).to have_been_requested
+  expect(@sns.sent).to eq(1)
 end
 
 Then /^the user should receive an email notification$/ do
@@ -207,6 +239,11 @@ end
 Then /^the user should not receive an SMS notification$/ do
   expect(@request).to have_been_requested
   expect(@sms.sent).to eq(0)
+end
+
+Then /^the user should not receive an SNS notification$/ do
+  expect(@request).to have_been_requested
+  expect(@sns.sent).to eq(0)
 end
 
 Then /^the user should not receive an email notification$/ do

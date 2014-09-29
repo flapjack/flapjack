@@ -25,10 +25,9 @@ tmp/spec*
 tmp/profiles
 flapjack-*.gem
 _site/*
-.rbenv-version
-.ruby-version
 .rvmrc
 artifacts/*
+libexec/httpchecker*
 libexec/httpbroker
 libexec/httpbroker.linux_386
 libexec/httpbroker.linux_amd64

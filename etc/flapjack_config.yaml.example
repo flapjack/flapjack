@@ -1,8 +1,8 @@
 ---
 
 production:
-  pid_file: /var/run/flapjack/flapjack.pid
-  log_file: /var/log/flapjack/flapjack.log
+  pid_dir: /var/run/flapjack/
+  log_dir: /var/log/flapjack/
   daemonize: yes
   logger:
     level: INFO
@@ -11,23 +11,36 @@ production:
     host: 127.0.0.1
     port: 6380
     db: 0
+  # Processes monitoring events off the *events* queue (a redis list) and decides
+  # what actions to take (generate notification event, record state changes, etc)
   processor:
     enabled: yes
     queue: events
     notifier_queue: notifications
     archive_events: true
     events_archive_maxage: 10800
+    # Flapjack sets scheduled maintenance on new check results so contacts aren't
+    # notified as soon as Flapjack becomes aware of an entity to notify on.
+    # This is useful is cases where your monitoring starts checking something
+    # before it is completely provisioned
+    # Value parsed by https://github.com/hpoydar/chronic_duration
+    # You can disable this setting by specifying "0 seconds".
     new_check_scheduled_maintenance_duration: 100 years
     new_check_scheduled_maintenance_ignore_tags:
       - bypass_ncsm
     logger:
       level: INFO
       syslog_errors: yes
+  # Processes notification events off the *notifications* queue (a redis list) and
+  # works out who to notify, and on which media, and with what kind of notification
+  # message. It then creates jobs for the various notification gateways below.
   notifier:
     enabled: yes
     queue: notifications
     email_queue: email_notifications
     sms_queue: sms_notifications
+    sms_twilio_queue: sms_twilio_notifications
+    sns_queue: sns_notifications
     jabber_queue: jabber_notifications
     pagerduty_queue: pagerduty_notifications
     notification_log_file: /var/log/flapjack/notification.log
@@ -37,19 +50,23 @@ production:
       syslog_errors: yes
   nagios-receiver:
     fifo: "/var/cache/nagios3/event_stream.fifo"
-    pid_file: "/var/run/flapjack/flapjack-nagios-receiver.pid"
-    log_file: "/var/log/flapjack/flapjack-nagios-receiver.log"
+    pid_dir: "/var/run/flapjack/"
+    log_dir: "/var/log/flapjack/"
   nsca-receiver:
     fifo: "/var/lib/nagios3/rw/nagios.cmd"
-    pid_file: "/var/run/flapjack/flapjack-nsca-receiver.pid"
-    log_file: "/var/log/flapjack/flapjack-nsca-receiver.log"
+    pid_dir: "/var/run/flapjack/"
+    log_dir: "/var/log/flapjack/"
   gateways:
+    # Generates email notifications
     email:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: email_notifications
       logger:
         level: INFO
         syslog_errors: yes
+      # these values are passed directly through to EventMachine::Protocols::SmtpClient configuration,
+      # and can be omitted if the defaults are acceptable
       smtp_config:
         # from: "Flapjack Example <flapjack@noreply.example>"
         # reply_to: "flapjack@support.example"
@@ -69,8 +86,10 @@ production:
       #  alert.text: '/etc/flapjack/templates/email/alert.text.erb'
       #  rollup.html: '/etc/flapjack/templates/email/rollup.html.erb'
       #  alert.html: '/etc/flapjack/templates/email/alert.html.erb'
+    # Sends SMS notifications via MessageNet (Australia only)
     sms:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: sms_notifications
       endpoint: 'https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage'
       username: "ermahgerd"
@@ -82,16 +101,44 @@ production:
       #templates:
       #  rollup.text: '/etc/flapjack/templates/sms/rollup.text.erb'
       #  alert.text: '/etc/flapjack/templates/sms/alert.text.erb'
+    # Sends SMS notifications via Twilio
+    sms_twilio:
+      enabled: no
+      queue: sms_twilio_notifications
+      account_sid: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      auth_token: "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      from: "+1xxxxxxxxxx"
+      logger:
+        level: INFO
+        syslog_errors: yes
+      # location of custom alert templates
+      # location of custom alert templates
+      #templates:
+      #  rollup.text: '/etc/flapjack/templates/sms_twilio/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/sms_twilio/alert.text.erb'
+    # Generates SNS notifications
+    sns:
+      enabled: no
+      queue: sns_notifications
+      #region_name: us-east-1
+      # Don't forget to use an IAM user's credentials here so revocation is easy!
+      access_key: AKIAIOSFODNN7EXAMPLE
+      secret_key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+    # Connects to an XMPP (jabber) server, sends notifications (to rooms and individuals),
+    # handles acknowledgements from jabber users and other commands.
     jabber:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: jabber_notifications
       server: "jabber.example.com"
       port: 5222
       jabberid: "flapjack@jabber.example.com"
       password: "good-password"
       alias: "flapjack"
+      # List of strings that this pikelet user will respond to
       identifiers:
         - "@flapjack"
+      # the Multi-User Chats the pikelet should join and announce to
       rooms:
         - "gimp@conference.jabber.example.com"
         - "log@conference.jabber.example.com"
@@ -102,8 +149,11 @@ production:
       #templates:
       #  rollup.text: '/etc/flapjack/templates/jabber/rollup.text.erb'
       #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb'
+    # Sends notifications to and accepts acknowledgements from [PagerDuty](http://www.pagerduty.com/)
+    # (NB: contacts will need to have a registered PagerDuty account to use this)
     pagerduty:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: pagerduty_notifications
       logger:
         level: INFO
@@ -111,16 +161,21 @@ production:
       # location of custom alert templates
       #templates:
       #  alert.text: '/etc/flapjack/templates/pagerduty/alert.text.erb'
+    # Browsable web interface
     web:
       enabled: yes
       port: 3080
       timeout: 300
+      # Seconds between auto_refresh of entities/checks pages.  Set to 0 to disable
+      auto_refresh: 120
       access_log: "/var/log/flapjack/web_access.log"
       api_url: "http://localhost:3081/"
+      # Full path to location of logo file, e.g. /etc/flapjack/custom_logo.png
       #logo_image_path: "/etc/flapjack/web/custom_logo/flapjack-2013-notext-transparent-300-300.png"
       logger:
         level: INFO
         syslog_errors: yes
+    # HTTP API server
     jsonapi:
       enabled: yes
       port: 3081
@@ -130,17 +185,25 @@ production:
       logger:
         level: INFO
         syslog_errors: yes
+    # "out-of-band" end-to-end testing, used for monitoring other instances of
+    # flapjack to ensure that they are running correctly
     oobetet:
       enabled: no
       server: "jabber.example.com"
       port: 5222
+      # jabberid, password, alias, rooms: see the jabber pikelet
       jabberid: "flapjacktest@jabber.example.com"
       password: "nuther-good-password"
       alias: "flapjacktest"
+      # The check oobetet should watch for the state change
       watched_check: "PING"
+      # The entitiy that the check should be associated with
       watched_entity: "foo.example.com"
+      # The maximum amount of time allowed to pass between state changes on that check
       max_latency: 300
+      # The API key for a service in PagerDuty that the oobetet will use to alert you
       pagerduty_contact: "11111111111111111111111111111111"
+      # Jabber rooms to join
       rooms:
         - "flapjacktest@conference.jabber.example.com"
         - "gimp@conference.jabber.example.com"
@@ -150,8 +213,8 @@ production:
         syslog_errors: yes
 
 development:
-  pid_file: tmp/pids/flapjack.pid
-  log_file: log/flapjack.log
+  pid_dir: tmp/pids/
+  log_dir: log/
   daemonize: yes
   logger:
     level: DEBUG
@@ -160,23 +223,35 @@ development:
     host: 127.0.0.1
     port: 6379
     db: 13
+  # Processes monitoring events off the *events* queue (a redis list) and decides
+  # what actions to take (generate notification event, record state changes, etc)
   processor:
     enabled: yes
     queue: events
     notifier_queue: notifications
     archive_events: true
     events_archive_maxage: 10800
+    # Flapjack sets scheduled maintenance on new check results so contacts aren't
+    # notified as soon as Flapjack becomes aware of an entity to notify on.
+    # This is useful is cases where your monitoring starts checking something
+    # before it is completely provisioned
+    # Value parsed by https://github.com/hpoydar/chronic_duration
+    # You can disable this setting by specifying "0 seconds".
     new_check_scheduled_maintenance_duration: 100 years
     new_check_scheduled_maintenance_ignore_tags:
       - bypass_ncsm
     logger:
       level: DEBUG
       syslog_errors: yes
+  # Processes notification events off the *notifications* queue (a redis list) and
+  # works out who to notify, and on which media, and with what kind of notification
+  # message. It then creates jobs for the various notification gateways below.
   notifier:
     enabled: yes
     queue: notifications
     email_queue: email_notifications
     sms_queue: sms_notifications
+    sms_twilio_queue: sms_twilio_notifications
     jabber_queue: jabber_notifications
     pagerduty_queue: pagerduty_notifications
     notification_log_file: log/notification.log
@@ -186,19 +261,23 @@ development:
       syslog_errors: yes
   nagios-receiver:
     fifo: "/var/cache/nagios3/event_stream.fifo"
-    pid_file: "tmp/pids/flapjack-nagios-receiver.pid"
-    log_file: "log/flapjack-nagios-receiver.log"
+    pid_dir: "tmp/pids/"
+    log_dir: "log/"
   nsca-receiver:
     fifo: "/var/lib/nagios3/rw/nagios.cmd"
-    pid_file: "/var/run/flapjack/flapjack-nsca-receiver.pid"
-    log_file: "/var/log/flapjack/flapjack-nsca-receiver.log"
+    pid_dir: "tmp/pids/"
+    log_dir: "log/"
   gateways:
+    # Generates email notifications
     email:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: email_notifications
       logger:
         level: DEBUG
         syslog_errors: yes
+      # these values are passed directly through to EventMachine::Protocols::SmtpClient configuration,
+      # and can be omitted if the defaults are acceptable
       smtp_config:
         # from: "Flapjack Example <flapjack@noreply.example>"
         # reply_to: "flapjack@support.example"
@@ -218,8 +297,10 @@ development:
       #  alert.text: '/etc/flapjack/templates/email/alert.text.erb'
       #  rollup.html: '/etc/flapjack/templates/email/rollup.html.erb'
       #  alert.html: '/etc/flapjack/templates/email/alert.html.erb'
+    # Generates sms notifications
     sms:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: sms_notifications
       endpoint: 'https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage'
       username: "ermahgerd"
@@ -231,14 +312,37 @@ development:
       #templates:
       #  rollup.text: '/etc/flapjack/templates/sms/rollup.text.erb'
       #  alert.text: '/etc/flapjack/templates/sms/alert.text.erb'
+    # Sends SMS messages via Twilio
+    sms_twilio:
+      enabled: no
+      queue: sms_twilio_notifications
+      account_sid: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      auth_token: "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      from: "+1xxxxxxxxxx"
+      logger:
+        level: INFO
+        syslog_errors: yes
+      # location of custom alert templates
+      # location of custom alert templates
+      #templates:
+      #  rollup.text: '/etc/flapjack/templates/sms_twilio/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/sms_twilio/alert.text.erb'
+    # Generates SNS notifications
+    # Connects to an XMPP (jabber) server, sends notifications (to rooms and individuals),
+    # handles acknowledgements from jabber users and other commands.
     jabber:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: jabber_notifications
       server: "jabber.example.com"
       port: 5222
       jabberid: "flapjack@jabber.example.com"
       password: "good-password"
       alias: "flapjack"
+      # List of strings that this pikelet user will respond to
+      identifiers:
+        - "@flapjack"
+      # the Multi-User Chats the pikelet should join and announce to
       rooms:
         - "gimp@conference.jabber.example.com"
         - "log@conference.jabber.example.com"
@@ -249,8 +353,11 @@ development:
       #templates:
       #  rollup.text: '/etc/flapjack/templates/jabber/rollup.text.erb'
       #  alert.text: '/etc/flapjack/templates/jabber/alert.text.erb'
+    # Sends notifications to and accepts acknowledgements from [PagerDuty](http://www.pagerduty.com/)
+    # (NB: contacts will need to have a registered PagerDuty account to use this)
     pagerduty:
       enabled: no
+      # the redis queue this pikelet will look for notifications on
       queue: pagerduty_notifications
       logger:
         level: INFO
@@ -258,16 +365,21 @@ development:
       # location of custom alert templates
       #templates:
       #  alert.text: '/etc/flapjack/templates/pagerduty/alert.text.erb'
+    # Browsable web interface
     web:
       enabled: yes
       port: 3080
       timeout: 300
+      # Seconds between auto_refresh of entities/checks pages.  Set to 0 to disable
+      auto_refresh: 120
       access_log: "log/web_access.log"
       api_url: "http://localhost:3081/"
+      # Full path to location of logo file, e.g. /etc/flapjack/custom_logo.png
       #logo_image_path: "/etc/flapjack/web/custom_logo/flapjack-2013-notext-transparent-300-300.png"
       logger:
         level: DEBUG
         syslog_errors: yes
+    # HTTP API server
     jsonapi:
       enabled: yes
       port: 3081
@@ -277,17 +389,25 @@ development:
       logger:
         level: DEBUG
         syslog_errors: yes
+    # "out-of-band" end-to-end testing, used for monitoring other instances of
+    # flapjack to ensure that they are running correctly
     oobetet:
       enabled: no
       server: "jabber.example.com"
       port: 5222
+      # jabberid, password, alias, rooms: see the jabber pikelet
       jabberid: "flapjacktest@jabber.example.com"
       password: "nuther-good-password"
       alias: "flapjacktest"
+      # The check oobetet should watch for the state change
       watched_check: "PING"
+      # The entitiy that the check should be associated with
       watched_entity: "foo.example.com"
+      # The maximum amount of time allowed to pass between state changes on that check
       max_latency: 300
+      # The API key for a service in PagerDuty that the oobetet will use to alert you
       pagerduty_contact: "11111111111111111111111111111111"
+      # Jabber rooms to join
       rooms:
         - "flapjacktest@conference.jabber.example.com"
         - "gimp@conference.jabber.example.com"
@@ -297,5 +417,8 @@ development:
         syslog_errors: yes
 
 test:
+  pid_dir: tmp/pids/
+  log_dir: log/
   redis:
     db: 14
+    driver: ruby

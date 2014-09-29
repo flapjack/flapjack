@@ -232,6 +232,7 @@ module Flapjack
             rollup_type = 'problem'
           elsif (alerting_checks_count + cleaned) >= medium.rollup_threshold
             # alerting checks was just cleaned such that it is now below the rollup threshold
+            medium.update_sent_alert_keys(:rollup => true, :delete => true)
             rollup_type = 'recovery'
           end
         end
