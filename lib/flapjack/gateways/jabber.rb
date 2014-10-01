@@ -4,7 +4,6 @@ require 'monitor'
 require 'socket'
 
 require 'chronic_duration'
-require 'oj'
 require 'rexml/document'
 require 'xmpp4r/query'
 require 'xmpp4r/muc'

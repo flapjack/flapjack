@@ -47,7 +47,14 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::ReportMethods::Helpers
 
           app.get %r{^/(status|outage|(?:un)?scheduled_maintenance|downtime)_report/checks(?:/([^/]+))?$} do
+
             action = params[:captures][0]
+            action_pres = case action
+            when 'status', 'downtime'
+              action
+            else
+              "#{action}s"
+            end
 
             args = []
             unless 'status'.eql?(action)
@@ -60,11 +67,11 @@ module Flapjack
 
             check_ids = params[:captures][1].nil? ? nil : params[:captures][1].split(',')
             report_data, check_data = load_api_data(check_ids) {|presenter|
-              presenter.send(action, *args)
+              presenter.send(action_pres.to_sym, *args)
             }
 
-            "{\"#{action}_reports\":" + report_data.to_json + "," +
-             "\"linked\":{\"checks\":" + check_data.to_json + "}}"
+            "{\"#{action}_reports\":" + Flapjack.dump_json(report_data) + "," +
+             "\"linked\":{\"checks\":" + Flapjack.dump_json(check_data) + "}}"
           end
 
         end

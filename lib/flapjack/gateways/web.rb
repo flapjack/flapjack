@@ -156,7 +156,7 @@ module Flapjack
 
         self_stats(time)
         check_stats
-        {
+        Flapjack.dump_json({
           'events_queued'       => @events_queued,
           'enabled_checks'      => @count_enabled_checks,
           'failing_checks'      => @count_failing_checks,
@@ -174,7 +174,7 @@ module Flapjack
           'boottime'            => @boot_time,
           'current_time'        => Time.now,
           'executive_instances' => @executive_instances,
-        }.to_json
+        })
       end
 
       get '/checks' do

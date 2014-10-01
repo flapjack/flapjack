@@ -16,7 +16,7 @@ def drain_notifications
 end
 
 def submit_event(event)
-  Flapjack.redis.rpush 'events', event.to_json
+  Flapjack.redis.rpush('events', Flapjack.dump_json(event))
 end
 
 def set_scheduled_maintenance(entity_name, check_name, duration)
@@ -297,7 +297,7 @@ Then /^dump notification rules for user (\S+)$/ do |contact|
   puts "There #{(rule_ids.length == 1) ? 'is' : 'are'} #{rule_ids.length} notification rule#{(rule_ids.length == 1) ? '' : 's'} for user #{contact}:"
   rule_ids.each {|rule_id|
     rule = Flapjack::Data::Notificationule.find_by_id(rule_id)
-    puts rule.to_json
+    puts Flapjack.dump_json(rule)
   }
 end
 

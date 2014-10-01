@@ -3,9 +3,6 @@
 require 'dante'
 require 'redis'
 
-require 'oj'
-Oj.default_options = { :indent => 0, :mode => :strict }
-
 require 'flapjack/configuration'
 require 'flapjack/data/event'
 require 'flapjack/patches'

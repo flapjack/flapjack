@@ -27,8 +27,7 @@ module Flapjack
             media_ids = nil
             media = nil
 
-            Flapjack::Data::Contact.backend.lock(Flapjack::Data::Contact,
-              Flapjack::Data::Medium) do
+            Flapjack::Data::Contact.lock(Flapjack::Data::Medium) do
 
               contact = Flapjack::Data::Contact.find_by_id(params[:contact_id])
 
@@ -67,7 +66,7 @@ module Flapjack
 
             status 201
             response.headers['Location'] = "#{base_url}/media/#{media_ids.join(',')}"
-            media_ids.to_json
+            Flapjack.dump_json(media_ids)
           end
 
           app.get %r{^/media(?:/)?([^/]+)?$} do
@@ -84,13 +83,15 @@ module Flapjack
             end
 
             media_ids = media.map(&:id)
-            linked_contact_ids = Flapjack::Data::Medium.associated_ids_for_contact(media_ids)
+            linked_contact_ids = Flapjack::Data::Medium.associated_ids_for_contact(*media_ids)
+            linked_notification_rule_state_ids = Flapjack::Data::Medium.associated_ids_for_notification_rule_states(*media_ids)
 
-            media_json = media.collect {|medium|
-              medium.as_json(:contact_id => linked_contact_ids[medium.id]).to_json
-            }.join(",")
+            media_as_json = media.collect {|medium|
+              medium.as_json(:contact_ids => [linked_contact_ids[medium.id]],
+                             :notification_rule_state_ids => linked_notification_rule_state_ids[medium.id])
+            }
 
-            '{"media":[' + media_json + ']}'
+            Flapjack.dump_json(:media => media_as_json)
           end
 
           app.patch '/media/:id' do
@@ -107,7 +108,7 @@ module Flapjack
                   case linked
                   when 'notification_rule_state'
 
-                    Flapjack::Data::Medium.backend.lock(Flapjack::Data::Medium) do
+                    Flapjack::Data::Medium.lock do
                       notification_rule_state = Flapjack::Data::NotificationRuleState.find_by_id(value)
                       unless notification_rule_state.nil?
                         if existing_medium = notification_rule_state.media.intersect(:type => medium.type).all.first

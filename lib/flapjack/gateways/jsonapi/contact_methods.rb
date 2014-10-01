@@ -24,14 +24,14 @@ module Flapjack
 
           def bulk_contact_operation(contact_ids, &block)
             missing_ids = nil
-            Flapjack::Data::Contact.backend.lock(Flapjack::Data::Contact) do
+            Flapjack::Data::Contact.lock do
               contacts = Flapjack::Data::Contact.find_by_ids(*contact_ids)
-              missing_ids = contact_ids - contacts.map(&:id)
+              missing_ids = contact_ids - contacts.compact.map(&:id)
               block.call(contacts) if missing_ids.empty?
             end
 
             unless missing_ids.empty?
-              halt(404, "Contacts with ids #{missing_ids.join(', ')} were not found")
+              raise Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Contact, missing_ids)
             end
           end
 
@@ -51,7 +51,7 @@ module Flapjack
             contact_ids = nil
             contacts    = nil
 
-            Flapjack::Data::Contact.backend.lock(Flapjack::Data::Contact) do
+            Flapjack::Data::Contact.lock do
 
               # TODO should these overwrite instead?
               conflicted_ids = data_ids.select {|id|
@@ -67,16 +67,16 @@ module Flapjack
                     :first_name => contact_data['first_name'],
                     :last_name => contact_data['last_name'],
                     :email => contact_data['email'],
-                    :timezone => contact_data['timezone'],
-                    :tags => contact_data['tags'])
+                    :timezone => contact_data['timezone'])
+                end
+
+                if invalid = contacts.detect {|c| c.invalid? }
+                  contact_err = "Contact validation failed, " + invalid.errors.full_messages.join(', ')
+                else
+                  contact_ids = contacts.collect {|c| c.save; c.id }
                 end
               end
 
-              if invalid = contacts.detect {|c| c.invalid? }
-                contact_err = "Contact validation failed, " + invalid.errors.full_messages.join(', ')
-              else
-                contact_ids = contacts.collect {|c| c.save; c.id }
-              end
             end
 
             if contact_err
@@ -85,7 +85,7 @@ module Flapjack
 
             status 201
             response.headers['Location'] = "#{base_url}/contacts/#{contact_ids.join(',')}"
-            contact_ids.to_json
+            Flapjack.dump_json(contact_ids)
           end
 
           # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contacts/2) contact(s)
@@ -108,17 +108,17 @@ module Flapjack
             end
 
             contacts_ids = contacts.map(&:id)
-            linked_medium_ids = Flapjack::Data::Contact.associated_ids_for_media(contacts_ids)
-            linked_pagerduty_credentials_ids = Flapjack::Data::Contact.associated_ids_for_pagerduty_credentials(contacts_ids)
-            linked_notification_rule_ids = Flapjack::Data::Contact.associated_ids_for_notification_rules(contacts_ids)
+            linked_medium_ids = Flapjack::Data::Contact.associated_ids_for_media(*contacts_ids)
+            linked_pagerduty_credentials_ids = Flapjack::Data::Contact.associated_ids_for_pagerduty_credentials(*contacts_ids)
+            linked_notification_rule_ids = Flapjack::Data::Contact.associated_ids_for_notification_rules(*contacts_ids)
 
-            contacts_json = contacts.collect {|contact|
+            contacts_as_json = contacts.collect {|contact|
               contact.as_json(:medium_ids => linked_medium_ids[contact.id],
                 :pagerduty_credentials_ids => linked_pagerduty_credentials_ids[contact.id],
-                :notification_rule_ids => linked_notification_rule_ids[contact.id]).to_json
-            }.join(", ")
+                :notification_rule_ids => linked_notification_rule_ids[contact.id])
+            }
 
-            '{"contacts":[' + contacts_json + ']}'
+            Flapjack.dump_json(:contacts => contacts_as_json)
           end
 
           app.patch '/contacts/:id' do
@@ -133,7 +133,7 @@ module Flapjack
                   when 'add'
                     case linked
                     when 'media'
-                      Flapjack::Data::Medium.backend.lock(Flapjack::Data::Medium) do
+                      Flapjack::Data::Medium.lock do
                         medium = Flapjack::Data::Medium.find_by_id(value)
                         unless medium.nil?
                           if existing_medium = contact.media.intersect(:type => medium.type).all.first
@@ -166,8 +166,12 @@ module Flapjack
           end
 
           app.delete '/contacts/:id' do
-            bulk_contact_operation(params[:id].split(',')) do |contacts|
-              contacts.map(&:destroy)
+            Flapjack::Data::Contact.lock(Flapjack::Data::Medium, Flapjack::Data::NotificationRule,
+              Flapjack::Data::NotificationRuleState, Flapjack::Data::Check,
+              Flapjack::Data::Tag, Flapjack::Data::PagerdutyCredentials) do
+              bulk_contact_operation(params[:id].split(',')) do |contacts|
+                contacts.map(&:destroy)
+              end
             end
 
             status 204

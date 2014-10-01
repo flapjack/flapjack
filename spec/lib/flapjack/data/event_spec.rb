@@ -85,7 +85,7 @@ describe Flapjack::Data::Event do
     it "rejects an event with missing '#{required_key}' key" do
       bad_event_data = event_data.clone
       bad_event_data.delete(required_key)
-      bad_event_json = bad_event_data.to_json
+      bad_event_json = Flapjack.dump_json(bad_event_data)
 
       expect( Flapjack::Data::Event.parse_and_validate(bad_event_json) ).to be_nil
     end
@@ -93,7 +93,7 @@ describe Flapjack::Data::Event do
     it "rejects an event with invalid '#{required_key}' key" do
       bad_event_data = event_data.clone
       bad_event_data[required_key] = {'hello' => 'there'}
-      bad_event_json = bad_event_data.to_json
+      bad_event_json = Flapjack.dump_json(bad_event_data)
 
       expect( Flapjack::Data::Event.parse_and_validate(bad_event_json) ).to be_nil
     end
@@ -103,7 +103,7 @@ describe Flapjack::Data::Event do
     it "rejects an event with invalid '#{optional_key}' key" do
       bad_event_data = event_data.clone
       bad_event_data[optional_key] = {'hello' => 'there'}
-      bad_event_json = bad_event_data.to_json
+      bad_event_json = Flapjack.dump_json(bad_event_data)
 
       expect( Flapjack::Data::Event.parse_and_validate(bad_event_json) ).to be_nil
     end
@@ -113,7 +113,7 @@ describe Flapjack::Data::Event do
     it "accepts an event with a numeric string #{key} key" do
       numstr_event_data = event_data.clone
       numstr_event_data[key] = '352'
-      numstr_event_json = numstr_event_data.to_json
+      numstr_event_json = Flapjack.dump_json(numstr_event_data)
 
       expect( Flapjack::Data::Event.parse_and_validate(numstr_event_json) ).to_not be_nil
     end
@@ -121,7 +121,7 @@ describe Flapjack::Data::Event do
     it "rejects an event with a non-numeric or numeric string #{key} key" do
       bad_event_data = event_data.clone
       bad_event_data[key] = 'NaN'
-      bad_event_json = bad_event_data.to_json
+      bad_event_json = Flapjack.dump_json(bad_event_data)
 
       expect( Flapjack::Data::Event.parse_and_validate(bad_event_json) ).to be_nil
     end

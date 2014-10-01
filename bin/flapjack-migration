@@ -31,16 +31,12 @@ I18n.config.enforce_available_locales = true
 
 require 'sandstorm'
 
-require 'oj'
-Oj.mimic_JSON
-Oj.default_options = { :indent => 0, :mode => :strict }
-require 'active_support/json'
-
 # add lib to the default include path
 unless $:.include?(File.dirname(__FILE__) + '/../lib/')
   $: << File.dirname(__FILE__) + '/../lib'
 end
 
+require 'flapjack'
 require 'flapjack/data/action'
 require 'flapjack/data/check'
 require 'flapjack/data/check_state'

@@ -24,13 +24,13 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
      }
   end
 
-  def expect_checks(path, report_type, opts = {})
+  def expect_checks(path, report_type, action_pres, opts = {})
     if opts[:start] && opts[:finish]
-      expect(check_presenter).to receive(report_type).
+      expect(check_presenter).to receive(action_pres).
         with(opts[:start].to_i, opts[:finish].to_i).
         and_return(report_data)
     else
-      expect(check_presenter).to receive(report_type).and_return(report_data)
+      expect(check_presenter).to receive(action_pres).and_return(report_data)
     end
 
     expect(Flapjack::Gateways::JSONAPI::CheckPresenter).to receive(:new).
@@ -52,18 +52,25 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
 
     get path, par
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(result.to_json)
+    expect(last_response.body).to eq(Flapjack.dump_json(result))
   end
 
   [:status, :scheduled_maintenance, :unscheduled_maintenance, :outage,
    :downtime].each do |report_type|
 
+    action_pres = case report_type
+    when :status, :downtime
+      report_type
+    else
+      "#{report_type}s"
+    end
+
     it "returns a #{report_type} report for all checks" do
-      expect_checks("/#{report_type}_report/checks", report_type, :all => true)
+      expect_checks("/#{report_type}_report/checks", report_type, action_pres, :all => true)
     end
 
     it "returns a #{report_type} report for some checks" do
-      expect_checks("/#{report_type}_report/checks/#{check.id}", report_type, :some => true)
+      expect_checks("/#{report_type}_report/checks/#{check.id}", report_type, action_pres, :some => true)
     end
 
     it "doesn't return a #{report_type} report for a check that's not found" do
@@ -81,13 +88,13 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
       let(:finish) { Time.parse('6 Jan 2012') }
 
       it "returns a #{report_type} report for all checks within a time window" do
-        expect_checks("/#{report_type}_report/checks", report_type, :all => true,
+        expect_checks("/#{report_type}_report/checks", report_type, action_pres, :all => true,
           :start => start, :finish => finish)
       end
 
       it "returns a #{report_type} report for some checks within a time window" do
-        expect_checks("/#{report_type}_report/checks/#{check.id}", report_type, :some => true,
-          :start => start, :finish => finish)
+        expect_checks("/#{report_type}_report/checks/#{check.id}", report_type,
+          action_pres, :some => true, :start => start, :finish => finish)
       end
 
     end

@@ -22,7 +22,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
 
     get '/checks'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq({:checks => [check_data]}.to_json)
+    expect(last_response.body).to eq(Flapjack.dump_json(:checks => [check_data]))
   end
 
   it "retrieves one check" do
@@ -32,7 +32,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
 
     get "/checks/#{check.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq({:checks => [check_data]}.to_json)
+    expect(last_response.body).to eq(Flapjack.dump_json(:checks => [check_data]))
   end
 
   it "retrieves several checks" do
@@ -46,17 +46,18 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
 
     get "/checks/#{check.id},#{check_2.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq({:checks => [check_data, check_data_2]}.to_json)
+    expect(last_response.body).to eq(Flapjack.dump_json(:checks => [check_data, check_data_2]))
   end
 
   it 'disables a check' do
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
       with(check.id).and_return([check])
 
-    expect(check).to receive(:disable!)
+    expect(check).to receive(:enabled=).with(false)
+    expect(check).to receive(:save).and_return(true)
 
     patch "/checks/#{check.id}",
-      [{:op => 'replace', :path => '/checks/0/enabled', :value => false}].to_json,
+      Flapjack.dump_json([{:op => 'replace', :path => '/checks/0/enabled', :value => false}]),
       jsonapi_patch_env
     expect(last_response.status).to eq(204)
   end
@@ -80,7 +81,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
       with(check.id).and_return([check])
 
     patch "/unscheduled_maintenances/checks/#{check.id}",
-      [{:op => 'replace', :path => '/unscheduled_maintenances/0/end_time', :value => end_time.iso8601}].to_json,
+      Flapjack.dump_json([{:op => 'replace', :path => '/unscheduled_maintenances/0/end_time', :value => end_time.iso8601}]),
       jsonapi_patch_env
     expect(last_response.status).to eq(204)
   end
@@ -89,10 +90,8 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     start = Time.now + (60 * 60) # an hour from now
     duration = (2 * 60 * 60)     # two hours
 
-    backend = double(Sandstorm::Backends::Base)
-    expect(Flapjack::Data::Check).to receive(:backend).and_return(backend)
-    expect(backend).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance).and_yield
+    expect(Flapjack::Data::Check).to receive(:lock).
+      with(Flapjack::Data::ScheduledMaintenance).and_yield
 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
       with(check.id).and_return([check])
@@ -108,7 +107,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
       and_return(sched_maint)
 
     post "/scheduled_maintenances/checks/#{check.id}",
-      {:scheduled_maintenances => [{:start_time => start.iso8601, :summary => 'test', :duration => duration}]}.to_json,
+      Flapjack.dump_json(:scheduled_maintenances => [{:start_time => start.iso8601, :summary => 'test', :duration => duration}]),
       jsonapi_post_env
     expect(last_response.status).to eq(204)
   end
@@ -117,7 +116,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     duration = (2 * 60 * 60)     # two hours
 
     post "/scheduled_maintenances/checks/#{check.id}",
-      {:summary => 'test', :duration => duration}.to_json, jsonapi_post_env
+      Flapjack.dump_json(:summary => 'test', :duration => duration), jsonapi_post_env
     expect(last_response.status).to eq(403)
   end
 

@@ -47,7 +47,7 @@ module Flapjack
         def outages(start_time, end_time, options = {})
           hist_states = @check.states.
             intersect_range(start_time, end_time, :by_score => true).all
-          return [] if hist_states.empty?
+          return {:outages => []} if hist_states.empty?
 
           unless start_time.nil?
             first_and_prior = @check.states.

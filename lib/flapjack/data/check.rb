@@ -110,7 +110,7 @@ module Flapjack
                    "value" => parts[1].nil? ? '' : parts[1].split(';')[0].to_s}
           memo
         end
-        self.perfdata_json = @perfdata.nil? ? nil : @perfdata.to_json
+        self.perfdata_json = @perfdata.nil? ? nil : Flapjack.dump_json(@perfdata)
       end
 
       # takes an array of ages (in seconds) to split all checks up by
@@ -309,6 +309,10 @@ module Flapjack
             collect(&:state).uniq
 
         ['critical', 'warning', 'unknown'].detect {|st| states_since_last_recovery.include?(st) }
+      end
+
+      def as_json(opts = {})
+        {:id => self.id, :name => self.name}
       end
 
       private

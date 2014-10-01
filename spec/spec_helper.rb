@@ -20,17 +20,12 @@ ENV['RACK_ENV'] = ENV["FLAPJACK_ENV"]
 require 'bundler'
 Bundler.require(:default, :test)
 
-require 'oj'
-Oj.default_options = { :indent => 0, :mode => :strict }
-Oj.mimic_JSON
-require 'active_support/json'
-
 require 'webmock/rspec'
 WebMock.disable_net_connect!
 
 $:.unshift(File.dirname(__FILE__) + '/../lib')
+require 'flapjack'
 require 'flapjack/configuration'
-
 
 # Requires supporting files with custom matchers and macros, etc,
 # in ./support/ and its subdirectories.

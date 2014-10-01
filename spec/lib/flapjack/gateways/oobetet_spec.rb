@@ -51,7 +51,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
 
       # TODO be more specific about the request body
       req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
-         to_return(:status => 200, :body => {'status' => 'success'}.to_json)
+         to_return(:status => 200, :body => Flapjack.dump_json('status' => 'success'))
 
       fon = Flapjack::Gateways::Oobetet::Notifier.new(:lock => lock, :config => config, :logger => @logger)
       fon.instance_variable_set('@siblings', [time_check, bot])

@@ -16,9 +16,11 @@ module Flapjack
       extend Flapjack::Utility
 
       include Sandstorm::Records::RedisRecord
+      include ActiveModel::Serializers::JSON
+      self.include_root_in_json = false
 
       # I've removed regex_* properties as they encourage loose binding against
-      # names, which may change.
+      # names, which may change. Do client-side grouping and create a tag!
 
       define_attributes :time_restrictions_json => :string
 
@@ -58,7 +60,7 @@ module Flapjack
 
       def time_restrictions=(restrictions)
         @time_restrictions = restrictions
-        self.time_restrictions_json = restrictions.nil? ? nil : restrictions.to_json
+        self.time_restrictions_json = restrictions.nil? ? nil : Flapjack.dump_json(restrictions)
       end
 
       # NB: ice_cube doesn't have much rule data validation, and has
@@ -109,10 +111,11 @@ module Flapjack
 
       def as_json(opts = {})
         super.as_json(opts.merge(:except => :time_restrictions_json)).merge(
-          :time_restrictions        => @time_restrictions,
+          :time_restrictions          => time_restrictions,
           :links => {
-            :contact                  => [opts[:contact_id]].compact,
+            :contacts                 => opts[:contact_ids] || [],
             :notification_rule_states => opts[:states_ids] || [],
+            :checks                   => opts[:tag_ids] || [],
             :tags                     => opts[:tag_ids] || [],
           }
         )

@@ -77,7 +77,7 @@ module Flapjack
               metrics[key] = self.send(key.to_sym)
             end
 
-            return metrics.to_json
+            Flapjack.dump_json(metrics)
           end
         end
 

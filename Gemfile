@@ -14,6 +14,7 @@ group :test do
   gem 'delorean'
   gem 'rack-test'
   gem 'webmock'
+  gem 'pact'
   gem 'fuubar'
   gem 'simplecov', :require => false
 

@@ -140,9 +140,16 @@ module Flapjack
         end
 
         def err(status, *msg)
-          msg_str = msg.join(", ")
-          logger.info "Error: #{msg_str}"
-          [status, {}, {:errors => msg}.to_json]
+          logger.info "Error: #{msg}"
+
+          headers = if 'DELETE'.eql?(request.request_method)
+            # not set by default for delete, but the error structure is JSON
+            {'Content-Type' => JSONAPI_MEDIA_TYPE}
+          else
+            {}
+          end
+
+          [status, headers, Flapjack.dump_json({:errors => msg})]
         end
 
         def is_json_request?
@@ -261,10 +268,6 @@ module Flapjack
       register Flapjack::Gateways::JSONAPI::NotificationRuleStateMethods
       register Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods
       register Flapjack::Gateways::JSONAPI::ReportMethods
-
-      not_found do
-        err(404, "not routable")
-      end
 
       error Sandstorm::LockNotAcquired do
         # TODO

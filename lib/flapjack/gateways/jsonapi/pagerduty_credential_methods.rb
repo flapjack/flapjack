@@ -27,8 +27,7 @@ module Flapjack
             pagerduty_credentials_id = nil
             pagerduty_credentials = nil
 
-            Flapjack::Data::Contact.backend.lock(Flapjack::Data::Contact,
-              Flapjack::Data::PagerdutyCredentials) do
+            Flapjack::Data::Contact.lock(Flapjack::Data::PagerdutyCredentials) do
 
               contact = Flapjack::Data::Contact.find_by_id(params[:contact_id])
 
@@ -48,7 +47,6 @@ module Flapjack
                 else
                   pagerduty_credentials.save
                   if existing_pagerduty_credentials = contact.pagerduty_credentials
-                    p existing_pagerduty_credentials
                     # TODO is this the right thing to do here?
                     existing_pagerduty_credentials.destroy
                   end
@@ -63,7 +61,7 @@ module Flapjack
 
             status 201
             response.headers['Location'] = "#{base_url}/pagerduty_credentials/#{pagerduty_credentials.id}"
-            [pagerduty_credentials.id].to_json
+            Flapjack.dump_json([pagerduty_credentials.id])
           end
 
           app.get %r{^/pagerduty_credentials(?:/)?([^/]+)?$} do
@@ -80,13 +78,13 @@ module Flapjack
             end
 
             pagerduty_credentials_ids = pagerduty_credentials.map(&:id)
-            linked_contact_ids = Flapjack::Data::PagerdutyCredentials.associated_ids_for_contact(pagerduty_credentials_ids)
+            linked_contact_ids = Flapjack::Data::PagerdutyCredentials.associated_ids_for_contact(*pagerduty_credentials_ids)
 
-            pagerduty_credentials_json = pagerduty_credentials.collect {|pdc|
-              pdc.as_json(:contact_id => linked_contact_ids[pdc.id]).to_json
-            }.join(",")
+            pagerduty_credentials_as_json = pagerduty_credentials.collect {|pdc|
+              pdc.as_json(:contact_ids => [linked_contact_ids[pdc.id]])
+            }
 
-            '{"pagerduty_credentials":[' + pagerduty_credentials_json + ']}'
+            Flapjack.dump_json(:pagerduty_credentials => pagerduty_credentials_as_json)
           end
 
           app.patch '/pagerduty_credentials/:id' do

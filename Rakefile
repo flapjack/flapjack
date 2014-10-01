@@ -15,6 +15,8 @@ require 'rake/clean'
 require 'bundler'
 Bundler::GemHelper.install_tasks
 
+require 'pact/tasks'
+
 Cucumber::Rake::Task.new(:features) do |t|
   #t.cucumber_opts = 'features --format pretty'
   t.cucumber_opts = '--format progress'

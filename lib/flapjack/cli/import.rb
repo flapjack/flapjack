@@ -1,8 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'oj'
-Oj.default_options = { :indent => 0, :mode => :strict }
-
 require 'redis'
 
 require 'flapjack/configuration'

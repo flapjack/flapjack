@@ -33,13 +33,13 @@ module Flapjack
             end
 
             notification_rule_state_ids = notification_rule_states.map(&:id)
-            linked_notification_rule_ids = Flapjack::Data::NotificationRuleState.associated_ids_for_notification_rule(notification_rule_state_ids)
+            linked_notification_rule_ids = Flapjack::Data::NotificationRuleState.associated_ids_for_notification_rule(*notification_rule_state_ids)
 
-            notification_rule_states_json = notification_rule_states.collect {|notification_rule_state|
-              notification_rule_state.as_json(:notification_rule_id => linked_notification_rule_ids[notification_rule_state.id]).to_json
-            }.join(",")
+            notification_rule_states_as_json = notification_rule_states.collect {|notification_rule_state|
+              notification_rule_state.as_json(:notification_rule_id => linked_notification_rule_ids[notification_rule_state.id])
+            }
 
-            '{"notification_rule_states":[' + notification_rule_states_json + ']}'
+            Flapjack.dump_json(:notification_rule_states => notification_rule_states_as_json)
           end
 
           app.patch '/notification_rule_states/:id' do
@@ -55,7 +55,7 @@ module Flapjack
                 when 'add'
                   case linked
                   when 'media'
-                    Flapjack::Data::Medium.backend.lock(Flapjack::Data::Medium) do
+                    Flapjack::Data::Medium.lock do
                       medium = Flapjack::Data::Medium.find_by_id(value)
                       unless medium.nil?
                         if existing_medium = notification_rule_state.media.intersect(:type => medium.type).all.first

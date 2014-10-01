@@ -28,8 +28,9 @@ module Flapjack
             notification_rule_ids = nil
             notification_rules = nil
 
-            Flapjack::Data::Contact.backend.lock(Flapjack::Data::Contact,
-              Flapjack::Data::NotificationRule) do
+            Flapjack::Data::Contact.lock(Flapjack::Data::NotificationRule,
+              Flapjack::Data::Medium, Flapjack::Data::NotificationRuleState,
+              Flapjack::Data::CheckState) do
 
               contact = Flapjack::Data::Contact.find_by_id(params[:contact_id])
 
@@ -60,7 +61,7 @@ module Flapjack
 
             status 201
             response.headers['Location'] = "#{base_url}/notification_rules/#{notification_rule_ids.join(',')}"
-            notification_rule_ids.to_json
+            Flapjack.dump_json(notification_rule_ids)
           end
 
           app.get %r{^/notification_rules(?:/)?([^/]+)?$} do
@@ -77,15 +78,15 @@ module Flapjack
             end
 
             notification_rule_ids = notification_rules.map(&:id)
-            linked_contact_ids = Flapjack::Data::NotificationRule.associated_ids_for_contact(notification_rule_ids)
-            linked_notification_rule_states_ids = Flapjack::Data::NotificationRule.associated_ids_for_states(notification_rule_ids)
+            linked_contact_ids = Flapjack::Data::NotificationRule.associated_ids_for_contact(*notification_rule_ids)
+            linked_notification_rule_states_ids = Flapjack::Data::NotificationRule.associated_ids_for_states(*notification_rule_ids)
 
-            notification_rules_json = notification_rules.collect {|notification_rule|
-              notification_rule.as_json(:contact_id => linked_contact_ids[notification_rule.id],
-                                        :states_ids => linked_notification_rule_states_ids[notification_rule.id]).to_json
-            }.join(",")
+            notification_rules_as_json = notification_rules.collect {|notification_rule|
+              notification_rule.as_json(:contact_ids => [linked_contact_ids[notification_rule.id]],
+                                        :states_ids => linked_notification_rule_states_ids[notification_rule.id])
+            }
 
-            '{"notification_rules":[' + notification_rules_json + ']}'
+            Flapjack.dump_json(:notification_rules => notification_rules_as_json)
           end
 
           # NB notification rules can't add/remove NotitifcationRuleStates, they're

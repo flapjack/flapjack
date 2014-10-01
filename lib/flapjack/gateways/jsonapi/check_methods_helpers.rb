@@ -32,8 +32,7 @@ module Flapjack
 
             errs = nil
 
-            Flapjack::Data::Check.backend.lock(Flapjack::Data::Check,
-              Flapjack::Data::ScheduledMaintenance) do
+            Flapjack::Data::Check.lock(Flapjack::Data::ScheduledMaintenance) do
 
               invalid_maint = nil
 

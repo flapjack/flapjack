@@ -45,11 +45,13 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config, :logger => @logger)
 
       req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
-         with(:body => {'service_key'  => '11111111111111111111111111111111',
+         with(:body => Flapjack.dump_json(
+                        'service_key'  => '11111111111111111111111111111111',
                         'incident_key' => 'Flapjack is running a NOOP',
                         'event_type'   => 'nop',
-                        'description'  => 'I love APIs with noops.'}.to_json).
-         to_return(:status => 200, :body => {'status' => 'success'}.to_json)
+                        'description'  => 'I love APIs with noops.'
+                       )).
+         to_return(:status => 200, :body => Flapjack.dump_json('status' => 'success'))
 
       fpn.send(:test_pagerduty_connection)
       expect(req).to have_been_requested
@@ -59,11 +61,13 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config, :logger => @logger)
 
       req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
-         with(:body => {'service_key'  => 'pdservicekey',
+        with(:body => Flapjack.dump_json(
+                        'service_key'  => 'pdservicekey',
                         'incident_key' => 'app-02:ping',
                         'event_type'   => 'trigger',
-                        'description'  => 'Problem: "app-02:ping" is Critical'}.to_json).
-         to_return(:status => 200, :body => {'status' => 'success'}.to_json)
+                        'description'  => 'Problem: "app-02:ping" is Critical'
+                       )).
+         to_return(:status => 200, :body => Flapjack.dump_json('status' => 'success'))
 
       expect(check).to receive(:name).twice.and_return('app-02:ping')
 
@@ -165,7 +169,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
         with(:query => {:fields => 'incident_number,status,last_status_change_by',
                         :incident_key => check, :since => since, :until => unt,
                         :status => 'acknowledged'}).
-        to_return(:status => 200, :body => response.to_json, :headers => {})
+        to_return(:status => 200, :body => Flapjack.dump_json(response), :headers => {})
 
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 

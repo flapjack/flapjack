@@ -29,7 +29,7 @@ module Flapjack
            data_ids = checks_data.reject {|c| c['id'].nil? }.
               map {|co| co['id'].to_s }
 
-            Flapjack::Data::Check.backend.lock(Flapjack::Data::Check) do
+            Flapjack::Data::Check.lock do
 
               conflicted_ids = data_ids.select {|id|
                 Flapjack::Data::Check.exists?(id)
@@ -59,7 +59,7 @@ module Flapjack
 
             status 201
             response.headers['Location'] = "#{base_url}/checks/#{check_ids.join(',')}"
-            check_ids.to_json
+            Flapjack.dump_json(check_ids)
           end
 
           app.get %r{^/checks(?:/)?(.+)?$} do
@@ -79,9 +79,7 @@ module Flapjack
               raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Check, requested_checks)
             end
 
-            checks_json = checks.collect {|check| check.to_json}.join(",")
-
-            '{"checks":[' + checks_json + ']}'
+            Flapjack.dump_json(:checks => checks)
           end
 
           app.patch %r{^/checks/(.+)$} do
@@ -96,8 +94,14 @@ module Flapjack
                 case op
                 when 'replace'
                   if ['enabled'].include?(property)
-                    # explicitly checking for false being passed in
-                    check.disable! if value.is_a?(FalseClass)
+                    case value
+                    when TrueClass
+                      check.enabled = true
+                      check.save
+                    when FalseClass
+                      check.enabled = false
+                      check.save
+                    end
                   end
                 end
               end

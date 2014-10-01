@@ -120,7 +120,7 @@ module Flapjack
         event['time'] = Time.now.to_i if event['time'].nil?
 
         begin
-          event_json = ::Oj.dump(event)
+          event_json = Flapjack.dump_json(event)
         rescue Oj::Error => e
           if opts[:logger]
             opts[:logger].warn("Error serialising event json: #{e}, event: #{event.inspect}")

@@ -35,11 +35,7 @@ require 'pathname'
 require 'webmock/cucumber'
 WebMock.disable_net_connect!
 
-require 'oj'
-Oj.mimic_JSON
-Oj.default_options = { :indent => 0, :mode => :strict }
-require 'active_support/json'
-
+require 'flapjack'
 require 'flapjack/patches'
 require 'flapjack/redis_proxy'
 

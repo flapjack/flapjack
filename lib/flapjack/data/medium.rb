@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'sandstorm/records/redis_record'
+require 'flapjack/data/alert'
 require 'flapjack/data/check'
 
 module Flapjack
@@ -10,6 +11,8 @@ module Flapjack
     class Medium
 
       include Sandstorm::Records::RedisRecord
+      include ActiveModel::Serializers::JSON
+      self.include_root_in_json = false
 
       TYPES = ['email', 'sms', 'jabber', 'pagerduty', 'sns', 'sms_twilio']
 
@@ -120,7 +123,7 @@ module Flapjack
       end
 
       def clean_alerting_checks
-        backend.lock(Flapjack::Data::Medium, Flapjack::Data::Check,
+        self.class.lock(Flapjack::Data::Check,
           Flapjack::Data::ScheduledMaintenance,
           Flapjack::Data::UnscheduledMaintenance,
           Flapjack::Data::Contact) do
@@ -142,10 +145,9 @@ module Flapjack
       end
 
       def as_json(opts = {})
-        super.as_json(opts).merge(
-          :time_restrictions        => @time_restrictions,
+        super.as_json(opts.merge(:root => false)).merge(
           :links => {
-            :contact                  => [opts[:contact_id]].compact,
+            :contacts                 => opts[:contact_ids] || [],
             :notification_rule_states => opts[:notification_rule_states_ids] || []
           }
         )

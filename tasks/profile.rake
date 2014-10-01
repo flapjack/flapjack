@@ -145,7 +145,7 @@ namespace :profile do
 
         REPETITIONS.times do |n|
           msg_contents['event_count'] = n
-          Flapjack.redis.lpush(queue, Oj.dump(msg_contents))
+          Flapjack.redis.lpush(queue, Flapjack.dump_json(msg_contents))
           Flapjack.redis.lpush("#{queue}_actions", "+")
         end
       rescue => e

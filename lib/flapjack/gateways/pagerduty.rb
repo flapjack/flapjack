@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'oj'
-
 require 'net/http'
 require 'uri'
 require 'uri/https'
@@ -145,10 +143,10 @@ module Flapjack
           http.use_ssl = true
           http.verify_mode = OpenSSL::SSL::VERIFY_PEER
           request = Net::HTTP::Post.new(uri.request_uri)
-          request.body = Oj.dump(event)
+          request.body = Flapjack.dump_json(event)
           http_response = http.request(request)
 
-          response = Oj.load(http_response.body)
+          response = Flapjack.load_json(http_response.body)
           status   = http_response.code
           @logger.debug "send_pagerduty_event got a return code of #{status} - #{response.inspect}"
           unless status.to_i == 200

@@ -22,6 +22,15 @@ module Flapjack
       validates :username, :presence => true
       validates :password, :presence => true
 
+      def as_json(opts = {})
+        super.as_json(opts).merge(
+          [:id, :service_key, :subdomain, :username, :password].inject({}) {|memo, k|
+            memo[k] = self.send(k)
+            memo
+          }
+        )
+      end
+
     end
 
   end

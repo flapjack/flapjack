@@ -30,7 +30,7 @@ namespace :benchmarks do
     event['time'] = Time.now.to_i if event['time'].nil?
 
     begin
-      event_json = ::Oj.dump(event)
+      event_json = Flapjack.dump_json(event)
     rescue Oj::Error => e
       if opts[:logger]
         opts[:logger].warn("Error serialising event json: #{e}, event: #{event.inspect}")
@@ -48,7 +48,7 @@ namespace :benchmarks do
 
   desc "nukes the redis db, generates the events, runs and shuts down flapjack, generates perftools reports"
   task :run => [:reset_redis, :benchmark, :run_flapjack, :reports] do
-    puts Oj.dump(@benchmark_data, :indent => 2)
+    puts Flapjack.dump_json(@benchmark_data, :indent => 2)
   end
 
   desc "reset the redis database"

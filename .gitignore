@@ -19,10 +19,7 @@ vendor
 .bundle
 etc/*.yaml
 coverage
-tmp/cucumber_cli
-tmp/pids/*
-tmp/spec*
-tmp/profiles
+tmp/*
 flapjack-*.gem
 _site/*
 .rvmrc
