@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/flapjack/sandstorm.git
-  revision: 630a1c7e300e3497b9e3f2e94e1a073cbfd8875e
+  revision: 00949bc6b347f38646f1b3133db7072f741e361f
   branch: master
   specs:
     sandstorm (0.1.0)
@@ -23,22 +23,25 @@ PATH
       redis (~> 3.0.6)
       sinatra
       terminal-table
-      tzinfo (~> 1.0.1)
+      tzinfo
       tzinfo-data
       xmpp4r (>= 0.5.5)
 
 GEM
   remote: https://rubygems.org/
   specs:
-    activemodel (3.2.19)
-      activesupport (= 3.2.19)
-      builder (~> 3.0.0)
-    activesupport (3.2.19)
-      i18n (~> 0.6, >= 0.6.4)
-      multi_json (~> 1.0)
+    activemodel (4.1.6)
+      activesupport (= 4.1.6)
+      builder (~> 3.1)
+    activesupport (4.1.6)
+      i18n (~> 0.6, >= 0.6.9)
+      json (~> 1.7, >= 1.7.7)
+      minitest (~> 5.1)
+      thread_safe (~> 0.1)
+      tzinfo (~> 1.1)
     addressable (2.3.6)
     awesome_print (1.2.0)
-    builder (3.0.4)
+    builder (3.2.2)
     chronic (0.10.2)
     chronic_duration (0.10.6)
       numerizer (~> 0.1.1)
@@ -71,6 +74,7 @@ GEM
     mail (2.6.1)
       mime-types (>= 1.16, < 3)
     mime-types (2.3)
+    minitest (5.4.2)
     msgpack (0.5.8)
     multi_json (1.10.1)
     multi_test (0.1.1)
@@ -127,10 +131,12 @@ GEM
       tins (~> 1.0)
     terminal-table (1.4.5)
     thor (0.19.1)
+    thread_safe (0.3.4)
     tilt (1.4.1)
     tins (1.3.3)
     trollop (2.0)
-    tzinfo (1.0.1)
+    tzinfo (1.2.2)
+      thread_safe (~> 0.1)
     tzinfo-data (1.2014.8)
       tzinfo (>= 1.0.0)
     webmock (1.18.0)
