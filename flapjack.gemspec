@@ -29,7 +29,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'chronic_duration'
   gem.add_dependency 'activesupport'
   gem.add_dependency 'ice_cube'
-  gem.add_dependency 'tzinfo', '~> 1.0.1'
+  gem.add_dependency 'tzinfo'
   gem.add_dependency 'tzinfo-data'
   gem.add_dependency 'gli', '= 2.12.0'
   gem.add_dependency 'rbtrace'
