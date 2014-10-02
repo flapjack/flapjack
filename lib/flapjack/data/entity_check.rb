@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'oj'
-
 require 'flapjack/patches'
 
 require 'flapjack/data/contact'
@@ -973,7 +971,7 @@ module Flapjack
       end
 
       def to_jsonapi(opts = {})
-        {
+        json_data = {
           "id"          => @key,
           "name"        => @check,
           "entity_name" => @entity.name,
@@ -981,7 +979,8 @@ module Flapjack
           "links"       => {
             :entities     => opts[:entity_ids] || [],
           }
-        }.to_json
+        }
+        Flapjack.dump_json(json_data)
       end
 
     private

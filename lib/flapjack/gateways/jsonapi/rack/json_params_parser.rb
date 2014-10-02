@@ -13,7 +13,7 @@ module Flapjack
               env['rack.request.form_input'] = env['rack.input']
               json_data = env['rack.input'].read
               env['rack.input'].rewind
-              data = json_data.empty? ? {} : Oj.load(json_data)
+              data = json_data.empty? ? {} : Flapjack.load_json(json_data)
               env['rack.request.form_hash'] = data.empty? ? {} :
                 (('application/json-patch+json'.eql?(t)) ? {'ops' => data} : data)
             end

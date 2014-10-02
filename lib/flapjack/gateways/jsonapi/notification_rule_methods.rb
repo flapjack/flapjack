@@ -67,7 +67,7 @@ module Flapjack
 
             unless rule_ids.empty?
               response.headers['Location'] = "#{base_url}/notification_rules/#{rule_ids.join(',')}"
-              rule_ids.to_json
+              Flapjack.dump_json(rule_ids)
             end
           end
 

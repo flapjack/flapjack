@@ -121,9 +121,9 @@ module Flapjack
               }
             end
 
-            "{\"#{action}_reports\":" + report_data.to_json + "," +
-             "\"linked\":{\"entities\":" + entity_data.to_json + "," +
-                         "\"checks\":" + check_data.to_json + "}}"
+            "{\"#{action}_reports\":" + Flapjack.dump_json(report_data) + "," +
+             "\"linked\":{\"entities\":" + Flapjack.dump_json(entity_data) + "," +
+                         "\"checks\":" + Flapjack.dump_json(check_data) + "}}"
           end
 
         end

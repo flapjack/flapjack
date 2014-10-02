@@ -454,20 +454,9 @@ module Flapjack
         end
       end
 
-      def to_json(*args)
-        { "id"                      => self.id,
-          "first_name"              => self.first_name,
-          "last_name"               => self.last_name,
-          "email"                   => self.email,
-          "media"                   => self.media,
-          "media_intervals"         => self.media_intervals,
-          "media_rollup_thresholds" => self.media_rollup_thresholds,
-          "timezone"                => self.timezone.name,
-        }.to_json
-      end
-
       def to_jsonapi(opts = {})
-        { "id"                    => self.id,
+        json_data = {
+          "id"                    => self.id,
           "first_name"            => self.first_name,
           "last_name"             => self.last_name,
           "email"                 => self.email,
@@ -477,7 +466,8 @@ module Flapjack
             :media                  => self.media_ids             || [],
             :notification_rules     => self.notification_rule_ids || [],
           }
-        }.to_json
+        }
+        Flapjack.dump_json(json_data)
       end
 
     private
