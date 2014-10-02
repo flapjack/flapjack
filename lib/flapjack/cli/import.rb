@@ -38,7 +38,6 @@ module Flapjack
               next
             end
             media_data = contact_data.delete('media')
-            tag_data   = contact_data.delete('tags')
             contact = Flapjack::Data::Contact.new(contact_data)
             contact.save
 
@@ -50,17 +49,6 @@ module Flapjack
                   :rollup_threshold => medium_data['rollup_threshold'])
                 medium.save
                 contact.media << medium
-              end
-            end
-
-            unless tag_data.nil? || tag_data.empty?
-              tag_data.each do |tag_name|
-                tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
-                if tag.nil?
-                  tag = Flapjack::Data::Tag.new(:name => tag_name)
-                  tag.save
-                end
-                contact.tags << tag
               end
             end
           end

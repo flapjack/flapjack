@@ -79,11 +79,13 @@ module Flapjack
 
             notification_rule_ids = notification_rules.map(&:id)
             linked_contact_ids = Flapjack::Data::NotificationRule.associated_ids_for_contact(*notification_rule_ids)
+            linked_tag_ids = Flapjack::Data::NotificationRule.associated_ids_for_tags(*notification_rule_ids)
             linked_notification_rule_states_ids = Flapjack::Data::NotificationRule.associated_ids_for_states(*notification_rule_ids)
 
             notification_rules_as_json = notification_rules.collect {|notification_rule|
               notification_rule.as_json(:contact_ids => [linked_contact_ids[notification_rule.id]],
-                                        :states_ids => linked_notification_rule_states_ids[notification_rule.id])
+                                        :tag_ids => linked_tag_ids,
+                                        :notification_rule_state_ids => linked_notification_rule_states_ids[notification_rule.id])
             }
 
             Flapjack.dump_json(:notification_rules => notification_rules_as_json)
@@ -101,18 +103,12 @@ module Flapjack
                   end
                 when 'add'
                   case linked
-                  when 'checks'
-                    check = Flapjack::Data::Check.find_by_id(value)
-                    notification_rule.checks << check unless check.nil?
                   when 'tags'
                     tag = Flapjack::Data::Tag.find_by_id(value)
                     notification_rule.tags << tag unless tag.nil?
                   end
                 when 'remove'
                   case linked
-                  when 'checks'
-                    check = Flapjack::Data::Check.find_by_id(value)
-                    notification_rule.delete(check) unless check.nil?
                   when 'tags'
                     tag = Flapjack::Data::Tag.find_by_id(value)
                     notification_rule.delete(tag) unless tag.nil?

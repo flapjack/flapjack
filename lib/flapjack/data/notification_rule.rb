@@ -24,16 +24,13 @@ module Flapjack
 
       define_attributes :time_restrictions_json => :string
 
-      has_and_belongs_to_many :checks, :class_name => 'Flapjack::Data::Check',
-        :inverse_of => :notification_rules
-
-      has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :notification_rules
-
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
         :inverse_of => :notification_rules
 
       has_many :states, :class_name => 'Flapjack::Data::NotificationRuleState'
+
+      has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
+        :inverse_of => :notification_rules
 
       validates_each :time_restrictions_json do |record, att, value|
         unless value.nil?
@@ -81,12 +78,11 @@ module Flapjack
       end
 
       def is_specific?
-        !checks.empty? || !tags.empty?
+        !tags.empty?
       end
 
       def is_match?(check)
-        (self.checks.empty? || self.checks.ids.include?(check.id)) &&
-        (self.tags.empty? || (self.tags.ids - check.tags.ids).empty? )
+        self.tags.empty? || (self.tags.ids - check.tags.ids).empty?
       end
 
       # nil time_restrictions matches
@@ -114,9 +110,8 @@ module Flapjack
           :time_restrictions          => time_restrictions,
           :links => {
             :contacts                 => opts[:contact_ids] || [],
-            :notification_rule_states => opts[:states_ids] || [],
-            :checks                   => opts[:tag_ids] || [],
             :tags                     => opts[:tag_ids] || [],
+            :notification_rule_states => opts[:notification_rule_state_ids] || [],
           }
         )
       end

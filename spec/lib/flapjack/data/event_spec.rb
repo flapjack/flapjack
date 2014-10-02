@@ -18,8 +18,7 @@ describe Flapjack::Data::Event do
                       'details'  => "couldn't access",
                       'perfdata' => "/=5504MB;5554;6348;0;7935",
                       'acknowledgement_id' => '1234',
-                      'duration' => (60 * 60),
-                      'tags'     => ['dev'] }
+                      'duration' => (60 * 60) }
                    }
 
   context 'class' do
@@ -99,7 +98,7 @@ describe Flapjack::Data::Event do
     end
   end
 
-  ['time', 'details', 'perfdata', 'acknowledgement_id', 'duration', 'tags'].each do |optional_key|
+  ['time', 'details', 'perfdata', 'acknowledgement_id', 'duration'].each do |optional_key|
     it "rejects an event with invalid '#{optional_key}' key" do
       bad_event_data = event_data.clone
       bad_event_data[optional_key] = {'hello' => 'there'}

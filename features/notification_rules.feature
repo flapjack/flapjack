@@ -12,15 +12,15 @@ Feature: Notification rules on a per contact basis
       | c6  | Jive       | Smith     | jive@example.com  | +61400000006 | America/Los_Angeles |
 
     And the following checks exist:
-      | id  | name                       | contacts |
-      | 1   | foo:ping                   | c1       |
-      | 2   | bar:ping                   | c1,c2,c3 |
-      | 3   | baz:ping                   | c1,c3    |
-      | 4   | buf:ping                   | c1,c2,c3 |
-      | 5   | foo-app-01.xyz:Disk / Util | c4,c6    |
-      | 6   | foo-app-01.xyz:Memory Util | c4,c6    |
-      | 7   | foo-app-01.xyz:ping        | c4,c6    |
-      | 8   | blakes7:ping               | c2       |
+      | id  | name                       | contacts | tags                       |
+      | 1   | foo:ping                   | c1       | foo:ping                   |
+      | 2   | bar:ping                   | c1,c2,c3 | bar:ping                   |
+      | 3   | baz:ping                   | c1,c3    | baz:ping                   |
+      | 4   | buf:ping                   | c1,c2,c3 | buf:ping                   |
+      | 5   | foo-app-01.xyz:Disk / Util | c4,c6    | foo-app-01.xyz:Disk / Util |
+      | 6   | foo-app-01.xyz:Memory Util | c4,c6    | foo-app-01.xyz:Memory Util |
+      | 7   | foo-app-01.xyz:ping        | c4,c6    | foo-app-01.xyz:ping        |
+      | 8   | blakes7:ping               | c2       | blakes7:ping               |
 
     And user c1 has the following notification intervals:
       | email | sms |
@@ -39,21 +39,21 @@ Feature: Notification rules on a per contact basis
       | 15    | 60  |
 
     And user c1 has the following notification rules:
-      | checks    | unknown_media | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
+      | tags    | unknown_media | warning_media | critical_media   | warning_blackhole | critical_blackhole | time_restrictions |
       |           |               | email         | sms,email        | true              | true               |                   |
       | foo:ping  |               | email         | sms,email        |                   |                    | 8-18 weekdays     |
       | bar:ping  | email         |               | sms,email        | true              |                    |                   |
       | baz:ping  |               | email         | sms,email        |                   |                    |                   |
 
     And user c2 has the following notification rules:
-      | checks                | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole |
+      | tags                | tags | warning_media | critical_media   | warning_blackhole | critical_blackhole|
       |                       |      | email         | email            |                   |                    |
       |                       |      | sms           | sms              |                   |                    |
       | bar:ping,blakes7:ping |      | email         | email,sms        |                   |                    |
       | bar:ping,blakes7:ping | wags |               |                  | true              | true               |
 
     And user c3 has the following notification rules:
-      | checks    | warning_media | critical_media   | warning_blackhole | critical_blackhole |
+      | tags      | warning_media | critical_media   | warning_blackhole | critical_blackhole |
       |           | email         | email            |                   |                    |
       | baz:ping  | sms           | sms              |                   |                    |
       | buf:ping  | email         | email            |                   |                    |
@@ -71,7 +71,7 @@ Feature: Notification rules on a per contact basis
       | email         | email, sms     |
 
     And user c6 has the following notification rules:
-      | checks              | tags            | warning_media | critical_media   |
+      | tags              | tags            | warning_media | critical_media   |
       |                     |                 |               |                  |
       | foo-app-01.xyz:ping | check_disk      | email         | email            |
 

@@ -23,6 +23,9 @@ module Flapjack
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact', :inverse_of => :media
 
+      has_and_belongs_to_many :notification_rule_states,
+        :class_name => 'Flapjack::Data::NotificationRuleState', :inverse_of => :media
+
       has_many :alerts, :class_name => 'Flapjack::Data::Alert'
 
       has_and_belongs_to_many :alerting_checks,
@@ -30,9 +33,6 @@ module Flapjack
 
       has_sorted_set :notification_blocks,
         :class_name => 'Flapjack::Data::NotificationBlock', :key => :expire_at
-
-      has_and_belongs_to_many :notification_rule_states,
-        :class_name => 'Flapjack::Data::NotificationRuleState', :inverse_of => :media
 
       index_by :type
 
@@ -106,18 +106,13 @@ module Flapjack
             block.save
           else
             # need to remove it from the sorted_set that uses expire_at as a key,
-            # change and re-add -- see https://github.com/ali-graham/sandstorm/issues/1
-            # TODO should this be in a multi/exec block?
+            # change and re-add -- see https://github.com/flapjack/sandstorm/issues/1
             self.notification_blocks.delete(block)
-            if check
-              check.notification_blocks.delete(block)
-            end
+            check.notification_blocks.delete(block) if check
             block.expire_at = expire_at
             block.save
           end
-          if check
-            check.notification_blocks << block
-          end
+          check.notification_blocks << block if check
           self.notification_blocks << block
         end
       end

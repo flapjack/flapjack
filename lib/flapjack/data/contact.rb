@@ -35,9 +35,6 @@ module Flapjack
       has_and_belongs_to_many :checks, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :contacts
 
-      has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :contacts
-
       has_many :media, :class_name => 'Flapjack::Data::Medium'
       has_one :pagerduty_credentials, :class_name => 'Flapjack::Data::PagerdutyCredentials'
 
@@ -111,8 +108,7 @@ module Flapjack
             :checks                => opts[:check_ids] || [],
             :media                 => opts[:medium_ids] || [],
             :pagerduty_credentials => opts[:pagerduty_credentials_ids] || [],
-            :notification_rules    => opts[:notification_rule_ids] || [],
-            :tags                  => opts[:tag_ids] || [],
+            :notification_rules    => opts[:notification_rule_ids] || []
           }
         )
       end

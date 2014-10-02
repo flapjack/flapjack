@@ -78,6 +78,8 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
     expect(notification_rule).to receive(:as_json).and_return(notification_rule_data)
     expect(Flapjack::Data::NotificationRule).to receive(:associated_ids_for_contact).
       with(notification_rule.id).and_return({notification_rule.id => contact.id})
+    expect(Flapjack::Data::NotificationRule).to receive(:associated_ids_for_tags).
+      with(notification_rule.id).and_return({})
     expect(Flapjack::Data::NotificationRule).to receive(:associated_ids_for_states).
       with(notification_rule.id).and_return({})
 
@@ -93,6 +95,8 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
     expect(notification_rule).to receive(:as_json).and_return(notification_rule_data)
     expect(Flapjack::Data::NotificationRule).to receive(:associated_ids_for_contact).
       with(notification_rule.id).and_return({notification_rule.id => contact.id})
+    expect(Flapjack::Data::NotificationRule).to receive(:associated_ids_for_tags).
+      with(notification_rule.id).and_return({})
     expect(Flapjack::Data::NotificationRule).to receive(:associated_ids_for_states).
       with(notification_rule.id).and_return({})
 

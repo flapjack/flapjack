@@ -7,12 +7,12 @@ module Flapjack
   module Data
     class Event
 
-      attr_accessor :counter, :id_hash, :tags
+      attr_accessor :counter, :id_hash
 
       attr_reader :id, :summary, :details, :acknowledgement_id, :perfdata
 
       REQUIRED_KEYS = ['type', 'state', 'entity', 'check', 'summary']
-      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration', 'tags', 'perfdata']
+      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration', 'perfdata']
 
       VALIDATIONS = {
         proc {|e| e['type'].is_a?(String) &&
@@ -55,10 +55,6 @@ module Flapjack
                  (e['duration'].is_a?(String) && !!(e['duration'] =~ /^\d+$/)) } =>
           "duration must be a positive integer, or a string castable to one",
 
-        proc {|e| e['tags'].nil? ||
-                  (e['tags'].is_a?(Array) &&
-                   e['tags'].all? {|tag| tag.is_a?(String)}) } =>
-          "tags must be an array of strings",
       }
 
       def self.parse_and_validate(raw, opts = {})
@@ -169,7 +165,7 @@ module Flapjack
       def initialize(attrs = {})
         @id = "#{attrs['entity']}:#{attrs['check']}"
         [:type, :state, :time, :summary,
-         :perfdata, :details, :acknowledgement_id, :duration, :tags].each do |key|
+         :perfdata, :details, :acknowledgement_id, :duration].each do |key|
           instance_variable_set("@#{key.to_s}", attrs[key.to_s])
         end
         # details and perfdata are optional. set to nil if they only contain whitespace

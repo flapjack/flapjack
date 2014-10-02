@@ -306,12 +306,25 @@ Given /^the following checks exist:$/ do |checks|
   checks.hashes.each do |check_data|
     check = find_or_create_check(check_data)
 
-    next if check_data['contacts'].nil?
-    check_data['contacts'].split(',').map(&:strip).each do |contact_id|
-      contact = Flapjack::Data::Contact.find_by_id(contact_id)
-      expect(contact).not_to be_nil
-      check.contacts << contact
+    unless check_data['contacts'].nil? || check_data['contacts'].strip.empty?
+      check_data['contacts'].split(',').map(&:strip).each do |contact_id|
+        contact = Flapjack::Data::Contact.find_by_id(contact_id)
+        expect(contact).not_to be_nil
+        check.contacts << contact
+      end
     end
+
+    unless check_data['tags'].nil? || check_data['tags'].strip.empty?
+      check_data['tags'].split(',').map(&:strip).each do |tag_name|
+        tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+        if tag.nil?
+          tag = Flapjack::Data::Tag.new(:name => tag_name)
+          tag.save
+        end
+        check.tags << tag
+      end
+    end
+
   end
 end
 
@@ -371,7 +384,6 @@ Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules
   end
 
   rules.hashes.each do |rule|
-    checks           = rule['checks']      ? rule['checks'].split(',').map(&:strip)       : []
     tags             = rule['tags']        ? rule['tags'].split(',').map(&:strip)         : []
     media = {
       :unknown  => (rule['unknown_media']      ? rule['unknown_media'].split(',').map(&:strip)  : []),
@@ -398,15 +410,6 @@ Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules
     rule_data = {:time_restrictions  => time_restrictions}
     new_rule = Flapjack::Data::NotificationRule.new(rule_data)
     expect(new_rule.save).to be true
-
-    checks.each do |check_name|
-      check = Flapjack::Data::Check.intersect(:name => check_name).all.first
-      if check.nil?
-        check = Flapjack::Data::Check.new(:name => check_name)
-        expect(check.save).to be true
-      end
-      new_rule.checks << check
-    end
 
     tags.each do |tag_name|
       tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first

@@ -55,20 +55,17 @@ module Flapjack
       has_sorted_set :unscheduled_maintenances_by_end, :class_name => 'Flapjack::Data::UnscheduledMaintenance',
         :key => :end_time
 
-      has_sorted_set :notification_blocks, :class_name => 'Flapjack::Data::NotificationBlock',
-        :key => :expire_at
-
-      has_and_belongs_to_many :alerting_media, :class_name => 'Flapjack::Data::Medium',
-        :inverse_of => :alerting_checks
-
-      # the following 3 associations are used internally, for the notification
+      # the following associations are used internally, for the notification
       # and alert queue inter-pikelet workflow
       has_many :notifications, :class_name => 'Flapjack::Data::Notification'
       has_many :alerts, :class_name => 'Flapjack::Data::Alert'
       has_many :rollup_alerts, :class_name => 'Flapjack::Data::RollupAlert'
 
-      has_and_belongs_to_many :notification_rules, :class_name => 'Flapjack::Data::Check',
-        :inverse_of => :checks
+      has_sorted_set :notification_blocks, :class_name => 'Flapjack::Data::NotificationBlock',
+        :key => :expire_at
+
+      has_and_belongs_to_many :alerting_media, :class_name => 'Flapjack::Data::Medium',
+        :inverse_of => :alerting_checks
 
       validates :name, :presence => true
       validates :state,

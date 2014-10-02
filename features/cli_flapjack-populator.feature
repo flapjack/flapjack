@@ -31,11 +31,7 @@ test:
         "interval": 7200,
         "rollup_threshold": null
       }
-    },
-    "tags": [
-      "legend",
-      "first computer programmer"
-    ]
+    }
   }
 ]
 """
