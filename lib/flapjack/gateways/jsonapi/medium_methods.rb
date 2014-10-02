@@ -42,8 +42,8 @@ module Flapjack
 
               contact_id = $1
               media_type = $2
-              halt err(422, "Could not get contact_id from media_id") if contact_id.nil?
-              halt err(422, "Could not get media type from media_id") if media_type.nil?
+              halt err(422, "Could not get contact_id from media_id '#{m_id}'") if contact_id.nil?
+              halt err(422, "Could not get media type from media_id '#{m_id}'") if media_type.nil?
 
               contact_cache[contact_id] ||= find_contact(contact_id)
 
@@ -73,7 +73,7 @@ module Flapjack
             contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
             if contact.nil?
               semaphore.release
-              halt err(422, "Contact id:'#{params[:contact_id]}' could not be loaded")
+              halt err(422, "Contact id: '#{params[:contact_id]}' could not be loaded")
             end
 
             media_data.each do |medium_data|
@@ -115,12 +115,14 @@ module Flapjack
               media_list_cache[contact.id] ||= contact.media_list
               if media_list_cache[contact.id].include?(media_type)
                 medium_id = "#{contact.id}_#{media_type}"
+                int = contact.media_intervals[media_type]
+                rut = contact.media_rollup_thresholds[media_type]
                 memo <<
                   {:id               => medium_id,
                    :type             => media_type,
                    :address          => contact.media[media_type],
-                   :interval         => contact.media_intervals[media_type],
-                   :rollup_threshold => contact.media_rollup_thresholds[media_type],
+                   :interval         => int.nil? ? nil : int.to_i,
+                   :rollup_threshold => rut.nil? ? nil : rut.to_i,
                    :links            => {:contacts => [contact.id]}}
               end
 

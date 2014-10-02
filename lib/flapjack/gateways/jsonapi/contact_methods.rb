@@ -45,7 +45,7 @@ module Flapjack
             missing_ids = contacts_by_id.select {|k, v| v.nil? }.keys
             unless missing_ids.empty?
               semaphore.release
-              halt(404, "Contacts with ids #{missing_ids.join(', ')} were not found")
+              raise Flapjack::Gateways::JSONAPI::ContactsNotFound.new(missing_ids)
             end
 
             block.call(contacts_by_id.select {|k, v| !v.nil? }.values)

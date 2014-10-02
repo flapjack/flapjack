@@ -3,14 +3,14 @@ matrix:
   include:
     - rvm: 1.9.3
       gemfile: Gemfile-ruby1.9
-      script:  "bundle exec rspec spec && bundle exec cucumber features"
+      script:  "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features"
       env: BUNDLE_GEMFILE=Gemfile-ruby1.9
     - rvm: '2.0'
       gemfile: Gemfile
-      script: "bundle exec rspec spec && bundle exec cucumber features"
+      script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features"
     - rvm: '2.1'
       gemfile: Gemfile
-      script: "bundle exec rspec spec && bundle exec cucumber features"
+      script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features"
 services:
 - redis-server
 before_script:

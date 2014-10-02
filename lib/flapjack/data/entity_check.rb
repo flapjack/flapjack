@@ -65,6 +65,7 @@ module Flapjack
         logger = options[:logger]
         entity = Flapjack::Data::Entity.find_by_name(entity_name,
           :create => create_entity, :logger => logger, :redis => redis)
+        return if entity.nil?
         self.new(entity, check_name, :logger => logger, :redis => redis)
       end
 
