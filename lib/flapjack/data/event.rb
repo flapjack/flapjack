@@ -2,8 +2,6 @@
 
 require 'flapjack'
 
-require 'flapjack/data/tag_set'
-
 module Flapjack
   module Data
     class Event
@@ -221,7 +219,7 @@ module Flapjack
         # perfdata is optional. set it to nil if it only contains whitespace
         @perfdata = (@perfdata.is_a?(String) && ! @perfdata.strip.empty?) ? @perfdata.strip : nil
         if attrs['tags']
-          @tags = Flapjack::Data::TagSet.new
+          @tags = Set.new
           attrs['tags'].each {|tag| @tags.add(tag)}
         end
       end

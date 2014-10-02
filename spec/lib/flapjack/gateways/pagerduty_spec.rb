@@ -151,7 +151,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     evt = { "service_key"  => "11111111111111111111111111111111",
             "incident_key" => "Flapjack is running a NOOP",
             "event_type"   => "nop",
-            "description"  => "I love APIs with noops." }
+            "description"  => "I love APIs with noops."}
     body = evt.to_json
 
     stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
@@ -169,9 +169,11 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
   it "sends an event to pagerduty" do
     evt = {"service_key"  => "abcdefg",
-           "incident_key" => "Flapjack test",
+           "incident_key" => "www.example.com:ssh",
            "event_type"   => "nop",
-           "description"  => "Not really sent anyway"}
+           "description"  => "Not really sent anyway",
+           "details"      => { 'HOSTNAME' => 'www.example.com', 'SERVICE' => 'ssh' }
+          }
     body = evt.to_json
 
     stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").

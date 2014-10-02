@@ -262,7 +262,7 @@ module Flapjack
         @state_duration = opts['state_duration']
         @type           = opts['type']
         @severity       = opts['severity']
-        @tags           = opts['tags'].is_a?(Array) ? Flapjack::Data::TagSet.new(opts['tags']) : nil
+        @tags           = opts['tags'].is_a?(Array) ? Set.new(opts['tags']) : nil
       end
 
       # # time restrictions match?
