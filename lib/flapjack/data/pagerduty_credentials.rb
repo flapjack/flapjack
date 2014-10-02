@@ -9,11 +9,13 @@ module Flapjack
     class PagerdutyCredentials
 
       include Sandstorm::Records::RedisRecord
+      include ActiveModel::Serializers::JSON
+      self.include_root_in_json = false
 
-       define_attributes :service_key  => :string,
-                         :subdomain    => :string,
-                         :username     => :string,
-                         :password     => :string
+      define_attributes :service_key  => :string,
+                        :subdomain    => :string,
+                        :username     => :string,
+                        :password     => :string
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact', :inverse_of => :pagerduty_credentials
 

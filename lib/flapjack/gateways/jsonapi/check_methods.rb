@@ -53,9 +53,7 @@ module Flapjack
 
             end
 
-            if check_err
-              halt err(403, check_err)
-            end
+            halt err(403, check_err) unless check_err.nil?
 
             status 201
             response.headers['Location'] = "#{base_url}/checks/#{check_ids.join(',')}"
@@ -79,7 +77,14 @@ module Flapjack
               raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Check, requested_checks)
             end
 
-            Flapjack.dump_json(:checks => checks)
+            checks_ids = checks.map(&:id)
+            linked_tag_ids = Flapjack::Data::Check.associated_ids_for_tags(*checks_ids)
+
+            checks_as_json = checks.collect {|check|
+              check.as_json(:tag_ids => linked_tag_ids[check.id])
+            }
+
+            Flapjack.dump_json(:checks => checks_as_json)
           end
 
           app.patch %r{^/checks/(.+)$} do
@@ -93,17 +98,38 @@ module Flapjack
               apply_json_patch('checks') do |op, property, linked, value|
                 case op
                 when 'replace'
-                  if ['enabled'].include?(property)
-                    case value
-                    when TrueClass
-                      check.enabled = true
+                  case property
+                  when 'enabled', 'name'
+                    check.send("#{property}=".to_sym, value)
+                    if check.valid?
                       check.save
-                    when FalseClass
-                      check.enabled = false
-                      check.save
+                    else
+                      # TODO return error
+                    end
+                  end
+                when 'add'
+                  case linked
+                  when 'tags'
+                    tag = Flapjack::Data::Tag.intersect(:name => value).all.first
+                    if tag.nil?
+                      tag = Flapjack::Data::Tag.new(:name => value)
+                      tag.save
+                    end
+                    check.tags << tag
+                  end
+                when 'remove'
+                  case linked
+                  when 'tags'
+                    tag = check.tags.intersect(:name => value).all.first
+                    unless tag.nil?
+                      check.tags.delete(tag)
+                      if tag.checks.empty? && tag.notification_rules.empty?
+                        tag.destroy
+                      end
                     end
                   end
                 end
+
               end
             end
 

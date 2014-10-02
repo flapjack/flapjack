@@ -362,7 +362,7 @@ def migrate_notification_rules
       notification_rule.states.add(*nr_fail_states)
 
       # skip accessor which may create a new rule
-      contact.orig_notification_rules << notification_rule
+      contact.notification_rules << notification_rule
     end
   end
 end

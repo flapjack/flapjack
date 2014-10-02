@@ -60,9 +60,7 @@ module Flapjack
               end
             end
 
-            if media_err
-              halt err(403, media_err)
-            end
+            halt err(403, media_err) unless media_err.nil?
 
             status 201
             response.headers['Location'] = "#{base_url}/media/#{media_ids.join(',')}"
@@ -134,8 +132,15 @@ module Flapjack
           end
 
           app.delete '/media/:id' do
-            Flapjack::Data::Medium.find_by_ids!(*params[:id].split(',')).map(&:destroy)
+            media_ids = params[:id].split(',')
+            media = Flapjack::Data::Medium.intersect(:id => media_ids)
+            missing_ids = media_ids - media.ids
 
+            unless missing_ids.empty?
+              raise Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, missing_ids)
+            end
+
+            media.destroy_all
             status 204
           end
 

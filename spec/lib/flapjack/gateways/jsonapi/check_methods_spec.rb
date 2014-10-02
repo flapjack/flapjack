@@ -5,20 +5,38 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
 
   include_context "jsonapi"
 
-  let(:check)    { double(Flapjack::Data::Check, :id => '5678') }
-
   let(:check_data)   {
-    {'id'          => check.id,
-     'entity_name' => 'www.example.com',
-     'name'        => 'SSH'
+    {'id'          => '5678',
+     'name'        => 'www.example.com:SSH',
+     'enabled'     => true
     }
    }
 
+  let(:check)    { double(Flapjack::Data::Check, :id => check_data['id']) }
+
   let(:check_presenter) { double(Flapjack::Gateways::JSONAPI::CheckPresenter) }
+
+  it "creates a check" do
+    expect(Flapjack::Data::Check).to receive(:lock).with(no_args).and_yield
+    expect(Flapjack::Data::Check).to receive(:exists?).with(check.id).and_return(false)
+
+    expect(check).to receive(:invalid?).and_return(false)
+    expect(check).to receive(:save).and_return(true)
+    expect(Flapjack::Data::Check).to receive(:new).
+      with(:id => check_data['id'], :name => check_data['name'], :enabled => check_data['enabled']).
+      and_return(check)
+
+    post "/checks", Flapjack.dump_json(:checks => [check_data]), jsonapi_post_env
+    expect(last_response.status).to eq(201)
+    expect(last_response.body).to eq(Flapjack.dump_json([check.id]))
+  end
 
   it "retrieves all checks" do
     expect(check).to receive(:as_json).and_return(check_data)
     expect(Flapjack::Data::Check).to receive(:all).and_return([check])
+
+    expect(Flapjack::Data::Check).to receive(:associated_ids_for_tags).
+      with(check.id).and_return({})
 
     get '/checks'
     expect(last_response).to be_ok
@@ -29,6 +47,9 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(check).to receive(:as_json).and_return(check_data)
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
       with(check.id).and_return([check])
+
+    expect(Flapjack::Data::Check).to receive(:associated_ids_for_tags).
+      with(check.id).and_return({})
 
     get "/checks/#{check.id}"
     expect(last_response).to be_ok
@@ -44,6 +65,9 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
       with(check.id, check_2.id).and_return([check, check_2])
 
+    expect(Flapjack::Data::Check).to receive(:associated_ids_for_tags).
+      with(check.id, check_2.id).and_return({})
+
     get "/checks/#{check.id},#{check_2.id}"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(Flapjack.dump_json(:checks => [check_data, check_data_2]))
@@ -54,6 +78,7 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
       with(check.id).and_return([check])
 
     expect(check).to receive(:enabled=).with(false)
+    expect(check).to receive(:valid?).and_return(true)
     expect(check).to receive(:save).and_return(true)
 
     patch "/checks/#{check.id}",
@@ -61,6 +86,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
       jsonapi_patch_env
     expect(last_response.status).to eq(204)
   end
+
+  it 'adds a linked tag to a check'
+
+  it 'removes a linked tag from a check'
 
   it "creates an acknowledgement for a check" do
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).

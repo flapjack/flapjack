@@ -101,16 +101,11 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   end
 
   it "deletes a contact" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids).
-      with(contact.id).and_return([contact])
-    expect(contact).to receive(:destroy)
-
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium, Flapjack::Data::NotificationRule,
-           Flapjack::Data::NotificationRuleState, Flapjack::Data::Check,
-           Flapjack::Data::Tag, Flapjack::Data::PagerdutyCredentials).and_yield
-
-    expect(Flapjack::Data::Contact).to receive(:lock).with(no_args).and_yield
+    contacts = double('contacts')
+    expect(contacts).to receive(:ids).and_return([contact.id])
+    expect(contacts).to receive(:destroy_all)
+    expect(Flapjack::Data::Contact).to receive(:intersect).
+      with(:id => [contact.id]).and_return(contacts)
 
     delete "/contacts/#{contact.id}"
     expect(last_response.status).to eq(204)

@@ -156,10 +156,11 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
   end
 
   it "deletes a notification rule" do
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_ids!).
-      with(notification_rule.id).and_return([notification_rule])
-
-    expect(notification_rule).to receive(:destroy)
+    notification_rules = double('notification_rules')
+    expect(notification_rules).to receive(:ids).and_return([notification_rule.id])
+    expect(notification_rules).to receive(:destroy_all)
+    expect(Flapjack::Data::NotificationRule).to receive(:intersect).
+      with(:id => [notification_rule.id]).and_return(notification_rules)
 
     delete "/notification_rules/#{notification_rule.id}"
     expect(last_response.status).to eq(204)
@@ -167,21 +168,24 @@ describe 'Flapjack::Gateways::JSONAPI::NotificationRuleMethods', :sinatra => tru
 
   it "deletes multiple notification rules" do
     notification_rule_2 = double(Flapjack::Data::NotificationRule, :id => 'uiop')
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_ids!).
-      with(notification_rule.id, notification_rule_2.id).
-      and_return([notification_rule, notification_rule_2])
-
-    expect(notification_rule).to receive(:destroy)
-    expect(notification_rule_2).to receive(:destroy)
+    notification_rules = double('notification_rules')
+    expect(notification_rules).to receive(:ids).
+      and_return([notification_rule.id, notification_rule_2.id])
+    expect(notification_rules).to receive(:destroy_all)
+    expect(Flapjack::Data::NotificationRule).to receive(:intersect).
+      with(:id => [notification_rule.id, notification_rule_2.id]).
+      and_return(notification_rules)
 
     delete "/notification_rules/#{notification_rule.id},#{notification_rule_2.id}"
     expect(last_response.status).to eq(204)
   end
 
   it "does not delete a notification rule that does not exist" do
-    expect(Flapjack::Data::NotificationRule).to receive(:find_by_ids!).
-      with(notification_rule.id).
-      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::NotificationRule, [notification_rule.id]))
+    notification_rules = double('notification_rules')
+    expect(notification_rules).to receive(:ids).and_return([])
+    expect(notification_rules).not_to receive(:destroy_all)
+    expect(Flapjack::Data::NotificationRule).to receive(:intersect).
+      with(:id => [notification_rule.id]).and_return(notification_rules)
 
     delete "/notification_rules/#{notification_rule.id}"
     expect(last_response).to be_not_found

@@ -117,10 +117,11 @@ describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => 
   end
 
   it "deletes pagerduty credentials" do
-    expect(Flapjack::Data::PagerdutyCredentials).to receive(:find_by_ids!).
-      with(pagerduty_credentials.id).and_return([pagerduty_credentials])
-
-    expect(pagerduty_credentials).to receive(:destroy)
+    pdcs = double('pdcs')
+    expect(pdcs).to receive(:ids).and_return([pagerduty_credentials.id])
+    expect(pdcs).to receive(:destroy_all)
+    expect(Flapjack::Data::PagerdutyCredentials).to receive(:intersect).
+      with(:id => [pagerduty_credentials.id]).and_return(pdcs)
 
     delete "/pagerduty_credentials/#{pagerduty_credentials.id}"
     expect(last_response.status).to eq(204)

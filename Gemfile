@@ -2,7 +2,8 @@ source 'https://rubygems.org'
 
 gemspec :name => 'flapjack'
 
-gem 'sandstorm', :github => 'flapjack/sandstorm', :branch => 'master'
+gem 'sandstorm', :path => '../sandstorm'
+# gem 'sandstorm', :github => 'flapjack/sandstorm', :branch => 'master'
 
 group :development do
   gem 'ruby-prof'

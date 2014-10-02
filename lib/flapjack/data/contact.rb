@@ -42,34 +42,36 @@ module Flapjack
 
       before_destroy :remove_child_records
       def remove_child_records
-        self.media.each               {|medium|             medium.destroy }
+        self.media.each                    {|medium|             medium.destroy }
+        # self.orig_notification_rules.each  {|notification_rule|  notification_rule.destroy }
         self.notification_rules.each  {|notification_rule|  notification_rule.destroy }
       end
 
-      # wrap the has_many to create the generic rule if none exists
-      alias_method :orig_notification_rules, :notification_rules
-      def notification_rules
-        rules = orig_notification_rules
-        contact_media = media.all
+      # # wrap the has_many to create the generic rule if none exists
+      # alias_method :orig_notification_rules, :notification_rules
+      # def notification_rules
+      #   rules = orig_notification_rules
+      #   contact_media = media.all
 
-        if rules.all.all? {|r| r.is_specific? } # also true if empty
-          nr_fail_states = Flapjack::Data::CheckState.failing_states.collect do |fail_state|
-            state = Flapjack::Data::NotificationRuleState.new(:state => fail_state,
-              :blackhole => false)
-            state.save
-            state.media.add(*contact_media) unless 'unknown'.eql?(fail_state) || contact_media.empty?
-            state
-          end
+      #   if rules.all.all? {|r| r.is_specific? } # also true if empty
+      #     nr_fail_states = Flapjack::Data::CheckState.failing_states.collect do |fail_state|
+      #       state = Flapjack::Data::NotificationRuleState.new(:state => fail_state,
+      #         :blackhole => false)
+      #       state.save
+      #       state.media.add(*contact_media) unless 'unknown'.eql?(fail_state) || contact_media.empty?
+      #       state
+      #     end
 
-          rule = Flapjack::Data::NotificationRule.new(
-            :time_restrictions  => []
-          )
-          rule.save
-          rule.states.add(*nr_fail_states)
-          rules << rule
-        end
-        rules
-      end
+      #     rule = Flapjack::Data::NotificationRule.new(
+      #       :time_restrictions  => [],
+      #       :is_specific        => false,
+      #     )
+      #     rule.save
+      #     rule.states.add(*nr_fail_states)
+      #     rules << rule
+      #   end
+      #   rules
+      # end
 
       # TODO sort usages of 'Contact.all' by [c.last_name, c.first_name] in the code
       def name

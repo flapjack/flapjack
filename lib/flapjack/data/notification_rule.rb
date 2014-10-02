@@ -22,15 +22,26 @@ module Flapjack
       # I've removed regex_* properties as they encourage loose binding against
       # names, which may change. Do client-side grouping and create a tag!
 
-      define_attributes :time_restrictions_json => :string
+      define_attributes :time_restrictions_json => :string,
+                        :is_specific            => :boolean
+
+      index_by :is_specific
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
         :inverse_of => :notification_rules
 
-      has_many :states, :class_name => 'Flapjack::Data::NotificationRuleState'
-
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
         :inverse_of => :notification_rules
+
+      has_many :drops,  :class_name => 'Flapjack::Data::NotificationRuleDrop',
+        :inverse_of => :notification_rule
+
+      has_many :routes, :class_name => 'Flapjack::Data::NotificationRuleRoute',
+        :inverse_of => :notification_rule
+
+      # TODO if a drop is added for a state, should the route for that state be
+      # cleared? also, one route or drop per state should be permitted at most,
+      # requests should update rather than add to the route/drop
 
       validates_each :time_restrictions_json do |record, att, value|
         unless value.nil?
@@ -77,24 +88,12 @@ module Flapjack
         IceCube::Schedule.from_hash(tr)
       end
 
-      def is_specific?
-        !tags.empty?
-      end
-
-      def is_match?(check)
-        self.tags.empty? || (self.tags.ids - check.tags.ids).empty?
-      end
-
       # nil time_restrictions matches
       # times (start, end) within time restrictions will have any UTC offset removed and will be
       # considered to be in the timezone of the contact
-      def is_occurring_now?(options = {})
-        contact = options[:contact]
-        def_tz = options[:default_timezone]
-
+      def is_occurring_now?(timezone)
         return true if self.time_restrictions.nil? || self.time_restrictions.empty?
 
-        timezone = contact.time_zone(:default => def_tz)
         usertime = timezone.now
 
         self.time_restrictions.any? do |tr|
@@ -106,7 +105,7 @@ module Flapjack
       end
 
       def as_json(opts = {})
-        super.as_json(opts.merge(:except => :time_restrictions_json)).merge(
+        super.as_json(opts.merge(:except => [:time_restrictions_json])).merge(
           :time_restrictions          => time_restrictions,
           :links => {
             :contacts                 => opts[:contact_ids] || [],

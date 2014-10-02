@@ -79,9 +79,7 @@ module Flapjack
 
             end
 
-            if contact_err
-              halt err(403, contact_err)
-            end
+            halt err(403, contact_err) unless contact_err.nil?
 
             status 201
             response.headers['Location'] = "#{base_url}/contacts/#{contact_ids.join(',')}"
@@ -127,7 +125,7 @@ module Flapjack
                 apply_json_patch('contacts') do |op, property, linked, value|
                   case op
                   when 'replace'
-                    if ['first_name', 'last_name', 'email', 'timezone', 'tags'].include?(property)
+                    if ['first_name', 'last_name', 'email', 'timezone'].include?(property)
                       contact.send("#{property}=".to_sym, value)
                     end
                   when 'add'
@@ -166,14 +164,15 @@ module Flapjack
           end
 
           app.delete '/contacts/:id' do
-            Flapjack::Data::Contact.lock(Flapjack::Data::Medium, Flapjack::Data::NotificationRule,
-              Flapjack::Data::NotificationRuleState, Flapjack::Data::Check,
-              Flapjack::Data::Tag, Flapjack::Data::PagerdutyCredentials) do
-              bulk_contact_operation(params[:id].split(',')) do |contacts|
-                contacts.map(&:destroy)
-              end
+            contact_ids = params[:id].split(',')
+            contacts = Flapjack::Data::Contact.intersect(:id => contact_ids)
+            missing_ids = contact_ids - contacts.ids
+
+            unless missing_ids.empty?
+              raise Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Contact, missing_ids)
             end
 
+            contacts.destroy_all
             status 204
           end
 

@@ -39,7 +39,8 @@ module Flapjack
               else
                 notification_rules = notification_rules_data.collect do |notification_rule_data|
                   Flapjack::Data::NotificationRule.new(:id => notification_rule_data['id'],
-                    :time_restrictions => notification_rule_data['time_restrictions'])
+                    :time_restrictions => notification_rule_data['time_restrictions'],
+                    :is_specific => false)
                 end
 
                 if invalid = notification_rules.detect {|nr| nr.invalid? }
@@ -55,9 +56,7 @@ module Flapjack
               end
             end
 
-            if notification_rules_err
-              halt err(403, notification_rules_err)
-            end
+            halt err(403, notification_rules_err) unless notification_rules_err.nil?
 
             status 201
             response.headers['Location'] = "#{base_url}/notification_rules/#{notification_rule_ids.join(',')}"
@@ -104,14 +103,34 @@ module Flapjack
                 when 'add'
                   case linked
                   when 'tags'
-                    tag = Flapjack::Data::Tag.find_by_id(value)
-                    notification_rule.tags << tag unless tag.nil?
+                    Flapjack::Data::NotificationRule.lock(Flapjack::Data::Tag) do
+                      tag = Flapjack::Data::Tag.intersect(:name => value).all.first
+                      if tag.nil?
+                        tag = Flapjack::Data::Tag.new(:name => value)
+                        tag.save
+                      end
+                        # TODO association callbacks, which would lock around things
+                      notification_rule.tags << tag
+                      notification_rule.is_specific = true
+                      notification_rule.save
+                    end
                   end
                 when 'remove'
                   case linked
                   when 'tags'
-                    tag = Flapjack::Data::Tag.find_by_id(value)
-                    notification_rule.delete(tag) unless tag.nil?
+                    Flapjack::Data::NotificationRule.lock(Flapjack::Data::Tag) do
+                      tag = notification_rule.tags.intersect(:name => value).all.first
+                      unless tag.nil?
+                        notification_rule.tags.delete(tag)
+                        if tag.notification_rules.empty? && tag.checks.empty?
+                          tag.destroy
+                        end
+                        if notification_rule.tags.empty?
+                          notification_rule.is_specific = false
+                          notification_rule.save
+                        end
+                      end
+                    end
                   end
                 end
               end
@@ -122,8 +141,15 @@ module Flapjack
           end
 
           app.delete '/notification_rules/:id' do
-            Flapjack::Data::NotificationRule.find_by_ids!(*params[:id].split(',')).map(&:destroy)
+            notification_rule_ids = params[:id].split(',')
+            notification_rules = Flapjack::Data::NotificationRule.intersect(:id => notification_rule_ids)
+            missing_ids = notification_rule_ids - notification_rules.ids
 
+            unless missing_ids.empty?
+              raise Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::NotificationRule, missing_ids)
+            end
+
+            notification_rules.destroy_all
             status 204
           end
 

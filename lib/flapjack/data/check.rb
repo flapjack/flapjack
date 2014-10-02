@@ -5,9 +5,9 @@ require 'digest'
 require 'sandstorm/records/redis_record'
 
 require 'flapjack/data/check_state'
-require 'flapjack/data/contact'
 require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/unscheduled_maintenance'
+require 'flapjack/data/tag'
 
 module Flapjack
 
@@ -16,6 +16,8 @@ module Flapjack
     class Check
 
       include Sandstorm::Records::RedisRecord
+      include ActiveModel::Serializers::JSON
+      self.include_root_in_json = false
 
       # NB: state could be retrieved from states.last instead -- summary, details
       # and last_update can change without a new check_state being added though
@@ -34,9 +36,6 @@ module Flapjack
       unique_index_by :name, :ack_hash
 
       # TODO validate uniqueness of :name, :ack_hash
-
-      has_and_belongs_to_many :contacts, :class_name => 'Flapjack::Data::Contact',
-        :inverse_of => :checks
 
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
         :inverse_of => :checks

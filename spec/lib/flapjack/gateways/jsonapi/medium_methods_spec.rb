@@ -151,33 +151,35 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
   end
 
   it "deletes a medium" do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with(medium.id).and_return([medium])
-
-    expect(medium).to receive(:destroy)
+    media = double('media')
+    expect(media).to receive(:ids).and_return([medium.id])
+    expect(media).to receive(:destroy_all)
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [medium.id]).and_return(media)
 
     delete "/media/#{medium.id}"
     expect(last_response.status).to eq(204)
   end
 
   it "deletes multiple media" do
-    medium_2 = double(Flapjack::Data::Medium, :id => 'uiop')
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with(medium.id, medium_2.id).and_return([medium, medium_2])
+    media = double('media')
+    expect(media).to receive(:ids).and_return([medium.id, '6789'])
+    expect(media).to receive(:destroy_all)
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [medium.id, '6789']).and_return(media)
 
-    expect(medium).to receive(:destroy)
-    expect(medium_2).to receive(:destroy)
-
-    delete "/media/#{medium.id},#{medium_2.id}"
+    delete "/media/#{medium.id},6789"
     expect(last_response.status).to eq(204)
   end
 
   it "does not delete a medium that's not found" do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
+    media = double('media')
+    expect(media).to receive(:ids).and_return([])
+    expect(media).not_to receive(:destroy_all)
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [medium.id]).and_return(media)
 
     delete "/media/#{medium.id}"
     expect(last_response).to be_not_found
   end
-
 end

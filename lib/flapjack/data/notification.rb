@@ -29,9 +29,6 @@ module Flapjack
       belongs_to :check, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :notifications
 
-      has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :notifications
-
       # state association will not be set for notification tests
       belongs_to :state, :class_name => 'Flapjack::Data::CheckState',
         :inverse_of => :current_notifications
@@ -68,31 +65,130 @@ module Flapjack
         when 'acknowledgement', 'test'
           self.type
         else
-          self.state ? self.state.state : nil
+          st = self.state
+          st ? st.state : nil
         end
       end
 
-      def alerts(contacts, opts = {})
+      # TODO move this and related methods to 'notifier.rb'
+      def alerts(opts = {})
         @logger = opts[:logger]
 
-        return [] if contacts.nil? || contacts.empty?
-
         default_timezone = opts[:default_timezone]
+        safe_state_or_ack = self.state_or_ack
 
         alert_check = self.check
 
+        # candidate rules are all rules for which
+        #   (rule.tags.ids - check.tags.ids).empty?
+        # this includes generic rules, i.e. ones with no tags
+
+        # NB -- this logic will be a good candidate for having the result be
+        # cached, and regenerated any time check tags or notification rule
+        # tags change
+
+        # A generic rule in Flapjack v2 means that it applies to all checks, not
+        # just all checks the contact is separately regeistered for, as in v1.
+        # These are not automatically created for users any more, but can be
+        # deliberately configured.
+        generic_rules_ids = Flapjack::Data::NotificationRule.intersect(:is_specific => false).ids
+
+        tags_ids = alert_check.tags.ids
+        tag_notification_rules_ids = Flapjack::Data::Tag.associated_ids_for_notification_rules(*tags_ids.to_a)
+
+        notification_rules_ids = Set.new(tag_notification_rules_ids.values).flatten | generic_rules_ids
+        notification_rule_drops_ids = Flapjack::Data::NotificationRule.
+                                        associated_ids_for_drops(*notification_rules_ids)
+
+        dropped_nr_ids = Flapjack::Data::NotificationRuleDrop.
+          intersect(:id => notification_rule_drops_ids).map(&:notification_rule_id)
+
+        after_blackhole_nr_ids = notification_rules_ids - blackholed_nr_ids
+
+        return [] if after_blackhole_nr_ids.empty?
+
+        after_blackhole_nrules = Flapjack::Data::NotificationRule.find_by_ids(*after_blackhole_nr_ids)
+
+        # TODO build hash of rule by id
+
+        contact_ids = Flapjack::Data::NotificationRule.
+                        associated_ids_for_contact(*after_blackhole_nr_ids.to_a)
+
+        abnr_ids_by_contact_id = contact_ids.inject({}) do |memo, (nr_id, c_id)|
+          memo[c_id] ||= []
+          memo[c_id] << nr_id # set this to rule instead of id, useful in loop
+          memo
+        end
+
+        contacts = abnr_ids_by_contact_id.empty? ? [] :
+          Flapjack::Data::Contact.find_by_ids(*abnr_ids_by_contact_id.keys)
+
+        return [] if contacts.empty?
+
+        # TODO pass in base time from outside (cast to zone per contact), so
+        # all alerts from this notification use a consistent time
+
         contacts.inject([]) do |memo, contact|
-          matchers = matching_rules_for_contact(contact, :check => alert_check,
-            :default_timezone => default_timezone)
-          next memo if matchers.nil?
+          matchers = after_blackhole_nrules.select do |nr|
+            abnr_ids_by_contact_id[contact.id].include?(nr.id)
+          end
 
-          media_to_use = media_for_contact(contact, matchers, :check => alert_check)
-          next memo if media_to_use.nil? || media_to_use.empty?
+          log_rules(matchers, "initial")
 
-          media_to_use.each do |medium|
-            alert = alert_for_medium(medium, :check => alert_check)
-            next if alert.nil?
-            memo << alert
+          # delete any general matchers if there are more specific matchers left
+          generic = matchers.reject {|matcher| matcher.is_specific }
+
+          unless generic.empty? || (generic.size == matchers.size)
+            matchers = matchers - generic
+
+            log_rules(matchers, "after remove general if specific exist")
+          end
+
+          next memo if matchers.empty?
+
+          rule_count = matchers.size
+          timezone = contact.time_zone(:default => default_timezone)
+          matchers = matchers.select {|rule| rule.is_occurring_now?(timezone) }
+          log_rules(matchers, "after time and tags") if matchers.size != rule_count
+
+          next memo if matchers.empty?
+
+          Flapjack::Data::Medium.lock(Flapjack::Data::Check,
+                                      Flapjack::Data::ScheduledMaintenance,
+                                      Flapjack::Data::UnscheduledMaintenance,
+                                      Flapjack::Data::NotificationRuleRoute,
+                                      Flapjack::Data::NotificationBlock,
+                                      Flapjack::Data::Alert) do
+
+            # media_to_use = media_for_contact(contact, matchers, :check => alert_check)
+
+            route_ids = Flapjack::Data::NotificationRule.associated_ids_for_routes(*matchers.map(&:id))
+
+            routes = Flapjack::Data::NotificationRuleRoute.intersect(:ids => route_ids,
+              :state => [nil, safe_state_or_ack])
+
+            rule_media = routes.media
+
+            # unless logger.nil?
+            #   logger.debug "collected media_for_severity(#{self.severity}): #{rule_media.inspect}"
+            # end
+
+            final_media = rule_media.reject {|medium|
+              medium.drop_notifications?(:check => alert_check,
+                                         :state => safe_state_or_ack)
+            }
+
+            # unless logger.nil?
+            #   logger.debug "media after contact_drop?: #{final_media.collect(&:type)}"
+            # end
+
+            next memo if final_media.empty?
+
+            final_media.each do |medium|
+              alert = alert_for_medium(medium, :check => alert_check, :state => safe_state_or_ack)
+              next if alert.nil?
+              memo << alert
+            end
           end
 
           memo
@@ -110,87 +206,6 @@ module Flapjack
         end
       end
 
-      def matching_rules_for_contact(contact, options = {})
-        rules = contact.notification_rules.all
-
-        check = options[:check]
-
-        log_rules(rules, "initial")
-
-        matchers = rules.select do |rule|
-          rule.is_match?(self.check) &&
-            rule.is_occurring_now?(:contact => contact,
-              :default_timezone => options[:default_timezone])
-        end
-
-        log_rules(matchers, "after time, check and tags") if matchers.count != rules.count
-
-        # delete any general matchers if there are more specific matchers left
-        if matchers.any? {|matcher| matcher.is_specific? }
-          num_matchers = matchers.count
-          matchers.reject! {|matcher| !matcher.is_specific? }
-
-          log_rules(matchers, "after remove general if specific exist") if matchers.count != rules.count
-        end
-
-        # delete media based on blackholes
-        blackhole_matchers = matchers.inject([]) {|memo, matcher|
-          if matcher.states.intersect(:state => self.severity, :blackhole => true).count > 0
-            memo << matcher
-          end
-          memo
-        }
-
-        if blackhole_matchers.length > 0
-          log_rules(blackhole_matchers, "#{blackhole_matchers.count} blackhole matchers found - skipping")
-          return
-        elsif !logger.nil?
-          logger.debug "no blackhole matchers matched"
-        end
-
-        matchers
-      end
-
-      # return value may or may not be a Sandstorm association; i.e. collect,
-      # each, etc. methods may be used on its contained values. if nil is
-      # returned that value will be compacted away.
-      def media_for_contact(contact, matchers, opts = {})
-        contact_id = contact.id
-        media = contact.media
-
-        return media if matchers.empty?
-
-        check = opts[:check]
-
-        matcher_states = matchers.collect {|m|
-          m.states.intersect(:state => self.severity).all
-        }.flatten
-
-        rule_media = matcher_states.inject({}) do |memo, nr_state|
-          nr_state_media = nr_state.media.reject {|m| memo.has_key?(m.type) }
-          nr_state_media.each do |nrsm|
-            memo[nrsm.type] = nrsm
-          end
-          memo
-        end.values
-
-        unless logger.nil?
-          logger.debug "collected media_for_severity(#{self.severity}): #{rule_media.inspect}"
-        end
-
-        final_media = rule_media.reject {|medium|
-          medium.drop_notifications?(:check => check,
-                                     :state => state_or_ack)
-        }
-
-        unless logger.nil?
-          logger.debug "media after contact_drop?: #{final_media.collect(&:type)}"
-        end
-
-        return if final_media.empty?
-        final_media
-      end
-
       def alert_for_medium(medium, opts = {})
         rollup_type = nil
         media_type  = medium.type
@@ -201,7 +216,7 @@ module Flapjack
 
         alert_check = opts[:check]
 
-        unless (['ok', 'acknowledgement', 'test'].include?(state_or_ack)) ||
+        unless (['ok', 'acknowledgement', 'test'].include?(opts[:state])) ||
           medium.alerting_checks.exists?(alert_check.id)
 
           medium.alerting_checks << alert_check
@@ -228,7 +243,7 @@ module Flapjack
             end
 
             medium.update_sent_alert_keys(:rollup => true,
-              :delete => (['ok', 'acknowledgement'].include?(state_or_ack)))
+              :delete => (['ok', 'acknowledgement'].include?(opts[:state])))
             rollup_type = 'problem'
           elsif (alerting_checks_count + cleaned) >= medium.rollup_threshold
             # alerting checks was just cleaned such that it is now below the rollup threshold
@@ -238,12 +253,12 @@ module Flapjack
         end
 
         unless logger.nil?
-          logger.debug "rollup decisions: #{check.name} " +
-            "#{state_or_ack} #{media_type} #{medium.address} " +
+          logger.debug "rollup decisions: #{alert_check.name} " +
+            "#{opts[:state]} #{media_type} #{medium.address} " +
             "rollup_type: #{rollup_type}"
         end
 
-        alert = Flapjack::Data::Alert.new(:state => self.state_or_ack,
+        alert = Flapjack::Data::Alert.new(:state => opts[:state],
           :rollup => rollup_type, :state_duration => self.state_duration,
           :acknowledgement_duration => duration,
           :notification_type => self.type)

@@ -85,18 +85,17 @@ module Flapjack
 
       timestamp   = Time.now
       check       = notification.check
-      contacts    = check.contacts.all
+      # contacts    = check.contacts.all
 
       check_name  = check.name
 
-      if contacts.empty?
-        @logger.debug("No contacts for '#{check_name}'")
-        @notifylog.info("#{check_name} | #{notification.type} | NO CONTACTS")
-        return
-      end
+      # if contacts.empty?
+      #   @logger.debug("No contacts for '#{check_name}'")
+      #   @notifylog.info("#{check_name} | #{notification.type} | NO CONTACTS")
+      #   return
+      # end
 
-      alerts = notification.alerts(contacts,
-        :default_timezone => @default_contact_timezone,
+      alerts = notification.alerts(:default_timezone => @default_contact_timezone,
         :logger => @logger)
 
       in_unscheduled_maintenance = check.in_scheduled_maintenance?

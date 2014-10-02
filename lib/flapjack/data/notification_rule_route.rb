@@ -10,10 +10,9 @@ module Flapjack
 
       include Sandstorm::Records::RedisRecord
 
-      define_attributes :state     => :string,
-                        :blackhole => :boolean
+      define_attributes :state     => :string
 
-      index_by :state, :blackhole
+      index_by :state
 
       belongs_to :notification_rule, :class_name => 'Flapjack::Data::Notification',
         :inverse_of => :states

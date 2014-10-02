@@ -55,9 +55,7 @@ module Flapjack
               end
             end
 
-            if pagerduty_credentials_err
-              halt err(403, pagerduty_credentials_err)
-            end
+            halt err(403, pagerduty_credentials_err) unless pagerduty_credentials_err.nil?
 
             status 201
             response.headers['Location'] = "#{base_url}/pagerduty_credentials/#{pagerduty_credentials.id}"
@@ -105,9 +103,15 @@ module Flapjack
           end
 
           app.delete '/pagerduty_credentials/:id' do
-            Flapjack::Data::PagerdutyCredentials.find_by_ids!(*params[:id].split(',')).
-              map(&:destroy)
+            pagerduty_credentials_ids = params[:id].split(',')
+            pagerduty_credentials = Flapjack::Data::PagerdutyCredentials.intersect(:id => pagerduty_credentials_ids)
+            missing_ids = pagerduty_credentials_ids - pagerduty_credentials.ids
 
+            unless missing_ids.empty?
+              raise Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::PagerdutyCredentials, missing_ids)
+            end
+
+            pagerduty_credentials.destroy_all
             status 204
           end
 

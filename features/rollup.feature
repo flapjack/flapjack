@@ -7,9 +7,9 @@ Feature: Rollup on a per contact, per media basis
       | 1   | Malak      | Al-Musawi | malak@example.com | +61400000001 | Asia/Baghdad     |
 
     And the following checks exist:
-      | id  | name     | contacts |
-      | 1   | foo:ping | 1        |
-      | 2   | baz:ping | 1        |
+      | id  | name     | tags |
+      | 1   | foo:ping | ping |
+      | 2   | baz:ping | ping |
 
     And user 1 has the following notification intervals:
       | email | sms |
@@ -20,8 +20,8 @@ Feature: Rollup on a per contact, per media basis
       | 1     | 2   |
 
     And user 1 has the following notification rules:
-      | checks | unknown_media | warning_media | critical_media   |
-      |        |               | email         | sms,email        |
+      | checks | unknown_media | warning_media | critical_media   | tags |
+      |        |               | email         | sms,email        | ping |
 
   @time
   Scenario: Rollup threshold of 1 means first alert is a rollup

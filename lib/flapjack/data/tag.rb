@@ -3,7 +3,7 @@
 require 'sandstorm/records/redis_record'
 
 require 'flapjack/data/check'
-require 'flapjack/data/contact'
+require 'flapjack/data/notification_rule'
 
 module Flapjack
 
@@ -12,20 +12,16 @@ module Flapjack
     class Tag
 
       include Sandstorm::Records::RedisRecord
+      include ActiveModel::Serializers::JSON
+      self.include_root_in_json = false
 
       define_attributes :name => :string
 
       has_and_belongs_to_many :checks,
         :class_name => 'Flapjack::Data::Check', :inverse_of => :tags
 
-      has_and_belongs_to_many :contacts,
-        :class_name => 'Flapjack::Data::Contact', :inverse_of => :tags
-
       has_and_belongs_to_many :notification_rules,
         :class_name => 'Flapjack::Data::NotificationRule', :inverse_of => :tags
-
-      has_and_belongs_to_many :notifications,
-        :class_name => 'Flapjack::Data::Notification', :inverse_of => :tags
 
       unique_index_by :name
 

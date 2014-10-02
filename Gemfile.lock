@@ -1,11 +1,3 @@
-GIT
-  remote: git://github.com/flapjack/sandstorm.git
-  revision: 00949bc6b347f38646f1b3133db7072f741e361f
-  branch: master
-  specs:
-    sandstorm (0.1.0)
-      activemodel
-
 PATH
   remote: .
   specs:
@@ -26,6 +18,12 @@ PATH
       tzinfo
       tzinfo-data
       xmpp4r (>= 0.5.5)
+
+PATH
+  remote: ../sandstorm
+  specs:
+    sandstorm (0.1.0)
+      activemodel
 
 GEM
   remote: https://rubygems.org/

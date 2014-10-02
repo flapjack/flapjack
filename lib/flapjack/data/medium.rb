@@ -118,24 +118,17 @@ module Flapjack
       end
 
       def clean_alerting_checks
-        self.class.lock(Flapjack::Data::Check,
-          Flapjack::Data::ScheduledMaintenance,
-          Flapjack::Data::UnscheduledMaintenance,
-          Flapjack::Data::Contact) do
+        checks_to_remove = alerting_checks.select do |check|
+          Flapjack::Data::CheckState.ok_states.include?(check.state) ||
+          check.in_unscheduled_maintenance? ||
+          check.in_scheduled_maintenance?
+        end
 
-          checks_to_remove = alerting_checks.select do |check|
-            Flapjack::Data::CheckState.ok_states.include?(check.state) ||
-            check.in_unscheduled_maintenance? ||
-            check.in_scheduled_maintenance? ||
-            !check.contacts.ids.include?(self.contact.id)
-          end
-
-          if checks_to_remove.empty?
-            0
-          else
-            alerting_checks.delete(*checks_to_remove)
-            checks_to_remove.size
-          end
+        if checks_to_remove.empty?
+          0
+        else
+          alerting_checks.delete(*checks_to_remove)
+          checks_to_remove.size
         end
       end
 
