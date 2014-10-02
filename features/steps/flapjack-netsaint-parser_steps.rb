@@ -14,7 +14,7 @@ end
 
 Then /^I should see a valid JSON output$/ do
   expect {
-    @data = Oj.load(@output)
+    @data = Flapjack.load_json(@output)
   }.not_to raise_error
 end
 

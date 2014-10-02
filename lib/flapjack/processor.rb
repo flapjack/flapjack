@@ -129,7 +129,7 @@ module Flapjack
         redis_uri = @redis_config[:path] ||
           "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
         shutdown_redis = EM::Hiredis.connect(redis_uri)
-        shutdown_redis.rpush('events', Oj.dump('type' => 'noop'))
+        shutdown_redis.rpush('events', Flapjack.dump_json('type' => 'noop'))
       end
     end
 
@@ -151,7 +151,7 @@ module Flapjack
       entity_check = Flapjack::Data::EntityCheck.for_event_id(event.id, :create_entity => true, :redis => @redis)
       timestamp = Time.now.to_i
 
-      event.tags = (event.tags || Flapjack::Data::TagSet.new) + entity_check.tags
+      event.tags = (event.tags || Set.new) + entity_check.tags
 
       should_notify, previous_state = update_keys(event, entity_check, timestamp)
 

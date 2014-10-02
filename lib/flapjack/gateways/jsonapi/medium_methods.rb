@@ -90,7 +90,7 @@ module Flapjack
 
             status 201
             response.headers['Location'] = "#{base_url}/media/#{media_ids.join(',')}"
-            media_ids.to_json
+            Flapjack.dump_json(media_ids)
           end
 
           # get one or more media records; media ids are, for Flapjack
@@ -129,7 +129,7 @@ module Flapjack
               memo
             end
 
-            '{"media":' + media_data.to_json + '}'
+            '{"media":' + Flapjack.dump_json(media_data) + '}'
           end
 
           # update one or more media records; media ids are, for Flapjack

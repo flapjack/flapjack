@@ -4,8 +4,6 @@ require 'em-hiredis'
 require 'em-synchrony'
 require 'em-synchrony/em-http'
 
-require 'oj'
-
 require 'flapjack/data/entity_check'
 require 'flapjack/data/alert'
 require 'flapjack/redis_pool'
@@ -40,7 +38,7 @@ module Flapjack
         redis_uri = @redis_config[:path] ||
           "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
         shutdown_redis = EM::Hiredis.connect(redis_uri)
-        shutdown_redis.rpush(@config['queue'], Oj.dump('notification_type' => 'shutdown'))
+        shutdown_redis.rpush(@config['queue'], Flapjack.dump_json('notification_type' => 'shutdown'))
       end
 
       def start
@@ -67,7 +65,7 @@ module Flapjack
           event_json    = events[queue][1]
 
           begin
-            event = Oj.load(event_json)
+            event = Flapjack.load_json(event_json)
             @logger.debug("pagerduty notification event received: " + event.inspect)
 
             if 'shutdown'.eql?(event['notification_type'])
@@ -166,9 +164,9 @@ module Flapjack
       end
 
       def send_pagerduty_event(event)
-        options  = { :body => Oj.dump(event) }
+        options  = { :body => Flapjack.dump_json(event) }
         http = EM::HttpRequest.new(PAGERDUTY_EVENTS_API_URL).post(options)
-        response = Oj.load(http.response)
+        response = Flapjack.load_json(http.response)
         status   = http.response_header.status
         @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
         unless status == 200
@@ -263,7 +261,7 @@ module Flapjack
 
         http = EM::HttpRequest.new(url).get(options)
         begin
-          response = Oj.load(http.response)
+          response = Flapjack.load_json(http.response)
         rescue Oj::Error
           @logger.error("failed to parse json from a post to #{url} ... response headers and body follows...")
           return nil

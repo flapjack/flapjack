@@ -80,7 +80,7 @@ module Flapjack
 
             response.headers['Location'] = "#{request.base_url}/checks/#{check_names.join(',')}"
             status 201
-            check_names.to_json
+            Flapjack.dump_json(check_names)
           end
 
           app.patch %r{^/checks/(.+)$} do

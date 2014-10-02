@@ -7,8 +7,6 @@ require 'set'
 require 'ice_cube'
 require 'flapjack/data/entity'
 require 'flapjack/data/notification_rule'
-require 'flapjack/data/tag'
-require 'flapjack/data/tag_set'
 
 require 'securerandom'
 
@@ -17,8 +15,6 @@ module Flapjack
   module Data
 
     class Contact
-
-      include Tagged
 
       attr_accessor :id, :first_name, :last_name, :email, :media,
         :media_intervals, :media_rollup_thresholds, :pagerduty_credentials
@@ -79,10 +75,6 @@ module Flapjack
         contact = self.find_by_id(contact_id, :redis => redis)
 
         unless contact.nil?
-          if contact_data['tags'] && contact_data['tags'].respond_to?(:each)
-            contact.add_tags(*contact_data['tags'])
-          end
-
           contact.notification_rules # invoke to create general rule
         end
 
@@ -116,12 +108,6 @@ module Flapjack
 
       def update(contact_data)
         self.class.add_or_update(@id, contact_data, :redis => @redis)
-
-        if contact_data['tags'] && contact_data['tags'].respond_to?(:each)
-          self.delete_tags(*self.tags.to_a)
-          self.add_tags(*contact_data['tags'])
-        end
-
         self.refresh
       end
 
@@ -141,9 +127,6 @@ module Flapjack
         # list all alerts from all matched keys, remove them from
         # the main alerts sorted set, remove all alerts_by sorted sets
         # for the contact
-
-        # remove this contact from all tags it's marked with
-        self.delete_tags(*self.tags.to_a)
 
         # remove all associated notification rules
         self.notification_rules.each do |nr|
@@ -266,8 +249,8 @@ module Flapjack
           rule = self.add_notification_rule({
               :entities           => [],
               :regex_entities     => [],
-              :tags               => Flapjack::Data::TagSet.new([]),
-              :regex_tags         => Flapjack::Data::TagSet.new([]),
+              :tags               => Set.new([]),
+              :regex_tags         => Set.new([]),
               :time_restrictions  => [],
               :warning_media      => ALL_MEDIA,
               :critical_media     => ALL_MEDIA,
@@ -471,32 +454,20 @@ module Flapjack
         end
       end
 
-      def to_json(*args)
-        { "id"                      => self.id,
-          "first_name"              => self.first_name,
-          "last_name"               => self.last_name,
-          "email"                   => self.email,
-          "media"                   => self.media,
-          "media_intervals"         => self.media_intervals,
-          "media_rollup_thresholds" => self.media_rollup_thresholds,
-          "timezone"                => self.timezone.name,
-          "tags"                    => self.tags.to_a.sort
-        }.to_json
-      end
-
       def to_jsonapi(opts = {})
-        { "id"                    => self.id,
+        json_data = {
+          "id"                    => self.id,
           "first_name"            => self.first_name,
           "last_name"             => self.last_name,
           "email"                 => self.email,
           "timezone"              => self.timezone.name,
-          "tags"                  => self.tags.to_a.sort,
           "links"                 => {
             :entities               => opts[:entity_ids]          || [],
             :media                  => self.media_ids             || [],
             :notification_rules     => self.notification_rule_ids || [],
           }
-        }.to_json
+        }
+        Flapjack.dump_json(json_data)
       end
 
     private

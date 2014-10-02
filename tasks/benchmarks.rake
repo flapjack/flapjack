@@ -1,5 +1,4 @@
 require 'redis'
-require 'oj'
 require 'time'
 
 # add lib to the default include path
@@ -36,7 +35,7 @@ namespace :benchmarks do
 
   desc "nukes the redis db, generates the events, runs and shuts down flapjack, generates perftools reports"
   task :run => [:setup, :reset_redis, :benchmark, :run_flapjack, :reports] do
-    puts Oj.dump(@benchmark_data, :indent => 2)
+    puts Flapjack.dump_json(@benchmark_data, :indent => 2)
   end
 
   desc "reset the redis database"
@@ -76,7 +75,7 @@ namespace :benchmarks do
     @benchmark_data = { 'events_created'   => @events_created,
                         'flapjack_runtime' => @timer_flapjack,
                         'processing_rate'  => @events_created.to_f / @timer_flapjack }.merge(@benchmark_parameters)
-    bytes_written = IO.write('artifacts/benchmark_data.json', Oj.dump(@benchmark_data, :indent => 2))
+    bytes_written = IO.write('artifacts/benchmark_data.json', Flapjack.dump_json(@benchmark_data, :indent => 2))
     puts "benchmark data written to artifacts/benchmark_data.json (#{bytes_written} bytes)"
 
     if system("pprof.rb --text artifacts/flapjack-perftools-cpuprofile > artifacts/flapjack-perftools-cpuprofile.txt")

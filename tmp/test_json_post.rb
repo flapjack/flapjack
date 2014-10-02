@@ -2,8 +2,7 @@
 
 require 'httparty'
 
-require 'oj'
-Oj.default_options = { :indent => 0, :mode => :strict }
+require 'flapjack'
 
 @payload ={
     "email" => "phil@gmail.com",
@@ -14,5 +13,7 @@ Oj.default_options = { :indent => 0, :mode => :strict }
     "auto_action" => "true"
  }
 
-HTTParty.post( 'http://localhost:4091/notification_rules', :body => Oj.dump(@payload), :options => { :headers => { 'ContentType' => 'application/json' } })
+HTTParty.post( 'http://localhost:4091/notification_rules',
+               :body => Flapjack.dump_json(@payload),
+               :options => { :headers => { 'ContentType' => 'application/json' } })
 
