@@ -328,23 +328,16 @@ module Flapjack
         puts "Done."
       end
 
-
       def mirror_receive(opts)
         unless opts[:follow] || opts[:all]
           exit_now! "one or both of --follow or --all is required"
         end
 
-        source_redis = Redis.new(:url => opts[:source])
+        source_addr = opts[:source]
 
-        # refresh the key name cache, avoid repeated calls to redis KEYS
-        # this cache will be updated any time a new archive bucket is created
-        archive_keys = source_redis.keys("events_archive:*").group_by do |ak|
-          (source_redis.scard(ak) > 0) ? 't' : 'f'
-        end
+        source_redis = Redis.new(:url => source_addr)
 
-        source_redis.srem('known_events_archive_keys', archive_keys['f']) unless archive_keys['f'].empty?
-        source_redis.sadd('known_events_archive_keys', archive_keys['t']) unless archive_keys['t'].empty?
-
+        refresh_archive_index(source_addr, :redis => source_redis)
         archives = mirror_get_archive_keys_stats(source_redis)
         raise "found no archives!" if archives.empty?
 
@@ -359,57 +352,69 @@ module Flapjack
         events_sent = 0
         case
         when opts[:all]
-          archive_key = archives[0][:name]
+          archive_idx = 0
           cursor      = -1
         when opts[:last], opts[:time]
           raise "Sorry, unimplemented"
         else
           # wait for the next event to be archived, so point the cursor at a non-existant
           # slot in the list, the one before the 0'th
-          archive_key = archives[-1][:name]
+          archive_idx = archives.size - 1
           cursor      = -1 - archives[-1][:size]
         end
 
+        archive_key = archives[archive_idx][:name]
         puts archive_key
 
         loop do
-          new_archive_key = false
-          # something to read at cursor?
           event = source_redis.lindex(archive_key, cursor)
           if event
             Flapjack::Data::Event.add(event, :redis => redis)
             events_sent += 1
             print "#{events_sent} " if events_sent % 1000 == 0
             cursor -= 1
-          else
-            puts "\narchive key: #{archive_key}, cursor: #{cursor}"
-            # do we need to look at the next archive bucket?
-            archives = mirror_get_archive_keys_stats(source_redis)
-
-            unless archives.empty?
-              i = archives.index {|a| a[:name] == archive_key } || 0
-
-              if ((archives[i][:size] == (cursor.abs + 1)) || (archives[i][:size] == 0))
-                if archives[i + 1].nil?
-                  return unless opts[:follow]
-                else
-                  archive_key = archives[i + 1][:name]
-                  puts archive_key
-                  cursor = -1
-                  new_archive_key = true
-                end
-              end
-            end
-            sleep 1 unless new_archive_key
+            next
           end
+
+          archives = mirror_get_archive_keys_stats(source_addr, :redis => source_redis)
+
+          if archives.any? {|a| a[:size] == 0}
+            # data may be out of date -- refresh, then reject any immediately
+            # expired keys directly; don't keep chasing updated data
+            refresh_archive_index(source_addr, :redis => source_redis)
+            archives = mirror_get_archive_keys_stats(source_addr, :redis => source_redis).select {|a| a[:size] > 0}
+          end
+
+          if archives.empty?
+            sleep 1
+            next
+          end
+
+          archive_idx = archives.index {|a| a[:name] == archive_key }
+          archive_idx = archive_idx.nil? ? 0 : (archive_idx + 1)
+          archive_key = archives[archive_idx][:name]
+          puts archive_key
+          cursor = -1
         end
       end
 
-      def mirror_get_archive_keys_stats(source_redis)
-        source_redis.smembers('known_events_archive_keys').sort.map {|eak|
-          { :name => eak,
-            :size => source_redis.llen(eak) }
-        }
+      def mirror_get_archive_keys_stats(name, opts = {})
+        source_redis = opts[:redis]
+        redis.smembers("known_events_archive_keys:#{name}").sort.collect do |eak|
+          {:name => eak, :size =>  source_redis.llen(eak)}
+        end
+      end
+
+      def refresh_archive_index(name, opts = {})
+        source_redis = opts[:redis]
+        # refresh the key name cache, avoid repeated calls to redis KEYS
+        # this cache will be updated any time a new archive bucket is created
+        archive_keys = source_redis.keys("events_archive:*").group_by do |ak|
+          (source_redis.scard(ak) > 0) ? 't' : 'f'
+        end
+
+        redis.srem("known_events_archive_keys:#{name}", archive_keys['f']) unless archive_keys['f'].empty?
+        redis.sadd("known_events_archive_keys:#{name}", archive_keys['t']) unless archive_keys['t'].empty?
       end
 
     end
