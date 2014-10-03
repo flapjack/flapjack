@@ -410,7 +410,7 @@ module Flapjack
         # refresh the key name cache, avoid repeated calls to redis KEYS
         # this cache will be updated any time a new archive bucket is created
         archive_keys = source_redis.keys("events_archive:*").group_by do |ak|
-          (source_redis.scard(ak) > 0) ? 't' : 'f'
+          (source_redis.llen(ak) > 0) ? 't' : 'f'
         end
 
         redis.srem("known_events_archive_keys:#{name}", archive_keys['f']) unless archive_keys['f'].empty?
