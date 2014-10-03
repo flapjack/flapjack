@@ -335,7 +335,7 @@ module Flapjack
         source_redis = Redis.new(:url => source_addr, :driver => :hiredis)
 
         refresh_archive_index(source_addr, :redis => source_redis)
-        archives = mirror_get_archive_keys_stats(source_redis)
+        archives = mirror_get_archive_keys_stats(source_addr, :redis => source_redis)
         raise "found no archives!" if archives.empty?
 
         puts "found archives: #{archives.inspect}"
@@ -398,7 +398,7 @@ module Flapjack
       def mirror_get_archive_keys_stats(name, opts = {})
         source_redis = opts[:redis]
         redis.smembers("known_events_archive_keys:#{name}").sort.collect do |eak|
-          {:name => eak, :size =>  source_redis.llen(eak)}
+          {:name => eak, :size => source_redis.llen(eak)}
         end
       end
 
