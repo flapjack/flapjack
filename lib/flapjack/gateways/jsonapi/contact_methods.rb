@@ -45,7 +45,7 @@ module Flapjack
             missing_ids = contacts_by_id.select {|k, v| v.nil? }.keys
             unless missing_ids.empty?
               semaphore.release
-              halt(404, "Contacts with ids #{missing_ids.join(', ')} were not found")
+              raise Flapjack::Gateways::JSONAPI::ContactsNotFound.new(missing_ids)
             end
 
             block.call(contacts_by_id.select {|k, v| !v.nil? }.values)
@@ -93,7 +93,7 @@ module Flapjack
 
             response.headers['Location'] = "#{base_url}/contacts/#{contact_ids.join(',')}"
             status 201
-            contact_ids.to_json
+            Flapjack.dump_json(contact_ids)
           end
 
           # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contacts/2) contact(s)

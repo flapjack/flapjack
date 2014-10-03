@@ -90,8 +90,10 @@ describe Flapjack::Data::NotificationRule, :redis => true do
 
   it "generates a JSON string representing its data" do
     rule = existing_rule
-    # bit of extra hackery for the inserted ID values
-    expect(rule.to_json).to eq({:id => rule.id}.merge(rule_data).to_json)
+    # bit of extra hackery for the ID values
+    munged = {:id => rule.id}.merge(rule_data)
+    munged[:links] = {:contacts => [munged.delete(:contact_id)]}
+    expect(rule.to_jsonapi).to eq(Flapjack.dump_json(munged))
   end
 
   it "checks whether entity names match" do

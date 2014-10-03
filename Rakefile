@@ -8,6 +8,7 @@ require 'fileutils'
 require 'rake'
 
 require 'resque/tasks'
+require 'pact/tasks'
 
 Dir['tasks/**/*.rake'].each { |t| load t }
 

@@ -320,7 +320,7 @@ describe Flapjack::Data::Event do
       expect(event.time).to eq(event_data['time'])
       expect(event.id).to eq('xyz-example.com:ping')
       expect(event.type).to eq('service')
-      expect(event.tags).to be_an_instance_of(Flapjack::Data::TagSet)
+      expect(event.tags).to be_an_instance_of(Set)
       expect(event.tags).to include('dev')
       expect(event.tags).to_not include('prod')
 

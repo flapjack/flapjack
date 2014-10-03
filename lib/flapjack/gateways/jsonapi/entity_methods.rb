@@ -92,7 +92,7 @@ module Flapjack
 
             response.headers['Location'] = "#{request.base_url}/entities/#{entity_ids.join(',')}"
             status 201
-            entity_ids.to_json
+            Flapjack.dump_json(entity_ids)
           end
 
           app.patch '/entities/:id' do

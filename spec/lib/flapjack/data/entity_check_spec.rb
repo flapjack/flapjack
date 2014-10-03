@@ -1,8 +1,6 @@
 require 'spec_helper'
 
-require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
-require 'flapjack/data/tag_set'
 
 describe Flapjack::Data::EntityCheck, :redis => true do
 
@@ -1404,7 +1402,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec = Flapjack::Data::EntityCheck.for_entity_name('foo-app-01.example.com', 'Disk / Utilisation', :create_entity => true, :redis => @redis)
     tags = ec.tags
     expect(tags).not_to be_nil
-    expect(tags).to be_a(Flapjack::Data::TagSet)
+    expect(tags).to be_a(Set)
     expect(['foo-app-01', 'example.com', 'disk', '/', 'utilisation'].to_set.subset?(tags)).to be true
   end
 

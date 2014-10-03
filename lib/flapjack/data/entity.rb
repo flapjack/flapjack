@@ -2,9 +2,8 @@
 
 require 'securerandom'
 
-require 'flapjack/tagged'
-
 require 'flapjack/data/contact'
+require 'flapjack/data/tagged'
 
 module Flapjack
 
@@ -513,18 +512,6 @@ module Flapjack
         }.sort
       end
 
-      # # Not used anywhere
-      # def self.find_all_with_tags(tags, options = {})
-      #   raise "Redis connection not set" unless redis = options[:redis]
-      #   tags_prefixed = tags.collect {|tag|
-      #     "#{TAG_PREFIX}:#{tag}"
-      #   }
-      #   logger.debug "tags_prefixed: #{tags_prefixed.inspect}" if logger = options[:logger]
-      #   Flapjack::Data::Tag.find_intersection(tags_prefixed, :redis => redis).collect {|entity_id|
-      #     Flapjack::Data::Entity.find_by_id(entity_id, :redis => redis)
-      #   }.compact
-      # end
-
       def self.current_names(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         redis.zrange('current_entities', 0, -1)
@@ -581,22 +568,23 @@ module Flapjack
         checks.length
       end
 
-      def as_json(*args)
-        {
-          "id"    => self.id,
-          "name"  => self.name,
-        }
-      end
+      # def as_json(*args)
+      #   {
+      #     "id"    => self.id,
+      #     "name"  => self.name,
+      #   }
+      # end
 
       def to_jsonapi(opts = {})
-        {
+        json_data = {
           "id"        => self.id,
           "name"      => self.name,
           "links"     => {
             :contacts  => opts[:contact_ids] || [],
             :checks    => opts[:check_ids]   || [],
           }
-        }.to_json
+        }
+        Flapjack.dump_json(json_data)
       end
 
     private

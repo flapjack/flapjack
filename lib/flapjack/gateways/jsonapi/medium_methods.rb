@@ -42,8 +42,8 @@ module Flapjack
 
               contact_id = $1
               media_type = $2
-              halt err(422, "Could not get contact_id from media_id") if contact_id.nil?
-              halt err(422, "Could not get media type from media_id") if media_type.nil?
+              halt err(422, "Could not get contact_id from media_id '#{m_id}'") if contact_id.nil?
+              halt err(422, "Could not get media type from media_id '#{m_id}'") if media_type.nil?
 
               contact_cache[contact_id] ||= find_contact(contact_id)
 
@@ -65,15 +65,17 @@ module Flapjack
               halt err(422, "No valid media were submitted")
             end
 
-            unless media_data.all? {|m| m['id'].nil? }
-              halt err(422, "Media creation cannot include IDs")
+            media_id_re = /^#{params[:contact_id]}_(?:#{Flapjack::Data::Contact::ALL_MEDIA.join('|')}$)/
+
+            unless media_data.all? {|m| m['id'].nil? || media_id_re === m['id'] }
+              halt err(422, "Media creation cannot include non-conformant IDs")
             end
 
             semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
             contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
             if contact.nil?
               semaphore.release
-              halt err(422, "Contact id:'#{params[:contact_id]}' could not be loaded")
+              halt err(422, "Contact id: '#{params[:contact_id]}' could not be loaded")
             end
 
             media_data.each do |medium_data|
@@ -90,7 +92,7 @@ module Flapjack
 
             status 201
             response.headers['Location'] = "#{base_url}/media/#{media_ids.join(',')}"
-            media_ids.to_json
+            Flapjack.dump_json(media_ids)
           end
 
           # get one or more media records; media ids are, for Flapjack
@@ -115,19 +117,21 @@ module Flapjack
               media_list_cache[contact.id] ||= contact.media_list
               if media_list_cache[contact.id].include?(media_type)
                 medium_id = "#{contact.id}_#{media_type}"
+                int = contact.media_intervals[media_type]
+                rut = contact.media_rollup_thresholds[media_type]
                 memo <<
                   {:id               => medium_id,
                    :type             => media_type,
                    :address          => contact.media[media_type],
-                   :interval         => contact.media_intervals[media_type],
-                   :rollup_threshold => contact.media_rollup_thresholds[media_type],
+                   :interval         => int.nil? ? nil : int.to_i,
+                   :rollup_threshold => rut.nil? ? nil : rut.to_i,
                    :links            => {:contacts => [contact.id]}}
               end
 
               memo
             end
 
-            '{"media":' + media_data.to_json + '}'
+            '{"media":' + Flapjack.dump_json(media_data) + '}'
           end
 
           # update one or more media records; media ids are, for Flapjack
