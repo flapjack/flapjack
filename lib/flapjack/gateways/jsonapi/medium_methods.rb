@@ -65,8 +65,10 @@ module Flapjack
               halt err(422, "No valid media were submitted")
             end
 
-            unless media_data.all? {|m| m['id'].nil? }
-              halt err(422, "Media creation cannot include IDs")
+            media_id_re = /^#{params[:contact_id]}_(?:#{Flapjack::Data::Contact::ALL_MEDIA.join('|')}$)/
+
+            unless media_data.all? {|m| m['id'].nil? || media_id_re === m['id'] }
+              halt err(422, "Media creation cannot include non-conformant IDs")
             end
 
             semaphore = obtain_semaphore(SEMAPHORE_CONTACT_MASS_UPDATE)
