@@ -410,8 +410,10 @@ module Flapjack
           (source_redis.llen(ak) > 0) ? 't' : 'f'
         end
 
-        redis.srem("known_events_archive_keys:#{name}", archive_keys['f']) unless archive_keys['f'].empty?
-        redis.sadd("known_events_archive_keys:#{name}", archive_keys['t']) unless archive_keys['t'].empty?
+        {'f' => :srem, 't' => :sadd}.each_pair do |k, cmd|
+          next unless archive_keys.has_key?(k) && !archive_keys[k].empty?
+          redis.send(cmd, "known_events_archive_keys:#{name}", archive_keys[k])
+        end
       end
 
     end
