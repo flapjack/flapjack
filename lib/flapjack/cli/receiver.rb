@@ -2,6 +2,7 @@
 
 require 'dante'
 require 'redis'
+require 'hiredis'
 
 require 'oj'
 Oj.default_options = { :indent => 0, :mode => :strict }
@@ -117,7 +118,7 @@ module Flapjack
       private
 
       def redis
-        @redis ||= Redis.new(@redis_options)
+        @redis ||= Redis.new(@redis_options.merge(:driver => :hiredis))
       end
 
       def runner(type)
@@ -298,7 +299,6 @@ module Flapjack
       end
 
       def json_feeder(opts = {})
-
         input = if opts[:from]
           File.open(opts[:from]) # Explodes if file does not exist.
         elsif $stdin.tty?
@@ -335,7 +335,7 @@ module Flapjack
 
         source_addr = opts[:source]
 
-        source_redis = Redis.new(:url => source_addr)
+        source_redis = Redis.new(:url => source_addr, :driver => :hiredis)
 
         refresh_archive_index(source_addr, :redis => source_redis)
         archives = mirror_get_archive_keys_stats(source_redis)
