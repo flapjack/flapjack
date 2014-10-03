@@ -389,9 +389,14 @@ module Flapjack
 
           archive_idx = archives.index {|a| a[:name] == archive_key }
           archive_idx = archive_idx.nil? ? 0 : (archive_idx + 1)
-          archive_key = archives[archive_idx][:name]
-          puts archive_key
-          cursor = -1
+          if archives[archive_idx]
+            archive_key = archives[archive_idx][:name]
+            puts archive_key
+            cursor = -1
+          else
+            break unless opts[:follow]
+            sleep 1
+          end
         end
       end
 
