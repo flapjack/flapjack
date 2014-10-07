@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.9.5 - 2014-10-08
+- Bug: fix api_url handling in the web ui (@jessereynolds)
+
 # 0.9.4 - 2014-09-21
 - Bug: crash in pagerduty gateway when failing entities have no id #593 (@jessereynolds)
 - Bug: bugfix for updating rule data without contact_ids (no-issue) (@ali-graham)
