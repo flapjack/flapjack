@@ -88,7 +88,6 @@ module Flapjack
             raw = redis.rpoplpush(queue, archive_dest)
             return unless raw
           end
-          redis.sadd("known_events_archive_keys", archive_dest)
         else
           if options[:block]
             raw = redis.brpop(queue, 0)[1]
