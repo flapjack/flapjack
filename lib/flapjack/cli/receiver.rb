@@ -18,11 +18,14 @@ module Flapjack
         @global_options = global_options
         @options = options
 
-        if 'mirror'.eql?(@options[:type])
+        @config = Flapjack::Configuration.new
+
+        if 'mirror'.eql?(@options[:type]) &&
+          (global_options[:config].nil? || global_options[:config].strip.empty?)
+
           @config_env = {}
           @config_runner = {}
         else
-          @config = Flapjack::Configuration.new
           @config.load(global_options[:config])
           @config_env = @config.all
 
@@ -116,7 +119,14 @@ module Flapjack
       end
 
       def mirror
-        mirror_receive(:source => @options[:source], :dest => @options[:dest],
+        if (@options[:dest].nil? || @options[:dest].strip.empty?) &&
+          @redis_options.nil?
+
+          exit_now! "No destination redis URL passed, and none configured"
+        end
+
+        mirror_receive(:source => @options[:source],
+          :dest => @options[:dest] || @redis_options,
           :include => @options[:include], :all => @options[:all],
           :follow => @options[:follow], :last => @options[:last],
           :time => @options[:time])
@@ -341,10 +351,12 @@ module Flapjack
         end
 
         include_re = nil
-        begin
-          include_re = Regexp.new(opts[:include].strip)
-        rescue RegexpError
-          exit_now! "could not parse include Regexp: #{opts[:include].strip}"
+        unless opts[:include].nil? || opts[:include].strip.empty?
+          begin
+            include_re = Regexp.new(opts[:include].strip)
+          rescue RegexpError
+            exit_now! "could not parse include Regexp: #{opts[:include].strip}"
+          end
         end
 
         source_addr = opts[:source]
@@ -387,7 +399,9 @@ module Flapjack
           event_json = source_redis.lindex(archive_key, cursor)
           if event_json
             event = Flapjack::Data::Event.parse_and_validate(event_json)
-            if !event.nil? && (include_re === "#{event['entity']}:#{event['check']}")
+            if !event.nil? && (include_re.nil? ||
+              (include_re === "#{event['entity']}:#{event['check']}"))
+
               Flapjack::Data::Event.add(event, :redis => dest_redis)
               events_sent += 1
               print "#{events_sent} " if events_sent % 1000 == 0
@@ -434,7 +448,7 @@ module Flapjack
       end
 
       def refresh_archive_index(name, opts = {})
-        source_redis = opts[:redis]
+        source_redis = opts[:source]
         dest_redis   = opts[:dest]
         # refresh the key name cache, avoid repeated calls to redis KEYS
         # this cache will be updated any time a new archive bucket is created
@@ -648,11 +662,9 @@ command :receiver do |receiver|
     mirror.flag     [:s, 'source'], :desc => 'URL of source redis database, e.g. redis://localhost:6379/0',
       :required => true
 
-    mirror.flag     [:d, 'dest'],   :desc => 'URL of destination redis database, e.g. redis://localhost:6379/1',
-      :required => true
+    mirror.flag     [:d, 'dest'],   :desc => 'URL of destination redis database, e.g. redis://localhost:6379/1'
 
-    mirror.flag     [:i, 'include'], :desc => 'Regexp which must match event id for it to be mirrored',
-      :required => true
+    mirror.flag     [:i, 'include'], :desc => 'Regexp which must match event id for it to be mirrored'
 
     # one or both of follow, all is required
     mirror.switch   [:f, 'follow'], :desc => 'keep reading events as they are archived on the source',
