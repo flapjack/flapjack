@@ -5,7 +5,7 @@ describe Flapjack::Data::Event do
 
   let(:entity_name) { 'xyz-example.com' }
   let(:check)       { 'ping' }
-  let(:mock_redis)  { double(::Redis) }
+  let(:redis)       { double(::Redis) }
 
   let!(:time) { Time.now}
 
@@ -25,66 +25,66 @@ describe Flapjack::Data::Event do
   context 'class' do
 
     it "returns the next event (blocking, archiving)" do
-      expect(mock_redis).to receive(:brpoplpush).
+      expect(redis).to receive(:brpoplpush).
         with('events', /^events_archive:/, 0).and_return(event_data.to_json)
-      expect(mock_redis).to receive(:expire)
+      expect(redis).to receive(:expire)
 
       result = Flapjack::Data::Event.next('events', :block => true,
-        :archive_events => true, :redis => mock_redis)
+        :archive_events => true, :redis => redis)
       expect(result).to be_an_instance_of(Flapjack::Data::Event)
     end
 
     it "returns the next event (blocking, not archiving)" do
-      expect(mock_redis).to receive(:brpop).with('events', 0).
+      expect(redis).to receive(:brpop).with('events', 0).
         and_return(['events', event_data.to_json])
 
       result = Flapjack::Data::Event.next('events',:block => true,
-        :archive_events => false, :redis => mock_redis)
+        :archive_events => false, :redis => redis)
       expect(result).to be_an_instance_of(Flapjack::Data::Event)
     end
 
     it "returns the next event (non-blocking, archiving)" do
-      expect(mock_redis).to receive(:rpoplpush).
+      expect(redis).to receive(:rpoplpush).
         with('events', /^events_archive:/).and_return(event_data.to_json)
-      expect(mock_redis).to receive(:expire)
+      expect(redis).to receive(:expire)
 
       result = Flapjack::Data::Event.next('events', :block => false,
-        :archive_events => true, :redis => mock_redis)
+        :archive_events => true, :redis => redis)
       expect(result).to be_an_instance_of(Flapjack::Data::Event)
     end
 
     it "returns the next event (non-blocking, not archiving)" do
-      expect(mock_redis).to receive(:rpop).with('events').
+      expect(redis).to receive(:rpop).with('events').
         and_return(event_data.to_json)
 
       result = Flapjack::Data::Event.next('events', :block => false,
-        :archive_events => false, :redis => mock_redis)
+        :archive_events => false, :redis => redis)
       expect(result).to be_an_instance_of(Flapjack::Data::Event)
     end
 
     it "rejects invalid event JSON (archiving)" do
       bad_event_json = '{{{'
-      expect(mock_redis).to receive(:brpoplpush).
+      expect(redis).to receive(:brpoplpush).
         with('events', /^events_archive:/, 0).and_return(bad_event_json)
-      expect(mock_redis).to receive(:multi)
-      expect(mock_redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
-      expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
-      expect(mock_redis).to receive(:exec)
-      expect(mock_redis).to receive(:expire)
+      expect(redis).to receive(:multi)
+      expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
+      expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+      expect(redis).to receive(:exec)
+      expect(redis).to receive(:expire)
 
       result = Flapjack::Data::Event.next('events', :block => true,
-        :archive_events => true, :redis => mock_redis)
+        :archive_events => true, :redis => redis)
       expect(result).to be_nil
     end
 
     it "rejects invalid event JSON (not archiving)" do
       bad_event_json = '{{{'
-      expect(mock_redis).to receive(:brpop).with('events', 0).
+      expect(redis).to receive(:brpop).with('events', 0).
         and_return(['events', bad_event_json])
-      expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+      expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
 
       result = Flapjack::Data::Event.next('events', :block => true,
-        :archive_events => false, :redis => mock_redis)
+        :archive_events => false, :redis => redis)
       expect(result).to be_nil
     end
 
@@ -94,16 +94,16 @@ describe Flapjack::Data::Event do
         bad_event_data = event_data.clone
         bad_event_data.delete(required_key)
         bad_event_json = bad_event_data.to_json
-        expect(mock_redis).to receive(:brpoplpush).
+        expect(redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(bad_event_json)
-        expect(mock_redis).to receive(:multi)
-        expect(mock_redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
-        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
-        expect(mock_redis).to receive(:exec)
-        expect(mock_redis).to receive(:expire)
+        expect(redis).to receive(:multi)
+        expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
+        expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+        expect(redis).to receive(:exec)
+        expect(redis).to receive(:expire)
 
         result = Flapjack::Data::Event.next('events', :block => true,
-          :archive_events => true, :redis => mock_redis)
+          :archive_events => true, :redis => redis)
         expect(result).to be_nil
       end
 
@@ -111,12 +111,12 @@ describe Flapjack::Data::Event do
         bad_event_data = event_data.clone
         bad_event_data.delete(required_key)
         bad_event_json = bad_event_data.to_json
-        expect(mock_redis).to receive(:brpop).with('events', 0).
+        expect(redis).to receive(:brpop).with('events', 0).
           and_return(['events', bad_event_json])
-        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+        expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
 
         result = Flapjack::Data::Event.next('events', :block => true,
-          :archive_events => false, :redis => mock_redis)
+          :archive_events => false, :redis => redis)
         expect(result).to be_nil
       end
 
@@ -124,16 +124,16 @@ describe Flapjack::Data::Event do
         bad_event_data = event_data.clone
         bad_event_data[required_key] = {'hello' => 'there'}
         bad_event_json = bad_event_data.to_json
-        expect(mock_redis).to receive(:brpoplpush).
+        expect(redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(bad_event_json)
-        expect(mock_redis).to receive(:multi)
-        expect(mock_redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
-        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
-        expect(mock_redis).to receive(:exec)
-        expect(mock_redis).to receive(:expire)
+        expect(redis).to receive(:multi)
+        expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
+        expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+        expect(redis).to receive(:exec)
+        expect(redis).to receive(:expire)
 
         result = Flapjack::Data::Event.next('events', :block => true,
-          :archive_events => true, :redis => mock_redis)
+          :archive_events => true, :redis => redis)
         expect(result).to be_nil
       end
 
@@ -141,12 +141,12 @@ describe Flapjack::Data::Event do
         bad_event_data = event_data.clone
         bad_event_data[required_key] = {'hello' => 'there'}
         bad_event_json = bad_event_data.to_json
-        expect(mock_redis).to receive(:brpop).with('events', 0).
+        expect(redis).to receive(:brpop).with('events', 0).
           and_return(['events', bad_event_json])
-        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+        expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
 
         result = Flapjack::Data::Event.next('events', :block => true,
-          :archive_events => false, :redis => mock_redis)
+          :archive_events => false, :redis => redis)
         expect(result).to be_nil
       end
     end
@@ -156,16 +156,16 @@ describe Flapjack::Data::Event do
         bad_event_data = event_data.clone
         bad_event_data[optional_key] = {'hello' => 'there'}
         bad_event_json = bad_event_data.to_json
-        expect(mock_redis).to receive(:brpoplpush).
+        expect(redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(bad_event_json)
-        expect(mock_redis).to receive(:multi)
-        expect(mock_redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
-        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
-        expect(mock_redis).to receive(:exec)
-        expect(mock_redis).to receive(:expire)
+        expect(redis).to receive(:multi)
+        expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
+        expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+        expect(redis).to receive(:exec)
+        expect(redis).to receive(:expire)
 
         result = Flapjack::Data::Event.next('events', :block => true,
-          :archive_events => true, :redis => mock_redis)
+          :archive_events => true, :redis => redis)
         expect(result).to be_nil
       end
 
@@ -173,12 +173,12 @@ describe Flapjack::Data::Event do
         bad_event_data = event_data.clone
         bad_event_data[optional_key] = {'hello' => 'there'}
         bad_event_json = bad_event_data.to_json
-        expect(mock_redis).to receive(:brpop).with('events', 0).
+        expect(redis).to receive(:brpop).with('events', 0).
           and_return(['events', bad_event_json])
-        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+        expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
 
         result = Flapjack::Data::Event.next('events', :block => true,
-          :archive_events => false, :redis => mock_redis)
+          :archive_events => false, :redis => redis)
         expect(result).to be_nil
       end
     end
@@ -188,23 +188,23 @@ describe Flapjack::Data::Event do
       it "it matches case-insensitively for #{key} (archiving)" do
         case_event_data = event_data.clone
         case_event_data[key] = event_data[key].upcase
-        expect(mock_redis).to receive(:brpoplpush).
+        expect(redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(case_event_data.to_json)
-        expect(mock_redis).to receive(:expire)
+        expect(redis).to receive(:expire)
 
         result = Flapjack::Data::Event.next('events', :block => true,
-          :archive_events => true, :redis => mock_redis)
+          :archive_events => true, :redis => redis)
         expect(result).to be_an_instance_of(Flapjack::Data::Event)
       end
 
       it "it matches case-insensitively for #{key} (not archiving)" do
         case_event_data = event_data.clone
         case_event_data[key] = event_data[key].upcase
-        expect(mock_redis).to receive(:brpop).with('events', 0).
+        expect(redis).to receive(:brpop).with('events', 0).
           and_return(['events', case_event_data.to_json])
 
         result = Flapjack::Data::Event.next('events',:block => true,
-          :archive_events => false, :redis => mock_redis)
+          :archive_events => false, :redis => redis)
         expect(result).to be_an_instance_of(Flapjack::Data::Event)
       end
     end
@@ -214,23 +214,23 @@ describe Flapjack::Data::Event do
       it "it accepts an event with a numeric #{key} key (archiving)" do
         num_event_data = event_data.clone
         num_event_data[key] = event_data[key].to_i.to_s
-        expect(mock_redis).to receive(:brpoplpush).
+        expect(redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(num_event_data.to_json)
-        expect(mock_redis).to receive(:expire)
+        expect(redis).to receive(:expire)
 
         result = Flapjack::Data::Event.next('events', :block => true,
-          :archive_events => true, :redis => mock_redis)
+          :archive_events => true, :redis => redis)
         expect(result).to be_an_instance_of(Flapjack::Data::Event)
       end
 
       it "it accepts an event with a numeric #{key} key (not archiving)" do
         num_event_data = event_data.clone
         num_event_data[key] = event_data[key].to_i.to_s
-        expect(mock_redis).to receive(:brpop).with('events', 0).
+        expect(redis).to receive(:brpop).with('events', 0).
           and_return(['events', num_event_data.to_json])
 
         result = Flapjack::Data::Event.next('events',:block => true,
-          :archive_events => false, :redis => mock_redis)
+          :archive_events => false, :redis => redis)
         expect(result).to be_an_instance_of(Flapjack::Data::Event)
       end
 
@@ -238,16 +238,16 @@ describe Flapjack::Data::Event do
         bad_event_data = event_data.clone
         bad_event_data[key] = 'NaN'
         bad_event_json = bad_event_data.to_json
-        expect(mock_redis).to receive(:brpoplpush).
+        expect(redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(bad_event_json)
-        expect(mock_redis).to receive(:multi)
-        expect(mock_redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
-        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
-        expect(mock_redis).to receive(:exec)
-        expect(mock_redis).to receive(:expire)
+        expect(redis).to receive(:multi)
+        expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
+        expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+        expect(redis).to receive(:exec)
+        expect(redis).to receive(:expire)
 
         result = Flapjack::Data::Event.next('events', :block => true,
-          :archive_events => true, :redis => mock_redis)
+          :archive_events => true, :redis => redis)
         expect(result).to be_nil
       end
 
@@ -255,12 +255,12 @@ describe Flapjack::Data::Event do
         bad_event_data = event_data.clone
         bad_event_data[key] = 'NaN'
         bad_event_json = bad_event_data.to_json
-        expect(mock_redis).to receive(:brpop).with('events', 0).
+        expect(redis).to receive(:brpop).with('events', 0).
           and_return(['events', bad_event_json])
-        expect(mock_redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
+        expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
 
         result = Flapjack::Data::Event.next('events', :block => true,
-          :archive_events => false, :redis => mock_redis)
+          :archive_events => false, :redis => redis)
         expect(result).to be_nil
       end
 
@@ -268,26 +268,26 @@ describe Flapjack::Data::Event do
 
     it "returns a count of pending events" do
       events_len = 23
-      expect(mock_redis).to receive(:llen).with('events').and_return(events_len)
+      expect(redis).to receive(:llen).with('events').and_return(events_len)
 
-      pc = Flapjack::Data::Event.pending_count('events', :redis => mock_redis)
+      pc = Flapjack::Data::Event.pending_count('events', :redis => redis)
       expect(pc).to eq(events_len)
     end
 
     it "creates a notification testing event" do
       expect(Time).to receive(:now).and_return(time)
-      expect(mock_redis).to receive(:lpush).with('events', /"testing"/ )
+      expect(redis).to receive(:lpush).with('events', /"testing"/ )
 
       Flapjack::Data::Event.test_notifications(entity_name, check,
-        :summary => 'test', :details => 'testing', :redis => mock_redis)
+        :summary => 'test', :details => 'testing', :redis => redis)
     end
 
     it "creates an acknowledgement event" do
       expect(Time).to receive(:now).and_return(time)
-      expect(mock_redis).to receive(:lpush).with('events', /"acking"/ )
+      expect(redis).to receive(:lpush).with('events', /"acking"/ )
 
       Flapjack::Data::Event.create_acknowledgement(entity_name, check,
-        :summary => 'acking', :time => time.to_i, :redis => mock_redis)
+        :summary => 'acking', :time => time.to_i, :redis => redis)
     end
 
   end

@@ -32,6 +32,12 @@ module Flapjack
       EM.synchrony do
         setup_signals if options[:signals]
 
+        redis = Flapjack::RedisPool.new(:config => @redis_options, :size => 1)
+        ['entity', 'check'].each do |type|
+          discovered = redis.keys("#{type}_tag:*")
+          redis.sadd("known_tags:#{type}_tag", discovered) unless discovered.empty?
+        end
+
         begin
           add_pikelets(pikelets(@config.all))
           loop do

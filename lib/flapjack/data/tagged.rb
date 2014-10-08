@@ -14,20 +14,10 @@ module Flapjack
       "known_tags:#{tag_prefix}"
     end
 
-    def known_tags
-      if @redis.scard(known_key) == 0
-        discovered = @redis.keys("#{tag_prefix}:*")
-        @redis.sadd(known_key, discovered) unless discovered.empty?
-        discovered
-      else
-        @redis.smembers(known_key)
-      end
-    end
-
     # return the set of tags for this object
     def tags
       return @tags unless @tags.nil?
-      @tags ||= Set.new( known_tags.inject([]) {|memo, t|
+      @tags ||= Set.new( @redis.smembers(known_key).inject([]) {|memo, t|
         tag_key = "#{tag_prefix}:#{t}"
         memo << t if @redis.sismember(tag_key, @id.to_s)
         memo
