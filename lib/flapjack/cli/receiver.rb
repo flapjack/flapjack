@@ -18,17 +18,26 @@ module Flapjack
         @global_options = global_options
         @options = options
 
-        @config = Flapjack::Configuration.new
-        @config.load(global_options[:config])
-        @config_env = @config.all
+        if 'mirror'.eql?(@options[:type])
+          @config_env = {}
+          @config_runner = {}
+        else
+          @config = Flapjack::Configuration.new
+          @config.load(global_options[:config])
+          @config_env = @config.all
 
-        if @config_env.nil? || @config_env.empty?
-          exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
+          if @config_env.nil? || @config_env.empty?
+            exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
+          end
+
+          @config_runner = @config_env["#{@options[:type]}-receiver"] || {}
         end
 
-        @config_runner = @config_env["#{@options[:type]}-receiver"] || {}
+        @redis_options = @config.for_redis
+      end
 
-        @pidfile = case
+      def pidfile
+        @pidfile ||= case
         when !@options[:pidfile].nil?
           @options[:pidfile]
         when !@config_env['pid_dir'].nil?
@@ -36,8 +45,10 @@ module Flapjack
         else
           "/var/run/flapjack/#{@options[:type]}-receiver.pid"
         end
+      end
 
-        @logfile = case
+      def logfile
+        @logfile ||= case
         when !@options[:logfile].nil?
           @options[:logfile]
         when !@config_env['log_dir'].nil?
@@ -45,8 +56,6 @@ module Flapjack
         else
           "/var/run/flapjack/#{@options[:type]}-receiver.log"
         end
-
-        @redis_options = @config.for_redis
       end
 
       def start
@@ -95,7 +104,7 @@ module Flapjack
       def status
         if runner(@options[:type]).daemon_running?
           pid = get_pid
-          uptime = Time.now - File.stat(@pidfile).ctime
+          uptime = Time.now - File.stat(pidfile).ctime
           puts "#{@options[:type]}-receiver is running: pid #{pid}, uptime #{uptime}"
         else
           exit_now! "#{@options[:type]}-receiver is not running"
@@ -107,9 +116,10 @@ module Flapjack
       end
 
       def mirror
-        mirror_receive(:source => @options[:source],
-          :all => @options[:all], :follow => @options[:follow],
-          :last => @options[:last], :time => @options[:time])
+        mirror_receive(:source => @options[:source], :dest => @options[:dest],
+          :include => @options[:include], :all => @options[:all],
+          :follow => @options[:follow], :last => @options[:last],
+          :time => @options[:time])
       end
 
       private
@@ -121,8 +131,8 @@ module Flapjack
       def runner(type)
         return @runner if @runner
 
-        @runner = Dante::Runner.new("#{@options[:type]}-receiver", :pid_path => @pidfile,
-          :log_path => @logfile)
+        @runner = Dante::Runner.new("#{@options[:type]}-receiver", :pid_path => pidfile,
+          :log_path => logfile)
         @runner
       end
 
@@ -252,7 +262,7 @@ module Flapjack
       end
 
       def get_pid
-        IO.read(@pidfile).chomp.to_i
+        IO.read(pidfile).chomp.to_i
       rescue StandardError
         pid = nil
       end
@@ -330,12 +340,22 @@ module Flapjack
           exit_now! "one or both of --follow or --all is required"
         end
 
-        source_addr = opts[:source]
+        include_re = nil
+        begin
+          include_re = Regexp.new(opts[:include].strip)
+        rescue RegexpError
+          exit_now! "could not parse include Regexp: #{opts[:include].strip}"
+        end
 
+        source_addr = opts[:source]
         source_redis = Redis.new(:url => source_addr, :driver => :hiredis)
 
-        refresh_archive_index(source_addr, :redis => source_redis)
-        archives = mirror_get_archive_keys_stats(source_addr, :redis => source_redis)
+        dest_addr  = opts[:dest]
+        dest_redis = Redis.new(:url => dest_addr, :driver => :hiredis)
+
+        refresh_archive_index(source_addr, :source => source_redis, :dest => dest_redis)
+        archives = mirror_get_archive_keys_stats(source_addr, :source => source_redis,
+          :dest => dest_redis)
         raise "found no archives!" if archives.empty?
 
         puts "found archives: #{archives.inspect}"
@@ -364,22 +384,27 @@ module Flapjack
         puts archive_key
 
         loop do
-          event = source_redis.lindex(archive_key, cursor)
-          if event
-            Flapjack::Data::Event.add(event, :redis => redis)
-            events_sent += 1
-            print "#{events_sent} " if events_sent % 1000 == 0
+          event_json = source_redis.lindex(archive_key, cursor)
+          if event_json
+            event = Flapjack::Data::Event.parse_and_validate(event_json)
+            if !event.nil? && (include_re === "#{event['entity']}:#{event['check']}")
+              Flapjack::Data::Event.add(event, :redis => dest_redis)
+              events_sent += 1
+              print "#{events_sent} " if events_sent % 1000 == 0
+            end
             cursor -= 1
             next
           end
 
-          archives = mirror_get_archive_keys_stats(source_addr, :redis => source_redis)
+          archives = mirror_get_archive_keys_stats(source_addr,
+            :source => source_redis, :dest => dest_redis)
 
           if archives.any? {|a| a[:size] == 0}
             # data may be out of date -- refresh, then reject any immediately
             # expired keys directly; don't keep chasing updated data
-            refresh_archive_index(source_addr, :redis => source_redis)
-            archives = mirror_get_archive_keys_stats(source_addr, :redis => source_redis).select {|a| a[:size] > 0}
+            refresh_archive_index(source_addr, :source => source_redis, :dest => dest_redis)
+            archives = mirror_get_archive_keys_stats(source_addr,
+              :source => source_redis, :dest => dest_redis).select {|a| a[:size] > 0}
           end
 
           if archives.empty?
@@ -401,14 +426,16 @@ module Flapjack
       end
 
       def mirror_get_archive_keys_stats(name, opts = {})
-        source_redis = opts[:redis]
-        redis.smembers("known_events_archive_keys:#{name}").sort.collect do |eak|
+        source_redis = opts[:source]
+        dest_redis   = opts[:dest]
+        dest_redis.smembers("known_events_archive_keys:#{name}").sort.collect do |eak|
           {:name => eak, :size => source_redis.llen(eak)}
         end
       end
 
       def refresh_archive_index(name, opts = {})
         source_redis = opts[:redis]
+        dest_redis   = opts[:dest]
         # refresh the key name cache, avoid repeated calls to redis KEYS
         # this cache will be updated any time a new archive bucket is created
         archive_keys = source_redis.keys("events_archive:*").group_by do |ak|
@@ -417,7 +444,7 @@ module Flapjack
 
         {'f' => :srem, 't' => :sadd}.each_pair do |k, cmd|
           next unless archive_keys.has_key?(k) && !archive_keys[k].empty?
-          redis.send(cmd, "known_events_archive_keys:#{name}", archive_keys[k])
+          dest_redis.send(cmd, "known_events_archive_keys:#{name}", archive_keys[k])
         end
       end
 
@@ -618,7 +645,13 @@ command :receiver do |receiver|
   receiver.desc 'Mirror receiver'
   receiver.command :mirror do |mirror|
 
-    mirror.flag     [:s, 'source'], :desc => 'URL of source redis database, eg redis://localhost:6379/0',
+    mirror.flag     [:s, 'source'], :desc => 'URL of source redis database, e.g. redis://localhost:6379/0',
+      :required => true
+
+    mirror.flag     [:d, 'dest'],   :desc => 'URL of destination redis database, e.g. redis://localhost:6379/1',
+      :required => true
+
+    mirror.flag     [:i, 'include'], :desc => 'Regexp which must match event id for it to be mirrored',
       :required => true
 
     # one or both of follow, all is required
@@ -637,6 +670,7 @@ command :receiver do |receiver|
       :default_value => nil
 
     mirror.action do |global_options,options,args|
+      options.merge!(:type => 'mirror')
       receiver = Flapjack::CLI::Receiver.new(global_options, options)
       receiver.mirror
     end

@@ -22,7 +22,7 @@ test:
   Scenario: Running receive-events with no arguments exits uncleanly and shows usage
     When I run `bundle exec bin/flapjack -n test receiver mirror`
     Then the exit status should not be 0
-    And  the output should contain "error: s is required"
+    And  the output should contain "error: d is required, i is required, s is required"
 
     #TODO: put some archived events into a separate redis db and then run receive-events to suck them up
 
