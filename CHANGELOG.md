@@ -1,5 +1,17 @@
 ## Flapjack Changelog
 
+# 1.2.0rc1 - 2014-10-08
+- Feature: Allow updating an entities name via PATCH /entities/id[,id...] #628 (@ali-graham)
+- Feature: Pact specs for flapjack-diner compatability testing #663 (@ali-graham)
+- Feature: more api check methods #644 (@ali-graham)
+- Chore: optimise tag code #654 (@ali-graham)
+- Chore: fix #653, overuse of Redis KEYS in mirror #661 (@ali-graham)
+- Bug: Entities should return linked checks with list of check "ids" in API #648 (@ali-graham)
+- Bug: 500 error getting all checks from API #641 (@ali-graham)
+- Bug: Pager Duty credentials get throws error #657 (@ali-graham)
+- Bug: Flapjack crashes when email alert is triggered #656 (@ali-graham)
+- Bug: Fix /edit_contacts media saving after adding contacts #651 (@ali-graham)
+
 # 1.1.0 - 2014-09-10
 - Feature: Add autorefresh for the web GUI (Closes: #494) #607 (@Hobbsee)
 - Feature: twilio sms sending #633 (@jessereynolds)
