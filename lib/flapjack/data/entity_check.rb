@@ -977,6 +977,7 @@ module Flapjack
           "name"        => @check,
           "entity_name" => @entity.name,
           "enabled"     => opts[:enabled].is_a?(TrueClass),
+          "tags"        => self.tags.to_a,
           "links"       => {
             :entities     => opts[:entity_ids] || [],
           }
