@@ -360,7 +360,14 @@ module Flapjack
         source_redis = Redis.new(:url => source_addr, :driver => :hiredis)
 
         dest_addr  = opts[:dest]
-        dest_redis = Redis.new(:url => dest_addr, :driver => :hiredis)
+        dest_redis = case dest_addr
+        when Hash
+          Redis.new(dest_redis.merge(:driver => :hiredis))
+        when String
+          Redis.new(:url => dest_addr, :driver => :hiredis)
+        else
+          exit_now! "could not understand destination Redis config"
+        end
 
         refresh_archive_index(source_addr, :source => source_redis, :dest => dest_redis)
         archives = mirror_get_archive_keys_stats(source_addr, :source => source_redis,
