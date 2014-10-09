@@ -19,20 +19,17 @@ module Flapjack
         @options = options
 
         @config = Flapjack::Configuration.new
+        @config.load(global_options[:config])
+        @config_env = @config.all
 
-        if 'mirror'.eql?(@options[:type]) &&
-          (global_options[:config].nil? || global_options[:config].strip.empty?)
+        if @config_env.nil? || @config_env.empty?
+          unless 'mirror'.eql?(@options[:type])
+            exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
+          end
 
           @config_env = {}
           @config_runner = {}
         else
-          @config.load(global_options[:config])
-          @config_env = @config.all
-
-          if @config_env.nil? || @config_env.empty?
-            exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
-          end
-
           @config_runner = @config_env["#{@options[:type]}-receiver"] || {}
         end
 
