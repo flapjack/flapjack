@@ -362,7 +362,7 @@ module Flapjack
         dest_addr  = opts[:dest]
         dest_redis = case dest_addr
         when Hash
-          Redis.new(dest_redis.merge(:driver => :hiredis))
+          Redis.new(dest_addr.merge(:driver => :hiredis))
         when String
           Redis.new(:url => dest_addr, :driver => :hiredis)
         else
