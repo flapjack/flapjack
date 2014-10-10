@@ -11,8 +11,7 @@ describe Flapjack::Data::Medium, :redis => true do
       :id => 1, :enabled => true)
     check = Flapjack::Data::Check.find_by_id('1')
 
-    Factory.contact(:id => '1', :first_name => 'John', :last_name => 'Smith',
-      :email => 'jsmith@example.com') # raw redis
+    Factory.contact(:id => '1', :name => 'John Smith') # raw redis
     contact = Flapjack::Data::Contact.find_by_id('1')
 
     Factory.medium(contact, :id => '10', :type => 'sms', :address => '012345678',

@@ -28,7 +28,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "no notification rule exists" do
+  provider_state "no rule exists" do
     tear_down do
       Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
       Flapjack.redis.flushdb
@@ -69,9 +69,7 @@ Pact.provider_states_for "flapjack-diner" do
     set_up do
       contact = Flapjack::Data::Contact.new(
         :id         => 'abc',
-        :first_name => 'Jim',
-        :last_name  => 'Smith',
-        :email      => 'jims@example.com',
+        :name       => 'Jim Smith',
         :timezone   => 'UTC',
         # :tags       => ['admin', 'night_shift']
       )
@@ -88,9 +86,7 @@ Pact.provider_states_for "flapjack-diner" do
     set_up do
       contact = Flapjack::Data::Contact.new(
         :id         => 'abc',
-        :first_name => 'Jim',
-        :last_name  => 'Smith',
-        :email      => 'jims@example.com',
+        :name       => 'Jim Smith',
         :timezone   => 'UTC',
         # :tags       => ['admin', 'night_shift']
       )
@@ -127,9 +123,7 @@ Pact.provider_states_for "flapjack-diner" do
     set_up do
       contact = Flapjack::Data::Contact.new(
         :id         => '872',
-        :first_name => 'John',
-        :last_name  => 'Smith',
-        :email      => 'jsmith@example.com',
+        :name       => 'Jim Smith',
       )
       contact.save
     end
@@ -144,19 +138,14 @@ Pact.provider_states_for "flapjack-diner" do
     set_up do
       contact = Flapjack::Data::Contact.new(
         :id         => 'abc',
-        :first_name => 'Jim',
-        :last_name  => 'Smith',
-        :email      => 'jims@example.com',
-        :timezone   => 'UTC',
-        # :tags       => ['admin', 'night_shift']
+        :name       => 'Jim Smith',
+        :timezone   => 'UTC'
       )
       contact.save
 
       contact_2 = Flapjack::Data::Contact.new(
         :id         => '872',
-        :first_name => 'John',
-        :last_name  => 'Smith',
-        :email      => 'jsmith@example.com',
+        :name       => 'John Smith',
       )
       contact_2.save
     end
@@ -167,31 +156,27 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "a contact 'abc' with generic notification rule '05983623-fcef-42da-af44-ed6990b500fa' exists" do
+  provider_state "a contact 'abc' with generic rule '05983623-fcef-42da-af44-ed6990b500fa' exists" do
     set_up do
       contact = Flapjack::Data::Contact.new(
         :id         => 'abc',
-        :first_name => 'Jim',
-        :last_name  => 'Smith',
-        :email      => 'jims@example.com',
+        :name       => 'Jim Smith',
         :timezone   => 'UTC',
         # :tags       => ['admin', 'night_shift']
       )
       contact.save
 
-      existing_nr = contact.notification_rules.all.first
-
-      notification_rule = Flapjack::Data::NotificationRule.new(
+      rule = Flapjack::Data::Rule.new(
         :id                 => '05983623-fcef-42da-af44-ed6990b500fa',
-        :time_restrictions  => [],
+        :is_specific        => false,
+        # :time_restrictions  => [],
         # :warning_media      => ["email"],
         # :critical_media     => ["sms", "email"],
         # :warning_blackhole  => false,
         # :critical_blackhole => false
       )
-      notification_rule.save
-      contact.notification_rules << notification_rule
-      existing_nr.destroy
+      rule.save
+      contact.rules << rule
     end
 
     tear_down do
@@ -200,42 +185,39 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "a contact 'abc' with generic notification rule '05983623-fcef-42da-af44-ed6990b500fa' and notification rule '20f182fc-6e32-4794-9007-97366d162c51' exists" do
+  provider_state "a contact 'abc' with generic rule '05983623-fcef-42da-af44-ed6990b500fa' and rule '20f182fc-6e32-4794-9007-97366d162c51' exists" do
     set_up do
       contact = Flapjack::Data::Contact.new(
         :id         => 'abc',
-        :first_name => 'Jim',
-        :last_name  => 'Smith',
-        :email      => 'jims@example.com',
+        :name       => 'Jim Smith',
         :timezone   => 'UTC',
         # :tags       => ['admin', 'night_shift']
       )
       contact.save
 
-      existing_nr = contact.notification_rules.all.first
-
-      notification_rule = Flapjack::Data::NotificationRule.new(
+      rule = Flapjack::Data::Rule.new(
         :id                 => '05983623-fcef-42da-af44-ed6990b500fa',
-        :time_restrictions  => [],
+        :is_specific        => false,
+        # :time_restrictions  => [],
         # :warning_media      => ["email"],
         # :critical_media     => ["sms", "email"],
         # :warning_blackhole  => false,
         # :critical_blackhole => false
       )
-      notification_rule.save
-      contact.notification_rules << notification_rule
-      existing_nr.destroy
+      rule.save
+      contact.rules << rule
 
-      notification_rule_2 = Flapjack::Data::NotificationRule.new(
+      rule_2 = Flapjack::Data::Rule.new(
         :id                 => '20f182fc-6e32-4794-9007-97366d162c51',
-        :time_restrictions  => [],
+        :is_specific        => false,
+        # :time_restrictions  => [],
         # :warning_media      => ["email"],
         # :critical_media     => ["sms", "email"],
         # :warning_blackhole  => true,
         # :critical_blackhole => true
       )
-      notification_rule_2.save
-      contact.notification_rules << notification_rule_2
+      rule_2.save
+      contact.rules << rule_2
     end
 
     tear_down do
@@ -248,9 +230,7 @@ Pact.provider_states_for "flapjack-diner" do
     set_up do
       contact = Flapjack::Data::Contact.new(
         :id         => 'abc',
-        :first_name => 'Jim',
-        :last_name  => 'Smith',
-        :email      => 'jims@example.com',
+        :name       => 'Jim Smith',
         :timezone   => 'UTC',
         # :tags       => ['admin', 'night_shift']
       )
@@ -277,9 +257,7 @@ Pact.provider_states_for "flapjack-diner" do
     set_up do
       contact = Flapjack::Data::Contact.new(
         :id         => 'abc',
-        :first_name => 'Jim',
-        :last_name  => 'Smith',
-        :email      => 'jims@example.com',
+        :name       => 'Jim Smith',
         :timezone   => 'UTC',
         # :tags       => ['admin', 'night_shift']
       )
@@ -297,9 +275,7 @@ Pact.provider_states_for "flapjack-diner" do
 
       contact_2 = Flapjack::Data::Contact.new(
         :id         => '872',
-        :first_name => 'John',
-        :last_name  => 'Smith',
-        :email      => 'jsmith@example.com',
+        :name       => 'John Smith',
       )
       contact_2.save
 

@@ -8,11 +8,9 @@ require 'ice_cube'
 
 require 'sandstorm/records/redis_record'
 
-require 'flapjack/data/check_state'
 require 'flapjack/data/medium'
 require 'flapjack/data/notification_block'
-require 'flapjack/data/notification_rule'
-require 'flapjack/data/notification_rule_state'
+require 'flapjack/data/rule'
 require 'flapjack/data/tag'
 
 require 'securerandom'
@@ -27,10 +25,8 @@ module Flapjack
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
 
-      define_attributes :first_name            => :string,
-                        :last_name             => :string,
-                        :email                 => :string,
-                        :timezone              => :string
+      define_attributes :name            => :string,
+                        :timezone        => :string
 
       has_and_belongs_to_many :checks, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :contacts
@@ -38,45 +34,12 @@ module Flapjack
       has_many :media, :class_name => 'Flapjack::Data::Medium'
       has_one :pagerduty_credentials, :class_name => 'Flapjack::Data::PagerdutyCredentials'
 
-      has_many :notification_rules, :class_name => 'Flapjack::Data::NotificationRule'
+      has_many :rules, :class_name => 'Flapjack::Data::Rule'
 
       before_destroy :remove_child_records
       def remove_child_records
-        self.media.each                    {|medium|             medium.destroy }
-        # self.orig_notification_rules.each  {|notification_rule|  notification_rule.destroy }
-        self.notification_rules.each  {|notification_rule|  notification_rule.destroy }
-      end
-
-      # # wrap the has_many to create the generic rule if none exists
-      # alias_method :orig_notification_rules, :notification_rules
-      # def notification_rules
-      #   rules = orig_notification_rules
-      #   contact_media = media.all
-
-      #   if rules.all.all? {|r| r.is_specific? } # also true if empty
-      #     nr_fail_states = Flapjack::Data::CheckState.failing_states.collect do |fail_state|
-      #       state = Flapjack::Data::NotificationRuleState.new(:state => fail_state,
-      #         :blackhole => false)
-      #       state.save
-      #       state.media.add(*contact_media) unless 'unknown'.eql?(fail_state) || contact_media.empty?
-      #       state
-      #     end
-
-      #     rule = Flapjack::Data::NotificationRule.new(
-      #       :time_restrictions  => [],
-      #       :is_specific        => false,
-      #     )
-      #     rule.save
-      #     rule.states.add(*nr_fail_states)
-      #     rules << rule
-      #   end
-      #   rules
-      # end
-
-      # TODO sort usages of 'Contact.all' by [c.last_name, c.first_name] in the code
-      def name
-        return if invalid? && !(self.errors.keys & [:first_name, :last_name]).empty?
-        [(self.first_name || ''), (self.last_name || '')].join(" ").strip
+        self.media.each  {|medium| medium.destroy }
+        self.rules.each  {|rule|   rule.destroy }
       end
 
       # return the timezone of the contact, or the system default if none is set
@@ -110,7 +73,7 @@ module Flapjack
             :checks                => opts[:check_ids] || [],
             :media                 => opts[:medium_ids] || [],
             :pagerduty_credentials => opts[:pagerduty_credentials_ids] || [],
-            :notification_rules    => opts[:notification_rule_ids] || []
+            :rules                 => opts[:rule_ids] || []
           }
         )
       end

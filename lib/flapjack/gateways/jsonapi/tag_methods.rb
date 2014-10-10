@@ -109,12 +109,12 @@ module Flapjack
                     check = Flapjack::Data::Check.find_by_id(value)
                     tag.checks << check unless check.nil?
                   when 'notification_rules'
-                    Flapjack::Data::NotificationRule.lock(Flapjack::Data::Tag) do
-                      notification_rule = Flapjack::Data::NotificationRule.find_by_id(value)
-                      unless notification_rule.nil?
-                        tag.notification_rules << notification_rule
-                        notification_rule.is_specific = false
-                        notification_rule.save
+                    Flapjack::Data::Rule.lock(Flapjack::Data::Tag) do
+                      rule = Flapjack::Data::Rule.find_by_id(value)
+                      unless rule.nil?
+                        tag.rules << rule
+                        rule.is_specific = false
+                        rule.save
                       end
                     end
                   end
@@ -124,13 +124,13 @@ module Flapjack
                     check = Flapjack::Data::Check.find_by_id(value)
                     tag.checks.delete(check) unless check.nil?
                   when 'notification_rules'
-                    Flapjack::Data::NotificationRule.lock(Flapjack::Data::Tag) do
-                      notification_rule = Flapjack::Data::NotificationRule.find_by_id(value)
-                      unless notification_rule.nil?
-                        tag.notification_rules.delete(notification_rule)
-                        if notification_rule.tags.empty?
-                          notification_rule.is_specific = false
-                          notification_rule.save
+                    Flapjack::Data::Rule.lock(Flapjack::Data::Tag) do
+                      rule = Flapjack::Data::Rule.find_by_id(value)
+                      unless rule.nil?
+                        tag.rules.delete(rule)
+                        if rule.tags.empty?
+                          rule.is_specific = false
+                          rule.save
                         end
                       end
                     end

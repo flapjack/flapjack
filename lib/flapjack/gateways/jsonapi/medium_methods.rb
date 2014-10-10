@@ -82,11 +82,11 @@ module Flapjack
 
             media_ids = media.map(&:id)
             linked_contact_ids = Flapjack::Data::Medium.associated_ids_for_contact(*media_ids)
-            linked_notification_rule_state_ids = Flapjack::Data::Medium.associated_ids_for_notification_rule_states(*media_ids)
+            linked_route_ids = Flapjack::Data::Medium.associated_ids_for_routes(*media_ids)
 
             media_as_json = media.collect {|medium|
               medium.as_json(:contact_ids => [linked_contact_ids[medium.id]],
-                             :notification_rule_state_ids => linked_notification_rule_state_ids[medium.id])
+                             :route_ids => linked_route_ids[medium.id])
             }
 
             Flapjack.dump_json(:media => media_as_json)

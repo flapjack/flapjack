@@ -6,18 +6,8 @@ def find_or_create_contact(contact_data)
   contact = Flapjack::Data::Contact.find_by_id(contact_data['id'])
   if contact.nil?
     contact = Flapjack::Data::Contact.new(:id => contact_data['id'],
-      :first_name => contact_data['first_name'],
-      :last_name => contact_data['last_name'],
-      :email => contact_data['email'])
+      :name => contact_data['name'])
     expect(contact.save).to be true
-  end
-
-  if contact_data['media']
-    contact_data['media'].each_pair {|type, address|
-      medium = Flapjack::Data::Medium.new(:type => type, :address => address, :interval => 600)
-      expect(medium.save).to be true
-      contact.media << medium
-    }
   end
 
   contact
@@ -49,56 +39,242 @@ def find_or_create_check(check_data)
   check
 end
 
+Given /^the following contacts exist:$/ do |contacts|
+  contacts.hashes.each do |contact_data|
+    contact = Flapjack::Data::Contact.find_by_id(contact_data['id'])
+    expect(contact).to be nil
+    contact = Flapjack::Data::Contact.new(
+      :id       => contact_data['id'],
+      :name     => contact_data['name'],
+      :timezone => contact_data['timezone']
+    )
+    expect(contact.save).to be true
+  end
+end
+
+Given /^the following checks exist:$/ do |checks|
+  checks.hashes.each do |check_data|
+    check = Flapjack::Data::Check.find_by_id(check_data['id'])
+    expect(check).to be nil
+
+    check = Flapjack::Data::Check.new(
+      :id   => check_data['id'],
+      :name => check_data['name']
+    )
+    expect(check.save).to be true
+
+    unless check_data['tags'].nil? || check_data['tags'].strip.empty?
+      check_data['tags'].split(',').map(&:strip).each do |tag_name|
+        tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+        if tag.nil?
+          tag = Flapjack::Data::Tag.new(:name => tag_name)
+          tag.save
+        end
+        check.tags << tag
+      end
+    end
+  end
+end
+
+Given /^the following media exist:$/ do |media|
+  media.hashes.each do |medium_data|
+    contact = Flapjack::Data::Contact.find_by_id(medium_data['contact_id'])
+    expect(contact).not_to be nil
+
+    medium = Flapjack::Data::Medium.find_by_id(medium_data['id'])
+    expect(medium).to be nil
+    medium = Flapjack::Data::Medium.new(
+      :id               => medium_data['id'],
+      :type             => medium_data['type'],
+      :address          => medium_data['address'],
+      :interval         => medium_data['interval'].to_i,
+      :rollup_threshold => medium_data['rollup_threshold'].to_i
+    )
+    expect(medium.save).to be true
+    contact.media << medium
+  end
+end
+
+Given /^the following rules exist:$/ do |rules|
+  rules.hashes.each do |rule_data|
+    contact = Flapjack::Data::Contact.find_by_id(rule_data['contact_id'])
+    expect(contact).not_to be nil
+
+    rule = Flapjack::Data::Rule.find_by_id(rule_data['id'])
+    expect(rule).to be nil
+
+    rule = Flapjack::Data::Rule.new(
+      :id          => rule_data['id'],
+      :is_specific => false
+    )
+    expect(rule.save).to be true
+
+    unless rule_data['tags'].nil? || rule_data['tags'].strip.empty?
+      rule_data['tags'].split(',').map(&:strip).each do |tag_name|
+        tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+        if tag.nil?
+          tag = Flapjack::Data::Tag.new(:name => tag_name)
+          expect(tag.save).to be true
+        end
+        rule.tags << tag
+      end
+      rule.is_specific = true
+      expect(rule.save).to be true
+    end
+
+    contact.rules << rule
+  end
+end
+
+Given /^the following routes exist:$/ do |routes|
+  routes.hashes.each do |route_data|
+    rule = Flapjack::Data::Rule.find_by_id(route_data['rule_id'])
+    expect(rule).not_to be nil
+
+    contact = rule.contact
+    expect(rule.contact).not_to be nil
+
+    time_zone = contact.time_zone
+    expect(time_zone).to be_an ActiveSupport::TimeZone
+
+    route = Flapjack::Data::Route.find_by_id(route_data['id'])
+    expect(route).to be nil
+
+    route = Flapjack::Data::Route.new(
+      :id    => route_data['id'],
+      :state => (route_data['state'].nil? || route_data['state'].empty?) ? nil : route_data['state'],
+      :drop  => !(route_data['drop'].nil? || route_data['drop'].strip.empty?)
+    )
+    unless route_data['time_restrictions'].nil? || route_data['time_restrictions'].strip.empty?
+      route.time_restrictions = route_data['time_restrictions'].split(',').map(&:strip).inject([]) do |memo, tr|
+        case tr
+        when '8-18 weekdays'
+          weekdays_8_18 = IceCube::Schedule.new(time_zone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
+          weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
+          memo << icecube_schedule_to_time_restriction(weekdays_8_18, time_zone)
+        end
+        memo
+      end
+    end
+    expect(route.save).to be true
+
+    unless route_data['media_ids'].nil? || route_data['media_ids'].strip.empty?
+      media_ids = route_data['media_ids'].split(',').map(&:strip)
+      media = Flapjack::Data::Medium.find_by_ids(*media_ids)
+      expect(media.map(&:id)).to match_array(media_ids)
+      route.media.add(*media) unless media.empty?
+    end
+    rule.routes << route
+  end
+end
+
 Given /^(?:a|the) user wants to receive SMS notifications for check '(.+)'$/ do |check_name|
-  contact = find_or_create_contact( 'id'         => '0999',
-                                    'first_name' => 'John',
-                                    'last_name'  => 'Smith',
-                                    'email'      => 'johns@example.dom',
-                                    'media'      => {'sms' => '+61888888888'} )
+  contact = find_or_create_contact( 'id'   => '0999',
+                                    'name' => 'John Smith')
+
+  sms = Flapjack::Data::Medium.new(:type => 'sms',
+    :address => '+61888888888', :interval => 600)
+  expect(sms.save).to be true
+  contact.media << sms
+
   check = find_or_create_check('id'   => '5000',
                                'name' => check_name)
 
-  e, c = check_name.split(':', 2)
-  nr   = contact.notification_rules.all.first
-  expect(nr).not_to be_nil
-  tags = Flapjack::Data::Tag.intersect(:name => c.split(' ').map(&:downcase)).all
-  expect(tags.size).to be > 0
-  nr.tags.add(*tags)
+  rule = Flapjack::Data::Rule.new
+  expect(rule.save).to be true
+
+  check_name.split(':', 2).each do |tag_name|
+    tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+    if tag.nil?
+      tag = Flapjack::Data::Tag.new(:name => tag_name)
+      expect(tag.save).to be true
+    end
+    rule.tags << tag
+    check.tags << tag
+  end
+
+  rule.is_specific = true
+  expect(rule.save).to be true
+
+  route = Flapjack::Data::Route.new(:state => 'critical')
+  expect(route.save).to be true
+
+  route.media << sms
+  rule.routes << route
+
+  contact.rules << rule
 end
 
 Given /^(?:a|the) user wants to receive email notifications for check '(.+)'$/ do |check_name|
-  contact = find_or_create_contact( 'id'         => '1000',
-                                    'first_name' => 'Jane',
-                                    'last_name'  => 'Smith',
-                                    'email'      => 'janes@example.dom',
-                                    'media'      => {'email' => 'janes@example.dom'} )
+  contact = find_or_create_contact( 'id'   => '1000',
+                                    'name' => 'Jane Smith')
+
+  email = Flapjack::Data::Medium.new(:type => 'email',
+    :address => 'janes@example.dom', :interval => 600)
+  expect(email.save).to be true
+  contact.media << email
 
   check = find_or_create_check('id'   => '5001',
                                'name' => check_name)
 
-  e, c = check_name.split(':', 2)
-  nr   = contact.notification_rules.all.first
-  expect(nr).not_to be_nil
-  tags = Flapjack::Data::Tag.intersect(:name => c.split(' ').map(&:downcase)).all
-  expect(tags.size).to be > 0
-  nr.tags.add(*tags)
+  rule = Flapjack::Data::Rule.new
+  expect(rule.save).to be true
+
+  check_name.split(':', 2).each do |tag_name|
+    tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+    if tag.nil?
+      tag = Flapjack::Data::Tag.new(:name => tag_name)
+      expect(tag.save).to be true
+    end
+    rule.tags << tag
+    check.tags << tag
+  end
+
+  rule.is_specific = true
+  rule.save
+
+  route = Flapjack::Data::Route.new(:state => 'critical')
+  expect(route.save).to be true
+
+  route.media << email
+  rule.routes << route
+  contact.rules << rule
 end
 
 Given /^(?:a|the) user wants to receive SNS notifications for check '(.+)'$/ do |check_name|
-  contact = find_or_create_contact( 'id'         => '1001',
-                                    'first_name' => 'James',
-                                    'last_name'  => 'Smithson',
-                                    'email'      => 'jamess@example.dom',
-                                    'media' => {'sns' => 'arn:aws:sns:us-east-1:698519295917:My-Topic'} )
+  contact = find_or_create_contact( 'id'   => '1001',
+                                    'name' => 'James Smithson')
+
+  sns = Flapjack::Data::Medium.new(:type => 'sns',
+    :address => 'arn:aws:sns:us-east-1:698519295917:My-Topic', :interval => 600)
+  expect(sns.save).to be true
+  contact.media << sns
+
   check = find_or_create_check('id'       => '5002',
                                'name'     => check_name)
 
-  e, c = check_name.split(':', 2)
-  nr   = contact.notification_rules.all.first
-  expect(nr).not_to be_nil
-  tags = Flapjack::Data::Tag.intersect(:name => c.split(' ').map(&:downcase)).all
-  expect(tags.size).to be > 0
-  nr.tags.add(*tags)
+  rule = Flapjack::Data::Rule.new
+  expect(rule.save).to be true
+
+  check_name.split(':', 2).each do |tag_name|
+    tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+    if tag.nil?
+      tag = Flapjack::Data::Tag.new(:name => tag_name)
+      expect(tag.save).to be true
+    end
+    rule.tags << tag
+    check.tags << tag
+  end
+
+  rule.is_specific = true
+  rule.save
+
+  route = Flapjack::Data::Route.new(:state => 'critical')
+  expect(route.save).to be true
+
+  route.media << sns
+  rule.routes << route
+  contact.rules << rule
 end
 
 # TODO create the notification object in redis, flag the relevant operation as

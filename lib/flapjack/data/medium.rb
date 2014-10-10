@@ -23,8 +23,8 @@ module Flapjack
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact', :inverse_of => :media
 
-      has_and_belongs_to_many :notification_rule_states,
-        :class_name => 'Flapjack::Data::NotificationRuleState', :inverse_of => :media
+      has_and_belongs_to_many :routes,
+        :class_name => 'Flapjack::Data::Route', :inverse_of => :media
 
       has_many :alerts, :class_name => 'Flapjack::Data::Alert'
 
@@ -124,19 +124,16 @@ module Flapjack
           check.in_scheduled_maintenance?
         end
 
-        if checks_to_remove.empty?
-          0
-        else
-          alerting_checks.delete(*checks_to_remove)
-          checks_to_remove.size
-        end
+        return 0 if checks_to_remove.empty?
+        alerting_checks.delete(*checks_to_remove)
+        checks_to_remove.size
       end
 
       def as_json(opts = {})
         super.as_json(opts.merge(:root => false)).merge(
           :links => {
-            :contacts                 => opts[:contact_ids] || [],
-            :notification_rule_states => opts[:notification_rule_states_ids] || []
+            :contacts   => opts[:contact_ids] || [],
+            :routes     => opts[:route_ids] || []
           }
         )
       end

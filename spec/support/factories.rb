@@ -7,8 +7,7 @@ module Factory
 
   def self.contact(attrs = {})
     redis.multi
-    redis.hmset("contact:#{attrs[:id]}:attrs", {'first_name' => attrs[:first_name],
-      'last_name' => attrs[:last_name], 'email' => attrs[:email]}.flatten)
+    redis.hmset("contact:#{attrs[:id]}:attrs", {'name' => attrs[:name]}.flatten)
     redis.sadd('contact::attrs:ids', attrs[:id])
     redis.exec
   end

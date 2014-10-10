@@ -43,10 +43,11 @@ require 'flapjack/data/check_state'
 require 'flapjack/data/contact'
 require 'flapjack/data/medium'
 require 'flapjack/data/notification_block'
-require 'flapjack/data/notification_rule'
-require 'flapjack/data/notification_rule_state'
+require 'flapjack/data/rule'
+require 'flapjack/data/route'
 require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/unscheduled_maintenance'
+require 'flapjack/data/tag'
 
 options = OpenStruct.new
 
@@ -205,8 +206,7 @@ def migrate_contacts_and_media
     raise "Contact already exists with id #{contact_id}" unless contact.nil?
 
     contact = Flapjack::Data::Contact.new(:id => contact_id,
-      :first_name => contact_data['first_name'],
-      :last_name => contact_data['last_name'],
+      :name => contact_data['first_name'].to_s + " " + contact_data['last_name'].to_s,
       :email => contact_data['email'],
       :timezone => timezone)
 
@@ -352,17 +352,18 @@ def migrate_notification_rules
         state
       end
 
-      notification_rule = Flapjack::Data::NotificationRule.new(
-        :id => notification_rule_id,
-        :entities => Set.new( JSON.parse(notification_rule_data['entities'])),
-        :tags => Set.new( JSON.parse(notification_rule_data['tags'])),
-        :time_restrictions => JSON.parse(notification_rule_data['time_restrictions'])
-      )
-      notification_rule.save
-      notification_rule.states.add(*nr_fail_states)
+      # TODO Fix
 
-      # skip accessor which may create a new rule
-      contact.notification_rules << notification_rule
+      # rule = Flapjack::Data::NotificationRule.new(
+      #   :id => notification_rule_id,
+      #   :entities => Set.new( JSON.parse(notification_rule_data['entities'])),
+      #   :tags => Set.new( JSON.parse(notification_rule_data['tags'])),
+      #   :time_restrictions => JSON.parse(notification_rule_data['time_restrictions'])
+      # )
+      # rule.save
+      # rule.states.add(*nr_fail_states)
+
+      # contact.rules << rule
     end
   end
 end

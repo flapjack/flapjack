@@ -388,7 +388,7 @@
           <th>Name</th>
           <th>Media</th>
         </tr>
-        <% @contacts.sort_by {|c| [c.first_name, c.last_name] }.each do |contact| %>
+        <% @contacts.sort_by(&:name).each do |contact| %>
           <tr>
             <td><a href="<%= @base_url %>contacts/<%= u(contact.id) %>" title="contact details"><%= h contact.name %></a></td>
             <td>

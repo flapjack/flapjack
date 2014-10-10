@@ -9,9 +9,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
 
   let(:contact_data) {
     {:id         => contact.id,
-     :first_name => "Ada",
-     :last_name  => "Lovelace",
-     :email      => "ada@example.com",
+     :name       => "Ada Lovelace",
      :timezone   => 'Australia/Perth',
      # :tags       => ["legend", "first computer programmer"]
     }
@@ -51,7 +49,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
       with(contact.id).and_return({})
     expect(Flapjack::Data::Contact).to receive(:associated_ids_for_pagerduty_credentials).
       with(contact.id).and_return({})
-    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_notification_rules).
+    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_rules).
       with(contact.id).and_return({})
     expect(contact).to receive(:as_json).and_return(contact_data)
     expect(Flapjack::Data::Contact).to receive(:all).and_return([contact])
@@ -66,7 +64,7 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
       with(contact.id).and_return({})
     expect(Flapjack::Data::Contact).to receive(:associated_ids_for_pagerduty_credentials).
       with(contact.id).and_return({})
-    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_notification_rules).
+    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_rules).
       with(contact.id).and_return({})
     expect(contact).to receive(:as_json).and_return(contact_data)
     expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
@@ -89,13 +87,13 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).to receive(:find_by_ids).
       with(contact.id).and_return([contact])
 
-    expect(contact).to receive(:first_name=).with('Elias')
+    expect(contact).to receive(:name=).with('Elias Ericsson')
     expect(contact).to receive(:save).and_return(true)
 
     expect(Flapjack::Data::Contact).to receive(:lock).with(no_args).and_yield
 
     patch "/contacts/#{contact.id}",
-      Flapjack.dump_json([{:op => 'replace', :path => '/contacts/0/first_name', :value => 'Elias'}]),
+      Flapjack.dump_json([{:op => 'replace', :path => '/contacts/0/name', :value => 'Elias Ericsson'}]),
       jsonapi_patch_env
     expect(last_response.status).to eq(204)
   end

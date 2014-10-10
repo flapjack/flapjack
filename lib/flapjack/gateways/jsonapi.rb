@@ -16,8 +16,7 @@ require 'flapjack/gateways/jsonapi/check_methods'
 require 'flapjack/gateways/jsonapi/contact_methods'
 require 'flapjack/gateways/jsonapi/medium_methods'
 require 'flapjack/gateways/jsonapi/metrics_methods'
-require 'flapjack/gateways/jsonapi/notification_rule_methods'
-require 'flapjack/gateways/jsonapi/notification_rule_state_methods'
+require 'flapjack/gateways/jsonapi/rule_methods'
 require 'flapjack/gateways/jsonapi/pagerduty_credential_methods'
 require 'flapjack/gateways/jsonapi/report_methods'
 require 'flapjack/gateways/jsonapi/tag_methods'
@@ -265,8 +264,7 @@ module Flapjack
       register Flapjack::Gateways::JSONAPI::ContactMethods
       register Flapjack::Gateways::JSONAPI::MediumMethods
       register Flapjack::Gateways::JSONAPI::MetricsMethods
-      register Flapjack::Gateways::JSONAPI::NotificationRuleMethods
-      register Flapjack::Gateways::JSONAPI::NotificationRuleStateMethods
+      register Flapjack::Gateways::JSONAPI::RuleMethods
       register Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods
       register Flapjack::Gateways::JSONAPI::ReportMethods
       register Flapjack::Gateways::JSONAPI::TagMethods

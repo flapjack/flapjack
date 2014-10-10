@@ -85,18 +85,22 @@ module Flapjack
 
       timestamp   = Time.now
       check       = notification.check
-      # contacts    = check.contacts.all
-
       check_name  = check.name
 
-      # if contacts.empty?
-      #   @logger.debug("No contacts for '#{check_name}'")
-      #   @notifylog.info("#{check_name} | #{notification.type} | NO CONTACTS")
-      #   return
-      # end
+      routes_by_contact_id = self.class.routes_for(:check => check,
+        :severity => notification.severity, :logger => @logger)
 
-      alerts = notification.alerts(:default_timezone => @default_contact_timezone,
+      if routes_by_contact_id.empty?
+        @logger.debug("No routes for '#{check_name}'")
+        @notifylog.info("#{check_name} | #{notification.type} | NO ROUTES")
+        return
+      end
+
+      alerts = self.class.alerts_for(notification, routes_by_contact_id, :check => check,
+        :default_timezone => @default_contact_timezone,
         :logger => @logger)
+
+      @logger.info "alerts: #{alerts.size}"
 
       in_unscheduled_maintenance = check.in_scheduled_maintenance?
       in_scheduled_maintenance   = check.in_unscheduled_maintenance?
@@ -104,6 +108,8 @@ module Flapjack
       alerts.each do |alert|
         medium = alert.medium
         unless @queues.has_key?(medium.type)
+          # TODO when notification code is moved up here, do this test before the
+          # alert is generated
           @logger.error("no queue for media type: #{medium.type}")
           next
         end
@@ -154,6 +160,220 @@ module Flapjack
 
         @queues[medium.type].push(alert)
       end
+    end
+
+    def self.routes_for(opts = {})
+      severity    = opts[:severity]
+      alert_check = opts[:check]
+
+      logger = opts[:logger]
+
+      # candidate rules are all rules for which
+      #   (rule.tags.ids - check.tags.ids).empty?
+      # this includes generic rules, i.e. ones with no tags
+
+      # NB -- this logic will be a good candidate for having the result be
+      # cached, and regenerated any time check tags or notification rule
+      # tags change
+
+      # A generic rule in Flapjack v2 means that it applies to all checks, not
+      # just all checks the contact is separately regeistered for, as in v1.
+      # These are not automatically created for users any more, but can be
+      # deliberately configured.
+      generic_rules_ids = Flapjack::Data::Rule.intersect(:is_specific => false).ids
+
+      logger.info "Generic rules: #{generic_rules_ids.size}"
+
+      tags_ids = alert_check.tags.ids
+      tag_rules_ids = Flapjack::Data::Tag.associated_ids_for_rules(*tags_ids.to_a)
+      unified_tag_ids = Set.new(tag_rules_ids.values).flatten
+      rule_tags_ids = Flapjack::Data::Rule.associated_ids_for_tags(*(unified_tag_ids.to_a))
+      rule_tags_ids.delete_if {|rid, tids| (tids - tags_ids).size > 0 }
+
+      return [] if (rule_tags_ids.empty? && generic_rules_ids.empty?)
+
+      rules_ids = rule_tags_ids.keys | generic_rules_ids.to_a
+
+      logger.info "Matching rules: #{rules_ids.size}"
+
+      return [] if rules_ids.empty?
+
+      rule_route_ids = Flapjack::Data::Rule.associated_ids_for_routes(*rules_ids)
+
+      return [] if rule_route_ids.empty?
+
+      # unrouted rules should be dropped
+      rule_route_ids.delete_if {|nr_id, route_ids| route_ids.empty? }
+      return [] if rule_route_ids.empty?
+
+      # we only want routes for any state or for the current one
+      route_ids_for_all_states = Set.new(rule_route_ids.values).flatten
+
+      # TODO sandstorm should accept a set as well as an array in intersect
+      active_route_ids = Flapjack::Data::Route.
+        intersect(:id => route_ids_for_all_states.to_a, :state => [nil, severity]).ids
+
+      logger.info "Matching routes: #{active_route_ids.size}"
+
+      return [] if active_route_ids.empty?
+
+      # if more than one route exists for a rule & state, media will be unioned together
+      # (may happen with, e.g. overlapping time restrictions, multiple matching rules, etc.)
+
+      # TODO is it worth doing a shortcut check here -- if no media for routes, return [] ?
+
+      # TODO possibly invert the returned data from associated_ids_for belongs_to?
+      # we're always doing it on this side anyway
+      rule_ids_by_route_id = Flapjack::Data::Route.associated_ids_for_rule(*active_route_ids)
+
+      unified_rule_ids = Set.new(rule_ids_by_route_id.values).flatten
+
+      contact_ids_by_rule_id = Flapjack::Data::Rule.associated_ids_for_contact(*(unified_rule_ids.to_a))
+
+      rule_ids_by_route_id.inject({}) do |memo, (route_id, rule_id)|
+        memo[contact_ids_by_rule_id[rule_id]] ||= []
+        memo[contact_ids_by_rule_id[rule_id]] << route_id
+        memo
+      end
+    end
+
+    def self.alerts_for(notification, route_ids_by_contact_id, opts = {})
+      logger = opts[:logger]
+
+      default_timezone = opts[:default_timezone]
+      safe_state_or_ack = notification.state_or_ack
+
+      alert_check = opts[:check]
+
+      logger.info "contacts: #{route_ids_by_contact_id.keys.size}"
+
+      contacts = route_ids_by_contact_id.empty? ? [] :
+        Flapjack::Data::Contact.find_by_ids(*route_ids_by_contact_id.keys)
+      return [] if contacts.empty?
+
+      # TODO pass in base time from outside (cast to zone per contact), so
+      # all alerts from this notification use a consistent time
+
+      contact_ids_to_drop = []
+
+      route_ids = contacts.inject([]) do |memo, contact|
+        routes = Flapjack::Data::Route.find_by_ids(*route_ids_by_contact_id[contact.id])
+        next memo if routes.empty?
+
+        timezone = contact.time_zone(:default => default_timezone)
+        routes = routes.select {|route| route.is_occurring_now?(timezone) }
+
+        contact_ids_to_drop << contact.id if routes.any? {|r| r.drop }
+
+        memo += routes.map(&:id)
+        memo
+      end
+
+      logger.info "routes after time: #{route_ids.size}"
+      return [] if route_ids.empty?
+
+      route_ids -= contact_ids_to_drop.flat_map {|c_id| route_ids_by_contact_id[c_id] }
+
+      logger.info "routes after drop: #{route_ids.size}"
+      return [] if route_ids.empty?
+
+      Flapjack::Data::Medium.lock(Flapjack::Data::Check,
+                                  Flapjack::Data::ScheduledMaintenance,
+                                  Flapjack::Data::UnscheduledMaintenance,
+                                  Flapjack::Data::Route,
+                                  Flapjack::Data::NotificationBlock,
+                                  Flapjack::Data::Alert) do
+
+        media_ids_by_route_id = Flapjack::Data::Route.associated_ids_for_media(*route_ids)
+
+        media_ids = Set.new(media_ids_by_route_id.values).flatten
+
+        logger.info "media from routes: #{media_ids.size}"
+
+        final_media = Flapjack::Data::Medium.find_by_ids(*(media_ids.to_a)).reject do |medium|
+          medium.drop_notifications?(:check => alert_check,
+                                     :state => safe_state_or_ack)
+        end
+
+        logger.info "media after drop: #{final_media.size}"
+
+        final_media.inject([]) do |memo, medium|
+          alert = alert_for_medium(notification, medium,
+            :check => alert_check, :state => safe_state_or_ack,
+            :logger => logger)
+          next memo if alert.nil?
+          memo << alert
+          memo
+        end
+      end
+    end
+
+    def self.alert_for_medium(notification, medium, opts = {})
+      rollup_type = nil
+      media_type  = medium.type
+
+      logger = opts[:logger]
+
+      unless logger.nil?
+        logger.debug("using media #{media_type}")
+      end
+
+      alert_check = opts[:check]
+
+      unless (['ok', 'acknowledgement', 'test'].include?(opts[:state])) ||
+        medium.alerting_checks.exists?(alert_check.id)
+
+        medium.alerting_checks << alert_check
+      end
+
+      # expunge checks in (un)scheduled maintenance from the alerting set
+      cleaned = medium.clean_alerting_checks
+      unless logger.nil?
+        logger.debug("cleaned alerting checks for #{media_type}: #{cleaned}")
+      end
+
+      alerting_checks_count = medium.alerting_checks.count
+      unless logger.nil?
+        logger.debug("current alerting checks for #{media_type}: #{alerting_checks_count}")
+      end
+
+      unless medium.rollup_threshold.nil?
+        if alerting_checks_count >= medium.rollup_threshold
+          if medium.drop_notifications?(:rollup => true)
+            unless logger.nil?
+              logger.debug("dropping notifications as medium blocked")
+            end
+            return
+          end
+
+          medium.update_sent_alert_keys(:rollup => true,
+            :delete => (['ok', 'acknowledgement'].include?(opts[:state])))
+          rollup_type = 'problem'
+        elsif (alerting_checks_count + cleaned) >= medium.rollup_threshold
+          # alerting checks was just cleaned such that it is now below the rollup threshold
+          medium.update_sent_alert_keys(:rollup => true, :delete => true)
+          rollup_type = 'recovery'
+        end
+      end
+
+      unless logger.nil?
+        logger.debug "rollup decisions: #{alert_check.name} " +
+          "#{opts[:state]} #{media_type} #{medium.address} " +
+          "rollup_type: #{rollup_type}"
+      end
+
+      alert = Flapjack::Data::Alert.new(:state => opts[:state],
+        :rollup => rollup_type, :state_duration => notification.state_duration,
+        :acknowledgement_duration => notification.duration,
+        :notification_type => notification.type)
+      unless alert.save
+        raise "Couldn't save alert: #{alert.errors.full_messages.inspect}"
+      end
+
+      medium.alerts << alert
+      alert_check.alerts << alert
+
+      alert
     end
 
   end

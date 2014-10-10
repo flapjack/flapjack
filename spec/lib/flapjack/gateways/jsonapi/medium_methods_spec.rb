@@ -80,7 +80,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(medium).to receive(:as_json).and_return(medium_data)
     expect(Flapjack::Data::Medium).to receive(:associated_ids_for_contact).
       with(medium.id).and_return(medium.id => contact.id)
-    expect(Flapjack::Data::Medium).to receive(:associated_ids_for_notification_rule_states).
+    expect(Flapjack::Data::Medium).to receive(:associated_ids_for_routes).
       with(medium.id).and_return(medium.id => [])
 
     get "/media/#{medium.id}"
@@ -94,7 +94,7 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(medium).to receive(:as_json).and_return(medium_data)
     expect(Flapjack::Data::Medium).to receive(:associated_ids_for_contact).
       with(medium.id).and_return(medium.id => contact.id)
-    expect(Flapjack::Data::Medium).to receive(:associated_ids_for_notification_rule_states).
+    expect(Flapjack::Data::Medium).to receive(:associated_ids_for_routes).
       with(medium.id).and_return(medium.id => [])
 
     get "/media"

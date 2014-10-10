@@ -12,7 +12,7 @@
       <th>Name</th>
       <th>Email</th>
     </tr>
-    <% @contacts.sort_by {|c| [c.last_name, c.first_name] }.each do |contact| %>
+    <% @contacts.sort_by(&:name).each do |contact| %>
     <tr>
       <td><a href="<%= @base_url %>contacts/<%= contact.id %>" title="contact details"><%= h contact.name %></a></td>
       <td><%= h contact.email %></td>

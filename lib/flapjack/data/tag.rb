@@ -3,7 +3,7 @@
 require 'sandstorm/records/redis_record'
 
 require 'flapjack/data/check'
-require 'flapjack/data/notification_rule'
+require 'flapjack/data/rule'
 
 module Flapjack
 
@@ -20,8 +20,8 @@ module Flapjack
       has_and_belongs_to_many :checks,
         :class_name => 'Flapjack::Data::Check', :inverse_of => :tags
 
-      has_and_belongs_to_many :notification_rules,
-        :class_name => 'Flapjack::Data::NotificationRule', :inverse_of => :tags
+      has_and_belongs_to_many :rules,
+        :class_name => 'Flapjack::Data::Rule', :inverse_of => :tags
 
       unique_index_by :name
 

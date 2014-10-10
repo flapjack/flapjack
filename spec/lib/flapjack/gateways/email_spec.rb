@@ -29,7 +29,7 @@ describe Flapjack::Gateways::Email, :logger => true do
     expect(check).to receive(:name).exactly(3).times.and_return('example.com:ping')
 
     contact = double(Flapjack::Data::Contact)
-    expect(contact).to receive(:first_name).twice.and_return('John')
+    expect(contact).to receive(:name).twice.and_return('John Smith')
 
     medium = double(Flapjack::Data::Medium)
     expect(medium).to receive(:contact).twice.and_return(contact)
@@ -80,7 +80,7 @@ describe Flapjack::Gateways::Email, :logger => true do
     expect(check).to receive(:name).exactly(3).times.and_return('example.com:ping')
 
     contact = double(Flapjack::Data::Contact)
-    expect(contact).to receive(:first_name).twice.and_return('John')
+    expect(contact).to receive(:name).twice.and_return('John Smith')
 
     medium = double(Flapjack::Data::Medium)
     expect(medium).to receive(:contact).twice.and_return(contact)
@@ -133,7 +133,7 @@ describe Flapjack::Gateways::Email, :logger => true do
     expect(check).to receive(:name).exactly(3).times.and_return('example.com:ping')
 
     contact = double(Flapjack::Data::Contact)
-    expect(contact).to receive(:first_name).twice.and_return('John')
+    expect(contact).to receive(:name).twice.and_return('John Smith')
 
     medium = double(Flapjack::Data::Medium)
     expect(medium).to receive(:contact).twice.and_return(contact)
@@ -186,7 +186,7 @@ describe Flapjack::Gateways::Email, :logger => true do
     expect(check).to receive(:name).exactly(3).times.and_return('example.com:ping')
 
     contact = double(Flapjack::Data::Contact)
-    expect(contact).to receive(:first_name).twice.and_return('John')
+    expect(contact).to receive(:name).twice.and_return('John Smith')
 
     medium = double(Flapjack::Data::Medium)
     expect(medium).to receive(:contact).twice.and_return(contact)

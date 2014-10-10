@@ -20,8 +20,7 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
                }
 
   let(:message) { {'notification_type'  => 'recovery',
-                   'contact_first_name' => 'John',
-                   'contact_last_name'  => 'Smith',
+                   'contact_name' => 'John Smith',
                    'state'              => 'ok',
                    'summary'            => 'smile',
                    'last_state'         => 'problem',

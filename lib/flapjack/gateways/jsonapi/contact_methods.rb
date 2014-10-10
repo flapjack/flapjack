@@ -3,7 +3,7 @@
 require 'sinatra/base'
 
 require 'flapjack/data/contact'
-require 'flapjack/data/notification_rule'
+require 'flapjack/data/rule'
 
 module Flapjack
 
@@ -64,9 +64,7 @@ module Flapjack
               else
                 contacts = contacts_data.collect do |contact_data|
                   Flapjack::Data::Contact.new(:id => contact_data['id'],
-                    :first_name => contact_data['first_name'],
-                    :last_name => contact_data['last_name'],
-                    :email => contact_data['email'],
+                    :name => contact_data['name'],
                     :timezone => contact_data['timezone'])
                 end
 
@@ -108,12 +106,12 @@ module Flapjack
             contacts_ids = contacts.map(&:id)
             linked_medium_ids = Flapjack::Data::Contact.associated_ids_for_media(*contacts_ids)
             linked_pagerduty_credentials_ids = Flapjack::Data::Contact.associated_ids_for_pagerduty_credentials(*contacts_ids)
-            linked_notification_rule_ids = Flapjack::Data::Contact.associated_ids_for_notification_rules(*contacts_ids)
+            linked_rule_ids = Flapjack::Data::Contact.associated_ids_for_rules(*contacts_ids)
 
             contacts_as_json = contacts.collect {|contact|
               contact.as_json(:medium_ids => linked_medium_ids[contact.id],
                 :pagerduty_credentials_ids => linked_pagerduty_credentials_ids[contact.id],
-                :notification_rule_ids => linked_notification_rule_ids[contact.id])
+                :rule_ids => linked_rule_ids[contact.id])
             }
 
             Flapjack.dump_json(:contacts => contacts_as_json)
@@ -125,7 +123,7 @@ module Flapjack
                 apply_json_patch('contacts') do |op, property, linked, value|
                   case op
                   when 'replace'
-                    if ['first_name', 'last_name', 'email', 'timezone'].include?(property)
+                    if ['name', 'email', 'timezone'].include?(property)
                       contact.send("#{property}=".to_sym, value)
                     end
                   when 'add'
@@ -141,18 +139,18 @@ module Flapjack
                           contact.media << medium
                         end
                       end
-                    when 'notification_rules'
-                      notification_rule = Flapjack::Data::NotificationRule.find_by_id(value)
-                      contact.notification_rules << notification_rule unless notification_rule.nil?
+                    when 'rules'
+                      rule = Flapjack::Data::Rule.find_by_id(value)
+                      contact.rules << rule unless rule.nil?
                     end
                   when 'remove'
                     case linked
                     when 'media'
                       medium = Flapjack::Data::Medium.find_by_id(value)
                       contact.media.delete(medium) unless medium.nil?
-                    when 'notification_rules'
-                      notification_rule = Flapjack::Data::NotificationRule.find_by_id(value)
-                      contact.notification_rules.delete(notification_rule) unless notification_rule.nil?
+                    when 'rules'
+                      rule = Flapjack::Data::Rule.find_by_id(value)
+                      contact.rules.delete(rule) unless rule.nil?
                     end
                   end
                 end
