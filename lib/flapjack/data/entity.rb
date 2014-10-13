@@ -550,10 +550,11 @@ module Flapjack
 
         entity_ids.inject({}) do |memo, entity_id|
           entity_name = redis.hget("entity:#{entity_id}", 'name')
-          unless entity_name.nil? || entity_name.empty?
-            checks = Flapjack::Data::EntityCheck.find_all_names_for_entity_name(entity_name, :redis => redis)
-            memo[entity_id] = checks.collect {|check| "#{entity_name}:#{check}" }
-          end
+          next memo if entity_name.nil? || entity_name.empty?
+          en = Regexp.escape(entity_name)
+          check_names = redis.keys("check:#{entity_name}:*").map {|c| c.sub(/^check:#{en}:/, '') } |
+            Flapjack::Data::EntityCheck.find_current_names_for_entity_name(entity_name, :redis => redis)
+          memo[entity_id] = check_names.map {|cn| "#{entity_name}:#{cn}"}
           memo
         end
       end
@@ -567,13 +568,6 @@ module Flapjack
         return if checks.nil?
         checks.length
       end
-
-      # def as_json(*args)
-      #   {
-      #     "id"    => self.id,
-      #     "name"  => self.name,
-      #   }
-      # end
 
       def to_jsonapi(opts = {})
         json_data = {
