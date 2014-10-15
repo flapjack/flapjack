@@ -369,7 +369,6 @@ module Flapjack
           exit_now! "could not understand destination Redis config"
         end
 
-        refresh_archive_index(source_addr, :source => source_redis, :dest => dest_redis)
         archives = mirror_get_archive_keys_stats(source_addr, :source => source_redis,
           :dest => dest_redis)
         raise "found no archives!" if archives.empty?
@@ -415,15 +414,7 @@ module Flapjack
           end
 
           archives = mirror_get_archive_keys_stats(source_addr,
-            :source => source_redis, :dest => dest_redis)
-
-          if archives.any? {|a| a[:size] == 0}
-            # data may be out of date -- refresh, then reject any immediately
-            # expired keys directly; don't keep chasing updated data
-            refresh_archive_index(source_addr, :source => source_redis, :dest => dest_redis)
-            archives = mirror_get_archive_keys_stats(source_addr,
-              :source => source_redis, :dest => dest_redis).select {|a| a[:size] > 0}
-          end
+            :source => source_redis, :dest => dest_redis).select {|a| a[:size] > 0}
 
           if archives.empty?
             sleep 1
@@ -448,21 +439,6 @@ module Flapjack
         dest_redis   = opts[:dest]
         dest_redis.smembers("known_events_archive_keys:#{name}").sort.collect do |eak|
           {:name => eak, :size => source_redis.llen(eak)}
-        end
-      end
-
-      def refresh_archive_index(name, opts = {})
-        source_redis = opts[:source]
-        dest_redis   = opts[:dest]
-        # refresh the key name cache, avoid repeated calls to redis KEYS
-        # this cache will be updated any time a new archive bucket is created
-        archive_keys = source_redis.keys("events_archive:*").group_by do |ak|
-          (source_redis.llen(ak) > 0) ? 't' : 'f'
-        end
-
-        {'f' => :srem, 't' => :sadd}.each_pair do |k, cmd|
-          next unless archive_keys.has_key?(k) && !archive_keys[k].empty?
-          dest_redis.send(cmd, "known_events_archive_keys:#{name}", archive_keys[k])
         end
       end
 

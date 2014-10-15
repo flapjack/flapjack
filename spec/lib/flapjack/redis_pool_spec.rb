@@ -12,6 +12,7 @@ describe Flapjack::RedisPool do
         redis
       }
       expect(::Redis).to receive(:new).exactly(redis_count).times.and_return(*redis_conns)
+      expect(Flapjack::Data::Migration).to receive(:refresh_archive_index).exactly(redis_count).times
 
       frp = Flapjack::RedisPool.new(:size => redis_count)
 
