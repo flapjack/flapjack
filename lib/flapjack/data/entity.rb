@@ -451,7 +451,6 @@ module Flapjack
             entity_id = SecureRandom.uuid
             redis.hset('all_entity_ids_by_name', entity_name, entity_id)
             redis.hset('all_entity_names_by_id', entity_id, entity_name)
-            redis.hset("entity:#{entity_id}", 'name', entity_name)
           end
         else
           # most likely from API import
@@ -463,7 +462,6 @@ module Flapjack
           if existing_name.nil?
             redis.hset('all_entity_ids_by_name', entity_name, entity_id)
             redis.hset('all_entity_names_by_id', entity_id, entity_name)
-            redis.hset("entity:#{entity_id}", 'name', entity_name)
 
           elsif existing_name != entity_name
             if redis.hexists('all_entity_ids_by_name', entity_name)
@@ -473,7 +471,6 @@ module Flapjack
                 redis.hdel('all_entity_ids_by_name', existing_name)
                 redis.hset('all_entity_ids_by_name', entity_name, entity_id)
                 redis.hset('all_entity_names_by_id', entity_id, entity_name)
-                redis.hset("entity:#{entity_id}", 'name', entity_name)
               }
             end
           end
@@ -580,7 +577,7 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
 
         entity_ids.inject({}) do |memo, entity_id|
-          entity_name = redis.hget("entity:#{entity_id}", 'name')
+          entity_name = redis.hget('entity_names_by_id', entity_id)
           next memo if entity_name.nil? || entity_name.empty?
           en = Regexp.escape(entity_name)
           check_names = redis.keys("check:#{entity_name}:*").map {|c| c.sub(/^check:#{en}:/, '') } |

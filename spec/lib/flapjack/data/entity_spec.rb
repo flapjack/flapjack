@@ -238,14 +238,12 @@ describe Flapjack::Data::Entity, :redis => true do
       it 'renames the "entity name to id lookup" and the name in the "entity hash by id"' do
         expect(@redis.hget('all_entity_ids_by_name', 'name1')).to eq('5000')
         expect(@redis.hget('all_entity_names_by_id', '5000')).to eq('name1')
-        expect(@redis.hget('entity:5000', 'name')).to eq('name1')
 
         add_name2
 
         expect(@redis.hget('all_entity_ids_by_name', 'name1')).to be_nil
         expect(@redis.hget('all_entity_ids_by_name', 'name2')).to eq('5000')
         expect(@redis.hget('all_entity_names_by_id', '5000')).to eq('name2')
-        expect(@redis.hget('entity:5000', 'name')).to eq('name2')
       end
 
       it 'does not rename an entity if an entity with the new name already exists' do
@@ -256,20 +254,16 @@ describe Flapjack::Data::Entity, :redis => true do
 
         expect(@redis.hget('all_entity_ids_by_name', 'name1')).to eq('5000')
         expect(@redis.hget('all_entity_names_by_id', '5000')).to eq('name1')
-        expect(@redis.hget('entity:5000', 'name')).to eq('name1')
         expect(@redis.hget('all_entity_ids_by_name', 'name2')).to eq('5001')
         expect(@redis.hget('all_entity_names_by_id', '5001')).to eq('name2')
-        expect(@redis.hget('entity:5001', 'name')).to eq('name2')
 
         add_name2
 
         # no change
         expect(@redis.hget('all_entity_ids_by_name', 'name1')).to eq('5000')
         expect(@redis.hget('all_entity_names_by_id', '5000')).to eq('name1')
-        expect(@redis.hget('entity:5000', 'name')).to eq('name1')
         expect(@redis.hget('all_entity_ids_by_name', 'name2')).to eq('5001')
         expect(@redis.hget('all_entity_names_by_id', '5001')).to eq('name2')
-        expect(@redis.hget('entity:5001', 'name')).to eq('name2')
       end
 
       it 'renames current check state' do

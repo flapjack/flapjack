@@ -10,6 +10,8 @@ require 'redis'
 
 require 'em-synchrony/connection_pool'
 
+require 'flapjack/data/migration'
+
 module Flapjack
   class RedisPool < EventMachine::Synchrony::ConnectionPool
 
@@ -17,7 +19,9 @@ module Flapjack
       config = opts.delete(:config)
       @size = opts[:size] || 5
       super(:size => @size) {
-        ::Redis.new(config)
+        redis = ::Redis.new(config)
+        Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => redis)
+        redis
       }
     end
 

@@ -5,6 +5,7 @@ require 'redis'
 require 'flapjack/configuration'
 require 'flapjack/data/contact'
 require 'flapjack/data/entity'
+require 'flapjack/data/migration'
 
 module Flapjack
   module CLI
@@ -61,7 +62,10 @@ module Flapjack
       private
 
       def redis
-        @redis ||= Redis.new(@redis_options.merge(:driver => :ruby))
+        return @redis unless @redis.nil?
+        @redis = Redis.new(@redis_options.merge(:driver => :hiredis))
+        Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => @redis)
+        @redis
       end
 
     end
