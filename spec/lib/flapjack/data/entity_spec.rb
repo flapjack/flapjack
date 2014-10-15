@@ -11,7 +11,7 @@ describe Flapjack::Data::Entity, :redis => true do
 
     expect(entity).not_to be_nil
     expect(entity.name).to eq(name)
-    expect(@redis.get("entity_id:#{name}")).to match(/^\S+$/)
+    expect(@redis.hget('all_entity_ids_by_name', name)).to match(/^\S+$/)
   end
 
   it 'creates tags if passed when added' do
@@ -193,75 +193,6 @@ describe Flapjack::Data::Entity, :redis => true do
 
   end
 
-  # # Not used anywhere
-  # it "finds entities by tag" do
-  #   entity0 = Flapjack::Data::Entity.add({'id'       => '5000',
-  #                                         'name'     => 'abc-123',
-  #                                         'contacts' => []},
-  #                                        :redis => @redis)
-
-  #   entity1 = Flapjack::Data::Entity.add({'id'       => '5001',
-  #                                         'name'     => 'def-456',
-  #                                         'contacts' => []},
-  #                                        :redis => @redis)
-
-  #   entity0.add_tags('source:foobar', 'abc')
-  #   entity1.add_tags('source:foobar', 'def')
-
-  #   expect(entity0).not_to be_nil
-  #   expect(entity0).to be_an(Flapjack::Data::Entity)
-  #   expect(entity0.tags).to include("source:foobar")
-  #   expect(entity0.tags).to include("abc")
-  #   expect(entity0.tags).not_to include("def")
-  #   expect(entity1).not_to be_nil
-  #   expect(entity1).to be_an(Flapjack::Data::Entity)
-  #   expect(entity1.tags).to include("source:foobar")
-  #   expect(entity1.tags).to include("def")
-  #   expect(entity1.tags).not_to include("abc")
-
-  #   entities = Flapjack::Data::Entity.find_all_with_tags(['abc'], :redis => @redis)
-  #   expect(entities).to be_an(Array)
-  #   expect(entities.size).to eq(1)
-  #   expect(entities.first).to eq('abc-123')
-
-  #   entities = Flapjack::Data::Entity.find_all_with_tags(['donkey'], :redis => @redis)
-  #   expect(entities).to be_an(Array)
-  #   expect(entities).to be_empty
-  # end
-
-  # it "finds entities with several tags" do
-  #   entity0 = Flapjack::Data::Entity.add({'id'       => '5000',
-  #                                        'name'     => 'abc-123',
-  #                                        'contacts' => []},
-  #                                       :redis => @redis)
-
-  #   entity1 = Flapjack::Data::Entity.add({'id'       => '5001',
-  #                                        'name'     => 'def-456',
-  #                                        'contacts' => []},
-  #                                       :redis => @redis)
-
-  #   entity0.add_tags('source:foobar', 'abc')
-  #   entity1.add_tags('source:foobar', 'def')
-
-  #   expect(entity0).not_to be_nil
-  #   expect(entity0).to be_an(Flapjack::Data::Entity)
-  #   expect(entity0.tags).to include("source:foobar")
-  #   expect(entity0.tags).to include("abc")
-  #   expect(entity1).not_to be_nil
-  #   expect(entity1).to be_an(Flapjack::Data::Entity)
-  #   expect(entity1.tags).to include("source:foobar")
-  #   expect(entity1.tags).to include("def")
-
-  #   entities = Flapjack::Data::Entity.find_all_with_tags(['source:foobar'], :redis => @redis)
-  #   expect(entities).to be_an(Array)
-  #   expect(entities.size).to eq(2)
-
-  #   entities = Flapjack::Data::Entity.find_all_with_tags(['source:foobar', 'def'], :redis => @redis)
-  #   expect(entities).to be_an(Array)
-  #   expect(entities.size).to eq(1)
-  #   expect(entities.first).to eq('def-456')
-  # end
-
   context 'renaming and merging' do
 
     let(:time_i) { Time.now.to_i }
@@ -305,13 +236,15 @@ describe Flapjack::Data::Entity, :redis => true do
       end
 
       it 'renames the "entity name to id lookup" and the name in the "entity hash by id"' do
-        expect(@redis.get('entity_id:name1')).to eq('5000')
+        expect(@redis.hget('all_entity_ids_by_name', 'name1')).to eq('5000')
+        expect(@redis.hget('all_entity_names_by_id', '5000')).to eq('name1')
         expect(@redis.hget('entity:5000', 'name')).to eq('name1')
 
         add_name2
 
-        expect(@redis.get('entity_id:name1')).to be_nil
-        expect(@redis.get('entity_id:name2')).to eq('5000')
+        expect(@redis.hget('all_entity_ids_by_name', 'name1')).to be_nil
+        expect(@redis.hget('all_entity_ids_by_name', 'name2')).to eq('5000')
+        expect(@redis.hget('all_entity_names_by_id', '5000')).to eq('name2')
         expect(@redis.hget('entity:5000', 'name')).to eq('name2')
       end
 
@@ -321,17 +254,21 @@ describe Flapjack::Data::Entity, :redis => true do
                                     'contacts' => []},
                                     :redis => @redis)
 
-        expect(@redis.get('entity_id:name1')).to eq('5000')
+        expect(@redis.hget('all_entity_ids_by_name', 'name1')).to eq('5000')
+        expect(@redis.hget('all_entity_names_by_id', '5000')).to eq('name1')
         expect(@redis.hget('entity:5000', 'name')).to eq('name1')
-        expect(@redis.get('entity_id:name2')).to eq('5001')
+        expect(@redis.hget('all_entity_ids_by_name', 'name2')).to eq('5001')
+        expect(@redis.hget('all_entity_names_by_id', '5001')).to eq('name2')
         expect(@redis.hget('entity:5001', 'name')).to eq('name2')
 
         add_name2
 
         # no change
-        expect(@redis.get('entity_id:name1')).to eq('5000')
+        expect(@redis.hget('all_entity_ids_by_name', 'name1')).to eq('5000')
+        expect(@redis.hget('all_entity_names_by_id', '5000')).to eq('name1')
         expect(@redis.hget('entity:5000', 'name')).to eq('name1')
-        expect(@redis.get('entity_id:name2')).to eq('5001')
+        expect(@redis.hget('all_entity_ids_by_name', 'name2')).to eq('5001')
+        expect(@redis.hget('all_entity_names_by_id', '5001')).to eq('name2')
         expect(@redis.hget('entity:5001', 'name')).to eq('name2')
       end
 

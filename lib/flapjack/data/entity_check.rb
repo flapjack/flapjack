@@ -47,10 +47,12 @@ module Flapjack
         logger = options[:logger]
         timestamp = Time.now.to_i
 
-        redis.zadd("current_checks:#{ent.name}", timestamp, check_name)
-        redis.zadd('current_entities', timestamp, ent.name)
+        entity_name = ent.name
 
-        c = self.new(ent, check_name, :logger  => logger,
+        redis.zadd("current_checks:#{entity_name}", timestamp, check_name)
+        redis.zadd('current_entities', timestamp, entity_name)
+
+        c = self.new(ent, check_name, :logger => logger, :timestamp => timestamp,
                      :redis => redis)
         if check_data['tags'] && check_data['tags'].respond_to?(:each)
           c.add_tags(*check_data['tags'])
@@ -95,11 +97,9 @@ module Flapjack
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        checks = redis.keys('check:*').map {|c| c.sub(/^check:/, '') } |
-                   find_current_names(:redis => redis)
-        checks.map {|ec|
-          self.for_event_id(ec, options)
-        }
+        redis.zrange("all_checks", 0, -1).collect do |cname|
+          self.for_event_id(cname, options)
+        end
       end
 
       def self.find_current_names_for_entity_name(entity_name, options = {})
@@ -176,36 +176,42 @@ module Flapjack
       def self.find_maintenance(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         type = options[:type]
-        keys = redis.keys("*:#{type}_maintenances")
-        keys.flat_map { |k|
-          entity = k.split(':')[0]
-          check = k.split(':')[1]
+
+        checks_with_maints = redis.zrange("all_checks", 0, -1).select do |ec_name|
+          # not ideal, but redis internals should essentially make this a lot
+          # of separate hash lookups
+          redis.exists("#{ec_name}:#{type}_maintenances")
+        end
+
+        return [] if checks_with_maints.empty?
+
+        entity_re = options[:entity].nil? ? nil : Regexp.new(options[:entity])
+        check_re  = options[:check].nil?  ? nil : Regexp.new(options[:check])
+        reason_re = options[:reason].nil? ? nil : Regexp.new(options[:reason])
+
+        checks_with_maints.inject([]) do |memo, k|
+          entity, check = k.split(':', 2)
           ec = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => redis)
 
           # Only return entries which match what was passed in
-          case
-          when options[:state] && options[:state] != ec.state
-            nil
-          when options[:entity] && !Regexp.new(options[:entity]).match(entity)
-            nil
-          when options[:check] && !Regexp.new(options[:check]).match(check)
-            nil
-          else
-            windows = ec.maintenances(nil, nil, type.to_sym => true)
-            windows.map { |window|
-              entry = { :entity => entity,
-                        :check => check,
-                        :state => ec.state
-              }
-              if (options[:reason].nil? || Regexp.new(options[:reason]).match(window[:summary])) &&
-                check_maintenance_timestamp(options[:started], window[:start_time]) &&
-                check_maintenance_timestamp(options[:finishing], window[:end_time]) &&
-                check_maintenance_interval(options[:duration], window[:duration])
-                entry.merge!(window)
-              end
-            }.compact
+          next memo if (options[:state] && (options[:state] != ec.state)) ||
+                       !(entity_re.nil? || entity_re.match(entity)) ||
+                       !(check_re.nil?  || check_re.match(check))
+
+          ec.maintenances(nil, nil, type.to_sym => true).each do |window|
+            next unless (reason_re.nil? || reason_re.match(window[:summary])) &&
+              check_maintenance_timestamp(options[:started], window[:start_time]) &&
+              check_maintenance_timestamp(options[:finishing], window[:end_time]) &&
+              check_maintenance_interval(options[:duration], window[:duration])
+
+            memo << { :entity => entity,
+                      :check => check,
+                      :state => ec.state
+                    }.merge(window)
           end
-        }.compact
+
+          memo
+        end
       end
 
       def self.delete_maintenance(options = {})
@@ -660,6 +666,8 @@ module Flapjack
 
       def last_update=(timestamp)
         @redis.hset("check:#{@key}", 'last_update', timestamp)
+        @redis.zadd("all_checks", timestamp, @key)
+        @redis.zadd("all_checks:#{entity.name}", timestamp, check)
         @redis.zadd("current_checks:#{entity.name}", timestamp, check)
         @redis.zadd('current_entities', timestamp, entity.name)
       end
@@ -672,8 +680,11 @@ module Flapjack
 
       # disables a check (removes currency)
       def disable!
+        timestamp = Time.now.to_i
         @logger.debug("disabling check [#{@key}]") if @logger
         entity_name = entity.name
+        @redis.zadd("all_checks", timestamp, @key)
+        @redis.zadd("all_checks:#{entity_name}", timestamp, check)
         @redis.zrem("current_checks:#{entity_name}", check)
         if @redis.zcount("current_checks:#{entity_name}", '-inf', '+inf') == 0
           @redis.zrem("current_checks:#{entity_name}", check)
@@ -684,8 +695,10 @@ module Flapjack
       def enable!
         timestamp = Time.now.to_i
         entity_name = entity.name
-        redis.zadd("current_checks:#{entity_name}", timestamp, check)
-        redis.zadd('current_entities', timestamp, entity_name)
+        @redis.zadd("all_checks", timestamp, @key)
+        @redis.zadd("all_checks:#{entity_name}", timestamp, check)
+        @redis.zadd("current_checks:#{entity_name}", timestamp, check)
+        @redis.zadd('current_entities', timestamp, entity_name)
       end
 
       def enabled?
@@ -986,6 +999,11 @@ module Flapjack
         raise "Invalid entity" unless @entity = entity
         raise "Invalid check" unless @check = check
         @key = "#{entity.name}:#{check}"
+        if @redis.zscore("all_checks", @key).nil?
+          timestamp = options[:timestamp] || Time.now.to_i
+          @redis.zadd("all_checks", timestamp, @key)
+          @redis.zadd("all_checks:#{entity.name}", timestamp, check)
+        end
         @logger = options[:logger]
       end
 

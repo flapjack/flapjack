@@ -540,7 +540,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         ec.create_scheduled_maintenance(three_hours_ago + five_minutes, seven_hours, :summary => "Scheduled maintenance started 3 hours ago")
         ec.create_scheduled_maintenance(four_hours_ago, seven_hours, :summary => "Scheduled maintenance started 4 hours ago")
 
-        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :started => input).sort_by { |k| k[:entity] }
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis,
+          :type => 'scheduled', :started => input).sort_by { |k| k[:entity] }
 
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(2)

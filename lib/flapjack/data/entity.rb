@@ -21,19 +21,16 @@ module Flapjack
         current_entity_names = (options.has_key?(:enabled) && !options[:enabled].nil?) ?
           Flapjack::Data::Entity.current_names(:redis => redis) : nil
 
-        keys = redis.keys("entity_id:*")
-        return [] unless keys.any?
-        ids = redis.mget(keys)
-        keys.inject([]) {|memo, k|
-          k =~ /^entity_id:(.+)$/; entity_name = $1; entity_id = ids.shift
+        entity_names_by_id = redis.hgetall("all_entity_names_by_id")
+        return [] if entity_names_by_id.empty?
 
+        entity_names_by_id.inject([]) {|memo, (eid, ename)|
           if options[:enabled].nil? ||
-            (options[:enabled].is_a?(TrueClass) && current_entity_names.include?(entity_name) ) ||
-            (options[:enabled].is_a?(FalseClass) && !current_entity_names.include?(entity_name))
+            (options[:enabled].is_a?(TrueClass) && current_entity_names.include?(ename) ) ||
+            (options[:enabled].is_a?(FalseClass) && !current_entity_names.include?(ename))
 
-            memo << self.new(:name => entity_name, :id => entity_id, :redis => redis)
+            memo << self.new(:name => ename, :id => eid, :redis => redis)
           end
-
           memo
         }.sort_by(&:name)
       end
@@ -59,6 +56,7 @@ module Flapjack
 
         alerting_check_keys = redis.keys("contact_alerting_checks:*")
 
+        all_checks       = {}
         failed_checks    = {}
         hashes_to_remove = []
         hashes_to_add    = {}
@@ -76,6 +74,9 @@ module Flapjack
         checks.each do |ch|
           existing_check = "#{existing_name}:#{ch}"
           new_check      = "#{entity_name}:#{ch}"
+
+          ch_all_score = redis.zscore("all_checks", existing_check)
+          all_checks[ch] = ch_all_score unless ch_all_score.nil?
 
           ch_fail_score = redis.zscore("failed_checks", existing_check)
           failed_checks[ch] = ch_fail_score unless ch_fail_score.nil?
@@ -111,12 +112,18 @@ module Flapjack
           redis.rename(chk, chk.sub(/^#{Regexp.escape(existing_name)}:/, "#{entity_name}:"))
         end
 
+        all_checks.each_pair do |ch, score|
+          redis.zrem('all_checks', "#{existing_name}:#{ch}")
+          redis.zadd('all_checks', score, "#{entity_name}:#{ch}")
+        end
+
         # currently failing checks
         failed_checks.each_pair do |ch, score|
           redis.zrem('failed_checks', "#{existing_name}:#{ch}")
           redis.zadd('failed_checks', score, "#{entity_name}:#{ch}")
         end
 
+        redis.rename("all_checks:#{existing_name}", "all_checks:#{entity_name}")
         redis.rename("current_checks:#{existing_name}", "current_checks:#{entity_name}")
 
         unless current_score.nil?
@@ -160,6 +167,9 @@ module Flapjack
         keys_to_delete = []
         keys_to_rename = {}
 
+        all_checks_to_remove = []
+        all_checks_to_add    = {}
+
         failed_checks_to_remove = []
         failed_checks_to_add    = {}
 
@@ -182,6 +192,7 @@ module Flapjack
           old_states = "#{old_check}:states"
           new_states = "#{current_check}:states"
 
+          all_checks_to_remove    << old_check
           failed_checks_to_remove << old_check
 
           if redis.exists("check:#{current_check}")
@@ -194,6 +205,9 @@ module Flapjack
 
             keys_to_delete << old_states
           else
+
+            ch_all_score = redis.zscore("all_checks", old_check)
+            all_checks_to_add[current_check] = ch_all_score unless ch_all_score.nil?
 
             # can move a failing checks entry over, if it exists
             ch_fail_score = redis.zscore("failed_checks", old_check)
@@ -238,6 +252,14 @@ module Flapjack
             end
           end
 
+        end
+
+        # TODO all_checks sorted set -- merge/rename entries
+
+        if redis.exists("all_checks:#{current_name}")
+          keys_to_delete << "all_checks:#{old_name}"
+        else
+          keys_to_rename["all_checks:#{old_name}"] = "all_checks:#{current_name}"
         end
 
         if redis.exists("current_checks:#{current_name}")
@@ -339,6 +361,14 @@ module Flapjack
           redis.zunionstore(dest, [ctk, dest], :aggregate => :max)
         end
 
+        all_checks_to_remove.each do |actr|
+          redis.zrem('all_checks', actr)
+        end
+
+        all_checks_to_add.each_pair do |acta, score|
+          redis.zadd('all_checks', score, acta)
+        end
+
         failed_checks_to_remove.each do |fctr|
           redis.zrem('failed_checks', fctr)
         end
@@ -415,31 +445,36 @@ module Flapjack
 
           # if an entity exists with the same name as the incoming data,
           # use its id; failing that allocate a random one
-          entity_id = redis.get("entity_id:#{entity_name}")
+          entity_id = redis.hget('all_entity_ids_by_name', entity_name)
 
           if entity_id.nil? || entity_id.empty?
             entity_id = SecureRandom.uuid
-            redis.set("entity_id:#{entity_name}", entity_id)
+            redis.hset('all_entity_ids_by_name', entity_name, entity_id)
+            redis.hset('all_entity_names_by_id', entity_id, entity_name)
             redis.hset("entity:#{entity_id}", 'name', entity_name)
           end
         else
           # most likely from API import
-          existing_name = redis.hget("entity:#{entity_id}", 'name')
+          existing_name = redis.hget('all_entity_names_by_id', entity_id)
+
+          # if there's an entity with a matching name, this will change its
+          # id; if no entity exists it creates a new one
 
           if existing_name.nil?
-
-            # if there's an entity with a matching name, this will change its
-            # id; if no entity exists it creates a new one
-            redis.set("entity_id:#{entity_name}", entity_id)
+            redis.hset('all_entity_ids_by_name', entity_name, entity_id)
+            redis.hset('all_entity_names_by_id', entity_id, entity_name)
             redis.hset("entity:#{entity_id}", 'name', entity_name)
 
           elsif existing_name != entity_name
-            if redis.renamenx("entity_id:#{existing_name}", "entity_id:#{entity_name}")
+            if redis.hexists('all_entity_ids_by_name', entity_name)
+              merge(existing_name, entity_name, :redis => redis)
+            else
               rename(existing_name, entity_name, :redis => redis) {
+                redis.hdel('all_entity_ids_by_name', existing_name)
+                redis.hset('all_entity_ids_by_name', entity_name, entity_id)
+                redis.hset('all_entity_names_by_id', entity_id, entity_name)
                 redis.hset("entity:#{entity_id}", 'name', entity_name)
               }
-            else
-              merge(existing_name, entity_name, :redis => redis)
             end
           end
         end
@@ -463,7 +498,7 @@ module Flapjack
 
       def self.find_by_name(entity_name, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        entity_id = redis.get("entity_id:#{entity_name}")
+        entity_id = redis.hget("all_entity_ids_by_name", entity_name)
         if entity_id.nil? || entity_id.empty?
           # key doesn't exist
           return unless options[:create]
@@ -476,7 +511,7 @@ module Flapjack
 
       def self.find_by_id(entity_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        entity_name = redis.hget("entity:#{entity_id}", 'name')
+        entity_name = redis.hget("all_entity_names_by_id", entity_id)
         return if entity_name.nil? || entity_name.empty?
         self.new(:name => entity_name, :id => entity_id, :redis => redis)
       end
@@ -495,21 +530,17 @@ module Flapjack
       # time
       def self.find_all_name_matching(pattern, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
+        regexp = nil
         begin
-          regex = /#{pattern}/
+          regexp = Regexp.new(pattern)
         rescue => e
           if @logger
             @logger.info("Jabber#self.find_all_name_matching - unable to use /#{pattern}/ as a regex pattern: #{e}")
           end
-          return nil
+          regexp = nil
         end
-        redis.keys('entity_id:*').inject([]) {|memo, check|
-          a, entity_name = check.split(':', 2)
-          if (entity_name =~ regex) && !memo.include?(entity_name)
-            memo << entity_name
-          end
-          memo
-        }.sort
+        return if regexp.nil?
+        redis.hkeys('all_entity_ids_by_name').select {|en| regexp === en }.sort
       end
 
       def self.current_names(options = {})
