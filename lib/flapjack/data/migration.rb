@@ -6,19 +6,19 @@ module Flapjack
 
       def self.refresh_archive_index(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        events_keys = redis.keys('events_archive:*')
-        if events_keys.empty?
+        archive_keys = redis.keys('events_archive:*')
+        if archive_keys.empty?
           redis.del('known_events_archive_keys')
           return
         end
 
-        archive_keys = events_keys.group_by do |ak|
-          (redis.llen(ak) > 0) ? 't' : 'f'
+        grouped_keys = archive_keys.group_by do |ak|
+          (redis.llen(ak) > 0) ? 'add' : 'remove'
         end
 
-        {'f' => :srem, 't' => :sadd}.each_pair do |k, cmd|
-          next unless archive_keys.has_key?(k) && !archive_keys[k].empty?
-          redis.send(cmd, 'known_events_archive_keys', archive_keys[k])
+        {'remove' => :srem, 'add' => :sadd}.each_pair do |k, cmd|
+          next unless grouped_keys.has_key?(k) && !grouped_keys[k].empty?
+          redis.send(cmd, 'known_events_archive_keys', grouped_keys[k])
         end
       end
 
