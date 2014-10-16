@@ -21,6 +21,7 @@ module Flapjack
       super(:size => @size) {
         redis = ::Redis.new(config)
         Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => redis)
+        Flapjack::Data::Migration.refresh_archive_index(:redis => redis)
         redis
       }
     end

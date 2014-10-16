@@ -1,6 +1,9 @@
 #!/usr/bin/env ruby
 
+require 'eventmachine'
+require 'em-synchrony'
 require 'redis'
+require 'redis/connection/synchrony'
 
 require 'flapjack/configuration'
 require 'flapjack/data/event'
@@ -50,7 +53,7 @@ module Flapjack
 
       def redis
         return @redis unless @redis.nil?
-        @redis = Redis.new(@redis_options.merge(:driver => :hiredis))
+        @redis = Redis.new(@redis_options)
         Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => @redis)
         @redis
       end

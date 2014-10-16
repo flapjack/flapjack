@@ -22,11 +22,18 @@ describe Flapjack::Data::Event do
                       'tags'     => ['dev'] }
   }
 
+  before(:each) do
+    Flapjack::Data::Event.instance_variable_set('@previous_base_time_str', nil)
+  end
+
   context 'class' do
 
     it "returns the next event (blocking, archiving)" do
       expect(redis).to receive(:brpoplpush).
         with('events', /^events_archive:/, 0).and_return(event_data.to_json)
+      expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
+      expect(redis).to receive(:sadd).
+        with('known_events_archive_keys', /^events_archive:/)
       expect(redis).to receive(:expire)
 
       result = Flapjack::Data::Event.next('events', :block => true,
@@ -46,6 +53,9 @@ describe Flapjack::Data::Event do
     it "returns the next event (non-blocking, archiving)" do
       expect(redis).to receive(:rpoplpush).
         with('events', /^events_archive:/).and_return(event_data.to_json)
+      expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
+      expect(redis).to receive(:sadd).
+        with('known_events_archive_keys', /^events_archive:/)
       expect(redis).to receive(:expire)
 
       result = Flapjack::Data::Event.next('events', :block => false,
@@ -66,6 +76,9 @@ describe Flapjack::Data::Event do
       bad_event_json = '{{{'
       expect(redis).to receive(:brpoplpush).
         with('events', /^events_archive:/, 0).and_return(bad_event_json)
+      expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
+      expect(redis).to receive(:sadd).
+        with('known_events_archive_keys', /^events_archive:/)
       expect(redis).to receive(:multi)
       expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
       expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
@@ -96,6 +109,9 @@ describe Flapjack::Data::Event do
         bad_event_json = bad_event_data.to_json
         expect(redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(bad_event_json)
+        expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
+        expect(redis).to receive(:sadd).
+          with('known_events_archive_keys', /^events_archive:/)
         expect(redis).to receive(:multi)
         expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
         expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
@@ -126,6 +142,9 @@ describe Flapjack::Data::Event do
         bad_event_json = bad_event_data.to_json
         expect(redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(bad_event_json)
+        expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
+        expect(redis).to receive(:sadd).
+          with('known_events_archive_keys', /^events_archive:/)
         expect(redis).to receive(:multi)
         expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
         expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
@@ -158,6 +177,9 @@ describe Flapjack::Data::Event do
         bad_event_json = bad_event_data.to_json
         expect(redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(bad_event_json)
+        expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
+        expect(redis).to receive(:sadd).
+          with('known_events_archive_keys', /^events_archive:/)
         expect(redis).to receive(:multi)
         expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
         expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
@@ -190,6 +212,9 @@ describe Flapjack::Data::Event do
         case_event_data[key] = event_data[key].upcase
         expect(redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(case_event_data.to_json)
+        expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
+        expect(redis).to receive(:sadd).
+          with('known_events_archive_keys', /^events_archive:/)
         expect(redis).to receive(:expire)
 
         result = Flapjack::Data::Event.next('events', :block => true,
@@ -216,6 +241,9 @@ describe Flapjack::Data::Event do
         num_event_data[key] = event_data[key].to_i.to_s
         expect(redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(num_event_data.to_json)
+        expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
+        expect(redis).to receive(:sadd).
+          with('known_events_archive_keys', /^events_archive:/)
         expect(redis).to receive(:expire)
 
         result = Flapjack::Data::Event.next('events', :block => true,
@@ -240,6 +268,9 @@ describe Flapjack::Data::Event do
         bad_event_json = bad_event_data.to_json
         expect(redis).to receive(:brpoplpush).
           with('events', /^events_archive:/, 0).and_return(bad_event_json)
+        expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
+        expect(redis).to receive(:sadd).
+          with('known_events_archive_keys', /^events_archive:/)
         expect(redis).to receive(:multi)
         expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
         expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
