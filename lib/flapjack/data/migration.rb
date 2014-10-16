@@ -22,6 +22,15 @@ module Flapjack
         end
       end
 
+      def self.purge_expired_archive_index(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        return unless redis.exists('known_events_archive_keys')
+
+        redis.smembers('known_events_archive_keys').each do |ak|
+          redis.srem('known_events_archive_keys', ak) unless redis.exists(ak)
+        end
+      end
+
     end
   end
 end

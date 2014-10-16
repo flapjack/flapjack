@@ -369,8 +369,7 @@ module Flapjack
           exit_now! "could not understand destination Redis config"
         end
 
-        archives = mirror_get_archive_keys_stats(source_addr, :source => source_redis,
-          :dest => dest_redis)
+        archives = mirror_get_archive_keys_stats(:source => source_redis)
         raise "found no archives!" if archives.empty?
 
         puts "found archives: #{archives.inspect}"
@@ -413,8 +412,9 @@ module Flapjack
             next
           end
 
-          archives = mirror_get_archive_keys_stats(source_addr,
-            :source => source_redis, :dest => dest_redis).select {|a| a[:size] > 0}
+          archives = mirror_get_archive_keys_stats(:source => source_redis).select {|a|
+            a[:size] > 0
+          }
 
           if archives.empty?
             sleep 1
@@ -434,10 +434,9 @@ module Flapjack
         end
       end
 
-      def mirror_get_archive_keys_stats(name, opts = {})
+      def mirror_get_archive_keys_stats(opts = {})
         source_redis = opts[:source]
-        dest_redis   = opts[:dest]
-        dest_redis.smembers("known_events_archive_keys:#{name}").sort.collect do |eak|
+        source_redis.smembers("known_events_archive_keys").sort.collect do |eak|
           {:name => eak, :size => source_redis.llen(eak)}
         end
       end

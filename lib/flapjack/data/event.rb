@@ -2,6 +2,8 @@
 
 require 'flapjack'
 
+require 'flapjack/data/migration'
+
 module Flapjack
   module Data
     class Event
@@ -77,11 +79,15 @@ module Flapjack
                      :events_archive_maxage => (3 * 60 * 60) }
         options  = defaults.merge(opts)
 
-        archive_dest = nil
+        archive_dest  = nil
         base_time_str = Time.now.utc.strftime("%Y%m%d%H")
 
         if options[:archive_events]
           archive_dest = "events_archive:#{base_time_str}"
+          unless @previous_base_time_str == base_time_str
+            Flapjack::Data::Migration.purge_expired_archive_index(:redis => redis)
+          end
+          @previous_base_time_str = base_time_str
           if options[:block]
             raw = redis.brpoplpush(queue, archive_dest, 0)
           else
@@ -89,13 +95,11 @@ module Flapjack
             return unless raw
           end
           redis.sadd("known_events_archive_keys", archive_dest)
+        elsif options[:block]
+          raw = redis.brpop(queue, 0)[1]
         else
-          if options[:block]
-            raw = redis.brpop(queue, 0)[1]
-          else
-            raw = redis.rpop(queue)
-            return unless raw
-          end
+          raw = redis.rpop(queue)
+          return unless raw
         end
         parsed = parse_and_validate(raw, :logger => options[:logger])
         if parsed.nil?
