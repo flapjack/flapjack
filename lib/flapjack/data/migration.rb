@@ -35,9 +35,11 @@ module Flapjack
         semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, :redis => redis)
         if semaphore.nil?
           unless logger.nil?
-            logger.fatal "Could not obtain lock for data migration. Check logs " +
-              "for any exceptions, manually delete the '#{ENTITY_DATA_MIGRATION}' " +
-              "key from your Flapjack Redis database and try running Flapjack again."
+            logger.fatal "Could not obtain lock for data migration. Ensure that " +
+              "no other flapjack processes are running that might be executing " +
+              "migrations, check logs for any exceptions, manually delete the " +
+              "'#{ENTITY_DATA_MIGRATION}' key from your Flapjack Redis " +
+              "database and try running Flapjack again."
           end
           exit
         end
