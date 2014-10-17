@@ -46,9 +46,10 @@ module Flapjack
         @redis_config = opts[:redis_config] || {}
         @boot_time = opts[:boot_time]
 
-        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
-
         @logger = opts[:logger]
+
+        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2, :logger => @logger)
+
         @logger.debug("Jabber Initializing")
 
         @buffer = []

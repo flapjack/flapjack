@@ -23,7 +23,7 @@ module Flapjack
         @config = opts[:config]
         @logger = opts[:logger]
         @redis_config = opts[:redis_config] || {}
-        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
+        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2, :logger => @logger)
 
         @logger.debug("New Pagerduty pikelet with the following options: #{@config.inspect}")
 

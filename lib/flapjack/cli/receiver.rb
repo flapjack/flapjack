@@ -6,6 +6,7 @@ require 'hiredis'
 
 require 'flapjack/configuration'
 require 'flapjack/data/event'
+require 'flapjack/data/migration'
 require 'flapjack/patches'
 
 # TODO options should be overridden by similar config file options
@@ -132,7 +133,10 @@ module Flapjack
       private
 
       def redis
-        @redis ||= Redis.new(@redis_options.merge(:driver => :hiredis))
+        return @redis unless @redis.nil?
+        @redis = Redis.new(@redis_options.merge(:driver => :hiredis))
+        Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => @redis)
+        @redis
       end
 
       def runner(type)
@@ -368,6 +372,8 @@ module Flapjack
         else
           exit_now! "could not understand destination Redis config"
         end
+
+        Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => dest_redis)
 
         archives = mirror_get_archive_keys_stats(:source => source_redis)
         raise "found no archives!" if archives.empty?

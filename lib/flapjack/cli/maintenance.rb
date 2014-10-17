@@ -1,13 +1,12 @@
 #!/usr/bin/env ruby
 
-require 'eventmachine'
-require 'em-synchrony'
 require 'redis'
-require 'redis/connection/synchrony'
+require 'hiredis'
 
 require 'flapjack/configuration'
 require 'flapjack/data/event'
 require 'flapjack/data/entity_check'
+require 'flapjack/data/migration'
 require 'terminal-table'
 
 module Flapjack
@@ -26,7 +25,7 @@ module Flapjack
           exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
         end
 
-        @redis_options = config.for_redis.merge(:driver => :ruby)
+        @redis_options = config.for_redis
         @options[:redis] = redis
       end
 
@@ -67,7 +66,10 @@ module Flapjack
       private
 
       def redis
-        @redis ||= Redis.new(@redis_options)
+        return @redis unless @redis.nil?
+        @redis = Redis.new(@redis_options.merge(:driver => :hiredis))
+        Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => @redis)
+        @redis
       end
 
     end

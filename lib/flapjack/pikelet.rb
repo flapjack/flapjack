@@ -97,7 +97,7 @@ module Flapjack
 
       def configure_resque
         unless ::Resque.instance_variable_defined?('@flapjack_pool') && !::Resque.instance_variable_get('@flapjack_pool').nil?
-          resque_pool = Flapjack::RedisPool.new(:config => @redis_config)
+          resque_pool = Flapjack::RedisPool.new(:config => @redis_config, :logger => @logger)
           ::Resque.instance_variable_set('@flapjack_pool', resque_pool)
           ::Resque.redis = resque_pool
         end
@@ -175,7 +175,7 @@ module Flapjack
 
         # guard against another Resque pikelet having created the pool already
         unless defined?(@@redis_connection) && !@@redis_connection.nil?
-          @@redis_connection = Flapjack::RedisPool.new(:config => @redis_config)
+          @@redis_connection = Flapjack::RedisPool.new(:config => @redis_config, :logger => @logger)
         end
 
         pikelet_klass.instance_variable_set('@config', @config)

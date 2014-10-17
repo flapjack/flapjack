@@ -7,6 +7,7 @@ require 'redis/connection/synchrony'
 
 require 'flapjack/configuration'
 require 'flapjack/data/event'
+require 'flapjack/data/migration'
 
 module Flapjack
   module CLI
@@ -51,7 +52,10 @@ module Flapjack
       private
 
       def redis
-        @redis ||= Redis.new(@redis_options)
+        return @redis unless @redis.nil?
+        @redis = Redis.new(@redis_options)
+        Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => @redis)
+        @redis
       end
 
       def events(opts = {})
