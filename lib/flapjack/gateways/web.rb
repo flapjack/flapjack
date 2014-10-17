@@ -40,7 +40,7 @@ module Flapjack
 
       class << self
         def start
-          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
+          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2, :logger => @logger)
 
           @logger.info "starting web - class"
 

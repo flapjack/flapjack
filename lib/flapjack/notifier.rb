@@ -26,7 +26,7 @@ module Flapjack
       @config = opts[:config]
       @redis_config = opts[:redis_config] || {}
       @logger = opts[:logger]
-      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
+      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2, :logger => @logger)
 
       @notifications_queue = @config['queue'] || 'notifications'
 

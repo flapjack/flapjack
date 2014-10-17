@@ -1,12 +1,53 @@
 #!/usr/bin/env ruby
 
+require 'flapjack/data/semaphore'
+
 module Flapjack
   module Data
     class Migration
 
+      ENTITY_DATA_MIGRATION = 'entity_data_migration'
+
+      # copied from jsonapi/contact_methods.rb, could extract both into separate file
+      def self.obtain_semaphore(resource, options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        semaphore = nil
+        strikes = 0
+        begin
+          semaphore = Flapjack::Data::Semaphore.new(resource, :redis => redis, :expiry => 60)
+        rescue Flapjack::Data::Semaphore::ResourceLocked
+          strikes += 1
+          if strikes < 5
+            sleep 2
+            retry
+          end
+          sempahore = nil
+        end
+        semaphore
+      end
+
       def self.migrate_entity_check_data_if_required(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
-        return if redis.exists('all_checks')
+
+        logger = options[:logger]
+
+        semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, :redis => redis)
+        if semaphore.nil?
+          unless logger.nil?
+            logger.fatal "Could not obtain lock for data migration. Check logs " +
+              "for any exceptions, manually delete the '#{ENTITY_DATA_MIGRATION}' " +
+              "key from your Flapjack Redis database and try running Flapjack again."
+          end
+          exit
+        end
+
+        if redis.exists('all_checks')
+          semaphore.release
+          return
+        end
+
+        logger.warn "Upgrading Flapjack's entity/check Redis indexes..." unless logger.nil?
 
         check_names = redis.keys('check:*').map {|c| c.sub(/^check:/, '') } |
           Flapjack::Data::EntityCheck.find_current_names(:redis => redis)
@@ -15,12 +56,14 @@ module Flapjack
           timestamp = Time.now.to_i
 
           check_names.each do |ecn|
-            @redis.zadd("all_checks", timestamp, ecn)
-            entity_name, check = cn.split(':', 2)
-            @redis.zadd("all_checks:#{entity_name}", timestamp, check)
+            redis.zadd("all_checks", timestamp, ecn)
+            entity_name, check = ecn.split(':', 2)
+            redis.zadd("all_checks:#{entity_name}", timestamp, check)
             # not deleting the check hashes, they store useful data
           end
         end
+
+        logger.warn "Checks indexed." unless logger.nil?
 
         entity_name_keys = redis.keys("entity_id:*")
         unless entity_name_keys.empty?
@@ -36,6 +79,12 @@ module Flapjack
             redis.del("entity:#{entity_id}")
           end
         end
+
+        logger.warn "Entities indexed." unless logger.nil?
+
+        semaphore.release
+
+        logger.warn "Indexing complete." unless logger.nil?
       end
 
       def self.refresh_archive_index(options = {})

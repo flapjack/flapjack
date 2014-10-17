@@ -17,10 +17,12 @@ module Flapjack
 
     def initialize(opts = {})
       config = opts.delete(:config)
-      @size = opts[:size] || 5
+      @size  = opts[:size] || 5
+      logger = opts[:logger]
       super(:size => @size) {
         redis = ::Redis.new(config)
-        Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => redis)
+        Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => redis,
+          :logger => logger)
         Flapjack::Data::Migration.refresh_archive_index(:redis => redis)
         redis
       }

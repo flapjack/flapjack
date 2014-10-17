@@ -25,11 +25,11 @@ module Flapjack
               semaphore = Flapjack::Data::Semaphore.new(resource, :redis => redis, :expiry => 30)
             rescue Flapjack::Data::Semaphore::ResourceLocked
               strikes += 1
-              raise Flapjack::Gateways::JSONAPI::ResourceLocked.new(resource) unless strikes < 3
+              raise Flapjack::Gateways::JSONAPI::ResourceLocked.new(resource) if strikes >= 3
               sleep 1
               retry
             end
-            raise Flapjack::Gateways::JSONAPI::ResourceLocked.new(resource) unless semaphore
+            raise Flapjack::Gateways::JSONAPI::ResourceLocked.new(resource) if semaphore.nil?
             semaphore
           end
 
