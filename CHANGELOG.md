@@ -1,5 +1,11 @@
 ## Flapjack Changelog
 
+# 1.2.0rc2 - 2014-10-17
+- Feature: Cache entity and check name <-> id lookups #682 (@ali-graham)
+- Chore: Add last_change field to status_reports in the API (closes: #678) #679 (@Hobbsee)
+- Chore: Move archive cache responsibility to mirror source. #683 (@ali-graham)
+- Bug: jsonapi: GET /entities is non performant #674 (@ali-graham)
+
 # 1.2.0rc1 - 2014-10-08
 - Feature: Allow updating an entities name via PATCH /entities/id[,id...] #628 (@ali-graham)
 - Feature: Pact specs for flapjack-diner compatability testing #663 (@ali-graham)
