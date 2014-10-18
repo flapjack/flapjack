@@ -31,12 +31,12 @@ module Flapjack
             #   contacts_ids = contacts.map(&:id)
             #   linked_medium_ids = Flapjack::Data::Contact.associated_ids_for_media(contacts_ids)
             #   linked_pagerduty_credentials_ids = Flapjack::Data::Contact.associated_ids_for_pagerduty_credentials(contacts_ids)
-            #   linked_notification_rule_ids = Flapjack::Data::Contact.associated_ids_for_notification_rules(contacts_ids)
+            #   linked_rule_ids = Flapjack::Data::Contact.associated_ids_for_rules(contacts_ids)
 
             #   contacts_json = contacts.collect {|contact|
             #     contact.as_json(:medium_ids => linked_medium_ids[contact.id],
             #       :pagerduty_credentials_ids => linked_pagerduty_credentials_ids[contact.id],
-            #       :notification_rule_ids => linked_notification_rule_ids[contact.id]).to_json
+            #       :rule_ids => linked_rule_ids[contact.id]).to_json
             #   }.join(", ")
 
             #   '{"contacts":[' + contacts_json + ']}'

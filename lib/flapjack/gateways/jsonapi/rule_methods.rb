@@ -76,12 +76,12 @@ module Flapjack
             rule_ids = rules.map(&:id)
             linked_contact_ids = Flapjack::Data::Rule.associated_ids_for_contact(*rule_ids)
             linked_tag_ids = Flapjack::Data::Rule.associated_ids_for_tags(*rule_ids)
-            # linked_rule_states_ids = Flapjack::Data::Rule.associated_ids_for_states(*rule_ids)
+            linked_route_ids = Flapjack::Data::Rule.associated_ids_for_routes(*rule_ids)
 
             rules_as_json = rules.collect {|rule|
               rule.as_json(:contact_ids => [linked_contact_ids[rule.id]],
                            :tag_ids => linked_tag_ids,
-                           # :rule_state_ids => linked_rule_states_ids[rule.id]
+                           :route_ids => linked_route_ids[rule.id]
                           )
             }
 

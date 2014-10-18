@@ -31,18 +31,32 @@ describe 'Flapjack::Gateways::JSONAPI::TagMethods', :sinatra => true, :logger =>
     expect(last_response.body).to eq(Flapjack.dump_json([tag_data['name']]))
   end
 
-  it "retrieves all tags" do
+  it "retrieves paginated tags" do
+    meta = {:pagination => {
+      :page        => 1,
+      :per_page    => 20,
+      :total_pages => 1,
+      :total_count => 1
+    }}
+
+    expect(Flapjack::Data::Tag).to receive(:count).and_return(1)
+
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).
+      and_return([tag])
+    expect(Flapjack::Data::Tag).to receive(:sort).
+      with(:name, :order => 'alpha').and_return(sorted)
+
     expect(tag).to receive(:as_json).and_return(tag_data)
-    expect(Flapjack::Data::Tag).to receive(:all).and_return([tag])
 
     expect(Flapjack::Data::Tag).to receive(:associated_ids_for_checks).
       with(tag.id).and_return({})
-    expect(Flapjack::Data::Tag).to receive(:associated_ids_for_notification_rules).
+    expect(Flapjack::Data::Tag).to receive(:associated_ids_for_rules).
       with(tag.id).and_return({})
 
     get '/tags'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:tags => [tag_data]))
+    expect(last_response.body).to eq(Flapjack.dump_json(:tags => [tag_data], :meta => meta))
   end
 
   it "retrieves one tag" do
@@ -53,7 +67,7 @@ describe 'Flapjack::Gateways::JSONAPI::TagMethods', :sinatra => true, :logger =>
 
     expect(Flapjack::Data::Tag).to receive(:associated_ids_for_checks).
       with(tag.id).and_return({})
-    expect(Flapjack::Data::Tag).to receive(:associated_ids_for_notification_rules).
+    expect(Flapjack::Data::Tag).to receive(:associated_ids_for_rules).
       with(tag.id).and_return({})
 
     get "/tags/#{tag.name}"
@@ -74,7 +88,7 @@ describe 'Flapjack::Gateways::JSONAPI::TagMethods', :sinatra => true, :logger =>
 
     expect(Flapjack::Data::Tag).to receive(:associated_ids_for_checks).
       with(tag.id, tag_2.id).and_return({})
-    expect(Flapjack::Data::Tag).to receive(:associated_ids_for_notification_rules).
+    expect(Flapjack::Data::Tag).to receive(:associated_ids_for_rules).
       with(tag.id, tag_2.id).and_return({})
 
     get "/tags/#{tag.name},#{tag_2.name}"

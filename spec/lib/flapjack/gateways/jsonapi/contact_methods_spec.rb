@@ -44,7 +44,22 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(last_response.status).to eq(403)
   end
 
-  it "returns all the contacts" do
+  it "returns paginated contacts" do
+    expect(Flapjack::Data::Contact).to receive(:count).and_return(1)
+
+    meta = {:pagination => {
+      :page        => 1,
+      :per_page    => 20,
+      :total_pages => 1,
+      :total_count => 1
+    }}
+
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).
+      and_return([contact])
+    expect(Flapjack::Data::Contact).to receive(:sort).
+      with(:name, :order => 'alpha').and_return(sorted)
+
     expect(Flapjack::Data::Contact).to receive(:associated_ids_for_media).
       with(contact.id).and_return({})
     expect(Flapjack::Data::Contact).to receive(:associated_ids_for_pagerduty_credentials).
@@ -52,11 +67,10 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).to receive(:associated_ids_for_rules).
       with(contact.id).and_return({})
     expect(contact).to receive(:as_json).and_return(contact_data)
-    expect(Flapjack::Data::Contact).to receive(:all).and_return([contact])
 
     get '/contacts'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => [contact_data]))
+    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => [contact_data], :meta => meta))
   end
 
   it "returns the core information of a specified contact" do

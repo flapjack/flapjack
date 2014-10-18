@@ -77,6 +77,8 @@ describe 'Flapjack::Gateways::JSONAPI::RuleMethods', :sinatra => true, :logger =
       with(rule.id).and_return({rule.id => contact.id})
     expect(Flapjack::Data::Rule).to receive(:associated_ids_for_tags).
       with(rule.id).and_return({})
+    expect(Flapjack::Data::Rule).to receive(:associated_ids_for_routes).
+      with(rule.id).and_return({})
 
     get "/rules"
     expect(last_response).to be_ok
@@ -91,6 +93,8 @@ describe 'Flapjack::Gateways::JSONAPI::RuleMethods', :sinatra => true, :logger =
     expect(Flapjack::Data::Rule).to receive(:associated_ids_for_contact).
       with(rule.id).and_return({rule.id => contact.id})
     expect(Flapjack::Data::Rule).to receive(:associated_ids_for_tags).
+      with(rule.id).and_return({})
+    expect(Flapjack::Data::Rule).to receive(:associated_ids_for_routes).
       with(rule.id).and_return({})
 
     get "/rules/#{rule.id}"

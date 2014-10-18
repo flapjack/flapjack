@@ -67,14 +67,18 @@ module Flapjack
               nil
             end
 
-            checks = if requested_checks
-              Flapjack::Data::Check.find_by_ids!(*requested_checks)
-            else
-              Flapjack::Data::Check.all
-            end
+            if requested_checks
+              checks = Flapjack::Data::Check.find_by_ids!(*requested_checks)
 
-            if requested_checks && checks.empty?
-              raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Check, requested_checks)
+              if checks.empty?
+                raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Check, requested_checks)
+              end
+
+              meta = {}
+            else
+              checks, meta = paginate_get(Flapjack::Data::Check.sort(:name, :order => 'alpha'),
+                :total => Flapjack::Data::Check.count, :page => params[:page],
+                :per_page => params[:per_page])
             end
 
             checks_ids = checks.map(&:id)
@@ -84,7 +88,7 @@ module Flapjack
               check.as_json(:tag_ids => linked_tag_ids[check.id])
             }
 
-            Flapjack.dump_json(:checks => checks_as_json)
+            Flapjack.dump_json({:checks => checks_as_json}.merge(meta))
           end
 
           app.patch %r{^/checks/(.+)$} do

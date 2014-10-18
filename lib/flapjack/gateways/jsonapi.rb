@@ -166,6 +166,32 @@ module Flapjack
           'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
         end
 
+        def paginate_get(dataset, options = {})
+          return([[], {}]) if dataset.nil?
+
+          page = options[:page].to_i
+          page = (page > 0) ? page : 1
+
+          per_page = options[:per_page].to_i
+          per_page = (per_page > 0) ? per_page : 20
+
+          total = options[:total].to_i
+          total = (total < 0) ? 0 : total
+
+          [dataset.page(page, :per_page => per_page),
+           {
+             :meta => {
+               :pagination => {
+                 :page        => page,
+                 :per_page    => per_page,
+                 :total_pages => (total.to_f / per_page).ceil,
+                 :total_count => total,
+               }
+             }
+           }
+          ]
+        end
+
         def wrapped_params(name, error_on_nil = true)
           result = params[name.to_sym]
           if result.nil?

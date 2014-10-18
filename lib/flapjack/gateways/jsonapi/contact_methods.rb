@@ -93,14 +93,18 @@ module Flapjack
               nil
             end
 
-            contacts = if requested_contacts
-              Flapjack::Data::Contact.find_by_ids!(*requested_contacts)
-            else
-              Flapjack::Data::Contact.all
-            end
+            if requested_contacts
+              contacts = Flapjack::Data::Contact.find_by_ids!(*requested_contacts)
 
-            if requested_contacts && contacts.empty?
-              raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Contact, requested_contacts)
+              if contacts.empty?
+                raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Contact, requested_contacts)
+              end
+
+              meta = {}
+            else
+              contacts, meta = paginate_get(Flapjack::Data::Contact.sort(:name, :order => 'alpha'),
+                :total => Flapjack::Data::Contact.count, :page => params[:page],
+                :per_page => params[:per_page])
             end
 
             contacts_ids = contacts.map(&:id)
@@ -114,7 +118,7 @@ module Flapjack
                 :rule_ids => linked_rule_ids[contact.id])
             }
 
-            Flapjack.dump_json(:contacts => contacts_as_json)
+            Flapjack.dump_json({:contacts => contacts_as_json}.merge(meta))
           end
 
           app.patch '/contacts/:id' do

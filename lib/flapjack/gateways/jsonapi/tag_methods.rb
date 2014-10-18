@@ -67,26 +67,31 @@ module Flapjack
               nil
             end
 
-            tags = if requested_tags
-              Flapjack::Data::Tag.intersect(:name => requested_tags).all
+            if requested_tags
+              tags = Flapjack::Data::Tag.intersect(:name => requested_tags).all
+
+              if tags.empty?
+                raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Tag, requested_tags)
+              end
+
+              meta = {}
             else
-              Flapjack::Data::Tag.all
+              tags, meta = paginate_get(Flapjack::Data::Tag.sort(:name, :order => 'alpha'),
+                :total => Flapjack::Data::Tag.count, :page => params[:page],
+                :per_page => params[:per_page])
             end
 
-            if requested_tags && tags.empty?
-              raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Tag, requested_tags)
-            end
 
             tags_ids = tags.map(&:id)
             linked_check_ids = Flapjack::Data::Tag.associated_ids_for_checks(*tags_ids)
-            linked_notification_rule_ids = Flapjack::Data::Tag.associated_ids_for_notification_rules(*tags_ids)
+            linked_rule_ids = Flapjack::Data::Tag.associated_ids_for_rules(*tags_ids)
 
             tags_as_json = tags.collect {|tag|
               tag.as_json(:check_ids => linked_check_ids[tag.id],
-                          :notification_rule_ids => linked_notification_rule_ids[tag.id])
+                          :rule_ids => linked_rule_ids[tag.id])
             }
 
-            Flapjack.dump_json(:tags => tags_as_json)
+            Flapjack.dump_json({:tags => tags_as_json}.merge(meta))
           end
 
           app.patch %r{^/tags/(.+)$} do

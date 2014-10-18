@@ -31,16 +31,30 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(last_response.body).to eq(Flapjack.dump_json([check.id]))
   end
 
-  it "retrieves all checks" do
-    expect(check).to receive(:as_json).and_return(check_data)
-    expect(Flapjack::Data::Check).to receive(:all).and_return([check])
+  it "retrieves paginated checks" do
+    meta = {:pagination => {
+      :page        => 1,
+      :per_page    => 20,
+      :total_pages => 1,
+      :total_count => 1
+    }}
+
+    expect(Flapjack::Data::Check).to receive(:count).and_return(1)
+
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).
+      and_return([check])
+    expect(Flapjack::Data::Check).to receive(:sort).
+      with(:name, :order => 'alpha').and_return(sorted)
 
     expect(Flapjack::Data::Check).to receive(:associated_ids_for_tags).
       with(check.id).and_return({})
 
+    expect(check).to receive(:as_json).and_return(check_data)
+
     get '/checks'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:checks => [check_data]))
+    expect(last_response.body).to eq(Flapjack.dump_json(:checks => [check_data], :meta => meta))
   end
 
   it "retrieves one check" do
