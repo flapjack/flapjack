@@ -33,7 +33,7 @@ describe Flapjack::Coordinator do
       and_return(processor)
 
     expect(EM).to receive(:stop)
-    expect(EM::Synchrony).to receive(:sleep).and_return {
+    expect(EM::Synchrony).to receive(:sleep) {
       fc.instance_variable_set('@received_signals', ['INT'])
     }
 
@@ -102,7 +102,7 @@ describe Flapjack::Coordinator do
       and_return(notifier)
 
     expect(EM).to receive(:stop)
-    expect(EM::Synchrony).to receive(:sleep).and_return {
+    expect(EM::Synchrony).to receive(:sleep) {
       fc.instance_variable_set('@received_signals', ['INT'])
     }
 
@@ -136,7 +136,7 @@ describe Flapjack::Coordinator do
       and_return(processor)
 
     expect(EM).to receive(:stop)
-    expect(EM::Synchrony).to receive(:sleep).and_return {
+    expect(EM::Synchrony).to receive(:sleep) {
       fc.instance_variable_set('@received_signals', ['INT'])
     }
 

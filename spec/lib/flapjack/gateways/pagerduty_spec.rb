@@ -182,7 +182,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
     EM.synchrony do
       ret = fp.send(:send_pagerduty_event, evt)
-      expect { ret }.not_to be_nil
+      expect(ret).not_to be_nil
       expect(ret).to eq([200, nil])
       EM.stop
     end
