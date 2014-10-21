@@ -25,8 +25,8 @@ module Flapjack
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
 
-      define_attributes :name            => :string,
-                        :timezone        => :string
+      define_attributes :name                     => :string,
+                        :timezone                 => :string
 
       has_and_belongs_to_many :checks, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :contacts

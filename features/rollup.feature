@@ -181,26 +181,26 @@ Feature: Rollup on a per contact, per media basis
     Then  2 sms alerts should be queued for +61400000001
     And   1 sms alert of type problem and rollup problem should be queued for +61400000001
 
-  # @time
-  # Scenario: Contact removes a rule matching on a check
-  #   Given check 'ping' for entity 'foo' is in an ok state
-  #   And   check 'ping' for entity 'baz' is in an ok state
-  #   When  a critical event is received for check 'ping' on entity 'foo'
-  #   And   1 minute passes
-  #   And   a critical event is received for check 'ping' on entity 'foo'
-  #   Then  1 sms alerts of type problem and rollup none should be queued for +61400000001
-  #   When  5 minutes passes
-  #   And   a critical event is received for check 'ping' on entity 'baz'
-  #   And   1 minute passes
-  #   And   a critical event is received for check 'ping' on entity 'baz'
-  #   Then  1 sms alert of type problem and rollup problem should be queued for +61400000001
-  #   And   1 sms alerts of type problem and rollup none should be queued for +61400000001
-  #   And   2 sms alerts should be queued for +61400000001
-  #   When  20 minute passes
-  #   And   user with id 'c1' removes rule with id 'r1'
-  #   And   a critical event is received for check 'ping' on entity 'baz'
-  #   Then  show me the abc log
-  #   Then  1 sms alert of rollup recovery should be queued for +61400000001
+  @time
+  Scenario: Contact removes a rule matching on a check
+    Given check 'ping' for entity 'foo' is in an ok state
+    And   check 'ping' for entity 'baz' is in an ok state
+    When  a critical event is received for check 'ping' on entity 'foo'
+    And   1 minute passes
+    And   a critical event is received for check 'ping' on entity 'foo'
+    Then  1 sms alerts of type problem and rollup none should be queued for +61400000001
+    When  5 minutes passes
+    And   a critical event is received for check 'ping' on entity 'baz'
+    And   1 minute passes
+    And   a critical event is received for check 'ping' on entity 'baz'
+    Then  1 sms alert of type problem and rollup problem should be queued for +61400000001
+    And   1 sms alerts of type problem and rollup none should be queued for +61400000001
+    And   2 sms alerts should be queued for +61400000001
+    When  20 minute passes
+    And   user with id 'c1' removes rule with id 'r1'
+    And   a critical event is received for check 'ping' on entity 'baz'
+    Then  show me the abc log
+    Then  1 sms alert of rollup recovery should be queued for +61400000001
 
   @time
   Scenario: Test notification to not contribute to rollup

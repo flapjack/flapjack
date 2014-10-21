@@ -69,10 +69,18 @@ module Flapjack
               nil
             end
 
-            pagerduty_credentials = if requested_pagerduty_credentials
-              Flapjack::Data::PagerdutyCredentials.find_by_ids!(*requested_pagerduty_credentials)
+            pagerduty_credentials, meta = if requested_pagerduty_credentials
+              requested = Flapjack::Data::PagerdutyCredentials.find_by_ids!(*requested_pagerduty_credentials)
+
+              if requested.empty?
+                raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::PagerdutyCredentials, requested_pagerduty_credentials)
+              end
+
+              [requested, {}]
             else
-              Flapjack::Data::PagerdutyCredentials.all
+              paginate_get(Flapjack::Data::PagerdutyCredentials.sort(:id, :order => 'alpha'),
+                :total => Flapjack::Data::PagerdutyCredentials.count, :page => params[:page],
+                :per_page => params[:per_page])
             end
 
             pagerduty_credentials_ids = pagerduty_credentials.map(&:id)
@@ -82,7 +90,7 @@ module Flapjack
               pdc.as_json(:contact_ids => [linked_contact_ids[pdc.id]])
             }
 
-            Flapjack.dump_json(:pagerduty_credentials => pagerduty_credentials_as_json)
+            Flapjack.dump_json({:pagerduty_credentials => pagerduty_credentials_as_json}.merge(meta))
           end
 
           app.patch '/pagerduty_credentials/:id' do

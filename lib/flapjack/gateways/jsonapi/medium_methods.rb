@@ -74,10 +74,18 @@ module Flapjack
               nil
             end
 
-            media = if requested_media
-              Flapjack::Data::Medium.find_by_ids!(*requested_media)
+            media, methods = if requested_media
+              requested = Flapjack::Data::Media.find_by_ids!(*requested_media)
+
+              if requested.empty?
+                raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Medium, requested_media)
+              end
+
+              [requested, {}]
             else
-              Flapjack::Data::Medium.all
+              paginate_get(Flapjack::Data::Medium.sort(:id, :order => 'alpha'),
+                :total => Flapjack::Data::Medium.count, :page => params[:page],
+                :per_page => params[:per_page])
             end
 
             media_ids = media.map(&:id)
@@ -89,7 +97,7 @@ module Flapjack
                              :route_ids => linked_route_ids[medium.id])
             }
 
-            Flapjack.dump_json(:media => media_as_json)
+            Flapjack.dump_json({:media => media_as_json}.merge(meta))
           end
 
           app.patch '/media/:id' do

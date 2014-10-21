@@ -15,31 +15,12 @@ module Flapjack
 
         SEMAPHORE_CONTACT_MASS_UPDATE = 'contact_mass_update'
 
-        module Helpers
-
-          def check_errors_on_save(record)
-            return if record.save
-            halt err(403, *record.errors.full_messages)
-          end
-
-          def bulk_contact_operation(contact_ids, &block)
-            missing_ids = nil
-            Flapjack::Data::Contact.lock do
-              contacts = Flapjack::Data::Contact.find_by_ids(*contact_ids)
-              missing_ids = contact_ids - contacts.compact.map(&:id)
-              block.call(contacts) if missing_ids.empty?
-            end
-
-            unless missing_ids.empty?
-              raise Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Contact, missing_ids)
-            end
-          end
-
-        end
+        # module Helpers
+        # end
 
         def self.registered(app)
           app.helpers Flapjack::Gateways::JSONAPI::Helpers
-          app.helpers Flapjack::Gateways::JSONAPI::ContactMethods::Helpers
+          # app.helpers Flapjack::Gateways::JSONAPI::ContactMethods::Helpers
 
           app.post '/contacts' do
             contacts_data = wrapped_params('contacts')
@@ -93,16 +74,16 @@ module Flapjack
               nil
             end
 
-            if requested_contacts
-              contacts = Flapjack::Data::Contact.find_by_ids!(*requested_contacts)
+            contacts, meta = if requested_contacts
+              requested = Flapjack::Data::Contact.find_by_ids!(*requested_contacts)
 
-              if contacts.empty?
+              if requested.empty?
                 raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Contact, requested_contacts)
               end
 
-              meta = {}
+              [requested, {}]
             else
-              contacts, meta = paginate_get(Flapjack::Data::Contact.sort(:name, :order => 'alpha'),
+              paginate_get(Flapjack::Data::Contact.sort(:name, :order => 'alpha'),
                 :total => Flapjack::Data::Contact.count, :page => params[:page],
                 :per_page => params[:per_page])
             end
@@ -122,44 +103,42 @@ module Flapjack
           end
 
           app.patch '/contacts/:id' do
-            bulk_contact_operation(params[:id].split(',')) do |contacts|
-              contacts.each do |contact|
-                apply_json_patch('contacts') do |op, property, linked, value|
-                  case op
-                  when 'replace'
-                    if ['name', 'email', 'timezone'].include?(property)
-                      contact.send("#{property}=".to_sym, value)
-                    end
-                  when 'add'
-                    case linked
-                    when 'media'
-                      Flapjack::Data::Medium.lock do
-                        medium = Flapjack::Data::Medium.find_by_id(value)
-                        unless medium.nil?
-                          if existing_medium = contact.media.intersect(:type => medium.type).all.first
-                            # TODO is this the right thing to do here? -- or just dissociate?
-                            existing_medium.destroy
-                          end
-                          contact.media << medium
-                        end
-                      end
-                    when 'rules'
-                      rule = Flapjack::Data::Rule.find_by_id(value)
-                      contact.rules << rule unless rule.nil?
-                    end
-                  when 'remove'
-                    case linked
-                    when 'media'
+            Flapjack::Data::Contact.find_by_ids!(*params[:id].split(',')).each do |contact|
+              apply_json_patch('contacts') do |op, property, linked, value|
+                case op
+                when 'replace'
+                  if ['name', 'email', 'timezone'].include?(property)
+                    contact.send("#{property}=".to_sym, value)
+                  end
+                when 'add'
+                  case linked
+                  when 'media'
+                    Flapjack::Data::Medium.lock do
                       medium = Flapjack::Data::Medium.find_by_id(value)
-                      contact.media.delete(medium) unless medium.nil?
-                    when 'rules'
-                      rule = Flapjack::Data::Rule.find_by_id(value)
-                      contact.rules.delete(rule) unless rule.nil?
+                      unless medium.nil?
+                        if existing_medium = contact.media.intersect(:type => medium.type).all.first
+                          # TODO is this the right thing to do here? -- or just dissociate?
+                          existing_medium.destroy
+                        end
+                        contact.media << medium
+                      end
                     end
+                  when 'rules'
+                    rule = Flapjack::Data::Rule.find_by_id(value)
+                    contact.rules << rule unless rule.nil?
+                  end
+                when 'remove'
+                  case linked
+                  when 'media'
+                    medium = Flapjack::Data::Medium.find_by_id(value)
+                    contact.media.delete(medium) unless medium.nil?
+                  when 'rules'
+                    rule = Flapjack::Data::Rule.find_by_id(value)
+                    contact.rules.delete(rule) unless rule.nil?
                   end
                 end
-                contact.save # no-op if the properties haven't changed
               end
+              contact.save # no-op if the properties haven't changed
             end
 
             status 204

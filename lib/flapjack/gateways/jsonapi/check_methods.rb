@@ -67,16 +67,16 @@ module Flapjack
               nil
             end
 
-            if requested_checks
-              checks = Flapjack::Data::Check.find_by_ids!(*requested_checks)
+            checks, meta = if requested_checks
+              requested = Flapjack::Data::Check.find_by_ids!(*requested_checks)
 
-              if checks.empty?
+              if requested.empty?
                 raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Check, requested_checks)
               end
 
-              meta = {}
+              [requested, {}]
             else
-              checks, meta = paginate_get(Flapjack::Data::Check.sort(:name, :order => 'alpha'),
+              paginate_get(Flapjack::Data::Check.sort(:name, :order => 'alpha'),
                 :total => Flapjack::Data::Check.count, :page => params[:page],
                 :per_page => params[:per_page])
             end
@@ -114,21 +114,32 @@ module Flapjack
                 when 'add'
                   case linked
                   when 'tags'
-                    tag = Flapjack::Data::Tag.intersect(:name => value).all.first
-                    if tag.nil?
-                      tag = Flapjack::Data::Tag.new(:name => value)
-                      tag.save
+                    add_tag = proc {|tag_name|
+                      tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+                      if tag.nil?
+                        tag = Flapjack::Data::Tag.new(:name => tag_name)
+                        tag.save
+                      end
+                      tag
+                    }
+
+                    tags = if value.respond_to?(:each)
+                      value.collect {|tag_name| add_tag.call(tag_name) }
+                    else
+                      [add_tag.call(tag_name)]
                     end
-                    check.tags << tag
+                    check.tags.add(*tags) unless tags.empty?
                   end
                 when 'remove'
                   case linked
                   when 'tags'
-                    tag = check.tags.intersect(:name => value).all.first
-                    unless tag.nil?
-                      check.tags.delete(tag)
-                      if tag.checks.empty? && tag.notification_rules.empty?
-                        tag.destroy
+                    tags = check.tags.intersect(:name => value).all
+                    unless tags.empty?
+                      check.tags.delete(*tags)
+                      tags.each do |tag|
+                        if tag.checks.empty? && tag.rules.empty?
+                          tag.destroy
+                        end
                       end
                     end
                   end

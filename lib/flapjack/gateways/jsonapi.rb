@@ -166,6 +166,11 @@ module Flapjack
           'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
         end
 
+        def check_errors_on_save(record)
+          return if record.save
+          halt err(403, *record.errors.full_messages)
+        end
+
         def paginate_get(dataset, options = {})
           return([[], {}]) if dataset.nil?
 

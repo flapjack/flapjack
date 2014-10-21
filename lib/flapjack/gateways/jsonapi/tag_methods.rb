@@ -67,20 +67,19 @@ module Flapjack
               nil
             end
 
-            if requested_tags
-              tags = Flapjack::Data::Tag.intersect(:name => requested_tags).all
+            tags, meta = if requested_tags
+              requested = Flapjack::Data::Tag.intersect(:name => requested_tags).all
 
-              if tags.empty?
+              if requested.empty?
                 raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Tag, requested_tags)
               end
 
-              meta = {}
+              [requested, {}]
             else
-              tags, meta = paginate_get(Flapjack::Data::Tag.sort(:name, :order => 'alpha'),
+              paginate_get(Flapjack::Data::Tag.sort(:name, :order => 'alpha'),
                 :total => Flapjack::Data::Tag.count, :page => params[:page],
                 :per_page => params[:per_page])
             end
-
 
             tags_ids = tags.map(&:id)
             linked_check_ids = Flapjack::Data::Tag.associated_ids_for_checks(*tags_ids)

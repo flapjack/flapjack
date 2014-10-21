@@ -28,10 +28,18 @@ module Flapjack
               nil
             end
 
-            routes = if requested_routes
-              Flapjack::Data::Route.find_by_ids!(*requested_routes)
+            routes, meta = if requested_routes
+              requested = Flapjack::Data::Route.find_by_ids!(*requested_routes)
+
+              if requested.empty?
+                raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Route, requested_routes)
+              end
+
+              [requested, {}]
             else
-              Flapjack::Data::Route.all
+              paginate_get(Flapjack::Data::Route.sort(:id, :order => 'alpha'),
+                :total => Flapjack::Data::Route.count, :page => params[:page],
+                :per_page => params[:per_page])
             end
 
             route_ids = routes.map(&:id)
@@ -41,7 +49,7 @@ module Flapjack
               route.as_json(:rule_id => linked_rule_ids[route.id])
             }
 
-            Flapjack.dump_json(:routes => routes_as_json)
+            Flapjack.dump_json({:routes => routes_as_json}.merge(meta))
           end
 
           app.patch '/routes/:id' do

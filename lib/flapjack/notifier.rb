@@ -96,9 +96,9 @@ module Flapjack
         return
       end
 
-      alerts = self.class.alerts_for(notification, routes_by_contact_id, :check => check,
-        :default_timezone => @default_contact_timezone,
-        :logger => @logger)
+      alerts = self.class.alerts_for(notification, routes_by_contact_id,
+        :check => check, :timestamp => timestamp,
+        :default_timezone => @default_contact_timezone, :logger => @logger)
 
       @logger.info "alerts: #{alerts.size}"
 
@@ -240,6 +240,7 @@ module Flapjack
     def self.alerts_for(notification, route_ids_by_contact_id, opts = {})
       logger = opts[:logger]
 
+      timestamp = opts[:timestamp]
       default_timezone = opts[:default_timezone]
       safe_state_or_ack = notification.state_or_ack
 
@@ -291,89 +292,21 @@ module Flapjack
         logger.info "media from routes: #{media_ids.size}"
 
         final_media = Flapjack::Data::Medium.find_by_ids(*(media_ids.to_a)).reject do |medium|
-          medium.drop_notifications?(:check => alert_check,
-                                     :state => safe_state_or_ack)
+          !medium.last_notification.nil? &&
+            ((medium.last_notification + medium.interval) >= timestamp)
         end
 
-        logger.info "media after drop: #{final_media.size}"
+        logger.info "media after interval check: #{final_media.size}"
 
-        final_media.inject([]) do |memo, medium|
-          alert = alert_for_medium(notification, medium,
-            :check => alert_check, :state => safe_state_or_ack,
-            :logger => logger)
-          next memo if alert.nil?
-          memo << alert
-          memo
+        final_media.collect do |medium|
+          alert = medium.alert(notification, :state => safe_state_or_ack)
+
+          medium.alerts << alert
+          alert_check.alerts << alert
+
+          alert
         end
       end
-    end
-
-    def self.alert_for_medium(notification, medium, opts = {})
-      rollup_type = nil
-      media_type  = medium.type
-
-      logger = opts[:logger]
-
-      unless logger.nil?
-        logger.debug("using media #{media_type}")
-      end
-
-      alert_check = opts[:check]
-
-      unless (['ok', 'acknowledgement', 'test'].include?(opts[:state])) ||
-        medium.alerting_checks.exists?(alert_check.id)
-
-        medium.alerting_checks << alert_check
-      end
-
-      # expunge checks in (un)scheduled maintenance from the alerting set
-      cleaned = medium.clean_alerting_checks
-      unless logger.nil?
-        logger.debug("cleaned alerting checks for #{media_type}: #{cleaned}")
-      end
-
-      alerting_checks_count = medium.alerting_checks.count
-      unless logger.nil?
-        logger.debug("current alerting checks for #{media_type}: #{alerting_checks_count}")
-      end
-
-      unless medium.rollup_threshold.nil?
-        if alerting_checks_count >= medium.rollup_threshold
-          if medium.drop_notifications?(:rollup => true)
-            unless logger.nil?
-              logger.debug("dropping notifications as medium blocked")
-            end
-            return
-          end
-
-          medium.update_sent_alert_keys(:rollup => true,
-            :delete => (['ok', 'acknowledgement'].include?(opts[:state])))
-          rollup_type = 'problem'
-        elsif (alerting_checks_count + cleaned) >= medium.rollup_threshold
-          # alerting checks was just cleaned such that it is now below the rollup threshold
-          medium.update_sent_alert_keys(:rollup => true, :delete => true)
-          rollup_type = 'recovery'
-        end
-      end
-
-      unless logger.nil?
-        logger.debug "rollup decisions: #{alert_check.name} " +
-          "#{opts[:state]} #{media_type} #{medium.address} " +
-          "rollup_type: #{rollup_type}"
-      end
-
-      alert = Flapjack::Data::Alert.new(:state => opts[:state],
-        :rollup => rollup_type, :state_duration => notification.state_duration,
-        :acknowledgement_duration => notification.duration,
-        :notification_type => notification.type)
-      unless alert.save
-        raise "Couldn't save alert: #{alert.errors.full_messages.inspect}"
-      end
-
-      medium.alerts << alert
-      alert_check.alerts << alert
-
-      alert
     end
 
   end

@@ -67,10 +67,18 @@ module Flapjack
               nil
             end
 
-            rules = if requested_rules
-              Flapjack::Data::Rule.find_by_ids!(*requested_rules)
+            rules, meta = if requested_rules
+              requested = Flapjack::Data::Rule.find_by_ids!(*requested_rules)
+
+              if requested.empty?
+                raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Rule, requested_rules)
+              end
+
+              [requested, {}]
             else
-              Flapjack::Data::Rule.all
+              paginate_get(Flapjack::Data::Rule.sort(:id, :order => 'alpha'),
+                :total => Flapjack::Data::Rule.count, :page => params[:page],
+                :per_page => params[:per_page])
             end
 
             rule_ids = rules.map(&:id)
@@ -85,7 +93,7 @@ module Flapjack
                           )
             }
 
-            Flapjack.dump_json(:rules => rules_as_json)
+            Flapjack.dump_json({:rules => rules_as_json}.merge(meta))
           end
 
           app.patch '/rules/:id' do
@@ -100,30 +108,41 @@ module Flapjack
                   case linked
                   when 'tags'
                     Flapjack::Data::Rule.lock(Flapjack::Data::Tag) do
-                      tag = Flapjack::Data::Tag.intersect(:name => value).all.first
-                      if tag.nil?
-                        tag = Flapjack::Data::Tag.new(:name => value)
-                        tag.save
+                      add_tag = proc {|tag_name|
+                        tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+                        if tag.nil?
+                          tag = Flapjack::Data::Tag.new(:name => tag_name)
+                          tag.save
+                        end
+                        tag
+                      }
+
+                      tags = if value.respond_to?(:each)
+                        value.collect {|tag_name| add_tag.call(tag_name) }
+                      else
+                        [add_tag.call(tag_name)]
                       end
+                      unless tags.empty?
                         # TODO association callbacks, which would lock around things
-                      rule.tags << tag
-                      rule.is_specific = true
-                      rule.save
+                        rule.tags << tag
+                        rule.is_specific = true
+                      end
                     end
                   end
                 when 'remove'
                   case linked
                   when 'tags'
                     Flapjack::Data::Rule.lock(Flapjack::Data::Tag) do
-                      tag = rule.tags.intersect(:name => value).all.first
-                      unless tag.nil?
-                        rule.tags.delete(tag)
-                        if tag.rules.empty? && tag.checks.empty?
-                          tag.destroy
-                        end
+                      tags = rule.tags.intersect(:name => value).all
+                      unless tags.empty?
+                        rule.tags.delete(*tags)
                         if rule.tags.empty?
                           rule.is_specific = false
-                          rule.save
+                        end
+                        tags.each do |tag|
+                          if tag.checks.empty? && tag.rules.empty?
+                            tag.destroy
+                          end
                         end
                       end
                     end

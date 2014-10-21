@@ -30,13 +30,13 @@ module Flapjack
       has_many :routes, :class_name => 'Flapjack::Data::Route',
         :inverse_of => :rule
 
-      # # TODO unsure if this is the right thing
-      # before_destroy :remove_child_records
-      # def remove_child_records
-      #   self.class.lock(Flapjack::Data::Route, Flapjack::Data::Medium) do
-      #     self.routes.each  {|route| route.destroy }
-      #   end
-      # end
+      # TODO unsure if this is the right thing
+      before_destroy :remove_child_records
+      def remove_child_records
+        self.class.lock(Flapjack::Data::Route, Flapjack::Data::Medium) do
+          self.routes.each  {|route| route.destroy }
+        end
+      end
 
       def as_json(opts = {})
         self.attributes.merge(
