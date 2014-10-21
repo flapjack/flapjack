@@ -11,8 +11,6 @@ matrix:
     - rvm: '2.1'
       gemfile: Gemfile
       script: "bundle exec rspec spec && bundle exec cucumber features"
-gemfile:
-  - Gemfile
 services:
   - redis-server
 before_script:
