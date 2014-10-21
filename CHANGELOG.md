@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 0.9.6 - 2014-10-21
+- Feature: make 0.9 compatible with new event mirroring logic in 1.2 (fixes #687) #688 (@ali-graham, @jessereynolds)
+
 # 0.9.5 - 2014-10-08
 - Bug: fix api_url handling in the web ui (@jessereynolds)
 
