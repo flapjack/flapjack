@@ -5,12 +5,11 @@ Feature: receive-events command line
   From the command line
 
   Background:
-    Given a file named "receive-events.yaml" with:
+    Given a file named "receive-events.toml" with:
 """
-test:
-  redis:
-    db: 14
-    driver: ruby
+[redis]
+  db = 14
+  driver = "ruby"
 """
 
   Scenario: Running with --help shows usage information

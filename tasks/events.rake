@@ -16,7 +16,7 @@ namespace :events do
   task :test_notification do
 
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
-    config_file = File.join('etc', 'flapjack_config.yaml')
+    config_file = File.join('etc', 'flapjack_config.toml')
 
     config = Flapjack::Configuration.new
     config.load( config_file )

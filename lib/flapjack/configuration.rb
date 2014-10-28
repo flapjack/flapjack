@@ -1,13 +1,13 @@
 #!/usr/bin/env ruby
 
-require 'yaml'
+require 'toml'
 require 'logger'
 
 module Flapjack
 
   class Configuration
 
-    DEFAULT_CONFIG_PATH = '/etc/flapjack/flapjack_config.yaml'
+    DEFAULT_CONFIG_PATH = '/etc/flapjack/flapjack_config.toml'
 
     attr_reader :filename
 
@@ -16,20 +16,20 @@ module Flapjack
     end
 
     def all
-      @config_env
+      @config
     end
 
     def for_redis
-      return unless @config_env
+      return unless @config
 
       redis_defaults = {'host'   => '127.0.0.1',
                         'port'   => 6379,
                         'path'   => nil,
                         'db'     => 0}
 
-      @config_env['redis'] = {} unless @config_env.has_key?('redis')
+      @config['redis'] = {} unless @config.has_key?('redis')
 
-      redis = @config_env['redis']
+      redis = @config['redis']
       redis_defaults.each_pair do |k,v|
         next if redis.has_key?(k) && redis[k] &&
           !(redis[k].is_a?(String) && redis[k].empty?)
@@ -52,31 +52,21 @@ module Flapjack
 
     def load(filename)
       @filename = nil
-      @config_env = nil
+      @config = nil
 
       unless File.file?(filename)
         @logger.error "Could not find file '#{filename}'" if @logger
         return
       end
 
-      unless defined?(FLAPJACK_ENV)
-        @logger.error "Environment variable 'FLAPJACK_ENV' is not set" if @logger
-        return
-      end
-
-      config = YAML::load_file(filename)
+      config = TOML.load_file(filename)
 
       if config.nil?
         @logger.error "Could not load config file '#{filename}'" if @logger
         return
       end
 
-      @config_env = config[FLAPJACK_ENV]
-
-      if @config_env.nil?
-        @logger.error "No config data for environment '#{FLAPJACK_ENV}' found in '#{filename}'" if @logger
-        return
-      end
+      @config = config
 
       @filename = filename
     end

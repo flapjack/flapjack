@@ -1,0 +1,209 @@
+pid_dir = "/var/run/flapjack/"
+log_dir = "/var/log/flapjack/"
+daemonize = "yes"
+[logger]
+  level = "INFO"
+  syslog_errors = "yes"
+[redis]
+  host = "127.0.0.1"
+  port = 6380
+  db = 0
+# Processes monitoring events off the *events* queue (a redis list) and decides
+# what actions to take (generate notification event, record state changes, etc)
+[processor]
+  enabled = "yes"
+  queue = "events"
+  notifier_queue = "notifications"
+  archive_events = true
+  events_archive_maxage = 10800
+  # Flapjack sets scheduled maintenance on new check results so contacts aren't
+  # notified as soon as Flapjack becomes aware of an entity to notify on.
+  # This is useful is cases where your monitoring starts checking something
+  # before it is completely provisioned
+  # Value parsed by https://github.com/hpoydar/chronic_duration
+  # You can disable this setting by specifying "0 seconds".
+  new_check_scheduled_maintenance_duration = "100 years"
+  new_check_scheduled_maintenance_ignore_tags = ["bypass_ncsm"]
+  [processor.logger]
+    level = "INFO"
+    syslog_errors = "yes"
+# Processes notification events off the *notifications* queue (a redis list) and
+# works out who to notify, and on which media, and with what kind of notification
+# message. It then creates jobs for the various notification gateways below.
+[notifier]
+  enabled = "yes"
+  queue = "notifications"
+  email_queue = "email_notifications"
+  sms_queue = "sms_notifications"
+  sms_twilio_queue = "sms_twilio_notifications"
+  sns_queue = "sns_notifications"
+  jabber_queue = "jabber_notifications"
+  pagerduty_queue = "pagerduty_notifications"
+  notification_log_file = "/var/log/flapjack/notification.log"
+  default_contact_timezone = "UTC"
+  [notifier.logger]
+    level = "INFO"
+    syslog_errors = "yes"
+[nagios-receiver]
+  fifo = "/var/cache/nagios3/event_stream.fifo"
+  pid_dir = "/var/run/flapjack/"
+  log_dir = "/var/log/flapjack/"
+[nsca-receiver]
+  fifo = "/var/lib/nagios3/rw/nagios.cmd"
+  pid_dir = "/var/run/flapjack/"
+  log_dir = "/var/log/flapjack/"
+[gateways]
+  # Generates email notifications
+  [gateways.email]
+    enabled = "no"
+    # the redis queue this pikelet will look for notifications on
+    queue = "email_notifications"
+    [gateways.email.logger]
+      level = "INFO"
+      syslog_errors = "yes"
+    # these values are passed directly through to EventMachine::Protocols::SmtpClient configuration,
+    # and can be omitted if the defaults are acceptable
+    [gateways.email.smtp_config]
+      # from = "Flapjack Example <flapjack@noreply.example>"
+      # reply_to = "flapjack@support.example"
+      host = "127.0.0.1"
+      # 1025 is the default port for http://mailcatcher.me
+      port = 1025
+      starttls = false
+      #[gateways.email.smtp_config.auth]
+      #  type =
+      #  username =
+      #  password =
+    # location of custom alert templates
+    #[gateways.email.templates]
+    #  rollup_subject_text = "/etc/flapjack/templates/email/rollup_subject.text.erb"
+    #  alert_subject_text = "/etc/flapjack/templates/email/alert_subject.text.erb"
+    #  rollup_text = "/etc/flapjack/templates/email/rollup.text.erb"
+    #  alert_text = "/etc/flapjack/templates/email/alert.text.erb"
+    #  rollup.html = "/etc/flapjack/templates/email/rollup.html.erb"
+    #  alert.html = "/etc/flapjack/templates/email/alert.html.erb"
+  # Sends SMS notifications via MessageNet (Australia only)
+  [gateways.sms]
+    enabled = "no"
+    # the redis queue this pikelet will look for notifications on
+    queue = "sms_notifications"
+    endpoint = "https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage"
+    username = "ermahgerd"
+    password = "xxxx"
+    [gateways.sms.logger]
+      level = "INFO"
+      syslog_errors = "yes"
+    # location of custom alert templates
+    #templates:
+    #  rollup_text = "/etc/flapjack/templates/sms/rollup.text.erb"
+    #  alert_text = "/etc/flapjack/templates/sms/alert.text.erb"
+  # Sends SMS notifications via Twilio
+  [gateways.sms_twilio]
+    enabled = "no"
+    queue = "sms_twilio_notifications"
+    account_sid = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    auth_token = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+    from = "+1xxxxxxxxxx"
+    [gateways.sms_twilio.logger]
+      level = "INFO"
+      syslog_errors = "yes"
+    # location of custom alert templates
+    #[gateways.sms_twilio.templates]
+    #  rollup_text = "/etc/flapjack/templates/sms_twilio/rollup.text.erb"
+    #  alert_text = "/etc/flapjack/templates/sms_twilio/alert.text.erb"
+  # Generates SNS notifications
+  [gateways.sns]
+    enabled = "no"
+    queue = "sns_notifications"
+    #region_name = "us-east-1"
+    # Don't forget to use an IAM user's credentials here so revocation is easy!
+    access_key = "AKIAIOSFODNN7EXAMPLE"
+    secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  # Connects to an XMPP (jabber) server, sends notifications (to rooms and individuals),
+  # handles acknowledgements from jabber users and other commands.
+  [gateways.jabber]
+    enabled = "no"
+    # the redis queue this pikelet will look for notifications on
+    queue = "jabber_notifications"
+    server = "jabber.example.com"
+    port = 5222
+    jabberid = "flapjack@jabber.example.com"
+    password = "good-password"
+    alias = "flapjack"
+    # List of strings that this pikelet user will respond to
+    identifiers = ["@flapjack"]
+    # the Multi-User Chats the pikelet should join and announce to
+    rooms = [
+      "gimp@conference.jabber.example.com",
+      "log@conference.jabber.example.com"
+    ]
+    [gateways.jabber.logger]
+      level = "INFO"
+      syslog_errors = "yes"
+    # location of custom alert templates
+    #[gateways.jabber.templates]
+    #  rollup_text = "/etc/flapjack/templates/jabber/rollup.text.erb"
+    #  alert_text = "/etc/flapjack/templates/jabber/alert.text.erb"
+  # Sends notifications to and accepts acknowledgements from [PagerDuty](http://www.pagerduty.com/)
+  # (NB = "contacts will need to have a registered PagerDuty account to use this)"
+  [gateways.pagerduty]
+    enabled = "no"
+    # the redis queue this pikelet will look for notifications on
+    queue = "pagerduty_notifications"
+    [gateways.pagerduty.logger]
+      level = "INFO"
+      syslog_errors = "yes"
+    # location of custom alert templates
+    #[gateways.pagerduty.templates]
+    #  alert_text = "/etc/flapjack/templates/pagerduty/alert.text.erb"
+  # Browsable web interface
+  [gateways.web]
+    enabled = "yes"
+    port = 3080
+    timeout = 300
+    # Seconds between auto_refresh of entities/checks pages.  Set to 0 to disable
+    auto_refresh = 120
+    access_log = "/var/log/flapjack/web_access.log"
+    api_url = "http://localhost:3081/"
+    # Full path to location of logo file, e.g. /etc/flapjack/custom_logo.png
+    #logo_image_path = "/etc/flapjack/web/custom_logo/flapjack-2013-notext-transparent-300-300.png"
+    [gateways.web.logger]
+      level = "INFO"
+      syslog_errors = "yes"
+  # HTTP API server
+  [gateways.jsonapi]
+    enabled = "yes"
+    port = 3081
+    timeout = 300
+    access_log = "/var/log/flapjack/jsonapi_access.log"
+    base_url = "http://localhost:3081/"
+    [gateways.jsonapi.logger]
+      level = "INFO"
+      syslog_errors = "yes"
+  # "out-of-band" end-to-end testing, used for monitoring other instances of
+  # flapjack to ensure that they are running correctly
+  [gateways.oobetet]
+    enabled = "no"
+    server = "jabber.example.com"
+    port = 5222
+    # jabberid, password, alias, rooms = "see the jabber pikelet"
+    jabberid = "flapjacktest@jabber.example.com"
+    password = "nuther-good-password"
+    alias = "flapjacktest"
+    # The check oobetet should watch for the state change
+    watched_check = "PING"
+    # The entitiy that the check should be associated with
+    watched_entity = "foo.example.com"
+    # The maximum amount of time allowed to pass between state changes on that check
+    max_latency = 300
+    # The API key for a service in PagerDuty that the oobetet will use to alert you
+    pagerduty_contact = 11111111111111111111111111111111
+    # Jabber rooms to join
+    rooms = [
+      "flapjacktest@conference.jabber.example.com",
+      "gimp@conference.jabber.example.com",
+      "log@conference.jabber.example.com"
+    ]  
+    [gateways.oobetet.logger]
+      level = "INFO"
+      syslog_errors = "yes"

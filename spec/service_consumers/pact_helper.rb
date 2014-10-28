@@ -9,7 +9,7 @@ $testing = true
 
 FLAPJACK_ENV    = ENV["FLAPJACK_ENV"] || 'test'
 FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..')
-FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.yaml')
+FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.toml')
 ENV['RACK_ENV'] = ENV["FLAPJACK_ENV"]
 
 require 'bundler'

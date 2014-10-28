@@ -12,7 +12,7 @@ namespace :benchmarks do
   require 'flapjack/version'
 
   def prepare_env
-    config_file = File.join('tasks', 'support', 'flapjack_config_benchmark.yaml')
+    config_file = File.join('tasks', 'support', 'flapjack_config_benchmark.toml')
 
     config = Flapjack::Configuration.new
     config.load( config_file )
@@ -75,7 +75,7 @@ namespace :benchmarks do
     result = system({"FLAPJACK_ENV" => FLAPJACK_ENV,
                "CPUPROFILE"   => "artifacts/flapjack-perftools-cpuprofile",
                "RUBYOPT"      => "-r#{perftools}"},
-               "bin/flapjack start --no-daemonize --config tasks/support/flapjack_config_benchmark.yaml --logfile log/benchmark_test.log")
+               "bin/flapjack start --no-daemonize --config tasks/support/flapjack_config_benchmark.toml --logfile log/benchmark_test.log")
     if result
       puts "Flapjack run completed successfully"
     else
