@@ -81,12 +81,17 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            checks_ids = checks.map(&:id)
-            linked_tag_ids = Flapjack::Data::Check.associated_ids_for_tags(*checks_ids)
+            checks_as_json = if checks.empty?
+              []
+            else
+              checks_ids = checks.map(&:id)
+              linked_tag_ids = Flapjack::Data::Check.intersect(:id => checks_ids).
+                associated_ids_for(:tags)
 
-            checks_as_json = checks.collect {|check|
-              check.as_json(:tag_ids => linked_tag_ids[check.id])
-            }
+              checks.collect {|check|
+                check.as_json(:tag_ids => linked_tag_ids[check.id])
+              }
+            end
 
             Flapjack.dump_json({:checks => checks_as_json}.merge(meta))
           end

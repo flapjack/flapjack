@@ -60,12 +60,13 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).to receive(:sort).
       with(:name, :order => 'alpha').and_return(sorted)
 
-    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_media).
-      with(contact.id).and_return({})
-    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_pagerduty_credentials).
-      with(contact.id).and_return({})
-    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_rules).
-      with(contact.id).and_return({})
+    contact_ids = double('contact_ids')
+    expect(contact_ids).to receive(:associated_ids_for).with(:media).and_return({})
+    expect(contact_ids).to receive(:associated_ids_for).with(:pagerduty_credentials).and_return({})
+    expect(contact_ids).to receive(:associated_ids_for).with(:rules).and_return({})
+    expect(Flapjack::Data::Contact).to receive(:intersect).with(:id => [contact.id]).
+      exactly(3).times.and_return(contact_ids)
+
     expect(contact).to receive(:as_json).and_return(contact_data)
 
     get '/contacts'
@@ -74,12 +75,13 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   end
 
   it "returns the core information of a specified contact" do
-    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_media).
-      with(contact.id).and_return({})
-    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_pagerduty_credentials).
-      with(contact.id).and_return({})
-    expect(Flapjack::Data::Contact).to receive(:associated_ids_for_rules).
-      with(contact.id).and_return({})
+    contact_ids = double('contact_ids')
+    expect(contact_ids).to receive(:associated_ids_for).with(:media).and_return({})
+    expect(contact_ids).to receive(:associated_ids_for).with(:pagerduty_credentials).and_return({})
+    expect(contact_ids).to receive(:associated_ids_for).with(:rules).and_return({})
+    expect(Flapjack::Data::Contact).to receive(:intersect).with(:id => [contact.id]).
+      exactly(3).times.and_return(contact_ids)
+
     expect(contact).to receive(:as_json).and_return(contact_data)
     expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
       with(contact.id).and_return([contact])
@@ -98,13 +100,11 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
   end
 
   it "updates a contact" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids).
+    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
       with(contact.id).and_return([contact])
 
     expect(contact).to receive(:name=).with('Elias Ericsson')
     expect(contact).to receive(:save).and_return(true)
-
-    expect(Flapjack::Data::Contact).to receive(:lock).with(no_args).and_yield
 
     patch "/contacts/#{contact.id}",
       Flapjack.dump_json([{:op => 'replace', :path => '/contacts/0/name', :value => 'Elias Ericsson'}]),

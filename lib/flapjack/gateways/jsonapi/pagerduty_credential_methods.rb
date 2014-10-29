@@ -83,12 +83,17 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            pagerduty_credentials_ids = pagerduty_credentials.map(&:id)
-            linked_contact_ids = Flapjack::Data::PagerdutyCredentials.associated_ids_for_contact(*pagerduty_credentials_ids)
+            pagerduty_credentials_as_json = if pagerduty_credentials.empty?
+              []
+            else
+              pagerduty_credentials_ids = pagerduty_credentials.map(&:id)
+              linked_contact_ids = Flapjack::Data::PagerdutyCredentials.
+                intersect(:id => pagerduty_credentials_ids).associated_ids_for(:contact)
 
-            pagerduty_credentials_as_json = pagerduty_credentials.collect {|pdc|
-              pdc.as_json(:contact_ids => [linked_contact_ids[pdc.id]])
-            }
+              pagerduty_credentials.collect {|pdc|
+                pdc.as_json(:contact_ids => [linked_contact_ids[pdc.id]])
+              }
+            end
 
             Flapjack.dump_json({:pagerduty_credentials => pagerduty_credentials_as_json}.merge(meta))
           end

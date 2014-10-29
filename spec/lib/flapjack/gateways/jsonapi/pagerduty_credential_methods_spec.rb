@@ -77,10 +77,14 @@ describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => 
     expect(Flapjack::Data::PagerdutyCredentials).to receive(:find_by_ids!).
       with(pagerduty_credentials.id).and_return([pagerduty_credentials])
 
+    pdc_ids = double('pagerdutycredentials_ids')
+    expect(pdc_ids).to receive(:associated_ids_for).with(:contact).
+      and_return(pagerduty_credentials.id => contact.id)
+    expect(Flapjack::Data::PagerdutyCredentials).to receive(:intersect).
+      with(:id => [pagerduty_credentials.id]).and_return(pdc_ids)
+
     expect(pagerduty_credentials).to receive(:as_json).
       and_return(pagerduty_credentials_data)
-    expect(Flapjack::Data::PagerdutyCredentials).to receive(:associated_ids_for_contact).
-      with(pagerduty_credentials.id).and_return({pagerduty_credentials.id => contact.id})
 
     get "/pagerduty_credentials/#{pagerduty_credentials.id}"
     expect(last_response).to be_ok
@@ -88,17 +92,35 @@ describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => 
   end
 
   it "returns all pagerduty credentials" do
-    expect(Flapjack::Data::PagerdutyCredentials).to receive(:all).
+
+    expect(Flapjack::Data::PagerdutyCredentials).to receive(:count).and_return(1)
+
+    meta = {:pagination => {
+      :page        => 1,
+      :per_page    => 20,
+      :total_pages => 1,
+      :total_count => 1
+    }}
+
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return([pagerduty_credentials])
+    expect(Flapjack::Data::PagerdutyCredentials).to receive(:sort).
+      with(:id, :order => 'alpha').and_return(sorted)
 
     expect(pagerduty_credentials).to receive(:as_json).
       and_return(pagerduty_credentials_data)
-    expect(Flapjack::Data::PagerdutyCredentials).to receive(:associated_ids_for_contact).
-      with(pagerduty_credentials.id).and_return({pagerduty_credentials.id => contact.id})
+
+    pdc_ids = double('pagerdutycredentials_ids')
+    expect(pdc_ids).to receive(:associated_ids_for).with(:contact).
+      and_return(pagerduty_credentials.id => contact.id)
+    expect(Flapjack::Data::PagerdutyCredentials).to receive(:intersect).
+      with(:id => [pagerduty_credentials.id]).and_return(pdc_ids)
 
     get "/pagerduty_credentials"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:pagerduty_credentials => [pagerduty_credentials_data]))
+    expect(last_response.body).to eq(
+      Flapjack.dump_json(:pagerduty_credentials => [pagerduty_credentials_data], :meta => meta))
   end
 
   it "does not return pagerduty credentials if the record is not found"

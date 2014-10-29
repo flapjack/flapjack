@@ -92,7 +92,7 @@ Feature: Notification rules on a per contact basis
     Then  no email alerts should be queued for imani@example.com
 
   @severity @time
-  Scenario: Recoveries are not affected by routes
+  Scenario: Recoveries are not affected by intervals
     Given the check is check 'ping' on entity 'foo'
     And   the check is in an ok state
     When  a critical event is received

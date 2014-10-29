@@ -74,8 +74,8 @@ module Flapjack
               nil
             end
 
-            media, methods = if requested_media
-              requested = Flapjack::Data::Media.find_by_ids!(*requested_media)
+            media, meta = if requested_media
+              requested = Flapjack::Data::Medium.find_by_ids!(*requested_media)
 
               if requested.empty?
                 raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Medium, requested_media)
@@ -88,14 +88,20 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            media_ids = media.map(&:id)
-            linked_contact_ids = Flapjack::Data::Medium.associated_ids_for_contact(*media_ids)
-            linked_route_ids = Flapjack::Data::Medium.associated_ids_for_routes(*media_ids)
+            media_as_json = if media.empty?
+              []
+            else
+              media_ids = media.map(&:id)
+              linked_contact_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
+                associated_ids_for(:contact)
+              linked_route_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
+                associated_ids_for(:routes)
 
-            media_as_json = media.collect {|medium|
-              medium.as_json(:contact_ids => [linked_contact_ids[medium.id]],
-                             :route_ids => linked_route_ids[medium.id])
-            }
+              media.collect {|medium|
+                medium.as_json(:contact_ids => [linked_contact_ids[medium.id]],
+                               :route_ids => linked_route_ids[medium.id])
+              }
+            end
 
             Flapjack.dump_json({:media => media_as_json}.merge(meta))
           end

@@ -56,15 +56,9 @@ module Flapjack
 
       # the following associations are used internally, for the notification
       # and alert queue inter-pikelet workflow
-      has_many :notifications, :class_name => 'Flapjack::Data::Notification'
-      has_many :alerts, :class_name => 'Flapjack::Data::Alert'
-      has_many :rollup_alerts, :class_name => 'Flapjack::Data::RollupAlert'
-
-      has_sorted_set :notification_blocks, :class_name => 'Flapjack::Data::NotificationBlock',
-        :key => :expire_at
-
-      # has_and_belongs_to_many :alerting_media, :class_name => 'Flapjack::Data::Medium',
-      #   :inverse_of => :alerting_checks
+      has_many :notifications, :class_name => 'Flapjack::Data::Notification', :inverse_of => :check
+      has_and_belongs_to_many :alerting_media, :class_name => 'Flapjack::Data::Medium', :inverse_of => :alerting_checks
+      has_many :alerts, :class_name => 'Flapjack::Data::Alert', :inverse_of => :check
 
       validates :name, :presence => true
       validates :state,
@@ -177,7 +171,11 @@ module Flapjack
       end
 
       def in_scheduled_maintenance?
-        !scheduled_maintenance_ids_at(Time.now).empty?
+        return false if scheduled_maintenance_ids_at(Time.now).empty?
+        self.alerting_media.each do |medium|
+          self.alerting_media.delete(medium)
+        end
+        true
       end
 
       def in_unscheduled_maintenance?
@@ -194,7 +192,14 @@ module Flapjack
         # TODO validation for: if state has changed, last_update must have changed
         return unless self.changed.include?('last_update') && self.changed.include?('state')
 
-        # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
+        # clear any alerting media if the check is OK
+        if Flapjack::Data::CheckState.ok_states.include?(self.state)
+          self.class.lock(Flapjack::Data::Medium) do
+            self.alerting_media.each do |medium|
+              self.alerting_media.delete(medium)
+            end
+          end
+        end
 
         check_state = Flapjack::Data::CheckState.new(:state => self.state,
           :timestamp => self.last_update,
@@ -269,6 +274,12 @@ module Flapjack
         self.unscheduled_maintenances_by_end << unsched_maint
         self.last_update = current_time.to_i # ack is treated as changing state in this case
         self.save
+
+        self.class.lock(Flapjack::Data::Medium) do
+          self.alerting_media.each do |medium|
+            self.alerting_media.delete(medium)
+          end
+        end
       end
 
       def clear_unscheduled_maintenance(end_time)

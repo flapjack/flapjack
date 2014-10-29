@@ -88,16 +88,24 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            contacts_ids = contacts.map(&:id)
-            linked_medium_ids = Flapjack::Data::Contact.associated_ids_for_media(*contacts_ids)
-            linked_pagerduty_credentials_ids = Flapjack::Data::Contact.associated_ids_for_pagerduty_credentials(*contacts_ids)
-            linked_rule_ids = Flapjack::Data::Contact.associated_ids_for_rules(*contacts_ids)
+            contacts_as_json = if contacts.empty?
+              []
+            else
+              contacts_ids = contacts.map(&:id)
+              linked_medium_ids = Flapjack::Data::Contact.intersect(:id => contacts_ids).
+                associated_ids_for(:media)
 
-            contacts_as_json = contacts.collect {|contact|
-              contact.as_json(:medium_ids => linked_medium_ids[contact.id],
-                :pagerduty_credentials_ids => linked_pagerduty_credentials_ids[contact.id],
-                :rule_ids => linked_rule_ids[contact.id])
-            }
+              linked_pagerduty_credentials_ids = Flapjack::Data::Contact.
+                intersect(:id => contacts_ids).associated_ids_for(:pagerduty_credentials)
+              linked_rule_ids = Flapjack::Data::Contact.intersect(:id => contacts_ids).
+                associated_ids_for(:rules)
+
+              contacts.collect {|contact|
+                contact.as_json(:medium_ids => linked_medium_ids[contact.id],
+                  :pagerduty_credentials_ids => linked_pagerduty_credentials_ids[contact.id],
+                  :rule_ids => linked_rule_ids[contact.id])
+              }
+            end
 
             Flapjack.dump_json({:contacts => contacts_as_json}.merge(meta))
           end

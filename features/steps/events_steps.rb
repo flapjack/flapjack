@@ -28,6 +28,11 @@ def set_scheduled_maintenance(entity_name, check_name, duration)
     :end_time => Time.at(t.to_i + duration), :summary => 'upgrading everything')
   expect(sched_maint.save).to be true
   check.add_scheduled_maintenance(sched_maint)
+  Flapjack::Data::Check.lock(Flapjack::Data::Medium) do
+    check.alerting_media.each do |medium|
+      check.alerting_media.delete(medium)
+    end
+  end
 end
 
 def remove_scheduled_maintenance(entity_name, check_name)

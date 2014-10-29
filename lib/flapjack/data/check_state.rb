@@ -21,8 +21,10 @@ module Flapjack
 
       belongs_to :check, :class_name => 'Flapjack::Data::Check', :inverse_of => :states
 
-      has_many :current_notifications, :class_name => 'Flapjack::Data::Notification'
-      has_many :previous_notifications, :class_name => 'Flapjack::Data::Notification'
+      has_many :current_notifications, :class_name => 'Flapjack::Data::Notification',
+        :inverse_of => :state
+      has_many :previous_notifications, :class_name => 'Flapjack::Data::Notification',
+        :inverse_of => :previous_state
 
       def self.ok_states
         ['ok']

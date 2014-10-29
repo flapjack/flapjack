@@ -47,8 +47,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(Flapjack::Data::Check).to receive(:sort).
       with(:name, :order => 'alpha').and_return(sorted)
 
-    expect(Flapjack::Data::Check).to receive(:associated_ids_for_tags).
-      with(check.id).and_return({})
+    check_ids = double('check_ids')
+    expect(check_ids).to receive(:associated_ids_for).with(:tags).and_return({})
+    expect(Flapjack::Data::Check).to receive(:intersect).with(:id => [check.id]).
+      and_return(check_ids)
 
     expect(check).to receive(:as_json).and_return(check_data)
 
@@ -62,8 +64,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
       with(check.id).and_return([check])
 
-    expect(Flapjack::Data::Check).to receive(:associated_ids_for_tags).
-      with(check.id).and_return({})
+    check_ids = double('check_ids')
+    expect(check_ids).to receive(:associated_ids_for).with(:tags).and_return({})
+    expect(Flapjack::Data::Check).to receive(:intersect).with(:id => [check.id]).
+      and_return(check_ids)
 
     get "/checks/#{check.id}"
     expect(last_response).to be_ok
@@ -79,8 +83,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
       with(check.id, check_2.id).and_return([check, check_2])
 
-    expect(Flapjack::Data::Check).to receive(:associated_ids_for_tags).
-      with(check.id, check_2.id).and_return({})
+    check_ids = double('check_ids')
+    expect(check_ids).to receive(:associated_ids_for).with(:tags).and_return({})
+    expect(Flapjack::Data::Check).to receive(:intersect).with(:id => [check.id, check_2.id]).
+      and_return(check_ids)
 
     get "/checks/#{check.id},#{check_2.id}"
     expect(last_response).to be_ok

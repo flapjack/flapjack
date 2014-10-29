@@ -87,7 +87,7 @@ Given /^the following media exist:$/ do |media|
       :id               => medium_data['id'],
       :type             => medium_data['type'],
       :address          => medium_data['address'],
-      :interval         => medium_data['interval'].to_i,
+      :interval         => medium_data['interval'].to_i * 60,
       :rollup_threshold => medium_data['rollup_threshold'].to_i
     )
     expect(medium.save).to be true

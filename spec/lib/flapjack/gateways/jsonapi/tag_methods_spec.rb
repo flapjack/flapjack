@@ -49,10 +49,13 @@ describe 'Flapjack::Gateways::JSONAPI::TagMethods', :sinatra => true, :logger =>
 
     expect(tag).to receive(:as_json).and_return(tag_data)
 
-    expect(Flapjack::Data::Tag).to receive(:associated_ids_for_checks).
-      with(tag.id).and_return({})
-    expect(Flapjack::Data::Tag).to receive(:associated_ids_for_rules).
-      with(tag.id).and_return({})
+    tag_ids = double('tag_ids')
+    expect(tag_ids).to receive(:associated_ids_for).with(:checks).
+      and_return({})
+    expect(tag_ids).to receive(:associated_ids_for).with(:rules).
+      and_return({})
+    expect(Flapjack::Data::Tag).to receive(:intersect).with(:id => [tag.id]).
+      exactly(2).times.and_return(tag_ids)
 
     get '/tags'
     expect(last_response).to be_ok
@@ -65,10 +68,13 @@ describe 'Flapjack::Gateways::JSONAPI::TagMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Tag).to receive(:intersect).with(:name => [tag.name]).
       and_return(all_tags)
 
-    expect(Flapjack::Data::Tag).to receive(:associated_ids_for_checks).
-      with(tag.id).and_return({})
-    expect(Flapjack::Data::Tag).to receive(:associated_ids_for_rules).
-      with(tag.id).and_return({})
+    tag_ids = double('tag_ids')
+    expect(tag_ids).to receive(:associated_ids_for).with(:checks).
+      and_return({})
+    expect(tag_ids).to receive(:associated_ids_for).with(:rules).
+      and_return({})
+    expect(Flapjack::Data::Tag).to receive(:intersect).with(:id => [tag.id]).
+      exactly(2).times.and_return(tag_ids)
 
     get "/tags/#{tag.name}"
     expect(last_response).to be_ok
@@ -86,10 +92,13 @@ describe 'Flapjack::Gateways::JSONAPI::TagMethods', :sinatra => true, :logger =>
     expect(Flapjack::Data::Tag).to receive(:intersect).with(:name => [tag.name, tag_2.name]).
       and_return(all_tags)
 
-    expect(Flapjack::Data::Tag).to receive(:associated_ids_for_checks).
-      with(tag.id, tag_2.id).and_return({})
-    expect(Flapjack::Data::Tag).to receive(:associated_ids_for_rules).
-      with(tag.id, tag_2.id).and_return({})
+    tag_ids = double('tag_ids')
+    expect(tag_ids).to receive(:associated_ids_for).with(:checks).
+      and_return({})
+    expect(tag_ids).to receive(:associated_ids_for).with(:rules).
+      and_return({})
+    expect(Flapjack::Data::Tag).to receive(:intersect).with(:id => [tag.id, tag_2.id]).
+      exactly(2).times.and_return(tag_ids)
 
     get "/tags/#{tag.name},#{tag_2.name}"
     expect(last_response).to be_ok

@@ -183,6 +183,7 @@ Feature: Rollup on a per contact, per media basis
 
   @time
   Scenario: Contact removes a rule matching on a check
+    Given PENDING: more data model refactoring is needed
     Given check 'ping' for entity 'foo' is in an ok state
     And   check 'ping' for entity 'baz' is in an ok state
     When  a critical event is received for check 'ping' on entity 'foo'
@@ -199,7 +200,6 @@ Feature: Rollup on a per contact, per media basis
     When  20 minute passes
     And   user with id 'c1' removes rule with id 'r1'
     And   a critical event is received for check 'ping' on entity 'baz'
-    Then  show me the abc log
     Then  1 sms alert of rollup recovery should be queued for +61400000001
 
   @time

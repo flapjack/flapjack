@@ -43,23 +43,23 @@ module Flapjack
 
       # TODO also cleanup jsonapi linkage methods to optionally take multiple arguments
 
-      before_destroy :correct_alerting_media
-      def correct_alerting_media
-        self.class.lock(Flapjack::Data::Medium, Flapjack::Data::Check) do
+      # before_destroy :correct_alerting_media
+      # def correct_alerting_media
+      #   self.class.lock(Flapjack::Data::Medium, Flapjack::Data::Check) do
 
-          self.media.each do |medium|
-            medium.alerting_checks.each do |check|
+      #     self.media.each do |medium|
+      #       medium.alerting_checks.each do |check|
 
-              # if this is the only route that links the media to that check,
-              # remove from the set of alerting_checks for that media; will
-              # need to use current check state to limit route set as well
+      #         # if this is the only route that links the media to that check,
+      #         # remove from the set of alerting_checks for that media; will
+      #         # need to use current check state to limit route set as well
 
-            end
+      #       end
 
-          end
+      #     end
 
-        end
-      end
+      #   end
+      # end
 
 
       validates_each :time_restrictions_json do |record, att, value|

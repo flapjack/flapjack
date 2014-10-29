@@ -42,12 +42,17 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            route_ids = routes.map(&:id)
-            linked_rule_ids = Flapjack::Data::Route.associated_ids_for_rule(*route_ids)
+            routes_as_json = if routes.empty?
+              []
+            else
+              route_ids = routes.map(&:id)
+              linked_rule_ids = Flapjack::Data::Route.intersect(:id => route_ids).
+                associated_ids_for(:rule)
 
-            routes_as_json = routes.collect {|route|
-              route.as_json(:rule_id => linked_rule_ids[route.id])
-            }
+              routes.collect {|route|
+                route.as_json(:rule_id => linked_rule_ids[route.id])
+              }
+            end
 
             Flapjack.dump_json({:routes => routes_as_json}.merge(meta))
           end

@@ -2,6 +2,8 @@
 
 # require 'sandstorm/records/redis_record'
 
+# # NB: not yet implemented
+
 # module Flapjack
 #   module Data
 #     class State

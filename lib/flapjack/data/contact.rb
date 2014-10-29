@@ -9,7 +9,6 @@ require 'ice_cube'
 require 'sandstorm/records/redis_record'
 
 require 'flapjack/data/medium'
-require 'flapjack/data/notification_block'
 require 'flapjack/data/rule'
 require 'flapjack/data/tag'
 
@@ -31,10 +30,11 @@ module Flapjack
       has_and_belongs_to_many :checks, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :contacts
 
-      has_many :media, :class_name => 'Flapjack::Data::Medium'
-      has_one :pagerduty_credentials, :class_name => 'Flapjack::Data::PagerdutyCredentials'
+      has_many :media, :class_name => 'Flapjack::Data::Medium', :inverse_of => :contact
+      has_one :pagerduty_credentials, :class_name => 'Flapjack::Data::PagerdutyCredentials',
+        :inverse_of => :contact
 
-      has_many :rules, :class_name => 'Flapjack::Data::Rule'
+      has_many :rules, :class_name => 'Flapjack::Data::Rule', :inverse_of => :contact
 
       before_destroy :remove_child_records
       def remove_child_records

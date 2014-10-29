@@ -69,20 +69,37 @@ describe 'Flapjack::Gateways::JSONAPI::RuleMethods', :sinatra => true, :logger =
   end
 
   it "gets all notification rules" do
-    expect(Flapjack::Data::Rule).to receive(:all).
+
+    expect(Flapjack::Data::Rule).to receive(:count).and_return(1)
+
+    meta = {:pagination => {
+      :page        => 1,
+      :per_page    => 20,
+      :total_pages => 1,
+      :total_count => 1
+    }}
+
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return([rule])
+    expect(Flapjack::Data::Rule).to receive(:sort).
+      with(:id, :order => 'alpha').and_return(sorted)
 
     expect(rule).to receive(:as_json).and_return(rule_data)
-    expect(Flapjack::Data::Rule).to receive(:associated_ids_for_contact).
-      with(rule.id).and_return({rule.id => contact.id})
-    expect(Flapjack::Data::Rule).to receive(:associated_ids_for_tags).
-      with(rule.id).and_return({})
-    expect(Flapjack::Data::Rule).to receive(:associated_ids_for_routes).
-      with(rule.id).and_return({})
+
+    rule_ids = double('rule_ids')
+    expect(rule_ids).to receive(:associated_ids_for).with(:contact).
+      and_return(rule.id => contact.id)
+    expect(rule_ids).to receive(:associated_ids_for).with(:tags).
+      and_return({})
+    expect(rule_ids).to receive(:associated_ids_for).with(:routes).
+      and_return({})
+    expect(Flapjack::Data::Rule).to receive(:intersect).with(:id => [rule.id]).
+      exactly(3).times.and_return(rule_ids)
 
     get "/rules"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:rules => [rule_data]))
+    expect(last_response.body).to eq(Flapjack.dump_json(:rules => [rule_data], :meta => meta))
   end
 
   it "gets a single notification rule" do
@@ -90,12 +107,16 @@ describe 'Flapjack::Gateways::JSONAPI::RuleMethods', :sinatra => true, :logger =
       with(rule.id).and_return([rule])
 
     expect(rule).to receive(:as_json).and_return(rule_data)
-    expect(Flapjack::Data::Rule).to receive(:associated_ids_for_contact).
-      with(rule.id).and_return({rule.id => contact.id})
-    expect(Flapjack::Data::Rule).to receive(:associated_ids_for_tags).
-      with(rule.id).and_return({})
-    expect(Flapjack::Data::Rule).to receive(:associated_ids_for_routes).
-      with(rule.id).and_return({})
+
+    rule_ids = double('rule_ids')
+    expect(rule_ids).to receive(:associated_ids_for).with(:contact).
+      and_return(rule.id => contact.id)
+    expect(rule_ids).to receive(:associated_ids_for).with(:tags).
+      and_return({})
+    expect(rule_ids).to receive(:associated_ids_for).with(:routes).
+      and_return({})
+    expect(Flapjack::Data::Rule).to receive(:intersect).with(:id => [rule.id]).
+      exactly(3).times.and_return(rule_ids)
 
     get "/rules/#{rule.id}"
     expect(last_response).to be_ok

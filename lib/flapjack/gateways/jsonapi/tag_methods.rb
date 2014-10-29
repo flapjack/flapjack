@@ -33,7 +33,6 @@ module Flapjack
             end
 
             Flapjack::Data::Tag.lock do
-
               conflicted_names = Flapjack::Data::Tag.intersect(:name => data_names).map(&:name)
 
               if conflicted_names.length > 0
@@ -50,7 +49,6 @@ module Flapjack
               else
                 tag_names = tags.collect {|t| t.save; t.name }
               end
-
             end
 
             halt err(403, tag_err) unless tag_err.nil?
@@ -81,14 +79,20 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            tags_ids = tags.map(&:id)
-            linked_check_ids = Flapjack::Data::Tag.associated_ids_for_checks(*tags_ids)
-            linked_rule_ids = Flapjack::Data::Tag.associated_ids_for_rules(*tags_ids)
+            tags_as_json = if tags.empty?
+              []
+            else
+              tag_ids = tags.map(&:id)
+              linked_check_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
+                associated_ids_for(:checks)
+              linked_rule_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
+                associated_ids_for(:rules)
 
-            tags_as_json = tags.collect {|tag|
-              tag.as_json(:check_ids => linked_check_ids[tag.id],
-                          :rule_ids => linked_rule_ids[tag.id])
-            }
+              tags.collect {|tag|
+                tag.as_json(:check_ids => linked_check_ids[tag.id],
+                            :rule_ids => linked_rule_ids[tag.id])
+              }
+            end
 
             Flapjack.dump_json({:tags => tags_as_json}.merge(meta))
           end
