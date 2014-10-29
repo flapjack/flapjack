@@ -78,6 +78,26 @@ module Flapjack
         )
       end
 
+      def self.as_jsonapi(*contacts)
+        return [] if contacts.empty?
+        contact_ids = contacts.map(&:id)
+
+        medium_ids = Flapjack::Data::Contact.intersect(:id => contact_ids).
+          associated_ids_for(:media)
+        pagerduty_credentials_ids = Flapjack::Data::Contact.
+          intersect(:id => contact_ids).associated_ids_for(:pagerduty_credentials)
+        rule_ids = Flapjack::Data::Contact.intersect(:id => contact_ids).
+          associated_ids_for(:rules)
+
+        contacts.collect do |contact|
+          contact.as_json(
+            :medium_ids => medium_ids[contact.id],
+            :pagerduty_credentials_ids => pagerduty_credentials_ids[contact.id],
+            :rule_ids => rule_ids[contact.id]
+          )
+        end
+      end
+
     end
   end
 end

@@ -81,18 +81,7 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            checks_as_json = if checks.empty?
-              []
-            else
-              checks_ids = checks.map(&:id)
-              linked_tag_ids = Flapjack::Data::Check.intersect(:id => checks_ids).
-                associated_ids_for(:tags)
-
-              checks.collect {|check|
-                check.as_json(:tag_ids => linked_tag_ids[check.id])
-              }
-            end
-
+            checks_as_json = Flapjack::Data::Check.as_jsonapi(*checks)
             Flapjack.dump_json({:checks => checks_as_json}.merge(meta))
           end
 

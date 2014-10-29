@@ -322,6 +322,14 @@ module Flapjack
         {:id => self.id, :name => self.name}
       end
 
+      def self.as_jsonapi(*checks)
+        return [] if checks.empty?
+        check_ids = checks.map(&:id)
+        tag_ids = Flapjack::Data::Check.intersect(:id => check_ids).
+                    associated_ids_for(:tags)
+        checks.collect {|check| check.as_json(:tag_ids => tag_ids[check.id]) }
+      end
+
       private
 
       # would need to be "#{entity.name}:#{name}" to be compatible with v1, but

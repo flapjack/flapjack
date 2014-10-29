@@ -20,35 +20,59 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::Helpers
           # app.helpers Flapjack::Gateways::JSONAPI::SearchMethods::Helpers
 
-          app.get %r{^/search/(contacts/checks)$} do
+          app.get %r{^/search/(contacts/checks/tags)$} do
 
-            # query = params[:q]
+            query    = params[:q]
+            re_query = params[:r]
 
-            # case params[:captures][0]
-            # when 'contacts'
-            #   # contacts = Flapjack::Data::Contact.
+            case params[:captures][0]
+            when 'contacts'
+              # TODO paginate
+              meta = {}
 
-            #   contacts_ids = contacts.map(&:id)
-            #   linked_medium_ids = Flapjack::Data::Contact.associated_ids_for_media(contacts_ids)
-            #   linked_pagerduty_credentials_ids = Flapjack::Data::Contact.associated_ids_for_pagerduty_credentials(contacts_ids)
-            #   linked_rule_ids = Flapjack::Data::Contact.associated_ids_for_rules(contacts_ids)
+              if !query.nil? && !''.eql?(query)
+                contacts = Flapjack::Data::Contact.intersect(:name => query).all
+              elsif !re_query.nil? && !''.eql?(re_query)
+                contacts = Flapjack::Data::Contact.intersect(:name => /#{re_query}/).all
+              else
+                halt(500, 'No valid query parameter')
+              end
 
-            #   contacts_json = contacts.collect {|contact|
-            #     contact.as_json(:medium_ids => linked_medium_ids[contact.id],
-            #       :pagerduty_credentials_ids => linked_pagerduty_credentials_ids[contact.id],
-            #       :rule_ids => linked_rule_ids[contact.id]).to_json
-            #   }.join(", ")
+              contacts_as_json = Flapjack::Data::Contact.as_jsonapi(*contacts)
+              Flapjack.dump_json({:contacts => contacts_as_json}.merge(meta))
 
-            #   '{"contacts":[' + contacts_json + ']}'
+            when 'checks'
 
-            # when 'checks'
-            #   # checks = Flapjack::Data::Check
+              # TODO paginate
+              meta = {}
 
-            #   checks_json = checks.collect {|check| check.to_json}.join(",")
+              if !query.nil? && !''.eql?(query)
+                checks = Flapjack::Data::Check.intersect(:name => query).all
+              elsif !re_query.nil? && !''.eql?(re_query)
+                checks = Flapjack::Data::Check.intersect(:name => /#{re_query}/).all
+              else
+                halt(500, 'No valid query parameter')
+              end
 
-            #   '{"checks":[' + checks_json + ']}'
+              checks_as_json = Flapjack::Data::Check.as_jsonapi(*checks)
+              Flapjack.dump_json({:checks => checks_as_json}.merge(meta))
 
-            # end
+            when 'tags'
+
+              # TODO paginate
+              meta = {}
+
+              # normal tags endpoint is looked up by name, so no singular one here
+
+              if !re_query.nil? && !''.eql?(re_query)
+                tags = Flapjack::Data::Tag.intersect(:name => /#{re_query}/).all
+              else
+                halt(500, 'No valid query parameter')
+              end
+
+              tags_as_json = Flapjack::Data::Tag.as_jsonapi(*tags)
+              Flapjack.dump_json({:tags => tags_as_json}.merge(meta))
+            end
 
           end
 
