@@ -21,7 +21,7 @@ namespace :benchmarks do
     @redis = Redis.new(config.for_redis)
 
     if @config_env.nil? || @config_env.empty?
-      puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{config_file}'"
+      puts "No config data found in '#{config_file}'"
       exit(false)
     end
   end

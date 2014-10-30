@@ -78,8 +78,7 @@ namespace :profile do
     config.load(FLAPJACK_CONFIG)
     config_env = config.all
     if config_env.nil? || config_env.empty?
-      puts "No config data for environment '#{FLAPJACK_ENV}' " +
-        "found in '#{FLAPJACK_CONFIG}'"
+      puts "No config data found in '#{FLAPJACK_CONFIG}'"
       exit(false)
     end
 
