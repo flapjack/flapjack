@@ -115,16 +115,13 @@ end
 
 config = Flapjack::Configuration.new
 redis_opts = config.load(FLAPJACK_CONFIG) ?
-             config.for_redis :
+             config.for_redis.merge(:driver => :ruby) :
              {:db => 14, :driver => :ruby}
 redis = ::Redis.new(redis_opts)
 redis.flushdb
 RedisDelorean.before_all(:redis => redis)
 redis.quit
 
-# NB: this seems to execute outside the Before/After hooks
-# regardless of placement -- this is what we want, as the
-# @redis driver should be initialised in the sync block.
 Around do |scenario, blk|
   EM.synchrony do
     blk.call
@@ -140,7 +137,6 @@ After do
   @logger.messages = []
 end
 
-
 Before('@processor') do
   @processor = Flapjack::Processor.new(:logger => @logger,
     :redis_config => redis_opts, :config => {})
@@ -150,6 +146,7 @@ end
 After('@processor') do
   @redis.flushdb
   @redis.quit
+  @redis = nil
 end
 
 Before('@notifier') do
@@ -165,6 +162,7 @@ end
 After('@notifier') do
   @notifier_redis.flushdb
   @notifier_redis.quit
+  @notifier_redis = nil
 end
 
 Before('@resque') do
@@ -173,7 +171,7 @@ Before('@resque') do
 end
 
 Before('@time') do
-  RedisDelorean.before_each(:redis => @redis)
+  RedisDelorean.before_each(:redis => @redis || @notifier_redis)
 end
 
 After('@time') do

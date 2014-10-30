@@ -2,16 +2,16 @@
 # copied from flapjack-populator
 # TODO use Flapjack::Data::Contact.add
 def add_contact(contact = {})
-  @redis.multi
-  @redis.del("contact:#{contact['id']}")
-  @redis.del("contact_media:#{contact['id']}")
-  @redis.hset("contact:#{contact['id']}", 'first_name', contact['first_name'])
-  @redis.hset("contact:#{contact['id']}", 'last_name',  contact['last_name'])
-  @redis.hset("contact:#{contact['id']}", 'email',      contact['email'])
-  contact['media'].each_pair {|medium, address|
-    @redis.hset("contact_media:#{contact['id']}", medium, address)
-  }
-  @redis.exec
+  @redis.multi do |multi|
+    multi.del("contact:#{contact['id']}")
+    multi.del("contact_media:#{contact['id']}")
+    multi.hset("contact:#{contact['id']}", 'first_name', contact['first_name'])
+    multi.hset("contact:#{contact['id']}", 'last_name',  contact['last_name'])
+    multi.hset("contact:#{contact['id']}", 'email',      contact['email'])
+    contact['media'].each_pair {|medium, address|
+      multi.hset("contact_media:#{contact['id']}", medium, address)
+    }
+  end
 end
 
 Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ do |entity|

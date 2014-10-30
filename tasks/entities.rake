@@ -129,10 +129,10 @@ namespace :entities do
 
         if id.nil? || entity.nil?
           id ||= SecureRandom.uuid
-          redis.multi
-          redis.hset('all_entity_ids_by_name', name, id)
-          redis.hset('all_entity_names_by_id', id, name)
-          redis.exec
+          redis.multi do
+            multi.hset('all_entity_ids_by_name', name, id)
+            multi.hset('all_entity_names_by_id', id, name)
+          end
           puts "Set id '#{id}' for entity #{name}'"
         elsif entity.name.eql?(name)
           puts "'#{name}' entity already exists with the provided id"

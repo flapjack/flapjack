@@ -44,12 +44,17 @@ module Flapjack
 
         check_history_keys = redis.keys("#{existing_name}:*:states") +
           redis.keys("#{existing_name}:*:state") +
-          redis.keys("#{existing_name}:*:summary") +
           redis.keys("#{existing_name}:*:sorted_state_timestamps")
 
         action_keys = redis.keys("#{existing_name}:*:actions")
 
-        maint_keys = redis.keys("#{existing_name}:*:*scheduled_maintenance*") +
+        maint_keys = redis.keys("#{existing_name}:*:*scheduled_maintenance*")
+
+        all_summary_keys = redis.keys("#{existing_name}:*:summary")
+        maint_summary_keys = redis.keys("#{existing_name}:*:*scheduled_maintenance:summary")
+        check_summary_keys = all_summary_keys - maint_summary_keys
+
+        check_history_keys += check_summary_keys
 
         notif_keys = redis.keys("#{existing_name}:*:last_*_notification") +
           redis.keys("#{existing_name}:*:*_notifications")
@@ -100,54 +105,61 @@ module Flapjack
 
         block_keys = redis.keys("drop_alerts_for_contact:*:*:#{existing_name}:*:*")
 
-        redis.multi
+        rename_all_checks = redis.exists("all_checks:#{existing_name}")
+        rename_current_checks = redis.exists("current_checks:#{existing_name}")
 
-        yield if block_given? # entity id -> name update from add()
+        redis.multi do |multi|
 
-        check_state_keys.each do |csk|
-          redis.rename(csk, csk.sub(/^check:#{Regexp.escape(existing_name)}:/, "check:#{entity_name}:"))
+          yield(multi) if block_given? # entity id -> name update from add()
+
+          check_state_keys.each do |csk|
+            multi.rename(csk, csk.sub(/^check:#{Regexp.escape(existing_name)}:/, "check:#{entity_name}:"))
+          end
+
+          (check_history_keys + action_keys + maint_keys + notif_keys).each do |chk|
+            multi.rename(chk, chk.sub(/^#{Regexp.escape(existing_name)}:/, "#{entity_name}:"))
+          end
+
+          all_checks.each_pair do |ch, score|
+            multi.zrem('all_checks', "#{existing_name}:#{ch}")
+            multi.zadd('all_checks', score, "#{entity_name}:#{ch}")
+          end
+
+          # currently failing checks
+          failed_checks.each_pair do |ch, score|
+            multi.zrem('failed_checks', "#{existing_name}:#{ch}")
+            multi.zadd('failed_checks', score, "#{entity_name}:#{ch}")
+          end
+
+          if rename_all_checks
+            multi.rename("all_checks:#{existing_name}", "all_checks:#{entity_name}")
+          end
+
+          if rename_current_checks
+            multi.rename("current_checks:#{existing_name}", "current_checks:#{entity_name}")
+          end
+
+          unless current_score.nil?
+            multi.zrem('current_entities', existing_name)
+            multi.zadd('current_entities', current_score, entity_name)
+          end
+
+          block_keys.each do |blk|
+            multi.rename(blk, blk.sub(/^drop_alerts_for_contact:(.+):([^:]+):#{Regexp.escape(existing_name)}:(.+):([^:]+)$/,
+              "drop_alerts_for_contact:\\1:\\2:#{entity_name}:\\3:\\4"))
+          end
+
+          hashes_to_remove.each   {|hash|      multi.hdel('checks_by_hash', hash) }
+          hashes_to_add.each_pair {|hash, chk| multi.hset('checks_by_hash', hash, chk)}
+
+          alerting_to_remove.each_pair do |alerting, chks|
+            chks.each {|chk| multi.zrem(alerting, chk)}
+          end
+
+          alerting_to_add.each_pair do |alerting, chks|
+            chks.each_pair {|chk, score| multi.zadd(alerting, score, chk)}
+          end
         end
-
-        (check_history_keys + action_keys + maint_keys + notif_keys).each do |chk|
-          redis.rename(chk, chk.sub(/^#{Regexp.escape(existing_name)}:/, "#{entity_name}:"))
-        end
-
-        all_checks.each_pair do |ch, score|
-          redis.zrem('all_checks', "#{existing_name}:#{ch}")
-          redis.zadd('all_checks', score, "#{entity_name}:#{ch}")
-        end
-
-        # currently failing checks
-        failed_checks.each_pair do |ch, score|
-          redis.zrem('failed_checks', "#{existing_name}:#{ch}")
-          redis.zadd('failed_checks', score, "#{entity_name}:#{ch}")
-        end
-
-        redis.rename("all_checks:#{existing_name}", "all_checks:#{entity_name}")
-        redis.rename("current_checks:#{existing_name}", "current_checks:#{entity_name}")
-
-        unless current_score.nil?
-          redis.zrem('current_entities', existing_name)
-          redis.zadd('current_entities', current_score, entity_name)
-        end
-
-        block_keys.each do |blk|
-          redis.rename(blk, blk.sub(/^drop_alerts_for_contact:(.+):([^:]+):#{Regexp.escape(existing_name)}:(.+):([^:]+)$/,
-            "drop_alerts_for_contact:\\1:\\2:#{entity_name}:\\3:\\4"))
-        end
-
-        hashes_to_remove.each   {|hash|      redis.hdel('checks_by_hash', hash) }
-        hashes_to_add.each_pair {|hash, chk| redis.hset('checks_by_hash', hash, chk)}
-
-        alerting_to_remove.each_pair do |alerting, chks|
-          chks.each {|chk| redis.zrem(alerting, chk)}
-        end
-
-        alerting_to_add.each_pair do |alerting, chks|
-          chks.each_pair {|chk, score| redis.zadd(alerting, score, chk)}
-        end
-
-        redis.exec
       end
 
       # NB only used by the 'entities:reparent' Rake task, but kept in this
@@ -213,8 +225,12 @@ module Flapjack
             ch_fail_score = redis.zscore("failed_checks", old_check)
             failed_checks_to_add[current_check] = ch_fail_score unless ch_fail_score.nil?
 
-            keys_to_rename["check:#{old_check}"] = "check:#{current_check}"
-            keys_to_rename[old_states]           = new_states
+            if redis.exists("check:#{old_check}")
+              keys_to_rename["check:#{old_check}"] = "check:#{current_check}"
+            end
+            if redis.exists(old_states)
+              keys_to_rename[old_states] = new_states
+            end
           end
 
           notification_types.each do |notif|
@@ -229,7 +245,7 @@ module Flapjack
               end
 
               keys_to_delete << old_notif
-            else
+            elsif redis.exists(old_notif)
               keys_to_rename[old_notif] = new_notif
             end
           end
@@ -258,13 +274,13 @@ module Flapjack
 
         if redis.exists("all_checks:#{current_name}")
           keys_to_delete << "all_checks:#{old_name}"
-        else
+        elsif redis.exists("all_checks:#{old_name}")
           keys_to_rename["all_checks:#{old_name}"] = "all_checks:#{current_name}"
         end
 
         if redis.exists("current_checks:#{current_name}")
           keys_to_delete << "current_checks:#{old_name}"
-        else
+        elsif redis.exists("current_checks:#{old_name}")
           keys_to_rename["current_checks:#{old_name}"] = "current_checks:#{current_name}"
         end
 
@@ -291,7 +307,7 @@ module Flapjack
           if redis.exists(current_actions)
             action_data[current_actions] = redis.hgetall(old_actions)
             keys_to_delete << old_actions
-          else
+          elsif redis.exists(old_actions)
             keys_to_rename[old_actions] = current_actions
           end
         end
@@ -317,7 +333,7 @@ module Flapjack
           # TTL < 0 is a redis error code -- key not present, etc.
           if (old_ttl >= 0) && ((new_ttl < 0) ||
                ((old_time + old_ttl) > (new_time + new_ttl)))
-            keys_to_rename[maint_key] = new_maint_key
+            keys_to_rename[maint_key] = new_maint_key if redis.exists(maint_key)
             maints_to_set[new_maint_key] = redis.zscore("#{maint_key}s", old_time)
           end
 
@@ -350,84 +366,83 @@ module Flapjack
 
         notif_keys = redis.keys("#{old_name}:*:last_*_notification")
 
-        redis.multi
+        redis.multi do |multi|
 
-        check_history_keys.each do |chk|
-          redis.renamenx(chk, chk.sub(/^#{Regexp.escape(old_name)}:/, "#{current_name}:"))
-        end
-
-        check_timestamps_keys.each do |ctk|
-          dest = ctk.sub(/^#{Regexp.escape(old_name)}:/, "#{current_name}:")
-          redis.zunionstore(dest, [ctk, dest], :aggregate => :max)
-        end
-
-        all_checks_to_remove.each do |actr|
-          redis.zrem('all_checks', actr)
-        end
-
-        all_checks_to_add.each_pair do |acta, score|
-          redis.zadd('all_checks', score, acta)
-        end
-
-        failed_checks_to_remove.each do |fctr|
-          redis.zrem('failed_checks', fctr)
-        end
-
-        failed_checks_to_add.each_pair do |fcta, score|
-          redis.zadd('failed_checks', score, fcta)
-        end
-
-        action_data.each_pair do |action_key, data|
-          data.each_pair do |k, v|
-            redis.hsetnx(action_key, k, v)
+          check_history_keys.each do |chk|
+            multi.renamenx(chk, chk.sub(/^#{Regexp.escape(old_name)}:/, "#{current_name}:"))
           end
-        end
 
-        redis.zunionstore("current_checks:#{current_name}",
-          ["current_checks:#{old_name}", "current_checks:#{current_name}"],
-          :aggregate => :max)
+          check_timestamps_keys.each do |ctk|
+            dest = ctk.sub(/^#{Regexp.escape(old_name)}:/, "#{current_name}:")
+            multi.zunionstore(dest, [ctk, dest], :aggregate => :max)
+          end
 
-        redis.zrem('current_entities', old_name)
-        unless old_score.nil?
-          redis.zadd('current_entities', old_score, current_name)
-        end
+          all_checks_to_remove.each do |actr|
+            multi.zrem('all_checks', actr)
+          end
 
-        maints_to_set.each_pair do |maint_key, score|
-          redis.zadd("#{maint_key}s", score, current_name)
-        end
+          all_checks_to_add.each_pair do |acta, score|
+            multi.zadd('all_checks', score, acta)
+          end
 
-        stored_maint_keys.each do |stored_maint_key|
-          new_stored_maint_key = stored_maint_key.sub(/^#{Regexp.escape(old_name)}:/, "#{current_name}:")
-          redis.zunionstore(new_stored_maint_key,
-            [stored_maint_key, new_stored_maint_key],
+          failed_checks_to_remove.each do |fctr|
+            multi.zrem('failed_checks', fctr)
+          end
+
+          failed_checks_to_add.each_pair do |fcta, score|
+            multi.zadd('failed_checks', score, fcta)
+          end
+
+          action_data.each_pair do |action_key, data|
+            data.each_pair do |k, v|
+              multi.hsetnx(action_key, k, v)
+            end
+          end
+
+          multi.zunionstore("current_checks:#{current_name}",
+            ["current_checks:#{old_name}", "current_checks:#{current_name}"],
             :aggregate => :max)
+
+          multi.zrem('current_entities', old_name)
+          unless old_score.nil?
+            multi.zadd('current_entities', old_score, current_name)
+          end
+
+          maints_to_set.each_pair do |maint_key, score|
+            multi.zadd("#{maint_key}s", score, current_name)
+          end
+
+          stored_maint_keys.each do |stored_maint_key|
+            new_stored_maint_key = stored_maint_key.sub(/^#{Regexp.escape(old_name)}:/, "#{current_name}:")
+            multi.zunionstore(new_stored_maint_key,
+              [stored_maint_key, new_stored_maint_key],
+              :aggregate => :max)
+          end
+
+          notif_keys.each do |nk|
+            dest = nk.sub(/^#{Regexp.escape(old_name)}:/, "#{current_name}:")
+            multi.renamenx(nk, dest)
+            multi.del(nk)
+          end
+
+          alerting_to_remove.each_pair do |alerting, chks|
+            chks.each {|chk| multi.zrem(alerting, chk)}
+          end
+
+          alerting_to_add.each_pair do |alerting, chks|
+            chks.each_pair {|chk, score| multi.zadd(alerting, score, chk)}
+          end
+
+          blocks_to_set.each_pair do |block_key, (timestamp, value)|
+            multi.setex(block_key, (timestamp - Time.now.to_i), value)
+          end
+
+          keys_to_rename.each_pair do |old_key, new_key|
+            multi.rename(old_key, new_key)
+          end
+
+          multi.del(*keys_to_delete) unless keys_to_delete.empty?
         end
-
-        notif_keys.each do |nk|
-          dest = nk.sub(/^#{Regexp.escape(old_name)}:/, "#{current_name}:")
-          redis.renamenx(nk, dest)
-          redis.del(nk)
-        end
-
-        alerting_to_remove.each_pair do |alerting, chks|
-          chks.each {|chk| redis.zrem(alerting, chk)}
-        end
-
-        alerting_to_add.each_pair do |alerting, chks|
-          chks.each_pair {|chk, score| redis.zadd(alerting, score, chk)}
-        end
-
-        blocks_to_set.each_pair do |block_key, (timestamp, value)|
-          redis.setex(block_key, (timestamp - Time.now.to_i), value)
-        end
-
-        keys_to_rename.each_pair do |old_key, new_key|
-          redis.rename(old_key, new_key)
-        end
-
-        redis.del(*keys_to_delete) unless keys_to_delete.empty?
-
-        redis.exec
       end
 
       # NB: If entities are renamed in imported data before they are
@@ -467,10 +482,10 @@ module Flapjack
             if redis.hexists('all_entity_ids_by_name', entity_name)
               merge(existing_name, entity_name, :redis => redis)
             else
-              rename(existing_name, entity_name, :redis => redis) {
-                redis.hdel('all_entity_ids_by_name', existing_name)
-                redis.hset('all_entity_ids_by_name', entity_name, entity_id)
-                redis.hset('all_entity_names_by_id', entity_id, entity_name)
+              rename(existing_name, entity_name, :redis => redis) {|multi|
+                multi.hdel('all_entity_ids_by_name', existing_name)
+                multi.hset('all_entity_ids_by_name', entity_name, entity_id)
+                multi.hset('all_entity_names_by_id', entity_id, entity_name)
               }
             end
           end
