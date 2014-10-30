@@ -309,11 +309,11 @@ module Flapjack
       @logger.debug("Notification is being generated for #{event.id}: " + event.inspect)
 
       notification = Flapjack::Data::Notification.new(
-        :state_duration    => (current_state ? (timestamp - current_state.timestamp.to_i) : nil),
-        :severity          => severity,
-        :type              => event.notification_type,
-        :time              => event.time,
-        :duration          => event.duration,
+        :state_duration => (current_state ? (timestamp - current_state.timestamp.to_i) : nil),
+        :severity       => severity,
+        :type           => event.notification_type,
+        :time           => event.time,
+        :duration       => event.duration,
       )
 
       notification.save

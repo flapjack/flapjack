@@ -17,8 +17,7 @@
 </script>
 
 <script type="text/template" id="contact-list-item-template">
-  <td><@- first_name @></td>
-  <td><@- last_name @></td>
+  <td><@- name @></td>
   <td class="actions">
     <button type="button" class="btn btn-default contact-media" style="visibility: hidden" aria-hidden="true">Media</button>
   </td>
@@ -40,15 +39,9 @@
 
       <div id="contactDetails">
         <div class="form-group">
-          <label class="col-sm-3 control-label" for="contact_first_name">First name</label>
+          <label class="col-sm-3 control-label" for="contact_name">Name</label>
           <div class="col-sm-9">
-            <input type="text" autofocus="autofocus" name="contact_first_name" class="form-control" value="<@- first_name @>">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="col-sm-3 control-label" for="contact_last_name">Last name</label>
-          <div class="col-sm-9">
-            <input type="text" name="contact_last_name" class="form-control" value="<@- last_name @>">
+            <input type="text" autofocus="autofocus" name="contact_name" class="form-control" value="<@- name @>">
           </div>
         </div>
       </div>
@@ -66,7 +59,7 @@
 <div class="modal-content">
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-    <h4 class="modal-title" id="contactModalLabel">Media for <@- first_name @> <@- last_name @></h4>
+    <h4 class="modal-title" id="contactModalLabel">Media for <@- name @></h4>
   </div>
   <div class="modal-body">
     <table class="table">
@@ -104,7 +97,7 @@
 <div class="modal-content">
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-    <h4 class="modal-title" id="contactModalLabel">Entities for <@- first_name @> <@- last_name @></h4>
+    <h4 class="modal-title" id="contactModalLabel">Entities for <@- name @></h4>
   </div>
   <div class="modal-body">
     <div id="contactEntityChooser">
@@ -154,8 +147,7 @@
     <table class="table">
       <thead>
         <tr>
-          <th>First Name</th>
-          <th>Last Name</th>
+          <th>Name</th>
           <th colspan="3">Actions</th>
         </tr>
       </thead>

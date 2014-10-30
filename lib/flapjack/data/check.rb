@@ -5,9 +5,9 @@ require 'digest'
 require 'sandstorm/records/redis_record'
 
 require 'flapjack/data/check_state'
-require 'flapjack/data/contact'
 require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/unscheduled_maintenance'
+require 'flapjack/data/tag'
 
 module Flapjack
 
@@ -16,6 +16,8 @@ module Flapjack
     class Check
 
       include Sandstorm::Records::RedisRecord
+      include ActiveModel::Serializers::JSON
+      self.include_root_in_json = false
 
       # NB: state could be retrieved from states.last instead -- summary, details
       # and last_update can change without a new check_state being added though
@@ -34,9 +36,6 @@ module Flapjack
       unique_index_by :name, :ack_hash
 
       # TODO validate uniqueness of :name, :ack_hash
-
-      has_and_belongs_to_many :contacts, :class_name => 'Flapjack::Data::Contact',
-        :inverse_of => :checks
 
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
         :inverse_of => :checks
@@ -57,15 +56,9 @@ module Flapjack
 
       # the following associations are used internally, for the notification
       # and alert queue inter-pikelet workflow
-      has_many :notifications, :class_name => 'Flapjack::Data::Notification'
-      has_many :alerts, :class_name => 'Flapjack::Data::Alert'
-      has_many :rollup_alerts, :class_name => 'Flapjack::Data::RollupAlert'
-
-      has_sorted_set :notification_blocks, :class_name => 'Flapjack::Data::NotificationBlock',
-        :key => :expire_at
-
-      has_and_belongs_to_many :alerting_media, :class_name => 'Flapjack::Data::Medium',
-        :inverse_of => :alerting_checks
+      has_many :notifications, :class_name => 'Flapjack::Data::Notification', :inverse_of => :check
+      has_and_belongs_to_many :alerting_media, :class_name => 'Flapjack::Data::Medium', :inverse_of => :alerting_checks
+      has_many :alerts, :class_name => 'Flapjack::Data::Alert', :inverse_of => :check
 
       validates :name, :presence => true
       validates :state,
@@ -178,7 +171,11 @@ module Flapjack
       end
 
       def in_scheduled_maintenance?
-        !scheduled_maintenance_ids_at(Time.now).empty?
+        return false if scheduled_maintenance_ids_at(Time.now).empty?
+        self.alerting_media.each do |medium|
+          self.alerting_media.delete(medium)
+        end
+        true
       end
 
       def in_unscheduled_maintenance?
@@ -195,7 +192,14 @@ module Flapjack
         # TODO validation for: if state has changed, last_update must have changed
         return unless self.changed.include?('last_update') && self.changed.include?('state')
 
-        # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
+        # clear any alerting media if the check is OK
+        if Flapjack::Data::CheckState.ok_states.include?(self.state)
+          self.class.lock(Flapjack::Data::Medium) do
+            self.alerting_media.each do |medium|
+              self.alerting_media.delete(medium)
+            end
+          end
+        end
 
         check_state = Flapjack::Data::CheckState.new(:state => self.state,
           :timestamp => self.last_update,
@@ -270,6 +274,12 @@ module Flapjack
         self.unscheduled_maintenances_by_end << unsched_maint
         self.last_update = current_time.to_i # ack is treated as changing state in this case
         self.save
+
+        self.class.lock(Flapjack::Data::Medium) do
+          self.alerting_media.each do |medium|
+            self.alerting_media.delete(medium)
+          end
+        end
       end
 
       def clear_unscheduled_maintenance(end_time)
@@ -310,6 +320,14 @@ module Flapjack
 
       def as_json(opts = {})
         {:id => self.id, :name => self.name}
+      end
+
+      def self.as_jsonapi(*checks)
+        return [] if checks.empty?
+        check_ids = checks.map(&:id)
+        tag_ids = Flapjack::Data::Check.intersect(:id => check_ids).
+                    associated_ids_for(:tags)
+        checks.collect {|check| check.as_json(:tag_ids => tag_ids[check.id]) }
       end
 
       private

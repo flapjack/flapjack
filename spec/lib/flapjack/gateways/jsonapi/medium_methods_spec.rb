@@ -78,10 +78,12 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
       with(medium.id).and_return([medium])
 
     expect(medium).to receive(:as_json).and_return(medium_data)
-    expect(Flapjack::Data::Medium).to receive(:associated_ids_for_contact).
-      with(medium.id).and_return(medium.id => contact.id)
-    expect(Flapjack::Data::Medium).to receive(:associated_ids_for_notification_rule_states).
-      with(medium.id).and_return(medium.id => [])
+
+    media_ids = double('media_ids')
+    expect(media_ids).to receive(:associated_ids_for).with(:contact).and_return(medium.id => contact.id)
+    expect(media_ids).to receive(:associated_ids_for).with(:routes).and_return(medium.id => [])
+    expect(Flapjack::Data::Medium).to receive(:intersect).with(:id => [medium.id]).
+      exactly(2).times.and_return(media_ids)
 
     get "/media/#{medium.id}"
     expect(last_response).to be_ok
@@ -89,17 +91,34 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
   end
 
   it "returns all media" do
-    expect(Flapjack::Data::Medium).to receive(:all).and_return([medium])
+    expect(Flapjack::Data::Medium).to receive(:count).and_return(1)
+
+    meta = {:pagination => {
+      :page        => 1,
+      :per_page    => 20,
+      :total_pages => 1,
+      :total_count => 1
+    }}
+
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).
+      and_return([medium])
+    expect(Flapjack::Data::Medium).to receive(:sort).
+      with(:id, :order => 'alpha').and_return(sorted)
+
+    media_ids = double('media_ids')
+    expect(media_ids).to receive(:associated_ids_for).with(:contact).
+      and_return(medium.id => contact.id)
+    expect(media_ids).to receive(:associated_ids_for).with(:routes).
+      and_return(medium.id => [])
+    expect(Flapjack::Data::Medium).to receive(:intersect).with(:id => [medium.id]).
+      exactly(2).times.and_return(media_ids)
 
     expect(medium).to receive(:as_json).and_return(medium_data)
-    expect(Flapjack::Data::Medium).to receive(:associated_ids_for_contact).
-      with(medium.id).and_return(medium.id => contact.id)
-    expect(Flapjack::Data::Medium).to receive(:associated_ids_for_notification_rule_states).
-      with(medium.id).and_return(medium.id => [])
 
     get "/media"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:media => [medium_data]))
+    expect(last_response.body).to eq(Flapjack.dump_json(:media => [medium_data], :meta => meta))
   end
 
   it "does not return a medium if the medium is not present" do
@@ -151,33 +170,35 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
   end
 
   it "deletes a medium" do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with(medium.id).and_return([medium])
-
-    expect(medium).to receive(:destroy)
+    media = double('media')
+    expect(media).to receive(:ids).and_return([medium.id])
+    expect(media).to receive(:destroy_all)
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [medium.id]).and_return(media)
 
     delete "/media/#{medium.id}"
     expect(last_response.status).to eq(204)
   end
 
   it "deletes multiple media" do
-    medium_2 = double(Flapjack::Data::Medium, :id => 'uiop')
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with(medium.id, medium_2.id).and_return([medium, medium_2])
+    media = double('media')
+    expect(media).to receive(:ids).and_return([medium.id, '6789'])
+    expect(media).to receive(:destroy_all)
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [medium.id, '6789']).and_return(media)
 
-    expect(medium).to receive(:destroy)
-    expect(medium_2).to receive(:destroy)
-
-    delete "/media/#{medium.id},#{medium_2.id}"
+    delete "/media/#{medium.id},6789"
     expect(last_response.status).to eq(204)
   end
 
   it "does not delete a medium that's not found" do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
+    media = double('media')
+    expect(media).to receive(:ids).and_return([])
+    expect(media).not_to receive(:destroy_all)
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [medium.id]).and_return(media)
 
     delete "/media/#{medium.id}"
     expect(last_response).to be_not_found
   end
-
 end

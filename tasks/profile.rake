@@ -107,8 +107,7 @@ namespace :profile do
     entity.save
 
     contact = Flapjack::Data::Contact.new(:id => '1000',
-      :first_name => 'John', :last_name => 'Smith',
-      :email => 'jsmith@example.com')
+      :name => 'John Smith')
     contact.save
 
     medium = Flapjack::Data::Medium.new(:type => 'email', :address => 'jsmith@example.com',
@@ -123,9 +122,8 @@ namespace :profile do
     contact = Flapjack::Data::Contact.find_by_id('1000')
 
     {'notification_type'   => 'problem',
-     'contact_first_name'  => contact.first_name,
-     'contact_last_name'   => contact.last_name,
-     'address'             => contact.email,
+     'contact_name'        => contact.name,
+     'address'             => contact.media.intersect(:type => 'email').all.first.address,
      'state'               => 'critical',
      'state_duration'      => 23,
      'summary'             => '',

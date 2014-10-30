@@ -16,10 +16,10 @@ require 'flapjack/gateways/jsonapi/check_methods'
 require 'flapjack/gateways/jsonapi/contact_methods'
 require 'flapjack/gateways/jsonapi/medium_methods'
 require 'flapjack/gateways/jsonapi/metrics_methods'
-require 'flapjack/gateways/jsonapi/notification_rule_methods'
-require 'flapjack/gateways/jsonapi/notification_rule_state_methods'
+require 'flapjack/gateways/jsonapi/rule_methods'
 require 'flapjack/gateways/jsonapi/pagerduty_credential_methods'
 require 'flapjack/gateways/jsonapi/report_methods'
+require 'flapjack/gateways/jsonapi/tag_methods'
 
 module Flapjack
 
@@ -166,6 +166,37 @@ module Flapjack
           'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
         end
 
+        def check_errors_on_save(record)
+          return if record.save
+          halt err(403, *record.errors.full_messages)
+        end
+
+        def paginate_get(dataset, options = {})
+          return([[], {}]) if dataset.nil?
+
+          page = options[:page].to_i
+          page = (page > 0) ? page : 1
+
+          per_page = options[:per_page].to_i
+          per_page = (per_page > 0) ? per_page : 20
+
+          total = options[:total].to_i
+          total = (total < 0) ? 0 : total
+
+          [dataset.page(page, :per_page => per_page),
+           {
+             :meta => {
+               :pagination => {
+                 :page        => page,
+                 :per_page    => per_page,
+                 :total_pages => (total.to_f / per_page).ceil,
+                 :total_count => total,
+               }
+             }
+           }
+          ]
+        end
+
         def wrapped_params(name, error_on_nil = true)
           result = params[name.to_sym]
           if result.nil?
@@ -264,10 +295,10 @@ module Flapjack
       register Flapjack::Gateways::JSONAPI::ContactMethods
       register Flapjack::Gateways::JSONAPI::MediumMethods
       register Flapjack::Gateways::JSONAPI::MetricsMethods
-      register Flapjack::Gateways::JSONAPI::NotificationRuleMethods
-      register Flapjack::Gateways::JSONAPI::NotificationRuleStateMethods
+      register Flapjack::Gateways::JSONAPI::RuleMethods
       register Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods
       register Flapjack::Gateways::JSONAPI::ReportMethods
+      register Flapjack::Gateways::JSONAPI::TagMethods
 
       error Sandstorm::LockNotAcquired do
         # TODO

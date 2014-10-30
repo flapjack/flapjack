@@ -11,7 +11,7 @@
   }
 </style>
 
-<p>Hi <%= @alert.contact_first_name %></p>
+<p>Hi <%= @alert.contact_name %></p>
 
 <% rollup_alerts_count = @alert.rollup_alerts.length -%>
 <p>You have <%= rollup_alerts_count %> alerting check<%= (rollup_alerts_count == 1) ? '' : 's' %> as follows:</p>

@@ -18,6 +18,7 @@ module Flapjack
 
           def load_api_data(check_ids, &block)
             checks = if check_ids.nil?
+              # TODO paginate
               Flapjack::Data::Check.all
             elsif !check_ids.empty?
               Flapjack::Data::Check.find_by_ids!(*check_ids)

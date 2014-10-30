@@ -55,9 +55,7 @@ module Flapjack
               end
             end
 
-            if pagerduty_credentials_err
-              halt err(403, pagerduty_credentials_err)
-            end
+            halt err(403, pagerduty_credentials_err) unless pagerduty_credentials_err.nil?
 
             status 201
             response.headers['Location'] = "#{base_url}/pagerduty_credentials/#{pagerduty_credentials.id}"
@@ -71,20 +69,33 @@ module Flapjack
               nil
             end
 
-            pagerduty_credentials = if requested_pagerduty_credentials
-              Flapjack::Data::PagerdutyCredentials.find_by_ids!(*requested_pagerduty_credentials)
+            pagerduty_credentials, meta = if requested_pagerduty_credentials
+              requested = Flapjack::Data::PagerdutyCredentials.find_by_ids!(*requested_pagerduty_credentials)
+
+              if requested.empty?
+                raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::PagerdutyCredentials, requested_pagerduty_credentials)
+              end
+
+              [requested, {}]
             else
-              Flapjack::Data::PagerdutyCredentials.all
+              paginate_get(Flapjack::Data::PagerdutyCredentials.sort(:id, :order => 'alpha'),
+                :total => Flapjack::Data::PagerdutyCredentials.count, :page => params[:page],
+                :per_page => params[:per_page])
             end
 
-            pagerduty_credentials_ids = pagerduty_credentials.map(&:id)
-            linked_contact_ids = Flapjack::Data::PagerdutyCredentials.associated_ids_for_contact(*pagerduty_credentials_ids)
+            pagerduty_credentials_as_json = if pagerduty_credentials.empty?
+              []
+            else
+              pagerduty_credentials_ids = pagerduty_credentials.map(&:id)
+              linked_contact_ids = Flapjack::Data::PagerdutyCredentials.
+                intersect(:id => pagerduty_credentials_ids).associated_ids_for(:contact)
 
-            pagerduty_credentials_as_json = pagerduty_credentials.collect {|pdc|
-              pdc.as_json(:contact_ids => [linked_contact_ids[pdc.id]])
-            }
+              pagerduty_credentials.collect {|pdc|
+                pdc.as_json(:contact_ids => [linked_contact_ids[pdc.id]])
+              }
+            end
 
-            Flapjack.dump_json(:pagerduty_credentials => pagerduty_credentials_as_json)
+            Flapjack.dump_json({:pagerduty_credentials => pagerduty_credentials_as_json}.merge(meta))
           end
 
           app.patch '/pagerduty_credentials/:id' do
@@ -105,9 +116,15 @@ module Flapjack
           end
 
           app.delete '/pagerduty_credentials/:id' do
-            Flapjack::Data::PagerdutyCredentials.find_by_ids!(*params[:id].split(',')).
-              map(&:destroy)
+            pagerduty_credentials_ids = params[:id].split(',')
+            pagerduty_credentials = Flapjack::Data::PagerdutyCredentials.intersect(:id => pagerduty_credentials_ids)
+            missing_ids = pagerduty_credentials_ids - pagerduty_credentials.ids
 
+            unless missing_ids.empty?
+              raise Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::PagerdutyCredentials, missing_ids)
+            end
+
+            pagerduty_credentials.destroy_all
             status 204
           end
 

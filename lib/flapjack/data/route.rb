@@ -1,36 +1,66 @@
 #!/usr/bin/env ruby
 
-require 'set'
-
 require 'active_support/time'
 require 'ice_cube'
 
+
 require 'flapjack/utility'
+
 
 require 'sandstorm/records/redis_record'
 
+require 'flapjack/data/check_state'
+
 module Flapjack
   module Data
-    class NotificationRule
+    class Route
 
       extend Flapjack::Utility
 
       include Sandstorm::Records::RedisRecord
-      include ActiveModel::Serializers::JSON
-      self.include_root_in_json = false
 
-      # I've removed regex_* properties as they encourage loose binding against
-      # names, which may change. Do client-side grouping and create a tag!
+      # TODO change to Flapjack::Data::State class
+      define_attributes :state => :string,
+                        :drop => :boolean,
+                        :time_restrictions_json => :string
 
-      define_attributes :time_restrictions_json => :string
+      index_by :state, :drop
 
-      belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
-        :inverse_of => :notification_rules
+      belongs_to :rule, :class_name => 'Flapjack::Data::Rule',
+        :inverse_of => :routes
 
-      has_many :states, :class_name => 'Flapjack::Data::NotificationRuleState'
+      has_and_belongs_to_many :media, :class_name => 'Flapjack::Data::Medium',
+        :inverse_of => :routes
 
-      has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :notification_rules
+      validate :state, :presence => true,
+        :inclusion => { :in => Flapjack::Data::CheckState.failing_states }
+
+      # TODO validate that rule and media belong to the same contact ?
+
+      # TODO if a drop is set for a route, should the media for that state be
+      # cleared?
+
+
+      # TODO also cleanup jsonapi linkage methods to optionally take multiple arguments
+
+      # before_destroy :correct_alerting_media
+      # def correct_alerting_media
+      #   self.class.lock(Flapjack::Data::Medium, Flapjack::Data::Check) do
+
+      #     self.media.each do |medium|
+      #       medium.alerting_checks.each do |check|
+
+      #         # if this is the only route that links the media to that check,
+      #         # remove from the set of alerting_checks for that media; will
+      #         # need to use current check state to limit route set as well
+
+      #       end
+
+      #     end
+
+      #   end
+      # end
+
 
       validates_each :time_restrictions_json do |record, att, value|
         unless value.nil?
@@ -77,43 +107,19 @@ module Flapjack
         IceCube::Schedule.from_hash(tr)
       end
 
-      def is_specific?
-        !tags.empty?
-      end
-
-      def is_match?(check)
-        self.tags.empty? || (self.tags.ids - check.tags.ids).empty?
-      end
-
       # nil time_restrictions matches
       # times (start, end) within time restrictions will have any UTC offset removed and will be
       # considered to be in the timezone of the contact
-      def is_occurring_now?(options = {})
-        contact = options[:contact]
-        def_tz = options[:default_timezone]
-
+      def is_occurring_now?(timezone)
         return true if self.time_restrictions.nil? || self.time_restrictions.empty?
 
-        timezone = contact.time_zone(:default => def_tz)
         usertime = timezone.now
 
         self.time_restrictions.any? do |tr|
           # add contact's timezone to the time restriction schedule
-          schedule = Flapjack::Data::NotificationRule.
-                       time_restriction_to_icecube_schedule(tr, timezone)
+          schedule = self.class.time_restriction_to_icecube_schedule(tr, timezone)
           schedule && schedule.occurring_at?(usertime)
         end
-      end
-
-      def as_json(opts = {})
-        super.as_json(opts.merge(:except => :time_restrictions_json)).merge(
-          :time_restrictions          => time_restrictions,
-          :links => {
-            :contacts                 => opts[:contact_ids] || [],
-            :tags                     => opts[:tag_ids] || [],
-            :notification_rule_states => opts[:notification_rule_state_ids] || [],
-          }
-        )
       end
 
     private
@@ -177,4 +183,3 @@ module Flapjack
     end
   end
 end
-

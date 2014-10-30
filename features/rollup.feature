@@ -2,26 +2,31 @@
 Feature: Rollup on a per contact, per media basis
 
   Background:
-    Given the following users exist:
-      | id  | first_name | last_name | email             | sms          | timezone         |
-      | 1   | Malak      | Al-Musawi | malak@example.com | +61400000001 | Asia/Baghdad     |
+    Given the following contacts exist:
+      | id  | name            | timezone            |
+      | c1  | Malak Al-Musawi | Asia/Baghdad        |
+
+    And the following media exist:
+      | id  | contact_id | type  | address           | interval | rollup_threshold |
+      | m1e | c1         | email | malak@example.com | 15       | 1                |
+      | m1s | c1         | sms   | +61400000001      | 15       | 2                |
 
     And the following checks exist:
-      | id  | name     | contacts |
-      | 1   | foo:ping | 1        |
-      | 2   | baz:ping | 1        |
+      | id  | name     | tags     |
+      | 1   | foo:ping | foo,ping |
+      | 2   | baz:ping | baz,ping |
 
-    And user 1 has the following notification intervals:
-      | email | sms |
-      | 15    | 15  |
+    And the following rules exist:
+      | id | contact_id | tags     |
+      | r1 | c1         | foo,ping |
+      | r2 | c1         | baz,ping |
 
-    And user 1 has the following notification rollup thresholds:
-      | email | sms |
-      | 1     | 2   |
-
-    And user 1 has the following notification rules:
-      | checks | unknown_media | warning_media | critical_media   |
-      |        |               | email         | sms,email        |
+    And the following routes exist:
+      | id  | rule_id | state    | time_restrictions | drop | media_ids |
+      | o1a | r1      | critical |                   |      | m1e,m1s   |
+      | o1b | r1      | warning  |                   |      | m1e       |
+      | o2a | r2      | critical |                   |      | m1e,m1s   |
+      | o2b | r2      | warning  |                   |      | m1e       |
 
   @time
   Scenario: Rollup threshold of 1 means first alert is a rollup
@@ -177,7 +182,8 @@ Feature: Rollup on a per contact, per media basis
     And   1 sms alert of type problem and rollup problem should be queued for +61400000001
 
   @time
-  Scenario: Contact ceases to be a contact on an entity that they were being alerted for
+  Scenario: Contact removes a rule matching on a check
+    Given PENDING: more data model refactoring is needed
     Given check 'ping' for entity 'foo' is in an ok state
     And   check 'ping' for entity 'baz' is in an ok state
     When  a critical event is received for check 'ping' on entity 'foo'
@@ -192,7 +198,7 @@ Feature: Rollup on a per contact, per media basis
     And   1 sms alerts of type problem and rollup none should be queued for +61400000001
     And   2 sms alerts should be queued for +61400000001
     When  20 minute passes
-    And   user 1 ceases to be a contact of check 'foo:ping'
+    And   user with id 'c1' removes rule with id 'r1'
     And   a critical event is received for check 'ping' on entity 'baz'
     Then  1 sms alert of rollup recovery should be queued for +61400000001
 

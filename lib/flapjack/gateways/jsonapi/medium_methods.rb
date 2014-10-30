@@ -60,9 +60,7 @@ module Flapjack
               end
             end
 
-            if media_err
-              halt err(403, media_err)
-            end
+            halt err(403, media_err) unless media_err.nil?
 
             status 201
             response.headers['Location'] = "#{base_url}/media/#{media_ids.join(',')}"
@@ -76,22 +74,36 @@ module Flapjack
               nil
             end
 
-            media = if requested_media
-              Flapjack::Data::Medium.find_by_ids!(*requested_media)
+            media, meta = if requested_media
+              requested = Flapjack::Data::Medium.find_by_ids!(*requested_media)
+
+              if requested.empty?
+                raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Medium, requested_media)
+              end
+
+              [requested, {}]
             else
-              Flapjack::Data::Medium.all
+              paginate_get(Flapjack::Data::Medium.sort(:id, :order => 'alpha'),
+                :total => Flapjack::Data::Medium.count, :page => params[:page],
+                :per_page => params[:per_page])
             end
 
-            media_ids = media.map(&:id)
-            linked_contact_ids = Flapjack::Data::Medium.associated_ids_for_contact(*media_ids)
-            linked_notification_rule_state_ids = Flapjack::Data::Medium.associated_ids_for_notification_rule_states(*media_ids)
+            media_as_json = if media.empty?
+              []
+            else
+              media_ids = media.map(&:id)
+              linked_contact_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
+                associated_ids_for(:contact)
+              linked_route_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
+                associated_ids_for(:routes)
 
-            media_as_json = media.collect {|medium|
-              medium.as_json(:contact_ids => [linked_contact_ids[medium.id]],
-                             :notification_rule_state_ids => linked_notification_rule_state_ids[medium.id])
-            }
+              media.collect {|medium|
+                medium.as_json(:contact_ids => [linked_contact_ids[medium.id]],
+                               :route_ids => linked_route_ids[medium.id])
+              }
+            end
 
-            Flapjack.dump_json(:media => media_as_json)
+            Flapjack.dump_json({:media => media_as_json}.merge(meta))
           end
 
           app.patch '/media/:id' do
@@ -134,8 +146,15 @@ module Flapjack
           end
 
           app.delete '/media/:id' do
-            Flapjack::Data::Medium.find_by_ids!(*params[:id].split(',')).map(&:destroy)
+            media_ids = params[:id].split(',')
+            media = Flapjack::Data::Medium.intersect(:id => media_ids)
+            missing_ids = media_ids - media.ids
 
+            unless missing_ids.empty?
+              raise Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, missing_ids)
+            end
+
+            media.destroy_all
             status 204
           end
 

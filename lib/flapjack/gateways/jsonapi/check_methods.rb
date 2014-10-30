@@ -53,9 +53,7 @@ module Flapjack
 
             end
 
-            if check_err
-              halt err(403, check_err)
-            end
+            halt err(403, check_err) unless check_err.nil?
 
             status 201
             response.headers['Location'] = "#{base_url}/checks/#{check_ids.join(',')}"
@@ -69,17 +67,22 @@ module Flapjack
               nil
             end
 
-            checks = if requested_checks
-              Flapjack::Data::Check.find_by_ids!(*requested_checks)
+            checks, meta = if requested_checks
+              requested = Flapjack::Data::Check.find_by_ids!(*requested_checks)
+
+              if requested.empty?
+                raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Check, requested_checks)
+              end
+
+              [requested, {}]
             else
-              Flapjack::Data::Check.all
+              paginate_get(Flapjack::Data::Check.sort(:name, :order => 'alpha'),
+                :total => Flapjack::Data::Check.count, :page => params[:page],
+                :per_page => params[:per_page])
             end
 
-            if requested_checks && checks.empty?
-              raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Check, requested_checks)
-            end
-
-            Flapjack.dump_json(:checks => checks)
+            checks_as_json = Flapjack::Data::Check.as_jsonapi(*checks)
+            Flapjack.dump_json({:checks => checks_as_json}.merge(meta))
           end
 
           app.patch %r{^/checks/(.+)$} do
@@ -93,17 +96,49 @@ module Flapjack
               apply_json_patch('checks') do |op, property, linked, value|
                 case op
                 when 'replace'
-                  if ['enabled'].include?(property)
-                    case value
-                    when TrueClass
-                      check.enabled = true
+                  case property
+                  when 'enabled', 'name'
+                    check.send("#{property}=".to_sym, value)
+                    if check.valid?
                       check.save
-                    when FalseClass
-                      check.enabled = false
-                      check.save
+                    else
+                      # TODO return error
+                    end
+                  end
+                when 'add'
+                  case linked
+                  when 'tags'
+                    add_tag = proc {|tag_name|
+                      tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+                      if tag.nil?
+                        tag = Flapjack::Data::Tag.new(:name => tag_name)
+                        tag.save
+                      end
+                      tag
+                    }
+
+                    tags = if value.respond_to?(:each)
+                      value.collect {|tag_name| add_tag.call(tag_name) }
+                    else
+                      [add_tag.call(tag_name)]
+                    end
+                    check.tags.add(*tags) unless tags.empty?
+                  end
+                when 'remove'
+                  case linked
+                  when 'tags'
+                    tags = check.tags.intersect(:name => value).all
+                    unless tags.empty?
+                      check.tags.delete(*tags)
+                      tags.each do |tag|
+                        if tag.checks.empty? && tag.rules.empty?
+                          tag.destroy
+                        end
+                      end
                     end
                   end
                 end
+
               end
             end
 

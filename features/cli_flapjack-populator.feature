@@ -16,9 +16,7 @@ Feature: flapjack-populator command line
 [
   {
     "id": "21",
-    "first_name": "Ada",
-    "last_name": "Lovelace",
-    "email": "ada@example.com",
+    "name": "Ada Lovelace",
     "media": {
       "sms": {
         "address": "+61412345678",
