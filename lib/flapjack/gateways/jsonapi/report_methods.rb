@@ -27,11 +27,18 @@ module Flapjack
             end
 
             checks = if event_ids.nil?
-              Flapjack::Data::EntityCheck.find_current_names(:redis => redis).collect {|check_name|
-                find_entity_check_by_name(*check_name.split(':', 2))
-              }
+              Flapjack::Data::EntityCheck.find_current_names(:redis => redis).
+                each_with_object([]) do |check_name, memo|
+                  en, cn = check_name.split(':', 2)
+                  halt(500, 'Malformed check ID') if en.nil? || cn.nil?
+                  memo << find_entity_check_by_name(en, cn)
+                end
             elsif !event_ids.empty?
-              event_ids.collect {|event_id| find_entity_check_by_name(*event_id.split(':', 2)) }
+              event_ids.each_with_object([]) do |event_id, memo|
+                en, cn = event_id.split(':', 2)
+                halt(500, 'Malformed check ID') if en.nil? || cn.nil?
+                memo << find_entity_check_by_name(en, cn)
+              end
             else
               nil
             end

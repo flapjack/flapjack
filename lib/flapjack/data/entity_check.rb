@@ -163,16 +163,6 @@ module Flapjack
         }
       end
 
-      def self.conflate_to_keys(entity_checks_hash)
-        result = []
-        entity_checks_hash.each {|entity, checks|
-          checks.each {|check|
-            result << "#{entity}:#{check}"
-          }
-        }
-        result
-      end
-
       def self.find_maintenance(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         type = options[:type]
@@ -1005,6 +995,13 @@ module Flapjack
           @redis.zadd("all_checks:#{entity.name}", timestamp, check)
         end
         @logger = options[:logger]
+      end
+
+      def self.conflate_to_keys(entity_checks_hash)
+        entity_checks_hash.inject([]) {|memo, (entity, checks)|
+          memo += checks.collect {|check| "#{entity}:#{check}" }
+          memo
+        }
       end
 
       def format_perfdata(perfdata)

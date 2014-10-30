@@ -168,12 +168,9 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
     expect(last_response).to be_not_found
   end
 
-  it "should not show the status for a check that's not found on an entity" do
-    expect(Flapjack::Data::EntityCheck).to receive(:for_entity_name).
-      with(entity_name, 'SSH', :redis => redis).and_return(nil)
-
-    aget "/status_report/checks/#{entity_name}:SSH"
-    expect(last_response).to be_not_found
+  it "should not show the status for a check with a malformed name" do
+    aget "/status_report/checks/SSH"
+    expect(last_response.status).to eq(500)
   end
 
   it "returns a list of scheduled maintenance periods for an entity" do
