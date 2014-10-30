@@ -23,8 +23,6 @@ end
 require 'i18n'
 I18n.config.enforce_available_locales = true
 
-ENV["FLAPJACK_ENV"] = 'test'
-FLAPJACK_ENV = 'test'
 FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..', '..')
 FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.toml')
 

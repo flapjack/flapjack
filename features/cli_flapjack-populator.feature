@@ -48,11 +48,11 @@ Feature: flapjack-populator command line
     And  the output should contain "Bulk import data from an external source"
 
   Scenario: Importing contacts
-    When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack-populator.toml import contacts --from tmp/cucumber_cli/flapjack-populator-contacts.json`
+    When I run `bundle exec bin/flapjack --config tmp/cucumber_cli/flapjack-populator.toml import contacts --from tmp/cucumber_cli/flapjack-populator-contacts.json`
     Then the exit status should be 0
 
   Scenario Outline: Running an flapjack-populator import command with a missing '--from' exits uncleanly and shows usage
-    When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack-populator.toml import <Type> example.json`
+    When I run `bundle exec bin/flapjack --config tmp/cucumber_cli/flapjack-populator.toml import <Type> example.json`
     Then the exit status should not be 0
     And  the output should contain "error: f is required"
     And  the output should contain "Bulk import data from an external source"

@@ -25,7 +25,7 @@ Feature: purge command line
 
   #flapjack purge check_history --days 90
   Scenario: Purge check data older than 90 days
-    When I run `bundle exec bin/flapjack -n test -c tmp/cucumber_cli/purge.toml purge check_history --days 90`
+    When I run `bundle exec bin/flapjack -c tmp/cucumber_cli/purge.toml purge check_history --days 90`
     Then the exit status should be 0
 
   #flapjack purge check_history --days 2 --check "flapper.example:Flapper"

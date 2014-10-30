@@ -56,7 +56,7 @@ module Flapjack
       Thread.new do
 
         @boot_time = Time.now
-
+        
         Flapjack::RedisProxy.config = @config.for_redis
 
         pikelet_defs = pikelet_definitions(@config.all)
@@ -110,7 +110,7 @@ module Flapjack
     end
 
     def pikelet_definitions(config_env)
-       config = {}
+      config = {}
       return config unless config_env
 
       # backwards-compatible with config file for previous 'executive' pikelet

@@ -36,39 +36,39 @@ log_dir = "tmp/cucumber_cli/"
     And  the output should contain "[-d|--daemonize]"
 
   Scenario: Getting status when stopped
-    When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.toml server status`
+    When I run `bundle exec bin/flapjack --config tmp/cucumber_cli/flapjack_cfg_d.toml server status`
     Then the exit status should not be 0
     And  the output should contain "Flapjack is not running"
 
   Scenario: Starting flapjack
-    When I start flapjack (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg.toml server start`
+    When I start flapjack (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg.toml server start`
     Then flapjack should start within 15 seconds
 
   Scenario: Stopping flapjack via SIGINT
-    When I start flapjack (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg.toml server start`
+    When I start flapjack (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg.toml server start`
     Then flapjack should start within 15 seconds
     When I send a SIGINT to the flapjack process
     Then flapjack should stop within 15 seconds
 
   Scenario: Starting, status and stopping flapjack, daemonized
-    When I start flapjack (daemonised) (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.toml server start`
+    When I start flapjack (daemonised) (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg_d.toml server start`
     Then flapjack should start within 15 seconds
-    When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.toml server status`
+    When I run `bundle exec bin/flapjack --config tmp/cucumber_cli/flapjack_cfg_d.toml server status`
     Then the exit status should be 0
     And  the output should contain "Flapjack is running"
-    When I stop flapjack (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.toml server stop`
+    When I stop flapjack (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg_d.toml server stop`
     Then flapjack should stop within 15 seconds
 
   Scenario: Starting, restarting and stopping flapjack, daemonized
-    When I start flapjack (daemonised) (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.toml server start`
+    When I start flapjack (daemonised) (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg_d.toml server start`
     Then flapjack should start within 15 seconds
-    When I restart flapjack (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.toml server restart`
+    When I restart flapjack (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg_d.toml server restart`
     Then flapjack should restart within 15 seconds
-    When I stop flapjack (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.toml server stop`
+    When I stop flapjack (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg_d.toml server stop`
     Then flapjack should stop within 15 seconds
 
   Scenario: Reloading flapjack configuration
-    When I start flapjack (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg.toml server start`
+    When I start flapjack (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg.toml server start`
     Then flapjack should start within 15 seconds
     When I run `mv tmp/cucumber_cli/flapjack_cfg.toml tmp/cucumber_cli/flapjack_cfg.toml.bak`
     Given a file named "flapjack_cfg.toml" with:
@@ -83,5 +83,5 @@ test:
 """
     When I send a SIGHUP to the flapjack process
     # TODO how to test for config file change?
-    When I stop flapjack (via bundle exec) with `flapjack -n test --config tmp/cucumber_cli/flapjack_cfg_d.toml server stop`
+    When I stop flapjack (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg_d.toml server stop`
     Then flapjack should stop within 15 seconds

@@ -32,7 +32,7 @@ module Flapjack
         @config_env = @config.all
 
         if @config_env.nil? || @config_env.empty?
-          exit_now! "No config data for environment '#{FLAPJACK_ENV}' found in '#{global_options[:config]}'"
+          exit_now! "No config data found in '#{global_options[:config]}'"
         end
 
         @pidfile = case

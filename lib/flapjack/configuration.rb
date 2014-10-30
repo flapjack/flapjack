@@ -2,6 +2,7 @@
 
 require 'toml'
 require 'logger'
+require 'active_support/core_ext/hash/indifferent_access'
 
 module Flapjack
 
@@ -37,7 +38,7 @@ module Flapjack
       end
 
       redis_path = (redis['path'] || nil)
-      base_opts = {:db => (redis['db'] || 0)}
+      base_opts = HashWithIndifferentAccess.new({ :db => (redis['db'] || 0) })
       base_opts[:driver] = redis['driver'] if redis['driver']
       redis_config = base_opts.merge(
         (redis_path ? { :path => redis_path } :
@@ -60,12 +61,14 @@ module Flapjack
       end
 
       config = TOML.load_file(filename)
-
+      
       if config.nil?
         @logger.error "Could not load config file '#{filename}'" if @logger
         return
       end
-
+      
+      config = HashWithIndifferentAccess.new(config)
+      
       @config = config
 
       @filename = filename

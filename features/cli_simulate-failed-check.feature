@@ -24,7 +24,7 @@ Feature: simulate-failed-check command line
     And  the output should contain "Simulates a check by creating a stream of events for Flapjack"
 
   Scenario: Simulate a failed check
-    When I run `bundle exec bin/flapjack -n test -c tmp/cucumber_cli/simulate-failed-check.toml simulate fail -t 0.05 -i 0.05 -e 'test' -k 'PING'`
+    When I run `bundle exec bin/flapjack -c tmp/cucumber_cli/simulate-failed-check.toml simulate fail -t 0.05 -i 0.05 -e 'test' -k 'PING'`
     Then the exit status should be 0
     And  the output should contain "sending failure event"
     And  the output should contain "stopping"
