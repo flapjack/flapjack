@@ -184,18 +184,46 @@ module Flapjack
           total = options[:total].to_i
           total = (total < 0) ? 0 : total
 
+          total_pages = (total.to_f / per_page).ceil
+
+          pages = set_page_numbers(page, total_pages)
+          links = create_links(pages)
+          headers['Link']        = links.join(', ') unless links.empty?
+          headers['Total-Count'] = total_pages
+
           [dataset.page(page, :per_page => per_page),
            {
              :meta => {
                :pagination => {
                  :page        => page,
                  :per_page    => per_page,
-                 :total_pages => (total.to_f / per_page).ceil,
+                 :total_pages => total_pages,
                  :total_count => total,
                }
              }
            }
           ]
+        end
+
+        def set_page_numbers(page, total_pages)
+          pages = {}
+          pages[:first] = 1 if (total_pages > 1) && (page > 1)
+          pages[:prev]  = page - 1 if (page > 1)
+          pages[:next]  = page + 1 if page < total_pages
+          pages[:last]  = total_pages if (total_pages > 1) && (page < total_pages)
+          pages
+        end
+
+        def create_links(pages)
+          url_without_params = request.url.split('?').first
+          per_page = params[:per_page] ? params[:per_page].to_i : 20
+
+          links = []
+          pages.each do |key, value|
+            new_params = request.query_parameters.merge({ page: value, per_page: per_page })
+            links << "<#{url_without_params}?#{new_params.to_param}>; rel=\"#{key}\""
+          end
+          links
         end
 
         def wrapped_params(name, error_on_nil = true)
