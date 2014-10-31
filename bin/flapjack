@@ -12,22 +12,12 @@ program_desc 'Flexible monitoring notification routing system'
 version Flapjack::VERSION
 
 desc 'Configuration file to use'
-default_value '/etc/flapjack/flapjack_config.yaml'
-arg_name '/path/to/flapjack.yaml'
+default_value '/etc/flapjack/flapjack_config.toml'
+arg_name '/path/to/flapjack.toml'
 flag [:c,:config]
-
-desc 'Environment to boot'
-default_value 'production'
-arg_name '<environment>'
-flag [:n, :env, :environment]
 
 accept Array do |value|
   value.split(/,/).map(&:strip)
-end
-
-pre do |global,command,options,args|
-  FLAPJACK_ENV = ENV["FLAPJACK_ENV"] || global[:environment]
-  true
 end
 
 post do |global,command,options,args|

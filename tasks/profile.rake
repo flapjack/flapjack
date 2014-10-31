@@ -6,7 +6,7 @@ namespace :profile do
   require 'ruby-prof'
 
   FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..')
-  FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.yaml')
+  FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.toml')
 
   FLAPJACK_PROFILER = ENV['FLAPJACK_PROFILER'] || 'rubyprof'
   port = ENV['FLAPJACK_PROFILER'].to_i
@@ -78,8 +78,7 @@ namespace :profile do
     config.load(FLAPJACK_CONFIG)
     config_env = config.all
     if config_env.nil? || config_env.empty?
-      puts "No config data for environment '#{FLAPJACK_ENV}' " +
-        "found in '#{FLAPJACK_CONFIG}'"
+      puts "No config data found in '#{FLAPJACK_CONFIG}'"
       exit(false)
     end
 

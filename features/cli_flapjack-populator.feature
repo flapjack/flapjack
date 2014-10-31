@@ -5,12 +5,11 @@ Feature: flapjack-populator command line
   From the command line
 
   Background:
-    Given a file named "flapjack-populator.yaml" with:
+    Given a file named "flapjack-populator.toml" with:
 """
-test:
-  redis:
-    db: 14
-    driver: ruby
+[redis]
+  db = 14
+  driver = "ruby"
 """
     And  a file named "flapjack-populator-contacts.json" with:
 """
@@ -47,11 +46,11 @@ test:
     And  the output should contain "Bulk import data from an external source"
 
   Scenario: Importing contacts
-    When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack-populator.yaml import contacts --from tmp/cucumber_cli/flapjack-populator-contacts.json`
+    When I run `bundle exec bin/flapjack --config tmp/cucumber_cli/flapjack-populator.toml import contacts --from tmp/cucumber_cli/flapjack-populator-contacts.json`
     Then the exit status should be 0
 
   Scenario Outline: Running an flapjack-populator import command with a missing '--from' exits uncleanly and shows usage
-    When I run `bundle exec bin/flapjack -n test --config tmp/cucumber_cli/flapjack-populator.yaml import <Type> example.json`
+    When I run `bundle exec bin/flapjack --config tmp/cucumber_cli/flapjack-populator.toml import <Type> example.json`
     Then the exit status should not be 0
     And  the output should contain "error: f is required"
     And  the output should contain "Bulk import data from an external source"

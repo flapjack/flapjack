@@ -87,11 +87,11 @@ You'll also need Redis >= 2.6.12.
 
 ## Configuring
 
-Have a look at the [default config file](https://github.com/flapjack/flapjack/blob/master/etc/flapjack_config.yaml.example) and modify things as required. The package installer copies this to `/etc/flapjack/flapjack_config.yaml` if it doesn't already exist.
+Have a look at the [default config file](https://github.com/flapjack/flapjack/blob/master/etc/flapjack_config.toml.example) and modify things as required. The package installer copies this to `/etc/flapjack/flapjack_config.toml` if it doesn't already exist.
 
 ``` bash
 # edit the config
-sudo vi /etc/flapjack/flapjack_config.yaml
+sudo vi /etc/flapjack/flapjack_config.toml
 
 # reload the config
 sudo /etc/init.d/flapjack reload

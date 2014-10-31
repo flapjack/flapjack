@@ -23,10 +23,9 @@ end
 require 'i18n'
 I18n.config.enforce_available_locales = true
 
-ENV["FLAPJACK_ENV"] = 'test'
 FLAPJACK_ENV = 'test'
 FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..', '..')
-FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.yaml')
+FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.toml')
 
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 
@@ -177,19 +176,19 @@ After('@time') do
 end
 
 After('@process') do
-  ['tmp/cucumber_cli/flapjack_cfg.yaml',
-   'tmp/cucumber_cli/flapjack_cfg.yaml.bak',
-   'tmp/cucumber_cli/flapjack_cfg_d.yaml',
+  ['tmp/cucumber_cli/flapjack_cfg.toml',
+   'tmp/cucumber_cli/flapjack_cfg.toml.bak',
+   'tmp/cucumber_cli/flapjack_cfg_d.toml',
    'tmp/cucumber_cli/flapjack.log',
    'tmp/cucumber_cli/flapjack.pid',
    'tmp/cucumber_cli/nagios_perfdata.fifo',
    'tmp/cucumber_cli/flapjack-nagios-receiver.pid',
    'tmp/cucumber_cli/flapjack-nagios-receiver.log',
-   'tmp/cucumber_cli/flapjack-nagios-receiver_d.yaml',
-   'tmp/cucumber_cli/flapjack-nagios-receiver.yaml',
+   'tmp/cucumber_cli/flapjack-nagios-receiver_d.toml',
+   'tmp/cucumber_cli/flapjack-nagios-receiver.toml',
    'tmp/cucumber_cli/flapper.pid',
    'tmp/cucumber_cli/flapper.log',
-   'tmp/cucumber_cli/flapjack-populator.yaml',
+   'tmp/cucumber_cli/flapjack-populator.toml',
    'tmp/cucumber_cli/flapjack-populator-contacts.json',
    'tmp/cucumber_cli/flapjack-populator-entities.json',
   ].each do |file|

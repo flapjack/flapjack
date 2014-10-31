@@ -5,22 +5,21 @@ Feature: receive-events command line
   From the command line
 
   Background:
-    Given a file named "receive-events.yaml" with:
+    Given a file named "receive-events.toml" with:
 """
-test:
-  redis:
-    db: 14
-    driver: ruby
+[redis]
+  db = 14
+  driver = "ruby"
 """
 
   Scenario: Running with --help shows usage information
-    When I run `bundle exec bin/flapjack -n test receiver mirror --help`
+    When I run `bundle exec bin/flapjack receiver mirror --help`
     Then the exit status should be 0
     And  the output should contain "replay the last COUNT events from the source"
     And  the output should contain "-s, --source=arg"
 
   Scenario: Running receive-events with no arguments exits uncleanly and shows usage
-    When I run `bundle exec bin/flapjack -n test receiver mirror`
+    When I run `bundle exec bin/flapjack receiver mirror`
     Then the exit status should not be 0
     And  the output should contain "error: s is required"
 

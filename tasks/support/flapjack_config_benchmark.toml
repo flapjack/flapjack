@@ -1,0 +1,28 @@
+pid_file = "tmp/pids/flapjack_test.pid"
+log_file = "log/flapjack_test.log"
+daemonize = "no"
+[redis]
+  host = "127.0.0.1"
+  port = 6379
+  db = 14
+[processor]
+  enabled = "yes"
+  queue = "events"
+  notifier_queue = "notifications"
+  archive_events = "false"
+  events_archive_maxage = 10800
+  new_check_scheduled_maintenance_duration = "1 month"
+  exit_on_queue_empty = true
+  [logger]
+    level = "WARN"
+[notifier]
+  enabled = "yes"
+  queue = "notifications"
+  email_queue = "email_notifications"
+  sms_queue = "sms_notifications"
+  jabber_queue = "jabber_notifications"
+  pagerduty_queue = "pagerduty_notifications"
+  notification_log_file = "log/notification_test.log"
+  default_contact_timezone = "Australia/Broken_Hill"
+  [logger]
+    level = "WARN"

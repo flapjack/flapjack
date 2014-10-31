@@ -16,7 +16,7 @@ namespace :events do
   task :test_notification do
 
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'development'
-    config_file = File.join('etc', 'flapjack_config.yaml')
+    config_file = File.join('etc', 'flapjack_config.toml')
 
     config = Flapjack::Configuration.new
     config.load( config_file )
@@ -25,7 +25,7 @@ namespace :events do
     @redis_config = config.for_redis
 
     if @config_env.nil? || @config_env.empty?
-      puts "No config data for environment '#{FLAPJACK_ENV}' found in '#{config_file}'"
+      puts "No config data found in '#{config_file}'"
       exit(false)
     end
 
