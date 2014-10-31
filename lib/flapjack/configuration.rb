@@ -8,7 +8,7 @@ module Flapjack
 
   class Configuration
 
-    DEFAULT_CONFIG_PATH = '/etc/flapjack/flapjack_config.toml'
+    # DEFAULT_CONFIG_PATH = '/etc/flapjack/flapjack_config.toml'
 
     attr_reader :filename
 
@@ -61,14 +61,14 @@ module Flapjack
       end
 
       config = TOML.load_file(filename)
-      
+
       if config.nil?
         @logger.error "Could not load config file '#{filename}'" if @logger
         return
       end
-      
+
       config = HashWithIndifferentAccess.new(config)
-      
+
       @config = config
 
       @filename = filename

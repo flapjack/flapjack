@@ -25,7 +25,7 @@ I18n.config.enforce_available_locales = true
 
 FLAPJACK_ENV = 'test'
 FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..', '..')
-FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.toml')
+FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_test_config.toml')
 
 $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 

@@ -9,7 +9,7 @@ $testing = true
 
 FLAPJACK_ENV    = ENV["FLAPJACK_ENV"] || 'test'
 FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..')
-FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.toml')
+FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_test_config.toml')
 ENV['RACK_ENV'] = ENV["FLAPJACK_ENV"]
 
 require 'bundler'
@@ -38,10 +38,6 @@ end
 Flapjack::Gateways::JSONAPI.class_eval do
   set :show_exceptions, false
   set :raise_errors, false
-  # error do
-  #   Flapjack::Gateways::JSONAPI.instance_variable_get('@rescue_exception').
-  #     call(env, env['sinatra.error'])
-  # end
 end
 
 cfg = Flapjack::Configuration.new
