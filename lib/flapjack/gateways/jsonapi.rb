@@ -19,6 +19,7 @@ require 'flapjack/gateways/jsonapi/metrics_methods'
 require 'flapjack/gateways/jsonapi/rule_methods'
 require 'flapjack/gateways/jsonapi/pagerduty_credential_methods'
 require 'flapjack/gateways/jsonapi/report_methods'
+require 'flapjack/gateways/jsonapi/search_methods'
 require 'flapjack/gateways/jsonapi/tag_methods'
 
 module Flapjack
@@ -298,6 +299,7 @@ module Flapjack
       register Flapjack::Gateways::JSONAPI::RuleMethods
       register Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods
       register Flapjack::Gateways::JSONAPI::ReportMethods
+      register Flapjack::Gateways::JSONAPI::SearchMethods
       register Flapjack::Gateways::JSONAPI::TagMethods
 
       error Sandstorm::LockNotAcquired do
