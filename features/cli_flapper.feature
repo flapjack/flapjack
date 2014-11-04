@@ -12,7 +12,7 @@ log_dir = "tmp/cucumber_cli/"
 [redis]
   db = 14
 [processor]
-  enabled = "yes"
+  enabled = true
   [processor.logger]
     level = "warn"
 """

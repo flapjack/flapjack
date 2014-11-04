@@ -48,11 +48,6 @@ module Flapjack
         def start
           @logger.info "starting jsonapi - class"
 
-          if @config && @config['access_log']
-            access_logger = Flapjack::AsyncLogger.new(@config['access_log'])
-            use Flapjack::CommonLogger, access_logger
-          end
-
           @base_url = @config['base_url']
           dummy_url = "http://api.example.com"
           if @base_url
@@ -114,15 +109,6 @@ module Flapjack
             "#{request.path_info}#{query_string}")
         end
       end
-
-      # the following should add the cors headers to every request, but is no work
-      #register Sinatra::CrossOrigin
-      #
-      #configure do
-      #  enable :cross_origin
-      #end
-      #set :allow_origin, :any
-      #set :allow_methods, [:get, :post, :put, :patch, :delete, :options]
 
       module Helpers
 
@@ -189,7 +175,7 @@ module Flapjack
           pages = set_page_numbers(page, total_pages)
           links = create_links(pages)
           headers['Link']        = links.join(', ') unless links.empty?
-          headers['Total-Count'] = total_pages
+          headers['Total-Count'] = total_pages.to_s
 
           [dataset.page(page, :per_page => per_page),
            {

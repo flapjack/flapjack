@@ -1,9 +1,9 @@
 pid_dir = "/var/run/flapjack/"
 log_dir = "/var/log/flapjack/"
-daemonize = "yes"
+daemonize = true
 [logger]
   level = "INFO"
-  syslog_errors = "yes"
+  syslog_errors = true
 [redis]
   host = "127.0.0.1"
   port = 6380
@@ -11,7 +11,7 @@ daemonize = "yes"
 # Processes monitoring events off the *events* queue (a redis list) and decides
 # what actions to take (generate notification event, record state changes, etc)
 [processor]
-  enabled = "yes"
+  enabled = true
   queue = "events"
   notifier_queue = "notifications"
   archive_events = true
@@ -26,12 +26,12 @@ daemonize = "yes"
   new_check_scheduled_maintenance_ignore_tags = ["bypass_ncsm"]
   [processor.logger]
     level = "INFO"
-    syslog_errors = "yes"
+    syslog_errors = true
 # Processes notification events off the *notifications* queue (a redis list) and
 # works out who to notify, and on which media, and with what kind of notification
 # message. It then creates jobs for the various notification gateways below.
 [notifier]
-  enabled = "yes"
+  enabled = true
   queue = "notifications"
   email_queue = "email_notifications"
   sms_queue = "sms_notifications"
@@ -43,7 +43,7 @@ daemonize = "yes"
   default_contact_timezone = "UTC"
   [notifier.logger]
     level = "INFO"
-    syslog_errors = "yes"
+    syslog_errors = true
 [nagios-receiver]
   fifo = "/var/cache/nagios3/event_stream.fifo"
   pid_dir = "/var/run/flapjack/"
@@ -55,12 +55,12 @@ daemonize = "yes"
 [gateways]
   # Generates email notifications
   [gateways.email]
-    enabled = "no"
+    enabled = false
     # the redis queue this pikelet will look for notifications on
     queue = "email_notifications"
     [gateways.email.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
     # these values are passed directly through to EventMachine::Protocols::SmtpClient configuration,
     # and can be omitted if the defaults are acceptable
     [gateways.email.smtp_config]
@@ -84,7 +84,7 @@ daemonize = "yes"
     #  alert.html = "/etc/flapjack/templates/email/alert.html.erb"
   # Sends SMS notifications via MessageNet (Australia only)
   [gateways.sms]
-    enabled = "no"
+    enabled = false
     # the redis queue this pikelet will look for notifications on
     queue = "sms_notifications"
     endpoint = "https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage"
@@ -92,28 +92,28 @@ daemonize = "yes"
     password = "xxxx"
     [gateways.sms.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
     # location of custom alert templates
     #templates:
     #  rollup_text = "/etc/flapjack/templates/sms/rollup.text.erb"
     #  alert_text = "/etc/flapjack/templates/sms/alert.text.erb"
   # Sends SMS notifications via Twilio
   [gateways.sms_twilio]
-    enabled = "no"
+    enabled = false
     queue = "sms_twilio_notifications"
     account_sid = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     auth_token = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
     from = "+1xxxxxxxxxx"
     [gateways.sms_twilio.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
     # location of custom alert templates
     #[gateways.sms_twilio.templates]
     #  rollup_text = "/etc/flapjack/templates/sms_twilio/rollup.text.erb"
     #  alert_text = "/etc/flapjack/templates/sms_twilio/alert.text.erb"
   # Generates SNS notifications
   [gateways.sns]
-    enabled = "no"
+    enabled = false
     queue = "sns_notifications"
     #region_name = "us-east-1"
     # Don't forget to use an IAM user's credentials here so revocation is easy!
@@ -122,7 +122,7 @@ daemonize = "yes"
   # Connects to an XMPP (jabber) server, sends notifications (to rooms and individuals),
   # handles acknowledgements from jabber users and other commands.
   [gateways.jabber]
-    enabled = "no"
+    enabled = false
     # the redis queue this pikelet will look for notifications on
     queue = "jabber_notifications"
     server = "jabber.example.com"
@@ -139,7 +139,7 @@ daemonize = "yes"
     ]
     [gateways.jabber.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
     # location of custom alert templates
     #[gateways.jabber.templates]
     #  rollup_text = "/etc/flapjack/templates/jabber/rollup.text.erb"
@@ -147,18 +147,18 @@ daemonize = "yes"
   # Sends notifications to and accepts acknowledgements from [PagerDuty](http://www.pagerduty.com/)
   # (NB = "contacts will need to have a registered PagerDuty account to use this)"
   [gateways.pagerduty]
-    enabled = "no"
+    enabled = false
     # the redis queue this pikelet will look for notifications on
     queue = "pagerduty_notifications"
     [gateways.pagerduty.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
     # location of custom alert templates
     #[gateways.pagerduty.templates]
     #  alert_text = "/etc/flapjack/templates/pagerduty/alert.text.erb"
   # Browsable web interface
   [gateways.web]
-    enabled = "yes"
+    enabled = true
     port = 3080
     timeout = 300
     # Seconds between auto_refresh of entities/checks pages.  Set to 0 to disable
@@ -169,21 +169,21 @@ daemonize = "yes"
     #logo_image_path = "/etc/flapjack/web/custom_logo/flapjack-2013-notext-transparent-300-300.png"
     [gateways.web.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
   # HTTP API server
   [gateways.jsonapi]
-    enabled = "yes"
+    enabled = true
     port = 3081
     timeout = 300
     access_log = "/var/log/flapjack/jsonapi_access.log"
     base_url = "http://localhost:3081/"
     [gateways.jsonapi.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
   # "out-of-band" end-to-end testing, used for monitoring other instances of
   # flapjack to ensure that they are running correctly
   [gateways.oobetet]
-    enabled = "no"
+    enabled = false
     server = "jabber.example.com"
     port = 5222
     # jabberid, password, alias, rooms = "see the jabber pikelet"
@@ -203,7 +203,7 @@ daemonize = "yes"
       "flapjacktest@conference.jabber.example.com",
       "gimp@conference.jabber.example.com",
       "log@conference.jabber.example.com"
-    ]  
+    ]
     [gateways.oobetet.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
