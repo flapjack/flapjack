@@ -1,12 +1,12 @@
 pid_file = "tmp/pids/flapjack_test.pid"
 log_file = "log/flapjack_test.log"
-daemonize = "no"
+daemonize = false
 [redis]
   host = "127.0.0.1"
   port = 6379
   db = 14
 [processor]
-  enabled = "yes"
+  enabled = true
   queue = "events"
   notifier_queue = "notifications"
   archive_events = "false"
@@ -16,7 +16,7 @@ daemonize = "no"
   [logger]
     level = "WARN"
 [notifier]
-  enabled = "yes"
+  enabled = true
   queue = "notifications"
   email_queue = "email_notifications"
   sms_queue = "sms_notifications"

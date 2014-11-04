@@ -3,61 +3,61 @@ require 'spec_helper'
 require 'flapjack/configuration'
 
 describe Flapjack::Configuration do
-  
-  let(:configuration) { Flapjack::Configuration.new }  
+
+  let(:configuration) { Flapjack::Configuration.new }
 
   before(:each) do
     allow(File).to receive(:file?).and_return(true)
-    allow(File).to receive(:read).and_return(toml_data) 
+    allow(File).to receive(:read).and_return(toml_data)
     configuration.load('dummy_path')
-  end   
-  
-  describe "redis configuration data" do 
-    it "loads data accessible by symbol" do        
-      expect(configuration.for_redis[:host]).to eq('192.168.0.1') 
-      expect(configuration.for_redis[:port]).to eq(9999) 
-      expect(configuration.for_redis[:db]).to eq(11)  
+  end
+
+  describe "redis configuration data" do
+    it "loads data accessible by symbol" do
+      expect(configuration.for_redis[:host]).to eq('192.168.0.1')
+      expect(configuration.for_redis[:port]).to eq(9999)
+      expect(configuration.for_redis[:db]).to eq(11)
     end
-    
-    it "loads data accessible by string" do        
-      expect(configuration.for_redis['host']).to eq('192.168.0.1') 
-      expect(configuration.for_redis['port']).to eq(9999) 
-      expect(configuration.for_redis['db']).to eq(11)  
-    end    
-  end  
-  
-  describe "all configuration data" do   
-    it "loads data accessible by symbol" do 
-      expect(configuration.all[:processor][:enabled]).to eq('yes')  
+
+    it "loads data accessible by string" do
+      expect(configuration.for_redis['host']).to eq('192.168.0.1')
+      expect(configuration.for_redis['port']).to eq(9999)
+      expect(configuration.for_redis['db']).to eq(11)
     end
-    
-    it "loads data accessible by string" do 
-      expect(configuration.all['processor']['enabled']).to eq('yes')  
+  end
+
+  describe "all configuration data" do
+    it "loads data accessible by symbol" do
+      expect(configuration.all[:processor][:enabled]).to be_a(TrueClass)
     end
-    
+
+    it "loads data accessible by string" do
+      expect(configuration.all['processor']['enabled']).to be_a(TrueClass)
+    end
+
     it "loads array data" do
-      expect(configuration.all[:processor][:new_check_scheduled_maintenance_ignore_tags]).to be_an(Array)    
+      expect(configuration.all[:processor][:new_check_scheduled_maintenance_ignore_tags]).to be_an(Array)
     end
-    
+
     it "loads nested data" do
-      expect(configuration.all[:gateways][:sms_twilio][:logger][:syslog_errors]).to eq('yes')  
-    end     
+      expect(configuration.all[:gateways][:sms_twilio][:logger][:syslog_errors]).to be_a(TrueClass)
+    end
   end
 
   let(:toml_data) {
-    <<-TOML_DATA 
+    <<-TOML_DATA
 pid_dir = "/var/run/flapjack/"
 log_dir = "/var/log/flapjack/"
-daemonize = "yes"
+daemonize = true
 [logger]
   level = "INFO"
-  syslog_errors = "yes"
+  syslog_errors = true
 [redis]
   host = "192.168.0.1"
   port = 9999
   db = 11
 [processor]
-  enabled = "yes"
+  enabled = true
   queue = "events"
   notifier_queue = "notifications"
   archive_events = true
@@ -66,9 +66,9 @@ daemonize = "yes"
   new_check_scheduled_maintenance_ignore_tags = ["bypass_ncsm"]
   [processor.logger]
     level = "INFO"
-    syslog_errors = "yes"
+    syslog_errors = true
 [notifier]
-  enabled = "yes"
+  enabled = true
   queue = "notifications"
   email_queue = "email_notifications"
   sms_queue = "sms_notifications"
@@ -80,7 +80,7 @@ daemonize = "yes"
   default_contact_timezone = "UTC"
   [notifier.logger]
     level = "INFO"
-    syslog_errors = "yes"
+    syslog_errors = true
 [nagios-receiver]
   fifo = "/var/cache/nagios3/event_stream.fifo"
   pid_dir = "/var/run/flapjack/"
@@ -92,40 +92,40 @@ daemonize = "yes"
 [gateways]
   # Generates email notifications
   [gateways.email]
-    enabled = "no"
+    enabled = false
     queue = "email_notifications"
     [gateways.email.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
     [gateways.email.smtp_config]
       host = "127.0.0.1"
       port = 1025
       starttls = false
   [gateways.sms]
-    enabled = "no"
+    enabled = false
     queue = "sms_notifications"
     endpoint = "https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage"
     username = "ermahgerd"
     password = "xxxx"
     [gateways.sms.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
   [gateways.sms_twilio]
-    enabled = "no"
+    enabled = false
     queue = "sms_twilio_notifications"
     account_sid = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     auth_token = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
     from = "+1xxxxxxxxxx"
     [gateways.sms_twilio.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
   [gateways.sns]
-    enabled = "no"
+    enabled = false
     queue = "sns_notifications"
     access_key = "AKIAIOSFODNN7EXAMPLE"
     secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
   [gateways.jabber]
-    enabled = "no"
+    enabled = false
     queue = "jabber_notifications"
     server = "jabber.example.com"
     port = 5222
@@ -139,16 +139,16 @@ daemonize = "yes"
     ]
     [gateways.jabber.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
   [gateways.pagerduty]
-    enabled = "no"
+    enabled = false
     # the redis queue this pikelet will look for notifications on
     queue = "pagerduty_notifications"
     [gateways.pagerduty.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
   [gateways.web]
-    enabled = "yes"
+    enabled = true
     port = 3080
     timeout = 300
     # Seconds between auto_refresh of entities/checks pages.  Set to 0 to disable
@@ -157,18 +157,18 @@ daemonize = "yes"
     api_url = "http://localhost:3081/"
     [gateways.web.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
   [gateways.jsonapi]
-    enabled = "yes"
+    enabled = true
     port = 3081
     timeout = 300
     access_log = "/var/log/flapjack/jsonapi_access.log"
     base_url = "http://localhost:3081/"
     [gateways.jsonapi.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
   [gateways.oobetet]
-    enabled = "no"
+    enabled = false
     server = "jabber.example.com"
     port = 5222
     jabberid = "flapjacktest@jabber.example.com"
@@ -180,10 +180,10 @@ daemonize = "yes"
       "flapjacktest@conference.jabber.example.com",
       "gimp@conference.jabber.example.com",
       "log@conference.jabber.example.com"
-    ]  
+    ]
     [gateways.oobetet.logger]
       level = "INFO"
-      syslog_errors = "yes"
+      syslog_errors = true
   TOML_DATA
   }
-end  
+end

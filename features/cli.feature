@@ -12,7 +12,7 @@ log_dir = "tmp/cucumber_cli/"
 [redis]
   db = 14
 [processor]
-  enabled = "yes"
+  enabled = true
   [processor.logger]
     level = "warn"
 """
@@ -23,7 +23,7 @@ log_dir = "tmp/cucumber_cli/"
 [redis]
   db = 14
 [processor]
-  enabled = "yes"
+  enabled = true
   [processor.logger]
     level = "warn"
 """
@@ -79,7 +79,7 @@ test:
   redis:
     db: 14
   processor:
-    enabled: no
+    enabled: false
 """
     When I send a SIGHUP to the flapjack process
     # TODO how to test for config file change?
