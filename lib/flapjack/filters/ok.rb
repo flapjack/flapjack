@@ -15,7 +15,9 @@ module Flapjack
     class Ok
       include Base
 
-      def block?(event, check, previous_state)
+      def block?(event, check, opts = {})
+        previous_state = opts[:previous_state]
+
         unless Flapjack::Data::CheckState.ok_states.include?( event.state )
           @logger.debug("Filter: Ok: pass")
           return false

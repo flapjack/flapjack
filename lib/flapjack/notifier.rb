@@ -315,7 +315,10 @@ module Flapjack
           end
 
           interval_allows = medium.last_notification.nil? ||
-            ((medium.last_notification + medium.interval) < timestamp)
+            ((last_notification_ok && this_notification_failure) &&
+             ((medium.last_notification + medium.initial_failure_interval) < timestamp)) ||
+            ((last_notification_failure && this_notification_failure) &&
+             ((medium.last_notification + medium.repeat_failure_interval) < timestamp))
 
           logger.info "  last_notification_failure = #{last_notification_failure}\n" \
             "  last_notification_ok      = #{last_notification_ok}" \
@@ -325,8 +328,7 @@ module Flapjack
             "  no_previous_notification  = #{no_previous_notification}\n"
 
           next unless is_a_test || no_previous_notification ||
-              ((last_notification_failure && this_notification_ok) ||
-               (last_notification_ok && this_notification_failure)) ||
+              (last_notification_failure && this_notification_ok) ||
             (alert_rollup != medium.last_rollup_type) ||
             (safe_state_or_ack != medium.last_notification_state) ||
             interval_allows

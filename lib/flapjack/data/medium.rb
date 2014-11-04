@@ -18,7 +18,8 @@ module Flapjack
 
       define_attributes :type              => :string,
                         :address           => :string,
-                        :interval          => :integer,
+                        :initial_failure_interval => :integer,
+                        :repeat_failure_interval  => :integer,
                         :rollup_threshold  => :integer,
                         :last_rollup_type  => :string,
                         :last_notification => :timestamp,
@@ -39,7 +40,9 @@ module Flapjack
       validates :type, :presence => true,
         :inclusion => {:in => Flapjack::Data::Medium::TYPES }
       validates :address, :presence => true
-      validates :interval, :presence => true,
+      validates :initial_failure_interval, :presence => true,
+        :numericality => {:greater_than_or_equal_to => 0, :only_integer => true}
+      validates :repeat_failure_interval, :presence => true,
         :numericality => {:greater_than_or_equal_to => 0, :only_integer => true}
       validates :rollup_threshold, :allow_blank => true,
         :numericality => {:greater_than => 0, :only_integer => true}

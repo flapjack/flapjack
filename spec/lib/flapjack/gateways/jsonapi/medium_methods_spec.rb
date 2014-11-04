@@ -10,7 +10,8 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
   let(:medium_data) {
     {:type => 'email',
      :address => 'abc@example.com',
-     :interval => 120,
+     :initial_failure_interval => 120,
+     :repeat_failure_interval => 60,
      :rollup_threshold => 3
     }
   }
@@ -147,14 +148,14 @@ describe 'Flapjack::Gateways::JSONAPI::MediumMethods', :sinatra => true, :logger
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
       with(medium.id, medium_2.id).and_return([medium, medium_2])
 
-    expect(medium).to receive(:interval=).with(80)
+    expect(medium).to receive(:initial_failure_interval=).with(80)
     expect(medium).to receive(:save).and_return(true)
 
-    expect(medium_2).to receive(:interval=).with(80)
+    expect(medium_2).to receive(:initial_failure_interval=).with(80)
     expect(medium_2).to receive(:save).and_return(true)
 
     patch "/media/#{medium.id},#{medium_2.id}",
-      Flapjack.dump_json([{:op => 'replace', :path => '/media/0/interval', :value => 80}]),
+      Flapjack.dump_json([{:op => 'replace', :path => '/media/0/initial_failure_interval', :value => 80}]),
       jsonapi_patch_env
     expect(last_response.status).to eq(204)
   end

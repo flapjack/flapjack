@@ -11,17 +11,17 @@ Feature: Notification rules on a per contact basis
       | c5  | Wang Fang Wong  | Asia/Shanghai       |
 
     And the following media exist:
-      | id  | contact_id | type  | address           | interval | rollup_threshold |
-      | m1e | c1         | email | malak@example.com | 15       | 5                |
-      | m1s | c1         | sms   | +61400000001      | 60       | 5                |
-      | m2e | c2         | email | imani@example.com | 15       | 5                |
-      | m2s | c2         | sms   | +61400000002      | 60       | 5                |
-      | m3e | c3         | email | vera@example.com  | 15       | 5                |
-      | m3s | c3         | sms   | +61400000003      | 60       | 5                |
-      | m4e | c4         | email | lucia@example.com | 15       | 5                |
-      | m4s | c4         | sms   | +61400000004      | 60       | 5                |
-      | m5e | c5         | email | fang@example.com  | 15       | 5                |
-      | m5s | c5         | sms   | +61400000005      | 60       | 5                |
+      | id  | contact_id | type  | address           | initial_failure_interval | repeat_failure_interval | rollup_threshold |
+      | m1e | c1         | email | malak@example.com | 15                       | 15                      | 5                |
+      | m1s | c1         | sms   | +61400000001      | 60                       | 15                      | 5                |
+      | m2e | c2         | email | imani@example.com | 15                       | 15                      | 5                |
+      | m2s | c2         | sms   | +61400000002      | 60                       | 15                      | 5                |
+      | m3e | c3         | email | vera@example.com  | 15                       | 15                      | 5                |
+      | m3s | c3         | sms   | +61400000003      | 60                       | 15                      | 5                |
+      | m4e | c4         | email | lucia@example.com | 15                       | 15                      | 5                |
+      | m4s | c4         | sms   | +61400000004      | 60                       | 15                      | 5                |
+      | m5e | c5         | email | fang@example.com  | 15                       | 15                      | 5                |
+      | m5s | c5         | sms   | +61400000005      | 60                       | 15                      | 5                |
 
     And the following checks exist:
       | id  | name                       | tags      |

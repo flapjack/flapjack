@@ -38,7 +38,8 @@ module Flapjack
                   Flapjack::Data::Medium.new(:id => medium_data['id'],
                     :type => medium_data['type'],
                     :address => medium_data['address'],
-                    :interval => medium_data['interval'],
+                    :initial_failure_interval => medium_data['initial_failure_interval'],
+                    :repeat_failure_interval => medium_data['repeat_failure_interval'],
                     :rollup_threshold => medium_data['rollup_threshold'])
                 end
 
@@ -112,14 +113,14 @@ module Flapjack
                 case op
 
                 when 'replace'
-                  if ['type', 'address', 'interval', 'rollup_threshold'].include?(property)
+                  if ['type', 'address', 'initial_failure_interval',
+                      'repeat_failure_interval', 'rollup_threshold'].include?(property)
                     medium.send("#{property}=".to_sym, value)
                   end
 
                 when 'add'
                   case linked
                   when 'notification_rule_state'
-
                     Flapjack::Data::Medium.lock do
                       notification_rule_state = Flapjack::Data::NotificationRuleState.find_by_id(value)
                       unless notification_rule_state.nil?

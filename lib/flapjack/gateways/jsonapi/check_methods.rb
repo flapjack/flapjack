@@ -41,6 +41,8 @@ module Flapjack
               else
                 checks = checks_data.collect do |cd|
                   Flapjack::Data::Check.new(:id => cd['id'], :name => cd['name'],
+                    :initial_failure_delay => cd['initial_failure_delay'],
+                    :repeat_failure_delay  => cd['repeat_failure_delay'],
                     :enabled => cd['enabled'])
                 end
               end
@@ -97,7 +99,7 @@ module Flapjack
                 case op
                 when 'replace'
                   case property
-                  when 'enabled', 'name'
+                  when 'enabled', 'name', 'initial_failure_delay', 'repeat_failure_delay'
                     check.send("#{property}=".to_sym, value)
                     if check.valid?
                       check.save

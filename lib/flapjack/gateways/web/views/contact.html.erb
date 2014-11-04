@@ -12,7 +12,8 @@
     <tr>
       <th>Media</th>
       <th>Address</th>
-      <th>Interval</th>
+      <th>Initial Interval</th>
+      <th>Repeat Interval</th>
       <th>Summary Mode</th>
       <th>Summary Threshold</th>
     </tr>
@@ -39,8 +40,15 @@
           <% end %>
           <td><%= h med.address %></td>
           <td>
-            <% if med.interval %>
-              <%= h med.interval %> seconds
+            <% if med.initial_failure_interval %>
+              <%= h med.initial_failure_interval %> seconds
+            <% else %>
+              no custom interval
+            <% end %>
+          </td>
+          <td>
+            <% if med.repeat_failure_interval %>
+              <%= h med.repeat_failure_interval %> seconds
             <% else %>
               no custom interval
             <% end %>

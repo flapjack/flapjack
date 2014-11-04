@@ -7,9 +7,9 @@ Feature: Rollup on a per contact, per media basis
       | c1  | Malak Al-Musawi | Asia/Baghdad        |
 
     And the following media exist:
-      | id  | contact_id | type  | address           | interval | rollup_threshold |
-      | m1e | c1         | email | malak@example.com | 15       | 1                |
-      | m1s | c1         | sms   | +61400000001      | 15       | 2                |
+      | id  | contact_id | type  | address           | initial_failure_interval | repeat_failure_interval | rollup_threshold |
+      | m1e | c1         | email | malak@example.com | 15                       | 15                      | 1                |
+      | m1s | c1         | sms   | +61400000001      | 60                       | 15                      | 2                |
 
     And the following checks exist:
       | id  | name     | tags     |
