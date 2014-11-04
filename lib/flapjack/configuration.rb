@@ -51,19 +51,34 @@ module Flapjack
       redis_config
     end
 
-    def load(filename)
-      @filename = nil
+    def load(file_pattern)
+      @file_pattern = nil
       @config = nil
 
-      unless File.file?(filename)
-        @logger.error "Could not find file '#{filename}'" if @logger
+      config_file_names = Dir.glob(file_pattern)
+      
+      if config_file_names.nil?
+        @logger.error(
+          "Could not load config files using file_pattern '#{file_pattern}'"
+        ) if @logger
         return
       end
-
-      config = TOML.load_file(filename)
-
-      if config.nil?
-        @logger.error "Could not load config file '#{filename}'" if @logger
+      
+      config = config_file_names.inject({}) do |config, file_name|
+        config.merge!(TOML.load_file(file_name)) do |key, old_val, new_val|
+          if old_val != new_val 
+            @logger.error("Duplicate configuration setting #{key} in #{file_name}") if @logger
+            break   
+          else
+            new_val
+          end    
+        end  
+      end
+      
+      if config.nil? || config.empty?
+        @logger.error(
+          "Could not load config files using file_pattern '#{file_pattern}'"
+        ) if @logger
         return
       end
 
@@ -71,8 +86,18 @@ module Flapjack
 
       @config = config
 
-      @filename = filename
+      @file_pattern = file_pattern
     end
+    
+    def reload
+      unless @file_pattern
+        @logger.error "Cannot reload, config file_pattern not set." if @logger
+        return
+      end
+      
+      load(@file_pattern)  
+    end 
+    
 
   end
 

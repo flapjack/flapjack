@@ -158,9 +158,7 @@ module Flapjack
       # TODO refactor cfg load and key retrieval, consolidate with initial load
       prev_pikelet_cfg = pikelet_definitions(@config.all)
 
-      cfg_filename = @config.filename
-      @config = Flapjack::Configuration.new
-      @config.load(cfg_filename)
+      @config.reload
 
       current_pikelet_cfg = pikelet_definitions(@config.all)
 

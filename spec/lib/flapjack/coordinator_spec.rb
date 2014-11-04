@@ -194,12 +194,8 @@ describe Flapjack::Coordinator do
     new_config = double('new_config')
     filename = double('filename')
 
-    expect(config).to receive(:all).twice.and_return(old_cfg)
-    expect(config).to receive(:filename).and_return(filename)
-
-    expect(Flapjack::Configuration).to receive(:new).and_return(new_config)
-    expect(new_config).to receive(:load).with(filename)
-    expect(new_config).to receive(:all).and_return(new_cfg)
+    expect(config).to receive(:all).thrice.and_return(old_cfg, old_cfg, new_cfg)
+    expect(config).to receive(:reload)
 
     processor = double('processor')
     expect(processor).to receive(:type).and_return('processor')
@@ -230,12 +226,8 @@ describe Flapjack::Coordinator do
     new_config = double('new_config')
     filename = double('filename')
 
-    expect(config).to receive(:all).twice.and_return(old_cfg)
-    expect(config).to receive(:filename).and_return(filename)
-
-    expect(Flapjack::Configuration).to receive(:new).and_return(new_config)
-    expect(new_config).to receive(:load).with(filename)
-    expect(new_config).to receive(:all).and_return(new_cfg)
+    expect(config).to receive(:all).thrice.and_return(old_cfg, old_cfg, new_cfg)
+    expect(config).to receive(:reload)
 
     processor = double('processor')
     expect(processor).not_to receive(:start)
@@ -259,12 +251,8 @@ describe Flapjack::Coordinator do
     new_config = double('new_config')
     filename = double('filename')
 
-    expect(config).to receive(:all).twice.and_return(old_cfg)
-    expect(config).to receive(:filename).and_return(filename)
-
-    expect(Flapjack::Configuration).to receive(:new).and_return(new_config)
-    expect(new_config).to receive(:load).with(filename)
-    expect(new_config).to receive(:all).and_return(new_cfg)
+    expect(config).to receive(:all).thrice.and_return(old_cfg, old_cfg, new_cfg)
+    expect(config).to receive(:reload)
 
     processor = double('processor')
     expect(processor).to receive(:type).exactly(5).times.and_return('processor')
