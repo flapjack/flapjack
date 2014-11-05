@@ -38,8 +38,7 @@ module Flapjack
                   Flapjack::Data::Medium.new(:id => medium_data['id'],
                     :type => medium_data['type'],
                     :address => medium_data['address'],
-                    :initial_failure_interval => medium_data['initial_failure_interval'],
-                    :repeat_failure_interval => medium_data['repeat_failure_interval'],
+                    :interval => medium_data['interval'],
                     :rollup_threshold => medium_data['rollup_threshold'])
                 end
 
@@ -113,8 +112,7 @@ module Flapjack
                 case op
 
                 when 'replace'
-                  if ['type', 'address', 'initial_failure_interval',
-                      'repeat_failure_interval', 'rollup_threshold'].include?(property)
+                  if ['type', 'address', 'interval', 'rollup_threshold'].include?(property)
                     medium.send("#{property}=".to_sym, value)
                   end
 

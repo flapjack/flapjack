@@ -111,7 +111,7 @@ namespace :profile do
     contact.save
 
     medium = Flapjack::Data::Medium.new(:type => 'email', :address => 'jsmith@example.com',
-      :initial_failure_interval => 30, :repeat_failure_interval => 30)
+      :interval => 30)
     medium.save
 
     contact.media << medium

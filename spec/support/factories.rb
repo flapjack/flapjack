@@ -15,9 +15,7 @@ module Factory
   def self.medium(contact, attrs = {})
     redis.multi
     redis.hmset("medium:#{attrs[:id]}:attrs", {'type' => attrs[:type],
-      'address' => attrs[:address],
-      'initial_failure_interval' => attrs[:initial_failure_interval],
-      'repeat_failure_interval' => attrs[:repeat_failure_interval],
+      'address' => attrs[:address], 'interval' => attrs[:interval],
       'rollup_threshold' => attrs[:rollup_threshold]}.flatten)
     redis.sadd('medium::attrs:ids', attrs[:id].to_s)
     # type is known not to contain unsafe chars

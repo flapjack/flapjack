@@ -84,12 +84,11 @@ Given /^the following media exist:$/ do |media|
     medium = Flapjack::Data::Medium.find_by_id(medium_data['id'])
     expect(medium).to be nil
     medium = Flapjack::Data::Medium.new(
-      :id                       => medium_data['id'],
-      :type                     => medium_data['type'],
-      :address                  => medium_data['address'],
-      :initial_failure_interval => medium_data['initial_failure_interval'].to_i * 60,
-      :repeat_failure_interval  => medium_data['repeat_failure_interval'].to_i * 60,
-      :rollup_threshold         => medium_data['rollup_threshold'].to_i
+      :id               => medium_data['id'],
+      :type             => medium_data['type'],
+      :address          => medium_data['address'],
+      :interval         => medium_data['interval'].to_i * 60,
+      :rollup_threshold => medium_data['rollup_threshold'].to_i
     )
     expect(medium.save).to be true
     contact.media << medium
@@ -174,7 +173,7 @@ Given /^(?:a|the) user wants to receive SMS notifications for check '(.+)'$/ do 
                                     'name' => 'John Smith')
 
   sms = Flapjack::Data::Medium.new(:type => 'sms',
-    :address => '+61888888888', :initial_failure_interval => 600, :repeat_failure_interval => 600)
+    :address => '+61888888888', :interval => 600)
   expect(sms.save).to be true
   contact.media << sms
 
@@ -211,7 +210,7 @@ Given /^(?:a|the) user wants to receive email notifications for check '(.+)'$/ d
                                     'name' => 'Jane Smith')
 
   email = Flapjack::Data::Medium.new(:type => 'email',
-    :address => 'janes@example.dom', :initial_failure_interval => 600, :repeat_failure_interval => 600)
+    :address => 'janes@example.dom', :interval => 600)
   expect(email.save).to be true
   contact.media << email
 
@@ -247,7 +246,7 @@ Given /^(?:a|the) user wants to receive SNS notifications for check '(.+)'$/ do 
                                     'name' => 'James Smithson')
 
   sns = Flapjack::Data::Medium.new(:type => 'sns',
-    :address => 'arn:aws:sns:us-east-1:698519295917:My-Topic', :initial_failure_interval => 600, :repeat_failure_interval => 600)
+    :address => 'arn:aws:sns:us-east-1:698519295917:My-Topic', :interval => 600)
   expect(sns.save).to be true
   contact.media << sns
 

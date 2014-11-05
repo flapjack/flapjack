@@ -44,20 +44,15 @@ module Flapjack
             unless media_data.nil? || media_data.empty?
               media_data.each_pair do |type, medium_data|
 
-                ifi = medium_data['initial_failure_interval'].to_i
-                ifi = nil unless ifi >= 0
-
-                rfi = medium_data['repeat_failure_interval'].to_i
-                rfi = nil unless rfi >= 0
+                itv = medium_data['interval'].to_i
+                itv = nil unless itv >= 0
 
                 rut = medium_data['rollup_threshold'].to_i
                 rut = nil unless rut > 0
 
                 medium = Flapjack::Data::Medium.new(:type => type,
                   :address => medium_data['address'],
-                  :initial_failure_interval => ifi,
-                  :repeat_failure_interval => rfi,
-                  :rollup_threshold => rut)
+                  :interval => itv, :rollup_threshold => rut)
                 medium.save
                 contact.media << medium
               end

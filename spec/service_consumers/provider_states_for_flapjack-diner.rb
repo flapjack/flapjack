@@ -96,8 +96,7 @@ Pact.provider_states_for "flapjack-diner" do
         :id               => 'abc_email',
         :type             => 'email',
         :address          => 'ablated@example.org',
-        :initial_failure_interval => 180,
-        :repeat_failure_interval => 180,
+        :interval         => 180,
         :rollup_threshold => 3
       )
       medium_email.save
@@ -106,8 +105,7 @@ Pact.provider_states_for "flapjack-diner" do
         :id               => 'abc_sms',
         :type             => 'sms',
         :address          => '0123456789',
-        :initial_failure_interval => 300,
-        :repeat_failure_interval => 300,
+        :interval         => 300,
         :rollup_threshold => 5
       )
       medium_sms.save

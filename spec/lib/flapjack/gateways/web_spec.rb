@@ -319,8 +319,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(medium).to receive(:alerting_checks).and_return(no_checks)
       expect(medium).to receive(:type).twice.and_return('sms')
       expect(medium).to receive(:address).and_return('0123456789')
-      expect(medium).to receive(:initial_failure_interval).twice.and_return(60)
-      expect(medium).to receive(:repeat_failure_interval).twice.and_return(60)
+      expect(medium).to receive(:interval).twice.and_return(60)
       expect(medium).to receive(:rollup_threshold).and_return(10)
 
       all_media = double('all_media', :all => [medium])
