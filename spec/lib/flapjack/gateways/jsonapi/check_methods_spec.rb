@@ -6,9 +6,11 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
   include_context "jsonapi"
 
   let(:check_data)   {
-    {'id'          => '5678',
-     'name'        => 'www.example.com:SSH',
-     'enabled'     => true
+    {'id'                    => '5678',
+     'name'                  => 'www.example.com:SSH',
+     'initial_failure_delay' => 30,
+     'repeat_failure_delay'  => 60,
+     'enabled'               => true
     }
    }
 
@@ -23,7 +25,10 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(check).to receive(:invalid?).and_return(false)
     expect(check).to receive(:save).and_return(true)
     expect(Flapjack::Data::Check).to receive(:new).
-      with(:id => check_data['id'], :name => check_data['name'], :enabled => check_data['enabled']).
+      with(:id => check_data['id'], :name => check_data['name'],
+        :initial_failure_delay => check_data['initial_failure_delay'],
+        :repeat_failure_delay => check_data['repeat_failure_delay'],
+        :enabled => check_data['enabled']).
       and_return(check)
 
     post "/checks", Flapjack.dump_json(:checks => [check_data]), jsonapi_post_env

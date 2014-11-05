@@ -22,15 +22,17 @@ module Flapjack
       # NB: state could be retrieved from states.last instead -- summary, details
       # and last_update can change without a new check_state being added though
 
-      define_attributes :name               => :string,
-                        :state              => :string,
-                        :summary            => :string,
-                        :perfdata_json      => :string,
-                        :details            => :string,
-                        :last_update        => :timestamp,
-                        :last_problem_alert => :timestamp,
-                        :enabled            => :boolean,
-                        :ack_hash           => :string
+      define_attributes :name                  => :string,
+                        :state                 => :string,
+                        :summary               => :string,
+                        :perfdata_json         => :string,
+                        :details               => :string,
+                        :last_update           => :timestamp,
+                        :last_problem_alert    => :timestamp,
+                        :enabled               => :boolean,
+                        :ack_hash              => :string,
+                        :initial_failure_delay => :integer,
+                        :repeat_failure_delay  => :integer
 
       index_by :enabled, :state
       unique_index_by :name, :ack_hash
@@ -63,6 +65,12 @@ module Flapjack
       validates :name, :presence => true
       validates :state,
         :inclusion => {:in => Flapjack::Data::CheckState.all_states, :allow_blank => true }
+
+      validates :initial_failure_delay, :allow_blank => true,
+        :numericality => {:greater_than => 0, :only_integer => true}
+
+      validates :repeat_failure_delay, :allow_blank => true,
+        :numericality => {:greater_than => 0, :only_integer => true}
 
       before_validation :create_ack_hash
       validates :ack_hash, :presence => true

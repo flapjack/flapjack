@@ -14,7 +14,7 @@ module Flapjack
     class Acknowledgement
       include Base
 
-      def block?(event, check, previous_state)
+      def block?(event, check, opts = {})
         timestamp = Time.now.to_i
 
         label = 'Filter: Acknowledgement:'

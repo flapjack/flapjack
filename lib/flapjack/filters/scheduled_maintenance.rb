@@ -7,7 +7,7 @@ module Flapjack
     class ScheduledMaintenance
       include Base
 
-      def block?(event, check, previous_state)
+      def block?(event, check, opts = {})
         result = check.in_scheduled_maintenance?
         @logger.debug("Filter: Scheduled Maintenance: #{result ? "block" : "pass"}")
         result

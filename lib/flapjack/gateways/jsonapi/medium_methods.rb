@@ -119,7 +119,6 @@ module Flapjack
                 when 'add'
                   case linked
                   when 'notification_rule_state'
-
                     Flapjack::Data::Medium.lock do
                       notification_rule_state = Flapjack::Data::NotificationRuleState.find_by_id(value)
                       unless notification_rule_state.nil?

@@ -201,6 +201,13 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unsched
   remove_scheduled_maintenance(entity_name, check_name)
 end
 
+Given /^the (initial|repeat) failure delay is (\d+) seconds$/ do |delay_type, num_secs|
+  delay = num_secs.to_i
+  expect(delay).to be > 0
+
+  @processor.instance_variable_set("@#{delay_type}_failure_delay", delay)
+end
+
 When /^an ok event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check_name, entity_name|
   check_name  ||= @check_name
   entity_name ||= @entity_name

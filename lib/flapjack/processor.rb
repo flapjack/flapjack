@@ -33,6 +33,16 @@ module Flapjack
 
       @queue = @config['queue'] || 'events'
 
+      @initial_failure_delay = @config['initial_failure_delay']
+      if !@initial_failure_delay.is_a?(Integer) || (@initial_failure_delay < 1)
+        @initial_failure_delay = nil
+      end
+
+      @repeat_failure_delay = @config['repeat_failure_delay']
+      if !@repeat_failure_delay.is_a?(Integer) || (@repeat_failure_delay < 1)
+        @repeat_failure_delay = nil
+      end
+
       @notifier_queue = Flapjack::RecordQueue.new(@config['notifier_queue'] || 'notifications',
                  Flapjack::Data::Notification)
 
@@ -182,10 +192,18 @@ module Flapjack
         @ncsm_sched_maint = nil
       end
 
-      if !should_notify
+      unless should_notify
         @logger.debug("Not generating notification for event #{event.id} because filtering was skipped")
         return
-      elsif blocker = @filters.find {|filter| filter.block?(event, check, previous_state) }
+      end
+
+      filter_opts = {
+        :initial_failure_delay => @initial_failure_delay,
+        :repeat_failure_delay => @repeat_failure_delay,
+        :previous_state => previous_state
+      }
+
+      if blocker = @filters.find {|filter| filter.block?(event, check, filter_opts) }
         @logger.debug("Not generating notification for event #{event.id} because this filter blocked: #{blocker.name}")
         return
       end

@@ -30,6 +30,15 @@ Feature: events
     Then  a notification should not be generated
 
   @time
+  Scenario: Check critical to critical after 10 seconds, with an initial delay of 5 seconds
+    Given the initial failure delay is 5 seconds
+    And   the check is in an ok state
+    When  a critical event is received
+    And   10 seconds passes
+    And   a critical event is received
+    Then  a notification should be generated
+
+  @time
   Scenario: Check ok to warning for 1 minute
     Given the check is in an ok state
     When  a warning event is received
@@ -44,6 +53,15 @@ Feature: events
     And   1 minute passes
     And   a critical event is received
     Then  a notification should be generated
+
+  @time
+  Scenario: Check ok to critical for 1 minute, with an initial delay of 2 minutes
+    Given the initial failure delay is 120 seconds
+    And   the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  a notification should not be generated
 
   @time
   Scenario: Check ok to warning, 1 min, then critical
@@ -71,6 +89,18 @@ Feature: events
     Then  a notification should not be generated
 
   @time
+  Scenario: Check critical and alerted to critical for 40 seconds, with a repeat delay of 20 seconds
+    Given the repeat failure delay is 20 seconds
+    And   the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  a notification should be generated
+    When  40 seconds passes
+    And   a critical event is received
+    Then  a notification should be generated
+
+  @time
   Scenario: Check critical and alerted to critical for 6 minutes
     Given the check is in an ok state
     When  a critical event is received
@@ -80,6 +110,18 @@ Feature: events
     When  6 minutes passes
     And   a critical event is received
     Then  a notification should be generated
+
+  @time
+  Scenario: Check critical and alerted to critical for 6 minutes, with a repeat delay of 10 minutes
+    Given the repeat failure delay is 600 seconds
+    Given the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  a notification should be generated
+    When  6 minutes passes
+    And   a critical event is received
+    Then  a notification should not be generated
 
   @time
   Scenario: Check ok to critical for 1 minute when in scheduled maintenance
