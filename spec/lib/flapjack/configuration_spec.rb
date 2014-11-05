@@ -4,43 +4,110 @@ require 'flapjack/configuration'
 
 describe Flapjack::Configuration do
 
-  let(:configuration) { Flapjack::Configuration.new }
+  let(:logger) { double(:logger) }
+  let(:configuration) { Flapjack::Configuration.new(logger: logger) }
 
-  before(:each) do
-    allow(File).to receive(:file?).and_return(true)
-    allow(File).to receive(:read).and_return(toml_data)
-    configuration.load('dummy_path')
+  # NOTE For readability, config files are defined at the bottom of this spec
+
+  context "single config file" do
+
+    before(:each) do
+      allow(Dir).to receive(:glob).and_return(%w(dummy_file))
+      expect(File).to receive(:read).and_return(toml_data)
+      configuration.load('dummy_path')
+    end
+
+    describe "redis configuration data" do
+      it "loads data accessible by symbol" do
+        expect(configuration.for_redis[:host]).to eq('192.168.0.1')
+        expect(configuration.for_redis[:port]).to eq(9999)
+        expect(configuration.for_redis[:db]).to eq(11)
+      end
+
+      it "loads data accessible by string" do
+        expect(configuration.for_redis['host']).to eq('192.168.0.1')
+        expect(configuration.for_redis['port']).to eq(9999)
+        expect(configuration.for_redis['db']).to eq(11)
+      end
+    end
+
+    describe "all configuration data" do
+      it "loads data accessible by symbol" do
+        expect(configuration.all[:processor][:enabled]).to be_a(TrueClass)
+      end
+
+      it "loads data accessible by string" do
+        expect(configuration.all['processor']['enabled']).to be_a(TrueClass)
+      end
+
+      it "loads array data" do
+        expect(
+          configuration.all[:processor][:new_check_scheduled_maintenance_ignore_tags]
+        ).to be_an(Array)
+      end
+
+      it "loads nested data" do
+        expect(
+          configuration.all[:gateways][:sms_twilio][:logger][:syslog_errors]
+        ).to be_a(TrueClass)
+      end
+    end
+
+    describe "reload configuration data" do
+
+      it "reloads config data" do
+        allow(File).to receive(:read).and_return(reloaded_toml_data)
+
+        expect(configuration.all[:pid_dir]).to eq("/var/run/flapjack/")
+        expect(configuration.all[:log_dir]).to eq("/var/log/flapjack/")
+        expect(configuration.for_redis[:host]).to eq('192.168.0.1')
+        expect(configuration.for_redis[:port]).to eq(9999)
+        expect(configuration.for_redis[:db]).to eq(11)
+
+        configuration.reload
+
+        expect(configuration.all[:pid_dir]).to eq("/var/run/flapjack_new/")
+        expect(configuration.all[:log_dir]).to eq("/var/log/flapjack_new/")
+        expect(configuration.for_redis['host']).to eq('192.168.0.2')
+        expect(configuration.for_redis['port']).to eq(8888)
+        expect(configuration.for_redis['db']).to eq(12)
+
+        expect(configuration.all['processor']).to be_nil
+      end
+    end
   end
 
-  describe "redis configuration data" do
-    it "loads data accessible by symbol" do
+  context "multiple config files" do
+
+    it "loads config data from files" do
+      expect(Dir).to receive(:glob).and_return(%w(1 2 3))
+      expect(File).to receive(:read).thrice.and_return(
+        base_toml_data,
+        redis_toml_data,
+        gateways_sms_toml_data
+        )
+
+      configuration.load('dummy_pattern')
+
+      expect(configuration.all[:pid_dir]).to eq('/var/run/flapjack/')
+      expect(configuration.all[:gateways][:sms][:enabled]).to be_a(FalseClass)
       expect(configuration.for_redis[:host]).to eq('192.168.0.1')
-      expect(configuration.for_redis[:port]).to eq(9999)
-      expect(configuration.for_redis[:db]).to eq(11)
     end
 
-    it "loads data accessible by string" do
-      expect(configuration.for_redis['host']).to eq('192.168.0.1')
-      expect(configuration.for_redis['port']).to eq(9999)
-      expect(configuration.for_redis['db']).to eq(11)
-    end
-  end
+    it "fails to load config from clashing files" do
+      expect(Dir).to receive(:glob).and_return(%w(1 2 3))
+      expect(File).to receive(:read).thrice.and_return(
+        base_toml_data,
+        redis_toml_data,
+        clashing_redis_toml_data
+        )
 
-  describe "all configuration data" do
-    it "loads data accessible by symbol" do
-      expect(configuration.all[:processor][:enabled]).to be_a(TrueClass)
-    end
+      expect(logger).to receive(:error).with("Duplicate configuration setting redis in 3")
+      expect(logger).to receive(:error).with("Could not load config files using file_pattern 'dummy_pattern'")
 
-    it "loads data accessible by string" do
-      expect(configuration.all['processor']['enabled']).to be_a(TrueClass)
-    end
+      configuration.load('dummy_pattern')
 
-    it "loads array data" do
-      expect(configuration.all[:processor][:new_check_scheduled_maintenance_ignore_tags]).to be_an(Array)
-    end
-
-    it "loads nested data" do
-      expect(configuration.all[:gateways][:sms_twilio][:logger][:syslog_errors]).to be_a(TrueClass)
+      expect(configuration.all).to be_nil
     end
   end
 
@@ -185,5 +252,63 @@ daemonize = true
       level = "INFO"
       syslog_errors = true
   TOML_DATA
+  }
+
+  let(:reloaded_toml_data) {
+    <<-NEW_TOML_DATA
+pid_dir = "/var/run/flapjack_new/"
+log_dir = "/var/log/flapjack_new/"
+daemonize = false
+[logger]
+  level = "DEBUG"
+  syslog_errors = false
+[redis]
+  host = "192.168.0.2"
+  port = 8888
+  db = 12
+NEW_TOML_DATA
+  }
+
+  let(:base_toml_data) {
+    <<-BASE_TOML_DATA
+pid_dir = "/var/run/flapjack/"
+log_dir = "/var/log/flapjack/"
+daemonize = true
+[logger]
+  level = "INFO"
+  syslog_errors = true
+BASE_TOML_DATA
+  }
+
+  let(:redis_toml_data) {
+    <<-REDIS_TOML_DATA
+[redis]
+  host = "192.168.0.1"
+  port = 9999
+  db = 11
+REDIS_TOML_DATA
+  }
+
+  let(:clashing_redis_toml_data) {
+    <<-REDIS_TOML_DATA
+[redis]
+  host = "192.168.0.2"
+  port = 8888
+  db = 22
+REDIS_TOML_DATA
+  }
+
+  let(:gateways_sms_toml_data) {
+    <<-GATEWAYS_SMS_TOML_DATA
+[gateways.sms]
+  enabled = false
+  queue = "sms_notifications"
+  endpoint = "https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage"
+  username = "ermahgerd"
+  password = "xxxx"
+  [gateways.sms.logger]
+    level = "INFO"
+    syslog_errors = true
+GATEWAYS_SMS_TOML_DATA
   }
 end
