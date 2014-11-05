@@ -20,7 +20,7 @@ PATH
       mail
       oj (>= 2.9.0)
       rbtrace
-      redis (~> 3.0.6)
+      redis (>= 3.0.7)
       sinatra
       terminal-table
       toml
@@ -56,7 +56,6 @@ GEM
       multi_json (>= 1.7.5, < 2.0)
       multi_test (>= 0.1.1)
     dante (0.2.0)
-    debugger-ruby_core_source (1.3.5)
     delorean (2.1.0)
       chronic
     diff-lcs (1.2.5)
@@ -73,7 +72,7 @@ GEM
     i18n (0.6.11)
     ice_cube (0.12.1)
     json (1.8.1)
-    mail (2.6.1)
+    mail (2.6.3)
       mime-types (>= 1.16, < 3)
     mime-types (2.4.3)
     minitest (5.4.2)
@@ -81,7 +80,7 @@ GEM
     multi_json (1.10.1)
     multi_test (0.1.1)
     numerizer (0.1.1)
-    oj (2.10.4)
+    oj (2.11.0)
     pact (1.3.3)
       awesome_print (~> 1.1)
       find_a_port (~> 1.0.1)
@@ -94,7 +93,6 @@ GEM
       webrick
     parslet (1.5.0)
       blankslate (~> 2.0)
-    perftools.rb (2.0.1)
     rack (1.5.2)
     rack-protection (1.5.3)
       rack
@@ -106,7 +104,7 @@ GEM
       ffi (>= 1.0.6)
       msgpack (>= 0.4.3)
       trollop (>= 1.16.2)
-    redis (3.0.7)
+    redis (3.1.0)
     rspec (3.1.0)
       rspec-core (~> 3.1.0)
       rspec-expectations (~> 3.1.0)
@@ -156,12 +154,10 @@ PLATFORMS
 
 DEPENDENCIES
   cucumber
-  debugger-ruby_core_source (>= 1.3.4)
   delorean
   flapjack!
   fuubar
   pact
-  perftools.rb
   rack-test
   rake
   rspec
