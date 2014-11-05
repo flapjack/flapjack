@@ -57,7 +57,7 @@ module Flapjack
 
           @api_url = @config['api_url']
           if @api_url
-            if (@api_url =~ /^#{URI::regexp(%w(http https))}$/).nil?
+            if URI.regexp(['http', 'https']).match(@api_url).nil?
               @logger.error "api_url is not a valid http or https URI (#{@api_url}), discarding"
               @api_url = nil
             end

@@ -62,7 +62,6 @@ GEM
       multi_test (>= 0.1.1)
     daemons (1.1.9)
     dante (0.2.0)
-    debugger-ruby_core_source (1.3.5)
     delorean (2.1.0)
       chronic
     diff-lcs (1.2.5)
@@ -143,7 +142,6 @@ GEM
       term-ansicolor (~> 1.0)
       thor
       webrick
-    perftools.rb (2.0.1)
     pry (0.10.1)
       coderay (~> 1.1.0)
       method_source (~> 0.8.1)
@@ -233,7 +231,6 @@ PLATFORMS
 DEPENDENCIES
   async_rack_test (>= 0.0.5)
   cucumber
-  debugger-ruby_core_source (>= 1.3.4)
   delorean
   flapjack!
   fuubar
@@ -241,7 +238,6 @@ DEPENDENCIES
   guard-cucumber
   guard-rspec
   pact
-  perftools.rb
   rack-test
   rb-fsevent
   resque_spec
