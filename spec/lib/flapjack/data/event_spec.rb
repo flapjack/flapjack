@@ -6,6 +6,7 @@ describe Flapjack::Data::Event do
   let(:entity_name) { 'xyz-example.com' }
   let(:check)       { 'ping' }
   let(:redis)       { double(::Redis) }
+  let(:multi)       { double('multi') }
 
   let!(:time) { Time.now}
 
@@ -79,10 +80,9 @@ describe Flapjack::Data::Event do
       expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
       expect(redis).to receive(:sadd).
         with('known_events_archive_keys', /^events_archive:/)
-      expect(redis).to receive(:multi)
-      expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
-      expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
-      expect(redis).to receive(:exec)
+      expect(redis).to receive(:multi).and_yield(multi)
+      expect(multi).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
+      expect(multi).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
       expect(redis).to receive(:expire)
 
       result = Flapjack::Data::Event.next('events', :block => true,
@@ -112,10 +112,9 @@ describe Flapjack::Data::Event do
         expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
         expect(redis).to receive(:sadd).
           with('known_events_archive_keys', /^events_archive:/)
-        expect(redis).to receive(:multi)
-        expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
-        expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
-        expect(redis).to receive(:exec)
+        expect(redis).to receive(:multi).and_yield(multi)
+        expect(multi).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
+        expect(multi).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
         expect(redis).to receive(:expire)
 
         result = Flapjack::Data::Event.next('events', :block => true,
@@ -145,10 +144,9 @@ describe Flapjack::Data::Event do
         expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
         expect(redis).to receive(:sadd).
           with('known_events_archive_keys', /^events_archive:/)
-        expect(redis).to receive(:multi)
-        expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
-        expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
-        expect(redis).to receive(:exec)
+        expect(redis).to receive(:multi).and_yield(multi)
+        expect(multi).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
+        expect(multi).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
         expect(redis).to receive(:expire)
 
         result = Flapjack::Data::Event.next('events', :block => true,
@@ -180,10 +178,9 @@ describe Flapjack::Data::Event do
         expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
         expect(redis).to receive(:sadd).
           with('known_events_archive_keys', /^events_archive:/)
-        expect(redis).to receive(:multi)
-        expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
-        expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
-        expect(redis).to receive(:exec)
+        expect(redis).to receive(:multi).and_yield(multi)
+        expect(multi).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
+        expect(multi).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
         expect(redis).to receive(:expire)
 
         result = Flapjack::Data::Event.next('events', :block => true,
@@ -271,10 +268,9 @@ describe Flapjack::Data::Event do
         expect(Flapjack::Data::Migration).to receive(:purge_expired_archive_index).with(:redis => redis)
         expect(redis).to receive(:sadd).
           with('known_events_archive_keys', /^events_archive:/)
-        expect(redis).to receive(:multi)
-        expect(redis).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
-        expect(redis).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
-        expect(redis).to receive(:exec)
+        expect(redis).to receive(:multi).and_yield(multi)
+        expect(multi).to receive(:lrem).with(/^events_archive:/, 1, bad_event_json)
+        expect(multi).to receive(:lpush).with(/^events_rejected:/, bad_event_json)
         expect(redis).to receive(:expire)
 
         result = Flapjack::Data::Event.next('events', :block => true,

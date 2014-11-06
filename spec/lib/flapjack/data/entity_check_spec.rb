@@ -1199,7 +1199,13 @@ describe Flapjack::Data::EntityCheck, :redis => true do
   it "updates enabled checks" do
     ts = Time.now.to_i
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-    ec.last_update = ts
+
+    # was check.last_update=
+    @redis.hset("check:#{name}:#{check}", 'last_update', ts)
+    @redis.zadd("all_checks", ts, @key)
+    @redis.zadd("all_checks:#{name}", ts, check)
+    @redis.zadd("current_checks:#{name}", ts, check)
+    @redis.zadd('current_entities', ts, name)
 
     saved_check_ts = @redis.zscore("current_checks:#{name}", check)
     expect(saved_check_ts).not_to be_nil

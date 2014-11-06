@@ -191,19 +191,19 @@ module Flapjack
           event.id_hash = entity_check.ack_hash
         end
 
-        @redis.multi
-        if event.ok?
-          @redis.hincrby('event_counters', 'ok', 1)
-          @redis.hincrby("event_counters:#{@instance_id}", 'ok', 1)
-        elsif event.failure?
-          @redis.hincrby('event_counters', 'failure', 1)
-          @redis.hincrby("event_counters:#{@instance_id}", 'failure', 1)
-        else
-          @redis.hincrby('event_counters', 'invalid', 1)
-          @redis.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
-          @logger.error("Invalid event received: #{event.inspect}")
+        @redis.multi do |multi|
+          if event.ok?
+            multi.hincrby('event_counters', 'ok', 1)
+            multi.hincrby("event_counters:#{@instance_id}", 'ok', 1)
+          elsif event.failure?
+            multi.hincrby('event_counters', 'failure', 1)
+            multi.hincrby("event_counters:#{@instance_id}", 'failure', 1)
+          else
+            multi.hincrby('event_counters', 'invalid', 1)
+            multi.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+            @logger.error("Invalid event received: #{event.inspect}")
+          end
         end
-        @redis.exec
 
         previous_state = entity_check.state
 
@@ -233,14 +233,16 @@ module Flapjack
       # Action events represent human or automated interaction with Flapjack
       when 'action'
         # When an action event is processed, store the event.
-        @redis.multi
-        @redis.hset(event.id + ':actions', timestamp, event.state)
-        @redis.hincrby('event_counters', 'action', 1)
-        @redis.hincrby("event_counters:#{@instance_id}", 'action', 1)
-        @redis.exec
+        @redis.multi do |multi|
+          multi.hset(event.id + ':actions', timestamp, event.state)
+          multi.hincrby('event_counters', 'action', 1)
+          multi.hincrby("event_counters:#{@instance_id}", 'action', 1)
+        end
       else
-        @redis.hincrby('event_counters', 'invalid', 1)
-        @redis.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+        @redis.multi do |multi|
+          multi.hincrby('event_counters', 'invalid', 1)
+          multi.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+        end
         @logger.error("Invalid event received: #{event.inspect}")
       end
 
@@ -251,12 +253,12 @@ module Flapjack
       notification_type = Flapjack::Data::Notification.type_for_event(event)
       max_notified_severity = entity_check.max_notified_severity_of_current_failure
 
-      @redis.multi
-      @redis.set("#{event.id}:last_#{notification_type}_notification", timestamp)
-      @redis.set("#{event.id}:last_#{event.state}_notification", timestamp) if event.failure?
-      @redis.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
-      @redis.rpush("#{event.id}:#{event.state}_notifications", timestamp) if event.failure?
-      @redis.exec
+      @redis.multi do |multi|
+        multi.set("#{event.id}:last_#{notification_type}_notification", timestamp)
+        multi.set("#{event.id}:last_#{event.state}_notification", timestamp) if event.failure?
+        multi.rpush("#{event.id}:#{notification_type}_notifications", timestamp)
+        multi.rpush("#{event.id}:#{event.state}_notifications", timestamp) if event.failure?
+      end
 
       @logger.debug("Notification of type #{notification_type} is being generated for #{event.id}: " + event.inspect)
 

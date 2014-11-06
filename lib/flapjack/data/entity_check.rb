@@ -609,57 +609,54 @@ module Flapjack
 
         old_state = self.state
 
-        @redis.multi
+        @redis.multi do |multi|
 
-        if old_state != new_state
+          if old_state != new_state
 
-          # Note the current state (for speedy lookups)
-          @redis.hset("check:#{@key}", 'state', new_state)
+            # Note the current state (for speedy lookups)
+            multi.hset("check:#{@key}", 'state', new_state)
 
-          # FIXME: rename to last_state_change?
-          @redis.hset("check:#{@key}", 'last_change', timestamp)
+            # FIXME: rename to last_state_change?
+            multi.hset("check:#{@key}", 'last_change', timestamp)
 
-          case new_state
-          when STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN
-            @redis.zadd('failed_checks', timestamp, @key)
-            # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
-          else
-            @redis.zrem("failed_checks", @key)
-            # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
+            case new_state
+            when STATE_WARNING, STATE_CRITICAL, STATE_UNKNOWN
+              multi.zadd('failed_checks', timestamp, @key)
+              # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
+            else
+              multi.zrem("failed_checks", @key)
+              # FIXME: Iterate through a list of tags associated with an entity:check pair, and update counters
+            end
+
+            # Retain event data for entity:check pair
+            # NB (appending to tail as far as Redis is concerned)
+            multi.rpush("#{@key}:states", timestamp)
+            multi.set("#{@key}:#{timestamp}:state", new_state)
+            multi.set("#{@key}:#{timestamp}:summary", summary) if summary
+            multi.set("#{@key}:#{timestamp}:details", details) if details
+            multi.set("#{@key}:#{timestamp}:count", count) if count
+
+            multi.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
           end
 
-          # Retain event data for entity:check pair
-          # NB (appending to tail as far as Redis is concerned)
-          @redis.rpush("#{@key}:states", timestamp)
-          @redis.set("#{@key}:#{timestamp}:state", new_state)
-          @redis.set("#{@key}:#{timestamp}:summary", summary) if summary
-          @redis.set("#{@key}:#{timestamp}:details", details) if details
-          @redis.set("#{@key}:#{timestamp}:count", count) if count
+          # Track when we last saw an event for a particular entity:check pair
+          # (used to be last_update=, but needs to happen in the multi block)
+          multi.hset("check:#{@key}", 'last_update', timestamp)
+          multi.zadd("all_checks", timestamp, @key)
+          multi.zadd("all_checks:#{entity.name}", timestamp, check)
+          multi.zadd("current_checks:#{entity.name}", timestamp, check)
+          multi.zadd('current_entities', timestamp, entity.name)
 
-          @redis.zadd("#{@key}:sorted_state_timestamps", timestamp, timestamp)
+          # Even if this isn't a state change, we need to update the current state
+          # hash summary and details (as they may have changed)
+          multi.hset("check:#{@key}", 'summary', (summary || ''))
+          multi.hset("check:#{@key}", 'details', (details || ''))
+          if perfdata
+            multi.hset("check:#{@key}", 'perfdata', format_perfdata(perfdata).to_json)
+  #          multi.set("#{@key}:#{timestamp}:perfdata", perfdata)
+          end
+
         end
-
-        # Track when we last saw an event for a particular entity:check pair
-        self.last_update = timestamp
-
-        # Even if this isn't a state change, we need to update the current state
-        # hash summary and details (as they may have changed)
-        @redis.hset("check:#{@key}", 'summary', (summary || ''))
-        @redis.hset("check:#{@key}", 'details', (details || ''))
-        if perfdata
-          @redis.hset("check:#{@key}", 'perfdata', format_perfdata(perfdata).to_json)
-#          @redis.set("#{@key}:#{timestamp}:perfdata", perfdata)
-        end
-
-        @redis.exec
-      end
-
-      def last_update=(timestamp)
-        @redis.hset("check:#{@key}", 'last_update', timestamp)
-        @redis.zadd("all_checks", timestamp, @key)
-        @redis.zadd("all_checks:#{entity.name}", timestamp, check)
-        @redis.zadd("current_checks:#{entity.name}", timestamp, check)
-        @redis.zadd('current_entities', timestamp, entity.name)
       end
 
       def last_update

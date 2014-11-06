@@ -107,10 +107,10 @@ module Flapjack
           # store the raw data in a rejected list
           rejected_dest = "events_rejected:#{base_time_str}"
           if options[:archive_events]
-            redis.multi
-            redis.lrem(archive_dest, 1, raw)
-            redis.lpush(rejected_dest, raw)
-            redis.exec
+            redis.multi do |multi|
+              multi.lrem(archive_dest, 1, raw)
+              multi.lpush(rejected_dest, raw)
+            end
             redis.expire(archive_dest, options[:events_archive_maxage])
           else
             redis.lpush(rejected_dest, raw)

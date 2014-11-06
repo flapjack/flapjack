@@ -218,7 +218,12 @@ describe Flapjack::Data::Contact, :redis => true do
     ec = Flapjack::Data::EntityCheck.for_entity_name(entity_name, 'PING', :redis => @redis)
     t = Time.now.to_i
     ec.update_state('ok', :timestamp => t, :summary => 'a')
-    ec.last_update = t
+    # was check.last_update=
+    @redis.hset("check:#{entity_name}:PING", 'last_update', t)
+    @redis.zadd("all_checks", t, @key)
+    @redis.zadd("all_checks:#{entity_name}", t, 'PING')
+    @redis.zadd("current_checks:#{entity_name}", t, 'PING')
+    @redis.zadd('current_entities', t, entity_name)
 
     contact = Flapjack::Data::Contact.find_by_id('c362', :redis => @redis)
     eandcs = contact.entities(:checks => true)
