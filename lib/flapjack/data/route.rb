@@ -3,11 +3,11 @@
 require 'active_support/time'
 require 'ice_cube'
 
-
 require 'flapjack/utility'
 
-
 require 'sandstorm/records/redis_record'
+
+require 'flapjack/data/validators/id_validator'
 
 require 'flapjack/data/check_state'
 
@@ -34,6 +34,8 @@ module Flapjack
 
       validate :state, :presence => true,
         :inclusion => { :in => Flapjack::Data::CheckState.failing_states }
+
+      validates_with Flapjack::Data::Validators::IdValidator
 
       # TODO validate that rule and media belong to the same contact ?
 

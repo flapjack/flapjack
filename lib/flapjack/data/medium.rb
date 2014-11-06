@@ -1,6 +1,9 @@
 #!/usr/bin/env ruby
 
 require 'sandstorm/records/redis_record'
+
+require 'flapjack/data/validators/id_validator'
+
 require 'flapjack/data/alert'
 require 'flapjack/data/check'
 
@@ -43,6 +46,8 @@ module Flapjack
         :numericality => {:greater_than_or_equal_to => 0, :only_integer => true}
       validates :rollup_threshold, :allow_blank => true,
         :numericality => {:greater_than => 0, :only_integer => true}
+
+      validates_with Flapjack::Data::Validators::IdValidator
 
       def as_json(opts = {})
         aj_opts = opts.merge(

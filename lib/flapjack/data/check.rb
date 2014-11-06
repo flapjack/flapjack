@@ -4,7 +4,10 @@ require 'digest'
 
 require 'sandstorm/records/redis_record'
 
+require 'flapjack/data/validators/id_validator'
+
 require 'flapjack/data/check_state'
+require 'flapjack/data/medium'
 require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/unscheduled_maintenance'
 require 'flapjack/data/tag'
@@ -74,6 +77,8 @@ module Flapjack
 
       before_validation :create_ack_hash
       validates :ack_hash, :presence => true
+
+      validates_with Flapjack::Data::Validators::IdValidator
 
       around_create :handle_state_change_and_enabled
       around_update :handle_state_change_and_enabled

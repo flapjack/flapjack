@@ -10,6 +10,22 @@ describe Flapjack::Data::Check, :redis => true do
 
   let(:redis) { Flapjack.redis }
 
+  it "allows an id that is a UUID" do
+    check = Flapjack::Data::Check.new(:id => '20f182fc-6e32-4794-9007-97366d162c51')
+    check.valid?
+    expect(check.errors).not_to be_nil
+    expect(check.errors[:id]).to be_an(Array)
+    expect(check.errors[:id]).to be_empty
+  end
+
+  it "does not allow an id that is not a UUID" do
+    check = Flapjack::Data::Check.new(:id => 'hello')
+    check.valid?
+    expect(check.errors).not_to be_nil
+    expect(check.errors[:id]).to be_an(Array)
+    expect(check.errors[:id]).to include('is not a UUID')
+  end
+
   context "maintenance" do
 
     it "returns that it is not in unscheduled maintenance" do

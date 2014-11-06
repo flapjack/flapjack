@@ -4,6 +4,8 @@ require 'set'
 
 require 'sandstorm/records/redis_record'
 
+require 'flapjack/data/validators/id_validator'
+
 require 'flapjack/data/route'
 
 module Flapjack
@@ -29,6 +31,8 @@ module Flapjack
 
       has_many :routes, :class_name => 'Flapjack::Data::Route',
         :inverse_of => :rule
+
+      validates_with Flapjack::Data::Validators::IdValidator
 
       before_destroy :remove_child_records
       def remove_child_records

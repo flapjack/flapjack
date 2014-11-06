@@ -2,6 +2,8 @@
 
 require 'sandstorm/records/redis_record'
 
+require 'flapjack/data/validators/id_validator'
+
 module Flapjack
 
   module Data
@@ -23,6 +25,8 @@ module Flapjack
       validates :subdomain, :presence => true
       validates :username, :presence => true
       validates :password, :presence => true
+
+      validates_with Flapjack::Data::Validators::IdValidator
 
       def as_json(opts = {})
         super.as_json(opts).merge(

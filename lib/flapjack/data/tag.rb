@@ -2,6 +2,8 @@
 
 require 'sandstorm/records/redis_record'
 
+require 'flapjack/data/validators/id_validator'
+
 require 'flapjack/data/check'
 require 'flapjack/data/rule'
 
@@ -26,6 +28,8 @@ module Flapjack
       unique_index_by :name
 
       # TODO validate uniqueness of name
+
+      validates_with Flapjack::Data::Validators::IdValidator
 
       def as_json(opts = {})
         self.attributes.merge(

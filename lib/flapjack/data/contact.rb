@@ -8,6 +8,8 @@ require 'ice_cube'
 
 require 'sandstorm/records/redis_record'
 
+require 'flapjack/data/validators/id_validator'
+
 require 'flapjack/data/medium'
 require 'flapjack/data/rule'
 require 'flapjack/data/tag'
@@ -35,6 +37,8 @@ module Flapjack
         :inverse_of => :contact
 
       has_many :rules, :class_name => 'Flapjack::Data::Rule', :inverse_of => :contact
+
+      validates_with Flapjack::Data::Validators::IdValidator
 
       before_destroy :remove_child_records
       def remove_child_records
