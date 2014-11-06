@@ -1,5 +1,8 @@
 #!/usr/bin/env ruby
 
+require 'flapjack/data/contact'
+require 'flapjack/data/entity_check'
+
 require 'flapjack/data/semaphore'
 
 module Flapjack
@@ -114,6 +117,32 @@ module Flapjack
         redis.smembers('known_events_archive_keys').each do |ak|
           redis.srem('known_events_archive_keys', ak) unless redis.exists(ak)
         end
+      end
+
+      def self.correct_notification_rule_contact_linkages(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        logger = options[:logger]
+
+        if redis.exists('corrected_notification_rule_contact_linkages')
+          return
+        end
+
+        invalid_notification_rule_keys = redis.keys("notification_rule:*").select {|k|
+          contact_id = redis.hget(k, 'contact_id')
+          contact_id.nil? || contact_id.empty?
+        }.collect {|nrk| nrk.sub(/^notification_rule:/, '') }
+
+        unless invalid_notification_rule_keys.empty?
+          Flapjack::Data::Contact.all(:redis => redis).each do |contact|
+            correctable = contact.notification_rule_ids & invalid_notification_rule_keys
+            next if correctable.empty?
+            correctable.each {|ck| redis.hset("notification_rule:#{ck}", 'contact_id', contact.id) }
+            logger.warn "Set contact #{contact.id} for rules #{correctable.join(', ')}" unless logger.nil?
+          end
+        end
+
+        redis.set('corrected_notification_rule_contact_linkages', 'true')
       end
 
     end

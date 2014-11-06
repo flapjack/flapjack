@@ -21,6 +21,8 @@ module Flapjack
       logger = opts[:logger]
       super(:size => @size) {
         redis = ::Redis.new(config)
+        Flapjack::Data::Migration.correct_notification_rule_contact_linkages(:redis => redis,
+          :logger => logger)
         Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => redis,
           :logger => logger)
         Flapjack::Data::Migration.refresh_archive_index(:redis => redis)
