@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 1.2.0 - 2014-11-07
+- Bug: multi blocks for safe redis connection pool usage #694 (@ali-graham)
+- Bug: data migration to work around previous notification rule bug #699 (@ali-graham)
+
 # 1.2.0rc2 - 2014-10-17
 - Feature: Cache entity and check name <-> id lookups #682 (@ali-graham)
 - Chore: Add last_change field to status_reports in the API (closes: #678) #679 (@Hobbsee)
