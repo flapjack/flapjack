@@ -71,35 +71,34 @@ module Flapjack
         self.timezone = tz.respond_to?(:name) ? tz.name : tz
       end
 
-      def as_json(opts = {})
-        self.attributes.merge(
-          :links => {
-            :checks                => opts[:check_ids] || [],
-            :media                 => opts[:medium_ids] || [],
-            :pagerduty_credentials => opts[:pagerduty_credentials_ids] || [],
-            :rules                 => opts[:rule_ids] || []
-          }
-        )
-      end
-
-      def self.as_jsonapi(*contacts)
+      def self.as_jsonapi(unwrap, *contacts)
         return [] if contacts.empty?
         contact_ids = contacts.map(&:id)
 
-        medium_ids = Flapjack::Data::Contact.intersect(:id => contact_ids).
-          associated_ids_for(:media)
-        pagerduty_credentials_ids = Flapjack::Data::Contact.
-          intersect(:id => contact_ids).associated_ids_for(:pagerduty_credentials)
-        rule_ids = Flapjack::Data::Contact.intersect(:id => contact_ids).
-          associated_ids_for(:rules)
+        # medium_ids = Flapjack::Data::Contact.intersect(:id => contact_ids).
+        #   associated_ids_for(:media)
+        # pagerduty_credentials_ids = Flapjack::Data::Contact.
+        #   intersect(:id => contact_ids).associated_ids_for(:pagerduty_credentials)
+        # rule_ids = Flapjack::Data::Contact.intersect(:id => contact_ids).
+        #   associated_ids_for(:rules)
 
-        contacts.collect do |contact|
-          contact.as_json(
-            :medium_ids => medium_ids[contact.id],
-            :pagerduty_credentials_ids => pagerduty_credentials_ids[contact.id],
-            :rule_ids => rule_ids[contact.id]
-          )
+        data = contacts.collect do |contact|
+          contact.as_json
+
+          # :links => {
+          #   :media                 => opts[:medium_ids] || [],
+          #   :pagerduty_credentials => opts[:pagerduty_credentials_ids] || [],
+          #   :rules                 => opts[:rule_ids] || []
+          # }
+
+          # (
+          #   :medium_ids => medium_ids[contact.id],
+          #   :pagerduty_credentials_ids => pagerduty_credentials_ids[contact.id],
+          #   :rule_ids => rule_ids[contact.id]
+          # )
         end
+        return data unless (data.size == 1) && unwrap
+        data.first
       end
 
     end

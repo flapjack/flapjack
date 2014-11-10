@@ -21,7 +21,7 @@ module Flapjack
 
           # Creates media records for a contact
           app.post '/contacts/:contact_id/media' do
-            media_data = wrapped_params('media')
+            media_data, unwrap = wrapped_params('media')
 
             media_err = nil
             media_ids = nil
@@ -64,7 +64,8 @@ module Flapjack
 
             status 201
             response.headers['Location'] = "#{base_url}/media/#{media_ids.join(',')}"
-            Flapjack.dump_json(media_ids)
+            media_as_json = Flapjack::Data::Medium.as_jsonapi(unwrap, *media)
+            Flapjack.dump_json(:media => media_as_json)
           end
 
           app.get %r{^/media(?:/)?([^/]+)?$} do
@@ -73,6 +74,8 @@ module Flapjack
             else
               nil
             end
+
+            unwrap = !requested_media.nil? && (requested_media.size == 1)
 
             media, meta = if requested_media
               requested = Flapjack::Data::Medium.find_by_ids!(*requested_media)
@@ -88,21 +91,7 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            media_as_json = if media.empty?
-              []
-            else
-              media_ids = media.map(&:id)
-              linked_contact_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
-                associated_ids_for(:contact)
-              linked_route_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
-                associated_ids_for(:routes)
-
-              media.collect {|medium|
-                medium.as_json(:contact_ids => [linked_contact_ids[medium.id]],
-                               :route_ids => linked_route_ids[medium.id])
-              }
-            end
-
+            media_as_json = Flapjack::Data::Medium.as_jsonapi(unwrap, *media)
             Flapjack.dump_json({:media => media_as_json}.merge(meta))
           end
 

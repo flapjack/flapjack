@@ -21,7 +21,7 @@ module Flapjack
           # app.helpers Flapjack::Gateways::JSONAPI::TagMethods::Helpers
 
           app.post '/tags' do
-            tags_data = wrapped_params('tags')
+            tags_data, unwrap = wrapped_params('tags')
 
             tag_err   = nil
             tag_names = nil
@@ -55,7 +55,8 @@ module Flapjack
 
             status 201
             response.headers['Location'] = "#{base_url}/tags/#{tag_names.join(',')}"
-            Flapjack.dump_json(tag_names)
+            tags_as_json = Flapjack::Data::Tag.as_jsonapi(unwrap, *tags)
+            Flapjack.dump_json(:tags => tags_as_json)
           end
 
           app.get %r{^/tags(?:/)?(.+)?$} do
@@ -64,6 +65,8 @@ module Flapjack
             else
               nil
             end
+
+            unwrap = !requested_tags.nil? && (requested_tags.size == 1)
 
             tags, meta = if requested_tags
               requested = Flapjack::Data::Tag.intersect(:name => requested_tags).all
@@ -79,7 +82,7 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            tags_as_json = Flapjack::Data::Tag.as_jsonapi(*tags)
+            tags_as_json = Flapjack::Data::Tag.as_jsonapi(unwrap, *tags)
             Flapjack.dump_json({:tags => tags_as_json}.merge(meta))
           end
 

@@ -20,46 +20,42 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::CheckMethods::Helpers
 
           app.post '/checks' do
-            checks_data = wrapped_params('checks')
+            checks_data, unwrap = wrapped_params('checks')
 
             check_err = nil
-            check_ids = nil
             checks    = nil
 
-           data_ids = checks_data.reject {|c| c['id'].nil? }.
+            data_ids = checks_data.reject {|c| c['id'].nil? }.
               map {|co| co['id'].to_s }
 
             Flapjack::Data::Check.lock do
+              conflicted = Flapjack::Data::Check.find_by_ids(data_ids)
 
-              conflicted_ids = data_ids.select {|id|
-                Flapjack::Data::Check.exists?(id)
-              }
-
-              if conflicted_ids.length > 0
-                check_err = "Checks already exist with the following ids: " +
-                              conflicted_ids.join(', ')
-              else
+              if conflicted.empty?
                 checks = checks_data.collect do |cd|
                   Flapjack::Data::Check.new(:id => cd['id'], :name => cd['name'],
                     :initial_failure_delay => cd['initial_failure_delay'],
                     :repeat_failure_delay  => cd['repeat_failure_delay'],
                     :enabled => cd['enabled'])
                 end
-              end
 
-              if invalid = checks.detect {|c| c.invalid? }
-                check_err = "Check validation failed, " + invalid.errors.full_messages.join(', ')
+                if invalid = checks.detect {|c| c.invalid? }
+                  check_err = "Check validation failed, " + invalid.errors.full_messages.join(', ')
+                else
+                  checks.each {|c| c.save }
+                end
               else
-                check_ids = checks.collect {|c| c.save; c.id }
+                check_err = "Checks already exist with the following ids: " +
+                              conflicted_ids.join(', ')
               end
-
             end
 
             halt err(403, check_err) unless check_err.nil?
 
             status 201
-            response.headers['Location'] = "#{base_url}/checks/#{check_ids.join(',')}"
-            Flapjack.dump_json(check_ids)
+            response.headers['Location'] = "#{base_url}/checks/#{checks.map(&:id).join(',')}"
+            checks_as_json = Flapjack::Data::Check.as_jsonapi(unwrap, *checks)
+            Flapjack.dump_json(:checks => checks_as_json)
           end
 
           app.get %r{^/checks(?:/)?(.+)?$} do
@@ -68,6 +64,8 @@ module Flapjack
             else
               nil
             end
+
+            unwrap = !requested_checks.nil? && (requested_checks.size == 1)
 
             checks, meta = if requested_checks
               requested = Flapjack::Data::Check.find_by_ids!(*requested_checks)
@@ -83,67 +81,39 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            checks_as_json = Flapjack::Data::Check.as_jsonapi(*checks)
+            checks_as_json = Flapjack::Data::Check.as_jsonapi(unwrap, *checks)
             Flapjack.dump_json({:checks => checks_as_json}.merge(meta))
           end
 
-          app.patch %r{^/checks/(.+)$} do
+          app.put %r{^/checks/(.+)$} do
             requested_checks = params[:captures][0].split(',').uniq
             checks = Flapjack::Data::Check.find_by_ids!(*requested_checks)
             if checks.empty?
               raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Check, requested_checks)
             end
 
-            checks.each do |check|
-              apply_json_patch('checks') do |op, property, linked, value|
-                case op
-                when 'replace'
-                  case property
-                  when 'enabled', 'name', 'initial_failure_delay', 'repeat_failure_delay'
-                    check.send("#{property}=".to_sym, value)
-                    if check.valid?
-                      check.save
-                    else
-                      # TODO return error
-                    end
-                  end
-                when 'add'
-                  case linked
-                  when 'tags'
-                    add_tag = proc {|tag_name|
-                      tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
-                      if tag.nil?
-                        tag = Flapjack::Data::Tag.new(:name => tag_name)
-                        tag.save
-                      end
-                      tag
-                    }
+            checks_data, unwrap = wrapped_params('checks')
 
-                    tags = if value.respond_to?(:each)
-                      value.collect {|tag_name| add_tag.call(tag_name) }
-                    else
-                      [add_tag.call(tag_name)]
-                    end
-                    check.tags.add(*tags) unless tags.empty?
-                  end
-                when 'remove'
-                  case linked
-                  when 'tags'
-                    tags = check.tags.intersect(:name => value).all
-                    unless tags.empty?
-                      check.tags.delete(*tags)
-                      tags.each do |tag|
-                        if tag.checks.empty? && tag.rules.empty?
-                          tag.destroy
-                        end
-                      end
-                    end
-                  end
-                end
-
-              end
+            if checks_data.map {|cd| cd['id'] }.sort != requested_checks.sort
+              halt err(403, "Id mismatch updating checks")
             end
 
+            changed = checks_data.collect do |cd|
+              check = checks.detect {|c| c.id == cd['id']}
+              cd.each_pair do |att, value|
+                case att
+                when 'enabled', 'name', 'initial_failure_delay', 'repeat_failure_delay'
+                  check.send("#{att}=".to_sym, value)
+                end
+              end
+              check
+            end
+
+            if invalid = changed.detect {|c| c.invalid? }
+              halt err(403,  "Check validation failed, " + invalid.errors.full_messages.join(', '))
+            end
+
+            changed.each {|c| c.save }
             status 204
           end
 

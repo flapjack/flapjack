@@ -1,6 +1,7 @@
 require 'spec_helper'
 
 require 'flapjack/data/contact'
+require 'securerandom'
 
 describe Flapjack::Data::Contact, :redis => true do
 
@@ -9,8 +10,9 @@ describe Flapjack::Data::Contact, :redis => true do
   context 'timezone' do
 
     it "sets a timezone string from a string" do
-      Factory.contact(:id => '1', :name => 'John Smith')
-      contact = Flapjack::Data::Contact.find_by_id('1')
+      cid = SecureRandom.uuid
+      Factory.contact(:id => cid, :name => 'John Smith')
+      contact = Flapjack::Data::Contact.find_by_id(cid)
       expect(contact.timezone).to be_nil
 
       contact.time_zone = 'Australia/Adelaide'

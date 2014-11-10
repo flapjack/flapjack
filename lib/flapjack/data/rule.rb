@@ -41,14 +41,36 @@ module Flapjack
         end
       end
 
-      def as_json(opts = {})
-        self.attributes.merge(
-          :links => {
-            :contacts  => opts[:contact_ids] || [],
-            :tags      => opts[:tag_ids]     || [],
-            :routes    => opts[:route_ids]   || [],
-          }
-        )
+      def self.as_jsonapi(unwrap, *rules)
+        return [] if rules.empty?
+        rule_ids = rules.map(&:id)
+
+        # contact_ids = Flapjack::Data::Rule.intersect(:id => rule_ids).
+        #   associated_ids_for(:contact)
+        # tag_ids = Flapjack::Data::Rule.intersect(:id => rule_ids).
+        #   associated_ids_for(:tags)
+        # route_ids = Flapjack::Data::Rule.intersect(:id => rule_ids).
+        #   associated_ids_for(:routes)
+
+        data = rules.collect do |rule|
+          rule.as_json
+
+          #   rule.as_json(:contact_ids => [linked_contact_ids[rule.id]],
+          #                :tag_ids => linked_tag_ids,
+          #                :route_ids => linked_route_ids[rule.id]
+          #               )
+
+          # :links => {
+            # :contacts  => opts[:contact_ids] || [],
+            # :tags      => opts[:tag_ids]     || [],
+            # :routes    => opts[:route_ids]   || [],
+          # }
+
+        #     (:contact_ids => contact_ids[medium.id],
+        #      :route_ids => route_ids[medium.id])
+        end
+        return data unless (data.size == 1) && unwrap
+        data.first
       end
 
     end

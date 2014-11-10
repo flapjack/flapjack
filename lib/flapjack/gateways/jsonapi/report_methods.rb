@@ -48,7 +48,6 @@ module Flapjack
           app.helpers Flapjack::Gateways::JSONAPI::ReportMethods::Helpers
 
           app.get %r{^/(status|outage|(?:un)?scheduled_maintenance|downtime)_report/checks(?:/([^/]+))?$} do
-
             action = params[:captures][0]
             action_pres = case action
             when 'status', 'downtime'

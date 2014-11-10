@@ -28,13 +28,29 @@ module Flapjack
 
       validates_with Flapjack::Data::Validators::IdValidator
 
-      def as_json(opts = {})
-        super.as_json(opts).merge(
-          [:id, :service_key, :subdomain, :username, :password].inject({}) {|memo, k|
-            memo[k] = self.send(k)
-            memo
-          }
-        )
+      # def as_json(opts = {})
+      #   super.as_json(opts).merge(
+      #     [:id, :service_key, :subdomain, :username, :password].inject({}) {|memo, k|
+      #       memo[k] = self.send(k)
+      #       memo
+      #     }
+      #   )
+      # end
+
+      def self.as_jsonapi(unwrap, *pagerduty_credentials)
+        return [] if pagerduty_credentials.empty?
+        pagerduty_credentials_ids = pagerduty_credentials.map(&:id)
+
+        # contact_ids = Flapjack::Data::PagerdutyCredentials.
+        #   intersect(:id => pagerduty_credentials_ids).associated_ids_for(:contact)
+
+        data = pagerduty_credentials.collect do |pdc|
+          pdc.as_json
+          # (:contact_ids => [linked_contact_ids[pdc.id]])
+          # }
+        end
+        return data unless (data.size == 1) && unwrap
+        data.first
       end
 
     end

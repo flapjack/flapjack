@@ -32,12 +32,12 @@ module Flapjack
       validates_with Flapjack::Data::Validators::IdValidator
 
       def as_json(opts = {})
-        self.attributes.merge(
-          :links => {
-            :checks  => opts[:check_ids] || [],
-            :rules   => opts[:rule_ids]  || [],
-          }
-        )
+        self.attributes #.merge(
+          # :links => {
+          #   :checks  => opts[:check_ids] || [],
+          #   :rules   => opts[:rule_ids]  || [],
+          # }
+        # )
       end
 
       def self.as_jsonapi(*tags)
@@ -48,12 +48,14 @@ module Flapjack
         rule_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
           associated_ids_for(:rules)
 
-        tags.collect {|tag|
+        data = tags.collect {|tag|
           tag.as_json(
             :check_ids => check_ids[tag.id],
             :rule_ids => rule_ids[tag.id]
           )
         }
+        return data unless data.size == 1
+        data.first
       end
     end
   end

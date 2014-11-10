@@ -3,6 +3,8 @@ require 'pact/provider/rspec'
 require 'flapjack/configuration'
 require 'flapjack/gateways/jsonapi'
 
+require './spec/service_consumers/fixture_data.rb'
+
 require './spec/service_consumers/provider_states_for_flapjack-diner.rb'
 
 $testing = true
@@ -54,7 +56,7 @@ Flapjack::Gateways::JSONAPI.instance_variable_set('@logger', MockLogger.new)
 Flapjack::Gateways::JSONAPI.start
 
 Pact.configure do |config|
-
+  config.include ::FixtureData
 end
 
 Pact.service_provider "flapjack" do

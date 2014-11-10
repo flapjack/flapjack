@@ -49,21 +49,29 @@ module Flapjack
 
       validates_with Flapjack::Data::Validators::IdValidator
 
-      def as_json(opts = {})
-        aj_opts = opts.merge(
-          :root   => false,
-          :except => [:last_rollup_type, :last_notification]
-        )
-        super.as_json(aj_opts).merge(
-          :links => {
-            :contacts   => opts[:contact_ids] || [],
-            :routes     => opts[:route_ids]   || []
-          }
-        )
+      def self.as_jsonapi(unwrap, *media)
+        return [] if media.empty?
+        media_ids = media.map(&:id)
+
+        # contact_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
+        #   associated_ids_for(:contact)
+        # route_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
+        #   associated_ids_for(:routes)
+
+        data = media.collect do |medium|
+          medium.as_json(:except => [:last_rollup_type, :last_notification, :last_notification_state])
+
+# :links => {
+      #       :contacts   => opts[:contact_ids] || [],
+      #       :routes     => opts[:route_ids]   || []
+      #     }
+
+        #     (:contact_ids => contact_ids[medium.id],
+        #      :route_ids => route_ids[medium.id])
+        end
+        return data unless (data.size == 1) && unwrap
+        data.first
       end
-
     end
-
   end
-
 end

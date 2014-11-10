@@ -1,5 +1,12 @@
 Pact.provider_states_for "flapjack-diner" do
 
+  provider_state "no check exists" do
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
   provider_state "no contact exists" do
     tear_down do
       Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
@@ -7,14 +14,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "no media exist" do
-    tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
-      Flapjack.redis.flushdb
-    end
-  end
-
-  provider_state "no check exists" do
+  provider_state "no medium exists" do
     tear_down do
       Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
       Flapjack.redis.flushdb
@@ -35,10 +35,31 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "a check 'www.example.com:SSH' exists" do
+  provider_state "no scheduled maintenance period exists" do
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "no tag exists" do
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "no unscheduled maintenance period exists" do
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+
+  provider_state "a check exists" do
     set_up do
-      check = Flapjack::Data::Check.new(:name => 'www.example.com:SSH',
-        :id => 'www.example.com:SSH')
+      check = Flapjack::Data::Check.new(check_data)
       check.save
     end
 
@@ -48,14 +69,12 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "checks 'www.example.com:SSH' and 'www2.example.com:PING' exist" do
+  provider_state "two checks exist" do
     set_up do
-      check = Flapjack::Data::Check.new(:name => 'www.example.com:SSH',
-        :id => 'www.example.com:SSH')
+      check = Flapjack::Data::Check.new(check_data)
       check.save
 
-      check_2 = Flapjack::Data::Check.new(:name => 'www2.example.com:PING',
-        :id => 'www2.example.com:PING')
+      check_2 = Flapjack::Data::Check.new(check_2_data)
       check_2.save
     end
 
@@ -65,14 +84,9 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "a contact with id 'abc' exists" do
+  provider_state "a contact exists" do
     set_up do
-      contact = Flapjack::Data::Contact.new(
-        :id         => 'abc',
-        :name       => 'Jim Smith',
-        :timezone   => 'UTC',
-        # :tags       => ['admin', 'night_shift']
-      )
+      contact = Flapjack::Data::Contact.new(contact_data)
       contact.save
     end
 
@@ -82,49 +96,12 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "a contact with id 'abc' has email and sms media" do
+  provider_state "two contacts exist" do
     set_up do
-      contact = Flapjack::Data::Contact.new(
-        :id         => 'abc',
-        :name       => 'Jim Smith',
-        :timezone   => 'UTC',
-        # :tags       => ['admin', 'night_shift']
-      )
+      contact = Flapjack::Data::Contact.new(contact_data)
       contact.save
 
-      medium_email = Flapjack::Data::Medium.new(
-        :id               => 'abc_email',
-        :type             => 'email',
-        :address          => 'ablated@example.org',
-        :interval         => 180,
-        :rollup_threshold => 3
-      )
-      medium_email.save
-
-      medium_sms = Flapjack::Data::Medium.new(
-        :id               => 'abc_sms',
-        :type             => 'sms',
-        :address          => '0123456789',
-        :interval         => 300,
-        :rollup_threshold => 5
-      )
-      medium_sms.save
-
-      contact.media.add(medium_email, medium_sms)
-    end
-
-    tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
-      Flapjack.redis.flushdb
-    end
-  end
-
-  provider_state "a contact with id '872' exists" do
-    set_up do
-      contact = Flapjack::Data::Contact.new(
-        :id         => '872',
-        :name       => 'Jim Smith',
-      )
+      contact_2 = Flapjack::Data::Contact.new(contact_2_data)
       contact.save
     end
 
@@ -134,20 +111,10 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "contacts with ids 'abc' and '872' exist" do
+  provider_state "a medium exists" do
     set_up do
-      contact = Flapjack::Data::Contact.new(
-        :id         => 'abc',
-        :name       => 'Jim Smith',
-        :timezone   => 'UTC'
-      )
-      contact.save
-
-      contact_2 = Flapjack::Data::Contact.new(
-        :id         => '872',
-        :name       => 'John Smith',
-      )
-      contact_2.save
+      sms = Flapjack::Data::Medium.new(sms_data)
+      sms.save
     end
 
     tear_down do
@@ -156,27 +123,52 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "a contact 'abc' with generic rule '05983623-fcef-42da-af44-ed6990b500fa' exists" do
+  provider_state "two media exist" do
     set_up do
-      contact = Flapjack::Data::Contact.new(
-        :id         => 'abc',
-        :name       => 'Jim Smith',
-        :timezone   => 'UTC',
-        # :tags       => ['admin', 'night_shift']
-      )
-      contact.save
+      sms = Flapjack::Data::Medium.new(sms_data)
+      sms.save
 
-      rule = Flapjack::Data::Rule.new(
-        :id                 => '05983623-fcef-42da-af44-ed6990b500fa',
-        :is_specific        => false,
-        # :time_restrictions  => [],
-        # :warning_media      => ["email"],
-        # :critical_media     => ["sms", "email"],
-        # :warning_blackhole  => false,
-        # :critical_blackhole => false
-      )
+      email = Flapjack::Data::Medium.new(email_data)
+      email.save
+    end
+
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "a set of pagerduty credentials exists" do
+    set_up do
+      pagerduty_credentials = Flapjack::Data::PagerdutyCredentials.new(pagerduty_credentials_data)
+      pagerduty_credentials.save
+    end
+
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "two sets of pagerduty credentials exist" do
+    set_up do
+      pagerduty_credentials = Flapjack::Data::PagerdutyCredentials.new(pagerduty_credentials_data)
+      pagerduty_credentials.save
+
+      pagerduty_credentials_2 = Flapjack::Data::PagerdutyCredentials.new(pagerduty_credentials_2_data)
+      pagerduty_credentials_2.save
+    end
+
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "a rule exists" do
+    set_up do
+      rule = Flapjack::Data::Rule.new(rule_data)
       rule.save
-      contact.rules << rule
     end
 
     tear_down do
@@ -185,39 +177,13 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "a contact 'abc' with generic rule '05983623-fcef-42da-af44-ed6990b500fa' and rule '20f182fc-6e32-4794-9007-97366d162c51' exists" do
+  provider_state "two rules exist" do
     set_up do
-      contact = Flapjack::Data::Contact.new(
-        :id         => 'abc',
-        :name       => 'Jim Smith',
-        :timezone   => 'UTC',
-        # :tags       => ['admin', 'night_shift']
-      )
-      contact.save
-
-      rule = Flapjack::Data::Rule.new(
-        :id                 => '05983623-fcef-42da-af44-ed6990b500fa',
-        :is_specific        => false,
-        # :time_restrictions  => [],
-        # :warning_media      => ["email"],
-        # :critical_media     => ["sms", "email"],
-        # :warning_blackhole  => false,
-        # :critical_blackhole => false
-      )
+      rule = Flapjack::Data::Rule.new(rule_data)
       rule.save
-      contact.rules << rule
 
-      rule_2 = Flapjack::Data::Rule.new(
-        :id                 => '20f182fc-6e32-4794-9007-97366d162c51',
-        :is_specific        => false,
-        # :time_restrictions  => [],
-        # :warning_media      => ["email"],
-        # :critical_media     => ["sms", "email"],
-        # :warning_blackhole  => true,
-        # :critical_blackhole => true
-      )
+      rule_2 = Flapjack::Data::Rule.new(rule_2_data)
       rule_2.save
-      contact.rules << rule_2
     end
 
     tear_down do
@@ -226,25 +192,10 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "a set of pagerduty credentials 'rstuv' exists" do
+  provider_state "a tag exists" do
     set_up do
-      contact = Flapjack::Data::Contact.new(
-        :id         => 'abc',
-        :name       => 'Jim Smith',
-        :timezone   => 'UTC',
-        # :tags       => ['admin', 'night_shift']
-      )
-      contact.save
-
-      pdc = Flapjack::Data::PagerdutyCredentials.new(
-        :id          => 'rstuv',
-        :service_key => 'abc',
-        :subdomain   => 'def',
-        :username    => 'ghi',
-        :password    => 'jkl',
-      )
-      pdc.save
-      contact.pagerduty_credentials = pdc
+      tag = Flapjack::Data::Tag.new(tag_data)
+      tag.save
     end
 
     tear_down do
@@ -253,41 +204,67 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "two sets of pagerduty credentials 'rstuv' and 'wxyza' exist" do
+  provider_state "two tags exist" do
     set_up do
-      contact = Flapjack::Data::Contact.new(
-        :id         => 'abc',
-        :name       => 'Jim Smith',
-        :timezone   => 'UTC',
-        # :tags       => ['admin', 'night_shift']
-      )
-      contact.save
+      tag = Flapjack::Data::Tag.new(tag_data)
+      tag.save
 
-      pdc = Flapjack::Data::PagerdutyCredentials.new(
-        :id          => 'rstuv',
-        :service_key => 'abc',
-        :subdomain   => 'def',
-        :username    => 'ghi',
-        :password    => 'jkl',
-      )
-      pdc.save
-      contact.pagerduty_credentials = pdc
+      tag_2 = Flapjack::Data::Tag.new(tag_2_data)
+      tag_2.save
+    end
 
-      contact_2 = Flapjack::Data::Contact.new(
-        :id         => '872',
-        :name       => 'John Smith',
-      )
-      contact_2.save
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
 
-      pdc_2 = Flapjack::Data::PagerdutyCredentials.new(
-        :id          => 'wxyza',
-        :service_key => 'mno',
-        :subdomain   => 'pqr',
-        :username    => 'stu',
-        :password    => 'vwx',
-      )
-      pdc_2.save
-      contact_2.pagerduty_credentials = pdc_2
+  provider_state "a scheduled maintenance period exists" do
+    set_up do
+      scheduled_maintenance = Flapjack::Data::ScheduledMaintenance.new(scheduled_maintenance_data)
+      scheduled_maintenance.save
+    end
+
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "two scheduled maintenance periods exist" do
+    set_up do
+      scheduled_maintenance = Flapjack::Data::ScheduledMaintenance.new(scheduled_maintenance_data)
+      scheduled_maintenance.save
+
+      scheduled_maintenance_2 = Flapjack::Data::ScheduledMaintenance.new(scheduled_maintenance_2_data)
+      scheduled_maintenance_2.save
+    end
+
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "an unscheduled maintenance period exists" do
+    set_up do
+      unscheduled_maintenance = Flapjack::Data::UnscheduledMaintenance.new(unscheduled_maintenance_data)
+      unscheduled_maintenance.save
+    end
+
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "two unscheduled maintenance periods exist" do
+    set_up do
+      unscheduled_maintenance = Flapjack::Data::UnscheduledMaintenance.new(unscheduled_maintenance_data)
+      unscheduled_maintenance.save
+
+      unscheduled_maintenance_2 = Flapjack::Data::UnscheduledMaintenance.new(unscheduled_maintenance_2_data)
+      unscheduled_maintenance_2.save
     end
 
     tear_down do

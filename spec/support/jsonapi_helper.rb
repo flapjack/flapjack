@@ -13,6 +13,11 @@ module JsonapiHelper
        'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
     }
 
+    let(:jsonapi_put_env) {
+      {'CONTENT_TYPE' => 'application/json',
+       'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
+    }
+
     let(:jsonapi_patch_env) {
       {'CONTENT_TYPE' => 'application/json-patch+json',
        'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}

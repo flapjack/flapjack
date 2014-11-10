@@ -213,20 +213,24 @@ module Flapjack
         end
 
         def wrapped_params(name, error_on_nil = true)
-          result = params[name.to_sym]
+          result = params[name.to_s]
           if result.nil?
             if error_on_nil
               logger.debug("No '#{name}' object found in the following supplied JSON:")
               logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
               halt err(403, "No '#{name}' object received")
             else
-              result = [{}]
+              result = [[{}], true]
             end
           end
-          unless result.is_a?(Array)
-            halt err(403, "The received '#{name}'' object is not an Array")
+          case result
+          when Array
+            [result, false]
+          when Hash
+            [[result], true]
+          else
+            halt err(403, "The received '#{name}'' object is not an Array or a Hash")
           end
-          result
         end
 
         def apply_json_patch(object_path, &block)
@@ -288,7 +292,14 @@ module Flapjack
       # bare 'params' may have splat/captures for regex route, see
       # https://github.com/sinatra/sinatra/issues/453
       post '*' do
-        halt(405) unless request.params.empty? || is_json_request? || is_jsonapi_request
+        halt(405) unless request.params.empty? || is_json_request? || is_jsonapi_request?
+        content_type JSONAPI_MEDIA_TYPE
+        cors_headers
+        pass
+      end
+
+      put '*' do
+        halt(405) unless request.params.empty? || is_json_request? || is_jsonapi_request?
         content_type JSONAPI_MEDIA_TYPE
         cors_headers
         pass

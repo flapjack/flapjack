@@ -21,7 +21,7 @@ module Flapjack
           # app.helpers Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods::Helpers
 
           app.post '/contacts/:contact_id/pagerduty_credentials' do
-            pagerduty_credentials_data = wrapped_params('pagerduty_credentials')
+            pagerduty_credentials_data, unwrap = wrapped_params('pagerduty_credentials')
 
             pagerduty_credentials_err = nil
             pagerduty_credentials_id = nil
@@ -59,7 +59,8 @@ module Flapjack
 
             status 201
             response.headers['Location'] = "#{base_url}/pagerduty_credentials/#{pagerduty_credentials.id}"
-            Flapjack.dump_json([pagerduty_credentials.id])
+            pagerduty_credentials_as_json = Flapjack::Data::Medium.as_jsonapi(unwrap, *pagerduty_credentials)
+            Flapjack.dump_json(:pagerduty_credentials => pagerduty_credentials_as_json)
           end
 
           app.get %r{^/pagerduty_credentials(?:/)?([^/]+)?$} do
@@ -68,6 +69,8 @@ module Flapjack
             else
               nil
             end
+
+            unwrap = !requested_pagerduty_credentials.nil? && (requested_pagerduty_credentials.size == 1)
 
             pagerduty_credentials, meta = if requested_pagerduty_credentials
               requested = Flapjack::Data::PagerdutyCredentials.find_by_ids!(*requested_pagerduty_credentials)
@@ -83,18 +86,7 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            pagerduty_credentials_as_json = if pagerduty_credentials.empty?
-              []
-            else
-              pagerduty_credentials_ids = pagerduty_credentials.map(&:id)
-              linked_contact_ids = Flapjack::Data::PagerdutyCredentials.
-                intersect(:id => pagerduty_credentials_ids).associated_ids_for(:contact)
-
-              pagerduty_credentials.collect {|pdc|
-                pdc.as_json(:contact_ids => [linked_contact_ids[pdc.id]])
-              }
-            end
-
+            pagerduty_credentials_as_json = Flapjack::Data::PagerdutyCredentials.as_jsonapi(unwrap, *pagerduty_credentials)
             Flapjack.dump_json({:pagerduty_credentials => pagerduty_credentials_as_json}.merge(meta))
           end
 

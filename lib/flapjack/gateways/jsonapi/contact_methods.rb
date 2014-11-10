@@ -23,7 +23,7 @@ module Flapjack
           # app.helpers Flapjack::Gateways::JSONAPI::ContactMethods::Helpers
 
           app.post '/contacts' do
-            contacts_data = wrapped_params('contacts')
+            contacts_data, unwrap = wrapped_params('contacts')
 
             data_ids = contacts_data.reject {|c| c['id'].nil? }.
               map {|co| co['id'].to_s }
@@ -62,7 +62,8 @@ module Flapjack
 
             status 201
             response.headers['Location'] = "#{base_url}/contacts/#{contact_ids.join(',')}"
-            Flapjack.dump_json(contact_ids)
+            contacts_as_json = Flapjack::Data::Contact.as_jsonapi(unwrap, *contacts)
+            Flapjack.dump_json(:contacts => contacts_as_json)
           end
 
           # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contacts/2) contact(s)
@@ -73,6 +74,8 @@ module Flapjack
             else
               nil
             end
+
+            unwrap = !requested_contacts.nil? && (requested_contacts.size == 1)
 
             contacts, meta = if requested_contacts
               requested = Flapjack::Data::Contact.find_by_ids!(*requested_contacts)
@@ -88,7 +91,7 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            contacts_as_json = Flapjack::Data::Contact.as_jsonapi(*contacts)
+            contacts_as_json = Flapjack::Data::Contact.as_jsonapi(unwrap, *contacts)
             Flapjack.dump_json({:contacts => contacts_as_json}.merge(meta))
           end
 

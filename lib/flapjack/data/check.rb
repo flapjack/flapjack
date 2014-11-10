@@ -331,16 +331,21 @@ module Flapjack
         ['critical', 'warning', 'unknown'].detect {|st| states_since_last_recovery.include?(st) }
       end
 
-      def as_json(opts = {})
-        {:id => self.id, :name => self.name}
-      end
+      # def as_json(opts = {})
+      #   {:id => self.id, :name => self.name}
+      # end
 
-      def self.as_jsonapi(*checks)
+      def self.as_jsonapi(unwrap, *checks)
         return [] if checks.empty?
         check_ids = checks.map(&:id)
-        tag_ids = Flapjack::Data::Check.intersect(:id => check_ids).
-                    associated_ids_for(:tags)
-        checks.collect {|check| check.as_json(:tag_ids => tag_ids[check.id]) }
+        # tag_ids = Flapjack::Data::Check.intersect(:id => check_ids).
+        #             associated_ids_for(:tags)
+        data = checks.collect do |check|
+          check.as_json
+            #  (:tag_ids => tag_ids[check.id])
+        end
+        return data unless (data.size == 1) && unwrap
+        data.first
       end
 
       private

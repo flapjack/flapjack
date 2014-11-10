@@ -22,7 +22,7 @@ module Flapjack
 
           # Creates a rule or rules for a contact
           app.post '/contacts/:contact_id/rules' do
-            rules_data = wrapped_params('rules')
+            rules_data, unwrap = wrapped_params('rules')
 
             rules_err = nil
             rule_ids = nil
@@ -57,7 +57,8 @@ module Flapjack
 
             status 201
             response.headers['Location'] = "#{base_url}/rules/#{rule_ids.join(',')}"
-            Flapjack.dump_json(rule_ids)
+            rules_as_json = Flapjack::Data::Rule.as_jsonapi(unwrap, *rules)
+            Flapjack.dump_json(:rules => rules_as_json)
           end
 
           app.get %r{^/rules(?:/)?([^/]+)?$} do
@@ -66,6 +67,8 @@ module Flapjack
             else
               nil
             end
+
+            unwrap = !requested_rules.nil? && (requested_rules.size == 1)
 
             rules, meta = if requested_rules
               requested = Flapjack::Data::Rule.find_by_ids!(*requested_rules)
@@ -81,25 +84,7 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            rules_as_json = if rules.empty?
-              []
-            else
-              rule_ids = rules.map(&:id)
-              linked_contact_ids = Flapjack::Data::Rule.intersect(:id => rule_ids).
-                associated_ids_for(:contact)
-              linked_tag_ids = Flapjack::Data::Rule.intersect(:id => rule_ids).
-                associated_ids_for(:tags)
-              linked_route_ids = Flapjack::Data::Rule.intersect(:id => rule_ids).
-                associated_ids_for(:routes)
-
-              rules.collect {|rule|
-                rule.as_json(:contact_ids => [linked_contact_ids[rule.id]],
-                             :tag_ids => linked_tag_ids,
-                             :route_ids => linked_route_ids[rule.id]
-                            )
-              }
-            end
-
+            rules_as_json = Flapjack::Data::Rule.as_jsonapi(unwrap, *rules)
             Flapjack.dump_json({:rules => rules_as_json}.merge(meta))
           end
 
