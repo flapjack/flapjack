@@ -16,18 +16,12 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
 
             app.post '/media' do
-              media_data, unwrap = wrapped_params('media')
-
-              media = resource_post(Flapjack::Data::Medium, media_data,
+              status 201
+              resource_post(Flapjack::Data::Medium, 'media',
                 :attributes => ['id', 'type', 'address', 'interval',
                                 'rollup_threshold'],
                 :singular_links   => {'contact' => Flapjack::Data::Contact},
                 :collection_links => {'routes' => Flapjack::Data::Route})
-
-              status 201
-              response.headers['Location'] = "#{base_url}/media/#{media.map(&:id).join(',')}"
-              media_as_json = Flapjack::Data::Medium.as_jsonapi(unwrap, *media)
-              Flapjack.dump_json(:media => media_as_json)
             end
 
             app.get %r{^/media(?:/)?([^/]+)?$} do
@@ -37,37 +31,20 @@ module Flapjack
                 nil
               end
 
-              unwrap = !requested_media.nil? && (requested_media.size == 1)
-
-              media, meta = if requested_media
-                requested = Flapjack::Data::Medium.find_by_ids!(*requested_media)
-
-                if requested.empty?
-                  raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Medium, requested_media)
-                end
-
-                [requested, {}]
-              else
-                paginate_get(Flapjack::Data::Medium.sort(:id, :order => 'alpha'),
-                  :total => Flapjack::Data::Medium.count, :page => params[:page],
-                  :per_page => params[:per_page])
-              end
-
-              media_as_json = Flapjack::Data::Medium.as_jsonapi(unwrap, *media)
-              Flapjack.dump_json({:media => media_as_json}.merge(meta))
+              status 200
+              resource_get(Flapjack::Data::Medium, 'media', requested_media,
+                           :sort => :id)
             end
 
             app.put %r{^/media/(.+)$} do
               medium_ids    = params[:captures][0].split(',').uniq
-              media_data, _ = wrapped_params('media')
 
-              resource_put(Flapjack::Data::Medium, medium_ids, media_data,
+              resource_put(Flapjack::Data::Medium, 'media', medium_ids,
                 :attributes => ['type', 'address', 'interval',
                                 'rollup_threshold'],
                 :singular_links   => {'contact' => Flapjack::Data::Contact},
                 :collection_links => {'routes' => Flapjack::Data::Route}
               )
-
               status 204
             end
 

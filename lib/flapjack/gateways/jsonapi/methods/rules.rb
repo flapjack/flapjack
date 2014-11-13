@@ -17,18 +17,12 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
 
             app.post '/rules' do
-              rules_data, unwrap = wrapped_params('rules')
-
-              rules = resource_post(Flapjack::Data::Rule, rules_data,
+              status 201
+              resource_post(Flapjack::Data::Rule, 'rules',
                 :attributes       => ['id'],
                 :singular_links   => {'contact' => Flapjack::Data::Contact},
                 :collection_links => {'tags' => Flapjack::Data::Tag}
               )
-
-              status 201
-              response.headers['Location'] = "#{base_url}/rules/#{rules.map(&:id).join(',')}"
-              rules_as_json = Flapjack::Data::Rule.as_jsonapi(unwrap, *rules)
-              Flapjack.dump_json(:rules => rules_as_json)
             end
 
             app.get %r{^/rules(?:/)?([^/]+)?$} do
@@ -38,31 +32,15 @@ module Flapjack
                 nil
               end
 
-              unwrap = !requested_rules.nil? && (requested_rules.size == 1)
-
-              rules, meta = if requested_rules
-                requested = Flapjack::Data::Rule.find_by_ids!(*requested_rules)
-
-                if requested.empty?
-                  raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(Flapjack::Data::Rule, requested_rules)
-                end
-
-                [requested, {}]
-              else
-                paginate_get(Flapjack::Data::Rule.sort(:id, :order => 'alpha'),
-                  :total => Flapjack::Data::Rule.count, :page => params[:page],
-                  :per_page => params[:per_page])
-              end
-
-              rules_as_json = Flapjack::Data::Rule.as_jsonapi(unwrap, *rules)
-              Flapjack.dump_json({:rules => rules_as_json}.merge(meta))
+              status 200
+              resource_get(Flapjack::Data::Rule, 'rules', requested_rules,
+                           :sort => :id)
             end
 
             app.put %r{^/rules/(.+)$} do
               rule_ids = params[:captures][0].split(',').uniq
-              rules_data, _ = wrapped_params('rules')
 
-              resource_put(Flapjack::Data::Rule, rule_ids, rules_data,
+              resource_put(Flapjack::Data::Rule, 'rules', rule_ids,
                 :singular_links   => {'contact' => Flapjack::Data::Contact},
                 :collection_links => {'tags'    => Flapjack::Data::Tag,
                                       'routes'  => Flapjack::Data::Route}
@@ -72,6 +50,7 @@ module Flapjack
 
             app.delete %r{^/rules/(.+)$} do
               rule_ids = params[:captures][0].split(',').uniq
+
               resource_delete(Flapjack::Data::Rule, rule_ids)
               status 204
             end
