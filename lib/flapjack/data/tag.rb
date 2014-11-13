@@ -8,9 +8,7 @@ require 'flapjack/data/check'
 require 'flapjack/data/rule'
 
 module Flapjack
-
   module Data
-
     class Tag
 
       include Sandstorm::Records::RedisRecord
@@ -31,32 +29,25 @@ module Flapjack
 
       validates_with Flapjack::Data::Validators::IdValidator
 
-      def as_json(opts = {})
-        self.attributes #.merge(
-          # :links => {
-          #   :checks  => opts[:check_ids] || [],
-          #   :rules   => opts[:rule_ids]  || [],
-          # }
-        # )
-      end
-
       def self.as_jsonapi(*tags)
         return [] if tags.empty?
         tag_ids = tags.map(&:id)
+
         check_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
           associated_ids_for(:checks)
         rule_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
           associated_ids_for(:rules)
 
-        data = tags.collect {|tag|
-          tag.as_json(
-            :check_ids => check_ids[tag.id],
-            :rule_ids => rule_ids[tag.id]
-          )
-        }
+        data = tags.collect do |tag|
+          tag.as_json(:only => [:id, :name]).merge(:links => {
+            :checks => check_ids[tag.id],
+            :rules  => rule_ids[tag.id]
+          })
+        end
         return data unless data.size == 1
         data.first
       end
+
     end
   end
 end

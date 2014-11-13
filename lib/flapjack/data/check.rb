@@ -116,6 +116,21 @@ module Flapjack
         self.perfdata_json = @perfdata.nil? ? nil : Flapjack.dump_json(@perfdata)
       end
 
+      def self.as_jsonapi(unwrap, *checks)
+        return [] if checks.empty?
+        check_ids = checks.map(&:id)
+        tag_ids = Flapjack::Data::Check.intersect(:id => check_ids).
+                    associated_ids_for(:tags)
+        data = checks.collect do |check|
+          check.as_json(:only => [:id, :name, :initial_failure_delay,
+            :repeat_failure_delay, :enabled]).merge(:links => {
+              :tags => tag_ids[check.id]
+            })
+        end
+        return data unless (data.size == 1) && unwrap
+        data.first
+      end
+
       # takes an array of ages (in seconds) to split all checks up by
       # - age means how long since the last update
       # - 0 age is implied if not explicitly passed
@@ -329,23 +344,6 @@ module Flapjack
             collect(&:state).uniq
 
         ['critical', 'warning', 'unknown'].detect {|st| states_since_last_recovery.include?(st) }
-      end
-
-      # def as_json(opts = {})
-      #   {:id => self.id, :name => self.name}
-      # end
-
-      def self.as_jsonapi(unwrap, *checks)
-        return [] if checks.empty?
-        check_ids = checks.map(&:id)
-        # tag_ids = Flapjack::Data::Check.intersect(:id => check_ids).
-        #             associated_ids_for(:tags)
-        data = checks.collect do |check|
-          check.as_json
-            #  (:tag_ids => tag_ids[check.id])
-        end
-        return data unless (data.size == 1) && unwrap
-        data.first
       end
 
       private

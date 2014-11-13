@@ -10,17 +10,13 @@ require 'time'
 
 require 'sinatra/base'
 
+require 'active_support/core_ext/string/inflections'
+
 require 'flapjack/gateways/jsonapi/rack/json_params_parser'
 
-require 'flapjack/gateways/jsonapi/check_methods'
-require 'flapjack/gateways/jsonapi/contact_methods'
-require 'flapjack/gateways/jsonapi/medium_methods'
-require 'flapjack/gateways/jsonapi/metrics_methods'
-require 'flapjack/gateways/jsonapi/rule_methods'
-require 'flapjack/gateways/jsonapi/pagerduty_credential_methods'
-require 'flapjack/gateways/jsonapi/report_methods'
-require 'flapjack/gateways/jsonapi/search_methods'
-require 'flapjack/gateways/jsonapi/tag_methods'
+%w[headers miscellaneous resources resource_links].each do |helper|
+  require "flapjack/gateways/jsonapi/helpers/#{helper}"
+end
 
 module Flapjack
 
@@ -110,173 +106,6 @@ module Flapjack
         end
       end
 
-      module Helpers
-
-        def cors_headers
-          allow_headers  = %w(* Content-Type Accept AUTHORIZATION Cache-Control)
-          allow_methods  = %w(GET POST PUT PATCH DELETE OPTIONS)
-          expose_headers = %w(Cache-Control Content-Language Content-Type Expires Last-Modified Pragma)
-          cors_headers   = {
-            'Access-Control-Allow-Origin'   => '*',
-            'Access-Control-Allow-Methods'  => allow_methods.join(', '),
-            'Access-Control-Allow-Headers'  => allow_headers.join(', '),
-            'Access-Control-Expose-Headers' => expose_headers.join(', '),
-            'Access-Control-Max-Age'        => '1728000'
-          }
-          headers(cors_headers)
-        end
-
-        def err(status, *msg)
-          logger.info "Error: #{msg}"
-
-          headers = if 'DELETE'.eql?(request.request_method)
-            # not set by default for delete, but the error structure is JSON
-            {'Content-Type' => JSONAPI_MEDIA_TYPE}
-          else
-            {}
-          end
-
-          [status, headers, Flapjack.dump_json({:errors => msg})]
-        end
-
-        def is_json_request?
-          Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type.split(/\s*[;,]\s*/, 2).first)
-        end
-
-        def is_jsonapi_request?
-          return false if request.content_type.nil?
-          'application/vnd.api+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
-        end
-
-        def is_jsonpatch_request?
-          return false if request.content_type.nil?
-          'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
-        end
-
-        def check_errors_on_save(record)
-          return if record.save
-          halt err(403, *record.errors.full_messages)
-        end
-
-        def paginate_get(dataset, options = {})
-          return([[], {}]) if dataset.nil?
-
-          page = options[:page].to_i
-          page = (page > 0) ? page : 1
-
-          per_page = options[:per_page].to_i
-          per_page = (per_page > 0) ? per_page : 20
-
-          total = options[:total].to_i
-          total = (total < 0) ? 0 : total
-
-          total_pages = (total.to_f / per_page).ceil
-
-          pages = set_page_numbers(page, total_pages)
-          links = create_links(pages)
-          headers['Link']        = links.join(', ') unless links.empty?
-          headers['Total-Count'] = total_pages.to_s
-
-          [dataset.page(page, :per_page => per_page),
-           {
-             :meta => {
-               :pagination => {
-                 :page        => page,
-                 :per_page    => per_page,
-                 :total_pages => total_pages,
-                 :total_count => total,
-               }
-             }
-           }
-          ]
-        end
-
-        def set_page_numbers(page, total_pages)
-          pages = {}
-          pages[:first] = 1 if (total_pages > 1) && (page > 1)
-          pages[:prev]  = page - 1 if (page > 1)
-          pages[:next]  = page + 1 if page < total_pages
-          pages[:last]  = total_pages if (total_pages > 1) && (page < total_pages)
-          pages
-        end
-
-        def create_links(pages)
-          url_without_params = request.url.split('?').first
-          per_page = params[:per_page] ? params[:per_page].to_i : 20
-
-          links = []
-          pages.each do |key, value|
-            new_params = request.query_parameters.merge({ page: value, per_page: per_page })
-            links << "<#{url_without_params}?#{new_params.to_param}>; rel=\"#{key}\""
-          end
-          links
-        end
-
-        def wrapped_params(name, error_on_nil = true)
-          result = params[name.to_s]
-          if result.nil?
-            if error_on_nil
-              logger.debug("No '#{name}' object found in the following supplied JSON:")
-              logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
-              halt err(403, "No '#{name}' object received")
-            else
-              result = [[{}], true]
-            end
-          end
-          case result
-          when Array
-            [result, false]
-          when Hash
-            [[result], true]
-          else
-            halt err(403, "The received '#{name}'' object is not an Array or a Hash")
-          end
-        end
-
-        def apply_json_patch(object_path, &block)
-          ops = params[:ops]
-
-          if ops.nil? || !ops.is_a?(Array)
-            halt err(400, "Invalid JSON-Patch request")
-          end
-
-          ops.each do |operation|
-            linked = nil
-            property = nil
-
-            op = operation['op']
-            operation['path'] =~ /\A\/#{object_path}\/0\/([^\/]+)(?:\/([^\/]+)(?:\/([^\/]+))?)?\z/
-            if 'links'.eql?($1)
-              linked = $2
-
-              value = case op
-              when 'add'
-                operation['value']
-              when 'remove'
-                $3
-              end
-            elsif 'replace'.eql?(op)
-              property = $1
-              value = operation['value']
-            else
-              next
-            end
-
-            yield(op, property, linked, value)
-          end
-        end
-
-        # NB: casts to UTC before converting to a timestamp
-        def validate_and_parsetime(value)
-          return unless value
-          Time.iso8601(value).getutc.to_i
-        rescue ArgumentError => e
-          logger.error "Couldn't parse time from '#{value}'"
-          nil
-        end
-
-      end
-
       options '*' do
         cors_headers
         204
@@ -317,15 +146,15 @@ module Flapjack
         pass
       end
 
-      register Flapjack::Gateways::JSONAPI::CheckMethods
-      register Flapjack::Gateways::JSONAPI::ContactMethods
-      register Flapjack::Gateways::JSONAPI::MediumMethods
-      register Flapjack::Gateways::JSONAPI::MetricsMethods
-      register Flapjack::Gateways::JSONAPI::RuleMethods
-      register Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods
-      register Flapjack::Gateways::JSONAPI::ReportMethods
-      register Flapjack::Gateways::JSONAPI::SearchMethods
-      register Flapjack::Gateways::JSONAPI::TagMethods
+      # hacky, but trying to avoid too much boilerplate
+      %w[checks check_links contacts contact_links media medium_links
+         routes route_links rules rule_links tags tag_links
+         scheduled_maintenances unscheduled_maintenances
+         reports searches test_notifications].each do |method|
+
+        require "flapjack/gateways/jsonapi/methods/#{method}"
+        eval "register Flapjack::Gateways::JSONAPI::Methods::#{method.camelize}"
+      end
 
       error Sandstorm::LockNotAcquired do
         # TODO
@@ -349,7 +178,5 @@ module Flapjack
       end
 
     end
-
   end
-
 end

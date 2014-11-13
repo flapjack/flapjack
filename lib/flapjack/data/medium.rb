@@ -53,22 +53,19 @@ module Flapjack
         return [] if media.empty?
         media_ids = media.map(&:id)
 
-        # contact_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
-        #   associated_ids_for(:contact)
-        # route_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
-        #   associated_ids_for(:routes)
+        contact_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
+          associated_ids_for(:contact)
+        route_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
+          associated_ids_for(:routes)
 
         data = media.collect do |medium|
-          medium.as_json(:except => [:last_rollup_type, :last_notification, :last_notification_state])
-
-# :links => {
-      #       :contacts   => opts[:contact_ids] || [],
-      #       :routes     => opts[:route_ids]   || []
-      #     }
-
-        #     (:contact_ids => contact_ids[medium.id],
-        #      :route_ids => route_ids[medium.id])
+          medium.as_json(:only => [:id, :type, :address,
+            :interval, :rollup_threshold]).merge(:links => {
+            :contact => contact_ids[medium.id],
+            :routes  => route_ids[medium.id]
+          })
         end
+
         return data unless (data.size == 1) && unwrap
         data.first
       end

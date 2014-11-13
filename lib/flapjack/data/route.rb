@@ -37,13 +37,10 @@ module Flapjack
 
       validates_with Flapjack::Data::Validators::IdValidator
 
-      # TODO validate that rule and media belong to the same contact ?
+      # TODO validate that rule and media belong to the same contact
 
-      # TODO if a drop is set for a route, should the media for that state be
-      # cleared?
-
-
-      # TODO also cleanup jsonapi linkage methods to optionally take multiple arguments
+      # TODO drop should not be exposed in the API, set it when media empty
+      #   and remove if media not empty
 
       # before_destroy :correct_alerting_media
       # def correct_alerting_media
@@ -63,6 +60,25 @@ module Flapjack
       #   end
       # end
 
+      def as_jsonapi(unwrap, *routes)
+        return [] if routes.empty?
+        route_ids = routes.map(&:id)
+
+        rule_ids  = Flapjack::Data::Route.intersect(:id => route_ids).
+                      associated_ids_for(:rule)
+        media_ids = Flapjack::Data::Route.intersect(:id => route_ids).
+                      associated_ids_for(:media)
+
+        data = routes.collect do |route|
+          route.as_json(:only => [:id, :state, :time_restrictions]).merge(:links => {
+            :rule  => rule_ids[route.id],
+            :media => media_ids[route.id]
+          })
+        end
+
+        return data unless (data.size == 1) && unwrap
+        data.first
+      end
 
       validates_each :time_restrictions_json do |record, att, value|
         unless value.nil?

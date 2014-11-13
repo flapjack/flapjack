@@ -26,17 +26,16 @@ module Flapjack
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
 
-      define_attributes :name                     => :string,
-                        :timezone                 => :string
+      define_attributes :name     => :string,
+                        :timezone => :string
 
-      has_and_belongs_to_many :checks, :class_name => 'Flapjack::Data::Check',
-        :inverse_of => :contacts
+      index_by :name
 
-      has_many :media, :class_name => 'Flapjack::Data::Medium', :inverse_of => :contact
-      has_one :pagerduty_credentials, :class_name => 'Flapjack::Data::PagerdutyCredentials',
+      has_many :media, :class_name => 'Flapjack::Data::Medium',
         :inverse_of => :contact
 
-      has_many :rules, :class_name => 'Flapjack::Data::Rule', :inverse_of => :contact
+      has_many :rules, :class_name => 'Flapjack::Data::Rule',
+        :inverse_of => :contact
 
       validates_with Flapjack::Data::Validators::IdValidator
 
@@ -75,27 +74,16 @@ module Flapjack
         return [] if contacts.empty?
         contact_ids = contacts.map(&:id)
 
-        # medium_ids = Flapjack::Data::Contact.intersect(:id => contact_ids).
-        #   associated_ids_for(:media)
-        # pagerduty_credentials_ids = Flapjack::Data::Contact.
-        #   intersect(:id => contact_ids).associated_ids_for(:pagerduty_credentials)
-        # rule_ids = Flapjack::Data::Contact.intersect(:id => contact_ids).
-        #   associated_ids_for(:rules)
+        medium_ids = Flapjack::Data::Contact.intersect(:id => contact_ids).
+          associated_ids_for(:media)
+        rule_ids = Flapjack::Data::Contact.intersect(:id => contact_ids).
+          associated_ids_for(:rules)
 
         data = contacts.collect do |contact|
-          contact.as_json
-
-          # :links => {
-          #   :media                 => opts[:medium_ids] || [],
-          #   :pagerduty_credentials => opts[:pagerduty_credentials_ids] || [],
-          #   :rules                 => opts[:rule_ids] || []
-          # }
-
-          # (
-          #   :medium_ids => medium_ids[contact.id],
-          #   :pagerduty_credentials_ids => pagerduty_credentials_ids[contact.id],
-          #   :rule_ids => rule_ids[contact.id]
-          # )
+          contact.as_json(:only => [:id, :name, :timezone]).merge(:links => {
+            :media => medium_ids[contact.id],
+            :rules => rule_ids[contact.id]
+          })
         end
         return data unless (data.size == 1) && unwrap
         data.first

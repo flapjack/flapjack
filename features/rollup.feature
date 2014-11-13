@@ -3,30 +3,30 @@ Feature: Rollup on a per contact, per media basis
 
   Background:
     Given the following contacts exist:
-      | id  | name            | timezone            |
-      | c1  | Malak Al-Musawi | Asia/Baghdad        |
+      | id                                   | name            | timezone            |
+      | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | Malak Al-Musawi | Asia/Baghdad        |
 
     And the following media exist:
-      | id  | contact_id | type  | address           | interval | rollup_threshold |
-      | m1e | c1         | email | malak@example.com | 15       | 1                |
-      | m1s | c1         | sms   | +61400000001      | 15       | 2                |
+      | id                                   | contact_id                           | type  | address           | interval | rollup_threshold |
+      | 28032dbf-388d-4f52-91b2-dc5e5be2becc | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | email | malak@example.com | 15       | 1                |
+      | 73e2803f-948e-467a-a707-37b9f53ee21a | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | sms   | +61400000001      | 15       | 2                |
 
     And the following checks exist:
       | id  | name     | tags     |
-      | 1   | foo:ping | foo,ping |
-      | 2   | baz:ping | baz,ping |
+      | 56c13ce2-f246-4bc6-adfa-2206789c3ced | foo:ping | foo,ping |
+      | d1a39575-0480-4f65-a7f7-64c90db93731 | baz:ping | baz,ping |
 
     And the following rules exist:
       | id | contact_id | tags     |
-      | r1 | c1         | foo,ping |
-      | r2 | c1         | baz,ping |
+      | b0c8deb9-b8c8-4fdd-acc4-72493852ca15 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | foo,ping |
+      | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | baz,ping |
 
     And the following routes exist:
-      | id  | rule_id | state    | time_restrictions | drop | media_ids |
-      | o1a | r1      | critical |                   |      | m1e,m1s   |
-      | o1b | r1      | warning  |                   |      | m1e       |
-      | o2a | r2      | critical |                   |      | m1e,m1s   |
-      | o2b | r2      | warning  |                   |      | m1e       |
+      | id                                   | rule_id                              | state    | time_restrictions | drop | media_ids |
+      | b18e9f48-59e7-4c25-b94c-d4ebd4a6559a | b0c8deb9-b8c8-4fdd-acc4-72493852ca15 | critical |                   |      | 28032dbf-388d-4f52-91b2-dc5e5be2becc,73e2803f-948e-467a-a707-37b9f53ee21a   |
+      | 1c501800-6b20-458d-bb99-a78d17397c00 | b0c8deb9-b8c8-4fdd-acc4-72493852ca15 | warning  |                   |      | 28032dbf-388d-4f52-91b2-dc5e5be2becc       |
+      | f163bf33-b53e-4138-ab27-1dd89f2d6fdd | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | critical |                   |      | 28032dbf-388d-4f52-91b2-dc5e5be2becc,73e2803f-948e-467a-a707-37b9f53ee21a   |
+      | 32d2b140-18b9-40cc-845f-d3bc3d69b84f | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | warning  |                   |      | 28032dbf-388d-4f52-91b2-dc5e5be2becc       |
 
   @time
   Scenario: Rollup threshold of 1 means first alert is a rollup

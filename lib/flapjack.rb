@@ -4,6 +4,8 @@ require 'oj'
 
 module Flapjack
 
+  UUID_RE = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+
   DEFAULT_INITIAL_FAILURE_DELAY = 30
   DEFAULT_REPEAT_FAILURE_DELAY  = 60
 

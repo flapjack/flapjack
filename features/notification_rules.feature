@@ -3,56 +3,56 @@ Feature: Notification rules on a per contact basis
 
   Background:
     Given the following contacts exist:
-      | id  | name            | timezone            |
-      | c1  | Malak Al-Musawi | Asia/Baghdad        |
-      | c2  | Imani Farooq    | Europe/Moscow       |
-      | c3  | Vera Дурейко    | Europe/Paris        |
-      | c4  | Lucia Moretti   | Europe/Rome         |
-      | c5  | Wang Fang Wong  | Asia/Shanghai       |
+      | id                                   | name            | timezone       |
+      | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | Malak Al-Musawi | Asia/Baghdad   |
+      | 65d32027-1942-43b3-93c5-52f4b12d36b0 | Imani Farooq    | Europe/Moscow  |
+      | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | Vera Дурейко    | Europe/Paris   |
+      | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | Lucia Moretti   | Europe/Rome    |
+      | 5da490ec-72a0-42b0-834f-4049867dfce7 | Wang Fang Wong  | Asia/Shanghai  |
 
     And the following media exist:
-      | id  | contact_id | type  | address           | interval | rollup_threshold |
-      | m1e | c1         | email | malak@example.com | 15       | 5                |
-      | m1s | c1         | sms   | +61400000001      | 60       | 5                |
-      | m2e | c2         | email | imani@example.com | 15       | 5                |
-      | m2s | c2         | sms   | +61400000002      | 60       | 5                |
-      | m3e | c3         | email | vera@example.com  | 15       | 5                |
-      | m3s | c3         | sms   | +61400000003      | 60       | 5                |
-      | m4e | c4         | email | lucia@example.com | 15       | 5                |
-      | m4s | c4         | sms   | +61400000004      | 60       | 5                |
-      | m5e | c5         | email | fang@example.com  | 15       | 5                |
-      | m5s | c5         | sms   | +61400000005      | 60       | 5                |
+      | id                                   | contact_id                           | type  | address           | interval | rollup_threshold |
+      | 28032dbf-388d-4f52-91b2-dc5e5be2becc | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | email | malak@example.com | 15       | 5                |
+      | 73e2803f-948e-467a-a707-37b9f53ee21a | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | sms   | +61400000001      | 60       | 5                |
+      | 1d473cef-5369-4396-9f59-533f3db6c1cb | 65d32027-1942-43b3-93c5-52f4b12d36b0 | email | imani@example.com | 15       | 5                |
+      | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | 65d32027-1942-43b3-93c5-52f4b12d36b0 | sms   | +61400000002      | 60       | 5                |
+      | 65d32027-1942-43b3-93c5-52f4b12d36b0 | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | email | vera@example.com  | 15       | 5                |
+      | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | sms   | +61400000003      | 60       | 5                |
+      | 19ef48b1-9a42-488b-9734-00314c79e5eb | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | email | lucia@example.com | 15       | 5                |
+      | ad25c952-c300-4285-9301-ef4408c9d645 | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | sms   | +61400000004      | 60       | 5                |
+      | f15078cf-3643-4cf1-b701-ac9fe2836365 | 5da490ec-72a0-42b0-834f-4049867dfce7 | email | fang@example.com  | 15       | 5                |
+      | 862228f8-fc80-4887-bc4c-e133fcda4107 | 5da490ec-72a0-42b0-834f-4049867dfce7 | sms   | +61400000005      | 60       | 5                |
 
     And the following checks exist:
-      | id  | name                       | tags      |
-      | 1   | foo:ping                   | foo,ping  |
-      | 2   | bar:ping                   | bar,ping  |
-      | 3   | baz:ping                   | baz,ping  |
-      | 4   | buf:ping                   | buf,ping  |
+      | id                                   | name       | tags      |
+      | 56c13ce2-f246-4bc6-adfa-2206789c3ced | foo:ping   | foo,ping  |
+      | d1a39575-0480-4f65-a7f7-64c90db93731 | bar:ping   | bar,ping  |
+      | 2ae8327c-ecf3-4544-ac3e-9c7779503a4a | baz:ping   | baz,ping  |
+      | 982fc9fb-fbf8-44cd-b6de-6ccbab8e7230 | buf:ping   | buf,ping  |
 
     And the following rules exist:
-      | id | contact_id | tags     |
-      | r1 | c1         | foo,ping |
-      | r2 | c2         | bar,ping |
-      | r3 | c3         | foo,ping |
-      | r4 | c4         | baz,ping |
-      | r5 | c1         | buf,ping |
-      | r6 | c1         | buf,ping |
-      | r7 | c5         |          |
+      | id                                   | contact_id                           | tags     |
+      | b0c8deb9-b8c8-4fdd-acc4-72493852ca15 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | foo,ping |
+      | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | 65d32027-1942-43b3-93c5-52f4b12d36b0 | bar,ping |
+      | fc2d1b1f-1480-45dd-814b-4655bc5b1474 | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | foo,ping |
+      | e8a67e7c-4f3d-4d9b-afe4-ef276bbeb0df | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | baz,ping |
+      | 9b437f3e-4b48-4516-8067-a57935684777 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | buf,ping |
+      | dd7005b9-d30b-4875-9e83-dec7fb70895c | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | buf,ping |
+      | 724bf183-215c-4ba9-b835-56db781c4844 | 5da490ec-72a0-42b0-834f-4049867dfce7 |          |
 
     And the following routes exist:
-      | id  | rule_id | state    | time_restrictions | drop | media_ids |
-      | o1  | r1      | critical | 8-18 weekdays     |      | m1e       |
-      | o2a | r2      | critical |                   |      | m2e       |
-      | o2b | r2      | unknown  |                   |      | m2e       |
-      | o3a | r3      | critical |                   |      | m3e       |
-      | o3b | r3      |          |                   |      | m3s       |
-      | o4a | r4      | critical | 8-18 weekdays     |      | m4e,m4s   |
-      | o4b | r4      | warning  | 8-18 weekdays     |      | m4e       |
-      | o5  | r5      | critical |                   |      | m1e       |
-      | o6  | r6      |          |                   | y    | m1e       |
-      | o7a | r7      |          |                   |      | m5e       |
-      | o7b | r7      |          |                   |      | m5s       |
+      | id                                   | rule_id                              | state    | time_restrictions | drop | media_ids |
+      | b18e9f48-59e7-4c25-b94c-d4ebd4a6559a | b0c8deb9-b8c8-4fdd-acc4-72493852ca15 | critical | 8-18 weekdays     |      | 28032dbf-388d-4f52-91b2-dc5e5be2becc |
+      | 1c501800-6b20-458d-bb99-a78d17397c00 | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | critical |                   |      | 1d473cef-5369-4396-9f59-533f3db6c1cb |
+      | f163bf33-b53e-4138-ab27-1dd89f2d6fdd | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | unknown  |                   |      | 1d473cef-5369-4396-9f59-533f3db6c1cb |
+      | 32d2b140-18b9-40cc-845f-d3bc3d69b84f | fc2d1b1f-1480-45dd-814b-4655bc5b1474 | critical |                   |      | 65d32027-1942-43b3-93c5-52f4b12d36b0 |
+      | 964b031a-8c39-498f-ac87-c6e26ca06767 | fc2d1b1f-1480-45dd-814b-4655bc5b1474 |          |                   |      | 9f77502c-1daf-47a2-b806-f3ae7d04cefb |
+      | 5e0766a3-0fef-487f-a18c-cf375b4ef7b1 | e8a67e7c-4f3d-4d9b-afe4-ef276bbeb0df | critical | 8-18 weekdays     |      | 19ef48b1-9a42-488b-9734-00314c79e5eb,ad25c952-c300-4285-9301-ef4408c9d645 |
+      | c86e1f11-36a4-40ce-a294-747f6ca5f3b3 | e8a67e7c-4f3d-4d9b-afe4-ef276bbeb0df | warning  | 8-18 weekdays     |      | 19ef48b1-9a42-488b-9734-00314c79e5eb |
+      | 0a3c66f2-6245-49cf-a02c-28d586b2f55a | 9b437f3e-4b48-4516-8067-a57935684777 | critical |                   |      | 28032dbf-388d-4f52-91b2-dc5e5be2becc |
+      | 7c123a29-1a67-4a32-b38e-2658e63834d8 | dd7005b9-d30b-4875-9e83-dec7fb70895c |          |                   | y    | 28032dbf-388d-4f52-91b2-dc5e5be2becc |
+      | 8c5d57a6-196b-4949-a22a-81229733685f | 724bf183-215c-4ba9-b835-56db781c4844 |          |                   |      | f15078cf-3643-4cf1-b701-ac9fe2836365 |
+      | 11494c9f-3583-4528-8258-0a05685edb85 | 724bf183-215c-4ba9-b835-56db781c4844 |          |                   |      | 862228f8-fc80-4887-bc4c-e133fcda4107 |
 
   @time_restrictions @time
   Scenario: Alerts only during specified time restrictions

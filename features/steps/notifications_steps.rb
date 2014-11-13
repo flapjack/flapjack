@@ -3,10 +3,9 @@ require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 
 def find_or_create_contact(contact_data)
-  contact = Flapjack::Data::Contact.find_by_id(contact_data['id'])
+  contact = Flapjack::Data::Contact.intersect(:name => contact_data[:name]).all.first
   if contact.nil?
-    contact = Flapjack::Data::Contact.new(:id => contact_data['id'],
-      :name => contact_data['name'])
+    contact = Flapjack::Data::Contact.new(:name => contact_data[:name])
     expect(contact.save).to be true
   end
 
@@ -14,14 +13,13 @@ def find_or_create_contact(contact_data)
 end
 
 def find_or_create_check(check_data)
-  check = Flapjack::Data::Check.find_by_id(check_data['id'])
+  check = Flapjack::Data::Check.intersect(:name => check_data[:name]).all.first
 
   if check.nil?
-    check = Flapjack::Data::Check.new(:id => check_data['id'],
-      :name => check_data['name'])
+    check = Flapjack::Data::Check.new(:name => check_data[:name])
     expect(check.save).to be true
 
-    entity_name, check_name = check_data['name'].split(':', 2)
+    entity_name, check_name = check_data[:name].split(':', 2)
 
     tags = entity_name.split('.', 2).map(&:downcase) +
       check_name.split(' ').map(&:downcase)
@@ -169,16 +167,14 @@ Given /^the following routes exist:$/ do |routes|
 end
 
 Given /^(?:a|the) user wants to receive SMS notifications for check '(.+)'$/ do |check_name|
-  contact = find_or_create_contact( 'id'   => '0999',
-                                    'name' => 'John Smith')
+  contact = find_or_create_contact(:name => 'John Smith')
 
   sms = Flapjack::Data::Medium.new(:type => 'sms',
     :address => '+61888888888', :interval => 600)
   expect(sms.save).to be true
   contact.media << sms
 
-  check = find_or_create_check('id'   => '5000',
-                               'name' => check_name)
+  check = find_or_create_check(:name => check_name)
 
   rule = Flapjack::Data::Rule.new
   expect(rule.save).to be true
@@ -206,16 +202,14 @@ Given /^(?:a|the) user wants to receive SMS notifications for check '(.+)'$/ do 
 end
 
 Given /^(?:a|the) user wants to receive email notifications for check '(.+)'$/ do |check_name|
-  contact = find_or_create_contact( 'id'   => '1000',
-                                    'name' => 'Jane Smith')
+  contact = find_or_create_contact(:name => 'Jane Smith')
 
   email = Flapjack::Data::Medium.new(:type => 'email',
     :address => 'janes@example.dom', :interval => 600)
   expect(email.save).to be true
   contact.media << email
 
-  check = find_or_create_check('id'   => '5001',
-                               'name' => check_name)
+  check = find_or_create_check(:name => check_name)
 
   rule = Flapjack::Data::Rule.new
   expect(rule.save).to be true
@@ -242,16 +236,14 @@ Given /^(?:a|the) user wants to receive email notifications for check '(.+)'$/ d
 end
 
 Given /^(?:a|the) user wants to receive SNS notifications for check '(.+)'$/ do |check_name|
-  contact = find_or_create_contact( 'id'   => '1001',
-                                    'name' => 'James Smithson')
+  contact = find_or_create_contact(:name => 'James Smithson')
 
   sns = Flapjack::Data::Medium.new(:type => 'sns',
     :address => 'arn:aws:sns:us-east-1:698519295917:My-Topic', :interval => 600)
   expect(sns.save).to be true
   contact.media << sns
 
-  check = find_or_create_check('id'       => '5002',
-                               'name'     => check_name)
+  check = find_or_create_check(:name => check_name)
 
   rule = Flapjack::Data::Rule.new
   expect(rule.save).to be true
