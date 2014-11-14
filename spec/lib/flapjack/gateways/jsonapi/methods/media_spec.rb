@@ -1,106 +1,139 @@
 require 'spec_helper'
 require 'flapjack/gateways/jsonapi'
 
-describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logger => true do
-
-  before { skip 'broken, fixing' }
+describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logger => true, :pact_fixture => true do
 
   include_context "jsonapi"
 
-  let(:medium) { double(Flapjack::Data::Medium, :id => "ab12") }
+  let(:medium)   { double(Flapjack::Data::Medium, :id => email_data[:id]) }
+  let(:medium_2) { double(Flapjack::Data::Medium, :id => sms_data[:id]) }
 
-  let(:medium_data) {
-    {:type => 'email',
-     :address => 'abc@example.com',
-     :interval => 120,
-     :rollup_threshold => 3
-    }
-  }
-
-  let(:contact)      { double(Flapjack::Data::Contact, :id => '21') }
+  let(:contact)  { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
 
   it "creates a medium" do
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium).and_yield
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Route).and_yield
 
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(contact.id).and_return(contact)
+    empty_ids = double('empty_ids')
+    expect(empty_ids).to receive(:ids).and_return([])
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [email_data[:id]]).and_return(empty_ids)
 
     expect(medium).to receive(:invalid?).and_return(false)
     expect(medium).to receive(:save).and_return(true)
-    expect(medium).to receive(:type).and_return(medium_data[:type])
-    expect(Flapjack::Data::Medium).to receive(:new).
-      with(medium_data.merge(:id => nil)).
+    expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
       and_return(medium)
 
-    no_media = double('no_media', :all => [])
-    contact_media = ('contact_media')
-    expect(contact_media).to receive(:intersect).
-      with(:type => medium_data[:type]).and_return(no_media)
-    expect(contact).to receive(:media).and_return(contact_media)
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(true, medium).and_return(email_data)
 
-    expect(contact_media).to receive(:"<<").with(medium)
-
-    post "/contacts/#{contact.id}/media", Flapjack.dump_json(:media => [medium_data]), jsonapi_post_env
+    post "/media", Flapjack.dump_json(:media => email_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json([medium.id]))
+    expect(last_response.body).to eq(Flapjack.dump_json(:media => email_data))
   end
 
   it "does not create a medium if the data is improperly formatted" do
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium).and_yield
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Route).and_yield
 
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(contact.id).and_return(contact)
+    empty_ids = double('empty_ids')
+    expect(empty_ids).to receive(:ids).and_return([])
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [email_data[:id]]).and_return(empty_ids)
 
     errors = double('errors', :full_messages => ['err'])
     expect(medium).to receive(:errors).and_return(errors)
 
     expect(medium).to receive(:invalid?).and_return(true)
     expect(medium).not_to receive(:save)
-    expect(Flapjack::Data::Medium).to receive(:new).and_return(medium)
+    expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
+      and_return(medium)
 
-    post "/contacts/#{contact.id}/media", Flapjack.dump_json(:media => [{'silly' => 'sausage'}]), jsonapi_post_env
+    expect(Flapjack::Data::Medium).not_to receive(:as_jsonapi)
+
+    post "/media", Flapjack.dump_json(:media => email_data), jsonapi_post_env
     expect(last_response.status).to eq(403)
+    # TODO error body
   end
 
-  it "does not create a medium if the contact doesn't exist" do
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium).and_yield
+  it 'creates a medium with a linked contact' do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Route).and_yield
 
-    expect(Flapjack::Data::Contact).to receive(:find_by_id).
-      with(contact.id).and_return(nil)
+    empty_ids = double('empty_ids')
+    expect(empty_ids).to receive(:ids).and_return([])
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [email_data[:id]]).and_return(empty_ids)
 
-    post "/contacts/#{contact.id}/media", Flapjack.dump_json(:media => [medium_data]), jsonapi_post_env
-    expect(last_response.status).to eq(403)
+    email_with_contact_data = email_data.merge(:links => {
+      :contact => contact_data[:id]
+    })
+
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact_data[:id]).
+      and_return(contact)
+
+    expect(medium).to receive(:invalid?).and_return(false)
+    expect(medium).to receive(:save).and_return(true)
+    expect(medium).to receive(:contact=).with(contact)
+    expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
+      and_return(medium)
+
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(true, medium).and_return(email_with_contact_data)
+
+    post "/media", Flapjack.dump_json(:media => email_with_contact_data), jsonapi_post_env
+    expect(last_response.status).to eq(201)
+    expect(last_response.body).to eq(Flapjack.dump_json(:media => email_with_contact_data))
+  end
+
+  it "does not create a medium with a linked contact if the contact doesn't exist" do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Route).and_yield
+
+    empty_ids = double('empty_ids')
+    expect(empty_ids).to receive(:ids).and_return([])
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [email_data[:id]]).and_return(empty_ids)
+
+    email_with_contact_data = email_data.merge(:links => {
+      :contact => contact_data[:id]
+    })
+
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact_data[:id]).
+      and_raise(Sandstorm::Records::Errors::RecordNotFound.new(Flapjack::Data::Contact, contact_data[:id]))
+
+    expect(medium).to receive(:invalid?).and_return(false)
+    expect(medium).not_to receive(:save)
+    expect(medium).not_to receive(:contact=).with(contact)
+    expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
+      and_return(medium)
+
+    expect(Flapjack::Data::Medium).not_to receive(:as_jsonapi)
+
+    post "/media", Flapjack.dump_json(:media => email_with_contact_data), jsonapi_post_env
+    expect(last_response.status).to eq(404)
   end
 
   it "returns a single medium" do
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
       with(medium.id).and_return([medium])
 
-    expect(medium).to receive(:as_json).and_return(medium_data)
-
-    media_ids = double('media_ids')
-    expect(media_ids).to receive(:associated_ids_for).with(:contact).and_return(medium.id => contact.id)
-    expect(media_ids).to receive(:associated_ids_for).with(:routes).and_return(medium.id => [])
-    expect(Flapjack::Data::Medium).to receive(:intersect).with(:id => [medium.id]).
-      exactly(2).times.and_return(media_ids)
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(true, medium).and_return(email_data)
 
     get "/media/#{medium.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:media => [medium_data]))
+    expect(last_response.body).to eq(Flapjack.dump_json(:media => email_data))
   end
 
   it "returns all media" do
-    expect(Flapjack::Data::Medium).to receive(:count).and_return(1)
+    meta = {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
 
-    meta = {:pagination => {
-      :page        => 1,
-      :per_page    => 20,
-      :total_pages => 1,
-      :total_count => 1
-    }}
+    expect(Flapjack::Data::Medium).to receive(:count).and_return(1)
 
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
@@ -108,19 +141,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:sort).
       with(:id, :order => 'alpha').and_return(sorted)
 
-    media_ids = double('media_ids')
-    expect(media_ids).to receive(:associated_ids_for).with(:contact).
-      and_return(medium.id => contact.id)
-    expect(media_ids).to receive(:associated_ids_for).with(:routes).
-      and_return(medium.id => [])
-    expect(Flapjack::Data::Medium).to receive(:intersect).with(:id => [medium.id]).
-      exactly(2).times.and_return(media_ids)
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(false, medium).and_return([email_data])
 
-    expect(medium).to receive(:as_json).and_return(medium_data)
-
-    get "/media"
+    get '/media'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:media => [medium_data], :meta => meta))
+    expect(last_response.body).to eq(Flapjack.dump_json(:media => [email_data], :meta => meta))
   end
 
   it "does not return a medium if the medium is not present" do
@@ -136,39 +161,44 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       with(medium.id).and_return([medium])
 
     expect(medium).to receive(:address=).with('12345')
+    expect(medium).to receive(:invalid?).and_return(false)
     expect(medium).to receive(:save).and_return(true)
 
-    patch "/media/#{medium.id}",
-      Flapjack.dump_json([{:op => 'replace', :path => '/media/0/address', :value => '12345'}]),
-      jsonapi_patch_env
+    put "/media/#{medium.id}",
+      Flapjack.dump_json(:media => {:id => medium.id, :address => '12345'}),
+      jsonapi_put_env
     expect(last_response.status).to eq(204)
   end
 
   it "updates multiple media" do
-    medium_2 = double(Flapjack::Data::Medium, :id => 'uiop')
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
       with(medium.id, medium_2.id).and_return([medium, medium_2])
 
-    expect(medium).to receive(:interval=).with(80)
+    expect(medium).to receive(:address=).with('12345')
+    expect(medium).to receive(:invalid?).and_return(false)
     expect(medium).to receive(:save).and_return(true)
 
-    expect(medium_2).to receive(:interval=).with(80)
+    expect(medium_2).to receive(:interval=).with(120)
+    expect(medium_2).to receive(:invalid?).and_return(false)
     expect(medium_2).to receive(:save).and_return(true)
 
-    patch "/media/#{medium.id},#{medium_2.id}",
-      Flapjack.dump_json([{:op => 'replace', :path => '/media/0/interval', :value => 80}]),
-      jsonapi_patch_env
+    put "/media/#{medium.id},#{medium_2.id}",
+      Flapjack.dump_json(:media => [
+        {:id => medium.id, :address => '12345'},
+        {:id => medium_2.id, :interval => 120}
+      ]),
+      jsonapi_put_env
     expect(last_response.status).to eq(204)
   end
 
   it "does not update a medium that's not present" do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
+    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
+      with(medium.id).and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
 
-    patch "/media/#{medium.id}",
-      Flapjack.dump_json([{:op => 'replace', :path => '/media/0/address', :value => 'xyz@example.com'}]),
-      jsonapi_patch_env
-    expect(last_response).to be_not_found
+    put "/media/#{medium.id}",
+      Flapjack.dump_json(:media => {:id => medium.id, :address => '12345'}),
+      jsonapi_put_env
+    expect(last_response.status).to eq(404)
   end
 
   it "deletes a medium" do
@@ -184,12 +214,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "deletes multiple media" do
     media = double('media')
-    expect(media).to receive(:ids).and_return([medium.id, '6789'])
+    expect(media).to receive(:ids).and_return([medium.id, medium_2.id])
     expect(media).to receive(:destroy_all)
     expect(Flapjack::Data::Medium).to receive(:intersect).
-      with(:id => [medium.id, '6789']).and_return(media)
+      with(:id => [medium.id, medium_2.id]).and_return(media)
 
-    delete "/media/#{medium.id},6789"
+    delete "/media/#{medium.id},#{medium_2.id}"
     expect(last_response.status).to eq(204)
   end
 
