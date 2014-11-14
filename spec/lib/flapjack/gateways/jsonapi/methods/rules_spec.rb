@@ -212,7 +212,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(last_response.status).to eq(404)
   end
 
-  it "deletes a notification rule" do
+  it "deletes a rule" do
     rules = double('rules')
     expect(rules).to receive(:ids).and_return([rule.id])
     expect(rules).to receive(:destroy_all)
@@ -223,7 +223,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(last_response.status).to eq(204)
   end
 
-  it "deletes multiple notification rules" do
+  it "deletes multiple rules" do
     rules = double('rules')
     expect(rules).to receive(:ids).
       and_return([rule.id, rule_2.id])
@@ -236,7 +236,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(last_response.status).to eq(204)
   end
 
-  it "does not delete a notification rule that does not exist" do
+  it "does not delete a rule that does not exist" do
     rules = double('rules')
     expect(rules).to receive(:ids).and_return([])
     expect(rules).not_to receive(:destroy_all)

@@ -3,8 +3,6 @@ require 'flapjack/gateways/jsonapi'
 
 describe 'Flapjack::Gateways::JSONAPI::Methods::Searches', :sinatra => true, :logger => true do
 
-  before { skip 'broken, fixing' }
-
   include_context "jsonapi"
 
   let(:meta) {

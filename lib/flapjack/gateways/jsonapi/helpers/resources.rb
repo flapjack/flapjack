@@ -44,7 +44,7 @@ module Flapjack
                 collection_links.each_pair do |assoc, assoc_klass|
                   next unless links.has_key?(assoc)
                   memo[r.object_id] ||= {}
-                  memo[r.object_id][assoc] = assoc_klass.find_by_ids!(*(links[assoc]))
+                  memo[r.object_id][assoc] = assoc_klass.find_by_ids!(*links[assoc])
                 end
               end
 
@@ -130,9 +130,13 @@ module Flapjack
                 next unless links.has_key?(assoc)
                 current_assoc_ids = r.send(assoc.to_sym).ids
                 memo[r.id] ||= {}
+
+                to_remove = current_assoc_ids - links[assoc]
+                to_add    = links[assoc] - current_assoc_ids
+
                 memo[r.id][assoc] = [
-                  assoc_klass.find_by_ids!(links[assoc] - current_assoc_ids), # to_remove
-                  assoc_klass.find_by_ids!(current_assoc_ids - links[assoc])  # to_add
+                  to_remove.empty? ? [] : assoc_klass.find_by_ids!(*to_remove),
+                  to_add.empty?    ? [] : assoc_klass.find_by_ids!(*to_add)
                 ]
               end
             end
@@ -190,7 +194,7 @@ module Flapjack
                 links.each_pair do |k, v|
                   if sl.include?(k)
                     halt(err(403, "Value for linked '#{k}' must be a String")) unless v.is_a?(String)
-                  elsif !v.is_a?(Array) && v.all? {|vv| vv.is_a?(String)}
+                  elsif !v.is_a?(Array) || v.any? {|vv| !vv.is_a?(String)}
                     halt(err(403, "Value for linked '#{k}' must be an Array of Strings"))
                   end
                 end

@@ -29,7 +29,7 @@ module Flapjack
 
       validates_with Flapjack::Data::Validators::IdValidator
 
-      def self.as_jsonapi(*tags)
+      def self.as_jsonapi(unwrap, *tags)
         return [] if tags.empty?
         tag_ids = tags.map(&:id)
 
@@ -44,7 +44,7 @@ module Flapjack
             :rules  => rule_ids[tag.id]
           })
         end
-        return data unless data.size == 1
+        return data unless (data.size == 1) && unwrap
         data.first
       end
 

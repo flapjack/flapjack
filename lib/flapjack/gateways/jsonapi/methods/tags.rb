@@ -20,8 +20,8 @@ module Flapjack
               status 201
               resource_post(Flapjack::Data::Tag, 'tags',
                 :attributes       => ['id', 'name'],
-                :collection_links => {'contacts' => Flapjack::Data::Contact,
-                                      'rules' => Flapjack::Data::Rule}
+                :collection_links => {'checks' => Flapjack::Data::Check,
+                                      'rules'  => Flapjack::Data::Rule}
               )
             end
 
@@ -43,8 +43,8 @@ module Flapjack
 
               resource_put(Flapjack::Data::Tag, 'tags', tag_ids,
                 :attributes       => ['name'],
-                :collection_links => {'contacts' => Flapjack::Data::Contact,
-                                      'rules' => Flapjack::Data::Rule}
+                :collection_links => {'checks' => Flapjack::Data::Check,
+                                      'rules'  => Flapjack::Data::Rule}
               )
 
               status 204
