@@ -117,7 +117,8 @@ module Flapjack
                 r.send("#{att}=".to_sym, value)
               end
               halt(err(403, "Validation failed, " + r.errors.full_messages.join(', '))) if r.invalid?
-              next if d['links'].nil?
+              links = d['links']
+              next if links.nil?
 
               singular_links.each_pair do |assoc, assoc_klass|
                 next unless links.has_key?(assoc)
