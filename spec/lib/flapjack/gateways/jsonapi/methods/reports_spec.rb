@@ -3,8 +3,6 @@ require 'flapjack/gateways/jsonapi'
 
 describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :logger => true, :pact_fixture => true do
 
-  before { skip 'broken, fixing' }
-
   include_context "jsonapi"
 
   let(:check)    { double(Flapjack::Data::Check, :id => check_data[:id]) }

@@ -33,10 +33,10 @@ module Flapjack
                     'check'  => [check.id],
                   })
 
-                check_data << check.as_json
+                # check_data << check.as_json
               end
 
-              [report_data, check_data]
+              [report_data, nil]
             end
 
           end
@@ -47,7 +47,7 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
             app.helpers Flapjack::Gateways::JSONAPI::Methods::Reports::Helpers
 
-            app.get %r{^/(status|outage|(?:un)?scheduled_maintenance|downtime)_report/(?:/([^/]+))?$} do
+            app.get %r{^/(status|outage|(?:un)?scheduled_maintenance|downtime)_report(?:/([^/]+))?$} do
               action = params[:captures][0]
               action_pres = case action
               when 'status', 'downtime'
@@ -70,8 +70,10 @@ module Flapjack
                 presenter.send(action_pres.to_sym, *args)
               }
 
-              "{\"#{action}_reports\":" + Flapjack.dump_json(report_data) + "," +
-               "\"linked\":{\"checks\":" + Flapjack.dump_json(check_data) + "}}"
+              "{\"#{action}_reports\":" + Flapjack.dump_json(report_data) + "}"
+
+              # "{\"#{action}_reports\":" + Flapjack.dump_json(report_data) + "," +
+              #  "\"linked\":{\"checks\":" + Flapjack.dump_json(check_data) + "}}"
             end
 
           end
