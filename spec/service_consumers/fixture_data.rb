@@ -2,6 +2,10 @@ module FixtureData
 
   # Not RSpec shared context, so it can be used in the pact provider too
 
+  def time
+    @time ||= Time.now
+  end
+
   def check_data
     @check_data ||= {
      :id   => '1ed80833-6d28-4aba-8603-d81c249b8c23',
@@ -41,7 +45,7 @@ module FixtureData
     @scheduled_maintenance_data ||= {
      :id         => '9b7a7af4-8251-4216-8e86-2d4068447ae4',
      :start_time => time.iso8601,
-     :duration   => 3600,
+     :end_time   => (time + 3_600).iso8601,
      :summary    => 'working'
     }
   end
@@ -49,8 +53,8 @@ module FixtureData
   def scheduled_maintenance_2_data
     @scheduled_maintenance_2_data ||= {
      :id         => '5a84c82b-0acb-4703-a27e-0b0db50b298a',
-     :start_time => (time + 7200).iso8601,
-     :duration   => 3600,
+     :start_time => (time +  7_200).iso8601,
+     :end_time   => (time + 10_800).iso8601,
      :summary    => 'working'
     }
   end
@@ -58,7 +62,7 @@ module FixtureData
   def unscheduled_maintenance_data
     @unscheduled_maintenance_data ||= {
      :id         => '9b7a7af4-8251-4216-8e86-2d4068447ae4',
-     :duration   => 3600,
+     :end_time   => (time + 3_600).iso8601,
      :summary    => 'working'
     }
   end
@@ -66,7 +70,7 @@ module FixtureData
   def unscheduled_maintenance_2_data
     @unscheduled_maintenance_2_data ||= {
      :id         => '41895714-9b77-48a9-a373-5f6005b1ce95',
-     :duration   => 1800,
+     :end_time   => (time + 5_400).iso8601,
      :summary    => 'partly working'
     }
   end

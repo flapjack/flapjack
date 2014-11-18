@@ -14,39 +14,39 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
 
             app.post '/unscheduled_maintenances' do
-              # unscheduled_maintenance_data, unwrap = wrapped_params('unscheduled_maintenances')
+              status 201
+              resource_post(Flapjack::Data::UnscheduledMaintenance,
+                'unscheduled_maintenances',
+                :attributes       => ['id', 'end_time', 'summary'],
+                :singular_links   => {'check' => Flapjack::Data::Check},
+                :link_aliases     => {'check' => ['check_by_start', 'check_by_end']}
+              )
+            end
 
-              # # TODO check has_sorted_set linkages
+            app.get %r{^/unscheduled_maintenances(?:/)?(.+)?$} do
+              requested_unscheduled_maintenances = if params[:captures] && params[:captures][0]
+                params[:captures][0].split(',').uniq
+              else
+                nil
+              end
 
-              # unscheduled_maintenances = resource_post(Flapjack::Data::UnscheduledMaintenance,
-              #   scheduled_maintenance_data,
-              #   :attributes       => ['id', 'start_time', 'end_time', 'summary'],
-              #   # :singular_links   => {'check' => Flapjack::Data::Check})
-              # )
-
-              # status 201
-              # response.headers['Location'] = "#{base_url}/unscheduled_maintenances/#{unscheduled_maintenances.map(&:id).join(',')}"
-              # unscheduled_maintenances_as_json = Flapjack::Data::UnscheduledMaintenance.as_jsonapi(unwrap, *unscheduled_maintenances)
-              # Flapjack.dump_json(:unscheduled_maintenances => unscheduled_maintenances_as_json)
+              status 200
+              resource_get(Flapjack::Data::UnscheduledMaintenance,
+                           'unscheduled_maintenances',
+                           requested_unscheduled_maintenances,
+                           :sort => :timestamp)
             end
 
             app.put %r{^/unscheduled_maintenances/(.+)$} do
-              # check_ids = params[:captures][0].split(',')
+              unscheduled_maintenance_ids = params[:captures][0].split(',')
 
-              # Flapjack::Data::Check.find_by_ids!(*check_ids).each do |check|
-              #   apply_json_patch('unscheduled_maintenances') do |op, property, linked, value|
-              #     case op
-              #     when 'replace'
-              #       if ['end_time'].include?(property)
-              #         end_time = validate_and_parsetime(value)
-              #         check.clear_unscheduled_maintenance(end_time.to_i)
-              #       end
-              #     end
-              #   end
-              # end
-
-              # status 204
+              resource_put(Flapjack::Data::UnscheduledMaintenance,
+                'unscheduled_maintenances', unscheduled_maintenance_ids,
+                :attributes => ['end_time'],
+              )
+              status 204
             end
+
           end
         end
       end

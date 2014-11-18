@@ -27,9 +27,7 @@ module Flapjack
 
               rd = checks.each_with_object([]) do |check, memo|
                 memo << yield(Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)).
-                  merge('links'  => {
-                    'check'  => [check.id],
-                  })
+                  merge('links'  => {'check'  => [check.id]})
               end
 
               [rd, meta]

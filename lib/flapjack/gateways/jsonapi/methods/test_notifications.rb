@@ -40,6 +40,8 @@ module Flapjack
               end
 
               status 201
+              # No Location headers, as the returned 'resources' don't have
+              # relevant URLs
               Flapjack.dump_json(:test_notifications => test_notifications)
             end
           end

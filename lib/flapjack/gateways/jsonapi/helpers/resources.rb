@@ -17,6 +17,7 @@ module Flapjack
 
             singular_links   = options[:singular_links]   || {}
             collection_links = options[:collection_links] || {}
+            link_aliases     = options[:link_aliases]     || {}
 
             assoc_klasses = singular_links.values | collection_links.values
 
@@ -36,15 +37,31 @@ module Flapjack
                 next if links.nil?
 
                 singular_links.each_pair do |assoc, assoc_klass|
-                  next unless links.has_key?(assoc)
-                  memo[r.object_id] ||= {}
-                  memo[r.object_id][assoc] = assoc_klass.find_by_id!(links[assoc])
+                  if link_aliases.has_key?(assoc)
+                    value = assoc_klass.find_by_id!(links[assoc])
+                    alias_names = link_aliases[assoc].is_a?(Array) ? link_aliases[assoc] : [link_aliases[assoc]]
+                    alias_names.each do |aname|
+                      memo[r.object_id] ||= {}
+                      memo[r.object_id][aname] = value
+                    end
+                  elsif links.has_key?(assoc)
+                    memo[r.object_id] ||= {}
+                    memo[r.object_id][assoc] = assoc_klass.find_by_id!(links[assoc])
+                  end
                 end
 
                 collection_links.each_pair do |assoc, assoc_klass|
-                  next unless links.has_key?(assoc)
-                  memo[r.object_id] ||= {}
-                  memo[r.object_id][assoc] = assoc_klass.find_by_ids!(*links[assoc])
+                  if link_aliases.has_key?(assoc)
+                    values = assoc_klass.find_by_ids!(*links[assoc])
+                    alias_names = link_aliases[assoc].is_a?(Array) ? link_aliases[assoc] : [link_aliases[assoc]]
+                    alias_names.each do |aname|
+                      memo[r.object_id] ||= {}
+                      memo[r.object_id][aname] = values
+                    end
+                  elsif links.has_key?(assoc)
+                    memo[r.object_id] ||= {}
+                    memo[r.object_id][assoc] = assoc_klass.find_by_ids!(*links[assoc])
+                  end
                 end
               end
 
