@@ -14,29 +14,25 @@ module Flapjack
 
           module Helpers
 
-            def load_api_data(check_ids, &block)
-              checks = if check_ids.nil?
-                # TODO paginate
-                Flapjack::Data::Check.all
+            def report_data(check_ids, options = {}, &block)
+              checks, meta = if check_ids.nil?
+                paginate_get(Flapjack::Data::Check.sort(:name, :order => 'alpha'),
+                  :total => Flapjack::Data::Check.count, :page => options[:page],
+                  :per_page => options[:per_page])
               elsif !check_ids.empty?
-                Flapjack::Data::Check.find_by_ids!(*check_ids)
+                [Flapjack::Data::Check.find_by_ids!(*check_ids), {}]
               else
-                []
+                [[], {}]
               end
 
-              report_data = []
-              check_data = []
-
-              checks.each do |check|
-                report_data << yield(Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)).
+              rd = checks.each_with_object([]) do |check, memo|
+                memo << yield(Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)).
                   merge('links'  => {
                     'check'  => [check.id],
                   })
-
-                # check_data << check.as_json
               end
 
-              [report_data, nil]
+              [rd, meta]
             end
 
           end
@@ -66,14 +62,13 @@ module Flapjack
               end
 
               check_ids = params[:captures][1].nil? ? nil : params[:captures][1].split(',')
-              report_data, check_data = load_api_data(check_ids) {|presenter|
+              rd, meta = report_data(check_ids, :page => params[:page],
+                                     :per_page => params[:per_page]) {|presenter|
                 presenter.send(action_pres.to_sym, *args)
               }
 
-              "{\"#{action}_reports\":" + Flapjack.dump_json(report_data) + "}"
-
-              # "{\"#{action}_reports\":" + Flapjack.dump_json(report_data) + "," +
-              #  "\"linked\":{\"checks\":" + Flapjack.dump_json(check_data) + "}}"
+              status 200
+              Flapjack.dump_json({"#{action}_reports".to_sym => rd}.merge(meta))
             end
 
           end

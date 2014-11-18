@@ -3,7 +3,7 @@ require 'flapjack/gateways/jsonapi/helpers/check_presenter'
 
 describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
 
-  before { skip 'broken, fixing' }
+  # before { skip 'broken, fixing' }
 
   let(:check) { double(Flapjack::Data::Check) }
 
@@ -84,7 +84,7 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
            :order => "desc").and_return(no_states)
     expect(check).to receive(:states).twice.and_return(states_assoc)
 
-    check_presenter = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
+    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
     outages = check_presenter.outages(time - (5 * 60 * 60), time - (2 * 60 * 60))
     expect(outages).not_to be_nil
     expect(outages).to be_a(Hash)
@@ -102,7 +102,7 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
       and_return(all_states)
     expect(check).to receive(:states).and_return(states_assoc)
 
-    check_presenter = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
+    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
     outages = check_presenter.outages(nil, nil)
     expect(outages).not_to be_nil
     expect(outages).to be_a(Hash)
@@ -127,7 +127,7 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
       and_return(all_states)
     expect(check).to receive(:states).and_return(states_assoc)
 
-    check_presenter = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
+    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
     outages = check_presenter.outages(nil, nil)
     expect(outages).not_to be_nil
     expect(outages).to be_a(Hash)
@@ -148,7 +148,7 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
       and_return(all_states)
     expect(check).to receive(:states).and_return(states_assoc)
 
-    ecp = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
+    ecp = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
     outages = ecp.outages(nil, nil)
     expect(outages).not_to be_nil
     expect(outages).to be_a(Hash)
@@ -169,7 +169,7 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
       with(nil, time - (12 * 60 * 60), :by_score => true).and_return(no_unsched)
     expect(check).to receive(:unscheduled_maintenances_by_start).twice.and_return(unsched_assoc)
 
-    check_presenter = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
+    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
     unsched_maint = check_presenter.unscheduled_maintenances(time - (12 * 60 * 60), time)
     expect(unsched_maint).not_to be_nil
     expect(unsched_maint).to be_a(Hash)
@@ -190,7 +190,7 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
       with(nil, time - (12 * 60 * 60), :by_score => true).and_return(no_sched)
     expect(check).to receive(:scheduled_maintenances_by_start).twice.and_return(sched_assoc)
 
-    check_presenter = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
+    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
     sched_maint = check_presenter.scheduled_maintenances(time - (12 * 60 * 60), time)
     expect(sched_maint).not_to be_nil
     expect(sched_maint).to be_a(Hash)
@@ -223,7 +223,7 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
       with(nil, time - (12 * 60 * 60), :by_score => true).and_return(no_sched)
     expect(check).to receive(:scheduled_maintenances_by_start).twice.and_return(sched_assoc)
 
-    check_presenter = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
+    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
     downtimes = check_presenter.downtime(time - (12 * 60 * 60), time)
 
     # 22 minutes, 3 + 8 + 11
@@ -255,7 +255,7 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
       and_return(all_sched)
     expect(check).to receive(:scheduled_maintenances_by_start).and_return(sched_assoc)
 
-    check_presenter = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
+    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
     downtimes = check_presenter.downtime(nil, nil)
 
     # 22 minutes, 3 + 8 + 11
@@ -295,7 +295,7 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
       and_return(all_sched)
     expect(check).to receive(:scheduled_maintenances_by_start).and_return(sched_assoc)
 
-    check_presenter = Flapjack::Gateways::JSONAPI::CheckPresenter.new(check)
+    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
     downtimes = check_presenter.downtime(nil, nil)
 
     expect(downtimes).to be_a(Hash)

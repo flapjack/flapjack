@@ -11,6 +11,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
 
   let(:report_data) { {'report' => 'data'}}
 
+  let(:meta) {
+    {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
+  }
+
   def result_data(report_type)
     {
       report_type => [
@@ -35,15 +46,23 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
       with(check).and_return(check_presenter)
 
     if opts[:all]
-      expect(Flapjack::Data::Check).to receive(:all).and_return([check])
+      expect(Flapjack::Data::Check).to receive(:count).and_return(1)
+
+      sorted = double('sorted')
+      expect(sorted).to receive(:page).with(1, :per_page => 20).
+        and_return([check])
+      expect(Flapjack::Data::Check).to receive(:sort).
+        with(:name, :order => 'alpha').and_return(sorted)
     elsif opts[:some]
       expect(Flapjack::Data::Check).to receive(:find_by_ids!).
         with(check.id).and_return([check])
     end
 
-    # expect(check).to receive(:as_json).and_return({'check' => 'json'})
-
     result = result_data("#{report_type}_reports")
+
+    if opts[:all]
+      result.update(:meta => meta)
+    end
 
     par = opts[:start] && opts[:finish] ?
       {:start_time => opts[:start].iso8601, :end_time => opts[:finish].iso8601} : {}
