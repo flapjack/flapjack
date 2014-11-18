@@ -243,17 +243,4 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
   #   expect(last_response.status).to eq(204)
   # end
 
-  it "creates a test notification event for a check" # do
-  #   expect(Flapjack::Data::Check).to receive(:find_by_ids!).
-  #     with(check.id).and_return([check])
-
-  #   expect(check).to receive(:name).and_return('www.example.com:PING')
-
-  #   expect(Flapjack::Data::Event).to receive(:test_notifications).
-  #     with('events', [check], an_instance_of(Hash))
-
-  #   post "/test_notifications/checks/#{check.id}"
-  #   expect(last_response.status).to eq(204)
-  # end
-
 end

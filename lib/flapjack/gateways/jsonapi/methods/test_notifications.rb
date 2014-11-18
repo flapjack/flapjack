@@ -2,6 +2,8 @@
 
 require 'sinatra/base'
 
+require 'flapjack/data/event'
+
 module Flapjack
   module Gateways
     class JSONAPI < Sinatra::Base
@@ -13,20 +15,32 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
 
-            app.post %r{^/test_notifications/(checks|tags)/(.+)$} do
-              # check_ids = params[:captures][0].split(',')
+            # not allowing a single request to send notifications for all
+            # checks -- design choice, to avoid unintended spam
+            app.post %r{^/test_notifications/(.+)$} do
+              check_ids = params[:captures][0].split(',')
 
-              # test_notifications = wrapped_params('test_notifications', false)
-              # checks = Flapjack::Data::Check.find_by_ids!(*check_ids)
+              test_notifications, unwrap = wrapped_params('test_notifications',
+                                                          :error_on_nil => false)
+              checks = Flapjack::Data::Check.find_by_ids!(*check_ids)
 
-              # test_notifications.each do |wp|
-              #   summary = wp['summary'] ||
-              #             "Testing notifications to all contacts interested in #{checks.map(&:name).join(', ')}"
-              #   Flapjack::Data::Event.test_notifications(
-              #     config['processor_queue'] || 'events',
-              #     checks, :summary => summary)
-              # end
-              # status 204
+              # assume single notification with default summary if none sent
+              test_notifications = [{}] if test_notifications.empty?
+
+              test_notifications.each do |tn|
+                tn['summary'] ||=
+                  'Testing notifications to everyone interested in ' +
+                  checks.map(&:name).join(', ')
+
+                Flapjack::Data::Event.test_notifications(
+                  config['processor_queue'] || 'events',
+                  checks, :summary => tn['summary'])
+
+                tn['links'] = {'checks' => checks.map(&:id)}
+              end
+
+              status 201
+              Flapjack.dump_json(:test_notifications => test_notifications)
             end
           end
         end

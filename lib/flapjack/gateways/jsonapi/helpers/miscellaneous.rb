@@ -10,7 +10,7 @@ module Flapjack
             result = params[name.to_s]
             if result.nil?
               if options[:error_on_nil].is_a?(FalseClass)
-                result = [[{}], true]
+                result = []
               else
                 logger.debug("No '#{name}' object found in the following supplied JSON:")
                 logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
