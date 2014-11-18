@@ -13,21 +13,15 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
 
+            # TODO: link_aliases handling in validate_data
             app.post '/scheduled_maintenances' do
-              scheduled_maintenance_data, unwrap = wrapped_params('scheduled_maintenances')
-
-              # TODO: link_aliases handling in validate_data
+              status 201
               scheduled_maintenances = resource_post(Flapjack::Data::ScheduledMaintenance,
-                scheduled_maintenance_data,
+                'scheduled_maintenances',
                 :attributes       => ['id', 'start_time', 'end_time', 'summary'],
                 :singular_links   => {'check' => Flapjack::Data::Check},
                 :link_aliases     => {'check' => ['check_by_start', 'check_by_end']}
               )
-
-              status 201
-              response.headers['Location'] = "#{base_url}/scheduled_maintenances/#{scheduled_maintenances.map(&:id).join(',')}"
-              scheduled_maintenances_as_json = Flapjack::Data::ScheduledMaintenance.as_jsonapi(unwrap, *scheduled_maintenances)
-              Flapjack.dump_json(:scheduled_maintenances => scheduled_maintenances_as_json)
             end
 
             app.get %r{^/scheduled_maintenances(?:/)?(.+)?$} do
@@ -39,8 +33,8 @@ module Flapjack
 
               status 200
               resource_get(Flapjack::Data::ScheduledMaintenance,
-                           requested_scheduled_maintenances,
                            'scheduled_maintenances',
+                           requested_scheduled_maintenances,
                            :sort => :timestamp)
             end
 
