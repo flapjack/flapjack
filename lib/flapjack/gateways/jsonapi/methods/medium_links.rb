@@ -27,7 +27,7 @@ module Flapjack
             end
 
             app.get %r{^/media/(#{Flapjack::UUID_RE})/links/(contact|routes)} do
-              contact_id = params[:captures][0]
+              medium_id = params[:captures][0]
               assoc_type = params[:captures][1]
 
               status 200
@@ -37,7 +37,7 @@ module Flapjack
             end
 
             app.put %r{^/media/(#{Flapjack::UUID_RE})/links/(contact|routes)$} do
-              contact_id = params[:captures][0]
+              medium_id = params[:captures][0]
               assoc_type = params[:captures][1]
 
               resource_put_links(Flapjack::Data::Medium, medium_id, assoc_type,
@@ -46,8 +46,19 @@ module Flapjack
               status 204
             end
 
+            app.delete %r{^/media/(#{Flapjack::UUID_RE})/links/(contact)$} do
+              medium_id = params[:captures][0]
+              assoc_type = params[:captures][1]
+
+              assoc_klass = {'contact' => Flapjack::Data::Contact}[assoc_type]
+
+              resource_delete_link(Flapjack::Data::Medium, medium_id, assoc_type,
+                assoc_klass)
+              status 204
+            end
+
             app.delete %r{^/media/(#{Flapjack::UUID_RE})/links/(routes)/(.+)$} do
-              contact_id = params[:captures][0]
+              medium_id = params[:captures][0]
               assoc_type = params[:captures][1]
               assoc_ids  = params[:captures][2].split(',').uniq
 

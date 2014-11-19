@@ -129,6 +129,18 @@ module FixtureData
     }
   end
 
+  def route_data
+    @route_data ||= {
+      :id          => 'da37d2a9-da41-47ce-85ac-537b2ed1443a',
+    }
+  end
+
+  def route_2_data
+    @route_2_data ||= {
+      :id          => '121fa5a6-7d87-43fc-a231-a746619ed98c',
+    }
+  end
+
   def rule_data
     @rule_data ||= {
       :id          => '05983623-fcef-42da-af44-ed6990b500fa',

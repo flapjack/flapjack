@@ -71,7 +71,7 @@ module Flapjack
                 ]
               elsif !singular_klass.nil?
                 halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
-                memo[r.id] = links[assoc_name].nil? ? nil : singular_klass.find_by_id!(assoc_ids.first)
+                memo[r.id] = assoc_ids.first.nil? ? nil : singular_klass.find_by_id!(assoc_ids.first)
               end
             end
 
