@@ -46,6 +46,17 @@ module Flapjack
               status 204
             end
 
+            app.delete %r{^/routes/(#{Flapjack::UUID_RE})/links/(rule)$} do
+              route_id   = params[:captures][0]
+              assoc_type = params[:captures][1]
+
+              assoc_klass = {'rule' => Flapjack::Data::Rule}[assoc_type]
+
+              resource_delete_link(Flapjack::Data::Route, route_id, assoc_type,
+                assoc_klass)
+              status 204
+            end
+
             app.delete %r{^/routes/(#{Flapjack::UUID_RE})/links/(media)/(.+)$} do
               route_id   = params[:captures][0]
               assoc_type = params[:captures][1]
