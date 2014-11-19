@@ -28,11 +28,11 @@ module Flapjack
               unscheduled_maintenance_id = params[:captures][0]
               assoc_type                 = params[:captures][1]
 
+              status 200
               resource_get_links(Flapjack::Data::UnscheduledMaintenance,
                 unscheduled_maintenance_id, assoc_type,
                 :singular_links   => {'check' => Flapjack::Data::Check}
               )
-              status 200
             end
 
             app.put %r{^/unscheduled_maintenances/(#{Flapjack::UUID_RE})/links/(check)$} do

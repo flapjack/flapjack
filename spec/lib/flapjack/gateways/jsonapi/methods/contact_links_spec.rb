@@ -47,7 +47,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(contact_media).to receive(:add).with(medium)
     expect(contact).to receive(:media).twice.and_return(contact_media)
 
-    put "/contacts/#{contact.id}/links/media", Flapjack.dump_json(:media => [medium.id]), jsonapi_post_env
+    put "/contacts/#{contact.id}/links/media", Flapjack.dump_json(:media => [medium.id]), jsonapi_put_env
     expect(last_response.status).to eq(204)
   end
 
@@ -99,7 +99,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(contact_rules).to receive(:add).with(rule)
     expect(contact).to receive(:rules).twice.and_return(contact_rules)
 
-    put "/contacts/#{contact.id}/links/rules", Flapjack.dump_json(:rules => [rule.id]), jsonapi_post_env
+    put "/contacts/#{contact.id}/links/rules", Flapjack.dump_json(:rules => [rule.id]), jsonapi_put_env
     expect(last_response.status).to eq(204)
   end
 

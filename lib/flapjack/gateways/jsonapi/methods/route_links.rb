@@ -28,11 +28,11 @@ module Flapjack
               route_id   = params[:captures][0]
               assoc_type = params[:captures][1]
 
+              status 200
               resource_get_links(Flapjack::Data::Route, route_id, assoc_type,
                 :singular_links   => {'rule' => Flapjack::Data::Rule},
                 :collection_links => {'media' => Flapjack::Data::Medium}
               )
-              status 200
             end
 
             app.put %r{^/routes/(#{Flapjack::UUID_RE})/links/(rule|media)$} do

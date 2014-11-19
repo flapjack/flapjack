@@ -28,11 +28,11 @@ module Flapjack
               rule_id    = params[:captures][0]
               assoc_type = params[:captures][1]
 
+              status 200
               resource_get_links(Flapjack::Data::Rule, rule_id, assoc_type,
                 :singular_links   => {'contact' => Flapjack::Data::Contact},
                 :collection_links => {'routes'  => Flapjack::Data::Route,
                                       'tags'    => Flapjack::Data::Tag})
-              status 200
             end
 
             app.put %r{^/rules/(#{Flapjack::UUID_RE})/links/(contact|routes|tags)$} do
@@ -43,6 +43,17 @@ module Flapjack
                 :singular_links   => {'contact' => Flapjack::Data::Contact},
                 :collection_links => {'routes'  => Flapjack::Data::Route,
                                       'tags'    => Flapjack::Data::Tag})
+              status 204
+            end
+
+            app.delete %r{^/rules/(#{Flapjack::UUID_RE})/links/(contact)$} do
+              rule_id    = params[:captures][0]
+              assoc_type = params[:captures][1]
+
+              assoc_klass = {'contact' => Flapjack::Data::Contact}[assoc_type]
+
+              resource_delete_link(Flapjack::Data::Rule, rule_id, assoc_type,
+                assoc_klass)
               status 204
             end
 

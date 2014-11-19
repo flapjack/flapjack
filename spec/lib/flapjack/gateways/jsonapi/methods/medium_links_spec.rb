@@ -43,7 +43,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
 
     expect(medium).to receive(:contact=).with(contact)
 
-    put "/media/#{medium.id}/links/contact", Flapjack.dump_json(:contact => contact.id), jsonapi_post_env
+    put "/media/#{medium.id}/links/contact", Flapjack.dump_json(:contact => contact.id), jsonapi_put_env
     expect(last_response.status).to eq(204)
   end
 
@@ -93,7 +93,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     expect(medium_routes).to receive(:add).with(route)
     expect(medium).to receive(:routes).twice.and_return(medium_routes)
 
-    put "/media/#{medium.id}/links/routes", Flapjack.dump_json(:routes => [route.id]), jsonapi_post_env
+    put "/media/#{medium.id}/links/routes", Flapjack.dump_json(:routes => [route.id]), jsonapi_put_env
     expect(last_response.status).to eq(204)
   end
 
@@ -109,6 +109,5 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     delete "/media/#{medium.id}/links/routes/#{route.id}"
     expect(last_response.status).to eq(204)
   end
-
 
 end
