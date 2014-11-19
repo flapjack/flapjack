@@ -11,25 +11,26 @@ module Flapjack
           # on current behaviour.
 
           def resource_post_links(klass, id, assoc_name, options)
-            assoc_ids, _ = wrapped_params(assoc_name)
+            assoc_ids, _ = wrapped_link_params(assoc_name)
             halt(err(403, "No link ids")) if assoc_ids.empty?
 
-            associated = assoc_klass.find_by_ids!(*tag_ids)
+            singular_klass   = (options[:singular_links]   || {})[assoc_name]
+            collection_klass = (options[:collection_links] || {})[assoc_name]
 
-            singular_links   = options[:singular_links]   || {}
-            collection_links = options[:collection_links] || {}
+            associated = (singular_klass || collection_klass).find_by_ids!(*assoc_ids)
 
             klass.find_by_ids!(id).each do |r|
               # Not checking for duplication on adding existing to a multiple
               # association, the JSONAPI spec doesn't ask for it
-              if singular_links.has_key?(assoc_name)
+              unless singular_klass.nil?
                 halt(err(409, "Association '#{assoc_name}' is already populated")) unless r.send(assoc_name.to_sym).nil?
+                halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if associated.size > 1
               end
             end.each do |r|
-              if collection_links.has_key?(assoc_name)
+              if !collection_klass.nil?
                 r.send(assoc_name.to_sym).add(*associated)
-              elsif singular_links.has_key?(assoc_name)
-                r.send("#{assoc_name}=".to_sym)
+              elsif !singular_klass.nil?
+                r.send("#{assoc_name}=".to_sym, associated.first)
               end
             end
           end
@@ -48,39 +49,41 @@ module Flapjack
               memo[r.id] = r.send(assoc_name).send(assoc_accessor)
             end
 
-            {assoc_name => associated[id]}
+            Flapjack.dump_json(assoc_name => associated[id])
           end
 
           def resource_put_links(klass, id, assoc_name, options)
-            assoc_ids, _ = wrapped_params(assoc_name)
+            assoc_ids, _ = wrapped_link_params(assoc_name)
 
             resources  = klass.find_by_ids!(id)
 
-            singular_links   = options[:singular_links]   || {}
-            collection_links = options[:collection_links] || {}
+            singular_klass   = (options[:singular_links]   || {})[assoc_name]
+            collection_klass = (options[:collection_links] || {})[assoc_name]
 
-            associated_to_change = resources.each_with_object do |memo, r|
-              if collection_links.has_key?(assoc_name)
-                assoc_klass = collection_links[assoc_name]
+            associated_to_change = resources.each_with_object({}) do |r, memo|
+              if !collection_klass.nil?
                 current_assoc_ids = r.send(assoc_name.to_sym).ids
+                to_remove = current_assoc_ids - assoc_ids
+                to_add    = assoc_ids - current_assoc_ids
                 memo[r.id] = [
-                  assoc_klass.find_by_ids!(current_assoc_ids - links[assoc_name]), # to_remove
-                  assoc_klass.find_by_ids!(links[assoc_name] - current_assoc_ids)  # to_add
+                  to_remove.empty? ? [] : collection_klass.find_by_ids!(*to_remove),
+                  to_add.empty?    ? [] : collection_klass.find_by_ids!(*to_add)
                 ]
-              elsif singular_links.has_key?(assoc_name)
-                memo[r.id] = links[assoc_name].nil? ? nil : assoc_klass.find_by_id!(links[assoc_name])
+              elsif !singular_klass.nil?
+                halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
+                memo[r.id] = links[assoc_name].nil? ? nil : singular_klass.find_by_id!(assoc_ids.first)
               end
             end
 
             resources.each do |r|
               value = associated_to_change[r.id]
-              if collection_links.has_key?(assoc_name)
+              if !collection_klass.nil?
                 to_remove = value.first
                 to_add    = value.last
-                r.send(assoc.to_sym).delete(*to_remove) unless to_remove.empty?
-                r.send(assoc.to_sym).add(*to_add) unless to_add.empty?
-              elsif singular_links.has_key?(assoc_name)
-                r.send("#{assoc}=".to_sym, value)
+                r.send(assoc_name.to_sym).delete(*to_remove) unless to_remove.empty?
+                r.send(assoc_name.to_sym).add(*to_add) unless to_add.empty?
+              elsif !singular_klass.nil?
+                r.send("#{assoc_name}=".to_sym, value)
               end
             end
           end
@@ -101,9 +104,10 @@ module Flapjack
 
             # validate that the association ids actually exist in the associations
             klass.find_by_ids!(id).each_with_object({}) do |r, memo|
-              memo[r] = r.send(assoc_name.to_sym).find_by_ids!(assoc_ids)
-            end.each_pair do |r, associated|
-              r.send(assoc_name.to_sym).delete(*associated)
+              assoc = r.send(assoc_name.to_sym)
+              memo[assoc] = assoc.find_by_ids!(*assoc_ids)
+            end.each_pair do |assoc, associated|
+              assoc.delete(*associated)
             end
           end
 

@@ -146,9 +146,10 @@ module Flapjack
         pass
       end
 
-      # hacky, but trying to avoid too much boilerplate
-      %w[checks check_links contacts contact_links media medium_links
-         routes route_links rules rule_links tags tag_links
+      # hacky, but trying to avoid too much boilerplate -- links paths
+      # must be before regular ones to avoid greedy path captures
+      %w[check_links checks contact_links contacts medium_links media
+         route_links routes rule_links rules tag_links tags
          scheduled_maintenances unscheduled_maintenances
          reports searches test_notifications].each do |method|
 
