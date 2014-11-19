@@ -1,7 +1,7 @@
 GIT
   remote: git://github.com/flapjack/sandstorm.git
-  revision: d415a1e34bbbbce487593b2051981a4bdd5f6ef7
-  branch: master
+  revision: ffab5aef296d89b4b3a335f1305e0f281315f91d
+  branch: 8_association_callbacks
   specs:
     sandstorm (0.1.0)
       activemodel
@@ -31,10 +31,10 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    activemodel (4.1.7)
-      activesupport (= 4.1.7)
+    activemodel (4.1.8)
+      activesupport (= 4.1.8)
       builder (~> 3.1)
-    activesupport (4.1.7)
+    activesupport (4.1.8)
       i18n (~> 0.6, >= 0.6.9)
       json (~> 1.7, >= 1.7.7)
       minitest (~> 5.1)
@@ -80,7 +80,7 @@ GEM
     multi_json (1.10.1)
     multi_test (0.1.1)
     numerizer (0.1.1)
-    oj (2.11.0)
+    oj (2.11.1)
     pact (1.3.3)
       awesome_print (~> 1.1)
       find_a_port (~> 1.0.1)
@@ -141,9 +141,9 @@ GEM
     trollop (2.0)
     tzinfo (1.2.2)
       thread_safe (~> 0.1)
-    tzinfo-data (1.2014.9)
+    tzinfo-data (1.2014.10)
       tzinfo (>= 1.0.0)
-    webmock (1.20.2)
+    webmock (1.20.4)
       addressable (>= 2.3.6)
       crack (>= 0.3.2)
     webrick (1.3.1)
