@@ -22,7 +22,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:new).with(check_data).
       and_return(check)
 
-    expect(Flapjack::Data::Check).to receive(:as_jsonapi).with(true, check).and_return(check_data)
+    expect(Flapjack::Data::Check).to receive(:as_jsonapi).with(nil, true, check).and_return(check_data)
 
     post "/checks", Flapjack.dump_json(:checks => check_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -49,7 +49,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(check_tags).to receive(:add).with(tag)
     expect(check).to receive(:tags).and_return(check_tags)
 
-    expect(Flapjack::Data::Check).to receive(:as_jsonapi).with(true, check).and_return(check_with_tag_data)
+    expect(Flapjack::Data::Check).to receive(:as_jsonapi).with(nil, true, check).and_return(check_with_tag_data)
 
     post "/checks", Flapjack.dump_json(:checks => check_with_tag_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -74,7 +74,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:sort).
       with(:name, :order => 'alpha').and_return(sorted)
 
-    expect(Flapjack::Data::Check).to receive(:as_jsonapi).with(false, check).and_return([check_data])
+    expect(Flapjack::Data::Check).to receive(:as_jsonapi).with(nil, false, check).and_return([check_data])
 
     get '/checks'
     expect(last_response).to be_ok
@@ -85,9 +85,21 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
       with(check.id).and_return([check])
 
-    expect(Flapjack::Data::Check).to receive(:as_jsonapi).with(true, check).and_return(check_data)
+    expect(Flapjack::Data::Check).to receive(:as_jsonapi).with(nil, true, check).and_return(check_data)
 
     get "/checks/#{check.id}"
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq(Flapjack.dump_json(:checks => check_data))
+  end
+
+  it "retrieves one check with a subset of fields" do
+    expect(Flapjack::Data::Check).to receive(:find_by_ids!).
+      with(check.id).and_return([check])
+
+    expect(Flapjack::Data::Check).to receive(:as_jsonapi).
+      with([:name, :enabled], true, check).and_return(check_data)
+
+    get "/checks/#{check.id}?fields=name,enabled"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(Flapjack.dump_json(:checks => check_data))
   end
@@ -99,7 +111,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       with(check.id, check_2.id).and_return([check, check_2])
 
     expect(Flapjack::Data::Check).to receive(:as_jsonapi).
-      with(false, check, check_2).and_return([check_data, check_2_data])
+      with(nil, false, check, check_2).and_return([check_data, check_2_data])
 
     get "/checks/#{check.id},#{check_2.id}"
     expect(last_response).to be_ok

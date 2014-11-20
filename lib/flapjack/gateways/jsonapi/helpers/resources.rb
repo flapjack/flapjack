@@ -66,7 +66,7 @@ module Flapjack
             end
 
             response.headers['Location'] = "#{base_url}/#{resources_name}/#{resources.map(&:id).join(',')}"
-            resources_as_json = klass.as_jsonapi(unwrap, *resources)
+            resources_as_json = klass.as_jsonapi(nil, unwrap, *resources)
             Flapjack.dump_json(resources_name.to_sym => resources_as_json)
           end
 
@@ -87,7 +87,9 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            resources_as_json = klass.as_jsonapi(unwrap, *resources)
+            fields = params[:fields].nil? ? nil : params[:fields].split(',').map(&:to_sym)
+
+            resources_as_json = klass.as_jsonapi(fields, unwrap, *resources)
             Flapjack.dump_json({resources_name.to_sym => resources_as_json}.merge(meta))
           end
 

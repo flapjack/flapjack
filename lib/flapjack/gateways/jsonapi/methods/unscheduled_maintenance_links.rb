@@ -52,7 +52,7 @@ module Flapjack
 
               assoc_klass = {'check' => Flapjack::Data::Check}[assoc_type]
 
-              resource_delete_lins(Flapjack::Data::UnscheduledMaintenance,
+              resource_delete_link(Flapjack::Data::UnscheduledMaintenance,
                 unscheduled_maintenance_id, assoc_type, assoc_klass)
               status 204
             end

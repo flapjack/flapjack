@@ -116,16 +116,25 @@ module Flapjack
         self.perfdata_json = @perfdata.nil? ? nil : Flapjack.dump_json(@perfdata)
       end
 
-      def self.as_jsonapi(unwrap, *checks)
+      def self.as_jsonapi(fields, unwrap, *checks)
         return [] if checks.empty?
         check_ids = checks.map(&:id)
+
+        whitelist = [:id, :name, :initial_failure_delay,
+                     :repeat_failure_delay, :enabled]
+
+        jsonapi_fields = if fields.nil?
+          whitelist
+        else
+          Set.new(fields).add(:id).keep_if {|f| whitelist.include?(f) }.to_a
+        end
+
         tag_ids = Flapjack::Data::Check.intersect(:id => check_ids).
                     associated_ids_for(:tags)
         data = checks.collect do |check|
-          check.as_json(:only => [:id, :name, :initial_failure_delay,
-            :repeat_failure_delay, :enabled]).merge(:links => {
-              :tags => tag_ids[check.id]
-            })
+          check.as_json(:only => jsonapi_fields).merge(:links => {
+            :tags => tag_ids[check.id]
+          })
         end
         return data unless (data.size == 1) && unwrap
         data.first

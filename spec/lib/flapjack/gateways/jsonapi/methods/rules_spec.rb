@@ -23,7 +23,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Rule).to receive(:new).with(rule_data).
       and_return(rule)
 
-    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).with(true, rule).and_return(rule_data)
+    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).with(nil, true, rule).and_return(rule_data)
 
     post "/rules", Flapjack.dump_json(:rules => rule_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -74,7 +74,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Rule).to receive(:new).with(rule_data).
       and_return(rule)
 
-    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).with(true, rule).and_return(rule_with_contact_data)
+    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).with(nil, true, rule).and_return(rule_with_contact_data)
 
     post "/rules", Flapjack.dump_json(:rules => rule_with_contact_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -127,7 +127,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Rule).to receive(:sort).
       with(:id, :order => 'alpha').and_return(sorted)
 
-    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).with(false, rule).and_return([rule_data])
+    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).with(nil, false, rule).and_return([rule_data])
 
     get '/rules'
     expect(last_response).to be_ok
@@ -138,7 +138,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Rule).to receive(:find_by_ids!).
       with(rule.id).and_return([rule])
 
-    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).with(true, rule).and_return(rule_data)
+    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).with(nil, true, rule).and_return(rule_data)
 
     get "/rules/#{rule.id}"
     expect(last_response).to be_ok

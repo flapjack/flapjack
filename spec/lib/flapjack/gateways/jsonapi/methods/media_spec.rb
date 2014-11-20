@@ -24,7 +24,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
       and_return(medium)
 
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(true, medium).and_return(email_data)
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(nil, true, medium).and_return(email_data)
 
     post "/media", Flapjack.dump_json(:media => email_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -77,7 +77,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
       and_return(medium)
 
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(true, medium).and_return(email_with_contact_data)
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(nil, true, medium).and_return(email_with_contact_data)
 
     post "/media", Flapjack.dump_json(:media => email_with_contact_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -116,7 +116,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
       with(medium.id).and_return([medium])
 
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(true, medium).and_return(email_data)
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(nil, true, medium).and_return(email_data)
 
     get "/media/#{medium.id}"
     expect(last_response).to be_ok
@@ -141,7 +141,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:sort).
       with(:id, :order => 'alpha').and_return(sorted)
 
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(false, medium).and_return([email_data])
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(nil, false, medium).and_return([email_data])
 
     get '/media'
     expect(last_response).to be_ok

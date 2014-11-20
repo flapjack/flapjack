@@ -23,7 +23,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Routes', :sinatra => true, :logg
     expect(Flapjack::Data::Route).to receive(:new).with(route_data).
       and_return(route)
 
-    expect(Flapjack::Data::Route).to receive(:as_jsonapi).with(true, route).and_return(route_data)
+    expect(Flapjack::Data::Route).to receive(:as_jsonapi).with(nil, true, route).and_return(route_data)
 
     post "/routes", Flapjack.dump_json(:routes => route_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -74,7 +74,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Routes', :sinatra => true, :logg
     expect(Flapjack::Data::Route).to receive(:new).with(route_data).
       and_return(route)
 
-    expect(Flapjack::Data::Route).to receive(:as_jsonapi).with(true, route).and_return(route_with_rule_data)
+    expect(Flapjack::Data::Route).to receive(:as_jsonapi).with(nil, true, route).and_return(route_with_rule_data)
 
     post "/routes", Flapjack.dump_json(:routes => route_with_rule_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -127,7 +127,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Routes', :sinatra => true, :logg
     expect(Flapjack::Data::Route).to receive(:sort).
       with(:id, :order => 'alpha').and_return(sorted)
 
-    expect(Flapjack::Data::Route).to receive(:as_jsonapi).with(false, route).and_return([route_data])
+    expect(Flapjack::Data::Route).to receive(:as_jsonapi).with(nil, false, route).and_return([route_data])
 
     get '/routes'
     expect(last_response).to be_ok
@@ -138,7 +138,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Routes', :sinatra => true, :logg
     expect(Flapjack::Data::Route).to receive(:find_by_ids!).
       with(route.id).and_return([route])
 
-    expect(Flapjack::Data::Route).to receive(:as_jsonapi).with(true, route).and_return(route_data)
+    expect(Flapjack::Data::Route).to receive(:as_jsonapi).with(nil, true, route).and_return(route_data)
 
     get "/routes/#{route.id}"
     expect(last_response).to be_ok

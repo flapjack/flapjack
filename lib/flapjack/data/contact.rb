@@ -70,9 +70,17 @@ module Flapjack
         self.timezone = tz.respond_to?(:name) ? tz.name : tz
       end
 
-      def self.as_jsonapi(unwrap, *contacts)
+      def self.as_jsonapi(fields, unwrap, *contacts)
         return [] if contacts.empty?
         contact_ids = contacts.map(&:id)
+
+        whitelist = [:id, :name, :timezone]
+
+        jsonapi_fields = if fields.nil?
+          whitelist
+        else
+          Set.new(fields).add(:id).keep_if {|f| whitelist.include?(f) }.to_a
+        end
 
         medium_ids = Flapjack::Data::Contact.intersect(:id => contact_ids).
           associated_ids_for(:media)
@@ -80,7 +88,7 @@ module Flapjack
           associated_ids_for(:rules)
 
         data = contacts.collect do |contact|
-          contact.as_json(:only => [:id, :name, :timezone]).merge(:links => {
+          contact.as_json(:only => jsonapi_fields).merge(:links => {
             :media => medium_ids[contact.id],
             :rules => rule_ids[contact.id]
           })

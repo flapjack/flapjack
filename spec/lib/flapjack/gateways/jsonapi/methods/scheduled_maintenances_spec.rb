@@ -25,7 +25,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
       and_return(scheduled_maintenance)
 
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:as_jsonapi).
-      with(true, scheduled_maintenance).and_return(scheduled_maintenance_data)
+      with(nil, true, scheduled_maintenance).and_return(scheduled_maintenance_data)
 
     post "/scheduled_maintenances", Flapjack.dump_json(:scheduled_maintenances => scheduled_maintenance_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -79,7 +79,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
       and_return(scheduled_maintenance)
 
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:as_jsonapi).
-      with(true, scheduled_maintenance).and_return(scheduled_maintenance_with_check_data)
+      with(nil, true, scheduled_maintenance).and_return(scheduled_maintenance_with_check_data)
 
     post "/scheduled_maintenances", Flapjack.dump_json(:scheduled_maintenances => scheduled_maintenance_with_check_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -91,7 +91,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
       with(scheduled_maintenance.id).and_return([scheduled_maintenance])
 
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:as_jsonapi).
-      with(true, scheduled_maintenance).and_return(scheduled_maintenance_data)
+      with(nil, true, scheduled_maintenance).and_return(scheduled_maintenance_data)
 
     get "/scheduled_maintenances/#{scheduled_maintenance.id}"
     expect(last_response).to be_ok
@@ -104,7 +104,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
       and_return([scheduled_maintenance, scheduled_maintenance_2])
 
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:as_jsonapi).
-      with(false, scheduled_maintenance, scheduled_maintenance_2).
+      with(nil, false, scheduled_maintenance, scheduled_maintenance_2).
       and_return([scheduled_maintenance_data, scheduled_maintenance_2_data])
 
     get "/scheduled_maintenances/#{scheduled_maintenance.id},#{scheduled_maintenance_2.id}"
@@ -131,7 +131,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
       with(:timestamp, :order => 'alpha').and_return(sorted)
 
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:as_jsonapi).
-      with(false, scheduled_maintenance).and_return([scheduled_maintenance_data])
+      with(nil, false, scheduled_maintenance).and_return([scheduled_maintenance_data])
 
     get '/scheduled_maintenances'
     expect(last_response).to be_ok
