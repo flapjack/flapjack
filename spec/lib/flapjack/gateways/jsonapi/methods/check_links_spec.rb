@@ -11,8 +11,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
   let(:check_tags)  { double('check_tags') }
 
   it 'adds tags to a check' do
-    expect(Flapjack::Data::Check).to receive(:find_by_ids!).with(check.id).
-      and_return([check])
+    expect(Flapjack::Data::Check).to receive(:find_by_id!).with(check.id).
+      and_return(check)
     expect(Flapjack::Data::Tag).to receive(:find_by_ids!).with(tag.id).
       and_return([tag])
 
@@ -27,8 +27,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
     expect(check_tags).to receive(:ids).and_return([tag.id])
     expect(check).to receive(:tags).and_return(check_tags)
 
-    expect(Flapjack::Data::Check).to receive(:find_by_ids!).with(check.id).
-      and_return([check])
+    expect(Flapjack::Data::Check).to receive(:find_by_id!).with(check.id).
+      and_return(check)
 
     get "/checks/#{check.id}/links/tags"
     expect(last_response.status).to eq(200)
@@ -36,8 +36,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
   end
 
   it 'updates tags for a check' do
-    expect(Flapjack::Data::Check).to receive(:find_by_ids!).with(check.id).
-      and_return([check])
+    expect(Flapjack::Data::Check).to receive(:find_by_id!).with(check.id).
+      and_return(check)
     expect(Flapjack::Data::Tag).to receive(:find_by_ids!).with(tag.id).
       and_return([tag])
 
@@ -50,8 +50,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
   end
 
   it 'deletes a tag from a check' do
-    expect(Flapjack::Data::Check).to receive(:find_by_ids!).with(check.id).
-      and_return([check])
+    expect(Flapjack::Data::Check).to receive(:find_by_id!).with(check.id).
+      and_return(check)
 
     expect(check_tags).to receive(:find_by_ids!).with(tag.id).
       and_return([tag])

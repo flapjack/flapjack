@@ -19,7 +19,7 @@ module Flapjack
 
               resource_post_links(Flapjack::Data::ScheduledMaintenance,
                 scheduled_maintenance_id, assoc_type,
-                :singular_links   => {'check' => Flapjack::Data::Check}
+                :singular_links   => {'check' => Flapjack::Data::Check},
               )
               status 204
             end
@@ -41,20 +41,19 @@ module Flapjack
 
               resource_put_links(Flapjack::Data::ScheduledMaintenance,
                 scheduled_maintenance_id, assoc_type,
-                :singular_links   => {'check' => Flapjack::Data::Check}
+                :singular_links   => {'check' => Flapjack::Data::Check},
               )
               status 204
             end
 
-            app.delete %r{^/scheduled_maintenances/(#{Flapjack::UUID_RE})/links/(check)/(.+)$} do
+            app.delete %r{^/scheduled_maintenances/(#{Flapjack::UUID_RE})/links/(check)$} do
               scheduled_maintenance_id = params[:captures][0]
               assoc_type               = params[:captures][1]
-              assoc_ids  = params[:captures][2].split(',').uniq
 
               assoc_klass = {'check' => Flapjack::Data::Check}[assoc_type]
 
-              resource_delete_links(Flapjack::Data::ScheduledMaintenance,
-                scheduled_maintenance_id, assoc_type, assoc_klass, assoc_ids)
+              resource_delete_link(Flapjack::Data::ScheduledMaintenance,
+                scheduled_maintenance_id, assoc_type, assoc_klass)
               status 204
             end
           end

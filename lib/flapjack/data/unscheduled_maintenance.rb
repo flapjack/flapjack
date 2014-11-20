@@ -29,6 +29,15 @@ module Flapjack
         self.end_time - self.start_time
       end
 
+      def check
+        self.check_by_start
+      end
+
+      def check=(c)
+        self.check_by_start = c
+        self.check_by_end   = c
+      end
+
       def self.as_jsonapi(unwrap, *unscheduled_maintenances)
         return [] if unscheduled_maintenances.empty?
         usm_ids = unscheduled_maintenances.map(&:id)

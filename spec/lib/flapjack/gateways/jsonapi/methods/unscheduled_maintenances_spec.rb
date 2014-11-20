@@ -47,8 +47,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
     expect(unscheduled_maintenance).to receive(:invalid?).and_return(false)
     expect(unscheduled_maintenance).to receive(:save).and_return(true)
-    expect(unscheduled_maintenance).to receive(:check_by_start=).with(check)
-    expect(unscheduled_maintenance).to receive(:check_by_end=).with(check)
+    expect(unscheduled_maintenance).to receive(:check=).with(check)
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:new).with(unscheduled_maintenance_data).
       and_return(unscheduled_maintenance)
 

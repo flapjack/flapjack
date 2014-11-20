@@ -150,7 +150,8 @@ module Flapjack
       # must be before regular ones to avoid greedy path captures
       %w[check_links checks contact_links contacts medium_links media
          route_links routes rule_links rules tag_links tags
-         scheduled_maintenances unscheduled_maintenances
+         scheduled_maintenance_links scheduled_maintenances
+         unscheduled_maintenance_links unscheduled_maintenances
          reports searches test_notifications].each do |method|
 
         require "flapjack/gateways/jsonapi/methods/#{method}"

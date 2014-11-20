@@ -19,7 +19,6 @@ module Flapjack
                 'unscheduled_maintenances',
                 :attributes       => ['id', 'end_time', 'summary'],
                 :singular_links   => {'check' => Flapjack::Data::Check},
-                :link_aliases     => {'check' => ['check_by_start', 'check_by_end']}
               )
             end
 

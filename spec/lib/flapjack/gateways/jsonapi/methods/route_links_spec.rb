@@ -12,10 +12,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RouteLinks', :sinatra => true, :
   let(:route_media)  { double('route_media') }
 
   it 'sets a rule for a route' do
-    expect(Flapjack::Data::Route).to receive(:find_by_ids!).with(route.id).
-      and_return([route])
-    expect(Flapjack::Data::Rule).to receive(:find_by_ids!).with(rule.id).
-      and_return([rule])
+    expect(Flapjack::Data::Route).to receive(:find_by_id!).with(route.id).
+      and_return(route)
+    expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
+      and_return(rule)
 
     expect(route).to receive(:rule).and_return(nil)
     expect(route).to receive(:rule=).with(rule)
@@ -27,8 +27,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RouteLinks', :sinatra => true, :
   it 'shows the rule for a route' do
     expect(route).to receive(:rule).and_return(rule)
 
-    expect(Flapjack::Data::Route).to receive(:find_by_ids!).with(route.id).
-      and_return([route])
+    expect(Flapjack::Data::Route).to receive(:find_by_id!).with(route.id).
+      and_return(route)
 
     get "/routes/#{route.id}/links/rule"
     expect(last_response.status).to eq(200)
@@ -36,8 +36,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RouteLinks', :sinatra => true, :
   end
 
   it 'changes the rule for a route' do
-    expect(Flapjack::Data::Route).to receive(:find_by_ids!).with(route.id).
-      and_return([route])
+    expect(Flapjack::Data::Route).to receive(:find_by_id!).with(route.id).
+      and_return(route)
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
 
@@ -48,8 +48,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RouteLinks', :sinatra => true, :
   end
 
   it 'clears the rule for a route' do
-    expect(Flapjack::Data::Route).to receive(:find_by_ids!).with(route.id).
-      and_return([route])
+    expect(Flapjack::Data::Route).to receive(:find_by_id!).with(route.id).
+      and_return(route)
 
     expect(route).to receive(:rule).and_return(rule)
     expect(route).to receive(:rule=).with(nil)
@@ -59,8 +59,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RouteLinks', :sinatra => true, :
   end
 
   it 'adds a medium to a route' do
-    expect(Flapjack::Data::Route).to receive(:find_by_ids!).with(route.id).
-      and_return([route])
+    expect(Flapjack::Data::Route).to receive(:find_by_id!).with(route.id).
+      and_return(route)
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
       and_return([medium])
 
@@ -75,8 +75,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RouteLinks', :sinatra => true, :
     expect(route_media).to receive(:ids).and_return([medium.id])
     expect(route).to receive(:media).and_return(route_media)
 
-    expect(Flapjack::Data::Route).to receive(:find_by_ids!).with(route.id).
-      and_return([route])
+    expect(Flapjack::Data::Route).to receive(:find_by_id!).with(route.id).
+      and_return(route)
 
     get "/routes/#{route.id}/links/media"
     expect(last_response.status).to eq(200)
@@ -84,8 +84,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RouteLinks', :sinatra => true, :
   end
 
   it 'updates media for a route' do
-    expect(Flapjack::Data::Route).to receive(:find_by_ids!).with(route.id).
-      and_return([route])
+    expect(Flapjack::Data::Route).to receive(:find_by_id!).with(route.id).
+      and_return(route)
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
       and_return([medium])
 
@@ -98,8 +98,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RouteLinks', :sinatra => true, :
   end
 
   it 'deletes a medium from a route' do
-    expect(Flapjack::Data::Route).to receive(:find_by_ids!).with(route.id).
-      and_return([route])
+    expect(Flapjack::Data::Route).to receive(:find_by_id!).with(route.id).
+      and_return(route)
 
     expect(route_media).to receive(:find_by_ids!).with(medium.id).
       and_return([medium])

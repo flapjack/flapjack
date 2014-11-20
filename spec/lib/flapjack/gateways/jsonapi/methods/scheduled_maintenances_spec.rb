@@ -74,8 +74,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
     expect(scheduled_maintenance).to receive(:invalid?).and_return(false)
     expect(scheduled_maintenance).to receive(:save).and_return(true)
-    expect(scheduled_maintenance).to receive(:check_by_start=).with(check)
-    expect(scheduled_maintenance).to receive(:check_by_end=).with(check)
+    expect(scheduled_maintenance).to receive(:check=).with(check)
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(scheduled_maintenance_data).
       and_return(scheduled_maintenance)
 

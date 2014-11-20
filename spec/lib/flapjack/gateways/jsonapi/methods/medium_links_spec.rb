@@ -12,10 +12,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
   let(:medium_routes)  { double('medium_routes') }
 
   it 'sets a contact for a medium' do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).with(contact.id).
-      and_return([contact])
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
+      and_return(medium)
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
+      and_return(contact)
 
     expect(medium).to receive(:contact).and_return(nil)
     expect(medium).to receive(:contact=).with(contact)
@@ -27,8 +27,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
   it 'shows the contact for a medium' do
     expect(medium).to receive(:contact).and_return(contact)
 
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
+      and_return(medium)
 
     get "/media/#{medium.id}/links/contact"
     expect(last_response.status).to eq(200)
@@ -36,8 +36,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
   end
 
   it 'changes the contact for a medium' do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
+      and_return(medium)
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
       and_return(contact)
 
@@ -48,8 +48,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
   end
 
   it 'clears the contact for a medium' do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
+      and_return(medium)
 
     expect(medium).to receive(:contact).and_return(contact)
     expect(medium).to receive(:contact=).with(nil)
@@ -59,8 +59,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
   end
 
   it 'adds a route to a medium' do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
+      and_return(medium)
     expect(Flapjack::Data::Route).to receive(:find_by_ids!).with(route.id).
       and_return([route])
 
@@ -75,8 +75,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     expect(medium_routes).to receive(:ids).and_return([route.id])
     expect(medium).to receive(:routes).and_return(medium_routes)
 
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
+      and_return(medium)
 
     get "/media/#{medium.id}/links/routes"
     expect(last_response.status).to eq(200)
@@ -84,8 +84,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
   end
 
   it 'updates routes for a medium' do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
+      and_return(medium)
     expect(Flapjack::Data::Route).to receive(:find_by_ids!).with(route.id).
       and_return([route])
 
@@ -98,8 +98,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
   end
 
   it 'deletes a route from a medium' do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
+      and_return(medium)
 
     expect(medium_routes).to receive(:find_by_ids!).with(route.id).
       and_return([route])

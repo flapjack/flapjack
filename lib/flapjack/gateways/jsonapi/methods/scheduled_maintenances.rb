@@ -13,14 +13,12 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
 
-            # TODO: link_aliases handling in validate_data
             app.post '/scheduled_maintenances' do
               status 201
               scheduled_maintenances = resource_post(Flapjack::Data::ScheduledMaintenance,
                 'scheduled_maintenances',
                 :attributes       => ['id', 'start_time', 'end_time', 'summary'],
                 :singular_links   => {'check' => Flapjack::Data::Check},
-                :link_aliases     => {'check' => ['check_by_start', 'check_by_end']}
               )
             end
 

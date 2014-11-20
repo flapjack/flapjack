@@ -13,8 +13,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
   let(:contact_rules)  { double('contact_rules') }
 
   it 'adds a medium to a contact' do
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).with(contact.id).
-      and_return([contact])
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
+      and_return(contact)
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
       and_return([medium])
 
@@ -29,8 +29,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(contact_media).to receive(:ids).and_return([medium.id])
     expect(contact).to receive(:media).and_return(contact_media)
 
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).with(contact.id).
-      and_return([contact])
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
+      and_return(contact)
 
     get "/contacts/#{contact.id}/links/media"
     expect(last_response.status).to eq(200)
@@ -38,8 +38,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
   end
 
   it 'updates media for a contact' do
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).with(contact.id).
-      and_return([contact])
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
+      and_return(contact)
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
       and_return([medium])
 
@@ -52,8 +52,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
   end
 
   it 'deletes a medium from a contact' do
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).with(contact.id).
-      and_return([contact])
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
+      and_return(contact)
 
     expect(contact_media).to receive(:find_by_ids!).with(medium.id).
       and_return([medium])
@@ -65,8 +65,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
   end
 
   it 'adds a rule to a contact' do
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).with(contact.id).
-      and_return([contact])
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
+      and_return(contact)
     expect(Flapjack::Data::Rule).to receive(:find_by_ids!).with(rule.id).
       and_return([rule])
 
@@ -81,8 +81,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(contact_rules).to receive(:ids).and_return([rule.id])
     expect(contact).to receive(:rules).and_return(contact_rules)
 
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).with(contact.id).
-      and_return([contact])
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
+      and_return(contact)
 
     get "/contacts/#{contact.id}/links/rules"
     expect(last_response.status).to eq(200)
@@ -90,8 +90,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
   end
 
   it 'updates rules for a contact' do
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).with(contact.id).
-      and_return([contact])
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
+      and_return(contact)
     expect(Flapjack::Data::Rule).to receive(:find_by_ids!).with(rule.id).
       and_return([rule])
 
@@ -104,8 +104,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
   end
 
   it 'deletes a rule from a contact' do
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).with(contact.id).
-      and_return([contact])
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
+      and_return(contact)
 
     expect(contact_rules).to receive(:find_by_ids!).with(rule.id).
       and_return([rule])
