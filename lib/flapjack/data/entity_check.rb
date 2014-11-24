@@ -75,8 +75,11 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
         create_entity = options[:create_entity]
         logger = options[:logger]
+        puts("entity_name: #{entity_name.inspect}")
+        puts("create_entity: #{create_entity.inspect}")
         entity = Flapjack::Data::Entity.find_by_name(entity_name,
           :create => create_entity, :logger => logger, :redis => redis)
+        puts("entity: #{entity.inspect}")
         self.new(entity, check_name, :logger => logger, :redis => redis)
       end
 
@@ -983,8 +986,8 @@ module Flapjack
 
       def initialize(entity, check, options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
-        raise "Invalid entity" unless @entity = entity
-        raise "Invalid check" unless @check = check
+        raise "Invalid entity (#{entity.inspect})" unless @entity = entity
+        raise "Invalid check (#{check.inspect} on #{entity.inspect})" unless @check = check
         @key = "#{entity.name}:#{check}"
         if @redis.zscore("all_checks", @key).nil?
           timestamp = options[:timestamp] || Time.now.to_i

@@ -30,6 +30,36 @@ module Flapjack
         semaphore
       end
 
+      def self.create_entity_ids_if_required(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        logger = options[:logger]
+
+        semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, :redis => redis)
+        if semaphore.nil?
+          unless logger.nil?
+            logger.fatal "Could not obtain lock for data migration. Ensure that " +
+              "no other flapjack processes are running that might be executing " +
+              "migrations, check logs for any exceptions, manually delete the " +
+              "'#{ENTITY_DATA_MIGRATION}' key from your Flapjack Redis " +
+              "database and try running Flapjack again."
+          end
+          exit
+        end
+
+        if redis.exists('created_ids_for_old_entities_without_ids')
+          return
+        end
+        logger.warn "Ensuring all entities have ids ..." unless logger.nil?
+
+        Flapjack::Data::EntityCheck.find_current_names_by_entity(:redis => redis, :logger => logger).keys.each {|entity_name|
+          entity = Flapjack::Data::Entity.find_by_name(entity_name, :create => true, :redis => redis, :logger => logger)
+        }
+
+        redis.set('created_ids_for_old_entities_without_ids', 'true')
+        logger.warn "Entity id creation complete."
+        semaphore.release
+      end
+
       def self.migrate_entity_check_data_if_required(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
 
