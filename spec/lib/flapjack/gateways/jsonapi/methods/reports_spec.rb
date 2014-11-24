@@ -52,7 +52,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
       expect(sorted).to receive(:page).with(1, :per_page => 20).
         and_return([check])
       expect(Flapjack::Data::Check).to receive(:sort).
-        with(:name, :order => 'alpha').and_return(sorted)
+        with(:name).and_return(sorted)
     elsif opts[:some]
       expect(Flapjack::Data::Check).to receive(:find_by_ids!).
         with(check.id).and_return([check])

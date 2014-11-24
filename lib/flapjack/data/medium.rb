@@ -49,9 +49,13 @@ module Flapjack
 
       validates_with Flapjack::Data::Validators::IdValidator
 
-      def self.as_jsonapi(fields, unwrap, *media)
-        return [] if media.empty?
-        media_ids = media.map(&:id)
+      def self.as_jsonapi(options = {})
+        media = options[:resources]
+        return [] if media.nil? || media.empty?
+
+        fields = options[:fields]
+        unwrap = options[:unwrap]
+        # incl   = options[:include]
 
         whitelist = [:id, :type, :address, :interval, :rollup_threshold]
 
@@ -61,6 +65,7 @@ module Flapjack
           Set.new(fields).add(:id).keep_if {|f| whitelist.include?(f) }.to_a
         end
 
+        media_ids = media.map(&:id)
         contact_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
           associated_ids_for(:contact)
         route_ids = Flapjack::Data::Medium.intersect(:id => media_ids).

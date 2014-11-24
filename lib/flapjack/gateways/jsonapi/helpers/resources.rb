@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'active_support/inflector'
+
 module Flapjack
   module Gateways
     class JSONAPI < Sinatra::Base
@@ -66,15 +68,35 @@ module Flapjack
             end
 
             response.headers['Location'] = "#{base_url}/#{resources_name}/#{resources.map(&:id).join(',')}"
-            resources_as_json = klass.as_jsonapi(nil, unwrap, *resources)
+            resources_as_json = klass.as_jsonapi(:unwrap => unwrap,
+              :resources => resources, :ids => resources.map(&:id))
             Flapjack.dump_json(resources_name.to_sym => resources_as_json)
+          end
+
+          def resource_sort(klass, options = {})
+            sort_opts = if params[:sort].nil?
+              options[:sort].to_sym || :id
+            else
+              params[:sort].split(',').each_with_object({}) do |sort_param|
+                sort_param =~ /^(-)?([a-z_]+)/i
+                rev  = $1
+                term = $2
+                memo[term.to_sym] = rev.nil? ? :asc : :desc
+              end
+            end
+
+            klass.sort(sort_opts)
           end
 
           def resource_get(klass, resources_name, ids, options = {})
             unwrap = !ids.nil? && (ids.size == 1)
 
             resources, meta = if ids
-              requested = klass.find_by_ids!(*ids)
+              requested = if (ids.size == 1)
+                [klass.find_by_id!(*ids)]
+              else
+                resource_sort(klass, :sort => options[:sort]).find_by_ids!(*ids)
+              end
 
               if requested.empty?
                 raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(klass, ids)
@@ -82,19 +104,45 @@ module Flapjack
 
               [requested, {}]
             else
-              paginate_get(klass.sort(options[:sort], :order => 'alpha'),
+              paginate_get(resource_sort(klass, :sort => options[:sort]),
                 :total => klass.count, :page => params[:page],
                 :per_page => params[:per_page])
             end
 
-            fields = params[:fields].nil? ? nil : params[:fields].split(',').map(&:to_sym)
+            fields = params[:fields].nil?  ? nil : params[:fields].split(',')
 
-            resources_as_json = klass.as_jsonapi(fields, unwrap, *resources)
-            Flapjack.dump_json({resources_name.to_sym => resources_as_json}.merge(meta))
+            whitelist = (options[:attributes] || []) | ['id']
+
+            jsonapi_fields = if fields.nil?
+              whitelist.map(&:to_sym)
+            else
+              Set.new(fields).add(:id).keep_if {|f| whitelist.include?(f) }.to_a.map(&:to_sym)
+            end
+
+            linked = {}
+
+            incl = params[:include].nil? ? nil : params[:include].split(',')
+
+            unless incl.nil?
+              included = incl.collect {|i| i.split('.')}.sort_by(&:length)
+              included.each do |incl_clause|
+                data_for_include_clause(linked, klass, resources.map(&:id),
+                  [], incl_clause)
+              end
+            end
+
+            resources_as_json = klass.as_jsonapi(:resources => resources,
+              :ids => ids || resources.map(&:id), :fields => jsonapi_fields,
+              :unwrap => unwrap)
+
+            data = {resources_name.to_sym => resources_as_json}
+
+            unless linked.empty?
+              data[:linked] = linked
+            end
+
+            Flapjack.dump_json(data.merge(meta))
           end
-
-          # TODO some of the link stuff could be done more efficiently -- check
-          # for existence of ids rather than load the records outright
 
           def resource_put(klass, resources_name, ids, options = {})
             resources_data, _ = wrapped_params(resources_name)
@@ -256,6 +304,41 @@ module Flapjack
               links << "<#{url_without_params}?#{new_params.to_param}>; rel=\"#{key}\""
             end
             links
+          end
+
+          # TODO probably don't need to preserve the 'clause_done' part, but
+          # leaving it in for debugging for the moment
+          # TODO generally suboptimal
+          def data_for_include_clause(cache, parent_klass, parent_ids, clause_done, clause_left)
+            clause_fragment = clause_left.shift
+            clause_done.push(clause_fragment)
+
+            fragment_klass = nil
+
+            # SMELL mucking about with a sandstorm protected method...
+            parent_klass.send(:with_association_data, clause_fragment.to_sym) do |data|
+              fragment_klass = data.data_klass
+            end
+
+            return if fragment_klass.nil?
+
+            fragment_ids_by_parent_id = parent_klass.intersect(:id => parent_ids).
+              associated_ids_for(clause_fragment.to_sym)
+
+            # TODO currently only handles to_many (unwrap false),
+            # needs to handle to_one (unwrap true)
+            fragment_ids = fragment_ids_by_parent_id.values.flatten
+
+            if clause_left.size > 0
+              data_for_include_clause(cache, fragment_klass, fragment_ids,
+                                      clause_done, clause_left)
+            else
+              # reached the end, ensure that data is stored as needed
+              fragment_resources = fragment_klass.find_by_ids!(*fragment_ids)
+              cache[fragment_klass.name.split('::').last.downcase.pluralize] =
+                fragment_klass.as_jsonapi(:resources => fragment_resources,
+                  :ids => fragment_ids, :unwrap => false)
+            end
           end
         end
       end

@@ -34,9 +34,13 @@ module Flapjack
         self.check_by_end   = c
       end
 
-      def self.as_jsonapi(fields, unwrap, *scheduled_maintenances)
-        return [] if scheduled_maintenances.empty?
-        sm_ids = scheduled_maintenances.map(&:id)
+      def self.as_jsonapi(options = {})
+        scheduled_maintenances = options[:resources]
+        return [] if scheduled_maintenances.nil? || scheduled_maintenances.empty?
+
+        fields = options[:fields]
+        unwrap = options[:unwrap]
+        # incl   = options[:include]
 
         whitelist = [:id, :start_time, :end_time, :summary]
 
@@ -46,6 +50,7 @@ module Flapjack
           Set.new(fields).add(:id).keep_if {|f| whitelist.include?(f) }.to_a
         end
 
+        sm_ids = scheduled_maintenances.map(&:id)
         check_ids = Flapjack::Data::Check.intersect(:id => sm_ids).
                       associated_ids_for(:check_by_start)
 

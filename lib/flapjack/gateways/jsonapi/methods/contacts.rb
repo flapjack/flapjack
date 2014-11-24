@@ -31,7 +31,9 @@ module Flapjack
 
               status 200
               resource_get(Flapjack::Data::Contact, 'contacts',
-                           requested_contacts, :sort => :name)
+                           requested_contacts,
+                           :attributes => ['id', 'name', 'timezone'],
+                           :sort => :name)
             end
 
             app.put %r{^/contacts/(.+)$} do

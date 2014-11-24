@@ -34,6 +34,7 @@ module Flapjack
 
               status 200
               resource_get(Flapjack::Data::Rule, 'rules', requested_rules,
+                           :attributes       => ['id'],
                            :sort => :id)
             end
 

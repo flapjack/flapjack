@@ -217,7 +217,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
       all_states = double('all_states', :all => [ok_state, failing_state])
       expect(states).to receive(:intersect_range).
-        with(nil, time.to_i, :order => 'desc', :limit => 20, :by_score => true).
+        with(nil, time.to_i, :desc => true, :limit => 20, :by_score => true).
         and_return(all_states)
 
       expect(check).to receive(:enabled).and_return(true)

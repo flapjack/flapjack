@@ -29,9 +29,13 @@ module Flapjack
 
       validates_with Flapjack::Data::Validators::IdValidator
 
-      def self.as_jsonapi(fields, unwrap, *tags)
-        return [] if tags.empty?
-        tag_ids = tags.map(&:id)
+      def self.as_jsonapi(options = {})
+        tags = options[:resources]
+        return [] if tags.nil? || tags.empty?
+
+        fields = options[:fields]
+        unwrap = options[:unwrap]
+        # incl   = options[:include]
 
         whitelist = [:id, :name]
 
@@ -41,6 +45,7 @@ module Flapjack
           Set.new(fields).add(:id).keep_if {|f| whitelist.include?(f) }.to_a
         end
 
+        tag_ids = tags.map(&:id)
         check_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
           associated_ids_for(:checks)
         rule_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).

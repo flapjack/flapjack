@@ -25,7 +25,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:new).with(tag_data).
       and_return(tag)
 
-    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).with(nil, true, tag).and_return(tag_data)
+    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).
+      with(:resources => [tag], :ids => [tag.id], :unwrap => true).
+      and_return(tag_data)
 
     post "/tags", Flapjack.dump_json(:tags => tag_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -56,7 +58,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:new).with(tag_data).
       and_return(tag)
 
-    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).with(nil, true, tag).and_return(tag_with_check_data)
+    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).
+      with(:resources => [tag], :ids => [tag.id], :unwrap => true).
+      and_return(tag_with_check_data)
 
     post "/tags", Flapjack.dump_json(:tags => tag_with_check_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -94,7 +98,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:new).with(tag_data).
       and_return(tag)
 
-    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).with(nil, true, tag).and_return(tag_with_check_and_rule_data)
+    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).
+      with(:resources => [tag], :ids => [tag.id], :unwrap => true).
+      and_return(tag_with_check_and_rule_data)
 
     post "/tags", Flapjack.dump_json(:tags => tag_with_check_and_rule_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -116,10 +122,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return([tag])
-    expect(Flapjack::Data::Tag).to receive(:sort).
-      with(:name, :order => 'alpha').and_return(sorted)
+    expect(Flapjack::Data::Tag).to receive(:sort).with(:name).and_return(sorted)
 
-    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).with(nil, false, tag).and_return([tag_data])
+    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).
+      with(:resources => [tag], :ids => [tag.id],
+           :fields => an_instance_of(Array), :unwrap => false).
+      and_return([tag_data])
 
     get '/tags'
     expect(last_response).to be_ok
@@ -127,10 +135,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   end
 
   it "retrieves one tag" do
-    expect(Flapjack::Data::Tag).to receive(:find_by_ids!).
-      with(tag.id).and_return([tag])
+    expect(Flapjack::Data::Tag).to receive(:find_by_id!).
+      with(tag.id).and_return(tag)
 
-    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).with(nil, true, tag).and_return(tag_data)
+    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).
+      with(:resources => [tag], :ids => [tag.id],
+           :fields => an_instance_of(Array), :unwrap => true).
+      and_return(tag_data)
 
     get "/tags/#{tag.id}"
     expect(last_response).to be_ok
@@ -138,10 +149,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   end
 
   it "retrieves several tags" do
-    expect(Flapjack::Data::Tag).to receive(:find_by_ids!).
-      with(tag.id, tag_2.id).and_return([tag, tag_2])
+    sorted = double('sorted')
+    expect(sorted).to receive(:find_by_ids!).
+      with(tag.id, tag_2.id).
+      and_return([tag, tag_2])
+    expect(Flapjack::Data::Tag).to receive(:sort).
+      with(:name).and_return(sorted)
 
-    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).with(nil, false, tag, tag_2).and_return([tag_data, tag_2_data])
+    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).
+      with(:resources => [tag, tag_2], :ids => [tag.id, tag_2.id],
+           :fields => an_instance_of(Array), :unwrap => false).
+      and_return([tag_data, tag_2_data])
 
     get "/tags/#{tag.id},#{tag_2.id}"
     expect(last_response).to be_ok

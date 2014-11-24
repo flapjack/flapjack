@@ -30,7 +30,9 @@ module Flapjack
 
               status 200
               resource_get(Flapjack::Data::Check, 'checks', requested_checks,
-                           :sort => :name)
+                           :attributes => ['id', 'name', 'initial_failure_delay',
+                                           'repeat_failure_delay', 'enabled'],
+                           :sort => 'name')
             end
 
             app.put %r{^/checks/(.+)$} do

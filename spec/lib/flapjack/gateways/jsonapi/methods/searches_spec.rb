@@ -31,7 +31,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Searches', :sinatra => true, :lo
     expect(sorted).to receive(:page).with(1, :per_page => 20).and_return([check])
     expect(filtered).to receive(:count).and_return(1)
     expect(filtered).to receive(:sort).
-      with(:name, :order => 'alpha').and_return(sorted)
+      with(:name).and_return(sorted)
 
     expect(Flapjack::Data::Check).to receive(:as_jsonapi).with(check).
       and_return([check_data])
@@ -57,7 +57,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Searches', :sinatra => true, :lo
     expect(sorted).to receive(:page).with(1, :per_page => 20).and_return([contact])
     expect(filtered).to receive(:count).and_return(1)
     expect(filtered).to receive(:sort).
-      with(:name, :order => 'alpha').and_return(sorted)
+      with(:name).and_return(sorted)
 
     expect(Flapjack::Data::Contact).to receive(:as_jsonapi).with(contact).
       and_return([contact_data])
@@ -83,7 +83,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Searches', :sinatra => true, :lo
     expect(sorted).to receive(:page).with(1, :per_page => 20).and_return([tag])
     expect(filtered).to receive(:count).and_return(1)
     expect(filtered).to receive(:sort).
-      with(:name, :order => 'alpha').and_return(sorted)
+      with(:name).and_return(sorted)
 
     expect(Flapjack::Data::Tag).to receive(:as_jsonapi).with(tag).
       and_return([tag_data])

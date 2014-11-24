@@ -81,7 +81,7 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
       and_return(all_states)
     expect(states_assoc).to receive(:intersect_range).
       with(nil, time - (5 * 60 * 60), :by_score => true, :limit => 2,
-           :order => "desc").and_return(no_states)
+           :desc => true).and_return(no_states)
     expect(check).to receive(:states).twice.and_return(states_assoc)
 
     check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
@@ -209,7 +209,7 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
       and_return(all_states)
     expect(states_assoc).to receive(:intersect_range).
       with(nil, time - (12 * 60 * 60), :by_score => true, :limit => 2,
-           :order => "desc").and_return(no_states)
+           :desc => true).and_return(no_states)
     expect(check).to receive(:states).twice.and_return(states_assoc)
 
     all_sched = double('all_sched', :all => scheduled_maintenances)

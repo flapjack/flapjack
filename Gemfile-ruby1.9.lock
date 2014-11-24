@@ -1,7 +1,7 @@
 GIT
   remote: git://github.com/flapjack/sandstorm.git
-  revision: ffab5aef296d89b4b3a335f1305e0f281315f91d
-  branch: 8_association_callbacks
+  revision: 45ea4a66905d9df42ac98025f3503a158ce4f632
+  branch: master
   specs:
     sandstorm (0.1.0)
       activemodel

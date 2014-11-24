@@ -33,6 +33,8 @@ module Flapjack
 
               status 200
               resource_get(Flapjack::Data::Medium, 'media', requested_media,
+                           :attributes => ['id', 'type', 'address', 'interval',
+                                           'rollup_threshold'],
                            :sort => :id)
             end
 

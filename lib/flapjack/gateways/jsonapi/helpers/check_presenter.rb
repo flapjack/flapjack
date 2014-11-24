@@ -54,7 +54,7 @@ module Flapjack
             unless start_time.nil?
               first_and_prior = @check.states.
                 intersect_range(nil, start_time, :by_score => true,
-                                :limit => 2, :order => 'desc').all
+                                :limit => 2, :desc => true).all
               hist_states.unshift(first_and_prior.last) if first_and_prior.size == 2
             end
 

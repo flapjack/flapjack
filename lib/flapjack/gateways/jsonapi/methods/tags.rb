@@ -34,6 +34,7 @@ module Flapjack
 
               status 200
               resource_get(Flapjack::Data::Tag, 'tags', requested_tags,
+                           :attributes => ['id', 'name'],
                            :sort => :name)
             end
 

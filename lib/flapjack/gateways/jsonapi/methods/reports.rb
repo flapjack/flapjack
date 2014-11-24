@@ -16,7 +16,7 @@ module Flapjack
 
             def report_data(check_ids, options = {}, &block)
               checks, meta = if check_ids.nil?
-                paginate_get(Flapjack::Data::Check.sort(:name, :order => 'alpha'),
+                paginate_get(Flapjack::Data::Check.sort(:name),
                   :total => Flapjack::Data::Check.count, :page => options[:page],
                   :per_page => options[:per_page])
               elsif !check_ids.empty?

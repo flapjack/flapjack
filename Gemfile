@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 gemspec :name => 'flapjack'
 
-gem 'sandstorm', :github => 'flapjack/sandstorm', :branch => '8_association_callbacks'
+gem 'sandstorm', :github => 'flapjack/sandstorm', :branch => 'master'
 
 group :development do
   gem 'ruby-prof'

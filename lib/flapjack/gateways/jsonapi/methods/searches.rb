@@ -49,7 +49,7 @@ module Flapjack
 
               opts.update(bool_opts)
 
-              records, meta = paginate_get(klass.intersect(opts).sort(:name, :order => 'alpha'),
+              records, meta = paginate_get(klass.intersect(opts).sort(:name),
                 :total => klass.intersect(opts).count, :page => params[:page],
                 :per_page => params[:per_page])
 

@@ -33,6 +33,7 @@ module Flapjack
               resource_get(Flapjack::Data::UnscheduledMaintenance,
                            'unscheduled_maintenances',
                            requested_unscheduled_maintenances,
+                           :attributes => ['id', 'end_time', 'summary'],
                            :sort => :timestamp)
             end
 

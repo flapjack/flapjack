@@ -24,7 +24,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
       and_return(medium)
 
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(nil, true, medium).and_return(email_data)
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).
+      with(:resources => [medium], :ids => [medium.id], :unwrap => true).
+      and_return(email_data)
 
     post "/media", Flapjack.dump_json(:media => email_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -77,7 +79,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
       and_return(medium)
 
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(nil, true, medium).and_return(email_with_contact_data)
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).
+      with(:resources => [medium], :ids => [medium.id], :unwrap => true).
+      and_return(email_with_contact_data)
 
     post "/media", Flapjack.dump_json(:media => email_with_contact_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -113,10 +117,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   end
 
   it "returns a single medium" do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with(medium.id).and_return([medium])
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).
+      with(medium.id).and_return(medium)
 
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(nil, true, medium).and_return(email_data)
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).
+      with(:resources => [medium], :ids => [medium.id],
+           :fields => an_instance_of(Array), :unwrap => true).
+      and_return(email_data)
 
     get "/media/#{medium.id}"
     expect(last_response).to be_ok
@@ -139,9 +146,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return([medium])
     expect(Flapjack::Data::Medium).to receive(:sort).
-      with(:id, :order => 'alpha').and_return(sorted)
+      with(:id).and_return(sorted)
 
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).with(nil, false, medium).and_return([email_data])
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).
+      with(:resources => [medium], :ids => [medium.id],
+           :fields => an_instance_of(Array), :unwrap => false).
+      and_return([email_data])
 
     get '/media'
     expect(last_response).to be_ok
@@ -149,8 +159,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   end
 
   it "does not return a medium if the medium is not present" do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
+      and_raise(Sandstorm::Records::Errors::RecordNotFound.new(Flapjack::Data::Medium, medium.id))
 
     get "/media/#{medium.id}"
     expect(last_response).to be_not_found

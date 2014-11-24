@@ -22,7 +22,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(Flapjack::Data::Contact).to receive(:new).with(contact_data).
       and_return(contact)
 
-    expect(Flapjack::Data::Contact).to receive(:as_jsonapi).with(nil, true, contact).and_return(contact_data)
+    expect(Flapjack::Data::Contact).to receive(:as_jsonapi).
+      with(:resources => [contact], :ids => [contact.id], :unwrap => true).
+      and_return(contact_data)
 
     post "/contacts", Flapjack.dump_json(:contacts => contact_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -64,10 +66,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return([contact])
-    expect(Flapjack::Data::Contact).to receive(:sort).
-      with(:name, :order => 'alpha').and_return(sorted)
+    expect(Flapjack::Data::Contact).to receive(:sort).with(:name).
+      and_return(sorted)
 
-    expect(Flapjack::Data::Contact).to receive(:as_jsonapi).with(nil, false, contact).and_return([contact_data])
+    expect(Flapjack::Data::Contact).to receive(:as_jsonapi).
+      with(:resources => [contact], :ids => [contact.id],
+           :fields => an_instance_of(Array), :unwrap => false).
+      and_return([contact_data])
 
     get '/contacts'
     expect(last_response).to be_ok
@@ -75,10 +80,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "returns a contact" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
-      with(contact.id).and_return([contact])
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).
+      with(contact.id).and_return(contact)
     expect(Flapjack::Data::Contact).to receive(:as_jsonapi).
-      with(nil, true, contact).and_return(contact_data)
+      with(:resources => [contact], :ids => [contact.id],
+           :fields => an_instance_of(Array), :unwrap => true).
+      and_return(contact_data)
 
     get "/contacts/#{contact.id}"
     expect(last_response).to be_ok
@@ -86,8 +93,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "does not return a contact that does not exist" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
-      with(contact.id).and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Contact, [contact.id]))
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).
+      with(contact.id).and_raise(Sandstorm::Records::Errors::RecordNotFound.new(Flapjack::Data::Contact, contact.id))
 
     get "/contacts/#{contact.id}"
     expect(last_response.status).to eq(404)

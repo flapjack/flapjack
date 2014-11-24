@@ -22,7 +22,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
       and_return(unscheduled_maintenance)
 
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:as_jsonapi).
-      with(nil, true, unscheduled_maintenance).and_return(unscheduled_maintenance_data)
+      with(:resources => [unscheduled_maintenance],
+           :ids => [unscheduled_maintenance.id], :unwrap => true).
+      and_return(unscheduled_maintenance_data)
 
     post "/unscheduled_maintenances", Flapjack.dump_json(:unscheduled_maintenances => unscheduled_maintenance_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -52,7 +54,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
       and_return(unscheduled_maintenance)
 
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:as_jsonapi).
-      with(nil, true, unscheduled_maintenance).and_return(unscheduled_maintenance_with_check_data)
+      with(:resources => [unscheduled_maintenance],
+           :ids => [unscheduled_maintenance.id], :unwrap => true).
+      and_return(unscheduled_maintenance_with_check_data)
 
     post "/unscheduled_maintenances", Flapjack.dump_json(:unscheduled_maintenances => unscheduled_maintenance_with_check_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
@@ -60,11 +64,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
   end
 
   it 'returns a single unscheduled maintenance period' do
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:find_by_ids!).
-      with(unscheduled_maintenance.id).and_return([unscheduled_maintenance])
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:find_by_id!).
+      with(unscheduled_maintenance.id).and_return(unscheduled_maintenance)
 
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:as_jsonapi).
-      with(nil, true, unscheduled_maintenance).and_return(unscheduled_maintenance_data)
+      with(:resources => [unscheduled_maintenance],
+           :ids => [unscheduled_maintenance.id],
+           :fields => an_instance_of(Array), :unwrap => true).
+      and_return(unscheduled_maintenance_data)
 
     get "/unscheduled_maintenances/#{unscheduled_maintenance.id}"
     expect(last_response).to be_ok
@@ -75,12 +82,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
     unscheduled_maintenance_2 = double(Flapjack::Data::UnscheduledMaintenance,
       :id => unscheduled_maintenance_2_data[:id])
 
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:find_by_ids!).
+    sorted = double('sorted')
+    expect(sorted).to receive(:find_by_ids!).
       with(unscheduled_maintenance.id, unscheduled_maintenance_2.id).
       and_return([unscheduled_maintenance, unscheduled_maintenance_2])
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:sort).
+      with(:timestamp).and_return(sorted)
 
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:as_jsonapi).
-      with(nil, false, unscheduled_maintenance, unscheduled_maintenance_2).
+      with(:resources => [unscheduled_maintenance, unscheduled_maintenance_2],
+           :ids => [unscheduled_maintenance.id, unscheduled_maintenance_2.id],
+           :fields => an_instance_of(Array), :unwrap => false).
       and_return([unscheduled_maintenance_data, unscheduled_maintenance_2_data])
 
     get "/unscheduled_maintenances/#{unscheduled_maintenance.id},#{unscheduled_maintenance_2.id}"
@@ -104,10 +116,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return([unscheduled_maintenance])
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:sort).
-      with(:timestamp, :order => 'alpha').and_return(sorted)
+      with(:timestamp).and_return(sorted)
 
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:as_jsonapi).
-      with(nil, false, unscheduled_maintenance).and_return([unscheduled_maintenance_data])
+      with(:resources => [unscheduled_maintenance],
+           :ids => [unscheduled_maintenance.id],
+           :fields => an_instance_of(Array), :unwrap => false).
+      and_return([unscheduled_maintenance_data])
 
     get '/unscheduled_maintenances'
     expect(last_response).to be_ok

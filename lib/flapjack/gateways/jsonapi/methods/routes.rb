@@ -33,6 +33,7 @@ module Flapjack
 
               status 200
               resource_get(Flapjack::Data::Route, 'routes', requested_routes,
+                           :attributes => ['id', 'state', 'time_restrictions'],
                            :sort => :id)
             end
 
