@@ -10,6 +10,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
   let(:contact) { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
 
+  let(:medium)  { double(Flapjack::Data::Medium, :id => email_data[:id]) }
+  let(:route)   { double(Flapjack::Data::Route, :id => route_data[:id]) }
+
   it "creates a rule" do
     expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
       Flapjack::Data::Tag).and_yield
@@ -162,6 +165,42 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     get "/rules/#{rule.id}"
     expect(last_response).to be_not_found
+  end
+
+  it "retrieves a rule and all its linked media records (through routes)" do
+    expect(Flapjack::Data::Rule).to receive(:find_by_id!).
+      with(rule.id).and_return(rule)
+
+    rule_with_route_data = rule_data.merge(:links => {:routes => [route.id]})
+
+    rules = double('rules')
+    expect(rules).to receive(:associated_ids_for).with(:routes).
+      and_return(rule.id => [route.id])
+    expect(Flapjack::Data::Rule).to receive(:intersect).
+      with(:id => [rule.id]).and_return(rules)
+
+    routes = double('routes')
+    expect(routes).to receive(:associated_ids_for).with(:media).
+      and_return(route.id => [medium.id])
+    expect(Flapjack::Data::Route).to receive(:intersect).
+      with(:id => [route.id]).and_return(routes)
+
+    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
+      with(medium.id).and_return([medium])
+
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).
+      with(:resources => [medium], :ids => [medium.id], :unwrap => false).
+      and_return(email_data)
+
+    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).
+      with(:resources => [rule], :ids => [rule.id], :unwrap => true,
+           :fields => an_instance_of(Array)).
+      and_return(rule_with_route_data)
+
+    get "/rules/#{rule.id}?include=routes.media"
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq(Flapjack.dump_json(:rules => rule_with_route_data,
+      :linked => {:media => email_data}))
   end
 
   it "sets a contact for a rule" do
