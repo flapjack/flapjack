@@ -93,13 +93,13 @@ command :maintenance do |maintenance|
       :desc => 'The reason for the maintenance window to occur.  This can be a string, or a ruby regex of the form \'Downtime for *\' or \'[[:lower:]]\''
 
     show.flag [:s, 'start', 'started', 'starting'],
-      :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between times and time"'
+      :desc => 'The start time for the maintenance window, eg \'before 10am\'. This should be prefixed with \'more than\', \'less than\', \'on\', \'before\', or \'after\', or of the form \'between times and time\''
 
     show.flag [:d, 'duration'],
-      :desc => 'The total duration of the maintenance window. This should be prefixed with "more than", "less than", "before, "after" or "equal to", or or of the form "between 3 and 4 hours".  This should be an interval'
+      :desc => 'The total duration of the maintenance window, eg \'equal to 5 hours\'. This should be prefixed with \'more than\', \'less than\', \'before, \'after\' or \'equal to\', or or of the form \'between 3 and 4 hours\'.  This should be an interval'
 
     show.flag [:f, 'finish', 'finished', 'finishing', 'remain', 'remained', 'remaining', 'end'],
-      :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between time and time"'
+      :desc => 'The finishing time for the maintenance window, eg \'more than 1 year from now\'. This should be prefixed with \'more than\', \'less than\', \'on\', \'before\', or \'after\', or of the form \'between time and time\''
 
     show.flag [:st, 'state'],
       :desc => 'The state that the check is currently in'
@@ -131,13 +131,13 @@ command :maintenance do |maintenance|
       :desc => 'The reason for the maintenance window to occur.  This can be a string, or a ruby regex of the form \'Downtime for *\' or \'[[:lower:]]\''
 
     delete.flag [:s, 'start', 'started', 'starting'],
-      :desc => 'The start time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between times and time"'
+      :desc => 'The start time for the maintenance window, eg \'before 10am\'. This should be prefixed with \'more than\', \'less than\', \'on\', \'before\', or \'after\', or of the form \'between times and time\''
 
     delete.flag [:d, 'duration'],
-      :desc => 'The total duration of the maintenance window. This should be prefixed with "more than", "less than", "before, "after" or "equal to", or or of the form "between 3 and 4 hours".  This should be an interval'
+      :desc => 'The total duration of the maintenance window, eg \'equal to 5 hours\'. This should be prefixed with \'more than\', \'less than\', \'before, \'after\' or \'equal to\', or or of the form \'between 3 and 4 hours\'.  This should be an interval'
 
     delete.flag [:f, 'finish', 'finished', 'finishing', 'remain', 'remained', 'remaining', 'end'],
-      :desc => 'The finishing time for the maintenance window. This should be prefixed with "more than", "less than", "on", "before", or "after", or of the form "between time and time"'
+      :desc => 'The finishing time for the maintenance window, eg \'more than 1 year from now\'. This should be prefixed with \'more than\', \'less than\', \'on\', \'before\', or \'after\', or of the form \'between time and time\''
 
     delete.flag [:st, 'state'],
       :desc => 'The state that the check is currently in'
@@ -167,13 +167,13 @@ command :maintenance do |maintenance|
       :desc => 'The reason for the maintenance window to occur'
 
     create.flag [:s, 'start', 'started', 'starting'],
-      :desc => 'The start time for the maintenance window'
+      :desc => 'The start time for the maintenance window, eg \'now\' or \'in 3 hours\''
 
     create.flag [:d, 'duration'],
-      :desc => 'The total duration of the maintenance window.  This should be an interval'
+      :desc => 'The total duration of the maintenance window, eg \'30 minutes\'.  This should be an interval'
 
     create.flag [:t, 'type'],
-      :desc => 'The type of maintenance scheduled ("scheduled")',
+      :desc => 'The type of maintenance scheduled (\'scheduled\')',
       :default_value => 'scheduled'
 
     create.action do |global_options,options,args|
