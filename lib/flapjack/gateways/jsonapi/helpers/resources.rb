@@ -328,9 +328,11 @@ module Flapjack
 
             fragment_ids_by_parent_id = ids_cache[clause_done]
 
-            # TODO currently only handles to_many (unwrap false),
-            # needs to handle to_one (unwrap true)
-            fragment_ids = fragment_ids_by_parent_id.values.flatten
+            # to_many associations have array values, to_one associations have string ids
+            fragment_ids = fragment_ids_by_parent_id.values.inject([]) do |memo, v|
+              memo += (v.is_a?(Array) ? v : [v])
+              memo
+            end
 
             if clause_left.size > 0
               data_for_include_clause(linked, ids_cache, fragment_klass, fragment_ids,

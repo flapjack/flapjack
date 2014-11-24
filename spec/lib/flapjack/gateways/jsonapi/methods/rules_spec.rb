@@ -167,6 +167,36 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(last_response).to be_not_found
   end
 
+  it "retrieves a rule and its linked contact record" do
+    expect(Flapjack::Data::Rule).to receive(:find_by_id!).
+      with(rule.id).and_return(rule)
+
+    rule_with_contact_data = rule_data.merge(:links => {:contact => contact.id})
+
+    rules = double('rules')
+    expect(rules).to receive(:associated_ids_for).with(:contact).
+      and_return(rule.id => contact.id)
+    expect(Flapjack::Data::Rule).to receive(:intersect).
+      with(:id => [rule.id]).and_return(rules)
+
+    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
+      with(contact.id).and_return([contact])
+
+    expect(Flapjack::Data::Contact).to receive(:as_jsonapi).
+      with(:resources => [contact], :ids => [contact.id], :unwrap => false).
+      and_return([contact_data])
+
+    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).
+      with(:resources => [rule], :ids => [rule.id], :unwrap => true,
+           :fields => an_instance_of(Array)).
+      and_return(rule_with_contact_data)
+
+    get "/rules/#{rule.id}?include=contact"
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq(Flapjack.dump_json(:rules => rule_with_contact_data,
+      :linked => {:contacts => [contact_data]}))
+  end
+
   it "retrieves a rule and all its linked media records (through routes)" do
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).and_return(rule)
