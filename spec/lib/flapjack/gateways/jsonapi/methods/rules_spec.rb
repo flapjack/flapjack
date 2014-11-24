@@ -190,7 +190,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     expect(Flapjack::Data::Medium).to receive(:as_jsonapi).
       with(:resources => [medium], :ids => [medium.id], :unwrap => false).
-      and_return(email_data)
+      and_return([email_data])
 
     expect(Flapjack::Data::Rule).to receive(:as_jsonapi).
       with(:resources => [rule], :ids => [rule.id], :unwrap => true,
@@ -200,7 +200,50 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     get "/rules/#{rule.id}?include=routes.media"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(Flapjack.dump_json(:rules => rule_with_route_data,
-      :linked => {:media => email_data}))
+      :linked => {:media => [email_data]}))
+  end
+
+  it "retrieves a rule, its routes, and the routes' media records" do
+    expect(Flapjack::Data::Rule).to receive(:find_by_id!).
+      with(rule.id).and_return(rule)
+
+    rule_with_route_data = rule_data.merge(:links => {:routes => [route.id]})
+
+    rules = double('rules')
+    expect(rules).to receive(:associated_ids_for).with(:routes).
+      and_return(rule.id => [route.id])
+    expect(Flapjack::Data::Rule).to receive(:intersect).
+      with(:id => [rule.id]).and_return(rules)
+
+    routes = double('routes')
+    expect(routes).to receive(:associated_ids_for).with(:media).
+      and_return(route.id => [medium.id])
+    expect(Flapjack::Data::Route).to receive(:intersect).
+      with(:id => [route.id]).and_return(routes)
+
+    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
+      with(medium.id).and_return([medium])
+
+    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).
+      with(:resources => [medium], :ids => [medium.id], :unwrap => false).
+      and_return([email_data])
+
+    expect(Flapjack::Data::Route).to receive(:find_by_ids!).
+      with(route.id).and_return([route])
+
+    expect(Flapjack::Data::Route).to receive(:as_jsonapi).
+      with(:resources => [route], :ids => [route.id], :unwrap => false).
+      and_return([route_data])
+
+    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).
+      with(:resources => [rule], :ids => [rule.id], :unwrap => true,
+           :fields => an_instance_of(Array)).
+      and_return(rule_with_route_data)
+
+    get "/rules/#{rule.id}?include=routes,routes.media"
+    expect(last_response).to be_ok
+    expect(last_response.body).to eq(Flapjack.dump_json(:rules => rule_with_route_data,
+      :linked => {:routes => [route_data], :media => [email_data]}))
   end
 
   it "sets a contact for a rule" do

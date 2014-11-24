@@ -124,15 +124,16 @@ module Flapjack
             incl = params[:include].nil? ? nil : params[:include].split(',')
 
             unless incl.nil?
+              ids_cache = {}
               included = incl.collect {|i| i.split('.')}.sort_by(&:length)
               included.each do |incl_clause|
-                data_for_include_clause(linked, klass, resources.map(&:id),
-                  [], incl_clause)
+                data_for_include_clause(linked, ids_cache, klass,
+                  (ids || resources.map(&:id)), [], incl_clause)
               end
             end
 
             resources_as_json = klass.as_jsonapi(:resources => resources,
-              :ids => ids || resources.map(&:id), :fields => jsonapi_fields,
+              :ids => (ids || resources.map(&:id)), :fields => jsonapi_fields,
               :unwrap => unwrap)
 
             data = {resources_name.to_sym => resources_as_json}
@@ -306,12 +307,8 @@ module Flapjack
             links
           end
 
-          # TODO probably don't need to preserve the 'clause_done' part, but
-          # leaving it in for debugging for the moment
-          # TODO generally suboptimal
-          def data_for_include_clause(cache, parent_klass, parent_ids, clause_done, clause_left)
+          def data_for_include_clause(linked, ids_cache, parent_klass, parent_ids, clause_done, clause_left)
             clause_fragment = clause_left.shift
-            clause_done.push(clause_fragment)
 
             fragment_klass = nil
 
@@ -322,20 +319,26 @@ module Flapjack
 
             return if fragment_klass.nil?
 
-            fragment_ids_by_parent_id = parent_klass.intersect(:id => parent_ids).
-              associated_ids_for(clause_fragment.to_sym)
+            clause_done.push(clause_fragment)
+
+            unless ids_cache.has_key?(clause_done)
+              ids_cache[clause_done] = parent_klass.intersect(:id => parent_ids).
+                associated_ids_for(clause_fragment.to_sym)
+            end
+
+            fragment_ids_by_parent_id = ids_cache[clause_done]
 
             # TODO currently only handles to_many (unwrap false),
             # needs to handle to_one (unwrap true)
             fragment_ids = fragment_ids_by_parent_id.values.flatten
 
             if clause_left.size > 0
-              data_for_include_clause(cache, fragment_klass, fragment_ids,
+              data_for_include_clause(linked, ids_cache, fragment_klass, fragment_ids,
                                       clause_done, clause_left)
             else
               # reached the end, ensure that data is stored as needed
               fragment_resources = fragment_klass.find_by_ids!(*fragment_ids)
-              cache[fragment_klass.name.split('::').last.downcase.pluralize] =
+              linked[fragment_klass.name.split('::').last.downcase.pluralize] =
                 fragment_klass.as_jsonapi(:resources => fragment_resources,
                   :ids => fragment_ids, :unwrap => false)
             end
