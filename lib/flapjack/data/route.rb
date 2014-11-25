@@ -60,30 +60,32 @@ module Flapjack
       #   end
       # end
 
+      def self.jsonapi_attributes
+        [:state, :time_restrictions]
+      end
+
+      def self.jsonapi_singular_associations
+        [:rule]
+      end
+
+      def self.jsonapi_multiple_associations
+        [:media]
+      end
+
       def self.as_jsonapi(options = {})
         routes = options[:resources]
         return [] if routes.nil? || routes.empty?
 
-        fields = options[:fields]
         unwrap = options[:unwrap]
-        # incl   = options[:include]
 
-        whitelist = [:id, :state, :time_restrictions]
-
-        jsonapi_fields = if fields.nil?
-          whitelist
-        else
-          Set.new(fields).add(:id).keep_if {|f| whitelist.include?(f) }.to_a
-        end
-
-        route_ids = routes.map(&:id)
+        route_ids = options[:ids]
         rule_ids  = Flapjack::Data::Route.intersect(:id => route_ids).
                       associated_ids_for(:rule)
         media_ids = Flapjack::Data::Route.intersect(:id => route_ids).
                       associated_ids_for(:media)
 
         data = routes.collect do |route|
-          route.as_json(:only => jsonapi_fields).merge(:links => {
+          route.as_json(:only => options[:fields]).merge(:links => {
             :rule  => rule_ids[route.id],
             :media => media_ids[route.id]
           })

@@ -10,7 +10,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   let(:contact) { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
 
   it "creates a contact" do
-    expect(Flapjack::Data::Contact).to receive(:lock).with(no_args).and_yield
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium, Flapjack::Data::Rule).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -32,7 +33,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "does not create a contact if the data is improperly formatted" do
-    expect(Flapjack::Data::Contact).to receive(:lock).with(no_args).and_yield
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium, Flapjack::Data::Rule).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])

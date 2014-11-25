@@ -116,6 +116,18 @@ module Flapjack
         self.perfdata_json = @perfdata.nil? ? nil : Flapjack.dump_json(@perfdata)
       end
 
+      def self.jsonapi_attributes
+        [:name, :initial_failure_delay, :repeat_failure_delay, :enabled]
+      end
+
+      def self.jsonapi_singular_associations
+        []
+      end
+
+      def self.jsonapi_multiple_associations
+        [:tags]
+      end
+
       def self.as_jsonapi(options = {})
         checks = options[:resources]
         return [] if checks.nil? || check.empty?

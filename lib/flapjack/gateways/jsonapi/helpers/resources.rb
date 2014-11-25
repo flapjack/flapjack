@@ -11,16 +11,19 @@ module Flapjack
           def resource_post(klass, resources_name, options = {})
             resources_data, unwrap = wrapped_params(resources_name)
 
-            validate_data(resources_data, options)
+            attributes = klass.respond_to?(:jsonapi_attributes) ?
+              klass.jsonapi_attributes : []
+            singular_links, multiple_links = association_klasses(klass)
 
-            resources    = nil
+            validate_data(resources_data, :attributes => attributes,
+              :singular_links => singular_links,
+              :multiple_links => multiple_links)
+
+            resources = nil
 
             data_ids = resources_data.reject {|d| d['id'].nil? }.map {|dd| dd['id'].to_s }
 
-            singular_links   = options[:singular_links]   || {}
-            collection_links = options[:collection_links] || {}
-
-            assoc_klasses = singular_links.values | collection_links.values
+            assoc_klasses = singular_links.values | multiple_links.values
 
             klass.lock(*assoc_klasses) do
               conflicted_ids = klass.intersect(:id => data_ids).ids
@@ -38,15 +41,15 @@ module Flapjack
                 next if links.nil?
 
                 singular_links.each_pair do |assoc, assoc_klass|
-                  next unless links.has_key?(assoc)
+                  next unless links.has_key?(assoc.to_s)
                   memo[r.object_id] ||= {}
-                  memo[r.object_id][assoc] = assoc_klass.find_by_id!(links[assoc])
+                  memo[r.object_id][assoc.to_s] = assoc_klass.find_by_id!(links[assoc.to_s])
                 end
 
-                collection_links.each_pair do |assoc, assoc_klass|
-                  next unless links.has_key?(assoc)
+                multiple_links.each_pair do |assoc, assoc_klass|
+                  next unless links.has_key?(assoc.to_s)
                   memo[r.object_id] ||= {}
-                  memo[r.object_id][assoc] = assoc_klass.find_by_ids!(*links[assoc])
+                  memo[r.object_id][assoc.to_s] = assoc_klass.find_by_ids!(*links[assoc.to_s])
                 end
               end
 
@@ -109,14 +112,15 @@ module Flapjack
                 :per_page => params[:per_page])
             end
 
-            fields = params[:fields].nil?  ? nil : params[:fields].split(',')
+            fields = params[:fields].nil? ? nil : params[:fields].split(',').map(&:to_sym)
 
-            whitelist = (options[:attributes] || []) | ['id']
+            whitelist = (klass.respond_to?(:jsonapi_attributes) ?
+              klass.jsonapi_attributes : []) | [:id]
 
             jsonapi_fields = if fields.nil?
-              whitelist.map(&:to_sym)
+              whitelist
             else
-              Set.new(fields).add(:id).keep_if {|f| whitelist.include?(f) }.to_a.map(&:to_sym)
+              Set.new(fields).add(:id).keep_if {|f| whitelist.include?(f) }.to_a
             end
 
             linked = {}
@@ -147,8 +151,12 @@ module Flapjack
 
           def resource_put(klass, resources_name, ids, options = {})
             resources_data, _ = wrapped_params(resources_name)
-
-            validate_data(resources_data, options)
+            singular_links, multiple_links = association_klasses(klass)
+            attributes = klass.respond_to?(:jsonapi_attributes) ?
+              klass.jsonapi_attributes : []
+            validate_data(resources_data, :attributes => attributes,
+              :singular_links => singular_links,
+              :multiple_links => multiple_links)
             resources = klass.find_by_ids!(*ids)
 
             if resources_data.map {|d| d['id'] }.sort != ids.sort
@@ -157,14 +165,12 @@ module Flapjack
 
             resources_by_id = resources.each_with_object({}) {|r, o| o[r.id] = r }
 
-            attrs            = options[:attributes] || []
-            singular_links   = options[:singular_links]   || {}
-            collection_links = options[:collection_links] || {}
+            assoc_klasses = singular_links.values | multiple_links.values
 
             resource_links = resources_data.each_with_object({}) do |d, memo|
               r = resources_by_id[d['id']]
               d.each_pair do |att, value|
-                next unless attrs.include?(att)
+                next unless attributes.include?(att.to_sym)
                 r.send("#{att}=".to_sym, value)
               end
               halt(err(403, "Validation failed, " + r.errors.full_messages.join(', '))) if r.invalid?
@@ -172,18 +178,18 @@ module Flapjack
               next if links.nil?
 
               singular_links.each_pair do |assoc, assoc_klass|
-                next unless links.has_key?(assoc)
+                next unless links.has_key?(assoc.to_s)
                 memo[r.id] ||= {}
                 memo[r.id][assoc] = assoc_klass.find_by_id!(links[assoc])
               end
 
-              collection_links.each_pair do |assoc, assoc_klass|
-                next unless links.has_key?(assoc)
+              multiple_links.each_pair do |assoc, assoc_klass|
+                next unless links.has_key?(assoc.to_s)
                 current_assoc_ids = r.send(assoc.to_sym).ids
                 memo[r.id] ||= {}
 
-                to_remove = current_assoc_ids - links[assoc]
-                to_add    = links[assoc] - current_assoc_ids
+                to_remove = current_assoc_ids - links[assoc.to_s]
+                to_add    = links[assoc.to_s] - current_assoc_ids
 
                 memo[r.id][assoc] = [
                   to_remove.empty? ? [] : assoc_klass.find_by_ids!(*to_remove),
@@ -227,11 +233,41 @@ module Flapjack
 
           private
 
+          def association_klasses(klass)
+            singular = klass.respond_to?(:jsonapi_singular_associations) ?
+              klass.jsonapi_singular_associations : []
+            multiple = klass.respond_to?(:jsonapi_multiple_associations) ?
+              klass.jsonapi_multiple_associations : []
+
+            singular_aliases, singular_names = singular.partition {|s| s.is_a?(Hash)}
+            multiple_aliases, multiple_names = multiple.partition {|m| m.is_a?(Hash)}
+
+            singular_links = {}
+            multiple_links = {}
+
+            # SMELL mucking about with a sandstorm protected method...
+            klass.send(:with_association_data) do |assoc_data|
+              assoc_data.each_pair do |name, data|
+                if sa = singular_aliases.detect {|a| a.has_key?(name) }
+                  singular_links[sa[name]] = data.data_klass
+                elsif singular_names.include?(name)
+                  singular_links[name] = data.data_klass
+                elsif ma = multiple_aliases.detect {|a| a.has_key?(name) }
+                  multiple_links[ma[name]] = data.data_klass
+                elsif multiple_names.include?(name)
+                  multiple_links[name] = data.data_klass
+                end
+              end
+            end
+
+            [singular_links, multiple_links]
+          end
+
           def validate_data(data, options = {})
-            valid_keys = ((options[:attributes] || []) + ['links']) | ['id']
-            cl = options[:collection_links] ? options[:collection_links].keys : []
-            sl = options[:singular_links]   ? options[:singular_links].keys   : []
-            all_links = cl + sl
+            valid_keys = ((options[:attributes] || []).map(&:to_s) + ['links']) | ['id']
+            sl = options[:singular_links] ? options[:singular_links].keys.map(&:to_s) : []
+            ml = options[:multiple_links] ? options[:multiple_links].keys.map(&:to_s) : []
+            all_links = sl + ml
 
             data.each do |d|
               invalid_keys = d.keys - valid_keys

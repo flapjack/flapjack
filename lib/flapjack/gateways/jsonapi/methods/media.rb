@@ -17,11 +17,7 @@ module Flapjack
 
             app.post '/media' do
               status 201
-              resource_post(Flapjack::Data::Medium, 'media',
-                :attributes => ['id', 'type', 'address', 'interval',
-                                'rollup_threshold'],
-                :singular_links   => {'contact' => Flapjack::Data::Contact},
-                :collection_links => {'routes' => Flapjack::Data::Route})
+              resource_post(Flapjack::Data::Medium, 'media')
             end
 
             app.get %r{^/media(?:/)?([^/]+)?$} do
@@ -33,20 +29,13 @@ module Flapjack
 
               status 200
               resource_get(Flapjack::Data::Medium, 'media', requested_media,
-                           :attributes => ['id', 'type', 'address', 'interval',
-                                           'rollup_threshold'],
                            :sort => :id)
             end
 
             app.put %r{^/media/(.+)$} do
               medium_ids    = params[:captures][0].split(',').uniq
 
-              resource_put(Flapjack::Data::Medium, 'media', medium_ids,
-                :attributes => ['type', 'address', 'interval',
-                                'rollup_threshold'],
-                :singular_links   => {'contact' => Flapjack::Data::Contact},
-                :collection_links => {'routes' => Flapjack::Data::Route}
-              )
+              resource_put(Flapjack::Data::Medium, 'media', medium_ids)
               status 204
             end
 

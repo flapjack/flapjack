@@ -16,10 +16,7 @@ module Flapjack
             app.post '/scheduled_maintenances' do
               status 201
               scheduled_maintenances = resource_post(Flapjack::Data::ScheduledMaintenance,
-                'scheduled_maintenances',
-                :attributes       => ['id', 'start_time', 'end_time', 'summary'],
-                :singular_links   => {'check' => Flapjack::Data::Check},
-              )
+                'scheduled_maintenances')
             end
 
             app.get %r{^/scheduled_maintenances(?:/)?(.+)?$} do
@@ -33,7 +30,6 @@ module Flapjack
               resource_get(Flapjack::Data::ScheduledMaintenance,
                            'scheduled_maintenances',
                            requested_scheduled_maintenances,
-                          :attributes => ['id', 'start_time', 'end_time', 'summary'],
                            :sort => :timestamp)
             end
 

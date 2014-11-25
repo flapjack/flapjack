@@ -108,7 +108,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     expect(Flapjack::Data::Check).to receive(:as_jsonapi).
       with(:resources => [check], :ids => [check.id], :unwrap => true,
-           :fields => [:name, :enabled]).
+           :fields => [:name, :enabled, :id]).
       and_return(check_data)
 
     get "/checks/#{check.id}?fields=name,enabled"

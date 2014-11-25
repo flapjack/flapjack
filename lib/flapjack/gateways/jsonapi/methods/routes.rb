@@ -17,11 +17,7 @@ module Flapjack
 
             app.post '/routes' do
               status 201
-              resource_post(Flapjack::Data::Route, 'routes',
-                :attributes       => ['id', 'state', 'time_restrictions'],
-                :singular_links   => {'rule' => Flapjack::Data::Rule},
-                :collection_links => {'media' => Flapjack::Data::Medium}
-              )
+              resource_post(Flapjack::Data::Route, 'routes')
             end
 
             app.get %r{^/routes(?:/)?([^/]+)?$} do
@@ -33,18 +29,13 @@ module Flapjack
 
               status 200
               resource_get(Flapjack::Data::Route, 'routes', requested_routes,
-                           :attributes => ['id', 'state', 'time_restrictions'],
                            :sort => :id)
             end
 
             app.put %r{^/routes/(.+)$} do
               route_ids = params[:captures][0].split(',').uniq
 
-              resource_put(Flapjack::Data::Route, 'routes', route_ids,
-                :attributes       => ['state', 'time_restrictions'],
-                :singular_links   => {'rule' => Flapjack::Data::Rule},
-                :collection_links => {'media' => Flapjack::Data::Medium}
-              )
+              resource_put(Flapjack::Data::Route, 'routes', route_ids)
               status 204
             end
 

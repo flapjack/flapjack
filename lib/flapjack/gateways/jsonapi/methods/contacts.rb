@@ -18,8 +18,7 @@ module Flapjack
 
             app.post '/contacts' do
               status 201
-              resource_post(Flapjack::Data::Contact, 'contacts',
-                :attributes => ['id', 'name', 'timezone'])
+              resource_post(Flapjack::Data::Contact, 'contacts')
             end
 
             app.get %r{^/contacts(?:/)?([^/]+)?$} do
@@ -31,19 +30,13 @@ module Flapjack
 
               status 200
               resource_get(Flapjack::Data::Contact, 'contacts',
-                           requested_contacts,
-                           :attributes => ['id', 'name', 'timezone'],
-                           :sort => :name)
+                           requested_contacts, :sort => :name)
             end
 
             app.put %r{^/contacts/(.+)$} do
               contact_ids = params[:captures][0].split(',').uniq
 
-              resource_put(Flapjack::Data::Contact, 'contacts', contact_ids,
-                :attributes       => ['name', 'timezone'],
-                :collection_links => {'media' => Flapjack::Data::Medium,
-                                      'rules' => Flapjack::Data::Rule}
-              )
+              resource_put(Flapjack::Data::Contact, 'contacts', contact_ids)
               status 204
             end
 

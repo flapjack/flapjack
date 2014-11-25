@@ -16,10 +16,7 @@ module Flapjack
             app.post '/unscheduled_maintenances' do
               status 201
               resource_post(Flapjack::Data::UnscheduledMaintenance,
-                'unscheduled_maintenances',
-                :attributes       => ['id', 'end_time', 'summary'],
-                :singular_links   => {'check' => Flapjack::Data::Check},
-              )
+                'unscheduled_maintenances')
             end
 
             app.get %r{^/unscheduled_maintenances(?:/)?(.+)?$} do
@@ -33,7 +30,6 @@ module Flapjack
               resource_get(Flapjack::Data::UnscheduledMaintenance,
                            'unscheduled_maintenances',
                            requested_unscheduled_maintenances,
-                           :attributes => ['id', 'end_time', 'summary'],
                            :sort => :timestamp)
             end
 
@@ -41,9 +37,7 @@ module Flapjack
               unscheduled_maintenance_ids = params[:captures][0].split(',')
 
               resource_put(Flapjack::Data::UnscheduledMaintenance,
-                'unscheduled_maintenances', unscheduled_maintenance_ids,
-                :attributes => ['end_time'],
-              )
+                'unscheduled_maintenances', unscheduled_maintenance_ids)
               status 204
             end
 

@@ -15,10 +15,7 @@ module Flapjack
 
             app.post '/checks' do
               status 201
-              resource_post(Flapjack::Data::Check, 'checks',
-                :attributes       => ['id', 'name', 'initial_failure_delay',
-                                      'repeat_failure_delay', 'enabled'],
-                :collection_links => {'tags' => Flapjack::Data::Tag})
+              resource_post(Flapjack::Data::Check, 'checks')
             end
 
             app.get %r{^/checks(?:/)?(.+)?$} do
@@ -30,19 +27,13 @@ module Flapjack
 
               status 200
               resource_get(Flapjack::Data::Check, 'checks', requested_checks,
-                           :attributes => ['id', 'name', 'initial_failure_delay',
-                                           'repeat_failure_delay', 'enabled'],
                            :sort => 'name')
             end
 
             app.put %r{^/checks/(.+)$} do
               check_ids = params[:captures][0].split(',').uniq
 
-              resource_put(Flapjack::Data::Check, 'checks', check_ids,
-                :attributes       => ['name', 'initial_failure_delay',
-                                      'repeat_failure_delay', 'enabled'],
-                :collection_links => {'tags' => Flapjack::Data::Tag}
-              )
+              resource_put(Flapjack::Data::Check, 'checks', check_ids)
               status 204
             end
           end
