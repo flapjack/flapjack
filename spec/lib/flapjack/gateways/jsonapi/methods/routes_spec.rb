@@ -13,23 +13,29 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Routes', :sinatra => true, :logg
   it "creates a route" do
     expect(Flapjack::Data::Route).to receive(:lock).with(Flapjack::Data::Rule,
       Flapjack::Data::Medium).and_yield
+
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:rule).and_return({route.id => nil})
+    expect(full_ids).to receive(:associated_ids_for).with(:media).and_return({route.id => []})
     expect(Flapjack::Data::Route).to receive(:intersect).
-      with(:id => [route_data[:id]]).and_return(empty_ids)
+      with(:id => [route_data[:id]]).exactly(3).times.and_return(empty_ids, full_ids, full_ids)
 
     expect(route).to receive(:invalid?).and_return(false)
     expect(route).to receive(:save).and_return(true)
     expect(Flapjack::Data::Route).to receive(:new).with(route_data).
       and_return(route)
 
-    expect(Flapjack::Data::Route).to receive(:as_jsonapi).
-      with(:resources => [route], :ids => [route.id], :unwrap => true).
+    expect(route).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(route_data)
 
     post "/routes", Flapjack.dump_json(:routes => route_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:routes => route_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:routes => route_data.merge(:links => {
+      :rule => nil,
+      :media => []
+    })))
   end
 
   it "does not create a route if the data is improperly formatted" do
@@ -48,8 +54,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Routes', :sinatra => true, :logg
     expect(Flapjack::Data::Route).to receive(:new).with(route_data).
       and_return(route)
 
-    expect(Flapjack::Data::Route).not_to receive(:as_jsonapi)
-
     post "/routes", Flapjack.dump_json(:routes => route_data), jsonapi_post_env
     expect(last_response.status).to eq(403)
   end
@@ -60,12 +64,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Routes', :sinatra => true, :logg
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:rule).and_return({route.id => rule.id})
+    expect(full_ids).to receive(:associated_ids_for).with(:media).and_return({route.id => []})
     expect(Flapjack::Data::Route).to receive(:intersect).
-      with(:id => [route_data[:id]]).and_return(empty_ids)
-
-    route_with_rule_data = route_data.merge(:links => {
-      :rule => rule_data[:id]
-    })
+      with(:id => [route_data[:id]]).exactly(3).times.and_return(empty_ids, full_ids, full_ids)
 
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule_data[:id]).
       and_return(rule)
@@ -76,13 +79,19 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Routes', :sinatra => true, :logg
     expect(Flapjack::Data::Route).to receive(:new).with(route_data).
       and_return(route)
 
-    expect(Flapjack::Data::Route).to receive(:as_jsonapi).
-      with(:resources => [route], :ids => [route.id], :unwrap => true).
-      and_return(route_with_rule_data)
+    expect(route).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(route_data)
 
-    post "/routes", Flapjack.dump_json(:routes => route_with_rule_data), jsonapi_post_env
+    post "/routes", Flapjack.dump_json(:routes => route_data.merge(:links => {:rule => rule.id})), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:routes => route_with_rule_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:links => {
+        'routes.rule' => 'http://example.org/rules/{routes.rule}',
+      },
+      :routes => route_data.merge(:links => {
+        :rule => rule.id,
+        :media => []
+      }
+    )))
   end
 
   it "does not create a route with a linked rule if the rule doesn't exist" do
@@ -131,28 +140,42 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Routes', :sinatra => true, :logg
     expect(Flapjack::Data::Route).to receive(:sort).
       with(:id).and_return(sorted)
 
-    expect(Flapjack::Data::Route).to receive(:as_jsonapi).
-      with(:resources => [route], :ids => [route.id],
-           :fields => an_instance_of(Array), :unwrap => false).
-      and_return([route_data])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:rule).and_return({route.id => nil})
+    expect(full_ids).to receive(:associated_ids_for).with(:media).and_return({route.id => []})
+    expect(Flapjack::Data::Route).to receive(:intersect).
+      with(:id => [route.id]).twice.and_return(full_ids)
+
+    expect(route).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(route_data)
 
     get '/routes'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:routes => [route_data], :meta => meta))
+    expect(last_response.body).to eq(Flapjack.dump_json(:routes => [route_data.merge(:links => {
+      :rule => nil,
+      :media => []
+    })], :meta => meta))
   end
 
   it "gets a single route" do
     expect(Flapjack::Data::Route).to receive(:find_by_id!).
       with(route.id).and_return(route)
 
-    expect(Flapjack::Data::Route).to receive(:as_jsonapi).
-      with(:resources => [route], :ids => [route.id],
-           :fields => an_instance_of(Array), :unwrap => true).
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:rule).and_return({route.id => nil})
+    expect(full_ids).to receive(:associated_ids_for).with(:media).and_return({route.id => []})
+    expect(Flapjack::Data::Route).to receive(:intersect).
+      with(:id => [route.id]).twice.and_return(full_ids)
+
+    expect(route).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(route_data)
 
     get "/routes/#{route.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:routes => route_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:routes => route_data.merge(:links => {
+      :rule => nil,
+      :media => []
+    })))
   end
 
   it "does not get a route that does not exist" do

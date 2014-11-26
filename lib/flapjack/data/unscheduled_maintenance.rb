@@ -49,25 +49,6 @@ module Flapjack
       def self.jsonapi_multiple_associations
         []
       end
-
-      def self.as_jsonapi(options = {})
-        unscheduled_maintenances = options[:resources]
-        return [] if unscheduled_maintenances.nil? || unscheduled_maintenances.empty?
-
-        unwrap = options[:unwrap]
-        usm_ids = options[:ids]
-        check_ids = Flapjack::Data::Check.intersect(:id => usm_ids).
-                      associated_ids_for(:check_by_start)
-
-        data = unscheduled_maintenances.collect do |usm|
-          usm.as_json(:only => options[:fields]).merge(:links => {
-            :check => check_ids[usm.id]
-          })
-        end
-        return data unless (data.size == 1) && unwrap
-        data.first
-      end
-
     end
   end
 end

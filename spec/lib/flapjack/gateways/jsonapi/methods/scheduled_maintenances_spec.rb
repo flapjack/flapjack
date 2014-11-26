@@ -16,22 +16,26 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:check_by_start).
+      and_return({scheduled_maintenance.id => nil})
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:intersect).
-      with(:id => [scheduled_maintenance_data[:id]]).and_return(empty_ids)
+      with(:id => [scheduled_maintenance_data[:id]]).twice.
+      and_return(empty_ids, full_ids)
 
     expect(scheduled_maintenance).to receive(:invalid?).and_return(false)
     expect(scheduled_maintenance).to receive(:save).and_return(true)
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(scheduled_maintenance_data).
       and_return(scheduled_maintenance)
 
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:as_jsonapi).
-      with(:resources => [scheduled_maintenance],
-           :ids => [scheduled_maintenance.id], :unwrap => true).
-      and_return(scheduled_maintenance_data)
+    expect(scheduled_maintenance).to receive(:as_json).
+      with(:only => an_instance_of(Array)).and_return(scheduled_maintenance_data)
 
     post "/scheduled_maintenances", Flapjack.dump_json(:scheduled_maintenances => scheduled_maintenance_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:scheduled_maintenances => scheduled_maintenance_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:scheduled_maintenances => scheduled_maintenance_data.merge(:links => {
+      :check => nil
+    })))
   end
 
   it "doesn't create a scheduled maintenance period if the start time isn't passed" do
@@ -52,8 +56,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(bad_data).
       and_return(scheduled_maintenance)
 
-    expect(Flapjack::Data::ScheduledMaintenance).not_to receive(:as_jsonapi)
-
     post "/scheduled_maintenances", Flapjack.dump_json(:scheduled_maintenances => bad_data), jsonapi_post_env
     expect(last_response.status).to eq(403)
     # TODO body error message
@@ -64,12 +66,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:check_by_start).
+      and_return({scheduled_maintenance.id => check.id})
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:intersect).
-      with(:id => [scheduled_maintenance_data[:id]]).and_return(empty_ids)
-
-    scheduled_maintenance_with_check_data = scheduled_maintenance_data.merge(:links => {
-      :check => check.id
-    })
+      with(:id => [scheduled_maintenance_data[:id]]).twice.
+      and_return(empty_ids, full_ids)
 
     expect(Flapjack::Data::Check).to receive(:find_by_id!).with(check.id).
       and_return(check)
@@ -80,29 +82,39 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(scheduled_maintenance_data).
       and_return(scheduled_maintenance)
 
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:as_jsonapi).
-      with(:resources => [scheduled_maintenance],
-           :ids => [scheduled_maintenance.id], :unwrap => true).
-      and_return(scheduled_maintenance_with_check_data)
+    expect(scheduled_maintenance).to receive(:as_json).
+      with(:only => an_instance_of(Array)).and_return(scheduled_maintenance_data)
 
-    post "/scheduled_maintenances", Flapjack.dump_json(:scheduled_maintenances => scheduled_maintenance_with_check_data), jsonapi_post_env
+    post "/scheduled_maintenances", Flapjack.dump_json(:scheduled_maintenances => scheduled_maintenance_data.merge(:links => {
+      :check => check.id
+    })), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:scheduled_maintenances => scheduled_maintenance_with_check_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:links => {
+        'scheduled_maintenances.check' => 'http://example.org/checks/{scheduled_maintenances.check}',
+      },
+      :scheduled_maintenances => scheduled_maintenance_data.merge(:links => {
+        :check => check.id
+      }
+    )))
   end
 
   it 'returns a single scheduled maintenance period' do
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:find_by_id!).
       with(scheduled_maintenance.id).and_return(scheduled_maintenance)
 
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:as_jsonapi).
-      with(:resources => [scheduled_maintenance],
-           :ids => [scheduled_maintenance.id],
-           :fields => an_instance_of(Array), :unwrap => true).
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:check_by_start).and_return({scheduled_maintenance.id => nil})
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:intersect).
+      with(:id => [scheduled_maintenance.id]).and_return(full_ids)
+
+    expect(scheduled_maintenance).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(scheduled_maintenance_data)
 
     get "/scheduled_maintenances/#{scheduled_maintenance.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:scheduled_maintenances => scheduled_maintenance_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:scheduled_maintenances => scheduled_maintenance_data.merge(:links => {
+        :check => nil
+    })))
   end
 
   it 'returns multiple scheduled_maintenance periods' do
@@ -113,15 +125,24 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:sort).
       with(:timestamp).and_return(sorted)
 
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:as_jsonapi).
-      with(:resources => [scheduled_maintenance, scheduled_maintenance_2],
-           :ids => [scheduled_maintenance.id, scheduled_maintenance_2.id],
-           :fields => an_instance_of(Array), :unwrap => false).
-      and_return([scheduled_maintenance_data, scheduled_maintenance_2_data])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:check_by_start).
+      and_return({scheduled_maintenance.id => nil, scheduled_maintenance_2.id => nil})
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:intersect).
+      with(:id => [scheduled_maintenance.id, scheduled_maintenance_2.id]).and_return(full_ids)
+
+    expect(scheduled_maintenance).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(scheduled_maintenance_data)
+
+    expect(scheduled_maintenance_2).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(scheduled_maintenance_2_data)
 
     get "/scheduled_maintenances/#{scheduled_maintenance.id},#{scheduled_maintenance_2.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:scheduled_maintenances => [scheduled_maintenance_data, scheduled_maintenance_2_data]))
+    expect(last_response.body).to eq(Flapjack.dump_json(:scheduled_maintenances => [
+      scheduled_maintenance_data.merge(:links => {:check => nil}),
+      scheduled_maintenance_2_data.merge(:links => {:check => nil}),
+    ]))
   end
 
   it 'returns paginated scheduled maintenance periods' do
@@ -142,15 +163,19 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:sort).
       with(:timestamp).and_return(sorted)
 
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:as_jsonapi).
-      with(:resources => [scheduled_maintenance],
-           :ids => [scheduled_maintenance.id],
-           :fields => an_instance_of(Array), :unwrap => false).
-      and_return([scheduled_maintenance_data])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:check_by_start).and_return({scheduled_maintenance.id => nil})
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:intersect).
+      with(:id => [scheduled_maintenance.id]).and_return(full_ids)
+
+    expect(scheduled_maintenance).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(scheduled_maintenance_data)
 
     get '/scheduled_maintenances'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:scheduled_maintenances => [scheduled_maintenance_data], :meta => meta))
+    expect(last_response.body).to eq(Flapjack.dump_json(:scheduled_maintenances => [scheduled_maintenance_data.merge(:links => {
+        :check => nil
+    })], :meta => meta))
   end
 
   it "deletes a scheduled maintenance period" do

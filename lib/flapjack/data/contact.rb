@@ -82,28 +82,6 @@ module Flapjack
         [:media, :rules]
       end
 
-      def self.as_jsonapi(options = {})
-        contacts = options[:resources]
-        return [] if contacts.nil? || contacts.empty?
-
-        unwrap = options[:unwrap]
-
-        contact_ids = options[:ids]
-        medium_ids = Flapjack::Data::Contact.intersect(:id => contact_ids).
-          associated_ids_for(:media)
-        rule_ids = Flapjack::Data::Contact.intersect(:id => contact_ids).
-          associated_ids_for(:rules)
-
-        data = contacts.collect do |contact|
-          contact.as_json(:only => options[:fields]).merge(:links => {
-            :media => medium_ids[contact.id],
-            :rules => rule_ids[contact.id]
-          })
-        end
-        return data unless (data.size == 1) && unwrap
-        data.first
-      end
-
     end
   end
 end

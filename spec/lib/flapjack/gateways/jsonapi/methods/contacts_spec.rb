@@ -15,21 +15,28 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:media).and_return({contact.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({contact.id => []})
     expect(Flapjack::Data::Contact).to receive(:intersect).
-      with(:id => [contact_data[:id]]).and_return(empty_ids)
+      with(:id => [contact_data[:id]]).exactly(3).times.and_return(empty_ids, full_ids, full_ids)
 
     expect(contact).to receive(:invalid?).and_return(false)
     expect(contact).to receive(:save).and_return(true)
     expect(Flapjack::Data::Contact).to receive(:new).with(contact_data).
       and_return(contact)
 
-    expect(Flapjack::Data::Contact).to receive(:as_jsonapi).
-      with(:resources => [contact], :ids => [contact.id], :unwrap => true).
+    expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data)
 
     post "/contacts", Flapjack.dump_json(:contacts => contact_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => contact_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => contact_data.merge(:links =>
+    {
+      :media => [],
+      :rules => []
+    }
+    )))
   end
 
   it "does not create a contact if the data is improperly formatted" do
@@ -48,8 +55,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(contact).not_to receive(:save)
     expect(Flapjack::Data::Contact).to receive(:new).with(contact_data).
       and_return(contact)
-
-    expect(Flapjack::Data::Contact).not_to receive(:as_jsonapi)
 
     post "/contacts", Flapjack.dump_json(:contacts => contact_data), jsonapi_post_env
     expect(last_response.status).to eq(403)
@@ -71,27 +76,42 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(Flapjack::Data::Contact).to receive(:sort).with(:name).
       and_return(sorted)
 
-    expect(Flapjack::Data::Contact).to receive(:as_jsonapi).
-      with(:resources => [contact], :ids => [contact.id],
-           :fields => an_instance_of(Array), :unwrap => false).
-      and_return([contact_data])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:media).and_return({contact.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({contact.id => []})
+    expect(Flapjack::Data::Contact).to receive(:intersect).
+      with(:id => [contact_data[:id]]).twice.and_return(full_ids)
+
+    expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(contact_data)
 
     get '/contacts'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => [contact_data], :meta => meta))
+    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => [contact_data.merge(:links => {
+      :media => [],
+      :rules => []
+    })], :meta => meta))
   end
 
   it "returns a contact" do
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).
       with(contact.id).and_return(contact)
-    expect(Flapjack::Data::Contact).to receive(:as_jsonapi).
-      with(:resources => [contact], :ids => [contact.id],
-           :fields => an_instance_of(Array), :unwrap => true).
+
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:media).and_return({contact.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({contact.id => []})
+    expect(Flapjack::Data::Contact).to receive(:intersect).
+      with(:id => [contact_data[:id]]).twice.and_return(full_ids)
+
+    expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data)
 
     get "/contacts/#{contact.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => contact_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => contact_data.merge(:links => {
+      :media => [],
+      :rules => []
+    })))
   end
 
   it "does not return a contact that does not exist" do

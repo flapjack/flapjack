@@ -5,7 +5,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
   include_context "jsonapi"
 
-  let(:unscheduled_maintenance) { double(Flapjack::Data::UnscheduledMaintenance, :id => unscheduled_maintenance_data[:id]) }
+  let(:unscheduled_maintenance) { double(Flapjack::Data::UnscheduledMaintenance,
+    :id => unscheduled_maintenance_data[:id]) }
+  let(:unscheduled_maintenance_2) { double(Flapjack::Data::UnscheduledMaintenance,
+    :id => unscheduled_maintenance_2_data[:id]) }
+
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
 
   it "creates an unscheduled maintenance period" do
@@ -13,36 +17,40 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:check_by_start).
+      and_return({unscheduled_maintenance.id => nil})
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:intersect).
-      with(:id => [unscheduled_maintenance_data[:id]]).and_return(empty_ids)
+      with(:id => [unscheduled_maintenance_data[:id]]).twice.
+      and_return(empty_ids, full_ids)
 
     expect(unscheduled_maintenance).to receive(:invalid?).and_return(false)
     expect(unscheduled_maintenance).to receive(:save).and_return(true)
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:new).with(unscheduled_maintenance_data).
       and_return(unscheduled_maintenance)
 
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:as_jsonapi).
-      with(:resources => [unscheduled_maintenance],
-           :ids => [unscheduled_maintenance.id], :unwrap => true).
-      and_return(unscheduled_maintenance_data)
+    expect(unscheduled_maintenance).to receive(:as_json).
+      with(:only => an_instance_of(Array)).and_return(unscheduled_maintenance_data)
 
     post "/unscheduled_maintenances", Flapjack.dump_json(:unscheduled_maintenances => unscheduled_maintenance_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:unscheduled_maintenances => unscheduled_maintenance_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:unscheduled_maintenances => unscheduled_maintenance_data.merge(:links => {
+      :check => nil
+    })))
   end
 
   # TODO send acknowledgment event when the association is created
-  it "creates an unscheduled maintenance period linked to a check" do
+  it "creates a unscheduled maintenance period linked to a check" do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).with(Flapjack::Data::Check).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:check_by_start).
+      and_return({unscheduled_maintenance.id => check.id})
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:intersect).
-      with(:id => [unscheduled_maintenance_data[:id]]).and_return(empty_ids)
-
-    unscheduled_maintenance_with_check_data = unscheduled_maintenance_data.merge(:links => {
-      :check => check.id
-    })
+      with(:id => [unscheduled_maintenance_data[:id]]).twice.
+      and_return(empty_ids, full_ids)
 
     expect(Flapjack::Data::Check).to receive(:find_by_id!).with(check.id).
       and_return(check)
@@ -53,35 +61,42 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:new).with(unscheduled_maintenance_data).
       and_return(unscheduled_maintenance)
 
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:as_jsonapi).
-      with(:resources => [unscheduled_maintenance],
-           :ids => [unscheduled_maintenance.id], :unwrap => true).
-      and_return(unscheduled_maintenance_with_check_data)
+    expect(unscheduled_maintenance).to receive(:as_json).
+      with(:only => an_instance_of(Array)).and_return(unscheduled_maintenance_data)
 
-    post "/unscheduled_maintenances", Flapjack.dump_json(:unscheduled_maintenances => unscheduled_maintenance_with_check_data), jsonapi_post_env
+    post "/unscheduled_maintenances", Flapjack.dump_json(:unscheduled_maintenances => unscheduled_maintenance_data.merge(:links => {
+      :check => check.id
+    })), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:unscheduled_maintenances => unscheduled_maintenance_with_check_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:links => {
+        'unscheduled_maintenances.check' => 'http://example.org/checks/{unscheduled_maintenances.check}',
+      },
+      :unscheduled_maintenances => unscheduled_maintenance_data.merge(:links => {
+        :check => check.id
+      }
+    )))
   end
 
   it 'returns a single unscheduled maintenance period' do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:find_by_id!).
       with(unscheduled_maintenance.id).and_return(unscheduled_maintenance)
 
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:as_jsonapi).
-      with(:resources => [unscheduled_maintenance],
-           :ids => [unscheduled_maintenance.id],
-           :fields => an_instance_of(Array), :unwrap => true).
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:check_by_start).and_return({unscheduled_maintenance.id => nil})
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:intersect).
+      with(:id => [unscheduled_maintenance.id]).and_return(full_ids)
+
+    expect(unscheduled_maintenance).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(unscheduled_maintenance_data)
 
     get "/unscheduled_maintenances/#{unscheduled_maintenance.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:unscheduled_maintenances => unscheduled_maintenance_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:unscheduled_maintenances => unscheduled_maintenance_data.merge(:links => {
+        :check => nil
+    })))
   end
 
   it 'returns multiple unscheduled_maintenance periods' do
-    unscheduled_maintenance_2 = double(Flapjack::Data::UnscheduledMaintenance,
-      :id => unscheduled_maintenance_2_data[:id])
-
     sorted = double('sorted')
     expect(sorted).to receive(:find_by_ids!).
       with(unscheduled_maintenance.id, unscheduled_maintenance_2.id).
@@ -89,15 +104,24 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:sort).
       with(:timestamp).and_return(sorted)
 
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:as_jsonapi).
-      with(:resources => [unscheduled_maintenance, unscheduled_maintenance_2],
-           :ids => [unscheduled_maintenance.id, unscheduled_maintenance_2.id],
-           :fields => an_instance_of(Array), :unwrap => false).
-      and_return([unscheduled_maintenance_data, unscheduled_maintenance_2_data])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:check_by_start).
+      and_return({unscheduled_maintenance.id => nil, unscheduled_maintenance_2.id => nil})
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:intersect).
+      with(:id => [unscheduled_maintenance.id, unscheduled_maintenance_2.id]).and_return(full_ids)
+
+    expect(unscheduled_maintenance).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(unscheduled_maintenance_data)
+
+    expect(unscheduled_maintenance_2).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(unscheduled_maintenance_2_data)
 
     get "/unscheduled_maintenances/#{unscheduled_maintenance.id},#{unscheduled_maintenance_2.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:unscheduled_maintenances => [unscheduled_maintenance_data, unscheduled_maintenance_2_data]))
+    expect(last_response.body).to eq(Flapjack.dump_json(:unscheduled_maintenances => [
+      unscheduled_maintenance_data.merge(:links => {:check => nil}),
+      unscheduled_maintenance_2_data.merge(:links => {:check => nil}),
+    ]))
   end
 
   it 'returns paginated unscheduled maintenance periods' do
@@ -118,15 +142,19 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:sort).
       with(:timestamp).and_return(sorted)
 
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:as_jsonapi).
-      with(:resources => [unscheduled_maintenance],
-           :ids => [unscheduled_maintenance.id],
-           :fields => an_instance_of(Array), :unwrap => false).
-      and_return([unscheduled_maintenance_data])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:check_by_start).and_return({unscheduled_maintenance.id => nil})
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:intersect).
+      with(:id => [unscheduled_maintenance.id]).and_return(full_ids)
+
+    expect(unscheduled_maintenance).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(unscheduled_maintenance_data)
 
     get '/unscheduled_maintenances'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:unscheduled_maintenances => [unscheduled_maintenance_data], :meta => meta))
+    expect(last_response.body).to eq(Flapjack.dump_json(:unscheduled_maintenances => [unscheduled_maintenance_data.merge(:links => {
+        :check => nil
+    })], :meta => meta))
   end
 
   it "ends an unscheduled maintenance period for a check" do

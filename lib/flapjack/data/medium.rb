@@ -60,29 +60,6 @@ module Flapjack
       def self.jsonapi_multiple_associations
         [:routes]
       end
-
-      def self.as_jsonapi(options = {})
-        media = options[:resources]
-        return [] if media.nil? || media.empty?
-
-        unwrap = options[:unwrap]
-
-        media_ids = options[:ids]
-        contact_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
-          associated_ids_for(:contact)
-        route_ids = Flapjack::Data::Medium.intersect(:id => media_ids).
-          associated_ids_for(:routes)
-
-        data = media.collect do |medium|
-          medium.as_json(:only => options[:fields]).merge(:links => {
-            :contact => contact_ids[medium.id],
-            :routes  => route_ids[medium.id]
-          })
-        end
-
-        return data unless (data.size == 1) && unwrap
-        data.first
-      end
     end
   end
 end

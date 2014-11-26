@@ -128,22 +128,6 @@ module Flapjack
         [:tags]
       end
 
-      def self.as_jsonapi(options = {})
-        checks = options[:resources]
-        return [] if checks.nil? || check.empty?
-
-        check_ids = options[:ids]
-        tag_ids = Flapjack::Data::Check.intersect(:id => check_ids).
-                    associated_ids_for(:tags)
-        data = checks.collect do |check|
-          check.as_json(:only => options[:fields]).merge(:links => {
-            :tags => tag_ids[check.id]
-          })
-        end
-        return data unless (data.size == 1) && options[:unwrap]
-        data.first
-      end
-
       # takes an array of ages (in seconds) to split all checks up by
       # - age means how long since the last update
       # - 0 age is implied if not explicitly passed

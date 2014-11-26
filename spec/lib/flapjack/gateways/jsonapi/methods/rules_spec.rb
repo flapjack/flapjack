@@ -16,23 +16,31 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   it "creates a rule" do
     expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
       Flapjack::Data::Tag, Flapjack::Data::Route).and_yield
+
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:contact).and_return({rule.id => nil})
+    expect(full_ids).to receive(:associated_ids_for).with(:routes).and_return({rule.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({rule.id => []})
     expect(Flapjack::Data::Rule).to receive(:intersect).
-      with(:id => [rule_data[:id]]).and_return(empty_ids)
+      with(:id => [rule_data[:id]]).exactly(4).times.and_return(empty_ids, full_ids)
 
     expect(rule).to receive(:invalid?).and_return(false)
     expect(rule).to receive(:save).and_return(true)
     expect(Flapjack::Data::Rule).to receive(:new).with(rule_data).
       and_return(rule)
 
-    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).
-      with(:resources => [rule], :ids => [rule.id], :unwrap => true).
+    expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(rule_data)
 
     post "/rules", Flapjack.dump_json(:rules => rule_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:rules => rule_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:rules => rule_data.merge(:links => {
+      :contact => nil,
+      :routes => [],
+      :tags => []
+    })))
   end
 
   it "does not create a rule if the data is improperly formatted" do
@@ -51,8 +59,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Rule).to receive(:new).with(rule_data).
       and_return(rule)
 
-    expect(Flapjack::Data::Rule).not_to receive(:as_jsonapi)
-
     post "/rules", Flapjack.dump_json(:rules => rule_data), jsonapi_post_env
     expect(last_response.status).to eq(403)
   end
@@ -63,12 +69,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:contact).and_return({rule.id => contact.id})
+    expect(full_ids).to receive(:associated_ids_for).with(:routes).and_return({rule.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({rule.id => []})
     expect(Flapjack::Data::Rule).to receive(:intersect).
-      with(:id => [rule_data[:id]]).and_return(empty_ids)
-
-    rule_with_contact_data = rule_data.merge(:links => {
-      :contact => contact_data[:id]
-    })
+      with(:id => [rule_data[:id]]).exactly(4).times.and_return(empty_ids, full_ids)
 
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact_data[:id]).
       and_return(contact)
@@ -79,13 +85,20 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Rule).to receive(:new).with(rule_data).
       and_return(rule)
 
-    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).
-      with(:resources => [rule], :ids => [rule.id], :unwrap => true).
-      and_return(rule_with_contact_data)
+    expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(rule_data)
 
-    post "/rules", Flapjack.dump_json(:rules => rule_with_contact_data), jsonapi_post_env
+    post "/rules", Flapjack.dump_json(:rules => rule_data.merge(:links => {:contact => contact.id})), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:rules => rule_with_contact_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:links => {
+        'rules.contact' => 'http://example.org/contacts/{rules.contact}',
+      },
+      :rules => rule_data.merge(:links => {
+        :contact => contact.id,
+        :routes => [],
+        :tags => []
+      }
+    )))
   end
 
   it "does not create a rule with a linked contact if the contact doesn't exist" do
@@ -134,28 +147,46 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Rule).to receive(:sort).
       with(:id).and_return(sorted)
 
-    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).
-      with(:resources => [rule], :ids => [rule.id],
-           :fields => an_instance_of(Array), :unwrap => false).
-      and_return([rule_data])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:contact).and_return({rule.id => nil})
+    expect(full_ids).to receive(:associated_ids_for).with(:routes).and_return({rule.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({rule.id => []})
+    expect(Flapjack::Data::Rule).to receive(:intersect).
+      with(:id => [rule.id]).exactly(3).times.and_return(full_ids)
+
+    expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(rule_data)
 
     get '/rules'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:rules => [rule_data], :meta => meta))
+    expect(last_response.body).to eq(Flapjack.dump_json(:rules => [rule_data.merge(:links => {
+      :contact => nil,
+      :routes => [],
+      :tags => []
+    })], :meta => meta))
   end
 
   it "gets a single rule" do
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).and_return(rule)
 
-    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).
-      with(:resources => [rule], :ids => [rule.id],
-           :fields => an_instance_of(Array), :unwrap => true).
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:contact).and_return({rule.id => nil})
+    expect(full_ids).to receive(:associated_ids_for).with(:routes).and_return({rule.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({rule.id => []})
+    expect(Flapjack::Data::Rule).to receive(:intersect).
+      with(:id => [rule.id]).exactly(3).times.and_return(full_ids)
+
+    expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(rule_data)
 
     get "/rules/#{rule.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:rules => rule_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:rules => rule_data.merge(:links => {
+      :contact => nil,
+      :routes => [],
+      :tags => []
+    })))
   end
 
   it "does not get a rule that does not exist" do
@@ -171,109 +202,170 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).and_return(rule)
 
-    rule_with_contact_data = rule_data.merge(:links => {:contact => contact.id})
-
     rules = double('rules')
-    expect(rules).to receive(:associated_ids_for).with(:contact).
+    expect(rules).to receive(:associated_ids_for).with(:contact).twice.
       and_return(rule.id => contact.id)
+    expect(rules).to receive(:associated_ids_for).with(:routes).
+      and_return(rule.id => [])
+    expect(rules).to receive(:associated_ids_for).with(:tags).
+      and_return(rule.id => [])
     expect(Flapjack::Data::Rule).to receive(:intersect).
-      with(:id => [rule.id]).and_return(rules)
+      with(:id => [rule.id]).exactly(4).times.and_return(rules)
+
+    contacts = double('contacts')
+    expect(contacts).to receive(:associated_ids_for).with(:media).and_return({contact.id => []})
+    expect(contacts).to receive(:associated_ids_for).with(:rules).and_return({contact.id => [rule.id]})
+    expect(Flapjack::Data::Contact).to receive(:intersect).
+      with(:id => [contact_data[:id]]).twice.and_return(contacts)
 
     expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
       with(contact.id).and_return([contact])
 
-    expect(Flapjack::Data::Contact).to receive(:as_jsonapi).
-      with(:resources => [contact], :ids => [contact.id], :unwrap => false).
-      and_return([contact_data])
+    expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(contact_data)
 
-    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).
-      with(:resources => [rule], :ids => [rule.id], :unwrap => true,
-           :fields => an_instance_of(Array)).
-      and_return(rule_with_contact_data)
+    expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(rule_data)
 
     get "/rules/#{rule.id}?include=contact"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:rules => rule_with_contact_data,
-      :linked => {:contacts => [contact_data]}))
+    expect(last_response.body).to eq(Flapjack.dump_json(:links => {
+        'rules.contact' => 'http://example.org/contacts/{rules.contact}',
+        'contacts.rules' => 'http://example.org/rules/{contacts.rules}',
+      },
+      :rules => rule_data.merge(:links => {
+        :contact => contact.id,
+        :routes => [],
+        :tags => []
+      }),
+      :linked => {
+        :contacts => [contact_data.merge(:links => {
+          :media => [],
+          :rules => [rule.id]
+        })]
+      }
+    ))
   end
 
   it "retrieves a rule and all its linked media records (through routes)" do
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).and_return(rule)
 
-    rule_with_route_data = rule_data.merge(:links => {:routes => [route.id]})
-
     rules = double('rules')
-    expect(rules).to receive(:associated_ids_for).with(:routes).
+    expect(rules).to receive(:associated_ids_for).with(:contact).
+      and_return(rule.id => nil)
+    expect(rules).to receive(:associated_ids_for).with(:routes).twice.
       and_return(rule.id => [route.id])
+    expect(rules).to receive(:associated_ids_for).with(:tags).
+      and_return(rule.id => [])
     expect(Flapjack::Data::Rule).to receive(:intersect).
-      with(:id => [rule.id]).and_return(rules)
+      with(:id => [rule.id]).exactly(4).times.and_return(rules)
 
-    routes = double('routes')
-    expect(routes).to receive(:associated_ids_for).with(:media).
-      and_return(route.id => [medium.id])
+    route_ids = double('route_ids')
+    expect(route_ids).to receive(:associated_ids_for).with(:media).and_return({route.id => [medium.id]})
     expect(Flapjack::Data::Route).to receive(:intersect).
-      with(:id => [route.id]).and_return(routes)
+      with(:id => [route.id]).and_return(route_ids)
+
+    medium_ids = double('medium_ids')
+    expect(medium_ids).to receive(:associated_ids_for).with(:contact).and_return({medium.id => nil})
+    expect(medium_ids).to receive(:associated_ids_for).with(:routes).and_return({medium.id => [route.id]})
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [medium.id]).twice.and_return(medium_ids)
 
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
       with(medium.id).and_return([medium])
 
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).
-      with(:resources => [medium], :ids => [medium.id], :unwrap => false).
-      and_return([email_data])
+    expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(email_data)
 
-    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).
-      with(:resources => [rule], :ids => [rule.id], :unwrap => true,
-           :fields => an_instance_of(Array)).
-      and_return(rule_with_route_data)
+    expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(rule_data)
 
     get "/rules/#{rule.id}?include=routes.media"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:rules => rule_with_route_data,
-      :linked => {:media => [email_data]}))
+    expect(last_response.body).to eq(Flapjack.dump_json(:links => {
+        'rules.routes' => 'http://example.org/routes/{rules.routes}',
+        'media.routes' => 'http://example.org/routes/{media.routes}',
+      },
+      :rules => rule_data.merge(:links => {
+        :contact => nil,
+        :routes => [route.id],
+        :tags => []
+      }),
+      :linked => {
+        :media => [email_data.merge(:links => {
+          :contact => nil,
+          :routes => [route.id]
+        })],
+      }
+    ))
   end
 
   it "retrieves a rule, its routes, and the routes' media records" do
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).and_return(rule)
 
-    rule_with_route_data = rule_data.merge(:links => {:routes => [route.id]})
-
     rules = double('rules')
-    expect(rules).to receive(:associated_ids_for).with(:routes).
+    expect(rules).to receive(:associated_ids_for).with(:contact).
+      and_return(rule.id => nil)
+    expect(rules).to receive(:associated_ids_for).with(:routes).twice.
       and_return(rule.id => [route.id])
+    expect(rules).to receive(:associated_ids_for).with(:tags).
+      and_return(rule.id => [])
     expect(Flapjack::Data::Rule).to receive(:intersect).
-      with(:id => [rule.id]).and_return(rules)
+      with(:id => [rule.id]).exactly(4).times.and_return(rules)
 
-    routes = double('routes')
-    expect(routes).to receive(:associated_ids_for).with(:media).
-      and_return(route.id => [medium.id])
+    route_ids = double('route_ids')
+    expect(route_ids).to receive(:associated_ids_for).with(:rule).and_return({route.id => rule.id})
+    expect(route_ids).to receive(:associated_ids_for).with(:media).twice.and_return({route.id => [medium.id]})
     expect(Flapjack::Data::Route).to receive(:intersect).
-      with(:id => [route.id]).and_return(routes)
+      with(:id => [route.id]).exactly(3).times.and_return(route_ids)
 
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with(medium.id).and_return([medium])
-
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).
-      with(:resources => [medium], :ids => [medium.id], :unwrap => false).
-      and_return([email_data])
+    medium_ids = double('medium_ids')
+    expect(medium_ids).to receive(:associated_ids_for).with(:contact).and_return({medium.id => nil})
+    expect(medium_ids).to receive(:associated_ids_for).with(:routes).and_return({medium.id => [route.id]})
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [medium.id]).twice.and_return(medium_ids)
 
     expect(Flapjack::Data::Route).to receive(:find_by_ids!).
       with(route.id).and_return([route])
 
-    expect(Flapjack::Data::Route).to receive(:as_jsonapi).
-      with(:resources => [route], :ids => [route.id], :unwrap => false).
-      and_return([route_data])
+    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
+      with(medium.id).and_return([medium])
 
-    expect(Flapjack::Data::Rule).to receive(:as_jsonapi).
-      with(:resources => [rule], :ids => [rule.id], :unwrap => true,
-           :fields => an_instance_of(Array)).
-      and_return(rule_with_route_data)
+    expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(email_data)
+
+    expect(route).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(route_data)
+
+    expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(rule_data)
 
     get "/rules/#{rule.id}?include=routes,routes.media"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:rules => rule_with_route_data,
-      :linked => {:routes => [route_data], :media => [email_data]}))
+    expect(last_response.body).to eq(Flapjack.dump_json(:links => {
+        'rules.routes' => 'http://example.org/routes/{rules.routes}',
+        'routes.rule'  => 'http://example.org/rules/{routes.rule}',
+        'routes.media' => 'http://example.org/media/{routes.media}',
+        'media.routes' => 'http://example.org/routes/{media.routes}',
+      },
+      :rules => rule_data.merge(:links => {
+        :contact => nil,
+        :routes => [route.id],
+        :tags => []
+      }),
+      :linked => {
+        :routes => [route_data.merge(:links => {
+          :rule  => rule.id,
+          :media => [medium.id],
+        })],
+        :media => [email_data.merge(:links => {
+          :contact => nil,
+          :routes => [route.id]
+        })]
+      }
+    ))
   end
 
   it "sets a contact for a rule" do

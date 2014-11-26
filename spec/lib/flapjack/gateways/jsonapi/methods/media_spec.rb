@@ -16,21 +16,28 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:contact).and_return({medium.id => nil})
+    expect(full_ids).to receive(:associated_ids_for).with(:routes).and_return({medium.id => []})
     expect(Flapjack::Data::Medium).to receive(:intersect).
-      with(:id => [email_data[:id]]).and_return(empty_ids)
+      with(:id => [email_data[:id]]).exactly(3).times.and_return(empty_ids, full_ids, full_ids)
 
     expect(medium).to receive(:invalid?).and_return(false)
     expect(medium).to receive(:save).and_return(true)
     expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
       and_return(medium)
 
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).
-      with(:resources => [medium], :ids => [medium.id], :unwrap => true).
+    expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(email_data)
 
     post "/media", Flapjack.dump_json(:media => email_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:media => email_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:media => email_data.merge(:links =>
+    {
+      :contact => nil,
+      :routes  => []
+    })))
+
   end
 
   it "does not create a medium if the data is improperly formatted" do
@@ -50,8 +57,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
       and_return(medium)
 
-    expect(Flapjack::Data::Medium).not_to receive(:as_jsonapi)
-
     post "/media", Flapjack.dump_json(:media => email_data), jsonapi_post_env
     expect(last_response.status).to eq(403)
     # TODO error body
@@ -63,12 +68,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:contact).and_return({medium.id => contact.id})
+    expect(full_ids).to receive(:associated_ids_for).with(:routes).and_return({medium.id => []})
     expect(Flapjack::Data::Medium).to receive(:intersect).
-      with(:id => [email_data[:id]]).and_return(empty_ids)
-
-    email_with_contact_data = email_data.merge(:links => {
-      :contact => contact_data[:id]
-    })
+      with(:id => [email_data[:id]]).exactly(3).times.and_return(empty_ids, full_ids, full_ids)
 
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact_data[:id]).
       and_return(contact)
@@ -79,13 +83,21 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
       and_return(medium)
 
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).
-      with(:resources => [medium], :ids => [medium.id], :unwrap => true).
-      and_return(email_with_contact_data)
+    expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(email_data)
 
-    post "/media", Flapjack.dump_json(:media => email_with_contact_data), jsonapi_post_env
+    post "/media", Flapjack.dump_json(:media => email_data.merge(:links => {
+      :contact => contact.id
+    })), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:media => email_with_contact_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:links => {
+        'media.contact' => 'http://example.org/contacts/{media.contact}',
+      },
+      :media => email_data.merge(:links => {
+        :contact => contact.id,
+        :routes => []
+      }
+    )))
   end
 
   it "does not create a medium with a linked contact if the contact doesn't exist" do
@@ -120,14 +132,21 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).
       with(medium.id).and_return(medium)
 
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).
-      with(:resources => [medium], :ids => [medium.id],
-           :fields => an_instance_of(Array), :unwrap => true).
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:contact).and_return({medium.id => nil})
+    expect(full_ids).to receive(:associated_ids_for).with(:routes).and_return({medium.id => []})
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [medium.id]).twice.and_return(full_ids)
+
+    expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(email_data)
 
     get "/media/#{medium.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:media => email_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:media => email_data.merge(:links => {
+      :contact => nil,
+      :routes => []
+    })))
   end
 
   it "returns all media" do
@@ -148,14 +167,21 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:sort).
       with(:id).and_return(sorted)
 
-    expect(Flapjack::Data::Medium).to receive(:as_jsonapi).
-      with(:resources => [medium], :ids => [medium.id],
-           :fields => an_instance_of(Array), :unwrap => false).
-      and_return([email_data])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:contact).and_return({medium.id => nil})
+    expect(full_ids).to receive(:associated_ids_for).with(:routes).and_return({medium.id => []})
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [medium.id]).twice.and_return(full_ids)
+
+    expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(email_data)
 
     get '/media'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:media => [email_data], :meta => meta))
+    expect(last_response.body).to eq(Flapjack.dump_json(:media => [email_data.merge(:links => {
+      :contact => nil,
+      :routes => []
+    })], :meta => meta))
   end
 
   it "does not return a medium if the medium is not present" do

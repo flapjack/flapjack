@@ -72,29 +72,6 @@ module Flapjack
         [:media]
       end
 
-      def self.as_jsonapi(options = {})
-        routes = options[:resources]
-        return [] if routes.nil? || routes.empty?
-
-        unwrap = options[:unwrap]
-
-        route_ids = options[:ids]
-        rule_ids  = Flapjack::Data::Route.intersect(:id => route_ids).
-                      associated_ids_for(:rule)
-        media_ids = Flapjack::Data::Route.intersect(:id => route_ids).
-                      associated_ids_for(:media)
-
-        data = routes.collect do |route|
-          route.as_json(:only => options[:fields]).merge(:links => {
-            :rule  => rule_ids[route.id],
-            :media => media_ids[route.id]
-          })
-        end
-
-        return data unless (data.size == 1) && unwrap
-        data.first
-      end
-
       validates_each :time_restrictions_json do |record, att, value|
         unless value.nil?
           restrictions = JSON.parse(value)

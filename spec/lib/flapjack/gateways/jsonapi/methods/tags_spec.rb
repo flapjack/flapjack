@@ -17,21 +17,26 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:checks).and_return({tag.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({tag.id => []})
     expect(Flapjack::Data::Tag).to receive(:intersect).
-      with(:id => [tag_data[:id]]).and_return(empty_ids)
+      with(:id => [tag_data[:id]]).exactly(3).times.and_return(empty_ids, full_ids)
 
     expect(tag).to receive(:invalid?).and_return(false)
     expect(tag).to receive(:save).and_return(true)
     expect(Flapjack::Data::Tag).to receive(:new).with(tag_data).
       and_return(tag)
 
-    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).
-      with(:resources => [tag], :ids => [tag.id], :unwrap => true).
+    expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(tag_data)
 
     post "/tags", Flapjack.dump_json(:tags => tag_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:tags => tag_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:tags => tag_data.merge(:links => {
+      :checks => [],
+      :rules => []
+    })))
   end
 
   it 'creates a tag linked to a check' do
@@ -40,12 +45,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:checks).and_return({tag.id => [check.id]})
+    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({tag.id => []})
     expect(Flapjack::Data::Tag).to receive(:intersect).
-      with(:id => [tag_data[:id]]).and_return(empty_ids)
-
-    tag_with_check_data = tag_data.merge(:links => {
-      :checks => [check.id]
-    })
+      with(:id => [tag_data[:id]]).exactly(3).times.and_return(empty_ids, full_ids)
 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).with(check.id).
       and_return([check])
@@ -58,13 +62,18 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:new).with(tag_data).
       and_return(tag)
 
-    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).
-      with(:resources => [tag], :ids => [tag.id], :unwrap => true).
-      and_return(tag_with_check_data)
+    expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(tag_data)
 
-    post "/tags", Flapjack.dump_json(:tags => tag_with_check_data), jsonapi_post_env
+    post "/tags", Flapjack.dump_json(:tags => tag_data.merge(:links => {:checks => [check.id]})), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:tags => tag_with_check_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:links => {
+        'tags.checks' => 'http://example.org/checks/{tags.checks}',
+      },
+      :tags => tag_data.merge(:links => {
+      :checks => [check.id],
+      :rules => []
+    })))
   end
 
   it 'creates a tag linked to a check and a rule' do
@@ -73,13 +82,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:checks).and_return({tag.id => [check.id]})
+    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({tag.id => [rule.id]})
     expect(Flapjack::Data::Tag).to receive(:intersect).
-      with(:id => [tag_data[:id]]).and_return(empty_ids)
-
-    tag_with_check_and_rule_data = tag_data.merge(:links => {
-      :checks => [check.id],
-      :rules  => [rule.id],
-    })
+      with(:id => [tag_data[:id]]).exactly(3).times.and_return(empty_ids, full_ids)
 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).with(check.id).
       and_return([check])
@@ -98,13 +105,19 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:new).with(tag_data).
       and_return(tag)
 
-    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).
-      with(:resources => [tag], :ids => [tag.id], :unwrap => true).
-      and_return(tag_with_check_and_rule_data)
+    expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(tag_data)
 
-    post "/tags", Flapjack.dump_json(:tags => tag_with_check_and_rule_data), jsonapi_post_env
+    post "/tags", Flapjack.dump_json(:tags => tag_data.merge(:links => {:checks => [check.id], :rules => [rule.id]})), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:tags => tag_with_check_and_rule_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:links => {
+        'tags.checks' => 'http://example.org/checks/{tags.checks}',
+        'tags.rules' => 'http://example.org/rules/{tags.rules}',
+      },
+      :tags => tag_data.merge(:links => {
+      :checks => [check.id],
+      :rules => [rule.id]
+    })))
   end
 
   it "retrieves paginated tags" do
@@ -124,46 +137,68 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
       and_return([tag])
     expect(Flapjack::Data::Tag).to receive(:sort).with(:name).and_return(sorted)
 
-    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).
-      with(:resources => [tag], :ids => [tag.id],
-           :fields => an_instance_of(Array), :unwrap => false).
-      and_return([tag_data])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:checks).and_return({tag.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({tag.id => []})
+    expect(Flapjack::Data::Tag).to receive(:intersect).
+      with(:id => [tag.id]).twice.and_return(full_ids)
+
+    expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(tag_data)
 
     get '/tags'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:tags => [tag_data], :meta => meta))
+    expect(last_response.body).to eq(Flapjack.dump_json(:tags => [tag_data.merge(:links => {
+      :checks => [],
+      :rules => []
+    })], :meta => meta))
   end
 
   it "retrieves one tag" do
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).
       with(tag.id).and_return(tag)
 
-    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).
-      with(:resources => [tag], :ids => [tag.id],
-           :fields => an_instance_of(Array), :unwrap => true).
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:checks).and_return({tag.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({tag.id => []})
+    expect(Flapjack::Data::Tag).to receive(:intersect).
+      with(:id => [tag.id]).twice.and_return(full_ids)
+
+    expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(tag_data)
 
     get "/tags/#{tag.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:tags => tag_data))
+    expect(last_response.body).to eq(Flapjack.dump_json(:tags => tag_data.merge(:links => {
+      :checks => [],
+      :rules => []
+    })))
   end
 
   it "retrieves several tags" do
     sorted = double('sorted')
     expect(sorted).to receive(:find_by_ids!).
-      with(tag.id, tag_2.id).
-      and_return([tag, tag_2])
-    expect(Flapjack::Data::Tag).to receive(:sort).
-      with(:name).and_return(sorted)
+      with(tag.id, tag_2.id).and_return([tag, tag_2])
+    expect(Flapjack::Data::Tag).to receive(:sort).with(:name).and_return(sorted)
 
-    expect(Flapjack::Data::Tag).to receive(:as_jsonapi).
-      with(:resources => [tag, tag_2], :ids => [tag.id, tag_2.id],
-           :fields => an_instance_of(Array), :unwrap => false).
-      and_return([tag_data, tag_2_data])
+    full_ids = double('full_ids')
+    expect(full_ids).to receive(:associated_ids_for).with(:checks).and_return({tag.id => [], tag_2.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({tag.id => [], tag_2.id => []})
+    expect(Flapjack::Data::Tag).to receive(:intersect).
+      with(:id => [tag.id, tag_2.id]).twice.and_return(full_ids)
+
+    expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(tag_data)
+
+    expect(tag_2).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(tag_2_data)
 
     get "/tags/#{tag.id},#{tag_2.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:tags => [tag_data, tag_2_data]))
+    expect(last_response.body).to eq(Flapjack.dump_json(:tags => [
+      tag_data.merge(:links => {:checks => [], :rules => []}),
+      tag_2_data.merge(:links => {:checks => [], :rules => []})
+    ]))
   end
 
   it 'adds a linked check to a tag' do

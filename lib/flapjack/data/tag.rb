@@ -40,29 +40,6 @@ module Flapjack
       def self.jsonapi_multiple_associations
         [:checks, :rules]
       end
-
-      def self.as_jsonapi(options = {})
-        tags = options[:resources]
-        return [] if tags.nil? || tags.empty?
-
-        unwrap = options[:unwrap]
-
-        tag_ids = options[:ids]
-        check_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
-          associated_ids_for(:checks)
-        rule_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
-          associated_ids_for(:rules)
-
-        data = tags.collect do |tag|
-          tag.as_json(:only => options[:fields]).merge(:links => {
-            :checks => check_ids[tag.id],
-            :rules  => rule_ids[tag.id]
-          })
-        end
-        return data unless (data.size == 1) && unwrap
-        data.first
-      end
-
     end
   end
 end

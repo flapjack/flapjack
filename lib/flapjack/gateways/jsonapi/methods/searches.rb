@@ -54,9 +54,12 @@ module Flapjack
                 :per_page => params[:per_page])
 
               records_as_json = klass.as_jsonapi(*records)
-              Flapjack.dump_json({resource.to_sym => records_as_json}.merge(meta))
-            end
 
+              json_data = {}
+              json_data.update(resource.to_sym => records_as_json)
+              json_data.update(:meta => meta) unless meta.nil? || meta.empty?
+              Flapjack.dump_json(json_data)
+            end
           end
         end
       end

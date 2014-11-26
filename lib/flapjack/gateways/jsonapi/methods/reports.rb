@@ -66,7 +66,10 @@ module Flapjack
               }
 
               status 200
-              Flapjack.dump_json({"#{action}_reports".to_sym => rd}.merge(meta))
+              json_data = {}
+              json_data.update("#{action}_reports".to_sym => rd)
+              json_data.update(:meta => meta) unless meta.nil? || meta.empty?
+              Flapjack.dump_json(json_data)
             end
 
           end

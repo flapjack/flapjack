@@ -95,7 +95,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
         ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
-      logo_image_tag = '<img alt="Flapjack" class="logo" src="/img/branding.png">'
+      logo_image_tag = '<img alt="Flapjack" class="logo" src="http://example.org/img/branding.png">'
 
       get '/self_stats'
 
@@ -112,7 +112,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
         ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
-      logo_image_tag = '<img alt="Flapjack" class="logo" src="/img/flapjack-2013-notext-transparent-300-300.png">'
+      logo_image_tag = '<img alt="Flapjack" class="logo" src="http://example.org/img/flapjack-2013-notext-transparent-300-300.png">'
 
       get '/self_stats'
 

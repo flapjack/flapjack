@@ -53,17 +53,6 @@ module Flapjack
              end
            end
 
-          @base_url = @config['base_url']
-          unless @base_url
-            @logger.info "base_url is not configured, setting to '/'"
-            @base_url = '/'
-          end
-
-          unless @base_url.match(/^.*\/$/)
-            @logger.warn "base_url must end with a trailing '/', setting to '#{@base_url}/'"
-            @base_url = "#{@base_url}/"
-          end
-
           # constants won't be exposed to eRb scope
           @default_logo_url = "img/flapjack-2013-notext-transparent-300-300.png"
           @logo_image_file  = nil
@@ -111,7 +100,7 @@ module Flapjack
       before do
         Sandstorm.redis ||= Flapjack.redis
         @api_url          = self.class.instance_variable_get('@api_url')
-        @base_url         = self.class.instance_variable_get('@base_url')
+        @base_url         = "#{request.base_url}/"
         @default_logo_url = self.class.instance_variable_get('@default_logo_url')
         @logo_image_file  = self.class.instance_variable_get('@logo_image_file')
         @logo_image_ext   = self.class.instance_variable_get('@logo_image_ext')

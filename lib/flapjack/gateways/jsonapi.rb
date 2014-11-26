@@ -43,27 +43,10 @@ module Flapjack
       class << self
         def start
           @logger.info "starting jsonapi - class"
-
-          @base_url = @config['base_url']
-          dummy_url = "http://api.example.com"
-          if @base_url
-            @base_url = $1 if @base_url.match(/^(.+)\/$/)
-          else
-            @logger.error "base_url must be a valid http or https URI (not configured), setting to dummy value (#{dummy_url})"
-            # FIXME: at this point I'd like to stop this pikelet without bringing down the whole
-            @base_url = dummy_url
-          end
-          if (@base_url =~ /^#{URI::regexp(%w(http https))}$/).nil?
-            @logger.error "base_url must be a valid http or https URI (#{@base_url}), setting to dummy value (#{dummy_url})"
-            # FIXME: at this point I'd like to stop this pikelet without bringing down the whole
-            # flapjack process
-            # For now, set a dummy value
-            @base_url = dummy_url
-          end
         end
       end
 
-      ['logger', 'config', 'base_url'].each do |class_inst_var|
+      ['logger', 'config'].each do |class_inst_var|
         define_method(class_inst_var.to_sym) do
           self.class.instance_variable_get("@#{class_inst_var}")
         end
