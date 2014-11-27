@@ -78,7 +78,7 @@ module FixtureData
   def sms_data
     @sms_data ||= {
       :id               => 'e2e09943-ed6c-476a-a8a5-ec165426f298',
-      :type             => 'sms',
+      :transport        => 'sms',
       :address          => '0123456789',
       :interval         => 300,
       :rollup_threshold => 5
@@ -88,7 +88,7 @@ module FixtureData
   def email_data
     @email_data ||= {
       :id               => '9156de3c-ddc6-4637-b1cc-bd035fd61dd3',
-      :type             => 'email',
+      :transport        => 'email',
       :address          => 'ablated@example.org',
       :interval         => 180,
       :rollup_threshold => 3

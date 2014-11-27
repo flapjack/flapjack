@@ -14,12 +14,12 @@ module Factory
 
   def self.medium(contact, attrs = {})
     redis.multi
-    redis.hmset("medium:#{attrs[:id]}:attrs", {'type' => attrs[:type],
+    redis.hmset("medium:#{attrs[:id]}:attrs", {'transport' => attrs[:transport],
       'address' => attrs[:address], 'interval' => attrs[:interval],
       'rollup_threshold' => attrs[:rollup_threshold]}.flatten)
     redis.sadd('medium::attrs:ids', attrs[:id].to_s)
-    # type is known not to contain unsafe chars
-    redis.sadd("medium::indices:by_type:string:#{attrs[:type]}", attrs[:type])
+    # transport is known not to contain unsafe chars
+    redis.sadd("medium::indices:by_transport:string:#{attrs[:transport]}", attrs[:transport])
 
     redis.sadd("contact:#{contact.id}:assocs:medium_ids", attrs[:id].to_s)
     redis.exec

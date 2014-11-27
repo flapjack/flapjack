@@ -316,7 +316,7 @@ module Flapjack
 
         @contact_media = @contact.media.all
 
-        if @contact_media.any? {|m| m.type == 'pagerduty'}
+        if @contact_media.any? {|m| m.transport == 'pagerduty'}
           @pagerduty_credentials = @contact.pagerduty_credentials
         end
 

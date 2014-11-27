@@ -42,7 +42,7 @@ module Flapjack
             contact.save
 
             unless media_data.nil? || media_data.empty?
-              media_data.each_pair do |type, medium_data|
+              media_data.each_pair do |transport, medium_data|
 
                 itv = medium_data['interval'].to_i
                 itv = nil unless itv >= 0
@@ -50,7 +50,7 @@ module Flapjack
                 rut = medium_data['rollup_threshold'].to_i
                 rut = nil unless rut > 0
 
-                medium = Flapjack::Data::Medium.new(:type => type,
+                medium = Flapjack::Data::Medium.new(:transport => transport,
                   :address => medium_data['address'],
                   :interval => itv, :rollup_threshold => rut)
                 medium.save

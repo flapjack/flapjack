@@ -103,21 +103,21 @@ module Flapjack
 
       alerts.each do |alert|
         medium = alert.medium
-        unless @queues.has_key?(medium.type)
+        unless @queues.has_key?(medium.transport)
           # TODO when notification code is moved up here, do this test before the
           # alert is generated
-          @logger.error("no queue for media type: #{medium.type}")
+          @logger.error("no queue for media transport: #{medium.transport}")
           next
         end
 
         @notifylog.info("#{check_name} | " +
-          "#{notification.type} | #{medium.contact.id} | #{medium.type} | #{medium.address}")
+          "#{notification.type} | #{medium.contact.id} | #{medium.transport} | #{medium.address}")
 
-        @logger.info("Enqueueing #{medium.type} alert for " +
+        @logger.info("Enqueueing #{medium.transport} alert for " +
           "#{check_name} to #{medium.address} " +
           " type: #{notification.type} rollup: #{alert.rollup || '-'}")
 
-        @queues[medium.type].push(alert)
+        @queues[medium.transport].push(alert)
       end
     end
 
@@ -284,7 +284,7 @@ module Flapjack
 
         alertable_media.each_with_object([]) do |medium, memo|
 
-          logger.info "media test: #{medium.type}, #{medium.id}"
+          logger.info "media test: #{medium.transport}, #{medium.id}"
 
           no_previous_notification  = medium.last_notification.nil?
 

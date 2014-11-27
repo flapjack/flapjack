@@ -17,8 +17,8 @@ describe Flapjack::Notifier, :logger => true do
     expect(Flapjack::RecordQueue).to receive(:new).with('notifications',
       Flapjack::Data::Notification).and_return(queue)
 
-    ['email', 'sms', 'pagerduty', 'jabber'].each do |media_type|
-      expect(Flapjack::RecordQueue).to receive(:new).with("#{media_type}_notifications",
+    ['email', 'sms', 'pagerduty', 'jabber'].each do |media_transport|
+      expect(Flapjack::RecordQueue).to receive(:new).with("#{media_transport}_notifications",
         Flapjack::Data::Alert)
     end
 
@@ -78,14 +78,14 @@ describe Flapjack::Notifier, :logger => true do
   #   expect(alerting_checks_2).to receive(:count).and_return(1)
 
   #   medium_1 = double(Flapjack::Data::Medium)
-  #   expect(medium_1).to receive(:type).and_return('email')
+  #   expect(medium_1).to receive(:transport).and_return('email')
   #   expect(medium_1).to receive(:address).and_return('abcde@example.com')
   #   expect(medium_1).to receive(:alerting_checks).exactly(3).times.and_return(alerting_checks_1)
   #   expect(medium_1).to receive(:clean_alerting_checks).and_return(0)
   #   expect(medium_1).to receive(:rollup_threshold).exactly(3).times.and_return(10)
 
   #   medium_2 = double(Flapjack::Data::Medium)
-  #   expect(medium_2).to receive(:type).and_return('sms')
+  #   expect(medium_2).to receive(:transport).and_return('sms')
   #   expect(medium_2).to receive(:address).and_return('0123456789')
   #   expect(medium_2).to receive(:alerting_checks).exactly(3).times.and_return(alerting_checks_2)
   #   expect(medium_2).to receive(:clean_alerting_checks).and_return(0)

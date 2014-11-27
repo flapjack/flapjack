@@ -7,9 +7,9 @@ Feature: Rollup on a per contact, per media basis
       | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | Malak Al-Musawi | Asia/Baghdad        |
 
     And the following media exist:
-      | id                                   | contact_id                           | type  | address           | interval | rollup_threshold |
-      | 28032dbf-388d-4f52-91b2-dc5e5be2becc | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | email | malak@example.com | 15       | 1                |
-      | 73e2803f-948e-467a-a707-37b9f53ee21a | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | sms   | +61400000001      | 15       | 2                |
+      | id                                   | contact_id                           | transport | address           | interval | rollup_threshold |
+      | 28032dbf-388d-4f52-91b2-dc5e5be2becc | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | email     | malak@example.com | 15       | 1                |
+      | 73e2803f-948e-467a-a707-37b9f53ee21a | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | sms       | +61400000001      | 15       | 2                |
 
     And the following checks exist:
       | id  | name     | tags     |

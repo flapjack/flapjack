@@ -30,35 +30,31 @@ module Flapjack
         :inverse_of => :routes
 
       has_and_belongs_to_many :media, :class_name => 'Flapjack::Data::Medium',
-        :inverse_of => :routes
+        :inverse_of => :routes, :after_add => :clear_drop,
+        :after_remove => :check_drop
 
       validate :state, :presence => true,
         :inclusion => { :in => Flapjack::Data::CheckState.failing_states }
 
       validates_with Flapjack::Data::Validators::IdValidator
 
+      def initialize(attributes = {})
+        super
+        send(:"attribute=", 'drop', true) # default, as no media associated
+      end
+
+      def clear_drop(*media)
+        self.drop = false
+        self.save
+      end
+
+      def check_drop(*media)
+        return unless self.media.empty?
+        self.drop = true
+        self.save
+      end
+
       # TODO validate that rule and media belong to the same contact
-
-      # TODO drop should not be exposed in the API, set it when media empty
-      #   and remove if media not empty
-
-      # before_destroy :correct_alerting_media
-      # def correct_alerting_media
-      #   self.class.lock(Flapjack::Data::Medium, Flapjack::Data::Check) do
-
-      #     self.media.each do |medium|
-      #       medium.alerting_checks.each do |check|
-
-      #         # if this is the only route that links the media to that check,
-      #         # remove from the set of alerting_checks for that media; will
-      #         # need to use current check state to limit route set as well
-
-      #       end
-
-      #     end
-
-      #   end
-      # end
 
       def self.jsonapi_attributes
         [:state, :time_restrictions]

@@ -83,7 +83,7 @@ Given /^the following media exist:$/ do |media|
     expect(medium).to be nil
     medium = Flapjack::Data::Medium.new(
       :id               => medium_data['id'],
-      :type             => medium_data['type'],
+      :transport        => medium_data['transport'],
       :address          => medium_data['address'],
       :interval         => medium_data['interval'].to_i * 60,
       :rollup_threshold => medium_data['rollup_threshold'].to_i
@@ -169,7 +169,7 @@ end
 Given /^(?:a|the) user wants to receive SMS notifications for check '(.+)'$/ do |check_name|
   contact = find_or_create_contact(:name => 'John Smith')
 
-  sms = Flapjack::Data::Medium.new(:type => 'sms',
+  sms = Flapjack::Data::Medium.new(:transport => 'sms',
     :address => '+61888888888', :interval => 600)
   expect(sms.save).to be true
   contact.media << sms
@@ -204,7 +204,7 @@ end
 Given /^(?:a|the) user wants to receive email notifications for check '(.+)'$/ do |check_name|
   contact = find_or_create_contact(:name => 'Jane Smith')
 
-  email = Flapjack::Data::Medium.new(:type => 'email',
+  email = Flapjack::Data::Medium.new(:transport => 'email',
     :address => 'janes@example.dom', :interval => 600)
   expect(email.save).to be true
   contact.media << email
@@ -238,7 +238,7 @@ end
 Given /^(?:a|the) user wants to receive SNS notifications for check '(.+)'$/ do |check_name|
   contact = find_or_create_contact(:name => 'James Smithson')
 
-  sns = Flapjack::Data::Medium.new(:type => 'sns',
+  sns = Flapjack::Data::Medium.new(:transport => 'sns',
     :address => 'arn:aws:sns:us-east-1:698519295917:My-Topic', :interval => 600)
   expect(sns.save).to be true
   contact.media << sns
@@ -323,7 +323,7 @@ Then /^an (SMS|SNS|email) notification for check '(.+)' should( not)? be queued$
         send((neg ? :to : :not_to), be_empty)
 end
 
-Given /^an (SMS|SNS|email) notification has been queued for check '(.+)'$/ do |media_type, check_name|
+Given /^an (SMS|SNS|email) notification has been queued for check '(.+)'$/ do |media_transport, check_name|
   check = Flapjack::Data::Check.intersect(:name => check_name).all.first
   expect(check).not_to be_nil
 
@@ -342,7 +342,7 @@ Given /^an (SMS|SNS|email) notification has been queued for check '(.+)'$/ do |m
     raise "Couldn't save alert: #{@alert.errors.full_messages.inspect}"
   end
 
-  medium = Flapjack::Data::Medium.intersect(:type => media_type.downcase).all.first
+  medium = Flapjack::Data::Medium.intersect(:transport => media_transport.downcase).all.first
   expect(medium).not_to be_nil
 
   medium.alerts << @alert

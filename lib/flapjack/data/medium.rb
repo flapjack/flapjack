@@ -17,12 +17,13 @@ module Flapjack
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
 
-      TYPES = ['email', 'sms', 'jabber', 'pagerduty', 'sns', 'sms_twilio']
+      TRANSPORTS = ['email', 'sms', 'jabber', 'pagerduty', 'sns', 'sms_twilio']
 
-      define_attributes :type              => :string,
+      define_attributes :transport         => :string,
                         :address           => :string,
                         :interval          => :integer,
                         :rollup_threshold  => :integer,
+                        # :userdata          => :hash,
                         :last_rollup_type  => :string,
                         :last_notification => :timestamp,
                         :last_notification_state => :string
@@ -37,10 +38,10 @@ module Flapjack
       has_and_belongs_to_many :alerting_checks, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :alerting_media
 
-      index_by :type
+      index_by :transport
 
-      validates :type, :presence => true,
-        :inclusion => {:in => Flapjack::Data::Medium::TYPES }
+      validates :transport, :presence => true,
+        :inclusion => {:in => Flapjack::Data::Medium::TRANSPORTS }
       validates :address, :presence => true
       validates :interval, :presence => true,
         :numericality => {:greater_than_or_equal_to => 0, :only_integer => true}
@@ -50,7 +51,7 @@ module Flapjack
       validates_with Flapjack::Data::Validators::IdValidator
 
       def self.jsonapi_attributes
-        [:type, :address, :interval, :rollup_threshold]
+        [:transport, :address, :interval, :rollup_threshold]
       end
 
       def self.jsonapi_singular_associations

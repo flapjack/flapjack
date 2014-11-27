@@ -18,10 +18,10 @@
     </tr>
     <% @contact_media.each do |med| %>
       <% alerting_checks = med.alerting_checks.all %>
-      <% media_type = med.type %>
-      <% alerting[media_type] = alerting_checks unless alerting_checks.empty? %>
+      <% media_transport = med.transport %>
+      <% alerting[media_transport] = alerting_checks unless alerting_checks.empty? %>
       <tr>
-        <% if 'pagerduty'.eql?(media_type) %>
+        <% if 'pagerduty'.eql?(media_transport) %>
           <td>PagerDuty</td>
           <td>
             <% @pagerduty_credentials.each_pair do |pk, pv| %>
@@ -32,10 +32,10 @@
           <td></td>
           <td></td>
         <% else %>
-          <% if 'sms'.eql?(media_type) %>
-            <td><%= h media_type.upcase %></td>
+          <% if 'sms'.eql?(media_transport) %>
+            <td><%= h media_transport.upcase %></td>
           <% else %>
-              <td><%= h media_type.capitalize %></td>
+              <td><%= h media_transport.capitalize %></td>
           <% end %>
           <td><%= h med.address %></td>
           <td>
@@ -47,7 +47,7 @@
           </td>
           <td>
             <% rollup_threshold = med.rollup_threshold %>
-            <% num_alerting = alerting[media_type].nil? ? 0 : alerting[media_type].length %>
+            <% num_alerting = alerting[media_transport].nil? ? 0 : alerting[media_transport].length %>
             <% if rollup_threshold.nil? || (num_alerting < rollup_threshold.to_i) %>
               No -
             <% else %>
