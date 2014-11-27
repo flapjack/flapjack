@@ -38,19 +38,19 @@ module Flapjack
           return
         end
 
-        begin
-          semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, :redis => redis)
-          if semaphore.nil?
-            unless logger.nil?
-              logger.fatal "Could not obtain lock for data migration (entity id creation). Ensure that " +
-                "no other flapjack processes are running that might be executing " +
-                "migrations, check logs for any exceptions, manually delete the " +
-                "'#{ENTITY_DATA_MIGRATION}' key from your Flapjack Redis " +
-                "database and try running Flapjack again."
-            end
-            raise "Unable to obtain semaphore #{ENTITY_DATA_MIGRATION}"
+        semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, :redis => redis)
+        if semaphore.nil?
+          unless logger.nil?
+            logger.fatal "Could not obtain lock for data migration (entity id creation). Ensure that " +
+              "no other flapjack processes are running that might be executing " +
+              "migrations, check logs for any exceptions, manually delete the " +
+              "'#{ENTITY_DATA_MIGRATION}' key from your Flapjack Redis " +
+              "database and try running Flapjack again."
           end
+          raise "Unable to obtain semaphore #{ENTITY_DATA_MIGRATION}"
+        end
 
+        begin
           logger.warn "Ensuring all entities have ids ..." unless logger.nil?
 
           Flapjack::Data::EntityCheck.find_current_names_by_entity(:redis => redis, :logger => logger).keys.each {|entity_name|
@@ -73,19 +73,19 @@ module Flapjack
           return
         end
 
-        begin
-          semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, :redis => redis)
-          if semaphore.nil?
-            unless logger.nil?
-              logger.fatal "Could not obtain lock for entity check data migration. Ensure that " +
-                "no other flapjack processes are running that might be executing " +
-                "migrations, check logs for any exceptions, manually delete the " +
-                "'#{ENTITY_DATA_MIGRATION}' key from your Flapjack Redis " +
-                "database and try running Flapjack again."
-            end
-            raise "Unable to obtain semaphore #{ENTITY_DATA_MIGRATION}"
+        semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, :redis => redis)
+        if semaphore.nil?
+          unless logger.nil?
+            logger.fatal "Could not obtain lock for entity check data migration. Ensure that " +
+              "no other flapjack processes are running that might be executing " +
+              "migrations, check logs for any exceptions, manually delete the " +
+              "'#{ENTITY_DATA_MIGRATION}' key from your Flapjack Redis " +
+              "database and try running Flapjack again."
           end
+          raise "Unable to obtain semaphore #{ENTITY_DATA_MIGRATION}"
+        end
 
+        begin
           logger.warn "Upgrading Flapjack's entity/check Redis indexes..." unless logger.nil?
 
           check_names = redis.keys('check:*').map {|c| c.sub(/^check:/, '') } |
