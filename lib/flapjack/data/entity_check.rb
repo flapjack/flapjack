@@ -160,7 +160,7 @@ module Flapjack
           redis.exists(entity_check + ':unscheduled_maintenance')
         }.collect {|entity_check|
           Flapjack::Data::EntityCheck.for_event_id(entity_check, :redis => redis)
-        }
+        }.compact
       end
 
       def self.find_maintenance(options = {})
