@@ -134,7 +134,7 @@ module Flapjack
 
       def to_s
         contact = medium.contact
-        msg = "Alert via #{medium.type}:#{medium.address} to contact #{contact.id} (#{contact.name}): "
+        msg = "Alert via #{medium.transport}:#{medium.address} to contact #{contact.id} (#{contact.name}): "
         msg += type_sentence_case
         if rollup
           msg += " - #{rollup_states_summary} (#{rollup_states_detail_text(:max_checks_per_state => 3)})"
