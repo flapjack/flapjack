@@ -25,6 +25,8 @@ module Flapjack
           :logger => logger)
         Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => redis,
           :logger => logger)
+        Flapjack::Data::Migration.create_entity_ids_if_required(:redis => redis,
+          :logger => logger)
         Flapjack::Data::Migration.refresh_archive_index(:redis => redis)
         redis
       }
