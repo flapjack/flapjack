@@ -21,17 +21,23 @@ module Flapjack
 
             resources = nil
 
-            data_ids = resources_data.reject {|d| d['id'].nil? }.map {|dd| dd['id'].to_s }
+            id_field = klass.respond_to?(:jsonapi_id) ? klass.jsonapi_id : nil
+            idf      = id_field || :id
+
+            data_ids = resources_data.reject {|d| d[idf.to_s].nil? }.
+                                      map    {|i| i[idf.to_s].to_s }
 
             assoc_klasses = singular_links.values | multiple_links.values
 
             klass.lock(*assoc_klasses) do
-              conflicted_ids = klass.intersect(:id => data_ids).ids
-              halt(err(403, "Resources already exist with the following ids: " +
+              conflicted_ids = klass.intersect(idf => data_ids).ids
+              halt(err(403, "Resources already exist with the following #{idf}s: " +
                        conflicted_ids.join(', '))) unless conflicted_ids.empty?
 
               links_by_resource = resources_data.each_with_object({}) do |rd, memo|
-                r = klass.new( symbolize(rd.reject {|k| 'links'.eql?(k)}) )
+                record_data = symbolize(rd.reject {|k| 'links'.eql?(k)})
+                record_data[:id] = record_data[id_field] unless id_field.nil?
+                r = klass.new(record_data)
                 halt(err(403, "Validation failed, " + r.errors.full_messages.join(', '))) if r.invalid?
                 memo[r] = rd['links']
               end

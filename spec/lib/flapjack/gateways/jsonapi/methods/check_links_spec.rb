@@ -6,7 +6,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
   include_context "jsonapi"
 
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
-  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:id]) }
+  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
 
   let(:check_tags)  { double('check_tags') }
 

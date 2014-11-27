@@ -6,7 +6,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
   include_context "jsonapi"
 
 
-  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:id]) }
+  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
   let(:rule)  { double(Flapjack::Data::Rule, :id => rule_data[:id]) }
 

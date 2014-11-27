@@ -2,9 +2,6 @@
 
 require 'sinatra/base'
 
-# NB: documentation changes required, this now uses individual check ids rather
-# than v1's 'entity_name:check_name' pseudo-id
-
 module Flapjack
   module Gateways
     class JSONAPI < Sinatra::Base
@@ -33,7 +30,8 @@ module Flapjack
                            :sort => :name)
             end
 
-            # TODO should we not allow tags to be renamed?
+            # NB: tags cannot be renamed, this is only present for updating of
+            # associations, which can also be done through tag_links.rb methods
             app.put %r{^/tags/(.+)$} do
               tag_ids = params[:captures][0].split(',').uniq
 

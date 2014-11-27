@@ -12,14 +12,16 @@ module Flapjack
                         :end_time   => :timestamp,
                         :summary    => :string
 
-      validates :start_time, :presence => true
-      validates :end_time, :presence => true
-
       belongs_to :check_by_start, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :scheduled_maintenances_by_start
 
       belongs_to :check_by_end, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :scheduled_maintenances_by_end
+
+      validates :start_time, :presence => true
+      validates :end_time, :presence => true
+
+      validates_with Flapjack::Data::Validators::IdValidator
 
       def duration
         self.end_time - self.start_time

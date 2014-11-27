@@ -7,7 +7,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
 
   let(:rule)    { double(Flapjack::Data::Rule, :id => rule_data[:id]) }
   let(:contact) { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
-  let(:tag)     { double(Flapjack::Data::Tag, :id => tag_data[:id]) }
+  let(:tag)     { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
   let(:route)   { double(Flapjack::Data::Route, :id => route_data[:id]) }
 
   let(:rule_tags)   { double('rule_tags') }

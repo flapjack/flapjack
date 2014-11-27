@@ -179,7 +179,7 @@ Given /^(?:a|the) user wants to receive SMS notifications for check '(.+)'$/ do 
   rule = Flapjack::Data::Rule.new
   expect(rule.save).to be true
 
-  check_name.split(':', 2).each do |tag_name|
+  check_name.gsub(/\./, '_').split(':', 2).each do |tag_name|
     tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
     if tag.nil?
       tag = Flapjack::Data::Tag.new(:name => tag_name)
@@ -214,7 +214,7 @@ Given /^(?:a|the) user wants to receive email notifications for check '(.+)'$/ d
   rule = Flapjack::Data::Rule.new
   expect(rule.save).to be true
 
-  check_name.split(':', 2).each do |tag_name|
+  check_name.gsub(/\./, '_').split(':', 2).each do |tag_name|
     tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
     if tag.nil?
       tag = Flapjack::Data::Tag.new(:name => tag_name)
@@ -248,7 +248,7 @@ Given /^(?:a|the) user wants to receive SNS notifications for check '(.+)'$/ do 
   rule = Flapjack::Data::Rule.new
   expect(rule.save).to be true
 
-  check_name.split(':', 2).each do |tag_name|
+  check_name.gsub(/\./, '_').split(':', 2).each do |tag_name|
     tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
     if tag.nil?
       tag = Flapjack::Data::Tag.new(:name => tag_name)

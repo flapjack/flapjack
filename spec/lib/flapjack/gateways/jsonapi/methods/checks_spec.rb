@@ -6,7 +6,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
   include_context "jsonapi"
 
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
-  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:id]) }
+  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
 
   let(:check_presenter) { double(Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter) }
 
@@ -49,7 +49,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:new).with(check_data).
       and_return(check)
 
-    expect(Flapjack::Data::Tag).to receive(:find_by_ids!).with(tag_data[:id]).
+    expect(Flapjack::Data::Tag).to receive(:find_by_ids!).with(tag.id).
       and_return([tag])
     check_tags = double('check_tags')
     expect(check_tags).to receive(:add).with(tag)

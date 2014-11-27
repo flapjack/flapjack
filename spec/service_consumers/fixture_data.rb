@@ -155,14 +155,12 @@ module FixtureData
 
   def tag_data
     @tag_data ||= {
-     :id   => '3330972a-3bae-4d8d-af0f-e88caad73b49',
      :name => 'database',
     }
   end
 
   def tag_2_data
     @tag_2_data ||= {
-     :id   => '72dfb8b1-e252-4c36-9bd1-7da774b17bba',
      :name => 'physical',
     }
   end

@@ -13,7 +13,7 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::ResourceLinks
 
-            app.post %r{^/tags/(#{Flapjack::UUID_RE})/links/(checks|rules)$} do
+            app.post %r{^/tags/(\S+)/links/(checks|rules)$} do
               tag_id     = params[:captures][0]
               assoc_type = params[:captures][1]
 
@@ -24,7 +24,7 @@ module Flapjack
               status 204
             end
 
-            app.get %r{^/tags/(#{Flapjack::UUID_RE})/links/(checks|rules)} do
+            app.get %r{^/tags/(\S+)/links/(checks|rules)} do
               tag_id     = params[:captures][0]
               assoc_type = params[:captures][1]
 
@@ -35,7 +35,7 @@ module Flapjack
               )
             end
 
-            app.put %r{^/tags/(#{Flapjack::UUID_RE})/links/(checks|rules)$} do
+            app.put %r{^/tags/(\S+)/links/(checks|rules)$} do
               tag_id     = params[:captures][0]
               assoc_type = params[:captures][1]
 
@@ -46,7 +46,7 @@ module Flapjack
               status 204
             end
 
-            app.delete %r{^/tags/(#{Flapjack::UUID_RE})/links/(checks|rules)/(.+)$} do
+            app.delete %r{^/tags/(\S+)/links/(checks|rules)/(.+)$} do
               tag_id     = params[:captures][0]
               assoc_type = params[:captures][1]
               assoc_ids  = params[:captures][2].split(',').uniq
