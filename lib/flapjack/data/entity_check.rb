@@ -75,11 +75,8 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
         create_entity = options[:create_entity]
         logger = options[:logger]
-        puts("entity_name: #{entity_name.inspect}")
-        puts("create_entity: #{create_entity.inspect}")
         entity = Flapjack::Data::Entity.find_by_name(entity_name,
           :create => create_entity, :logger => logger, :redis => redis)
-        puts("entity: #{entity.inspect}")
         self.new(entity, check_name, :logger => logger, :redis => redis)
       end
 
