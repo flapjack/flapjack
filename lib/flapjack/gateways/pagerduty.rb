@@ -207,27 +207,21 @@ module Flapjack
           @logger.debug "found unacknowledged failing checks as follows: " +
             unacked_failing_checks.map(&:name).join(', ')
 
-          unacked_failing_checks.each do |check|
+          credentials_by_check = Flapjack::Data::Check.
+            pagerduty_credentials_for(unacked_failing_checks.map(&:id))
 
-            # If more than one contact for this check has pagerduty
-            # credentials then there'll be one hash in the array for each set of
-            # credentials.
-            ec_credentials = check.contacts.all.inject([]) {|ret, contact|
-              cred = contact.pagerduty_credentials
-              ret << cred if cred
-              ret
-            }
+          credentials_by_check.each_pair do |check, credentials|
 
             check_name = check.name
             event_id = check_name
 
-            if ec_credentials.empty?
+            if credentials.empty?
               @logger.debug("No pagerduty credentials found for #{event_id}, skipping")
               next
             end
 
             # FIXME: try each set of credentials until one works (may have stale contacts turning up)
-            options = ec_credentials.first.merge('check' => event_id)
+            options = credentials.first.merge('check' => event_id)
 
             acknowledged = pagerduty_acknowledged?(options)
             if acknowledged.nil?

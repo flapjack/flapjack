@@ -11,7 +11,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
   let(:redis) { double(Redis) }
   let(:lock)  { double(Monitor) }
 
-  let(:check) { double(Flapjack::Data::Check) }
+  let(:check) { double(Flapjack::Data::Check, :id => '12345') }
 
   before(:each) do
     allow(Flapjack).to receive(:redis).and_return(redis)
@@ -114,22 +114,20 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       expect(redis).to receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(1)
       expect(redis).to receive(:expire).with('sem_pagerduty_acks_running', 300)
 
-      contact = double(Flapjack::Data::Contact)
-      expect(contact).to receive(:pagerduty_credentials).and_return({
-        'service_key' => '12345678',
-        'subdomain"'  => 'flpjck',
-        'username'    => 'flapjack',
-        'password'    => 'password123'
-      })
-
-      contacts_all = double(:contacts, :all => [contact])
-      expect(check).to receive(:contacts).and_return(contacts_all)
       expect(check).to receive(:name).twice.and_return('app-02:ping')
       expect(check).to receive(:in_unscheduled_maintenance?).and_return(false)
 
       failing_checks = double('failing_checks', :all => [check])
       expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
         ['critical', 'warning', 'unknown']).and_return(failing_checks)
+
+      expect(Flapjack::Data::Check).to receive(:pagerduty_credentials_for).
+        and_return(check => [{
+        'service_key' => '12345678',
+        'subdomain"'  => 'flpjck',
+        'username'    => 'flapjack',
+        'password'    => 'password123'
+      }])
 
       expect(Flapjack::Data::Event).to receive(:create_acknowledgements).with('events',
         [check],

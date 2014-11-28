@@ -343,6 +343,132 @@ module Flapjack
         ['critical', 'warning', 'unknown'].detect {|st| states_since_last_recovery.include?(st) }
       end
 
+
+      # candidate rules are all rules for which
+      #   (rule.tags.ids - check.tags.ids).empty?
+      # this includes generic rules, i.e. ones with no tags
+
+      # A generic rule in Flapjack v2 means that it applies to all checks, not
+      # just all checks the contact is separately regeistered for, as in v1.
+      # These are not automatically created for users any more, but can be
+      # deliberately configured.
+
+      # returns hash with check_id => [rules_ids]
+      def self.rules_for(*check_ids)
+        generic_rules_ids = Flapjack::Data::Rule.intersect(:is_specific => false).ids
+
+        tag_ids_by_check_id = Flapjack::Data::Check.intersect(:id => check_ids).
+          associated_ids_for(:tags)
+
+        tag_ids_by_check_id.each_with_object({}) do |(check_id, tag_ids), memo|
+          tag_rules_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
+            associated_ids_for(:rules)
+
+          all_rules_for_tags_ids = Set.new(tag_rules_ids.values).flatten
+
+          rule_tags_ids = Flapjack::Data::Rule.intersect(:id => all_rules_for_tags_ids).
+            associated_ids_for(:tags)
+
+          rule_tags_ids.delete_if {|rid, tids| (tids - tag_ids).size > 0 }
+
+          memo[check_id] = rule_tags_ids.keys | generic_rules_ids.to_a
+        end
+      end
+
+      # returns hash with contact_id => [route_ids]
+      def routes_for(opts = {})
+        severity = opts[:severity]
+        logger   = opts[:logger]
+
+        rules_ids_by_check_id = Flapjack::Data::Check.rules_for(*self.id)
+
+        rules_ids = rules_ids_by_check_id[self.id]
+
+        return [] if rules_ids.empty?
+
+        rule_route_ids = Flapjack::Data::Rule.intersect(:id => rules_ids).
+          associated_ids_for(:routes)
+
+        return [] if rule_route_ids.empty?
+
+        # unrouted rules should be dropped
+        rule_route_ids.delete_if {|nr_id, route_ids| route_ids.empty? }
+        return [] if rule_route_ids.empty?
+
+        route_ids_for_all_states = Set.new(rule_route_ids.values).flatten
+
+        # TODO sandstorm should accept a set as well as an array in intersect
+        active_route_ids = if severity.nil?
+          Flapjack::Data::Route.
+            intersect(:id => route_ids_for_all_states).ids
+        else
+          Flapjack::Data::Route.
+            intersect(:id => route_ids_for_all_states, :state => [nil, severity]).ids
+        end
+
+        logger.info "Matching routes: #{active_route_ids.size}"
+
+        return [] if active_route_ids.empty?
+
+        # if more than one route exists for a rule & state, media will be unioned together
+        # (may happen with, e.g. overlapping time restrictions, multiple matching rules, etc.)
+
+        # TODO is it worth doing a shortcut check here -- if no media for routes, return [] ?
+
+        # TODO possibly invert the returned data from associated_ids_for belongs_to?
+        # we're always doing it on this side anyway
+        rule_ids_by_route_id = Flapjack::Data::Route.intersect(:id => active_route_ids).
+          associated_ids_for(:rule)
+
+        unified_rule_ids = Set.new(rule_ids_by_route_id.values).flatten
+
+        contact_ids_by_rule_id = Flapjack::Data::Rule.intersect(:id => unified_rule_ids).
+          associated_ids_for(:contact)
+
+        rule_ids_by_route_id.inject({}) do |memo, (route_id, rule_id)|
+          memo[contact_ids_by_rule_id[rule_id]] ||= []
+          memo[contact_ids_by_rule_id[rule_id]] << route_id
+          memo
+        end
+      end
+
+      def self.pagerduty_credentials_for(check_ids)
+        rule_ids_by_check_id = Flapjack::Data::Check.rules_for(check_ids)
+
+        route_ids_by_media_id = Flapjack::Data::Medium.
+          intersect(:transport => 'pagerduty').associated_ids_for(:routes)
+
+        return nil if route_ids_by_media_id.empty? ||
+          route_ids_by_media_id.values.all? {|r| r.empty? }
+
+        route_ids = Set.new(route_ids_by_media_id.values).flatten
+
+        media_ids_by_route_id = Flapjack::Data::Route.
+          intersect(:id => route_ids).associated_ids_for(:media)
+
+        route_ids_by_rule_id = Flapjack::Data::Route.intersect(:id => route_ids)
+          .associated_ids_for(:rule, :inversed => true)
+
+        pagerduty_objs_by_id = Flapjack::Data::Medium.find_by_ids!(route_ids_by_media_id.keys)
+
+        Flapjack::Data::Check.intersect(:id => check_ids).all.each_with_object({}) do |check, memo|
+          memo[check] = rule_ids_by_check_id[check.id].each_with_object([]) do |rule_id, m|
+            m[rule_id] = route_ids_by_rule_id[rule_id].each_with_object([]) do |route_id, mm|
+              mm += media_ids_by_route_id[route_id].collect do |media_id|
+                medium = pagerduty_objs_by_id[media_id]
+                ud = medium.userdata || {}
+                {
+                  'service_key' => medium.address,
+                  'subdomain'   => ud['subdomain'],
+                  'username'    => ud['username'],
+                  'password'    => ud['password'],
+                }
+              end
+            end
+          end
+        end
+      end
+
       private
 
       # would need to be "#{entity.name}:#{name}" to be compatible with v1, but
