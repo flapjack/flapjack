@@ -1,15 +1,8 @@
 language: ruby
-matrix:
-  include:
-    - rvm: 1.9.3
-      gemfile: Gemfile
-      script:  "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features"
-    - rvm: '2.0'
-      gemfile: Gemfile
-      script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features"
-    - rvm: '2.1'
-      gemfile: Gemfile
-      script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features"
+rvm:
+- 1.9.3
+- '2.0'
+- '2.1'
 services:
 - redis-server
 before_script:
@@ -17,6 +10,7 @@ before_script:
 before_install:
 - git submodule update --init --recursive
 - gem install bundler
+script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features"
 notifications:
   irc:
     channels:
