@@ -10,7 +10,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
                   'password' => 'password',
                   'alias'    => 'flapjack',
                   'identifiers' => ['@flapjack'],
-                  'rooms'    => ['flapjacktest@conference.example.com']
+                  'rooms'    => ['flapjacktest@conference.example.com'],
+                  'chatbot_announce' => true
                  }
   }
 
@@ -19,7 +20,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
   let(:redis) { double(::Redis) }
   let(:stanza) { double('stanza') }
 
-  let(:now) { Time.now}
+  let(:now) { Time.now }
 
   let(:lock) { double(Monitor) }
   let(:stop_cond) { double(MonitorMixin::ConditionVariable) }
@@ -495,7 +496,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       fjb.handle_state_change(client, muc_clients)
     end
 
-    it "joins the jabber client" do
+    it "joins the jabber client with chatbot_announce on" do
       expect(client).to receive(:connect)
       expect(client).to receive(:auth).with('password')
       expect(client).to receive(:send).with(an_instance_of(::Jabber::Presence))
@@ -510,7 +511,24 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       fjb._join(client, muc_clients)
     end
 
-    it "rejoins the jabber client" do
+    it "joins the jabber client with chatbot_announce off" do
+      config['chatbot_announce'] = false
+      expect(client).to receive(:connect)
+      expect(client).to receive(:auth).with('password')
+      expect(client).to receive(:send).with(an_instance_of(::Jabber::Presence))
+
+      expect(lock).to receive(:synchronize).twice.and_yield.and_yield
+
+      expect(muc_client).to receive(:join).with('flapjacktest@conference.example.com/flapjack', nil, :history => false)
+      expect(muc_client).to_not receive(:say).with(/^flapjack jabber gateway started/)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+      :config => config, :logger => @logger)
+      puts config
+      fjb._join(client, muc_clients)
+    end
+
+    it "rejoins the jabber client with chatbot_announce on" do
       expect(client).to receive(:connect)
       expect(client).to receive(:auth).with('password')
       expect(client).to receive(:send).with(an_instance_of(::Jabber::Presence))
@@ -522,6 +540,22 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
         :config => config, :logger => @logger)
+      fjb._join(client, muc_clients, :rejoin => true)
+    end
+
+    it "rejoins the jabber client with chatbot_announce off" do
+      config['chatbot_announce'] = false
+      expect(client).to receive(:connect)
+      expect(client).to receive(:auth).with('password')
+      expect(client).to receive(:send).with(an_instance_of(::Jabber::Presence))
+
+      expect(lock).to receive(:synchronize).twice.and_yield.and_yield
+
+      expect(muc_client).to receive(:join).with('flapjacktest@conference.example.com/flapjack', nil, :history => false)
+      expect(muc_client).to_not receive(:say).with(/^flapjack jabber gateway rejoining/)
+
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
+      :config => config, :logger => @logger)
       fjb._join(client, muc_clients, :rejoin => true)
     end
 
