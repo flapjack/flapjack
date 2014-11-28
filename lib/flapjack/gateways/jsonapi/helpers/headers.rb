@@ -20,8 +20,8 @@ module Flapjack
             headers(cors_headers)
           end
 
-          def err(status, *msg)
-            logger.info "Error: #{msg}"
+          def err(status_code, *msg)
+            logger.info "Error: #{msg.inspect}"
 
             headers = if 'DELETE'.eql?(request.request_method)
               # not set by default for delete, but the error structure is JSON
@@ -30,7 +30,17 @@ module Flapjack
               {}
             end
 
-            [status, headers, Flapjack.dump_json({:errors => msg})]
+            # TODO include more relevant data
+            error_data = {
+              :errors => msg.collect {|m|
+                {
+                  :status => status_code.to_s,
+                  :detail => m
+                }
+              }
+            }
+
+            [status_code, headers, Flapjack.dump_json(error_data)]
           end
 
           def is_json_request?
