@@ -282,23 +282,23 @@ end
 def common_arguments(cmd_type, gli_cmd)
 
   if [:show, :delete, :create].include?(cmd_type)
-    gli_cmd.flag [:c, 'check'],
+    gli_cmd.flag ['check', :c],
       :desc => 'The check for the maintenance window to occur on. This can ' +
         'be a string, or a Ruby regex of the form \'http*\' or \'[[:lower:]]\'',
       :required => :create.eql?(cmd_type)
 
-    gli_cmd.flag [:r, 'reason'],
+    gli_cmd.flag ['reason', :r],
       :desc => 'The reason for the maintenance window to occur. This can ' +
         'be a string, or a Ruby regex of the form \'Downtime for *\' or ' +
         '\'[[:lower:]]\''
 
-    gli_cmd.flag [:s, 'start', 'started', 'starting'],
+    gli_cmd.flag ['start', 'started', 'starting', :s],
       :desc => 'The start time for the maintenance window. This should ' +
                'be prefixed with "more than", "less than", "on", "before", ' +
                'or "after", or of the form "between T1 and T2"',
       :must_match => /^(?:more than|less than|on|before|after|between)\s+.+$/
 
-    gli_cmd.flag [:d, 'duration'],
+    gli_cmd.flag ['duration', :d],
       :desc => 'The total duration of the maintenance window. This should ' +
                'be prefixed with "more than", "less than", or "equal to", ' +
                'or of the form "between M and N hours". This should be an ' +
@@ -307,19 +307,19 @@ def common_arguments(cmd_type, gli_cmd)
   end
 
   if [:show, :delete].include?(cmd_type)
-    gli_cmd.flag [:f, 'finish', 'finished', 'finishing', 'remain', 'remained', 'remaining', 'end'],
+    gli_cmd.flag ['finish', 'finished', 'finishing', 'remain', 'remained', 'remaining', 'end', :f],
       :desc => 'The finishing time for the maintenance window. This should ' +
                'prefixed with "more than", "less than", "on", "before", or ' +
                '"after", or of the form "between T1 and T2"' ,
       :must_match => /^(?:more than|less than|on|before|after|between)\s+.+$/
 
-    gli_cmd.flag [:st, 'state'],
+    gli_cmd.flag ['state', :st],
       :desc => 'The state that the check is currently in',
       :must_match => %w(ok warning critical unknown)
   end
 
   if [:show, :delete, :create].include?(cmd_type)
-    gli_cmd.flag [:t, 'type'],
+    gli_cmd.flag ['type', :t],
       :desc          => 'The type of maintenance scheduled',
       :required      => true,
       :default_value => 'scheduled',

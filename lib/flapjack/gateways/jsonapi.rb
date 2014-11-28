@@ -60,7 +60,7 @@ module Flapjack
                         request.query_string.length > 0) ? "?#{request.query_string}" : ""
         if logger.debug?
           input = env['rack.input'].read
-          logger.debug("#{request.request_method} #{request.path_info}#{query_string} #{input}")
+          logger.debug("#{request.request_method} #{request.path_info}#{query_string} Headers: #{headers.inspect}, Body: #{input}")
         elsif logger.info?
           input = env['rack.input'].read
           input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
@@ -81,8 +81,9 @@ module Flapjack
           else
             response.body.to_s
           end
+          headers_debug = response.headers.to_s
           logger.debug("Returning #{response.status} for #{request.request_method} " +
-            "#{request.path_info}#{query_string}, body: #{body_debug}")
+            "#{request.path_info}#{query_string}, headers: #{headers_debug}, body: #{body_debug}")
         elsif logger.info?
           logger.info("Returning #{response.status} for #{request.request_method} " +
             "#{request.path_info}#{query_string}")

@@ -73,9 +73,9 @@ module Flapjack
     # TODO: set up a separate timer to reset key expiry every minute
     # and reduce the expiry to, say, five minutes
     # TODO: remove these keys on process exit
-    def touch_keys
-      Flapjack.redis.expire("executive_instance:#{@instance_id}", 1036800)
-      Flapjack.redis.expire("event_counters:#{@instance_id}", 1036800)
+    def touch_keys(multi)
+      multi.expire("executive_instance:#{@instance_id}", 1036800)
+      multi.expire("event_counters:#{@instance_id}", 1036800)
     end
 
     def start
@@ -89,19 +89,17 @@ module Flapjack
         counter_types = ['all', 'ok', 'failure', 'action', 'invalid']
         counters = Hash[counter_types.zip(Flapjack.redis.hmget('event_counters', *counter_types))]
 
-        Flapjack.redis.multi
+        Flapjack.redis.multi do |multi|
+          counter_types.select {|ct| counters[ct].nil? }.each do |counter_type|
+            multi.hset('event_counters', counter_type, 0)
+          end
 
-        counter_types.select {|ct| counters[ct].nil? }.each do |counter_type|
-          Flapjack.redis.hset('event_counters', counter_type, 0)
+          multi.zadd('executive_instances', @boot_time.to_i, @instance_id)
+          multi.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
+          multi.hmset("event_counters:#{@instance_id}",
+                               'all', 0, 'ok', 0, 'failure', 0, 'action', 0, 'invalid', 0)
+          touch_keys(multi)
         end
-
-        Flapjack.redis.zadd('executive_instances', @boot_time.to_i, @instance_id)
-        Flapjack.redis.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
-        Flapjack.redis.hmset("event_counters:#{@instance_id}",
-                             'all', 0, 'ok', 0, 'failure', 0, 'action', 0, 'invalid', 0)
-        touch_keys
-
-        Flapjack.redis.exec
 
         queue = (@config['queue'] || 'events')
 
@@ -140,19 +138,20 @@ module Flapjack
                                     Flapjack.redis.rpop(queue))
         parsed = Flapjack::Data::Event.parse_and_validate(event_json, :logger => @logger)
         if parsed.nil?
-          if archive
-            Flapjack.redis.multi
-            Flapjack.redis.lrem(archive, 1, event_json)
+          Flapjack.redis.multi do |multi|
+            if archive
+              multi.lrem(archive, 1, event_json)
+            end
+            multi.lpush(rejects, event_json)
+            multi.hincrby('event_counters', 'all', 1)
+            multi.hincrby("event_counters:#{@instance_id}", 'all', 1)
+            multi.hincrby('event_counters', 'invalid', 1)
+            multi.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
           end
-          Flapjack.redis.lpush(rejects, event_json)
-          Flapjack.redis.hincrby('event_counters', 'all', 1)
-          Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
-          Flapjack.redis.hincrby('event_counters', 'invalid', 1)
-          Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
           if archive
-            Flapjack.redis.exec
             Flapjack.redis.expire(archive, max_age)
           end
+
         else
           Flapjack.redis.expire(archive, max_age) if archive
           yield Flapjack::Data::Event.new(parsed) if block_given?
@@ -214,7 +213,9 @@ module Flapjack
     end
 
     def update_keys(event, check, timestamp)
-      touch_keys
+      Flapjack.redis.multi do |multi|
+        touch_keys(multi)
+      end
 
       result = true
       previous_state = nil
@@ -229,20 +230,20 @@ module Flapjack
       case event.type
       # Service events represent current state of checks on monitored systems
       when 'service'
-        Flapjack.redis.multi
-        if Flapjack::Data::CheckState.ok_states.include?( event.state )
-          Flapjack.redis.hincrby('event_counters', 'ok', 1)
-          Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'ok', 1)
-        elsif Flapjack::Data::CheckState.failing_states.include?( event.state )
-          Flapjack.redis.hincrby('event_counters', 'failure', 1)
-          Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'failure', 1)
-          event.id_hash = check.ack_hash
-        else
-          Flapjack.redis.hincrby('event_counters', 'invalid', 1)
-          Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
-          @logger.error("Invalid event received: #{event.inspect}")
+        Flapjack.redis.multi do |multi|
+          if Flapjack::Data::CheckState.ok_states.include?( event.state )
+            multi.hincrby('event_counters', 'ok', 1)
+            multi.hincrby("event_counters:#{@instance_id}", 'ok', 1)
+          elsif Flapjack::Data::CheckState.failing_states.include?( event.state )
+            multi.hincrby('event_counters', 'failure', 1)
+            multi.hincrby("event_counters:#{@instance_id}", 'failure', 1)
+            event.id_hash = check.ack_hash
+          else
+            multi.hincrby('event_counters', 'invalid', 1)
+            multi.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+            @logger.error("Invalid event received: #{event.inspect}")
+          end
         end
-        Flapjack.redis.exec
 
         # not available from an unsaved check
         previous_state = check.id.nil? ? nil : check.states.last
@@ -281,15 +282,15 @@ module Flapjack
           :timestamp => timestamp)
         action.save
 
-        Flapjack.redis.multi
-        Flapjack.redis.hincrby('event_counters', 'action', 1)
-        Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'action', 1)
-        Flapjack.redis.exec
+        Flapjack.redis.multi do |multi|
+          multi.hincrby('event_counters', 'action', 1)
+          multi.hincrby("event_counters:#{@instance_id}", 'action', 1)
+        end
       else
-        Flapjack.redis.multi
-        Flapjack.redis.hincrby('event_counters', 'invalid', 1)
-        Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
-        Flapjack.redis.exec
+        Flapjack.redis.multi do |multi|
+          multi.hincrby('event_counters', 'invalid', 1)
+          multi.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+        end
         @logger.error("Invalid event received: #{event.inspect}")
       end
 

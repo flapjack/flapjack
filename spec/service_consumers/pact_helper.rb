@@ -1,4 +1,4 @@
-puts "\nSkipping pact verification, API is broken, will fix soon\n\n"
+puts "\nSkipping pact verification, pacts need updating, will fix soon\n\n"
 exit 0
 
 require 'pact/provider/rspec'

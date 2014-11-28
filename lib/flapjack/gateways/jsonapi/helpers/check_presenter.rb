@@ -26,6 +26,7 @@ module Flapjack
           end
 
           def status
+            last_change   = @check.states.last
             last_update   = @check.last_update
             last_problem  = @check.states.intersect(:state => Flapjack::Data::CheckState.failing_states,
               :notified => true).last
@@ -40,6 +41,7 @@ module Flapjack
              'in_unscheduled_maintenance'        => @check.in_unscheduled_maintenance?,
              'in_scheduled_maintenance'          => @check.in_scheduled_maintenance?,
              'last_update'                       => (last_update   ? last_update.timestamp   : nil),
+             'last_change'                       => (last_change   ? last_change.timestamp   : nil),
              'last_problem_notification'         => (last_problem  ? last_problem.timestamp  : nil),
              'last_recovery_notification'        => (last_recovery ? last_recovery.timestamp : nil),
              'last_acknowledgement_notification' => (last_ack      ? last_ack.timestamp      : nil),

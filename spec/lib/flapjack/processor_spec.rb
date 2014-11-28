@@ -9,6 +9,7 @@ describe Flapjack::Processor, :logger => true do
 
   let(:lock)  { double(Monitor) }
   let(:redis) { double(Redis) }
+  let(:multi) { double('multi') }
 
   before(:each) do
     allow(Flapjack).to receive(:redis).and_return(redis)
@@ -23,29 +24,28 @@ describe Flapjack::Processor, :logger => true do
   end
 
   def expect_counters
-    expect(redis).to receive(:multi)
-    expect(redis).to receive(:hset).with(/^executive_instance:/, "boot_time", anything)
     expect(redis).to receive(:hmget).with('event_counters', 'all', 'ok', 'failure', 'action', 'invalid').and_return([nil, nil, nil, nil])
-    expect(redis).to receive(:hset).with('event_counters', 'all', 0)
-    expect(redis).to receive(:hset).with('event_counters', 'ok', 0)
-    expect(redis).to receive(:hset).with('event_counters', 'failure', 0)
-    expect(redis).to receive(:hset).with('event_counters', 'action', 0)
-    expect(redis).to receive(:hset).with('event_counters', 'invalid', 0)
 
-    expect(redis).to receive(:hmset).with(/^event_counters:/, 'all', 0, 'ok', 0, 'failure', 0, 'action', 0, 'invalid', 0)
-    expect(redis).to receive(:zadd).with('executive_instances', 0, an_instance_of(String))
-    expect(redis).to receive(:expire).with(/^executive_instance:/, anything)
-    expect(redis).to receive(:expire).with(/^event_counters:/, anything)
+    expect(redis).to receive(:multi).and_yield(multi)
+    expect(multi).to receive(:hset).with(/^executive_instance:/, "boot_time", anything)
+    expect(multi).to receive(:hset).with('event_counters', 'all', 0)
+    expect(multi).to receive(:hset).with('event_counters', 'ok', 0)
+    expect(multi).to receive(:hset).with('event_counters', 'failure', 0)
+    expect(multi).to receive(:hset).with('event_counters', 'action', 0)
+    expect(multi).to receive(:hset).with('event_counters', 'invalid', 0)
 
-    expect(redis).to receive(:exec)
+    expect(multi).to receive(:hmset).with(/^event_counters:/, 'all', 0, 'ok', 0, 'failure', 0, 'action', 0, 'invalid', 0)
+    expect(multi).to receive(:zadd).with('executive_instances', 0, an_instance_of(String))
+    expect(multi).to receive(:expire).with(/^executive_instance:/, anything)
+    expect(multi).to receive(:expire).with(/^event_counters:/, anything)
   end
 
   def expect_counters_invalid
-    expect(redis).to receive(:hincrby).with('event_counters', 'all', 1)
-    expect(redis).to receive(:hincrby).with(/^event_counters:/, 'all', 1)
+    expect(multi).to receive(:hincrby).with('event_counters', 'all', 1)
+    expect(multi).to receive(:hincrby).with(/^event_counters:/, 'all', 1)
 
-    expect(redis).to receive(:hincrby).with('event_counters', 'invalid', 1)
-    expect(redis).to receive(:hincrby).with(/^event_counters:/, 'invalid', 1)
+    expect(multi).to receive(:hincrby).with('event_counters', 'invalid', 1)
+    expect(multi).to receive(:hincrby).with(/^event_counters:/, 'invalid', 1)
   end
 
   it "starts up, runs and shuts down (archiving, accepted)" do
@@ -93,10 +93,9 @@ describe Flapjack::Processor, :logger => true do
     event_json = double('event_json')
 
     expect(redis).to receive(:rpoplpush).with('events', /^events_archive:/).twice.and_return(event_json, nil)
-    expect(redis).to receive(:multi)
-    expect(redis).to receive(:lrem).with(/^events_archive:/, 1, event_json)
-    expect(redis).to receive(:lpush).with(/^events_rejected:/, event_json)
-    expect(redis).to receive(:exec)
+    expect(redis).to receive(:multi).and_yield(multi)
+    expect(multi).to receive(:lrem).with(/^events_archive:/, 1, event_json)
+    expect(multi).to receive(:lpush).with(/^events_rejected:/, event_json)
     expect(redis).to receive(:expire).with(/^events_archive:/, kind_of(Integer))
 
     expect(Flapjack::Data::Event).to receive(:parse_and_validate).
@@ -152,7 +151,8 @@ describe Flapjack::Processor, :logger => true do
     expect(Flapjack::Data::Event).to receive(:parse_and_validate).
       with(event_json, :logger => @logger).and_return(nil)
     expect(Flapjack::Data::Event).not_to receive(:new)
-    expect(redis).to receive(:lpush).with(/^events_rejected:/, event_json)
+    expect(redis).to receive(:multi).and_yield(multi)
+    expect(multi).to receive(:lpush).with(/^events_rejected:/, event_json)
     expect(redis).to receive(:brpop).with('events_actions').and_raise(Flapjack::PikeletStop)
     expect(redis).to receive(:quit)
 
