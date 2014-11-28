@@ -523,8 +523,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(muc_client).to_not receive(:say).with(/^flapjack jabber gateway started/)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
-      :config => config, :logger => @logger)
-      puts config
+        :config => config, :logger => @logger)
       fjb._join(client, muc_clients)
     end
 

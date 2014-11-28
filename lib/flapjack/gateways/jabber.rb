@@ -406,7 +406,6 @@ module Flapjack
           rescue => e
             @logger.error("Exception when interpreting command '#{command}' - #{e.class}, #{e.message}")
             msg = "Oops, something went wrong processing that command (#{e.class}, #{e.message})"
-            puts e.backtrace.join("\n")
           end
 
           @bot ||= @siblings && @siblings.detect {|sib| sib.respond_to?(:announce) }
