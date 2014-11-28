@@ -123,6 +123,8 @@ daemonize = true
   # handles acknowledgements from jabber users and other commands.
   [gateways.jabber]
     enabled = false
+    # Announce my arrival in the Multi-User Chat room
+    chatbot_announce: true
     # the redis queue this pikelet will look for notifications on
     queue = "jabber_notifications"
     server = "jabber.example.com"

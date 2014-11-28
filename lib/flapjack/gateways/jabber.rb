@@ -406,7 +406,6 @@ module Flapjack
           rescue => e
             @logger.error("Exception when interpreting command '#{command}' - #{e.class}, #{e.message}")
             msg = "Oops, something went wrong processing that command (#{e.class}, #{e.message})"
-            puts e.backtrace.join("\n")
           end
 
           @bot ||= @siblings && @siblings.detect {|sib| sib.respond_to?(:announce) }
@@ -689,7 +688,7 @@ module Flapjack
                   t = Time.now
                   msg = opts[:rejoin] ? "flapjack jabber gateway rejoining at #{t}, hello again!" :
                                         "flapjack jabber gateway started at #{t}, hello! Try typing 'help'."
-                  muc_client.say(msg)
+                  muc_client.say(msg) if @config['chatbot_announce']
                   joined = true
                 rescue Errno::ECONNREFUSED, ::Jabber::JabberError => muc_je
                   report_error("Couldn't join MUC room #{room}, #{attempts_remaining} attempts remaining", muc_je)
