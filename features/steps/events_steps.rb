@@ -426,3 +426,19 @@ When(/^user (\S+) ceases to be a contact of entity '(.*)'$/) do |contact_id, ent
   @redis.srem("contacts_for:#{entity.id}", contact_id)
 end
 
+Then(/^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') should not appear in unacknowledged_failing$/) do |check, entity|
+  check  ||= @check
+  entity ||= @entity
+  unacknowledged_failing_checks = Flapjack::Data::EntityCheck.unacknowledged_failing(:redis => @redis)
+  puts "ufc: #{unacknowledged_failing_checks.inspect}"
+  expect(unacknowledged_failing_checks.map {|ec| "#{ec.entity.name}:#{ec.check}"}).to_not include("#{entity}:#{check}")
+end
+
+Then(/^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') should appear in unacknowledged_failing$/) do |check, entity|
+  check  ||= @check
+  entity ||= @entity
+  unacknowledged_failing_checks = Flapjack::Data::EntityCheck.unacknowledged_failing(:redis => @redis)
+  puts "ufc: #{unacknowledged_failing_checks.inspect}"
+  expect(unacknowledged_failing_checks.map {|ec| "#{ec.entity.name}:#{ec.check}"}).to include("#{entity}:#{check}")
+end
+
