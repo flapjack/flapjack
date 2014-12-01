@@ -27,7 +27,7 @@ module Flapjack
 
               rd = checks.each_with_object([]) do |check, memo|
                 memo << yield(Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)).
-                  merge('links'  => {'check'  => [check.id]})
+                  merge('links'  => {'check'  => check.id})
               end
 
               [rd, meta]
@@ -41,7 +41,7 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
             app.helpers Flapjack::Gateways::JSONAPI::Methods::Reports::Helpers
 
-            app.get %r{^/(status|outage|(?:un)?scheduled_maintenance|downtime)_report(?:/([^/]+))?$} do
+            app.get %r{^/(status|outage|(?:un)?scheduled_maintenance|downtime)_reports(?:/([^/]+))?$} do
               action = params[:captures][0]
               action_pres = case action
               when 'status', 'downtime'
@@ -64,6 +64,9 @@ module Flapjack
                                      :per_page => params[:per_page]) {|presenter|
                 presenter.send(action_pres.to_sym, *args)
               }
+
+              # unwrap, if 1 requested
+              rd = rd.first if !check_ids.nil? && check_ids.size == 1
 
               status 200
               json_data = {}

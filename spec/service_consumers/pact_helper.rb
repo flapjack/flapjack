@@ -1,6 +1,3 @@
-puts "\nSkipping pact verification, pacts need updating, will fix soon\n\n"
-exit 0
-
 require 'pact/provider/rspec'
 
 require 'flapjack/configuration'
@@ -19,6 +16,9 @@ ENV['RACK_ENV'] = ENV["FLAPJACK_ENV"]
 
 require 'bundler'
 Bundler.require(:default, :test)
+
+ActiveSupport::JSON::Encoding.use_standard_json_time_format = true
+ActiveSupport::JSON::Encoding.time_precision = 0
 
 class MockLogger
   attr_accessor :messages
@@ -67,6 +67,6 @@ Pact.service_provider "flapjack" do
   app { Flapjack::Gateways::JSONAPI.new }
 
   honours_pact_with 'flapjack-diner' do
-    pact_uri './spec/service_consumers/pacts/flapjack-diner_v1.0.json'
+    pact_uri './spec/service_consumers/pacts/flapjack-diner_v2.0.json'
   end
 end

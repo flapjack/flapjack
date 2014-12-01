@@ -18,6 +18,8 @@ module Flapjack
       extend Flapjack::Utility
 
       include Sandstorm::Records::RedisRecord
+      include ActiveModel::Serializers::JSON
+      self.include_root_in_json = false
 
       # TODO change to Flapjack::Data::State class
       define_attributes :state => :string,

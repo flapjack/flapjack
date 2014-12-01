@@ -7,6 +7,8 @@ module Flapjack
     class ScheduledMaintenance
 
       include Sandstorm::Records::RedisRecord
+      include ActiveModel::Serializers::JSON
+      self.include_root_in_json = false
 
       define_attributes :start_time => :timestamp,
                         :end_time   => :timestamp,

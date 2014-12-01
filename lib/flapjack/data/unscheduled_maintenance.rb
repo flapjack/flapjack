@@ -7,6 +7,8 @@ module Flapjack
     class UnscheduledMaintenance
 
       include Sandstorm::Records::RedisRecord
+      include ActiveModel::Serializers::JSON
+      self.include_root_in_json = false
 
       define_attributes :start_time => :timestamp,
                         :end_time   => :timestamp,
@@ -21,6 +23,8 @@ module Flapjack
 
       belongs_to :check_by_end, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :unscheduled_maintenances_by_end
+
+      before_validation :ensure_start_time
 
       validates :start_time, :presence => true
       validates :end_time, :presence => true
@@ -51,6 +55,13 @@ module Flapjack
       def self.jsonapi_multiple_associations
         []
       end
+
+      private
+
+      def ensure_start_time
+        self.start_time ||= Time.now
+      end
+
     end
   end
 end

@@ -12,6 +12,9 @@ require 'sinatra/base'
 
 require 'active_support/core_ext/string/inflections'
 
+require 'flapjack'
+require 'flapjack/utility'
+
 require 'flapjack/gateways/jsonapi/rack/json_params_parser'
 
 %w[headers miscellaneous resources resource_links].each do |helper|
@@ -155,11 +158,14 @@ module Flapjack
       error Sandstorm::Records::Errors::RecordsNotFound do
         e = env['sinatra.error']
         type = e.klass.name.split('::').last
-        err(404, "could not find #{type} records, ids: '#{e.ids.join(',')}'")
+        err_ids = e.ids.join("', '")
+        err(404, "could not find #{type} records, ids: '#{err_ids}'")
       end
 
       error do
         e = env['sinatra.error']
+        # trace = e.backtrace.join("\n")
+        # puts trace
         err(response.status, "#{e.class} - #{e.message}")
       end
 

@@ -29,13 +29,14 @@ module Flapjack
 
             assoc_klasses = singular_links.values | multiple_links.values
 
+            attribute_types = klass.attribute_types
+
             klass.lock(*assoc_klasses) do
               conflicted_ids = klass.intersect(idf => data_ids).ids
-              halt(err(403, "Resources already exist with the following #{idf}s: " +
+              halt(err(403, "#{klass.name.split('::').last.pluralize} already exist with the following #{idf}s: " +
                        conflicted_ids.join(', '))) unless conflicted_ids.empty?
-
               links_by_resource = resources_data.each_with_object({}) do |rd, memo|
-                record_data = symbolize(rd.reject {|k| 'links'.eql?(k)})
+                record_data = normalise_json_data(attribute_types, rd)
                 record_data[:id] = record_data[id_field] unless id_field.nil?
                 r = klass.new(record_data)
                 halt(err(403, "Validation failed, " + r.errors.full_messages.join(', '))) if r.invalid?
@@ -146,9 +147,11 @@ module Flapjack
 
             assoc_klasses = singular_links.values | multiple_links.values
 
+            attribute_types = klass.attribute_types
+
             resource_links = resources_data.each_with_object({}) do |d, memo|
               r = resources_by_id[d['id']]
-              d.each_pair do |att, value|
+              normalise_json_data(attribute_types, d).each_pair do |att, value|
                 next unless attributes.include?(att.to_sym)
                 r.send("#{att}=".to_sym, value)
               end
@@ -361,6 +364,20 @@ module Flapjack
             end
           end
 
+          def normalise_json_data(attribute_types, data)
+            record_data = data.reject {|k| 'links'.eql?(k)}
+            attribute_types.each_pair do |name, type|
+              t = record_data[name.to_s]
+              next unless t.is_a?(String) && :timestamp.eql?(type)
+              begin
+                record_data[name.to_s] = DateTime.parse(t)
+              rescue ArgumentError
+                record_data[name.to_s] = nil
+              end
+            end
+            symbolize(record_data)
+          end
+
           def paginate_get(dataset, options = {})
             return([[], {}]) if dataset.nil?
 
@@ -414,13 +431,6 @@ module Flapjack
           end
 
           def data_for_include_clause(ids_cache, parent_klass, parent_ids, clause_done, clause_left)
-            # puts "data_for_include_clause"
-            # p parent_klass
-            # p parent_ids
-            # p clause_done
-            # p clause_left
-            # puts "\n"
-
             clause_fragment = clause_left.shift
 
             fragment_klass = nil

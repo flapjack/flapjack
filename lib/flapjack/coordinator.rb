@@ -22,6 +22,9 @@ module Flapjack
     def initialize(config)
       Thread.abort_on_exception = true
 
+      ActiveSupport::JSON::Encoding.use_standard_json_time_format = true
+      ActiveSupport::JSON::Encoding.time_precision = 0
+
       @config   = config
       @pikelets = []
 
@@ -56,7 +59,7 @@ module Flapjack
       Thread.new do
 
         @boot_time = Time.now
-        
+
         Flapjack::RedisProxy.config = @config.for_redis
 
         pikelet_defs = pikelet_definitions(@config.all)
