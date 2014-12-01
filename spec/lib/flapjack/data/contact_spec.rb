@@ -116,6 +116,14 @@ describe Flapjack::Data::Contact, :redis => true do
     expect(contact.media).to be_empty
   end
 
+  it "updates a contact's timezone" do
+    contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
+
+    expect(contact.timezone).to eq(ActiveSupport::TimeZone.new('UTC'))
+    contact.update('timezone' => 'Asia/Shanghai')
+    expect(contact.timezone).to eq(ActiveSupport::TimeZone.new('Asia/Shanghai'))
+  end
+
   it "updates a contact, does not clear notification rules" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
     expect(contact).not_to be_nil

@@ -131,7 +131,7 @@ module Flapjack
                 apply_json_patch('contacts') do |op, property, linked, value|
                   case op
                   when 'replace'
-                    if ['first_name', 'last_name', 'email'].include?(property)
+                    if ['first_name', 'last_name', 'email', 'timezone'].include?(property)
                       contact.update(property => value)
                     end
                   when 'add'
