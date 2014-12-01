@@ -31,6 +31,8 @@ module Flapjack
         def start
           @logger.info "starting web - class"
 
+          set :show_exceptions, @config['show_exceptions'].is_a?(TrueClass)
+
           if accesslog = (@config && @config['access_log'])
             if not File.directory?(File.dirname(accesslog))
               puts "Parent directory for log file #{accesslog} doesn't exist"
@@ -73,8 +75,6 @@ module Flapjack
       end
 
       include Flapjack::Utility
-
-      set :protection, :except => :path_traversal
 
       helpers do
         def h(text)
@@ -190,7 +190,7 @@ module Flapjack
         @current_time = Time.now
 
         @check = Flapjack::Data::Check.find_by_id(check_id)
-        return 404 if @check.nil?
+        halt(404, "Could not find check '#{check_id}'") if @check.nil?
 
         check_stats
         states = @check.states
@@ -231,7 +231,7 @@ module Flapjack
         duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
         check = Flapjack::Data::Check.find_by_id(check_id)
-        return 404 if check.nil?
+        halt(404, "Could not find check '#{check_id}'") if check.nil?
 
         ack = Flapjack::Data::Event.create_acknowledgements(
           config['processor_queue'] || 'events',
@@ -248,7 +248,7 @@ module Flapjack
         check_id  = params[:id]
 
         check = Flapjack::Data::Check.find_by_id(check_id)
-        return 404 if check.nil?
+        halt(404, "Could not find check '#{check_id}'") if check.nil?
 
         check.end_unscheduled_maintenance(Time.now.to_i)
 
@@ -265,7 +265,7 @@ module Flapjack
         summary    = params[:summary]
 
         check = Flapjack::Data::Check.find_by_id(check_id)
-        return 404 if check.nil?
+        halt(404, "Could not find check '#{check_id}'") if check.nil?
 
         sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => start_time,
           :end_time => start_time + duration, :summary => summary)
@@ -283,13 +283,13 @@ module Flapjack
         start_time = Time.parse(params[:start_time])
 
         check = Flapjack::Data::Check.find_by_id(check_id)
-        return 404 if check.nil?
+        halt(404, "Could not find check '#{check_id}'") if check.nil?
 
         # TODO maybe intersect_range should auto-coerce for timestamp fields?
         # (actually, this should just pass sched maint ID in now that it can)
         sched_maints = check.scheduled_maintenances_by_start.
           intersect_range(start_time.to_i, start_time.to_i, :by_score => true).all
-        return 404 if sched_maints.empty?
+        halt(404, "No scheduled maintenance periods found") if sched_maints.empty?
 
         sched_maints.each do |sched_maint|
           check.end_scheduled_maintenance(sched_maint, Time.now)
@@ -312,7 +312,7 @@ module Flapjack
         contact_id = params[:id]
 
         @contact = Flapjack::Data::Contact.find_by_id(contact_id)
-        return 404 if @contact.nil?
+        halt(404, "Could not find contact '#{contact_id}'") if @contact.nil?
 
         @contact_media = @contact.media.all
 
