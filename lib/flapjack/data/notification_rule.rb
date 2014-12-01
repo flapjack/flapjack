@@ -253,6 +253,11 @@ module Flapjack
         return unless (tr.has_key?(:start_time) || tr.has_key?(:start_date)) &&
           (tr.has_key?(:end_time) || tr.has_key?(:end_date))
 
+        # exrules is deprecated in latest ice_cube, but may be stored in data
+        # serialised from earlier versions of the gem
+        # ( https://github.com/flapjack/flapjack/issues/715 )
+        tr.delete(:exrules)
+
         parsed_time = proc {|tr, field|
           if t = tr.delete(field)
             t = t.dup
