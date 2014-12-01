@@ -31,6 +31,8 @@ module Flapjack
                 each_with_object([]) do |check_name, memo|
                   en, cn = check_name.split(':', 2)
                   halt(500, 'Malformed check ID') if en.nil? || cn.nil?
+                  logger.debug("Flapjack::Gateways::JSONAPI::ReportMethods::Helpers#load_api_data entity: #{en}, check: #{cn}")
+
                   memo << find_entity_check_by_name(en, cn)
                 end
             elsif !event_ids.empty?

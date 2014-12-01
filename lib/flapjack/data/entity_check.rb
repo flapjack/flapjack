@@ -160,7 +160,7 @@ module Flapjack
           redis.exists(entity_check + ':unscheduled_maintenance')
         }.collect {|entity_check|
           Flapjack::Data::EntityCheck.for_event_id(entity_check, :redis => redis)
-        }
+        }.compact
       end
 
       def self.find_maintenance(options = {})
@@ -983,8 +983,8 @@ module Flapjack
 
       def initialize(entity, check, options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
-        raise "Invalid entity" unless @entity = entity
-        raise "Invalid check" unless @check = check
+        raise "Invalid entity (#{entity.inspect})" unless @entity = entity
+        raise "Invalid check (#{check.inspect} on #{entity.inspect})" unless @check = check
         @key = "#{entity.name}:#{check}"
         if @redis.zscore("all_checks", @key).nil?
           timestamp = options[:timestamp] || Time.now.to_i
