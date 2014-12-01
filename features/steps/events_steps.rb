@@ -430,7 +430,6 @@ Then(/^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') should not app
   check  ||= @check
   entity ||= @entity
   unacknowledged_failing_checks = Flapjack::Data::EntityCheck.unacknowledged_failing(:redis => @redis)
-  puts "ufc: #{unacknowledged_failing_checks.inspect}"
   expect(unacknowledged_failing_checks.map {|ec| "#{ec.entity.name}:#{ec.check}"}).to_not include("#{entity}:#{check}")
 end
 
@@ -438,7 +437,6 @@ Then(/^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') should appear 
   check  ||= @check
   entity ||= @entity
   unacknowledged_failing_checks = Flapjack::Data::EntityCheck.unacknowledged_failing(:redis => @redis)
-  puts "ufc: #{unacknowledged_failing_checks.inspect}"
   expect(unacknowledged_failing_checks.map {|ec| "#{ec.entity.name}:#{ec.check}"}).to include("#{entity}:#{check}")
 end
 

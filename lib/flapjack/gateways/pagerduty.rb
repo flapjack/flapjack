@@ -194,24 +194,34 @@ module Flapjack
             ret
           }
 
-          check = entity_check.check
+          check       = entity_check.check
+          entity_name = entity_check.entity_name
 
           if ec_credentials.empty?
-            @logger.debug("No pagerduty credentials found for #{entity_check.entity_name}:#{check}, skipping")
+            @logger.debug("No pagerduty credentials found for #{entity_name}:#{check}, skipping")
             next
           end
 
           # FIXME: try each set of credentials until one works (may have stale contacts turning up)
-          options = ec_credentials.first.merge('check' => "#{entity_check.entity_name}:#{check}")
+          options = ec_credentials.first.merge('check' => "#{entity_name}:#{check}")
 
           acknowledged = pagerduty_acknowledged?(options)
           if acknowledged.nil?
-            @logger.debug "#{entity_check.entity_name}:#{check} is not acknowledged in pagerduty, skipping"
+            @logger.debug "#{entity_name}:#{check} is not acknowledged in pagerduty, skipping"
+            next
+          end
+
+          # check again that the check is still unacknowledged in flapjack
+          unless Flapjack::Data::EntityCheck.unacknowledged_failing(:redis => @redis).map {|ec|
+              "#{ec.entity_name}:#{ec.check}"
+            }.include?("#{entity_name}:#{check}")
+            # skip this one
+            @logger.warn "#{entity_name}:#{check} seems to have been acknowledged by " +
+              "some other process while I've been running, cancelling acknowledgement creation"
             next
           end
 
           pg_acknowledged_by = acknowledged[:pg_acknowledged_by]
-          entity_name = entity_check.entity_name
           @logger.info "#{entity_name}:#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
           who_text = ""
           if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?

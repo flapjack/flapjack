@@ -103,13 +103,13 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     })
 
     entity_check = double('entity_check')
-    expect(entity_check).to receive(:check).and_return('PING')
+    expect(entity_check).to receive(:check).exactly(2).times.and_return('PING')
     expect(entity_check).to receive(:contacts).and_return([contact])
     expect(entity_check).to receive(:entity_name).exactly(2).times.and_return('foo-app-01.bar.net')
     expect(Flapjack::Data::Event).to receive(:create_acknowledgement).with('foo-app-01.bar.net', 'PING',
       :summary => 'Acknowledged on PagerDuty', :duration => 14400, :redis => redis)
 
-    expect(Flapjack::Data::EntityCheck).to receive(:unacknowledged_failing).and_return([entity_check])
+    expect(Flapjack::Data::EntityCheck).to receive(:unacknowledged_failing).exactly(2).times.and_return([entity_check])
 
     expect(fp).to receive(:pagerduty_acknowledged?).and_return({})
 
