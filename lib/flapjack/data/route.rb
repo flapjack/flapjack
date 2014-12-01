@@ -178,6 +178,11 @@ module Flapjack
           rrule[:rule_type] = "IceCube::#{rrule[:rule_type]}Rule"
         }
 
+        # exrules is deprecated in latest ice_cube, but may be stored in data
+        # serialised from earlier versions of the gem
+        # ( https://github.com/flapjack/flapjack/issues/715 )
+        tr.delete(:exrules)
+
         # TODO does this need to check classes for the following values?
         # "validations": {
         #   "day": [1,2,3,4,5]
