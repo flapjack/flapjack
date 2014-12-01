@@ -172,6 +172,7 @@ production:
       api_url: "http://localhost:3081/"
       # Full path to location of logo file, e.g. /etc/flapjack/custom_logo.png
       #logo_image_path: "/etc/flapjack/web/custom_logo/flapjack-2013-notext-transparent-300-300.png"
+      show_exceptions: false
       logger:
         level: INFO
         syslog_errors: yes
@@ -376,6 +377,7 @@ development:
       api_url: "http://localhost:3081/"
       # Full path to location of logo file, e.g. /etc/flapjack/custom_logo.png
       #logo_image_path: "/etc/flapjack/web/custom_logo/flapjack-2013-notext-transparent-300-300.png"
+      show_exceptions: true
       logger:
         level: DEBUG
         syslog_errors: yes

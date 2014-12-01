@@ -22,7 +22,7 @@ module Flapjack
     class Web < Sinatra::Base
 
       rescue_exception = Proc.new do |env, e|
-        if settings.show_exceptions?
+        if @config['show_exceptions'].is_a?(TrueClass)
           # ensure the sinatra error page shows properly
           request = Sinatra::Request.new(env)
           printer = Sinatra::ShowExceptions.new(proc{ raise e })
