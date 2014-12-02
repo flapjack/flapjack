@@ -672,6 +672,8 @@ command :receiver do |receiver|
       oneoff  = libexec.join('oneoff')
       if oneoff.exist?
         Kernel.exec(oneoff.to_s, *ARGV)
+      else
+        exit_now! "Oneoff event submitter doesn't exist"
       end
     end
   end
@@ -684,6 +686,8 @@ command :receiver do |receiver|
       httpchecker  = libexec.join('httpchecker')
       if httpchecker.exist?
         Kernel.exec(httpchecker.to_s, *ARGV)
+      else
+        exit_now! "HTTP checker doesn't exist"
       end
     end
   end
@@ -697,6 +701,8 @@ command :receiver do |receiver|
       httpbroker  = libexec.join('httpbroker')
       if httpbroker.exist?
         Kernel.exec(httpbroker.to_s, *ARGV)
+      else
+        exit_now! "HTTP broker doesn't exist"
       end
     end
   end
