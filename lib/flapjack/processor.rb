@@ -251,7 +251,7 @@ module Flapjack
         if previous_state.nil?
           @logger.info("No previous state for event #{event.id}")
 
-          if (@ncsm_duration > 0) && ((check.tags.all.map(&:name) || []) & @ncsm_ignore_tags).empty?
+          if (@ncsm_duration > 0) # && ((check.tags.all.map(&:name) || []) & @ncsm_ignore_tags).empty?
             @logger.info("Setting scheduled maintenance for #{time_period_in_words(@ncsm_duration)}")
 
             @ncsm_sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => timestamp,

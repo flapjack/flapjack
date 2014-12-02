@@ -11,8 +11,8 @@ module Flapjack
 
       attr_reader :id, :summary, :details, :acknowledgement_id, :perfdata
 
-      REQUIRED_KEYS = ['type', 'state', 'entity', 'check', 'summary']
-      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration', 'perfdata']
+      REQUIRED_KEYS = %w(type state entity check summary)
+      OPTIONAL_KEYS = %w(time details acknowledgement_id duration tags perfdata)
 
       VALIDATIONS = {
         proc {|e| e['type'].is_a?(String) &&
@@ -55,6 +55,10 @@ module Flapjack
                  (e['duration'].is_a?(String) && !!(e['duration'] =~ /^\d+$/)) } =>
           "duration must be a positive integer, or a string castable to one",
 
+        proc {|e| e['tags'].nil? ||
+                 (e['tags'].is_a?(Array) &&
+                  e['tags'].all? {|tag| tag.is_a?(String)}) } =>
+          "tags must be an array of strings",
       }
 
       def self.parse_and_validate(raw, opts = {})
