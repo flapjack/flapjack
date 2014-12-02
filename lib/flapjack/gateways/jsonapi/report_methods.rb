@@ -30,7 +30,7 @@ module Flapjack
               Flapjack::Data::EntityCheck.find_current_names(:redis => redis).
                 each_with_object([]) do |check_name, memo|
                   en, cn = check_name.split(':', 2)
-                  halt(500, 'Malformed check ID') if en.nil? || cn.nil?
+                  halt(err(400, 'Malformed check ID')) if en.nil? || cn.nil?
                   logger.debug("Flapjack::Gateways::JSONAPI::ReportMethods::Helpers#load_api_data entity: #{en}, check: #{cn}")
 
                   memo << find_entity_check_by_name(en, cn)
@@ -38,7 +38,7 @@ module Flapjack
             elsif !event_ids.empty?
               event_ids.each_with_object([]) do |event_id, memo|
                 en, cn = event_id.split(':', 2)
-                halt(500, 'Malformed check ID') if en.nil? || cn.nil?
+                halt(err(400, 'Malformed check ID')) if en.nil? || cn.nil?
                 memo << find_entity_check_by_name(en, cn)
               end
             else

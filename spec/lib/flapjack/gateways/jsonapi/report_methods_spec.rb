@@ -170,7 +170,8 @@ describe 'Flapjack::Gateways::JSONAPI::ReportMethods', :sinatra => true, :logger
 
   it "should not show the status for a check with a malformed name" do
     aget "/status_report/checks/SSH"
-    expect(last_response.status).to eq(500)
+    expect(last_response.status).to eq(400)
+    expect(last_response.body).to eq(Flapjack.dump_json({:errors => ['Malformed check ID']}))
   end
 
   it "returns a list of scheduled maintenance periods for an entity" do
