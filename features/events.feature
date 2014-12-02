@@ -199,6 +199,13 @@ Feature: events
     When  an acknowledgement event is received
     Then  a notification should be generated
 
+  Scenario: Acknowledgement when acknowledged
+    Given the check is in a critical state
+    When  an acknowledgement event is received
+    Then  a notification should be generated
+    When  an acknowledgement event is received
+    Then  a notification should be generated
+
   Scenario: Brief critical then OK
     Given the check is in an ok state
     When  a critical event is received
