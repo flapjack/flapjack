@@ -63,7 +63,7 @@ module Flapjack
       def self.for_event_id(event_id, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         entity_name, check_name = event_id.split(':', 2)
-        create_entity = options[:create_entity]
+        create_entity = options[:create]
         logger = options[:logger]
         entity = Flapjack::Data::Entity.find_by_name(entity_name,
           :create => create_entity, :logger => logger, :redis => redis)
