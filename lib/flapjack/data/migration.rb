@@ -57,7 +57,7 @@ module Flapjack
             entity = Flapjack::Data::Entity.find_by_name(entity_name, :create => true, :redis => redis, :logger => logger)
           }
 
-          all_checks = Flapjack::Data::EntityCheck.all(:redis => redis, :logger => logger, :create => true)
+          all_checks = Flapjack::Data::EntityCheck.all(:redis => redis, :logger => logger, :create_entity => true)
 
           redis.set('created_ids_for_old_entities_without_ids', 'true')
           logger.warn "Entity id creation complete."
