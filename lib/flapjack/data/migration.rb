@@ -181,6 +181,19 @@ module Flapjack
         redis.set('corrected_notification_rule_contact_linkages', 'true')
       end
 
+      def self.validate_scheduled_maintenance_periods(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        return if redis.exists('validated_scheduled_maintenance_periods')
+
+        Flapjack::Data::EntityCheck.all(:redis => redis).select {|ec|
+          ec.in_scheduled_maintenance?
+        }.each do |check|
+          check.update_current_scheduled_maintenance(:revalidate => true)
+        end
+
+        redis.set('validated_scheduled_maintenance_periods', 'true')
+      end
+
     end
   end
 end

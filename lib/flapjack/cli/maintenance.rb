@@ -68,6 +68,7 @@ module Flapjack
         return @redis unless @redis.nil?
         @redis = Redis.new(@redis_options.merge(:driver => :hiredis))
         Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => @redis)
+        Flapjack::Data::Migration.validate_scheduled_maintenance_periods(:redis => redis)
         @redis
       end
 
