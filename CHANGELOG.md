@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 1.2.1rc2 - 2014-12-04
+- Bug: Correct scheduled maintenance periods with expiry that don't match their timestamps #734 (@ali-graham)
+
 # 1.2.1rc1 - 2014-12-04
 - Bug: Exception in pagerduty gateway when looking for acknowledgements #721 (@jessereynolds)
 - Bug: Retrieving scheduled maintenance via api fails when old entities without ids are present #711 (@jessereynolds)
