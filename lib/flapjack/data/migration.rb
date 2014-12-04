@@ -32,11 +32,10 @@ module Flapjack
 
       def self.create_entity_ids_if_required(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
+
         logger = options[:logger]
 
-        if redis.exists('created_ids_for_old_entities_without_ids')
-          return
-        end
+        return if redis.exists('created_ids_for_old_entities_without_ids')
 
         semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, :redis => redis)
         if semaphore.nil?
@@ -71,9 +70,7 @@ module Flapjack
 
         logger = options[:logger]
 
-        if redis.exists('all_checks')
-          return
-        end
+        return if redis.exists('all_checks')
 
         semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, :redis => redis)
         if semaphore.nil?
@@ -160,9 +157,7 @@ module Flapjack
 
         logger = options[:logger]
 
-        if redis.exists('corrected_notification_rule_contact_linkages')
-          return
-        end
+        return if redis.exists('corrected_notification_rule_contact_linkages')
 
         invalid_notification_rule_keys = redis.keys("notification_rule:*").select {|k|
           contact_id = redis.hget(k, 'contact_id')
@@ -183,6 +178,9 @@ module Flapjack
 
       def self.validate_scheduled_maintenance_periods(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
+
+        logger = options[:logger]
+
         return if redis.exists('validated_scheduled_maintenance_periods')
 
         Flapjack::Data::EntityCheck.all(:redis => redis).select {|ec|
@@ -191,6 +189,7 @@ module Flapjack
           check.update_current_scheduled_maintenance(:revalidate => true)
         end
 
+        logger.warn "Validated scheduled maintenance period expiry" unless logger.nil?
         redis.set('validated_scheduled_maintenance_periods', 'true')
       end
 
