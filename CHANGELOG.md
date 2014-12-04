@@ -1,5 +1,15 @@
 ## Flapjack Changelog
 
+# 1.2.1rc1 - 2014-12-04
+- Bug: Exception in pagerduty gateway when looking for acknowledgements #721 (@jessereynolds)
+- Bug: Retrieving scheduled maintenance via api fails when old entities without ids are present #711 (@jessereynolds)
+- Bug: Repeated acknowledgement notifications sent after acknowledging on PagerDuty #714 (@jessereynolds)
+- Bug: Exception thrown to browser when you pass no values to "Add Scheduled Maintenance" #719 (@ali-graham)
+- Bug: API doesn't allow contact timezone to be updated #718 (@ali-graham)
+- Bug: IceCube deprecation warning in 1.2.0 - :exrules is deprecated, #715 (@ali-graham)
+- Bug: Badly formed error response to scheduled maintenance report with invalid check id #712 (@ali-graham)
+- Bug: Searching for checks in maintenance via CLI doesn't seem to work #710 (@jessereynolds, @Hobbsee)
+
 # 1.2.0 - 2014-11-07
 - Bug: multi blocks for safe redis connection pool usage #694 (@ali-graham)
 - Bug: data migration to work around previous notification rule bug #699 (@ali-graham)
