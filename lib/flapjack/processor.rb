@@ -85,7 +85,7 @@ module Flapjack
         Sandstorm.redis = Flapjack.redis
 
         redis_version = Flapjack.redis.info['redis_version']
-        required_version = '2.16.12'
+        required_version = '2.6.12'
         raise "Redis too old - Flapjack requires #{required_version} but #{redis_version} is running" if Gem::Version.new(redis_version) < Gem::Version.new(required_version)
 
         # FIXME: add an administrative function to reset all event counters
