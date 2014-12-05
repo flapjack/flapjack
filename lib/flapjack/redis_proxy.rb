@@ -40,7 +40,7 @@ module Flapjack
       @proxied_connection = ::Redis.new(self.class.config)
       redis_version = @proxied_connection.info['redis_version']
       return @proxied_connection if redis_version.nil? ||
-      (Gem::Version.new(redis_version) >= Gem::Version.new(REQUIRED_VERSION))
+      (redis_version.split('.') <=> REQUIRED_VERSION.split('.')) >= 0
       raise "Redis too old - Flapjack requires #{REQUIRED_VERSION} but #{redis_version} is running"
     end
 
