@@ -226,7 +226,9 @@ module Flapjack
 
         entity_check.update_state(event.state, :timestamp => timestamp,
                                   :summary => event.summary, :count => event.counter,
-                                  :details => event.details, :perfdata => event.perfdata)
+                                  :details => event.details, :perfdata => event.perfdata,
+                                  :initial_failure_delay => event.initial_failure_delay,
+                                  :repeat_failure_delay => event.repeat_failure_delay)
 
         entity_check.update_current_scheduled_maintenance
 

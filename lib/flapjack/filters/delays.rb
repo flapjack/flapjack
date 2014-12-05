@@ -20,8 +20,15 @@ module Flapjack
       include Base
 
       def block?(event, entity_check, previous_state)
-        failure_delay = 30
-        resend_delay  = 60
+        initial_failure_delay = entity_check.initial_failure_delay
+        if initial_failure_delay.nil? || (initial_failure_delay < 1)
+          initial_failure_delay = Flapjack::DEFAULT_INITIAL_FAILURE_DELAY
+        end
+
+        repeat_failure_delay = entity_check.repeat_failure_delay
+        if repeat_failure_delay.nil? || (repeat_failure_delay < 1)
+          repeat_failure_delay = Flapjack::DEFAULT_REPEAT_FAILURE_DELAY
+        end
 
         label = 'Filter: Delays:'
 
@@ -51,18 +58,18 @@ module Flapjack
                       "event.state: [#{event.state.inspect}], " +
                       "last_alert_state == event.state ? #{last_alert_state.to_s == event.state}")
 
-        if current_state_duration < failure_delay
+        if current_state_duration < initial_failure_delay
           @logger.debug("#{label} block - duration of current failure " +
-                     "(#{current_state_duration}) is less than failure_delay (#{failure_delay})")
+                     "(#{current_state_duration}) is less than initial_failure_delay (#{initial_failure_delay})")
           return true
         end
 
-        if !last_problem_alert.nil? && (time_since_last_alert < resend_delay) &&
+        if !last_problem_alert.nil? && (time_since_last_alert < repeat_failure_delay) &&
           (last_alert_state.to_s == event.state)
 
           @logger.debug("#{label} block - time since last alert for " +
                         "current problem (#{time_since_last_alert}) is less than " +
-                        "resend_delay (#{resend_delay}) and last alert state (#{last_alert_state}) " +
+                        "repeat_failure_delay (#{repeat_failure_delay}) and last alert state (#{last_alert_state}) " +
                         "is equal to current event state (#{event.state})")
           return true
         end
