@@ -346,4 +346,3 @@ module Flapjack
 
   end
 end
-
