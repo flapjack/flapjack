@@ -59,8 +59,14 @@ module Flapjack
           puts "flapper is already running."
         else
           print "flapper starting..."
-          print "\n" unless @options[:daemonize]
+          main_umask = nil
+          if @options[:daemonize]
+            main_umask = File.umask
+          else
+            print "\n"
+          end
           runner.execute(:daemonize => @options[:daemonize]) do
+            File.umask(main_umask) if @options[:daemonize]
             main(@options['bind-ip'] || Flapjack::CLI::Flapper.local_ip, @options['bind-port'].to_i, @options[:frequency])
           end
           puts " done."
@@ -81,7 +87,9 @@ module Flapjack
 
       def restart
         print "flapper restarting..."
+        main_umask = File.umask
         runner.execute(:daemonize => true, :restart => true) do
+          File.umask(main_umask)
           main(@options['bind-ip'], @options['bind-port'].to_i, @options[:frequency])
         end
         puts " done."
