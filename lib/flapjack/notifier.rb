@@ -87,16 +87,16 @@ module Flapjack
       check       = notification.check
       check_name  = check.name
 
-      routes_by_contact_id = check.routes_for(:severity => notification.severity,
+      rule_ids_by_contact_id = check.rule_ids_by_contact_id(:severity => notification.severity,
         :logger => @logger)
 
-      if routes_by_contact_id.empty?
-        @logger.debug("No routes for '#{check_name}'")
-        @notifylog.info("#{check_name} | #{notification.type} | NO ROUTES")
+      if rule_ids_by_contact_id.empty?
+        @logger.debug("No rules for '#{check_name}'")
+        @notifylog.info("#{check_name} | #{notification.type} | NO RULES")
         return
       end
 
-      alerts = notification.alerts_for(routes_by_contact_id,
+      alerts = notification.alerts_for(rule_ids_by_contact_id,
         :transports => @queues.keys, :timestamp => timestamp,
         :default_timezone => @default_contact_timezone, :logger => @logger)
 

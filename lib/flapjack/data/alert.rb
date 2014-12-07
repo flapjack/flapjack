@@ -30,7 +30,7 @@ module Flapjack
                         :notification_type => :string,
 
                         :acknowledgement_duration => :integer, # SMELL -- passed in as duration in other code
-                        :state_duration => :integer,
+                        :condition_duration => :integer,
 
                         :rollup        => :string,
                         :rollup_states_json => :string,
@@ -50,7 +50,7 @@ module Flapjack
 
       validates :state, :presence => true, :inclusion => {:in => self.states },
         :unless => proc {|n| n.type == 'test'}
-      validates :state_duration, :presence => true,
+      validates :condition_duration, :presence => true,
         :numericality => {:minimum => 0}, :unless => proc {|n| n.type == 'test'}
 
       validates_each :rollup_states_json do |record, att, value|

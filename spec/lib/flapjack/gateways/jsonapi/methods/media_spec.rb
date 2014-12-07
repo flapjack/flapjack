@@ -12,13 +12,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "creates a medium" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact, Flapjack::Data::Route).and_yield
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
     full_ids = double('full_ids')
     expect(full_ids).to receive(:associated_ids_for).with(:contact).and_return({medium.id => nil})
-    expect(full_ids).to receive(:associated_ids_for).with(:routes).and_return({medium.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({medium.id => []})
     expect(Flapjack::Data::Medium).to receive(:intersect).
       with(:id => [email_data[:id]]).exactly(3).times.and_return(empty_ids, full_ids, full_ids)
 
@@ -35,14 +35,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(last_response.body).to eq(Flapjack.dump_json(:media => email_data.merge(:links =>
     {
       :contact => nil,
-      :routes  => []
+      :rules  => []
     })))
 
   end
 
   it "does not create a medium if the data is improperly formatted" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact, Flapjack::Data::Route).and_yield
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -64,13 +64,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it 'creates a medium with a linked contact' do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact, Flapjack::Data::Route).and_yield
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
     full_ids = double('full_ids')
     expect(full_ids).to receive(:associated_ids_for).with(:contact).and_return({medium.id => contact.id})
-    expect(full_ids).to receive(:associated_ids_for).with(:routes).and_return({medium.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({medium.id => []})
     expect(Flapjack::Data::Medium).to receive(:intersect).
       with(:id => [email_data[:id]]).exactly(3).times.and_return(empty_ids, full_ids, full_ids)
 
@@ -95,14 +95,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       },
       :media => email_data.merge(:links => {
         :contact => contact.id,
-        :routes => []
+        :rules => []
       }
     )))
   end
 
   it "does not create a medium with a linked contact if the contact doesn't exist" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact, Flapjack::Data::Route).and_yield
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -134,7 +134,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
     full_ids = double('full_ids')
     expect(full_ids).to receive(:associated_ids_for).with(:contact).and_return({medium.id => nil})
-    expect(full_ids).to receive(:associated_ids_for).with(:routes).and_return({medium.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({medium.id => []})
     expect(Flapjack::Data::Medium).to receive(:intersect).
       with(:id => [medium.id]).twice.and_return(full_ids)
 
@@ -145,7 +145,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(last_response).to be_ok
     expect(last_response.body).to eq(Flapjack.dump_json(:media => email_data.merge(:links => {
       :contact => nil,
-      :routes => []
+      :rules => []
     })))
   end
 
@@ -169,7 +169,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
     full_ids = double('full_ids')
     expect(full_ids).to receive(:associated_ids_for).with(:contact).and_return({medium.id => nil})
-    expect(full_ids).to receive(:associated_ids_for).with(:routes).and_return({medium.id => []})
+    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({medium.id => []})
     expect(Flapjack::Data::Medium).to receive(:intersect).
       with(:id => [medium.id]).twice.and_return(full_ids)
 
@@ -180,7 +180,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(last_response).to be_ok
     expect(last_response.body).to eq(Flapjack.dump_json(:media => [email_data.merge(:links => {
       :contact => nil,
-      :routes => []
+      :rules => []
     })], :meta => meta))
   end
 

@@ -153,6 +153,12 @@ module FixtureData
     }
   end
 
+  def state_data
+    @state_data ||= {
+     :name => 'ok',
+    }
+  end
+
   def tag_data
     @tag_data ||= {
      :name => 'database',

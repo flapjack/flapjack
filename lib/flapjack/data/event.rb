@@ -11,14 +11,12 @@ module Flapjack
 
       attr_reader :id, :summary, :details, :acknowledgement_id, :perfdata
 
-      REQUIRED_KEYS = ['type', 'state', 'entity', 'check', 'summary']
-      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration', 'perfdata']
+      # type was a required key in v1, but is superfluous
+      REQUIRED_KEYS = ['state', 'entity', 'check', 'summary']
+      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration',
+                       'perfdata', 'type']
 
       VALIDATIONS = {
-        proc {|e| e['type'].is_a?(String) &&
-          ['service', 'action'].include?(e['type'].downcase) } =>
-          "type must be either 'service' or 'action'",
-
         proc {|e| e['state'].is_a?(String) &&
             ['ok', 'warning', 'critical', 'unknown', 'acknowledgement',
              'test_notifications'].include?(e['state'].downcase) } =>
@@ -106,7 +104,6 @@ module Flapjack
       # creates, or modifies, an event object and adds it to the events list in redis
       #   'entity'    => entity_name,
       #   'check'     => check_name,
-      #   'type'      => 'service',
       #   'state'     => state,
       #   'summary'   => check_output,
       #   'details'   => check_long_output,
@@ -141,8 +138,7 @@ module Flapjack
         raise "Check(s) must be provided" if checks.nil?
         checks = [checks] unless checks.is_a?(Array)
         checks.each do |check|
-          self.push(queue, 'type'               => 'action',
-                           'state'              => 'acknowledgement',
+          self.push(queue, 'state'              => 'acknowledgement',
                            'check'              => check.name,
                            'summary'            => opts[:summary],
                            'duration'           => opts[:duration],
@@ -154,8 +150,7 @@ module Flapjack
         raise "Check(s) must be provided" if checks.nil?
         checks = [checks] unless checks.is_a?(Array)
         checks.each do |check|
-          self.push(queue, 'type'               => 'action',
-                           'state'              => 'test_notifications',
+          self.push(queue, 'state'              => 'test_notifications',
                            'check'              => check.name,
                            'summary'            => opts[:summary],
                            'details'            => opts[:details])
@@ -164,8 +159,8 @@ module Flapjack
 
       def initialize(attrs = {})
         @id = "#{attrs['entity']}:#{attrs['check']}"
-        [:type, :state, :time, :summary,
-         :perfdata, :details, :acknowledgement_id, :duration].each do |key|
+        [:state, :time, :summary, :perfdata, :details, :acknowledgement_id,
+         :duration].each do |key|
           instance_variable_set("@#{key.to_s}", attrs[key.to_s])
         end
         # details and perfdata are optional. set to nil if they only contain whitespace
@@ -188,42 +183,25 @@ module Flapjack
         @time.to_i
       end
 
-      def type
-        return unless @type
-        @type.downcase
-      end
+      # def notification_type
+      #   case state
+      #   when 'ok'
+      #     'recovery'
+      #   when 'warning', 'critical', 'unknown'
+      #     'problem'
+      #   when 'acknowledgement'
+      #     'acknowledgement'
+      #   when 'test_notifications'
+      #     'test'
+      #   else
+      #     'unknown'
+      #   end
+      # end
 
-      def notification_type
-        case type
-        when 'service'
-          case state
-          when 'ok'
-            'recovery'
-          when 'warning', 'critical', 'unknown'
-            'problem'
-          end
-        when 'action'
-          case state
-          when 'acknowledgement'
-            'acknowledgement'
-          when 'test_notifications'
-            'test'
-          end
-        else
-          'unknown'
-        end
-      end
-
-      def service?
-        type == 'service'
-      end
-
-      def acknowledgement?
-        (type == 'action') && (state == 'acknowledgement')
-      end
-
-      def test_notifications?
-        (type == 'action') && (state == 'test_notifications')
+      def dump
+        return @dump unless @dump.nil?
+        @dump = "#{id}, #{state}, #{summary}"
+        @dump << ", #{Time.at(time).to_s}" unless time.nil?
       end
     end
   end

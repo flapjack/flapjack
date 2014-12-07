@@ -2,6 +2,8 @@
 
 require 'sandstorm/records/redis_record'
 
+require 'flapjack/data/validators/id_validator'
+
 module Flapjack
   module Data
     class UnscheduledMaintenance
@@ -12,11 +14,7 @@ module Flapjack
 
       define_attributes :start_time => :timestamp,
                         :end_time   => :timestamp,
-                        :summary    => :string,
-                        :notified   => :boolean,
-                        :last_notification_count => :integer
-
-      index_by :notified
+                        :summary    => :string
 
       belongs_to :check_by_start, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :unscheduled_maintenances_by_start

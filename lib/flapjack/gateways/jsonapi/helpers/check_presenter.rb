@@ -17,7 +17,7 @@ module Flapjack
         class CheckPresenter
 
           class Outage
-            attr_accessor :state, :start_time, :end_time,
+            attr_accessor :condition, :start_time, :end_time,
                           :duration, :summary, :details
           end
 
@@ -26,18 +26,20 @@ module Flapjack
           end
 
           def status
-            last_change   = @check.states.last
-            last_update   = @check.last_update
-            last_problem  = @check.states.intersect(:state => Flapjack::Data::CheckState.failing_states,
+            last_change   = @check.states.intersect(:condition_changed => true).last
+            last_update   = @check.states.last
+            last_problem  = @check.states.intersect(:condition => Flapjack::Data::Condition::UNHEALTHY.values,
+              :condition_changed => true, :notified => true).last
+            last_recovery = @check.states.intersect(:condition => Flapjack::Data::Condition::HEALTHY.values,
+              :condition_changed => true, :notified => true).last
+            last_ack      = @check.states.intersect(:action => 'acknowledgement',
               :notified => true).last
-            last_recovery = @check.states.intersect(:state => 'ok', :notified => true).last
-            last_ack      = @check.states.intersect(:state => 'acknowledgement', :notified => true).last
 
             {'name'                              => @check.name,
-             'state'                             => @check.state,
+             'condition'                         => (last_update   ? last_update.condition   : nil),
              'enabled'                           => @check.enabled,
-             'summary'                           => @check.summary,
-             'details'                           => @check.details,
+             'summary'                           => (last_update   ? last_update.summary     : nil),
+             'details'                           => (last_update   ? last_update.details     : nil),
              'in_unscheduled_maintenance'        => @check.in_unscheduled_maintenance?,
              'in_scheduled_maintenance'          => @check.in_scheduled_maintenance?,
              'last_update'                       => (last_update   ? last_update.timestamp   : nil),
@@ -72,9 +74,9 @@ module Flapjack
               obj = hist_states[index]
               index += 1
 
-              next if obj.state == 'ok'
+              next if Flapjack::Data::Condition::HEALTHY.values.include?(obj.condition)
 
-              if last_obj && (last_obj.state == obj.state)
+              if last_obj && (last_obj.condition == obj.condition)
                 # TODO maybe build up arrays of these instead, and leave calling
                 # classes to join them together if needed?
                 result.last.summary << " / #{obj.summary}" if obj.summary
@@ -84,11 +86,11 @@ module Flapjack
 
               ts = obj.timestamp
 
-              next_ts_obj = hist_states[index..-1].detect {|hs| hs.state != obj.state }
+              next_ts_obj = hist_states[index..-1].detect {|hs| hs.condition != obj.condition }
               obj_et  = next_ts_obj ? next_ts_obj.timestamp : end_time
 
               outage = Outage.new
-              outage.state      = obj.state
+              outage.condition  = obj.condition
               outage.start_time = (last_obj || !start_time) ? ts : [ts, start_time].max
               outage.end_time   = obj_et
               outage.duration   = obj_et ? (obj_et - outage.start_time) : nil
@@ -144,7 +146,7 @@ module Flapjack
             total_secs  = {}
             percentages = {}
 
-            outs.collect {|obj| obj.state}.uniq.each do |st|
+            outs.collect {|obj| obj.condition}.uniq.each do |st|
               total_secs[st]  = 0
               percentages[st] = (start_time.nil? || end_time.nil?) ? nil : 0
             end
@@ -169,14 +171,14 @@ module Flapjack
                   delete_outs << o
 
                   out_split_start = Outage.new
-                  out_split_start.state      = o.state
+                  out_split_start.condition  = o.condition
                   out_split_start.start_time = o.start_time
                   out_split_start.end_time   = sm.start_time
                   out_split_start.duration   = sm.start_time - o.start_time
                   out_split_start.summary    = "#{o.summary} [split start]"
 
                   out_split_end   = Outage.new
-                  out_split_end.state        = o.state
+                  out_split_end.condition    = o.condition
                   out_split_end.start_time   = sm.end_time
                   out_split_end.end_time     = o.end_time
                   out_split_end.duration     = o.end_time - sm.end_time
@@ -221,7 +223,7 @@ module Flapjack
               end
 
               total_secs = outs.inject(total_secs) {|ret, o|
-                ret[o.state] += o.duration if o.duration
+                ret[o.condition] += o.duration if o.duration
                 ret
               }
 

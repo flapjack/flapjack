@@ -263,7 +263,7 @@
       <% @state_changes.each do |state_change| %>
       <tr>
         <td><%= h Time.at(state_change.timestamp).to_s %></td>
-        <td><%= h state_change.state %></td>
+        <td><%= h state_change.condition %></td>
         <td><%= h state_change.summary %></td>
       </tr>
       <% end %>

@@ -61,12 +61,11 @@ module Flapjack
 
         def handle_alert(alert)
           check = alert.check
-          check_name  = check.name
 
           address = alert.address
 
           @logger.debug("processing pagerduty notification service_key: #{address}, " +
-                        "check: '#{check_name}', state: #{alert.state}, summary: #{alert.summary}")
+                        "check: '#{check.name}', state: #{alert.state}, summary: #{alert.summary}")
 
           pagerduty_dir = File.join(File.dirname(__FILE__), 'pagerduty')
           message_template_path = case
@@ -102,11 +101,11 @@ module Flapjack
           end
 
           # quick fix, may not be true in all cases
-          host_name, service_name = check_name.split(':', 2)
+          host_name, service_name = check.name.split(':', 2)
 
           # Setting the HOSTNAME and the SERVICE makes them visible in the Pagerduty UI
           send_pagerduty_event(:service_key  => address,
-                               :incident_key => check_name,
+                               :incident_key => check.name,
                                :event_type   => pagerduty_type,
                                :description  => msg,
                                :details      => {'HOSTNAME' => host_name,
@@ -200,9 +199,22 @@ module Flapjack
         def find_pagerduty_acknowledgements
           @logger.debug("looking for acks in pagerduty for unack'd problems")
 
+          state_ids_by_check_id = Flapjack::Data::Check.associated_ids_for(:state)
+
+          failing_check_ids = Flapjack::Data::State.
+            intersect(:id => state_ids_by_check_id.values,
+                      :condition => Flapjack::Data::Condition::UNHEALTHY.values).
+            associated_ids_for(:check).values
+
+          time = Time.now
+
+          # there are probably more efficient ways to do this calculation
           unacked_failing_checks = Flapjack::Data::Check.
-            intersect(:state => Flapjack::Data::CheckState.failing_states).
-            all.reject {|ec| ec.in_unscheduled_maintenance? }
+            intersect(:id => failing_check_ids).select do |check|
+
+            check.scheduled_maintenance_at(time).nil? &&
+              check.unscheduled_maintenance_at(time).nil?
+          end
 
           @logger.debug "found unacknowledged failing checks as follows: " +
             unacked_failing_checks.map(&:name).join(', ')
@@ -212,25 +224,22 @@ module Flapjack
 
           credentials_by_check.each_pair do |check, credentials|
 
-            check_name = check.name
-            event_id = check_name
-
             if credentials.empty?
-              @logger.debug("No pagerduty credentials found for #{event_id}, skipping")
+              @logger.debug("No pagerduty credentials found for #{check.name}, skipping")
               next
             end
 
             # FIXME: try each set of credentials until one works (may have stale contacts turning up)
-            options = credentials.first.merge('check' => event_id)
+            options = credentials.first.merge('check' => check.name)
 
             acknowledged = pagerduty_acknowledged?(options)
             if acknowledged.nil?
-              @logger.debug "#{event_id} is not acknowledged in pagerduty, skipping"
+              @logger.debug "#{check.name} is not acknowledged in pagerduty, skipping"
               next
             end
 
             pg_acknowledged_by = acknowledged[:pg_acknowledged_by]
-            @logger.info "#{event_id} is acknowledged in pagerduty, creating flapjack acknowledgement... "
+            @logger.info "#{check.name} is acknowledged in pagerduty, creating flapjack acknowledgement... "
             who_text = ""
             if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
               who_text = " by #{pg_acknowledged_by['name']}"

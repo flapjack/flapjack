@@ -11,7 +11,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
   let(:redis) { double(Redis) }
   let(:lock)  { double(Monitor) }
 
-  let(:check) { double(Flapjack::Data::Check, :id => '12345') }
+  let(:check) { double(Flapjack::Data::Check, :id => SecureRandom.uuid) }
 
   before(:each) do
     allow(Flapjack).to receive(:redis).and_return(redis)
@@ -69,7 +69,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
                        )).
          to_return(:status => 200, :body => Flapjack.dump_json('status' => 'success'))
 
-      expect(check).to receive(:name).twice.and_return('app-02:ping')
+      expect(check).to receive(:name).exactly(4).times.and_return('app-02:ping')
 
       expect(alert).to receive(:address).and_return('pdservicekey')
       expect(alert).to receive(:check).twice.and_return(check)
@@ -114,12 +114,31 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       expect(redis).to receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(1)
       expect(redis).to receive(:expire).with('sem_pagerduty_acks_running', 300)
 
-      expect(check).to receive(:name).twice.and_return('app-02:ping')
-      expect(check).to receive(:in_unscheduled_maintenance?).and_return(false)
+      expect(check).to receive(:name).exactly(3).times.and_return('app-02:ping')
 
-      failing_checks = double('failing_checks', :all => [check])
-      expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
-        ['critical', 'warning', 'unknown']).and_return(failing_checks)
+      state = double(Flapjack::Data::State, :id => SecureRandom.uuid)
+      states = double('states')
+
+      expect(Flapjack::Data::Check).to receive(:associated_ids_for).
+        with(:state).and_return(check.id => state.id)
+
+      expect(Flapjack::Data::State).to receive(:intersect).
+        with(:id => [state.id],
+             :condition => ['critical', 'warning', 'unknown']).
+        and_return(states)
+      expect(states).to receive(:associated_ids_for).with(:check).
+        and_return(state.id => check.id)
+
+      checks = double('checks')
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:id => [check.id]).and_return(checks)
+      expect(checks).to receive(:select).and_yield(check).and_return([check])
+
+      expect(check).to receive(:scheduled_maintenance_at).
+        with(an_instance_of(Time)).and_return(nil)
+
+      expect(check).to receive(:unscheduled_maintenance_at).
+        with(an_instance_of(Time)).and_return(nil)
 
       expect(Flapjack::Data::Check).to receive(:pagerduty_credentials_for).
         and_return(check => [{

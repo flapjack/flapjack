@@ -2,6 +2,8 @@
 
 require 'sandstorm/records/redis_record'
 
+require 'flapjack/data/validators/id_validator'
+
 module Flapjack
   module Data
     class ScheduledMaintenance

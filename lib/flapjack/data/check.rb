@@ -6,11 +6,12 @@ require 'sandstorm/records/redis_record'
 
 require 'flapjack/data/validators/id_validator'
 
-require 'flapjack/data/check_state'
+require 'flapjack/data/condition'
 require 'flapjack/data/medium'
 require 'flapjack/data/scheduled_maintenance'
-require 'flapjack/data/unscheduled_maintenance'
+require 'flapjack/data/state'
 require 'flapjack/data/tag'
+require 'flapjack/data/unscheduled_maintenance'
 
 module Flapjack
 
@@ -26,18 +27,12 @@ module Flapjack
       # and last_update can change without a new check_state being added though
 
       define_attributes :name                  => :string,
-                        :state                 => :string,
-                        :summary               => :string,
-                        :perfdata_json         => :string,
-                        :details               => :string,
-                        :last_update           => :timestamp,
-                        :last_problem_alert    => :timestamp,
                         :enabled               => :boolean,
                         :ack_hash              => :string,
                         :initial_failure_delay => :integer,
                         :repeat_failure_delay  => :integer
 
-      index_by :enabled, :state
+      index_by :enabled
       unique_index_by :name, :ack_hash
 
       # TODO validate uniqueness of :name, :ack_hash
@@ -45,43 +40,54 @@ module Flapjack
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
         :inverse_of => :checks
 
-      has_sorted_set :states, :class_name => 'Flapjack::Data::CheckState', :key => :timestamp
-      has_sorted_set :actions, :class_name => 'Flapjack::Data::Action', :key => :timestamp
+      has_sorted_set :states, :class_name => 'Flapjack::Data::State',
+        :key => :timestamp, :inverse_of => :check
+
+      has_one :state, :class_name => 'Flapjack::Data::State',
+        :inverse_of => :check
+      has_one :most_severe_notification, :class_name => 'Flapjack::Data::State',
+        :inverse_of => :check
 
       # keep two indices for each, so that we can query on their intersection
-      has_sorted_set :scheduled_maintenances_by_start, :class_name => 'Flapjack::Data::ScheduledMaintenance',
-        :key => :start_time
-      has_sorted_set :scheduled_maintenances_by_end, :class_name => 'Flapjack::Data::ScheduledMaintenance',
-        :key => :end_time
+      has_sorted_set :scheduled_maintenances_by_start,
+        :class_name => 'Flapjack::Data::ScheduledMaintenance',
+        :key => :start_time, :inverse_of => :check
+      has_sorted_set :scheduled_maintenances_by_end,
+        :class_name => 'Flapjack::Data::ScheduledMaintenance',
+        :key => :end_time, :inverse_of => :check
 
-      has_sorted_set :unscheduled_maintenances_by_start, :class_name => 'Flapjack::Data::UnscheduledMaintenance',
-        :key => :start_time
-      has_sorted_set :unscheduled_maintenances_by_end, :class_name => 'Flapjack::Data::UnscheduledMaintenance',
-        :key => :end_time
+      has_sorted_set :unscheduled_maintenances_by_start,
+        :class_name => 'Flapjack::Data::UnscheduledMaintenance',
+        :key => :start_time, :inverse_of => :check
+      has_sorted_set :unscheduled_maintenances_by_end,
+        :class_name => 'Flapjack::Data::UnscheduledMaintenance',
+        :key => :end_time, :inverse_of => :check
 
       # the following associations are used internally, for the notification
       # and alert queue inter-pikelet workflow
-      has_many :notifications, :class_name => 'Flapjack::Data::Notification', :inverse_of => :check
-      has_and_belongs_to_many :alerting_media, :class_name => 'Flapjack::Data::Medium', :inverse_of => :alerting_checks
-      has_many :alerts, :class_name => 'Flapjack::Data::Alert', :inverse_of => :check
+
+      has_and_belongs_to_many :alerting_media,
+        :class_name => 'Flapjack::Data::Medium',
+        :inverse_of => :alerting_checks
+      has_many :alerts, :class_name => 'Flapjack::Data::Alert',
+        :inverse_of => :check
+
+      # may replace, or work alongside 'alerting_media'
+      has_and_belongs_to_many :paths, :class_name => 'Flapjack::Data::Path',
+        :inverse_of => :checks
 
       validates :name, :presence => true
-      validates :state,
-        :inclusion => {:in => Flapjack::Data::CheckState.all_states, :allow_blank => true }
 
-      validates :initial_failure_delay, :allow_blank => true,
+      validates :initial_failure_delay, :allow_nil => true,
         :numericality => {:greater_than => 0, :only_integer => true}
 
-      validates :repeat_failure_delay, :allow_blank => true,
+      validates :repeat_failure_delay, :allow_nil => true,
         :numericality => {:greater_than => 0, :only_integer => true}
 
       before_validation :create_ack_hash
       validates :ack_hash, :presence => true
 
       validates_with Flapjack::Data::Validators::IdValidator
-
-      around_create :handle_state_change_and_enabled
-      around_update :handle_state_change_and_enabled
 
       attr_accessor :count
 
@@ -94,34 +100,12 @@ module Flapjack
         @perfdata ||= JSON.parse(self.perfdata_json)
       end
 
-      # example perfdata: time=0.486630s;;;0.000000 size=909B;;;0
-      def perfdata=(data)
-        if data.nil?
-          self.perfdata_json = nil
-          return
-        end
-
-        data = data.strip
-        if data.length == 0
-          self.perfdata_json = nil
-          return
-        end
-        # Could maybe be replaced by a fancy regex
-        @perfdata = data.split(' ').inject([]) do |item|
-          parts = item.split('=')
-          memo << {"key"   => parts[0].to_s,
-                   "value" => parts[1].nil? ? '' : parts[1].split(';')[0].to_s}
-          memo
-        end
-        self.perfdata_json = @perfdata.nil? ? nil : Flapjack.dump_json(@perfdata)
-      end
-
       def self.jsonapi_attributes
         [:name, :initial_failure_delay, :repeat_failure_delay, :enabled]
       end
 
       def self.jsonapi_singular_associations
-        []
+        [:state]
       end
 
       def self.jsonapi_multiple_associations
@@ -168,7 +152,9 @@ module Flapjack
         skeleton = ages.inject({}) {|memo, age| memo[age] = [] ; memo }
         age_ranges = ages.reverse.each_cons(2)
         results_with_times = current_checks.inject(skeleton) do |memo, check|
-          check_age = start_time.to_i - check.last_update
+          check_state = check.states.last
+          next memo if check_state.nil?
+          check_age = start_time.to_i - check_state.timestamp
           check_age = 0 unless check_age > 0
           if check_age >= ages.last
             memo[ages.last] << "#{check.name}"
@@ -205,35 +191,6 @@ module Flapjack
 
       def in_unscheduled_maintenance?
         !unscheduled_maintenance_ids_at(Time.now).empty?
-      end
-
-      def handle_state_change_and_enabled
-        if self.changed.include?('last_update')
-          self.enabled = true
-        end
-
-        yield
-
-        # TODO validation for: if state has changed, last_update must have changed
-        return unless self.changed.include?('last_update') && self.changed.include?('state')
-
-        # clear any alerting media if the check is OK
-        if Flapjack::Data::CheckState.ok_states.include?(self.state)
-          self.class.lock(Flapjack::Data::Medium) do
-            self.alerting_media.each do |medium|
-              self.alerting_media.delete(medium)
-            end
-          end
-        end
-
-        check_state = Flapjack::Data::CheckState.new(:state => self.state,
-          :timestamp => self.last_update,
-          :summary => self.summary,
-          :details => self.details,
-          :count => self.count)
-
-        check_state.save
-        self.states << check_state
       end
 
       def add_scheduled_maintenance(sched_maint)
@@ -297,8 +254,11 @@ module Flapjack
 
         self.unscheduled_maintenances_by_start << unsched_maint
         self.unscheduled_maintenances_by_end << unsched_maint
-        self.last_update = current_time.to_i # ack is treated as changing state in this case
+        # self.last_update = current_time.to_i # ack is treated as changing condition in this case
         self.save
+
+        # TODO add an ack action to the event state directly, uless this is the
+        # result of one
 
         self.class.lock(Flapjack::Data::Medium) do
           self.alerting_media.each do |medium|
@@ -311,38 +271,12 @@ module Flapjack
         return unless unsched_maint = unscheduled_maintenance_at(Time.now)
         # need to remove it from the sorted_set that uses the end_time as a key,
         # change and re-add -- see https://github.com/ali-graham/sandstorm/issues/1
-        # TODO should this be in a multi/exec block?
+        # TODO should this be in a Sandstorm lock?
         self.unscheduled_maintenances_by_end.delete(unsched_maint)
         unsched_maint.end_time = end_time
         unsched_maint.save
         self.unscheduled_maintenances_by_end.add(unsched_maint)
       end
-
-      def last_notification
-        events = [self.unscheduled_maintenances_by_start.intersect(:notified => true).last,
-                  self.states.intersect(:notified => true).last].compact
-
-        case events.size
-        when 2
-          events.max_by(&:last_notification_count)
-        when 1
-          events.first
-        else
-          nil
-        end
-      end
-
-      def max_notified_severity_of_current_failure
-        last_recovery = self.states.intersect(:notified => true, :state => 'ok').last
-        last_recovery_time = last_recovery ? last_recovery.timestamp.to_i : 0
-
-        states_since_last_recovery =
-          self.states.intersect_range(last_recovery_time, nil, :by_score => true).
-            collect(&:state).uniq
-
-        ['critical', 'warning', 'unknown'].detect {|st| states_since_last_recovery.include?(st) }
-      end
-
 
       # candidate rules are all rules for which
       #   (rule.tags.ids - check.tags.ids).empty?
@@ -354,7 +288,7 @@ module Flapjack
       # deliberately configured.
 
       # returns hash with check_id => [rules_ids]
-      def self.rules_for(*check_ids)
+      def self.rule_ids_for(*check_ids)
         generic_rules_ids = Flapjack::Data::Rule.intersect(:is_specific => false).ids
 
         tag_ids_by_check_id = Flapjack::Data::Check.intersect(:id => check_ids).
@@ -375,95 +309,62 @@ module Flapjack
         end
       end
 
-      # returns hash with contact_id => [route_ids]
-      def routes_for(opts = {})
+      # returns hash with contact_id => [rule_ids]
+      def rule_ids_by_contact_id(opts = {})
         severity = opts[:severity]
         logger   = opts[:logger]
 
-        rules_ids_by_check_id = Flapjack::Data::Check.rules_for(*self.id)
+        rule_ids_by_check_id = Flapjack::Data::Check.rule_ids_for(*self.id)
 
-        rules_ids = rules_ids_by_check_id[self.id]
+        rule_ids = rule_ids_by_check_id[self.id]
 
-        return [] if rules_ids.empty?
+        return [] if rule_ids.empty?
 
-        rule_route_ids = Flapjack::Data::Rule.intersect(:id => rules_ids).
-          associated_ids_for(:routes)
+        unless severity.nil?
+          state_ids_by_rule_id = Flapjack::Data::Rule.intersect(:id => rule_ids).
+            associated_ids_for(:states)
 
-        return [] if rule_route_ids.empty?
-
-        # unrouted rules should be dropped
-        rule_route_ids.delete_if {|nr_id, route_ids| route_ids.empty? }
-        return [] if rule_route_ids.empty?
-
-        route_ids_for_all_states = Set.new(rule_route_ids.values).flatten
-
-        # TODO sandstorm should accept a set as well as an array in intersect
-        active_route_ids = if severity.nil?
-          Flapjack::Data::Route.
-            intersect(:id => route_ids_for_all_states).ids
-        else
-          Flapjack::Data::Route.
-            intersect(:id => route_ids_for_all_states, :state => [nil, severity]).ids
+          rule_ids.select! do |rule_id|
+            state_ids_by_rule_id[rule_id].include?(severity)
+          end
         end
 
-        logger.info "Matching routes: #{active_route_ids.size}"
+        logger.info "Matching rules: #{rule_ids.size}"
+        return [] if rule_ids.empty?
 
-        return [] if active_route_ids.empty?
+        # TODO could maybe also eliminate rules with no media here?
 
-        # if more than one route exists for a rule & state, media will be unioned together
-        # (may happen with, e.g. overlapping time restrictions, multiple matching rules, etc.)
-
-        # TODO is it worth doing a shortcut check here -- if no media for routes, return [] ?
-
-        # TODO possibly invert the returned data from associated_ids_for belongs_to?
-        # we're always doing it on this side anyway
-        rule_ids_by_route_id = Flapjack::Data::Route.intersect(:id => active_route_ids).
-          associated_ids_for(:rule)
-
-        unified_rule_ids = Set.new(rule_ids_by_route_id.values).flatten
-
-        contact_ids_by_rule_id = Flapjack::Data::Rule.intersect(:id => unified_rule_ids).
-          associated_ids_for(:contact)
-
-        rule_ids_by_route_id.inject({}) do |memo, (route_id, rule_id)|
-          memo[contact_ids_by_rule_id[rule_id]] ||= []
-          memo[contact_ids_by_rule_id[rule_id]] << route_id
-          memo
-        end
+        Flapjack::Data::Rule.intersect(:id => rule_ids).
+          associated_ids_for(:contact, :inversed => true)
       end
 
       def self.pagerduty_credentials_for(check_ids)
         rule_ids_by_check_id = Flapjack::Data::Check.rules_for(check_ids)
 
-        route_ids_by_media_id = Flapjack::Data::Medium.
-          intersect(:transport => 'pagerduty').associated_ids_for(:routes)
+        rule_ids_by_media_id = Flapjack::Data::Medium.
+          intersect(:transport => 'pagerduty').associated_ids_for(:rules)
 
-        return nil if route_ids_by_media_id.empty? ||
-          route_ids_by_media_id.values.all? {|r| r.empty? }
+        return nil if rule_ids_by_media_id.empty? ||
+          rule_ids_by_media_id.values.all? {|r| r.empty? }
 
-        route_ids = Set.new(route_ids_by_media_id.values).flatten
+        rule_ids = Set.new(rule_ids_by_media_id.values).flatten
 
-        media_ids_by_route_id = Flapjack::Data::Route.
-          intersect(:id => route_ids).associated_ids_for(:media)
+        media_ids_by_rule_id = Flapjack::Data::Rule.
+          intersect(:id => rule_ids).associated_ids_for(:media)
 
-        route_ids_by_rule_id = Flapjack::Data::Route.intersect(:id => route_ids)
-          .associated_ids_for(:rule, :inversed => true)
-
-        pagerduty_objs_by_id = Flapjack::Data::Medium.find_by_ids!(route_ids_by_media_id.keys)
+        pagerduty_objs_by_id = Flapjack::Data::Medium.find_by_ids!(rule_ids_by_media_id.keys)
 
         Flapjack::Data::Check.intersect(:id => check_ids).all.each_with_object({}) do |check, memo|
           memo[check] = rule_ids_by_check_id[check.id].each_with_object([]) do |rule_id, m|
-            m[rule_id] = route_ids_by_rule_id[rule_id].each_with_object([]) do |route_id, mm|
-              mm += media_ids_by_route_id[route_id].collect do |media_id|
-                medium = pagerduty_objs_by_id[media_id]
-                ud = medium.userdata || {}
-                {
-                  'service_key' => medium.address,
-                  'subdomain'   => ud['subdomain'],
-                  'username'    => ud['username'],
-                  'password'    => ud['password'],
-                }
-              end
+            m += media_ids_by_rule_id[rule_id].collect do |media_id|
+              medium = pagerduty_objs_by_id[media_id]
+              ud = medium.userdata || {}
+              {
+                'service_key' => medium.address,
+                'subdomain'   => ud['subdomain'],
+                'username'    => ud['username'],
+                'password'    => ud['password'],
+              }
             end
           end
         end

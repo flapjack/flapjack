@@ -12,15 +12,10 @@ describe Flapjack::Data::Rule, :redis => true do
     wd
   }
 
-  let(:rule_data) {
-    {:time_restrictions  => [ weekdays_8_18 ],
-    }
-  }
-
   let(:timezone) { ActiveSupport::TimeZone.new("Europe/Moscow") }
 
   it "converts time restriction data to an IceCube schedule" do
-    sched = Flapjack::Data::Route.
+    sched = Flapjack::Data::Rule.
               time_restriction_to_icecube_schedule(weekdays_8_18, timezone)
     expect(sched).not_to be_nil
   end

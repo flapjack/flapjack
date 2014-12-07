@@ -453,8 +453,6 @@ module Flapjack
 
             fragment_ids_by_parent_id = ids_cache[ic_key]
 
-            # p ids_cache
-
             # to_many associations have array values, to_one associations have string ids
             fragment_ids = fragment_ids_by_parent_id.values.inject([]) do |memo, v|
               memo += (v.is_a?(Array) ? v : [v])

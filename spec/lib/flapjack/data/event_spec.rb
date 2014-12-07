@@ -9,8 +9,7 @@ describe Flapjack::Data::Event do
 
   let!(:time) { Time.now}
 
-  let(:event_data) { {'type'     => 'service',
-                      'state'    => 'critical',
+  let(:event_data) { {'state'    => 'critical',
                       'entity'   => entity_name,
                       'check'    => check_name,
                       'time'     => time.to_i,
@@ -71,16 +70,10 @@ describe Flapjack::Data::Event do
       expect(event.duration).to eq(event_data['duration'])
       expect(event.time).to eq(event_data['time'])
       expect(event.id).to eq('xyz-example.com:ping')
-      expect(event.type).to eq('service')
-
-      expect(event).to be_a_service
-      expect(event).to be_a_service
-      expect(event).not_to be_an_acknowledgement
-      expect(event).not_to be_a_test_notifications
     end
   end
 
-  ['type', 'state', 'entity', 'check', 'summary'].each do |required_key|
+  ['state', 'entity', 'check', 'summary'].each do |required_key|
     it "rejects an event with missing '#{required_key}' key" do
       bad_event_data = event_data.clone
       bad_event_data.delete(required_key)

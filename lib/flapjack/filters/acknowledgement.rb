@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'flapjack/data/check_state'
 require 'flapjack/data/unscheduled_maintenance'
 
 require 'flapjack/filters/base'
@@ -15,24 +14,21 @@ module Flapjack
       include Base
 
       def block?(event, check, opts = {})
-        timestamp = Time.now.to_i
+        old_state = opts[:old_state]
+        new_state = opts[:new_state]
+        timestamp = opts[:timestamp]
 
         label = 'Filter: Acknowledgement:'
 
-        return false unless event.type == 'action'
-
-        unless event.acknowledgement?
-          @logger.debug("#{label} pass (not an ack)")
+        unless 'acknowledgement'.eql?(new_state.action)
+          @logger.debug { "#{label} pass (not an ack)" }
           return false
         end
 
-        if check.nil?
-          @logger.error "#{label} unknown check for event '#{event.id}'"
-          return false
-        end
-
-        unless Flapjack::Data::CheckState.failing_states.include?(check.state)
-          @logger.debug("#{label} blocking because check '#{check.name}' is not failing")
+        if previous_state.healthy?
+          @logger.debug {
+            "#{label} blocking because check '#{check.name}' is not failing"
+          }
           return true
         end
 
@@ -44,7 +40,10 @@ module Flapjack
 
         check.set_unscheduled_maintenance(unsched_maint)
 
-        @logger.debug("#{label} pass (unscheduled maintenance created for #{event.id}, duration: #{end_time - timestamp})")
+        @logger.debug{
+          "#{label} pass (unscheduled maintenance created for #{check.name}, " \
+          " duration: #{end_time - timestamp})"
+        }
         false
       end
     end

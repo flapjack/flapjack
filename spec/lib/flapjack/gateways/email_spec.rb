@@ -41,12 +41,12 @@ describe Flapjack::Gateways::Email, :logger => true do
 
     expect(alert).to receive(:check).exactly(3).times.and_return(check)
     expect(alert).to receive(:state_title_case).exactly(3).times.and_return('OK')
-    expect(alert).to receive(:state_duration).twice.and_return(2)
+    expect(alert).to receive(:condition_duration).twice.and_return(2)
     expect(alert).to receive(:summary).twice.and_return('smile')
     expect(alert).to receive(:details).twice.and_return('')
     expect(alert).to receive(:time).twice.and_return(Time.now)
 
-    expect(alert).to receive(:last_state).twice.and_return( double(Flapjack::Data::CheckState) )
+    expect(alert).to receive(:last_state).twice.and_return( double(Flapjack::Data::State) )
     expect(alert).to receive(:last_state_title_case).twice.and_return('Critical')
     expect(alert).to receive(:last_summary).twice.and_return('frown')
 
@@ -92,12 +92,12 @@ describe Flapjack::Gateways::Email, :logger => true do
 
     expect(alert).to receive(:check).exactly(3).times.and_return(check)
     expect(alert).to receive(:state_title_case).exactly(3).times.and_return('OK')
-    expect(alert).to receive(:state_duration).twice.and_return(2)
+    expect(alert).to receive(:condition_duration).twice.and_return(2)
     expect(alert).to receive(:summary).twice.and_return('smile')
     expect(alert).to receive(:details).twice.and_return('')
     expect(alert).to receive(:time).twice.and_return(Time.now)
 
-    expect(alert).to receive(:last_state).twice.and_return( double(Flapjack::Data::CheckState) )
+    expect(alert).to receive(:last_state).twice.and_return( double(Flapjack::Data::State) )
     expect(alert).to receive(:last_state_title_case).twice.and_return('Critical')
     expect(alert).to receive(:last_summary).twice.and_return('frown')
 
@@ -145,12 +145,12 @@ describe Flapjack::Gateways::Email, :logger => true do
 
     expect(alert).to receive(:check).exactly(3).times.and_return(check)
     expect(alert).to receive(:state_title_case).exactly(3).times.and_return('OK')
-    expect(alert).to receive(:state_duration).twice.and_return(2)
+    expect(alert).to receive(:condition_duration).twice.and_return(2)
     expect(alert).to receive(:summary).twice.and_return('smile')
     expect(alert).to receive(:details).twice.and_return('')
     expect(alert).to receive(:time).twice.and_return(Time.now)
 
-    expect(alert).to receive(:last_state).twice.and_return( double(Flapjack::Data::CheckState) )
+    expect(alert).to receive(:last_state).twice.and_return( double(Flapjack::Data::State) )
     expect(alert).to receive(:last_state_title_case).twice.and_return('Critical')
     expect(alert).to receive(:last_summary).twice.and_return('frown')
 
@@ -198,12 +198,12 @@ describe Flapjack::Gateways::Email, :logger => true do
 
     expect(alert).to receive(:check).exactly(3).times.and_return(check)
     expect(alert).to receive(:state_title_case).exactly(3).times.and_return('OK')
-    expect(alert).to receive(:state_duration).twice.and_return(2)
+    expect(alert).to receive(:condition_duration).twice.and_return(2)
     expect(alert).to receive(:summary).twice.and_return('smile')
     expect(alert).to receive(:details).twice.and_return('')
     expect(alert).to receive(:time).twice.and_return(Time.now)
 
-    expect(alert).to receive(:last_state).twice.and_return( double(Flapjack::Data::CheckState) )
+    expect(alert).to receive(:last_state).twice.and_return( double(Flapjack::Data::State) )
     expect(alert).to receive(:last_state_title_case).twice.and_return('Critical')
     expect(alert).to receive(:last_summary).twice.and_return('frown')
 

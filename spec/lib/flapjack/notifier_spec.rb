@@ -50,7 +50,7 @@ describe Flapjack::Notifier, :logger => true do
 
   # it "generates messages for contacts" do
   #   notification = Flapjack::Data::Notification.new(
-  #     :state_duration    => 16,
+  #     :condition_duration    => 16,
   #     :severity          => 'critical',
   #     :type              => 'problem',
   #     :time              => Time.now,
@@ -98,12 +98,12 @@ describe Flapjack::Notifier, :logger => true do
 
   #   expect(Flapjack::Data::Alert).to receive(:new).
   #     with(:rollup => nil, :acknowledgement_duration => nil,
-  #       :state => "critical", :state_duration => 16,
+  #       :state => "critical", :condition_duration => 16,
   #       :notification_type => 'problem').and_return(alert_1)
 
   #   expect(Flapjack::Data::Alert).to receive(:new).
   #     with(:rollup => nil, :acknowledgement_duration => nil,
-  #       :state => "critical", :state_duration => 16,
+  #       :state => "critical", :condition_duration => 16,
   #       :notification_type => 'problem').and_return(alert_2)
 
   #   medium_alerts_1 = double('medium_alerts_1')

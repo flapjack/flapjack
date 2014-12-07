@@ -10,21 +10,21 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
   let(:time) { Time.now.to_i }
 
   let(:states) {
-    [double(Flapjack::Data::CheckState, :state => 'critical',
+    [double(Flapjack::Data::State, :condition => 'critical',
             :timestamp => time - (4 * 60 * 60), :summary => '', :details => ''),
-     double(Flapjack::Data::CheckState, :state => 'ok',
+     double(Flapjack::Data::State, :condition => 'ok',
             :timestamp => time - (4 * 60 * 60) + (5 * 60), :summary => '', :details => ''),
-     double(Flapjack::Data::CheckState, :state => 'critical',
+     double(Flapjack::Data::State, :condition => 'critical',
             :timestamp => time - (3 * 60 * 60), :summary => '', :details => ''),
-     double(Flapjack::Data::CheckState, :state => 'ok',
+     double(Flapjack::Data::State, :condition => 'ok',
             :timestamp => time - (3 * 60 * 60) + (10 * 60), :summary => '', :details => ''),
-     double(Flapjack::Data::CheckState, :state => 'critical',
+     double(Flapjack::Data::State, :condition => 'critical',
             :timestamp => time - (2 * 60 * 60), :summary => '', :details => ''),
-     double(Flapjack::Data::CheckState, :state => 'ok',
+     double(Flapjack::Data::State, :condition => 'ok',
             :timestamp => time - (2 * 60 * 60) + (15 * 60), :summary => '', :details => ''),
-     double(Flapjack::Data::CheckState, :state => 'critical',
+     double(Flapjack::Data::State, :condition => 'critical',
             :timestamp => time - (1 * 60 * 60), :summary => '', :details => ''),
-     double(Flapjack::Data::CheckState, :state => 'ok',
+     double(Flapjack::Data::State, :condition => 'ok',
             :timestamp => time - (1 * 60 * 60) + (20 * 60), :summary => '', :details => '')
     ]
   }
@@ -112,10 +112,10 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
   end
 
   it "returns a consolidated list of outage hashes with repeated state events" do
-    states[1] = double(Flapjack::Data::CheckState, :state => 'critical',
+    states[1] = double(Flapjack::Data::State, :condition => 'critical',
                        :timestamp => time - (4 * 60 * 60) + (5 * 60),
                        :summary => '', :details => '')
-    states[2] = double(Flapjack::Data::CheckState, :state => 'ok',
+    states[2] = double(Flapjack::Data::State, :condition => 'ok',
                        :timestamp => time - (3 * 60 * 60),
                        :summary => '', :details => '')
 
@@ -138,7 +138,7 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
 
   it "returns a (small) outage hash for a single state change" do
     all_states = double('all_states',
-      :all => [double(Flapjack::Data::CheckState, :state => 'critical',
+      :all => [double(Flapjack::Data::State, :condition => 'critical',
                       :timestamp => time - (4 * 60 * 60) ,
                       :summary => '', :details => '')])
 
@@ -269,13 +269,13 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
   end
 
   it "returns downtime and handles an unfinished problem state" do
-    current = [double(Flapjack::Data::CheckState, :state => 'critical',
+    current = [double(Flapjack::Data::State, :condition => 'critical',
                       :timestamp => time - (4 * 60 * 60),
                       :summary => '', :details => ''),
-               double(Flapjack::Data::CheckState, :state => 'ok',
+               double(Flapjack::Data::State, :condition => 'ok',
                       :timestamp => time - (4 * 60 * 60) + (5 * 60),
                       :summary => '', :details => ''),
-               double(Flapjack::Data::CheckState, :state => 'critical',
+               double(Flapjack::Data::State, :condition => 'critical',
                       :timestamp => time - (3 * 60 * 60),
                       :summary => '', :details => '')]
 

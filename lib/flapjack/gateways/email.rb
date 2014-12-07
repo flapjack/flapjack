@@ -13,6 +13,7 @@ require 'flapjack/exceptions'
 
 require 'flapjack/data/alert'
 require 'flapjack/data/check'
+require 'flapjack/data/contact'
 
 module Flapjack
   module Gateways

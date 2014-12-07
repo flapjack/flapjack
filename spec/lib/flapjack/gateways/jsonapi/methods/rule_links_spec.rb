@@ -8,10 +8,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   let(:rule)    { double(Flapjack::Data::Rule, :id => rule_data[:id]) }
   let(:contact) { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
   let(:tag)     { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
-  let(:route)   { double(Flapjack::Data::Route, :id => route_data[:id]) }
+  let(:medium)  { double(Flapjack::Data::Medium, :id => sms_data[:id]) }
 
-  let(:rule_tags)   { double('rule_tags') }
-  let(:rule_routes) { double('rule_routes') }
+  let(:rule_tags)  { double('rule_tags') }
+  let(:rule_media) { double('rule_media') }
 
   it 'sets a contact for a rule' do
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
@@ -34,7 +34,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
 
     get "/rules/#{rule.id}/links/contact"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:contact => contact.id))
+    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => contact.id))
   end
 
   it 'changes the contact for a rule' do
@@ -60,55 +60,55 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(last_response.status).to eq(204)
   end
 
-  it 'adds a route to a rule' do
+  it 'adds a medium to a rule' do
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
-    expect(Flapjack::Data::Route).to receive(:find_by_ids!).with(route.id).
-      and_return([route])
+    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
+      and_return([medium])
 
-    expect(rule_routes).to receive(:add).with(route)
-    expect(rule).to receive(:routes).and_return(rule_routes)
+    expect(rule_media).to receive(:add).with(medium)
+    expect(rule).to receive(:media).and_return(rule_media)
 
-    post "/rules/#{rule.id}/links/routes", Flapjack.dump_json(:routes => route.id), jsonapi_post_env
+    post "/rules/#{rule.id}/links/media", Flapjack.dump_json(:media => medium.id), jsonapi_post_env
     expect(last_response.status).to eq(204)
   end
 
-  it 'lists routes for a rule' do
-    expect(rule_routes).to receive(:ids).and_return([route.id])
-    expect(rule).to receive(:routes).and_return(rule_routes)
+  it 'lists media for a rule' do
+    expect(rule_media).to receive(:ids).and_return([medium.id])
+    expect(rule).to receive(:media).and_return(rule_media)
 
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
 
-    get "/rules/#{rule.id}/links/routes"
+    get "/rules/#{rule.id}/links/media"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:routes => [route.id]))
+    expect(last_response.body).to eq(Flapjack.dump_json(:media => [medium.id]))
   end
 
-  it 'updates routes for a rule' do
+  it 'updates media for a rule' do
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
-    expect(Flapjack::Data::Route).to receive(:find_by_ids!).with(route.id).
-      and_return([route])
+    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
+      and_return([medium])
 
-    expect(rule_routes).to receive(:ids).and_return([])
-    expect(rule_routes).to receive(:add).with(route)
-    expect(rule).to receive(:routes).twice.and_return(rule_routes)
+    expect(rule_media).to receive(:ids).and_return([])
+    expect(rule_media).to receive(:add).with(medium)
+    expect(rule).to receive(:media).twice.and_return(rule_media)
 
-    put "/rules/#{rule.id}/links/routes", Flapjack.dump_json(:routes => [route.id]), jsonapi_put_env
+    put "/rules/#{rule.id}/links/media", Flapjack.dump_json(:media => [medium.id]), jsonapi_put_env
     expect(last_response.status).to eq(204)
   end
 
-  it 'deletes a route from a rule' do
+  it 'deletes a medium from a rule' do
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
 
-    expect(rule_routes).to receive(:find_by_ids!).with(route.id).
-      and_return([route])
-    expect(rule_routes).to receive(:delete).with(route)
-    expect(rule).to receive(:routes).and_return(rule_routes)
+    expect(rule_media).to receive(:find_by_ids!).with(medium.id).
+      and_return([medium])
+    expect(rule_media).to receive(:delete).with(medium)
+    expect(rule).to receive(:media).and_return(rule_media)
 
-    delete "/rules/#{rule.id}/links/routes/#{route.id}"
+    delete "/rules/#{rule.id}/links/media/#{medium.id}"
     expect(last_response.status).to eq(204)
   end
 

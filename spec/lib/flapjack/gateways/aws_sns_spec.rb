@@ -29,7 +29,7 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
                    'event_id'           => 'example.com:ping',
                    'id'                 => '123456789',
                    'duration'           => 55,
-                   'state_duration'     => 23
+                   'condition_duration'     => 23
                   }
                 }
 

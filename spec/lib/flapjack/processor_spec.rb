@@ -96,7 +96,7 @@ describe Flapjack::Processor, :logger => true do
     expect(redis).to receive(:multi).and_yield(multi)
     expect(multi).to receive(:lrem).with(/^events_archive:/, 1, event_json)
     expect(multi).to receive(:lpush).with(/^events_rejected:/, event_json)
-    expect(redis).to receive(:expire).with(/^events_archive:/, kind_of(Integer))
+    expect(multi).to receive(:expire).with(/^events_archive:/, kind_of(Integer))
 
     expect(Flapjack::Data::Event).to receive(:parse_and_validate).
       with(event_json, :logger => @logger).and_return(nil)

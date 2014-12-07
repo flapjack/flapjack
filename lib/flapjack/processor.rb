@@ -10,7 +10,6 @@ require 'flapjack/filters/scheduled_maintenance'
 require 'flapjack/filters/unscheduled_maintenance'
 require 'flapjack/filters/delays'
 
-require 'flapjack/data/action'
 require 'flapjack/data/check'
 require 'flapjack/data/notification'
 require 'flapjack/data/event'
@@ -147,11 +146,10 @@ module Flapjack
             multi.hincrby("event_counters:#{@instance_id}", 'all', 1)
             multi.hincrby('event_counters', 'invalid', 1)
             multi.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+            if archive
+              multi.expire(archive, max_age)
+            end
           end
-          if archive
-            Flapjack.redis.expire(archive, max_age)
-          end
-
         else
           Flapjack.redis.expire(archive, max_age) if archive
           yield Flapjack::Data::Event.new(parsed) if block_given?
@@ -164,184 +162,207 @@ module Flapjack
     end
 
     def process_event(event)
-      pending = Flapjack::Data::Event.pending_count(@queue)
-      @logger.debug("#{pending} events waiting on the queue")
-      @logger.debug("Raw event received: #{event.inspect}")
-
-      event_str = "#{event.id}, #{event.type}, #{event.state}, #{event.summary}"
-      event_str << ", #{Time.at(event.time).to_s}" if event.time
-      @logger.debug("Processing Event: #{event_str}")
+      @logger.debug {
+        pending = Flapjack::Data::Event.pending_count(@queue)
+        "#{pending} events waiting on the queue"
+      }
+      @logger.debug { "Raw event received: #{event.inspect}" }
+      @logger.debug { "Processing Event: #{event.dump}" }
 
       timestamp = Time.now.to_i
 
-      check = Flapjack::Data::Check.intersect(:name => event.id).all.first ||
-        Flapjack::Data::Check.new(:name => event.id)
-
-      should_notify, previous_state, action = update_keys(event, check, timestamp)
-
-      # save before adding, as the check will not have been saved if it was
-      # created above, and associations require the check to have an id
-      check.save
-
-      check.actions << action unless action.nil?
-
-      if @ncsm_sched_maint
-        @ncsm_sched_maint.save
-        check.add_scheduled_maintenance(@ncsm_sched_maint)
-        @ncsm_sched_maint = nil
+      event_condition = case event.state
+      when 'acknowledgement', 'test_notifications'
+        nil
+      else
+        cond = Flapjack::Data::Condition.find_by_id(event.state)
+        if cond.nil?
+          @logger.error { "Invalid event received: #{event.inspect}" }
+          Flapjack.redis.multi do |multi|
+            multi.hincrby('event_counters', 'invalid', 1)
+            multi.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+          end
+          return
+        end
+        cond
       end
 
-      unless should_notify
-        @logger.debug("Not generating notification for event #{event.id} because filtering was skipped")
+      old_state = nil
+      new_state = nil
+
+      Flapjack::Data::Check.lock(Flapjack::Data::Condition,
+        Flapjack::Data::State, Flapjack::Data::ScheduledMaintenance) do
+
+        # TODO rethink name / event_id mapping, current behaviour is quick
+        # hack for Flapjack v1 equivalence
+        check = Flapjack::Data::Check.intersect(:name => event.id).all.first ||
+          Flapjack::Data::Check.new(:name => event.id)
+
+        # result will be nil if check has been created via API but has no events
+        old_state = check.id.nil? ? nil : check.current_state
+        new_state = update_check(check, old_state, event,
+                                 event_condition, timestamp)
+      end
+
+      if !event_condition.nil? && event_condition.healthy && old_state.nil?
+        # If the service event's state is ok and there was no previous state, don't alert.
+        # This stops new checks from alerting as "recovery" after they have been added.
+        @logger.debug {
+          "Not generating notification for event #{event.id} because " \
+          "filtering was skipped"
+        }
         return
       end
 
       filter_opts = {
         :initial_failure_delay => @initial_failure_delay,
         :repeat_failure_delay => @repeat_failure_delay,
-        :previous_state => previous_state
+        :old => old_state, :new_state => new_state, :timestamp => timestamp
       }
 
-      if blocker = @filters.find {|filter| filter.block?(event, check, filter_opts) }
-        @logger.debug("Not generating notification for event #{event.id} because this filter blocked: #{blocker.name}")
+      blocker = @filters.find {|f| f.block?(event, check, filter_opts) }
+
+      unless blocker.nil?
+        @logger.debug { "Not generating notification for event #{event.id} " \
+                        "because this filter blocked: #{blocker.name}" }
         return
       end
 
-      # redis_record rework -- up to here
-      @logger.info("Generating notification for event #{event_str}")
-      generate_notification(event, check, timestamp, previous_state)
+      @logger.info { "Generating notification for event #{event.dump}" }
+      generate_notification(check, old_state, new_state, event, event_condition)
     end
 
-    def update_keys(event, check, timestamp)
+    def update_check(check, old_state, event, event_condition, timestamp)
       Flapjack.redis.multi do |multi|
         touch_keys(multi)
       end
 
-      result = true
-      previous_state = nil
-      action = nil
-
       event.counter = Flapjack.redis.hincrby('event_counters', 'all', 1)
       Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
 
-      # FIXME: validate that the event is sane before we ever get here
-      # FIXME: create an event if there is dodgy data
+      new_state         = Flapjack::Data::State.new(:timestamp => timestamp)
+      ncsm_sched_maint  = nil
 
-      case event.type
-      # Service events represent current state of checks on monitored systems
-      when 'service'
-        Flapjack.redis.multi do |multi|
-          if Flapjack::Data::CheckState.ok_states.include?( event.state )
-            multi.hincrby('event_counters', 'ok', 1)
-            multi.hincrby("event_counters:#{@instance_id}", 'ok', 1)
-          elsif Flapjack::Data::CheckState.failing_states.include?( event.state )
-            multi.hincrby('event_counters', 'failure', 1)
-            multi.hincrby("event_counters:#{@instance_id}", 'failure', 1)
-            event.id_hash = check.ack_hash
-          else
-            multi.hincrby('event_counters', 'invalid', 1)
-            multi.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
-            @logger.error("Invalid event received: #{event.inspect}")
-          end
-        end
-
-        # not available from an unsaved check
-        previous_state = check.id.nil? ? nil : check.states.last
-
-        if previous_state.nil?
-          @logger.info("No previous state for event #{event.id}")
-
-          if (@ncsm_duration > 0) && ((check.tags.all.map(&:name) || []) & @ncsm_ignore_tags).empty?
-            @logger.info("Setting scheduled maintenance for #{time_period_in_words(@ncsm_duration)}")
-
-            @ncsm_sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => timestamp,
-              :end_time => timestamp + @ncsm_duration,
-              :summary => 'Automatically created for new check')
-          end
-
-          # If the service event's state is ok and there was no previous state, don't alert.
-          # This stops new checks from alerting as "recovery" after they have been added.
-          if Flapjack::Data::CheckState.ok_states.include?( event.state )
-            @logger.debug("setting skip_filters to true because there was no previous state and event is ok")
-            result = false
-          end
-        end
-
-        # this creates a new entry in check.states, through the magic
-        # of callbacks
-        check.state       = event.state
-        check.summary     = event.summary
-        check.details     = event.details
-        check.count       = event.counter
-        check.perfdata    = event.perfdata
-        check.last_update = timestamp
-
-      # Action events represent human or automated interaction with Flapjack
-      when 'action'
-        action = Flapjack::Data::Action.new(:action => event.state,
-          :timestamp => timestamp)
-        action.save
+      if event_condition.nil?
+        # Action events represent human or automated interaction with Flapjack
+        new_state.action            = event.state
+        new_state.condition_changed = false
 
         Flapjack.redis.multi do |multi|
           multi.hincrby('event_counters', 'action', 1)
           multi.hincrby("event_counters:#{@instance_id}", 'action', 1)
         end
       else
+        # Service events represent current state of checks on monitored systems
         Flapjack.redis.multi do |multi|
-          multi.hincrby('event_counters', 'invalid', 1)
-          multi.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+          if event_state.healthy
+            multi.hincrby('event_counters', 'ok', 1)
+            multi.hincrby("event_counters:#{@instance_id}", 'ok', 1)
+          else
+            multi.hincrby('event_counters', 'failure', 1)
+            multi.hincrby("event_counters:#{@instance_id}", 'failure', 1)
+            event.id_hash = check.ack_hash
+          end
         end
-        @logger.error("Invalid event received: #{event.inspect}")
+
+        new_state = Flapjack::Data::State.new(:timestamp => timestamp)
+
+        if old_state.nil?
+          @logger.info { "No previous state for event #{event.id}" }
+
+          if (@ncsm_duration > 0) && !check.id.nil? &&
+            (check.tags.all.map(&:name) & @ncsm_ignore_tags).empty?
+
+            @logger.info { "Setting scheduled maintenance for #{time_period_in_words(@ncsm_duration)}" }
+
+            ncsm_sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => timestamp,
+              :end_time => timestamp + @ncsm_duration,
+              :summary => 'Automatically created for new check')
+            ncsm_sched_maint.save
+          end
+
+          new_state.condition_changed = true
+        else
+          new_state.condition_changed = (event_condition.id != old_state.condition.id)
+        end
       end
 
-      [result, previous_state, action]
+      new_state.summary  = event.summary
+      new_state.details  = event.details
+      new_state.perfdata = event.perfdata
+      new_state.count    = event.counter
+      new_state.save
+
+      cond = event_condition || (old_state.nil? ? nil : old_state.condition)
+      new_state.condition = cond unless cond.nil?
+
+      # save before adding, as the check will not have been saved if it was
+      # created above, and associations require the check to have an id
+
+      check.enabled = true unless event_condition.nil?
+      check.save # no-op if not new and not changed
+
+      unless ncsm_sched_maint.nil?
+        check.add_scheduled_maintenance(ncsm_sched_maint)
+      end
+
+      unless new_state.nil?
+        check.history << new_state
+
+        unless event_condition.nil?
+          check.previous_state     = old_state
+          check.condition          = event_condition
+          check.state              = new_state
+        end
+      end
+
+      new_state
     end
 
-    def generate_notification(event, check, timestamp, previous_state)
-      max_notified_severity = check.max_notified_severity_of_current_failure
-
-      current_state = check.states.last
-
-      # TODO should probably look these up by 'timestamp', last may not be safe...
-      case event.type
-      when 'service'
-        if Flapjack::Data::CheckState.failing_states.include?( event.state )
-          check.last_problem_alert = timestamp
-          check.save
-        end
-
-        current_state.notified = true
-        current_state.last_notification_count = event.counter
-        current_state.save
-      when 'action'
-        if event.state == 'acknowledgement'
-          unsched_maint = check.unscheduled_maintenances_by_start.last
-          unsched_maint.notified = true
-          unsched_maint.last_notification_count = event.counter
-          unsched_maint.save
-        end
+    def generate_notification(check, old_state, new_state, event, event_condition)
+      if [nil, 'acknowledgement'].include?(new_state.action)
+        new_state.notified = true
+        # new_state.last_notification_count = event.counter # TODO find & replace for unsched_maint.lnc, .notified
+        new_state.save
       end
 
-      severity = Flapjack::Data::Notification.severity_for_state(event.state,
-                   max_notified_severity)
+      case new_state.action
+      when 'test_notifications'
+        severity = Flapjack::Data::Condition.intersect(:healthy => false).
+          sort(:priority, :desc => true).first
+      when nil
+        if check.condition.healthy
+          check.max_notified_severity = nil
+          severity = event_condition.name # TODO load from id in notifier
+        else
+          msn = check.most_severe_notification
+          msn_cond = msn.condition
+          if msn.nil? || (event_condition.priority > msn_cond.priority)
+            check.most_severe_notification = new_state
+            severity = event_condition.name
+          else
+            severity = msn_cond.name
+          end
+        end
+      end
 
       @logger.debug("Notification is being generated for #{event.id}: " + event.inspect)
 
-      notification = Flapjack::Data::Notification.new(
-        :state_duration => (current_state ? (timestamp - current_state.timestamp.to_i) : nil),
-        :severity       => severity,
-        :type           => event.notification_type,
-        :time           => event.time,
-        :duration       => event.duration,
-      )
+      condition_duration = old_state.nil? ? nil :
+                             (new_state.timestamp - old_state.timestamp)
 
-      notification.save
+      notific = Flapjack::Data::Notification.new(:duration => event.duration,
+        :condition_duration => condition_duration)
+      notific.save
 
-      check.notifications << notification
-      current_state.current_notifications << notification unless current_state.nil?
-      previous_state.previous_notifications << notification unless previous_state.nil?
+      new_state.notifications << notific
 
-      @notifier_queue.push(notification)
+      # severity.notifications << notification
+      # check.notifications << notification
+      # current_state.current_notifications << notification unless current_state.nil?
+      # previous_state.previous_notifications << notification unless previous_state.nil?
+
+      @notifier_queue.push(notific)
     end
 
   end

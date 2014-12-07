@@ -193,30 +193,52 @@ module Flapjack
         halt(404, "Could not find check '#{check_id}'") if @check.nil?
 
         check_stats
-        states = @check.states
 
-        last_change = states.last
-        last_update = @check.last_update
+        last_change = @check.states.intersect(:condition_changed => true).last
+        last_update = @check.states.last
 
-        @check_state            = @check.state
         @check_enabled          = !!@check.enabled
-        @check_last_update      = last_update
         @check_last_change      = last_change ? last_change.timestamp : nil
-        @check_summary          = @check.summary
-        @check_details          = @check.details
-        @check_perfdata         = @check.perfdata
 
-        @last_notifications     = last_notification_data(@check, @current_time)
+        @check_state            = last_update ? last_update.condition : nil
+        @check_last_update      = last_update ? last_update.timestamp : nil
+        @check_summary          = last_update ? last_update.summary   : nil
+        @check_details          = last_update ? last_update.details   : nil
+        @check_perfdata         = last_update ? last_update.perfdata  : nil
+
+        @last_notifications = Flapjack::Data::Condition.all.each_with_object({}) do |cond, memo|
+          notif = @check.states.intersect(:condition => cond.name, :condition_changed => true,
+                                          :notified => true).last
+          next if notif.nil?
+          t = Time.at(notif.timestamp)
+
+          memo[cond.name.to_sym] = {
+            :time => t.to_s,
+            :relative => relative_time_ago(@current_time, t) + " ago",
+            :summary => notif.summary
+          }
+        end
+
+        @last_notifications[:acknowledgement] =
+          @check.states.intersect(:action => 'acknowledgement',
+                                  :notified => true).last
+
+        @last_notifications[:recovery] = @last_notifications.delete(:ok)
 
         @scheduled_maintenances = @check.scheduled_maintenances_by_start.all
-        @acknowledgement_id     = Flapjack::Data::CheckState.failing_states.include?(@check.state) ? @check.ack_hash : nil
+        @acknowledgement_id = if Flapjack::Data::Condition::UNHEALTHY.values.include?(@check_state)
+          @check.ack_hash
+        else
+          nil
+        end
 
         @current_scheduled_maintenance   = @check.scheduled_maintenance_at(@current_time)
         @current_unscheduled_maintenance = @check.unscheduled_maintenance_at(@current_time)
 
-        @contacts               = @check.contacts.all
+        # @contacts               = @check.contacts.all
+        @contacts = []
 
-        @state_changes = states.intersect_range(nil, @current_time.to_i,
+        @state_changes = @check.states.intersect_range(nil, @current_time.to_i,
                            :desc => true, :limit => 20, :by_score => true).all
 
         erb 'check.html'.to_sym
@@ -325,39 +347,49 @@ module Flapjack
 
     private
 
+      # FIXME fails if check has no state
       def check_state(check, time)
-        summary = check.summary
-        summary = summary[0..76] + '...' unless summary.nil? || (summary.length < 81)
-
         latest_problem  = check.states.
-          intersect(:state => Flapjack::Data::CheckState.failing_states, :notified => true).last
+          intersect(:condition => Flapjack::Data::Condition::UNHEALTHY.values,
+                    :condition_changed => true, :notified => true).last
 
         latest_recovery = check.states.
-          intersect(:state => 'ok', :notified => true).last
+          intersect(:condition => Flapjack::Data::Condition::HEALTHY.values,
+                    :condition_changed => true, :notified => true).last
 
         latest_ack      = check.states.
-          intersect(:state => 'acknowledgement', :notified => true).last
+          intersect(:action => 'acknowledgement', :notified => true).last
 
-        latest_notif =
-          {:problem         => (latest_problem  ? latest_problem.timestamp  : nil),
-           :recovery        => (latest_recovery ? latest_recovery.timestamp : nil),
-           :acknowledgement => (latest_ack      ? latest_ack.timestamp      : nil),
-          }.max_by {|n| n[1] || 0}
+        latest_notif = [latest_problem, latest_recovery, latest_ack].
+                         max_by {|n| n.nil? ? 0 : n.timestamp }
 
-        lc = check.states.last
+        lc = check.states.intersect(:condition_changed => true).last
         last_change   = lc ? (ChronicDuration.output(time.to_i - lc.timestamp.to_i,
                                :format => :short, :keep_zero => true, :units => 2) || '0s') : 'never'
 
-        lu = check.last_update
-        last_update   = lu ? (ChronicDuration.output(time.to_i - lu.to_i,
+        lu = check.states.last
+        last_update   = lu ? (ChronicDuration.output(time.to_i - lu.timestamp.to_i,
                                :format => :short, :keep_zero => true, :units => 2) || '0s') : 'never'
 
-        ln = latest_notif[1]
-        last_notified = ln ? (ChronicDuration.output(time.to_i - ln.to_i,
-                               :format => :short, :keep_zero => true, :units => 2) || '0s') + ", #{latest_notif[0]}" : 'never'
+        summary = nil
+        cond    = nil
 
-        [(check.state       || '-'),
-         (summary           || '-'),
+        if latest_notif.nil?
+          last_notified = 'never'
+        else
+          cond = latest_notif.condition
+
+          summary = latest_notif.summary
+          summary = summary[0..76] + '...' unless summary.nil? || (summary.length < 81)
+
+          ln = latest_notif.timestamp
+
+          last_notified = (ChronicDuration.output(time.to_i - ln.to_i,
+                           :format => :short, :keep_zero => true, :units => 2) || '0s')
+        end
+
+        [(cond     || '-'),
+         (summary  || '-'),
          last_change,
          last_update,
          check.in_unscheduled_maintenance?,
@@ -395,27 +427,21 @@ module Flapjack
       end
 
       def failing_checks
-        @failing_checks ||= Flapjack::Data::Check.intersect(:state =>
-                              Flapjack::Data::CheckState.failing_states)
+        return @failing_checks unless @failing_checks.nil?
+
+        state_ids_by_check_id = Flapjack::Data::Check.associated_ids_for(:state)
+
+        failing_check_ids = Flapjack::Data::State.
+          intersect(:id => state_ids_by_check_id.values,
+                    :condition => Flapjack::Data::Condition::UNHEALTHY.values).
+          associated_ids_for(:check).values
+
+        @failing_checks = Flapjack::Data::Check.intersect(:id => failing_check_ids)
       end
 
       def check_stats
-        @count_enabled_checks    = Flapjack::Data::Check.intersect(:enabled => true).count
-        @count_failing_checks    = failing_checks.count
-      end
-
-      def last_notification_data(check, time)
-        states = check.states
-        ['critical', 'warning', 'unknown', 'recovery', 'acknowledgement'].inject({}) do |memo, type|
-          state = (type == 'recovery') ? 'ok' : type
-          notif = states.intersect(:state => state, :notified => true).last
-          next memo if (notif.nil? || notif.timestamp.nil?)
-          t = Time.at(notif.timestamp)
-          memo[type.to_sym] = {:time => t.to_s,
-                               :relative => relative_time_ago(time, t) + " ago",
-                               :summary => notif.summary}
-          memo
-        end
+        @count_enabled_checks = Flapjack::Data::Check.intersect(:enabled => true).count
+        @count_failing_checks = failing_checks.count
       end
 
       def require_js(*js)

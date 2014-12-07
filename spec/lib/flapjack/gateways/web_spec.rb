@@ -9,7 +9,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
   let(:check_name)      { 'example.com:ping' }
 
-  let(:check)  { double(Flapjack::Data::Check) }
+  let(:check)  { double(Flapjack::Data::Check, :id => SecureRandom.uuid) }
+  let(:state)  { double(Flapjack::Data::State, :id => SecureRandom.uuid) }
 
   let(:redis)  { double(Redis) }
 
@@ -48,29 +49,44 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   def expect_check_status(ec)
     time = Time.now.to_i
 
-    expect(ec).to receive(:state).and_return('ok')
-    expect(ec).to receive(:summary).and_return('happy results are returned')
-    expect(ec).to receive(:last_update).and_return(time - (3 * 60 * 60))
-
     last_failing = double('last_failing',
-      :last => double(Flapjack::Data::CheckState, :timestamp => time - ((3 * 60 * 60) + (5 * 60))))
-    ok_state = double(Flapjack::Data::CheckState, :timestamp => time - ((3 * 60 * 60)))
+      :last => double(Flapjack::Data::State, :timestamp => time - ((3 * 60 * 60) + (5 * 60))))
+    ok_state = double(Flapjack::Data::State, :condition => 'ok', :timestamp => time - ((3 * 60 * 60)))
     last_ok = double('last_ok', :last => ok_state)
     no_last_ack = double('no_last_ack', :last => nil)
 
+    expect(ok_state).to receive(:summary).and_return('happy results are returned')
+
     states = double('states')
-    expect(states).to receive(:intersect).with(:state => ['critical', 'warning', 'unknown'], :notified => true).
+    expect(states).to receive(:intersect).with(:condition => ['critical', 'warning', 'unknown'], :condition_changed => true, :notified => true).
       and_return(last_failing)
-    expect(states).to receive(:intersect).with(:state => 'ok', :notified => true).
+    expect(states).to receive(:intersect).with(:condition => ['ok'], :condition_changed => true, :notified => true).
       and_return(last_ok)
-    expect(states).to receive(:intersect).with(:state => 'acknowledgement', :notified => true).
+    expect(states).to receive(:intersect).with(:condition_changed => true).
+      and_return(last_ok)
+    expect(states).to receive(:intersect).with(:action => 'acknowledgement', :notified => true).
       and_return(no_last_ack)
     expect(states).to receive(:last).and_return(ok_state)
 
-    expect(ec).to receive(:states).exactly(4).times.and_return(states)
+    expect(ec).to receive(:states).exactly(5).times.and_return(states)
 
     expect(ec).to receive(:in_scheduled_maintenance?).and_return(false)
     expect(ec).to receive(:in_unscheduled_maintenance?).and_return(false)
+  end
+
+  def expect_failing_checks
+    states = double('states')
+    expect(states).to receive(:associated_ids_for).with(:check).
+      and_return(state.id => check.id)
+    expect(Flapjack::Data::State).to receive(:intersect).
+      with(:id => [state.id],
+           :condition => ['critical', 'warning', 'unknown']).
+    and_return(states)
+
+    expect(Flapjack::Data::Check).to receive(:associated_ids_for).with(:state).
+      and_return(check.id => state.id)
+    expect(Flapjack::Data::Check).to receive(:intersect).
+      with(:id => [check.id]).and_return(failing_checks)
   end
 
   # TODO add data, test that pages contain representations of it
@@ -91,9 +107,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       # NOTE Reuse enough of the stats specs to be able to build a page quickly
       expect_stats
       expect_check_stats
-
-      expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
-        ['critical', 'warning', 'unknown']).and_return(failing_checks)
+      expect_failing_checks
 
       logo_image_tag = '<img alt="Flapjack" class="logo" src="http://example.org/img/branding.png">'
 
@@ -108,9 +122,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       # NOTE Reuse enough of the stats specs to be able to build a page quickly
       expect_stats
       expect_check_stats
-
-      expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
-        ['critical', 'warning', 'unknown']).and_return(failing_checks)
+      expect_failing_checks
 
       logo_image_tag = '<img alt="Flapjack" class="logo" src="http://example.org/img/flapjack-2013-notext-transparent-300-300.png">'
 
@@ -131,13 +143,9 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect_check_stats
       expect_check_status(check)
 
-      expect(check).to receive(:id).and_return('abcde')
       expect(check).to receive(:name).and_return(check_name)
       expect(Flapjack::Data::Check).to receive(:all).and_return([check])
-
-      expect(Flapjack::Data::Check).to receive(:intersect).
-        with(:state => ['critical', 'warning', 'unknown']).
-        and_return(failing_checks)
+      expect_failing_checks
 
       get '/checks'
       expect(last_response).to be_ok
@@ -146,14 +154,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     it "shows a page listing failing checks" do
       expect_check_stats
       expect_check_status(check)
+      expect_failing_checks
 
-      expect(check).to receive(:id).and_return('abcde')
       expect(check).to receive(:name).and_return(check_name)
       expect(failing_checks).to receive(:all).and_return([check])
-
-      expect(Flapjack::Data::Check).to receive(:intersect).
-        with(:state => ['critical', 'warning', 'unknown']).
-        and_return(failing_checks)
 
       get '/checks?type=failing'
       expect(last_response).to be_ok
@@ -162,9 +166,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     it "shows a page listing flapjack statistics" do
       expect_stats
       expect_check_stats
-
-      expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
-        ['critical', 'warning', 'unknown']).and_return(failing_checks)
+      expect_failing_checks
 
       get '/self_stats'
       expect(last_response).to be_ok
@@ -175,36 +177,45 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(Time).to receive(:now).and_return(time)
 
       expect_check_stats
+      expect_failing_checks
 
-      expect(check).to receive(:id).twice.and_return('abcde')
       expect(check).to receive(:name).and_return(check_name)
 
-      expect(check).to receive(:state).twice.and_return('ok')
-      expect(check).to receive(:last_update).and_return(time.to_i - (3 * 60 * 60))
-      expect(check).to receive(:summary).and_return('all good')
-      expect(check).to receive(:details).and_return('seriously, all very wonderful')
-      expect(check).to receive(:perfdata).and_return([{"key" => "foo", "value" => "bar"}])
+      conditions = ['ok', 'critical', 'warning', 'unknown'].collect do |cond|
+        double(Flapjack::Data::Condition, :name => cond)
+      end
 
-      failing_state = double(Flapjack::Data::CheckState, :state => 'critical', :timestamp => time - ((3 * 60 * 60) + (5 * 60)), :summary => 'N')
+      expect(Flapjack::Data::Condition).to receive(:all).and_return(conditions)
+
+      failing_state = double(Flapjack::Data::State, :condition => 'critical', :timestamp => time - ((3 * 60 * 60) + (5 * 60)))
+      expect(failing_state).to receive(:summary).twice.and_return('BAAAAD')
       last_failing = double('last_failing', :last => failing_state)
-      ok_state = double(Flapjack::Data::CheckState, :state => 'ok', :timestamp => time - ((3 * 60 * 60)), :summary => 'Y')
+
+      ok_state = double(Flapjack::Data::State, :condition => 'ok', :timestamp => time - ((3 * 60 * 60)))
+      expect(ok_state).to receive(:summary).exactly(3).times.and_return('smile')
+      expect(ok_state).to receive(:details).and_return('seriously, all very wonderful')
+      expect(ok_state).to receive(:perfdata).and_return([{"key" => "foo", "value" => "bar"}])
       last_ok = double('last_ok', :last => ok_state)
+
       no_last = double('no_last', :last => nil)
 
       states = double('states')
-      expect(states).to receive(:intersect).with(:state => 'ok', :notified => true).
+
+      expect(states).to receive(:intersect).with(:condition_changed => true).and_return(last_ok)
+
+      expect(states).to receive(:intersect).with(:condition => 'ok', :condition_changed => true, :notified => true).
         and_return(last_ok)
-      expect(states).to receive(:intersect).with(:state => 'critical', :notified => true).
+      expect(states).to receive(:intersect).with(:condition => 'critical', :condition_changed => true, :notified => true).
         and_return(last_failing)
-      expect(states).to receive(:intersect).with(:state => 'warning', :notified => true).
+      expect(states).to receive(:intersect).with(:condition => 'warning', :condition_changed => true, :notified => true).
         and_return(no_last)
-      expect(states).to receive(:intersect).with(:state => 'unknown', :notified => true).
+      expect(states).to receive(:intersect).with(:condition => 'unknown', :condition_changed => true, :notified => true).
         and_return(no_last)
-      expect(states).to receive(:intersect).with(:state => 'acknowledgement', :notified => true).
+      expect(states).to receive(:intersect).with(:action => 'acknowledgement', :notified => true).
         and_return(no_last)
       expect(states).to receive(:last).and_return(ok_state)
 
-      expect(check).to receive(:states).twice.and_return(states)
+      expect(check).to receive(:states).exactly(8).times.and_return(states)
 
       no_sched_maint = double('no_sched_maint', :all => [])
       expect(check).to receive(:scheduled_maintenances_by_start).and_return(no_sched_maint)
@@ -212,8 +223,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(check).to receive(:scheduled_maintenance_at).with(time).and_return(nil)
       expect(check).to receive(:unscheduled_maintenance_at).with(time).and_return(nil)
 
-      no_contacts = double('no_contacts', :all => [])
-      expect(check).to receive(:contacts).and_return(no_contacts)
+      # no_contacts = double('no_contacts', :all => [])
+      # expect(check).to receive(:contacts).and_return(no_contacts)
 
       all_states = double('all_states', :all => [ok_state, failing_state])
       expect(states).to receive(:intersect_range).
@@ -222,34 +233,34 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
       expect(check).to receive(:enabled).and_return(true)
 
-      expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
-        ['critical', 'warning', 'unknown']).and_return(failing_checks)
+      # expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
+      #   ['critical', 'warning', 'unknown']).and_return(failing_checks)
 
-      expect(Flapjack::Data::Check).to receive(:find_by_id).with('abcde').
+      expect(Flapjack::Data::Check).to receive(:find_by_id).with(check.id).
         and_return(check)
 
-      get "/checks/abcde"
+      get "/checks/#{check.id}"
       expect(last_response).to be_ok
       # TODO test instance variables set to appropriate values
     end
 
     it "returns 404 if an unknown check is requested" do
-      expect(Flapjack::Data::Check).to receive(:find_by_id).with('abcde').
+      expect(Flapjack::Data::Check).to receive(:find_by_id).with(check.id).
         and_return(nil)
 
-      get "/checks/abcde"
+      get "/checks/#{check.id}"
       expect(last_response).to be_not_found
     end
 
     it "creates an acknowledgement for a check" do
-      expect(Flapjack::Data::Check).to receive(:find_by_id).with('abcde').
+      expect(Flapjack::Data::Check).to receive(:find_by_id).with(check.id).
         and_return(check)
 
       expect(Flapjack::Data::Event).to receive(:create_acknowledgements).
         with('events', [check], :summary => "", :duration => (4 * 60 * 60),
              :acknowledgement_id => '1234')
 
-      post "/unscheduled_maintenances/checks/abcde?acknowledgement_id=1234"
+      post "/unscheduled_maintenances/checks/#{check.id}?acknowledgement_id=1234"
       expect(last_response.status).to eq(302)
     end
 
@@ -263,7 +274,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(Chronic).to receive(:parse).with('1 day ago').and_return(start_time)
       expect(ChronicDuration).to receive(:parse).with('30 minutes').and_return(duration)
 
-      expect(Flapjack::Data::Check).to receive(:find_by_id).with('abcde').
+      expect(Flapjack::Data::Check).to receive(:find_by_id).with(check.id).
         and_return(check)
 
       sched_maint = double(Flapjack::Data::ScheduledMaintenance)
@@ -276,7 +287,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(check).to receive(:add_scheduled_maintenance).
         with(sched_maint)
 
-      post "/scheduled_maintenances/checks/abcde?"+
+      post "/scheduled_maintenances/checks/#{check.id}?"+
         "start_time=1+day+ago&duration=30+minutes&summary=wow"
 
       expect(last_response.status).to eq(302)
@@ -287,7 +298,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
       start_time = t - (24 * 60 * 60)
 
-      expect(Flapjack::Data::Check).to receive(:find_by_id).with('abcde').
+      expect(Flapjack::Data::Check).to receive(:find_by_id).with(check.id).
         and_return(check)
 
       sched_maint = double(Flapjack::Data::ScheduledMaintenance)
@@ -298,7 +309,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(check).to receive(:scheduled_maintenances_by_start).and_return(sched_maints)
       expect(check).to receive(:end_scheduled_maintenance).with(sched_maint, an_instance_of(Time))
 
-      delete "/scheduled_maintenances/checks/abcde?start_time=#{Time.at(start_time).iso8601}"
+      delete "/scheduled_maintenances/checks/#{check.id}?start_time=#{Time.at(start_time).iso8601}"
       expect(last_response.status).to eq(302)
     end
 

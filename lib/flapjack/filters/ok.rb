@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'flapjack/data/check_state'
-
 require 'flapjack/filters/base'
 
 module Flapjack
@@ -16,21 +14,27 @@ module Flapjack
       include Base
 
       def block?(event, check, opts = {})
+        old_state = opts[:old_state]
+        new_state = opts[:new_state]
+        timestamp = opts[:timestamp]
+
         previous_state = opts[:previous_state]
 
-        unless Flapjack::Data::CheckState.ok_states.include?( event.state )
+        healthy = Flapjack::Data::Condition::HEALTHY.values
+
+        unless healthy.include?(new_state.condition)
           @logger.debug("Filter: Ok: pass")
           return false
         end
 
-        check.clear_unscheduled_maintenance(Time.now)
+        check.clear_unscheduled_maintenance(timestamp)
 
-        if !previous_state.nil? && Flapjack::Data::CheckState.ok_states.include?( previous_state.state )
+        unless old_state.nil? || healthy.include?(old_state.condition)
           @logger.debug("Filter: Ok: block - previous state was ok, so blocking")
           return true
         end
 
-        last_notification = check.last_notification
+        last_notification = check.states.intersect(:notified => true).last
         @logger.debug("Filter: Ok: last notification: #{last_notification.inspect}")
 
         if last_notification.nil?
@@ -38,9 +42,7 @@ module Flapjack
           return true
         end
 
-        if last_notification.respond_to?(:state) &&
-           Flapjack::Data::CheckState.ok_states.include?(last_notification.state)
-
+        if healthy.include?(last_notification.condition)
           @logger.debug("Filter: Ok: block - last notification was a recovery")
           return true
         end

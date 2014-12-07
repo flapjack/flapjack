@@ -31,28 +31,17 @@ Feature: Notification rules on a per contact basis
       | 982fc9fb-fbf8-44cd-b6de-6ccbab8e7230 | buf:ping | buf,ping  |
 
     And the following rules exist:
-      | id                                   | contact_id                           | tags     |
-      | b0c8deb9-b8c8-4fdd-acc4-72493852ca15 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | foo,ping |
-      | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | 65d32027-1942-43b3-93c5-52f4b12d36b0 | bar,ping |
-      | fc2d1b1f-1480-45dd-814b-4655bc5b1474 | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | foo,ping |
-      | e8a67e7c-4f3d-4d9b-afe4-ef276bbeb0df | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | baz,ping |
-      | 9b437f3e-4b48-4516-8067-a57935684777 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | buf,ping |
-      | dd7005b9-d30b-4875-9e83-dec7fb70895c | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | buf,ping |
-      | 724bf183-215c-4ba9-b835-56db781c4844 | 5da490ec-72a0-42b0-834f-4049867dfce7 |          |
-
-    And the following routes exist:
-      | id                                   | rule_id                              | state    | time_restrictions | media_ids |
-      | b18e9f48-59e7-4c25-b94c-d4ebd4a6559a | b0c8deb9-b8c8-4fdd-acc4-72493852ca15 | critical | 8-18 weekdays     | 28032dbf-388d-4f52-91b2-dc5e5be2becc |
-      | 1c501800-6b20-458d-bb99-a78d17397c00 | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | critical |                   | 1d473cef-5369-4396-9f59-533f3db6c1cb |
-      | f163bf33-b53e-4138-ab27-1dd89f2d6fdd | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | unknown  |                   | 1d473cef-5369-4396-9f59-533f3db6c1cb |
-      | 32d2b140-18b9-40cc-845f-d3bc3d69b84f | fc2d1b1f-1480-45dd-814b-4655bc5b1474 | critical |                   | 65d32027-1942-43b3-93c5-52f4b12d36b0 |
-      | 964b031a-8c39-498f-ac87-c6e26ca06767 | fc2d1b1f-1480-45dd-814b-4655bc5b1474 |          |                   | 9f77502c-1daf-47a2-b806-f3ae7d04cefb |
-      | 5e0766a3-0fef-487f-a18c-cf375b4ef7b1 | e8a67e7c-4f3d-4d9b-afe4-ef276bbeb0df | critical | 8-18 weekdays     | 19ef48b1-9a42-488b-9734-00314c79e5eb,ad25c952-c300-4285-9301-ef4408c9d645 |
-      | c86e1f11-36a4-40ce-a294-747f6ca5f3b3 | e8a67e7c-4f3d-4d9b-afe4-ef276bbeb0df | warning  | 8-18 weekdays     | 19ef48b1-9a42-488b-9734-00314c79e5eb |
-      | 0a3c66f2-6245-49cf-a02c-28d586b2f55a | 9b437f3e-4b48-4516-8067-a57935684777 | critical |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc |
-      | 7c123a29-1a67-4a32-b38e-2658e63834d8 | dd7005b9-d30b-4875-9e83-dec7fb70895c |          |                   |                                      |
-      | 8c5d57a6-196b-4949-a22a-81229733685f | 724bf183-215c-4ba9-b835-56db781c4844 |          |                   | f15078cf-3643-4cf1-b701-ac9fe2836365 |
-      | 11494c9f-3583-4528-8258-0a05685edb85 | 724bf183-215c-4ba9-b835-56db781c4844 |          |                   | 862228f8-fc80-4887-bc4c-e133fcda4107 |
+      | id                                   | contact_id                           | tags     | state            | time_restrictions | media_ids |
+      | b0c8deb9-b8c8-4fdd-acc4-72493852ca15 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | foo,ping | critical         | 8-18 weekdays     | 28032dbf-388d-4f52-91b2-dc5e5be2becc |
+      | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | 65d32027-1942-43b3-93c5-52f4b12d36b0 | bar,ping | critical,unknown |                   | 1d473cef-5369-4396-9f59-533f3db6c1cb |
+      | fc2d1b1f-1480-45dd-814b-4655bc5b1474 | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | foo,ping | critical         |                   | 65d32027-1942-43b3-93c5-52f4b12d36b0 |
+      | 7c123a29-1a67-4a32-b38e-2658e63834d8 | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | foo,ping |                  |                   | 9f77502c-1daf-47a2-b806-f3ae7d04cefb |
+      | e8a67e7c-4f3d-4d9b-afe4-ef276bbeb0df | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | baz,ping | critical         | 8-18 weekdays     | 19ef48b1-9a42-488b-9734-00314c79e5eb,ad25c952-c300-4285-9301-ef4408c9d645 |
+      | 0a3c66f2-6245-49cf-a02c-28d586b2f55a | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | baz,ping | warning          | 8-18 weekdays     | 19ef48b1-9a42-488b-9734-00314c79e5eb |
+      | 9b437f3e-4b48-4516-8067-a57935684777 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | buf,ping | critical         |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc |
+      | dd7005b9-d30b-4875-9e83-dec7fb70895c | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | buf,ping |                  |                   |
+      | 724bf183-215c-4ba9-b835-56db781c4844 | 5da490ec-72a0-42b0-834f-4049867dfce7 |          |                  |                   | f15078cf-3643-4cf1-b701-ac9fe2836365 |
+      | 1c501800-6b20-458d-bb99-a78d17397c00 | 5da490ec-72a0-42b0-834f-4049867dfce7 |          |                  |                   | 862228f8-fc80-4887-bc4c-e133fcda4107 |
 
   @time_restrictions @time
   Scenario: Alerts only during specified time restrictions

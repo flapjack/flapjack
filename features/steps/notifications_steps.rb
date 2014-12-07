@@ -98,13 +98,30 @@ Given /^the following rules exist:$/ do |rules|
     contact = Flapjack::Data::Contact.find_by_id(rule_data['contact_id'])
     expect(contact).not_to be nil
 
+    time_zone = contact.time_zone
+    expect(time_zone).to be_an ActiveSupport::TimeZone
+
     rule = Flapjack::Data::Rule.find_by_id(rule_data['id'])
     expect(rule).to be nil
 
+    # # TODO state associations
+    #   :state => (route_data['state'].nil? || route_data['state'].empty?) ? nil : route_data['state'],
+
     rule = Flapjack::Data::Rule.new(
       :id          => rule_data['id'],
-      :is_specific => false
     )
+
+    unless rule_data['time_restrictions'].nil? || rule_data['time_restrictions'].strip.empty?
+      rule.time_restrictions = rule_data['time_restrictions'].split(',').map(&:strip).inject([]) do |memo, tr|
+        case tr
+        when '8-18 weekdays'
+          weekdays_8_18 = IceCube::Schedule.new(time_zone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
+          weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
+          memo << icecube_schedule_to_time_restriction(weekdays_8_18, time_zone)
+        end
+        memo
+      end
+    end
     expect(rule.save).to be true
 
     unless rule_data['tags'].nil? || rule_data['tags'].strip.empty?
@@ -120,49 +137,14 @@ Given /^the following rules exist:$/ do |rules|
       expect(rule.save).to be true
     end
 
-    contact.rules << rule
-  end
-end
-
-Given /^the following routes exist:$/ do |routes|
-  routes.hashes.each do |route_data|
-    rule = Flapjack::Data::Rule.find_by_id(route_data['rule_id'])
-    expect(rule).not_to be nil
-
-    contact = rule.contact
-    expect(rule.contact).not_to be nil
-
-    time_zone = contact.time_zone
-    expect(time_zone).to be_an ActiveSupport::TimeZone
-
-    route = Flapjack::Data::Route.find_by_id(route_data['id'])
-    expect(route).to be nil
-
-    route = Flapjack::Data::Route.new(
-      :id    => route_data['id'],
-      :state => (route_data['state'].nil? || route_data['state'].empty?) ? nil : route_data['state'],
-      :drop  => !(route_data['drop'].nil? || route_data['drop'].strip.empty?)
-    )
-    unless route_data['time_restrictions'].nil? || route_data['time_restrictions'].strip.empty?
-      route.time_restrictions = route_data['time_restrictions'].split(',').map(&:strip).inject([]) do |memo, tr|
-        case tr
-        when '8-18 weekdays'
-          weekdays_8_18 = IceCube::Schedule.new(time_zone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
-          weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
-          memo << icecube_schedule_to_time_restriction(weekdays_8_18, time_zone)
-        end
-        memo
-      end
-    end
-    expect(route.save).to be true
-
-    unless route_data['media_ids'].nil? || route_data['media_ids'].strip.empty?
-      media_ids = route_data['media_ids'].split(',').map(&:strip)
+    unless rule_data['media_ids'].nil? || rule_data['media_ids'].strip.empty?
+      media_ids = rule_data['media_ids'].split(',').map(&:strip)
       media = Flapjack::Data::Medium.find_by_ids(*media_ids)
       expect(media.map(&:id)).to match_array(media_ids)
-      route.media.add(*media) unless media.empty?
+      rule.media.add(*media) unless media.empty?
     end
-    rule.routes << route
+
+    contact.rules << rule
   end
 end
 
@@ -296,11 +278,11 @@ When /^an event notification is generated for check '(.+)'$/ do |check_name|
   previous_state = check.states.intersect_range(-2, -1).first
 
   notification = Flapjack::Data::Notification.new(
-    :state_duration    => 0,
-    :severity          => severity,
-    :type              => event.notification_type,
-    :time              => event.time,
-    :duration          => event.duration,
+    :condition_duration  => 0,
+    :severity            => severity,
+    :type                => event.notification_type,
+    :time                => event.time,
+    :duration            => event.duration,
   )
 
   unless notification.save
@@ -334,7 +316,7 @@ Given /^an (SMS|SNS|email) notification has been queued for check '(.+)'$/ do |m
   @alert = Flapjack::Data::Alert.new(
     :state => check.states.all.last.state,
     :rollup => nil,
-    :state_duration => 15,
+    :condition_duration => 15,
     :notification_type => 'problem',
     :time => Time.now)
 

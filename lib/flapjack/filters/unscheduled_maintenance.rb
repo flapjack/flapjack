@@ -8,8 +8,14 @@ module Flapjack
       include Base
 
       def block?(event, check, opts = {})
-        result = check.in_unscheduled_maintenance? && !event.acknowledgement?
-        @logger.debug("Filter: Unscheduled Maintenance: #{result ? "block" : "pass"}")
+        new_state = opts[:new_state]
+        result = check.in_unscheduled_maintenance? &&
+          !('acknowledgement'.eql?(new_state.action))
+
+        @logger.debug {
+          "Filter: Unscheduled Maintenance: #{result ? "block" : "pass"}"
+        }
+
         result
       end
 
