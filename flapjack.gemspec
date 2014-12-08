@@ -18,7 +18,7 @@ Gem::Specification.new do |gem|
   gem.require_paths = ["lib"]
   gem.version       = Flapjack::VERSION
 
-  gem.add_dependency 'dante'
+  gem.add_dependency 'dante', '= 0.2.0'
   gem.add_dependency 'oj', '>= 2.9.0'
   gem.add_dependency 'eventmachine', '~> 1.0.0'
   gem.add_dependency 'redis', '~> 3.0.6'

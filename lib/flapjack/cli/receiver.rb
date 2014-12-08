@@ -64,9 +64,15 @@ module Flapjack
           puts "#{@options[:type]}-receiver is already running."
         else
           print "#{@options[:type]}-receiver starting..."
-          print "\n" unless @options[:daemonize]
+          main_umask = nil
+          if @options[:daemonize]
+            main_umask = File.umask
+          else
+            print "\n"
+          end
           runner(@options[:type]).execute(:daemonize => @options[:daemonize]) do
             begin
+              File.umask(main_umask) if @options[:daemonize]
               main(:fifo => @options[:fifo], :type => @options[:type])
             rescue Exception => e
               p e.message
@@ -91,8 +97,10 @@ module Flapjack
 
       def restart
         print "#{@options[:type]}-receiver restarting..."
+        main_umask = File.umask
         runner(@options[:type]).execute(:daemonize => true, :restart => true) do
           begin
+            File.umask(main_umask)
             main(:fifo => @options[:fifo], :type => @options[:type])
           rescue Exception => e
             p e.message
