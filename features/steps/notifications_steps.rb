@@ -223,7 +223,7 @@ end
 
 When /^the email notification handler runs successfully$/ do
   Resque.redis = @redis
-  Flapjack::Gateways::Email.instance_variable_set('@config', {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}})
+  Flapjack::Gateways::Email.instance_variable_set('@config', {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525, 'from' => 'flapjack@example'}})
   Flapjack::Gateways::Email.instance_variable_set('@redis', @redis)
   Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
   Flapjack::Gateways::Email.start
@@ -242,7 +242,7 @@ end
 
 When /^the email notification handler fails to send an email$/ do
   Resque.redis = @redis
-  Flapjack::Gateways::Email.instance_variable_set('@config', {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}})
+  Flapjack::Gateways::Email.instance_variable_set('@config', {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525, 'from' => 'flapjack@example'}})
   Flapjack::Gateways::Email.instance_variable_set('@redis', @redis)
   Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
   Flapjack::Gateways::Email.start
