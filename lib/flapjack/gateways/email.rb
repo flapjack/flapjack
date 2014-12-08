@@ -70,7 +70,13 @@ module Flapjack
                                :message_id => "<#{alert.notification_id}@#{@fqdn}>",
                                :alert      => alert)
 
-          smtp_args = {:from     => m_from,
+          smtp_from = m_from.clone
+          while smtp_from =~ /(<|>)/
+            smtp_from.sub!(/^.*</, '')
+            smtp_from.sub!(/>.*$/, '')
+          end
+
+          smtp_args = {:from     => smtp_from,
                        :to       => alert.address,
                        :content  => "#{mail.to_s}\r\n.\r\n",
                        :domain   => @fqdn,
@@ -105,7 +111,7 @@ module Flapjack
         # returns a Mail object
         def prepare_email(opts = {})
           from       = opts[:from]
-          reply_to   = opts[:reply_to] 
+          reply_to   = opts[:reply_to]
           to         = opts[:to]
           message_id = opts[:message_id]
           alert      = opts[:alert]
