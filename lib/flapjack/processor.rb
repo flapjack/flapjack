@@ -353,14 +353,8 @@ module Flapjack
 
       new_state.notifications << notific
 
-      # severity.notifications << notification
-      # check.notifications << notification
-      # current_state.current_notifications << notification unless current_state.nil?
-      # previous_state.previous_notifications << notification unless previous_state.nil?
-
       @notifier_queue.push(notific)
     end
 
   end
 end
-

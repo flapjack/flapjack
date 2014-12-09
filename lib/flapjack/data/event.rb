@@ -12,9 +12,8 @@ module Flapjack
       attr_reader :id, :summary, :details, :acknowledgement_id, :perfdata
 
       # type was a required key in v1, but is superfluous
-      REQUIRED_KEYS = ['state', 'entity', 'check', 'summary']
-      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration',
-                       'perfdata', 'type']
+      REQUIRED_KEYS = %w(state entity check summary)
+      OPTIONAL_KEYS = %w(time details acknowledgement_id duration tags perfdata type)
 
       VALIDATIONS = {
         proc {|e| e['state'].is_a?(String) &&
@@ -53,6 +52,10 @@ module Flapjack
                  (e['duration'].is_a?(String) && !!(e['duration'] =~ /^\d+$/)) } =>
           "duration must be a positive integer, or a string castable to one",
 
+        proc {|e| e['tags'].nil? ||
+                 (e['tags'].is_a?(Array) &&
+                  e['tags'].all? {|tag| tag.is_a?(String)}) } =>
+          "tags must be an array of strings",
       }
 
       def self.parse_and_validate(raw, opts = {})
