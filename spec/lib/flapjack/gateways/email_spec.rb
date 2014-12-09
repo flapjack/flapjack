@@ -45,7 +45,7 @@ describe Flapjack::Gateways::Email, :logger => true do
     expect(EM::P::SmtpClient).to receive(:send).with(
       hash_including(host: 'localhost',
                      port: 25,
-                     from: "Full Name <from@example.org>")
+                     from: "from@example.org")
     ).and_return(email)
 
     response = double(response)
