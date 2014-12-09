@@ -17,22 +17,18 @@ module Flapjack
 
       attr_accessor :logger
 
-      # NB can't use has_one associations for the states, as the redis persistence
-      # is only transitory (used to trigger a queue pop)
       define_attributes :severity       => :string,
                         :time           => :timestamp,
                         :duration       => :integer,
+                        :condition_duration => :float,
                         :event_hash     => :string
-
-      belongs_to :check, :class_name => 'Flapjack::Data::Check',
-        :inverse_of => :notifications
 
       belongs_to :state, :class_name => 'Flapjack::Data::State',
         :inverse_of => :notifications
 
-      validates :severity, :presence => true
+      validates :severity,
+        :inclusion => {:in => Flapjack::Data::Condition.unhealthy.keys + Flapjack::Data::Condition.healthy.keys }
       validates :time, :presence => true
-      validates :event_hash, :presence => true
 
       # TODO ensure 'unacknowledged_failures' behaviour is covered
 
@@ -50,7 +46,6 @@ module Flapjack
         default_timezone = opts[:default_timezone]
 
         notification_state = self.state
-        condition = Flapjack::Data::Condition.find_by_id!(notification_state.condition)
 
         alert_check = notification_state.check
 
@@ -92,7 +87,8 @@ module Flapjack
                                     Flapjack::Data::Rule,
                                     Flapjack::Data::Alert,
                                     Flapjack::Data::Medium,
-                                    Flapjack::Data::Contact) do
+                                    Flapjack::Data::Contact,
+                                    Flapjack::Data::State) do
 
           media_ids_by_rule_id = Flapjack::Data::Rule.intersect(:id => rule_ids).
             associated_ids_for(:media)
@@ -107,14 +103,21 @@ module Flapjack
           # we want to consider this as 'alerting' for the purpose of rollup
           # calculations, if it's failing, even if we won't notify on this media
 
-          this_notification_failure = !(condition.healthy ||
+          logger.info "healthy #{Flapjack::Data::Condition.healthy?(notification_state.condition)}"
+          logger.info "sched #{alert_check.in_scheduled_maintenance?}"
+          logger.info "unsched #{alert_check.in_unscheduled_maintenance?}"
+
+          this_notification_failure = !(Flapjack::Data::Condition.healthy?(notification_state.condition) ||
             alert_check.in_scheduled_maintenance? ||
             alert_check.in_unscheduled_maintenance?)
 
-          this_notification_ok = 'acknowledgement'.eql?(notification_state.action) || condition.healthy?
-          is_a_test            = 'test_notificiations'.eql?(notification_state.action)
+          this_notification_ok = 'acknowledgement'.eql?(notification_state.action) ||
+            Flapjack::Data::Condition.healthy?(notification_state.condition)
+          is_a_test            = 'test_notifications'.eql?(notification_state.action)
 
-          alert_check.alerting_media.add(*alertable_media) if this_notification_failure
+          if this_notification_failure && !is_a_test
+            alert_check.alerting_media.add(*alertable_media)
+          end
 
           logger.info "pre-media test: \n" \
             "  this_notification_failure = #{this_notification_failure}\n" \
@@ -125,19 +128,14 @@ module Flapjack
 
             logger.info "media test: #{medium.transport}, #{medium.id}"
 
-            last_notification = medium.last_notification
-
-            last_notification_condition = last_notification.nil? ? nil :
-              Flapjack::Data::Condition.find_by_id!(last_notification.condition)
+            last_notification = medium.last_notification_state
 
             last_notification_ok = last_notification.nil? ? nil :
-              last_notification_condition.healthy
+              (Flapjack::Data::Condition.healthy?(last_notification.condition) ||
+              'acknowledgement'.eql?(last_notification.action))
 
             alerting_check_ids = medium.rollup_threshold.nil? || (medium.rollup_threshold == 0) ? nil :
                                    medium.alerting_checks.ids
-
-            # TODO remove any alerting checks that aren't in failing_checks,
-            # dynamically calculated
 
             logger.info " alerting_checks: #{alerting_check_ids.inspect}"
 
@@ -162,16 +160,20 @@ module Flapjack
             logger.info "  last_notification_ok = #{last_notification_ok}\n" \
               "  interval_allows  = #{interval_allows}\n" \
               "  alert_rollup , last_rollup_type = #{alert_rollup} , #{medium.last_rollup_type}\n" \
-              "  condition , last_notification_condition  = #{condition.id} , #{last_notification_condition.nil? ? '-' : last_notification_condition.id}\n" \
+              "  condition , last_notification_condition  = #{notification_state.condition} , #{last_notification.nil? ? '-' : last_notification.condition}\n" \
               "  no_previous_notification  = #{last_notification.nil?}\n"
 
             next unless is_a_test || last_notification.nil? ||
                 (!last_notification_ok && this_notification_ok) ||
               (alert_rollup != medium.last_rollup_type) ||
-              (condition.id != last_notification_condition.id) ||
+              ('acknowledgement'.eql?(last_notification.action) && this_notification_failure) ||
+              (notification_state.condition != last_notification.condition) ||
               interval_allows
 
-            alert = Flapjack::Data::Alert.new(:state => (notification_state.action || notification_state.condition),
+            alert = Flapjack::Data::Alert.new(:condition => notification_state.condition,
+              :action => notification_state.action,
+              :last_condition => (last_notification.nil? ? nil : last_notification.condition),
+              :last_action => (last_notification.nil? ? nil : last_notification.action),
               :condition_duration => self.condition_duration,
               :acknowledgement_duration => self.duration,
               :rollup => alert_rollup)
@@ -179,8 +181,9 @@ module Flapjack
             unless alert_rollup.nil?
               alerting_checks = Flapjack::Data::Check.find_by_ids(*alerting_check_ids)
               alert.rollup_states = alerting_checks.each_with_object({}) do |check, memo|
-                memo[check.state] ||= []
-                memo[check.state] << check.name
+                cond = check.states.last.condition
+                memo[cond] ||= []
+                memo[cond] << check.name
               end
             end
 
@@ -191,10 +194,9 @@ module Flapjack
             medium.alerts      << alert
             alert_check.alerts << alert
 
-            logger.info "alerting with:"
-            logger.info alert.inspect
+            logger.info "alerting for #{medium.transport}, #{medium.address}"
 
-            unless 'test'.eql?(safe_state_or_ack)
+            unless 'test_notifications'.eql?(notification_state.action)
               medium.last_notification_state = notification_state
               medium.last_rollup_type        = alert.rollup
               medium.save

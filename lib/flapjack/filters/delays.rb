@@ -20,7 +20,7 @@ module Flapjack
     class Delays
       include Base
 
-      def block?(event, check, opts = {})
+      def block?(check, opts = {})
         old_state = opts[:old_state]
         new_state = opts[:new_state]
         timestamp = opts[:timestamp]
@@ -43,50 +43,52 @@ module Flapjack
 
         label = 'Filter: Delays:'
 
-        if old_state.healthy || !new_state.action.nil?
+        unless new_state.action.nil? && !Flapjack::Data::Condition.healthy?(new_state.condition)
           @logger.debug {
             "#{label} pass - not a service event in a failure state"
           }
           return false
         end
 
+        last_notif  = check.states.intersect(:notified => true).last
+        last_problem = check.states.intersect(:condition => Flapjack::Data::Condition.unhealthy.keys,
+          :notified => true).last
 
-        # last_change        = check.states.last
-        # last_notif         = check.last_notification
+        last_change_time   = old_state ? old_state.timestamp : nil
 
-        # last_change_time   = last_change  ? last_change.timestamp  : nil
-        # last_problem_alert = check.last_problem_alert
-        # last_alert_state   = last_notif.nil? ? nil :
-        #   (last_notif.respond_to?(:state) ? last_notif.state : 'acknowledgement')
+        last_problem_alert = last_problem ? last_problem.timestamp : nil
 
-        # current_condition_duration = last_change_time.nil?   ? nil : (timestamp - last_change_time)
-        # time_since_last_alert  = last_problem_alert.nil? ? nil : (timestamp - last_problem_alert)
+        alert_type        = Flapjack::Data::Alert.notification_type(new_state.action,
+          new_state.condition)
+        last_alert_type   = last_notif.nil? ? nil :
+          Flapjack::Data::Alert.notification_type(last_notif.action, last_notif.condition)
 
-        # @logger.debug("#{label} last_problem_alert: #{last_problem_alert || 'nil'}, " +
-        #               "last_change: #{last_change_time || 'nil'}, " +
-        #               "current_condition_duration: #{current_condition_duration || 'nil'}, " +
-        #               "time_since_last_alert: #{time_since_last_alert || 'nil'}, " +
-        #               "last_alert_state: [#{last_alert_state}], " +
-        #               "event.state: [#{event.state}], " +
-        #               "last_alert_state == event.state ? #{last_alert_state == event.state}")
+        current_condition_duration = last_change_time.nil? ? nil : (timestamp - last_change_time)
+        time_since_last_alert = last_problem_alert.nil? ? nil : (timestamp - last_problem_alert)
 
-        # if current_condition_duration < initial_failure_delay
-        #   @logger.debug("#{label} block - duration of current failure " +
-        #              "(#{current_condition_duration}) is less than failure_delay (#{initial_failure_delay})")
-        #   return true
-        # end
+        @logger.debug("#{label} last_problem_alert: #{last_problem_alert || 'nil'}, " +
+                      "last_change: #{last_change_time || 'nil'}, " +
+                      "current_condition_duration: #{current_condition_duration || 'nil'}, " +
+                      "time_since_last_alert: #{time_since_last_alert || 'nil'}, " +
+                      "alert type: [#{alert_type}], " +
+                      "last_alert_type == alert_type ? #{last_alert_type == alert_type}")
 
-        # if !(last_problem_alert.nil? || time_since_last_alert.nil?) &&
-        #   (time_since_last_alert < repeat_failure_delay) &&
-        #   (last_alert_state == event.state)
+        if !current_condition_duration.nil? && (current_condition_duration < initial_failure_delay)
+          @logger.debug("#{label} block - duration of current failure " +
+                     "(#{current_condition_duration}) is less than failure_delay (#{initial_failure_delay})")
+          return true
+        end
 
-        #   @logger.debug("#{label} block - time since last alert for " +
-        #                 "current problem (#{time_since_last_alert}) is less than " +
-        #                 "repeat_failure_delay (#{repeat_failure_delay}) and last alert state (#{last_alert_state}) " +
-        #                 "is equal to current event state (#{event.state})")
-        #   return true
-        # end
+        if !(last_problem_alert.nil? || time_since_last_alert.nil?) &&
+          (time_since_last_alert <= repeat_failure_delay) &&
+          (last_alert_type == alert_type)
 
+          @logger.debug("#{label} block - time since last alert for " +
+                        "current problem (#{time_since_last_alert}) is less than " +
+                        "repeat_failure_delay (#{repeat_failure_delay}) and last alert type (#{last_alert_type}) " +
+                        "is equal to current alert type (#{alert_type})")
+          return true
+        end
 
         @logger.debug("#{label} pass - not blocking because neither of the time comparison " +
                       "conditions were met")

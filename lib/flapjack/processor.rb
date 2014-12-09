@@ -166,16 +166,16 @@ module Flapjack
         pending = Flapjack::Data::Event.pending_count(@queue)
         "#{pending} events waiting on the queue"
       }
-      @logger.debug { "Raw event received: #{event.inspect}" }
+      @logger.debug { "Event received: #{event.inspect}" }
       @logger.debug { "Processing Event: #{event.dump}" }
 
-      timestamp = Time.now.to_i
+      timestamp = Time.now
 
       event_condition = case event.state
       when 'acknowledgement', 'test_notifications'
         nil
       else
-        cond = Flapjack::Data::Condition.find_by_id(event.state)
+        cond = Flapjack::Data::Condition.for_name(event.state)
         if cond.nil?
           @logger.error { "Invalid event received: #{event.inspect}" }
           Flapjack.redis.multi do |multi|
@@ -190,8 +190,11 @@ module Flapjack
       old_state = nil
       new_state = nil
 
-      Flapjack::Data::Check.lock(Flapjack::Data::Condition,
-        Flapjack::Data::State, Flapjack::Data::ScheduledMaintenance) do
+      # TODO remove Medium from lock if alerting_media association is deleted
+      Flapjack::Data::Check.lock(Flapjack::Data::State,
+        Flapjack::Data::ScheduledMaintenance, Flapjack::Data::Tag,
+        Flapjack::Data::Medium, Flapjack::Data::UnscheduledMaintenance,
+        Flapjack::Data::Notification) do
 
         # TODO rethink name / event_id mapping, current behaviour is quick
         # hack for Flapjack v1 equivalence
@@ -199,37 +202,46 @@ module Flapjack
           Flapjack::Data::Check.new(:name => event.id)
 
         # result will be nil if check has been created via API but has no events
-        old_state = check.id.nil? ? nil : check.current_state
+        old_state = check.id.nil? ? nil : check.states.intersect(:condition_changed => true).last
         new_state = update_check(check, old_state, event,
                                  event_condition, timestamp)
+
+        check.enabled = true unless event_condition.nil?
+        check.save # no-op if not new and not changed
+
+        if !event_condition.nil? && Flapjack::Data::Condition.healthy?(event_condition.name) && old_state.nil?
+          new_state.save
+          check.states << new_state
+
+          # If the service event's state is ok and there was no previous state, don't alert.
+          # This stops new checks from alerting as "recovery" after they have been added.
+          @logger.debug {
+            "Not generating notification for event #{event.id} because " \
+            "filtering was skipped"
+          }
+
+        else
+          filter_opts = {
+            :initial_failure_delay => @initial_failure_delay,
+            :repeat_failure_delay => @repeat_failure_delay,
+            :old_state => old_state, :new_state => new_state,
+            :timestamp => timestamp, :duration => event.duration
+          }
+
+          blocker = @filters.find {|f| f.block?(check, filter_opts) }
+
+          if blocker.nil?
+            @logger.info { "Generating notification for event #{event.dump}" }
+            generate_notification(check, old_state, new_state, event, event_condition)
+          else
+            new_state.save
+            check.states << new_state
+
+            @logger.debug { "Not generating notification for event #{event.id} " \
+                            "because this filter blocked: #{blocker.name}" }
+          end
+        end
       end
-
-      if !event_condition.nil? && event_condition.healthy && old_state.nil?
-        # If the service event's state is ok and there was no previous state, don't alert.
-        # This stops new checks from alerting as "recovery" after they have been added.
-        @logger.debug {
-          "Not generating notification for event #{event.id} because " \
-          "filtering was skipped"
-        }
-        return
-      end
-
-      filter_opts = {
-        :initial_failure_delay => @initial_failure_delay,
-        :repeat_failure_delay => @repeat_failure_delay,
-        :old => old_state, :new_state => new_state, :timestamp => timestamp
-      }
-
-      blocker = @filters.find {|f| f.block?(event, check, filter_opts) }
-
-      unless blocker.nil?
-        @logger.debug { "Not generating notification for event #{event.id} " \
-                        "because this filter blocked: #{blocker.name}" }
-        return
-      end
-
-      @logger.info { "Generating notification for event #{event.dump}" }
-      generate_notification(check, old_state, new_state, event, event_condition)
     end
 
     def update_check(check, old_state, event, event_condition, timestamp)
@@ -246,6 +258,9 @@ module Flapjack
       if event_condition.nil?
         # Action events represent human or automated interaction with Flapjack
         new_state.action            = event.state
+        if old_state && !old_state.condition.nil?
+          new_state.condition = old_state.condition
+        end
         new_state.condition_changed = false
 
         Flapjack.redis.multi do |multi|
@@ -255,13 +270,12 @@ module Flapjack
       else
         # Service events represent current state of checks on monitored systems
         Flapjack.redis.multi do |multi|
-          if event_state.healthy
+          if Flapjack::Data::Condition.healthy?(event_condition.name)
             multi.hincrby('event_counters', 'ok', 1)
             multi.hincrby("event_counters:#{@instance_id}", 'ok', 1)
           else
             multi.hincrby('event_counters', 'failure', 1)
             multi.hincrby("event_counters:#{@instance_id}", 'failure', 1)
-            event.id_hash = check.ack_hash
           end
         end
 
@@ -279,42 +293,25 @@ module Flapjack
               :end_time => timestamp + @ncsm_duration,
               :summary => 'Automatically created for new check')
             ncsm_sched_maint.save
+
+            check.add_scheduled_maintenance(ncsm_sched_maint)
           end
 
           new_state.condition_changed = true
         else
-          new_state.condition_changed = (event_condition.id != old_state.condition.id)
+          new_state.condition_changed = (event_condition.name != old_state.condition)
         end
       end
 
+      new_state.notified = false
       new_state.summary  = event.summary
       new_state.details  = event.details
       new_state.perfdata = event.perfdata
-      new_state.count    = event.counter
-      new_state.save
 
-      cond = event_condition || (old_state.nil? ? nil : old_state.condition)
+      cond = event_condition.nil? ?
+        (old_state.nil? ? nil : old_state.condition) :
+        event_condition.name
       new_state.condition = cond unless cond.nil?
-
-      # save before adding, as the check will not have been saved if it was
-      # created above, and associations require the check to have an id
-
-      check.enabled = true unless event_condition.nil?
-      check.save # no-op if not new and not changed
-
-      unless ncsm_sched_maint.nil?
-        check.add_scheduled_maintenance(ncsm_sched_maint)
-      end
-
-      unless new_state.nil?
-        check.history << new_state
-
-        unless event_condition.nil?
-          check.previous_state     = old_state
-          check.condition          = event_condition
-          check.state              = new_state
-        end
-      end
 
       new_state
     end
@@ -322,37 +319,36 @@ module Flapjack
     def generate_notification(check, old_state, new_state, event, event_condition)
       if [nil, 'acknowledgement'].include?(new_state.action)
         new_state.notified = true
-        # new_state.last_notification_count = event.counter # TODO find & replace for unsched_maint.lnc, .notified
-        new_state.save
       end
 
-      case new_state.action
-      when 'test_notifications'
-        severity = Flapjack::Data::Condition.intersect(:healthy => false).
-          sort(:priority, :desc => true).first
-      when nil
-        if check.condition.healthy
-          check.max_notified_severity = nil
-          severity = event_condition.name # TODO load from id in notifier
+      new_state.save
+      check.states << new_state
+
+      severity = if 'test_notifications'.eql?(new_state.action)
+        Flapjack::Data::Condition.unhealthy.max_by {|n, pri| pri }.first
+      else
+        msn = check.most_severe_notification
+        msn_cond = msn.nil? ? nil : Flapjack::Data::Condition.for_name(msn.condition)
+        if msn_cond.nil? || (!event_condition.nil? && (event_condition.priority > msn_cond.priority))
+          check.most_severe_notification = new_state
+          new_state.condition
         else
-          msn = check.most_severe_notification
-          msn_cond = msn.condition
-          if msn.nil? || (event_condition.priority > msn_cond.priority)
-            check.most_severe_notification = new_state
-            severity = event_condition.name
-          else
-            severity = msn_cond.name
-          end
+          msn_cond.name
         end
       end
 
       @logger.debug("Notification is being generated for #{event.id}: " + event.inspect)
 
+      event_hash = (event_condition.nil? || Flapjack::Data::Condition.healthy?(event_condition.name)) ?
+        nil : check.ack_hash
+
       condition_duration = old_state.nil? ? nil :
                              (new_state.timestamp - old_state.timestamp)
 
       notific = Flapjack::Data::Notification.new(:duration => event.duration,
-        :condition_duration => condition_duration)
+        :severity => (severity || 'ok'), :condition_duration => condition_duration,
+        :event_hash => event_hash, :time => new_state.timestamp)
+
       notific.save
 
       new_state.notifications << notific

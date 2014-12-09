@@ -19,6 +19,7 @@ describe Flapjack::Coordinator do
 
     expect(config).to receive(:for_redis).and_return(redis_config)
     expect(Flapjack::RedisProxy).to receive(:config=).with(redis_config)
+    # expect(Flapjack::Data::Condition).to receive(:ensure_present)
 
     processor = double('processor')
     expect(processor).to receive(:start)
@@ -54,6 +55,7 @@ describe Flapjack::Coordinator do
 
     expect(config).to receive(:for_redis).and_return(redis_config)
     expect(Flapjack::RedisProxy).to receive(:config=).with(redis_config)
+    # expect(Flapjack::Data::Condition).to receive(:ensure_present)
 
     processor = double('processor')
     expect(processor).to receive(:start)
@@ -101,6 +103,7 @@ describe Flapjack::Coordinator do
 
     expect(config).to receive(:for_redis).and_return(redis_config)
     expect(Flapjack::RedisProxy).to receive(:config=).with(redis_config)
+    # expect(Flapjack::Data::Condition).to receive(:ensure_present)
 
     processor = double('processor')
     expect(processor).to receive(:start)

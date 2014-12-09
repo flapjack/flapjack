@@ -21,13 +21,12 @@ module Flapjack
       # I've removed regex_* properties as they encourage loose binding against
       # names, which may change. Do client-side grouping and create a tag!
 
-      define_attributes :has_media => :boolean,
+      define_attributes :conditions_list => :string,
+                        :has_media => :boolean,
                         :has_tags => :boolean,
                         :time_restrictions_json => :string
 
-      define_attributes :is_specific => :boolean
-
-      index_by :has_media, :has_tags
+      index_by :conditions_list, :has_media, :has_tags
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
         :inverse_of => :rules
@@ -62,11 +61,8 @@ module Flapjack
         self.save
       end
 
-      has_and_belongs_to_many :conditions, :class_name => 'Flapjack::Data::Condition',
-        :inverse_of => :rules
-
-      has_many :paths, :class_name => 'Flapjack::Data::Path',
-        :inverse_of => :rule
+      # has_many :paths, :class_name => 'Flapjack::Data::Path',
+      #   :inverse_of => :rule
 
       def initialize(attributes = {})
         super
@@ -78,7 +74,7 @@ module Flapjack
 
       validates_each :time_restrictions_json do |record, att, value|
         unless value.nil?
-          restrictions = JSON.parse(value)
+          restrictions = Flapjack.load_json(value)
           case restrictions
           when Enumerable
             record.errors.add(att, 'are invalid') if restrictions.any? {|tr|
@@ -90,13 +86,23 @@ module Flapjack
         end
       end
 
+      def conditions
+        return if self.conditions_list.nil?
+        @conditions ||= self.conditions_list.
+          sub(/^\|/, '').sub(/\|$/, '').split('|').each_with_object  do |c, memo|
+
+          cond = Flapjack::Data::Condition.for_name(c)
+          memo << cond unless cond.nil?
+        end
+      end
+
       # TODO handle JSON exception
       def time_restrictions
         if self.time_restrictions_json.nil?
           @time_restrictions = nil
           return
         end
-        @time_restrictions = JSON.parse(self.time_restrictions_json)
+        @time_restrictions ||= Flapjack.load_json(self.time_restrictions_json)
       end
 
       def time_restrictions=(restrictions)

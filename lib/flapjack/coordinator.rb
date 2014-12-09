@@ -13,6 +13,8 @@ require 'flapjack/redis_proxy'
 require 'flapjack/logger'
 require 'flapjack/pikelet'
 
+require 'flapjack/data/condition'
+
 module Flapjack
 
   class Coordinator
@@ -61,6 +63,7 @@ module Flapjack
         @boot_time = Time.now
 
         Flapjack::RedisProxy.config = @config.for_redis
+        # Flapjack::Data::Condition.ensure_present
 
         pikelet_defs = pikelet_definitions(@config.all)
         return if pikelet_defs.empty?

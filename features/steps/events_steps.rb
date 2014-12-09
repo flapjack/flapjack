@@ -3,7 +3,6 @@
 def drain_events
   @processor.send(:foreach_on_queue, 'events') do |event|
     @processor.send(:process_event, event)
-    @last_event_count = event.counter
   end
   drain_notifications
 end
@@ -65,13 +64,14 @@ def clear_unscheduled_maintenance(entity_name, check_name)
   check.clear_unscheduled_maintenance(Time.now)
 end
 
-def set_state(entity_name, check_name, state, last_update)
+def set_state(entity_name, check_name, condition, last_update = Time.now)
   check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   expect(check).not_to be_nil
 
-  check.state = state
-  check.last_update = last_update
-  check.save
+  state = Flapjack::Data::State.new(:timestamp => last_update,
+    :condition => condition, :condition_changed => true, :notified => false)
+  state.save
+  check.states << state
 end
 
 def submit_ok(entity_name, check_name)
@@ -173,23 +173,18 @@ end
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') has no state$/ do |check_name, entity_name|
   check_name  ||= @check_name
   entity_name ||= @entity_name
-  clear_unscheduled_maintenance(entity_name, check_name)
-  remove_scheduled_maintenance(entity_name, check_name)
 end
 
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in an? (ok|critical) state$/ do |check_name, entity_name, state|
   check_name  ||= @check_name
   entity_name ||= @entity_name
-  clear_unscheduled_maintenance(entity_name, check_name)
-  set_state(entity_name, check_name, state, Time.now.to_i - (6 * 60 *60))
-  remove_scheduled_maintenance(entity_name, check_name)
+  set_state(entity_name, check_name, state, Time.now.to_i)
 end
 
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in scheduled maintenance(?: for (.+))?$/ do |check_name, entity_name, duration|
   check_name  ||= @check_name
   entity_name ||= @entity_name
   durn = duration ? ChronicDuration.parse(duration) : (6 * 60 *60)
-  clear_unscheduled_maintenance(entity_name, check_name)
   set_scheduled_maintenance(entity_name, check_name, durn)
 end
 
@@ -197,8 +192,6 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unsched
   check_name  ||= @check_name
   entity_name ||= @entity_name
   set_unscheduled_maintenance(entity_name, check_name, 60*60*2)
-  set_state(entity_name, check_name, 'critical', Time.now.to_i - (6 * 60 *60))
-  remove_scheduled_maintenance(entity_name, check_name)
 end
 
 Given /^the (initial|repeat) failure delay is (\d+) seconds$/ do |delay_type, num_secs|
@@ -263,30 +256,16 @@ When /^the unscheduled maintenance is ended(?: for check '([\w\.\-]+)' on entity
   clear_unscheduled_maintenance(entity_name, check_name)
 end
 
-Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check_name, entity_name|
+Then /^(no|\d+) notifications? should have been generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |count, check_name, entity_name|
   check_name  ||= @check_name
   entity_name ||= @entity_name
 
   check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   expect(check).not_to be_nil
 
-  if last_notification = check.last_notification
-    puts @logger.messages.join("\n\n") if last_notification.last_notification_count == @last_event_count
-    expect(last_notification.last_notification_count).not_to eq(@last_event_count)
-  end
-end
+  count = (count == 'no') ? 0 : count.to_i
 
-Then /^a notification should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check_name, entity_name|
-  check_name  ||= @check_name
-  entity_name ||= @entity_name
-
-  check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
-  expect(check).not_to be_nil
-
-  last_notification = check.last_notification
-  expect(last_notification).not_to be_nil
-  puts @logger.messages.join("\n\n") if last_notification.last_notification_count != @last_event_count
-  expect(last_notification.last_notification_count).to eq(@last_event_count)
+  expect(check.states.intersect(:notified => true).count).to eq(count)
 end
 
 Then /^(un)?scheduled maintenance should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |unsched, check_name, entity_name|

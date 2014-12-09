@@ -206,13 +206,16 @@ module Flapjack
         @check_details          = last_update ? last_update.details   : nil
         @check_perfdata         = last_update ? last_update.perfdata  : nil
 
-        @last_notifications = Flapjack::Data::Condition.all.each_with_object({}) do |cond, memo|
-          notif = @check.states.intersect(:condition => cond.name, :condition_changed => true,
+        @last_notifications = (Flapjack::Data::Condition.healthy.keys +
+                               Flapjack::Data::Condition.unhealthy.keys).each_with_object({}) do |cond, memo|
+
+          notif = @check.states.intersect(:condition => cond,
+                                          :condition_changed => true,
                                           :notified => true).last
           next if notif.nil?
           t = Time.at(notif.timestamp)
 
-          memo[cond.name.to_sym] = {
+          memo[cond.to_sym] = {
             :time => t.to_s,
             :relative => relative_time_ago(@current_time, t) + " ago",
             :summary => notif.summary
@@ -226,16 +229,17 @@ module Flapjack
         @last_notifications[:recovery] = @last_notifications.delete(:ok)
 
         @scheduled_maintenances = @check.scheduled_maintenances_by_start.all
-        @acknowledgement_id = if Flapjack::Data::Condition::UNHEALTHY.values.include?(@check_state)
-          @check.ack_hash
-        else
+        @acknowledgement_id = if Flapjack::Data::Condition.healthy?(@check_state)
           nil
+        else
+          @check.ack_hash
         end
 
         @current_scheduled_maintenance   = @check.scheduled_maintenance_at(@current_time)
         @current_unscheduled_maintenance = @check.unscheduled_maintenance_at(@current_time)
 
-        # @contacts               = @check.contacts.all
+        # FIXME use the newer indirect routing to get this info
+        # @contacts = @check.contacts.all
         @contacts = []
 
         @state_changes = @check.states.intersect_range(nil, @current_time.to_i,
@@ -350,11 +354,11 @@ module Flapjack
       # FIXME fails if check has no state
       def check_state(check, time)
         latest_problem  = check.states.
-          intersect(:condition => Flapjack::Data::Condition::UNHEALTHY.values,
+          intersect(:condition => Flapjack::Data::Condition.unhealthy.keys,
                     :condition_changed => true, :notified => true).last
 
         latest_recovery = check.states.
-          intersect(:condition => Flapjack::Data::Condition::HEALTHY.values,
+          intersect(:condition => Flapjack::Data::Condition.healthy.keys,
                     :condition_changed => true, :notified => true).last
 
         latest_ack      = check.states.
@@ -433,7 +437,7 @@ module Flapjack
 
         failing_check_ids = Flapjack::Data::State.
           intersect(:id => state_ids_by_check_id.values,
-                    :condition => Flapjack::Data::Condition::UNHEALTHY.values).
+                    :condition => Flapjack::Data::Condition.unhealthy.keys).
           associated_ids_for(:check).values
 
         @failing_checks = Flapjack::Data::Check.intersect(:id => failing_check_ids)

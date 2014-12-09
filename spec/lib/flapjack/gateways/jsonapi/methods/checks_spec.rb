@@ -12,15 +12,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
   it "creates a check" do
     expect(Flapjack::Data::Check).to receive(:lock).
-      with(Flapjack::Data::State, Flapjack::Data::Tag).and_yield
+      with(Flapjack::Data::Tag).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
     full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:state).and_return({check.id => nil})
     expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => []})
     expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check_data[:id]]).exactly(3).times.and_return(empty_ids, full_ids)
+      with(:id => [check_data[:id]]).exactly(2).times.and_return(empty_ids, full_ids)
 
     expect(check).to receive(:invalid?).and_return(false)
     expect(check).to receive(:save).and_return(true)
@@ -33,21 +32,19 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     post "/checks", Flapjack.dump_json(:checks => check_data), jsonapi_post_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to eq(Flapjack.dump_json(:checks => check_data.merge(:links =>
-      {:state => nil,
-       :tags => []}
+      {:tags => []}
     )))
   end
 
   it "creates a check with a linked tag" do
     expect(Flapjack::Data::Check).to receive(:lock).
-      with(Flapjack::Data::State, Flapjack::Data::Tag).and_yield
+      with(Flapjack::Data::Tag).and_yield
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
     full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:state).and_return({check.id => nil})
     expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => [tag.id]})
     expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check_data[:id]]).exactly(3).times.and_return(empty_ids, full_ids)
+      with(:id => [check_data[:id]]).exactly(2).times.and_return(empty_ids, full_ids)
 
     expect(check).to receive(:invalid?).and_return(false)
     expect(check).to receive(:save).and_return(true)
@@ -70,8 +67,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
         'checks.tags' => 'http://example.org/tags/{checks.tags}',
       },
       :checks => check_data.merge(:links =>
-      {:state => nil,
-       :tags => [tag.id]}
+      {:tags => [tag.id]}
     )))
   end
 
@@ -94,10 +90,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       with(:name).and_return(sorted)
 
     full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:state).and_return({check.id => nil})
     expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => []})
     expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check_data[:id]]).twice.and_return(full_ids)
+      with(:id => [check_data[:id]]).and_return(full_ids)
 
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data)
@@ -105,7 +100,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     get '/checks'
     expect(last_response).to be_ok
     expect(last_response.body).to eq(Flapjack.dump_json(:checks => [check_data.merge(:links => {
-      :state => nil,
       :tags => []})], :meta => meta))
   end
 
@@ -114,10 +108,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       with(check.id).and_return(check)
 
     full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:state).and_return({check.id => nil})
     expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => []})
     expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check_data[:id]]).twice.and_return(full_ids)
+      with(:id => [check_data[:id]]).and_return(full_ids)
 
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data)
@@ -125,8 +118,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     get "/checks/#{check.id}"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(Flapjack.dump_json(:checks => check_data.merge(:links =>
-      {:state => nil,
-       :tags => []}
+      {:tags => []}
     )))
   end
 
@@ -135,10 +127,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       with(check.id).and_return(check)
 
     full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:state).and_return({check.id => nil})
     expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => []})
     expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check_data[:id]]).twice.and_return(full_ids)
+      with(:id => [check_data[:id]]).and_return(full_ids)
 
     expect(check).to receive(:as_json).with(:only => [:name, :enabled, :id]).
       and_return(check_data)
@@ -146,7 +137,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     get "/checks/#{check.id}?fields=name,enabled"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(Flapjack.dump_json(:checks => check_data.merge(:links =>
-        {:state => nil, :tags => []})))
+        {:tags => []})))
   end
 
   it "retrieves one check and all its linked tag records" do
@@ -154,11 +145,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       with(check.id).and_return(check)
 
     checks = double('checks')
-    expect(checks).to receive(:associated_ids_for).with(:state).and_return({check.id => nil})
     expect(checks).to receive(:associated_ids_for).with(:tags).
       and_return(check.id => [tag.id])
     expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check.id]).twice.and_return(checks)
+      with(:id => [check.id]).and_return(checks)
 
     expect(Flapjack::Data::Tag).to receive(:find_by_ids!).
       with(tag.id).and_return([tag])
@@ -186,7 +176,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       'checks.tags' => 'http://example.org/tags/{checks.tags}',
       'tags.checks' => 'http://example.org/checks/{tags.checks}',
       },
-      :checks => check_data.merge(:links => {:state => nil, :tags => [tag.id]}),
+      :checks => check_data.merge(:links => {:tags => [tag.id]}),
       :linked => {:tags => [tag_data.merge(:links => {
         :checks => [check.id],
         :rules => []
@@ -202,10 +192,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:sort).with(:name).and_return(sorted)
 
     full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:state).and_return({check.id => nil, check_2.id => nil})
     expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => [], check_2.id => []})
     expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check.id, check_2.id]).twice.and_return(full_ids)
+      with(:id => [check.id, check_2.id]).and_return(full_ids)
 
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data)
@@ -216,8 +205,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     get "/checks/#{check.id},#{check_2.id}"
     expect(last_response).to be_ok
     expect(last_response.body).to eq(Flapjack.dump_json(:checks => [
-      check_data.merge(:links => {:state => nil, :tags => []}),
-      check_2_data.merge(:links => {:state => nil, :tags => []})
+      check_data.merge(:links => {:tags => []}),
+      check_2_data.merge(:links => {:tags => []})
     ]))
   end
 

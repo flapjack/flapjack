@@ -13,24 +13,31 @@ module Flapjack
     class Ok
       include Base
 
-      def block?(event, check, opts = {})
+      def block?(check, opts = {})
         old_state = opts[:old_state]
         new_state = opts[:new_state]
         timestamp = opts[:timestamp]
 
         previous_state = opts[:previous_state]
 
-        healthy = Flapjack::Data::Condition::HEALTHY.values
-
-        unless healthy.include?(new_state.condition)
+        unless new_state.action.nil? && Flapjack::Data::Condition.healthy?(new_state.condition)
           @logger.debug("Filter: Ok: pass")
           return false
         end
 
-        check.clear_unscheduled_maintenance(timestamp)
+        Flapjack::Data::Check.lock(Flapjack::Data::State, Flapjack::Data::Medium) do
+          check.most_severe_notification = nil
+          check.clear_unscheduled_maintenance(timestamp)
+          unless check.alerting_media.empty?
+            @logger.debug("Filter: Ok: clearing alerting media for #{check.id}")
+            check.alerting_media.delete(*check.alerting_media.all)
+          end
+        end
 
-        unless old_state.nil? || healthy.include?(old_state.condition)
+        if old_state.nil? || Flapjack::Data::Condition.healthy?(old_state.condition)
           @logger.debug("Filter: Ok: block - previous state was ok, so blocking")
+          @logger.debug(old_state.inspect)
+          @logger.debug(new_state.inspect)
           return true
         end
 
@@ -42,7 +49,7 @@ module Flapjack
           return true
         end
 
-        if healthy.include?(last_notification.condition)
+        if Flapjack::Data::Condition.healthy?(last_notification.condition)
           @logger.debug("Filter: Ok: block - last notification was a recovery")
           return true
         end

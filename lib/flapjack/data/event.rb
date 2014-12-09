@@ -57,7 +57,7 @@ module Flapjack
 
       def self.parse_and_validate(raw, opts = {})
         errors = []
-        if parsed = ::Oj.load(raw)
+        if parsed = Flapjack.load_json(raw)
           if parsed.is_a?(Hash)
             errors = validation_errors_for_hash(parsed, opts)
           else
@@ -182,21 +182,6 @@ module Flapjack
         return unless @time
         @time.to_i
       end
-
-      # def notification_type
-      #   case state
-      #   when 'ok'
-      #     'recovery'
-      #   when 'warning', 'critical', 'unknown'
-      #     'problem'
-      #   when 'acknowledgement'
-      #     'acknowledgement'
-      #   when 'test_notifications'
-      #     'test'
-      #   else
-      #     'unknown'
-      #   end
-      # end
 
       def dump
         return @dump unless @dump.nil?

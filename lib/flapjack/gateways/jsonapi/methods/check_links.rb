@@ -21,7 +21,7 @@ module Flapjack
               status 204
             end
 
-            app.get %r{^/checks/(#{Flapjack::UUID_RE})/links/(state|tags)} do
+            app.get %r{^/checks/(#{Flapjack::UUID_RE})/links/(tags)} do
               check_id   = params[:captures][0]
               assoc_type = params[:captures][1]
 

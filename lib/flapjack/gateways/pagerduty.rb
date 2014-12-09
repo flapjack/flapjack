@@ -203,7 +203,7 @@ module Flapjack
 
           failing_check_ids = Flapjack::Data::State.
             intersect(:id => state_ids_by_check_id.values,
-                      :condition => Flapjack::Data::Condition::UNHEALTHY.values).
+                      :condition => Flapjack::Data::Condition.unhealthy.keys).
             associated_ids_for(:check).values
 
           time = Time.now

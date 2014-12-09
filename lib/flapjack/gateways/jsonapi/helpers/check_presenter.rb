@@ -28,9 +28,9 @@ module Flapjack
           def status
             last_change   = @check.states.intersect(:condition_changed => true).last
             last_update   = @check.states.last
-            last_problem  = @check.states.intersect(:condition => Flapjack::Data::Condition::UNHEALTHY.values,
+            last_problem  = @check.states.intersect(:condition => Flapjack::Data::Condition.unhealthy.keys,
               :condition_changed => true, :notified => true).last
-            last_recovery = @check.states.intersect(:condition => Flapjack::Data::Condition::HEALTHY.values,
+            last_recovery = @check.states.intersect(:condition => Flapjack::Data::Condition.healthy.keys,
               :condition_changed => true, :notified => true).last
             last_ack      = @check.states.intersect(:action => 'acknowledgement',
               :notified => true).last
@@ -74,7 +74,7 @@ module Flapjack
               obj = hist_states[index]
               index += 1
 
-              next if Flapjack::Data::Condition::HEALTHY.values.include?(obj.condition)
+              next if Flapjack::Data::Condition.healthy?(obj.condition)
 
               if last_obj && (last_obj.condition == obj.condition)
                 # TODO maybe build up arrays of these instead, and leave calling

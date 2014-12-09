@@ -84,7 +84,7 @@ module Flapjack
       @logger.debug ("Processing notification: #{notification.inspect}")
 
       timestamp   = Time.now
-      check       = notification.check
+      check       = notification.state.check
       check_name  = check.name
 
       rule_ids_by_contact_id = check.rule_ids_by_contact_id(:severity => notification.severity,
@@ -105,12 +105,12 @@ module Flapjack
       alerts.each do |alert|
         medium = alert.medium
 
-        @notifylog.info("#{check_name} | " +
-          "#{notification.type} | #{medium.contact.id} | #{medium.transport} | #{medium.address}")
+        @notifylog.info("#{check_name} | #{medium.contact.id} | " \
+                        "#{medium.transport} | #{medium.address}")
 
         @logger.info("Enqueueing #{medium.transport} alert for " +
           "#{check_name} to #{medium.address} " +
-          " type: #{notification.type} rollup: #{alert.rollup || '-'}")
+          " rollup: #{alert.rollup || '-'}")
 
         @queues[medium.transport].push(alert)
       end

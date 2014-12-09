@@ -39,7 +39,7 @@ module Flapjack
         :inverse_of => :alerting_media
 
       belongs_to :last_notification_state, :class_name => 'Flapjack::Data::State',
-        :inverse => :media
+        :inverse_of => :media
 
       index_by :transport
 

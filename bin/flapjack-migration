@@ -341,10 +341,10 @@ def migrate_notification_rules
 
       nr_fail_states = Flapjack::Data::CheckState.failing_states.collect do |fail_state|
         state = Flapjack::Data::NotificationRuleState.new(:state => fail_state,
-          :blackhole => !!JSON.parse(notification_rule_data["#{fail_state}_blackhole"]))
+          :blackhole => !!Flapjack.load_json(notification_rule_data["#{fail_state}_blackhole"]))
         state.save
 
-        media_types = JSON.parse(notification_rule_data["#{fail_state}_media"])
+        media_types = Flapjack.load_json(notification_rule_data["#{fail_state}_media"])
         unless media_types.nil? || media_types.empty?
           state_media = contact.media.intersect(:type => media_types).all
           state.media.add(*state_media) unless state_media.empty?
@@ -356,9 +356,9 @@ def migrate_notification_rules
 
       # rule = Flapjack::Data::NotificationRule.new(
       #   :id => notification_rule_id,
-      #   :entities => Set.new( JSON.parse(notification_rule_data['entities'])),
-      #   :tags => Set.new( JSON.parse(notification_rule_data['tags'])),
-      #   :time_restrictions => JSON.parse(notification_rule_data['time_restrictions'])
+      #   :entities => Set.new( Flapjack.load_json(notification_rule_data['entities'])),
+      #   :tags => Set.new( Flapjack.load_json(notification_rule_data['tags'])),
+      #   :time_restrictions => Flapjack.load_json(notification_rule_data['time_restrictions'])
       # )
       # rule.save
       # rule.states.add(*nr_fail_states)

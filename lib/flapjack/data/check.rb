@@ -43,8 +43,6 @@ module Flapjack
       has_sorted_set :states, :class_name => 'Flapjack::Data::State',
         :key => :timestamp, :inverse_of => :check
 
-      has_one :state, :class_name => 'Flapjack::Data::State',
-        :inverse_of => :check
       has_one :most_severe_notification, :class_name => 'Flapjack::Data::State',
         :inverse_of => :check
 
@@ -97,7 +95,7 @@ module Flapjack
           @perfdata = nil
           return
         end
-        @perfdata ||= JSON.parse(self.perfdata_json)
+        @perfdata ||= Flapjack.load_json(self.perfdata_json)
       end
 
       def self.jsonapi_attributes
@@ -105,7 +103,7 @@ module Flapjack
       end
 
       def self.jsonapi_singular_associations
-        [:state]
+        []
       end
 
       def self.jsonapi_multiple_associations
@@ -244,25 +242,31 @@ module Flapjack
         current_unsched_ms.max_by(&:end_time)
       end
 
-      def set_unscheduled_maintenance(unsched_maint)
+      def set_unscheduled_maintenance(unsched_maint, options = {})
         current_time = Time.now
 
-        # time_remaining
-        if (unsched_maint.end_time - current_time) > 0
-          self.clear_unscheduled_maintenance(unsched_maint.start_time)
-        end
+        self.class.lock(Flapjack::Data::UnscheduledMaintenance,
+                        Flapjack::Data::Medium) do
+          # time_remaining
+          if (unsched_maint.end_time - current_time) > 0
+            self.clear_unscheduled_maintenance(unsched_maint.start_time)
+          end
 
-        self.unscheduled_maintenances_by_start << unsched_maint
-        self.unscheduled_maintenances_by_end << unsched_maint
-        # self.last_update = current_time.to_i # ack is treated as changing condition in this case
-        self.save
+          self.unscheduled_maintenances_by_start << unsched_maint
+          self.unscheduled_maintenances_by_end << unsched_maint
 
-        # TODO add an ack action to the event state directly, uless this is the
-        # result of one
+          # TODO add an ack action to the event state directly, uless this is the
+          # result of one
+          if options[:create_state].is_a?(TrueClass)
+            last_state = self.states.last
+            ack_state = Flapjack::Data::State.new
+            # TODO set state data
+            ack_state.save
+            self.states << ack_state
+          end
 
-        self.class.lock(Flapjack::Data::Medium) do
-          self.alerting_media.each do |medium|
-            self.alerting_media.delete(medium)
+          unless self.alerting_media.empty?
+            self.alerting_media.delete(*self.alerting_media.all)
           end
         end
       end
@@ -271,11 +275,12 @@ module Flapjack
         return unless unsched_maint = unscheduled_maintenance_at(Time.now)
         # need to remove it from the sorted_set that uses the end_time as a key,
         # change and re-add -- see https://github.com/ali-graham/sandstorm/issues/1
-        # TODO should this be in a Sandstorm lock?
-        self.unscheduled_maintenances_by_end.delete(unsched_maint)
-        unsched_maint.end_time = end_time
-        unsched_maint.save
-        self.unscheduled_maintenances_by_end.add(unsched_maint)
+        self.class.lock(Flapjack::Data::UnscheduledMaintenance) do
+          self.unscheduled_maintenances_by_end.delete(unsched_maint)
+          unsched_maint.end_time = end_time
+          unsched_maint.save
+          self.unscheduled_maintenances_by_end.add(unsched_maint)
+        end
       end
 
       # candidate rules are all rules for which
@@ -289,7 +294,7 @@ module Flapjack
 
       # returns hash with check_id => [rules_ids]
       def self.rule_ids_for(*check_ids)
-        generic_rules_ids = Flapjack::Data::Rule.intersect(:is_specific => false).ids
+        generic_rules_ids = Flapjack::Data::Rule.intersect(:has_tags => false).ids
 
         tag_ids_by_check_id = Flapjack::Data::Check.intersect(:id => check_ids).
           associated_ids_for(:tags)
@@ -318,18 +323,17 @@ module Flapjack
 
         rule_ids = rule_ids_by_check_id[self.id]
 
+        logger.info "severity: #{severity}"
+
+        logger.info "Matching rules before severity (#{rule_ids.size}): #{rule_ids.inspect}"
         return [] if rule_ids.empty?
 
-        unless severity.nil?
-          state_ids_by_rule_id = Flapjack::Data::Rule.intersect(:id => rule_ids).
-            associated_ids_for(:states)
-
-          rule_ids.select! do |rule_id|
-            state_ids_by_rule_id[rule_id].include?(severity)
-          end
+        unless severity.nil? || Flapjack::Data::Condition.healthy.include?(severity)
+          rule_ids = Flapjack::Data::Rule.intersect(:id => rule_ids,
+            :conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/]).ids
         end
 
-        logger.info "Matching rules: #{rule_ids.size}"
+        logger.info "Matching rules after severity (#{rule_ids.size}): #{rule_ids.inspect}"
         return [] if rule_ids.empty?
 
         # TODO could maybe also eliminate rules with no media here?
@@ -395,9 +399,9 @@ module Flapjack
         at_time = Time.at(at_time) unless at_time.is_a?(Time)
 
         start_prior_ids = self.unscheduled_maintenances_by_start.
-          intersect_range(nil, at_time.to_i, :by_score => true).ids
+          intersect_range(nil, at_time.to_i + 1, :by_score => true).ids
         end_later_ids = self.unscheduled_maintenances_by_end.
-          intersect_range(at_time.to_i + 1, nil, :by_score => true).ids
+          intersect_range(at_time.to_i, nil, :by_score => true).ids
 
         start_prior_ids & end_later_ids
       end

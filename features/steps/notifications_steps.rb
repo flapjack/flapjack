@@ -104,11 +104,11 @@ Given /^the following rules exist:$/ do |rules|
     rule = Flapjack::Data::Rule.find_by_id(rule_data['id'])
     expect(rule).to be nil
 
-    # # TODO state associations
-    #   :state => (route_data['state'].nil? || route_data['state'].empty?) ? nil : route_data['state'],
+    conditions = rule_data['condition'].split(',').map(&:strip).join(',')
 
     rule = Flapjack::Data::Rule.new(
-      :id          => rule_data['id'],
+      :id             => rule_data['id'],
+      :conditions_list => conditions.empty? ? nil : conditions
     )
 
     unless rule_data['time_restrictions'].nil? || rule_data['time_restrictions'].strip.empty?
@@ -133,8 +133,6 @@ Given /^the following rules exist:$/ do |rules|
         end
         rule.tags << tag
       end
-      rule.is_specific = true
-      expect(rule.save).to be true
     end
 
     unless rule_data['media_ids'].nil? || rule_data['media_ids'].strip.empty?
@@ -148,7 +146,7 @@ Given /^the following rules exist:$/ do |rules|
   end
 end
 
-Given /^(?:a|the) user wants to receive SMS notifications for check '(.+)'$/ do |check_name|
+Given /^(?:a|the) user wants to receive SMS alerts for check '(.+)'$/ do |check_name|
   contact = find_or_create_contact(:name => 'John Smith')
 
   sms = Flapjack::Data::Medium.new(:transport => 'sms',
@@ -158,7 +156,7 @@ Given /^(?:a|the) user wants to receive SMS notifications for check '(.+)'$/ do 
 
   check = find_or_create_check(:name => check_name)
 
-  rule = Flapjack::Data::Rule.new
+  rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
   expect(rule.save).to be true
 
   check_name.gsub(/\./, '_').split(':', 2).each do |tag_name|
@@ -171,19 +169,11 @@ Given /^(?:a|the) user wants to receive SMS notifications for check '(.+)'$/ do 
     check.tags << tag
   end
 
-  rule.is_specific = true
-  expect(rule.save).to be true
-
-  route = Flapjack::Data::Route.new(:state => 'critical')
-  expect(route.save).to be true
-
-  route.media << sms
-  rule.routes << route
-
+  rule.media << sms
   contact.rules << rule
 end
 
-Given /^(?:a|the) user wants to receive email notifications for check '(.+)'$/ do |check_name|
+Given /^(?:a|the) user wants to receive email alerts for check '(.+)'$/ do |check_name|
   contact = find_or_create_contact(:name => 'Jane Smith')
 
   email = Flapjack::Data::Medium.new(:transport => 'email',
@@ -193,7 +183,7 @@ Given /^(?:a|the) user wants to receive email notifications for check '(.+)'$/ d
 
   check = find_or_create_check(:name => check_name)
 
-  rule = Flapjack::Data::Rule.new
+  rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
   expect(rule.save).to be true
 
   check_name.gsub(/\./, '_').split(':', 2).each do |tag_name|
@@ -206,18 +196,11 @@ Given /^(?:a|the) user wants to receive email notifications for check '(.+)'$/ d
     check.tags << tag
   end
 
-  rule.is_specific = true
-  rule.save
-
-  route = Flapjack::Data::Route.new(:state => 'critical')
-  expect(route.save).to be true
-
-  route.media << email
-  rule.routes << route
+  rule.media << email
   contact.rules << rule
 end
 
-Given /^(?:a|the) user wants to receive SNS notifications for check '(.+)'$/ do |check_name|
+Given /^(?:a|the) user wants to receive SNS alerts for check '(.+)'$/ do |check_name|
   contact = find_or_create_contact(:name => 'James Smithson')
 
   sns = Flapjack::Data::Medium.new(:transport => 'sns',
@@ -227,7 +210,7 @@ Given /^(?:a|the) user wants to receive SNS notifications for check '(.+)'$/ do 
 
   check = find_or_create_check(:name => check_name)
 
-  rule = Flapjack::Data::Rule.new
+  rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
   expect(rule.save).to be true
 
   check_name.gsub(/\./, '_').split(':', 2).each do |tag_name|
@@ -240,24 +223,14 @@ Given /^(?:a|the) user wants to receive SNS notifications for check '(.+)'$/ do 
     check.tags << tag
   end
 
-  rule.is_specific = true
-  rule.save
-
-  route = Flapjack::Data::Route.new(:state => 'critical')
-  expect(route.save).to be true
-
-  route.media << sns
-  rule.routes << route
+  rule.media << sns
   contact.rules << rule
 end
 
-# TODO create the notification object in redis, flag the relevant operation as
-# only needing that part running, split up the before block that covers these
 When /^an event notification is generated for check '(.+)'$/ do |check_name|
   timestamp = Time.now.to_i
 
-  event = Flapjack::Data::Event.new('type'    => 'service',
-                                    'state'   => 'critical',
+  event = Flapjack::Data::Event.new('state'   => 'critical',
                                     'summary' => '100% packet loss',
                                     'entity'  => check_name.split(':', 2).first,
                                     'check'   => check_name.split(':', 2).last,
@@ -266,58 +239,42 @@ When /^an event notification is generated for check '(.+)'$/ do |check_name|
   check = Flapjack::Data::Check.intersect(:name => check_name).all.first
   expect(check).not_to be_nil
 
-  check.state = 'critical'
-  check.last_update = timestamp
-  expect(check.save).to be true
-
-  max_notified_severity = check.max_notified_severity_of_current_failure
-  severity = Flapjack::Data::Notification.severity_for_state(event.state,
-               max_notified_severity)
-
-  current_state = check.states.last
-  previous_state = check.states.intersect_range(-2, -1).first
+  state = Flapjack::Data::State.new(:timestamp => timestamp,
+    :condition => 'critical', :condition_changed => true, :notified => true)
+  state.save
+  check.states << state
+  check.most_severe_notification = state
 
   notification = Flapjack::Data::Notification.new(
-    :condition_duration  => 0,
-    :severity            => severity,
-    :type                => event.notification_type,
+    :condition_duration  => 0.0,
+    :severity            => 'critical',
     :time                => event.time,
     :duration            => event.duration,
   )
 
   unless notification.save
-    raise "Couldn't save notification: #{@notification.errors.full_messages.inspect}"
+    raise "Couldn't save notification: #{notification.errors.full_messages.inspect}"
   end
 
-  # notification.tags.add(*check.tags.all) unless check.tags.empty?
-
-  check.notifications << notification
-  current_state.current_notifications << notification
-  previous_state.previous_notifications << notification
+  state.notifications << notification
 
   @notifier.instance_variable_get('@queue').push(notification)
   drain_notifications
 end
 
-Then /^an (SMS|SNS|email) notification for check '(.+)' should( not)? be queued$/ do |medium, check_name, neg|
+Then /^an (SMS|SNS|email) alert for check '(.+)' should( not)? be queued$/ do |medium, check_name, neg|
   queue = redis_peek("#{medium.downcase}_notifications", Flapjack::Data::Alert)
   expect(queue.select {|n| n.check.name == check_name }).
         send((neg ? :to : :not_to), be_empty)
 end
 
-Given /^an (SMS|SNS|email) notification has been queued for check '(.+)'$/ do |media_transport, check_name|
+Given /^an (SMS|SNS|email) alert has been queued for check '(.+)'$/ do |media_transport, check_name|
   check = Flapjack::Data::Check.intersect(:name => check_name).all.first
   expect(check).not_to be_nil
 
-  check.state = 'critical'
-  check.last_update = Time.now.to_i
-  expect(check.save).to be true
-
   @alert = Flapjack::Data::Alert.new(
-    :state => check.states.all.last.state,
-    :rollup => nil,
-    :condition_duration => 15,
-    :notification_type => 'problem',
+    :condition => 'critical',
+    :condition_duration => 15.0,
     :time => Time.now)
 
   unless @alert.save
@@ -332,24 +289,24 @@ Given /^an (SMS|SNS|email) notification has been queued for check '(.+)'$/ do |m
 end
 
 # TODO may need to get more complex, depending which SMS provider is used
-When /^the SMS notification handler runs successfully$/ do
+When /^the SMS alert handler runs successfully$/ do
   @request = stub_request(:get, /^#{Regexp.escape('https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage')}/)
   @sms = Flapjack::Gateways::SmsMessagenet.new(:config => {'username' => 'abcd', 'password' => 'efgh'}, :logger => @logger )
   @sms.send(:handle_alert, @alert)
 end
 
-When /^the SMS notification handler fails to send an SMS$/ do
+When /^the SMS alert handler fails to send an SMS$/ do
   @request = stub_request(:get, /^#{Regexp.escape('https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage')}/).to_return(:status => [500, "Internal Server Error"])
   @sms = Flapjack::Gateways::SmsMessagenet.new(:config => {'username' => 'abcd', 'password' => 'efgh'}, :logger => @logger )
   @sms.send(:handle_alert, @alert)
 end
 
-When /^the email notification handler runs successfully$/ do
+When /^the email alert handler runs successfully$/ do
   @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525, 'from' => 'flapjack@example.com'}}, :logger => @logger)
   @email.send(:handle_alert, @alert)
 end
 
-When /^the email notification handler fails to send an email$/ do
+When /^the email alert handler fails to send an email$/ do
   module Mail
     class TestMailer
       alias_method :"orig_deliver!", :"deliver!"
@@ -370,7 +327,7 @@ When /^the email notification handler fails to send an email$/ do
   end
 end
 
-When /^the SNS notification handler runs successfully$/ do
+When /^the SNS alert handler runs successfully$/ do
   @request = stub_request(:post, /amazonaws\.com/)
   @sns = Flapjack::Gateways::AwsSns.new(:config => {
     'access_key' => "AKIAIOSFODNN7EXAMPLE",
@@ -378,7 +335,7 @@ When /^the SNS notification handler runs successfully$/ do
   @sns.send(:handle_alert, @alert)
 end
 
-When /^the SNS notification handler fails to send an SMS$/ do
+When /^the SNS alert handler fails to send an SMS$/ do
   @request = stub_request(:post, /amazonaws\.com/).to_return(:status => [500, "Internal Server Error"])
   @sns = Flapjack::Gateways::AwsSns.new(:config => {
     'access_key' => "AKIAIOSFODNN7EXAMPLE",
@@ -386,32 +343,32 @@ When /^the SNS notification handler fails to send an SMS$/ do
   @sns.send(:handle_alert, @alert)
 end
 
-Then /^the user should receive an SMS notification$/ do
+Then /^the user should receive an SMS alert$/ do
   expect(@request).to have_been_requested
   expect(@sms.sent).to eq(1)
 end
 
-Then /^the user should receive an SNS notification$/ do
+Then /^the user should receive an SNS alert$/ do
   expect(@request).to have_been_requested
   expect(@sns.sent).to eq(1)
 end
 
-Then /^the user should receive an email notification$/ do
+Then /^the user should receive an email alert$/ do
   expect(Mail::TestMailer.deliveries.length).to eq(1)
   expect(@email.sent).to eq(1)
 end
 
-Then /^the user should not receive an SMS notification$/ do
+Then /^the user should not receive an SMS alert$/ do
   expect(@request).to have_been_requested
   expect(@sms.sent).to eq(0)
 end
 
-Then /^the user should not receive an SNS notification$/ do
+Then /^the user should not receive an SNS alert$/ do
   expect(@request).to have_been_requested
   expect(@sns.sent).to eq(0)
 end
 
-Then /^the user should not receive an email notification$/ do
+Then /^the user should not receive an email alert$/ do
   expect(Mail::TestMailer.deliveries).to be_empty
   expect(@email.sent).to eq(0)
 end

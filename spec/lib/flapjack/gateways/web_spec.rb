@@ -181,12 +181,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
       expect(check).to receive(:name).and_return(check_name)
 
-      conditions = ['ok', 'critical', 'warning', 'unknown'].collect do |cond|
-        double(Flapjack::Data::Condition, :name => cond)
-      end
-
-      expect(Flapjack::Data::Condition).to receive(:all).and_return(conditions)
-
       failing_state = double(Flapjack::Data::State, :condition => 'critical', :timestamp => time - ((3 * 60 * 60) + (5 * 60)))
       expect(failing_state).to receive(:summary).twice.and_return('BAAAAD')
       last_failing = double('last_failing', :last => failing_state)

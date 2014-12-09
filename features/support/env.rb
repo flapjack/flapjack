@@ -53,7 +53,8 @@ class MockLogger
 
   %w(debug info warn error fatal).each do |level|
     class_eval <<-RUBY
-      def #{level}(msg)
+      def #{level}(msg = nil, &block)
+        msg = yield if msg.nil? && block_given?
         @messages << msg
       end
     RUBY
@@ -147,7 +148,8 @@ end
 
 Before('@processor') do
   Flapjack.redis.flushdb
-  @processor = Flapjack::Processor.new(:logger => @logger, :config => {})
+  # Flapjack::Data::Condition.ensure_present
+  @processor = Flapjack::Processor.new(:logger => @logger, :config => {'new_check_scheduled_maintenance_duration' => '0 seconds'})
 end
 
 After('@processor') do
@@ -156,6 +158,7 @@ end
 
 Before('@notifier') do
   Flapjack.redis.flushdb
+  # Flapjack::Data::Condition.ensure_present
   @notifier  = Flapjack::Notifier.new(:logger => @logger,
     :config => {'email_queue' => 'email_notifications',
                 'sms_queue' => 'sms_notifications',

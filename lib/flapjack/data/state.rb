@@ -2,6 +2,8 @@
 
 require 'sandstorm/records/redis_record'
 
+require 'flapjack/data/condition'
+
 require 'flapjack/data/validators/id_validator'
 
 module Flapjack
@@ -19,11 +21,8 @@ module Flapjack
                         :notified      => :boolean,
                         :summary       => :string,
                         :details       => :string,
-                        :perfdata_json => :string,
-                        :count         => :integer,
-                        :last_notification_count => :integer # ???
+                        :perfdata_json => :string
 
-      unique_index_by :count
       index_by :condition, :condition_changed, :action, :notified
 
       belongs_to :check, :class_name => 'Flapjack::Data::Check', :inverse_of => :states
@@ -31,22 +30,20 @@ module Flapjack
       has_many :notifications, :class_name => 'Flapjack::Data::Notification',
         :inverse_of => :state
 
-      has_many :media, :class_name => 'Flapjack::Data::Medium',
-        :inverse_of => :last_notification_state
-
       validates_with Flapjack::Data::Validators::IdValidator
 
       validates :timestamp, :presence => true
 
-      validates :condition, :presence => true,
-        :inclusion => {:in => Flapjack::Data::Condition::HEALTHY.values +
-                              Flapjack::Data::Condition::UNHEALTHY.values}
+      # condition shopuld only be blank if no previous check states with condition
+      validates :condition, :unless => proc {|s| !s.action.nil? },
+        :inclusion => { :in => Flapjack::Data::Condition.healthy.keys +
+                               Flapjack::Data::Condition.unhealthy.keys }
 
       ACTIONS = %w(acknowledgement test_notifications)
 
       validates :action, :allow_nil => true, :inclusion => {:in => ACTIONS}
 
-      validates :notified, :presence => true, :inclusion => {:in => [true, false]}
+      validates :notified, :inclusion => {:in => [true, false]}
 
       # example perfdata: time=0.486630s;;;0.000000 size=909B;;;0
       def perfdata=(data)

@@ -6,7 +6,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
   include_context "jsonapi"
 
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
-  let(:state) { double(Flapjack::Data::State, :id => state_data[:name]) }
   let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
 
   let(:check_tags)  { double('check_tags') }
@@ -61,17 +60,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
 
     delete "/checks/#{check.id}/links/tags/#{tag.id}"
     expect(last_response.status).to eq(204)
-  end
-
-  it 'gets states for a check' do
-    expect(check).to receive(:state).and_return(state)
-
-    expect(Flapjack::Data::Check).to receive(:find_by_id!).with(check.id).
-      and_return(check)
-
-    get "/checks/#{check.id}/links/state"
-    expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:states => state.id))
   end
 
 end

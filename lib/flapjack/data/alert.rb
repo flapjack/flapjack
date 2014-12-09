@@ -6,6 +6,8 @@ require 'sandstorm/records/redis_record'
 
 require 'flapjack/utility'
 
+require 'flapjack/data/state'
+
 # Alert is the object ready to send to someone, complete with an address and all
 # the data with which to render the text of the alert in the appropriate gateway
 
@@ -16,46 +18,37 @@ module Flapjack
       include Flapjack::Utility
       include Sandstorm::Records::RedisRecord
 
-      define_attributes :state        => :string,
-                        :summary      => :string,
-                        :details      => :string,
-
-                        :last_state   => :string,
-                        :last_summary => :string,
-
-                        :event_count  => :integer,
-                        :time         => :timestamp,
-
-                        # shouldn't need this, can calculate from state & last_state
-                        :notification_type => :string,
-
-                        :acknowledgement_duration => :integer, # SMELL -- passed in as duration in other code
-                        :condition_duration => :integer,
-
-                        :rollup        => :string,
-                        :rollup_states_json => :string,
-
-                        :event_hash    => :string
+      define_attributes :condition      => :string,
+                        :action         => :string,
+                        :summary        => :string,
+                        :details        => :string,
+                        :last_condition => :string,
+                        :last_action    => :string,
+                        :last_summary   => :string,
+                        :event_count    => :integer,
+                        :time           => :timestamp,
+                        :acknowledgement_duration => :integer, # passed in as duration in other code
+                        :condition_duration       => :float,
+                        :rollup         => :string,
+                        :rollup_states_json       => :string,
+                        :event_hash     => :string
 
       belongs_to :medium, :class_name => 'Flapjack::Data::Medium', :inverse_of => :alerts
-        # media_type, address, :rollup_threshold retrieved from medium
-        # contact_id, name retrieved from medium.contact
 
       belongs_to :check, :class_name => 'Flapjack::Data::Check', :inverse_of => :alerts
-        # entity, in_scheduled_maintenance, in_unscheduled_maintenance retrieved from check
 
-      def self.states
-        ['ok', 'critical', 'warning', 'unknown', 'test', 'acknowledgement']
-      end
+      validates :condition, :unless => proc {|s| !s.action.nil? },
+        :inclusion => { :in => Flapjack::Data::Condition.healthy.keys +
+                               Flapjack::Data::Condition.unhealthy.keys }
 
-      validates :state, :presence => true, :inclusion => {:in => self.states },
-        :unless => proc {|n| n.type == 'test'}
+      validates :action, :allow_nil => true, :inclusion => {:in => Flapjack::Data::State::ACTIONS}
+
       validates :condition_duration, :presence => true,
         :numericality => {:minimum => 0}, :unless => proc {|n| n.type == 'test'}
 
       validates_each :rollup_states_json do |record, att, value|
         unless value.nil?
-          states = JSON.parse(value)
+          states = Flapjack.load_json(value)
           case states
           when Hash
             record.errors.add(att, 'must contain a serialized Hash (String => Array[String])') unless states.all? {|k,v|
@@ -73,12 +66,34 @@ module Flapjack
           @rollup_states = nil
           return
         end
-        @rollup_states = JSON.parse(self.rollup_states_json)
+        @rollup_states = Flapjack.load_json(self.rollup_states_json)
       end
 
       def rollup_states=(rollup_states)
         @rollup_states = rollup_states
         self.rollup_states_json = rollup_states.nil? ? nil : Flapjack.dump_json(rollup_states)
+      end
+
+      def notification_type
+        self.class.notification_type(action, condition)
+      end
+
+      def self.notification_type(act, cond)
+        case act
+        when 'acknowledgement'
+          'acknowledgement'
+        when 'test_notifications'
+          'test'
+        when nil
+          case cond
+          when 'ok'
+            'recovery'
+          when 'warning', 'critical', 'unknown'
+            'problem'
+          else
+            'unknown'
+          end
+        end
       end
 
       def type
@@ -88,7 +103,7 @@ module Flapjack
         when "recovery"
           "rollup_recovery"
         else
-          self.notification_type
+          notification_type
         end
       end
 
@@ -103,12 +118,20 @@ module Flapjack
         end
       end
 
+      def state
+        @state ||= (self.action || self.condition)
+      end
+
+      def last_state
+        @last_state ||= (self.last_action || self.last_condition)
+      end
+
       def state_title_case
-        ['ok'].include?(self.state) ? self.state.upcase : self.state.titleize
+        ['ok'].include?(state) ? state.upcase : state.titleize
       end
 
       def last_state_title_case
-        ['ok'].include?(self.last_state) ? self.last_state.upcase : self.last_state.titleize
+        ['ok'].include?(last_state) ? last_state.upcase : last_state.titleize
       end
 
       def rollup_states_summary
