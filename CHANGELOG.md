@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 1.2.1rc3 - 2014-12-09
+- Bug: flapjack 1.2.0 ignores umask and makes logs world writable #708 (@ali-graham)
+- Bug: Can't get full name email syntax working #690 (@jessereynolds)
+
 # 1.2.1rc2 - 2014-12-04
 - Bug: Correct scheduled maintenance periods with expiry that don't match their timestamps #734 (@ali-graham)
 
