@@ -238,9 +238,45 @@ module Flapjack
         @current_scheduled_maintenance   = @check.scheduled_maintenance_at(@current_time)
         @current_unscheduled_maintenance = @check.unscheduled_maintenance_at(@current_time)
 
-        # FIXME use the newer indirect routing to get this info
-        # @contacts = @check.contacts.all
-        @contacts = []
+        Flapjack::Data::Contact.lock(Flapjack::Data::Medium, Flapjack::Data::Rule) do
+          rule_ids_by_contact_id = @check.rule_ids_by_contact_id
+
+          if rule_ids_by_contact_id.empty?
+            @contacts = []
+            @contact_media = {}
+          else
+            @contacts = Flapjack::Data::Contact.
+              intersect(:id => rule_ids_by_contact_id.keys).sort(:name).all
+
+            rule_ids = Set.new(rule_ids_by_contact_id.values.flatten)
+
+            if rule_ids.empty?
+              @contact_media = {}
+            else
+
+              media_ids_by_rule_id = Flapjack::Data::Rule.
+                intersect(:id => rule_ids).associated_ids_for(:media)
+
+              media_ids = Set.new(media_ids_by_rule_id.values.flatten)
+
+              if media_ids.empty?
+                @contact_media = {}
+              else
+                media_ids_by_contact_id = Flapjack::Data::Medium.
+                  intersect(:id => media_ids).associated_ids_for(:contact)
+
+                @contact_media = @contacts.each_with_object({}) do |contact, memo|
+                  m_ids = media_ids_by_contact_id[contact.id]
+                  next if m_ids.nil? || m_ids.empty?
+                  memo[contact.id] = Flapjack::Data::Medium.intersect(:id => m_ids).all
+                end
+              end
+
+            end
+
+          end
+
+        end
 
         @state_changes = @check.states.intersect_range(nil, @current_time.to_i,
                            :desc => true, :limit => 20, :by_score => true).all

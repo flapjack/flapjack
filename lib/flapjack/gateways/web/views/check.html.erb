@@ -382,27 +382,28 @@
 <div class="row">
   <div id="contacts" class="col-md-8">
     <h3>Contacts</h3>
-    <% if @contacts && !@contacts.empty? %>
+    <% if @contacts.empty? %>
+      <p>There are <strong>no contacts</strong> associated with this check.</p>
+    <% else %>
       <table class="table table-bordered table-hover table-condensed">
         <tr>
           <th>Name</th>
           <th>Media</th>
         </tr>
-        <% @contacts.sort_by(&:name).each do |contact| %>
+        <% @contacts.each do |contact| %>
           <tr>
             <td><a href="<%= @base_url %>contacts/<%= u(contact.id) %>" title="contact details"><%= h contact.name %></a></td>
             <td>
-              <% if contact.media && !contact.media.empty? %>
-                <p><%= h contact.media.keys.collect(&:capitalize).join(", ") %></p>
-              <% else %>
+              <%- contact_media = @media_by_contact_id[contact.id] %>
+              <% if contact_media.nil? || contact_media.empty? %>
                 <p>No media</p>
+              <% else %>
+                <p><%= h contact_media.map(&:transport).collect(&:capitalize).join(", ") %></p>
               <% end %>
             </td>
           </tr>
         <% end %>
       </table>
-    <% else %>
-      <p>There are <strong>no contacts</strong> associated with this check.</p>
     <% end %>
   </div><!-- col-md-8 -->
 </div><!-- row -->

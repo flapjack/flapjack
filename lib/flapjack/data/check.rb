@@ -326,7 +326,7 @@ module Flapjack
         logger.info "severity: #{severity}"
 
         logger.info "Matching rules before severity (#{rule_ids.size}): #{rule_ids.inspect}"
-        return [] if rule_ids.empty?
+        return {} if rule_ids.empty?
 
         unless severity.nil? || Flapjack::Data::Condition.healthy.include?(severity)
           rule_ids = Flapjack::Data::Rule.intersect(:id => rule_ids,
@@ -334,7 +334,7 @@ module Flapjack
         end
 
         logger.info "Matching rules after severity (#{rule_ids.size}): #{rule_ids.inspect}"
-        return [] if rule_ids.empty?
+        return {} if rule_ids.empty?
 
         # TODO could maybe also eliminate rules with no media here?
 

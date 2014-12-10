@@ -217,9 +217,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(check).to receive(:scheduled_maintenance_at).with(time).and_return(nil)
       expect(check).to receive(:unscheduled_maintenance_at).with(time).and_return(nil)
 
-      # no_contacts = double('no_contacts', :all => [])
-      # expect(check).to receive(:contacts).and_return(no_contacts)
-
       all_states = double('all_states', :all => [ok_state, failing_state])
       expect(states).to receive(:intersect_range).
         with(nil, time.to_i, :desc => true, :limit => 20, :by_score => true).
@@ -227,11 +224,13 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
       expect(check).to receive(:enabled).and_return(true)
 
-      # expect(Flapjack::Data::Check).to receive(:intersect).with(:state =>
-      #   ['critical', 'warning', 'unknown']).and_return(failing_checks)
-
       expect(Flapjack::Data::Check).to receive(:find_by_id).with(check.id).
         and_return(check)
+
+      expect(Flapjack::Data::Contact).to receive(:lock).
+        with(Flapjack::Data::Medium, Flapjack::Data::Rule).and_yield
+
+      expect(check).to receive(:rule_ids_by_contact_id).and_return({})
 
       get "/checks/#{check.id}"
       expect(last_response).to be_ok
