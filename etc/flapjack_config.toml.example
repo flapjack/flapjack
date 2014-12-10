@@ -152,6 +152,11 @@ daemonize = true
     enabled = false
     # the redis queue this pikelet will look for notifications on
     queue = "pagerduty_notifications"
+    [gateways.pagerduty.credentials]
+      service_key = 1234567890
+      subdomain = thecompany
+      username = user
+      password = pass
     [gateways.pagerduty.logger]
       level = "INFO"
       syslog_errors = true

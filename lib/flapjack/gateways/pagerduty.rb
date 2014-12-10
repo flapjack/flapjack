@@ -168,6 +168,12 @@ module Flapjack
 
           @logger.debug("New Pagerduty::AckFinder pikelet with the following options: #{@config.inspect}")
 
+          if credentials = @config['credentials']
+            @subdomain = credentials['subdomain']
+            @username  = credentials['username']
+            @password  = credentials['password']
+          end
+
           # TODO: only clear this if there isn't another pagerduty gateway instance running
           # or better, include an instance ID in the semaphore key name
           Flapjack.redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
@@ -258,15 +264,12 @@ module Flapjack
         end
 
         def pagerduty_acknowledged?(opts = {})
-          subdomain   = opts['subdomain']
-          username    = opts['username']
-          password    = opts['password']
-          check       = opts['check']
+          check = opts['check']
 
-          unless subdomain && username && password && check
+          if @subdomain.blank? || @username.blank? || @password.blank? || check.nil?
             @logger.warn("pagerduty_acknowledged?: Unable to look for acknowledgements on pagerduty" +
                          " as all of the following options are required:" +
-                         " subdomain (#{subdomain}), username (#{username}), password (#{password}), check (#{check})")
+                         " subdomain (#{@subdomain}), username (#{@username}), password (#{@password}), check (#{check})")
             return nil
           end
 
@@ -278,7 +281,7 @@ module Flapjack
                    'incident_key' => check,
                    'status'       => 'acknowledged'}
 
-          uri = URI::HTTPS.build(:host => "#{subdomain}.pagerduty.com",
+          uri = URI::HTTPS.build(:host => "#{@subdomain}.pagerduty.com",
                                  :path => '/api/v1/incidents',
                                  :port => 443,
                                  :query => URI.encode_www_form(query))
@@ -286,11 +289,11 @@ module Flapjack
           http.use_ssl = true
           http.verify_mode = OpenSSL::SSL::VERIFY_PEER
           request = Net::HTTP::Get.new(uri.request_uri)
-          request.basic_auth(username, password)
+          request.basic_auth(@username, @password)
 
           @logger.debug("pagerduty_acknowledged?: request to #{uri.request_uri}")
           @logger.debug("pagerduty_acknowledged?: query: #{query.inspect}")
-          @logger.debug("pagerduty_acknowledged?: auth: #{username}, #{password}")
+          @logger.debug("pagerduty_acknowledged?: auth: #{@username}, #{@password}")
 
           http_response = http.request(request)
 
@@ -319,10 +322,7 @@ module Flapjack
         end
 
       end
-
     end
-
   end
-
 end
 

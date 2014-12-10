@@ -19,13 +19,10 @@ module Flapjack
 
       TRANSPORTS = ['email', 'sms', 'jabber', 'pagerduty', 'sns', 'sms_twilio']
 
-      # TODO userdata for pagerduty credentials
-
       define_attributes :transport         => :string,
                         :address           => :string,
                         :interval          => :integer,
                         :rollup_threshold  => :integer,
-                        # :userdata          => :hash,
                         :last_rollup_type  => :string
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
@@ -45,11 +42,22 @@ module Flapjack
 
       validates :transport, :presence => true,
         :inclusion => {:in => Flapjack::Data::Medium::TRANSPORTS }
+
       validates :address, :presence => true
+
       validates :interval, :presence => true,
-        :numericality => {:greater_than_or_equal_to => 0, :only_integer => true}
+        :numericality => {:greater_than_or_equal_to => 0, :only_integer => true},
+        :unless => proc {|m| 'pagerduty'.eql?(m.transport) }
+
       validates :rollup_threshold, :allow_nil => true,
-        :numericality => {:greater_than => 0, :only_integer => true}
+        :numericality => {:greater_than => 0, :only_integer => true},
+        :unless => proc {|m| 'pagerduty'.eql?(m.transport) }
+
+      validates_each :interval, :rollup_threshold,
+        :if =>  proc {|m| 'pagerduty'.eql?(m.transport) } do |record, att, value|
+
+        record.errors.add(att, 'must be nil') unless value.nil?
+      end
 
       validates_with Flapjack::Data::Validators::IdValidator
 

@@ -4,7 +4,12 @@ require 'flapjack/gateways/pagerduty'
 
 describe Flapjack::Gateways::Pagerduty, :logger => true do
 
-  let(:config) { {'queue'    => 'pagerduty_notifications'} }
+  let(:config) { {
+    'queue'       => 'pagerduty_notifications',
+    'credentials' => {'subdomain' => 'flpjck',
+                      'username' => 'flapjack',
+                      'password' => 'password123'}
+  } }
 
   let(:now)   { Time.new }
 
@@ -192,8 +197,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config, :logger => @logger)
 
-      result = fpa.send(:pagerduty_acknowledged?, 'subdomain' => 'flpjck',
-        'username' => 'flapjack', 'password' => 'password123', 'check' => check)
+      result = fpa.send(:pagerduty_acknowledged?, 'check' => check)
 
       expect(result).to be_a(Hash)
       expect(result).to have_key(:pg_acknowledged_by)
