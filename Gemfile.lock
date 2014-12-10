@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    flapjack (1.2.1rc3)
+    flapjack (1.2.1)
       activesupport (~> 3.2.14)
       blather (~> 0.8.3)
       chronic
