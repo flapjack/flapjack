@@ -298,7 +298,6 @@ module Flapjack
             response = Oj.load(http_response.body)
           rescue Oj::Error
             @logger.error("failed to parse json from a post to #{url} ... response headers and body follows...")
-            return nil
           end
           @logger.debug(http_response.inspect)
           status   = http_response.code
