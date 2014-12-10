@@ -1,7 +1,7 @@
 ## Flapjack Changelog
 
 # 1.2.1 - 2014-12-10
-- No changes
+- Bug: Fix PagerDuty log failure on POST (maint/1.x) #744 (@jgoldschrafe)
 
 # 1.2.1rc3 - 2014-12-09
 - Bug: flapjack 1.2.0 ignores umask and makes logs world writable #708 (@ali-graham)
