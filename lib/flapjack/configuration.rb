@@ -57,7 +57,10 @@ module Flapjack
 
       config_file_names = Dir.glob(file_pattern)
 
-      config_file_names.each { |f| raise "#{f} looks like a YAML file. Flapjack v2 config files are now in TOML, see flapjack.io/docs/2.x/configuration" if f.end_with?('.yaml') }
+      config_file_names.each { |f| 
+        raise "#{f} looks like a YAML file. Flapjack v2 config files are now in TOML, " + 
+          "see flapjack.io/docs/2.x/configuration" if f.end_with?('.yaml') 
+      }
 
       if config_file_names.nil?
         @logger.error(
