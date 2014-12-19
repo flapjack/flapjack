@@ -138,18 +138,18 @@ def redis_peek(queue, klass, start = 0, count = nil)
 end
 
 Before do
-  @logger = MockLogger.new
+  Flapjack.logger = @logger = MockLogger.new
 end
 
 After do
-  @logger.messages = []
+  Flapjack.logger.messages = []
   WebMock.reset!
 end
 
 Before('@processor') do
   Flapjack.redis.flushdb
   # Flapjack::Data::Condition.ensure_present
-  @processor = Flapjack::Processor.new(:logger => @logger, :config => {'new_check_scheduled_maintenance_duration' => '0 seconds'})
+  @processor = Flapjack::Processor.new(:config => {'new_check_scheduled_maintenance_duration' => '0 seconds'})
 end
 
 After('@processor') do

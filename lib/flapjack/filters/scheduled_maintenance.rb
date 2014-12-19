@@ -9,7 +9,7 @@ module Flapjack
 
       def block?(check, opts = {})
         result = check.in_scheduled_maintenance?
-        @logger.debug("Filter: Scheduled Maintenance: #{result ? "block" : "pass"}")
+        Flapjack.logger.debug("Filter: Scheduled Maintenance: #{result ? "block" : "pass"}")
         result
       end
     end

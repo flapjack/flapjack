@@ -30,7 +30,8 @@ module Flapjack
                         :enabled               => :boolean,
                         :ack_hash              => :string,
                         :initial_failure_delay => :integer,
-                        :repeat_failure_delay  => :integer
+                        :repeat_failure_delay  => :integer,
+                        :notification_count    => :integer
 
       index_by :enabled
       unique_index_by :name, :ack_hash
@@ -43,23 +44,44 @@ module Flapjack
       has_sorted_set :states, :class_name => 'Flapjack::Data::State',
         :key => :timestamp, :inverse_of => :check
 
-      has_one :most_severe_notification, :class_name => 'Flapjack::Data::State',
-        :inverse_of => :check
+      has_one :most_severe, :class_name => 'Flapjack::Data::State',
+        :inverse_of => :most_severe_check
+
+      has_sorted_set :latest_notifications, :class_name => 'Flapjack::Data::Entry',
+        :key => :timestamp, :inverse_of => :latest_notifications_check,
+        :after_remove => :removed_latest_notification
+
+      def removed_latest_notification(entry)
+        Flapjack.logger.info "pre-delete-check: processor check_latest_notifications"
+        Flapjack::Data::Entry.delete_if_unlinked(entry)
+      end
+
+      def last_update
+        s = self.states.last
+        return if s.nil?
+        s.entries.last
+      end
+
+      def last_change
+        s = self.states.last
+        return if s.nil?
+        s.entries.first
+      end
 
       # keep two indices for each, so that we can query on their intersection
       has_sorted_set :scheduled_maintenances_by_start,
         :class_name => 'Flapjack::Data::ScheduledMaintenance',
-        :key => :start_time, :inverse_of => :check
+        :key => :start_time, :inverse_of => :check_by_start
       has_sorted_set :scheduled_maintenances_by_end,
         :class_name => 'Flapjack::Data::ScheduledMaintenance',
-        :key => :end_time, :inverse_of => :check
+        :key => :end_time, :inverse_of => :check_by_end
 
       has_sorted_set :unscheduled_maintenances_by_start,
         :class_name => 'Flapjack::Data::UnscheduledMaintenance',
-        :key => :start_time, :inverse_of => :check
+        :key => :start_time, :inverse_of => :check_by_start
       has_sorted_set :unscheduled_maintenances_by_end,
         :class_name => 'Flapjack::Data::UnscheduledMaintenance',
-        :key => :end_time, :inverse_of => :check
+        :key => :end_time, :inverse_of => :check_by_end
 
       # the following associations are used internally, for the notification
       # and alert queue inter-pikelet workflow

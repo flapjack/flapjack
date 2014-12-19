@@ -29,7 +29,7 @@ module Flapjack
       # {'contacts' => [CONTACT_HASH, ...]}
 
       def contacts
-        conts = Oj.load(File.new(@options[:from]))
+        conts = Flapjack.load_json(File.new(@options[:from]))
 
         if conts && conts.is_a?(Enumerable) && conts.any? {|e| !e['id'].nil?}
           conts.each do |contact_data|

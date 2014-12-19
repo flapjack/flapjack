@@ -264,7 +264,7 @@
       <tr>
         <td><%= h Time.at(state_change.timestamp).to_s %></td>
         <td><%= h state_change.condition %></td>
-        <td><%= h state_change.summary %></td>
+        <td><%= h state_change.entries.last.summary %></td>
       </tr>
       <% end %>
     </table>

@@ -15,18 +15,18 @@ module Flapjack
 
       def block?(check, opts = {})
         old_state = opts[:old_state]
-        new_state = opts[:new_state]
+        new_entry = opts[:new_entry]
         timestamp = opts[:timestamp]
 
         label = 'Filter: Acknowledgement:'
 
-        unless 'acknowledgement'.eql?(new_state.action)
-          @logger.debug { "#{label} pass (not an ack)" }
+        unless 'acknowledgement'.eql?(new_entry.action)
+          Flapjack.logger.debug { "#{label} pass (not an ack)" }
           return false
         end
 
         if old_state.nil? || Flapjack::Data::Condition.healthy?(old_state.condition)
-          @logger.debug {
+          Flapjack.logger.debug {
             "#{label} blocking because check '#{check.name}' is not failing"
           }
           return true
@@ -35,12 +35,12 @@ module Flapjack
         end_time = timestamp + (opts[:duration] || (4 * 60 * 60))
 
         unsched_maint = Flapjack::Data::UnscheduledMaintenance.new(:start_time => timestamp,
-          :end_time => end_time, :summary => new_state.summary)
+          :end_time => end_time, :summary => new_entry.summary)
         unsched_maint.save
 
         check.set_unscheduled_maintenance(unsched_maint)
 
-        @logger.debug{
+        Flapjack.logger.debug{
           "#{label} pass (unscheduled maintenance created for #{check.name}, " \
           " duration: #{end_time - timestamp})"
         }

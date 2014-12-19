@@ -114,7 +114,7 @@ RSpec.configure do |config|
   end
 
   config.around(:each, :logger => true) do |example|
-    @logger = MockLogger.new
+    Flapjack.logger = @logger = MockLogger.new
     example.run
 
     if ENV['SHOW_LOGGER_ALL']

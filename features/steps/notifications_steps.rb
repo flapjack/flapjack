@@ -240,15 +240,19 @@ When /^an event notification is generated for check '(.+)'$/ do |check_name|
   expect(check).not_to be_nil
 
   state = Flapjack::Data::State.new(:timestamp => timestamp,
-    :condition => 'critical', :condition_changed => true, :notified => true)
+    :condition => 'critical')
   state.save
   check.states << state
-  check.most_severe_notification = state
+
+  entry = Flapjack::Data::Entry.new(:timestamp => timestamp,
+    :condition => 'critical')
+  entry.save
+  state.entries << entry
+  check.most_severe = state
 
   notification = Flapjack::Data::Notification.new(
     :condition_duration  => 0.0,
     :severity            => 'critical',
-    :time                => event.time,
     :duration            => event.duration,
   )
 
@@ -256,7 +260,7 @@ When /^an event notification is generated for check '(.+)'$/ do |check_name|
     raise "Couldn't save notification: #{notification.errors.full_messages.inspect}"
   end
 
-  state.notifications << notification
+  entry.notification = notification
 
   @notifier.instance_variable_get('@queue').push(notification)
   drain_notifications

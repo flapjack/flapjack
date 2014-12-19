@@ -6,7 +6,8 @@ require 'sandstorm/records/redis_record'
 
 require 'flapjack/utility'
 
-require 'flapjack/data/state'
+require 'flapjack/data/condition'
+require 'flapjack/data/entry'
 
 # Alert is the object ready to send to someone, complete with an address and all
 # the data with which to render the text of the alert in the appropriate gateway
@@ -41,7 +42,7 @@ module Flapjack
         :inclusion => { :in => Flapjack::Data::Condition.healthy.keys +
                                Flapjack::Data::Condition.unhealthy.keys }
 
-      validates :action, :allow_nil => true, :inclusion => {:in => Flapjack::Data::State::ACTIONS}
+      validates :action, :allow_nil => true, :inclusion => {:in => Flapjack::Data::Entry::ACTIONS}
 
       validates :condition_duration, :presence => true,
         :numericality => {:minimum => 0}, :unless => proc {|n| n.type == 'test'}

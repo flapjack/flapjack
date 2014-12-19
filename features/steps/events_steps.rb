@@ -69,7 +69,7 @@ def set_state(entity_name, check_name, condition, last_update = Time.now)
   expect(check).not_to be_nil
 
   state = Flapjack::Data::State.new(:timestamp => last_update,
-    :condition => condition, :condition_changed => true, :notified => false)
+    :condition => condition)
   state.save
   check.states << state
 end
@@ -263,9 +263,12 @@ Then /^(no|\d+) notifications? should have been generated(?: for check '([\w\.\-
   check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   expect(check).not_to be_nil
 
-  count = (count == 'no') ? 0 : count.to_i
-
-  expect(check.states.intersect(:notified => true).count).to eq(count)
+  case count
+  when 'no', 0
+    expect(check.notification_count).to be_nil
+  else
+    expect(check.notification_count).to eq(count.to_i)
+  end
 end
 
 Then /^(un)?scheduled maintenance should be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |unsched, check_name, entity_name|

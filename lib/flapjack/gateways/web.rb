@@ -171,7 +171,7 @@ module Flapjack
         time = Time.now
 
         @adjective, @checks = if 'failing'.eql?(params[:type])
-          ['failing', failing_checks.all]
+          ['failing', failing_checks]
         else
           ['all', Flapjack::Data::Check.all]
         end
@@ -194,8 +194,8 @@ module Flapjack
 
         check_stats
 
-        last_change = @check.states.intersect(:condition_changed => true).last
-        last_update = @check.states.last
+        last_change = @check.states.last
+        last_update = @check.latest_notifications.last
 
         @check_enabled          = !!@check.enabled
         @check_last_change      = last_change ? last_change.timestamp : nil
@@ -206,25 +206,18 @@ module Flapjack
         @check_details          = last_update ? last_update.details   : nil
         @check_perfdata         = last_update ? last_update.perfdata  : nil
 
-        @last_notifications = (Flapjack::Data::Condition.healthy.keys +
-                               Flapjack::Data::Condition.unhealthy.keys).each_with_object({}) do |cond, memo|
-
-          notif = @check.states.intersect(:condition => cond,
-                                          :condition_changed => true,
-                                          :notified => true).last
-          next if notif.nil?
-          t = Time.at(notif.timestamp)
-
-          memo[cond.to_sym] = {
+        @last_notifications = @check.latest_notifications.all.each_with_object({}) do |entry, memo|
+          t = Time.at(entry.timestamp)
+          memo[(entry.action || entry.condition).to_sym] = {
             :time => t.to_s,
             :relative => relative_time_ago(@current_time, t) + " ago",
-            :summary => notif.summary
+            :summary => entry.summary
           }
         end
 
-        @last_notifications[:acknowledgement] =
-          @check.states.intersect(:action => 'acknowledgement',
-                                  :notified => true).last
+        # @last_notifications[:acknowledgement] =
+        #   @check.states.intersect(:action => 'acknowledgement',
+        #                           :notified => true).last
 
         @last_notifications[:recovery] = @last_notifications.delete(:ok)
 
@@ -387,29 +380,20 @@ module Flapjack
 
     private
 
-      # FIXME fails if check has no state
       def check_state(check, time)
-        latest_problem  = check.states.
-          intersect(:condition => Flapjack::Data::Condition.unhealthy.keys,
-                    :condition_changed => true, :notified => true).last
+        latest_notif = check.latest_notifications.last
 
-        latest_recovery = check.states.
-          intersect(:condition => Flapjack::Data::Condition.healthy.keys,
-                    :condition_changed => true, :notified => true).last
+        lc = check.states.last
+        last_change   = lc.nil? ? 'never' :
+          (ChronicDuration.output(time.to_i - lc.timestamp.to_i,
+                                  :format => :short, :keep_zero => true,
+                                  :units => 2) || '0s')
 
-        latest_ack      = check.states.
-          intersect(:action => 'acknowledgement', :notified => true).last
-
-        latest_notif = [latest_problem, latest_recovery, latest_ack].
-                         max_by {|n| n.nil? ? 0 : n.timestamp }
-
-        lc = check.states.intersect(:condition_changed => true).last
-        last_change   = lc ? (ChronicDuration.output(time.to_i - lc.timestamp.to_i,
-                               :format => :short, :keep_zero => true, :units => 2) || '0s') : 'never'
-
-        lu = check.states.last
-        last_update   = lu ? (ChronicDuration.output(time.to_i - lu.timestamp.to_i,
-                               :format => :short, :keep_zero => true, :units => 2) || '0s') : 'never'
+        lu = lc.nil? ? nil : lc.entries.last
+        last_update   = lu.nil? ? 'never' :
+          (ChronicDuration.output(time.to_i - lu.timestamp.to_i,
+                                  :format => :short, :keep_zero => true,
+                                  :units => 2) || '0s')
 
         summary = nil
         cond    = nil
@@ -467,21 +451,16 @@ module Flapjack
       end
 
       def failing_checks
-        return @failing_checks unless @failing_checks.nil?
-
-        state_ids_by_check_id = Flapjack::Data::Check.associated_ids_for(:state)
-
-        failing_check_ids = Flapjack::Data::State.
-          intersect(:id => state_ids_by_check_id.values,
-                    :condition => Flapjack::Data::Condition.unhealthy.keys).
-          associated_ids_for(:check).values
-
-        @failing_checks = Flapjack::Data::Check.intersect(:id => failing_check_ids)
+        @failing_checks ||= Flapjack::Data::Check.all.each_with_object([]) do |check, memo|
+          s = check.states.last
+          next if s.nil? || Flapjack::Data::Condition.healthy?(s.condition)
+          memo << check
+        end
       end
 
       def check_stats
         @count_enabled_checks = Flapjack::Data::Check.intersect(:enabled => true).count
-        @count_failing_checks = failing_checks.count
+        @count_failing_checks = failing_checks.size
       end
 
       def require_js(*js)

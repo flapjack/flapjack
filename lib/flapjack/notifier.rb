@@ -83,8 +83,7 @@ module Flapjack
     def process_notification(notification)
       @logger.debug ("Processing notification: #{notification.inspect}")
 
-      timestamp   = Time.now
-      check       = notification.state.check
+      check       = notification.entry.state.check
       check_name  = check.name
 
       rule_ids_by_contact_id = check.rule_ids_by_contact_id(:severity => notification.severity,
@@ -97,8 +96,8 @@ module Flapjack
       end
 
       alerts = notification.alerts_for(rule_ids_by_contact_id,
-        :transports => @queues.keys, :timestamp => timestamp,
-        :default_timezone => @default_contact_timezone, :logger => @logger)
+        :transports => @queues.keys,
+        :default_timezone => @default_contact_timezone)
 
       @logger.info "alerts: #{alerts.size}"
 
@@ -114,6 +113,12 @@ module Flapjack
 
         @queues[medium.transport].push(alert)
       end
+
+      e = notification.entry
+      notification.entry = nil
+      Flapjack.logger.info "pre-delete-check: notifier after alerts sent"
+      Flapjack::Data::Entry.delete_if_unlinked(e)
+      notification.destroy
     end
 
   end

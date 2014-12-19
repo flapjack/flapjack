@@ -6,6 +6,20 @@ require 'monitor'
 
 module Flapjack
 
+  class << self
+    # Thread and fiber-local
+
+    def logger=(l)
+      Thread.current[:flapjack_log] = l
+    end
+
+    def logger
+      log = Thread.current[:flapjack_log]
+      return log unless log.nil?
+      Thread.current[:flapjack_log] = Flapjack::Logger.new('FIXME')
+    end
+  end
+
   class Logger
 
     LEVELS = [:debug, :info, :warn, :error, :fatal]
@@ -103,7 +117,7 @@ module Flapjack
     end
 
     LEVELS.each do |level|
-      define_method(level) {|progname, &block|
+      define_method(level) {|progname = nil, &block|
         add(::Logger.const_get(level.upcase), nil, progname, &block)
       }
     end

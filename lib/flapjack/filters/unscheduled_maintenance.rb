@@ -9,13 +9,13 @@ module Flapjack
 
       def block?(check, opts = {})
         old_state = opts[:old_state]
-        new_state = opts[:new_state]
+        new_entry = opts[:new_entry]
 
         result = check.in_unscheduled_maintenance? &&
-          !('acknowledgement'.eql?(new_state.action) ||
-            Flapjack::Data::Condition.healthy?(new_state.condition))
+          !('acknowledgement'.eql?(new_entry.action) ||
+            Flapjack::Data::Condition.healthy?(new_entry.condition))
 
-        @logger.debug {
+        Flapjack.logger.debug {
           "Filter: Unscheduled Maintenance: #{result ? "block" : "pass"}"
         }
 

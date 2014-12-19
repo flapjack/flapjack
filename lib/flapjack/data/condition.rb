@@ -6,6 +6,12 @@ module Flapjack
   module Data
     class Condition
 
+      include Comparable
+
+      def <=>(cond)
+        self.priority <=> cond.priority
+      end
+
       # class methods rather than constants, as these may come from config
       # data in the future; name => priority
       def self.healthy
@@ -16,9 +22,9 @@ module Flapjack
 
       def self.unhealthy
         {
-          'critical' => 3,
-          'warning'  => 2,
-          'unknown'  => 1
+          'critical' => -3,
+          'warning'  => -2,
+          'unknown'  => -1
         }
       end
 
@@ -34,7 +40,7 @@ module Flapjack
                                Flapjack::Data::Condition.unhealthy.keys }
 
       validates :priority, :presence => true,
-        :numericality => {:greater_than => 0, :only_integer => true},
+        :numericality => {:only_integer => true},
         :inclusion => { :in => Flapjack::Data::Condition.healthy.values |
                                Flapjack::Data::Condition.unhealthy.values }
 
@@ -46,6 +52,10 @@ module Flapjack
 
       def self.healthy?(c)
         self.healthy.keys.include?(c)
+      end
+
+      def self.most_unhealthy
+        self.unhealthy.min_by {|_, pri| pri }.first
       end
 
       def self.for_name(n)

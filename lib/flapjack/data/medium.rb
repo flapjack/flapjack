@@ -19,11 +19,11 @@ module Flapjack
 
       TRANSPORTS = ['email', 'sms', 'jabber', 'pagerduty', 'sns', 'sms_twilio']
 
-      define_attributes :transport         => :string,
-                        :address           => :string,
-                        :interval          => :integer,
-                        :rollup_threshold  => :integer,
-                        :last_rollup_type  => :string
+      define_attributes :transport               => :string,
+                        :address                 => :string,
+                        :interval                => :integer,
+                        :rollup_threshold        => :integer,
+                        :last_rollup_type        => :string
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
         :inverse_of => :media
@@ -35,8 +35,13 @@ module Flapjack
       has_and_belongs_to_many :alerting_checks, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :alerting_media
 
-      belongs_to :last_notification_state, :class_name => 'Flapjack::Data::State',
-        :inverse_of => :media
+      belongs_to :last_entry, :class_name => 'Flapjack::Data::Entry',
+        :inverse_of => :latest_media, :before_remove => :debug_remove
+
+      def debug_remove(e)
+        trace = caller[0..5].join("\n")
+        Flapjack.logger.info "medium #{self.id} removing entry #{e.id}:\n#{trace}"
+      end
 
       index_by :transport
 

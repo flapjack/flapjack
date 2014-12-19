@@ -26,14 +26,14 @@ module Flapjack
           end
 
           def status
-            last_change   = @check.states.intersect(:condition_changed => true).last
-            last_update   = @check.states.last
-            last_problem  = @check.states.intersect(:condition => Flapjack::Data::Condition.unhealthy.keys,
-              :condition_changed => true, :notified => true).last
-            last_recovery = @check.states.intersect(:condition => Flapjack::Data::Condition.healthy.keys,
-              :condition_changed => true, :notified => true).last
-            last_ack      = @check.states.intersect(:action => 'acknowledgement',
-              :notified => true).last
+            last_change   = @check.states.last
+            last_update   = last_change.nil? ? nil : last_change.entries.last
+            last_problem  = @check.latest_notifications.
+              intersect(:condition => Flapjack::Data::Condition.unhealthy.keys).first
+            last_recovery = @check.latest_notifications.
+              intersect(:condition => Flapjack::Data::Condition.healthy.keys).first
+            last_ack      = @check.latest_notifications.
+              intersect(:action => 'acknowledgement').first
 
             {'name'                              => @check.name,
              'condition'                         => (last_update   ? last_update.condition   : nil),
