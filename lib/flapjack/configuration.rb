@@ -1,20 +1,12 @@
 #!/usr/bin/env ruby
 
 require 'toml'
-require 'logger'
 require 'active_support/core_ext/hash/indifferent_access'
 
 module Flapjack
-
   class Configuration
 
-    # DEFAULT_CONFIG_PATH = '/etc/flapjack/flapjack_config.toml'
-
     attr_reader :filename
-
-    def initialize(opts = {})
-      @logger = opts[:logger]
-    end
 
     def all
       @config
@@ -57,33 +49,37 @@ module Flapjack
 
       config_file_names = Dir.glob(file_pattern)
 
-      config_file_names.each { |f| 
-        raise "#{f} looks like a YAML file. Flapjack v2 config files are now in TOML, " + 
-          "see flapjack.io/docs/2.x/configuration" if f.end_with?('.yaml') 
-      }
-
       if config_file_names.nil?
-        @logger.error(
+        Flapjack.logger.error {
           "Could not load config files using file_pattern '#{file_pattern}'"
-        ) if @logger
+        }
         return
       end
-      
+
+      yaml_file = config_file_names.detect {|f| f.end_with?('.yaml') }
+
+      unless yaml_file.nil?
+        raise "#{yaml_file} looks like a YAML file. Flapjack v2 config files are now in TOML, " +
+          "see flapjack.io/docs/2.x/configuration"
+      end
+
       config = config_file_names.inject({}) do |config, file_name|
         config.merge!(TOML.load_file(file_name)) do |key, old_val, new_val|
-          if old_val != new_val 
-            @logger.error("Duplicate configuration setting #{key} in #{file_name}") if @logger
-            break   
+          if old_val != new_val
+            Flapjack.logger.error {
+              "Duplicate configuration setting #{key} in #{file_name}"
+            }
+            break
           else
             new_val
-          end    
-        end  
+          end
+        end
       end
-      
+
       if config.nil? || config.empty?
-        @logger.error(
+        Flapjack.logger.error {
           "Could not load config files using file_pattern '#{file_pattern}'"
-        ) if @logger
+        }
         return
       end
 
@@ -93,17 +89,14 @@ module Flapjack
 
       @file_pattern = file_pattern
     end
-    
+
     def reload
       unless @file_pattern
-        @logger.error "Cannot reload, config file_pattern not set." if @logger
+        Flapjack.logger.error "Cannot reload, config file_pattern not set."
         return
       end
-      
-      load(@file_pattern)  
-    end 
-    
 
+      load(@file_pattern)
+    end
   end
-
 end

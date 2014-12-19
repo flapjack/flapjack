@@ -23,7 +23,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
 
     it "raises an error if a required config setting is not set" do
       expect {
-        Flapjack::Gateways::Oobetet::Notifier.new(:config => config.delete('watched_check'), :logger => @logger)
+        Flapjack::Gateways::Oobetet::Notifier.new(:config => config.delete('watched_check'))
       }.to raise_error
     end
 
@@ -33,7 +33,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
       expect(lock).to receive(:synchronize).and_yield
 
       fon = Flapjack::Gateways::Oobetet::Notifier.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       expect(fon).to receive(:check_timers)
       expect { fon.start }.to raise_error(Flapjack::PikeletStop)
     end
@@ -53,7 +53,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
       req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
          to_return(:status => 200, :body => Flapjack.dump_json('status' => 'success'))
 
-      fon = Flapjack::Gateways::Oobetet::Notifier.new(:lock => lock, :config => config, :logger => @logger)
+      fon = Flapjack::Gateways::Oobetet::Notifier.new(:lock => lock, :config => config)
       fon.instance_variable_set('@siblings', [time_check, bot])
       fon.send(:check_timers)
 
@@ -74,13 +74,13 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
       expect(stop_cond).to receive(:wait_until)
 
       fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :stop_condition => stop_cond,
-        :config => config, :logger => @logger)
+        :config => config)
       fot.start
     end
 
     it "records times of a problem status message" do
       expect(lock).to receive(:synchronize).and_yield
-      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config)
       fot.send(:receive_status, 'problem', now.to_i)
       fot_times = fot.instance_variable_get('@times')
       expect(fot_times).not_to be_nil
@@ -90,7 +90,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
 
     it "records times of a recovery status message" do
       expect(lock).to receive(:synchronize).and_yield
-      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config)
       fot.send(:receive_status, 'recovery', now.to_i)
       fot_times = fot.instance_variable_get('@times')
       expect(fot_times).not_to be_nil
@@ -100,7 +100,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
 
     it "records times of an acknowledgement status message" do
       expect(lock).to receive(:synchronize).and_yield
-      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config)
       fot.send(:receive_status, 'acknowledgement', now.to_i)
       fot_times = fot.instance_variable_get('@times')
       expect(fot_times).not_to be_nil
@@ -110,7 +110,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
 
     it "detects a time period with no test problem alerts" do
       expect(lock).to receive(:synchronize).and_yield
-      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config)
       fot_times = fot.instance_variable_get('@times')
 
       fot_times[:last_problem]  = a_day_ago
@@ -125,7 +125,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
 
     it "detects a time period with no test recovery alerts" do
       expect(lock).to receive(:synchronize).and_yield
-      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config, :logger => @logger)
+      fot = Flapjack::Gateways::Oobetet::TimeChecker.new(:lock => lock, :config => config)
       fot_times = fot.instance_variable_get('@times')
 
       fot_times[:last_problem]  = a_minute_ago
@@ -146,7 +146,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
 
     it "raises an error if a required config setting is not set" do
       expect {
-        Flapjack::Gateways::Oobetet::Bot.new(:config => config.delete('watched_check'), :logger => @logger)
+        Flapjack::Gateways::Oobetet::Bot.new(:config => config.delete('watched_check'))
       }.to raise_error
     end
 
@@ -179,7 +179,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
       expect(stop_cond).to receive(:wait_until)
 
       fob = Flapjack::Gateways::Oobetet::Bot.new(:lock => lock, :stop_condition => stop_cond,
-        :config => config, :logger => @logger)
+        :config => config)
       fob.instance_variable_set('@siblings', [time_checker])
       fob.start
     end
@@ -192,7 +192,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
 
       expect(lock).to receive(:synchronize).and_yield
 
-      fob = Flapjack::Gateways::Oobetet::Bot.new(:lock => lock, :config => config, :logger => @logger)
+      fob = Flapjack::Gateways::Oobetet::Bot.new(:lock => lock, :config => config)
       fob.instance_variable_set('@muc_clients', {'room1' => muc_client, 'room2' => muc_client2})
       fob.announce('hello!')
     end

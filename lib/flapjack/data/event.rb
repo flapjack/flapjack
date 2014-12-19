@@ -68,16 +68,13 @@ module Flapjack
           end
           return parsed if errors.empty?
         end
-
-        if opts[:logger]
+        Flapjack.logger.error {
           error_str = errors.nil? ? '' : errors.join(', ')
-          opts[:logger].error("Invalid event data received, #{error_str} #{parsed.inspect}")
-        end
+          "Invalid event data received, #{error_str} #{parsed.inspect}"
+        }
         nil
       rescue Oj::Error => e
-        if opts[:logger]
-          opts[:logger].error("Error deserialising event json: #{e}, raw json: #{raw.inspect}")
-        end
+        Flapjack.logger.error("Error deserialising event json: #{e}, raw json: #{raw.inspect}")
         nil
       end
 
@@ -118,9 +115,7 @@ module Flapjack
         begin
           event_json = Flapjack.dump_json(event)
         rescue Oj::Error => e
-          if opts[:logger]
-            opts[:logger].warn("Error serialising event json: #{e}, event: #{event.inspect}")
-          end
+          Flapjack.logger.warn("Error serialising event json: #{e}, event: #{event.inspect}")
           event_json = nil
         end
 

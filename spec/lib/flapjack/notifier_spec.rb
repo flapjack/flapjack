@@ -27,7 +27,7 @@ describe Flapjack::Notifier, :logger => true do
     expect(queue).to receive(:foreach) # assume no messages for now
     expect(queue).to receive(:wait).and_raise(Flapjack::PikeletStop)
 
-    notifier = Flapjack::Notifier.new(:lock => lock, :config => config, :logger => @logger)
+    notifier = Flapjack::Notifier.new(:lock => lock, :config => config)
 
     expect(redis).to receive(:quit)
     allow(Flapjack).to receive(:redis).and_return(redis)
@@ -128,8 +128,7 @@ describe Flapjack::Notifier, :logger => true do
   #                                   and_return([alert_1, alert_2])
   #   expect(contact).to receive(:media).and_return(all_media)
 
-  #   alerts = notification.alerts([contact], :default_timezone => timezone,
-  #     :logger => @logger)
+  #   alerts = notification.alerts([contact], :default_timezone => timezone)
   #   expect(alerts).not_to be_nil
   #   expect(alerts.size).to eq(2)
   #   expect(alerts).to eq([alert_1, alert_2])

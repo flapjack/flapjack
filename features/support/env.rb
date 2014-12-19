@@ -138,7 +138,7 @@ def redis_peek(queue, klass, start = 0, count = nil)
 end
 
 Before do
-  Flapjack.logger = @logger = MockLogger.new
+  Flapjack.logger = MockLogger.new
 end
 
 After do
@@ -159,7 +159,7 @@ end
 Before('@notifier') do
   Flapjack.redis.flushdb
   # Flapjack::Data::Condition.ensure_present
-  @notifier  = Flapjack::Notifier.new(:logger => @logger,
+  @notifier  = Flapjack::Notifier.new(
     :config => {'email_queue' => 'email_notifications',
                 'sms_queue' => 'sms_notifications',
                 'sns_queue' => 'sns_notifications',

@@ -339,15 +339,14 @@ module Flapjack
       # returns hash with contact_id => [rule_ids]
       def rule_ids_by_contact_id(opts = {})
         severity = opts[:severity]
-        logger   = opts[:logger]
 
         rule_ids_by_check_id = Flapjack::Data::Check.rule_ids_for(*self.id)
 
         rule_ids = rule_ids_by_check_id[self.id]
 
-        logger.info "severity: #{severity}"
+        Flapjack.logger.info "severity: #{severity}"
 
-        logger.info "Matching rules before severity (#{rule_ids.size}): #{rule_ids.inspect}"
+        Flapjack.logger.info "Matching rules before severity (#{rule_ids.size}): #{rule_ids.inspect}"
         return {} if rule_ids.empty?
 
         unless severity.nil? || Flapjack::Data::Condition.healthy.include?(severity)
@@ -355,7 +354,7 @@ module Flapjack
             :conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/]).ids
         end
 
-        logger.info "Matching rules after severity (#{rule_ids.size}): #{rule_ids.inspect}"
+        Flapjack.logger.info "Matching rules after severity (#{rule_ids.size}): #{rule_ids.inspect}"
         return {} if rule_ids.empty?
 
         # TODO could maybe also eliminate rules with no media here?

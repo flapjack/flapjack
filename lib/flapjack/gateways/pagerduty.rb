@@ -23,18 +23,17 @@ module Flapjack
         def initialize(opts = {})
           @lock = opts[:lock]
           @config = opts[:config]
-          @logger = opts[:logger]
 
           # TODO support for config reloading
           @queue = Flapjack::RecordQueue.new(@config['queue'] || 'pagerduty_notifications',
                      Flapjack::Data::Alert)
 
-          @logger.debug("New Pagerduty::Notifier pikelet with the following options: #{@config.inspect}")
+          Flapjack.logger.debug("New Pagerduty::Notifier pikelet with the following options: #{@config.inspect}")
         end
 
         def start
           until test_pagerduty_connection
-            @logger.error("Can't connect to the pagerduty API, retrying after 10 seconds")
+            Flapjack.logger.error("Can't connect to the pagerduty API, retrying after 10 seconds")
             Kernel.sleep(10)
           end
 
@@ -64,7 +63,7 @@ module Flapjack
 
           address = alert.address
 
-          @logger.debug("processing pagerduty notification service_key: #{address}, " +
+          Flapjack.logger.debug("processing pagerduty notification service_key: #{address}, " +
                         "check: '#{check.name}', state: #{alert.state}, summary: #{alert.summary}")
 
           pagerduty_dir = File.join(File.dirname(__FILE__), 'pagerduty')
@@ -84,7 +83,7 @@ module Flapjack
           begin
             msg = message_template.result(bnd).chomp
           rescue => e
-            @logger.error "Error while executing the ERB for a pagerduty message, " +
+            Flapjack.logger.error "Error while executing the ERB for a pagerduty message, " +
               "ERB being executed: #{message_template_path}"
             raise
           end
@@ -111,11 +110,11 @@ module Flapjack
                                :details      => {'HOSTNAME' => host_name,
                                                  'SERVICE'  => service_name})
 
-          @logger.info "Sent alert successfully: #{alert.to_s}"
+          Flapjack.logger.info "Sent alert successfully: #{alert.to_s}"
         rescue => e
-          @logger.error "Error generating or dispatching pagerduty message: #{e.class}: #{e.message}\n" +
+          Flapjack.logger.error "Error generating or dispatching pagerduty message: #{e.class}: #{e.message}\n" +
             e.backtrace.join("\n")
-          @logger.debug "Alert that could not be processed: \n" + alert.inspect
+          Flapjack.logger.debug "Alert that could not be processed: \n" + alert.inspect
         end
 
         def test_pagerduty_connection
@@ -124,7 +123,7 @@ module Flapjack
                                                :event_type => 'nop',
                                                :description => 'I love APIs with noops.')
           return true if '200'.eql?(code) && results['status'] =~ /success/i
-          @logger.error "Error: test_pagerduty_connection: API returned #{code.to_s} #{results.inspect}"
+          Flapjack.logger.error "Error: test_pagerduty_connection: API returned #{code.to_s} #{results.inspect}"
           false
         end
 
@@ -147,7 +146,7 @@ module Flapjack
 
           response = Flapjack.load_json(http_response.body)
           status   = http_response.code
-          @logger.debug "send_pagerduty_event got a return code of #{status} - #{response.inspect}"
+          Flapjack.logger.debug "send_pagerduty_event got a return code of #{status} - #{response.inspect}"
           unless status.to_i == 200
             raise "Error sending event to pagerduty: status: #{status.to_s} - #{response.inspect}" +
                   " posted data: #{options[:body]}"
@@ -164,9 +163,8 @@ module Flapjack
         def initialize(opts = {})
           @lock = opts[:lock]
           @config = opts[:config]
-          @logger = opts[:logger]
 
-          @logger.debug("New Pagerduty::AckFinder pikelet with the following options: #{@config.inspect}")
+          Flapjack.logger.debug("New Pagerduty::AckFinder pikelet with the following options: #{@config.inspect}")
 
           if credentials = @config['credentials']
             @subdomain = credentials['subdomain']
@@ -186,7 +184,7 @@ module Flapjack
               # timeout of five minutes to guard against stale locks caused by crashing code) either in this
               # process or in other processes
               if Flapjack.redis.setnx(SEM_PAGERDUTY_ACKS_RUNNING, 'true') == 0
-                @logger.debug("skipping looking for acks in pagerduty as this is already happening")
+                Flapjack.logger.debug("skipping looking for acks in pagerduty as this is already happening")
               else
                 Flapjack.redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, 300)
                 find_pagerduty_acknowledgements
@@ -203,7 +201,7 @@ module Flapjack
         end
 
         def find_pagerduty_acknowledgements
-          @logger.debug("looking for acks in pagerduty for unack'd problems")
+          Flapjack.logger.debug("looking for acks in pagerduty for unack'd problems")
 
           state_ids_by_check_id = Flapjack::Data::Check.associated_ids_for(:state)
 
@@ -222,7 +220,7 @@ module Flapjack
               check.unscheduled_maintenance_at(time).nil?
           end
 
-          @logger.debug "found unacknowledged failing checks as follows: " +
+          Flapjack.logger.debug "found unacknowledged failing checks as follows: " +
             unacked_failing_checks.map(&:name).join(', ')
 
           credentials_by_check = Flapjack::Data::Check.
@@ -231,7 +229,7 @@ module Flapjack
           credentials_by_check.each_pair do |check, credentials|
 
             if credentials.empty?
-              @logger.debug("No pagerduty credentials found for #{check.name}, skipping")
+              Flapjack.logger.debug("No pagerduty credentials found for #{check.name}, skipping")
               next
             end
 
@@ -240,12 +238,12 @@ module Flapjack
 
             acknowledged = pagerduty_acknowledged?(options)
             if acknowledged.nil?
-              @logger.debug "#{check.name} is not acknowledged in pagerduty, skipping"
+              Flapjack.logger.debug "#{check.name} is not acknowledged in pagerduty, skipping"
               next
             end
 
             pg_acknowledged_by = acknowledged[:pg_acknowledged_by]
-            @logger.info "#{check.name} is acknowledged in pagerduty, creating flapjack acknowledgement... "
+            Flapjack.logger.info "#{check.name} is acknowledged in pagerduty, creating flapjack acknowledgement... "
             who_text = ""
             if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
               who_text = " by #{pg_acknowledged_by['name']}"
@@ -267,7 +265,7 @@ module Flapjack
           check = opts['check']
 
           if @subdomain.blank? || @username.blank? || @password.blank? || check.nil?
-            @logger.warn("pagerduty_acknowledged?: Unable to look for acknowledgements on pagerduty" +
+            Flapjack.logger.warn("pagerduty_acknowledged?: Unable to look for acknowledgements on pagerduty" +
                          " as all of the following options are required:" +
                          " subdomain (#{@subdomain}), username (#{@username}), password (#{@password}), check (#{check})")
             return nil
@@ -291,28 +289,28 @@ module Flapjack
           request = Net::HTTP::Get.new(uri.request_uri)
           request.basic_auth(@username, @password)
 
-          @logger.debug("pagerduty_acknowledged?: request to #{uri.request_uri}")
-          @logger.debug("pagerduty_acknowledged?: query: #{query.inspect}")
-          @logger.debug("pagerduty_acknowledged?: auth: #{@username}, #{@password}")
+          Flapjack.logger.debug("pagerduty_acknowledged?: request to #{uri.request_uri}")
+          Flapjack.logger.debug("pagerduty_acknowledged?: query: #{query.inspect}")
+          Flapjack.logger.debug("pagerduty_acknowledged?: auth: #{@username}, #{@password}")
 
           http_response = http.request(request)
 
           begin
             response = Flapjack.load_json(http_response.body)
           rescue Oj::Error
-            @logger.error("failed to parse json from a post to #{url} ... response headers and body follows...")
+            Flapjack.logger.error("failed to parse json from a post to #{url} ... response headers and body follows...")
           end
-          @logger.debug(http_response.inspect)
+          Flapjack.logger.debug(http_response.inspect)
           status   = http_response.code
 
-          @logger.debug("pagerduty_acknowledged?: decoded response as: #{response.inspect}")
+          Flapjack.logger.debug("pagerduty_acknowledged?: decoded response as: #{response.inspect}")
           if response.nil?
-            @logger.error('no valid response received from pagerduty!')
+            Flapjack.logger.error('no valid response received from pagerduty!')
             return nil
           end
 
           if response['incidents'].nil?
-            @logger.error('no incidents found in response')
+            Flapjack.logger.error('no incidents found in response')
             return nil
           end
 

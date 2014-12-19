@@ -78,8 +78,7 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
     expect(redis).to receive(:quit)
 
     sns_gw = Flapjack::Gateways::AwsSns.new(:lock => lock,
-                                            :config => config,
-                                            :logger => @logger)
+                                            :config => config)
     expect { sns_gw.start }.to raise_error(Flapjack::PikeletStop)
     expect(req).to have_been_requested
   end
@@ -112,8 +111,7 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
     expect(redis).to receive(:quit)
 
     sns_gw = Flapjack::Gateways::AwsSns.new(:lock => lock,
-                                            :config => config.reject {|k, v| k == 'secret_key'},
-                                            :logger => @logger)
+                                            :config => config.reject {|k, v| k == 'secret_key'})
 
     expect { sns_gw.start }.to raise_error(Flapjack::PikeletStop)
     expect(WebMock).not_to have_requested(:get, "http://sns.us-east-1.amazonaws.com/")

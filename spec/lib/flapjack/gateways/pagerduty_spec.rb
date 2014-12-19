@@ -40,14 +40,14 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       expect(redis).to receive(:quit)
 
       fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       expect(fpn).to receive(:handle_alert).with(alert)
       expect(fpn).to receive(:test_pagerduty_connection).twice.and_return(false, true)
       expect { fpn.start }.to raise_error(Flapjack::PikeletStop)
     end
 
     it "tests the pagerduty connection" do
-      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config, :logger => @logger)
+      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config)
 
       req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
          with(:body => Flapjack.dump_json(
@@ -63,7 +63,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     end
 
     it "handles notifications received via Redis" do
-      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config, :logger => @logger)
+      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config)
 
       req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
         with(:body => Flapjack.dump_json(
@@ -109,7 +109,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       expect(lock).to receive(:synchronize).and_yield
 
       fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
     end
 
@@ -165,7 +165,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       expect(lock).to receive(:synchronize).and_yield
 
       fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       expect(fpa).to receive(:pagerduty_acknowledged?).and_return(response)
       expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
     end
@@ -195,7 +195,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 
-      fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config, :logger => @logger)
+      fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config)
 
       result = fpa.send(:pagerduty_acknowledged?, 'check' => check)
 
@@ -216,7 +216,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
   #            'check'     => 'PING'}
 
   #   expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
-  #   fp = Flapjack::Gateways::Pagerduty.new(:config => config, :logger => @logger)
+  #   fp = Flapjack::Gateways::Pagerduty.new(:config => config)
   #   EM.synchrony do
   #     result = fp.send(:pagerduty_acknowledged?, creds)
 

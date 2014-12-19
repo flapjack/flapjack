@@ -24,7 +24,6 @@ module Flapjack
         def initialize(options = {})
           @lock = options[:lock]
           @config = options[:config]
-          @logger = options[:logger]
 
           @hostname = Socket.gethostname
 
@@ -70,7 +69,7 @@ module Flapjack
           @last_breach = breach
           return unless breach
 
-          @logger.error("Self monitoring has detected the following breach: #{breach}")
+          Flapjack.logger.error("Self monitoring has detected the following breach: #{breach}")
           summary = "Flapjack Self Monitoring is Critical: #{breach} for #{@check_matcher}, " +
                     "from #{@hostname} at #{t}"
 
@@ -84,7 +83,7 @@ module Flapjack
             if @last_alert.nil? || @last_alert < (t.to_i - 55)
               msg = "NOTICE: Self monitoring has detected a failure and is unable to tell " +
                     "anyone about it. DON'T PANIC."
-              @logger.error msg
+              Flapjack.logger.error msg
             end
           end
         end
@@ -102,11 +101,11 @@ module Flapjack
                                                   :event_type   => event_type,
                                                   :description  => summary)
           unless '200'.eql?(status)
-            @logger.error("pagerduty returned #{status} #{response.inspect}")
+            Flapjack.logger.error("pagerduty returned #{status} #{response.inspect}")
             return false
           end
 
-          @logger.debug("successfully sent pagerduty event")
+          Flapjack.logger.debug("successfully sent pagerduty event")
           true
         end
 
@@ -130,7 +129,7 @@ module Flapjack
 
           response = Flapjack.load_json(http_response.body)
           status   = http_response.code
-          @logger.debug "send_pagerduty_event got a return code of #{status} - #{response.inspect}"
+          Flapjack.logger.debug "send_pagerduty_event got a return code of #{status} - #{response.inspect}"
           [status, response]
         end
 
@@ -142,7 +141,6 @@ module Flapjack
           @lock   = opts[:lock]
           @stop_cond = opts[:stop_condition]
           @config = opts[:config]
-          @logger = opts[:logger]
 
           @max_latency = @config['max_latency'] || 300
 
@@ -151,7 +149,7 @@ module Flapjack
                      :last_ack      => nil,
                      :last_ack_sent => nil }
 
-          @logger.debug("new oobetet pikelet with the following options: #{@config.inspect}")
+          Flapjack.logger.debug("new oobetet pikelet with the following options: #{@config.inspect}")
         end
 
         def start
@@ -173,22 +171,22 @@ module Flapjack
           @lock.synchronize do
             case status
             when 'problem'
-              @logger.debug("updating @times last_problem")
+              Flapjack.logger.debug("updating @times last_problem")
               @times[:last_problem] = time
             when 'recovery'
-              @logger.debug("updating @times last_recovery")
+              Flapjack.logger.debug("updating @times last_recovery")
               @times[:last_recovery] = time
             when 'acknowledgement'
-              @logger.debug("updating @times last_ack")
+              Flapjack.logger.debug("updating @times last_ack")
               @times[:last_ack] = time
             end
-            @logger.debug("@times: #{@times.inspect}")
+            Flapjack.logger.debug("@times: #{@times.inspect}")
           end
         end
 
         def breach?(time)
           @lock.synchronize do
-            @logger.debug("check_timers: inspecting @times #{@times.inspect}")
+            Flapjack.logger.debug("check_timers: inspecting @times #{@times.inspect}")
             if @times[:last_problem] < (time - @max_latency)
               "haven't seen a test problem notification in the last #{@max_latency} seconds"
             elsif @times[:last_recovery] < (time - @max_latency)
@@ -209,7 +207,6 @@ module Flapjack
           @lock = opts[:lock]
           @stop_cond = opts[:stop_condition]
           @config = opts[:config]
-          @logger = opts[:logger]
 
           @hostname = Socket.gethostname
 
@@ -218,14 +215,14 @@ module Flapjack
           end
           @check_matcher = '"' + @config['watched_check'] + '"'
 
-          @logger.debug("new oobetet pikelet with the following options: #{@config.inspect}")
+          Flapjack.logger.debug("new oobetet pikelet with the following options: #{@config.inspect}")
         end
 
         def start
           @lock.synchronize do
             @time_checker ||= @siblings && @siblings.detect {|sib| sib.respond_to?(:receive_status) }
 
-            @logger.info("starting")
+            Flapjack.logger.info("starting")
 
             # ::Jabber::debug = true
 
@@ -249,11 +246,11 @@ module Flapjack
                 next if nick == jabber_id
 
                 if @time_checker
-                  @logger.debug("group message received: #{room}, #{text}")
+                  Flapjack.logger.debug("group message received: #{room}, #{text}")
                   if (text =~ /^((?i:problem|recovery|acknowledgement)).*#{Regexp.escape(@check_matcher)}/)
                     # got something interesting
                     status = $1.downcase
-                    @logger.debug("found the following state for #{@check_matcher}: #{status}")
+                    Flapjack.logger.debug("found the following state for #{@check_matcher}: #{status}")
                     @time_checker.receive_status(status, time.to_i)
                   end
                 end

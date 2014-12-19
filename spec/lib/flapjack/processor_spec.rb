@@ -56,8 +56,7 @@ describe Flapjack::Processor, :logger => true do
 
     processor = Flapjack::Processor.new(:lock => lock,
       :config => {'queue' => 'events', 'archive_events' => true,
-        'events_archive_maxage' => 3000},
-      :logger => @logger)
+        'events_archive_maxage' => 3000})
 
     event_json = double('event_json')
     event_data = double(event_data)
@@ -67,7 +66,7 @@ describe Flapjack::Processor, :logger => true do
     expect(redis).to receive(:expire).with(/^events_archive:/, kind_of(Integer))
 
     expect(Flapjack::Data::Event).to receive(:parse_and_validate).
-      with(event_json, :logger => @logger).and_return(event_data)
+      with(event_json).and_return(event_data)
     expect(Flapjack::Data::Event).to receive(:new).with(event_data).and_return(event)
     expect(redis).to receive(:brpop).with('events_actions').and_raise(Flapjack::PikeletStop)
     expect(redis).to receive(:quit)
@@ -87,8 +86,7 @@ describe Flapjack::Processor, :logger => true do
 
     processor = Flapjack::Processor.new(:lock => lock,
       :config => {'queue' => 'events', 'archive_events' => true,
-        'events_archive_maxage' => 3000},
-      :logger => @logger)
+        'events_archive_maxage' => 3000})
 
     event_json = double('event_json')
 
@@ -99,7 +97,7 @@ describe Flapjack::Processor, :logger => true do
     expect(multi).to receive(:expire).with(/^events_archive:/, kind_of(Integer))
 
     expect(Flapjack::Data::Event).to receive(:parse_and_validate).
-      with(event_json, :logger => @logger).and_return(nil)
+      with(event_json).and_return(nil)
     expect(Flapjack::Data::Event).not_to receive(:new)
     expect(redis).to receive(:brpop).with('events_actions').and_raise(Flapjack::PikeletStop)
     expect(redis).to receive(:quit)
@@ -115,8 +113,7 @@ describe Flapjack::Processor, :logger => true do
 
     expect(lock).to receive(:synchronize).and_yield
 
-    processor = Flapjack::Processor.new(:lock => lock, :config => {'queue' => 'events'},
-      :logger => @logger)
+    processor = Flapjack::Processor.new(:lock => lock, :config => {'queue' => 'events'})
 
     event_json = double('event_json')
     event_data = double(event_data)
@@ -124,7 +121,7 @@ describe Flapjack::Processor, :logger => true do
 
     expect(redis).to receive(:rpop).with('events').twice.and_return(event_json, nil)
     expect(Flapjack::Data::Event).to receive(:parse_and_validate).
-      with(event_json, :logger => @logger).and_return(event_data)
+      with(event_json).and_return(event_data)
     expect(Flapjack::Data::Event).to receive(:new).with(event_data).and_return(event)
     expect(redis).to receive(:brpop).with('events_actions').and_raise(Flapjack::PikeletStop)
     expect(redis).to receive(:quit)
@@ -142,14 +139,14 @@ describe Flapjack::Processor, :logger => true do
 
     expect(lock).to receive(:synchronize).and_yield
 
-    processor = Flapjack::Processor.new(:lock => lock, :config => {'queue' => 'events'},
-      :logger => @logger)
+    processor = Flapjack::Processor.new(:lock => lock,
+      :config => {'queue' => 'events'})
 
     event_json = double('event_json')
 
     expect(redis).to receive(:rpop).with('events').twice.and_return(event_json, nil)
     expect(Flapjack::Data::Event).to receive(:parse_and_validate).
-      with(event_json, :logger => @logger).and_return(nil)
+      with(event_json).and_return(nil)
     expect(Flapjack::Data::Event).not_to receive(:new)
     expect(redis).to receive(:multi).and_yield(multi)
     expect(multi).to receive(:lpush).with(/^events_rejected:/, event_json)
@@ -168,8 +165,7 @@ describe Flapjack::Processor, :logger => true do
     expect(lock).to receive(:synchronize).and_yield
 
     processor = Flapjack::Processor.new(:lock => lock,
-      :config => {'queue' => 'events', 'exit_on_queue_empty' => true},
-      :logger => @logger)
+      :config => {'queue' => 'events', 'exit_on_queue_empty' => true})
 
     event_json = double('event_json')
     event_data = double(event_data)
@@ -177,7 +173,7 @@ describe Flapjack::Processor, :logger => true do
 
     expect(redis).to receive(:rpop).with('events').twice.and_return(event_json, nil)
     expect(Flapjack::Data::Event).to receive(:parse_and_validate).
-      with(event_json, :logger => @logger).and_return(event_data)
+      with(event_json).and_return(event_data)
     expect(Flapjack::Data::Event).to receive(:new).with(event_data).and_return(event)
     expect(redis).to receive(:quit)
 

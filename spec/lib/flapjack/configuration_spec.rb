@@ -4,8 +4,7 @@ require 'flapjack/configuration'
 
 describe Flapjack::Configuration do
 
-  let(:logger) { double(:logger) }
-  let(:configuration) { Flapjack::Configuration.new(logger: logger) }
+  let(:configuration) { Flapjack::Configuration.new }
 
   # NOTE For readability, config files are defined at the bottom of this spec
 
@@ -101,9 +100,6 @@ describe Flapjack::Configuration do
         redis_toml_data,
         clashing_redis_toml_data
         )
-
-      expect(logger).to receive(:error).with("Duplicate configuration setting redis in 3")
-      expect(logger).to receive(:error).with("Could not load config files using file_pattern 'dummy_pattern'")
 
       configuration.load('dummy_pattern')
 

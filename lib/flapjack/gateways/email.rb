@@ -27,7 +27,6 @@ module Flapjack
       def initialize(opts = {})
         @lock = opts[:lock]
         @config = opts[:config]
-        @logger = opts[:logger]
 
         # TODO support for config reloading
         @queue = Flapjack::RecordQueue.new(@config['queue'] || 'email_notifications',
@@ -58,7 +57,7 @@ module Flapjack
       end
 
       def start
-        @logger.debug("new email gateway pikelet with the following options: #{@config.inspect}")
+        Flapjack.logger.debug("new email gateway pikelet with the following options: #{@config.inspect}")
 
         begin
           Sandstorm.redis = Flapjack.redis
@@ -82,7 +81,7 @@ module Flapjack
       private
 
       def handle_alert(alert)
-        @logger.debug "Woo, got an alert to send out: #{alert.inspect}"
+        Flapjack.logger.debug "Woo, got an alert to send out: #{alert.inspect}"
         if @smtp_config
           host = @smtp_config['host']
           port = @smtp_config['port']
@@ -102,7 +101,7 @@ module Flapjack
           m_reply_to = m_from = "flapjack@#{@fqdn}"
         end
 
-        @logger.debug("flapjack_mailer: set from to #{m_from}")
+        Flapjack.logger.debug("flapjack_mailer: set from to #{m_from}")
 
         mail = prepare_email(:from => m_from,
                              :reply_to => m_reply_to,
@@ -120,11 +119,11 @@ module Flapjack
         # any exceptions will be propagated through to main pikelet handler
         mail.deliver
 
-        @logger.info "Email sending succeeded"
+        Flapjack.logger.info "Email sending succeeded"
         @sent += 1
       rescue => e
-        @logger.error "Error generating or delivering email to #{alert.medium.address}: #{e.class}: #{e.message}"
-        @logger.error e.backtrace.join("\n")
+        Flapjack.logger.error "Error generating or delivering email to #{alert.medium.address}: #{e.class}: #{e.message}"
+        Flapjack.logger.error e.backtrace.join("\n")
         raise
       end
 
@@ -176,12 +175,12 @@ module Flapjack
           erb_to_be_executed = html_template_path
           body_html = html_template.result(bnd)
         rescue => e
-          @logger.error "Error while executing ERBs for an email: " +
+          Flapjack.logger.error "Error while executing ERBs for an email: " +
             "ERB being executed: #{erb_to_be_executed}"
           raise
         end
 
-        @logger.debug("preparing email to: #{to}, subject: #{subject}, message-id: #{message_id}")
+        Flapjack.logger.debug("preparing email to: #{to}, subject: #{subject}, message-id: #{message_id}")
 
         mail = Mail.new do
           from from

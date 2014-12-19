@@ -30,41 +30,6 @@ require 'flapjack/configuration'
 # in ./support/ and its subdirectories.
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each {|f| require f}
 
-class MockLogger
-  attr_accessor :messages, :errors
-
-  def initialize
-    @messages = []
-    @errors   = []
-  end
-
-  %w(debug info warn).each do |level|
-    class_eval <<-RUBY
-      def #{level}(msg)
-        @messages << '#{level.upcase}' + ': ' + msg
-      end
-    RUBY
-  end
-
-  %w(error fatal).each do |level|
-    class_eval <<-ERRORS
-      def #{level}(msg)
-        @messages << '#{level.upcase}' + ': ' + msg
-        @errors   << '#{level.upcase}' + ': ' + msg
-      end
-    ERRORS
-  end
-
-  %w(debug info warn error fatal).each do |level|
-    class_eval <<-LEVELS
-      def #{level}?
-        true
-      end
-    LEVELS
-  end
-
-end
-
 require 'mail'
 ::Mail.defaults do
   delivery_method :test
@@ -114,18 +79,18 @@ RSpec.configure do |config|
   end
 
   config.around(:each, :logger => true) do |example|
-    Flapjack.logger = @logger = MockLogger.new
+    Flapjack.logger = MockLogger.new
     example.run
 
     if ENV['SHOW_LOGGER_ALL']
-      puts @logger.messages.compact.join("\n")
+      puts Flapjack.logger.messages.compact.join("\n")
     end
 
     if ENV['SHOW_LOGGER_ERRORS']
-      puts @logger.errors.compact.join("\n")
+      puts Flapjack.logger.errors.compact.join("\n")
     end
 
-    @logger.errors.clear
+    Flapjack.logger.errors.clear
   end
 
   config.after(:each, :time => true) do

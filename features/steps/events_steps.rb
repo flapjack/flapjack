@@ -283,7 +283,7 @@ end
 
 Then /^show me the (\w+ )*log$/ do |adjective|
   puts "the #{adjective}log:"
-  puts @logger.messages.join("\n")
+  puts Flapjack.logger.messages.join("\n")
 end
 
 Then /^dump notification rules for user (\S+)$/ do |contact|

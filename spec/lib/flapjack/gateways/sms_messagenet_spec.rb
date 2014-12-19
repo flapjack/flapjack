@@ -59,8 +59,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
     expect(redis).to receive(:quit)
 
     sms_gw = Flapjack::Gateways::SmsMessagenet.new(:lock => lock,
-                                                   :config => config,
-                                                   :logger => @logger)
+                                                   :config => config)
     expect { sms_gw.start }.to raise_error(Flapjack::PikeletStop)
     expect(req).to have_been_requested
   end
@@ -108,8 +107,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
     expect(redis).to receive(:quit)
 
     sms_gw = Flapjack::Gateways::SmsMessagenet.new(:lock => lock,
-                                                   :config => config,
-                                                   :logger => @logger)
+                                                   :config => config)
     expect { sms_gw.start }.to raise_error(Flapjack::PikeletStop)
     expect(req).to have_been_requested
   end
@@ -143,8 +141,7 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
     expect(redis).to receive(:quit)
 
     sms_gw = Flapjack::Gateways::SmsMessagenet.new(:lock => lock,
-                                                   :config => config.reject {|k, v| k == 'password'},
-                                                   :logger => @logger)
+                                                   :config => config.reject {|k, v| k == 'password'})
     expect { sms_gw.start }.to raise_error(Flapjack::PikeletStop)
 
     expect(WebMock).not_to have_requested(:get,

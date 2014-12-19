@@ -23,7 +23,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
   before(:each) do
     allow(Flapjack).to receive(:redis).and_return(redis)
-    Flapjack::Gateways::Web.instance_variable_set('@logger', @logger)
   end
 
   def expect_stats

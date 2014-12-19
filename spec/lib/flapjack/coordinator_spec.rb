@@ -6,16 +6,13 @@ describe Flapjack::Coordinator do
 
   let(:config)       { double(Flapjack::Configuration) }
   let(:redis_config) { double('redis_config')}
-  let(:logger)       { double(Flapjack::Logger) }
 
   let!(:time)  { Time.now }
 
   it "starts and stops a pikelet" do
-    expect(Flapjack::Logger).to receive(:new).and_return(logger)
-
     cfg = {'processor' => {'enabled' => true}}
 
-    expect(config).to receive(:all).twice.and_return(cfg)
+    expect(config).to receive(:all).and_return(cfg)
 
     expect(config).to receive(:for_redis).and_return(redis_config)
     expect(Flapjack::RedisProxy).to receive(:config=).with(redis_config)
@@ -51,7 +48,7 @@ describe Flapjack::Coordinator do
   it "loads an old executive pikelet config block with no new data" do
     cfg = {'executive' => {'enabled' => true}}
 
-    expect(config).to receive(:all).twice.and_return(cfg)
+    expect(config).to receive(:all).and_return(cfg)
 
     expect(config).to receive(:for_redis).and_return(redis_config)
     expect(Flapjack::RedisProxy).to receive(:config=).with(redis_config)
@@ -99,11 +96,10 @@ describe Flapjack::Coordinator do
            'notifier'  => {'enabled' => false}
           }
 
-    expect(config).to receive(:all).twice.and_return(cfg)
+    expect(config).to receive(:all).and_return(cfg)
 
     expect(config).to receive(:for_redis).and_return(redis_config)
     expect(Flapjack::RedisProxy).to receive(:config=).with(redis_config)
-    # expect(Flapjack::Data::Condition).to receive(:ensure_present)
 
     processor = double('processor')
     expect(processor).to receive(:start)
@@ -133,9 +129,6 @@ describe Flapjack::Coordinator do
   end
 
   it "traps system signals and shuts down" do
-    expect(Flapjack::Logger).to receive(:new).and_return(logger)
-
-    expect(config).to receive(:all).and_return({})
     expect(RbConfig::CONFIG).to receive(:[]).with('host_os').and_return('darwin12.0.0')
 
     thread = double(Thread)
@@ -162,9 +155,6 @@ describe Flapjack::Coordinator do
   end
 
   it "only traps two system signals on Windows" do
-    expect(Flapjack::Logger).to receive(:new).and_return(logger)
-
-    expect(config).to receive(:all).and_return({})
     expect(RbConfig::CONFIG).to receive(:[]).with('host_os').and_return('mswin')
 
     thread = double(Thread)
@@ -189,15 +179,13 @@ describe Flapjack::Coordinator do
   end
 
   it "stops one pikelet and starts another on reload" do
-    expect(Flapjack::Logger).to receive(:new).and_return(logger)
-
     old_cfg = {'processor' => {'enabled' => true}}
     new_cfg = {'gateways' => {'jabber' => {'enabled' => true}}}
 
     new_config = double('new_config')
     filename = double('filename')
 
-    expect(config).to receive(:all).thrice.and_return(old_cfg, old_cfg, new_cfg)
+    expect(config).to receive(:all).twice.and_return(old_cfg, new_cfg)
     expect(config).to receive(:reload)
 
     processor = double('processor')
@@ -221,15 +209,13 @@ describe Flapjack::Coordinator do
   end
 
   it "reloads a pikelet config without restarting it" do
-    expect(Flapjack::Logger).to receive(:new).and_return(logger)
-
     old_cfg = {'processor' => {'enabled' => true, 'foo' => 'bar'}}
     new_cfg = {'processor' => {'enabled' => true, 'foo' => 'baz'}}
 
     new_config = double('new_config')
     filename = double('filename')
 
-    expect(config).to receive(:all).thrice.and_return(old_cfg, old_cfg, new_cfg)
+    expect(config).to receive(:all).twice.and_return(old_cfg, new_cfg)
     expect(config).to receive(:reload)
 
     processor = double('processor')
@@ -246,15 +232,13 @@ describe Flapjack::Coordinator do
   end
 
   it "reloads a pikelet config while restarting it" do
-    expect(Flapjack::Logger).to receive(:new).and_return(logger)
-
     old_cfg = {'processor' => {'enabled' => true, 'foo' => 'bar'}}
     new_cfg = {'processor' => {'enabled' => true, 'baz' => 'qux'}}
 
     new_config = double('new_config')
     filename = double('filename')
 
-    expect(config).to receive(:all).thrice.and_return(old_cfg, old_cfg, new_cfg)
+    expect(config).to receive(:all).twice.and_return(old_cfg, new_cfg)
     expect(config).to receive(:reload)
 
     processor = double('processor')

@@ -45,11 +45,11 @@ module Flapjack
 
       class << self
         def start
-          @logger.info "starting jsonapi - class"
+          Flapjack.logger.info "starting jsonapi - class"
         end
       end
 
-      ['logger', 'config'].each do |class_inst_var|
+      ['config'].each do |class_inst_var|
         define_method(class_inst_var.to_sym) do
           self.class.instance_variable_get("@#{class_inst_var}")
         end
@@ -61,13 +61,13 @@ module Flapjack
         input = nil
         query_string = (request.query_string.respond_to?(:length) &&
                         request.query_string.length > 0) ? "?#{request.query_string}" : ""
-        if logger.debug?
+        if Flapjack.logger.debug?
           input = env['rack.input'].read
-          logger.debug("#{request.request_method} #{request.path_info}#{query_string} Headers: #{headers.inspect}, Body: #{input}")
-        elsif logger.info?
+          Flapjack.logger.debug("#{request.request_method} #{request.path_info}#{query_string} Headers: #{headers.inspect}, Body: #{input}")
+        elsif Flapjack.logger.info?
           input = env['rack.input'].read
           input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
-          logger.info("#{request.request_method} #{request.path_info}#{query_string} #{input_short[0..80]}")
+          Flapjack.logger.info("#{request.request_method} #{request.path_info}#{query_string} #{input_short[0..80]}")
         end
         env['rack.input'].rewind unless input.nil?
       end
@@ -77,7 +77,7 @@ module Flapjack
 
         query_string = (request.query_string.respond_to?(:length) &&
                         request.query_string.length > 0) ? "?#{request.query_string}" : ""
-        if logger.debug?
+        if Flapjack.logger.debug?
           body_debug = case
           when response.body.respond_to?(:each)
             response.body.each_with_index {|r, i| "body[#{i}]: #{r}"}.join(', ')
@@ -85,10 +85,10 @@ module Flapjack
             response.body.to_s
           end
           headers_debug = response.headers.to_s
-          logger.debug("Returning #{response.status} for #{request.request_method} " +
+          Flapjack.logger.debug("Returning #{response.status} for #{request.request_method} " +
             "#{request.path_info}#{query_string}, headers: #{headers_debug}, body: #{body_debug}")
-        elsif logger.info?
-          logger.info("Returning #{response.status} for #{request.request_method} " +
+        elsif Flapjack.logger.info?
+          Flapjack.logger.info("Returning #{response.status} for #{request.request_method} " +
             "#{request.path_info}#{query_string}")
         end
       end

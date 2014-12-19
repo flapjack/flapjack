@@ -46,7 +46,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(redis).to receive(:quit)
 
       fjn = Flapjack::Gateways::Jabber::Notifier.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       expect(fjn).to receive(:handle_alert).with(alert)
 
       expect { fjn.start }.to raise_error(Flapjack::PikeletStop)
@@ -71,7 +71,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(alert).to receive(:rollup).and_return(nil)
       expect(alert).to receive(:event_hash).and_return('abcd1234')
 
-      fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config, :logger => @logger)
+      fjn = Flapjack::Gateways::Jabber::Notifier.new(:config => config)
       fjn.instance_variable_set('@siblings', [bot])
       fjn.send(:handle_alert, alert)
     end
@@ -93,7 +93,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(lock).to receive(:synchronize).and_yield
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:lock => lock, :stop_condition => stop_cond,
-        :config => config, :logger => @logger)
+        :config => config)
       msg = {:room => 'room1', :nick => 'jim', :time => now.to_i, :message => 'help'}
       fji.instance_variable_get('@messages').push(msg)
       expect(stop_cond).to receive(:wait_while) {
@@ -110,7 +110,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(lock).to receive(:synchronize).and_yield
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:lock => lock, :stop_condition => stop_cond,
-        :config => config, :logger => @logger)
+        :config => config)
       expect(fji.instance_variable_get('@messages')).to be_empty
       expect(stop_cond).to receive(:signal)
 
@@ -121,7 +121,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "interprets a received help command (from a room)" do
       expect(bot).to receive(:announce).with('room1', /^commands:/)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'help')
     end
@@ -129,7 +129,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "interprets a received help command (from a user)" do
       expect(bot).to receive(:say).with('jim', /^commands:/)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret(nil, 'jim', now.to_i, 'help')
     end
@@ -139,7 +139,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(bot).to receive(:identifiers).and_return(['@flapjack'])
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config,
-              :logger => @logger, :boot_time => now)
+        :boot_time => now)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i + 60, 'identify')
     end
@@ -154,7 +154,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("example")).and_return(checks)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'find checks matching /example/')
     end
@@ -164,7 +164,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(Flapjack::Data::Check).not_to receive(:intersect)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'find checks matching /(example/')
     end
@@ -181,7 +181,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Tag).to receive(:intersect).
         with(:name => 'example.com').and_return(tags)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'find checks with tag example.com')
     end
@@ -201,7 +201,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'state of example.com:ping')
     end
@@ -223,7 +223,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Tag).to receive(:intersect).
         with(:name => 'example.com').and_return(tags)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'state of checks with tag example.com')
     end
@@ -244,7 +244,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("^example.com:p")).and_return(checks)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'state of checks matching /^example.com:p/')
     end
@@ -263,7 +263,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'tell me about example.com:ping')
     end
@@ -282,7 +282,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, "tell me \nabout example.com:ping")
     end
@@ -303,7 +303,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Tag).to receive(:intersect).
         with(:name => 'example.com').and_return(tags)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'tell me about checks with tag example.com')
     end
@@ -322,7 +322,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("^example.com:p")).and_return(checks)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'tell me about checks matching /^example.com:p/')
     end
@@ -342,7 +342,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
              :summary => 'JJ looking', :acknowledgement_id => 'abcd1234',
              :duration => (60 * 60))
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'ACKID abcd1234 JJ looking duration: 1 hour')
     end
@@ -377,7 +377,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
         with('events', [check],
              :summary => 'jim: Set via chatbot', :duration => (60 * 60))
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'ack checks with tag example.com')
     end
@@ -411,7 +411,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
         with('events', [check],
              :summary => 'jim: Set via chatbot', :duration => (60 * 60))
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'ack checks matching /^example.com:p/')
     end
@@ -428,7 +428,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Event).to receive(:test_notifications).
         with('events', [check], an_instance_of(Hash))
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'test notifications for example.com:ping')
     end
@@ -447,7 +447,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Event).to receive(:test_notifications).
         with('events', [check], an_instance_of(Hash))
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'test notifications for checks with tag example.com')
     end
@@ -464,7 +464,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Event).to receive(:test_notifications).
         with('events', [check], an_instance_of(Hash))
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'test notifications for checks matching /^example.com:p/')
     end
@@ -472,7 +472,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "doesn't interpret an unmatched command" do
       expect(bot).to receive(:announce).with('room1', /^what do you mean/)
 
-      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config, :logger => @logger)
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'hello!')
     end
@@ -510,7 +510,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       stop_cond = double(MonitorMixin::ConditionVariable)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
-        :stop_condition => stop_cond, :config => config, :logger => @logger)
+        :stop_condition => stop_cond, :config => config)
       expect(stop_cond).to receive(:wait_until) {
         fjb.instance_variable_set('@should_quit', true)
       }
@@ -530,7 +530,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(client).to receive(:is_connected?).and_return(true)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       expect(fjb).to receive(:_announce).with(muc_clients)
       fjb.instance_variable_set('@state_buffer', ['announce'])
       fjb.handle_state_change(client, muc_clients)
@@ -540,7 +540,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(client).to receive(:is_connected?).and_return(true)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       expect(fjb).to receive(:_say).with(client)
       fjb.instance_variable_set('@state_buffer', ['say'])
       fjb.handle_state_change(client, muc_clients)
@@ -550,7 +550,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(client).to receive(:is_connected?).and_return(true)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       expect(fjb).to receive(:_leave).with(client, muc_clients)
       fjb.instance_variable_set('@state_buffer', ['leave'])
       fjb.handle_state_change(client, muc_clients)
@@ -560,7 +560,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(client).to receive(:is_connected?).and_return(false)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       expect(fjb).to receive(:_deactivate).with(muc_clients)
       fjb.instance_variable_set('@state_buffer', ['leave'])
       fjb.handle_state_change(client, muc_clients)
@@ -570,7 +570,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(client).to receive(:is_connected?).and_return(false)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       expect(fjb).to receive(:_join).with(client, muc_clients, :rejoin => true)
       fjb.instance_variable_set('@state_buffer', ['rejoin'])
       fjb.handle_state_change(client, muc_clients)
@@ -587,7 +587,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(muc_client).to receive(:say).with(/^flapjack jabber gateway started/)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       fjb._join(client, muc_clients)
     end
 
@@ -603,7 +603,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(muc_client).to_not receive(:say).with(/^flapjack jabber gateway started/)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       fjb._join(client, muc_clients)
     end
 
@@ -618,7 +618,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(muc_client).to receive(:say).with(/^flapjack jabber gateway rejoining/)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       fjb._join(client, muc_clients, :rejoin => true)
     end
 
@@ -634,7 +634,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(muc_client).to_not receive(:say).with(/^flapjack jabber gateway rejoining/)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
-      :config => config, :logger => @logger)
+      :config => config)
       fjb._join(client, muc_clients, :rejoin => true)
     end
 
@@ -644,7 +644,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(client).to receive(:close)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       fjb.instance_variable_set('@joined', true)
       fjb._leave(client, muc_clients)
     end
@@ -653,7 +653,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(muc_client).to receive(:deactivate)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,
-        :config => config, :logger => @logger)
+        :config => config)
       fjb._deactivate(muc_clients)
     end
 
@@ -661,7 +661,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(muc_client).to receive(:active?).and_return(true)
       expect(muc_client).to receive(:say).with('hello!')
 
-      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock, :config => config, :logger => @logger)
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock, :config => config)
       fjb.instance_variable_set('@announce_buffer', [{:room => 'room1', :msg => 'hello!'}])
       fjb._announce('room1' => muc_client)
     end
@@ -673,7 +673,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(client).to receive(:send).with(message)
 
-      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock, :config => config, :logger => @logger)
+      fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock, :config => config)
       fjb.instance_variable_set('@say_buffer', [{:nick => 'jim', :msg => 'hello!'}])
       fjb._say(client)
     end
@@ -683,7 +683,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(stop_cond).to receive(:signal)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock, :stop_condition => stop_cond,
-        :config => config, :logger => @logger)
+        :config => config)
       fjb.announce('room1', 'hello!')
       expect(fjb.instance_variable_get('@state_buffer')).to eq(['announce'])
       expect(fjb.instance_variable_get('@announce_buffer')).to eq([{:room => 'room1', :msg => 'hello!'}])
@@ -694,7 +694,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(stop_cond).to receive(:signal)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock, :stop_condition => stop_cond,
-        :config => config, :logger => @logger)
+        :config => config)
       fjb.say('jim', 'hello!')
       expect(fjb.instance_variable_get('@state_buffer')).to eq(['say'])
       expect(fjb.instance_variable_get('@say_buffer')).to eq([{:nick => 'jim', :msg => 'hello!'}])

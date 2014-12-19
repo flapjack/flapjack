@@ -10,7 +10,6 @@ require 'flapjack/patches'
 
 require 'flapjack/redis_proxy'
 
-require 'flapjack/logger'
 require 'flapjack/pikelet'
 
 require 'flapjack/data/condition'
@@ -52,8 +51,6 @@ module Flapjack
           @monitor_cond.signal
         }
       }
-
-      @logger = Flapjack::Logger.new("flapjack-coordinator", @config.all['logger'])
     end
 
     def start(opts = {})

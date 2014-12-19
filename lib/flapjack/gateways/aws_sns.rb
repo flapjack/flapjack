@@ -28,7 +28,6 @@ module Flapjack
         @lock = opts[:lock]
 
         @config = opts[:config]
-        @logger = opts[:logger]
 
         # TODO support for config reloading
         @queue = Flapjack::RecordQueue.new(@config['queue'] || 'sns_notifications',
@@ -36,7 +35,7 @@ module Flapjack
 
         @sent = 0
 
-        @logger.debug("new sns gateway pikelet with the following options: #{@config.inspect}")
+        Flapjack.logger.debug("new sns gateway pikelet with the following options: #{@config.inspect}")
       end
 
       def start
@@ -62,7 +61,7 @@ module Flapjack
       private
 
       def handle_alert(alert)
-        @logger.debug "Received a notification: #{alert.inspect}"
+        Flapjack.logger.debug "Received a notification: #{alert.inspect}"
 
         region_name = @config["region_name"] || SNS_DEFAULT_REGION_NAME
         hostname = "sns.#{region_name}.amazonaws.com"
@@ -90,13 +89,13 @@ module Flapjack
         begin
           message = sms_template.result(bnd).chomp
         rescue => e
-          @logger.error "Error while excuting the ERB for an sms: " +
+          Flapjack.logger.error "Error while excuting the ERB for an sms: " +
             "ERB being executed: #{sms_template_path}"
           raise
         end
 
         if @config.nil? || (@config.respond_to?(:empty?) && @config.empty?)
-          @logger.error "AWS SNS config is missing"
+          Flapjack.logger.error "AWS SNS config is missing"
           return
         end
 
@@ -112,7 +111,7 @@ module Flapjack
         end
 
         unless errors.empty?
-          errors.each {|err| @logger.error err }
+          errors.each {|err| Flapjack.logger.error err }
           return
         end
 
@@ -139,22 +138,22 @@ module Flapjack
           http.request(req)
         end
 
-        @logger.debug "server response: #{http_response.inspect}"
+        Flapjack.logger.debug "server response: #{http_response.inspect}"
 
         status = http_response.code
 
         if (status.to_i >= 200) && (status.to_i <= 206)
           @sent += 1
-          @logger.debug "Sent notification via SNS, response status is #{status}, " +
+          Flapjack.logger.debug "Sent notification via SNS, response status is #{status}, " +
             "notification_id: #{notification_id}"
         else
-          @logger.error "Failed to send notification via SNS, response status is #{status}, " +
+          Flapjack.logger.error "Failed to send notification via SNS, response status is #{status}, " +
             "notification_id: #{notification_id}"
         end
 
       rescue => e
-        @logger.error "Error generating or delivering notification to #{address}: #{e.class}: #{e.message}"
-        @logger.error e.backtrace.join("\n")
+        Flapjack.logger.error "Error generating or delivering notification to #{address}: #{e.class}: #{e.message}"
+        Flapjack.logger.error e.backtrace.join("\n")
         raise
       end
 

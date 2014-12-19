@@ -22,7 +22,6 @@ module Flapjack
     def initialize(opts = {})
       @lock = opts[:lock]
       @config = opts[:config] || {}
-      @logger = opts[:logger]
 
       @queue = Flapjack::RecordQueue.new(@config['queue'] || 'notifications',
                  Flapjack::Data::Notification)
@@ -81,16 +80,15 @@ module Flapjack
     # notification, updates the notification history in redis, generates the
     # notifications
     def process_notification(notification)
-      @logger.debug ("Processing notification: #{notification.inspect}")
+      Flapjack.logger.debug ("Processing notification: #{notification.inspect}")
 
       check       = notification.entry.state.check
       check_name  = check.name
 
-      rule_ids_by_contact_id = check.rule_ids_by_contact_id(:severity => notification.severity,
-        :logger => @logger)
+      rule_ids_by_contact_id = check.rule_ids_by_contact_id(:severity => notification.severity)
 
       if rule_ids_by_contact_id.empty?
-        @logger.debug("No rules for '#{check_name}'")
+        Flapjack.logger.debug("No rules for '#{check_name}'")
         @notifylog.info("#{check_name} | #{notification.type} | NO RULES")
         return
       end
@@ -99,7 +97,7 @@ module Flapjack
         :transports => @queues.keys,
         :default_timezone => @default_contact_timezone)
 
-      @logger.info "alerts: #{alerts.size}"
+      Flapjack.logger.info "alerts: #{alerts.size}"
 
       alerts.each do |alert|
         medium = alert.medium
@@ -107,7 +105,7 @@ module Flapjack
         @notifylog.info("#{check_name} | #{medium.contact.id} | " \
                         "#{medium.transport} | #{medium.address}")
 
-        @logger.info("Enqueueing #{medium.transport} alert for " +
+        Flapjack.logger.info("Enqueueing #{medium.transport} alert for " +
           "#{check_name} to #{medium.address} " +
           " rollup: #{alert.rollup || '-'}")
 

@@ -2,56 +2,56 @@ Pact.provider_states_for "flapjack-diner" do
 
   provider_state "no check exists" do
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
 
   provider_state "no contact exists" do
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
 
   provider_state "no medium exists" do
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
 
   provider_state "no pagerduty credentials exist" do
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
 
   provider_state "no rule exists" do
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
 
   provider_state "no scheduled maintenance period exists" do
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
 
   provider_state "no tag exists" do
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
 
   provider_state "no unscheduled maintenance period exists" do
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -64,7 +64,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -79,7 +79,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -91,7 +91,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -106,7 +106,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -118,7 +118,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -133,7 +133,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -145,7 +145,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -160,7 +160,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -172,7 +172,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -187,7 +187,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -199,7 +199,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -214,7 +214,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -228,7 +228,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -247,7 +247,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -261,7 +261,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end
@@ -280,7 +280,7 @@ Pact.provider_states_for "flapjack-diner" do
     end
 
     tear_down do
-      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      Flapjack.logger.messages.clear
       Flapjack.redis.flushdb
     end
   end

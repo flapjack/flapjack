@@ -57,7 +57,7 @@ describe Flapjack::Gateways::Email, :logger => true do
     expect(Mail::TestMailer.deliveries).to be_empty
 
     config = {"smtp_config" => {'from' => 'from@example.org'}}
-    email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => config, :logger => @logger)
+    email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => config)
     expect { email_gw.start }.to raise_error(Flapjack::PikeletStop)
 
     expect(Mail::TestMailer.deliveries.size).to eq(1)
@@ -108,7 +108,7 @@ describe Flapjack::Gateways::Email, :logger => true do
     expect(Mail::TestMailer.deliveries).to be_empty
 
     config = {"smtp_config" => {'from' => 'Full Name <from@example.org>'}}
-    email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => config, :logger => @logger)
+    email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => config)
     expect { email_gw.start }.to raise_error(Flapjack::PikeletStop)
 
     expect(Mail::TestMailer.deliveries.size).to eq(1)
@@ -161,7 +161,7 @@ describe Flapjack::Gateways::Email, :logger => true do
     expect(Mail::TestMailer.deliveries).to be_empty
 
     config = {"smtp_config" => {'from' => 'from@example.org', 'reply_to' => 'reply-to@example.com'}}
-    email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => config, :logger => @logger)
+    email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => config)
     expect { email_gw.start }.to raise_error(Flapjack::PikeletStop)
 
     expect(Mail::TestMailer.deliveries.size).to eq(1)
@@ -214,7 +214,7 @@ describe Flapjack::Gateways::Email, :logger => true do
     expect(Mail::TestMailer.deliveries).to be_empty
 
     config = {"smtp_config" => {'from' => 'from@example.org'}}
-    email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => config, :logger => @logger)
+    email_gw = Flapjack::Gateways::Email.new(:lock => lock, :config => config)
     expect { email_gw.start }.to raise_error(Flapjack::PikeletStop)
 
     expect(Mail::TestMailer.deliveries.size).to eq(1)

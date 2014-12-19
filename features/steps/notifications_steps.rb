@@ -295,18 +295,18 @@ end
 # TODO may need to get more complex, depending which SMS provider is used
 When /^the SMS alert handler runs successfully$/ do
   @request = stub_request(:get, /^#{Regexp.escape('https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage')}/)
-  @sms = Flapjack::Gateways::SmsMessagenet.new(:config => {'username' => 'abcd', 'password' => 'efgh'}, :logger => @logger )
+  @sms = Flapjack::Gateways::SmsMessagenet.new(:config => {'username' => 'abcd', 'password' => 'efgh'})
   @sms.send(:handle_alert, @alert)
 end
 
 When /^the SMS alert handler fails to send an SMS$/ do
   @request = stub_request(:get, /^#{Regexp.escape('https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage')}/).to_return(:status => [500, "Internal Server Error"])
-  @sms = Flapjack::Gateways::SmsMessagenet.new(:config => {'username' => 'abcd', 'password' => 'efgh'}, :logger => @logger )
+  @sms = Flapjack::Gateways::SmsMessagenet.new(:config => {'username' => 'abcd', 'password' => 'efgh'})
   @sms.send(:handle_alert, @alert)
 end
 
 When /^the email alert handler runs successfully$/ do
-  @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525, 'from' => 'flapjack@example.com'}}, :logger => @logger)
+  @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525, 'from' => 'flapjack@example.com'}})
   @email.send(:handle_alert, @alert)
 end
 
@@ -318,7 +318,7 @@ When /^the email alert handler fails to send an email$/ do
     end
   end
 
-  @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525, 'from' => 'flapjack@example.com'}}, :logger => @logger)
+  @email = Flapjack::Gateways::Email.new(:config => {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525, 'from' => 'flapjack@example.com'}})
   begin
     @email.send(:handle_alert, @alert)
   rescue RuntimeError
@@ -335,7 +335,7 @@ When /^the SNS alert handler runs successfully$/ do
   @request = stub_request(:post, /amazonaws\.com/)
   @sns = Flapjack::Gateways::AwsSns.new(:config => {
     'access_key' => "AKIAIOSFODNN7EXAMPLE",
-    'secret_key' => "secret"}, :logger => @logger)
+    'secret_key' => "secret"})
   @sns.send(:handle_alert, @alert)
 end
 
@@ -343,7 +343,7 @@ When /^the SNS alert handler fails to send an SMS$/ do
   @request = stub_request(:post, /amazonaws\.com/).to_return(:status => [500, "Internal Server Error"])
   @sns = Flapjack::Gateways::AwsSns.new(:config => {
     'access_key' => "AKIAIOSFODNN7EXAMPLE",
-    'secret_key' => "secret"}, :logger => @logger)
+    'secret_key' => "secret"})
   @sns.send(:handle_alert, @alert)
 end
 

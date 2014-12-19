@@ -38,7 +38,6 @@ module Flapjack
         @pikelet_class = pikelet_class
 
         @config        = opts[:config]
-        @logger        = opts[:logger]
         @boot_time     = opts[:boot_time]
         @shutdown      = shutdown
 
@@ -48,8 +47,7 @@ module Flapjack
         @stop_condition = @lock.new_cond
 
         @pikelet = @pikelet_class.new(:lock => @lock,
-          :stop_condition => @stop_condition, :config => @config,
-          :logger => @logger)
+          :stop_condition => @stop_condition, :config => @config)
 
         @finished_condition = @lock.new_cond
       end
@@ -67,18 +65,18 @@ module Flapjack
 
           loop do
             begin
-              @logger.debug "pikelet start for #{@pikelet_class.name}"
+              Flapjack.logger.debug "pikelet start for #{@pikelet_class.name}"
               yield
             rescue Flapjack::PikeletStop
-              @logger.debug "pikelet exception stop for #{@pikelet_class.name}"
+              Flapjack.logger.debug "pikelet exception stop for #{@pikelet_class.name}"
              rescue Flapjack::GlobalStop
-              @logger.debug "global exception stop for #{@pikelet_class.name}"
+              Flapjack.logger.debug "global exception stop for #{@pikelet_class.name}"
               @shutdown_thread = @thread
               shutdown_all = true
             rescue Exception => e
-              @logger.warn "#{e.class.name} #{e.message}"
+              Flapjack.logger.warn "#{e.class.name} #{e.message}"
               trace = e.backtrace
-              @logger.warn trace.join("\n") if trace
+              Flapjack.logger.warn trace.join("\n") if trace
               runs += 1
               keep_running = (max_runs > 0) && (runs < max_runs)
               shutdown_all = !keep_running
@@ -99,7 +97,7 @@ module Flapjack
       end
 
       def reload(cfg, &block)
-        @logger.configure(cfg['logger'])
+        Flapjack.logger.configure(cfg['logger'])
         yield
       end
 
@@ -115,13 +113,13 @@ module Flapjack
           case @pikelet.stop_type
           when :exception
             @lock.synchronize do
-              @logger.debug "triggering pikelet exception stop for #{@pikelet_class.name}"
+              Flapjack.logger.debug "triggering pikelet exception stop for #{@pikelet_class.name}"
               @thread.raise Flapjack::PikeletStop
               @finished_condition.wait_until { @finished }
             end
           when :signal
             @lock.synchronize do
-              @logger.debug "triggering pikelet signal stop for #{@pikelet_class.name}"
+              Flapjack.logger.debug "triggering pikelet signal stop for #{@pikelet_class.name}"
               @pikelet.instance_variable_set('@should_quit', true)
               @stop_condition.signal
               @finished_condition.wait_until { @finished }
@@ -159,7 +157,6 @@ module Flapjack
 
       def start
         @pikelet_class.instance_variable_set('@config', @config)
-        @pikelet_class.instance_variable_set('@logger', @logger)
 
         if @config
           port = @config['port']
@@ -190,9 +187,9 @@ module Flapjack
       def stop
         super do |thread|
           unless @server.nil?
-            @logger.info "shutting down server"
+            Flapjack.logger.info "shutting down server"
             @server.shutdown
-            @logger.info "shut down server"
+            Flapjack.logger.info "shut down server"
           end
           @pikelet_class.stop(thread) if @pikelet_class.respond_to?(:stop)
         end
@@ -225,7 +222,7 @@ module Flapjack
     def self.create(type, shutdown, opts = {})
       config = opts[:config] || {}
 
-      logger = Flapjack::Logger.new("flapjack-#{type}", config['logger'])
+      # logger = Flapjack::Logger.new("flapjack-#{type}", config['logger'])
 
       types = TYPES[type]
 
@@ -233,8 +230,7 @@ module Flapjack
 
       created = types.collect {|pikelet_class|
         wrapper = WRAPPERS.detect {|wrap| wrap::TYPES.include?(type) }
-        wrapper.new(pikelet_class, shutdown, :config => config,
-                    :logger => logger)
+        wrapper.new(pikelet_class, shutdown, :config => config)
       }
       created.each {|c| c.siblings = created - [c] }
       created

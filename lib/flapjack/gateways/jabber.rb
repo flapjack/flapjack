@@ -32,8 +32,6 @@ module Flapjack
           @lock = options[:lock]
           @config = options[:config]
 
-          @logger = options[:logger]
-
           # TODO support for config reloading
           @queue = Flapjack::RecordQueue.new(@config['queue'] || 'jabber_notifications',
                      Flapjack::Data::Alert)
@@ -65,7 +63,7 @@ module Flapjack
           @bot ||= @siblings && @siblings.detect {|sib| sib.respond_to?(:announce) }
 
           if @bot.nil?
-            @logger.warn("jabber bot not running, won't announce")
+            Flapjack.logger.warn("jabber bot not running, won't announce")
             return
           end
 
@@ -75,7 +73,7 @@ module Flapjack
           address = alert.address
           state = alert.state
 
-          @logger.debug("processing jabber notification address: #{address}, " +
+          Flapjack.logger.debug("processing jabber notification address: #{address}, " +
                         "check: '#{check_name}', state: #{state}, summary: #{alert.summary}")
 
           event_count = alert.event_count
@@ -106,7 +104,7 @@ module Flapjack
           begin
             message = message_template.result(bnd).chomp
           rescue => e
-            @logger.error "Error while executing the ERB for a jabber message, " +
+            Flapjack.logger.error "Error while executing the ERB for a jabber message, " +
               "ERB being executed: #{message_template_path}"
             raise
           end
@@ -131,7 +129,6 @@ module Flapjack
           @config = opts[:config]
 
           @boot_time = opts[:boot_time]
-          @logger = opts[:logger]
 
           @should_quit = false
 
@@ -147,7 +144,7 @@ module Flapjack
 
             until @messages.empty? && @should_quit
               while msg = @messages.pop
-                @logger.info "interpreter received #{msg.inspect}"
+                Flapjack.logger.info "interpreter received #{msg.inspect}"
                 interpret(msg[:room], msg[:nick], msg[:time], msg[:message])
               end
               @stop_cond.wait_while { @messages.empty? && !@should_quit }
@@ -414,7 +411,7 @@ module Flapjack
             end
 
           rescue => e
-            @logger.error("Exception when interpreting command '#{command}' - #{e.class}, #{e.message}")
+            Flapjack.logger.error("Exception when interpreting command '#{command}' - #{e.class}, #{e.message}")
             msg = "Oops, something went wrong processing that command (#{e.class}, #{e.message})"
           end
 
@@ -422,14 +419,14 @@ module Flapjack
 
           if @bot && (room || nick)
             if room
-              @logger.info "sending to room #{room}: #{msg}"
+              Flapjack.logger.info "sending to room #{room}: #{msg}"
               @bot.announce(room, msg)
             else
-              @logger.info "sending to user #{nick}: #{msg}"
+              Flapjack.logger.info "sending to user #{nick}: #{msg}"
               @bot.say(nick, msg)
             end
           else
-            @logger.warn "jabber bot not running, won't send #{msg} to #{room || nick}"
+            Flapjack.logger.warn "jabber bot not running, won't send #{msg} to #{room || nick}"
           end
 
           action.call if action
@@ -447,15 +444,13 @@ module Flapjack
           @config = opts[:config]
           @boot_time = opts[:boot_time]
 
-          @logger = opts[:logger]
-
           @say_buffer = []
           @announce_buffer = []
           @hostname = Socket.gethostname
 
           @alias = @config['alias'] || 'flapjack'
           @identifiers = ((@config['identifiers'] || []) + [@alias]).uniq
-          @logger.debug("I will respond to the following identifiers: #{@identifiers.join(', ')}")
+          Flapjack.logger.debug("I will respond to the following identifiers: #{@identifiers.join(', ')}")
 
           @state_buffer = []
         end
@@ -480,8 +475,8 @@ module Flapjack
           @lock.synchronize do
             interpreter = self.siblings ? self.siblings.detect {|sib| sib.respond_to?(:interpret)} : nil
 
-            @logger.info("starting")
-            @logger.debug("new jabber pikelet with the following options: #{@config.inspect}")
+            Flapjack.logger.info("starting")
+            Flapjack.logger.debug("new jabber pikelet with the following options: #{@config.inspect}")
 
             # ::Jabber::debug = true
 
@@ -497,10 +492,10 @@ module Flapjack
 
                 # called with a nil exception on disconnect for some reason
                 if exc
-                  @logger.error exc.class.name
-                  @logger.error ":#{loc.to_s}"
-                  @logger.error exc.message
-                  @logger.error exc.backtrace.join("\n")
+                  Flapjack.logger.error exc.class.name
+                  Flapjack.logger.error ":#{loc.to_s}"
+                  Flapjack.logger.error exc.message
+                  Flapjack.logger.error exc.backtrace.join("\n")
                 end
 
                 leave_and_rejoin = @joined && !@should_quit
@@ -524,7 +519,7 @@ module Flapjack
 
             check_xml = Proc.new do |data|
               return if data.nil?
-              @logger.debug "xml_data: #{data}"
+              Flapjack.logger.debug "xml_data: #{data}"
               text = ''
               begin
                 enc_name = Encoding.default_external.name
@@ -564,7 +559,7 @@ module Flapjack
                 identifier = @identifiers.detect {|id| check_xml.call(text) === /^#{id}:\s*(.*)/m }
                 unless identifier.nil?
                   the_command = $1
-                  @logger.debug("matched identifier: #{identifier}, command: #{the_command.inspect}")
+                  Flapjack.logger.debug("matched identifier: #{identifier}, command: #{the_command.inspect}")
                   if interpreter
                     interpreter.receive_message(room, nick, time, the_command)
                   end
@@ -603,7 +598,7 @@ module Flapjack
                 end
               else
                 # TODO should we quit Flapjack entirely?
-                @logger.error "stopping jabber bot, couldn't connect in #{attempts_allowed} attempts"
+                Flapjack.logger.error "stopping jabber bot, couldn't connect in #{attempts_allowed} attempts"
                 @should_quit = true
               end
 
@@ -634,10 +629,10 @@ module Flapjack
 
         def handle_state_change(client, muc_clients)
           connected = client.is_connected?
-          @logger.info "connected? #{connected}"
+          Flapjack.logger.info "connected? #{connected}"
 
           while state = @state_buffer.pop
-            @logger.info "state change #{state}"
+            Flapjack.logger.info "state change #{state}"
             case state
             when 'announce'
               _announce(muc_clients) if connected
@@ -648,7 +643,7 @@ module Flapjack
             when 'rejoin'
               _join(client, muc_clients, :rejoin => true) unless connected
             else
-              @logger.warn "unknown state change #{state}"
+              Flapjack.logger.warn "unknown state change #{state}"
             end
           end
         end
@@ -658,11 +653,11 @@ module Flapjack
         end
 
         def report_error(error_msg, je)
-          @logger.error error_msg
+          Flapjack.logger.error error_msg
           message = je.respond_to?(:message) ? je.message : '-'
-          @logger.error "#{je.class.name} #{message}"
+          Flapjack.logger.error "#{je.class.name} #{message}"
           # if je.respond_to?(:backtrace) && trace = je.backtrace
-          #   @logger.error trace.join("\n")
+          #   Flapjack.logger.error trace.join("\n")
           # end
         end
 

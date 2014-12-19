@@ -32,7 +32,6 @@ module JsonapiHelper
     before(:each) do
       allow(Flapjack).to receive(:redis).and_return(redis)
       Flapjack::Gateways::JSONAPI.instance_variable_set('@config', {})
-      Flapjack::Gateways::JSONAPI.instance_variable_set('@logger', @logger)
       Flapjack::Gateways::JSONAPI.start
     end
 

@@ -132,7 +132,7 @@ module Flapjack
 
       while event_json = (archive ? Flapjack.redis.rpoplpush(queue, archive) :
                                     Flapjack.redis.rpop(queue))
-        parsed = Flapjack::Data::Event.parse_and_validate(event_json, :logger => Flapjack.logger)
+        parsed = Flapjack::Data::Event.parse_and_validate(event_json)
         if parsed.nil?
           Flapjack.redis.multi do |multi|
             if archive

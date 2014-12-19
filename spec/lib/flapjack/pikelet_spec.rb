@@ -12,9 +12,6 @@ describe Flapjack::Pikelet, :logger => true do
   let(:shutdown)      { double(Proc) }
 
   it "creates and starts a processor pikelet" do
-    expect(Flapjack::Logger).to receive(:new).and_return(@logger)
-
-    expect(config).to receive(:[]).with('logger').and_return(nil)
     expect(config).to receive(:[]).with('max_runs').and_return(nil)
 
     expect(finished_cond).to receive(:signal)
@@ -25,13 +22,11 @@ describe Flapjack::Pikelet, :logger => true do
     processor = double('processor')
     expect(processor).to receive(:start)
     expect(Flapjack::Processor).to receive(:new).with(:lock => lock,
-      :stop_condition => stop_cond, :config => config,
-      :logger => @logger).and_return(processor)
+      :stop_condition => stop_cond, :config => config).and_return(processor)
 
     expect(Thread).to receive(:new).and_yield.and_return(thread)
 
-    pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config,
-      :logger => @logger)
+    pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config)
     expect(pikelets).not_to be_nil
     expect(pikelets.size).to eq(1)
     pikelet = pikelets.first
@@ -42,9 +37,6 @@ describe Flapjack::Pikelet, :logger => true do
 
   it "handles an exception from a processor pikelet, and restarts it, then shuts down" do
     exc = RuntimeError.new
-    expect(Flapjack::Logger).to receive(:new).and_return(@logger)
-
-    expect(config).to receive(:[]).with('logger').and_return(nil)
     expect(config).to receive(:[]).with('max_runs').and_return(2)
 
     expect(finished_cond).to receive(:signal)
@@ -55,15 +47,13 @@ describe Flapjack::Pikelet, :logger => true do
     processor = double('processor')
     expect(processor).to receive(:start).twice.and_raise(exc)
     expect(Flapjack::Processor).to receive(:new).with(:lock => lock,
-      :stop_condition => stop_cond, :config => config,
-      :logger => @logger).and_return(processor)
+      :stop_condition => stop_cond, :config => config).and_return(processor)
 
     expect(Thread).to receive(:new).and_yield.and_return(thread)
 
    expect(shutdown).to receive(:call)
 
-    pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config,
-      :logger => @logger)
+    pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config)
     expect(pikelets).not_to be_nil
     expect(pikelets.size).to eq(1)
     pikelet = pikelets.first
@@ -73,9 +63,6 @@ describe Flapjack::Pikelet, :logger => true do
   end
 
   it "creates and starts a http server gateway" do
-    expect(Flapjack::Logger).to receive(:new).and_return(@logger)
-
-    expect(config).to receive(:[]).with('logger').and_return(nil)
     expect(config).to receive(:[]).with('max_runs').and_return(nil)
     expect(config).to receive(:[]).with('port').and_return(7654)
     expect(config).to receive(:[]).with('timeout').and_return(90)
@@ -96,15 +83,12 @@ describe Flapjack::Pikelet, :logger => true do
 
     expect(Flapjack::Gateways::Web).to receive(:instance_variable_set).
       with('@config', config)
-    expect(Flapjack::Gateways::Web).to receive(:instance_variable_set).
-      with('@logger', @logger)
 
     expect(Thread).to receive(:new).and_yield.and_return(thread)
 
     expect(Flapjack::Gateways::Web).to receive(:start)
 
-    pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config,
-      :logger => @logger)
+    pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config)
     expect(pikelets).not_to be_nil
     expect(pikelets.size).to eq(1)
     pikelet = pikelets.first
@@ -115,9 +99,6 @@ describe Flapjack::Pikelet, :logger => true do
   it "handles an exception from a http server gateway" do
     exc = RuntimeError.new
 
-    expect(Flapjack::Logger).to receive(:new).and_return(@logger)
-
-    expect(config).to receive(:[]).with('logger').and_return(nil)
     expect(config).to receive(:[]).with('max_runs').and_return(nil)
     expect(config).to receive(:[]).with('port').and_return(7654)
     expect(config).to receive(:[]).with('timeout').and_return(90)
@@ -138,8 +119,6 @@ describe Flapjack::Pikelet, :logger => true do
 
     expect(Flapjack::Gateways::Web).to receive(:instance_variable_set).
       with('@config', config)
-    expect(Flapjack::Gateways::Web).to receive(:instance_variable_set).
-      with('@logger', @logger)
 
     expect(Thread).to receive(:new).and_yield.and_return(thread)
 
@@ -147,8 +126,7 @@ describe Flapjack::Pikelet, :logger => true do
 
     expect(Flapjack::Gateways::Web).to receive(:start)
 
-    pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config,
-      :logger => @logger)
+    pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config)
     expect(pikelets).not_to be_nil
     expect(pikelets.size).to eq(1)
     pikelet = pikelets.first

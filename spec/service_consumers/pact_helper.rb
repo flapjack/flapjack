@@ -3,6 +3,8 @@ require 'pact/provider/rspec'
 require 'flapjack/configuration'
 require 'flapjack/gateways/jsonapi'
 
+require './spec/support/mock_logger.rb'
+
 require './spec/service_consumers/fixture_data.rb'
 
 require './spec/service_consumers/provider_states_for_flapjack-diner.rb'
@@ -20,25 +22,7 @@ Bundler.require(:default, :test)
 ActiveSupport::JSON::Encoding.use_standard_json_time_format = true
 ActiveSupport::JSON::Encoding.time_precision = 0
 
-class MockLogger
-  attr_accessor :messages
-
-  def initialize
-    @messages = []
-  end
-
-  %w(debug info warn error fatal).each do |level|
-    class_eval <<-RUBY
-      def #{level}?
-        true
-      end
-
-      def #{level}(msg)
-        @messages << msg
-      end
-    RUBY
-  end
-end
+Flapjack.logger = MockLogger.new
 
 Flapjack::Gateways::JSONAPI.class_eval do
   set :show_exceptions, false
@@ -54,7 +38,6 @@ Flapjack::RedisProxy.config = $redis_options
 Sandstorm.redis = Flapjack.redis
 
 Flapjack::Gateways::JSONAPI.instance_variable_set('@config', 'port' => 19081)
-Flapjack::Gateways::JSONAPI.instance_variable_set('@logger', MockLogger.new)
 
 Flapjack::Gateways::JSONAPI.start
 

@@ -29,7 +29,7 @@ module Flapjack
 
       class << self
         def start
-          @logger.info "starting web - class"
+          Flapjack.logger.info "starting web - class"
 
           set :show_exceptions, @config['show_exceptions'].is_a?(TrueClass)
 
@@ -46,11 +46,11 @@ module Flapjack
           @api_url = @config['api_url']
            if @api_url
              if URI.regexp(['http', 'https']).match(@api_url).nil?
-               @logger.error "api_url is not a valid http or https URI (#{@api_url}), discarding"
+               Flapjack.logger.error "api_url is not a valid http or https URI (#{@api_url}), discarding"
                @api_url = nil
              end
              unless @api_url.match(/^.*\/$/)
-               @logger.info "api_url must end with a trailing '/', setting to '#{@api_url}/'"
+               Flapjack.logger.info "api_url must end with a trailing '/', setting to '#{@api_url}/'"
                @api_url = "#{@api_url}/"
              end
            end
@@ -65,7 +65,7 @@ module Flapjack
               @logo_image_file = logo_image_path
               @logo_image_ext  = File.extname(logo_image_path)
             else
-              @logger.error "logo_image_path '#{logo_image_path}'' does not point to a valid file."
+              Flapjack.logger.error "logo_image_path '#{logo_image_path}'' does not point to a valid file."
             end
           end
 
@@ -91,7 +91,7 @@ module Flapjack
         end
       end
 
-      ['logger', 'config'].each do |class_inst_var|
+      ['config'].each do |class_inst_var|
         define_method(class_inst_var.to_sym) do
           self.class.instance_variable_get("@#{class_inst_var}")
         end
@@ -109,13 +109,13 @@ module Flapjack
         input = nil
         query_string = (request.query_string.respond_to?(:length) &&
         request.query_string.length > 0) ? "?#{request.query_string}" : ""
-        if logger.debug?
+        if Flapjack.logger.debug?
           input = env['rack.input'].read
-          logger.debug("#{request.request_method} #{request.path_info}#{query_string} #{input}")
-        elsif logger.info?
+          Flapjack.logger.debug("#{request.request_method} #{request.path_info}#{query_string} #{input}")
+        elsif Flapjack.logger.info?
           input = env['rack.input'].read
           input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
-          logger.info("#{request.request_method} #{request.path_info}#{query_string} #{input_short[0..80]}")
+          Flapjack.logger.info("#{request.request_method} #{request.path_info}#{query_string} #{input_short[0..80]}")
         end
         env['rack.input'].rewind unless input.nil?
       end

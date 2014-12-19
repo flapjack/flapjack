@@ -34,7 +34,6 @@ module Flapjack
         @lock = opts[:lock]
 
         @config = opts[:config]
-        @logger = opts[:logger]
 
         # TODO support for config reloading
         @queue = Flapjack::RecordQueue.new(@config['queue'] || 'sms_twilio_notifications',
@@ -42,7 +41,7 @@ module Flapjack
 
         @sent = 0
 
-        @logger.debug("new sms_twilio gateway pikelet with the following options: #{@config.inspect}")
+        Flapjack.logger.debug("new sms_twilio gateway pikelet with the following options: #{@config.inspect}")
       end
 
       def start
@@ -95,13 +94,13 @@ module Flapjack
         begin
           message = sms_template.result(bnd).chomp
         rescue => e
-          @logger.error "Error while executing the ERB for an sms: " +
+          Flapjack.logger.error "Error while executing the ERB for an sms: " +
             "ERB being executed: #{sms_template_path}"
           raise
         end
 
         if @config.nil? || (@config.respond_to?(:empty?) && @config.empty?)
-          @logger.error "sms twilio config is missing"
+          Flapjack.logger.error "sms twilio config is missing"
           return
         end
 
@@ -118,7 +117,7 @@ module Flapjack
         end
 
         unless errors.empty?
-          errors.each {|err| @logger.error err }
+          errors.each {|err| Flapjack.logger.error err }
           return
         end
 
@@ -128,8 +127,8 @@ module Flapjack
           'Body' => truncate(message, 159)
         }
 
-        @logger.debug "body_data: #{body_data.inspect}"
-        @logger.debug "authorization: [#{account_sid}, #{auth_token[0..2]}...#{auth_token[-3..-1]}]"
+        Flapjack.logger.debug "body_data: #{body_data.inspect}"
+        Flapjack.logger.debug "authorization: [#{account_sid}, #{auth_token[0..2]}...#{auth_token[-3..-1]}]"
 
         req = Net::HTTP::Post.new(endpoint_path)
         req.set_form_data(body_data)
@@ -139,21 +138,21 @@ module Flapjack
           http.request(req)
         end
 
-        @logger.debug "server response: #{http_response.inspect}"
+        Flapjack.logger.debug "server response: #{http_response.inspect}"
 
         status = http_response.code
 
         if (status.to_i >= 200) && (status.to_i <= 206)
           @sent += 1
-          @logger.info "Sent SMS via Twilio, response status is #{status}, " +
+          Flapjack.logger.info "Sent SMS via Twilio, response status is #{status}, " +
             "alert id: #{alert.id}"
         else
-          @logger.error "Failed to send SMS via Twilio, response status is #{status}, " +
+          Flapjack.logger.error "Failed to send SMS via Twilio, response status is #{status}, " +
             "alert id: #{alert.id}"
         end
       rescue => e
-        @logger.error "Error generating or delivering twilio sms to #{alert.medium.address}: #{e.class}: #{e.message}"
-        @logger.error e.backtrace.join("\n")
+        Flapjack.logger.error "Error generating or delivering twilio sms to #{alert.medium.address}: #{e.class}: #{e.message}"
+        Flapjack.logger.error e.backtrace.join("\n")
         raise
       end
 

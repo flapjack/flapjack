@@ -57,8 +57,7 @@ describe Flapjack::Gateways::SmsTwilio, :logger => true do
     expect(redis).to receive(:quit)
 
     sms_gw = Flapjack::Gateways::SmsTwilio.new(:lock => lock,
-                                               :config => config,
-                                               :logger => @logger)
+                                               :config => config)
     expect { sms_gw.start }.to raise_error(Flapjack::PikeletStop)
     expect(req).to have_been_requested
   end
@@ -109,8 +108,7 @@ describe Flapjack::Gateways::SmsTwilio, :logger => true do
     expect(redis).to receive(:quit)
 
     sms_gw = Flapjack::Gateways::SmsTwilio.new(:lock => lock,
-                                               :config => config,
-                                               :logger => @logger)
+                                               :config => config)
     expect { sms_gw.start }.to raise_error(Flapjack::PikeletStop)
     expect(req).to have_been_requested
   end
@@ -144,8 +142,7 @@ describe Flapjack::Gateways::SmsTwilio, :logger => true do
     expect(redis).to receive(:quit)
 
     sms_gw = Flapjack::Gateways::SmsTwilio.new(:lock => lock,
-                                               :config => config.reject {|k, v| k == 'auth_token'},
-                                               :logger => @logger)
+                                               :config => config.reject {|k, v| k == 'auth_token'})
 
     expect { sms_gw.start }.to raise_error(Flapjack::PikeletStop)
 
