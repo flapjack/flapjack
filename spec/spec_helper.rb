@@ -79,6 +79,7 @@ RSpec.configure do |config|
   end
 
   config.around(:each, :logger => true) do |example|
+    MockLogger.configure_log('flapjack')
     Flapjack.logger = MockLogger.new
     example.run
 

@@ -39,6 +39,7 @@ module Flapjack
 
         @config        = opts[:config]
         @boot_time     = opts[:boot_time]
+        @logger_name   = opts[:logger_name]
         @shutdown      = shutdown
 
         @siblings      = []
@@ -56,6 +57,10 @@ module Flapjack
         @pikelet.siblings = @siblings.map(&:pikelet) if @pikelet.respond_to?(:siblings=)
 
         @thread = Thread.new do
+
+          # logger = Flapjack::Logger.new("flapjack-#{type}", config['logger'])
+          Flapjack.configure_log(@logger_name, @config['logger'])
+
           # TODO rename this, it's only relevant in the error case
           max_runs = @config['max_runs'] || 1
           runs = 0
@@ -222,15 +227,19 @@ module Flapjack
     def self.create(type, shutdown, opts = {})
       config = opts[:config] || {}
 
-      # logger = Flapjack::Logger.new("flapjack-#{type}", config['logger'])
-
       types = TYPES[type]
 
       return [] if types.nil?
 
       created = types.collect {|pikelet_class|
         wrapper = WRAPPERS.detect {|wrap| wrap::TYPES.include?(type) }
-        wrapper.new(pikelet_class, shutdown, :config => config)
+        logger_name = if TYPES[type].size == 1
+          "flapjack-#{type}"
+        else
+          "flapjack-#{type}-#{pikelet_class.split('::').last.downcase}"
+        end
+        wrapper.new(pikelet_class, shutdown, :logger_name => logger_name,
+          :config => config)
       }
       created.each {|c| c.siblings = created - [c] }
       created

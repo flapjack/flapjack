@@ -83,15 +83,13 @@ module Flapjack
         return
       end
 
-      config = HashWithIndifferentAccess.new(config)
-
-      @config = config
+      @config = HashWithIndifferentAccess.new(config)
 
       @file_pattern = file_pattern
     end
 
     def reload
-      unless @file_pattern
+      if @file_pattern.nil?
         Flapjack.logger.error "Cannot reload, config file_pattern not set."
         return
       end

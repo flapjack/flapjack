@@ -12,6 +12,7 @@ describe Flapjack::Pikelet, :logger => true do
   let(:shutdown)      { double(Proc) }
 
   it "creates and starts a processor pikelet" do
+    expect(config).to receive(:[]).with('logger').and_return(nil)
     expect(config).to receive(:[]).with('max_runs').and_return(nil)
 
     expect(finished_cond).to receive(:signal)
@@ -37,6 +38,7 @@ describe Flapjack::Pikelet, :logger => true do
 
   it "handles an exception from a processor pikelet, and restarts it, then shuts down" do
     exc = RuntimeError.new
+    expect(config).to receive(:[]).with('logger').and_return(nil)
     expect(config).to receive(:[]).with('max_runs').and_return(2)
 
     expect(finished_cond).to receive(:signal)
@@ -63,6 +65,7 @@ describe Flapjack::Pikelet, :logger => true do
   end
 
   it "creates and starts a http server gateway" do
+    expect(config).to receive(:[]).with('logger').and_return(nil)
     expect(config).to receive(:[]).with('max_runs').and_return(nil)
     expect(config).to receive(:[]).with('port').and_return(7654)
     expect(config).to receive(:[]).with('timeout').and_return(90)
@@ -98,7 +101,7 @@ describe Flapjack::Pikelet, :logger => true do
 
   it "handles an exception from a http server gateway" do
     exc = RuntimeError.new
-
+    expect(config).to receive(:[]).with('logger').and_return(nil)
     expect(config).to receive(:[]).with('max_runs').and_return(nil)
     expect(config).to receive(:[]).with('port').and_return(7654)
     expect(config).to receive(:[]).with('timeout').and_return(90)

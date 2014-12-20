@@ -9,14 +9,22 @@ module Flapjack
   class << self
     # Thread and fiber-local
 
+    def configure_log(name, config = {})
+      Thread.current[:flapjack_logger_name]   = name
+      Thread.current[:flapjack_logger_config] = config
+    end
+
     def logger=(l)
-      Thread.current[:flapjack_log] = l
+      Thread.current[:flapjack_logger] = l
     end
 
     def logger
-      log = Thread.current[:flapjack_log]
+      log = Thread.current[:flapjack_logger]
       return log unless log.nil?
-      Thread.current[:flapjack_log] = Flapjack::Logger.new('FIXME')
+      Thread.current[:flapjack_logger] = Flapjack::Logger.new(
+        Thread.current[:flapjack_logger_name]   || 'flapjack',
+        Thread.current[:flapjack_logger_config] || {}
+      )
     end
   end
 
@@ -40,7 +48,7 @@ module Flapjack
 
       @formatter = proc do |severity, datetime, progname, msg|
         t = datetime.iso8601
-        "#{t} [#{severity}] :: #{name} :: #{msg}\n"
+        "#{t} [#{severity}] :: #{@name} :: #{msg}\n"
       end
 
       @logger = ::Logger.new(STDOUT)
