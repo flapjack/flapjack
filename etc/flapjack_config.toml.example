@@ -153,7 +153,7 @@ daemonize = true
     # the redis queue this pikelet will look for notifications on
     queue = "pagerduty_notifications"
     [gateways.pagerduty.credentials]
-      service_key = 1234567890
+      service_key = "1234567890"
       subdomain = thecompany
       username = user
       password = pass
@@ -205,7 +205,7 @@ daemonize = true
     # The maximum amount of time allowed to pass between state changes on that check
     max_latency = 300
     # The API key for a service in PagerDuty that the oobetet will use to alert you
-    pagerduty_contact = 11111111111111111111111111111111
+    pagerduty_contact = "11111111111111111111111111111111"
     # Jabber rooms to join
     rooms = [
       "flapjacktest@conference.jabber.example.com",
