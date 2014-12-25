@@ -10,7 +10,13 @@ before_script:
 before_install:
 - git submodule update --init --recursive
 - gem install bundler
-script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features"
+install:
+  - go get github.com/garyburd/redigo/redis
+  - go get github.com/go-martini/martini
+  - go get gopkg.in/alecthomas/kingpin.v1
+  - go get github.com/oguzbilgic/pandik
+  - bundle install
+script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v"
 notifications:
   irc:
     channels:
