@@ -38,8 +38,48 @@ module Flapjack
 
       # TODO validate uniqueness of :name, :ack_hash
 
+      # TODO verify that callbacks are called no matter which side
+      # of the association fires the initial event
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :checks
+        :inverse_of => :checks, :after_add => :recalculate_routes,
+        :after_remove => :recalculate_routes
+
+      def recalculate_routes(*t)
+        self.routes.destroy_all
+        return if self.tags.empty?
+
+        # find all rules matching these tags
+        generic_rule_ids = Flapjack::Data::Rule.intersect(:has_tags => false).ids
+
+        tag_ids = self.tags.ids
+
+        tag_rules_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
+          associated_ids_for(:rules)
+
+        return if tag_rules_ids.empty?
+
+        all_rules_for_tags_ids = Set.new(tag_rules_ids.values).flatten
+
+        return if all_rules_for_tags_ids.empty?
+
+        rule_tags_ids = Flapjack::Data::Rule.intersect(:id => all_rules_for_tags_ids).
+          associated_ids_for(:tags)
+
+        rule_tags_ids.delete_if {|rid, tids| (tids - tag_ids).size > 0 }
+
+        rule_ids = rule_tags_ids.keys | generic_rule_ids.to_a
+
+        return if rule_ids.empty?
+
+        Flapjack::Data::Rule.intersect(:id => rule_ids).each do |r|
+          route = Flapjack::Data::Route.new(:is_alerting => false,
+            :conditions_list => r.conditions_list)
+          route.save
+
+          r.routes << route
+          self.routes << route
+        end
+      end
 
       has_sorted_set :states, :class_name => 'Flapjack::Data::State',
         :key => :timestamp, :inverse_of => :check
@@ -86,14 +126,10 @@ module Flapjack
       # the following associations are used internally, for the notification
       # and alert queue inter-pikelet workflow
 
-      has_and_belongs_to_many :alerting_media,
-        :class_name => 'Flapjack::Data::Medium',
-        :inverse_of => :alerting_checks
       has_many :alerts, :class_name => 'Flapjack::Data::Alert',
         :inverse_of => :check
 
-      # may replace, or work alongside 'alerting_media'
-      has_and_belongs_to_many :paths, :class_name => 'Flapjack::Data::Path',
+      has_and_belongs_to_many :routes, :class_name => 'Flapjack::Data::Route',
         :inverse_of => :checks
 
       validates :name, :presence => true
@@ -203,8 +239,9 @@ module Flapjack
 
       def in_scheduled_maintenance?
         return false if scheduled_maintenance_ids_at(Time.now).empty?
-        self.alerting_media.each do |medium|
-          self.alerting_media.delete(medium)
+        self.routes.intersect(:is_alerting => true).each do |route|
+          route.is_alerting = false
+          route.save
         end
         true
       end
@@ -268,7 +305,8 @@ module Flapjack
         current_time = Time.now
 
         self.class.lock(Flapjack::Data::UnscheduledMaintenance,
-                        Flapjack::Data::Medium) do
+          Flapjack::Data::Route, Flapjack::Data::State) do
+
           # time_remaining
           if (unsched_maint.end_time - current_time) > 0
             self.clear_unscheduled_maintenance(unsched_maint.start_time)
@@ -287,8 +325,9 @@ module Flapjack
             self.states << ack_state
           end
 
-          unless self.alerting_media.empty?
-            self.alerting_media.delete(*self.alerting_media.all)
+          self.routes.intersect(:is_alerting => true).each do |route|
+            route.is_alerting = false
+            route.save
           end
         end
       end
@@ -314,53 +353,48 @@ module Flapjack
       # These are not automatically created for users any more, but can be
       # deliberately configured.
 
-      # returns hash with check_id => [rules_ids]
-      def self.rule_ids_for(*check_ids)
-        generic_rules_ids = Flapjack::Data::Rule.intersect(:has_tags => false).ids
+      # returns array with two hashes [{contact_id => Set<rule_ids>},
+      #   {rule_id => Set<route_ids>}]
 
-        tag_ids_by_check_id = Flapjack::Data::Check.intersect(:id => check_ids).
-          associated_ids_for(:tags)
-
-        tag_ids_by_check_id.each_with_object({}) do |(check_id, tag_ids), memo|
-          tag_rules_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
-            associated_ids_for(:rules)
-
-          all_rules_for_tags_ids = Set.new(tag_rules_ids.values).flatten
-
-          rule_tags_ids = Flapjack::Data::Rule.intersect(:id => all_rules_for_tags_ids).
-            associated_ids_for(:tags)
-
-          rule_tags_ids.delete_if {|rid, tids| (tids - tag_ids).size > 0 }
-
-          memo[check_id] = rule_tags_ids.keys | generic_rules_ids.to_a
-        end
-      end
-
-      # returns hash with contact_id => [rule_ids]
-      def rule_ids_by_contact_id(opts = {})
+      def rule_ids_and_route_ids(opts = {})
         severity = opts[:severity]
 
-        rule_ids_by_check_id = Flapjack::Data::Check.rule_ids_for(*self.id)
+        r_ids = self.routes.ids
 
-        rule_ids = rule_ids_by_check_id[self.id]
+        Flapjack.logger.info {
+          "severity: #{severity}\n" \
+          "Matching routes before severity (#{r_ids.size}): #{r_ids.inspect}"
+        }
+        return [{}, {}] if r_ids.empty?
 
-        Flapjack.logger.info "severity: #{severity}"
-
-        Flapjack.logger.info "Matching rules before severity (#{rule_ids.size}): #{rule_ids.inspect}"
-        return {} if rule_ids.empty?
+        check_routes = self.routes
 
         unless severity.nil? || Flapjack::Data::Condition.healthy.include?(severity)
-          rule_ids = Flapjack::Data::Rule.intersect(:id => rule_ids,
-            :conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/]).ids
+          check_routes = check_routes.
+            intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
         end
 
-        Flapjack.logger.info "Matching rules after severity (#{rule_ids.size}): #{rule_ids.inspect}"
-        return {} if rule_ids.empty?
+        route_ids = check_routes.ids
+        return [{}, {}] if route_ids.empty?
+
+        Flapjack.logger.info {
+          "Matching routes after severity (#{route_ids.size}): #{route_ids.inspect}"
+        }
+
+        route_ids_by_rule_id = Flapjack::Data::Route.intersect(:id => route_ids).
+          associated_ids_for(:rule, :inversed => true)
+
+        rule_ids = route_ids_by_rule_id.keys
+
+        Flapjack.logger.info {
+          "Matching rules for routes (#{rule_ids.size}): #{rule_ids.inspect}"
+        }
 
         # TODO could maybe also eliminate rules with no media here?
-
-        Flapjack::Data::Rule.intersect(:id => rule_ids).
+        rule_ids_by_contact_id = Flapjack::Data::Rule.intersect(:id => rule_ids).
           associated_ids_for(:contact, :inversed => true)
+
+        [rule_ids_by_contact_id, route_ids_by_rule_id]
       end
 
       def self.pagerduty_credentials_for(check_ids)

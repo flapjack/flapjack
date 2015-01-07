@@ -25,13 +25,13 @@ module Flapjack
           return false
         end
 
-        Flapjack::Data::Check.lock(Flapjack::Data::State, Flapjack::Data::Medium) do
-          check.most_severe = nil
-          check.clear_unscheduled_maintenance(timestamp)
-          unless check.alerting_media.empty?
-            Flapjack.logger.debug("Filter: Ok: clearing alerting media for #{check.id}")
-            check.alerting_media.delete(*check.alerting_media.all)
-          end
+        check.most_severe = nil
+        check.clear_unscheduled_maintenance(timestamp)
+
+        Flapjack.logger.debug { "Filter: Ok: clearing alerting routes for #{check.id}" }
+        check.routes.intersect(:is_alerting => true).each do |route|
+          route.is_alerting = false
+          route.save
         end
 
         if old_state.nil? || Flapjack::Data::Condition.healthy?(old_state.condition)

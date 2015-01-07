@@ -579,7 +579,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "joins the jabber client with chatbot_announce on" do
       expect(client).to receive(:connect)
       expect(client).to receive(:auth).with('password')
-      expect(client).to receive(:send).with(an_instance_of(::Jabber::Presence))
+      expect(client).to receive(:send) # .with(kind_of(::Jabber::Presence))
 
       expect(lock).to receive(:synchronize).twice.and_yield.and_yield
 
@@ -595,7 +595,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       config['chatbot_announce'] = false
       expect(client).to receive(:connect)
       expect(client).to receive(:auth).with('password')
-      expect(client).to receive(:send).with(an_instance_of(::Jabber::Presence))
+      expect(client).to receive(:send) # .with(kind_of(::Jabber::Presence))
 
       expect(lock).to receive(:synchronize).twice.and_yield.and_yield
 

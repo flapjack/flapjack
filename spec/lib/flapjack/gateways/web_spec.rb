@@ -302,10 +302,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       contact = double('contact')
       expect(contact).to receive(:name).and_return("Smithson Smith")
 
-      no_checks = double('no_checks', :all => [])
-
       medium = double(Flapjack::Data::Medium)
-      expect(medium).to receive(:alerting_checks).and_return(no_checks)
+      expect(medium).to receive(:alerting_checks).and_return([])
       expect(medium).to receive(:transport).twice.and_return('sms')
       expect(medium).to receive(:address).and_return('0123456789')
       expect(medium).to receive(:interval).twice.and_return(60)

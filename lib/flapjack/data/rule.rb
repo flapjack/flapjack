@@ -7,6 +7,7 @@ require 'ice_cube'
 require 'sandstorm/records/redis_record'
 
 require 'flapjack/data/validators/id_validator'
+require 'flapjack/data/route'
 
 module Flapjack
   module Data
@@ -35,6 +36,12 @@ module Flapjack
         :inverse_of => :rules, :after_add => :has_some_media,
         :after_remove => :has_no_media
 
+      before_destroy :remove_routes
+
+      def remove_routes
+        self.routes.destroy_all
+      end
+
       def has_some_media(*m)
         self.has_media = true
         self.save
@@ -47,22 +54,55 @@ module Flapjack
       end
 
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :rules, :after_add => :has_some_tags,
-        :after_remove => :has_no_tags
+        :inverse_of => :rules, :after_add => :tags_added,
+        :after_remove => :tags_removed
 
-      def has_some_tags(*t)
+      # TODO on change to conditions_list, update value for all routes
+      # TODO when a rule is created, recalculate_routes should be called
+      # by the creating code if no tags are being added.
+      def recalculate_routes
+        self.routes.destroy_all
+
+        route_for_check = proc {|c|
+          route = Flapjack::Data::Route.new(:is_alerting => false,
+            :conditions_list => self.conditions_list)
+          route.save
+
+          self.routes << route
+          c.routes << route
+        }
+
+        if self.has_tags
+          # find all checks matching these tags -- FIXME there may be a more
+          # Sandstorm-idiomatic way to do this
+
+          check_ids = self.tags.associated_ids_for(:checks).values.reduce(:&)
+
+          unless check_ids.empty?
+            Flapjack::Data::Check.intersect(:id => check_ids).each do |check|
+              route_for_check.call(check)
+            end
+          end
+        else
+          # create routes between this rule and all checks
+          Flapjack::Data::Check.each {|check| route_for_check.call(check) }
+        end
+      end
+
+      def tags_added(*t)
         self.has_tags = true
+        recalculate_routes
         self.save
       end
 
-      def has_no_tags(*t)
-        return unless self.media.empty?
-        self.has_tags = false
+      def tag_removed(*t)
+        self.has_tags = self.tags.empty?
+        recalculate_routes
         self.save
       end
 
-      # has_many :paths, :class_name => 'Flapjack::Data::Path',
-      #   :inverse_of => :rule
+      has_many :routes, :class_name => 'Flapjack::Data::Route',
+        :inverse_of => :rule
 
       def initialize(attributes = {})
         super

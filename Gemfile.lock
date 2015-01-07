@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/flapjack/sandstorm.git
-  revision: 97ca0a08f45f31b3b42a83d226aea816c5861888
+  revision: 1b0370bd2c5b4c2dfa186e1bc741df169d5710db
   branch: master
   specs:
     sandstorm (0.1.0)
@@ -31,14 +31,14 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    activemodel (4.1.8)
-      activesupport (= 4.1.8)
+    activemodel (4.2.0)
+      activesupport (= 4.2.0)
       builder (~> 3.1)
-    activesupport (4.1.8)
-      i18n (~> 0.6, >= 0.6.9)
+    activesupport (4.2.0)
+      i18n (~> 0.7)
       json (~> 1.7, >= 1.7.7)
       minitest (~> 5.1)
-      thread_safe (~> 0.1)
+      thread_safe (~> 0.3, >= 0.3.4)
       tzinfo (~> 1.1)
     addressable (2.3.6)
     awesome_print (1.2.0)
@@ -72,13 +72,13 @@ GEM
       multi_json (~> 1.3)
     gli (2.12.0)
     hiredis (0.5.2)
-    i18n (0.6.11)
+    i18n (0.7.0)
     ice_cube (0.12.1)
     json (1.8.1)
     mail (2.6.3)
       mime-types (>= 1.16, < 3)
     mime-types (2.4.3)
-    minitest (5.4.3)
+    minitest (5.5.0)
     msgpack (0.5.9)
     multi_json (1.10.1)
     multi_test (0.1.1)
@@ -125,7 +125,7 @@ GEM
       rack (>= 1.0)
     rake (10.3.2)
     randexp (0.1.7)
-    rbtrace (0.4.5)
+    rbtrace (0.4.6)
       ffi (>= 1.0.6)
       msgpack (>= 0.4.3)
       trollop (>= 1.16.2)
@@ -163,7 +163,7 @@ GEM
     tins (1.3.3)
     toml (0.1.2)
       parslet (~> 1.5.0)
-    trollop (2.0)
+    trollop (2.1.1)
     tzinfo (1.2.2)
       thread_safe (~> 0.1)
     tzinfo-data (1.2014.10)

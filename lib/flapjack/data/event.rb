@@ -3,6 +3,8 @@
 require 'oj'
 require 'flapjack/redis_proxy'
 
+require 'flapjack/data/check'
+
 module Flapjack
   module Data
     class Event
@@ -66,16 +68,12 @@ module Flapjack
           else
             errors << "Event must be a JSON hash, see http://flapjack.io/docs/1.0/development/DATA_STRUCTURES#event-queue"
           end
-          return parsed if errors.empty?
+          return [parsed, errors]
         end
-        Flapjack.logger.error {
-          error_str = errors.nil? ? '' : errors.join(', ')
-          "Invalid event data received, #{error_str} #{parsed.inspect}"
-        }
-        nil
+        [nil, errors]
       rescue Oj::Error => e
-        Flapjack.logger.error("Error deserialising event json: #{e}, raw json: #{raw.inspect}")
-        nil
+        errors << "Error deserialising event json: #{e}, raw json: #{raw.inspect}"
+        [nil, errors]
       end
 
       def self.validation_errors_for_hash(hash, opts = {})

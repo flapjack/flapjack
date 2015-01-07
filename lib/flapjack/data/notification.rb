@@ -27,27 +27,38 @@ module Flapjack
         :inclusion => {:in => Flapjack::Data::Condition.unhealthy.keys +
                               Flapjack::Data::Condition.healthy.keys }
 
-      # TODO ensure 'unacknowledged_failures' behaviour is covered
-
       # query for 'recovery' notification should be for 'ok' state, intersect notified == true
       # query for 'acknowledgement' notification should be 'acknowledgement' state, intersect notified == true
       # any query for 'problem', 'critical', 'warning', 'unknown' notification should be
       # for union of 'critical', 'warning', 'unknown' states, intersect notified == true
 
-      def alerts_for(rule_ids_by_contact_id, opts = {})
-        transports = opts[:transports]
+      def alerts_for(alert_check, opts = {})
+        in_sched   = alert_check.in_scheduled_maintenance?
+        in_unsched = alert_check.in_unscheduled_maintenance?
 
-        default_timezone = opts[:default_timezone]
+        rule_ids_by_contact_id, route_ids_by_rule_id =
+          alert_check.rule_ids_and_route_ids(:severity => self.severity)
 
         notification_entry = self.entry
         notification_state = notification_entry.state
-        alert_check = notification_state.check
+
+        if rule_ids_by_contact_id.empty?
+          alert_type = Flapjack::Data::Alert.notification_type(notification_entry.action,
+            notification_entry.condition)
+
+          Flapjack.logger.info { "#{alert_check.name} | #{alert_type} | NO RULES" }
+          return
+        end
+
+        transports = opts[:transports]
+
+        default_timezone = opts[:default_timezone]
 
         Flapjack.logger.info { "contact_ids: #{rule_ids_by_contact_id.keys.size}" }
 
         contacts = rule_ids_by_contact_id.empty? ? [] :
           Flapjack::Data::Contact.find_by_ids(*rule_ids_by_contact_id.keys)
-        return [] if contacts.empty?
+        return if contacts.empty?
 
         # TODO pass in base time from outside (cast to zone per contact), so
         # all alerts from this notification use a consistent time
@@ -68,19 +79,19 @@ module Flapjack
         end
 
         Flapjack.logger.info "rule_ids after time: #{rule_ids.size}"
-        return [] if rule_ids.empty?
+        return if rule_ids.empty?
 
         rule_ids -= contact_ids_to_drop.flat_map {|c_id| rule_ids_by_contact_id[c_id] }
 
         Flapjack.logger.info "rule_ids after drop: #{rule_ids.size}"
-        return [] if rule_ids.empty?
+        return if rule_ids.empty?
 
         Flapjack::Data::Medium.lock(Flapjack::Data::Check,
                                     Flapjack::Data::ScheduledMaintenance,
                                     Flapjack::Data::UnscheduledMaintenance,
                                     Flapjack::Data::Rule,
                                     Flapjack::Data::Alert,
-                                    Flapjack::Data::Medium,
+                                    Flapjack::Data::Route,
                                     Flapjack::Data::Notification,
                                     Flapjack::Data::Contact,
                                     Flapjack::Data::State,
@@ -100,19 +111,22 @@ module Flapjack
           # calculations, if it's failing, even if we won't notify on this media
 
           Flapjack.logger.info "healthy #{Flapjack::Data::Condition.healthy?(notification_state.condition)}"
-          Flapjack.logger.info "sched #{alert_check.in_scheduled_maintenance?}"
-          Flapjack.logger.info "unsched #{alert_check.in_unscheduled_maintenance?}"
+          Flapjack.logger.info "sched #{in_sched}"
+          Flapjack.logger.info "unsched #{in_unsched}"
 
           this_notification_failure = !(Flapjack::Data::Condition.healthy?(notification_state.condition) ||
-            alert_check.in_scheduled_maintenance? ||
-            alert_check.in_unscheduled_maintenance?)
+            in_sched || in_unsched)
 
           this_notification_ok = 'acknowledgement'.eql?(notification_entry.action) ||
             Flapjack::Data::Condition.healthy?(notification_state.condition)
           is_a_test            = 'test_notifications'.eql?(notification_entry.action)
 
-          if this_notification_failure && !is_a_test
-            alert_check.alerting_media.add(*alertable_media)
+          unless is_a_test
+            route_ids = route_ids_by_rule_id.values.reduce(:|)
+            Flapjack::Data::Route.intersect(:id => route_ids).each do |route|
+              route.is_alerting = this_notification_failure
+              route.save # no-op if the value didn't change
+            end
           end
 
           Flapjack.logger.info "pre-media test: \n" \
@@ -130,8 +144,11 @@ module Flapjack
               (Flapjack::Data::Condition.healthy?(last_entry.condition) ||
               'acknowledgement'.eql?(last_entry.action))
 
-            alerting_check_ids = medium.rollup_threshold.nil? || (medium.rollup_threshold == 0) ? nil :
-                                   medium.alerting_checks.ids
+            alerting_check_ids = if medium.rollup_threshold.nil? || (medium.rollup_threshold == 0)
+              nil
+            else
+              medium.alerting_checks.map(&:id)
+            end
 
             Flapjack.logger.info " alerting_checks: #{alerting_check_ids.inspect}"
 

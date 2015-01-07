@@ -32,16 +32,9 @@ module Flapjack
         :inverse_of => :media
 
       has_many :alerts, :class_name => 'Flapjack::Data::Alert', :inverse_of => :medium
-      has_and_belongs_to_many :alerting_checks, :class_name => 'Flapjack::Data::Check',
-        :inverse_of => :alerting_media
 
       belongs_to :last_entry, :class_name => 'Flapjack::Data::Entry',
-        :inverse_of => :latest_media, :before_remove => :debug_remove
-
-      def debug_remove(e)
-        trace = caller[0..5].join("\n")
-        Flapjack.logger.info "medium #{self.id} removing entry #{e.id}:\n#{trace}"
-      end
+        :inverse_of => :latest_media
 
       index_by :transport
 
@@ -65,6 +58,19 @@ module Flapjack
       end
 
       validates_with Flapjack::Data::Validators::IdValidator
+
+      def alerting_checks
+        route_ids_by_rule_id = self.rules.associated_ids_for(:routes)
+        route_ids = route_ids_by_rule_id.values.reduce(&:|)
+
+        check_ids = Flapjack::Data::Route.intersect(:id => route_ids,
+          :is_alerting => true).associated_ids_for(:checks).values.reduce(:|)
+
+        # scheduled maintenance may have occurred without the routes being updated
+        Flapjack::Data::Check.intersect(:id => check_ids).all.each_with_object([]) do |check, memo|
+          memo << check unless check.in_scheduled_maintenance?
+        end
+      end
 
       def self.jsonapi_attributes
         [:transport, :address, :interval, :rollup_threshold]

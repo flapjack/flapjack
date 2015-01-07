@@ -7,6 +7,7 @@
 # those associations are not present, remove it from the state's associations
 # and delete it
 
+require 'flapjack/data/notification'
 require 'flapjack/data/state'
 
 module Flapjack
@@ -34,12 +35,7 @@ module Flapjack
         :inverse_of => :entry
 
       has_many :latest_media, :class_name => 'Flapjack::Data::Medium',
-        :inverse_of => :last_entry, :before_remove => :debug_remove
-
-      def debug_remove(m)
-        trace = caller[0..5].join("\n")
-        Flapjack.logger.info "entry #{self.id} removing medium #{m.id}:\n#{trace}"
-      end
+        :inverse_of => :last_entry
 
       validates :timestamp, :presence => true
 
@@ -74,15 +70,15 @@ module Flapjack
       end
 
       def self.delete_if_unlinked(e)
-        Flapjack.logger.info "checking deletion of #{e.instance_variable_get('@attributes').inspect}"
-        Flapjack.logger.info "state nil #{e.state.nil?}"
-        Flapjack.logger.info "latest_notifications_check nil #{e.latest_notifications_check.nil?}"
-        Flapjack.logger.info "notification nil #{e.notification.nil?}"
-        Flapjack.logger.info "latest media empty #{e.latest_media.empty?}"
+        Flapjack.logger.debug "checking deletion of #{e.instance_variable_get('@attributes').inspect}"
+        Flapjack.logger.debug "state nil #{e.state.nil?}"
+        Flapjack.logger.debug "latest_notifications_check nil #{e.latest_notifications_check.nil?}"
+        Flapjack.logger.debug "notification nil #{e.notification.nil?}"
+        Flapjack.logger.debug "latest media empty #{e.latest_media.empty?}"
 
         return unless e.state.nil? && e.latest_notifications_check.nil? &&
           e.notification.nil? && e.latest_media.empty?
-        Flapjack.logger.info "deleting"
+        Flapjack.logger.debug "deleting"
         e.destroy
       end
     end

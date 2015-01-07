@@ -17,7 +17,7 @@
       <th>Summary Threshold</th>
     </tr>
     <% @contact_media.each do |med| %>
-      <% alerting_checks = med.alerting_checks.all %>
+      <% alerting_checks = med.alerting_checks %>
       <% media_transport = med.transport %>
       <% alerting[media_transport] = alerting_checks unless alerting_checks.empty? %>
       <tr>
@@ -125,6 +125,7 @@
 <% end %>
 
 <h3>All Checks</h3>
+<%# TODO sort using Sandstorm scope %>
 <% checks = @contact.checks.all.sort_by(&:name) %>
 <% if checks.empty? %>
   <p>No checks</p>

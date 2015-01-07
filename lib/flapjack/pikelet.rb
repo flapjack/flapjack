@@ -58,7 +58,6 @@ module Flapjack
 
         @thread = Thread.new do
 
-          # logger = Flapjack::Logger.new("flapjack-#{type}", config['logger'])
           Flapjack.configure_log(@logger_name, @config['logger'])
 
           # TODO rename this, it's only relevant in the error case

@@ -43,7 +43,14 @@ module Flapjack
             app.delete %r{^/rules/(.+)$} do
               rule_ids = params[:captures][0].split(',').uniq
 
-              resource_delete(Flapjack::Data::Rule, rule_ids)
+              # extra locking to allow rule destroy callback to work
+              Flapjack::Data::Rule.lock(Flapjack::Data::Contact,
+                Flapjack::Data::Medium, Flapjack::Data::Tag,
+                Flapjack::Data::Route, Flapjack::Data::Check) do
+
+                resource_delete(Flapjack::Data::Rule, rule_ids)
+              end
+
               status 204
             end
           end

@@ -169,6 +169,7 @@ Pact.provider_states_for "flapjack-diner" do
     set_up do
       rule = Flapjack::Data::Rule.new(rule_data)
       rule.save
+      rule.recalculate_routes
     end
 
     tear_down do
@@ -181,9 +182,11 @@ Pact.provider_states_for "flapjack-diner" do
     set_up do
       rule = Flapjack::Data::Rule.new(rule_data)
       rule.save
+      rule.recalculate_routes
 
       rule_2 = Flapjack::Data::Rule.new(rule_2_data)
       rule_2.save
+      rule_2.recalculate_routes
     end
 
     tear_down do

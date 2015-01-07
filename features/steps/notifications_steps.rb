@@ -24,13 +24,18 @@ def find_or_create_check(check_data)
     tags = entity_name.split('.', 2).map(&:downcase) +
       check_name.split(' ').map(&:downcase)
 
-    tags.each do |tag_name|
-      tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
-      if tag.nil?
-        tag = Flapjack::Data::Tag.new(:name => tag_name)
-        expect(tag.save).to be true
+    Flapjack::Data::Tag.lock(Flapjack::Data::Rule, Flapjack::Data::Check,
+      Flapjack::Data::Route) do
+
+      tags = tags.collect do |tag_name|
+        tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+        if tag.nil?
+          tag = Flapjack::Data::Tag.new(:name => tag_name)
+          expect(tag.save).to be true
+        end
+        tag
       end
-      check.tags << tag
+      check.tags.add(*tags)
     end
   end
 
@@ -62,13 +67,18 @@ Given /^the following checks exist:$/ do |checks|
     expect(check.save).to be true
 
     unless check_data['tags'].nil? || check_data['tags'].strip.empty?
-      check_data['tags'].split(',').map(&:strip).each do |tag_name|
-        tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
-        if tag.nil?
-          tag = Flapjack::Data::Tag.new(:name => tag_name)
-          tag.save
+      Flapjack::Data::Tag.lock(Flapjack::Data::Rule, Flapjack::Data::Check,
+        Flapjack::Data::Route) do
+
+        tags = check_data['tags'].split(',').map(&:strip).collect do |tag_name|
+          tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+          if tag.nil?
+            tag = Flapjack::Data::Tag.new(:name => tag_name)
+            tag.save
+          end
+          tag
         end
-        check.tags << tag
+        check.tags.add(*tags)
       end
     end
   end
@@ -124,14 +134,22 @@ Given /^the following rules exist:$/ do |rules|
     end
     expect(rule.save).to be true
 
-    unless rule_data['tags'].nil? || rule_data['tags'].strip.empty?
-      rule_data['tags'].split(',').map(&:strip).each do |tag_name|
-        tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
-        if tag.nil?
-          tag = Flapjack::Data::Tag.new(:name => tag_name)
-          expect(tag.save).to be true
+    Flapjack::Data::Tag.lock(Flapjack::Data::Rule, Flapjack::Data::Check,
+      Flapjack::Data::Route) do
+
+      if rule_data['tags'].nil? || rule_data['tags'].strip.empty?
+        # generic rule, so force route recalc
+        rule.recalculate_routes
+      else
+        tags = rule_data['tags'].split(',').map(&:strip).collect do |tag_name|
+          tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+          if tag.nil?
+            tag = Flapjack::Data::Tag.new(:name => tag_name)
+            expect(tag.save).to be true
+          end
+          tag
         end
-        rule.tags << tag
+        rule.tags.add(*tags)
       end
     end
 
@@ -159,14 +177,19 @@ Given /^(?:a|the) user wants to receive SMS alerts for check '(.+)'$/ do |check_
   rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
   expect(rule.save).to be true
 
-  check_name.gsub(/\./, '_').split(':', 2).each do |tag_name|
-    tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
-    if tag.nil?
-      tag = Flapjack::Data::Tag.new(:name => tag_name)
-      expect(tag.save).to be true
+  Flapjack::Data::Tag.lock(Flapjack::Data::Rule, Flapjack::Data::Check,
+    Flapjack::Data::Route) do
+
+    tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
+      tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+      if tag.nil?
+        tag = Flapjack::Data::Tag.new(:name => tag_name)
+        expect(tag.save).to be true
+      end
+      tag
     end
-    rule.tags << tag
-    check.tags << tag
+    rule.tags.add(*tags)
+    check.tags.add(*tags)
   end
 
   rule.media << sms
@@ -186,14 +209,19 @@ Given /^(?:a|the) user wants to receive email alerts for check '(.+)'$/ do |chec
   rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
   expect(rule.save).to be true
 
-  check_name.gsub(/\./, '_').split(':', 2).each do |tag_name|
-    tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
-    if tag.nil?
-      tag = Flapjack::Data::Tag.new(:name => tag_name)
-      expect(tag.save).to be true
+  Flapjack::Data::Tag.lock(Flapjack::Data::Rule, Flapjack::Data::Check,
+    Flapjack::Data::Route) do
+
+    tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
+      tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+      if tag.nil?
+        tag = Flapjack::Data::Tag.new(:name => tag_name)
+        expect(tag.save).to be true
+      end
+      tag
     end
-    rule.tags << tag
-    check.tags << tag
+    rule.tags.add(*tags)
+    check.tags.add(*tags)
   end
 
   rule.media << email
@@ -213,14 +241,19 @@ Given /^(?:a|the) user wants to receive SNS alerts for check '(.+)'$/ do |check_
   rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
   expect(rule.save).to be true
 
-  check_name.gsub(/\./, '_').split(':', 2).each do |tag_name|
-    tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
-    if tag.nil?
-      tag = Flapjack::Data::Tag.new(:name => tag_name)
-      expect(tag.save).to be true
+  Flapjack::Data::Tag.lock(Flapjack::Data::Rule, Flapjack::Data::Check,
+    Flapjack::Data::Route) do
+
+    tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
+      tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+      if tag.nil?
+        tag = Flapjack::Data::Tag.new(:name => tag_name)
+        expect(tag.save).to be true
+      end
+      tag
     end
-    rule.tags << tag
-    check.tags << tag
+    rule.tags.add(*tags)
+    check.tags.add(*tags)
   end
 
   rule.media << sns

@@ -23,15 +23,11 @@ def set_scheduled_maintenance(entity_name, check_name, duration)
   expect(check).not_to be_nil
 
   t = Time.now
-  sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => t,
+  sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => Time.at(t.to_i - 60),
     :end_time => Time.at(t.to_i + duration), :summary => 'upgrading everything')
   expect(sched_maint.save).to be true
   check.add_scheduled_maintenance(sched_maint)
-  Flapjack::Data::Check.lock(Flapjack::Data::Medium) do
-    check.alerting_media.each do |medium|
-      check.alerting_media.delete(medium)
-    end
-  end
+  # expect(check.in_scheduled_maintenance?).to be true  # force route is_alerting to update
 end
 
 def remove_scheduled_maintenance(entity_name, check_name)
@@ -286,15 +282,6 @@ Then /^show me the (\w+ )*log$/ do |adjective|
   puts Flapjack.logger.messages.join("\n")
 end
 
-Then /^dump notification rules for user (\S+)$/ do |contact|
-  rule_ids = Flapjack.redis.smembers("contact_notification_rules:#{contact}")
-  puts "There #{(rule_ids.length == 1) ? 'is' : 'are'} #{rule_ids.length} notification rule#{(rule_ids.length == 1) ? '' : 's'} for user #{contact}:"
-  rule_ids.each {|rule_id|
-    rule = Flapjack::Data::Notificationule.find_by_id(rule_id)
-    puts Flapjack.dump_json(rule)
-  }
-end
-
 Then /^all alert dropping keys for user (\S+) should have expired$/ do |contact_id|
   expect(Flapjack.redis.keys("drop_alerts_for_contact:#{contact_id}*")).to be_empty
 end
@@ -320,7 +307,7 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
   expect(queued_length).to eq(num_queued.to_i)
 end
 
-When(/^user with id '(\S+)' removes rule with id '(\S+)'$/) do |contact_id, rule_id|
+When(/^the rule with id '(\S+)' is removed$/) do |rule_id|
   rule = Flapjack::Data::Rule.find_by_id(rule_id)
   expect(rule).not_to be_nil
 

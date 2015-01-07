@@ -401,8 +401,14 @@ module Flapjack
         loop do
           event_json = source_redis.lindex(archive_key, cursor)
           if event_json
-            event = Flapjack::Data::Event.parse_and_validate(event_json)
-            if !event.nil? && (include_re.nil? ||
+            event, errors = Flapjack::Data::Event.parse_and_validate(event_json)
+
+            if !errors.nil? && !errors.empty?
+              Flapjack.logger.error {
+                error_str = errors.nil? ? '' : errors.join(', ')
+                "Invalid event data received, #{error_str} #{event.inspect}"
+              }
+            elsif (include_re.nil? ||
               (include_re === "#{event['entity']}:#{event['check']}"))
 
               Flapjack::Data::Event.add(event)

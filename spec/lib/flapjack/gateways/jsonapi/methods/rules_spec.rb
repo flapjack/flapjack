@@ -431,6 +431,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "deletes a rule" do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Medium, Flapjack::Data::Tag,
+           Flapjack::Data::Route, Flapjack::Data::Check).
+      and_yield
+
     rules = double('rules')
     expect(rules).to receive(:ids).and_return([rule.id])
     expect(rules).to receive(:destroy_all)
@@ -442,6 +447,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "deletes multiple rules" do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Medium, Flapjack::Data::Tag,
+           Flapjack::Data::Route, Flapjack::Data::Check).
+      and_yield
+
     rules = double('rules')
     expect(rules).to receive(:ids).
       and_return([rule.id, rule_2.id])
@@ -455,6 +465,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "does not delete a rule that does not exist" do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Medium, Flapjack::Data::Tag,
+           Flapjack::Data::Route, Flapjack::Data::Check).
+      and_yield
+
     rules = double('rules')
     expect(rules).to receive(:ids).and_return([])
     expect(rules).not_to receive(:destroy_all)

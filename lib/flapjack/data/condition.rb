@@ -9,6 +9,7 @@ module Flapjack
       include Comparable
 
       def <=>(cond)
+        return nil unless cond.is_a?(Flapjack::Data::Condition)
         self.priority <=> cond.priority
       end
 

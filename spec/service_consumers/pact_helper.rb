@@ -25,6 +25,8 @@ ActiveSupport::JSON::Encoding.time_precision = 0
 MockLogger.configure_log('flapjack-jsonapi')
 Flapjack.logger = MockLogger.new
 
+# ::RSpec.configuration.full_backtrace = true
+
 Flapjack::Gateways::JSONAPI.class_eval do
   set :show_exceptions, false
   set :raise_errors, false

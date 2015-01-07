@@ -2,7 +2,7 @@ require 'spec_helper'
 
 require 'flapjack/configuration'
 
-describe Flapjack::Configuration do
+describe Flapjack::Configuration, :logger => true do
 
   let(:configuration) { Flapjack::Configuration.new }
 

@@ -24,6 +24,7 @@ WebMock.disable_net_connect!
 
 $:.unshift(File.dirname(__FILE__) + '/../lib')
 require 'flapjack'
+require 'flapjack/patches'
 require 'flapjack/configuration'
 
 # Requires supporting files with custom matchers and macros, etc,
@@ -56,7 +57,7 @@ RSpec.configure do |config|
   # order dependency and want to debug it, you can fix the order by providing
   # the seed, which is printed after each run.
   #     --seed 1234
-  config.order = 'random'
+  # config.order = 'random'
 
   unless (ENV.keys & ['SHOW_LOGGER_ALL', 'SHOW_LOGGER_ERRORS']).empty?
     config.instance_variable_set('@formatters', [])

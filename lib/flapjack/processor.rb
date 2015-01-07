@@ -132,8 +132,8 @@ module Flapjack
 
       while event_json = (archive ? Flapjack.redis.rpoplpush(queue, archive) :
                                     Flapjack.redis.rpop(queue))
-        parsed = Flapjack::Data::Event.parse_and_validate(event_json)
-        if parsed.nil?
+        parsed, errors = Flapjack::Data::Event.parse_and_validate(event_json)
+        if !errors.nil? && !errors.empty?
           Flapjack.redis.multi do |multi|
             if archive
               multi.lrem(archive, 1, event_json)
@@ -147,6 +147,10 @@ module Flapjack
               multi.expire(archive, max_age)
             end
           end
+          Flapjack.logger.error {
+            error_str = errors.nil? ? '' : errors.join(', ')
+            "Invalid event data received, #{error_str} #{parsed.inspect}"
+          }
         else
           Flapjack.redis.expire(archive, max_age) if archive
           yield Flapjack::Data::Event.new(parsed) if block_given?
@@ -184,11 +188,10 @@ module Flapjack
         cond
       end
 
-      # TODO remove Medium from lock if alerting_media association is deleted
-      Flapjack::Data::Check.lock(Flapjack::Data::State,
-        Flapjack::Data::ScheduledMaintenance, Flapjack::Data::Tag,
-        Flapjack::Data::Medium, Flapjack::Data::UnscheduledMaintenance,
-        Flapjack::Data::Notification, Flapjack::Data::Entry) do
+      Flapjack::Data::Check.lock(Flapjack::Data::State, Flapjack::Data::Entry,
+        Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
+        Flapjack::Data::Tag, Flapjack::Data::Route, Flapjack::Data::Medium,
+        Flapjack::Data::Notification) do
 
         # TODO rethink name / event_id mapping, current behaviour is quick
         # hack for Flapjack v1 equivalence

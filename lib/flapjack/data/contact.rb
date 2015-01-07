@@ -70,6 +70,16 @@ module Flapjack
         self.timezone = tz.respond_to?(:name) ? tz.name : tz
       end
 
+      def checks
+        route_ids_by_rule_id = self.rules.associated_ids_for(:routes)
+        route_ids = route_ids_by_rule_id.values.reduce(&:|)
+
+        check_ids = Flapjack::Data::Route.intersect(:id => route_ids).
+          associated_ids_for(:checks).values.reduce(:|)
+
+        Flapjack::Data::Check.intersect(:id => check_ids)
+      end
+
       def self.jsonapi_attributes
         [:name, :timezone]
       end

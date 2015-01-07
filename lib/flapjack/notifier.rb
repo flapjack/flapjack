@@ -35,15 +35,6 @@ module Flapjack
         raise "No queues for media transports"
       end
 
-      notify_logfile  = @config['notification_log_file'] || 'log/notify.log'
-      unless File.directory?(File.dirname(notify_logfile))
-        raise "Parent directory for log file '#{notify_logfile}' doesn't exist"
-      end
-      @notifylog = ::Logger.new(notify_logfile)
-      @notifylog.formatter = proc do |severity, datetime, progname, msg|
-        "#{datetime.to_s} | #{msg}\n"
-      end
-
       tz = nil
       tz_string = @config['default_contact_timezone'] || ENV['TZ'] || 'UTC'
       begin
@@ -80,41 +71,37 @@ module Flapjack
     # notification, updates the notification history in redis, generates the
     # notifications
     def process_notification(notification)
-      Flapjack.logger.debug ("Processing notification: #{notification.inspect}")
+      Flapjack.logger.debug { "Processing notification: #{notification.inspect}" }
 
       check       = notification.entry.state.check
       check_name  = check.name
 
-      rule_ids_by_contact_id = check.rule_ids_by_contact_id(:severity => notification.severity)
-
-      if rule_ids_by_contact_id.empty?
-        Flapjack.logger.debug("No rules for '#{check_name}'")
-        @notifylog.info("#{check_name} | #{notification.type} | NO RULES")
-        return
-      end
-
-      alerts = notification.alerts_for(rule_ids_by_contact_id,
+      alerts = notification.alerts_for(check,
         :transports => @queues.keys,
         :default_timezone => @default_contact_timezone)
 
-      Flapjack.logger.info "alerts: #{alerts.size}"
+      if alerts.nil? || alerts.empty?
+        Flapjack.logger.info { "No alerts" }
+      else
+        Flapjack.logger.info { "Alerts: #{alerts.size}" }
 
-      alerts.each do |alert|
-        medium = alert.medium
+        alerts.each do |alert|
+          medium = alert.medium
 
-        @notifylog.info("#{check_name} | #{medium.contact.id} | " \
-                        "#{medium.transport} | #{medium.address}")
+          Flapjack.logger.info {
+            "#{check_name} | #{medium.contact.id} | " \
+            "#{medium.transport} | #{medium.address}\n" \
+            "Enqueueing #{medium.transport} alert for " \
+            "#{check_name} to #{medium.address} " \
+            " rollup: #{alert.rollup || '-'}"
+          }
 
-        Flapjack.logger.info("Enqueueing #{medium.transport} alert for " +
-          "#{check_name} to #{medium.address} " +
-          " rollup: #{alert.rollup || '-'}")
-
-        @queues[medium.transport].push(alert)
+          @queues[medium.transport].push(alert)
+        end
       end
 
       e = notification.entry
       notification.entry = nil
-      Flapjack.logger.info "pre-delete-check: notifier after alerts sent"
       Flapjack::Data::Entry.delete_if_unlinked(e)
       notification.destroy
     end
