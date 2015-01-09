@@ -138,33 +138,6 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
-  provider_state "a set of pagerduty credentials exists" do
-    set_up do
-      pagerduty_credentials = Flapjack::Data::PagerdutyCredentials.new(pagerduty_credentials_data)
-      pagerduty_credentials.save
-    end
-
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
-  end
-
-  provider_state "two sets of pagerduty credentials exist" do
-    set_up do
-      pagerduty_credentials = Flapjack::Data::PagerdutyCredentials.new(pagerduty_credentials_data)
-      pagerduty_credentials.save
-
-      pagerduty_credentials_2 = Flapjack::Data::PagerdutyCredentials.new(pagerduty_credentials_2_data)
-      pagerduty_credentials_2.save
-    end
-
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
-  end
-
   provider_state "a rule exists" do
     set_up do
       rule = Flapjack::Data::Rule.new(rule_data)
@@ -280,6 +253,117 @@ Pact.provider_states_for "flapjack-diner" do
       usmd_2[:end_time] = Time.parse(usmd_2[:end_time])
       unscheduled_maintenance_2 = Flapjack::Data::UnscheduledMaintenance.new(usmd_2)
       unscheduled_maintenance_2.save
+    end
+
+    tear_down do
+      Flapjack.logger.messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "a check and a tag exist" do
+    set_up do
+      check = Flapjack::Data::Check.new(check_data)
+      check.save
+
+      tag = Flapjack::Data::Tag.new(tag_data)
+      tag.save
+    end
+
+    tear_down do
+      Flapjack.logger.messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "a contact and a medium exist" do
+    set_up do
+      contact = Flapjack::Data::Contact.new(contact_data)
+      contact.save
+
+      email = Flapjack::Data::Medium.new(email_data)
+      email.save
+    end
+
+    tear_down do
+      Flapjack.logger.messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "a contact with a rule exists" do
+    set_up do
+      contact = Flapjack::Data::Contact.new(contact_data)
+      contact.save
+
+      rule = Flapjack::Data::Rule.new(rule_data)
+      rule.save
+      rule.recalculate_routes
+
+      contact.rules << rule
+    end
+
+    tear_down do
+      Flapjack.logger.messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "a check with a tag exists" do
+    set_up do
+      check = Flapjack::Data::Check.new(check_data)
+      check.save
+
+      tag = Flapjack::Data::Tag.new(tag_data)
+      tag.save
+
+      Flapjack::Data::Check.lock(Flapjack::Data::Tag,
+        Flapjack::Data::Rule, Flapjack::Data::Route) do
+
+        check.tags << tag
+      end
+    end
+
+    tear_down do
+      Flapjack.logger.messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "a check and two tags exist" do
+    set_up do
+      check = Flapjack::Data::Check.new(check_data)
+      check.save
+
+      tag = Flapjack::Data::Tag.new(tag_data)
+      tag.save
+
+      tag_2 = Flapjack::Data::Tag.new(tag_2_data)
+      tag_2.save
+    end
+
+    tear_down do
+      Flapjack.logger.messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
+  provider_state "a check with two tags exists" do
+    set_up do
+      check = Flapjack::Data::Check.new(check_data)
+      check.save
+
+      tag = Flapjack::Data::Tag.new(tag_data)
+      tag.save
+
+      tag_2 = Flapjack::Data::Tag.new(tag_2_data)
+      tag_2.save
+
+      Flapjack::Data::Check.lock(Flapjack::Data::Tag,
+        Flapjack::Data::Rule, Flapjack::Data::Route) do
+
+        check.tags.add(tag, tag_2)
+      end
     end
 
     tear_down do

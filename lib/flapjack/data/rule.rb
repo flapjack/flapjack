@@ -55,7 +55,8 @@ module Flapjack
 
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
         :inverse_of => :rules, :after_add => :tags_added,
-        :after_remove => :tags_removed
+        :after_remove => :tags_removed,
+        :related_class_names => ['Flapjack::Data::Check', 'Flapjack::Data::Route']
 
       # TODO on change to conditions_list, update value for all routes
       # TODO when a rule is created, recalculate_routes should be called

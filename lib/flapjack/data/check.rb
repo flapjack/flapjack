@@ -42,7 +42,8 @@ module Flapjack
       # of the association fires the initial event
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
         :inverse_of => :checks, :after_add => :recalculate_routes,
-        :after_remove => :recalculate_routes
+        :after_remove => :recalculate_routes,
+        :related_class_names => ['Flapjack::Data::Rule', 'Flapjack::Data::Route']
 
       def recalculate_routes(*t)
         self.routes.destroy_all

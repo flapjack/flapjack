@@ -18,10 +18,22 @@ module Flapjack
       define_attributes :name => :string
 
       has_and_belongs_to_many :checks,
-        :class_name => 'Flapjack::Data::Check', :inverse_of => :tags
+        :class_name => 'Flapjack::Data::Check', :inverse_of => :tags,
+        :after_add => :changed_checks, :after_remove => :changed_checks,
+        :related_class_names => ['Flapjack::Data::Rule', 'Flapjack::Data::Route']
+
+      def changed_checks(*cs)
+        cs.each {|check| check.recalculate_routes }
+      end
 
       has_and_belongs_to_many :rules,
-        :class_name => 'Flapjack::Data::Rule', :inverse_of => :tags
+        :class_name => 'Flapjack::Data::Rule', :inverse_of => :tags,
+        :after_add => :changed_rules, :after_remove => :changed_rules,
+        :related_class_names => ['Flapjack::Data::Check', 'Flapjack::Data::Route']
+
+      def changed_rules(*rs)
+        rs.each {|rule| rule.recalculate_routes }
+      end
 
       unique_index_by :name
 
