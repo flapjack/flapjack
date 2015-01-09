@@ -1,5 +1,5 @@
 --color
---format Fuubar
+--format documentation
 --format html
 --out tmp/spec.html
 --require ./spec/support/uncolored_doc_formatter.rb

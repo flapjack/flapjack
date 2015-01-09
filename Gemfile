@@ -15,6 +15,5 @@ group :test do
   gem 'rack-test'
   gem 'webmock'
   gem 'pact'
-  gem 'fuubar'
   gem 'simplecov', :require => false
 end

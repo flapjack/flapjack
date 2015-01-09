@@ -36,9 +36,6 @@ require 'mail'
   delivery_method :test
 end
 
-require 'hiredis'
-require 'redis'
-require 'sandstorm'
 require 'flapjack/redis_proxy'
 
 require './spec/service_consumers/fixture_data.rb'
@@ -57,7 +54,7 @@ RSpec.configure do |config|
   # order dependency and want to debug it, you can fix the order by providing
   # the seed, which is printed after each run.
   #     --seed 1234
-  # config.order = 'random'
+  config.order = 'random'
 
   unless (ENV.keys & ['SHOW_LOGGER_ALL', 'SHOW_LOGGER_ERRORS']).empty?
     config.instance_variable_set('@formatters', [])
